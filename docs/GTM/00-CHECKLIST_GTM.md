@@ -196,7 +196,7 @@ Legenda: ✅ Feito — 🟡 Parcial/Rascunho — 🔧 Em andamento — ⏳ Não 
 
 | Item | Status | Referência |
 |------|--------|------------|
-| Migração de models para apps modulares | ⏳ | Tarefa: migracao_models_apps |
+| Limpeza de imports e INSTALLED_APPS | 🔧 | Tarefa: migracao_models_apps (12/15 tarefas concluídas) |
 | Ativar apps CS: NPS e Retenção | ⏳ | Tarefa: apps_cs_nps_retencao |
 | Migrar app gestão do megaroleta | ⏳ | Tarefa: migrar_gestao_megaroleta |
 | Implementar Django REST Framework | ⏳ | Tarefa: api_rest_framework |
@@ -231,6 +231,11 @@ Legenda: ✅ Feito — 🟡 Parcial/Rascunho — 🔧 Em andamento — ⏳ Não 
 | Item | Status | Referência |
 |------|--------|------------|
 | Correção CSRF e segurança de endpoints | ⏳ | Tarefa: csrf_endpoints_seguranca |
+| Autenticação nos 48+ endpoints de API | ⏳ | Tarefa: autenticacao_endpoints_api |
+| Validação de token nos webhooks | ⏳ | Tarefa: webhook_validacao_token |
+| TenantMixin nos models do CRM (9 models) | ⏳ | Tarefa: tenant_mixin_crm |
+| Remover credencial HubSoft hardcoded | ⏳ | Tarefa: credencial_hubsoft_hardcoded |
+| Corrigir exibição de senhas no admin | ⏳ | Tarefa: admin_render_value |
 | LGPD e privacidade de dados | ⏳ | Tarefa: lgpd_privacidade |
 | Secrets removidos do código | ✅ | Concluído (29/03/2026) |
 
@@ -262,10 +267,10 @@ Legenda: ✅ Feito — 🟡 Parcial/Rascunho — 🔧 Em andamento — ⏳ Não 
 | Customer success | 0 | 2 | 5 |
 | Operações e jurídico | 0 | 0 | 6 |
 | Lançamento | 2 | 1 | 3 |
-| **Desenvolvimento** | **0** | **2** | **4** |
+| **Desenvolvimento** | **0** | **3** | **3** |
 | **Infraestrutura** | **0** | **0** | **4** |
 | **Qualidade** | **0** | **0** | **3** |
-| **Segurança** | **1** | **0** | **2** |
+| **Segurança** | **1** | **0** | **6** |
 | **Produto (dev)** | **1** | **0** | **2** |
 | **Total** | **44** | **14** | **64** |
 
