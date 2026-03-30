@@ -52,9 +52,6 @@ htmlcov/
 # ── Node (se houver) ────────────────────────────────────
 node_modules/
 
-# ── Exports gerados ─────────────────────────────────────
-exports/hub.html
-
 # ── Projetos de código (repos git separados) ────────────
 megaroleta/
 robo/
