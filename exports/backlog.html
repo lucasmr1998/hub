@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Backlog — AuroraISP</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #0f172a;
+      color: #fff;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; }
+    header h1 span { color: #818cf8; }
+    .header-meta { font-size: 0.75rem; color: #94a3b8; text-align: right; }
+    .header-meta strong { color: #e2e8f0; }
+
+    .summary {
+      background: #1e293b;
+      padding: 12px 32px;
+      display: flex;
+      gap: 24px;
+    }
+    .summary-item { font-size: 0.8rem; color: #94a3b8; }
+    .summary-item strong { color: #e2e8f0; }
+
+    main {
+      padding: 24px 32px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .column {
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .column-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+    }
+    .column-title { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+    .badge {
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 99px;
+    }
+
+    .cards { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .card-title { font-size: 0.875rem; font-weight: 600; line-height: 1.3; }
+    .card-date { font-size: 0.7rem; color: #94a3b8; white-space: nowrap; }
+    .card-desc { font-size: 0.78rem; color: #64748b; margin-bottom: 8px; line-height: 1.45; }
+    .card-obj { font-size: 0.78rem; color: #475569; margin-bottom: 10px; line-height: 1.45; }
+
+    .progress-wrap {
+      height: 5px;
+      background: #e2e8f0;
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .progress-bar { height: 100%; border-radius: 99px; transition: width 0.3s; }
+    .progress-meta { display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .progress-label { font-size: 0.7rem; color: #64748b; }
+    .progress-pct { font-size: 0.7rem; color: #94a3b8; }
+
+    .toggle-btn {
+      background: none;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      color: #64748b;
+      cursor: pointer;
+      margin-top: 2px;
+      transition: all 0.15s;
+    }
+    .toggle-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
+
+    .card-detail { display: none; margin-top: 10px; }
+    .card-detail.open { display: block; }
+
+    .checklist { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+    .checklist li { display: flex; align-items: flex-start; gap: 7px; font-size: 0.775rem; line-height: 1.4; }
+    .check-icon { font-size: 0.7rem; margin-top: 2px; flex-shrink: 0; }
+    .item-done { color: #94a3b8; text-decoration: line-through; }
+    .item-done .check-icon { color: #22c55e; }
+    .item-pending { color: #374151; }
+    .item-pending .check-icon { color: #cbd5e1; }
+
+    .empty { font-size: 0.8rem; color: #94a3b8; text-align: center; padding: 24px 0; }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 0.72rem;
+      color: #94a3b8;
+    }
+
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Backlog <span>AuroraISP</span></h1>
+  <div class="header-meta">
+    Gerado em 28/03/2026 12:40<br>
+    <strong>3 de 12 tarefas finalizadas</strong>
+  </div>
+</header>
+
+<div class="summary">
+  <div class="summary-item">Pendentes: <strong>9</strong></div>
+  <div class="summary-item">Em andamento: <strong>0</strong></div>
+  <div class="summary-item">Finalizadas: <strong>3</strong></div>
+  <div class="summary-item">Total: <strong>12</strong></div>
+</div>
+
+<main>
+  
+    <div class="column" style="background:#fff7ed;border:1px solid #fed7aa">
+      <div class="column-header" style="border-bottom:2px solid #f97316">
+        <span class="column-title" style="color:#f97316">Pendente</span>
+        <span class="badge" style="background:#f97316">9</span>
+      </div>
+      <div class="cards">
+        
+    <div class="card" style="border-left:3px solid #f97316">
+      <div class="card-header">
+        <h3 class="card-title">criar_logo_26-03-2026</h3>
+        
+      </div>
+      
+      
+      
+        <div class="progress-wrap">
+          <div class="progress-bar" style="width:0%;background:#f97316"></div>
+        </div>
+        <div class="progress-meta">
+          <span class="progress-label">0/6 tarefas concluídas</span>
+          <span class="progress-pct">0%</span>
+        </div>
+      <button class="toggle-btn" onclick="toggle('detail-pendente-0')">Ver tarefas ▾</button>
+      <div class="card-detail" id="detail-pendente-0">
+        <ul class="checklist"><li class="item-pending"><span class="check-icon">○</span>Definir direção criativa (símbolo, tipografia, estilo)</li>
+<li class="item-pending"><span class="check-icon">○</span>Criar logo principal (versão colorida)</li>
+<li class="item-pending"><span class="check-icon">○</span>Criar versão negativa (para fundos escuros)</li>
+<li class="item-pending"><span class="check-icon">○</span>Criar versão monocromática</li>
+<li class="item-pending"><span class="check-icon">○</span>Exportar nos formatos SVG, PNG e PDF</li>
+<li class="item-pending"><span class="check-icon">○</span>Validar com o time</li>
+</ul>
+      </div>
+    </div>
+
+    <div class="card" style="border-left:3px solid #f97316">
+      <div class="card-header">
+        <h3 class="card-title">CRM para rastreamento do funil do parceiro</h3>
+        <span class="card-date">Criado em 27/03/2026</span>
+      </div>
+      <p class="card-desc">Definir como o parceiro registra e acompanha cada lead ao longo da esteira comercial</p>
+      <p class="card-obj">Garantir visibilidade sobre o funil comercial: quantos leads estão em cada etapa, onde estão travando e o que foi feito em cada um.</p>
+      
+        <div class="progress-wrap">
+          <div class="progress-bar" style="width:55%;background:#f97316"></div>
+        </div>
+        <div class="progress-meta">
+          <span class="progress-label">5/9 tarefas concluídas</span>
+          <span class="progress-pct">55%</span>
+        </div>
+      <button class="toggle-btn" onclick="toggle('detail-pendente-1')">Ver tarefas ▾</button>
+      <div class="card-detail" id="detail-pendente-1">
+        <ul class="checklist"><li class="item-done"><span class="check-icon">✓</span>Definir etapas do pipeline — 5 estágios: Lead identificado, Em contato, Em negociação, Trial ativo, Finalizada</li>
+<li class="item-done"><span class="check-icon">✓</span>Definir qualificação de entrada (A: HubSoft / B: outro ERP)</li>
+<li class="item-done"><span class="check-icon">✓</span>Definir campos obrigatórios por etapa</li>
+<li class="item-done"><span class="check-icon">✓</span>Definir critérios de avanço entre etapas</li>
+<li class="item-done"><span class="check-icon">✓</span>Criar template do CRM — exports/drafts/fluxos/crm_parceiro.md</li>
+<li class="item-pending"><span class="check-icon">○</span>Definir ferramenta (opções: Notion, Planilha Google, Pipedrive)</li>
+<li class="item-pending"><span class="check-icon">○</span>Configurar ferramenta com base no template</li>
+<li class="item-pending"><span class="check-icon">○</span>Treinar parceiro no uso</li>
+<li class="item-pending"><span class="check-icon">○</span>Definir cadência de revisão do funil com o parceiro (semanal?)</li>
+</ul>
+      </div>
+    </div>
+
+    <div class="card" style="border-left:3px solid #f97316">
+      <div class="card-header">
+        <h3 class="card-title">grupos_provedores_26-03-2026</h3>
+        
+      </div>
+      
+      
+      
+        <div class="progress-wrap">
+          <div class="progress-bar" style="width:0%;background:#f97316"></div>
+        </div>
+        <div class="progress-meta">
+          <span class="progress-label">0/5 tarefas concluídas</span>
+          <span class="progress-pct">0%</span>
+        </div>
+      <button class="toggle-btn" onclick="toggle('detail-pendente-2')">Ver tarefas ▾</button>
+      <div class="card-detail" id="detail-pendente-2">
+        <ul class="checklist"><li class="item-pending"><span class="check-icon">○</span>Sócio comercial mapear grupos de WhatsApp de ISPs que participa</li>
+<li class="item-pending"><span class="check-icon">○</span>Sócio comercial mapear grupos de Telegram relevantes</li>
+<li class="item-pending"><span class="check-icon">○</span>Identificar grupos com maior concentração de donos de provedor (decisores)</li>
+<li class="item-pending"><span class="check-icon">○</span>Identificar grupos da ABRINT e ABRI</li>
+<li class="item-pending"><span class="check-icon">○</span>Definir abordagem para cada grupo (conteúdo, case, indicação)</li>
+</ul>
+      </div>
+    </div>
+
+    <div class="card" style="border-left:3px solid #f97316">
+      <div class="card-header">
+        <h3 class="card-title">lancamento_digital_26-03-2026</h3>
+        
+      </div>
+      
+      
+      
+        <div class="progress-wrap">
+          <div class="progress-bar" style="width:0%;background:#f97316"></div>
+        </div>
+        <div class="progress-meta">
+          <span class="progress-label">0/6 tarefas concluídas</span>
+          <span class="progress-pct">0%</span>
+        </div>
+      <button class="toggle-btn" onclick="toggle('detail-pendente-3')">Ver tarefas ▾</button>
+      <div class="card-detail" id="detail-pendente-3">
+        <ul class="checklist"><li class="item-pending"><span class="check-icon">○</span>Criar copy da landing page (PMM)</li>
+<li class="item-pending"><span class="check-icon">○</span>Desenvolver landing page (Dev, aguarda logo e copy)</li>
+<li class="item-pending"><span class="check-icon">○</span>Criar perfil no Instagram (aguarda logo)</li>
+<li class="item-pending"><span class="check-icon">○</span>Criar perfil no LinkedIn (aguarda logo)</li>
+<li class="item-pending"><span class="check-icon">○</span>Configurar WhatsApp Business (CEO)</li>
+<li class="item-pending"><span class="check-icon">○</span>Definir domínio oficial (auroraisp.com.br ou similar)</li>
+</ul>
+      </div>
+    </div>
+
+    <div class="card" style="border-left:3px solid #f97316">
+      <div class="card-header">
+        <h3 class="card-title">Materiais de Vendas — Versões Visuais</h3>
+        <span class="card-date">Criado em 27/03/2026</span>
+      </div>
+      <p class="card-desc">Produzir os arquivos finais em PPT/PDF dos materiais de vendas com identidade visual da AuroraISP</p>
+      <p class="card-obj">Transformar os roteiros aprovados em arquivos visuais prontos para uso pelo parceiro.</p>
+      
+        <div class="progress-wrap">
+          <div class="progress-bar" style="width:0%;background:#f97316"></div>
+        </div>
+        <div class="progress-meta">
+          <span class="progress-label">0/5 tarefas concluídas</span>
+          <span class="progress-pct">0%</span>
+        </div>
+      <button class="toggle-btn" onclick="toggle('detail-pendente-4')">Ver tarefas ▾</button>
+      <div class="card-detail" id="detail-pendente-4">
+        <ul class="checklist"><li class="item-pending"><span class="check-icon">○</span>Criar one-pager em PPT e exportar PDF → exports/prospect/01_prospeccao/</li>
+<li class="item-pending"><span class="check-icon">○</span>Criar pre-demo deck em PPT e exportar PDF → exports/prospect/01_prospeccao/</li>
+<li class="item-pending"><span class="check-icon">○</span>Criar deck de apoio em PPT e exportar PDF → exports/prospect/02_demo/</li>
+<li class="item-pending"><span class="check-icon">○</span>Criar deck do parceiro em PPT (uso interno) → exports/parceiro/demo/</li>
+<li class="item-pending"><span class="check-icon">○</span>Criar case anônimo em PDF → exports/prospect/03_proposta/</li>
+</ul>
+      </div>
+    </div>
+
+    <div class="card" style="border-left:3px solid #f97316">
+      <div class="card-header">
+        <h3 class="card-title">Processo pós-ativação</h3>
+        <span class="card-date">Criado em 27/03/2026</span>
+      </div>
+      <p class="card-desc">Definir o que acontece depois que o cliente está ativo — NPS, indicação, expansão para outros módulos</p>
+      <p class="card-obj">Criar o processo de acompanhamento pós-ativação para aumentar retenção, gerar indicações e expandir para Marketing e CS.</p>
+      
+        <div class="progress-wrap">
+          <div class="progress-bar" style="width:0%;background:#f97316"></div>
+        </div>
+        <div class="progress-meta">
+          <span class="progress-label">0/6 tarefas concluídas</span>
+          <span class="progress-pct">0%</span>
+        </div>
+      <button class="toggle-btn" onclick="toggle('detail-pendente-5')">Ver tarefas ▾</button>
+      <div class="card-detail" id="detail-pendente-5">
+        <ul class="checklist"><li class="item-pending"><span class="check-icon">○</span>Definir touchpoints pós-ativação (D+7, D+30, D+60, D+90)</li>
+<li class="item-pending"><span class="check-icon">○</span>Criar mensagem de NPS para D+30 (integra com régua CS02)</li>
+<li class="item-pending"><span class="check-icon">○</span>Criar fluxo de pedido de indicação para clientes com NPS 9 ou 10</li>
+<li class="item-pending"><span class="check-icon">○</span>Definir gatilho para oferta de expansão (quando oferecer Marketing ou CS)</li>
+<li class="item-pending"><span class="check-icon">○</span>Definir quem faz o acompanhamento pós-ativação (Aurora ou parceiro)</li>
+<li class="item-pending"><span class="check-icon">○</span>Documentar em 12-FLUXO_COMERCIAL.md e criar drafts em exports/drafts/whatsapp/</li>
+</ul>
+      </div>
+    </div>
+
+    <div class="card" style="border-left:3px solid #f97316">
+      <div class="card-header">
+        <h3 class="card-title">Textos da Régua de Recuperação Pós-Trial</h3>
+        <span class="card-date">Criado em 27/03/2026</span>
+      </div>
+      <p class="card-desc">Escrever os textos de cada mensagem da régua de recuperação por canal e segmento</p>
+      <p class="card-obj">Escrever os textos de todas as mensagens da régua de recuperação pós-trial seguindo a estrutura definida em:
+`exports/drafts/email/regua_recuperacao_pos_trial_estrutura.md`</p>
+      
+        <div class="progress-wrap">
+          <div class="progress-bar" style="width:0%;background:#f97316"></div>
+        </div>
+        <div class="progress-meta">
+          <span class="progress-label">0/10 tarefas concluídas</span>
+          <span class="progress-pct">0%</span>
+        </div>
+      <button class="toggle-btn" onclick="toggle('detail-pendente-6')">Ver tarefas ▾</button>
+      <div class="card-detail" id="detail-pendente-6">
+        <ul class="checklist"><li class="item-pending"><span class="check-icon">○</span>D+1 — WhatsApp PMM (entender o que travou)</li>
+<li class="item-pending"><span class="check-icon">○</span>D+7 — WhatsApp PMM + e-mail (oferta: 1 mês com 30% de desconto)</li>
+<li class="item-pending"><span class="check-icon">○</span>D+15 — E-mail + WhatsApp PMM (oferta: setup gratuito)</li>
+<li class="item-pending"><span class="check-icon">○</span>D+22 — WhatsApp parceiro + e-mail (oferta: setup grátis + 50% de desconto)</li>
+<li class="item-pending"><span class="check-icon">○</span>D+30 — WhatsApp parceiro + e-mail (oferta: primeiro mês grátis. Última tentativa.)</li>
+<li class="item-pending"><span class="check-icon">○</span>D+1 — WhatsApp PMM (entender o que aconteceu)</li>
+<li class="item-pending"><span class="check-icon">○</span>D+7 — WhatsApp PMM + e-mail (oferta: extensão do trial por 7 dias)</li>
+<li class="item-pending"><span class="check-icon">○</span>D+15 — E-mail + WhatsApp PMM (oferta: 1 mês com 30% de desconto)</li>
+<li class="item-pending"><span class="check-icon">○</span>D+22 — WhatsApp parceiro + e-mail (oferta: setup gratuito)</li>
+<li class="item-pending"><span class="check-icon">○</span>D+30 — WhatsApp parceiro + e-mail (oferta: primeiro mês grátis. Última tentativa.)</li>
+</ul>
+      </div>
+    </div>
+
+    <div class="card" style="border-left:3px solid #f97316">
+      <div class="card-header">
+        <h3 class="card-title">Textos da Régua de Conversão do Trial</h3>
+        <span class="card-date">Criado em 27/03/2026</span>
+      </div>
+      <p class="card-desc">Escrever os textos de cada mensagem da régua de trial por canal (WhatsApp, e-mail, notificação)</p>
+      <p class="card-obj">Escrever os textos de todas as mensagens da régua de trial seguindo a estrutura definida em:
+`exports/drafts/email/regua_trial_estrutura.md`</p>
+      
+        <div class="progress-wrap">
+          <div class="progress-bar" style="width:0%;background:#f97316"></div>
+        </div>
+        <div class="progress-meta">
+          <span class="progress-label">0/12 tarefas concluídas</span>
+          <span class="progress-pct">0%</span>
+        </div>
+      <button class="toggle-btn" onclick="toggle('detail-pendente-7')">Ver tarefas ▾</button>
+      <div class="card-detail" id="detail-pendente-7">
+        <ul class="checklist"><li class="item-pending"><span class="check-icon">○</span>D+0 — E-mail de boas-vindas</li>
+<li class="item-pending"><span class="check-icon">○</span>D+1 ⚡ — Notificação de celebração (primeiro lead processado)</li>
+<li class="item-pending"><span class="check-icon">○</span>D+3 — E-mail de relatório de uso</li>
+<li class="item-pending"><span class="check-icon">○</span>D+7 — E-mail mostrando funcionalidade não utilizada</li>
+<li class="item-pending"><span class="check-icon">○</span>D+10 — Script WhatsApp para o parceiro</li>
+<li class="item-pending"><span class="check-icon">○</span>D+12 — Script WhatsApp para o parceiro + e-mail de urgência</li>
+<li class="item-pending"><span class="check-icon">○</span>D+14 — E-mail de encerramento + notificação</li>
+<li class="item-pending"><span class="check-icon">○</span>D+1 — WhatsApp PMM (verificar problema técnico)</li>
+<li class="item-pending"><span class="check-icon">○</span>D+3 — WhatsApp PMM (sessão de ativação assistida)</li>
+<li class="item-pending"><span class="check-icon">○</span>D+5 — WhatsApp PMM (entender o motivo de não uso)</li>
+<li class="item-pending"><span class="check-icon">○</span>D+7 — E-mail + WhatsApp PMM (última tentativa)</li>
+<li class="item-pending"><span class="check-icon">○</span>D+10 — Script WhatsApp para o parceiro</li>
+</ul>
+      </div>
+    </div>
+
+    <div class="card" style="border-left:3px solid #f97316">
+      <div class="card-header">
+        <h3 class="card-title">treinamento_parceiro_26-03-2026</h3>
+        
+      </div>
+      
+      
+      
+        <div class="progress-wrap">
+          <div class="progress-bar" style="width:0%;background:#f97316"></div>
+        </div>
+        <div class="progress-meta">
+          <span class="progress-label">0/7 tarefas concluídas</span>
+          <span class="progress-pct">0%</span>
+        </div>
+      <button class="toggle-btn" onclick="toggle('detail-pendente-8')">Ver tarefas ▾</button>
+      <div class="card-detail" id="detail-pendente-8">
+        <ul class="checklist"><li class="item-pending"><span class="check-icon">○</span>Criar Módulo 1 — Visão geral da AuroraISP (hub, módulos, ICP, posicionamento)</li>
+<li class="item-pending"><span class="check-icon">○</span>Criar Módulo 2 — Comercial a fundo (fluxo completo: lead, bot, docs, contrato, HubSoft)</li>
+<li class="item-pending"><span class="check-icon">○</span>Criar Módulo 3 — Marketing e CS (visão geral dos módulos em desenvolvimento)</li>
+<li class="item-pending"><span class="check-icon">○</span>Criar Módulo 4 — Precificação e transacional (Starter/Start/Pro, simulações, ROI)</li>
+<li class="item-pending"><span class="check-icon">○</span>Criar Módulo 5 — Objeções comuns (respostas prontas para as principais objeções)</li>
+<li class="item-pending"><span class="check-icon">○</span>Criar Módulo 6 — Demo hands-on (prática guiada do roteiro ao vivo)</li>
+<li class="item-pending"><span class="check-icon">○</span>Agendar sessão de treinamento com o parceiro (primeira semana de abril)</li>
+</ul>
+      </div>
+    </div>
+        
+      </div>
+    </div>
+    <div class="column" style="background:#eff6ff;border:1px solid #bfdbfe">
+      <div class="column-header" style="border-bottom:2px solid #3b82f6">
+        <span class="column-title" style="color:#3b82f6">Em andamento</span>
+        <span class="badge" style="background:#3b82f6">0</span>
+      </div>
+      <div class="cards">
+        
+        <p class="empty">Nenhuma tarefa</p>
+      </div>
+    </div>
+    <div class="column" style="background:#f0fdf4;border:1px solid #bbf7d0">
+      <div class="column-header" style="border-bottom:2px solid #22c55e">
+        <span class="column-title" style="color:#22c55e">Finalizada</span>
+        <span class="badge" style="background:#22c55e">3</span>
+      </div>
+      <div class="cards">
+        
+    <div class="card" style="border-left:3px solid #22c55e">
+      <div class="card-header">
+        <h3 class="card-title">Processo de conversão do trial</h3>
+        <span class="card-date">Criado em 27/03/2026</span>
+      </div>
+      <p class="card-desc">Definir e documentar o processo de acompanhamento durante os 14 dias de trial para maximizar conversão</p>
+      <p class="card-obj">Criar o processo de nurturing durante o trial de 14 dias (HubSoft) para garantir que o ISP ative, use e converta para cliente pagante.</p>
+      
+        <div class="progress-wrap">
+          <div class="progress-bar" style="width:100%;background:#22c55e"></div>
+        </div>
+        <div class="progress-meta">
+          <span class="progress-label">5/5 tarefas concluídas</span>
+          <span class="progress-pct">100%</span>
+        </div>
+      <button class="toggle-btn" onclick="toggle('detail-finalizada-0')">Ver tarefas ▾</button>
+      <div class="card-detail" id="detail-finalizada-0">
+        <ul class="checklist"><li class="item-done"><span class="check-icon">✓</span>Definir touchpoints durante o trial (D+0 a D+14, dois trilhos: ativo e inativo)</li>
+<li class="item-done"><span class="check-icon">✓</span>Definir critério de &quot;trial ativado com sucesso&quot; (primeiro lead processado)</li>
+<li class="item-done"><span class="check-icon">✓</span>Definir o que acontece se o trial não for usado nos primeiros 3 dias (trilho inativo com WhatsApp ativo do PMM)</li>
+<li class="item-done"><span class="check-icon">✓</span>Oferta D+12 → decisão: sem oferta durante o trial. Movida para Régua de Recuperação Pós-Trial.</li>
+<li class="item-done"><span class="check-icon">✓</span>Documentar estrutura da régua em exports/drafts/email/regua_trial_estrutura.md</li>
+</ul>
+      </div>
+    </div>
+
+    <div class="card" style="border-left:3px solid #22c55e">
+      <div class="card-header">
+        <h3 class="card-title">materiais_vendas_26-03-2026</h3>
+        
+      </div>
+      
+      
+      
+        <div class="progress-wrap">
+          <div class="progress-bar" style="width:71%;background:#22c55e"></div>
+        </div>
+        <div class="progress-meta">
+          <span class="progress-label">5/7 tarefas concluídas</span>
+          <span class="progress-pct">71%</span>
+        </div>
+      <button class="toggle-btn" onclick="toggle('detail-finalizada-1')">Ver tarefas ▾</button>
+      <div class="card-detail" id="detail-finalizada-1">
+        <ul class="checklist"><li class="item-done"><span class="check-icon">✓</span>Estrutura do one-pager → exports/drafts/apresentacao/one_pager_estrutura.md</li>
+<li class="item-done"><span class="check-icon">✓</span>Estrutura do pre-demo deck (6 slides) → exports/drafts/apresentacao/pre_demo_deck_estrutura.md</li>
+<li class="item-done"><span class="check-icon">✓</span>Estrutura do deck de apoio (10 slides) → exports/drafts/apresentacao/demo_deck_apoio_estrutura.md</li>
+<li class="item-done"><span class="check-icon">✓</span>Estrutura do deck do parceiro (10 slides + roteiro) → exports/drafts/apresentacao/demo_deck_parceiro_estrutura.md</li>
+<li class="item-done"><span class="check-icon">✓</span>Script do pitch de 2 minutos → 09-ENABLEMENT.md</li>
+<li class="item-pending"><span class="check-icon">○</span>Revisar script do pitch de 2 minutos com o parceiro</li>
+<li class="item-pending"><span class="check-icon">○</span>Finalizar documento de objeções e respostas</li>
+</ul>
+      </div>
+    </div>
+
+    <div class="card" style="border-left:3px solid #22c55e">
+      <div class="card-header">
+        <h3 class="card-title">Régua de Recuperação Pós-Trial</h3>
+        <span class="card-date">Criado em 27/03/2026</span>
+      </div>
+      <p class="card-desc">Definir a sequência de mensagens e oferta especial para ISPs que não converteram após os 14 dias de trial</p>
+      <p class="card-obj">Recuperar prospects que testaram o produto, não converteram no trial e estão em momento de decisão. A oferta especial fica reservada para esse momento, não durante o trial.</p>
+      
+        <div class="progress-wrap">
+          <div class="progress-bar" style="width:100%;background:#22c55e"></div>
+        </div>
+        <div class="progress-meta">
+          <span class="progress-label">4/4 tarefas concluídas</span>
+          <span class="progress-pct">100%</span>
+        </div>
+      <button class="toggle-btn" onclick="toggle('detail-finalizada-2')">Ver tarefas ▾</button>
+      <div class="card-detail" id="detail-finalizada-2">
+        <ul class="checklist"><li class="item-done"><span class="check-icon">✓</span>Definir segmentação: usou o trial × não usou o trial</li>
+<li class="item-done"><span class="check-icon">✓</span>Definir escalada de ofertas (D+7 ao D+30, crescente por segmento)</li>
+<li class="item-done"><span class="check-icon">✓</span>Definir prazo do ciclo: 30 dias. Após isso, nurturing passivo.</li>
+<li class="item-done"><span class="check-icon">✓</span>Documentar estrutura em exports/drafts/email/regua_recuperacao_pos_trial_estrutura.md</li>
+</ul>
+      </div>
+    </div>
+        
+      </div>
+    </div>
+</main>
+
+<footer>AuroraISP · Backlog gerado automaticamente a partir de docs/context/tarefas/</footer>
+
+<script>
+  function toggle(id) {
+    const el = document.getElementById(id);
+    const btn = el.previousElementSibling;
+    const open = el.classList.toggle('open');
+    btn.textContent = open ? 'Ocultar tarefas ▴' : 'Ver tarefas ▾';
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,60 @@
+# ── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# ── Ambientes virtuais ────────────────────────────────────
+venv/
+env/
+.venv/
+n_env/
+myenv/
+
+# ── Variáveis de ambiente / segredos ─────────────────────
+.env
+*.env
+!.env.example
+
+# ── Django ───────────────────────────────────────────────
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+db_local.sqlite3
+staticfiles/
+media/
+
+# ── Logs ─────────────────────────────────────────────────
+*.log
+logs/
+
+# ── IDEs e editores ──────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Cobertura e testes ───────────────────────────────────
+.coverage
+htmlcov/
+.pytest_cache/
+
+# ── Node (se houver) ────────────────────────────────────
+node_modules/
+
+# ── Exports gerados ─────────────────────────────────────
+exports/hub.html
+
+# ── Projetos de código (repos git separados) ────────────
+megaroleta/
+robo/
