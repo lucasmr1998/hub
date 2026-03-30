@@ -1,3 +1,10 @@
+---
+name: "Implementar Django REST Framework"
+description: "O projeto possui APIs (HubSoft, N8N, webhooks) mas sem Django REST Framework. Não há serializers, versionamento de API, "
+prioridade: "🟡 Média"
+responsavel: "Dev"
+---
+
 # Implementar Django REST Framework — 30/03/2026
 
 **Data:** 30/03/2026

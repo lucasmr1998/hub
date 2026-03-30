@@ -1,3 +1,10 @@
+---
+name: "Remover Dados Sensíveis dos Responses de API"
+description: "A API de integrações retorna campos sensíveis nos JSON responses: login PPPoE, senha PPPoE, MAC address, IPv4 de cliente"
+prioridade: "🟡 Média"
+responsavel: "Dev / Segurança (AppSec)"
+---
+
 # Remover Dados Sensíveis dos Responses de API — 30/03/2026
 
 **Data:** 30/03/2026

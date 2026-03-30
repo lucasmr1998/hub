@@ -1,3 +1,10 @@
+---
+name: "Corrigir Exibição de Senhas no Admin"
+description: "O formulário de edição de integrações no Django Admin usa `render_value=True` nos campos de senha e client_secret. Isso "
+prioridade: "🔴 Alta"
+responsavel: "Dev / Segurança (AppSec)"
+---
+
 # Corrigir Exibição de Senhas no Admin — 30/03/2026
 
 **Data:** 30/03/2026

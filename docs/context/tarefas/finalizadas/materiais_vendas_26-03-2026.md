@@ -1,3 +1,10 @@
+---
+name: "Materiais de Vendas — Roteiros e Estruturas"
+description: "Criar os materiais de vendas que o parceiro comercial usará para prospectar e fechar clientes. One-pager para enviar ant"
+prioridade: "🔴 Alta"
+responsavel: "PMM"
+---
+
 # Materiais de Vendas — Roteiros e Estruturas
 
 **Data:** 26/03/2026

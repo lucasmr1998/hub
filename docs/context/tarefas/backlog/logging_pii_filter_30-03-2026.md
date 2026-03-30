@@ -1,3 +1,10 @@
+---
+name: "Filtro de PII no Logging"
+description: "A configuração de logging em produção não possui filtros para mascarar dados pessoais. Se um desenvolvedor logar um obje"
+prioridade: "🟡 Média"
+responsavel: "Dev / Segurança (AppSec)"
+---
+
 # Filtro de PII no Logging — 30/03/2026
 
 **Data:** 30/03/2026

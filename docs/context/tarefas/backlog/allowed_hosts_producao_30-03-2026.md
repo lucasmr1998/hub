@@ -1,3 +1,10 @@
+---
+name: "Limpar ALLOWED_HOSTS de Produção"
+description: "O `settings_production.py` contém IP hardcoded e `localhost`/`127.0.0.1` no ALLOWED_HOSTS. Isso aumenta a superfície de "
+prioridade: "🟡 Média"
+responsavel: "DevOps"
+---
+
 # Limpar ALLOWED_HOSTS de Produção — 30/03/2026
 
 **Data:** 30/03/2026

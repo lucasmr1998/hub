@@ -1,3 +1,10 @@
+---
+name: "Forçar HTTPS e Cookies Seguros"
+description: "O `settings.py` base não define `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE` nem `SECURE_SSL_REDIRECT`. Em produção, co"
+prioridade: "🟠 Alta"
+responsavel: "DevOps / Segurança (AppSec)"
+---
+
 # Forçar HTTPS e Cookies Seguros — 30/03/2026
 
 **Data:** 30/03/2026

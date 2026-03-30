@@ -1,3 +1,10 @@
+---
+name: "Desenvolver Módulo Marketing"
+description: "O módulo Marketing está listado no hub como "a desenvolver". Atualmente existe apenas o app `apps/marketing/campanhas/` "
+prioridade: "🟡 Média"
+responsavel: "Dev / PM"
+---
+
 # Desenvolver Módulo Marketing — 30/03/2026
 
 **Data:** 30/03/2026

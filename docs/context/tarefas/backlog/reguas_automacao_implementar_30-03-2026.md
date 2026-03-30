@@ -1,3 +1,10 @@
+---
+name: "Implementar Réguas de Automação"
+description: "As 16 réguas de automação estão especificadas (`docs/PRODUTO/01-REGUAS_PADRAO.md`) mas nenhuma foi implementada no códig"
+prioridade: "🟡 Média"
+responsavel: "Dev / CRM e Automação"
+---
+
 # Implementar Réguas de Automação — 30/03/2026
 
 **Data:** 30/03/2026

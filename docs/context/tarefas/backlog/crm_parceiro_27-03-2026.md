@@ -1,6 +1,8 @@
 ---
-name: CRM para rastreamento do funil do parceiro
-description: Definir como o parceiro registra e acompanha cada lead ao longo da esteira comercial
+name: "CRM para rastreamento do funil do parceiro"
+description: "Definir como o parceiro registra e acompanha cada lead ao longo da esteira comercial"
+prioridade: "🟡 Média"
+responsavel: "Head de Vendas"
 type: tarefa
 status: pendente
 criado_em: 27/03/2026

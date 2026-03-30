@@ -1,3 +1,10 @@
+---
+name: "Ativar Apps CS: NPS e Retenção"
+description: "As pastas `apps/cs/nps/` e `apps/cs/retencao/` existem no projeto mas não estão em `INSTALLED_APPS`. É necessário defini"
+prioridade: "🟡 Média"
+responsavel: "Dev"
+---
+
 # Ativar Apps CS: NPS e Retenção — 30/03/2026
 
 **Data:** 30/03/2026

@@ -1,3 +1,10 @@
+---
+name: "Filtrar User por Tenant em Views"
+description: "Views do CRM e outros módulos fazem `User.objects.filter(is_active=True)` sem filtrar por tenant. Dropdowns de atribuiçã"
+prioridade: "🟠 Alta"
+responsavel: "Dev / Segurança (AppSec)"
+---
+
 # Filtrar User por Tenant em Views — 30/03/2026
 
 **Data:** 30/03/2026

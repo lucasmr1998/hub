@@ -1,3 +1,10 @@
+---
+name: "Contrato, Termos de Uso e Política de Privacidade"
+description: "Não existem documentos jurídicos para a operação SaaS. Antes de fechar contratos na Fase 1 (a partir de 31/03), é necess"
+prioridade: "🔴 Alta"
+responsavel: "Jurídico / CEO"
+---
+
 # Contrato, Termos de Uso e Política de Privacidade — 30/03/2026
 
 **Data:** 30/03/2026

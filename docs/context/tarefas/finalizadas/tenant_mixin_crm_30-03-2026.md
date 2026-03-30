@@ -1,3 +1,10 @@
+---
+name: "Adicionar TenantMixin nos Models do CRM"
+description: "9 models do CRM não herdam de TenantMixin e não possuem FK tenant. Com multi-tenancy ativo, um tenant consegue ver e man"
+prioridade: "🔴 Alta"
+responsavel: "Dev / Segurança (AppSec)"
+---
+
 # Adicionar TenantMixin nos Models do CRM — 30/03/2026
 
 **Data:** 30/03/2026

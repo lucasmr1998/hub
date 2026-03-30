@@ -794,9 +794,13 @@ def generate():
     tasks    = collect_tasks()
     now      = datetime.now().strftime("%d/%m/%Y %H:%M")
 
+    # Escapar </script> dentro do JSON para não quebrar o <script> tag
+    tree_json  = json.dumps(doc_tree, ensure_ascii=False).replace("</script>", "<\\/script>")
+    tasks_json = json.dumps(tasks,    ensure_ascii=False).replace("</script>", "<\\/script>")
+
     html = (HTML
-        .replace("__TREE__",  json.dumps(doc_tree, ensure_ascii=False))
-        .replace("__TASKS__", json.dumps(tasks,    ensure_ascii=False))
+        .replace("__TREE__",  tree_json)
+        .replace("__TASKS__", tasks_json)
         .replace("__NOW__",   now))
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)

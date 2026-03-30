@@ -1,3 +1,10 @@
+---
+name: "Trilha de Treinamento do Parceiro Comercial"
+description: "Criar a trilha de treinamento técnico para o parceiro comercial conseguir conduzir demos ao vivo e responder perguntas t"
+prioridade: "🔴 Alta"
+responsavel: "PMM + CEO"
+---
+
 # Trilha de Treinamento do Parceiro Comercial
 
 **Data:** 26/03/2026
@@ -15,11 +22,11 @@ Criar a trilha de treinamento técnico para o parceiro comercial conseguir condu
 
 ## Tarefas
 
-- [ ] Criar Módulo 1 — Visão geral da AuroraISP (hub, módulos, ICP, posicionamento)
-- [ ] Criar Módulo 2 — Comercial a fundo (fluxo completo: lead, bot, docs, contrato, HubSoft)
-- [ ] Criar Módulo 3 — Marketing e CS (visão geral dos módulos em desenvolvimento)
-- [ ] Criar Módulo 4 — Precificação e transacional (Starter/Start/Pro, simulações, ROI)
-- [ ] Criar Módulo 5 — Objeções comuns (respostas prontas para as principais objeções)
+- [x] Criar Módulo 1 — Visão geral da AuroraISP (hub, módulos, ICP, posicionamento)
+- [x] Criar Módulo 2 — Comercial a fundo (fluxo completo: lead, bot, docs, contrato, HubSoft)
+- [x] Criar Módulo 3 — Marketing e CS (visão geral dos módulos em desenvolvimento)
+- [x] Criar Módulo 4 — Precificação e transacional (Starter/Start/Pro, simulações, ROI)
+- [x] Criar Módulo 5 — Objeções comuns (respostas prontas para as principais objeções)
 - [ ] Criar Módulo 6 — Demo hands-on (prática guiada do roteiro ao vivo)
 - [ ] Agendar sessão de treinamento com o parceiro (primeira semana de abril)
 

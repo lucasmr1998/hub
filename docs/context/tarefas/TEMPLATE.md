@@ -1,4 +1,11 @@
-# [Assunto] — [Data]
+---
+name: "[Título curto e descritivo]"
+description: "[Uma linha explicando o que precisa ser feito]"
+prioridade: "🔴 Alta / 🟡 Média / 🟢 Baixa"
+responsavel: "[nome ou função]"
+---
+
+# [Título] — [Data]
 
 **Data:** DD/MM/AAAA
 **Responsável:** [nome ou função]

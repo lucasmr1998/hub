@@ -1,6 +1,8 @@
 ---
-name: Textos da Régua de Recuperação Pós-Trial
-description: Escrever os textos de cada mensagem da régua de recuperação por canal e segmento
+name: "Textos da Régua de Recuperação Pós-Trial"
+description: "Escrever os textos de cada mensagem da régua de recuperação por canal e segmento"
+prioridade: "🟡 Média"
+responsavel: "PMM"
 type: tarefa
 status: pendente
 criado_em: 27/03/2026

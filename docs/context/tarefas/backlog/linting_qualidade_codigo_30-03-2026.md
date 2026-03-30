@@ -1,3 +1,10 @@
+---
+name: "Linting e Qualidade de Código"
+description: "O projeto não possui ferramentas de linting, formatação automática nem verificação de qualidade de código. Para manter c"
+prioridade: "🟡 Média"
+responsavel: "Dev"
+---
+
 # Linting e Qualidade de Código — 30/03/2026
 
 **Data:** 30/03/2026

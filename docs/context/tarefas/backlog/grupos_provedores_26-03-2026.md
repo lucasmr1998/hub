@@ -1,3 +1,10 @@
+---
+name: "Mapeamento de Grupos de Provedores"
+description: "Levantar com o sócio comercial quais grupos de WhatsApp e Telegram de provedores regionais são mais relevantes para pros"
+prioridade: "🟡 Média"
+responsavel: "Sócio comercial"
+---
+
 # Mapeamento de Grupos de Provedores
 
 **Data:** 26/03/2026

@@ -1,3 +1,10 @@
+---
+name: "Autenticação e Tenant no Módulo Clube"
+description: "As APIs do Clube de Benefícios usam session-based auth (`request.session.get('auth_membro_id')`) sem verificar se o memb"
+prioridade: "🟠 Alta"
+responsavel: "Dev / Segurança (AppSec)"
+---
+
 # Autenticação e Tenant no Módulo Clube — 30/03/2026
 
 **Data:** 30/03/2026

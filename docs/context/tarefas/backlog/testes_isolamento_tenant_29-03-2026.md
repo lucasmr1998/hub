@@ -1,3 +1,10 @@
+---
+name: "Testes automatizados de isolamento de tenant"
+description: "Escrever testes automatizados que garantam o isolamento correto de dados entre tenants. Cada tenant deve enxergar apenas"
+prioridade: "🔴 Alta"
+responsavel: "QA / Tech Lead"
+---
+
 # Testes automatizados de isolamento de tenant — 29/03/2026
 
 **Data:** 29/03/2026

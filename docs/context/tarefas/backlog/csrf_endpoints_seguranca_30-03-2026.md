@@ -1,3 +1,10 @@
+---
+name: "Correção CSRF e Segurança de Endpoints"
+description: "O roadmap de produto identifica 50+ endpoints com `@csrf_exempt` e APIs sem autenticação adequada. Com o sistema multi-t"
+prioridade: "🔴 Alta"
+responsavel: "Segurança (AppSec)"
+---
+
 # Correção CSRF e Segurança de Endpoints — 30/03/2026
 
 **Data:** 30/03/2026

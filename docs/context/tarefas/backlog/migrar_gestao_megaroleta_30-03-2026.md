@@ -1,3 +1,10 @@
+---
+name: "Migrar App Gestão do Megaroleta"
+description: "O app `gestao` do megaroleta (17 models, agentes IA) não foi migrado para o hub. Existe um TODO no código (`apps/cs/club"
+prioridade: "🟡 Média"
+responsavel: "Dev"
+---
+
 # Migrar App Gestão do Megaroleta — 30/03/2026
 
 **Data:** 30/03/2026

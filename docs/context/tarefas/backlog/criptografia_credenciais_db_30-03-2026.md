@@ -1,3 +1,10 @@
+---
+name: "Criptografar Credenciais API no Banco"
+description: "Os models `IntegracaoAPI` armazenam `client_secret`, `password` e `access_token` em texto plano no banco. Se o banco for"
+prioridade: "🟠 Alta"
+responsavel: "Dev / Segurança (AppSec)"
+---
+
 # Criptografar Credenciais API no Banco — 30/03/2026
 
 **Data:** 30/03/2026

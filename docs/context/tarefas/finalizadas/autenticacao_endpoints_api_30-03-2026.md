@@ -1,3 +1,10 @@
+---
+name: "Autenticação nos 48+ Endpoints de API"
+description: "48+ endpoints de API usam `@csrf_exempt` sem nenhuma autenticação. Qualquer pessoa na internet consegue criar leads, apr"
+prioridade: "🔴 Alta"
+responsavel: "Dev / Segurança (AppSec)"
+---
+
 # Autenticação nos 48+ Endpoints de API — 30/03/2026
 
 **Data:** 30/03/2026

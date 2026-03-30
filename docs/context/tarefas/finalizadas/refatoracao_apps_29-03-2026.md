@@ -1,3 +1,10 @@
+---
+name: "Refatoração em apps + Multi-tenancy + Segurança"
+description: "Refatorar o monolito vendas_web em apps Django separados por módulo, implementar multi-tenancy para viabilizar o modelo "
+prioridade: "🔴 Alta"
+responsavel: "Tech Lead / DevOps / Segurança (AppSec)"
+---
+
 # Refatoração em apps + Multi-tenancy + Segurança — 29/03/2026
 
 **Data:** 29/03/2026

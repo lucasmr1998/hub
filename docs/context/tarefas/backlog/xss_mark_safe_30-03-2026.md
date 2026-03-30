@@ -1,3 +1,10 @@
+---
+name: "Corrigir XSS — mark_safe e format_html"
+description: "Template tags de parceiros usam `mark_safe(json.dumps(data))` com dados de usuário (título, descrição de cupom). O `admi"
+prioridade: "🟡 Média"
+responsavel: "Dev / Segurança (AppSec)"
+---
+
 # Corrigir XSS — mark_safe e format_html — 30/03/2026
 
 **Data:** 30/03/2026

@@ -1,3 +1,10 @@
+---
+name: "Isolar Uploads por Tenant"
+description: "Uploads de arquivos (logos, imagens de carteirinha, logos de parceiros) são armazenados em diretórios compartilhados (`l"
+prioridade: "🟠 Alta"
+responsavel: "Dev / Segurança (AppSec)"
+---
+
 # Isolar Uploads por Tenant — 30/03/2026
 
 **Data:** 30/03/2026

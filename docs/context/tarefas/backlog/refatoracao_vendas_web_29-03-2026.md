@@ -1,6 +1,8 @@
 ---
-name: Migração completa do vendas_web para apps modulares
-description: Finalizar a migração de models, views, urls e templates do vendas_web para a nova estrutura de apps
+name: "Migração completa do vendas_web para apps modulares"
+description: "Finalizar a migração de models, views, urls e templates do vendas_web para a nova estrutura de apps"
+prioridade: "🔴 Alta"
+responsavel: "Tech Lead"
 type: tarefa
 status: em andamento
 criado_em: 29/03/2026

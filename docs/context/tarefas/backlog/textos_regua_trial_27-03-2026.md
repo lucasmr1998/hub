@@ -1,6 +1,8 @@
 ---
-name: Textos da Régua de Conversão do Trial
-description: Escrever os textos de cada mensagem da régua de trial por canal (WhatsApp, e-mail, notificação)
+name: "Textos da Régua de Conversão do Trial"
+description: "Escrever os textos de cada mensagem da régua de trial por canal (WhatsApp, e-mail, notificação)"
+prioridade: "🟡 Média"
+responsavel: "PMM"
 type: tarefa
 status: pendente
 criado_em: 27/03/2026

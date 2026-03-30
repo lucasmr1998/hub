@@ -1,3 +1,10 @@
+---
+name: "Implementar Rate Limiting"
+description: "Nenhum endpoint possui rate limiting. APIs públicas (cadastro, consulta CEP) e webhooks podem ser abusados com enumeraçã"
+prioridade: "🟠 Alta"
+responsavel: "Dev / DevOps"
+---
+
 # Implementar Rate Limiting — 30/03/2026
 
 **Data:** 30/03/2026

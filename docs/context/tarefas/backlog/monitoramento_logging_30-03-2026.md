@@ -1,3 +1,10 @@
+---
+name: "Monitoramento e Logging Estruturado"
+description: "O projeto possui apenas logs do Gunicorn e um model `LogIntegracao` para auditoria de integrações. Não há APM, alertas, "
+prioridade: "🟡 Média"
+responsavel: "DevOps"
+---
+
 # Monitoramento e Logging Estruturado — 30/03/2026
 
 **Data:** 30/03/2026

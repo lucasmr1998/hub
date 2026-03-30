@@ -1,3 +1,10 @@
+---
+name: "Corrigir IDOR nas APIs — Verificação de Tenant"
+description: "Múltiplas APIs aceitam IDs via parâmetro (lead_id, imagem_id, fluxo_id) sem verificar se o objeto pertence ao tenant do "
+prioridade: "🟠 Alta"
+responsavel: "Dev / Segurança (AppSec)"
+---
+
 # Corrigir IDOR nas APIs — Verificação de Tenant — 30/03/2026
 
 **Data:** 30/03/2026

@@ -1,3 +1,10 @@
+---
+name: "Padronizar frontend do módulo CS"
+description: "Os templates do módulo CS (clube, parceiros, indicacoes, carteirinha) foram migrados do megaroleta e ainda usam o layout"
+prioridade: "🟡 Média"
+responsavel: "CTO"
+---
+
 # Padronizar frontend do módulo CS — 29/03/2026
 
 **Data:** 29/03/2026

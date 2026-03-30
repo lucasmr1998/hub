@@ -1,3 +1,10 @@
+---
+name: "Validação de Token nos Webhooks"
+description: "O webhook `webhook_hubsoft_contrato()` aceita qualquer POST sem validar a origem. Um atacante pode forjar confirmações d"
+prioridade: "🔴 Alta"
+responsavel: "Dev / Segurança (AppSec)"
+---
+
 # Validação de Token nos Webhooks — 30/03/2026
 
 **Data:** 30/03/2026

@@ -1,3 +1,10 @@
+---
+name: "Remover PII de Logs e Print Statements"
+description: "Existem `print()` em `vendas_web/views.py` que expõem email e telefone de leads em stdout. Logs de produção podem conter"
+prioridade: "🟠 Alta"
+responsavel: "Dev / Segurança (AppSec)"
+---
+
 # Remover PII de Logs e Print Statements — 30/03/2026
 
 **Data:** 30/03/2026

@@ -1,3 +1,10 @@
+---
+name: "Pipeline CI/CD"
+description: "Não existe pipeline de CI/CD. Testes, linting e deploy são manuais. Para garantir qualidade e agilidade no deploy, é nec"
+prioridade: "🔴 Alta"
+responsavel: "DevOps"
+---
+
 # Pipeline CI/CD — 30/03/2026
 
 **Data:** 30/03/2026

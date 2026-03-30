@@ -1,3 +1,10 @@
+---
+name: "Docker e Containerização"
+description: "O projeto não possui Dockerfile nem docker-compose. O deploy é manual via Gunicorn + Nginx no servidor. Para escalar o S"
+prioridade: "🔴 Alta"
+responsavel: "DevOps"
+---
+
 # Docker e Containerização — 30/03/2026
 
 **Data:** 30/03/2026

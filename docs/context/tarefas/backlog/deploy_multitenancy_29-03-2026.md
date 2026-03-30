@@ -1,3 +1,10 @@
+---
+name: "Deploy do multi-tenancy em produção"
+description: "Realizar o deploy do sistema de multi-tenancy em produção. Isso envolve rodar as migrations no banco de produção, criar "
+prioridade: "🔴 Alta"
+responsavel: "DevOps / Tech Lead"
+---
+
 # Deploy do multi-tenancy em produção — 29/03/2026
 
 **Data:** 29/03/2026

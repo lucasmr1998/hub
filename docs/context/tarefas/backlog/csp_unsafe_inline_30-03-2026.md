@@ -1,3 +1,10 @@
+---
+name: "Remover unsafe-inline e unsafe-eval do CSP"
+description: "A Content Security Policy permite `unsafe-inline` e `unsafe-eval` nos scripts e estilos. Isso anula a proteção contra XS"
+prioridade: "🟠 Alta"
+responsavel: "Dev / Segurança (AppSec)"
+---
+
 # Remover unsafe-inline e unsafe-eval do CSP — 30/03/2026
 
 **Data:** 30/03/2026

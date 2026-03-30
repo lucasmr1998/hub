@@ -1,3 +1,10 @@
+---
+name: "LGPD e Privacidade de Dados"
+description: "O sistema armazena dados pessoais de leads e clientes (nome, CPF, telefone, endereço, documentos). Com a operação SaaS m"
+prioridade: "🟡 Média"
+responsavel: "Segurança (AppSec) / Jurídico"
+---
+
 # LGPD e Privacidade de Dados — 30/03/2026
 
 **Data:** 30/03/2026

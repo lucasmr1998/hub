@@ -1,3 +1,10 @@
+---
+name: "Validação de Upload — Tipo e Tamanho"
+description: "Uploads de arquivos em carteirinha, parceiros e sistema não validam tipo de arquivo nem tamanho. Um usuário pode enviar "
+prioridade: "🟡 Média"
+responsavel: "Dev / Segurança (AppSec)"
+---
+
 # Validação de Upload — Tipo e Tamanho — 30/03/2026
 
 **Data:** 30/03/2026

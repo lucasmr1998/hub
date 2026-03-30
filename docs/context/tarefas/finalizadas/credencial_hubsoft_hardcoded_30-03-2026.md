@@ -1,3 +1,10 @@
+---
+name: "Remover Credencial HubSoft Hardcoded"
+description: "O arquivo `apps/cs/clube/management/commands/testar_pontuacoes.py` contém a senha do banco HubSoft em texto plano. Qualq"
+prioridade: "🔴 Alta"
+responsavel: "Dev / Segurança (AppSec)"
+---
+
 # Remover Credencial HubSoft Hardcoded — 30/03/2026
 
 **Data:** 30/03/2026

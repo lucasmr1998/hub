@@ -1,3 +1,10 @@
+---
+name: "Lançamento Digital — Landing Page e Redes Sociais"
+description: "Criar a presença digital da AuroraISP: landing page, redes sociais e WhatsApp Business. Esses canais são necessários par"
+prioridade: "🟡 Média"
+responsavel: "Dev + PMM"
+---
+
 # Lançamento Digital — Landing Page e Redes Sociais
 
 **Data:** 26/03/2026

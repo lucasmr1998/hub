@@ -1,3 +1,10 @@
+---
+name: "Admin Aurora — Verificação de Tenant por Objeto"
+description: "O painel Admin Aurora usa `@staff_required` (verifica `is_staff`) mas não valida se o objeto acessado pertence ao tenant"
+prioridade: "🟡 Média"
+responsavel: "Dev / Segurança (AppSec)"
+---
+
 # Admin Aurora — Verificação de Tenant por Objeto — 30/03/2026
 
 **Data:** 30/03/2026

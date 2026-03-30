@@ -1,6 +1,8 @@
 ---
-name: Processo pós-ativação
-description: Definir o que acontece depois que o cliente está ativo — NPS, indicação, expansão para outros módulos
+name: "Processo pós-ativação"
+description: "Definir o que acontece depois que o cliente está ativo — NPS, indicação, expansão para outros módulos"
+prioridade: "🟡 Média"
+responsavel: "CS"
 type: tarefa
 status: pendente
 criado_em: 27/03/2026

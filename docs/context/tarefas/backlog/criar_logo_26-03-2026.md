@@ -1,3 +1,10 @@
+---
+name: "Criar Logo da AuroraISP"
+description: "Criar a identidade visual da AuroraISP, começando pela logo. É o principal desbloqueador do lançamento — one-pager, pitc"
+prioridade: "🔴 Alta"
+responsavel: "CEO"
+---
+
 # Criar Logo da AuroraISP
 
 **Data:** 26/03/2026

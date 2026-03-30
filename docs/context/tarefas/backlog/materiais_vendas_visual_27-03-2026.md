@@ -1,6 +1,8 @@
 ---
-name: Materiais de Vendas — Versões Visuais
-description: Produzir os arquivos finais em PPT/PDF dos materiais de vendas com identidade visual da AuroraISP
+name: "Materiais de Vendas — Versões Visuais"
+description: "Produzir os arquivos finais em PPT/PDF dos materiais de vendas com identidade visual da AuroraISP"
+prioridade: "🟡 Média"
+responsavel: "CMO"
 type: tarefa
 status: pendente
 criado_em: 27/03/2026

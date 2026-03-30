@@ -1,3 +1,10 @@
+---
+name: "Processo de Suporte e Cobrança"
+description: "Não há processo definido para suporte ao cliente SaaS nem modelo de cobrança implementado. Com a Fase 1 começando, é nec"
+prioridade: "🟡 Média"
+responsavel: "CEO / RevOps"
+---
+
 # Processo de Suporte e Cobrança — 30/03/2026
 
 **Data:** 30/03/2026

@@ -1,3 +1,10 @@
+---
+name: "Migração do módulo CS (megaroleta) para o hub"
+description: "Migrar o módulo CS (Clube de Benefícios) do projeto megaroleta para dentro do hub, integrando os apps, models, URLs e te"
+prioridade: "🔴 Alta"
+responsavel: "Tech Lead"
+---
+
 # Migração do módulo CS (megaroleta) para o hub — 29/03/2026
 
 **Data:** 29/03/2026

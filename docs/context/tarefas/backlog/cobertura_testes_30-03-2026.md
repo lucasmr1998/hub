@@ -1,3 +1,10 @@
+---
+name: "Cobertura de Testes"
+description: "A cobertura de testes é ~1%. Existe apenas 1 arquivo de teste real (`test_tenant_isolation.py` com 16 testes). Para um S"
+prioridade: "🔴 Alta"
+responsavel: "QA / Dev"
+---
+
 # Cobertura de Testes — 30/03/2026
 
 **Data:** 30/03/2026

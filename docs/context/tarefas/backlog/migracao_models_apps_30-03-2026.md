@@ -1,3 +1,10 @@
+---
+name: "Limpeza de Apps Legados e Imports"
+description: "Os models já foram migrados para os apps modulares (29/03). Restavam apps legados duplicados e imports antigos. A limpez"
+prioridade: "🔴 Alta"
+responsavel: "Dev"
+---
+
 # Limpeza de Apps Legados e Imports — 30/03/2026
 
 **Data:** 30/03/2026
