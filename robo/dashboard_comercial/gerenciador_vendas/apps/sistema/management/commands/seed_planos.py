@@ -152,23 +152,33 @@ class Command(BaseCommand):
     help = 'Popula features dos planos conforme documentacao GTM.'
 
     def handle(self, *args, **options):
-        NOMES = {
-            ('comercial', 'starter'): 'Comercial Starter',
-            ('comercial', 'start'): 'Comercial Start',
-            ('comercial', 'pro'): 'Comercial Pro',
-            ('marketing', 'starter'): 'Marketing Starter',
-            ('marketing', 'start'): 'Marketing Start',
-            ('marketing', 'pro'): 'Marketing Pro',
-            ('cs', 'starter'): 'CS Starter',
-            ('cs', 'start'): 'CS Start',
-            ('cs', 'pro'): 'CS Pro',
+        # nome, preco_mensal, preco_transacional, unidade_transacional, descricao, ordem, destaque
+        PLANOS = {
+            ('comercial', 'starter'): ('Comercial Starter', 297, 0, '', 'Automação básica de vendas via WhatsApp', 1, False),
+            ('comercial', 'start'): ('Comercial Start', 497, 7, 'por venda finalizada', 'Automação completa com campanhas e notificações', 2, True),
+            ('comercial', 'pro'): ('Comercial Pro', 897, 7, 'por venda finalizada', 'Tudo do Start + CRM Kanban, metas e retenção', 3, False),
+            ('marketing', 'starter'): ('Marketing Starter', 197, 0, '', 'Réguas básicas de automação', 4, False),
+            ('marketing', 'start'): ('Marketing Start', 397, 0.05, 'por contato/mês', 'Automação completa, segmentação e relatórios', 5, True),
+            ('marketing', 'pro'): ('Marketing Pro', 697, 0.05, 'por contato/mês', 'Tudo do Start + IA, tráfego pago otimizado', 6, False),
+            ('cs', 'starter'): ('CS Starter', 197, 0, '', 'Clube de Benefícios básico', 7, False),
+            ('cs', 'start'): ('CS Start', 397, 0.15, 'por cliente ativo no clube', 'Clube + NPS + alertas de inadimplência', 8, True),
+            ('cs', 'pro'): ('CS Pro', 697, 0.15, 'por cliente ativo no clube', 'Tudo do Start + churn prevention IA, upsell', 9, False),
         }
 
         for (modulo, tier), features in FEATURES.items():
-            plano, created = Plano.objects.get_or_create(
+            nome, mensal, trans, unidade, desc, ordem, destaque = PLANOS[(modulo, tier)]
+            plano, created = Plano.objects.update_or_create(
                 modulo=modulo,
                 tier=tier,
-                defaults={'nome': NOMES.get((modulo, tier), f'{modulo} {tier}'.title())},
+                defaults={
+                    'nome': nome,
+                    'preco_mensal': mensal,
+                    'preco_transacional': trans,
+                    'unidade_transacional': unidade,
+                    'descricao': desc,
+                    'ordem': ordem,
+                    'destaque': destaque,
+                },
             )
             if created:
                 self.stdout.write(self.style.WARNING(f'Plano {modulo}/{tier} criado.'))
