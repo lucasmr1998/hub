@@ -5,33 +5,58 @@
 {% block content %}
 <div class="admin-header">
     <h1>Logs do Sistema</h1>
+    <div style="display:flex;align-items:center;gap:12px;">
+        <label style="font-size:.75rem;color:#64748b;display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="checkbox" id="auto-refresh" style="cursor:pointer;">
+            Auto-refresh (30s)
+        </label>
+    </div>
+</div>
+
+<!-- Filtros de busca -->
+<div class="card" style="padding:16px;margin-bottom:20px;">
+    <form method="get" action="{% url 'admin_aurora:logs' %}" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+        <div>
+            <label style="display:block;font-size:.72rem;font-weight:600;color:#334155;margin-bottom:4px;">Busca</label>
+            <input type="text" name="q" value="{{ busca }}" placeholder="Buscar na mensagem..." style="padding:7px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:.82rem;font-family:'Inter',sans-serif;width:220px;">
+        </div>
+        <div>
+            <label style="display:block;font-size:.72rem;font-weight:600;color:#334155;margin-bottom:4px;">Módulo</label>
+            <input type="text" name="modulo" value="{{ modulo }}" placeholder="Ex: comercial, sistema..." style="padding:7px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:.82rem;font-family:'Inter',sans-serif;width:180px;">
+        </div>
+        {% if nivel %}<input type="hidden" name="nivel" value="{{ nivel }}">{% endif %}
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Filtrar</button>
+        {% if busca or modulo or nivel %}
+            <a href="{% url 'admin_aurora:logs' %}" class="btn btn-outline btn-sm"><i class="fas fa-times"></i> Limpar</a>
+        {% endif %}
+    </form>
 </div>
 
 <!-- Filtros por nivel -->
 <div style="display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap;">
-    <a href="{% url 'admin_aurora:logs' %}"
+    <a href="{% url 'admin_aurora:logs' %}{% if busca %}?q={{ busca }}{% endif %}{% if modulo %}{% if busca %}&{% else %}?{% endif %}modulo={{ modulo }}{% endif %}"
        class="btn btn-sm {% if not nivel %}btn-primary{% else %}btn-outline{% endif %}">
         Todos
     </a>
-    <a href="{% url 'admin_aurora:logs' %}?nivel=DEBUG"
+    <a href="{% url 'admin_aurora:logs' %}?nivel=DEBUG{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
        class="btn btn-sm {% if nivel == 'DEBUG' %}btn-primary{% else %}btn-outline{% endif %}">
-        DEBUG
+        DEBUG {% if level_counts.DEBUG %}<span class="badge badge-gray" style="margin-left:4px;">{{ level_counts.DEBUG }}</span>{% endif %}
     </a>
-    <a href="{% url 'admin_aurora:logs' %}?nivel=INFO"
+    <a href="{% url 'admin_aurora:logs' %}?nivel=INFO{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
        class="btn btn-sm {% if nivel == 'INFO' %}btn-primary{% else %}btn-outline{% endif %}">
-        INFO
+        INFO {% if level_counts.INFO %}<span class="badge badge-blue" style="margin-left:4px;">{{ level_counts.INFO }}</span>{% endif %}
     </a>
-    <a href="{% url 'admin_aurora:logs' %}?nivel=WARNING"
+    <a href="{% url 'admin_aurora:logs' %}?nivel=WARNING{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
        class="btn btn-sm {% if nivel == 'WARNING' %}btn-primary{% else %}btn-outline{% endif %}">
-        WARNING
+        WARNING {% if level_counts.WARNING %}<span class="badge badge-yellow" style="margin-left:4px;">{{ level_counts.WARNING }}</span>{% endif %}
     </a>
-    <a href="{% url 'admin_aurora:logs' %}?nivel=ERROR"
+    <a href="{% url 'admin_aurora:logs' %}?nivel=ERROR{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
        class="btn btn-sm {% if nivel == 'ERROR' %}btn-primary{% else %}btn-outline{% endif %}">
-        ERROR
+        ERROR {% if level_counts.ERROR %}<span class="badge badge-red" style="margin-left:4px;">{{ level_counts.ERROR }}</span>{% endif %}
     </a>
-    <a href="{% url 'admin_aurora:logs' %}?nivel=CRITICAL"
+    <a href="{% url 'admin_aurora:logs' %}?nivel=CRITICAL{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
        class="btn btn-sm {% if nivel == 'CRITICAL' %}btn-primary{% else %}btn-outline{% endif %}">
-        CRITICAL
+        CRITICAL {% if level_counts.CRITICAL %}<span class="badge badge-red" style="margin-left:4px;">{{ level_counts.CRITICAL }}</span>{% endif %}
     </a>
 </div>
 
@@ -73,11 +98,38 @@
             {% empty %}
             <tr>
                 <td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">
-                    Nenhum log encontrado{% if nivel %} para o nível {{ nivel }}{% endif %}.
+                    Nenhum log encontrado{% if nivel %} para o nível {{ nivel }}{% endif %}{% if busca %} com "{{ busca }}"{% endif %}.
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
+<div style="margin-top:12px;font-size:.72rem;color:#94a3b8;text-align:right;">
+    Exibindo até 200 registros mais recentes.
+</div>
+
+<script>
+(function() {
+    const checkbox = document.getElementById('auto-refresh');
+    let timer = null;
+    const KEY = 'aurora_logs_autorefresh';
+
+    if (localStorage.getItem(KEY) === 'true') {
+        checkbox.checked = true;
+        timer = setTimeout(function() { location.reload(); }, 30000);
+    }
+
+    checkbox.addEventListener('change', function() {
+        if (this.checked) {
+            localStorage.setItem(KEY, 'true');
+            timer = setTimeout(function() { location.reload(); }, 30000);
+        } else {
+            localStorage.removeItem(KEY);
+            if (timer) clearTimeout(timer);
+        }
+    });
+})();
+</script>
 {% endblock %}

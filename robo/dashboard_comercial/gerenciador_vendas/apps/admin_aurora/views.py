@@ -192,13 +192,108 @@ def criar_tenant_view(request):
 
 
 @superuser_required
+def monitoramento_view(request):
+    """Painel de monitoramento do sistema."""
+    from django.db import connection
+    from django.db.models import Count
+    from apps.comercial.leads.models import LeadProspecto
+    from apps.comercial.atendimento.models import AtendimentoFluxo
+    from apps.integracoes.models import LogIntegracao
+
+    hoje = date.today()
+    semana = hoje - timedelta(days=7)
+
+    # Health check
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        db_status = 'online'
+    except Exception:
+        db_status = 'offline'
+
+    # Métricas de hoje
+    leads_hoje = LeadProspecto.all_tenants.filter(data_cadastro__date=hoje).count()
+    leads_semana = LeadProspecto.all_tenants.filter(data_cadastro__date__gte=semana).count()
+    atendimentos_hoje = AtendimentoFluxo.all_tenants.filter(data_inicio__date=hoje).count()
+
+    # Integrações
+    logs_integracao = LogIntegracao.objects.order_by('-data_criacao')[:20]
+    erros_integracao_24h = LogIntegracao.objects.filter(
+        sucesso=False,
+        data_criacao__gte=timezone.now() - timedelta(hours=24)
+    ).count()
+    sucesso_integracao_24h = LogIntegracao.objects.filter(
+        sucesso=True,
+        data_criacao__gte=timezone.now() - timedelta(hours=24)
+    ).count()
+
+    # Logs do sistema
+    erros_24h = LogSistema.all_tenants.filter(
+        nivel__in=['ERROR', 'CRITICAL'],
+        data_criacao__gte=timezone.now() - timedelta(hours=24)
+    ).count()
+    warnings_24h = LogSistema.all_tenants.filter(
+        nivel='WARNING',
+        data_criacao__gte=timezone.now() - timedelta(hours=24)
+    ).count()
+
+    # Tenants
+    tenants = Tenant.objects.all()
+    tenants_ativos = tenants.filter(ativo=True).count()
+    tenants_trial = tenants.filter(em_trial=True).count()
+
+    # Últimos logs de erro
+    ultimos_erros = LogSistema.all_tenants.filter(
+        nivel__in=['ERROR', 'CRITICAL']
+    ).order_by('-data_criacao')[:10]
+
+    return render(request, 'admin_aurora/monitoramento.html', {
+        'db_status': db_status,
+        'leads_hoje': leads_hoje,
+        'leads_semana': leads_semana,
+        'atendimentos_hoje': atendimentos_hoje,
+        'erros_integracao_24h': erros_integracao_24h,
+        'sucesso_integracao_24h': sucesso_integracao_24h,
+        'logs_integracao': logs_integracao,
+        'erros_24h': erros_24h,
+        'warnings_24h': warnings_24h,
+        'tenants_ativos': tenants_ativos,
+        'tenants_trial': tenants_trial,
+        'ultimos_erros': ultimos_erros,
+    })
+
+
+@superuser_required
 def logs_view(request):
     """Logs do sistema. Somente superusers."""
-    nivel = request.GET.get('nivel', 'ERROR')
-    logs = LogSistema.all_tenants.filter(nivel=nivel).order_by('-data_criacao')[:100]
+    from django.db.models import Count
+
+    nivel = request.GET.get('nivel', '')
+    modulo = request.GET.get('modulo', '')
+    busca = request.GET.get('q', '')
+
+    logs = LogSistema.all_tenants.all().order_by('-data_criacao')
+
+    if nivel:
+        logs = logs.filter(nivel=nivel)
+    if modulo:
+        logs = logs.filter(modulo__icontains=modulo)
+    if busca:
+        logs = logs.filter(mensagem__icontains=busca)
+
+    # Counts per level
+    level_counts = dict(
+        LogSistema.all_tenants.values_list('nivel').annotate(c=Count('id')).values_list('nivel', 'c')
+    )
+
+    logs = logs[:200]
+
     return render(request, 'admin_aurora/logs.html', {
         'logs': logs,
         'nivel': nivel,
+        'modulo': modulo,
+        'busca': busca,
+        'level_counts': level_counts,
     })
 
 

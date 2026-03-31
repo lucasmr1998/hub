@@ -8,6 +8,7 @@ urlpatterns = [
     path('tenant/<int:tenant_id>/', views.tenant_detalhe_view, name='tenant_detalhe'),
     path('tenant/criar/', views.criar_tenant_view, name='criar_tenant'),
     path('logs/', views.logs_view, name='logs'),
+    path('monitoramento/', views.monitoramento_view, name='monitoramento'),
     path('api/toggle-tenant/', views.api_toggle_tenant, name='api_toggle_tenant'),
 
     # Planos
