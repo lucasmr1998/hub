@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
 from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q, Sum, Avg, F
 from django.db.models.functions import TruncDate, TruncWeek, TruncMonth
 from django.http import HttpResponse
@@ -27,7 +27,6 @@ def admin_login(request):
     return render(request, 'clube/dashboard/login.html', {'form': form})
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def dashboard_home(request):
     PREMIO_SEM_SORTE = 'Não foi dessa vez'
 
@@ -153,7 +152,6 @@ def dashboard_home(request):
     return render(request, 'clube/dashboard/home.html', context)
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def dashboard_premios(request):
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -229,7 +227,6 @@ def dashboard_premios(request):
     })
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def dashboard_participantes(request):
     """
     Shows unique members of the Clube MegaLink
@@ -296,7 +293,6 @@ def dashboard_participantes(request):
     return render(request, 'clube/dashboard/participantes.html', context)
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def dashboard_extrato_membro(request, membro_id):
     """
     Shows the points history (ExtratoPontuacao) for a specific member
@@ -307,7 +303,6 @@ def dashboard_extrato_membro(request, membro_id):
     return render(request, 'clube/dashboard/extrato_membro.html', {'membro': membro, 'extrato': extrato})
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def dashboard_giros(request):
     """
     Shows historical log of all roulette spins
@@ -325,7 +320,6 @@ def dashboard_giros(request):
     return render(request, 'clube/dashboard/giros.html', {'giros': page_obj, 'page_obj': page_obj, 'q': q})
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def exportar_csv(request):
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="participantes_roleta.csv"'
@@ -340,7 +334,6 @@ def exportar_csv(request):
     return response
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def dashboard_assets(request):
     if request.method == 'POST':
         asset_id = request.POST.get('asset_id')
@@ -369,7 +362,6 @@ def dashboard_assets(request):
     return render(request, 'clube/dashboard/assets.html', context)
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def dashboard_config(request):
     config, _ = RoletaConfig.objects.get_or_create(id=1)
     if request.method == 'POST':
@@ -385,7 +377,6 @@ def dashboard_config(request):
     return render(request, 'clube/dashboard/config.html', {'config': config})
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def dashboard_gamificacao(request):
     """
     Manage Levels and Point Rules
@@ -460,7 +451,6 @@ def dashboard_gamificacao(request):
     return render(request, 'clube/dashboard/gamificacao.html', context)
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def dashboard_cidades(request):
     """
     Gestão de Cidades permitidas para os prêmios.
@@ -499,7 +489,6 @@ def dashboard_cidades(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def dashboard_relatorios(request):
     """
     Relatórios analíticos da roleta.
@@ -763,7 +752,6 @@ def _get_periodo_filtro(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def dashboard_relatorios_indicacoes(request):
     """Relatórios de indicações."""
     periodo, data_inicio = _get_periodo_filtro(request)
@@ -860,7 +848,6 @@ def dashboard_relatorios_indicacoes(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def dashboard_relatorios_parceiros(request):
     """Relatórios de parceiros e cupons."""
     periodo, data_inicio = _get_periodo_filtro(request)
@@ -917,7 +904,6 @@ def dashboard_relatorios_parceiros(request):
 # ============================================================
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def dashboard_landing_config(request):
     """Editar configuracao da landing page publica."""
     config, _ = LandingConfig.objects.get_or_create(id=1)
@@ -942,7 +928,6 @@ def dashboard_landing_config(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def dashboard_banners(request):
     """CRUD de banners da landing page."""
     if request.method == 'POST':
@@ -983,7 +968,6 @@ def dashboard_banners(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def dashboard_categorias(request):
     """CRUD de categorias de parceiros."""
     if request.method == 'POST':
