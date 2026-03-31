@@ -16,7 +16,7 @@ responsavel: "CEO / PM / Tech Lead"
 
 ## Descrição
 
-A AuroraISP será a primeira cliente do próprio sistema. O módulo Comercial será usado para gerenciar o pipeline de vendas de provedores, e um novo módulo de Suporte será criado para atender os clientes pós-venda.
+A AuroraISP será a primeira cliente do próprio sistema multi-tenant. Não é criar algo novo: é usar o mesmo CRM, fluxos de atendimento e CS que já existem, mas configurados para o contexto B2B (provedores como leads em vez de pessoas físicas). O tenant "Aurora HQ" opera no mesmo sistema que os tenants dos provedores clientes.
 
 ---
 
