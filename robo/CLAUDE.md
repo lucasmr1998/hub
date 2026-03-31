@@ -20,7 +20,7 @@
 
 ### Estrutura de apps
 
-O projeto foi refatorado de um monolito (vendas_web) para apps modulares:
+O projeto foi completamente migrado de um monolito (vendas_web) para apps modulares. A migração foi finalizada em 31/03/2026. O `vendas_web` foi removido do INSTALLED_APPS e seu código é morto (urls.py e admin.py vazios).
 
 ```
 gerenciador_vendas/
@@ -30,8 +30,14 @@ gerenciador_vendas/
 │   ├── settings_local.py        # Desenvolvimento (SQLite)
 │   └── urls.py
 │
-├── apps/
-│   ├── sistema/                 # Tenant, PerfilUsuario, configs do SaaS
+├── apps/                        # FONTE DA VERDADE — todos os models, views, templates, URLs
+│   ├── sistema/                 # Tenant, PerfilUsuario, configs, base.html, static files
+│   │   ├── decorators.py        # @api_token_required, @webhook_token_required
+│   │   ├── validators.py        # validate_image_upload, tenant_upload_path
+│   │   ├── logging_filters.py   # PIIFilter
+│   │   ├── context_processors.py
+│   │   ├── templates/sistema/base.html  # Template base do projeto
+│   │   └── static/sistema/      # CSS e JS globais
 │   ├── notificacoes/            # Motor de comunicação (cross-module)
 │   ├── integracoes/             # HubSoft API, sync de clientes
 │   ├── dashboard/               # Dashboard e relatórios
@@ -42,7 +48,7 @@ gerenciador_vendas/
 │   │   ├── atendimento/         # Bot conversacional (N8N)
 │   │   ├── cadastro/            # Registro, contrato, ativação
 │   │   ├── viabilidade/         # Cobertura técnica
-│   │   └── crm/                 # CRM Kanban (Plano Pro)
+│   │   └── crm/                 # CRM Kanban (Plano Pro) — TenantMixin em 13 models
 │   │
 │   ├── marketing/
 │   │   └── campanhas/           # Tráfego pago e atribuição
@@ -53,28 +59,54 @@ gerenciador_vendas/
 │       ├── indicacoes/          # Programa de indicações
 │       └── carteirinha/         # Carteirinha digital
 │
-├── vendas_web/                  # God App legado (em processo de migração)
-├── integracoes/                 # App original (copiado para apps/integracoes)
-└── crm/                         # App original (copiado para apps/comercial/crm)
+├── vendas_web/                  # MORTO — removido do INSTALLED_APPS, urls.py e admin.py vazios
+├── tests/                       # 225 testes, 10 arquivos, 28+ factories
+└── .github/workflows/           # CI/CD com GitHub Actions
 ```
 
 ### Multi-tenancy
 
-Implementado localmente, pendente deploy em produção.
+Implementado e validado localmente, pendente deploy em produção.
 - **Tenant:** model central que representa cada provedor
-- **TenantMixin:** mixin com FK tenant + auto-save + auto-filtro
+- **TenantMixin:** mixin com FK tenant + auto-save + auto-filtro. Aplicado em TODOS os models, incluindo 13 models do CRM
 - **TenantManager:** filtra automaticamente por tenant do request
 - **TenantMiddleware:** resolve o tenant via thread-local
-- **Admin Aurora:** painel /aurora-admin/ para gerenciar tenants e planos
+- **Admin Aurora:** painel /aurora-admin/ para gerenciar tenants e planos. Protegido com `superuser_required` + verificação de acesso ao tenant
+
+### API REST (DRF)
+
+- **Django REST Framework** implementado com TokenAuth + SessionAuth
+- Endpoints em `/api/v1/`
+- Documentação Swagger em `/api/docs/`
+- Serializers e ViewSets para os principais models
+
+### Segurança
+
+- **Decorators de autenticação:** `@api_token_required` (27 endpoints N8N), `@login_required` (21 endpoints painel), 3 endpoints públicos
+- **Webhook:** `@webhook_token_required` para webhooks HubSoft
+- **IDOR:** helper `get_tenant_object_or_404` para isolamento de tenant nas APIs
+- **PII:** PIIFilter no logging (CPF, email, telefone). 35+ prints removidos
+- **Uploads:** `validate_image_upload` (tipo + 5MB) e `tenant_upload_path` para isolamento
+- **XSS:** `format_html` corrigido em 9 funções, escape de HTML em JSON
+- **Credenciais:** todas em variáveis de ambiente (`.env`)
+- **HTTPS:** SECURE_SSL_REDIRECT, SESSION_COOKIE_SECURE via env var
+
+### Testes
+
+- **225 testes passando** (tenant isolation, endpoint auth, factories, module access)
+- 10 arquivos de teste em `tests/`
+- 28+ factories
+- CI/CD com GitHub Actions (`.github/workflows/`)
 
 ### Padrão de Frontend
 
 O projeto segue o design system documentado em `FRONTEND_BLUEPRINT.md`:
 - Topbar (52px) + Sidebar (220px) + Main Content
-- CSS em `vendas_web/static/vendas_web/css/dashboard.css`
+- CSS em `apps/sistema/static/sistema/css/dashboard.css`
 - Variáveis CSS com prefixo `--` (ex: `--primary`, `--border`)
 - Font: Inter (Google Fonts)
 - Icons: FontAwesome 6
+- Navegação por page reload (SPA desativado)
 
 ### Módulos da Topbar
 
@@ -103,4 +135,10 @@ python manage.py criar_tenant --settings=gerenciador_vendas.settings_local
 # Migrations locais
 python manage.py makemigrations --settings=gerenciador_vendas.settings_local
 python manage.py migrate --settings=gerenciador_vendas.settings_local
+
+# Rodar testes (225 testes)
+python manage.py test tests/ --settings=gerenciador_vendas.settings_local
+
+# Check do projeto
+python manage.py check --settings=gerenciador_vendas.settings_local
 ```

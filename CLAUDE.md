@@ -3,7 +3,7 @@
 ## Permissões
 
 - **NÃO editar** o projeto `megaroleta/`. Apenas leitura.
-- **`robo/` liberado para edição.** Refatoração em andamento (separação em apps por módulo).
+- **`robo/` liberado para edição.** Refatoração concluída. Estrutura modular em `apps/` é a fonte da verdade. `vendas_web` está desativado (código morto).
 - **NUNCA rodar comandos que afetem o banco de produção.** Sempre usar `--settings=gerenciador_vendas.settings_local` (SQLite local). Isso inclui: `migrate`, `makemigrations`, `createsuperuser`, `flush`, `loaddata`, `dumpdata`, `dbshell`, ou qualquer script que conecte ao PostgreSQL de produção.
 
 ---
@@ -76,20 +76,24 @@ Os projetos de código ficam em pastas separadas e não devem ser editados sem a
 
 ### robo/
 Módulo principal da AuroraISP (Comercial + CS + Marketing). Em produção na Megalink Telecom.
-- Stack: Python 3.11, Django 5.2, PostgreSQL, Gunicorn, Nginx
+- Stack: Python 3.11, Django 5.2, DRF, PostgreSQL, Gunicorn, Nginx
 - Integrações: HubSoft API, N8N, Matrix API, ViaCEP, WeasyPrint
 - Projeto Django: `robo/dashboard_comercial/gerenciador_vendas/`
-- **Estrutura modular (10+ apps):**
-  - `apps/sistema/` — Tenant, PerfilUsuario, configs do SaaS
+- **`vendas_web` desativado.** Removido do INSTALLED_APPS. Todos os models, views, templates, URLs, admin e signals migrados para `apps/`. O código em `vendas_web/` é morto e não deve ser referenciado.
+- **Estrutura modular (15 apps) em `apps/`:**
+  - `apps/sistema/` — Tenant, PerfilUsuario, configs do SaaS, base.html, static files, decorators, validators, logging filters
   - `apps/comercial/leads/`, `apps/comercial/atendimento/`, `apps/comercial/cadastro/`, `apps/comercial/viabilidade/`, `apps/comercial/crm/`
   - `apps/marketing/campanhas/`
   - `apps/cs/clube/`, `apps/cs/parceiros/`, `apps/cs/indicacoes/`, `apps/cs/carteirinha/`
   - `apps/dashboard/`, `apps/notificacoes/`, `apps/integracoes/`
   - `apps/admin_aurora/` — Painel de gestão do SaaS (/aurora-admin/)
-- **Multi-tenancy implementado:** Tenant model, TenantMixin, TenantManager, TenantMiddleware. Isolamento de dados por provedor. Implementado localmente, pendente deploy em produção.
+- **Multi-tenancy implementado:** Tenant model, TenantMixin (em TODOS os models incluindo CRM), TenantManager, TenantMiddleware. Isolamento de dados por provedor. Pendente deploy em produção.
 - **Admin Aurora:** Painel /aurora-admin/ para gerenciar tenants, planos (9 planos, 115 features) e monitorar o SaaS.
 - **CS migrado do megaroleta:** apps clube, parceiros, indicacoes e carteirinha integrados ao hub.
-- **Segurança:** secrets removidos do código, migrados para variáveis de ambiente.
+- **API REST:** DRF com TokenAuth + SessionAuth. Endpoints em `/api/v1/`. Swagger em `/api/docs/`.
+- **Segurança:** 5 vulnerabilidades críticas e 12 altas/médias corrigidas. Secrets em variáveis de ambiente. `@api_token_required` para N8N, `@login_required` para painel. PIIFilter no logging. Validação de uploads. Isolamento de tenant em uploads.
+- **Testes:** 225 testes passando, 10 arquivos de teste, 28+ factories. CI/CD com GitHub Actions.
+- **Migrations:** limpas e regeneradas do zero para todos os apps.
 
 ### megaroleta/
 Módulo **CS / Clube de Benefícios** da AuroraISP. **Legacy.** Os apps principais (clube, parceiros, indicacoes, carteirinha) foram migrados para `robo/apps/cs/`.

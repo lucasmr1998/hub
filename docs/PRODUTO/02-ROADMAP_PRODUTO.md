@@ -1,8 +1,8 @@
 # Roadmap de Produto — AuroraISP
 
-**Status:** 🔧 Em construção
-**Última atualização:** 29/03/2026
-**Base:** Análise completa do código fonte (robo/) em 28/03/2026. Atualizado após refatoração de 29/03/2026.
+**Status:** ✅ Atualizado
+**Última atualização:** 31/03/2026
+**Base:** Análise completa do código fonte (robo/) em 28/03/2026. Refatoração completa finalizada em 31/03/2026. vendas_web removido do INSTALLED_APPS.
 
 ---
 
@@ -12,28 +12,27 @@
 
 | Item | Valor |
 |------|-------|
-| Framework | Django 5.2, Python 3.11 |
+| Framework | Django 5.2, Python 3.11, DRF |
 | Banco | PostgreSQL 15+ |
-| Apps Django | 14+ (10 novos em apps/ + vendas_web legado + integracoes + crm + admin_aurora) |
-| Models totais | 67+ (originais + Tenant, PerfilUsuario, Plano, FeaturePlano + 20 CS migrados) |
-| Rotas totais | 360+ (288 originais + 76 CS migrados) |
-| Templates | 100+ (30 originais + 67 CS migrados) |
+| Apps Django | 15 modulares em apps/ (vendas_web removido do INSTALLED_APPS) |
+| Models totais | 67+ (todos com app_label natural, sem referência a vendas_web) |
+| Views migradas | 9.457 linhas migradas para apps modulares |
+| Rotas totais | 139 rotas em urls.py de cada app |
+| Templates | 24 templates migrados para diretórios de cada app |
+| Admin migrado | 3.676 linhas de admin distribuídas em 7 apps |
 | Linhas de código | ~30.000+ |
-| Testes | 16 (isolamento de tenant) |
-| Multi-tenancy | ✅ Implementado (29/03/2026). Pendente deploy em produção |
+| Testes | 225 (10 arquivos, 28+ factories, CI/CD) |
+| Multi-tenancy | ✅ Implementado (29/03/2026). TenantMixin em todos os models incluindo CRM. Pendente deploy |
+| Segurança | ✅ 5 críticas + 12 altas/médias corrigidas (30/03/2026) |
+| API REST | ✅ DRF com TokenAuth + SessionAuth. Swagger em /api/docs/ |
 
 ### 1.2 Apps existentes
 
-#### `vendas_web` (God App, precisa separar)
-27 models em um único `models.py` de 5.349 linhas. 128 funções em `views.py` de 7.464 linhas. Concentra 7 domínios diferentes misturados.
+#### `vendas_web` — DESATIVADO (31/03/2026)
+Removido do INSTALLED_APPS. Todos os 27 models, 128 views, 24 templates, 139 rotas, 3.676 linhas de admin, signals e services foram migrados para os 15 apps em `apps/`. O `urls.py` e `admin.py` estão vazios. Migrations limpas e regeneradas do zero.
 
-#### `integracoes` (app separado, bem estruturado)
-4 models: IntegracaoAPI, LogIntegracao, ClienteHubsoft, ServicoClienteHubsoft.
-Service dedicado para HubSoft com OAuth, sync de clientes e management commands.
-
-#### `crm` (app separado, bem estruturado)
-12 models com pipeline kanban, equipes, metas, segmentos, retenção e configuração.
-66 rotas, 10 templates, signals de auto-criação de oportunidade e conversão automática.
+#### `apps/` — Estrutura modular (15 apps)
+Todos os models têm app_label natural (sem `app_label='vendas_web'`). Cada app possui seus próprios models, views, urls, templates, admin e migrations. Base.html e static files centralizados em `apps/sistema/`.
 
 ---
 
@@ -163,32 +162,32 @@ Service dedicado para HubSoft com OAuth, sync de clientes e management commands.
 
 ### 3.1 Críticos (bloqueiam novos clientes)
 
-| Débito | Impacto | Esforço |
-|--------|---------|---------|
-| **Multi-tenancy inexistente** | Impossível ter mais de 1 provedor no sistema | Alto |
-| **Credenciais hardcoded** (DB, SECRET_KEY, token Matrix) | Comprometimento total em repo público | Baixo |
-| **APIs sem autenticação** (middleware isenta `^api/`) | Qualquer pessoa manipula dados | Médio |
-| **DEBUG=True em produção** | Expõe stack traces com variáveis | Baixo |
+| Débito | Impacto | Esforço | Status |
+|--------|---------|---------|--------|
+| **Multi-tenancy inexistente** | Impossível ter mais de 1 provedor no sistema | Alto | ✅ Concluído (29/03). TenantMixin em todos os models |
+| **Credenciais hardcoded** (DB, SECRET_KEY, token Matrix) | Comprometimento total em repo público | Baixo | ✅ Concluído (29/03). Todas em variáveis de ambiente |
+| **APIs sem autenticação** (middleware isenta `^api/`) | Qualquer pessoa manipula dados | Médio | ✅ Concluído (30/03). 27 endpoints com @api_token_required, 21 com @login_required |
+| **DEBUG=True em produção** | Expõe stack traces com variáveis | Baixo | ✅ Concluído (29/03) |
 
 ### 3.2 Altos (impactam operação)
 
-| Débito | Impacto | Esforço |
-|--------|---------|---------|
-| **God App (vendas_web)** com 27 models em 1 arquivo | Manutenção cada vez mais difícil, multi-tenancy impossível de aplicar limpo | Alto |
-| **Chamadas HTTP síncronas em signals** | Save trava 30s+ se API externa cair | Médio |
-| **Zero testes** para 25.000+ linhas | Regressões silenciosas, medo de refatorar | Alto |
-| **50+ endpoints com @csrf_exempt** | Vulnerabilidade CSRF em todo o sistema | Médio |
-| **Monkey-patch do User** (add_to_class) | Frágil, quebra com updates do Django | Baixo |
+| Débito | Impacto | Esforço | Status |
+|--------|---------|---------|--------|
+| **God App (vendas_web)** com 27 models em 1 arquivo | Manutenção cada vez mais difícil | Alto | ✅ Concluído (31/03). vendas_web removido do INSTALLED_APPS. 15 apps modulares |
+| **Chamadas HTTP síncronas em signals** | Save trava 30s+ se API externa cair | Médio | ⏳ Pendente (migrar para Celery ou Django-Q) |
+| **Zero testes** para 25.000+ linhas | Regressões silenciosas | Alto | ✅ Concluído (30/03). 225 testes passando, CI/CD configurado |
+| **50+ endpoints com @csrf_exempt** | Vulnerabilidade CSRF | Médio | ✅ Concluído (30/03). CSRF corrigido nos endpoints do frontend |
+| **Monkey-patch do User** (add_to_class) | Frágil, quebra com updates do Django | Baixo | ⏳ Pendente (substituir por PerfilUsuario) |
 
 ### 3.3 Médios (dívida técnica)
 
-| Débito | Impacto | Esforço |
-|--------|---------|---------|
-| Sem Django REST Framework (serialização manual) | Código repetitivo, sem validação padrão | Médio |
-| Sem versionamento de API (/api/v1/) | Mudança breaking afeta todos os consumidores | Baixo |
-| Endpoints N8N duplicam lógica dos normais | Manutenção dobrada | Médio |
-| Rotas legado sem prazo de remoção | Dívida crescente | Baixo |
-| WeasyPrint não está no requirements.txt | Deploy quebra em ambiente limpo | Baixo |
+| Débito | Impacto | Esforço | Status |
+|--------|---------|---------|--------|
+| Sem Django REST Framework (serialização manual) | Código repetitivo, sem validação padrão | Médio | ✅ Concluído (30/03). DRF implementado com TokenAuth + SessionAuth |
+| Sem versionamento de API (/api/v1/) | Mudança breaking afeta todos os consumidores | Baixo | ✅ Concluído (30/03). API em /api/v1/, Swagger em /api/docs/ |
+| Endpoints N8N duplicam lógica dos normais | Manutenção dobrada | Médio | ⏳ Pendente |
+| Rotas legado sem prazo de remoção | Dívida crescente | Baixo | ✅ Concluído (31/03). vendas_web/urls.py vazio |
+| WeasyPrint não está no requirements.txt | Deploy quebra em ambiente limpo | Baixo | ⏳ Pendente |
 
 ---
 
@@ -196,14 +195,17 @@ Service dedicado para HubSoft com OAuth, sync de clientes e management commands.
 
 **Decisão (29/03/2026):** Opção A — sub-apps por pasta. Cada domínio é um app Django completo dentro do seu módulo. Aprovada pelo CEO por permitir migrations isoladas, ativação/desativação por plano (Start/Pro) e refatoração incremental do vendas_web.
 
-### Estado atual
+### Estado atual (31/03/2026)
 
 ```
 gerenciador_vendas/
-├── vendas_web/     → 27 models, 128 views, 222 rotas (God App)
-├── integracoes/    → 4 models (bem separado)
-└── crm/            → 12 models (bem separado, referência de qualidade)
+├── apps/           → 15 apps modulares. FONTE DA VERDADE. Todos os models, views, templates, URLs, admin
+├── vendas_web/     → MORTO. Removido do INSTALLED_APPS. urls.py e admin.py vazios
+├── integracoes/    → Legacy. Código copiado para apps/integracoes/
+└── crm/            → Legacy. Código copiado para apps/comercial/crm/
 ```
+
+> **Migração concluída:** 9.457 linhas de views, 24 templates, 139 rotas, 3.676 linhas de admin migrados. Migrations limpas e regeneradas do zero. Todos os models com app_label natural.
 
 ### Estado alvo
 
@@ -497,42 +499,48 @@ urlpatterns = [
 
 ## 5. Roadmap de produto por fases
 
-### Fase 0 — Segurança e Fundação (bloqueadores)
+### Fase 0 — Segurança e Fundação (bloqueadores) ✅ CONCLUÍDA
 **Prazo alvo:** até 30/03/2026
 **Responsável:** Dev (CTO)
+**Status:** Todos os itens críticos concluídos entre 29/03 e 31/03/2026.
 
-| Ação | Prioridade | Esforço |
-|------|-----------|---------|
-| Remover credenciais hardcoded do código | Urgente | 1 dia | ✅ Concluído (29/03) |
-| Rotacionar senha do banco, token Matrix, SECRET_KEY | Urgente | 1 dia | ⏳ Pendente (deploy) |
-| DEBUG=False em produção | Urgente | 1 hora | ✅ Concluído (29/03) |
-| Restringir APIs (remover isenção geral `^api/`) | Urgente | 2 dias | ⏳ Pendente |
-| Implementar token auth para N8N | Urgente | 1 dia | ⏳ Pendente |
-| Multi-tenancy (model Tenant + middleware + FK em todos os models) | Crítico | 1-2 semanas | ✅ Concluído (29/03) |
-| Remover @csrf_exempt dos endpoints do frontend | Alto | 2 dias | ⏳ Pendente |
+| Ação | Prioridade | Status |
+|------|-----------|--------|
+| Remover credenciais hardcoded do código | Urgente | ✅ Concluído (29/03) |
+| Rotacionar senha do banco, token Matrix, SECRET_KEY | Urgente | ⏳ Pendente (requer deploy) |
+| DEBUG=False em produção | Urgente | ✅ Concluído (29/03) |
+| Restringir APIs (remover isenção geral `^api/`) | Urgente | ✅ Concluído (30/03). 48+ endpoints autenticados |
+| Implementar token auth para N8N | Urgente | ✅ Concluído (30/03). @api_token_required |
+| Multi-tenancy (Tenant + middleware + FK em todos os models) | Crítico | ✅ Concluído (29/03). TenantMixin em todos os models |
+| Remover @csrf_exempt dos endpoints do frontend | Alto | ✅ Concluído (30/03) |
+| Scan de segurança completo | Alto | ✅ Concluído (30/03). 5 críticas + 12 altas/médias corrigidas |
 
-### Fase 1 — Validação comercial (produto mínimo para vender)
+### Fase 1 — Validação comercial (produto mínimo para vender) 🔧 EM ANDAMENTO
 **Prazo alvo:** abril/2026
 **Meta:** 15 clientes pagantes até junho/2026
+**Status:** Migração completa. vendas_web removido. Foco agora em deploy e ambiente de demo.
 
-| Ação | Prioridade | Esforço | Status |
-|------|-----------|---------|--------|
-| Criar app `apps.sistema` com Tenant, PerfilUsuario, configs | Alto | 1 semana | ✅ Scaffold + models prontos (29/03) |
-| Extrair `apps.comercial.leads` de vendas_web | Alto | 3 dias | 🔧 Scaffold criado, falta mover models |
-| Extrair `apps.comercial.atendimento` de vendas_web | Alto | 3 dias | 🔧 Scaffold criado, falta mover models |
-| Extrair `apps.comercial.cadastro` de vendas_web | Alto | 3 dias | 🔧 Scaffold criado, falta mover models |
-| Extrair `apps.comercial.viabilidade` de vendas_web | Alto | 1 dia | 🔧 Scaffold criado, falta mover models |
-| Mover `crm/` para `apps.comercial.crm` | Alto | 1 dia | ✅ Copiado, apps.py atualizado (29/03) |
-| Mover `integracoes/` para `apps.integracoes` | Alto | 1 dia | ✅ Copiado, apps.py atualizado (29/03) |
-| Extrair `apps.notificacoes` de vendas_web | Alto | 2 dias | 🔧 Scaffold criado, falta mover models |
-| Extrair `apps.marketing.campanhas` de vendas_web | Alto | 1 dia | 🔧 Scaffold criado, falta mover models |
-| Criar `apps.dashboard` (views de relatório) | Alto | 2 dias | 🔧 Scaffold criado, falta mover views |
-| Renomear `gerenciador_vendas/` para `config/` | Alto | 1 dia | ⏳ Aguardando |
-| Substituir monkey-patch do User por PerfilUsuario | Alto | 2 dias |
-| Mover chamadas HTTP de signals para tasks assíncronas (Celery ou Django-Q) | Alto | 1 semana |
-| Testes unitários para services e signals | Alto | 1 semana |
-| Ambiente de demo multi-tenant | Alto | 3 dias |
-| Onboarding automatizado (criar tenant + config inicial) | Alto | 3 dias |
+| Ação | Prioridade | Status |
+|------|-----------|--------|
+| Criar app `apps.sistema` com Tenant, PerfilUsuario, configs | Alto | ✅ Concluído (29/03) |
+| Extrair `apps.comercial.leads` de vendas_web | Alto | ✅ Concluído (31/03). Models, views, URLs, templates, admin migrados |
+| Extrair `apps.comercial.atendimento` de vendas_web | Alto | ✅ Concluído (31/03). Models, views, URLs, templates, admin migrados |
+| Extrair `apps.comercial.cadastro` de vendas_web | Alto | ✅ Concluído (31/03). Models, views, URLs, templates, admin migrados |
+| Extrair `apps.comercial.viabilidade` de vendas_web | Alto | ✅ Concluído (31/03). Models, views, URLs, templates, admin migrados |
+| Mover `crm/` para `apps.comercial.crm` | Alto | ✅ Concluído (29/03) |
+| Mover `integracoes/` para `apps.integracoes` | Alto | ✅ Concluído (29/03) |
+| Extrair `apps.notificacoes` de vendas_web | Alto | ✅ Concluído (31/03). Models, views, URLs, templates, admin migrados |
+| Extrair `apps.marketing.campanhas` de vendas_web | Alto | ✅ Concluído (31/03). Models, views, URLs, templates, admin migrados |
+| Criar `apps.dashboard` (views de relatório) | Alto | ✅ Concluído (31/03). Views migradas |
+| vendas_web removido do INSTALLED_APPS | Alto | ✅ Concluído (31/03). urls.py e admin.py vazios |
+| Migrations limpas e regeneradas | Alto | ✅ Concluído (31/03) |
+| Django REST Framework implementado | Alto | ✅ Concluído (30/03). TokenAuth + SessionAuth, Swagger |
+| Testes unitários (225 testes) | Alto | ✅ Concluído (30/03). 10 arquivos, 28+ factories, CI/CD |
+| Renomear `gerenciador_vendas/` para `config/` | Médio | ⏳ Aguardando (baixo impacto) |
+| Substituir monkey-patch do User por PerfilUsuario | Alto | ⏳ Pendente |
+| Mover chamadas HTTP de signals para tasks assíncronas | Alto | ⏳ Pendente |
+| Ambiente de demo multi-tenant | Alto | ⏳ Pendente (requer deploy) |
+| Onboarding automatizado (criar tenant + config inicial) | Alto | ⏳ Pendente |
 
 ### Fase 2 — Produto completo Comercial
 **Prazo alvo:** maio/2026
@@ -542,8 +550,8 @@ urlpatterns = [
 | CRM integrado ao fluxo de vendas (já pronto, validar com clientes) | Alto | Validação |
 | Validação automática de documentos por IA | Médio | 2 semanas |
 | Relatórios de conversão por etapa do pipeline | Médio | 1 semana |
-| Adotar Django REST Framework | Médio | 2 semanas |
-| Versionamento de API (/api/v1/) | Médio | 1 semana |
+| Adotar Django REST Framework | Médio | ✅ Concluído (30/03) |
+| Versionamento de API (/api/v1/) | Médio | ✅ Concluído (30/03) |
 | Case público com autorização de cliente | Médio | Comercial |
 
 ### Fase 3 — Módulo Marketing
@@ -588,15 +596,15 @@ urlpatterns = [
 
 | Base existente no código | Onde está | Módulo que aproveita |
 |-------------------------|-----------|---------------------|
-| TipoNotificacao, CanalNotificacao, TemplateNotificacao, Notificacao | vendas_web (mover para notificacoes/) | Marketing (réguas, e-mail, WhatsApp) |
-| PreferenciaNotificacao | vendas_web (mover para notificacoes/) | Marketing e CS |
-| CampanhaTrafego, DeteccaoCampanha | vendas_web (mover para campanhas/) | Marketing (performance, atribuição) |
-| SegmentoCRM, MembroSegmento | crm/ | Marketing (segmentação de base) |
-| ClienteHubsoft, ServicoClienteHubsoft | integracoes/ | CS (base ativa, churn, NPS) |
-| AlertaRetencao | crm/ | CS (churn prevention) |
-| N8N integrado com APIs dedicadas | vendas_web/ | Marketing e CS (automações) |
-| OportunidadeVenda.churn_risk_score | crm/ | CS (health score) |
-| ConfiguracaoCRM.webhook_n8n_* | crm/ | Marketing e CS (event-driven) |
+| TipoNotificacao, CanalNotificacao, TemplateNotificacao, Notificacao | apps/notificacoes/ | Marketing (réguas, e-mail, WhatsApp) |
+| PreferenciaNotificacao | apps/notificacoes/ | Marketing e CS |
+| CampanhaTrafego, DeteccaoCampanha | apps/marketing/campanhas/ | Marketing (performance, atribuição) |
+| SegmentoCRM, MembroSegmento | apps/comercial/crm/ | Marketing (segmentação de base) |
+| ClienteHubsoft, ServicoClienteHubsoft | apps/integracoes/ | CS (base ativa, churn, NPS) |
+| AlertaRetencao | apps/comercial/crm/ | CS (churn prevention) |
+| N8N integrado com APIs dedicadas | apps/comercial/atendimento/ | Marketing e CS (automações) |
+| OportunidadeVenda.churn_risk_score | apps/comercial/crm/ | CS (health score) |
+| ConfiguracaoCRM.webhook_n8n_* | apps/comercial/crm/ | Marketing e CS (event-driven) |
 
 ---
 
@@ -604,9 +612,9 @@ urlpatterns = [
 
 | De | Para | Critério |
 |----|------|---------|
-| Fase 0 | Fase 1 | Multi-tenancy funcionando. Zero credenciais expostas. APIs autenticadas |
-| Fase 1 | Fase 2 | 5 clientes ativos e pagantes. Separação em apps concluída |
-| Fase 2 | Fase 3 | 15 clientes. CRM validado com feedback. DRF adotado |
+| Fase 0 | Fase 1 | ✅ Multi-tenancy funcionando. Zero credenciais expostas. APIs autenticadas |
+| Fase 1 | Fase 2 | 🔧 Separação em apps concluída. Falta: 5 clientes ativos e pagantes + deploy em produção |
+| Fase 2 | Fase 3 | 15 clientes. CRM validado com feedback. DRF adotado (✅ já concluído) |
 | Fase 3 | Fase 4 | Motor de réguas rodando. Ao menos 1 régua em produção por cliente |
 | Fase 4 | Fase 5 | NPS implementado. Clube de benefícios integrado. 50+ clientes |
 
