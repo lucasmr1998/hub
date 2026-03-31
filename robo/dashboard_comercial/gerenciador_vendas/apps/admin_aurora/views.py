@@ -130,9 +130,9 @@ def criar_tenant_view(request):
         nome = request.POST.get('nome', '').strip()
         cnpj = request.POST.get('cnpj', '').strip()
         plano = request.POST.get('plano', 'comercial_start')
-        admin_user = request.POST.get('admin_user', '').strip()
-        admin_email = request.POST.get('admin_email', '').strip()
-        admin_senha = request.POST.get('admin_senha', '').strip()
+        admin_user = request.POST.get('username', '').strip()
+        admin_email = request.POST.get('email', '').strip()
+        admin_senha = request.POST.get('senha', '').strip()
         trial = request.POST.get('trial') == 'on'
 
         erros = []
