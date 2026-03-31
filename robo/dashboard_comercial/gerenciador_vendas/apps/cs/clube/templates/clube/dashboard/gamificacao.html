@@ -1,0 +1,162 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Gamifica&ccedil;&atilde;o e N&iacute;veis{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <h1 class="page-title">Gamifica&ccedil;&atilde;o</h1>
+    <p class="page-subtitle">Sistema de n&iacute;veis, miss&otilde;es e XP.</p>
+</div>
+
+<div class="dashboard-grid grid-2">
+
+    <!-- Painel de Níveis -->
+    <div class="card">
+        <div class="card-title" style="display:flex; align-items:center; gap:8px;">
+            <i class="fas fa-medal" style="color:var(--warning);"></i> N&iacute;veis do Clube
+        </div>
+        <p class="text-muted text-sm" style="margin-bottom:20px;">
+            Defina os marcos de XP e o nome de cada n&iacute;vel (Ex: Prata, Ouro).
+        </p>
+
+        <form method="POST" style="margin-bottom:24px; background:var(--bg-page); padding:16px; border-radius:8px; border:1px solid var(--border);">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="salvar_nivel">
+            <div class="form-label" style="margin-bottom:10px; font-weight:700;">Adicionar Novo N&iacute;vel</div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                <input type="text" name="nome" placeholder="Nome (Ex: Ouro)" class="form-control" required>
+                <input type="number" name="xp_necessario" placeholder="XP Esperado (Ex: 500)" class="form-control" required>
+            </div>
+
+            <button type="submit" class="btn-primary w-full" style="padding:10px;">
+                <i class="fas fa-plus"></i> Criar N&iacute;vel
+            </button>
+        </form>
+
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>N&iacute;vel</th>
+                        <th>XP Alvo</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for n in niveis %}
+                    <tr>
+                        <td class="font-semibold">{{ n.nome }}</td>
+                        <td>{{ n.xp_necessario }} XP</td>
+                        <td>
+                            <form method="POST" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="excluir_nivel">
+                                <input type="hidden" name="nivel_id" value="{{ n.id }}">
+                                <button type="submit" class="btn-danger btn-sm" onclick="return confirm('Certeza que deseja remover?');">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted" style="padding:20px;">Nenhum n&iacute;vel cadastrado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Painel de Regras de Pontuação -->
+    <div class="card">
+        <div class="card-title" style="display:flex; align-items:center; gap:8px;">
+            <i class="fas fa-tasks" style="color:var(--primary);"></i> Regras e Miss&otilde;es
+        </div>
+        <p class="text-muted text-sm" style="margin-bottom:20px;">
+            Defina as a&ccedil;&otilde;es que geram Giros gr&aacute;tis e XP de perfil.
+        </p>
+
+        <form method="POST" style="margin-bottom:24px; background:var(--bg-page); padding:16px; border-radius:8px; border:1px solid var(--border);">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="salvar_regra">
+            <div class="form-label" style="margin-bottom:10px; font-weight:700;">Adicionar Nova Miss&atilde;o</div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                <input type="text" name="gatilho" placeholder="Gatilho Sist&ecirc;mico" class="form-control" title="Ex: telefone_verificado" required>
+                <input type="text" name="nome_exibicao" placeholder="Nome Interface" class="form-control" title="Ex: Validar Celular" required>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:12px;">
+                <div>
+                    <label class="form-label">Giros</label>
+                    <input type="number" name="pontos_saldo" value="0" class="form-control" required>
+                </div>
+                <div>
+                    <label class="form-label">XP</label>
+                    <input type="number" name="pontos_xp" value="0" class="form-control" required>
+                </div>
+                <div>
+                    <label class="form-label">Limite Vida</label>
+                    <input type="number" name="limite_por_membro" value="1" title="0 para infinito" class="form-control" required>
+                </div>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <label style="font-size:13px; display:flex; align-items:center; gap:8px; color:var(--text-secondary);">
+                    <input type="checkbox" name="ativo" checked> Ativar miss&atilde;o imediatamente
+                </label>
+            </div>
+
+            <button type="submit" class="btn-primary w-full" style="padding:10px;">
+                <i class="fas fa-plus"></i> Criar Regra
+            </button>
+        </form>
+
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Miss&atilde;o</th>
+                        <th>Retorno</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in regras %}
+                    <tr>
+                        <td>
+                            <strong {% if not r.ativo %}style="color:var(--text-light);"{% endif %}>{{ r.nome_exibicao }}</strong><br>
+                            <span class="text-xs text-muted" style="font-family:monospace;">{{ r.gatilho }}</span>
+                            {% if r.limite_por_membro > 0 %}
+                            <span class="badge" style="background:var(--border-light); color:var(--text-muted); font-size:10px; margin-left:4px;">{{ r.limite_por_membro }}x Max</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="text-sm"><i class="fas fa-coins" style="color:var(--warning);"></i> +{{ r.pontos_saldo }} Giros</div>
+                            <div class="text-sm"><i class="fas fa-star" style="color:var(--primary);"></i> +{{ r.pontos_xp }} XP</div>
+                        </td>
+                        <td>
+                            <form method="POST" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="excluir_regra">
+                                <input type="hidden" name="regra_id" value="{{ r.id }}">
+                                <button type="submit" class="btn-danger btn-sm" onclick="return confirm('Certeza da exclus\u00e3o?');">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted" style="padding:20px;">Nenhuma regra configurada.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "admin_aurora/base_admin.html" %}
+
+{% block title %}Logs{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <h1>Logs do Sistema</h1>
+</div>
+
+<!-- Filtros por nivel -->
+<div style="display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap;">
+    <a href="{% url 'admin_aurora:logs' %}"
+       class="btn btn-sm {% if not nivel %}btn-primary{% else %}btn-outline{% endif %}">
+        Todos
+    </a>
+    <a href="{% url 'admin_aurora:logs' %}?nivel=DEBUG"
+       class="btn btn-sm {% if nivel == 'DEBUG' %}btn-primary{% else %}btn-outline{% endif %}">
+        DEBUG
+    </a>
+    <a href="{% url 'admin_aurora:logs' %}?nivel=INFO"
+       class="btn btn-sm {% if nivel == 'INFO' %}btn-primary{% else %}btn-outline{% endif %}">
+        INFO
+    </a>
+    <a href="{% url 'admin_aurora:logs' %}?nivel=WARNING"
+       class="btn btn-sm {% if nivel == 'WARNING' %}btn-primary{% else %}btn-outline{% endif %}">
+        WARNING
+    </a>
+    <a href="{% url 'admin_aurora:logs' %}?nivel=ERROR"
+       class="btn btn-sm {% if nivel == 'ERROR' %}btn-primary{% else %}btn-outline{% endif %}">
+        ERROR
+    </a>
+    <a href="{% url 'admin_aurora:logs' %}?nivel=CRITICAL"
+       class="btn btn-sm {% if nivel == 'CRITICAL' %}btn-primary{% else %}btn-outline{% endif %}">
+        CRITICAL
+    </a>
+</div>
+
+<!-- Tabela de logs -->
+<div class="admin-table-wrap">
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Nível</th>
+                <th>Módulo</th>
+                <th>Tenant</th>
+                <th>Usuário</th>
+                <th>Mensagem</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td class="text-sm">{{ log.data_criacao|date:"d/m/Y H:i:s" }}</td>
+                <td>
+                    {% if log.nivel == 'CRITICAL' %}
+                        <span class="badge badge-red">{{ log.nivel }}</span>
+                    {% elif log.nivel == 'ERROR' %}
+                        <span class="badge badge-red">{{ log.nivel }}</span>
+                    {% elif log.nivel == 'WARNING' %}
+                        <span class="badge badge-yellow">{{ log.nivel }}</span>
+                    {% elif log.nivel == 'INFO' %}
+                        <span class="badge badge-blue">{{ log.nivel }}</span>
+                    {% else %}
+                        <span class="badge badge-gray">{{ log.nivel }}</span>
+                    {% endif %}
+                </td>
+                <td class="text-sm">{{ log.modulo|default:"—" }}</td>
+                <td class="text-sm">{{ log.tenant|default:"—" }}</td>
+                <td class="text-sm">{{ log.usuario|default:"—" }}</td>
+                <td style="max-width:400px;word-break:break-word;font-size:.8rem;">{{ log.mensagem }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">
+                    Nenhum log encontrado{% if nivel %} para o nível {{ nivel }}{% endif %}.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Participar - {{ config.nome_clube }}</title>
+    <style>
+        body { font-family: sans-serif; background: #eee; padding: 50px; text-align: center; }
+        .box { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
+        h1 { color: #000b4a; }
+        .btn { display: inline-block; padding: 15px 30px; background: #000b4a; color: white; text-decoration: none; border-radius: 10px; font-weight: bold; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>Teste de Recuperação</h1>
+        <p>Se você está vendo esta página, o novo sistema de templates está funcional e livre de corrupção.</p>
+        <p>Config: {{ config.nome_clube }}</p>
+        <p>Status do Sistema: <span style="color: green; font-weight: bold;">OK</span></p>
+        <a href="." class="btn">Recarregar Página</a>
+    </div>
+</body>
+</html>

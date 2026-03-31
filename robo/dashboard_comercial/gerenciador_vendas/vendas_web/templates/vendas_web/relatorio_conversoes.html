@@ -1,0 +1,324 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Relatório de Conversões - Megalink{% endblock %}
+
+{% block custom_css %}
+<style>
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .report-card {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 14px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.05);
+        margin-bottom: 2rem;
+    }
+
+    .card-header {
+        background: #fff;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-top-left-radius: 14px;
+        border-top-right-radius: 14px;
+    }
+
+    .card-content {
+        padding: 2rem;
+    }
+
+    .conversion-funnel {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 3rem;
+    }
+
+    .funnel-step {
+        position: relative;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        text-align: center;
+        transition: transform 0.3s ease;
+    }
+
+    .funnel-step:hover {
+        transform: translateY(-4px);
+    }
+
+    .funnel-step:nth-child(2) {
+        background: linear-gradient(135deg, #1F3D59, #2a4f73);
+    }
+
+    .funnel-step:nth-child(3) {
+        background: linear-gradient(135deg, #27ae60, #2ecc71);
+    }
+
+    .funnel-step:nth-child(4) {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+    }
+
+    .funnel-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .funnel-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 1rem;
+    }
+
+    .funnel-rate {
+        font-size: 1.2rem;
+        font-weight: 600;
+        background: rgba(255,255,255,0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        display: inline-block;
+    }
+
+    .conversion-arrow {
+        position: absolute;
+        top: 50%;
+        right: -15px;
+        transform: translateY(-50%);
+        width: 30px;
+        height: 30px;
+        background: #333;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
+
+    .funnel-step:last-child .conversion-arrow {
+        display: none;
+    }
+
+    .insights-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .insight-card {
+        background: #f8f9fa;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+
+    .insight-icon {
+        width: 50px;
+        height: 50px;
+        background: #1F3D59;
+        color: white;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+
+    .insight-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #333;
+    }
+
+    .insight-description {
+        color: #666;
+        line-height: 1.6;
+    }
+
+    .coming-soon {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #666;
+    }
+
+    .coming-soon i {
+        font-size: 4rem;
+        margin-bottom: 2rem;
+        color: #1F3D59;
+    }
+
+    .coming-soon h3 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        color: #333;
+    }
+
+    .coming-soon p {
+        font-size: 1rem;
+        line-height: 1.6;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .preview-badge {
+        background: linear-gradient(135deg, #f39c12, #e67e22);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header da Página -->
+    <div class="report-card">
+        <div class="card-header">
+            <div style="display:flex; align-items:center; gap:.5rem;">
+                <i class="fas fa-funnel-dollar" style="color:#1F3D59"></i>
+                <strong>Relatório de Conversões</strong>
+            </div>
+            <div class="preview-badge">
+                <i class="fas fa-eye"></i> Preview
+            </div>
+        </div>
+        <div class="card-content">
+            <!-- Funil de Conversão -->
+            <h3 style="margin-bottom: 2rem; color: #333;">
+                <i class="fas fa-chart-line" style="margin-right: 0.5rem; color: #1F3D59;"></i>
+                Funil de Conversão
+            </h3>
+            
+            <div class="conversion-funnel">
+                <div class="funnel-step">
+                    <div class="funnel-value">1,247</div>
+                    <div class="funnel-label">Visitantes</div>
+                    <div class="funnel-rate">100%</div>
+                    <div class="conversion-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+                
+                <div class="funnel-step">
+                    <div class="funnel-value">589</div>
+                    <div class="funnel-label">Leads</div>
+                    <div class="funnel-rate">47.2%</div>
+                    <div class="conversion-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+                
+                <div class="funnel-step">
+                    <div class="funnel-value">234</div>
+                    <div class="funnel-label">Prospectos</div>
+                    <div class="funnel-rate">39.7%</div>
+                    <div class="conversion-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+                
+                <div class="funnel-step">
+                    <div class="funnel-value">89</div>
+                    <div class="funnel-label">Vendas</div>
+                    <div class="funnel-rate">38.0%</div>
+                </div>
+            </div>
+
+            <!-- Insights -->
+            <h3 style="margin-bottom: 2rem; color: #333;">
+                <i class="fas fa-lightbulb" style="margin-right: 0.5rem; color: #1F3D59;"></i>
+                Insights de Conversão
+            </h3>
+            
+            <div class="insights-grid">
+                <div class="insight-card">
+                    <div class="insight-icon">
+                        <i class="fas fa-trending-up"></i>
+                    </div>
+                    <div class="insight-title">Taxa de Conversão Global</div>
+                    <div class="insight-description">
+                        Sua taxa de conversão de visitantes para vendas é de 7.1%, acima da média do setor (5.2%).
+                    </div>
+                </div>
+
+                <div class="insight-card">
+                    <div class="insight-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="insight-title">Tempo Médio de Conversão</div>
+                    <div class="insight-description">
+                        O tempo médio entre o primeiro contato e a venda é de 4.2 dias, com 68% das conversões em até 7 dias.
+                    </div>
+                </div>
+
+                <div class="insight-card">
+                    <div class="insight-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="insight-title">Melhor Canal de Conversão</div>
+                    <div class="insight-description">
+                        WhatsApp apresenta a maior taxa de conversão (12.4%), seguido por chamadas telefônicas (8.9%).
+                    </div>
+                </div>
+
+                <div class="insight-card">
+                    <div class="insight-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="insight-title">Melhor Dia da Semana</div>
+                    <div class="insight-description">
+                        Terças e quartas-feiras apresentam as melhores taxas de conversão, com picos entre 14h e 16h.
+                    </div>
+                </div>
+
+                <div class="insight-card">
+                    <div class="insight-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="insight-title">Valor Médio por Conversão</div>
+                    <div class="insight-description">
+                        O ticket médio das vendas é R$ 2.847,00, com variação de 15% nos últimos 30 dias.
+                    </div>
+                </div>
+
+                <div class="insight-card">
+                    <div class="insight-icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <div class="insight-title">Origem dos Leads</div>
+                    <div class="insight-description">
+                        45% dos leads vêm de campanhas digitais, 32% de indicações e 23% de marketing direto.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção Coming Soon -->
+            <div class="coming-soon">
+                <i class="fas fa-chart-area"></i>
+                <h3>Relatórios Detalhados em Breve</h3>
+                <p>
+                    Esta página será expandida com gráficos interativos, filtros avançados por período, 
+                    análises por segmento de clientes, comparações históricas e relatórios exportáveis. 
+                    Mantenha-se atualizado para aproveitar todas as funcionalidades de análise de conversões.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

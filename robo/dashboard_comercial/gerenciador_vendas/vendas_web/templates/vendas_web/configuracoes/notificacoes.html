@@ -1,0 +1,2693 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Sistema de Notificações - MegaLink{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block custom_css %}
+<style>
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .page-header {
+        margin-bottom: 2rem;
+    }
+
+    .page-title {
+        color: #1f2937;
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .page-subtitle {
+        color: #6b7280;
+        font-size: 1rem;
+        margin: 0;
+    }
+
+    /* Sistema de Abas */
+    .tabs-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+    }
+
+    .tabs-header {
+        display: flex;
+        background: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+        overflow-x: auto;
+    }
+
+    .tab-button {
+        flex: 1;
+        padding: 1rem 1.5rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #6b7280;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        justify-content: center;
+        min-width: 120px;
+    }
+
+    .tab-button:hover {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .tab-button.active {
+        background: white;
+        color: #667eea;
+        border-bottom: 2px solid #667eea;
+    }
+
+    .tab-content {
+        display: none;
+        padding: 2rem;
+    }
+
+    .tab-content.active {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+
+    .tab-icon {
+        font-size: 1rem;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1F3D59;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        color: #6b7280;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .tabs {
+        display: flex;
+        border-bottom: 2px solid #e5e7eb;
+        margin-bottom: 2rem;
+        gap: 0.5rem;
+    }
+
+    .tab-button {
+        padding: 1rem 1.5rem;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        color: #6b7280;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .tab-button:hover {
+        color: #1F3D59;
+        background: #f8fafc;
+    }
+
+    .tab-button.active {
+        color: #1F3D59;
+        border-bottom-color: #1F3D59;
+        background: #f8fafc;
+    }
+
+    .tab-content {
+        display: none !important;
+    }
+
+    .tab-content.active {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+
+    .content-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .card-header {
+        background: #f8fafc;
+        padding: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin: 0;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        background: #1F3D59;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #2c5282;
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+        background: #6b7280;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #4b5563;
+    }
+
+    .btn-success {
+        background: #059669;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #047857;
+    }
+
+    .btn-danger {
+        background: #dc2626;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #b91c1c;
+    }
+
+    .btn-sm {
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table th,
+    .table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .table th {
+        background: #f9fafb;
+        font-weight: 600;
+        color: #374151;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .table td {
+        color: #1f2937;
+        font-size: 0.9rem;
+    }
+
+    .table tr[onclick]:hover {
+        background: #f0f9ff !important;
+        cursor: pointer;
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .status-ativo {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-inativo {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .status-pendente {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .status-enviada {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-falhou {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: border-color 0.2s ease;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: #1F3D59;
+        box-shadow: 0 0 0 3px rgba(31, 61, 89, 0.1);
+    }
+
+    .form-select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        background: white;
+    }
+
+    .form-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .form-checkbox input {
+        width: 16px;
+        height: 16px;
+    }
+
+    .form-checkbox label {
+        font-size: 0.9rem;
+        color: #374151;
+        cursor: pointer;
+    }
+
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .grid-3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+
+    .alert-success {
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .alert-error {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        color: #6b7280;
+        font-size: 1rem;
+    }
+
+    .loading::before {
+        content: "⏳";
+        margin-right: 0.5rem;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    /* Garantir que o conteúdo da aba de estatísticas seja visível */
+    .alert-info {
+        background: #dbeafe;
+        color: #1e40af;
+        border: 1px solid #bfdbfe;
+    }
+
+    .modal {
+        display: none !important;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal.active {
+        display: flex !important;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .modal-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin: 0;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: #9ca3af;
+        cursor: pointer;
+        padding: 0.25rem;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+
+    .modal-close:hover {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-icon {
+        padding: 0.5rem;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .container {
+            padding: 1rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .tabs {
+            flex-wrap: wrap;
+        }
+
+        .tab-button {
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        .grid-2,
+        .grid-3 {
+            grid-template-columns: 1fr;
+        }
+
+        .modal-content {
+            padding: 1.5rem;
+            margin: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="fas fa-bell"></i>
+            Sistema de Notificações
+        </h1>
+        <p class="page-subtitle">
+            Configure notificações por email, WhatsApp e SMS integradas com N8N
+        </p>
+    </div>
+
+    <!-- Estatísticas -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">📨</div>
+            <div class="stat-value" id="totalNotificacoes">{{ stats.total_notificacoes }}</div>
+            <div class="stat-label">Total de Notificações</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-value" id="notificacoesHoje">{{ stats.notificacoes_hoje }}</div>
+            <div class="stat-label">Hoje</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-value" id="taxaEntrega">{{ stats.taxa_entrega }}%</div>
+            <div class="stat-label">Taxa de Entrega</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📱</div>
+            <div class="stat-value" id="canaisAtivos">{{ stats.canais_ativos }}</div>
+            <div class="stat-label">Canais Ativos</div>
+        </div>
+    </div>
+
+    <!-- Sistema de Abas -->
+    <div class="tabs-container">
+        <div class="tabs-header">
+            <button class="tab-button active" onclick="showTab('tipos', event)">
+                <i class="fas fa-list tab-icon"></i>
+                Tipos de Notificação
+            </button>
+            <button class="tab-button" onclick="showTab('historico', event)">
+                <i class="fas fa-history tab-icon"></i>
+                Histórico Geral
+            </button>
+            <button class="tab-button" onclick="showTab('teste', event)">
+                <i class="fas fa-flask tab-icon"></i>
+                Testar Notificação
+            </button>
+            <button class="tab-button" onclick="showTab('estatisticas-novo', event)">
+                <i class="fas fa-chart-bar tab-icon"></i>
+                Estatísticas
+            </button>
+        </div>
+
+    <!-- Conteúdo das Abas -->
+    
+    <!-- Tab: Tipos de Notificação -->
+    <div id="tab-tipos" class="tab-content active">
+        <div class="content-card">
+            <div class="card-header">
+                <h3 class="card-title">Tipos de Notificação</h3>
+                <p class="card-subtitle">Clique em um tipo para configurar canais, templates e preferências específicas</p>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Código</th>
+                            <th>Prioridade</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tipo in tipos %}
+                        <tr style="cursor: pointer;" onclick="window.location.href='{% url 'vendas_web:tipo_notificacao_detalhes' tipo.id %}'">
+                            <td><strong>{{ tipo.nome }}</strong></td>
+                            <td><code>{{ tipo.codigo }}</code></td>
+                            <td>
+                                <span class="status-badge status-{{ tipo.prioridade_padrao }}">
+                                    {{ tipo.get_prioridade_padrao_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="status-badge {% if tipo.ativo %}status-ativo{% else %}status-inativo{% endif %}">
+                                    {% if tipo.ativo %}Ativo{% else %}Inativo{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="actions">
+                                    <a href="{% url 'vendas_web:tipo_notificacao_detalhes' tipo.id %}" class="btn btn-primary btn-sm" title="Ver Detalhes">
+                                        <i class="fas fa-cog"></i> Configurar
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Canais -->
+    <div id="tab-canais" class="tab-content">
+        <div class="content-card">
+            <div class="card-header">
+                <h3 class="card-title">Canais de Notificação</h3>
+                <p class="card-subtitle">Canal pré-configurado pelo administrador do sistema</p>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Código</th>
+                            <th>Ícone</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for canal in canais %}
+                        <tr>
+                            <td>{{ canal.nome }}</td>
+                            <td><code>{{ canal.codigo }}</code></td>
+                            <td><i class="{{ canal.icone }}"></i></td>
+                            <td>
+                                <span class="status-badge {% if canal.ativo %}status-ativo{% else %}status-inativo{% endif %}">
+                                    {% if canal.ativo %}Ativo{% else %}Inativo{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn btn-secondary btn-sm" onclick="openCanalModal({{ canal.id }})" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Tab: Histórico -->
+    <div id="tab-historico" class="tab-content">
+        <div class="content-card">
+            <div class="card-header">
+                <h3 class="card-title">Histórico de Notificações</h3>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Canal</th>
+                            <th>Destinatário</th>
+                            <th>Status</th>
+                            <th>Data</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for notif in notificacoes_recentes %}
+                        <tr>
+                            <td>{{ notif.tipo.nome }}</td>
+                            <td>{{ notif.canal.nome }}</td>
+                            <td>{% if notif.destinatario %}{{ notif.destinatario.username }}{% else %}{{ notif.destinatario_email }}{% endif %}</td>
+                            <td>
+                                <span class="status-badge status-{{ notif.status }}">
+                                    {{ notif.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ notif.data_criacao|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn btn-secondary btn-sm" onclick="viewNotificacao({{ notif.id }})" title="Ver Detalhes">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Teste -->
+    <div id="tab-teste" class="tab-content">
+        <div class="content-card">
+            <div class="card-header">
+                <h3 class="card-title">Teste de Notificação</h3>
+            </div>
+            <div class="card-body">
+                <form id="testeForm">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="testeTipo">Tipo de Notificação</label>
+                            <select class="form-select" id="testeTipo" name="tipo" required>
+                                <option value="">Selecione um tipo</option>
+                                {% for tipo in tipos %}
+                                <option value="{{ tipo.codigo }}">{{ tipo.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="testeCanal">Canal</label>
+                            <select class="form-select" id="testeCanal" name="canal" required>
+                                <option value="">Selecione um canal</option>
+                                {% for canal in canais %}
+                                <option value="{{ canal.codigo }}">{{ canal.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="testeDados">Dados de Contexto (JSON)</label>
+                        <textarea class="form-input" id="testeDados" name="dados_contexto" rows="4" placeholder='{"nome": "João Silva", "valor": "R$ 100,00"}'></textarea>
+                    </div>
+                    <div class="form-group">
+                        <button type="button" class="btn btn-success" onclick="enviarTeste()">
+                            <i class="fas fa-paper-plane"></i>
+                            Enviar Teste
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Estatísticas NOVO - Relatório Completo -->
+    <div id="tab-estatisticas-novo" class="tab-content" style="display: none;">
+        <div style="padding: 0; margin: 0;">
+            <!-- Header do Relatório -->
+            <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 2rem; padding: 1.5rem; border: 1px solid #e5e7eb;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <i class="fas fa-chart-bar" style="color: #1F3D59; font-size: 1.5rem;"></i>
+                        <div>
+                            <h3 style="margin: 0; color: #1f2937; font-size: 1.5rem; font-weight: 700;">Análise Completa de Notificações</h3>
+                            <p style="margin: 0.25rem 0 0 0; color: #6b7280; font-size: 0.9rem;">Visão detalhada do desempenho do sistema</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <input type="date" id="dataInicioNovo" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.9rem;">
+                        <input type="date" id="dataFimNovo" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.9rem;">
+                        <button onclick="filtrarEstatisticasNovo()" style="padding: 0.5rem 1rem; background: #1F3D59; color: white; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease;" onmouseover="this.style.background='#2c5282'" onmouseout="this.style.background='#1F3D59'">
+                            <i class="fas fa-filter"></i>
+                            Filtrar
+                        </button>
+                        <button onclick="limparFiltrosNovo()" style="padding: 0.5rem 1rem; background: #6b7280; color: white; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease;" onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#6b7280'">
+                            <i class="fas fa-times"></i>
+                            Limpar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="estatisticasContentNovo" style="min-height: 300px;">
+                <div style="text-align: center; padding: 3rem; color: #6b7280;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <p>Carregando estatísticas...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Teste -->
+<div id="testeModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Resultado do Teste</h3>
+            <button class="modal-close" onclick="closeTesteModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="testeResultado">
+            <!-- Resultado será inserido aqui -->
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeTesteModal()">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Modal para Tipo de Notificação - Removido (agora é criado dinamicamente) -->
+
+    <!-- Modal para Canal de Notificação - Removido (agora é criado dinamicamente) -->
+
+    <!-- Modal para Template de Notificação -->
+    <div id="templateModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="templateModalTitle">Novo Template de Notificação</h3>
+                <button class="modal-close" onclick="closeTemplateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="templateForm">
+                    <input type="hidden" id="templateId" name="id">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="templateNome">Nome</label>
+                            <input type="text" class="form-input" id="templateNome" name="nome" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="templateTipo">Tipo de Notificação</label>
+                            <select class="form-select" id="templateTipo" name="tipo_notificacao" required>
+                                <option value="">Selecione um tipo</option>
+                                {% for tipo in tipos %}
+                                <option value="{{ tipo.id }}">{{ tipo.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="templateCanal">Canal</label>
+                        <select class="form-select" id="templateCanal" name="canal" required>
+                            <option value="">Selecione um canal</option>
+                            {% for canal in canais %}
+                            <option value="{{ canal.id }}">{{ canal.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="templateAssunto">Assunto</label>
+                        <input type="text" class="form-input" id="templateAssunto" name="assunto" required>
+                        <small class="form-text">Use variáveis como {{nome}}, {{valor}}, etc.</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="templateCorpoTexto">Corpo (Texto)</label>
+                        <textarea class="form-input" id="templateCorpoTexto" name="corpo_texto" rows="4" required></textarea>
+                        <small class="form-text">Versão em texto simples da mensagem</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="templateCorpoHtml">Corpo (HTML)</label>
+                        <textarea class="form-input" id="templateCorpoHtml" name="corpo_html" rows="6"></textarea>
+                        <small class="form-text">Versão HTML da mensagem (opcional)</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="templateVariaveis">Variáveis Disponíveis</label>
+                        <input type="text" class="form-input" id="templateVariaveis" name="variaveis" placeholder="nome,valor,data,telefone">
+                        <small class="form-text">Lista de variáveis separadas por vírgula</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-checkbox">
+                            <input type="checkbox" id="templateAtivo" name="ativo" checked>
+                            <span>Ativo</span>
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeTemplateModal()">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="salvarTemplate()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Templates -->
+    <div id="tab-templates" class="tab-content">
+        <div class="content-card">
+            <div class="card-header">
+                <h3 class="card-title">Templates de Notificação</h3>
+                <button class="btn btn-primary" onclick="openTemplateModal()">
+                    <i class="fas fa-plus"></i>
+                    Novo Template
+                </button>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Tipo</th>
+                            <th>Canal</th>
+                            <th>Assunto</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="templatesTableBody">
+                        <!-- Templates serão carregados via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Preferências -->
+    <div id="tab-preferencias" class="tab-content">
+        <div class="content-card">
+            <div class="card-header">
+                <h3 class="card-title">Suas Preferências de Notificação</h3>
+                <p class="card-subtitle">Configure como e quando você deseja receber notificações</p>
+            </div>
+            <div class="card-body">
+                <div id="preferenciasForm">
+                    <!-- Formulário de preferências será carregado via JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    </div> <!-- Fechamento do tabs-container -->
+</div> <!-- Fechamento do container -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Sistema de Notificações - MegaLink
+
+// Inicialização quando a página carrega
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📄 Página carregada, sistema de notificações pronto!');
+});
+
+// Funções de navegação entre abas
+function showTab(tabName, event) {
+    console.log('🔄 Mudando para aba:', tabName);
+    
+    // Remover active de todas as abas
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+        content.style.display = 'none';
+    });
+    
+    // Ativar aba selecionada
+    if (event && event.target) {
+        event.target.classList.add('active');
+    } else {
+        // Fallback: encontrar o botão correto
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabName)) {
+                btn.classList.add('active');
+            }
+        });
+    }
+    
+    const tabContent = document.getElementById(`tab-${tabName}`);
+    if (tabContent) {
+        tabContent.classList.add('active');
+        tabContent.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important;';
+        console.log('✅ Aba ativada:', tabName);
+        console.log('✅ Display da aba:', window.getComputedStyle(tabContent).display);
+    } else {
+        console.error('❌ Aba não encontrada:', `tab-${tabName}`);
+    }
+    
+    // Carregar conteúdo específico da aba com delay para garantir que o DOM está pronto
+    setTimeout(() => {
+    switch(tabName) {
+        case 'templates':
+            console.log('📋 Carregando templates...');
+            carregarTemplates();
+            break;
+        case 'preferencias':
+            console.log('⚙️ Carregando preferências...');
+            carregarPreferencias();
+            break;
+        case 'estatisticas-novo':
+            console.log('📊 Carregando estatísticas...');
+            carregarEstatisticasNovo();
+            break;
+        default:
+            console.log('ℹ️ Aba sem conteúdo específico:', tabName);
+    }
+    }, 100);
+}
+
+// Carregar templates
+async function carregarTemplates() {
+    try {
+        const response = await fetch('/api/templates-notificacoes/');
+        const data = await response.json();
+        
+        if (data.success) {
+            const tbody = document.getElementById('templatesTableBody');
+            tbody.innerHTML = data.templates.map(template => `
+                <tr>
+                    <td>${template.nome}</td>
+                    <td>${template.tipo_notificacao}</td>
+                    <td>${template.canal}</td>
+                    <td>${template.assunto}</td>
+                    <td>
+                        <span class="status-badge ${template.ativo ? 'status-ativo' : 'status-inativo'}">
+                            ${template.ativo ? 'Ativo' : 'Inativo'}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" onclick="editarTemplate(${template.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deletarTemplate(${template.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar templates:', error);
+    }
+}
+
+// Carregar preferências do usuário
+async function carregarPreferencias() {
+    try {
+        // Buscar tipos e canais disponíveis
+        const [tiposResponse, canaisResponse, preferenciasResponse] = await Promise.all([
+            fetch('/api/tipos-notificacao/'),
+            fetch('/api/canais-notificacao/'),
+            fetch('/api/notificacoes/preferencias/')
+        ]);
+        
+        const tiposData = await tiposResponse.json();
+        const canaisData = await canaisResponse.json();
+        const preferenciasData = await preferenciasResponse.json();
+        
+        if (tiposData.success && canaisData.success && preferenciasData.success) {
+            const container = document.getElementById('preferenciasForm');
+            
+            // Criar formulário com preferências por tipo
+            let html = `
+                <form id="preferenciasFormData">
+                    <div class="form-group">
+                        <label class="form-label">Horário de Recebimento</label>
+                        <div class="grid-2">
+                            <input type="time" name="horario_inicio" value="${preferenciasData.preferencias.horario_inicio || '08:00'}" class="form-input">
+                            <input type="time" name="horario_fim" value="${preferenciasData.preferencias.horario_fim || '18:00'}" class="form-input">
+                        </div>
+                        <small class="form-text">Horário para receber notificações</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-checkbox">
+                            <input type="checkbox" name="receber_fim_semana" ${preferenciasData.preferencias.receber_fim_semana ? 'checked' : ''}>
+                            <span>Receber notificações nos fins de semana</span>
+                        </label>
+                    </div>
+                    <hr style="margin: 2rem 0;">
+                    <h4>Preferências por Tipo de Notificação</h4>
+            `;
+            
+            // Adicionar preferências para cada tipo
+            tiposData.tipos.forEach(tipo => {
+                const preferencia = preferenciasData.preferencias.por_tipo[tipo.codigo] || {};
+                html += `
+                    <div class="form-group" style="border: 1px solid #e5e7eb; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <h5 style="margin: 0 0 1rem 0; color: #374151;">${tipo.nome}</h5>
+                        <div class="grid-2">
+                            <div>
+                                <label class="form-label">Canal Preferido</label>
+                                <select name="preferencias[${tipo.codigo}][canal]" class="form-select">
+                                    <option value="">Selecione um canal</option>
+                                    ${canaisData.canais.map(canal => 
+                                        `<option value="${canal.codigo}" ${preferencia.canal === canal.codigo ? 'selected' : ''}>${canal.nome}</option>`
+                                    ).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label">Prioridade</label>
+                                <select name="preferencias[${tipo.codigo}][prioridade]" class="form-select">
+                                    <option value="baixa" ${preferencia.prioridade === 'baixa' ? 'selected' : ''}>Baixa</option>
+                                    <option value="normal" ${preferencia.prioridade === 'normal' ? 'selected' : ''}>Normal</option>
+                                    <option value="alta" ${preferencia.prioridade === 'alta' ? 'selected' : ''}>Alta</option>
+                                    <option value="urgente" ${preferencia.prioridade === 'urgente' ? 'selected' : ''}>Urgente</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label class="form-checkbox">
+                                <input type="checkbox" name="preferencias[${tipo.codigo}][ativo]" ${preferencia.ativo !== false ? 'checked' : ''}>
+                                <span>Receber notificações deste tipo</span>
+                            </label>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    <div class="form-group" style="margin-top: 2rem;">
+                        <button type="button" class="btn btn-primary" onclick="salvarPreferencias()">
+                            <i class="fas fa-save"></i>
+                            Salvar Preferências
+                        </button>
+                    </div>
+                </form>
+            `;
+            
+            container.innerHTML = html;
+        }
+    } catch (error) {
+        console.error('Erro ao carregar preferências:', error);
+        document.getElementById('preferenciasForm').innerHTML = `
+            <div class="alert alert-error">
+                Erro ao carregar preferências. Tente recarregar a página.
+            </div>
+        `;
+    }
+}
+
+// Carregar estatísticas
+async function carregarEstatisticasNovo() {
+    try {
+        console.log('🔍 Carregando relatório completo de estatísticas...');
+        
+        const container = document.getElementById('estatisticasContentNovo');
+        if (!container) {
+            console.error('❌ Container estatisticasContentNovo não encontrado');
+            return;
+        }
+        
+        // Mostrar loading
+        container.innerHTML = '<div style="text-align: center; padding: 3rem; color: #6b7280;"><i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i><p>Carregando estatísticas...</p></div>';
+        
+        const dataInicioEl = document.getElementById('dataInicioNovo');
+        const dataFimEl = document.getElementById('dataFimNovo');
+        const dataInicio = dataInicioEl ? dataInicioEl.value : '';
+        const dataFim = dataFimEl ? dataFimEl.value : '';
+        
+        let url = '/api/notificacoes/estatisticas/';
+        const params = new URLSearchParams();
+        if (dataInicio) params.append('data_inicio', dataInicio);
+        if (dataFim) params.append('data_fim', dataFim);
+        if (params.toString()) url += '?' + params.toString();
+        
+        console.log('📡 Fazendo requisição para:', url);
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin'
+        });
+        console.log('📥 Resposta recebida:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Erro na resposta:', errorText);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('📊 Dados recebidos:', data);
+        
+        if (data.success && data.estatisticas) {
+            const stats = data.estatisticas;
+            
+            // Calcular porcentagens
+            const percEnviadas = stats.total_notificacoes > 0 ? ((stats.notificacoes_enviadas / stats.total_notificacoes) * 100).toFixed(1) : 0;
+            const percFalharam = stats.total_notificacoes > 0 ? ((stats.notificacoes_falharam / stats.total_notificacoes) * 100).toFixed(1) : 0;
+            const percPendentes = stats.total_notificacoes > 0 ? ((stats.notificacoes_pendentes / stats.total_notificacoes) * 100).toFixed(1) : 0;
+            
+            // HTML completo do relatório
+            container.innerHTML = `
+                <!-- Cards de Métricas Principais -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; padding: 1rem; background: white; border: 1px solid #e0e0e0; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.05); margin-bottom: 2rem;">
+                    <div style="background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1.25rem; display: flex; align-items: center; gap: 1rem; transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                        <div style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.2rem; background: #1F3D59;">
+                            <i class="fas fa-bell"></i>
+                </div>
+                        <div style="flex: 1;">
+                            <h4 style="color: #666; font-weight: 600; margin-bottom: .15rem; font-size: .85rem;">Total de Notificações</h4>
+                            <div style="font-size: 1.4rem; font-weight: 800; color: #333;">${stats.total_notificacoes}</div>
+                            <div style="font-size: .75rem; color: #999; margin-top: .25rem;">Hoje: ${stats.notificacoes_hoje}</div>
+                    </div>
+                    </div>
+                    
+                    <div style="background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1.25rem; display: flex; align-items: center; gap: 1rem; transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                        <div style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.2rem; background: #1F3D59;">
+                            <i class="fas fa-check"></i>
+                    </div>
+                        <div style="flex: 1;">
+                            <h4 style="color: #666; font-weight: 600; margin-bottom: .15rem; font-size: .85rem;">Enviadas com Sucesso</h4>
+                            <div style="font-size: 1.4rem; font-weight: 800; color: #333;">${stats.notificacoes_enviadas}</div>
+                            <div style="font-size: .75rem; color: #999; margin-top: .25rem;">${percEnviadas}% do total</div>
+                    </div>
+                </div>
+                    
+                    <div style="background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1.25rem; display: flex; align-items: center; gap: 1rem; transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                        <div style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.2rem; background: #1F3D59;">
+                            <i class="fas fa-times"></i>
+                </div>
+                        <div style="flex: 1;">
+                            <h4 style="color: #666; font-weight: 600; margin-bottom: .15rem; font-size: .85rem;">Falharam</h4>
+                            <div style="font-size: 1.4rem; font-weight: 800; color: #333;">${stats.notificacoes_falharam}</div>
+                            <div style="font-size: .75rem; color: #999; margin-top: .25rem;">${percFalharam}% do total</div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1.25rem; display: flex; align-items: center; gap: 1rem; transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                        <div style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.2rem; background: #1F3D59;">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div style="flex: 1;">
+                            <h4 style="color: #666; font-weight: 600; margin-bottom: .15rem; font-size: .85rem;">Aguardando Envio</h4>
+                            <div style="font-size: 1.4rem; font-weight: 800; color: #333;">${stats.notificacoes_pendentes}</div>
+                            <div style="font-size: .75rem; color: #999; margin-top: .25rem;">${percPendentes}% do total</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Tipos de Notificação -->
+                ${stats.tipos_notificacao && stats.tipos_notificacao.length > 0 ? `
+                <div style="background: white; border: 1px solid #e0e0e0; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.05); margin-bottom: 2rem;">
+                    <div style="background: #fff; padding: 1rem 1.25rem; border-bottom: 1px solid #f0f0f0; border-top-left-radius: 14px; border-top-right-radius: 14px;">
+                        <h3 style="margin: 0; color: #333; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-tags" style="color: #1F3D59;"></i>
+                            Distribuição por Tipo de Notificação
+                        </h3>
+                    </div>
+                    
+                    <div style="padding: 2rem;">
+                        <!-- Gráfico de Linha -->
+                        <div style="background: #f8f9fa; border-radius: 10px; padding: 1.25rem; border: 1px solid #e0e0e0; margin-bottom: 2rem;">
+                            <div style="font-size: .95rem; font-weight: 600; color: #333; margin-bottom: 1rem; text-align: center;">Evolução por Tipo (Últimos 7 Dias)</div>
+                            <div style="position: relative; height: 300px;">
+                                <canvas id="tiposNotificacaoChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Tabela Detalhada -->
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #f8f9fa;">
+                                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #333; font-size: 0.85rem; text-transform: uppercase; border-bottom: 2px solid #e0e0e0;">Tipo</th>
+                                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #333; font-size: 0.85rem; text-transform: uppercase; border-bottom: 2px solid #e0e0e0;">Total</th>
+                                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #333; font-size: 0.85rem; text-transform: uppercase; border-bottom: 2px solid #e0e0e0;">✅ Enviadas</th>
+                                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #333; font-size: 0.85rem; text-transform: uppercase; border-bottom: 2px solid #e0e0e0;">❌ Falharam</th>
+                                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #333; font-size: 0.85rem; text-transform: uppercase; border-bottom: 2px solid #e0e0e0;">⏳ Pendentes</th>
+                                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #333; font-size: 0.85rem; text-transform: uppercase; border-bottom: 2px solid #e0e0e0;">Taxa de Sucesso</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${stats.tipos_notificacao.map((tipo, index) => `
+                                    <tr style="border-bottom: 1px solid #f3f4f6; ${index % 2 === 0 ? 'background: #fafafa;' : 'background: white;'}">
+                                        <td style="padding: 1rem;">
+                                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                <i class="fas fa-bell" style="color: #1F3D59;"></i>
+                                                <div>
+                                                    <div style="font-weight: 600; color: #333;">${tipo.nome}</div>
+                                                    <div style="font-size: 0.75rem; color: #666;">${tipo.codigo}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style="padding: 1rem; text-align: center; color: #333; font-weight: 600; font-size: 1.1rem;">${tipo.total}</td>
+                                        <td style="padding: 1rem; text-align: center; color: #27ae60; font-weight: 600;">${tipo.enviadas}</td>
+                                        <td style="padding: 1rem; text-align: center; color: #e74c3c; font-weight: 600;">${tipo.falharam}</td>
+                                        <td style="padding: 1rem; text-align: center; color: #f39c12; font-weight: 600;">${tipo.pendentes}</td>
+                                        <td style="padding: 1rem; text-align: center;">
+                                            <span style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 600; background: ${tipo.taxa_sucesso >= 90 ? '#d1fae5' : tipo.taxa_sucesso >= 70 ? '#fef3c7' : '#fee2e2'}; color: ${tipo.taxa_sucesso >= 90 ? '#065f46' : tipo.taxa_sucesso >= 70 ? '#92400e' : '#991b1b'};">
+                                                ${tipo.taxa_sucesso}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Insights e Recomendações -->
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 14px; padding: 2rem; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); color: white; margin-bottom: 2rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                        <i class="fas fa-lightbulb" style="font-size: 1.5rem;"></i>
+                        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 600;">Insights e Recomendações</h3>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                        <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📊</div>
+                            <div style="font-weight: 600; margin-bottom: 0.5rem;">Performance Geral</div>
+                            <div style="font-size: 0.9rem; opacity: 0.9;">
+                                ${stats.taxa_entrega >= 90 ? 
+                                    'Sistema operando com excelência. Continue monitorando!' : 
+                                    stats.taxa_entrega >= 70 ? 
+                                    'Desempenho aceitável, mas há espaço para melhorias.' : 
+                                    'Atenção! Taxa de falha alta requer investigação urgente.'}
+                            </div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚡</div>
+                            <div style="font-weight: 600; margin-bottom: 0.5rem;">Volume de Envios</div>
+                            <div style="font-size: 0.9rem; opacity: 0.9;">
+                                ${stats.notificacoes_hoje} notificações processadas hoje.
+                                ${stats.notificacoes_pendentes > 0 ? 
+                                    `${stats.notificacoes_pendentes} aguardando processamento.` : 
+                                    'Todas as notificações foram processadas!'}
+                            </div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🎯</div>
+                            <div style="font-weight: 600; margin-bottom: 0.5rem;">Próximas Ações</div>
+                            <div style="font-size: 0.9rem; opacity: 0.9;">
+                                ${stats.notificacoes_falharam > 0 ? 
+                                    'Revise as notificações falhadas no histórico.' : 
+                                    'Continue monitorando o sistema regularmente.'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            console.log('✅ Relatório completo carregado com sucesso!');
+            
+            // Criar gráfico de tipos de notificação após renderizar (evolução por tipo)
+            if (stats.tipos_notificacao && stats.tipos_notificacao.length > 0 && stats.evolucao_data) {
+            setTimeout(() => {
+                    const ctx = document.getElementById('tiposNotificacaoChart');
+                    if (ctx) {
+                        // Destruir gráfico anterior se existir
+                        if (window.tiposNotificacaoChartInstance) {
+                            window.tiposNotificacaoChartInstance.destroy();
+                        }
+                        
+                        // Preparar labels (datas dos últimos 7 dias)
+                        const labels = stats.evolucao_data.map(d => d.date);
+                        
+                        // Cores para cada tipo
+                        const cores = [
+                            {border: '#3498db', bg: 'rgba(52, 152, 219, 0.1)'},
+                            {border: '#2ecc71', bg: 'rgba(46, 204, 113, 0.1)'},
+                            {border: '#e74c3c', bg: 'rgba(231, 76, 60, 0.1)'},
+                            {border: '#f39c12', bg: 'rgba(243, 156, 18, 0.1)'},
+                            {border: '#9b59b6', bg: 'rgba(155, 89, 182, 0.1)'},
+                            {border: '#1abc9c', bg: 'rgba(26, 188, 156, 0.1)'}
+                        ];
+                        
+                        // Criar datasets (uma linha para cada tipo)
+                        const datasets = stats.tipos_notificacao.map((tipo, index) => {
+                            const cor = cores[index % cores.length];
+                            
+                            // Por enquanto, vamos usar dados simulados baseados na proporção do total
+                            // Em produção, você deve ter dados reais de evolução por tipo no backend
+                            const dadosPorDia = stats.evolucao_data.map(dia => {
+                                const totalDia = dia.enviadas + dia.falharam;
+                                const proporcao = stats.total_notificacoes > 0 ? tipo.total / stats.total_notificacoes : 0;
+                                return Math.round(totalDia * proporcao);
+                            });
+                            
+                            return {
+                                label: tipo.nome,
+                                data: dadosPorDia,
+                                borderColor: cor.border,
+                                backgroundColor: cor.bg,
+                                borderWidth: 3,
+                                fill: true,
+                                tension: 0.4,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                pointBackgroundColor: cor.border,
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2
+                            };
+                        });
+                        
+                        // Criar gráfico
+                        window.tiposNotificacaoChartInstance = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: datasets
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                interaction: {
+                                    mode: 'index',
+                                    intersect: false
+                                },
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom',
+                                        labels: {
+                                            padding: 15,
+                                            font: {
+                                                size: 12,
+                                                weight: '500'
+                                            },
+                                            usePointStyle: true,
+                                            pointStyle: 'circle'
+                                        }
+                                    },
+                                    tooltip: {
+                                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                        padding: 12,
+                                        titleFont: {
+                                            size: 14,
+                                            weight: 'bold'
+                                        },
+                                        bodyFont: {
+                                            size: 12
+                                        },
+                                        bodySpacing: 4,
+                                        callbacks: {
+                                            label: function(context) {
+                                                return context.dataset.label + ': ' + context.parsed.y + ' notificações';
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: {
+                                            stepSize: 1,
+                                            font: {
+                                                size: 11
+                                            }
+                                        },
+                                        grid: {
+                                            color: 'rgba(0, 0, 0, 0.05)'
+                                        }
+                                    },
+                                    x: {
+                                        ticks: {
+                                            font: {
+                                                size: 11
+                                            }
+                                        },
+                                        grid: {
+                                            display: false
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                        
+                        console.log('✅ Gráfico de evolução por tipo criado com sucesso!');
+                    } else {
+                        console.error('❌ Canvas tiposNotificacaoChart não encontrado');
+                }
+            }, 100);
+            }
+            
+        } else {
+            container.innerHTML = `
+                <div style="background: #fee2e2; color: #991b1b; padding: 1.5rem; border-radius: 12px; border: 1px solid #fecaca;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 1.5rem;"></i>
+                        <div>
+                            <strong style="display: block; margin-bottom: 0.25rem;">Erro ao carregar dados</strong>
+                            <span>${data.error || 'Resposta inválida da API'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('❌ Erro ao carregar estatísticas:', error);
+        const container = document.getElementById('estatisticasContentNovo');
+        if (container) {
+            container.innerHTML = `
+                <div style="background: #fee2e2; color: #991b1b; padding: 1.5rem; border-radius: 12px; border: 1px solid #fecaca;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 1.5rem;"></i>
+                        <div>
+                            <strong style="display: block; margin-bottom: 0.25rem;">Erro ao carregar estatísticas</strong>
+                            <span>${error.message}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+}
+
+// Filtrar estatísticas novo
+function filtrarEstatisticasNovo() {
+    console.log('🔍 Filtrando estatísticas...');
+    const dataInicio = document.getElementById('dataInicioNovo').value;
+    const dataFim = document.getElementById('dataFimNovo').value;
+    
+    if (dataInicio && dataFim && dataInicio > dataFim) {
+        alert('⚠️ A data inicial não pode ser maior que a data final!');
+        return;
+    }
+    
+    carregarEstatisticasNovo();
+}
+
+// Limpar filtros
+function limparFiltrosNovo() {
+    console.log('🧹 Limpando filtros...');
+    document.getElementById('dataInicioNovo').value = '';
+    document.getElementById('dataFimNovo').value = '';
+    carregarEstatisticasNovo();
+}
+
+// Salvar preferências
+async function salvarPreferencias() {
+    const form = document.getElementById('preferenciasFormData');
+    const formData = new FormData(form);
+    
+    // Processar dados do formulário
+    const data = {
+        horario_inicio: formData.get('horario_inicio'),
+        horario_fim: formData.get('horario_fim'),
+        receber_fim_semana: formData.get('receber_fim_semana') === 'on',
+        preferencias_por_tipo: {}
+    };
+    
+    // Processar preferências por tipo
+    for (const [key, value] of formData.entries()) {
+        if (key.startsWith('preferencias[')) {
+            const match = key.match(/preferencias\[([^\]]+)\]\[([^\]]+)\]/);
+            if (match) {
+                const tipoCodigo = match[1];
+                const campo = match[2];
+                
+                if (!data.preferencias_por_tipo[tipoCodigo]) {
+                    data.preferencias_por_tipo[tipoCodigo] = {};
+                }
+                
+                if (campo === 'ativo') {
+                    data.preferencias_por_tipo[tipoCodigo][campo] = value === 'on';
+                } else {
+                    data.preferencias_por_tipo[tipoCodigo][campo] = value;
+                }
+            }
+        }
+    }
+    
+    try {
+        const response = await fetch('/api/notificacoes/preferencias/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            showNotification('Preferências salvas com sucesso!', 'success');
+        } else {
+            showNotification('Erro ao salvar preferências: ' + (result.error || 'Erro desconhecido'), 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao salvar preferências:', error);
+        showNotification('Erro ao salvar preferências', 'error');
+    }
+}
+
+// Funções para templates
+function openTemplateModal() {
+    document.getElementById('templateModalTitle').textContent = 'Novo Template de Notificação';
+    document.getElementById('templateForm').reset();
+    document.getElementById('templateId').value = '';
+    document.getElementById('templateModal').classList.add('active');
+}
+
+function editarTemplate(id) {
+    // Buscar dados do template
+    fetch(`/api/templates-notificacoes/${id}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const template = data.template;
+                document.getElementById('templateModalTitle').textContent = 'Editar Template de Notificação';
+                document.getElementById('templateId').value = template.id;
+                document.getElementById('templateNome').value = template.nome;
+                document.getElementById('templateTipo').value = template.tipo_notificacao_id;
+                document.getElementById('templateCanal').value = template.canal_id;
+                document.getElementById('templateAssunto').value = template.assunto;
+                document.getElementById('templateCorpoTexto').value = template.corpo_texto;
+                document.getElementById('templateCorpoHtml').value = template.corpo_html;
+                document.getElementById('templateVariaveis').value = template.variaveis.join(',');
+                document.getElementById('templateAtivo').checked = template.ativo;
+                document.getElementById('templateModal').classList.add('active');
+            } else {
+                showNotification('Erro ao carregar template', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showNotification('Erro ao carregar template', 'error');
+        });
+}
+
+function deletarTemplate(id) {
+    if (confirm('Tem certeza que deseja deletar este template?')) {
+        fetch(`/api/templates-notificacoes/${id}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Template deletado com sucesso!', 'success');
+                carregarTemplates();
+            } else {
+                showNotification('Erro ao deletar template', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            showNotification('Erro ao deletar template', 'error');
+        });
+    }
+}
+
+function salvarTemplate() {
+    const form = document.getElementById('templateForm');
+    const formData = new FormData(form);
+    const templateId = formData.get('id');
+    
+    const data = {
+        nome: formData.get('nome'),
+        tipo_notificacao: formData.get('tipo_notificacao'),
+        canal: formData.get('canal'),
+        assunto: formData.get('assunto'),
+        corpo_texto: formData.get('corpo_texto'),
+        corpo_html: formData.get('corpo_html'),
+        variaveis: formData.get('variaveis').split(',').map(v => v.trim()).filter(v => v),
+        ativo: formData.get('ativo') === 'on'
+    };
+    
+    const url = templateId ? `/api/templates-notificacoes/${templateId}/` : '/api/templates-notificacoes/';
+    const method = templateId ? 'PUT' : 'POST';
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Template salvo com sucesso!', 'success');
+            closeTemplateModal();
+            carregarTemplates();
+        } else {
+            showNotification('Erro ao salvar template: ' + (data.error || 'Erro desconhecido'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showNotification('Erro ao salvar template', 'error');
+    });
+}
+
+function closeTemplateModal() {
+    document.getElementById('templateModal').classList.remove('active');
+}
+
+// Função para enviar teste de notificação
+function enviarTeste() {
+    const form = document.getElementById('testeForm');
+    const formData = new FormData(form);
+    
+    const data = {
+        tipo: formData.get('tipo'),
+        canal: formData.get('canal'),
+        dados_contexto: {}
+    };
+    
+    // Tentar parsear JSON se fornecido
+    const dadosTexto = formData.get('dados_contexto');
+    if (dadosTexto.trim()) {
+        try {
+            data.dados_contexto = JSON.parse(dadosTexto);
+        } catch (e) {
+            alert('Erro no formato JSON dos dados de contexto');
+            return;
+        }
+    }
+    
+    // Enviar requisição
+    fetch('/api/notificacoes/teste/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        showTesteResult(data);
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showTesteResult({
+            success: false,
+            message: 'Erro ao enviar teste: ' + error.message
+        });
+    });
+}
+
+// Mostrar resultado do teste
+function showTesteResult(result) {
+    const modal = document.getElementById('testeModal');
+    const resultado = document.getElementById('testeResultado');
+    
+    let html = '';
+    if (result.success) {
+        html = `
+            <div class="alert alert-success">
+                <strong>✅ Sucesso!</strong><br>
+                ${result.message}
+                ${result.notificacao_id ? `<br><small>ID da notificação: ${result.notificacao_id}</small>` : ''}
+            </div>
+        `;
+    } else {
+        html = `
+            <div class="alert alert-error">
+                <strong>❌ Erro!</strong><br>
+                ${result.message || result.error || 'Erro desconhecido'}
+            </div>
+        `;
+    }
+    
+    resultado.innerHTML = html;
+    modal.classList.add('active');
+}
+
+// Fechar modal de teste
+function closeTesteModal() {
+    document.getElementById('testeModal').classList.remove('active');
+}
+
+// Funções para tipos de notificação
+
+
+function salvarTipo() {
+    console.log('Salvando tipo...');
+    
+    // Coletar dados do formulário (nome e código são readonly, não enviados)
+    const formData = {
+        id: document.getElementById('tipoId').value,
+        prioridade_padrao: document.getElementById('tipoPrioridade').value,
+        descricao: document.getElementById('tipoDescricao').value,
+        ativo: document.getElementById('tipoAtivo').checked
+    };
+    
+    console.log('Dados a serem salvos:', formData);
+    
+    // Enviar dados via API
+    fetch(`/api/tipos-notificacao/${formData.id}/`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Tipo salvo com sucesso:', data);
+            alert('Tipo de notificação atualizado com sucesso!');
+            closeTipoModal();
+            // Recarregar a página para mostrar as mudanças
+            location.reload();
+        } else {
+            console.error('Erro ao salvar tipo:', data);
+            alert('Erro ao salvar tipo: ' + (data.message || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro na requisição:', error);
+        alert('Erro ao salvar tipo: ' + error.message);
+    });
+}
+
+function closeTipoModal() {
+    const modal = document.getElementById('tipoModalDynamic');
+    if (modal) {
+        modal.remove();
+        console.log('Modal tipo fechado');
+    }
+}
+
+// Funções para canais de notificação
+
+// Função para carregar dados do canal
+function loadCanalData(id) {
+    console.log('Carregando dados do canal:', id);
+    
+    // Verificar se os elementos existem
+    const nomeField = document.getElementById('canalNome');
+    const codigoField = document.getElementById('canalCodigo');
+    const iconeField = document.getElementById('canalIcone');
+    const ativoField = document.getElementById('canalAtivo');
+    
+    console.log('Elementos encontrados:', {
+        nome: !!nomeField,
+        codigo: !!codigoField,
+        icone: !!iconeField,
+        ativo: !!ativoField
+    });
+    
+    if (!nomeField || !codigoField || !iconeField || !ativoField) {
+        console.error('Alguns elementos do formulário não foram encontrados!');
+        return;
+    }
+    
+    // Carregar dados reais via API
+    fetch('/api/canais-notificacao/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.canais) {
+                // Encontrar o canal com o ID especificado
+                const canal = data.canais.find(c => c.id == id);
+                if (canal) {
+                    console.log('Canal encontrado:', canal);
+                    
+                    // Preencher os campos com os dados reais
+                    console.log('Preenchendo campo nome:', canal.nome);
+                    nomeField.value = canal.nome;
+                    console.log('Nome após preenchimento:', nomeField.value);
+                    
+                    console.log('Preenchendo campo codigo:', canal.codigo);
+                    codigoField.value = canal.codigo;
+                    console.log('Codigo após preenchimento:', codigoField.value);
+                    
+                    console.log('Preenchendo campo icone:', canal.icone);
+                    iconeField.value = canal.icone || '';
+                    console.log('Icone após preenchimento:', iconeField.value);
+                    
+                    console.log('Preenchendo campo ativo:', canal.ativo);
+                    ativoField.checked = canal.ativo;
+                    console.log('Ativo após preenchimento:', ativoField.checked);
+                    
+                    // Mostrar/ocultar configurações de webhook
+                    const webhookConfig = document.getElementById('webhookConfig');
+                    if (canal.codigo === 'webhook' && webhookConfig) {
+                        webhookConfig.style.display = 'block';
+                        
+                        // Carregar configurações do webhook
+                        const config = canal.configuracao || {};
+                        document.getElementById('webhookUrl').value = config.url || '';
+                        document.getElementById('webhookMethod').value = config.method || 'POST';
+                        document.getElementById('webhookTimeout').value = config.timeout || 30;
+                        document.getElementById('webhookHeaders').value = config.headers ? JSON.stringify(config.headers, null, 2) : '';
+                        document.getElementById('webhookFrequency').value = config.frequency || 'imediato';
+                        
+                        console.log('Configurações de webhook carregadas:', config);
+                    } else if (webhookConfig) {
+                        webhookConfig.style.display = 'none';
+                    }
+                    
+                    // Forçar atualização visual
+                    nomeField.dispatchEvent(new Event('input', { bubbles: true }));
+                    codigoField.dispatchEvent(new Event('input', { bubbles: true }));
+                    iconeField.dispatchEvent(new Event('input', { bubbles: true }));
+                    ativoField.dispatchEvent(new Event('change', { bubbles: true }));
+                    
+                    console.log('Campos preenchidos com sucesso!');
+                    console.log('Valores finais:', {
+                        nome: nomeField.value,
+                        codigo: codigoField.value,
+                        icone: iconeField.value,
+                        ativo: ativoField.checked
+                    });
+                } else {
+                    console.error('Canal não encontrado com ID:', id);
+                }
+            } else {
+                console.error('Erro ao carregar canais:', data);
+            }
+        })
+        .catch(error => {
+            console.error('Erro na requisição:', error);
+            // Fallback para dados de exemplo em caso de erro
+            nomeField.value = 'Webhook';
+            codigoField.value = 'webhook';
+            iconeField.value = 'fas fa-webhook';
+            ativoField.checked = true;
+        });
+}
+
+
+function salvarCanal() {
+    console.log('Salvando canal...');
+    
+    // Coletar dados do formulário (nome e código são readonly, não enviados)
+    const formData = {
+        id: document.getElementById('canalId').value,
+        icone: document.getElementById('canalIcone').value,
+        ativo: document.getElementById('canalAtivo').checked
+    };
+    
+    // Se for webhook, incluir configurações específicas
+    const codigoField = document.getElementById('canalCodigo');
+    if (codigoField && codigoField.value === 'webhook') {
+        const webhookConfig = {
+            url: document.getElementById('webhookUrl').value,
+            method: document.getElementById('webhookMethod').value,
+            timeout: parseInt(document.getElementById('webhookTimeout').value) || 30,
+            frequency: document.getElementById('webhookFrequency').value
+        };
+        
+        // Processar headers JSON
+        const headersText = document.getElementById('webhookHeaders').value.trim();
+        if (headersText) {
+            try {
+                webhookConfig.headers = JSON.parse(headersText);
+            } catch (e) {
+                alert('Erro no formato JSON dos headers. Verifique a sintaxe.');
+                return;
+            }
+        }
+        
+        formData.configuracao = webhookConfig;
+        console.log('Configurações de webhook incluídas:', webhookConfig);
+    }
+    
+    console.log('Dados a serem salvos:', formData);
+    
+    // Enviar dados via API
+    fetch(`/api/canais-notificacao/${formData.id}/`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Canal salvo com sucesso:', data);
+            alert('Canal de notificação atualizado com sucesso!');
+            closeCanalModal();
+            // Recarregar a página para mostrar as mudanças
+            location.reload();
+        } else {
+            console.error('Erro ao salvar canal:', data);
+            alert('Erro ao salvar canal: ' + (data.message || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro na requisição:', error);
+        alert('Erro ao salvar canal: ' + error.message);
+    });
+}
+
+function closeCanalModal() {
+    const modal = document.getElementById('canalModalDynamic');
+    if (modal) {
+        modal.remove();
+        console.log('Modal canal fechado');
+    }
+}
+
+function editPreferencia(id) {
+    alert(`Editar preferência ${id} - Funcionalidade em desenvolvimento`);
+}
+
+// Visualizar detalhes de uma notificação
+async function viewNotificacao(id) {
+    try {
+        console.log(`📋 Carregando detalhes da notificação #${id}...`);
+        
+        // Buscar detalhes da notificação usando a API dedicada
+        const response = await fetch(`/api/notificacoes/${id}/`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error('Notificação não encontrada');
+            }
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('📊 Dados recebidos:', data);
+        
+        if (data.success && data.notificacao) {
+            mostrarModalNotificacao(data.notificacao);
+        } else {
+            throw new Error(data.error || 'Resposta inválida da API');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao carregar notificação:', error);
+        alert(`❌ Erro: ${error.message}`);
+    }
+}
+
+// Mostrar modal com detalhes da notificação
+function mostrarModalNotificacao(notif) {
+    // Determinar cor do status
+    const statusColors = {
+        'pendente': '#f59e0b',
+        'enviando': '#3b82f6',
+        'enviada': '#10b981',
+        'falhou': '#ef4444',
+        'cancelada': '#6b7280'
+    };
+    
+    const statusIcons = {
+        'pendente': '⏳',
+        'enviando': '📤',
+        'enviada': '✅',
+        'falhou': '❌',
+        'cancelada': '🚫'
+    };
+    
+    const statusTexts = {
+        'pendente': 'Pendente',
+        'enviando': 'Enviando',
+        'enviada': 'Enviada',
+        'falhou': 'Falhou',
+        'cancelada': 'Cancelada'
+    };
+    
+    const prioridadeColors = {
+        'baixa': '#6b7280',
+        'normal': '#3b82f6',
+        'alta': '#f59e0b',
+        'urgente': '#ef4444'
+    };
+    
+    const prioridadeTexts = {
+        'baixa': 'Baixa',
+        'normal': 'Normal',
+        'alta': 'Alta',
+        'urgente': 'Urgente'
+    };
+    
+    const statusColor = statusColors[notif.status] || '#6b7280';
+    const statusIcon = statusIcons[notif.status] || '📋';
+    const statusText = statusTexts[notif.status] || notif.status;
+    const prioridadeColor = prioridadeColors[notif.prioridade] || '#3b82f6';
+    const prioridadeText = prioridadeTexts[notif.prioridade] || notif.prioridade;
+    
+    // Criar modal HTML
+    const modalHTML = `
+        <div id="modalNotificacao" class="modal active" style="display: flex !important;">
+            <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, #1F3D59 0%, #2c5aa0 100%); padding: 1.5rem; border-radius: 12px 12px 0 0; margin: -2rem -2rem 1.5rem -2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2 style="color: white; margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-bell"></i>
+                            Detalhes da Notificação #${notif.id}
+                        </h2>
+                        <button onclick="fecharModalNotificacao()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+                            ×
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Status e Prioridade -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border-left: 4px solid ${statusColor};">
+                        <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.25rem;">Status</div>
+                        <div style="font-size: 1.2rem; font-weight: 600; color: ${statusColor}; display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 1.5rem;">${statusIcon}</span>
+                            ${statusText}
+                        </div>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border-left: 4px solid ${prioridadeColor};">
+                        <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.25rem;">Prioridade</div>
+                        <div style="font-size: 1.2rem; font-weight: 600; color: ${prioridadeColor};">
+                            ${prioridadeText}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Informações Principais -->
+                <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1F3D59; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-info-circle"></i>
+                        Informações Principais
+                    </h3>
+                    
+                    <div style="display: grid; gap: 1rem;">
+                        <div>
+                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.25rem;">📋 Tipo</div>
+                            <div style="font-weight: 600; color: #333;">${notif.tipo.nome}</div>
+                            <div style="font-size: 0.85rem; color: #999;"><code>${notif.tipo.codigo}</code></div>
+                        </div>
+                        
+                        <div>
+                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.25rem;">📱 Canal</div>
+                            <div style="font-weight: 600; color: #333;">
+                                <i class="${notif.canal.icone}"></i> ${notif.canal.nome}
+                            </div>
+                        </div>
+                        
+                        ${notif.destinatario ? `
+                        <div>
+                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.25rem;">👤 Destinatário</div>
+                            <div style="font-weight: 600; color: #333;">${notif.destinatario.username}</div>
+                            ${notif.destinatario.email ? `<div style="font-size: 0.85rem; color: #666;">${notif.destinatario.email}</div>` : ''}
+                        </div>
+                        ` : notif.destinatario_email ? `
+                        <div>
+                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.25rem;">📧 Email</div>
+                            <div style="font-weight: 600; color: #333;">${notif.destinatario_email}</div>
+                        </div>
+                        ` : ''}
+                        
+                        ${notif.destinatario_telefone ? `
+                        <div>
+                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.25rem;">📞 Telefone</div>
+                            <div style="font-weight: 600; color: #333;">${notif.destinatario_telefone}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                <!-- Mensagem -->
+                <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1F3D59; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-envelope"></i>
+                        Mensagem
+                    </h3>
+                    
+                    <div>
+                        <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.5rem;">📌 Título</div>
+                        <div style="font-weight: 600; color: #333; margin-bottom: 1rem; padding: 0.75rem; background: #f8f9fa; border-radius: 6px;">
+                            ${notif.titulo}
+                        </div>
+                        
+                        <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.5rem;">📝 Conteúdo</div>
+                        <div style="color: #333; line-height: 1.6; padding: 1rem; background: #f8f9fa; border-radius: 6px; white-space: pre-wrap; word-wrap: break-word;">
+                            ${notif.mensagem}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Dados Técnicos -->
+                <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1F3D59; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-cogs"></i>
+                        Dados Técnicos
+                    </h3>
+                    
+                    <div style="display: grid; gap: 0.75rem; font-size: 0.9rem;">
+                        <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem;">
+                            <span style="color: #666;">📅 Data Criação:</span>
+                            <span style="font-weight: 600;">${new Date(notif.data_criacao).toLocaleString('pt-BR')}</span>
+                        </div>
+                        
+                        ${notif.data_agendamento ? `
+                        <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem;">
+                            <span style="color: #666;">⏰ Data Agendamento:</span>
+                            <span style="font-weight: 600;">${new Date(notif.data_agendamento).toLocaleString('pt-BR')}</span>
+                        </div>
+                        ` : ''}
+                        
+                        ${notif.data_envio ? `
+                        <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem;">
+                            <span style="color: #666;">✅ Data Envio:</span>
+                            <span style="font-weight: 600; color: #10b981;">${new Date(notif.data_envio).toLocaleString('pt-BR')}</span>
+                        </div>
+                        ` : ''}
+                        
+                        <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem;">
+                            <span style="color: #666;">🔄 Tentativas:</span>
+                            <span style="font-weight: 600;">${notif.tentativas} / ${notif.max_tentativas}</span>
+                        </div>
+                        
+                        ${notif.n8n_execution_id ? `
+                        <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem;">
+                            <span style="color: #666;">🔗 N8N Execution ID:</span>
+                            <span style="font-family: monospace; font-size: 0.85rem;">${notif.n8n_execution_id}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                <!-- Dados de Contexto -->
+                ${notif.dados_contexto && Object.keys(notif.dados_contexto).length > 0 ? `
+                <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <h3 style="margin: 0 0 1rem 0; color: #1F3D59; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-database"></i>
+                        Dados de Contexto
+                    </h3>
+                    <pre style="background: #f8f9fa; padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; margin: 0;"><code>${JSON.stringify(notif.dados_contexto, null, 2)}</code></pre>
+                </div>
+                ` : ''}
+                
+                <!-- Erro (se houver) -->
+                ${notif.erro_detalhes ? `
+                <div style="background: #fee2e2; border: 1px solid #fecaca; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <h3 style="margin: 0 0 1rem 0; color: #991b1b; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Erro
+                    </h3>
+                    <div style="color: #991b1b; font-family: monospace; font-size: 0.9rem; white-space: pre-wrap; word-wrap: break-word;">
+                        ${notif.erro_detalhes}
+                    </div>
+                </div>
+                ` : ''}
+                
+                <!-- Botões de Ação -->
+                <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
+                    ${notif.status === 'pendente' || notif.status === 'falhou' ? `
+                    <button onclick="reenviarNotificacao(${notif.id})" class="btn btn-primary" style="display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-redo"></i>
+                        Reenviar
+                    </button>
+                    ` : ''}
+                    <button onclick="fecharModalNotificacao()" class="btn btn-secondary">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remover modal anterior se existir
+    const modalAntigo = document.getElementById('modalNotificacao');
+    if (modalAntigo) {
+        modalAntigo.remove();
+    }
+    
+    // Adicionar modal ao body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Fechar ao clicar fora
+    document.getElementById('modalNotificacao').addEventListener('click', function(e) {
+        if (e.target === this) {
+            fecharModalNotificacao();
+        }
+    });
+}
+
+// Fechar modal de notificação
+function fecharModalNotificacao() {
+    const modal = document.getElementById('modalNotificacao');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Reenviar notificação
+async function reenviarNotificacao(id) {
+    if (!confirm('Deseja realmente reenviar esta notificação?')) {
+        return;
+    }
+    
+    try {
+        // Aqui você pode implementar a lógica de reenvio
+        // Por enquanto, vamos apenas mostrar uma mensagem
+        alert('🔄 Funcionalidade de reenvio em desenvolvimento.\n\nPara reenviar, execute:\npython manage.py process_notifications');
+        
+        // Fechar modal
+        fecharModalNotificacao();
+    } catch (error) {
+        console.error('Erro ao reenviar notificação:', error);
+        alert(`Erro ao reenviar: ${error.message}`);
+    }
+}
+
+// Utility function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Função para mostrar notificações
+function showNotification(message, type = 'info') {
+    // Usar o sistema de notificações global se disponível
+    if (typeof window.showNotification === 'function') {
+        return window.showNotification(message, type);
+    }
+    
+    // Fallback: usar alert se o sistema global não estiver disponível
+    console.log(`[${type.toUpperCase()}] ${message}`);
+    alert(`[${type.toUpperCase()}] ${message}`);
+}
+
+// Atualizar estatísticas periodicamente
+setInterval(() => {
+    fetch('/api/notificacoes/estatisticas/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const stats = data.estatisticas;
+                document.getElementById('totalNotificacoes').textContent = stats.total_notificacoes;
+                document.getElementById('notificacoesHoje').textContent = stats.notificacoes_hoje;
+                document.getElementById('taxaEntrega').textContent = stats.taxa_entrega + '%';
+                document.getElementById('canaisAtivos').textContent = stats.canais_ativos;
+            }
+        })
+        .catch(error => console.error('Erro ao atualizar estatísticas:', error));
+}, 30000); // Atualizar a cada 30 segundos
+
+// Sistema de notificações carregado
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Sistema de notificações carregado');
+});
+
+// Funções simples para modais
+function openTipoModal(id) {
+    console.log('Abrindo modal tipo para ID:', id);
+    
+    // Remover modal anterior se existir
+    const existingModal = document.getElementById('tipoModalDynamic');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Criar modal dinamicamente (igual ao teste que funcionou)
+    const modal = document.createElement('div');
+    modal.id = 'tipoModalDynamic';
+    modal.innerHTML = `
+        <div style="background: white; padding: 2rem; border-radius: 12px; border: 2px solid #e5e7eb; max-width: 500px; width: 90%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 1rem;">
+                <h3 style="margin: 0; color: #1f2937; font-size: 1.25rem; font-weight: 600;">Editar Tipo de Notificação</h3>
+                <button onclick="closeTipoModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280;">&times;</button>
+            </div>
+            <form id="tipoForm">
+                <input type="hidden" id="tipoId" name="id" value="${id}">
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Nome</label>
+                    <input type="text" id="tipoNome" name="nome" readonly style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem; background-color: #f9fafb; color: #6b7280; cursor: not-allowed;">
+                    <small style="color: #6b7280; font-size: 0.875rem;">Nome não pode ser alterado</small>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Código</label>
+                    <input type="text" id="tipoCodigo" name="codigo" readonly style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem; background-color: #f9fafb; color: #6b7280; cursor: not-allowed;">
+                    <small style="color: #6b7280; font-size: 0.875rem;">Código não pode ser alterado</small>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Prioridade Padrão</label>
+                    <select id="tipoPrioridade" name="prioridade_padrao" required style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem;">
+                        <option value="baixa">Baixa</option>
+                        <option value="normal">Normal</option>
+                        <option value="alta">Alta</option>
+                        <option value="urgente">Urgente</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Descrição</label>
+                    <textarea id="tipoDescricao" name="descricao" rows="3" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem; resize: vertical;"></textarea>
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="tipoAtivo" name="ativo" checked style="margin-right: 0.5rem;">
+                        <span style="font-weight: 500; color: #374151;">Ativo</span>
+                    </label>
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" onclick="closeTipoModal()" style="padding: 0.75rem 1.5rem; border: 1px solid #d1d5db; background: white; color: #374151; border-radius: 0.375rem; cursor: pointer; font-weight: 500;">Cancelar</button>
+                    <button type="button" onclick="salvarTipo()" style="padding: 0.75rem 1.5rem; border: none; background: #3b82f6; color: white; border-radius: 0.375rem; cursor: pointer; font-weight: 500;">Atualizar</button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    // Estilos inline (igual ao teste que funcionou)
+    modal.style.cssText = `
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background-color: rgba(0, 0, 0, 0.5) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        z-index: 9999999 !important;
+    `;
+    
+    // Adicionar ao body
+    document.body.appendChild(modal);
+    console.log('Modal tipo criado dinamicamente e adicionado ao DOM');
+    
+    // Aguardar um frame para garantir que o DOM foi atualizado
+    setTimeout(() => {
+        loadTipoData(id);
+    }, 10);
+}
+
+function closeTipoModal() {
+    const modal = document.getElementById('tipoModalDynamic');
+    if (modal) {
+        modal.remove();
+        console.log('Modal tipo fechado');
+    }
+}
+
+// Função para carregar dados do tipo
+function loadTipoData(id) {
+    console.log('Carregando dados do tipo:', id);
+    
+    // Verificar se os elementos existem
+    const nomeField = document.getElementById('tipoNome');
+    const codigoField = document.getElementById('tipoCodigo');
+    const prioridadeField = document.getElementById('tipoPrioridade');
+    const descricaoField = document.getElementById('tipoDescricao');
+    const ativoField = document.getElementById('tipoAtivo');
+    
+    console.log('Elementos encontrados:', {
+        nome: !!nomeField,
+        codigo: !!codigoField,
+        prioridade: !!prioridadeField,
+        descricao: !!descricaoField,
+        ativo: !!ativoField
+    });
+    
+    // Verificar se há elementos duplicados
+    const allNomeFields = document.querySelectorAll('#tipoNome');
+    const allCodigoFields = document.querySelectorAll('#tipoCodigo');
+    const allPrioridadeFields = document.querySelectorAll('#tipoPrioridade');
+    const allDescricaoFields = document.querySelectorAll('#tipoDescricao');
+    const allAtivoFields = document.querySelectorAll('#tipoAtivo');
+    
+    console.log('Elementos duplicados encontrados:', {
+        nome: allNomeFields.length,
+        codigo: allCodigoFields.length,
+        prioridade: allPrioridadeFields.length,
+        descricao: allDescricaoFields.length,
+        ativo: allAtivoFields.length
+    });
+    
+    if (allNomeFields.length > 1) {
+        console.warn('Múltiplos elementos com ID tipoNome encontrados!');
+        console.log('Todos os elementos nome:', allNomeFields);
+    }
+    
+    if (!nomeField || !codigoField || !prioridadeField || !descricaoField || !ativoField) {
+        console.error('Alguns elementos do formulário não foram encontrados!');
+        return;
+    }
+    
+    // Carregar dados reais via API
+    fetch('/api/tipos-notificacao/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.tipos) {
+                // Encontrar o tipo com o ID especificado
+                const tipo = data.tipos.find(t => t.id == id);
+                if (tipo) {
+                    console.log('Tipo encontrado:', tipo);
+                    
+                    // Preencher os campos com os dados reais
+                    console.log('Preenchendo campo nome:', tipo.nome);
+                    nomeField.value = tipo.nome;
+                    console.log('Nome após preenchimento:', nomeField.value);
+                    
+                    console.log('Preenchendo campo codigo:', tipo.codigo);
+                    codigoField.value = tipo.codigo;
+                    console.log('Codigo após preenchimento:', codigoField.value);
+                    
+                    console.log('Preenchendo campo prioridade:', tipo.prioridade_padrao);
+                    prioridadeField.value = tipo.prioridade_padrao;
+                    console.log('Prioridade após preenchimento:', prioridadeField.value);
+                    
+                    console.log('Preenchendo campo descricao:', tipo.descricao);
+                    descricaoField.value = tipo.descricao || '';
+                    console.log('Descricao após preenchimento:', descricaoField.value);
+                    
+                    console.log('Preenchendo campo ativo:', tipo.ativo);
+                    ativoField.checked = tipo.ativo;
+                    console.log('Ativo após preenchimento:', ativoField.checked);
+                    
+                    // Forçar atualização visual
+                    nomeField.dispatchEvent(new Event('input', { bubbles: true }));
+                    codigoField.dispatchEvent(new Event('input', { bubbles: true }));
+                    prioridadeField.dispatchEvent(new Event('change', { bubbles: true }));
+                    descricaoField.dispatchEvent(new Event('input', { bubbles: true }));
+                    ativoField.dispatchEvent(new Event('change', { bubbles: true }));
+                    
+                    console.log('Campos preenchidos com sucesso!');
+                    console.log('Valores finais:', {
+                        nome: nomeField.value,
+                        codigo: codigoField.value,
+                        prioridade: prioridadeField.value,
+                        descricao: descricaoField.value,
+                        ativo: ativoField.checked
+                    });
+                } else {
+                    console.error('Tipo não encontrado com ID:', id);
+                }
+            } else {
+                console.error('Erro ao carregar tipos:', data);
+            }
+        })
+        .catch(error => {
+            console.error('Erro na requisição:', error);
+            // Fallback para dados de exemplo em caso de erro
+            nomeField.value = 'Novo Lead';
+            codigoField.value = 'lead_novo';
+            prioridadeField.value = 'alta';
+            descricaoField.value = 'Notificação enviada quando um novo lead é criado';
+            ativoField.checked = true;
+        });
+}
+
+
+function openCanalModal(id) {
+    console.log('Abrindo modal canal para ID:', id);
+    
+    // Remover modal anterior se existir
+    const existingModal = document.getElementById('canalModalDynamic');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Criar modal dinamicamente (igual ao modal de tipos)
+    const modal = document.createElement('div');
+    modal.id = 'canalModalDynamic';
+    modal.innerHTML = `
+        <div style="background: white; padding: 2rem; border-radius: 12px; border: 2px solid #e5e7eb; max-width: 500px; width: 90%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 1rem;">
+                <h3 style="margin: 0; color: #1f2937; font-size: 1.25rem; font-weight: 600;">Editar Canal de Notificação</h3>
+                <button onclick="closeCanalModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280;">&times;</button>
+            </div>
+            <form id="canalForm">
+                <input type="hidden" id="canalId" name="id" value="${id}">
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Nome</label>
+                    <input type="text" id="canalNome" name="nome" readonly style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem; background-color: #f9fafb; color: #6b7280; cursor: not-allowed;">
+                    <small style="color: #6b7280; font-size: 0.875rem;">Nome não pode ser alterado</small>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Código</label>
+                    <input type="text" id="canalCodigo" name="codigo" readonly style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem; background-color: #f9fafb; color: #6b7280; cursor: not-allowed;">
+                    <small style="color: #6b7280; font-size: 0.875rem;">Código não pode ser alterado</small>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Ícone (FontAwesome)</label>
+                    <input type="text" id="canalIcone" name="icone" placeholder="fas fa-envelope" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem;">
+                    <small style="color: #6b7280; font-size: 0.875rem;">Classe do ícone FontAwesome (ex: fas fa-envelope, fab fa-whatsapp)</small>
+                </div>
+                
+                <!-- Configurações específicas para Webhook -->
+                <div id="webhookConfig" style="display: none; margin-bottom: 1rem; padding: 1rem; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem;">
+                    <h4 style="margin: 0 0 1rem 0; color: #1f2937; font-size: 1rem; font-weight: 600;">Configurações do Webhook</h4>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">URL de Destino</label>
+                        <input type="url" id="webhookUrl" name="webhook_url" placeholder="https://exemplo.com/webhook" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem;">
+                        <small style="color: #6b7280; font-size: 0.875rem;">URL para onde os dados serão enviados</small>
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Método HTTP</label>
+                        <select id="webhookMethod" name="webhook_method" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem;">
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="PATCH">PATCH</option>
+                        </select>
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Timeout (segundos)</label>
+                        <input type="number" id="webhookTimeout" name="webhook_timeout" min="1" max="300" value="30" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem;">
+                        <small style="color: #6b7280; font-size: 0.875rem;">Tempo limite para a requisição (1-300 segundos)</small>
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Headers Personalizados (JSON)</label>
+                        <textarea id="webhookHeaders" name="webhook_headers" rows="3" placeholder='{"Authorization": "Bearer token", "Content-Type": "application/json"}' style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem; font-family: monospace;"></textarea>
+                        <small style="color: #6b7280; font-size: 0.875rem;">Headers HTTP em formato JSON (opcional)</small>
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Frequência de Envio</label>
+                        <select id="webhookFrequency" name="webhook_frequency" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem;">
+                            <option value="imediato">Imediato</option>
+                            <option value="agrupado_5min">Agrupado (5 minutos)</option>
+                            <option value="agrupado_15min">Agrupado (15 minutos)</option>
+                            <option value="agrupado_1hora">Agrupado (1 hora)</option>
+                            <option value="agrupado_diario">Agrupado (diário)</option>
+                        </select>
+                        <small style="color: #6b7280; font-size: 0.875rem;">Como as notificações serão enviadas</small>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="canalAtivo" name="ativo" checked style="margin-right: 0.5rem;">
+                        <span style="font-weight: 500; color: #374151;">Ativo</span>
+                    </label>
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" onclick="closeCanalModal()" style="padding: 0.75rem 1.5rem; border: 1px solid #d1d5db; background: white; color: #374151; border-radius: 0.375rem; cursor: pointer; font-weight: 500;">Cancelar</button>
+                    <button type="button" onclick="salvarCanal()" style="padding: 0.75rem 1.5rem; border: none; background: #3b82f6; color: white; border-radius: 0.375rem; cursor: pointer; font-weight: 500;">Atualizar</button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    // Estilos inline (igual ao modal de tipos)
+    modal.style.cssText = `
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background-color: rgba(0, 0, 0, 0.5) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        z-index: 9999999 !important;
+    `;
+    
+    // Adicionar ao body
+    document.body.appendChild(modal);
+    console.log('Modal canal criado dinamicamente e adicionado ao DOM');
+    
+    // Aguardar um frame para garantir que o DOM foi atualizado
+    setTimeout(() => {
+        loadCanalData(id);
+    }, 10);
+}
+
+function closeCanalModal() {
+    const modal = document.getElementById('canalModalDynamic');
+    if (modal) {
+        modal.remove();
+        console.log('Modal canal fechado');
+    }
+}
+
+</script>
+{% endblock %}

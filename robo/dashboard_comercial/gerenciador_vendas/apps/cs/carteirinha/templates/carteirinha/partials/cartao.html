@@ -1,0 +1,107 @@
+{% comment %}
+Template parcial do cartao de membro.
+Usado no preview (admin) e na area do membro.
+
+Variaveis esperadas:
+- modelo: ModeloCarteirinha
+- nome, cpf, nivel, data_emissao, pontos, cidade: strings
+- texto_rodape: string (opcional, usa modelo.texto_rodape se nao passado)
+{% endcomment %}
+
+<div style="
+    max-width:420px;
+    margin:0 auto;
+    border-radius:16px;
+    overflow:hidden;
+    position:relative;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+    font-family: 'Inter', sans-serif;
+    {% if modelo.tipo_fundo == 'imagem' and modelo.imagem_fundo %}
+        background: url('{{ modelo.imagem_fundo.url }}') center/cover;
+    {% else %}
+        background: linear-gradient(135deg, {{ modelo.cor_fundo_primaria }} 0%, {{ modelo.cor_fundo_secundaria }} 100%);
+    {% endif %}
+">
+    <!-- Decoracao: circulos abstratos (estilo Urbis) -->
+    <div style="position:absolute; top:-40px; right:-40px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,0.06);"></div>
+    <div style="position:absolute; top:30px; right:60px; width:120px; height:120px; border-radius:50%; background:rgba(255,255,255,0.04);"></div>
+    <div style="position:absolute; bottom:-60px; left:-30px; width:180px; height:180px; border-radius:50%; background:rgba(255,255,255,0.05);"></div>
+
+    <!-- Conteudo -->
+    <div style="position:relative; z-index:1; display:flex; flex-direction:column; gap:16px; padding:24px;">
+
+        <!-- Topo: Logo/Marca -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+                {% if modelo.logo %}
+                <img src="{{ modelo.logo.url }}" style="height:32px; margin-bottom:4px;" alt="{{ modelo.texto_marca }}">
+                {% else %}
+                <div style="font-size:18px; font-weight:800; color:{{ modelo.cor_texto }};">{{ modelo.texto_marca }}</div>
+                {% endif %}
+                {% if modelo.texto_rodape %}
+                <div style="font-size:10px; color:{{ modelo.cor_texto_secundario }}; margin-top:2px;">{{ texto_rodape|default:modelo.texto_rodape }}</div>
+                {% endif %}
+            </div>
+
+            {% if modelo.mostrar_qr_code %}
+            <div style="width:56px; height:56px; background:white; border-radius:10px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+                <i class="fas fa-qrcode" style="font-size:32px; color:#1e293b;"></i>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Centro: Dados do membro -->
+        <div>
+            {% if modelo.mostrar_nome %}
+            <div style="font-size:17px; font-weight:800; color:{{ modelo.cor_texto }}; margin-bottom:4px;">
+                Nome: {{ nome }}
+            </div>
+            {% endif %}
+
+            {% if modelo.mostrar_cpf %}
+            <div style="font-size:13px; color:{{ modelo.cor_texto_secundario }}; margin-bottom:2px;">
+                CPF/CNPJ: {{ cpf }}
+            </div>
+            {% endif %}
+
+            {% if modelo.mostrar_data_emissao %}
+            <div style="font-size:13px; color:{{ modelo.cor_texto_secundario }};">
+                Data de Emiss&atilde;o: {{ data_emissao }}
+            </div>
+            {% endif %}
+
+            {% if modelo.mostrar_data_validade %}
+            <div style="font-size:13px; color:{{ modelo.cor_texto_secundario }};">
+                Validade: {{ data_validade|default:"Indeterminada" }}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Rodape: Nivel, Pontos, Cidade -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                {% if modelo.mostrar_nivel %}
+                <span style="font-size:11px; font-weight:700; padding:4px 12px; border-radius:6px; background:{{ modelo.cor_destaque }}; color:#1e293b;">
+                    {{ nivel }}
+                </span>
+                {% endif %}
+                {% if modelo.mostrar_pontos %}
+                <span style="font-size:11px; font-weight:700; padding:4px 12px; border-radius:6px; background:rgba(255,255,255,0.15); color:{{ modelo.cor_texto }};">
+                    {{ pontos }} PTs
+                </span>
+                {% endif %}
+                {% if modelo.mostrar_cidade %}
+                <span style="font-size:11px; color:{{ modelo.cor_texto_secundario }}; padding:4px 0;">
+                    {{ cidade }}
+                </span>
+                {% endif %}
+            </div>
+
+            {% if modelo.mostrar_foto %}
+            <div style="width:48px; height:48px; border-radius:50%; background:rgba(255,255,255,0.15); border:2px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center;">
+                <i class="fas fa-user" style="font-size:20px; color:{{ modelo.cor_texto_secundario }};"></i>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

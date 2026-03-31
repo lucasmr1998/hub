@@ -1,0 +1,292 @@
+{% extends 'roleta/membro/base_membro.html' %}
+{% load static %}
+
+{% block title %}Roleta - Megalink{% endblock %}
+
+{% block extra_css %}
+.roleta-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+.roleta-panel {
+    width: 100%;
+    max-width: 500px;
+}
+.roulette-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    aspect-ratio: 1;
+    margin: 0 auto;
+}
+.roulette-wrapper img {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: none;
+}
+.roulette-wrapper img.active-frame {
+    display: block;
+}
+.pointer {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    z-index: 10;
+    filter: drop-shadow(0 5px 10px rgba(0,0,0,0.3));
+}
+.info-panel {
+    flex: 1;
+    min-width: 0;
+}
+.btn-spin {
+    display: block;
+    margin: 20px auto 0;
+    width: 100%;
+    max-width: 320px;
+    padding: 16px 20px;
+    background: #000b4a;
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 8px 20px rgba(0,11,74,0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-spin:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,11,74,0.4); }
+.btn-spin:active { transform: translateY(0); }
+.btn-spin:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.saldo-insuficiente {
+    text-align: center; padding: 16px; border-radius: 14px;
+    background: #fef2f2; border: 1px solid #fecaca;
+    color: #dc2626; font-size: 14px; font-weight: 600; margin-top: 20px;
+}
+
+/* Modal */
+.modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7); z-index: 1000;
+    align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.active { display: flex; }
+.modal-box {
+    background: white; border-radius: 20px; padding: 32px; max-width: 400px;
+    width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.modal-box h2 { font-size: 22px; font-weight: 800; color: #1e293b; margin-bottom: 8px; }
+.modal-box p { font-size: 14px; color: #64748b; line-height: 1.6; margin-bottom: 20px; }
+.modal-box .btn-ok {
+    padding: 12px 32px; background: #000b4a; color: white; border: none;
+    border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer;
+    font-family: 'Inter', sans-serif;
+}
+{% endblock %}
+
+{% block header %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <a href="{% url 'clube:membro_hub' %}" class="btn-voltar" style="margin:0;"><i class="fas fa-arrow-left"></i> Menu</a>
+    <div style="display:flex; align-items:center; gap:10px; color:white;">
+        <span style="font-size:13px; font-weight:700;">{{ membro.nome|truncatewords:1 }}</span>
+        <span id="header-saldo" style="font-size:13px; font-weight:800; color:#fbbf24;">{{ membro.saldo }} PTs</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card-page">
+    <div class="roleta-container">
+        <div class="roleta-panel">
+            <div class="roulette-wrapper" id="roulette-wrapper">
+                <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; color:#cbd5e0;">
+                    <i class="fas fa-spinner fa-spin" style="font-size:32px;"></i>
+                </div>
+            </div>
+            <div id="spin-action" style="margin-top:20px;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Resultado -->
+<div class="modal-overlay" style="display:none" id="resultModal">
+    <div class="modal-box">
+        <div id="modal-icon" style="font-size:48px; margin-bottom:16px;"></div>
+        <h2 id="modal-title"></h2>
+        <p id="modal-message"></p>
+        <button class="btn-ok" onclick="fecharModal()">OK</button>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'clube/js/jquery.min.js' %}"></script>
+<script>
+var frames = [];
+var pointer = null;
+var frameAtual = 0;
+var sorteado = -1;
+var premioGanhado = '';
+var mensagemSorteio = '';
+var custoGiro = 1;
+var saldoAtual = {{ membro.saldo }};
+
+function getCsrfToken() {
+    return '{{ csrf_token }}';
+}
+
+function showModal(icon, title, msg) {
+    $('#modal-icon').html(icon);
+    $('#modal-title').text(title);
+    $('#modal-message').html(msg);
+    $('#resultModal').addClass('active');
+}
+
+function fecharModal() {
+    $('#resultModal').removeClass('active');
+}
+
+// Carregar dados iniciais
+$.ajax({
+    url: '/roleta/api/init-dados/',
+    method: 'GET',
+    success: function(data) {
+        custoGiro = data.custo_giro;
+        saldoAtual = data.auth_saldo;
+
+        // Renderizar roleta
+        var wrapper = $('#roulette-wrapper');
+        wrapper.empty();
+        var frameAssets = [];
+        data.assets.forEach(function(a) {
+            if (a.tipo === 'frame') {
+                frameAssets.push(a);
+            } else if (a.tipo === 'pointer') {
+                pointer = a.imagem_url;
+            }
+        });
+        frameAssets.sort(function(a, b) { return a.ordem - b.ordem; });
+
+        frameAssets.forEach(function(a, i) {
+            var cls = i === 0 ? 'active-frame' : '';
+            wrapper.append('<img src="' + a.imagem_url + '" class="' + cls + '" alt="Frame ' + a.ordem + '">');
+        });
+        frames = wrapper.find('img');
+
+        if (pointer) {
+            wrapper.append('<img src="' + pointer + '" class="pointer active-frame" alt="Pointer">');
+        }
+
+        // Botão de giro
+        renderSpinButton();
+    }
+});
+
+function renderSpinButton() {
+    if (saldoAtual >= custoGiro) {
+        $('#spin-action').html(
+            '<form id="spinForm">' +
+            '<input type="hidden" name="csrfmiddlewaretoken" value="' + getCsrfToken() + '">' +
+            '<input type="hidden" name="acao" value="girar">' +
+            '<button type="submit" class="btn-spin">USAR ' + custoGiro + ' PONTOS E GIRAR!</button>' +
+            '</form>'
+        );
+    } else {
+        $('#spin-action').html(
+            '<div class="saldo-insuficiente">' +
+            '<strong>Saldo Insuficiente.</strong> Voc&ecirc; precisa de ' + custoGiro + ' pontos para jogar.' +
+            '</div>'
+        );
+    }
+}
+
+// Giro
+$(document).on('submit', '#spinForm', function(e) {
+    e.preventDefault();
+    var btn = $(this).find('button');
+    btn.prop('disabled', true).text('Girando...');
+
+    $.ajax({
+        url: '/roleta/cadastrar/',
+        method: 'POST',
+        data: $(this).serialize(),
+        success: function(res) {
+            if (res.error) {
+                showModal('&#10060;', 'Ops!', res.error === 'saldo_insuficiente' ? 'Saldo insuficiente para girar.' :
+                    res.error === 'limite_giros' ? 'Voc&ecirc; atingiu o limite de giros.' : res.error);
+                btn.prop('disabled', false).text('USAR ' + custoGiro + ' PONTOS E GIRAR!');
+            } else if (res.sorteado_pos !== undefined && res.sorteado_pos !== null) {
+                sorteado = parseInt(res.sorteado_pos);
+                premioGanhado = res.premio_nome;
+                mensagemSorteio = res.mensagem || 'Sua consultora entrar&aacute; em contato em breve.';
+                saldoAtual = res.saldo_atual;
+                $('#header-saldo').text(saldoAtual + ' PTs');
+                iniciarAnimacao();
+            }
+        },
+        error: function() {
+            showModal('&#10060;', 'Erro', 'Erro ao tentar girar. Tente novamente.');
+            btn.prop('disabled', false).text('USAR ' + custoGiro + ' PONTOS E GIRAR!');
+        }
+    });
+});
+
+// Animação da roleta
+function iniciarAnimacao() {
+    var velocidade = 100;
+    var etapa = 0;
+    var contador = 0;
+    var ciclos = 0;
+    var idx = 0;
+    var maxIdx = frames.length - 1;
+
+    function tick() {
+        frames.removeClass('active-frame');
+        idx = (idx + 1) % frames.length;
+        $(frames[idx]).addClass('active-frame');
+
+        if (etapa === 0) {
+            // Aceleração
+            velocidade = Math.max(40, velocidade - 10);
+            contador++;
+            if (contador > 15) { etapa = 1; contador = 0; }
+        } else if (etapa === 1) {
+            // Plateau
+            contador++;
+            if (contador > 30) { etapa = 2; contador = 0; }
+        } else if (etapa === 2) {
+            // Desaceleração
+            velocidade = Math.min(250, velocidade + 8);
+            if (velocidade >= 200) { etapa = 3; ciclos = 0; }
+        } else if (etapa === 3) {
+            // Parar no sorteado
+            velocidade = Math.min(350, velocidade + 15);
+            if (idx === sorteado) {
+                ciclos++;
+                if (ciclos >= 2) {
+                    // Parou!
+                    setTimeout(function() {
+                        showModal('&#127881;', premioGanhado, mensagemSorteio);
+                        renderSpinButton();
+                    }, 500);
+                    return;
+                }
+            }
+        }
+        setTimeout(tick, velocidade);
+    }
+    tick();
+}
+</script>
+{% endblock %}

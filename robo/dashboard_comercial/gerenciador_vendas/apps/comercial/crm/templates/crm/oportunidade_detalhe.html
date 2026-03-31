@@ -1,0 +1,1072 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block extra_css %}
+<style>
+  /* ---- HEADER ---- */
+  .detalhe-header {
+    background: var(--bg-white);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .detalhe-header .avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .detalhe-header .info { flex: 1; min-width: 200px; }
+  .detalhe-header .info h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0 0 4px;
+  }
+  .detalhe-header .meta-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .detalhe-header .meta-row span {
+    font-size: 13px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .estagio-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .prioridade-badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .prio-urgente { background: var(--danger-light); color: var(--danger); }
+  .prio-alta    { background: var(--warning-light); color: var(--warning); }
+  .prio-normal  { background: var(--primary-light); color: var(--primary); }
+  .prio-baixa   { background: var(--border-light); color: var(--text-muted); }
+
+  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  /* ---- LAYOUT GRID ---- */
+  .detalhe-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .detalhe-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ---- CARD overrides for detalhe ---- */
+  .detalhe-grid .card {
+    margin-bottom: 16px;
+    overflow: hidden;
+    padding: 0;
+  }
+  .card-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .card-header h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-body { padding: 16px 18px; }
+
+  /* ---- SIDEBAR: campos de detalhe ---- */
+  .detail-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 14px;
+  }
+  .detail-field label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--text-light);
+  }
+  .detail-field .value {
+    font-size: 14px;
+    color: var(--text-main);
+    font-weight: 500;
+  }
+  .detail-field .value a { color: var(--primary); text-decoration: none; }
+  .detail-field .value a:hover { text-decoration: underline; }
+  .value-empty { color: var(--border) !important; font-style: italic; }
+
+  /* Progress de probabilidade */
+  .prob-bar {
+    height: 6px;
+    background: var(--border);
+    border-radius: 99px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .prob-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: var(--primary);
+    transition: width .4s;
+  }
+
+  /* Tags */
+  .tags-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .tag-chip {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  /* ---- TIMELINE ---- */
+  .timeline { position: relative; padding-left: 28px; }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 9px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--border);
+  }
+  .tl-item {
+    position: relative;
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    background: var(--bg-white);
+    border-radius: 10px;
+    border: 1px solid var(--border-light);
+    transition: background .2s;
+  }
+  .tl-item:hover { background: var(--border-light); }
+  .tl-dot {
+    position: absolute;
+    left: -23px;
+    top: 14px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px var(--border);
+  }
+  .tl-dot.dot-estagio   { background: var(--primary); }
+  .tl-dot.dot-contato   { background: var(--info); }
+  .tl-dot.dot-nota      { background: var(--warning); }
+  .tl-dot.dot-venda     { background: var(--success); }
+  .tl-dot.dot-perdido   { background: var(--danger); }
+
+  .tl-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .tl-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tl-date {
+    font-size: 11px;
+    color: var(--text-light);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .tl-body {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: 0;
+  }
+  .tl-meta { font-size: 11px; color: var(--text-light); margin-top: 4px; }
+
+  /* Status de contato */
+  .status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-dot.ok   { background: var(--success); }
+  .status-dot.bad  { background: var(--danger); }
+  .status-dot.mid  { background: var(--warning); }
+
+  /* ---- NOTAS ---- */
+  .nota-item {
+    padding: 12px;
+    background: var(--bg-white);
+    border-radius: 10px;
+    border-left: 3px solid var(--primary);
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .nota-item.nota-alerta    { border-left-color: var(--danger); }
+  .nota-item.nota-importante{ border-left-color: var(--info); }
+  .nota-item.nota-reuniao   { border-left-color: var(--success); }
+  .nota-item.nota-ligacao   { border-left-color: var(--primary); }
+  .nota-item.nota-email     { border-left-color: var(--warning); }
+  .nota-item.nota-fixada    { background: var(--warning-light); border-left-color: var(--warning); }
+  .nota-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  .nota-author { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+  .nota-date   { font-size: 11px; color: var(--text-light); }
+  .nota-tipo   { font-size: 11px; background: var(--border-light); padding: 2px 8px; border-radius: 10px; color: var(--text-muted); }
+  .nota-texto  { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin: 0; white-space: pre-wrap; }
+
+  /* ---- FORM NOTA ---- */
+  .nota-form textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+    outline: none;
+    transition: border-color .2s;
+    box-sizing: border-box;
+  }
+  .nota-form textarea:focus { border-color: var(--primary); }
+  .nota-form-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .nota-form-row select {
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    background: var(--bg-white);
+    outline: none;
+    flex: 1;
+    min-width: 130px;
+  }
+
+  /* ---- HUBSOFT ---- */
+  .hubsoft-servico {
+    padding: 10px 12px;
+    background: var(--primary-light);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .hubsoft-servico .servico-nome { font-size: 13px; font-weight: 600; color: var(--text-main); }
+  .hubsoft-servico .servico-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .status-servico {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .status-habilitado   { background: var(--success-light); color: var(--success); }
+  .status-aguardando   { background: var(--primary-light); color: var(--primary); }
+  .status-suspenso     { background: var(--danger-light); color: var(--danger); }
+  .status-cancelado    { background: var(--border-light); color: var(--text-muted); }
+
+  /* ---- BREADCRUMB ---- */
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-light);
+    margin-bottom: 16px;
+  }
+  .breadcrumb a { color: var(--primary); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+
+  /* ---- TOAST ---- */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--text-main);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all .3s;
+    z-index: 9999;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.error { background: var(--danger); }
+
+  /* ---- SEÇÃO EMPTY ---- */
+  .empty-state {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-light);
+    font-size: 13px;
+  }
+  .empty-state i { font-size: 28px; margin-bottom: 8px; display: block; }
+
+  /* ---- TABS ---- */
+  .tabs-nav {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    padding: 0 18px;
+    background: var(--bg-white);
+  }
+  .tab-btn {
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-light);
+    border: none;
+    background: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .tab-btn .badge {
+    background: var(--primary);
+    color: #fff;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 10px;
+  }
+  .tab-panel { display: none; padding: 16px 18px; }
+  .tab-panel.active { display: block; }
+
+  /* ---- MODAL overrides for detalhe ---- */
+  .modal-box {
+    background: var(--bg-white);
+    border-radius: 16px;
+    padding: 24px;
+    width: min(460px, 95vw);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .modal-box h3 { margin: 0 0 16px; font-size: 16px; color: var(--text-main); }
+  .modal-box select, .modal-box textarea, .modal-box input[type=text] {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+  }
+  .modal-box select:focus, .modal-box textarea:focus { border-color: var(--primary); }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+  <!-- BREADCRUMB -->
+  <div class="breadcrumb">
+    <a href="{% url 'crm:pipeline' %}"><i class="fas fa-columns"></i> Pipeline</a>
+    <i class="fas fa-chevron-right" style="font-size:10px"></i>
+    <a href="{% url 'crm:oportunidades_lista' %}">Oportunidades</a>
+    <i class="fas fa-chevron-right" style="font-size:10px"></i>
+    <span>{{ oportunidade.titulo|default:lead.nome_razaosocial|truncatechars:40 }}</span>
+  </div>
+
+  <!-- HEADER -->
+  <div class="detalhe-header">
+    <div class="avatar">{{ lead.nome_razaosocial|first|upper }}</div>
+
+    <div class="info">
+      <h1>{{ lead.nome_razaosocial|default:"Lead sem nome" }}</h1>
+      <div class="meta-row">
+        {% if lead.telefone %}
+        <span><i class="fas fa-phone"></i>
+          <a href="https://wa.me/{{ lead.telefone|cut:'+' }}" target="_blank" style="color:var(--primary)">
+            {{ lead.telefone }}
+          </a>
+        </span>
+        {% endif %}
+        {% if lead.email %}
+        <span><i class="fas fa-envelope"></i> {{ lead.email }}</span>
+        {% endif %}
+        <span><i class="fas fa-calendar-alt"></i> Cadastro: {{ lead.data_cadastro|date:"d/m/Y" }}</span>
+        {% if lead.origem %}
+        <span><i class="fas fa-tag"></i> {{ lead.get_origem_display }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Estágio atual -->
+      <span class="estagio-badge" style="background:{{ oportunidade.estagio.cor_hex }}">
+        <i class="fas {{ oportunidade.estagio.icone_fa }}"></i>
+        {{ oportunidade.estagio.nome }}
+      </span>
+
+      <!-- Prioridade -->
+      {% if oportunidade.prioridade %}
+      <span class="prioridade-badge prio-{{ oportunidade.prioridade }}">
+        {{ oportunidade.get_prioridade_display }}
+      </span>
+      {% endif %}
+
+      <!-- Botão mover estágio -->
+      <button class="btn-primary" onclick="abrirModalEstagio()">
+        <i class="fas fa-arrow-right"></i> Mover estágio
+      </button>
+
+      <!-- WhatsApp -->
+      {% if lead.telefone %}
+      <a href="https://wa.me/{{ lead.telefone|cut:'+' }}" target="_blank" class="btn-secondary" style="text-decoration:none;">
+        <i class="fab fa-whatsapp" style="color:var(--success)"></i>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- GRID PRINCIPAL -->
+  <div class="detalhe-grid">
+
+    <!-- ===== SIDEBAR ===== -->
+    <div class="detalhe-sidebar">
+
+      <!-- DADOS CRM -->
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-briefcase" style="color:var(--primary)"></i> Oportunidade</h3>
+        </div>
+        <div class="card-body">
+
+          <div class="detail-field">
+            <label>Valor estimado</label>
+            <div class="value">
+              {% if oportunidade.valor_estimado %}
+                R$ {{ oportunidade.valor_estimado|floatformat:2 }}
+              {% else %}
+                <span class="value-empty">Não informado</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="detail-field">
+            <label>Probabilidade</label>
+            <div class="value">{{ oportunidade.probabilidade }}%</div>
+            <div class="prob-bar">
+              <div class="prob-fill" style="width:{{ oportunidade.probabilidade }}%"></div>
+            </div>
+          </div>
+
+          <div class="detail-field">
+            <label>Responsável</label>
+            <div class="value">
+              {% if oportunidade.responsavel %}
+                <i class="fas fa-user-circle" style="color:var(--primary)"></i>
+                {{ oportunidade.responsavel.get_full_name|default:oportunidade.responsavel.username }}
+              {% else %}
+                <span class="value-empty">Não atribuído</span>
+                <button class="btn-secondary btn-sm" style="margin-top:6px"
+                  onclick="abrirModalVendedor()">
+                  <i class="fas fa-user-plus"></i> Atribuir
+                </button>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="detail-field">
+            <label>Origem CRM</label>
+            <div class="value">{{ oportunidade.get_origem_crm_display }}</div>
+          </div>
+
+          <div class="detail-field">
+            <label>Entrada no estágio</label>
+            <div class="value">{{ oportunidade.data_entrada_estagio|date:"d/m/Y H:i" }}</div>
+          </div>
+
+          {% if oportunidade.data_fechamento_previsto %}
+          <div class="detail-field">
+            <label>Fechamento previsto</label>
+            <div class="value">{{ oportunidade.data_fechamento_previsto|date:"d/m/Y" }}</div>
+          </div>
+          {% endif %}
+
+          {% if oportunidade.data_fechamento_real %}
+          <div class="detail-field">
+            <label>Fechamento real</label>
+            <div class="value" style="color:var(--success);font-weight:700">
+              <i class="fas fa-check-circle"></i> {{ oportunidade.data_fechamento_real|date:"d/m/Y" }}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if oportunidade.tags.all %}
+          <div class="detail-field">
+            <label>Tags</label>
+            <div class="tags-row">
+              {% for tag in oportunidade.tags.all %}
+              <span class="tag-chip" style="background:{{ tag.cor_hex }}">{{ tag.nome }}</span>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if oportunidade.motivo_perda %}
+          <div class="detail-field">
+            <label>Motivo da perda</label>
+            <div class="value" style="color:var(--danger)">{{ oportunidade.motivo_perda }}</div>
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+
+      <!-- DADOS DO LEAD -->
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-user" style="color:var(--primary)"></i> Dados do Lead</h3>
+        </div>
+        <div class="card-body">
+
+          {% if lead.cpf_cnpj %}
+          <div class="detail-field">
+            <label>CPF/CNPJ</label>
+            <div class="value">{{ lead.cpf_cnpj }}</div>
+          </div>
+          {% endif %}
+
+          {% if lead.data_nascimento %}
+          <div class="detail-field">
+            <label>Nascimento</label>
+            <div class="value">{{ lead.data_nascimento|date:"d/m/Y" }}</div>
+          </div>
+          {% endif %}
+
+          {% if lead.rua or lead.endereco %}
+          <div class="detail-field">
+            <label>Endereço</label>
+            <div class="value" style="font-size:13px">
+              {% if lead.rua %}
+                {{ lead.rua }}{% if lead.numero_residencia %}, {{ lead.numero_residencia }}{% endif %}
+                {% if lead.bairro %} — {{ lead.bairro }}{% endif %}<br>
+                {% if lead.cidade %}{{ lead.cidade }}{% if lead.estado %}/{{ lead.estado }}{% endif %}{% endif %}
+                {% if lead.cep %} — CEP {{ lead.cep }}{% endif %}
+              {% else %}
+                {{ lead.endereco }}
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="detail-field">
+            <label>Status API</label>
+            <div class="value">
+              <span class="status-servico
+                {% if lead.status_api == 'processado' %}status-habilitado
+                {% elif lead.status_api == 'processamento_manual' %}status-aguardando
+                {% elif lead.status_api == 'erro' %}status-suspenso
+                {% else %}status-cancelado{% endif %}">
+                {{ lead.get_status_api_display|default:lead.status_api }}
+              </span>
+            </div>
+          </div>
+
+          <div class="detail-field">
+            <label>Documentação</label>
+            <div class="value">
+              {% if lead.documentacao_validada %}
+                <span style="color:var(--success)"><i class="fas fa-check-circle"></i> Validada</span>
+              {% elif lead.documentacao_completa %}
+                <span style="color:var(--warning)"><i class="fas fa-clock"></i> Aguardando validação</span>
+              {% else %}
+                <span style="color:var(--danger)"><i class="fas fa-times-circle"></i> Incompleta</span>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if lead.score_qualificacao %}
+          <div class="detail-field">
+            <label>Score de qualificação</label>
+            <div class="value">{{ lead.score_qualificacao }}/10</div>
+          </div>
+          {% endif %}
+
+          {% if lead.tentativas_contato %}
+          <div class="detail-field">
+            <label>Tentativas de contato</label>
+            <div class="value">{{ lead.tentativas_contato }}</div>
+          </div>
+          {% endif %}
+
+          {% if lead.observacoes %}
+          <div class="detail-field">
+            <label>Observações</label>
+            <div class="value" style="font-size:13px;color:var(--text-muted)">{{ lead.observacoes }}</div>
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+
+      <!-- HUBSOFT -->
+      {% if cliente_hubsoft %}
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-network-wired" style="color:var(--info)"></i> Hubsoft</h3>
+        </div>
+        <div class="card-body">
+          {% if cliente_hubsoft.servicos.all %}
+            {% for servico in cliente_hubsoft.servicos.all %}
+            <div class="hubsoft-servico">
+              <div class="servico-nome">{{ servico.nome_plano|default:"Serviço" }}</div>
+              <div class="servico-meta">
+                <span class="status-servico
+                  {% if servico.status_prefixo == 'servico_habilitado' %}status-habilitado
+                  {% elif servico.status_prefixo == 'aguardando_instalacao' %}status-aguardando
+                  {% elif servico.status_prefixo == 'servico_suspenso' %}status-suspenso
+                  {% else %}status-cancelado{% endif %}">
+                  <i class="fas fa-circle" style="font-size:6px"></i>
+                  {{ servico.status_prefixo|default:"—" }}
+                </span>
+                {% if servico.data_fim_contrato %}
+                  &nbsp;· Contrato: {{ servico.data_fim_contrato }}
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p style="font-size:13px;color:var(--text-light);margin:0">Nenhum serviço encontrado.</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+    <!-- fim sidebar -->
+
+    <!-- ===== COLUNA PRINCIPAL ===== -->
+    <div class="main-col">
+
+      <!-- TABS -->
+      <div class="card" style="margin-bottom:16px;overflow:visible">
+        <div class="tabs-nav">
+          <button class="tab-btn active" onclick="switchTab(this,'tab-timeline')">
+            <i class="fas fa-stream"></i> Timeline
+            <span class="badge">{{ historico_estagios|length|add:historico_contatos|length }}</span>
+          </button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-notas')">
+            <i class="fas fa-sticky-note"></i> Notas
+            <span class="badge" id="notas-count">{{ oportunidade.notas.count }}</span>
+          </button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-historico')">
+            <i class="fas fa-history"></i> Hist. Estágios
+            <span class="badge">{{ historico_estagios|length }}</span>
+          </button>
+        </div>
+
+        <!-- TAB: TIMELINE MESCLADA -->
+        <div id="tab-timeline" class="tab-panel active">
+          {% if historico_contatos or historico_estagios %}
+          <div class="timeline">
+
+            {% comment %}Mescla contatos e estágios, renderiza em ordem decrescente{% endcomment %}
+            {% for hc in historico_contatos %}
+            <div class="tl-item">
+              <div class="tl-dot
+                {% if hc.converteu_venda %}dot-venda
+                {% elif hc.sucesso %}dot-contato
+                {% elif hc.status == 'chamada_perdida' or hc.status == 'nao_atendeu' %}dot-perdido
+                {% else %}dot-contato{% endif %}">
+              </div>
+              <div class="tl-header">
+                <div class="tl-title">
+                  <i class="fas fa-phone" style="color:var(--info);font-size:12px"></i>
+                  {% if hc.converteu_venda %}
+                    <span style="color:var(--success)">Venda confirmada</span>
+                  {% elif hc.status == 'transferido_humano' %}
+                    Transferido para humano
+                  {% elif hc.status == 'fluxo_finalizado' %}
+                    Fluxo finalizado
+                  {% else %}
+                    {{ hc.get_status_display|default:hc.status }}
+                  {% endif %}
+                </div>
+                <span class="tl-date">{{ hc.data_hora_contato|date:"d/m H:i" }}</span>
+              </div>
+              {% if hc.observacoes %}
+              <p class="tl-body">{{ hc.observacoes|truncatechars:200 }}</p>
+              {% endif %}
+              <div class="tl-meta">
+                {% if hc.duracao_segundos %}
+                  <i class="fas fa-clock"></i> {{ hc.duracao_segundos }}s
+                {% endif %}
+                {% if hc.nome_contato %}· {{ hc.nome_contato }}{% endif %}
+              </div>
+            </div>
+            {% endfor %}
+
+            {% for he in historico_estagios %}
+            <div class="tl-item">
+              <div class="tl-dot
+                {% if he.estagio_novo.is_final_ganho %}dot-venda
+                {% elif he.estagio_novo.is_final_perdido %}dot-perdido
+                {% else %}dot-estagio{% endif %}">
+              </div>
+              <div class="tl-header">
+                <div class="tl-title">
+                  <i class="fas fa-arrow-right" style="color:var(--primary);font-size:11px"></i>
+                  {% if he.estagio_anterior %}
+                    {{ he.estagio_anterior.nome }} → <strong>{{ he.estagio_novo.nome }}</strong>
+                  {% else %}
+                    Entrada: <strong>{{ he.estagio_novo.nome }}</strong>
+                  {% endif %}
+                </div>
+                <span class="tl-date">{{ he.data_transicao|date:"d/m H:i" }}</span>
+              </div>
+              {% if he.motivo %}
+              <p class="tl-body">{{ he.motivo }}</p>
+              {% endif %}
+              <div class="tl-meta">
+                {% if he.movido_por %}por {{ he.movido_por.get_full_name|default:he.movido_por.username }}{% endif %}
+                {% if he.tempo_no_estagio_horas %}
+                  &nbsp;· {{ he.tempo_no_estagio_horas|floatformat:1 }}h no estágio anterior
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+
+          </div>
+          {% else %}
+          <div class="empty-state">
+            <i class="fas fa-stream"></i>
+            Nenhuma atividade registrada ainda.
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- TAB: NOTAS -->
+        <div id="tab-notas" class="tab-panel">
+
+          <!-- Form nova nota -->
+          <div class="nota-form" style="margin-bottom:20px">
+            <textarea id="nota-texto" placeholder="Adicionar uma nota, observação ou registro de contato..."></textarea>
+            <div class="nota-form-row">
+              <select id="nota-tipo">
+                <option value="geral">📝 Geral</option>
+                <option value="ligacao">📞 Ligação</option>
+                <option value="reuniao">🤝 Reunião</option>
+                <option value="email">✉️ E-mail</option>
+                <option value="importante">⭐ Importante</option>
+                <option value="alerta">⚠️ Alerta</option>
+              </select>
+              <button class="btn-primary" onclick="salvarNota()">
+                <i class="fas fa-paper-plane"></i> Salvar
+              </button>
+            </div>
+          </div>
+
+          <!-- Lista de notas -->
+          <div id="notas-lista">
+            {% for nota in oportunidade.notas.all %}
+            <div class="nota-item nota-{{ nota.tipo }}{% if nota.is_fixada %} nota-fixada{% endif %}">
+              <div class="nota-header">
+                {% if nota.is_fixada %}<i class="fas fa-thumbtack" style="color:var(--warning)"></i>{% endif %}
+                <span class="nota-author">{{ nota.autor.get_full_name|default:nota.autor.username }}</span>
+                <span class="nota-date">{{ nota.data_criacao|date:"d/m/Y H:i" }}</span>
+                <span class="nota-tipo">{{ nota.get_tipo_display }}</span>
+              </div>
+              <p class="nota-texto">{{ nota.conteudo }}</p>
+            </div>
+            {% empty %}
+            <div class="empty-state">
+              <i class="fas fa-sticky-note"></i>
+              Nenhuma nota ainda. Adicione a primeira acima.
+            </div>
+            {% endfor %}
+          </div>
+
+        </div>
+
+        <!-- TAB: HISTÓRICO DE ESTÁGIOS -->
+        <div id="tab-historico" class="tab-panel">
+          {% if historico_estagios %}
+          <div class="timeline">
+            {% for he in historico_estagios %}
+            <div class="tl-item">
+              <div class="tl-dot
+                {% if he.estagio_novo.is_final_ganho %}dot-venda
+                {% elif he.estagio_novo.is_final_perdido %}dot-perdido
+                {% else %}dot-estagio{% endif %}">
+              </div>
+              <div class="tl-header">
+                <div class="tl-title">
+                  <span class="estagio-badge" style="background:{{ he.estagio_novo.cor_hex }};font-size:11px;padding:2px 8px">
+                    {{ he.estagio_novo.nome }}
+                  </span>
+                </div>
+                <span class="tl-date">{{ he.data_transicao|date:"d/m/Y H:i" }}</span>
+              </div>
+              {% if he.estagio_anterior %}
+              <p class="tl-body">
+                <i class="fas fa-arrow-right" style="color:var(--text-light);font-size:11px"></i>
+                Veio de: <strong>{{ he.estagio_anterior.nome }}</strong>
+              </p>
+              {% endif %}
+              {% if he.motivo %}
+              <p class="tl-body">{{ he.motivo }}</p>
+              {% endif %}
+              <div class="tl-meta">
+                {% if he.movido_por %}
+                  <i class="fas fa-user" style="font-size:10px"></i>
+                  {{ he.movido_por.get_full_name|default:he.movido_por.username }}
+                {% endif %}
+                {% if he.tempo_no_estagio_horas %}
+                  &nbsp;· Ficou {{ he.tempo_no_estagio_horas|floatformat:0 }}h no estágio anterior
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="empty-state">
+            <i class="fas fa-history"></i>
+            Nenhuma transição registrada.
+          </div>
+          {% endif %}
+        </div>
+
+      </div>
+      <!-- fim card tabs -->
+
+    </div>
+    <!-- fim main-col -->
+
+  </div>
+  <!-- fim grid -->
+
+<!-- ===== MODAL: MOVER ESTÁGIO ===== -->
+<div class="modal-overlay" id="modal-estagio" style="display:none">
+  <div class="modal-box">
+    <h3><i class="fas fa-arrow-right" style="color:var(--primary)"></i> Mover para estágio</h3>
+    <select id="sel-estagio">
+      {% for e in estagios %}
+      <option value="{{ e.pk }}" {% if e.pk == oportunidade.estagio.pk %}selected{% endif %}>
+        {{ e.nome }}
+      </option>
+      {% endfor %}
+    </select>
+    <textarea id="motivo-estagio" placeholder="Motivo da mudança (opcional)..." rows="3"></textarea>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-estagio')">Cancelar</button>
+      <button class="btn-primary" onclick="confirmarMoverEstagio()">
+        <i class="fas fa-check"></i> Confirmar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: ATRIBUIR VENDEDOR ===== -->
+<div class="modal-overlay" id="modal-vendedor" style="display:none">
+  <div class="modal-box">
+    <h3><i class="fas fa-user-plus" style="color:var(--primary)"></i> Atribuir responsável</h3>
+    <select id="sel-vendedor">
+      <option value="">— Sem responsável —</option>
+      {% for v in vendedores %}
+      <option value="{{ v.pk }}" {% if oportunidade.responsavel and oportunidade.responsavel.pk == v.pk %}selected{% endif %}>
+        {{ v.get_full_name|default:v.username }}
+      </option>
+      {% endfor %}
+    </select>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-vendedor')">Cancelar</button>
+      <button class="btn-primary" onclick="confirmarVendedor()">
+        <i class="fas fa-check"></i> Atribuir
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const OP_PK = {{ oportunidade.pk }};
+const URLS = {
+  mover:       "{% url 'crm:api_mover_oportunidade' %}",
+  atribuir:    "{% url 'crm:api_atribuir_responsavel' oportunidade.pk %}",
+  notas_get:   "{% url 'crm:api_notas_oportunidade' oportunidade.pk %}",
+  notas_post:  "{% url 'crm:api_notas_oportunidade' oportunidade.pk %}",
+};
+const CSRF = "{{ csrf_token }}";
+
+// ---- TABS ----
+function switchTab(btn, panelId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(panelId).classList.add('active');
+}
+
+// ---- MODAIS ----
+function abrirModalEstagio()  { const m = document.getElementById('modal-estagio'); m.style.display = 'flex'; }
+function abrirModalVendedor() { const m = document.getElementById('modal-vendedor'); m.style.display = 'flex'; }
+function fecharModal(id)      { document.getElementById(id).style.display = 'none'; }
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
+});
+
+// ---- TOAST ----
+function toast(msg, err=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (err ? ' error' : '');
+  setTimeout(() => el.className = '', 2800);
+}
+
+// ---- MOVER ESTÁGIO ----
+async function confirmarMoverEstagio() {
+  const estagio_id = document.getElementById('sel-estagio').value;
+  const motivo     = document.getElementById('motivo-estagio').value.trim();
+  try {
+    const res = await fetch(URLS.mover, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ oportunidade_id: OP_PK, estagio_id, motivo }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      toast('Estágio atualizado!');
+      fecharModal('modal-estagio');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      toast(data.erro || 'Erro ao mover.', true);
+    }
+  } catch { toast('Falha na requisição.', true); }
+}
+
+// ---- ATRIBUIR VENDEDOR ----
+async function confirmarVendedor() {
+  const responsavel_id = document.getElementById('sel-vendedor').value || null;
+  try {
+    const res = await fetch(URLS.atribuir, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ responsavel_id }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      toast('Responsável atualizado!');
+      fecharModal('modal-vendedor');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      toast(data.erro || 'Erro.', true);
+    }
+  } catch { toast('Falha na requisição.', true); }
+}
+
+// ---- SALVAR NOTA ----
+async function salvarNota() {
+  const conteudo = document.getElementById('nota-texto').value.trim();
+  const tipo     = document.getElementById('nota-tipo').value;
+  if (!conteudo) { toast('Escreva algo antes de salvar.', true); return; }
+
+  try {
+    const res = await fetch(URLS.notas_post, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ conteudo, tipo }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById('nota-texto').value = '';
+      toast('Nota salva!');
+      await carregarNotas();
+    } else {
+      toast(data.erro || 'Erro ao salvar.', true);
+    }
+  } catch { toast('Falha na requisição.', true); }
+}
+
+// ---- CARREGAR NOTAS ----
+async function carregarNotas() {
+  try {
+    const res  = await fetch(URLS.notas_get);
+    const data = await res.json();
+    const lista = document.getElementById('notas-lista');
+    const count = document.getElementById('notas-count');
+    count.textContent = data.notas.length;
+
+    if (!data.notas.length) {
+      lista.innerHTML = `<div class="empty-state"><i class="fas fa-sticky-note"></i> Nenhuma nota ainda.</div>`;
+      return;
+    }
+
+    lista.innerHTML = data.notas.map(n => `
+      <div class="nota-item nota-${n.tipo}${n.is_fixada ? ' nota-fixada' : ''}">
+        <div class="nota-header">
+          ${n.is_fixada ? '<i class="fas fa-thumbtack" style="color:var(--warning)"></i>' : ''}
+          <span class="nota-author">${n.autor}</span>
+          <span class="nota-date">${n.data}</span>
+          <span class="nota-tipo">${n.tipo_label}</span>
+        </div>
+        <p class="nota-texto">${n.conteudo.replace(/</g,'&lt;')}</p>
+      </div>
+    `).join('');
+  } catch { /* silently fail */ }
+}
+</script>
+{% endblock %}

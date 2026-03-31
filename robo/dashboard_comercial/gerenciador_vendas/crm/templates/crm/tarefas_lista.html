@@ -1,0 +1,336 @@
+{% extends 'vendas_web/base.html' %}
+{% block extra_css %}
+<style>
+  .page { background: linear-gradient(135deg,#f0f2ff 0%,#f8f0ff 100%); min-height: calc(100vh - 64px); padding: 24px; }
+
+  .toolbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+  .toolbar h1 { font-size:22px; font-weight:700; color:#1e1b4b; margin:0; flex:1; display:flex; align-items:center; gap:10px; }
+
+  .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all .2s; text-decoration:none; white-space:nowrap; }
+  .btn-primary { background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; }
+  .btn-primary:hover { opacity:.9; color:#fff; }
+  .btn-secondary { background:#fff; color:#374151; border:1px solid #d1d5db; }
+  .btn-secondary:hover { background:#f9fafb; color:#374151; }
+  .btn-danger { background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; }
+  .btn-danger:hover { background:#fecaca; }
+
+  /* TABS */
+  .tabs-wrap { display:flex; gap:4px; margin-bottom:20px; flex-wrap:wrap; }
+  .tab-btn { padding:9px 18px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; border:none; background:rgba(255,255,255,0.6); color:#6b7280; transition:all .2s; display:flex; align-items:center; gap:7px; }
+  .tab-btn.active { background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; box-shadow:0 4px 12px rgba(102,126,234,.3); }
+  .tab-count { background:rgba(255,255,255,.3); border-radius:10px; padding:1px 7px; font-size:11px; }
+  .tab-btn:not(.active) .tab-count { background:rgba(102,126,234,.12); color:#667eea; }
+
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+
+  /* CARD DE TAREFA */
+  .tarefa-list { display:flex; flex-direction:column; gap:10px; }
+  .tarefa-card {
+    background:rgba(255,255,255,.88);
+    backdrop-filter:blur(10px);
+    border-radius:12px;
+    border:1px solid rgba(102,126,234,.1);
+    padding:14px 18px;
+    display:flex; align-items:flex-start; gap:14px;
+    transition:all .2s;
+  }
+  .tarefa-card:hover { box-shadow:0 4px 16px rgba(102,126,234,.12); transform:translateY(-1px); }
+  .tarefa-card.vencida { border-left:3px solid #e74c3c; }
+  .tarefa-card.urgente { border-left:3px solid #f59e0b; }
+
+  .tarefa-check {
+    width:20px; height:20px; border-radius:50%; border:2px solid #d1d5db;
+    flex-shrink:0; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:all .2s; margin-top:2px;
+  }
+  .tarefa-check:hover { border-color:#667eea; background:rgba(102,126,234,.08); }
+
+  .tarefa-body { flex:1; min-width:0; }
+  .tarefa-titulo { font-size:14px; font-weight:600; color:#1e1b4b; margin-bottom:4px; }
+  .tarefa-meta { display:flex; gap:10px; flex-wrap:wrap; align-items:center; font-size:12px; color:#9ca3af; }
+  .tarefa-meta span { display:flex; align-items:center; gap:4px; }
+  .tarefa-lead { font-size:12px; color:#667eea; font-weight:500; }
+
+  .tipo-badge { padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700; }
+  .tipo-ligacao   { background:#dbeafe; color:#1e40af; }
+  .tipo-whatsapp  { background:#d1fae5; color:#065f46; }
+  .tipo-email     { background:#fef3c7; color:#92400e; }
+  .tipo-followup  { background:#f3f4f6; color:#374151; }
+  .tipo-visita    { background:#ede9fe; color:#5b21b6; }
+  .tipo-proposta  { background:#fdf4ff; color:#7e22ce; }
+  .tipo-instalacao{ background:#e0f2fe; color:#0369a1; }
+  .tipo-outro     { background:#f3f4f6; color:#6b7280; }
+
+  .prio-urgente { color:#dc2626; font-weight:700; }
+  .prio-alta    { color:#d97706; }
+  .prio-normal  { color:#6b7280; }
+  .prio-baixa   { color:#9ca3af; }
+
+  .vencimento-ok       { color:#059669; }
+  .vencimento-hoje     { color:#f59e0b; font-weight:700; }
+  .vencimento-vencida  { color:#dc2626; font-weight:700; }
+
+  .tarefa-actions { display:flex; gap:6px; align-items:flex-start; }
+
+  /* EMPTY */
+  .empty { text-align:center; padding:48px; color:#9ca3af; }
+  .empty i { font-size:36px; display:block; margin-bottom:12px; }
+  .empty p { font-size:14px; margin:0; }
+
+  /* MODAL */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:1000; align-items:center; justify-content:center; }
+  .modal-overlay.open { display:flex; }
+  .modal-box { background:#fff; border-radius:16px; padding:24px; width:min(520px,95vw); box-shadow:0 20px 60px rgba(0,0,0,.18); }
+  .modal-box h3 { margin:0 0 18px; font-size:16px; color:#1e1b4b; display:flex; align-items:center; gap:8px; }
+  .form-field { margin-bottom:14px; }
+  .form-field label { display:block; font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; margin-bottom:5px; }
+  .form-field input, .form-field select, .form-field textarea {
+    width:100%; border:1.5px solid #e0e0e0; border-radius:8px;
+    padding:9px 12px; font-size:14px; font-family:inherit;
+    outline:none; box-sizing:border-box; transition:border-color .2s;
+  }
+  .form-field input:focus, .form-field select:focus, .form-field textarea:focus { border-color:#667eea; }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .modal-footer { display:flex; gap:8px; justify-content:flex-end; margin-top:18px; }
+
+  /* TOAST */
+  #toast { position:fixed; bottom:24px; right:24px; background:#1e1b4b; color:#fff; padding:12px 20px; border-radius:10px; font-size:14px; font-weight:500; opacity:0; transform:translateY(10px); transition:all .3s; z-index:9999; pointer-events:none; }
+  #toast.show { opacity:1; transform:translateY(0); }
+  #toast.error { background:#dc2626; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <div class="toolbar">
+    <h1><i class="fas fa-tasks" style="color:#667eea"></i> Tarefas</h1>
+    <button class="btn btn-primary" onclick="abrirModal()">
+      <i class="fas fa-plus"></i> Nova Tarefa
+    </button>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs-wrap">
+    <button class="tab-btn active" onclick="switchTab(this,'tab-hoje')">
+      <i class="fas fa-sun"></i> Hoje
+      <span class="tab-count">{{ tarefas_hoje|length }}</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-semana')">
+      <i class="fas fa-calendar-week"></i> Esta Semana
+      <span class="tab-count">{{ tarefas_semana|length }}</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-vencidas')">
+      <i class="fas fa-exclamation-triangle"></i> Vencidas
+      <span class="tab-count" style="{% if tarefas_vencidas %}background:rgba(220,38,38,.2);color:#dc2626{% endif %}">{{ tarefas_vencidas|length }}</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-todas')">
+      <i class="fas fa-list"></i> Todas Pendentes
+      <span class="tab-count">{{ tarefas_todas|length }}</span>
+    </button>
+  </div>
+
+  <!-- HOJE -->
+  <div id="tab-hoje" class="tab-panel active">
+    {% if tarefas_hoje %}
+    <div class="tarefa-list">
+      {% for t in tarefas_hoje %}{% include 'crm/_tarefa_card.html' with tarefa=t extra_class="" %}{% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-check-circle" style="color:#059669"></i><p>Nenhuma tarefa para hoje. Aproveite!</p></div>
+    {% endif %}
+  </div>
+
+  <!-- SEMANA -->
+  <div id="tab-semana" class="tab-panel">
+    {% if tarefas_semana %}
+    <div class="tarefa-list">
+      {% for t in tarefas_semana %}{% include 'crm/_tarefa_card.html' with tarefa=t extra_class="" %}{% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-calendar-check"></i><p>Nenhuma tarefa nos próximos 7 dias.</p></div>
+    {% endif %}
+  </div>
+
+  <!-- VENCIDAS -->
+  <div id="tab-vencidas" class="tab-panel">
+    {% if tarefas_vencidas %}
+    <div class="tarefa-list">
+      {% for t in tarefas_vencidas %}
+      <div class="tarefa-card vencida" data-id="{{ t.pk }}">
+        <div class="tarefa-check" onclick="concluirTarefa({{ t.pk }}, this)"></div>
+        <div class="tarefa-body">
+          <div class="tarefa-titulo">{{ t.titulo }}</div>
+          <div class="tarefa-meta">
+            <span class="tipo-badge tipo-{{ t.tipo }}">{{ t.get_tipo_display }}</span>
+            <span class="vencimento-vencida"><i class="fas fa-exclamation-triangle"></i> Venceu {{ t.data_vencimento|timesince }} atrás</span>
+            {% if t.lead %}<span class="tarefa-lead"><i class="fas fa-user"></i> {{ t.lead.nome_razaosocial|truncatechars:30 }}</span>{% endif %}
+          </div>
+          {% if t.descricao %}<div style="font-size:12px;color:#6b7280;margin-top:6px">{{ t.descricao|truncatechars:120 }}</div>{% endif %}
+        </div>
+        <div class="tarefa-actions">
+          <button class="btn btn-secondary" style="padding:5px 10px;font-size:12px" onclick="concluirTarefa({{ t.pk }}, null)">
+            <i class="fas fa-check"></i> Concluir
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-thumbs-up" style="color:#059669"></i><p>Sem tarefas vencidas!</p></div>
+    {% endif %}
+  </div>
+
+  <!-- TODAS -->
+  <div id="tab-todas" class="tab-panel">
+    {% if tarefas_todas %}
+    <div class="tarefa-list">
+      {% for t in tarefas_todas %}
+      <div class="tarefa-card {% if t.prioridade == 'urgente' %}urgente{% endif %}" data-id="{{ t.pk }}">
+        <div class="tarefa-check" onclick="concluirTarefa({{ t.pk }}, this)"></div>
+        <div class="tarefa-body">
+          <div class="tarefa-titulo">{{ t.titulo }}</div>
+          <div class="tarefa-meta">
+            <span class="tipo-badge tipo-{{ t.tipo }}">{{ t.get_tipo_display }}</span>
+            <span class="prio-{{ t.prioridade }}"><i class="fas fa-flag"></i> {{ t.get_prioridade_display }}</span>
+            {% if t.data_vencimento %}
+            <span class="{% if t.data_vencimento.date == hoje %}vencimento-hoje{% else %}vencimento-ok{% endif %}">
+              <i class="fas fa-clock"></i> {{ t.data_vencimento|date:"d/m H:i" }}
+            </span>
+            {% endif %}
+            {% if t.lead %}<span class="tarefa-lead"><i class="fas fa-user"></i> {{ t.lead.nome_razaosocial|truncatechars:28 }}</span>{% endif %}
+          </div>
+        </div>
+        <div class="tarefa-actions">
+          <button class="btn btn-secondary" style="padding:5px 10px;font-size:12px" onclick="concluirTarefa({{ t.pk }}, null)">
+            <i class="fas fa-check"></i>
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-inbox"></i><p>Nenhuma tarefa pendente.</p></div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- MODAL NOVA TAREFA -->
+<div class="modal-overlay" id="modal-tarefa">
+  <div class="modal-box">
+    <h3><i class="fas fa-plus-circle" style="color:#667eea"></i> Nova Tarefa</h3>
+    <div class="form-field">
+      <label>Título</label>
+      <input type="text" id="f-titulo" placeholder="Descreva a tarefa...">
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label>Tipo</label>
+        <select id="f-tipo">
+          <option value="followup">Follow-up</option>
+          <option value="ligacao">Ligação</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="email">E-mail</option>
+          <option value="visita">Visita</option>
+          <option value="proposta">Proposta</option>
+          <option value="instalacao">Instalação</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Prioridade</label>
+        <select id="f-prioridade">
+          <option value="normal">Normal</option>
+          <option value="alta">Alta</option>
+          <option value="urgente">Urgente</option>
+          <option value="baixa">Baixa</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-field">
+      <label>Vencimento</label>
+      <input type="datetime-local" id="f-vencimento">
+    </div>
+    <div class="form-field">
+      <label>Descrição (opcional)</label>
+      <textarea id="f-descricao" rows="3" placeholder="Detalhes da tarefa..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarTarefa()"><i class="fas fa-save"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = "{{ csrf_token }}";
+const URLS = {
+  criar:    "{% url 'crm:api_tarefa_criar' %}",
+  concluir: (pk) => `/crm/tarefas/${pk}/concluir/`,
+};
+
+function switchTab(btn, id) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(id).classList.add('active');
+}
+
+function abrirModal() { document.getElementById('modal-tarefa').classList.add('open'); }
+function fecharModal() { document.getElementById('modal-tarefa').classList.remove('open'); }
+document.getElementById('modal-tarefa').addEventListener('click', e => { if (e.target === e.currentTarget) fecharModal(); });
+
+function toast(msg, err=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (err ? ' error' : '');
+  setTimeout(() => el.className = '', 2800);
+}
+
+async function salvarTarefa() {
+  const titulo = document.getElementById('f-titulo').value.trim();
+  if (!titulo) { toast('Informe um título para a tarefa.', true); return; }
+  try {
+    const res = await fetch(URLS.criar, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+      body: JSON.stringify({
+        titulo,
+        tipo:         document.getElementById('f-tipo').value,
+        prioridade:   document.getElementById('f-prioridade').value,
+        data_vencimento: document.getElementById('f-vencimento').value || null,
+        descricao:    document.getElementById('f-descricao').value,
+      }),
+    });
+    const data = await res.json();
+    if (data.ok) { toast('Tarefa criada!'); fecharModal(); setTimeout(() => location.reload(), 800); }
+    else toast(data.erro || 'Erro.', true);
+  } catch { toast('Falha na requisição.', true); }
+}
+
+async function concluirTarefa(pk, checkEl) {
+  if (checkEl) {
+    checkEl.innerHTML = '<i class="fas fa-check" style="color:#059669;font-size:11px"></i>';
+    checkEl.style.borderColor = '#059669';
+    checkEl.style.background = '#d1fae5';
+  }
+  try {
+    const res = await fetch(URLS.concluir(pk), {
+      method:'POST', headers:{'X-CSRFToken':CSRF},
+    });
+    const data = await res.json();
+    if (data.ok) {
+      const card = document.querySelector(`[data-id="${pk}"]`);
+      if (card) { card.style.opacity='0'; card.style.transform='scale(.95)'; setTimeout(()=>card.remove(),300); }
+      toast('Tarefa concluída!');
+    } else toast(data.erro||'Erro.',true);
+  } catch { toast('Falha.',true); }
+}
+</script>
+{% endblock %}

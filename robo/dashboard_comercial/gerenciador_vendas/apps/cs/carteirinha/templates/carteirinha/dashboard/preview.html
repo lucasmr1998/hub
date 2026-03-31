@@ -1,0 +1,67 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Preview — {{ modelo.nome }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Preview: {{ modelo.nome }}</h1>
+        <p class="page-subtitle">Visualizacao do modelo com dados de exemplo.</p>
+    </div>
+    <a href="{% url 'carteirinha:dashboard_modelos_carteirinha' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+    <!-- Preview do Cartao -->
+    <div class="card" style="padding:24px;">
+        <h3 style="font-size:14px; font-weight:700; margin-bottom:16px; text-align:center;">Cart&atilde;o Renderizado</h3>
+
+        {% include 'carteirinha/partials/cartao.html' with modelo=modelo nome="JOAO DA SILVA SANTOS" cpf="123.456.789-00" nivel="Prata" data_emissao="19/03/2026" pontos="150" cidade="Floriano - PI" texto_rodape=modelo.texto_rodape %}
+    </div>
+
+    <!-- Detalhes -->
+    <div class="card" style="padding:24px;">
+        <h3 style="font-size:14px; font-weight:700; margin-bottom:16px;">Configura&ccedil;&atilde;o</h3>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:13px;">
+            <div style="padding:8px; background:var(--bg-page); border-radius:6px;">
+                <span class="text-muted">Tipo Fundo</span>
+                <div class="font-bold">{{ modelo.get_tipo_fundo_display }}</div>
+            </div>
+            <div style="padding:8px; background:var(--bg-page); border-radius:6px;">
+                <span class="text-muted">Marca</span>
+                <div class="font-bold">{{ modelo.texto_marca }}</div>
+            </div>
+            {% for campo in "mostrar_nome,mostrar_cpf,mostrar_nivel,mostrar_data_emissao,mostrar_data_validade,mostrar_qr_code,mostrar_foto,mostrar_pontos,mostrar_cidade"|make_list %}
+            {% endfor %}
+            <div style="padding:8px; background:var(--bg-page); border-radius:6px;"><span class="text-muted">Nome</span><div class="font-bold">{% if modelo.mostrar_nome %}&#10003;{% else %}&#10007;{% endif %}</div></div>
+            <div style="padding:8px; background:var(--bg-page); border-radius:6px;"><span class="text-muted">CPF</span><div class="font-bold">{% if modelo.mostrar_cpf %}&#10003;{% else %}&#10007;{% endif %}</div></div>
+            <div style="padding:8px; background:var(--bg-page); border-radius:6px;"><span class="text-muted">N&iacute;vel</span><div class="font-bold">{% if modelo.mostrar_nivel %}&#10003;{% else %}&#10007;{% endif %}</div></div>
+            <div style="padding:8px; background:var(--bg-page); border-radius:6px;"><span class="text-muted">Data Emiss&atilde;o</span><div class="font-bold">{% if modelo.mostrar_data_emissao %}&#10003;{% else %}&#10007;{% endif %}</div></div>
+            <div style="padding:8px; background:var(--bg-page); border-radius:6px;"><span class="text-muted">QR Code</span><div class="font-bold">{% if modelo.mostrar_qr_code %}&#10003;{% else %}&#10007;{% endif %}</div></div>
+            <div style="padding:8px; background:var(--bg-page); border-radius:6px;"><span class="text-muted">Pontos</span><div class="font-bold">{% if modelo.mostrar_pontos %}&#10003;{% else %}&#10007;{% endif %}</div></div>
+            <div style="padding:8px; background:var(--bg-page); border-radius:6px;"><span class="text-muted">Cidade</span><div class="font-bold">{% if modelo.mostrar_cidade %}&#10003;{% else %}&#10007;{% endif %}</div></div>
+            <div style="padding:8px; background:var(--bg-page); border-radius:6px;"><span class="text-muted">Foto</span><div class="font-bold">{% if modelo.mostrar_foto %}&#10003;{% else %}&#10007;{% endif %}</div></div>
+        </div>
+
+        <div style="margin-top:16px; display:flex; gap:16px; flex-wrap:wrap;">
+            <div style="display:flex; gap:6px; align-items:center;">
+                <div style="width:20px; height:20px; border-radius:4px; background:{{ modelo.cor_fundo_primaria }}; border:1px solid var(--border);"></div>
+                <span style="font-size:12px;">Fundo 1</span>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <div style="width:20px; height:20px; border-radius:4px; background:{{ modelo.cor_fundo_secundaria }}; border:1px solid var(--border);"></div>
+                <span style="font-size:12px;">Fundo 2</span>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <div style="width:20px; height:20px; border-radius:4px; background:{{ modelo.cor_texto }}; border:1px solid var(--border);"></div>
+                <span style="font-size:12px;">Texto</span>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <div style="width:20px; height:20px; border-radius:4px; background:{{ modelo.cor_destaque }}; border:1px solid var(--border);"></div>
+                <span style="font-size:12px;">Destaque</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

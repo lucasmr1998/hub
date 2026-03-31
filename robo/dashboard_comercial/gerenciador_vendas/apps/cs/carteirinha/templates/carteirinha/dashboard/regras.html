@@ -1,0 +1,139 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Regras de Atribui&ccedil;&atilde;o{% endblock %}
+
+{% block content %}
+
+<!-- Modal Criar -->
+<div id="modal-regra" class="modal-overlay" style="display:none">
+    <div class="modal-content" style="max-width:500px;">
+        <button onclick="document.getElementById('modal-regra').style.display='none'" class="modal-close">&times;</button>
+        <h3 style="margin-bottom:20px;"><i class="fas fa-magic" style="color:var(--primary); margin-right:8px;"></i>Nova Regra</h3>
+
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="criar">
+
+            <div class="form-group">
+                <label class="form-label">Modelo *</label>
+                <select name="modelo_id" class="form-control" required>
+                    {% for m in modelos %}
+                    <option value="{{ m.id }}">{{ m.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Tipo de Regra *</label>
+                <select name="tipo" class="form-control" id="tipo-regra" onchange="toggleCampos()" required>
+                    <option value="todos">Todos os Membros</option>
+                    <option value="nivel">Por N&iacute;vel</option>
+                    <option value="pontuacao_minima">Por Pontua&ccedil;&atilde;o M&iacute;nima (XP)</option>
+                    <option value="cidade">Por Cidade</option>
+                </select>
+            </div>
+
+            <div id="campo-nivel" style="display:none;" class="form-group">
+                <label class="form-label">N&iacute;vel</label>
+                <select name="nivel_id" class="form-control">
+                    <option value="">Selecione...</option>
+                    {% for n in niveis %}
+                    <option value="{{ n.id }}">{{ n.nome }} ({{ n.xp_necessario }} XP)</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div id="campo-xp" style="display:none;" class="form-group">
+                <label class="form-label">XP M&iacute;nimo</label>
+                <input type="number" name="pontuacao_minima" class="form-control" value="0" min="0">
+            </div>
+
+            <div id="campo-cidade" style="display:none;" class="form-group">
+                <label class="form-label">Cidade</label>
+                <input type="text" name="cidade" class="form-control" placeholder="Ex: Floriano">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Prioridade</label>
+                <input type="number" name="prioridade" class="form-control" value="0" help="Maior prioridade vence quando membro se encaixa em v&aacute;rias regras">
+                <small class="text-muted">Maior n&uacute;mero = maior prioridade</small>
+            </div>
+
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:16px;">
+                <input type="checkbox" name="ativo" checked> Ativa
+            </label>
+
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-regra').style.display='none'">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Criar Regra</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Regras de Atribui&ccedil;&atilde;o</h1>
+        <p class="page-subtitle">Defina qual modelo de carteirinha cada membro recebe.</p>
+    </div>
+    <button class="btn btn-primary" onclick="document.getElementById('modal-regra').style.display='flex'">
+        <i class="fas fa-plus"></i> Nova Regra
+    </button>
+</div>
+
+<div class="card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Modelo</th>
+                <th>Tipo</th>
+                <th>Condi&ccedil;&atilde;o</th>
+                <th style="text-align:center;">Prioridade</th>
+                <th style="text-align:center;">Status</th>
+                <th style="text-align:center;">A&ccedil;&otilde;es</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in regras %}
+            <tr>
+                <td><strong>{{ r.modelo.nome }}</strong></td>
+                <td>{{ r.get_tipo_display }}</td>
+                <td>
+                    {% if r.tipo == 'nivel' %}N&iacute;vel {{ r.nivel.nome|default:"?" }}
+                    {% elif r.tipo == 'pontuacao_minima' %}XP &ge; {{ r.pontuacao_minima }}
+                    {% elif r.tipo == 'cidade' %}{{ r.cidade }}
+                    {% elif r.tipo == 'todos' %}Todos os membros
+                    {% else %}Manual{% endif %}
+                </td>
+                <td style="text-align:center;"><span class="font-bold">{{ r.prioridade }}</span></td>
+                <td style="text-align:center;">
+                    {% if r.ativo %}<span class="badge badge-success">Ativa</span>
+                    {% else %}<span class="badge badge-danger">Inativa</span>{% endif %}
+                </td>
+                <td style="text-align:center;">
+                    <form method="post" style="display:inline;" onsubmit="return confirm('Excluir regra?')">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="excluir">
+                        <input type="hidden" name="regra_id" value="{{ r.id }}">
+                        <button type="submit" class="btn btn-secondary" style="padding:4px 10px; font-size:12px; color:var(--danger);">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted" style="padding:40px;">Nenhuma regra criada.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function toggleCampos() {
+    var tipo = document.getElementById('tipo-regra').value;
+    document.getElementById('campo-nivel').style.display = tipo === 'nivel' ? 'block' : 'none';
+    document.getElementById('campo-xp').style.display = tipo === 'pontuacao_minima' ? 'block' : 'none';
+    document.getElementById('campo-cidade').style.display = tipo === 'cidade' ? 'block' : 'none';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Membros - Indica&ccedil;&otilde;es{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Links de Indica&ccedil;&atilde;o</h1>
+        <p class="page-subtitle">Todos os membros do clube com seus links de indica&ccedil;&atilde;o.</p>
+    </div>
+</div>
+
+<!-- Busca -->
+<div class="card" style="margin-bottom:20px; padding:16px;">
+    <form method="get" style="display:flex; gap:10px; align-items:center;">
+        <input type="text" name="busca" value="{{ busca }}" class="form-control" placeholder="Buscar por nome, CPF ou c&oacute;digo..." style="max-width:350px;">
+        <button type="submit" class="btn btn-primary">Buscar</button>
+        {% if busca %}
+        <a href="{% url 'indicacoes:dashboard_indicacoes_membros' %}" class="btn btn-secondary">Limpar</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Tabela -->
+<div class="card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Membro</th>
+                <th>Cidade</th>
+                <th style="text-align:center;">Indica&ccedil;&otilde;es</th>
+                <th style="text-align:center;">Convertidas</th>
+                <th>Link de Indica&ccedil;&atilde;o</th>
+                <th style="text-align:center;">Copiar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in membros %}
+            <tr>
+                <td>
+                    <strong>{{ m.nome }}</strong>
+                    <br><small class="text-muted">{{ m.cpf }}</small>
+                </td>
+                <td>{{ m.cidade|default:"-" }}</td>
+                <td style="text-align:center;">
+                    <span class="font-bold">{{ m.total_indicacoes }}</span>
+                </td>
+                <td style="text-align:center;">
+                    {% if m.convertidas > 0 %}
+                    <span class="badge badge-success">{{ m.convertidas }}</span>
+                    {% else %}
+                    <span class="text-muted">0</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <code id="link-{{ m.id }}" style="font-size:12px; color:var(--primary); word-break:break-all;">{{ request.scheme }}://{{ request.get_host }}/roleta/indicar/{{ m.codigo_indicacao }}/</code>
+                </td>
+                <td style="text-align:center;">
+                    <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px;"
+                        onclick="copiarLink('link-{{ m.id }}', this)" title="Copiar link">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center text-muted" style="padding:40px;">Nenhum membro encontrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if membros.has_other_pages %}
+    <div class="pagination">
+        {% if membros.has_previous %}
+        <a href="?page={{ membros.previous_page_number }}&busca={{ busca }}" class="btn btn-secondary">&laquo; Anterior</a>
+        {% endif %}
+        <span class="text-muted" style="padding:8px;">P&aacute;gina {{ membros.number }} de {{ membros.paginator.num_pages }}</span>
+        {% if membros.has_next %}
+        <a href="?page={{ membros.next_page_number }}&busca={{ busca }}" class="btn btn-secondary">Pr&oacute;xima &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function copiarLink(elementId, btn) {
+    var texto = document.getElementById(elementId).innerText;
+    navigator.clipboard.writeText(texto).then(function() {
+        var icone = btn.querySelector('i');
+        icone.className = 'fas fa-check';
+        btn.style.color = 'var(--success)';
+        setTimeout(function() {
+            icone.className = 'fas fa-copy';
+            btn.style.color = '';
+        }, 2000);
+    });
+}
+</script>
+
+{% endblock %}

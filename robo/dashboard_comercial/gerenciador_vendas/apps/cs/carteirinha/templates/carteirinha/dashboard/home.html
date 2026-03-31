@@ -1,0 +1,70 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Dashboard - Carteirinhas{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Dashboard Carteirinhas</h1>
+    <p class="page-subtitle">Gerencie modelos de carteirinha e regras de atribui&ccedil;&atilde;o.</p>
+</div>
+
+<div class="stats-grid" style="grid-template-columns:repeat(3, 1fr); margin-bottom:24px;">
+    <div class="stat-card">
+        <div class="stat-label">Modelos Criados</div>
+        <div class="stat-value">{{ modelos.count }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Regras Ativas</div>
+        <div class="stat-value">{{ regras.count }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Carteirinhas Emitidas</div>
+        <div class="stat-value" style="color:var(--success);">{{ total_emitidas }}</div>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+    <!-- Modelos -->
+    <div class="card" style="padding:20px;">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+            Modelos
+            <a href="{% url 'carteirinha:dashboard_modelos_carteirinha' %}" style="font-size:13px; color:var(--primary); font-weight:600;">Gerenciar &rarr;</a>
+        </div>
+        {% for m in modelos %}
+        <div style="display:flex; align-items:center; gap:12px; padding:10px 0; {% if not forloop.last %}border-bottom:1px solid var(--border);{% endif %}">
+            {% if m.imagem_fundo %}
+            <img src="{{ m.imagem_fundo.url }}" style="width:60px; height:38px; border-radius:6px; object-fit:cover;">
+            {% else %}
+            <div style="width:60px; height:38px; border-radius:6px; background:var(--primary-light); display:flex; align-items:center; justify-content:center;"><i class="fas fa-id-card" style="color:var(--primary);"></i></div>
+            {% endif %}
+            <div style="flex:1;">
+                <strong style="font-size:13px;">{{ m.nome }}</strong>
+                {% if not m.ativo %}<span class="badge badge-danger" style="margin-left:6px;">Inativo</span>{% endif %}
+            </div>
+            <a href="{% url 'carteirinha:dashboard_preview_carteirinha' m.id %}" class="btn btn-secondary" style="padding:4px 10px; font-size:11px;">Preview</a>
+        </div>
+        {% empty %}
+        <p class="text-center text-muted" style="padding:20px;">Nenhum modelo criado.</p>
+        {% endfor %}
+    </div>
+
+    <!-- Regras -->
+    <div class="card" style="padding:20px;">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+            Regras de Atribui&ccedil;&atilde;o
+            <a href="{% url 'carteirinha:dashboard_regras_carteirinha' %}" style="font-size:13px; color:var(--primary); font-weight:600;">Gerenciar &rarr;</a>
+        </div>
+        {% for r in regras %}
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; {% if not forloop.last %}border-bottom:1px solid var(--border);{% endif %}">
+            <div>
+                <strong style="font-size:13px;">{{ r }}</strong>
+                <br><small class="text-muted">Prioridade: {{ r.prioridade }}</small>
+            </div>
+            {% if r.ativo %}<span class="badge badge-success">Ativa</span>{% else %}<span class="badge badge-danger">Inativa</span>{% endif %}
+        </div>
+        {% empty %}
+        <p class="text-center text-muted" style="padding:20px;">Nenhuma regra criada.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

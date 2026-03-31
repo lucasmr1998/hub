@@ -1,0 +1,118 @@
+{% extends 'roleta/membro/base_membro.html' %}
+
+{% block title %}Ajuda - Megalink{% endblock %}
+
+{% block extra_css %}
+.faq-cats {
+    display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px;
+    margin-bottom: 20px; -webkit-overflow-scrolling: touch;
+}
+.faq-cats::-webkit-scrollbar { display: none; }
+.faq-cat-pill {
+    padding: 8px 16px; border-radius: 20px; font-size: 13px;
+    font-weight: 700; white-space: nowrap; text-decoration: none;
+    border: 2px solid #e5e7eb; color: #64748b; background: white;
+    transition: all 0.2s; flex-shrink: 0;
+}
+.faq-cat-pill:hover { border-color: #3b82f6; color: #3b82f6; }
+.faq-cat-pill.active {
+    background: #3b82f6; color: white; border-color: #3b82f6;
+}
+.faq-item {
+    border: 1px solid #e5e7eb; border-radius: 12px;
+    margin-bottom: 10px; overflow: hidden; transition: box-shadow 0.2s;
+}
+.faq-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.faq-pergunta {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px; cursor: pointer; font-weight: 700; font-size: 14px;
+    color: #1e293b; gap: 12px;
+}
+.faq-pergunta i {
+    font-size: 12px; color: #94a3b8; transition: transform 0.3s; flex-shrink: 0;
+}
+.faq-item.open .faq-pergunta i { transform: rotate(180deg); }
+.faq-resposta {
+    max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
+    padding: 0 16px;
+}
+.faq-item.open .faq-resposta {
+    max-height: 300px; padding: 0 16px 16px;
+}
+.faq-resposta p {
+    font-size: 13px; color: #64748b; line-height: 1.6; margin: 0;
+}
+.faq-cat-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;
+}
+.faq-cat-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+}
+.faq-cat-name { font-size: 15px; font-weight: 800; color: #1e293b; }
+.faq-empty {
+    text-align: center; padding: 40px 20px; color: #94a3b8;
+}
+.faq-empty i { font-size: 40px; margin-bottom: 12px; display: block; }
+{% endblock %}
+
+{% block header %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <a href="{% url 'clube:membro_hub' %}" class="btn-voltar" style="margin:0;"><i class="fas fa-arrow-left"></i> Menu</a>
+    <div style="display:flex; align-items:center; gap:10px; color:white;">
+        <span style="font-size:13px; font-weight:700;">{{ membro.nome|truncatewords:1 }}</span>
+        <span style="font-size:13px; font-weight:800; color:#fbbf24;">{{ membro.saldo }} PTs</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card-page">
+    <div class="card-page-title"><i class="fas fa-question-circle" style="color:#ef4444;"></i> Perguntas Frequentes</div>
+
+    <!-- Pills de categoria -->
+    <div class="faq-cats">
+        <a href="{% url 'clube:membro_faq' %}" class="faq-cat-pill {% if not categoria_ativa %}active{% endif %}">Todas</a>
+        {% for cat in categorias %}
+        <a href="{% url 'clube:membro_faq' %}?cat={{ cat.slug }}" class="faq-cat-pill {% if categoria_ativa and categoria_ativa.slug == cat.slug %}active{% endif %}">
+            <i class="{{ cat.icone }}" style="margin-right:4px;"></i> {{ cat.nome }}
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- FAQs -->
+    {% for cat in categorias %}
+    {% if not categoria_ativa or categoria_ativa.slug == cat.slug %}
+    {% if cat.itens.all %}
+    <div class="faq-cat-header">
+        <div class="faq-cat-icon" style="background:{{ cat.cor }}15; color:{{ cat.cor }};">
+            <i class="{{ cat.icone }}"></i>
+        </div>
+        <div class="faq-cat-name">{{ cat.nome }}</div>
+    </div>
+
+    {% for item in cat.itens.all %}
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+        <div class="faq-pergunta">
+            <span>{{ item.pergunta }}</span>
+            <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="faq-resposta">
+            <p>{{ item.resposta }}</p>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endif %}
+    {% endfor %}
+
+    {% if not categorias %}
+    <div class="faq-empty">
+        <i class="fas fa-question-circle"></i>
+        <p>Nenhuma pergunta frequente dispon&iacute;vel no momento.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

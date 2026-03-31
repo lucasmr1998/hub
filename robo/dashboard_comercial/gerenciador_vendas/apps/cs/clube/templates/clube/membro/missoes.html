@@ -1,0 +1,85 @@
+{% extends 'roleta/membro/base_membro.html' %}
+
+{% block title %}Miss&otilde;es - Megalink{% endblock %}
+
+{% block extra_css %}
+.missao-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px; border-radius: 12px; margin-bottom: 10px;
+    border: 1px solid #e5e7eb; transition: box-shadow 0.2s;
+}
+.missao-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.missao-item.done { background: #f8fafc; }
+.missao-info { display: flex; align-items: center; gap: 14px; }
+.missao-icon { width: 28px; text-align: center; font-size: 20px; }
+.missao-nome { font-weight: 700; font-size: 14px; color: #1e293b; margin-bottom: 2px; }
+.missao-sub { font-size: 12px; color: #64748b; }
+.missao-badge {
+    font-size: 12px; font-weight: 700; padding: 8px 14px;
+    border-radius: 8px; white-space: nowrap;
+}
+.missao-badge.done { color: #10b981; background: #d1fae5; }
+.missao-badge.pending { color: #3b82f6; background: #e0e7ff; }
+.progresso-bar {
+    height: 8px; background: #e5e7eb; border-radius: 4px;
+    overflow: hidden; margin-top: 12px;
+}
+.progresso-fill {
+    height: 100%; background: linear-gradient(90deg, #10b981, #34d399);
+    border-radius: 4px; transition: width 0.5s;
+}
+{% endblock %}
+
+{% block header %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <a href="{% url 'clube:membro_hub' %}" class="btn-voltar" style="margin:0;"><i class="fas fa-arrow-left"></i> Menu</a>
+    <div style="display:flex; align-items:center; gap:10px; color:white;">
+        <span style="font-size:13px; font-weight:700;">{{ membro.nome|truncatewords:1 }}</span>
+        <span style="font-size:13px; font-weight:800; color:#fbbf24;">{{ membro.saldo }} PTs</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card-page">
+    <div class="card-page-title"><i class="fas fa-trophy" style="color:#f59e0b;"></i> Miss&otilde;es</div>
+
+    <!-- Progresso geral -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <span style="font-size:13px; font-weight:700; color:#334155;">{{ concluidas }} de {{ total }} conclu&iacute;das</span>
+        <span style="font-size:13px; font-weight:700; color:#10b981;">{% widthratio concluidas total 100 %}%</span>
+    </div>
+    <div class="progresso-bar">
+        <div class="progresso-fill" style="width:{% widthratio concluidas total 100 %}%;"></div>
+    </div>
+
+    <div style="margin-top:20px;">
+        {% for m in missoes %}
+        <div class="missao-item {% if not m.disponivel %}done{% endif %}">
+            <div class="missao-info">
+                <div class="missao-icon">
+                    {% if not m.disponivel %}
+                    <i class="fas fa-check-circle" style="color:#10b981;"></i>
+                    {% else %}
+                    <i class="fas fa-medal" style="color:#64748b;"></i>
+                    {% endif %}
+                </div>
+                <div>
+                    <div class="missao-nome">{{ m.nome }}</div>
+                    <div class="missao-sub">
+                        {% if m.limite > 0 %}{{ m.concluidas }}/{{ m.limite }} realizadas{% else %}Ilimitado{% endif %}
+                    </div>
+                </div>
+            </div>
+            {% if not m.disponivel %}
+            <div class="missao-badge done">Conclu&iacute;da</div>
+            {% else %}
+            <div class="missao-badge pending">+{{ m.pontos_saldo }} G | +{{ m.pontos_xp }} XP</div>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div class="text-center text-muted" style="padding:30px;">Nenhuma miss&atilde;o ativa no momento.</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

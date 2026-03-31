@@ -1,0 +1,74 @@
+{% extends "admin/base.html" %}
+{% load static %}
+<!-- Template atualizado: Megalink Logo - v2 -->
+
+{% block title %}{{ site_title }} | {{ title }}{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/custom_admin.css' %}">
+  <style>
+    #site-name {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    #site-name a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: #417690;
+    }
+    
+    .admin-logo {
+      width: 32px;
+      height: 32px;
+      background: #1F3D59;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .admin-logo svg {
+      width: 20px;
+      height: 20px;
+    }
+    
+    .admin-logo-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: #417690 !important;
+    }
+    
+    /* Forçar o texto Megalink */
+    #site-name a span {
+      content: "Megalink - Painel Comercial" !important;
+    }
+  </style>
+{% endblock %}
+
+{% block branding %}
+  <h1 id="site-name">
+    <a href="{% url 'admin:index' %}">
+      <div class="admin-logo">
+        <svg width="20" height="20" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Letra M estilizada -->
+          <path d="M12 32 L12 12 L18 24 L24 12 L30 24 L36 12 L36 32 L32 32 L32 20 L24 32 L18 20 L18 32 L12 32 Z" fill="white" stroke="white" stroke-width="0.5"/>
+        </svg>
+      </div>
+      <span class="admin-logo-text">Megalink - Painel Comercial</span>
+    </a>
+  </h1>
+{% endblock %}
+
+{% block nav-global %}
+  <div class="admin-header-actions">
+    <a class="btn-admin" href="/" target="_blank">Ver Dashboard</a>
+  </div>
+{% endblock %}
+
+

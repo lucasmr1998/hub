@@ -1,0 +1,72 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Extrato - {{ membro.nome }}{% endblock %}
+
+{% block content %}
+
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <div>
+        <h1 class="page-title">Extrato de {{ membro.nome }}</h1>
+        <p class="page-subtitle">CPF: {{ membro.cpf }}</p>
+    </div>
+    <a href="{% url 'clube:dashboard_participantes' %}" class="btn-secondary">
+        <i class="fas fa-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<!-- KPIs do Membro -->
+<div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom:24px;">
+    <div class="stat-card">
+        <span class="stat-label">Saldo Atual (Para Giros)</span>
+        <span class="stat-value text-primary">{{ membro.saldo }} PTS</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Total de Giros Realizados</span>
+        <span class="stat-value text-primary">{{ membro.giros.count }}</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">N&iacute;vel Atual (XP)</span>
+        <span class="stat-value" style="color:var(--warning);">{{ membro.nivel_atual }} <span class="text-sm text-muted">({{ membro.xp_total }} XP)</span></span>
+    </div>
+</div>
+
+<!-- Tabela de Extrato -->
+<div class="data-table-container">
+    <div style="overflow-x:auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Data e Hora</th>
+                    <th>Regra/Gatilho</th>
+                    <th>Descri&ccedil;&atilde;o</th>
+                    <th>Pontos Saldo</th>
+                    <th>Pontos XP</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lance in extrato %}
+                <tr>
+                    <td style="white-space:nowrap; font-size:13px; color:var(--text-muted);">{{ lance.data_recebimento|date:"d/m/Y H:i:s" }}</td>
+                    <td><strong>{{ lance.regra.nome_exibicao }}</strong></td>
+                    <td class="text-muted">{{ lance.descricao_extra }}</td>
+                    <td>
+                        <span class="font-bold {% if lance.pontos_saldo_ganhos > 0 %}text-success{% else %}text-danger{% endif %}">
+                            {% if lance.pontos_saldo_ganhos > 0 %}+{% endif %}{{ lance.pontos_saldo_ganhos }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="font-bold" style="color:var(--warning);">+{{ lance.pontos_xp_ganhos }}</span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center" style="padding:40px; color:var(--text-light);">Nenhuma movimenta&ccedil;&atilde;o encontrada.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<p class="text-muted text-xs" style="text-align:right; margin-top:16px;">Dados gerados automaticamente pelo GamificationService.</p>
+{% endblock %}

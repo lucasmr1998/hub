@@ -1,0 +1,348 @@
+{% extends "clube/dashboard/base.html" %}
+{% block title %}Diagnóstico Hubsoft{% endblock %}
+{% block page_title %}🔬 Diagnóstico Hubsoft{% endblock %}
+
+{% block content %}
+<style>
+    .diag-card {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, .07);
+        padding: 28px 32px;
+        margin-bottom: 24px;
+    }
+
+    .diag-card h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        margin: 0 0 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .diag-form input[type="text"] {
+        width: 320px;
+        padding: 12px 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-family: inherit;
+        transition: border-color .2s;
+        outline: none;
+    }
+
+    .diag-form input[type="text"]:focus {
+        border-color: #667eea;
+    }
+
+    .diag-form button {
+        padding: 12px 28px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        transition: opacity .2s;
+        margin-left: 10px;
+    }
+
+    .diag-form button:hover {
+        opacity: .88;
+    }
+
+    /* Step cards */
+    .step-card {
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        margin-bottom: 16px;
+    }
+
+    .step-header {
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 600;
+        font-size: .95rem;
+    }
+
+    .step-header.ok {
+        background: #f0fff4;
+        color: #276749;
+    }
+
+    .step-header.erro {
+        background: #fff5f5;
+        color: #9b2335;
+    }
+
+    .step-header.nao_encontrado {
+        background: #fffaf0;
+        color: #744210;
+    }
+
+    .step-badge {
+        font-size: .75rem;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-weight: 700;
+        margin-left: auto;
+    }
+
+    .step-badge.ok {
+        background: #c6f6d5;
+        color: #22543d;
+    }
+
+    .step-badge.erro {
+        background: #fed7d7;
+        color: #822727;
+    }
+
+    .step-badge.nao_encontrado {
+        background: #feebc8;
+        color: #744210;
+    }
+
+    .step-body {
+        padding: 16px 20px;
+        background: #fafafa;
+    }
+
+    .step-body table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .9rem;
+    }
+
+    .step-body table td {
+        padding: 6px 8px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .step-body table td:first-child {
+        font-weight: 600;
+        color: #4a5568;
+        width: 50%;
+    }
+
+    .step-body .step-error-msg {
+        background: #fff5f5;
+        border-left: 4px solid #fc8181;
+        padding: 10px 14px;
+        border-radius: 6px;
+        font-family: monospace;
+        font-size: .85rem;
+        color: #822727;
+        margin-top: 10px;
+    }
+
+    .duracao {
+        font-size: .8rem;
+        color: #718096;
+        font-weight: 400;
+    }
+
+    /* Extrato */
+    .extrato-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .88rem;
+        margin-top: 14px;
+    }
+
+    .extrato-table th {
+        background: #edf2f7;
+        padding: 8px 10px;
+        text-align: left;
+        font-weight: 600;
+        color: #4a5568;
+    }
+
+    .extrato-table td {
+        padding: 7px 10px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    /* Summary banner */
+    .summary-banner {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 24px;
+    }
+
+    .summary-item {
+        flex: 1;
+        min-width: 180px;
+        border-radius: 12px;
+        padding: 18px 22px;
+        font-weight: 700;
+        font-size: 1.05rem;
+    }
+
+    .summary-item.cidade {
+        background: #ebf8ff;
+        color: #2b6cb0;
+        border: 1px solid #bee3f8;
+    }
+
+    .summary-item.ok2 {
+        background: #f0fff4;
+        color: #276749;
+        border: 1px solid #c6f6d5;
+    }
+
+    .summary-item.warn {
+        background: #fffaf0;
+        color: #744210;
+        border: 1px solid #feebc8;
+    }
+
+    .summary-item small {
+        display: block;
+        font-weight: 400;
+        font-size: .8rem;
+        margin-bottom: 4px;
+        opacity: .75;
+    }
+</style>
+
+<div class="diag-card">
+    <h3><i class="fas fa-search" style="color:#667eea"></i> Consultar CPF no Hubsoft</h3>
+    <p style="color:#718096; margin-bottom:18px; font-size:.9rem;">
+        Informe o CPF do cliente (com ou sem pontuação) para verificar a cidade de instalação
+        e as pontuações extras consultadas diretamente no banco de dados Hubsoft.
+    </p>
+    <form method="POST" class="diag-form" style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+        {% csrf_token %}
+        <input type="text" name="cpf" placeholder="Ex: 123.456.789-00 ou 12345678900"
+            value="{{ resultado.cpf_informado|default:'' }}" autofocus autocomplete="off">
+        <button type="submit"><i class="fas fa-bolt"></i> Consultar</button>
+    </form>
+</div>
+
+{% if resultado %}
+
+{# ── Resumo rápido ── #}
+<div class="summary-banner">
+    <div class="summary-item cidade">
+        <small>Cidade Encontrada</small>
+        {% if resultado.cidade %}
+        🏙️ {{ resultado.cidade }}
+        {% else %}
+        ⚠️ Não retornou cidade
+        {% endif %}
+    </div>
+    {% if resultado.pontos %}
+    <div class="summary-item {% if resultado.pontos.hubsoft_recorrencia %}ok2{% else %}warn{% endif %}">
+        <small>Pagamento Recorrente</small>
+        {% if resultado.pontos.hubsoft_recorrencia %}✅ Ativo{% else %}❌ Inativo{% endif %}
+    </div>
+    <div class="summary-item {% if resultado.pontos.hubsoft_adiantado %}ok2{% else %}warn{% endif %}">
+        <small>Fatura Adiantada (mês atual)</small>
+        {% if resultado.pontos.hubsoft_adiantado %}✅ Sim{% else %}❌ Não{% endif %}
+    </div>
+    <div class="summary-item {% if resultado.pontos.hubsoft_app %}ok2{% else %}warn{% endif %}">
+        <small>Uso do App do Cliente</small>
+        {% if resultado.pontos.hubsoft_app %}✅ Sim{% else %}❌ Não{% endif %}
+    </div>
+    {% else %}
+    <div class="summary-item warn">
+        <small>Pontuações Extras</small>
+        ⚠️ Não disponíveis
+    </div>
+    {% endif %}
+</div>
+
+{# ── Etapas detalhadas ── #}
+<div class="diag-card">
+    <h3><i class="fas fa-list-check" style="color:#667eea"></i> Etapas da Consulta — CPF: <code
+            style="font-size:.95rem; background:#edf2f7; padding:2px 8px; border-radius:6px;">{{ resultado.cpf_limpo }}</code>
+    </h3>
+
+    {% for etapa in resultado.etapas %}
+    <div class="step-card">
+        <div class="step-header {{ etapa.status }}">
+            {% if etapa.status == 'ok' %}
+            <i class="fas fa-check-circle"></i>
+            {% elif etapa.status == 'erro' %}
+            <i class="fas fa-times-circle"></i>
+            {% else %}
+            <i class="fas fa-exclamation-triangle"></i>
+            {% endif %}
+            {{ etapa.titulo }}
+            {% if etapa.duracao_ms %}
+            <span class="duracao">({{ etapa.duracao_ms }}ms)</span>
+            {% endif %}
+            <span class="step-badge {{ etapa.status }}">
+                {% if etapa.status == 'ok' %}OK
+                {% elif etapa.status == 'erro' %}ERRO
+                {% else %}NÃO ENCONTRADO{% endif %}
+            </span>
+        </div>
+        <div class="step-body">
+            {% if etapa.dados %}
+            <table>
+                {% for chave, valor in etapa.dados.items %}
+                <tr>
+                    <td>{{ chave }}</td>
+                    <td>{{ valor }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+
+            {% if etapa.erro %}
+            <div class="step-error-msg">
+                <strong>Traceback / Mensagem de Erro:</strong><br>{{ etapa.erro }}
+            </div>
+            {% endif %}
+
+            {% if etapa.extratos is not None %}
+            {% if etapa.extratos %}
+            <p style="margin: 14px 0 6px; font-weight:600; color:#4a5568; font-size:.88rem;">Últimos 10 registros de
+                pontuação:</p>
+            <table class="extrato-table">
+                <thead>
+                    <tr>
+                        <th>Regra</th>
+                        <th>Gatilho</th>
+                        <th>Saldo</th>
+                        <th>XP</th>
+                        <th>Descrição</th>
+                        <th>Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in etapa.extratos %}
+                    <tr>
+                        <td>{{ e.regra }}</td>
+                        <td><code
+                                style="background:#edf2f7;padding:1px 6px;border-radius:4px;font-size:.8rem;">{{ e.gatilho }}</code>
+                        </td>
+                        <td>+{{ e.saldo }}</td>
+                        <td>+{{ e.xp }}</td>
+                        <td>{{ e.descricao }}</td>
+                        <td>{{ e.data }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="color:#718096; font-size:.88rem; margin-top:8px;"><em>Nenhum extrato de pontuação registrado
+                    ainda.</em></p>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% endif %}
+{% endblock %}

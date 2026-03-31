@@ -1,0 +1,172 @@
+{% extends 'vendas_web/base.html' %}
+{% block extra_css %}
+<style>
+  /* Segmento cards */
+  .seg-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+  .seg-card { background:var(--bg-white); border-radius:12px; border:1px solid var(--border); overflow:hidden; transition:box-shadow .2s; }
+  .seg-card:hover { box-shadow:0 4px 12px rgba(0,0,0,0.06); }
+  .seg-card-top { padding:18px 18px 14px; display:flex; align-items:flex-start; gap:12px; }
+  .seg-icon { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1rem; flex-shrink:0; }
+  .seg-nome { font-size:15px; font-weight:700; color:var(--text-main); margin-bottom:2px; }
+  .seg-desc { font-size:12px; color:var(--text-muted); line-height:1.4; }
+  .seg-card-stats { padding:12px 18px; background:var(--border-light); border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .seg-count-num { font-size:20px; font-weight:700; color:var(--text-main); }
+  .seg-count-lbl { font-size:11px; color:var(--text-light); font-weight:600; margin-left:6px; }
+  .seg-tipo-badge { font-size:10px; font-weight:700; padding:3px 10px; border-radius:6px; text-transform:uppercase; }
+  .seg-tipo-dinamico { background:var(--primary-light); color:var(--primary-dark); }
+  .seg-tipo-manual { background:var(--success-light); color:var(--success-dark); }
+  .seg-tipo-hibrido { background:var(--warning-light); color:var(--warning-dark); }
+  .seg-card-footer { padding:10px 18px 14px; display:flex; gap:8px; align-items:center; }
+  .seg-criado { font-size:11px; color:var(--text-light); flex:1; }
+
+  .empty-state { text-align:center; padding:64px 24px; color:var(--text-light); }
+  .empty-state i { font-size:48px; display:block; margin-bottom:16px; opacity:.3; }
+  .empty-state p { font-size:14px; margin-bottom:16px; }
+
+  .cor-row { display:flex; align-items:center; gap:10px; }
+  .cor-preview { width:36px; height:36px; border-radius:8px; flex-shrink:0; border:1px solid var(--border); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+  <div>
+    <h1 class="page-title"><i class="fas fa-layer-group" style="color:var(--info)"></i> Segmentos</h1>
+  </div>
+  <div>
+    <button class="btn-primary" onclick="abrirModalNovo()"><i class="fas fa-plus"></i> Novo Segmento</button>
+  </div>
+</div>
+
+{% if segmentos %}
+<div class="seg-grid">
+  {% for seg in segmentos %}
+  <div class="seg-card">
+    <div class="seg-card-top">
+      <div class="seg-icon" style="background:{{ seg.cor_hex }}">
+        <i class="fas {{ seg.icone_fa }}"></i>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="seg-nome">{{ seg.nome }}</div>
+        {% if seg.descricao %}
+        <div class="seg-desc">{{ seg.descricao|truncatechars:80 }}</div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="seg-card-stats">
+      <div>
+        <span class="seg-count-num">{{ seg.total_leads }}</span>
+        <span class="seg-count-lbl">leads</span>
+      </div>
+      <span class="seg-tipo-badge seg-tipo-{{ seg.tipo }}">{{ seg.get_tipo_display }}</span>
+    </div>
+    <div class="seg-card-footer">
+      <span class="seg-criado">por {{ seg.criado_por.get_full_name|default:seg.criado_por.username|default:"Sistema" }}</span>
+      <a href="{% url 'crm:segmento_detalhe' seg.pk %}" class="btn-secondary btn-sm">
+        <i class="fas fa-eye"></i> Ver
+      </a>
+      <button class="btn-secondary btn-sm" onclick="editarSegmento({{ seg.pk }}, '{{ seg.nome|escapejs }}', '{{ seg.descricao|escapejs }}', '{{ seg.tipo }}', '{{ seg.cor_hex }}', '{{ seg.icone_fa }}')">
+        <i class="fas fa-edit"></i>
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <i class="fas fa-layer-group"></i>
+  <p>Nenhum segmento cadastrado. Crie segmentos para organizar e disparar campanhas para grupos de leads.</p>
+  <button class="btn-primary" onclick="abrirModalNovo()"><i class="fas fa-plus"></i> Criar Primeiro Segmento</button>
+</div>
+{% endif %}
+
+<!-- MODAL NOVO / EDITAR SEGMENTO -->
+<div class="modal-overlay" id="modal-seg" style="display:none">
+  <div class="modal-content" style="max-width:460px;">
+    <button class="modal-close" onclick="fecharModal()"><i class="fas fa-times"></i></button>
+    <h3 id="modal-titulo" style="font-size:16px; font-weight:700; color:var(--text-main); margin-bottom:20px;">Novo Segmento</h3>
+    <form id="form-seg" method="post" action="{% url 'crm:api_segmento_salvar' %}">
+      {% csrf_token %}
+      <input type="hidden" name="seg_id" id="seg-id">
+
+      <div class="form-group">
+        <label class="form-label">Nome</label>
+        <input type="text" name="nome" id="campo-nome" class="form-control" placeholder="Ex: Leads Qualificados RJ" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <textarea name="descricao" id="campo-descricao" class="form-control" rows="2" placeholder="Para que serve este segmento?"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <select name="tipo" id="campo-tipo" class="form-control">
+          <option value="manual">Manual — você adiciona leads um a um</option>
+          <option value="dinamico">Dinâmico — regras automáticas de filtro</option>
+          <option value="hibrido">Híbrido — base dinâmica + adições manuais</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Cor</label>
+        <div class="cor-row">
+          <div class="cor-preview" id="cor-preview" style="background:#764ba2"></div>
+          <input type="color" name="cor_hex" id="campo-cor" class="form-control" value="#764ba2" style="width:80px;padding:4px" oninput="document.getElementById('cor-preview').style.background=this.value">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Ícone (classe Font Awesome)</label>
+        <input type="text" name="icone_fa" id="campo-icone" class="form-control" value="fa-users" placeholder="fa-users">
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button type="button" class="btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function abrirModalNovo() {
+  document.getElementById('modal-titulo').textContent = 'Novo Segmento';
+  document.getElementById('form-seg').reset();
+  document.getElementById('seg-id').value = '';
+  document.getElementById('campo-cor').value = '#764ba2';
+  document.getElementById('cor-preview').style.background = '#764ba2';
+  document.getElementById('modal-seg').style.display = 'flex';
+}
+
+function editarSegmento(pk, nome, desc, tipo, cor, icone) {
+  document.getElementById('modal-titulo').textContent = 'Editar Segmento';
+  document.getElementById('seg-id').value = pk;
+  document.getElementById('campo-nome').value = nome;
+  document.getElementById('campo-descricao').value = desc;
+  document.getElementById('campo-tipo').value = tipo;
+  document.getElementById('campo-cor').value = cor;
+  document.getElementById('cor-preview').style.background = cor;
+  document.getElementById('campo-icone').value = icone;
+  document.getElementById('modal-seg').style.display = 'flex';
+}
+
+function fecharModal() {
+  document.getElementById('modal-seg').style.display = 'none';
+}
+
+document.getElementById('form-seg').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const fd = new FormData(this);
+  fetch(this.action, { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(d => { if (d.ok) location.reload(); else alert(d.erro || 'Erro ao salvar.'); });
+});
+
+document.getElementById('modal-seg').addEventListener('click', function(e) {
+  if (e.target === this) fecharModal();
+});
+</script>
+{% endblock %}

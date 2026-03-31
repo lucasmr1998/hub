@@ -1,0 +1,1114 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Questões do Fluxo - Dashboard Megalink{% endblock %}
+
+{% block content %}
+<div style="padding: 2rem; max-width: 1400px; margin: 0 auto;">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                <a href="{% url 'vendas_web:configuracoes' %}" style="color: #666; text-decoration: none; font-size: 0.9rem;">
+                    ← Voltar para Configurações
+                </a>
+            </div>
+            <h1 style="color: #333; font-size: 2rem; font-weight: 700; margin: 0;">
+                ❓ Questões do Fluxo
+            </h1>
+            <p style="color: #666; font-size: 1rem; margin: 0.5rem 0 0 0;">
+                Configure as questões dos fluxos de atendimento
+            </p>
+        </div>
+        <div style="display: flex; gap: 1rem;">
+            <a href="{% url 'vendas_web:fluxos_atendimento' %}" class="btn-secondary">
+                🔄 Gerenciar Fluxos
+            </a>
+            {% if fluxo_selecionado %}
+            <button onclick="abrirModalNovaQuestao()" class="btn-primary">
+                ➕ Nova Questão
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Seletor de Fluxo -->
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; border: 1px solid #e0e0e0; margin-bottom: 2rem;">
+        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+            <label style="font-weight: 600; color: #333; min-width: 120px;">Selecionar Fluxo:</label>
+            <select id="fluxoSelector" onchange="selecionarFluxo()" style="flex: 1; min-width: 300px; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem;">
+                <option value="">Selecione um fluxo...</option>
+                {% for fluxo in fluxos %}
+                <option value="{{ fluxo.id }}" {% if fluxo_selecionado and fluxo.id == fluxo_selecionado.id %}selected{% endif %}>
+                    {{ fluxo.nome }} ({{ fluxo.get_tipo_fluxo_display }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    {% if fluxo_selecionado %}
+    <!-- Informações do Fluxo Selecionado -->
+    <div style="background: white; padding: 1.5rem; border-radius: 12px; border: 1px solid #e0e0e0; margin-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+            <div>
+                <h3 style="color: #333; font-size: 1.2rem; font-weight: 600; margin: 0 0 0.5rem 0;">
+                    {{ fluxo_selecionado.nome }}
+                </h3>
+                <p style="color: #666; margin: 0;">{{ fluxo_selecionado.descricao }}</p>
+            </div>
+            <div class="fluxo-badge {{ fluxo_selecionado.status }}">
+                {{ fluxo_selecionado.get_status_display|upper }}
+            </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+            <div class="info-item">
+                <div class="info-label">Tipo</div>
+                <div class="info-value">{{ fluxo_selecionado.get_tipo_fluxo_display }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Questões</div>
+                <div class="info-value">{{ questoes|length }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Max Tentativas</div>
+                <div class="info-value">{{ fluxo_selecionado.max_tentativas }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Tempo Limite</div>
+                <div class="info-value">{{ fluxo_selecionado.tempo_limite_minutos|default:"Ilimitado" }}{% if fluxo_selecionado.tempo_limite_minutos %} min{% endif %}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Questões -->
+    <div style="background: white; border-radius: 12px; border: 1px solid #e0e0e0; overflow: hidden;">
+        <div style="padding: 1.5rem; border-bottom: 1px solid #e0e0e0; background: #f8f9fa;">
+            <h3 style="color: #333; font-size: 1.1rem; font-weight: 600; margin: 0;">
+                Questões do Fluxo ({{ questoes|length }})
+            </h3>
+        </div>
+        
+        {% if questoes %}
+        <div style="padding: 1.5rem;">
+            {% for questao in questoes %}
+            <div class="questao-card">
+                <div class="questao-header">
+                    <div class="questao-indice">Q{{ questao.indice }}</div>
+                    <div class="questao-info">
+                        <h4 class="questao-titulo">{{ questao.titulo }}</h4>
+                        <p class="questao-descricao">{{ questao.descricao|truncatechars:100 }}</p>
+                    </div>
+                    <div class="questao-badges">
+                        <span class="tipo-badge {{ questao.tipo_questao }}">
+                            {{ questao.get_tipo_questao_display }}
+                        </span>
+                        <span class="validacao-badge {{ questao.tipo_validacao }}">
+                            {{ questao.get_tipo_validacao_display }}
+                        </span>
+                        {% if not questao.ativo %}
+                        <span class="status-badge inativo">INATIVA</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="questao-details">
+                    <div class="detail-row">
+                        <div class="detail-item">
+                            <span class="detail-label">Max Tentativas:</span>
+                            <span class="detail-value">{{ questao.max_tentativas|default:"Padrão" }}</span>
+                        </div>
+                        {% if questao.estrategia_erro %}
+                        <div class="detail-item">
+                            <span class="detail-label">Estratégia Erro:</span>
+                            <span class="detail-value">{{ questao.get_estrategia_erro_display }}</span>
+                        </div>
+                        {% endif %}
+                        {% if questao.opcoes_dinamicas_fonte %}
+                        <div class="detail-item">
+                            <span class="detail-label">Fonte Dinâmica:</span>
+                            <span class="detail-value">{{ questao.get_opcoes_dinamicas_fonte_display }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if questao.opcoes_resposta %}
+                    <div class="opcoes-resposta">
+                        <span class="detail-label">Opções:</span>
+                        <div class="opcoes-list">
+                            {% for opcao in questao.opcoes_resposta %}
+                            <span class="opcao-item">{{ opcao }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="questao-actions">
+                    <button onclick="editarQuestao({{ questao.id }})" class="btn-edit">
+                        ✏️ Editar
+                    </button>
+                    <button onclick="duplicarQuestao({{ questao.id }})" class="btn-secondary-small">
+                        📋 Duplicar
+                    </button>
+                    <button onclick="excluirQuestao({{ questao.id }})" class="btn-danger">
+                        🗑️ Excluir
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="padding: 3rem; text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">❓</div>
+            <h3 style="color: #666; margin-bottom: 0.5rem;">Nenhuma questão encontrada</h3>
+            <p style="color: #999; margin-bottom: 2rem;">Adicione questões a este fluxo</p>
+            <button onclick="abrirModalNovaQuestao()" class="btn-primary">
+                ➕ Criar Primeira Questão
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    
+    {% else %}
+    <!-- Estado sem fluxo selecionado -->
+    <div style="padding: 3rem; text-align: center; background: white; border-radius: 12px; border: 1px solid #e0e0e0;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🔄</div>
+        <h3 style="color: #666; margin-bottom: 0.5rem;">Selecione um fluxo</h3>
+        <p style="color: #999; margin-bottom: 2rem;">Escolha um fluxo acima para visualizar e gerenciar suas questões</p>
+        {% if not fluxos %}
+        <a href="{% url 'vendas_web:fluxos_atendimento' %}" class="btn-primary">
+            🔄 Criar Primeiro Fluxo
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal para Nova/Editar Questão -->
+<div id="modalQuestao" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-header">
+            <h2 id="modalTitulo">Nova Questão</h2>
+            <button onclick="fecharModal()" class="btn-close">&times;</button>
+        </div>
+        
+        <form id="formQuestao" onsubmit="salvarQuestao(event)">
+            <input type="hidden" id="questao_id" name="id">
+            <input type="hidden" id="fluxo_id" name="fluxo_id" value="{% if fluxo_selecionado %}{{ fluxo_selecionado.id }}{% endif %}">
+            
+            <div class="form-section">
+                <h3>Informações Básicas</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="titulo">Título da Questão *</label>
+                        <input type="text" id="titulo" name="titulo" required 
+                               placeholder="Ex: Qual é o seu nome completo?">
+                    </div>
+                    <div class="form-group">
+                        <label for="indice">Índice/Ordem</label>
+                        <input type="number" id="indice" name="indice" min="1"
+                               placeholder="Será calculado automaticamente">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="descricao">Descrição/Instruções</label>
+                    <textarea id="descricao" name="descricao" rows="3" 
+                              placeholder="Instruções adicionais para o usuário (opcional)"></textarea>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>Tipo e Validação</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="tipo_questao">Tipo de Questão *</label>
+                        <select id="tipo_questao" name="tipo_questao" required onchange="atualizarCamposValidacao()">
+                            <option value="">Selecione o tipo</option>
+                            <option value="texto">Texto</option>
+                            <option value="numero">Número</option>
+                            <option value="email">E-mail</option>
+                            <option value="telefone">Telefone</option>
+                            <option value="cpf_cnpj">CPF/CNPJ</option>
+                            <option value="cep">CEP</option>
+                            <option value="endereco">Endereço</option>
+                            <option value="select">Seleção Única</option>
+                            <option value="multiselect">Seleção Múltipla</option>
+                            <option value="data">Data</option>
+                            <option value="hora">Hora</option>
+                            <option value="data_hora">Data e Hora</option>
+                            <option value="boolean">Sim/Não</option>
+                            <option value="escala">Escala (1-10)</option>
+                            <option value="arquivo">Upload de Arquivo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tipo_validacao">Tipo de Validação *</label>
+                        <select id="tipo_validacao" name="tipo_validacao" required>
+                            <option value="obrigatoria">Obrigatória</option>
+                            <option value="opcional">Opcional</option>
+                            <option value="condicional">Condicional</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section" id="secaoOpcoes" style="display: none;">
+                <h3>Opções de Resposta</h3>
+                <div class="form-group">
+                    <label for="opcoes_resposta_text">Opções (uma por linha)</label>
+                    <textarea id="opcoes_resposta_text" name="opcoes_resposta_text" rows="5" 
+                              placeholder="Opção 1&#10;Opção 2&#10;Opção 3"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="resposta_padrao">Resposta Padrão</label>
+                    <input type="text" id="resposta_padrao" name="resposta_padrao" 
+                           placeholder="Valor padrão (opcional)">
+                </div>
+            </div>
+
+            <div class="form-section" id="secaoValidacoes">
+                <h3>Validações Específicas</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="tamanho_minimo">Tamanho Mínimo</label>
+                        <input type="number" id="tamanho_minimo" name="tamanho_minimo" min="0"
+                               placeholder="Mínimo de caracteres">
+                    </div>
+                    <div class="form-group">
+                        <label for="tamanho_maximo">Tamanho Máximo</label>
+                        <input type="number" id="tamanho_maximo" name="tamanho_maximo" min="0"
+                               placeholder="Máximo de caracteres">
+                    </div>
+                </div>
+                
+                <div class="form-row" id="validacoesNumericas" style="display: none;">
+                    <div class="form-group">
+                        <label for="valor_minimo">Valor Mínimo</label>
+                        <input type="number" id="valor_minimo" name="valor_minimo" step="0.01"
+                               placeholder="Valor mínimo permitido">
+                    </div>
+                    <div class="form-group">
+                        <label for="valor_maximo">Valor Máximo</label>
+                        <input type="number" id="valor_maximo" name="valor_maximo" step="0.01"
+                               placeholder="Valor máximo permitido">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="regex_validacao">Regex de Validação</label>
+                    <input type="text" id="regex_validacao" name="regex_validacao" 
+                           placeholder="Expressão regular para validação (opcional)">
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>Controle de Erros</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="max_tentativas">Máximo de Tentativas</label>
+                        <input type="number" id="max_tentativas" name="max_tentativas" min="1" max="10"
+                               placeholder="Deixe vazio para usar padrão do fluxo">
+                    </div>
+                    <div class="form-group">
+                        <label for="estrategia_erro">Estratégia de Erro</label>
+                        <select id="estrategia_erro" name="estrategia_erro">
+                            <option value="repetir">Repetir Questão</option>
+                            <option value="pular">Pular Questão</option>
+                            <option value="redirecionar">Redirecionar</option>
+                            <option value="finalizar">Finalizar Atendimento</option>
+                            <option value="escalar_humano">Escalar para Humano</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="mensagem_erro_padrao">Mensagem de Erro</label>
+                    <textarea id="mensagem_erro_padrao" name="mensagem_erro_padrao" rows="2" 
+                              placeholder="Mensagem exibida quando a resposta é inválida"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="mensagem_tentativa_esgotada">Mensagem Tentativas Esgotadas</label>
+                    <textarea id="mensagem_tentativa_esgotada" name="mensagem_tentativa_esgotada" rows="2" 
+                              placeholder="Mensagem quando excede o número máximo de tentativas"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="instrucoes_resposta_correta">Instruções para Resposta Correta</label>
+                    <textarea id="instrucoes_resposta_correta" name="instrucoes_resposta_correta" rows="2" 
+                              placeholder="Dicas para ajudar o usuário a responder corretamente"></textarea>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>Configurações Avançadas</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="opcoes_dinamicas_fonte">Fonte de Opções Dinâmicas</label>
+                        <select id="opcoes_dinamicas_fonte" name="opcoes_dinamicas_fonte">
+                            <option value="">Nenhuma</option>
+                            <option value="planos_internet">Planos de Internet</option>
+                            <option value="opcoes_vencimento">Opções de Vencimento</option>
+                            <option value="customizada">Query Customizada</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="ordem_exibicao">Ordem de Exibição</label>
+                        <input type="number" id="ordem_exibicao" name="ordem_exibicao" min="1"
+                               placeholder="Ordem personalizada (opcional)">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="permite_voltar" name="permite_voltar" checked>
+                            <span class="checkmark"></span>
+                            Permite Voltar
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="permite_editar" name="permite_editar" checked>
+                            <span class="checkmark"></span>
+                            Permite Editar Resposta
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="ativo" name="ativo" checked>
+                        <span class="checkmark"></span>
+                        Questão Ativa
+                    </label>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" onclick="fecharModal()" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary">
+                    <span id="btnSalvarTexto">Salvar Questão</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.btn-primary {
+    background: #1F3D59;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary:hover {
+    background: #2c5282;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+}
+
+.btn-secondary-small {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-secondary-small:hover {
+    background: #545b62;
+}
+
+.btn-edit {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-edit:hover {
+    background: #218838;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+.fluxo-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.fluxo-badge.ativo {
+    background: #d4edda;
+    color: #155724;
+}
+
+.fluxo-badge.inativo {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.fluxo-badge.rascunho {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.fluxo-badge.teste {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.info-item {
+    text-align: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.info-label {
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.info-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1F3D59;
+}
+
+.questao-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.questao-card:hover {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border-color: #1F3D59;
+}
+
+.questao-header {
+    padding: 1rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: start;
+    gap: 1rem;
+}
+
+.questao-indice {
+    background: #1F3D59;
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    min-width: 50px;
+    text-align: center;
+}
+
+.questao-info {
+    flex: 1;
+}
+
+.questao-titulo {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 0.5rem 0;
+}
+
+.questao-descricao {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.questao-badges {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.tipo-badge, .validacao-badge, .status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.tipo-badge.texto { background: #d1ecf1; color: #0c5460; }
+.tipo-badge.numero { background: #d4edda; color: #155724; }
+.tipo-badge.email { background: #e2e3f1; color: #383d41; }
+.tipo-badge.telefone { background: #fff3cd; color: #856404; }
+.tipo-badge.select { background: #f8d7da; color: #721c24; }
+
+.validacao-badge.obrigatoria { background: #f8d7da; color: #721c24; }
+.validacao-badge.opcional { background: #e2e6ea; color: #6c757d; }
+.validacao-badge.condicional { background: #fff3cd; color: #856404; }
+
+.status-badge.inativo { background: #f8d7da; color: #721c24; }
+
+.questao-details {
+    padding: 1rem;
+}
+
+.detail-row {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.detail-item {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.detail-label {
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.detail-value {
+    font-size: 0.8rem;
+    color: #333;
+    font-weight: 600;
+}
+
+.opcoes-resposta {
+    margin-top: 1rem;
+}
+
+.opcoes-list {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.opcao-item {
+    background: #e9ecef;
+    color: #495057;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+.questao-actions {
+    padding: 1rem;
+    border-top: 1px solid #e0e0e0;
+    background: #f8f9fa;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+@media (max-width: 768px) {
+    .questao-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .questao-badges {
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+    }
+    
+    .detail-row {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .questao-actions {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #333;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    padding: 0.5rem;
+}
+
+.form-section {
+    padding: 1.5rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+}
+
+.form-section h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #333;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.form-group input, 
+.form-group textarea, 
+.form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease;
+}
+
+.form-group input:focus, 
+.form-group textarea:focus, 
+.form-group select:focus {
+    outline: none;
+    border-color: #1F3D59;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    margin-bottom: 0 !important;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+.modal-footer {
+    padding: 1.5rem;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-content {
+        width: 95%;
+        max-height: 95vh;
+    }
+}
+</style>
+
+<script>
+let questoesCarregadas = [];
+const fluxoAtualId = {% if fluxo_selecionado %}{{ fluxo_selecionado.id }}{% else %}null{% endif %};
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (fluxoAtualId) {
+        carregarQuestoes();
+    }
+});
+
+function selecionarFluxo() {
+    const selector = document.getElementById('fluxoSelector');
+    const fluxoId = selector.value;
+    
+    if (fluxoId) {
+        window.location.href = `/configuracoes/questoes/${fluxoId}/`;
+    } else {
+        window.location.href = '/configuracoes/questoes/';
+    }
+}
+
+async function carregarQuestoes() {
+    if (!fluxoAtualId) return;
+    
+    try {
+        const response = await fetch(`/api/configuracoes/questoes/?fluxo_id=${fluxoAtualId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            questoesCarregadas = data.data;
+        } else {
+            console.error('Erro ao carregar questões:', data.error);
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+    }
+}
+
+function abrirModalNovaQuestao() {
+    if (!fluxoAtualId) {
+        alert('Selecione um fluxo primeiro');
+        return;
+    }
+    
+    document.getElementById('modalTitulo').textContent = 'Nova Questão';
+    document.getElementById('btnSalvarTexto').textContent = 'Salvar Questão';
+    document.getElementById('formQuestao').reset();
+    document.getElementById('questao_id').value = '';
+    document.getElementById('fluxo_id').value = fluxoAtualId;
+    
+    // Valores padrão
+    document.getElementById('tipo_validacao').value = 'obrigatoria';
+    document.getElementById('estrategia_erro').value = 'repetir';
+    document.getElementById('ativo').checked = true;
+    document.getElementById('permite_voltar').checked = true;
+    document.getElementById('permite_editar').checked = true;
+    
+    atualizarCamposValidacao();
+    document.getElementById('modalQuestao').style.display = 'flex';
+}
+
+function editarQuestao(id) {
+    const questao = questoesCarregadas.find(q => q.id === id);
+    if (!questao) {
+        alert('Questão não encontrada');
+        return;
+    }
+    
+    document.getElementById('modalTitulo').textContent = 'Editar Questão';
+    document.getElementById('btnSalvarTexto').textContent = 'Salvar Alterações';
+    
+    // Preencher campos
+    document.getElementById('questao_id').value = questao.id;
+    document.getElementById('fluxo_id').value = questao.fluxo_id;
+    document.getElementById('titulo').value = questao.titulo;
+    document.getElementById('descricao').value = questao.descricao || '';
+    document.getElementById('indice').value = questao.indice;
+    document.getElementById('tipo_questao').value = questao.tipo_questao;
+    document.getElementById('tipo_validacao').value = questao.tipo_validacao;
+    
+    // Opções de resposta
+    if (questao.opcoes_resposta && Array.isArray(questao.opcoes_resposta)) {
+        document.getElementById('opcoes_resposta_text').value = questao.opcoes_resposta.join('\n');
+    }
+    
+    document.getElementById('resposta_padrao').value = questao.resposta_padrao || '';
+    document.getElementById('regex_validacao').value = questao.regex_validacao || '';
+    document.getElementById('tamanho_minimo').value = questao.tamanho_minimo || '';
+    document.getElementById('tamanho_maximo').value = questao.tamanho_maximo || '';
+    document.getElementById('valor_minimo').value = questao.valor_minimo || '';
+    document.getElementById('valor_maximo').value = questao.valor_maximo || '';
+    document.getElementById('max_tentativas').value = questao.max_tentativas || '';
+    document.getElementById('estrategia_erro').value = questao.estrategia_erro || 'repetir';
+    document.getElementById('mensagem_erro_padrao').value = questao.mensagem_erro_padrao || '';
+    document.getElementById('mensagem_tentativa_esgotada').value = questao.mensagem_tentativa_esgotada || '';
+    document.getElementById('instrucoes_resposta_correta').value = questao.instrucoes_resposta_correta || '';
+    document.getElementById('opcoes_dinamicas_fonte').value = questao.opcoes_dinamicas_fonte || '';
+    document.getElementById('ordem_exibicao').value = questao.ordem_exibicao || '';
+    
+    // Checkboxes
+    document.getElementById('ativo').checked = questao.ativo;
+    document.getElementById('permite_voltar').checked = questao.permite_voltar;
+    document.getElementById('permite_editar').checked = questao.permite_editar;
+    
+    atualizarCamposValidacao();
+    document.getElementById('modalQuestao').style.display = 'flex';
+}
+
+async function salvarQuestao(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    const data = {
+        fluxo_id: parseInt(formData.get('fluxo_id')),
+        titulo: formData.get('titulo'),
+        descricao: formData.get('descricao'),
+        tipo_questao: formData.get('tipo_questao'),
+        tipo_validacao: formData.get('tipo_validacao'),
+        resposta_padrao: formData.get('resposta_padrao'),
+        regex_validacao: formData.get('regex_validacao'),
+        tamanho_minimo: formData.get('tamanho_minimo') ? parseInt(formData.get('tamanho_minimo')) : null,
+        tamanho_maximo: formData.get('tamanho_maximo') ? parseInt(formData.get('tamanho_maximo')) : null,
+        valor_minimo: formData.get('valor_minimo') ? parseFloat(formData.get('valor_minimo')) : null,
+        valor_maximo: formData.get('valor_maximo') ? parseFloat(formData.get('valor_maximo')) : null,
+        max_tentativas: formData.get('max_tentativas') ? parseInt(formData.get('max_tentativas')) : null,
+        estrategia_erro: formData.get('estrategia_erro'),
+        mensagem_erro_padrao: formData.get('mensagem_erro_padrao'),
+        mensagem_tentativa_esgotada: formData.get('mensagem_tentativa_esgotada'),
+        instrucoes_resposta_correta: formData.get('instrucoes_resposta_correta'),
+        opcoes_dinamicas_fonte: formData.get('opcoes_dinamicas_fonte') || null,
+        ordem_exibicao: formData.get('ordem_exibicao') ? parseInt(formData.get('ordem_exibicao')) : null,
+        ativo: formData.get('ativo') === 'on',
+        permite_voltar: formData.get('permite_voltar') === 'on',
+        permite_editar: formData.get('permite_editar') === 'on'
+    };
+    
+    // Processar opções de resposta
+    const opcoesText = formData.get('opcoes_resposta_text');
+    if (opcoesText) {
+        data.opcoes_resposta = opcoesText.split('\n').filter(opcao => opcao.trim() !== '');
+    }
+    
+    // Processar índice
+    const indice = formData.get('indice');
+    if (indice) {
+        data.indice = parseInt(indice);
+    }
+    
+    const questaoId = formData.get('id');
+    const isEdit = questaoId && questaoId !== '';
+    
+    if (isEdit) {
+        data.id = parseInt(questaoId);
+    }
+    
+    try {
+        const response = await fetch('/api/configuracoes/questoes/', {
+            method: isEdit ? 'PUT' : 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            fecharModal();
+            window.location.reload(); // Recarregar para mostrar as mudanças
+        } else {
+            throw new Error(result.error || 'Erro ao salvar questão');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao salvar questão: ' + error.message);
+    }
+}
+
+async function duplicarQuestao(id) {
+    if (!confirm('Tem certeza que deseja duplicar esta questão?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/configuracoes/questoes/duplicar/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ id: id })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            window.location.reload(); // Recarregar para mostrar a nova questão
+        } else {
+            throw new Error(result.error || 'Erro ao duplicar questão');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao duplicar questão: ' + error.message);
+    }
+}
+
+async function excluirQuestao(id) {
+    if (!confirm('Tem certeza que deseja excluir esta questão? Esta ação não pode ser desfeita.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/configuracoes/questoes/', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ id: id })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            window.location.reload(); // Recarregar para remover a questão
+        } else {
+            throw new Error(result.error || 'Erro ao excluir questão');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao excluir questão: ' + error.message);
+    }
+}
+
+function atualizarCamposValidacao() {
+    const tipoQuestao = document.getElementById('tipo_questao').value;
+    const secaoOpcoes = document.getElementById('secaoOpcoes');
+    const validacoesNumericas = document.getElementById('validacoesNumericas');
+    
+    // Mostrar/ocultar seção de opções para select/multiselect
+    if (tipoQuestao === 'select' || tipoQuestao === 'multiselect') {
+        secaoOpcoes.style.display = 'block';
+    } else {
+        secaoOpcoes.style.display = 'none';
+    }
+    
+    // Mostrar/ocultar validações numéricas
+    if (tipoQuestao === 'numero' || tipoQuestao === 'escala') {
+        validacoesNumericas.style.display = 'flex';
+    } else {
+        validacoesNumericas.style.display = 'none';
+    }
+}
+
+function fecharModal() {
+    document.getElementById('modalQuestao').style.display = 'none';
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Fechar modal ao clicar fora
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('modalQuestao');
+    if (event.target === modal) {
+        fecharModal();
+    }
+});
+</script>
+{% endblock %}

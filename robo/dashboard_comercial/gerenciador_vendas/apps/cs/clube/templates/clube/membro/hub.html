@@ -1,0 +1,176 @@
+{% extends 'roleta/membro/base_membro.html' %}
+
+{% block title %}Clube Megalink{% endblock %}
+
+{% block extra_css %}
+.hub-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+@media (min-width: 768px) {
+    .hub-grid { grid-template-columns: repeat(3, 1fr); gap: 18px; }
+}
+.hub-card {
+    background: white;
+    border-radius: 20px;
+    padding: 28px 20px;
+    text-align: center;
+    text-decoration: none;
+    color: #1e293b;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+.hub-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+}
+.hub-card:active {
+    transform: translateY(0);
+}
+.hub-card-icon {
+    width: 60px; height: 60px; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px; font-size: 26px;
+}
+@media (min-width: 768px) {
+    .hub-card { padding: 36px 24px; }
+    .hub-card-icon { width: 72px; height: 72px; font-size: 30px; border-radius: 20px; }
+    .hub-card-title { font-size: 17px; }
+    .hub-card-desc { font-size: 13px; }
+}
+.hub-card-title {
+    font-size: 15px; font-weight: 800; margin-bottom: 4px; color: #1e293b;
+}
+.hub-card-desc {
+    font-size: 12px; color: #64748b; line-height: 1.4;
+}
+.hub-card-badge {
+    position: absolute; top: 12px; right: 12px;
+    background: #ef4444; color: white; font-size: 11px;
+    font-weight: 800; min-width: 22px; height: 22px;
+    border-radius: 11px; display: flex; align-items: center;
+    justify-content: center; padding: 0 6px;
+}
+.hub-welcome {
+    text-align: center; margin-bottom: 24px; color: white;
+}
+.hub-welcome h1 {
+    font-size: 22px; font-weight: 800; margin-bottom: 4px;
+}
+@media (min-width: 768px) {
+    .hub-welcome h1 { font-size: 28px; }
+    .hub-welcome p { font-size: 15px; }
+    .hub-welcome { margin-bottom: 32px; }
+}
+.hub-welcome p {
+    font-size: 13px; color: rgba(255,255,255,0.6);
+}
+.hub-user-card {
+    background: white;
+    border-radius: 20px;
+    padding: 18px 24px;
+    margin-bottom: 20px;
+    color: #1e293b;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+@media (min-width: 768px) {
+    .hub-user-card { padding: 20px 28px; margin-bottom: 24px; }
+}
+.hub-user-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #000b4a;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: white; flex-shrink: 0;
+}
+.hub-user-name {
+    font-size: 15px; font-weight: 800; color: #1e293b;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+@media (min-width: 768px) {
+    .hub-user-name { font-size: 18px; }
+}
+.hub-user-level {
+    font-size: 11px; color: #f59e0b; font-weight: 700;
+    display: flex; align-items: center; gap: 4px;
+}
+.hub-logout-btn {
+    display: flex; align-items: center; justify-content: center;
+    color: #94a3b8; font-size: 14px;
+    text-decoration: none; width: 34px; height: 34px; border-radius: 8px;
+    transition: all 0.2s; flex-shrink: 0;
+}
+.hub-logout-btn:hover { color: #1e293b; background: #f1f5f9; }
+{% endblock %}
+
+{% block content %}
+<div class="hub-user-card">
+    <div style="display:flex; align-items:center; gap:12px;">
+        <div class="hub-user-avatar"><i class="fas fa-user"></i></div>
+        <div style="flex:1; min-width:0;">
+            <div class="hub-user-name">{{ membro.nome|truncatewords:2 }}</div>
+            <div class="hub-user-level"><i class="fas fa-medal"></i> {{ membro.nivel_atual }} &middot; <span style="color:#000b4a; font-weight:800;">{{ membro.saldo }} pts</span></div>
+        </div>
+        <a href="{% url 'clube:roleta_logout' %}" class="hub-logout-btn"><i class="fas fa-sign-out-alt"></i></a>
+    </div>
+</div>
+
+<div class="hub-grid">
+    <a href="{% url 'clube:membro_jogar' %}" class="hub-card">
+        <div class="hub-card-icon" style="background:#eff6ff; color:#2563eb;">
+            <i class="fas fa-dice"></i>
+        </div>
+        <div class="hub-card-title">Roleta</div>
+        <div class="hub-card-desc">Gire e ganhe pr&ecirc;mios</div>
+    </a>
+
+    <a href="{% url 'clube:membro_cupons' %}" class="hub-card">
+        {% if cupons_count > 0 %}
+        <div class="hub-card-badge">{{ cupons_count }}</div>
+        {% endif %}
+        <div class="hub-card-icon" style="background:#ecfdf5; color:#059669;">
+            <i class="fas fa-ticket-alt"></i>
+        </div>
+        <div class="hub-card-title">Cupons</div>
+        <div class="hub-card-desc">Descontos exclusivos</div>
+    </a>
+
+    <a href="{% url 'clube:membro_indicar' %}" class="hub-card">
+        {% if indicacoes_count > 0 %}
+        <div class="hub-card-badge" style="background:#2563eb;">{{ indicacoes_count }}</div>
+        {% endif %}
+        <div class="hub-card-icon" style="background:#fef3c7; color:#d97706;">
+            <i class="fas fa-user-plus"></i>
+        </div>
+        <div class="hub-card-title">Indicar</div>
+        <div class="hub-card-desc">Convide amigos e ganhe</div>
+    </a>
+
+    <a href="{% url 'clube:membro_perfil' %}" class="hub-card">
+        <div class="hub-card-icon" style="background:#f3e8ff; color:#7c3aed;">
+            <i class="fas fa-user-circle"></i>
+        </div>
+        <div class="hub-card-title">Perfil</div>
+        <div class="hub-card-desc">Saldo, n&iacute;vel e extrato</div>
+    </a>
+
+    <a href="{% url 'carteirinha:membro_carteirinha' %}" class="hub-card">
+        <div class="hub-card-icon" style="background:#e0e7ff; color:#4f46e5;">
+            <i class="fas fa-id-card"></i>
+        </div>
+        <div class="hub-card-title">Carteirinha</div>
+        <div class="hub-card-desc">Seu cart&atilde;o virtual</div>
+    </a>
+
+    <a href="{% url 'clube:membro_missoes' %}" class="hub-card">
+        <div class="hub-card-icon" style="background:#fef3c7; color:#f59e0b;">
+            <i class="fas fa-trophy"></i>
+        </div>
+        <div class="hub-card-title">Miss&otilde;es</div>
+        <div class="hub-card-desc">Ganhe giros extras</div>
+    </a>
+
+</div>
+{% endblock %}

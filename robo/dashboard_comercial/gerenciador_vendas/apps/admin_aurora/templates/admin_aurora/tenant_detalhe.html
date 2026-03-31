@@ -1,0 +1,220 @@
+{% extends "admin_aurora/base_admin.html" %}
+
+{% block title %}{{ tenant.nome }}{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="admin-header">
+    <div>
+        <h1>{{ tenant.nome }}</h1>
+        <div class="text-muted text-sm mt-2">
+            {% if tenant.em_trial %}
+                <span class="badge badge-yellow">Trial</span>
+            {% elif tenant.ativo %}
+                <span class="badge badge-green">Ativo</span>
+            {% else %}
+                <span class="badge badge-red">Inativo</span>
+            {% endif %}
+        </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+        <form method="post" action="">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="toggle_ativo">
+            {% if tenant.ativo %}
+                <button type="submit" class="btn btn-danger btn-sm">
+                    <i class="fas fa-ban"></i> Desativar
+                </button>
+            {% else %}
+                <button type="submit" class="btn btn-success btn-sm">
+                    <i class="fas fa-check"></i> Ativar
+                </button>
+            {% endif %}
+        </form>
+        <a href="{% url 'admin_aurora:dashboard' %}" class="btn btn-outline btn-sm">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Informacoes do Tenant -->
+<div class="card">
+    <div class="card-title"><i class="fas fa-building"></i> Informações</div>
+    <div class="form-row">
+        <div class="form-group">
+            <label>Slug</label>
+            <div style="font-size:.85rem;color:#334155;">{{ tenant.slug }}</div>
+        </div>
+        <div class="form-group">
+            <label>CNPJ</label>
+            <div style="font-size:.85rem;color:#334155;">{{ tenant.cnpj|default:"Não informado" }}</div>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group">
+            <label>Criado em</label>
+            <div style="font-size:.85rem;color:#334155;">{{ tenant.criado_em|date:"d/m/Y H:i" }}</div>
+        </div>
+        <div class="form-group">
+            <label>Total de Leads</label>
+            <div style="font-size:.85rem;color:#334155;">{{ leads_count }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Modulos e Planos -->
+<div class="card">
+    <div class="card-title"><i class="fas fa-cubes"></i> Módulos e Planos</div>
+    <form method="post" action="">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="atualizar_modulos">
+        <div class="form-row" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:16px;">
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="modulo_comercial" {% if tenant.modulo_comercial %}checked{% endif %}>
+                    Comercial
+                </label>
+                <select name="plano_comercial" style="margin-top:8px;">
+                    <option value="starter" {% if tenant.plano_comercial == 'starter' %}selected{% endif %}>Starter</option>
+                    <option value="start" {% if tenant.plano_comercial == 'start' %}selected{% endif %}>Start</option>
+                    <option value="pro" {% if tenant.plano_comercial == 'pro' %}selected{% endif %}>Pro</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="modulo_marketing" {% if tenant.modulo_marketing %}checked{% endif %}>
+                    Marketing
+                </label>
+                <select name="plano_marketing" style="margin-top:8px;">
+                    <option value="starter" {% if tenant.plano_marketing == 'starter' %}selected{% endif %}>Starter</option>
+                    <option value="start" {% if tenant.plano_marketing == 'start' %}selected{% endif %}>Start</option>
+                    <option value="pro" {% if tenant.plano_marketing == 'pro' %}selected{% endif %}>Pro</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="modulo_cs" {% if tenant.modulo_cs %}checked{% endif %}>
+                    CS
+                </label>
+                <select name="plano_cs" style="margin-top:8px;">
+                    <option value="starter" {% if tenant.plano_cs == 'starter' %}selected{% endif %}>Starter</option>
+                    <option value="start" {% if tenant.plano_cs == 'start' %}selected{% endif %}>Start</option>
+                    <option value="pro" {% if tenant.plano_cs == 'pro' %}selected{% endif %}>Pro</option>
+                </select>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fas fa-save"></i> Salvar Módulos
+        </button>
+    </form>
+</div>
+
+<!-- Trial -->
+<div class="card">
+    <div class="card-title"><i class="fas fa-clock"></i> Trial</div>
+    {% if tenant.em_trial %}
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+            <div>
+                <span class="text-sm text-muted">Início:</span>
+                <strong style="font-size:.85rem;">{{ tenant.trial_inicio|date:"d/m/Y" }}</strong>
+            </div>
+            <div>
+                <span class="text-sm text-muted">Fim:</span>
+                <strong style="font-size:.85rem;">{{ tenant.trial_fim|date:"d/m/Y" }}</strong>
+            </div>
+        </div>
+        <form method="post" action="" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="encerrar_trial">
+            <button type="submit" class="btn btn-danger btn-sm">
+                <i class="fas fa-times"></i> Encerrar Trial
+            </button>
+        </form>
+    {% else %}
+        <p class="text-muted text-sm mb-3">Nenhum trial ativo.</p>
+        <form method="post" action="" style="display:flex;align-items:flex-end;gap:12px;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="estender_trial">
+            <div class="form-group" style="margin-bottom:0;">
+                <label>Dias de trial</label>
+                <input type="number" name="dias" value="14" min="1" max="90" style="width:120px;">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fas fa-play"></i> Iniciar Trial
+            </button>
+        </form>
+    {% endif %}
+</div>
+
+<!-- Usuarios -->
+<div class="card">
+    <div class="card-title"><i class="fas fa-users"></i> Usuários</div>
+    <div class="admin-table-wrap">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Usuário</th>
+                    <th>Email</th>
+                    <th>Telefone</th>
+                    <th>Último Login</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for perfil in users %}
+                <tr>
+                    <td style="font-weight:600;">{{ perfil.user.username }}</td>
+                    <td>{{ perfil.user.email }}</td>
+                    <td>{{ perfil.telefone|default:"—" }}</td>
+                    <td>
+                        {% if perfil.user.last_login %}
+                            {{ perfil.user.last_login|date:"d/m/Y H:i" }}
+                        {% else %}
+                            <span class="text-muted">Nunca</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">
+                        Nenhum usuário cadastrado.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Integracao HubSoft -->
+<div class="card">
+    <div class="card-title"><i class="fas fa-plug"></i> Integração HubSoft</div>
+    {% if integracao %}
+        <div class="form-row">
+            <div class="form-group">
+                <label>URL Base</label>
+                <div style="font-size:.85rem;color:#334155;">{{ integracao.base_url }}</div>
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <div>
+                    {% if integracao.ativa %}
+                        <span class="badge badge-green">Conectado</span>
+                    {% else %}
+                        <span class="badge badge-red">Desconectado</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <p class="text-muted text-sm">Não configurado.</p>
+    {% endif %}
+</div>
+{% endblock %}

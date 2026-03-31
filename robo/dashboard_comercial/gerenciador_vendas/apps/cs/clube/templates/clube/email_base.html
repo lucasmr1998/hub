@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>{% block title %}Clube Megalink{% endblock %}</title>
+    <style type="text/css">
+        body { margin:0; padding:0; background-color:#f3f4f6; font-family:Arial,Helvetica,sans-serif; color:#1f2937; }
+        table { border-spacing:0; border-collapse:collapse; }
+        img { border:0; display:block; }
+        a { color:#f59e0b; text-decoration:none; }
+    </style>
+</head>
+<body style="margin:0; padding:0; background-color:#f3f4f6;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;">
+<tr><td align="center" style="padding:20px 0;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;">
+
+    <!-- HEADER -->
+    <tr>
+        <td style="background-image:url('{{ header_bg_url|default:"" }}'); background-color:#000b4a; background-size:cover; background-position:center; padding:0;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td style="padding:28px 30px; text-align:center;">
+                        <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+                            <tr>
+                                <td style="padding-right:12px;">
+                                    <div style="width:40px; height:40px; background:#f59e0b; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                                        <span style="color:#000b4a; font-size:22px; font-weight:800;">M</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="color:#ffffff; font-size:22px; font-weight:800; letter-spacing:-0.3px;">Clube Megalink</div>
+                                    <div style="color:#94a3b8; font-size:11px; margin-top:2px;">Seu programa de fidelidade</div>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+
+    <!-- BODY -->
+    <tr>
+        <td style="background-color:#ffffff; padding:32px 30px;">
+            {% block body %}{% endblock %}
+        </td>
+    </tr>
+
+    <!-- FOOTER -->
+    <tr>
+        <td style="background-image:url('{{ footer_bg_url|default:"" }}'); background-color:#0a0f2e; background-size:cover; padding:0; border-top:3px solid #f59e0b;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td style="padding:24px 30px; text-align:center;">
+                        <div style="color:#f59e0b; font-size:14px; font-weight:700; margin-bottom:8px;">Clube Megalink</div>
+                        <div style="color:#94a3b8; font-size:12px; line-height:1.6; margin-bottom:12px;">
+                            Megalink Telecom &mdash; Conectando o Piau&iacute; e Maranh&atilde;o<br>
+                            Internet de qualidade + benef&iacute;cios exclusivos
+                        </div>
+                        <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+                            <tr>
+                                <td style="padding:0 8px;">
+                                    <a href="{{ whatsapp_url|default:'#' }}" style="color:#f59e0b; font-size:12px; font-weight:600;">
+                                        WhatsApp
+                                    </a>
+                                </td>
+                                <td style="color:#4b5563;">|</td>
+                                <td style="padding:0 8px;">
+                                    <a href="{{ clube_url|default:'#' }}" style="color:#f59e0b; font-size:12px; font-weight:600;">
+                                        Acessar o Clube
+                                    </a>
+                                </td>
+                                <td style="color:#4b5563;">|</td>
+                                <td style="padding:0 8px;">
+                                    <a href="#" style="color:#6b7280; font-size:12px;">
+                                        Descadastrar
+                                    </a>
+                                </td>
+                            </tr>
+                        </table>
+                        <div style="color:#4b5563; font-size:10px; margin-top:12px;">
+                            &copy; 2026 Megalink Telecom. Todos os direitos reservados.
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>

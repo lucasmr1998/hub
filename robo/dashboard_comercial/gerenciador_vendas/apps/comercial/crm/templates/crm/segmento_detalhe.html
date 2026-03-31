@@ -1,0 +1,256 @@
+{% extends 'vendas_web/base.html' %}
+{% block extra_css %}
+<style>
+  .grid-layout { display:grid; grid-template-columns:300px 1fr; gap:16px; }
+  @media(max-width:900px) { .grid-layout { grid-template-columns:1fr; } }
+
+  .seg-banner { height:6px; }
+  .seg-info-content { padding:20px; }
+  .seg-icon-big { width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.4rem; margin-bottom:14px; }
+  .seg-nome { font-size:18px; font-weight:700; color:var(--text-main); margin-bottom:4px; }
+  .seg-tipo-badge { display:inline-flex; padding:3px 10px; border-radius:6px; font-size:12px; font-weight:600; text-transform:uppercase; margin-bottom:10px; }
+  .seg-tipo-dinamico { background:var(--primary-light); color:var(--primary-dark); }
+  .seg-tipo-manual { background:var(--success-light); color:var(--success-dark); }
+  .seg-tipo-hibrido { background:var(--warning-light); color:var(--warning-dark); }
+  .seg-desc { font-size:13px; color:var(--text-muted); line-height:1.5; margin-bottom:16px; }
+  .seg-stat { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border-light); font-size:13px; }
+  .seg-stat:last-child { border-bottom:none; }
+  .seg-stat-lbl { color:var(--text-light); font-weight:600; }
+  .seg-stat-val { font-weight:700; color:var(--text-main); }
+
+  .lead-nome { font-weight:600; color:var(--text-main); }
+  .lead-tel { font-size:12px; color:var(--text-muted); }
+  .manual-badge { background:var(--success-light); color:var(--success-dark); font-size:10px; font-weight:700; padding:2px 6px; border-radius:6px; }
+
+  .search-bar { padding:14px 16px; border-bottom:1px solid var(--border-light); }
+  .search-input { width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; color:var(--text-main); outline:none; box-sizing:border-box; }
+  .search-input:focus { border-color:var(--primary); }
+
+  .empty { text-align:center; padding:40px; color:var(--text-light); }
+  .empty i { font-size:32px; display:block; margin-bottom:10px; opacity:.4; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+  <div style="display:flex; align-items:center; gap:10px;">
+    <div style="width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;background:{{ segmento.cor_hex }}">
+      <i class="fas {{ segmento.icone_fa }}"></i>
+    </div>
+    <h1 class="page-title">{{ segmento.nome }}</h1>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <a href="{% url 'crm:segmentos_lista' %}" class="btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a>
+    <button class="btn-primary" onclick="abrirModalAdicionar()"><i class="fas fa-plus"></i> Adicionar Lead</button>
+  </div>
+</div>
+
+<div class="grid-layout">
+  <!-- SIDEBAR INFO -->
+  <div>
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="seg-banner" style="background:{{ segmento.cor_hex }}"></div>
+      <div class="seg-info-content">
+        <div class="seg-icon-big" style="background:{{ segmento.cor_hex }}">
+          <i class="fas {{ segmento.icone_fa }}"></i>
+        </div>
+        <div class="seg-nome">{{ segmento.nome }}</div>
+        <span class="seg-tipo-badge seg-tipo-{{ segmento.tipo }}">{{ segmento.get_tipo_display }}</span>
+        {% if segmento.descricao %}
+        <div class="seg-desc">{{ segmento.descricao }}</div>
+        {% endif %}
+
+        <div class="seg-stat">
+          <span class="seg-stat-lbl">Total de leads</span>
+          <span class="seg-stat-val">{{ segmento.total_leads }}</span>
+        </div>
+        <div class="seg-stat">
+          <span class="seg-stat-lbl">Criado por</span>
+          <span class="seg-stat-val">{{ segmento.criado_por.get_full_name|default:segmento.criado_por.username|default:"Sistema" }}</span>
+        </div>
+        <div class="seg-stat">
+          <span class="seg-stat-lbl">Criado em</span>
+          <span class="seg-stat-val">{{ segmento.data_criacao|date:"d/m/Y" }}</span>
+        </div>
+        {% if segmento.ultima_atualizacao_dinamica %}
+        <div class="seg-stat">
+          <span class="seg-stat-lbl">Última sync</span>
+          <span class="seg-stat-val">{{ segmento.ultima_atualizacao_dinamica|date:"d/m/Y H:i" }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <p style="font-size:13px;color:var(--text-muted);margin:0 0 12px">Disparar campanha para todos os leads deste segmento.</p>
+      <button class="btn-primary" style="width:100%" onclick="dispararCampanha()"><i class="fas fa-paper-plane"></i> Disparar Campanha</button>
+    </div>
+  </div>
+
+  <!-- MEMBROS TABLE -->
+  <div class="data-table-container" style="margin-bottom:0">
+    <div class="table-header">
+      <span class="table-title"><i class="fas fa-users" style="color:var(--primary)"></i> Membros ({{ membros|length }})</span>
+    </div>
+    <div class="search-bar">
+      <input type="text" class="search-input" id="busca" placeholder="Buscar por nome ou telefone..." oninput="filtrar()">
+    </div>
+    <div style="overflow-x:auto">
+      {% if membros %}
+      <table class="data-table" id="tabela-membros">
+        <thead>
+          <tr>
+            <th>Lead</th>
+            <th>Telefone</th>
+            <th>Status</th>
+            <th>Adicionado</th>
+            <th>Origem</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for membro in membros %}
+          <tr data-busca="{{ membro.lead.nome_completo|lower }} {{ membro.lead.telefone|default:'' }}">
+            <td>
+              <div class="lead-nome">{{ membro.lead.nome_completo }}</div>
+              <div class="lead-tel">{{ membro.lead.email|default:"" }}</div>
+            </td>
+            <td style="color:var(--text-muted)">{{ membro.lead.telefone|default:"—" }}</td>
+            <td>
+              <span class="badge badge-primary">
+                {{ membro.lead.get_status_api_display|default:membro.lead.status_api|default:"—" }}
+              </span>
+            </td>
+            <td style="color:var(--text-light);font-size:12px">{{ membro.data_adicao|date:"d/m/Y" }}</td>
+            <td>
+              {% if membro.adicionado_manualmente %}
+              <span class="manual-badge">Manual</span>
+              {% else %}
+              <span style="font-size:11px;color:var(--text-light)">Auto</span>
+              {% endif %}
+            </td>
+            <td>
+              <button class="btn-danger btn-sm" onclick="removerMembro({{ membro.pk }}, '{{ membro.lead.nome_completo|escapejs }}')">
+                <i class="fas fa-times"></i>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">
+        <i class="fas fa-users"></i>
+        <p>Nenhum membro ainda. Adicione leads manualmente ou configure regras dinâmicas.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ADICIONAR LEAD -->
+<div class="modal-overlay" id="modal-adicionar" style="display:none">
+  <div class="modal-content" style="max-width:440px;">
+    <button class="modal-close" onclick="fecharModal()"><i class="fas fa-times"></i></button>
+    <h3 style="font-size:16px; font-weight:700; color:var(--text-main); margin-bottom:16px;">Adicionar Lead ao Segmento</h3>
+    <div class="form-group">
+      <label class="form-label">Buscar lead por nome ou telefone</label>
+      <input type="text" id="busca-lead" class="form-control" placeholder="Digite para buscar..." oninput="buscarLeads()">
+    </div>
+    <div id="resultados-leads" style="max-height:240px;overflow-y:auto"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn-secondary" onclick="fecharModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+const SEG_ID = {{ segmento.pk }};
+
+function filtrar() {
+  const q = document.getElementById('busca').value.toLowerCase();
+  document.querySelectorAll('#tabela-membros tbody tr').forEach(tr => {
+    tr.style.display = tr.dataset.busca.includes(q) ? '' : 'none';
+  });
+}
+
+function abrirModalAdicionar() {
+  document.getElementById('busca-lead').value = '';
+  document.getElementById('resultados-leads').innerHTML = '';
+  document.getElementById('modal-adicionar').style.display = 'flex';
+}
+
+function fecharModal() {
+  document.getElementById('modal-adicionar').style.display = 'none';
+}
+
+let buscaTimeout;
+function buscarLeads() {
+  clearTimeout(buscaTimeout);
+  buscaTimeout = setTimeout(() => {
+    const q = document.getElementById('busca-lead').value;
+    if (q.length < 2) { document.getElementById('resultados-leads').innerHTML = ''; return; }
+    fetch(`/crm/segmentos/${SEG_ID}/buscar-leads/?q=${encodeURIComponent(q)}`)
+      .then(r => r.json())
+      .then(d => {
+        const el = document.getElementById('resultados-leads');
+        if (!d.leads || !d.leads.length) {
+          el.innerHTML = '<p style="text-align:center;color:var(--text-light);padding:16px;font-size:13px">Nenhum lead encontrado.</p>';
+          return;
+        }
+        el.innerHTML = d.leads.map(l => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-light)">
+            <div>
+              <div style="font-weight:600;color:var(--text-main);font-size:13px">${l.nome}</div>
+              <div style="font-size:12px;color:var(--text-light)">${l.telefone||''}</div>
+            </div>
+            <button class="btn-primary btn-sm" onclick="adicionarLead(${l.pk}, '${l.nome.replace(/'/g,"\\'")}', this)">
+              <i class="fas fa-plus"></i> Adicionar
+            </button>
+          </div>
+        `).join('');
+      });
+  }, 300);
+}
+
+function adicionarLead(leadPk, nome, btn) {
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  fetch(`/crm/segmentos/${SEG_ID}/adicionar-lead/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lead_id: leadPk })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) { btn.innerHTML = '<i class="fas fa-check"></i> Adicionado'; setTimeout(() => location.reload(), 800); }
+    else { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus"></i> Adicionar'; alert(d.erro || 'Erro.'); }
+  });
+}
+
+function removerMembro(membroPk, nome) {
+  if (!confirm(`Remover "${nome}" do segmento?`)) return;
+  fetch(`/crm/segmentos/${SEG_ID}/remover-membro/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ membro_id: membroPk })
+  }).then(r => r.json()).then(d => { if (d.ok) location.reload(); });
+}
+
+function dispararCampanha() {
+  if (!confirm(`Disparar campanha para ${{{ segmento.total_leads }}} leads?`)) return;
+  fetch(`/crm/segmentos/${SEG_ID}/disparar-campanha/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF }
+  }).then(r => r.json()).then(d => {
+    if (d.ok) alert(`Campanha disparada para ${d.total} leads via N8N.`);
+    else alert(d.erro || 'Erro ao disparar campanha.');
+  });
+}
+
+document.getElementById('modal-adicionar').addEventListener('click', function(e) {
+  if (e.target === this) fecharModal();
+});
+</script>
+{% endblock %}

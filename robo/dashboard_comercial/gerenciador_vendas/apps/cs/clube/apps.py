@@ -1,0 +1,7 @@
+from django.apps import AppConfig
+
+
+class ClubeConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'apps.cs.clube'
+    verbose_name = 'CS > Clube de Benefícios'

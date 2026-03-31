@@ -1,0 +1,139 @@
+<html>
+
+<head>
+    <meta charset="UTF-8"> 
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+</head>
+
+<body>
+
+    <div>
+        <img id="roleta00" src="roleta00.png" style="height: 500px; width: 500px;">
+        <img id="roleta01" src="roleta01.png" style="height: 500px; width: 500px;" hidden>
+        <img id="roleta02" src="roleta02.png" style="height: 500px; width: 500px;" hidden>
+        <img id="roleta03" src="roleta03.png" style="height: 500px; width: 500px;" hidden>
+        <img id="roleta04" src="roleta04.png" style="height: 500px; width: 500px;" hidden>
+        <img id="roleta05" src="roleta05.png" style="height: 500px; width: 500px;" hidden>
+        <img id="roleta06" src="roleta06.png" style="height: 500px; width: 500px;" hidden>
+        <img id="roleta07" src="roleta07.png" style="height: 500px; width: 500px;" hidden>
+        <img id="roleta08" src="roleta08.png" style="height: 500px; width: 500px;" hidden>
+        <img id="roleta09" src="roleta09.png" style="height: 500px; width: 500px;" hidden>
+        <img id="roleta10" src="roleta10.png" style="height: 500px; width: 500px;" hidden>
+        <img id="roleta11" src="roleta11.png" style="height: 500px; width: 500px;" hidden>
+        <img id="roleta12" src="roleta12.png" style="height: 500px; width: 500px;" hidden>
+
+    </div>
+
+    <script>
+        var sorteado = 4;
+
+        function sleep(milliseconds) {
+            var start = new Date().getTime();
+            for (var i = 0; i < 1e7; i++) {
+                if ((new Date().getTime() - start) > milliseconds) {
+                    break;
+                }
+            }
+        }
+
+        imagem_atual = 0;
+        velocidade = 1025;
+        etapa = 0;
+        acabou = false;
+        premio = "Você ganhou 1 mês gratis!";
+
+        function trocaImagem() {
+            if(!acabou){
+    
+                image_velha = "roleta" + ("00" + imagem_atual).slice(-2);
+                image_nova = "roleta" + ("00" + (imagem_atual + 1)).slice(-2);
+
+                if (imagem_atual == 12) {
+                    image_velha = "roleta" + ("00" + imagem_atual).slice(-2);
+                    image_nova = "roleta01";
+                    imagem_atual = 0;
+                }
+
+                $("#" + image_velha).hide(0);
+                $("#" + image_nova).show(0);    
+                
+
+                console.log(image_nova);
+                imagem_atual++;
+                if (etapa == 0) {
+                    velocidade = velocidade - 125;
+                    if (velocidade < 150) {
+                        etapa = 1;
+                        contador = 0;
+                    }
+                }
+                if (etapa == 1) {
+                    contador++;
+                    if (contador == 50) {
+                        etapa = 2;
+                    }
+                }
+                if (etapa == 2) {
+                    velocidade = velocidade + 125;
+                    if (velocidade > 800) {
+                        etapa = 3;
+                    }
+                }
+                if (etapa == 3) {
+                    if (imagem_atual == sorteado) {
+                        acabou = true;
+                    }
+                }
+                setTimeout(trocaImagem, velocidade);
+            }else{
+                switch(imagem_atual) {
+                    case 1:
+                        premio = "Você ganhou uma caderneta personalizada da Vetorial!";
+                        break;
+                    case 2:
+                        premio = "Você ganhou 50% de desconto na taxa de instalação!"
+                        break;
+                    case 3:
+                        premio = "Você ganhou um fone de ouvido personalizado da Vetorial!"
+                        break;
+                    case 4:
+                        premio = "Você ganhou 1 mês de internet grátis!"
+                        break;
+                    case 5:
+                        premio = "Você ganhou a taxa de instalação grátis!"
+                        break;
+                    case 6:
+                        premio = "Você ganhou 2 meses de internet grátis!"
+                        break;
+                    case 7:
+                        premio = "Você ganhou 1 mês de internet grátis!"
+                        break;
+                    case 8:
+                        premio = "Você ganhou 50% de desconto na taxa de instalação!"
+                        break;
+                    case 9:
+                        premio = "Você ganhou uma caderneta personalizada da Vetorial!"
+                        break;
+                    case 10:
+                        premio = "Você ganhou um fone de ouvido personalizado da Vetorial!"
+                        break;
+                    case 11:
+                        premio = "Você ganhou 3 meses de internet grátis!"
+                        break;
+                    case 12:
+                        premio = "Você ganhou a taxa de instalação grátis!"
+                        break;
+                    default:
+                        premio = "Você ganhou 1 mês de internet grátis!"
+                        break;
+                } 
+
+                alert(premio);
+            }
+        }
+
+        trocaImagem();
+    </script>
+</body>
+
+</html>

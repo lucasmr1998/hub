@@ -1,0 +1,91 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Cidades - Admin Roleta{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <h1 class="page-title">Cidades</h1>
+    <p class="page-subtitle">Gerencie as cidades permitidas para distribui&ccedil;&atilde;o de pr&ecirc;mios.</p>
+</div>
+
+<!-- Adicionar -->
+<div class="card">
+    <div class="card-title">Adicionar Nova Cidade</div>
+    <form method="post" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="nova_cidade">
+        <div style="flex:1; min-width:200px;">
+            <label class="form-label">Nome da Cidade</label>
+            <input type="text" name="nome" placeholder="Ex: Teresina" required class="form-control">
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; margin-top:22px;">
+            <input type="checkbox" name="ativo" id="nova_cidade_ativa" checked>
+            <label for="nova_cidade_ativa" class="form-label" style="margin-bottom:0;">Ativo</label>
+        </div>
+        <div>
+            <button type="submit" class="btn-primary" style="margin-top:22px;">
+                <i class="fas fa-plus"></i> Adicionar
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Tabela -->
+<div class="data-table-container">
+    <div style="overflow-x: auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nome da Cidade</th>
+                    <th>Status</th>
+                    <th>A&ccedil;&otilde;es</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in cidades %}
+                <tr>
+                    <td>
+                        <input type="text" name="nome" value="{{ c.nome }}" required form="form_atualizar_cid_{{ c.id }}" class="form-control" style="max-width:300px;">
+                    </td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <input type="checkbox" name="ativo" id="cidade_ativa_{{ c.id }}" {% if c.ativo %}checked{% endif %} form="form_atualizar_cid_{{ c.id }}">
+                            <label for="cidade_ativa_{{ c.id }}">
+                                {% if c.ativo %}
+                                <span class="badge badge-success">Ativo</span>
+                                {% else %}
+                                <span class="badge badge-warning">Inativo</span>
+                                {% endif %}
+                            </label>
+                        </div>
+                    </td>
+                    <td style="white-space:nowrap;">
+                        <form method="post" id="form_atualizar_cid_{{ c.id }}" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="atualizar_cidade">
+                            <input type="hidden" name="cidade_id" value="{{ c.id }}">
+                            <button type="submit" class="btn-primary btn-sm">
+                                <i class="fas fa-save"></i> Salvar
+                            </button>
+                        </form>
+                        <form method="post" style="display:inline; margin-left:4px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="excluir_cidade">
+                            <input type="hidden" name="cidade_id" value="{{ c.id }}">
+                            <button type="submit" class="btn-danger btn-sm" onclick="return confirm('Tem certeza que deseja apagar a cidade {{ c.nome }}?');">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-center" style="padding:20px; color:var(--text-light);">Nenhuma cidade cadastrada.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

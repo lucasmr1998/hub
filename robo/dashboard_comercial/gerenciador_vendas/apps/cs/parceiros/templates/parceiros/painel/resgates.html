@@ -1,0 +1,88 @@
+{% extends 'parceiros/painel/base.html' %}
+
+{% block title %}Resgates - {{ parceiro.nome }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:24px; display:flex; justify-content:space-between; align-items:center;">
+    <div>
+        <h1 style="font-size:22px; font-weight:800; color:#1e293b;">Hist&oacute;rico de Resgates</h1>
+        <p style="font-size:13px; color:#64748b;">Todos os resgates dos seus cupons.</p>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:20px; padding:16px;">
+    <form method="get" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <input type="text" name="busca" value="{{ busca }}" class="form-control" placeholder="Buscar cliente ou c&oacute;digo..." style="max-width:300px;">
+        <select name="status" class="form-control" style="max-width:160px;">
+            <option value="">Todos status</option>
+            <option value="resgatado" {% if status_filtro == "resgatado" %}selected{% endif %}>Pendente</option>
+            <option value="utilizado" {% if status_filtro == "utilizado" %}selected{% endif %}>Utilizado</option>
+            <option value="expirado" {% if status_filtro == "expirado" %}selected{% endif %}>Expirado</option>
+            <option value="cancelado" {% if status_filtro == "cancelado" %}selected{% endif %}>Cancelado</option>
+        </select>
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+        {% if busca or status_filtro %}
+        <a href="{% url 'parceiros:painel_resgates' %}" class="btn btn-secondary">Limpar</a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Cliente</th>
+                <th>Cupom</th>
+                <th style="text-align:center;">C&oacute;digo</th>
+                <th style="text-align:center;">Pontos</th>
+                <th style="text-align:center;">Valor Compra</th>
+                <th style="text-align:center;">Status</th>
+                <th>Resgatado</th>
+                <th>Utilizado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in resgates %}
+            <tr>
+                <td>
+                    <strong>{{ r.membro.nome }}</strong>
+                    <br><small class="text-muted">{{ r.membro.cidade|default:"-" }}</small>
+                </td>
+                <td>{{ r.cupom.titulo }}</td>
+                <td style="text-align:center;"><code>{{ r.codigo_unico }}</code></td>
+                <td style="text-align:center;">
+                    {% if r.pontos_gastos > 0 %}<span style="color:#ef4444;">-{{ r.pontos_gastos }}</span>
+                    {% else %}<span class="text-muted">Gr&aacute;tis</span>{% endif %}
+                </td>
+                <td style="text-align:center;">
+                    {% if r.valor_compra %}<strong>R$ {{ r.valor_compra }}</strong>
+                    {% else %}<span class="text-muted">-</span>{% endif %}
+                </td>
+                <td style="text-align:center;">
+                    {% if r.status == 'resgatado' %}<span class="badge badge-warning">Pendente</span>
+                    {% elif r.status == 'utilizado' %}<span class="badge badge-success">Utilizado</span>
+                    {% elif r.status == 'expirado' %}<span class="badge badge-danger">Expirado</span>
+                    {% else %}<span class="badge badge-danger">Cancelado</span>{% endif %}
+                </td>
+                <td>{{ r.data_resgate|date:"d/m/Y H:i" }}</td>
+                <td>{{ r.data_utilizacao|date:"d/m/Y H:i"|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center text-muted" style="padding:40px;">Nenhum resgate encontrado.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if resgates.has_other_pages %}
+    <div class="pagination">
+        {% if resgates.has_previous %}
+        <a href="?page={{ resgates.previous_page_number }}&busca={{ busca }}&status={{ status_filtro }}" class="btn btn-secondary">&laquo; Anterior</a>
+        {% endif %}
+        <span class="text-muted">P&aacute;gina {{ resgates.number }} de {{ resgates.paginator.num_pages }}</span>
+        {% if resgates.has_next %}
+        <a href="?page={{ resgates.next_page_number }}&busca={{ busca }}&status={{ status_filtro }}" class="btn btn-secondary">Pr&oacute;xima &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

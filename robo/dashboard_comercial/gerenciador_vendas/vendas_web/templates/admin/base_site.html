@@ -1,0 +1,259 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <style>
+        /* Melhorias gerais do admin */
+        #header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        #header h1, #header h1 a:link, #header h1 a:visited {
+            color: white;
+            font-weight: 600;
+        }
+        
+        #user-tools a {
+            color: rgba(255, 255, 255, 0.9);
+            border-bottom: none;
+        }
+        
+        #user-tools a:hover {
+            color: white;
+        }
+        
+        /* Melhorar breadcrumbs */
+        .breadcrumbs {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            padding: 12px 20px;
+        }
+        
+        .breadcrumbs a {
+            color: #495057;
+        }
+        
+        /* Melhorar botões */
+        .button, input[type=submit], input[type=button], .submit-row input, a.button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .button:hover, input[type=submit]:hover, input[type=button]:hover, .submit-row input:hover, a.button:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .button.default, input[type=submit].default, .submit-row input.default {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+        
+        .button.default:hover, input[type=submit].default:hover, .submit-row input.default:hover {
+            background: linear-gradient(135deg, #218838 0%, #1ca085 100%);
+        }
+        
+        /* Melhorar tabelas */
+        #result_list {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        #result_list thead th {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        #result_list tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        #result_list tbody tr:hover {
+            background: #e3f2fd;
+            transition: background 0.2s ease;
+        }
+        
+        /* Melhorar fieldsets */
+        .module h2, .module caption, .inline-group h2 {
+            background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
+            color: #495057;
+            font-weight: 600;
+            border-radius: 6px 6px 0 0;
+            padding: 12px 15px;
+        }
+        
+        fieldset.module {
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Melhorar forms */
+        .form-row {
+            padding: 12px 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .form-row:last-child {
+            border-bottom: none;
+        }
+        
+        .form-row label {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        /* Melhorar inputs */
+        input[type="text"], input[type="password"], input[type="email"], input[type="url"], 
+        input[type="number"], input[type="tel"], textarea, select {
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            padding: 8px 12px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus, 
+        input[type="url"]:focus, input[type="number"]:focus, input[type="tel"]:focus, 
+        textarea:focus, select:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        /* Melhorar mensagens */
+        .messagelist .success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border: 1px solid #b8dacc;
+            border-left: 4px solid #28a745;
+        }
+        
+        .messagelist .error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border: 1px solid #f1b0b7;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .messagelist .warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 1px solid #ffeaa7;
+            border-left: 4px solid #ffc107;
+        }
+        
+        /* Melhorar sidebar */
+        #nav-sidebar {
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+        
+        #nav-sidebar .module th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        #nav-sidebar .module a {
+            color: #495057;
+            padding: 8px 15px;
+            transition: all 0.2s ease;
+        }
+        
+        #nav-sidebar .module a:hover {
+            background: #e9ecef;
+            color: #667eea;
+            padding-left: 20px;
+        }
+        
+        /* Melhorar paginação */
+        .paginator {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .paginator a, .paginator .this-page {
+            display: inline-block;
+            padding: 8px 12px;
+            margin: 0 2px;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        
+        .paginator a {
+            background: #f8f9fa;
+            color: #495057;
+            border: 1px solid #dee2e6;
+        }
+        
+        .paginator a:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .paginator .this-page {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+        }
+        
+        /* Melhorar inline forms */
+        .inline-group .tabular tr.has_original td {
+            padding: 8px 10px;
+        }
+        
+        .inline-group .tabular thead th {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            color: #495057;
+            font-weight: 600;
+            padding: 10px;
+        }
+        
+        /* Responsividade */
+        @media (max-width: 768px) {
+            #container {
+                min-width: 320px;
+            }
+            
+            .dashboard-stats {
+                grid-template-columns: 1fr !important;
+            }
+        }
+        
+        /* Loading animation */
+        .loading {
+            position: relative;
+        }
+        
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
+

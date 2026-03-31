@@ -13,9 +13,10 @@ build/
 # ── Ambientes virtuais ────────────────────────────────────
 venv/
 env/
-.venv/
+.env/
 n_env/
 myenv/
+.venv/
 
 # ── Variáveis de ambiente / segredos ─────────────────────
 .env
@@ -24,18 +25,21 @@ myenv/
 
 # ── Django ───────────────────────────────────────────────
 *.sqlite3
-*.sqlite3-journal
-*.sqlite3-wal
-*.sqlite3-shm
-db_local.sqlite3
-staticfiles/
-media/
+/staticfiles/
+/media/
 
 # ── Logs ─────────────────────────────────────────────────
 *.log
 logs/
 
-# ── IDEs e editores ──────────────────────────────────────
+# ── Configurações de servidor / deploy ───────────────────
+*.sh
+*.service
+*.conf
+gunicorn*.py
+gunicorn*.conf*
+
+# ── IDEs e editores ───────────────────────────────────────
 .vscode/
 .idea/
 *.swp
@@ -44,13 +48,7 @@ logs/
 .DS_Store
 Thumbs.db
 
-# ── Cobertura e testes ───────────────────────────────────
+# ── Cobertura e testes ────────────────────────────────────
 .coverage
 htmlcov/
 .pytest_cache/
-
-# ── Node (se houver) ────────────────────────────────────
-node_modules/
-
-# ── Projetos de código (repos git separados) ────────────
-megaroleta/

@@ -1,0 +1,31 @@
+# Views a serem migradas de vendas_web.views:
+#
+# dashboard_view
+# dashboard1
+# dashboard_data
+# dashboard_charts_data
+# dashboard_tables_data
+# dashboard_leads_data
+# dashboard_prospectos_data
+# dashboard_historico_data
+# dashboard_contatos_realtime
+# dashboard_contato_historico
+# dashboard_ultimas_conversoes
+# vendas_view
+# relatorios_view
+# relatorio_leads_view
+# relatorio_clientes_view
+# relatorio_atendimentos_view
+# analise_atendimentos_view
+# relatorio_conversoes_view
+# ajuda_view
+# documentacao_view
+# api_swagger_view
+# api_documentation_view
+# n8n_guide_view
+# api_analise_atendimentos_data
+# api_analise_atendimentos_fluxos
+# api_analise_atendimentos_detalhada
+# api_jornada_cliente_completa
+# api_atendimento_em_tempo_real
+# dashboard_funil_insights

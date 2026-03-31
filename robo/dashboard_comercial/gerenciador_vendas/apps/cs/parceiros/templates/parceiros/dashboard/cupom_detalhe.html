@@ -1,0 +1,184 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}{{ cupom.titulo }} - Cupom{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ cupom.titulo }}</h1>
+        <p class="page-subtitle">
+            <span class="badge {% if cupom.ativo %}badge-success{% else %}badge-danger{% endif %}">{% if cupom.ativo %}Ativo{% else %}Inativo{% endif %}</span>
+            &middot; {{ cupom.parceiro.nome }}
+            &middot; <code>{{ cupom.codigo }}</code>
+        </p>
+    </div>
+    <a href="{% url 'parceiros:dashboard_cupons' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<!-- Resumo do Cupom -->
+<div class="card" style="padding:24px; margin-bottom:24px;">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+        <!-- Info do cupom -->
+        <div>
+            <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px;">
+                {% if cupom.imagem %}
+                <img src="{{ cupom.imagem.url }}" style="width:64px; height:64px; border-radius:12px; object-fit:cover; border:1px solid var(--border);">
+                {% elif cupom.parceiro.logo %}
+                <img src="{{ cupom.parceiro.logo.url }}" style="width:64px; height:64px; border-radius:12px; object-fit:cover; border:1px solid var(--border);">
+                {% else %}
+                <div style="width:64px; height:64px; border-radius:12px; background:var(--primary-light); display:flex; align-items:center; justify-content:center;">
+                    <i class="fas fa-ticket-alt" style="font-size:24px; color:var(--primary);"></i>
+                </div>
+                {% endif %}
+                <div>
+                    <div style="font-size:28px; font-weight:800; color:var(--primary);">
+                        {% if cupom.tipo_desconto == 'percentual' %}{{ cupom.valor_desconto }}%{% else %}R$ {{ cupom.valor_desconto }}{% endif %}
+                    </div>
+                    <small class="text-muted">de desconto</small>
+                </div>
+            </div>
+
+            {% if cupom.descricao %}
+            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:12px;">{{ cupom.descricao }}</p>
+            {% endif %}
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:13px;">
+                <div>
+                    <span class="text-muted">Modalidade:</span>
+                    <strong>
+                        {% if cupom.modalidade == 'gratuito' %}Gratuito
+                        {% elif cupom.modalidade == 'pontos' %}{{ cupom.custo_pontos }} pontos
+                        {% else %}N&iacute;vel {{ cupom.nivel_minimo.nome|default:"N/A" }}{% endif %}
+                    </strong>
+                </div>
+                <div>
+                    <span class="text-muted">Estoque:</span>
+                    <strong>{{ cupom.estoque_restante }}{% if cupom.quantidade_total > 0 %} / {{ cupom.quantidade_total }}{% endif %}</strong>
+                </div>
+                <div>
+                    <span class="text-muted">In&iacute;cio:</span>
+                    <strong>{{ cupom.data_inicio|date:"d/m/Y H:i" }}</strong>
+                </div>
+                <div>
+                    <span class="text-muted">Fim:</span>
+                    <strong>{{ cupom.data_fim|date:"d/m/Y H:i" }}</strong>
+                </div>
+                <div>
+                    <span class="text-muted">Limite/membro:</span>
+                    <strong>{{ cupom.limite_por_membro }}x</strong>
+                </div>
+                <div>
+                    <span class="text-muted">Cidades:</span>
+                    <strong>{% for c in cupom.cidades_permitidas.all %}{{ c.nome }}{% if not forloop.last %}, {% endif %}{% empty %}Todas{% endfor %}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Link de valida&ccedil;&atilde;o -->
+        <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; background:var(--bg-page); border-radius:12px; padding:20px; text-align:center;">
+            <i class="fas fa-qrcode" style="font-size:40px; color:var(--text-muted); margin-bottom:12px;"></i>
+            <p style="font-size:13px; color:var(--text-secondary); margin-bottom:8px;">Link de valida&ccedil;&atilde;o para o parceiro:</p>
+            <code style="font-size:12px; word-break:break-all; color:var(--primary); background:white; padding:8px 12px; border-radius:6px; border:1px solid var(--border);">
+                {{ request.scheme }}://{{ request.get_host }}/roleta/cupom/validar/
+            </code>
+        </div>
+    </div>
+</div>
+
+<!-- KPIs -->
+<div class="stats-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom:24px;">
+    <div class="stat-card">
+        <div class="stat-label">Total Resgates</div>
+        <div class="stat-value">{{ total_resgates }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Utilizados</div>
+        <div class="stat-value" style="color:var(--success);">{{ total_utilizados }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Pendentes</div>
+        <div class="stat-value" style="color:var(--warning);">{{ total_pendentes }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Pontos Gastos</div>
+        <div class="stat-value">{{ total_pontos }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Valor em Compras</div>
+        <div class="stat-value" style="color:var(--success);">R$ {{ total_valor_compras }}</div>
+    </div>
+</div>
+
+<!-- Tabela de resgates -->
+<div class="card">
+    <h3 style="padding:16px 20px 0; margin:0; font-size:16px; color:var(--text-main);">
+        <i class="fas fa-list" style="color:var(--primary); margin-right:6px;"></i>Hist&oacute;rico de Utiliza&ccedil;&otilde;es
+    </h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Cliente</th>
+                <th style="text-align:center;">C&oacute;digo</th>
+                <th style="text-align:center;">Pontos</th>
+                <th style="text-align:center;">Valor Compra</th>
+                <th style="text-align:center;">Status</th>
+                <th>Resgatado</th>
+                <th>Utilizado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in resgates %}
+            <tr>
+                <td>
+                    <strong>{{ r.membro.nome }}</strong>
+                    <br><small class="text-muted">{{ r.membro.cpf }}</small>
+                </td>
+                <td style="text-align:center;"><code>{{ r.codigo_unico }}</code></td>
+                <td style="text-align:center;">
+                    {% if r.pontos_gastos > 0 %}
+                    <span style="color:var(--danger);">-{{ r.pontos_gastos }}</span>
+                    {% else %}
+                    <span class="text-muted">Gr&aacute;tis</span>
+                    {% endif %}
+                </td>
+                <td style="text-align:center;">
+                    {% if r.valor_compra %}
+                    <strong>R$ {{ r.valor_compra }}</strong>
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td style="text-align:center;">
+                    {% if r.status == 'resgatado' %}<span class="badge badge-warning">Resgatado</span>
+                    {% elif r.status == 'utilizado' %}<span class="badge badge-success">Utilizado</span>
+                    {% elif r.status == 'expirado' %}<span class="badge badge-danger">Expirado</span>
+                    {% else %}<span class="badge badge-danger">Cancelado</span>{% endif %}
+                </td>
+                <td>{{ r.data_resgate|date:"d/m/Y H:i" }}</td>
+                <td>{{ r.data_utilizacao|date:"d/m/Y H:i"|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="text-center text-muted" style="padding:40px;">Nenhum resgate para este cupom.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if resgates.has_other_pages %}
+    <div class="pagination">
+        {% if resgates.has_previous %}
+        <a href="?page={{ resgates.previous_page_number }}" class="btn btn-secondary">&laquo; Anterior</a>
+        {% endif %}
+        <span class="text-muted" style="padding:8px;">P&aacute;gina {{ resgates.number }} de {{ resgates.paginator.num_pages }}</span>
+        {% if resgates.has_next %}
+        <a href="?page={{ resgates.next_page_number }}" class="btn btn-secondary">Pr&oacute;xima &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

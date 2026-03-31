@@ -1,0 +1,3365 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Acompanhamento de Leads</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+        }
+
+        .dashboard-container::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml,<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="%23ffffff" fill-opacity="0.05"><circle cx="30" cy="30" r="4"/></g></svg>') repeat;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Header Styles */
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 1.8rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header h1 i {
+            color: #ffd700;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f, #a8e6cf);
+            color: white;
+            box-shadow: 0 4px 15px rgba(86, 171, 47, 0.3);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(86, 171, 47, 0.4);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.3);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(245, 87, 108, 0.4);
+        }
+
+        /* Loading Styles */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #ffd700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        .loading p {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Main Content */
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Section Headers */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            color: white;
+        }
+
+        .section-header i {
+            font-size: 1.5rem;
+            color: #ffd700;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+
+        .section-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        /* Stats Section */
+        .stats-section {
+            margin-bottom: 3rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #ffd700);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: white;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-content h3 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #333;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-content p {
+            color: #666;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        /* Charts Section */
+        .charts-section {
+            margin-bottom: 3rem;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .chart-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-header {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .chart-header h3 {
+            color: #333;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chart-header i {
+            color: #667eea;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        /* Tables Section */
+        .tables-section {
+            margin-bottom: 3rem;
+        }
+
+        .tables-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .table-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .table-header {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .table-header h3 {
+            color: #333;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+            color: #333;
+        }
+
+        tbody tr:hover {
+            background: #f8f9ff;
+            transform: scale(1.01);
+            transition: all 0.2s ease;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header-content {
+                padding: 0 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.4rem;
+                text-align: center;
+            }
+
+            .header-actions {
+                width: 100%;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .header-actions .btn {
+                flex: 1;
+                min-width: 120px;
+                justify-content: center;
+                font-size: 0.8rem;
+                padding: 0.6rem 1rem;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 0.5rem;
+            }
+
+            .section-header h2 {
+                font-size: 1.2rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.8rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
+                min-height: auto;
+            }
+
+            .stat-card .stat-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1rem;
+            }
+
+            .stat-card h3 {
+                font-size: 1.2rem;
+            }
+
+            .stat-card p {
+                font-size: 0.8rem;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .chart-container {
+                padding: 1rem;
+            }
+
+            .chart-container h3 {
+                font-size: 1rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .tables-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .table-card {
+                padding: 1rem;
+            }
+
+            .table-header h3 {
+                font-size: 1rem;
+            }
+
+            .table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            table {
+                min-width: 600px;
+            }
+
+            th, td {
+                padding: 0.6rem 0.4rem;
+                font-size: 0.8rem;
+            }
+
+            .search-filters {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.8rem;
+            }
+
+            .search-box {
+                min-width: auto;
+                width: 100%;
+            }
+
+            .search-box input {
+                width: 100%;
+                font-size: 0.9rem;
+            }
+
+            .filters {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .filters select,
+            .filters input[type="date"] {
+                min-width: auto;
+                width: 100%;
+                font-size: 0.9rem;
+            }
+
+            .table-controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.8rem;
+            }
+
+            .tabs {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .tab-button {
+                justify-content: center;
+                padding: 0.8rem;
+                font-size: 0.9rem;
+            }
+
+            .pagination-info {
+                text-align: center;
+                font-size: 0.8rem;
+            }
+
+            .pagination-controls {
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 0.3rem;
+            }
+
+            .pagination-controls button {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-content {
+                padding: 0 0.5rem;
+            }
+
+            .header h1 {
+                font-size: 1.2rem;
+            }
+
+            .header-actions .btn {
+                font-size: 0.7rem;
+                padding: 0.5rem 0.8rem;
+            }
+
+            .main-content {
+                padding: 0.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 0.6rem;
+            }
+
+            .stat-card {
+                padding: 0.8rem;
+            }
+
+            .stat-card .stat-icon {
+                width: 35px;
+                height: 35px;
+                font-size: 0.9rem;
+            }
+
+            .stat-card h3 {
+                font-size: 1.1rem;
+            }
+
+            .stat-card p {
+                font-size: 0.75rem;
+            }
+
+            .section-header h2 {
+                font-size: 1.1rem;
+            }
+
+            .chart-container {
+                padding: 0.8rem;
+            }
+
+            .table-card {
+                padding: 0.8rem;
+            }
+
+            .table-header h3 {
+                font-size: 0.9rem;
+            }
+
+            th, td {
+                padding: 0.5rem 0.3rem;
+                font-size: 0.75rem;
+            }
+
+            .search-box input {
+                font-size: 0.8rem;
+            }
+
+            .filters select,
+            .filters input[type="date"] {
+                font-size: 0.8rem;
+            }
+
+            .tab-button {
+                padding: 0.6rem;
+                font-size: 0.8rem;
+            }
+
+            .pagination-controls button {
+                padding: 0.3rem 0.6rem;
+                font-size: 0.7rem;
+            }
+        }
+
+        /* Animation Classes */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .slide-in-right {
+            animation: slideInRight 0.6s ease-out;
+        }
+
+        /* Additional Enhancements */
+        .stat-card:nth-child(1) .stat-icon {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .stat-card:nth-child(2) .stat-icon {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .stat-card:nth-child(3) .stat-icon {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .stat-card:nth-child(4) .stat-icon {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #5a67d8, #6b46c1);
+        }
+
+        /* Error message styles */
+        .error-message {
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            color: #c53030;
+            padding: 1rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        /* Detailed Section Styles */
+        .detailed-section {
+            margin-bottom: 3rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem;
+            border-radius: 15px;
+            backdrop-filter: blur(20px);
+        }
+
+        .tab-button {
+            padding: 1rem 2rem;
+            border: none;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.7);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-button.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .table-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .search-filters {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            position: relative;
+            min-width: 300px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 3rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+
+        .filters {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filters select,
+        .filters input[type="date"] {
+            padding: 0.75rem 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 150px;
+        }
+
+        .filters select:focus,
+        .filters input[type="date"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .pagination-info {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .pagination button:hover {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .pagination button.active {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Action Button Styles */
+        .action-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            margin: 0 0.2rem;
+        }
+
+        .action-btn-view {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+        }
+
+        .action-btn-view:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
+        }
+
+        .action-btn-history {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+        }
+
+        .action-btn-history:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 87, 108, 0.3);
+        }
+
+        .action-btn-edit {
+            background: linear-gradient(135deg, #56ab2f, #a8e6cf);
+            color: white;
+        }
+
+        .action-btn-edit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(86, 171, 47, 0.3);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 2% auto;
+            padding: 0;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .close {
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .close:hover {
+            color: #ffd700;
+            transform: scale(1.1);
+        }
+
+        .modal-body {
+            padding: 2rem;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .contact-history-modal .modal-content {
+            max-width: 1200px;
+        }
+
+        /* Detail Card Styles */
+        .detail-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #667eea;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #495057;
+            min-width: 150px;
+        }
+
+        .detail-value {
+            color: #212529;
+            flex: 1;
+            text-align: right;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pendente {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-processado {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-erro {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-ativo {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-inativo {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Modal Responsive Adjustments */
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 5% auto;
+                max-height: 90vh;
+                overflow-y: auto;
+                padding: 1rem;
+            }
+
+            .modal-header {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 0.5rem;
+            }
+
+            .modal-header h3 {
+                font-size: 1.1rem;
+            }
+
+            .modal-body {
+                padding: 0.5rem 0;
+            }
+
+            .detail-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+                padding: 0.8rem 0;
+            }
+
+            .detail-label {
+                font-weight: 600;
+                color: #667eea;
+                font-size: 0.9rem;
+            }
+
+            .detail-value {
+                text-align: left;
+                font-size: 0.9rem;
+                word-break: break-word;
+            }
+
+            .modal-footer {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .modal-footer .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .modal-content {
+                width: 98%;
+                margin: 2% auto;
+                padding: 0.8rem;
+            }
+
+            .modal-header h3 {
+                font-size: 1rem;
+            }
+
+            .detail-row {
+                padding: 0.6rem 0;
+            }
+
+            .detail-label {
+                font-size: 0.8rem;
+            }
+
+            .detail-value {
+                font-size: 0.8rem;
+            }
+        }
+
+        /* Touch-friendly improvements */
+        @media (max-width: 768px) {
+            .btn {
+                min-height: 44px;
+                touch-action: manipulation;
+            }
+
+            .tab-button {
+                min-height: 44px;
+                touch-action: manipulation;
+            }
+
+            .pagination-controls button {
+                min-height: 44px;
+                min-width: 44px;
+                touch-action: manipulation;
+            }
+
+            .filters select,
+            .filters input[type="date"],
+            .search-box input {
+                min-height: 44px;
+                touch-action: manipulation;
+            }
+
+            /* Improve touch targets */
+            tbody tr {
+                min-height: 44px;
+            }
+
+            tbody tr:hover {
+                transform: none;
+            }
+
+            /* Better scrolling */
+            .table-container {
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: thin;
+            }
+
+            .table-container::-webkit-scrollbar {
+                height: 6px;
+            }
+
+            .table-container::-webkit-scrollbar-track {
+                background: #f1f1f1;
+                border-radius: 3px;
+            }
+
+            .table-container::-webkit-scrollbar-thumb {
+                background: #667eea;
+                border-radius: 3px;
+            }
+
+            .table-container::-webkit-scrollbar-thumb:hover {
+                background: #5a6fd8;
+            }
+
+            /* Navigation improvements */
+            .nav-menu {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .nav-item {
+                width: 100%;
+                text-align: center;
+            }
+
+            .nav-item .dropdown {
+                position: static;
+                width: 100%;
+                box-shadow: none;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                margin-top: 0.5rem;
+            }
+
+            .nav-item .dropdown.show {
+                display: block;
+            }
+
+            /* Loading improvements */
+            .loading {
+                padding: 2rem 1rem;
+            }
+
+            .loading-spinner {
+                width: 40px;
+                height: 40px;
+            }
+
+            .loading p {
+                font-size: 0.9rem;
+                margin-top: 1rem;
+            }
+
+            /* Chart responsive improvements */
+            .chart-container canvas {
+                max-width: 100%;
+                height: auto !important;
+            }
+
+            /* Status badges responsive */
+            .status-badge {
+                font-size: 0.7rem;
+                padding: 0.2rem 0.5rem;
+            }
+
+            /* Action buttons in tables */
+            .action-buttons {
+                flex-direction: column;
+                gap: 0.3rem;
+            }
+
+            .action-buttons .btn {
+                font-size: 0.7rem;
+                padding: 0.3rem 0.6rem;
+                min-height: 32px;
+            }
+        }
+
+        /* Landscape orientation adjustments */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .header-content {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+
+            .header h1 {
+                font-size: 1.2rem;
+            }
+
+            .header-actions {
+                width: auto;
+                flex-wrap: nowrap;
+            }
+
+            .header-actions .btn {
+                flex: none;
+                min-width: 100px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .main-content {
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-chart-line"></i>Dashboard de Leads</h1>
+                <div class="header-actions">
+                    <a href="/admin/" class="btn btn-success" style="margin-right: 10px;">
+                        <i class="fas fa-cog"></i> Admin
+                    </a>
+                    <button id="refreshBtn" class="btn btn-primary" style="margin-right: 10px;">
+                        <i class="fas fa-sync-alt"></i> Atualizar
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Loading -->
+        <div id="loading" class="loading">
+            <div class="loading-spinner"></div>
+            <p>Carregando dados...</p>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent" style="display: none;">
+            <!-- Statistics Cards -->
+            <section class="stats-section fade-in-up">
+                <div class="section-header">
+                    <i class="fas fa-chart-bar"></i>
+                    <h2>Estatísticas Gerais</h2>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="totalLeads">0</h3>
+                            <p>Total de Leads</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="totalProspectos">0</h3>
+                            <p>Total de Prospectos</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-calendar-day"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="leadsHoje">0</h3>
+                            <p>Leads Hoje</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="valorTotal">R$ 0,00</h3>
+                            <p>Valor Total</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Funil de Vendas - Métricas do Dia -->
+            <section class="stats-section fade-in-up">
+                <div class="section-header">
+                    <i class="fas fa-funnel-dollar"></i>
+                    <h2>Funil de Vendas - Hoje</h2>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #3498db, #2980b9);">
+                            <i class="fas fa-play-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="fluxosInicializadosHoje">0</h3>
+                            <p>Fluxos Inicializados</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #2ecc71, #27ae60);">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="fluxosFinalizadosHoje">0</h3>
+                            <p>Fluxos Finalizados</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="transferidosHumanoHoje">0</h3>
+                            <p>Transferidos para Humano</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
+                            <i class="fas fa-target"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="convertidosLeadHoje">0</h3>
+                            <p>Convertidos em Lead</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="vendasConfirmadasHoje">0</h3>
+                            <p>Vendas Confirmadas</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="abandonosHoje">0</h3>
+                            <p>Abandonos</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Taxas de Conversão -->
+            <section class="stats-section fade-in-up">
+                <div class="section-header">
+                    <i class="fas fa-percentage"></i>
+                    <h2>Taxas de Conversão - Hoje</h2>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #3498db, #2980b9);">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="taxaFinalizacaoHoje">0%</h3>
+                            <p>Taxa de Finalização</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
+                            <i class="fas fa-bullseye"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="taxaConversaoVendaHoje">0%</h3>
+                            <p>Taxa Conversão Venda</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+                            <i class="fas fa-rocket"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="taxaConversaoGeralHoje">0%</h3>
+                            <p>Taxa Conversão Geral</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
+                            <i class="fas fa-coins"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="valorVendasHoje">R$ 0,00</h3>
+                            <p>Valor Vendas Hoje</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Charts Section -->
+            <section class="charts-section slide-in-right">
+                <div class="section-header">
+                    <i class="fas fa-chart-pie"></i>
+                    <h2>Análise de Leads e Prospectos</h2>
+                </div>
+                <div class="charts-grid">
+                    <!-- Status Chart -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-chart-pie"></i> Status dos Prospectos</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Trends Chart -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-chart-line"></i> Leads dos Últimos 7 Dias</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="trendsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Funil de Vendas Charts Section -->
+            <section class="charts-section slide-in-right">
+                <div class="section-header">
+                    <i class="fas fa-funnel-dollar"></i>
+                    <h2>Visualização do Funil de Vendas</h2>
+                </div>
+                <div class="charts-grid">
+                    <!-- Funil Visual -->
+                    <div class="chart-card" style="grid-column: span 2;">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-funnel-dollar"></i> Funil de Conversão - Hoje</h3>
+                        </div>
+                        <div class="chart-container" style="height: 400px;">
+                            <canvas id="funilChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Taxa de Conversão por Etapa -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-percentage"></i> Taxas de Conversão</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="taxasChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Comparativo Temporal -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-calendar-alt"></i> Tendência 7 Dias</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="tendenciaFunilChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Status Distribution -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-chart-doughnut"></i> Distribuição de Status</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="statusDistribuicaoChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Performance por Origem -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-chart-bar"></i> Performance por Origem</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="origemPerformanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tables Section -->
+            <section class="tables-section fade-in-up">
+                <div class="tables-grid">
+                    <!-- Top Companies -->
+                    <div class="table-card">
+                        <div class="table-header">
+                            <h3><i class="fas fa-building"></i> Top Empresas</h3>
+                        </div>
+                        <div class="table-container">
+                            <table id="empresasTable">
+                                <thead>
+                                    <tr>
+                                        <th>Empresa</th>
+                                        <th>Leads</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Top Origins -->
+                    <div class="table-card">
+                        <div class="table-header">
+                            <h3><i class="fas fa-source"></i> Top Origens</h3>
+                        </div>
+                        <div class="table-container">
+                            <table id="origensTable">
+                                <thead>
+                                    <tr>
+                                        <th>Origem</th>
+                                        <th>Leads</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Detailed Tables -->
+            <section class="detailed-section slide-in-right">
+                <div class="section-header">
+                    <i class="fas fa-table"></i>
+                    <h2>Dados Detalhados</h2>
+                </div>
+                <div class="tabs">
+                    <button class="tab-button active" data-tab="leads">
+                        <i class="fas fa-users"></i> Leads
+                    </button>
+                    <button class="tab-button" data-tab="prospectos">
+                        <i class="fas fa-user-check"></i> Prospectos
+                    </button>
+                    <button class="tab-button" data-tab="historico">
+                        <i class="fas fa-history"></i> Histórico de Contatos
+                    </button>
+                </div>
+
+                <!-- Leads Tab -->
+                <div class="tab-content active" id="leads-tab">
+                    <!-- Filtros comentados temporariamente -->
+                    <!--
+                    <div class="table-controls">
+                        <div class="search-filters">
+                            <div class="search-box">
+                                <input type="text" id="leadsSearch" placeholder="Buscar leads por nome, email, telefone...">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <div class="filters">
+                                <select id="leadsOrigemFilter">
+                                    <option value="">Todas as Origens</option>
+                                </select>
+                                <select id="leadsStatusFilter">
+                                    <option value="">Todos os Status</option>
+                                </select>
+                                <select id="leadsAtivoFilter">
+                                    <option value="">Todos</option>
+                                    <option value="true">Ativos</option>
+                                    <option value="false">Inativos</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="pagination-info">
+                            <span id="leadsInfo">Carregando...</span>
+                        </div>
+                    </div>
+                    -->
+                    <div class="table-container">
+                        <table id="leadsTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nome/Razão Social</th>
+                                    <th>Email</th>
+                                    <th>Telefone</th>
+                                    <th>Valor</th>
+                                    <th>Empresa</th>
+                                    <th>Origem</th>
+                                    <th>Status API</th>
+                                    <th>Data Cadastro</th>
+                                    <th>Ativo</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="leadsPagination"></div>
+                </div>
+
+                <!-- Prospectos Tab -->
+                <div class="tab-content" id="prospectos-tab">
+                    <!-- Filtros comentados temporariamente -->
+                    <!--
+                    <div class="table-controls">
+                        <div class="search-filters">
+                            <div class="search-box">
+                                <input type="text" id="prospectosSearch" placeholder="Buscar prospectos por nome, ID Hubsoft...">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <div class="filters">
+                                <select id="prospectosStatusFilter">
+                                    <option value="">Todos os Status</option>
+                                </select>
+                                <select id="prospectosPrioridadeFilter">
+                                    <option value="">Todas as Prioridades</option>
+                                    <option value="1">Baixa (1)</option>
+                                    <option value="2">Baixa-Média (2)</option>
+                                    <option value="3">Média (3)</option>
+                                    <option value="4">Alta-Média (4)</option>
+                                    <option value="5">Alta (5)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="pagination-info">
+                            <span id="prospectosInfo">Carregando...</span>
+                        </div>
+                    </div>
+                    -->
+                    <div class="table-container">
+                        <table id="prospectosTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nome Prospecto</th>
+                                    <th>Lead Relacionado</th>
+                                    <th>ID Hubsoft</th>
+                                    <th>Status</th>
+                                    <th>Prioridade</th>
+                                    <th>Data Criação</th>
+                                    <th>Data Processamento</th>
+                                    <th>Tentativas</th>
+                                    <th>Tempo Proc.</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="prospectosPagination"></div>
+                </div>
+
+                <!-- Histórico Tab -->
+                <div class="tab-content" id="historico-tab">
+                    <!-- Filtros comentados temporariamente -->
+                    <!--
+                    <div class="table-controls">
+                        <div class="search-filters">
+                            <div class="search-box">
+                                <input type="text" id="historicoSearch" placeholder="Buscar por telefone, nome...">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <div class="filters">
+                                <select id="historicoStatusFilter">
+                                    <option value="">Todos os Status</option>
+                                </select>
+                                <select id="historicoSucessoFilter">
+                                    <option value="">Todos</option>
+                                    <option value="true">Sucesso</option>
+                                    <option value="false">Sem Sucesso</option>
+                                </select>
+                                <input type="date" id="historicoDataInicio" placeholder="Data Início">
+                                <input type="date" id="historicoDataFim" placeholder="Data Fim">
+                            </div>
+                        </div>
+                        <div class="pagination-info">
+                            <span id="historicoInfo">Carregando...</span>
+                        </div>
+                    </div>
+                    -->
+                    <div class="table-container">
+                        <table id="historicoTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Telefone</th>
+                                    <th>Nome Contato</th>
+                                    <th>Lead Relacionado</th>
+                                    <th>Status</th>
+                                    <th>Data/Hora</th>
+                                    <th>Duração</th>
+                                    <th>Sucesso</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="historicoPagination"></div>
+                </div>
+            </section>
+
+            <!-- Error message placeholder -->
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+        </main>
+
+        <!-- Modal for Lead Details -->
+        <div id="leadModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-user"></i> Detalhes do Lead</h3>
+                    <span class="close" onclick="closeModal('leadModal')">&times;</span>
+                </div>
+                <div class="modal-body" id="leadDetails">
+                    <!-- Lead details will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal for Prospecto Details -->
+        <div id="prospectoModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-user-check"></i> Detalhes do Prospecto</h3>
+                    <span class="close" onclick="closeModal('prospectoModal')">&times;</span>
+                </div>
+                <div class="modal-body" id="prospectoDetails">
+                    <!-- Prospecto details will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal for Contact History -->
+        <div id="contactHistoryModal" class="modal">
+            <div class="modal-content contact-history-modal">
+                <div class="modal-header">
+                    <h3><i class="fas fa-phone"></i> Histórico do Contato</h3>
+                    <span class="close" onclick="closeModal('contactHistoryModal')">&times;</span>
+                </div>
+                <div class="modal-body" id="contactHistoryDetails">
+                    <!-- Contact history details will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal for Contact Details -->
+        <div id="contatoModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-phone-alt"></i> Detalhes do Contato</h3>
+                    <span class="close" onclick="closeModal('contatoModal')">&times;</span>
+                </div>
+                <div class="modal-body" id="contatoDetails">
+                    <!-- Contact details will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // URLs das APIs usando Django URL reverse
+        const API_URLS = {
+            data: '{% url "vendas_web:dashboard_data" %}',
+            charts: '{% url "vendas_web:dashboard_charts" %}',
+            tables: '{% url "vendas_web:dashboard_tables" %}',
+            leads: '{% url "vendas_web:dashboard_leads" %}',
+            prospectos: '{% url "vendas_web:dashboard_prospectos" %}',
+            historico: '{% url "vendas_web:dashboard_historico" %}',
+            realtimeContatos: '{% url "vendas_web:dashboard_contatos_realtime" %}'
+        };
+
+        // Variáveis globais
+        let statusChart = null;
+        let trendsChart = null;
+        let funilChart = null;
+        let taxasChart = null;
+        let tendenciaFunilChart = null;
+        let statusDistribuicaoChart = null;
+        let origemPerformanceChart = null;
+        let currentTab = 'leads';
+        let currentPage = {
+            leads: 1,
+            prospectos: 1,
+            historico: 1
+        };
+        let filters = {
+            leads: {},
+            prospectos: {},
+            historico: {}
+        };
+        let searchTerms = {
+            leads: '',
+            prospectos: '',
+            historico: ''
+        };
+
+        // Função para mostrar erro
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            console.error('Erro:', message);
+        }
+
+        // Função para ocultar erro
+        function hideError() {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.style.display = 'none';
+        }
+
+        // Função para fechar modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Função para formatar datas no fuso horário local
+        function formatarDataLocal(dataString) {
+            if (!dataString) return '-';
+            
+            try {
+                const data = new Date(dataString);
+                if (isNaN(data.getTime())) return dataString; // Se não for uma data válida, retorna o original
+                
+                // Formatar no padrão específico: DD/MM/AAAA, HH:MM
+                const dia = data.getDate().toString().padStart(2, '0');
+                const mes = (data.getMonth() + 1).toString().padStart(2, '0');
+                const ano = data.getFullYear();
+                const hora = data.getHours().toString().padStart(2, '0');
+                const minuto = data.getMinutes().toString().padStart(2, '0');
+                
+                return `${dia}/${mes}/${ano}, ${hora}:${minuto}`;
+            } catch (error) {
+                console.warn('Erro ao formatar data:', dataString, error);
+                return dataString;
+            }
+        }
+
+        // Função para carregar dados principais
+        async function loadDashboardData() {
+            try {
+                const response = await fetch(API_URLS.data);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Atualizar estatísticas gerais
+                const stats = data.stats;
+                document.getElementById('totalLeads').textContent = stats.totalLeads;
+                document.getElementById('totalProspectos').textContent = stats.totalProspectos;
+                document.getElementById('leadsHoje').textContent = stats.leadsHoje;
+                document.getElementById('valorTotal').textContent = stats.valorTotal;
+                
+                // Atualizar métricas do funil - HOJE
+                const funilHoje = stats.funil_hoje;
+                document.getElementById('fluxosInicializadosHoje').textContent = funilHoje.fluxos_inicializados;
+                document.getElementById('fluxosFinalizadosHoje').textContent = funilHoje.fluxos_finalizados;
+                document.getElementById('transferidosHumanoHoje').textContent = funilHoje.transferidos_humano;
+                document.getElementById('convertidosLeadHoje').textContent = funilHoje.convertidos_lead;
+                document.getElementById('vendasConfirmadasHoje').textContent = funilHoje.vendas_confirmadas;
+                document.getElementById('abandonosHoje').textContent = funilHoje.abandonos;
+                
+                // Atualizar taxas de conversão - HOJE
+                document.getElementById('taxaFinalizacaoHoje').textContent = funilHoje.taxa_finalizacao;
+                document.getElementById('taxaConversaoVendaHoje').textContent = funilHoje.taxa_conversao_venda;
+                document.getElementById('taxaConversaoGeralHoje').textContent = funilHoje.taxa_conversao_geral;
+                document.getElementById('valorVendasHoje').textContent = funilHoje.valor_total_vendas;
+                
+                hideError();
+            } catch (error) {
+                showError(`Erro ao carregar dados principais: ${error.message}`);
+            }
+        }
+
+        // Função para carregar dados dos gráficos
+        async function loadChartsData() {
+            try {
+                const response = await fetch(API_URLS.charts);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Atualizar gráfico de status dos prospectos
+                updateStatusChart(data.statusProspectos);
+                
+                // Atualizar gráfico de tendências
+                updateTrendsChart(data.leadsUltimos7Dias);
+                
+                // Atualizar gráficos do funil se houver dados
+                if (data.funilVendas7Dias || data.statusAgrupados) {
+                    updateFunilCharts(data);
+                }
+                
+                hideError();
+            } catch (error) {
+                showError(`Erro ao carregar gráficos: ${error.message}`);
+            }
+        }
+
+        // Função para carregar dados das tabelas
+        async function loadTablesData() {
+            try {
+                const response = await fetch(API_URLS.tables);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Atualizar tabela de empresas
+                updateEmpresasTable(data.topEmpresas);
+                
+                // Atualizar tabela de origens
+                updateOrigensTable(data.topOrigens);
+                
+                hideError();
+            } catch (error) {
+                showError(`Erro ao carregar tabelas: ${error.message}`);
+            }
+        }
+
+        // Função para atualizar gráfico de status
+        function updateStatusChart(data) {
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            
+            if (statusChart) {
+                statusChart.destroy();
+            }
+            
+            const labels = data.map(item => item.status);
+            const values = data.map(item => item.count);
+            
+            statusChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: [
+                            '#667eea',
+                            '#764ba2',
+                            '#f093fb',
+                            '#f5576c',
+                            '#4facfe',
+                            '#00f2fe'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Função para atualizar gráfico de tendências
+        function updateTrendsChart(data) {
+            const ctx = document.getElementById('trendsChart').getContext('2d');
+            
+            if (trendsChart) {
+                trendsChart.destroy();
+            }
+            
+            const labels = data.map(item => item.date);
+            const values = data.map(item => item.count);
+            
+            trendsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Leads',
+                        data: values,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Função para atualizar gráficos do funil de vendas
+        function updateFunilCharts(data) {
+            // Usar dados das métricas carregadas no dashboard_data
+            updateFunilVisualChart();
+            updateTaxasConversaoChart();
+            updateStatusDistribuicaoChart(data);
+            updateOrigemPerformanceChart(data);
+            updateTendenciaFunilChart();
+        }
+
+        // Gráfico visual do funil
+        function updateFunilVisualChart() {
+            const ctx = document.getElementById('funilChart').getContext('2d');
+            
+            if (funilChart) {
+                funilChart.destroy();
+            }
+
+            // Pegar dados dos cards do dashboard
+            const fluxosInicializados = parseInt(document.getElementById('fluxosInicializadosHoje').textContent) || 0;
+            const fluxosFinalizados = parseInt(document.getElementById('fluxosFinalizadosHoje').textContent) || 0;
+            const transferidosHumano = parseInt(document.getElementById('transferidosHumanoHoje').textContent) || 0;
+            const convertidosLead = parseInt(document.getElementById('convertidosLeadHoje').textContent) || 0;
+            const vendasConfirmadas = parseInt(document.getElementById('vendasConfirmadasHoje').textContent) || 0;
+            
+            const labels = ['Inicializados', 'Finalizados', 'Transferidos', 'Leads', 'Vendas'];
+            const values = [fluxosInicializados, fluxosFinalizados, transferidosHumano, convertidosLead, vendasConfirmadas];
+            
+            funilChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Quantidade',
+                        data: values,
+                        backgroundColor: [
+                            'rgba(52, 152, 219, 0.8)',   // Inicializados - Azul
+                            'rgba(46, 204, 113, 0.8)',   // Finalizados - Verde
+                            'rgba(243, 156, 18, 0.8)',   // Transferidos - Laranja
+                            'rgba(155, 89, 182, 0.8)',   // Leads - Roxo
+                            'rgba(39, 174, 96, 0.8)'     // Vendas - Verde escuro
+                        ],
+                        borderColor: [
+                            'rgba(52, 152, 219, 1)',
+                            'rgba(46, 204, 113, 1)',
+                            'rgba(243, 156, 18, 1)',
+                            'rgba(155, 89, 182, 1)',
+                            'rgba(39, 174, 96, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const percentage = ((context.parsed.y / fluxosInicializados) * 100).toFixed(1);
+                                    return `${context.label}: ${context.parsed.y} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Quantidade de Contatos'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Etapas do Funil'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Gráfico de taxas de conversão
+        function updateTaxasConversaoChart() {
+            const ctx = document.getElementById('taxasChart').getContext('2d');
+            
+            if (taxasChart) {
+                taxasChart.destroy();
+            }
+
+            const taxaFinalizacao = parseFloat(document.getElementById('taxaFinalizacaoHoje').textContent.replace('%', '')) || 0;
+            const taxaConversaoVenda = parseFloat(document.getElementById('taxaConversaoVendaHoje').textContent.replace('%', '')) || 0;
+            const taxaConversaoGeral = parseFloat(document.getElementById('taxaConversaoGeralHoje').textContent.replace('%', '')) || 0;
+            
+            taxasChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Taxa Finalização', 'Taxa Conv. Venda', 'Taxa Conv. Geral'],
+                    datasets: [{
+                        data: [taxaFinalizacao, taxaConversaoVenda, taxaConversaoGeral],
+                        backgroundColor: [
+                            'rgba(52, 152, 219, 0.8)',
+                            'rgba(155, 89, 182, 0.8)',
+                            'rgba(39, 174, 96, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(52, 152, 219, 1)',
+                            'rgba(155, 89, 182, 1)',
+                            'rgba(39, 174, 96, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${context.parsed}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Gráfico de distribuição de status
+        function updateStatusDistribuicaoChart(data) {
+            const ctx = document.getElementById('statusDistribuicaoChart').getContext('2d');
+            
+            if (statusDistribuicaoChart) {
+                statusDistribuicaoChart.destroy();
+            }
+
+            // Simular dados de status (você pode buscar da API depois)
+            const fluxosFinalizados = parseInt(document.getElementById('fluxosFinalizadosHoje').textContent) || 0;
+            const transferidosHumano = parseInt(document.getElementById('transferidosHumanoHoje').textContent) || 0;
+            const abandonos = parseInt(document.getElementById('abandonosHoje').textContent) || 0;
+            const vendasConfirmadas = parseInt(document.getElementById('vendasConfirmadasHoje').textContent) || 0;
+
+            statusDistribuicaoChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Finalizados', 'Transferidos', 'Abandonos', 'Vendas Confirmadas'],
+                    datasets: [{
+                        data: [fluxosFinalizados, transferidosHumano, abandonos, vendasConfirmadas],
+                        backgroundColor: [
+                            'rgba(46, 204, 113, 0.8)',
+                            'rgba(243, 156, 18, 0.8)',
+                            'rgba(231, 76, 60, 0.8)',
+                            'rgba(39, 174, 96, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(46, 204, 113, 1)',
+                            'rgba(243, 156, 18, 1)',
+                            'rgba(231, 76, 60, 1)',
+                            'rgba(39, 174, 96, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Gráfico de performance por origem
+        function updateOrigemPerformanceChart(data) {
+            const ctx = document.getElementById('origemPerformanceChart').getContext('2d');
+            
+            if (origemPerformanceChart) {
+                origemPerformanceChart.destroy();
+            }
+
+            // Dados simulados para demonstração (você pode melhorar buscando da API)
+            const origens = ['Google Ads', 'Facebook', 'WhatsApp', 'Instagram', 'Direto'];
+            const contatos = [15, 12, 8, 5, 3];
+            const conversoes = [5, 4, 3, 2, 1];
+
+            origemPerformanceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: origens,
+                    datasets: [{
+                        label: 'Contatos',
+                        data: contatos,
+                        backgroundColor: 'rgba(52, 152, 219, 0.6)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Conversões',
+                        data: conversoes,
+                        backgroundColor: 'rgba(39, 174, 96, 0.6)',
+                        borderColor: 'rgba(39, 174, 96, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Gráfico de tendência temporal do funil
+        function updateTendenciaFunilChart() {
+            const ctx = document.getElementById('tendenciaFunilChart').getContext('2d');
+            
+            if (tendenciaFunilChart) {
+                tendenciaFunilChart.destroy();
+            }
+
+            // Dados simulados dos últimos 7 dias
+            const labels = [];
+            const contatosData = [];
+            const conversaoData = [];
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                labels.push(date.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric' }));
+                
+                // Simular dados variáveis
+                contatosData.push(Math.floor(Math.random() * 20) + 5);
+                conversaoData.push(Math.floor(Math.random() * 8) + 1);
+            }
+
+            tendenciaFunilChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Contatos Inicializados',
+                        data: contatosData,
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }, {
+                        label: 'Vendas Confirmadas',
+                        data: conversaoData,
+                        borderColor: 'rgba(39, 174, 96, 1)',
+                        backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Quantidade'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Últimos 7 Dias'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Função para atualizar tabela de empresas
+        function updateEmpresasTable(data) {
+            const tbody = document.querySelector('#empresasTable tbody');
+            tbody.innerHTML = '';
+            
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.empresa}</td>
+                    <td>${item.count}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Função para atualizar tabela de origens
+        function updateOrigensTable(data) {
+            const tbody = document.querySelector('#origensTable tbody');
+            tbody.innerHTML = '';
+            
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.origem}</td>
+                    <td>${item.count}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Funções para navegação de abas
+        function switchTab(tabName) {
+            // Remover active de todas as abas
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Ativar aba selecionada
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            currentTab = tabName;
+            
+            // Carregar dados da aba se necessário
+            if (tabName === 'leads') {
+                loadLeadsData();
+            } else if (tabName === 'prospectos') {
+                loadProspectosData();
+            } else if (tabName === 'historico') {
+                loadHistoricoData();
+            }
+        }
+
+        // Funções para carregar dados detalhados
+        async function loadLeadsData(page = 1) {
+            try {
+                const params = new URLSearchParams({
+                    page: page,
+                    search: searchTerms.leads,
+                    ...filters.leads
+                });
+                
+                const response = await fetch(`${API_URLS.leads}?${params}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                updateLeadsTable(data);
+                updatePagination('leads', data);
+                
+                // Atualizar filtros se necessário
+                if (data.origemChoices) {
+                    updateOrigemFilter(data.origemChoices);
+                }
+                if (data.statusChoices) {
+                    updateStatusFilter('leads', data.statusChoices);
+                }
+                
+                currentPage.leads = page;
+                
+            } catch (error) {
+                showError(`Erro ao carregar leads: ${error.message}`);
+            }
+        }
+
+        async function loadProspectosData(page = 1) {
+            try {
+                const params = new URLSearchParams({
+                    page: page,
+                    search: searchTerms.prospectos,
+                    ...filters.prospectos
+                });
+                
+                const response = await fetch(`${API_URLS.prospectos}?${params}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                updateProspectosTable(data);
+                updatePagination('prospectos', data);
+                
+                // Atualizar filtros
+                if (data.statusChoices) {
+                    updateStatusFilter('prospectos', data.statusChoices);
+                }
+                
+                currentPage.prospectos = page;
+                
+            } catch (error) {
+                showError(`Erro ao carregar prospectos: ${error.message}`);
+            }
+        }
+
+        async function loadHistoricoData(page = 1) {
+            try {
+                const params = new URLSearchParams({
+                    page: page,
+                    search: searchTerms.historico,
+                    ...filters.historico
+                });
+                
+                const response = await fetch(`${API_URLS.historico}?${params}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                updateHistoricoTable(data);
+                updatePagination('historico', data);
+                
+                currentPage.historico = page;
+                
+            } catch (error) {
+                showError(`Erro ao carregar histórico: ${error.message}`);
+            }
+        }
+
+        // Funções para atualizar tabelas detalhadas
+        function updateLeadsTable(data) {
+            const tbody = document.querySelector('#leadsTable tbody');
+            tbody.innerHTML = '';
+            
+            document.getElementById('leadsInfo').textContent = 
+                `Mostrando ${data.leads.length} de ${data.total} leads (Página ${data.page} de ${data.pages})`;
+            
+            data.leads.forEach(lead => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${lead.id}</td>
+                    <td>${lead.nome_razaosocial}</td>
+                    <td>${lead.email}</td>
+                    <td>${lead.telefone}</td>
+                    <td>${lead.valor}</td>
+                    <td>${lead.empresa}</td>
+                    <td>${lead.origem}</td>
+                    <td><span class="status-badge status-${lead.status_api.toLowerCase()}">${lead.status_api}</span></td>
+                    <td>${formatarDataLocal(lead.data_cadastro)}</td>
+                    <td><span class="status-badge ${lead.ativo ? 'status-ativo' : 'status-inativo'}">${lead.ativo ? 'Ativo' : 'Inativo'}</span></td>
+                    <td>
+                        <button class="action-btn action-btn-view" onclick="viewLead(${lead.id})">
+                            <i class="fas fa-eye"></i> Ver
+                        </button>
+                        <button class="action-btn action-btn-history" onclick="viewLeadHistory('${lead.telefone}')">
+                            <i class="fas fa-history"></i> Histórico
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateProspectosTable(data) {
+            const tbody = document.querySelector('#prospectosTable tbody');
+            tbody.innerHTML = '';
+            
+            document.getElementById('prospectosInfo').textContent = 
+                `Mostrando ${data.prospectos.length} de ${data.total} prospectos (Página ${data.page} de ${data.pages})`;
+            
+            data.prospectos.forEach(prospecto => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${prospecto.id}</td>
+                    <td>${prospecto.nome_prospecto}</td>
+                    <td>${prospecto.lead_relacionado || '-'}</td>
+                    <td>${prospecto.id_prospecto_hubsoft}</td>
+                    <td><span class="status-badge status-${prospecto.status.toLowerCase()}">${prospecto.status}</span></td>
+                    <td>${prospecto.prioridade}</td>
+                    <td>${formatarDataLocal(prospecto.data_criacao)}</td>
+                    <td>${formatarDataLocal(prospecto.data_processamento)}</td>
+                    <td>${prospecto.tentativas_processamento}</td>
+                    <td>${prospecto.tempo_processamento}</td>
+                    <td>
+                        <button class="action-btn action-btn-view" onclick="viewProspecto(${prospecto.id})">
+                            <i class="fas fa-eye"></i> Ver
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateHistoricoTable(data) {
+            const tbody = document.querySelector('#historicoTable tbody');
+            tbody.innerHTML = '';
+            
+            document.getElementById('historicoInfo').textContent = 
+                `Mostrando ${data.historico.length} de ${data.total} contatos (Página ${data.page} de ${data.pages})`;
+            
+            data.historico.forEach(contato => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${contato.id}</td>
+                    <td>${contato.telefone}</td>
+                    <td>${contato.nome_contato}</td>
+                    <td>${contato.lead_relacionado || '-'}</td>
+                    <td><span class="status-badge status-${contato.status.toLowerCase().replace(' ', '_')}">${contato.status}</span></td>
+                    <td>${formatarDataLocal(contato.data_hora_contato)}</td>
+                    <td>${contato.duracao_formatada}</td>
+                    <td><span class="status-badge ${contato.sucesso ? 'status-ativo' : 'status-inativo'}">${contato.sucesso ? 'Sim' : 'Não'}</span></td>
+                    <td>
+                        <button class="action-btn action-btn-view" onclick="viewContato(${contato.id})">
+                            <i class="fas fa-eye"></i> Ver
+                        </button>
+                        <button class="action-btn action-btn-history" onclick="viewContactHistory('${contato.telefone}')">
+                            <i class="fas fa-history"></i> Histórico
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Funções para paginação
+        function updatePagination(type, data) {
+            const paginationDiv = document.getElementById(`${type}Pagination`);
+            paginationDiv.innerHTML = '';
+            
+            if (data.pages <= 1) return;
+            
+            // Botão anterior
+            const prevBtn = document.createElement('button');
+            prevBtn.textContent = '‹ Anterior';
+            prevBtn.disabled = data.page === 1;
+            prevBtn.onclick = () => {
+                if (type === 'leads') loadLeadsData(data.page - 1);
+                else if (type === 'prospectos') loadProspectosData(data.page - 1);
+                else if (type === 'historico') loadHistoricoData(data.page - 1);
+            };
+            paginationDiv.appendChild(prevBtn);
+            
+            // Números das páginas
+            const startPage = Math.max(1, data.page - 2);
+            const endPage = Math.min(data.pages, data.page + 2);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.textContent = i;
+                pageBtn.className = i === data.page ? 'active' : '';
+                pageBtn.onclick = () => {
+                    if (type === 'leads') loadLeadsData(i);
+                    else if (type === 'prospectos') loadProspectosData(i);
+                    else if (type === 'historico') loadHistoricoData(i);
+                };
+                paginationDiv.appendChild(pageBtn);
+            }
+            
+            // Botão próximo
+            const nextBtn = document.createElement('button');
+            nextBtn.textContent = 'Próximo ›';
+            nextBtn.disabled = data.page === data.pages;
+            nextBtn.onclick = () => {
+                if (type === 'leads') loadLeadsData(data.page + 1);
+                else if (type === 'prospectos') loadProspectosData(data.page + 1);
+                else if (type === 'historico') loadHistoricoData(data.page + 1);
+            };
+            paginationDiv.appendChild(nextBtn);
+        }
+
+        // Funções para visualização de detalhes (modais)
+        async function viewLead(leadId) {
+            try {
+                const response = await fetch(`${API_URLS.leads}?id=${leadId}`);
+                const data = await response.json();
+                
+                if (data.error) throw new Error(data.error);
+                
+                const lead = data.leads[0];
+                
+                document.getElementById('leadDetails').innerHTML = `
+                    <div class="detail-card">
+                        <h4>Informações Básicas</h4>
+                        <div class="detail-row">
+                            <span class="detail-label">ID:</span>
+                            <span class="detail-value">${lead.id}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Nome/Razão Social:</span>
+                            <span class="detail-value">${lead.nome_razaosocial}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Email:</span>
+                            <span class="detail-value">${lead.email}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Telefone:</span>
+                            <span class="detail-value">${lead.telefone}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Empresa:</span>
+                            <span class="detail-value">${lead.empresa}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Valor:</span>
+                            <span class="detail-value">${lead.valor}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Origem:</span>
+                            <span class="detail-value">${lead.origem}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Status API:</span>
+                            <span class="detail-value"><span class="status-badge status-${lead.status_api.toLowerCase()}">${lead.status_api}</span></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Data Cadastro:</span>
+                            <span class="detail-value">${formatarDataLocal(lead.data_cadastro)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Ativo:</span>
+                            <span class="detail-value"><span class="status-badge ${lead.ativo ? 'status-ativo' : 'status-inativo'}">${lead.ativo ? 'Sim' : 'Não'}</span></span>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('leadModal').style.display = 'block';
+                
+            } catch (error) {
+                showError(`Erro ao carregar detalhes do lead: ${error.message}`);
+            }
+        }
+
+        async function viewProspecto(prospectoId) {
+            try {
+                const response = await fetch(`${API_URLS.prospectos}?id=${prospectoId}`);
+                const data = await response.json();
+                
+                if (data.error) throw new Error(data.error);
+                
+                const prospecto = data.prospectos[0];
+                
+                document.getElementById('prospectoDetails').innerHTML = `
+                    <div class="detail-card">
+                        <h4>Informações Básicas</h4>
+                        <div class="detail-row">
+                            <span class="detail-label">ID:</span>
+                            <span class="detail-value">${prospecto.id}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Nome do Prospecto:</span>
+                            <span class="detail-value">${prospecto.nome_prospecto}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Lead Relacionado:</span>
+                            <span class="detail-value">${prospecto.lead_relacionado || 'Nenhum'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">ID Hubsoft:</span>
+                            <span class="detail-value">${prospecto.id_prospecto_hubsoft}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Status:</span>
+                            <span class="detail-value"><span class="status-badge status-${prospecto.status.toLowerCase()}">${prospecto.status}</span></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Prioridade:</span>
+                            <span class="detail-value">${prospecto.prioridade}/5</span>
+                        </div>
+                    </div>
+                    <div class="detail-card">
+                        <h4>Informações de Processamento</h4>
+                        <div class="detail-row">
+                            <span class="detail-label">Data Criação:</span>
+                            <span class="detail-value">${formatarDataLocal(prospecto.data_criacao)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Data Processamento:</span>
+                            <span class="detail-value">${prospecto.data_processamento}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Tentativas:</span>
+                            <span class="detail-value">${prospecto.tentativas_processamento}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Tempo Processamento:</span>
+                            <span class="detail-value">${prospecto.tempo_processamento}</span>
+                        </div>
+                        ${prospecto.erro_processamento && prospecto.erro_processamento !== '-' ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Erro:</span>
+                            <span class="detail-value" style="color: #dc3545;">${prospecto.erro_processamento}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    ${prospecto.dados_processamento ? `
+                    <div class="detail-card">
+                        <h4>Dados de Processamento</h4>
+                        <pre style="background: #f8f9fa; padding: 1rem; border-radius: 8px; overflow: auto; max-height: 200px;">${JSON.stringify(prospecto.dados_processamento, null, 2)}</pre>
+                    </div>
+                    ` : ''}
+                    ${prospecto.resultado_processamento ? `
+                    <div class="detail-card">
+                        <h4>Resultado do Processamento</h4>
+                        <pre style="background: #f8f9fa; padding: 1rem; border-radius: 8px; overflow: auto; max-height: 200px;">${JSON.stringify(prospecto.resultado_processamento, null, 2)}</pre>
+                    </div>
+                    ` : ''}
+                `;
+                
+                document.getElementById('prospectoModal').style.display = 'block';
+                
+            } catch (error) {
+                showError(`Erro ao carregar detalhes do prospecto: ${error.message}`);
+            }
+        }
+
+        async function viewContato(contatoId) {
+            try {
+                const response = await fetch(`${API_URLS.historico}?id=${contatoId}`);
+                const data = await response.json();
+                
+                if (data.error) throw new Error(data.error);
+                
+                const contato = data.historico[0];
+                
+                document.getElementById('contatoDetails').innerHTML = `
+                    <div class="detail-card">
+                        <h4>Informações do Contato</h4>
+                        <div class="detail-row">
+                            <span class="detail-label">ID:</span>
+                            <span class="detail-value">${contato.id}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Telefone:</span>
+                            <span class="detail-value">${contato.telefone}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Nome do Contato:</span>
+                            <span class="detail-value">${contato.nome_contato}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Lead Relacionado:</span>
+                            <span class="detail-value">${contato.lead_relacionado || 'Nenhum'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Status:</span>
+                            <span class="detail-value"><span class="status-badge status-${contato.status.toLowerCase().replace(' ', '_')}">${contato.status}</span></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Data/Hora:</span>
+                            <span class="detail-value">${formatarDataLocal(contato.data_hora_contato)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Duração:</span>
+                            <span class="detail-value">${contato.duracao_formatada}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Sucesso:</span>
+                            <span class="detail-value"><span class="status-badge ${contato.sucesso ? 'status-ativo' : 'status-inativo'}">${contato.sucesso ? 'Sim' : 'Não'}</span></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Tempo Relativo:</span>
+                            <span class="detail-value">${contato.tempo_relativo}</span>
+                        </div>
+                    </div>
+                    ${contato.transcricao && contato.transcricao !== '-' ? `
+                    <div class="detail-card">
+                        <h4>Transcrição</h4>
+                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; line-height: 1.6;">
+                            ${contato.transcricao}
+                        </div>
+                    </div>
+                    ` : ''}
+                    ${contato.observacoes && contato.observacoes !== '-' ? `
+                    <div class="detail-card">
+                        <h4>Observações</h4>
+                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; line-height: 1.6;">
+                            ${contato.observacoes}
+                        </div>
+                    </div>
+                    ` : ''}
+                    <div class="detail-card">
+                        <h4>Informações Técnicas</h4>
+                        <div class="detail-row">
+                            <span class="detail-label">IP de Origem:</span>
+                            <span class="detail-value">${contato.ip_origem}</span>
+                        </div>
+                        ${contato.dados_extras ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Dados Extras:</span>
+                            <span class="detail-value">
+                                <pre style="background: #f8f9fa; padding: 0.5rem; border-radius: 4px; margin-top: 0.5rem; overflow: auto; max-height: 150px;">${JSON.stringify(contato.dados_extras, null, 2)}</pre>
+                            </span>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                document.getElementById('contatoModal').style.display = 'block';
+                
+            } catch (error) {
+                showError(`Erro ao carregar detalhes do contato: ${error.message}`);
+            }
+        }
+
+        async function viewLeadHistory(telefone) {
+            // Alias para viewContactHistory
+            viewContactHistory(telefone);
+        }
+
+        async function viewContactHistory(telefone) {
+            try {
+                const response = await fetch(`{% url "vendas_web:dashboard_contato_historico" "TELEFONE" %}`.replace('TELEFONE', telefone));
+                const data = await response.json();
+                
+                if (data.error) throw new Error(data.error);
+                
+                // Criar conteúdo do histórico
+                let historyContent = `
+                    <div class="detail-card">
+                        <h4>📞 Histórico de Contatos - ${telefone}</h4>
+                        <div class="detail-row">
+                            <span class="detail-label">Total de Contatos:</span>
+                            <span class="detail-value"><strong>${data.total}</strong></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Último Contato:</span>
+                            <span class="detail-value">${data.ultimo_contato || 'Nunca'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Taxa de Sucesso:</span>
+                            <span class="detail-value"><strong>${data.taxa_sucesso || '0%'}</strong></span>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-card">
+                        <h4>📊 Estatísticas do Funil</h4>
+                        <div class="detail-row">
+                            <span class="detail-label">Fluxos Inicializados:</span>
+                            <span class="detail-value">${data.estatisticas.contatos_inicializados}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Fluxos Finalizados:</span>
+                            <span class="detail-value">${data.estatisticas.contatos_finalizados}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Transferidos para Humano:</span>
+                            <span class="detail-value">${data.estatisticas.contatos_transferidos}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Taxa de Finalização:</span>
+                            <span class="detail-value"><strong>${data.estatisticas.taxa_finalizacao.toFixed(1)}%</strong></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Convertidos em Lead:</span>
+                            <span class="detail-value">${data.estatisticas.contatos_convertidos_lead}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Vendas Confirmadas:</span>
+                            <span class="detail-value">${data.estatisticas.contatos_vendas}</span>
+                        </div>
+                        ${data.estatisticas.contatos_vendas > 0 ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Valor Total Vendas:</span>
+                            <span class="detail-value" style="color: #27ae60; font-weight: bold;">${data.estatisticas.valor_total_vendas_formatado}</span>
+                        </div>
+                        ` : ''}
+                        <div class="detail-row">
+                            <span class="detail-label">Taxa Conversão Lead:</span>
+                            <span class="detail-value">${data.estatisticas.taxa_conversao_lead.toFixed(1)}%</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Taxa Conversão Venda:</span>
+                            <span class="detail-value">${data.estatisticas.taxa_conversao_venda.toFixed(1)}%</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Duração Total:</span>
+                            <span class="detail-value">${data.estatisticas.duracao_total_minutos} minutos</span>
+                        </div>
+                    </div>
+                    
+                    <h4>📋 Timeline de Contatos</h4>
+                `;
+
+                if (data.historico && data.historico.length > 0) {
+                    data.historico.forEach(contato => {
+                        historyContent += `
+                            <div class="detail-card" style="border-left: 4px solid ${contato.sucesso ? '#27ae60' : '#e74c3c'};">
+                                <div class="detail-row">
+                                    <span class="detail-label">📅 Data/Hora:</span>
+                                    <span class="detail-value"><strong>${formatarDataLocal(contato.data_hora_contato)}</strong></span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">📊 Status:</span>
+                                    <span class="detail-value">
+                                        <span class="status-badge status-${contato.status.toLowerCase().replace(' ', '_')}">${contato.status}</span>
+                                    </span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">👤 Nome:</span>
+                                    <span class="detail-value">${contato.nome_contato}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">⏱️ Duração:</span>
+                                    <span class="detail-value">${contato.duracao_formatada}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">✅ Sucesso:</span>
+                                    <span class="detail-value">
+                                        <span class="status-badge ${contato.sucesso ? 'status-ativo' : 'status-inativo'}">
+                                            ${contato.sucesso ? 'Sim' : 'Não'}
+                                        </span>
+                                    </span>
+                                </div>
+                                ${contato.converteu_lead ? `
+                                <div class="detail-row">
+                                    <span class="detail-label">🎯 Converteu Lead:</span>
+                                    <span class="detail-value">
+                                        <span class="status-badge status-ativo">Sim</span>
+                                    </span>
+                                </div>
+                                ` : ''}
+                                ${contato.converteu_venda ? `
+                                <div class="detail-row">
+                                    <span class="detail-label">💰 Venda Confirmada:</span>
+                                    <span class="detail-value">
+                                        <span class="status-badge status-ativo">Sim - ${contato.valor_venda}</span>
+                                    </span>
+                                </div>
+                                ` : ''}
+                                ${contato.origem_contato ? `
+                                <div class="detail-row">
+                                    <span class="detail-label">📍 Origem:</span>
+                                    <span class="detail-value">${contato.origem_contato}</span>
+                                </div>
+                                ` : ''}
+                                ${contato.transcricao && contato.transcricao !== '-' && contato.transcricao !== '' ? `
+                                <div class="detail-row">
+                                    <span class="detail-label">📝 Transcrição:</span>
+                                    <span class="detail-value">${contato.transcricao}</span>
+                                </div>
+                                ` : ''}
+                                ${contato.observacoes && contato.observacoes !== '-' && contato.observacoes !== '' ? `
+                                <div class="detail-row">
+                                    <span class="detail-label">💬 Observações:</span>
+                                    <span class="detail-value">${contato.observacoes}</span>
+                                </div>
+                                ` : ''}
+                                <div class="detail-row">
+                                    <span class="detail-label">🕐 Tempo Relativo:</span>
+                                    <span class="detail-value">${contato.tempo_relativo} atrás</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    historyContent += `
+                        <div class="detail-card">
+                            <p style="text-align: center; color: #666;">Nenhum histórico de contato encontrado para este telefone.</p>
+                        </div>
+                    `;
+                }
+
+                document.getElementById('contactHistoryDetails').innerHTML = historyContent;
+                document.getElementById('contactHistoryModal').style.display = 'block';
+                
+            } catch (error) {
+                showError(`Erro ao carregar histórico do contato: ${error.message}`);
+            }
+        }
+
+        // Função para atualizar todos os dados
+        async function refreshDashboard() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const originalText = refreshBtn.innerHTML;
+            
+            // Desabilitar botão e mostrar loading
+            refreshBtn.disabled = true;
+            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
+            
+            try {
+                await Promise.all([
+                    loadDashboardData(),
+                    loadChartsData(),
+                    loadTablesData()
+                ]);
+                
+                // Atualizar gráficos do funil
+                setTimeout(() => {
+                    updateFunilCharts({});
+                }, 300);
+                
+                // Recarregar aba atual
+                if (currentTab === 'leads') {
+                    await loadLeadsData(currentPage.leads);
+                } else if (currentTab === 'prospectos') {
+                    await loadProspectosData(currentPage.prospectos);
+                } else if (currentTab === 'historico') {
+                    await loadHistoricoData(currentPage.historico);
+                }
+                
+            } catch (error) {
+                showError('Erro ao atualizar dashboard');
+            } finally {
+                // Reabilitar botão
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = originalText;
+            }
+        }
+
+        // Função principal de inicialização
+        async function initDashboard() {
+            try {
+                // Carregar todos os dados
+                await Promise.all([
+                    loadDashboardData(),
+                    loadChartsData(),
+                    loadTablesData(),
+                    loadLeadsData() // Carregar leads por padrão
+                ]);
+                
+                // Inicializar gráficos do funil após carregar os dados principais
+                setTimeout(() => {
+                    updateFunilCharts({});
+                }, 500);
+                
+                // Ocultar loading e mostrar conteúdo
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                showError('Erro ao inicializar dashboard');
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar dashboard
+            initDashboard();
+            
+            // Configurar botão de refresh
+            document.getElementById('refreshBtn').addEventListener('click', refreshDashboard);
+            
+            // Configurar navegação de abas
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+            });
+            
+            // Configurar campos de busca
+            setupSearchHandlers();
+            
+            // Configurar filtros
+            setupFilterHandlers();
+            
+            // Auto-refresh a cada 30 segundos
+            setInterval(refreshDashboard, 30000);
+            
+            // Fechar modais clicando fora
+            window.addEventListener('click', function(event) {
+                if (event.target.classList.contains('modal')) {
+                    event.target.style.display = 'none';
+                }
+            });
+        });
+
+        // Configurar handlers de busca
+        function setupSearchHandlers() {
+            ['leads', 'prospectos', 'historico'].forEach(type => {
+                const searchInput = document.getElementById(`${type}Search`);
+                if (searchInput) {
+                    let timeout;
+                    searchInput.addEventListener('input', function() {
+                        clearTimeout(timeout);
+                        timeout = setTimeout(() => {
+                            searchTerms[type] = this.value;
+                            currentPage[type] = 1;
+                            
+                            if (type === 'leads') loadLeadsData();
+                            else if (type === 'prospectos') loadProspectosData();
+                            else if (type === 'historico') loadHistoricoData();
+                        }, 500);
+                    });
+                }
+            });
+        }
+
+        // Configurar handlers de filtros
+        function setupFilterHandlers() {
+            // Handlers para leads
+            const leadsOrigemFilter = document.getElementById('leadsOrigemFilter');
+            const leadsStatusFilter = document.getElementById('leadsStatusFilter');
+            const leadsAtivoFilter = document.getElementById('leadsAtivoFilter');
+
+            if (leadsOrigemFilter) {
+                leadsOrigemFilter.addEventListener('change', function() {
+                    filters.leads.origem = this.value;
+                    currentPage.leads = 1;
+                    loadLeadsData();
+                });
+            }
+
+            if (leadsStatusFilter) {
+                leadsStatusFilter.addEventListener('change', function() {
+                    filters.leads.status = this.value;
+                    currentPage.leads = 1;
+                    loadLeadsData();
+                });
+            }
+
+            if (leadsAtivoFilter) {
+                leadsAtivoFilter.addEventListener('change', function() {
+                    filters.leads.ativo = this.value;
+                    currentPage.leads = 1;
+                    loadLeadsData();
+                });
+            }
+
+            // Handlers para prospectos
+            const prospectosStatusFilter = document.getElementById('prospectosStatusFilter');
+            const prospectosPrioridadeFilter = document.getElementById('prospectosPrioridadeFilter');
+
+            if (prospectosStatusFilter) {
+                prospectosStatusFilter.addEventListener('change', function() {
+                    filters.prospectos.status = this.value;
+                    currentPage.prospectos = 1;
+                    loadProspectosData();
+                });
+            }
+
+            if (prospectosPrioridadeFilter) {
+                prospectosPrioridadeFilter.addEventListener('change', function() {
+                    filters.prospectos.prioridade = this.value;
+                    currentPage.prospectos = 1;
+                    loadProspectosData();
+                });
+            }
+
+            // Handlers para histórico
+            const historicoStatusFilter = document.getElementById('historicoStatusFilter');
+            const historicoSucessoFilter = document.getElementById('historicoSucessoFilter');
+            const historicoDataInicio = document.getElementById('historicoDataInicio');
+            const historicoDataFim = document.getElementById('historicoDataFim');
+
+            if (historicoStatusFilter) {
+                historicoStatusFilter.addEventListener('change', function() {
+                    filters.historico.status = this.value;
+                    currentPage.historico = 1;
+                    loadHistoricoData();
+                });
+            }
+
+            if (historicoSucessoFilter) {
+                historicoSucessoFilter.addEventListener('change', function() {
+                    filters.historico.sucesso = this.value;
+                    currentPage.historico = 1;
+                    loadHistoricoData();
+                });
+            }
+
+            if (historicoDataInicio) {
+                historicoDataInicio.addEventListener('change', function() {
+                    filters.historico.data_inicio = this.value;
+                    currentPage.historico = 1;
+                    loadHistoricoData();
+                });
+            }
+
+            if (historicoDataFim) {
+                historicoDataFim.addEventListener('change', function() {
+                    filters.historico.data_fim = this.value;
+                    currentPage.historico = 1;
+                    loadHistoricoData();
+                });
+            }
+        }
+
+        // Funções para atualizar filtros com dados dinâmicos
+        function updateOrigemFilter(choices) {
+            const select = document.getElementById('leadsOrigemFilter');
+            if (!select) return;
+
+            // Limpar opções existentes (exceto "Todas as Origens")
+            while (select.children.length > 1) {
+                select.removeChild(select.lastChild);
+            }
+
+            // Adicionar novas opções
+            choices.forEach(choice => {
+                const option = document.createElement('option');
+                option.value = choice.value;
+                option.textContent = choice.label;
+                select.appendChild(option);
+            });
+        }
+
+        function updateStatusFilter(type, choices) {
+            const select = document.getElementById(`${type}StatusFilter`);
+            if (!select) return;
+
+            // Limpar opções existentes (exceto "Todos os Status")
+            while (select.children.length > 1) {
+                select.removeChild(select.lastChild);
+            }
+
+            // Adicionar novas opções
+            choices.forEach(choice => {
+                const option = document.createElement('option');
+                option.value = choice.value;
+                option.textContent = choice.label;
+                select.appendChild(option);
+            });
+        }
+
+        // Adicionar animações aos elementos quando eles entram na viewport
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observar todos os elementos com animação
+        document.addEventListener('DOMContentLoaded', () => {
+            const animatedElements = document.querySelectorAll('.fade-in-up, .slide-in-right');
+            animatedElements.forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(30px)';
+                el.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+                observer.observe(el);
+            });
+        });
+    </script>
+</body>
+</html>

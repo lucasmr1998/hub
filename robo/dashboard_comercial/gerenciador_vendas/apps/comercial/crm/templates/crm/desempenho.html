@@ -1,0 +1,213 @@
+{% extends 'vendas_web/base.html' %}
+{% block extra_css %}
+<style>
+  /* STAT ICON — colored icon circles */
+  .stat-icon { width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.1rem; flex-shrink:0; }
+
+  /* PERIOD SELECTOR */
+  .periodo-sel { display:flex; gap:4px; background:var(--bg-white); padding:4px; border-radius:10px; border:1px solid var(--border); }
+  .periodo-sel .btn-secondary.active { background:var(--primary); color:#fff; border-color:transparent; }
+
+  /* GRID */
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  @media(max-width:900px) { .grid-2 { grid-template-columns:1fr; } }
+
+  /* CARD HEADER/BODY */
+  .card-header { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .card-header h3 { font-size:14px; font-weight:700; color:var(--text-main); margin:0; display:flex; align-items:center; gap:8px; }
+  .card-body { padding:18px; }
+
+  /* VENDEDORES TABLE */
+  .vendedor-nome { font-weight:600; color:var(--text-main); display:flex; align-items:center; gap:8px; }
+  .av { width:30px; height:30px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+
+  /* PROGRESS BAR */
+  .prog-wrap { display:flex; align-items:center; gap:8px; }
+  .prog-bar { flex:1; height:6px; background:var(--border); border-radius:99px; overflow:hidden; }
+  .prog-fill { height:100%; border-radius:99px; background:var(--primary); transition:width .6s; }
+  .prog-pct { font-size:11px; font-weight:700; color:var(--primary); min-width:32px; text-align:right; }
+
+  /* FUNIL */
+  .funil-item { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+  .funil-nome { font-size:13px; font-weight:600; color:var(--text-secondary); min-width:160px; }
+  .funil-bar-wrap { flex:1; height:28px; background:var(--border-light); border-radius:8px; overflow:hidden; position:relative; }
+  .funil-bar { height:100%; border-radius:8px; display:flex; align-items:center; padding-left:10px; font-size:12px; font-weight:700; color:#fff; min-width:30px; transition:width .6s; }
+  .funil-count { font-size:13px; font-weight:700; color:var(--text-secondary); min-width:32px; text-align:right; }
+
+  /* LOADING */
+  .loading { text-align:center; padding:40px; color:var(--text-light); }
+  .loading i { font-size:28px; display:block; margin-bottom:10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+  <div class="page-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+    <h1 class="page-title"><i class="fas fa-chart-bar" style="color:var(--primary)"></i> Desempenho</h1>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <div class="periodo-sel">
+        <button class="btn-secondary" id="btn-mes" onclick="setPeriodo('mes',this)">Este m&ecirc;s</button>
+        <button class="btn-secondary" id="btn-semana" onclick="setPeriodo('semana',this)">7 dias</button>
+        <button class="btn-secondary" id="btn-trimestre" onclick="setPeriodo('trimestre',this)">Trimestre</button>
+      </div>
+      <a href="{% url 'crm:metas' %}" class="btn-primary"><i class="fas fa-bullseye"></i> Metas</a>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-grid" id="stats-row">
+    <div class="stat-card" style="display:flex; align-items:center; gap:14px;">
+      <div class="stat-icon" style="background:var(--primary)"><i class="fas fa-trophy"></i></div>
+      <div><div class="stat-label">Vendas fechadas</div><div class="stat-value" id="s-vendas">&mdash;</div></div>
+    </div>
+    <div class="stat-card" style="display:flex; align-items:center; gap:14px;">
+      <div class="stat-icon" style="background:var(--success)"><i class="fas fa-dollar-sign"></i></div>
+      <div><div class="stat-label">Receita gerada</div><div class="stat-value" id="s-valor">&mdash;</div></div>
+    </div>
+    <div class="stat-card" style="display:flex; align-items:center; gap:14px;">
+      <div class="stat-icon" style="background:var(--info)"><i class="fas fa-briefcase"></i></div>
+      <div><div class="stat-label">Em andamento</div><div class="stat-value" id="s-ativas">&mdash;</div></div>
+    </div>
+    <div class="stat-card" style="display:flex; align-items:center; gap:14px;">
+      <div class="stat-icon" style="background:var(--warning)"><i class="fas fa-users"></i></div>
+      <div><div class="stat-label">Vendedores ativos</div><div class="stat-value">{{ vendedores|length }}</div></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- RANKING VENDEDORES -->
+    <div class="card" style="padding:0;">
+      <div class="card-header"><h3><i class="fas fa-medal" style="color:var(--warning)"></i> Ranking de Vendedores</h3></div>
+      <div class="card-body" style="padding:0">
+        <div id="tabela-vendedores"><div class="loading"><i class="fas fa-spinner fa-spin"></i>Carregando...</div></div>
+      </div>
+    </div>
+
+    <!-- FUNIL POR ESTAGIO -->
+    <div class="card" style="padding:0;">
+      <div class="card-header"><h3><i class="fas fa-filter" style="color:var(--primary)"></i> Funil por Est&aacute;gio</h3></div>
+      <div class="card-body">
+        <div id="funil-estagios"><div class="loading"><i class="fas fa-spinner fa-spin"></i>Carregando...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART -->
+  <div class="card" style="padding:0;">
+    <div class="card-header"><h3><i class="fas fa-chart-line" style="color:var(--primary)"></i> Vendas vs Meta (por vendedor)</h3></div>
+    <div class="card-body"><canvas id="chartVendas" height="80"></canvas></div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const URL_DADOS = "{% url 'crm:api_desempenho_dados' %}";
+let periodo = 'mes';
+let chartInstance = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btn-mes').classList.add('active');
+  carregar();
+});
+
+function setPeriodo(p, btn) {
+  periodo = p;
+  document.querySelectorAll('.periodo-sel .btn-secondary').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  carregar();
+}
+
+async function carregar() {
+  try {
+    const res = await fetch(`${URL_DADOS}?periodo=${periodo}`);
+    const data = await res.json();
+    if (!data.ok) return;
+    renderTabela(data.vendedores);
+    renderFunil(data.funil);
+    renderChart(data.vendedores);
+    renderStats(data.vendedores);
+  } catch(e) { console.error(e); }
+}
+
+function fmt(v) { return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v); }
+
+function renderStats(vendedores) {
+  const totalVendas = vendedores.reduce((a,v)=>a+v.vendas_quantidade,0);
+  const totalValor  = vendedores.reduce((a,v)=>a+v.vendas_valor,0);
+  const totalAtivas = vendedores.reduce((a,v)=>a+v.oportunidades_ativas,0);
+  document.getElementById('s-vendas').textContent = totalVendas;
+  document.getElementById('s-valor').textContent  = fmt(totalValor);
+  document.getElementById('s-ativas').textContent = totalAtivas;
+}
+
+function renderTabela(vendedores) {
+  if (!vendedores.length) {
+    document.getElementById('tabela-vendedores').innerHTML = '<div class="loading"><i class="fas fa-users"></i>Nenhum dado.</div>';
+    return;
+  }
+  const maxV = Math.max(...vendedores.map(v=>v.meta_quantidade||v.vendas_quantidade||1),1);
+  document.getElementById('tabela-vendedores').innerHTML = `
+  <table class="data-table">
+    <thead><tr>
+      <th>#</th><th>Vendedor</th><th>Vendas</th><th>vs Meta</th><th>Receita</th><th>Em aberto</th>
+    </tr></thead>
+    <tbody>
+    ${vendedores.map((v,i)=>{
+      const pct = v.meta_quantidade > 0 ? Math.min(Math.round(v.vendas_quantidade/v.meta_quantidade*100),100) : 0;
+      const ini = (v.nome||'?').split(' ').filter(Boolean).map(p=>p[0]).slice(0,2).join('').toUpperCase();
+      return `<tr>
+        <td style="color:var(--text-light);font-weight:700">${i+1}</td>
+        <td><div class="vendedor-nome"><div class="av">${ini}</div>${v.nome}</div></td>
+        <td style="font-weight:700;color:var(--text-main)">${v.vendas_quantidade}</td>
+        <td style="min-width:140px">
+          <div class="prog-wrap">
+            <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+            <span class="prog-pct">${pct}%</span>
+          </div>
+          ${v.meta_quantidade>0?`<div style="font-size:10px;color:var(--text-light)">Meta: ${v.meta_quantidade}</div>`:''}
+        </td>
+        <td style="font-weight:600;color:var(--success)">${fmt(v.vendas_valor)}</td>
+        <td style="color:var(--text-muted)">${v.oportunidades_ativas}</td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table>`;
+}
+
+function renderFunil(funil) {
+  const max = Math.max(...funil.map(f=>f.total),1);
+  document.getElementById('funil-estagios').innerHTML = funil.map(f=>{
+    const pct = Math.max(Math.round(f.total/max*100),f.total>0?8:0);
+    return `<div class="funil-item">
+      <div class="funil-nome">${f.estagio}</div>
+      <div class="funil-bar-wrap">
+        <div class="funil-bar" style="width:${pct}%;background:${f.cor}">${f.total>0?f.total:''}</div>
+      </div>
+      <div class="funil-count">${f.total}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderChart(vendedores) {
+  const nomes  = vendedores.map(v=>v.nome.split(' ')[0]);
+  const vendas = vendedores.map(v=>v.vendas_quantidade);
+  const metas  = vendedores.map(v=>v.meta_quantidade);
+
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(document.getElementById('chartVendas'), {
+    type: 'bar',
+    data: {
+      labels: nomes,
+      datasets: [
+        { label:'Vendas', data:vendas, backgroundColor:'rgba(59,130,246,.8)', borderRadius:6 },
+        { label:'Meta',   data:metas,  backgroundColor:'rgba(99,102,241,.2)', borderRadius:6, borderDash:[4,2] },
+      ]
+    },
+    options: {
+      responsive:true, plugins:{ legend:{ position:'top' } },
+      scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1 } } }
+    }
+  });
+}
+</script>
+{% endblock %}

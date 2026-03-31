@@ -1,0 +1,389 @@
+{% extends 'vendas_web/base.html' %}
+{% block extra_css %}
+<style>
+  /* META CARD — component specific */
+  .meta-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; }
+  .meta-card { background:var(--bg-white); border-radius:12px; border:1px solid var(--border); padding:16px 18px; position:relative; }
+  .meta-card-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:12px; }
+  .meta-card-title { font-size:14px; font-weight:700; color:var(--text-main); margin-bottom:2px; }
+  .meta-card-sub { font-size:12px; color:var(--text-light); }
+  .meta-tipo-badge { font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; text-transform:uppercase; letter-spacing:.04em; }
+  .meta-tipo-individual { background:var(--primary-light); color:var(--primary); }
+  .meta-tipo-equipe { background:var(--success-light); color:var(--success); }
+
+  /* PROGRESS */
+  .meta-metrics { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .metric-label { font-size:10px; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+  .metric-values { display:flex; align-items:baseline; gap:4px; margin-bottom:4px; }
+  .metric-real { font-size:18px; font-weight:800; color:var(--text-main); }
+  .metric-meta { font-size:12px; color:var(--text-light); }
+  .prog-bar { height:6px; background:var(--border); border-radius:99px; overflow:hidden; }
+  .prog-fill { height:100%; border-radius:99px; transition:width .6s; }
+  .prog-fill-ok { background:var(--primary); }
+  .prog-fill-warn { background:var(--warning); }
+  .prog-fill-danger { background:var(--danger); }
+  .prog-pct { font-size:10px; font-weight:700; margin-top:2px; }
+  .pct-ok { color:var(--primary); }
+  .pct-warn { color:var(--warning); }
+  .pct-danger { color:var(--danger); }
+
+  .meta-actions { display:flex; gap:6px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border-light); }
+
+  /* STAT ICON — colored icon circles */
+  .stat-icon { width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.1rem; flex-shrink:0; }
+
+  /* CARD HEADER/BODY */
+  .card-header { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .card-header h3 { font-size:14px; font-weight:700; color:var(--text-main); margin:0; display:flex; align-items:center; gap:8px; }
+  .card-body { padding:18px; }
+
+  /* TIPO TOGGLE */
+  .tipo-toggle { display:flex; gap:8px; }
+  .tipo-btn { flex:1; padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--bg-white); cursor:pointer; font-size:12px; font-weight:600; color:var(--text-muted); text-align:center; transition:all .2s; }
+  .tipo-btn.active { background:var(--primary); color:#fff; border-color:transparent; }
+
+  /* EMPTY */
+  .empty { text-align:center; padding:48px 24px; color:var(--text-light); }
+  .empty i { font-size:36px; display:block; margin-bottom:12px; opacity:.4; }
+  .empty p { font-size:14px; }
+
+  /* FORM ROW */
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+  <div class="page-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+    <h1 class="page-title"><i class="fas fa-bullseye" style="color:var(--primary)"></i> Metas de Vendas</h1>
+    <div style="display:flex; gap:8px;">
+      <a href="{% url 'crm:desempenho' %}" class="btn-secondary"><i class="fas fa-chart-bar"></i> Desempenho</a>
+      <button class="btn-primary" onclick="abrirModalNovaMeta()"><i class="fas fa-plus"></i> Nova Meta</button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-grid">
+    <div class="stat-card" style="display:flex; align-items:center; gap:14px;">
+      <div class="stat-icon" style="background:var(--primary)"><i class="fas fa-bullseye"></i></div>
+      <div><div class="stat-label">Metas ativas</div><div class="stat-value">{{ metas_ativas|length }}</div></div>
+    </div>
+    <div class="stat-card" style="display:flex; align-items:center; gap:14px;">
+      <div class="stat-icon" style="background:var(--success)"><i class="fas fa-user-check"></i></div>
+      <div><div class="stat-label">Acima de 80%</div><div class="stat-value" id="s-acima">&mdash;</div></div>
+    </div>
+    <div class="stat-card" style="display:flex; align-items:center; gap:14px;">
+      <div class="stat-icon" style="background:var(--warning)"><i class="fas fa-exclamation-triangle"></i></div>
+      <div><div class="stat-label">Em risco (&lt; 50%)</div><div class="stat-value" id="s-risco">&mdash;</div></div>
+    </div>
+    <div class="stat-card" style="display:flex; align-items:center; gap:14px;">
+      <div class="stat-icon" style="background:var(--info)"><i class="fas fa-users"></i></div>
+      <div><div class="stat-label">Vendedores</div><div class="stat-value">{{ vendedores|length }}</div></div>
+    </div>
+  </div>
+
+  <!-- METAS INDIVIDUAIS -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header">
+      <h3><i class="fas fa-user" style="color:var(--primary)"></i> Metas Individuais</h3>
+    </div>
+    <div class="card-body">
+      {% with metas_individuais=metas_ativas|dictsort:"vendedor" %}
+      {% if metas_ativas %}
+      <div class="meta-grid" id="meta-grid">
+        {% for meta in metas_ativas %}
+        {% if meta.tipo == 'individual' %}
+        {% with pqt=meta.percentual_quantidade pval=meta.percentual_valor %}
+        <div class="meta-card" data-pqt="{{ pqt }}" data-pval="{{ pval }}">
+          <div class="meta-card-header">
+            <div>
+              <div class="meta-card-title">
+                {% if meta.vendedor %}{{ meta.vendedor.get_full_name|default:meta.vendedor.username }}{% elif meta.equipe %}{{ meta.equipe.nome }}{% endif %}
+              </div>
+              <div class="meta-card-sub">{{ meta.get_periodo_display }} &mdash; {{ meta.data_inicio|date:"d/m/Y" }} a {{ meta.data_fim|date:"d/m/Y" }}</div>
+            </div>
+            <span class="meta-tipo-badge meta-tipo-{{ meta.tipo }}">
+              {% if meta.tipo == 'individual' %}Individual{% else %}Equipe{% endif %}
+            </span>
+          </div>
+
+          <div class="meta-metrics">
+            {% if meta.meta_vendas_quantidade > 0 %}
+            <div class="metric-item">
+              <div class="metric-label">Vendas (qtd)</div>
+              <div class="metric-values">
+                <span class="metric-real">{{ meta.realizado_vendas_quantidade }}</span>
+                <span class="metric-meta">/ {{ meta.meta_vendas_quantidade }}</span>
+              </div>
+              {% with pct=pqt %}
+              <div class="prog-bar">
+                <div class="prog-fill {% if pct >= 80 %}prog-fill-ok{% elif pct >= 50 %}prog-fill-warn{% else %}prog-fill-danger{% endif %}" style="width:{{ pct|floatformat:0 }}%"></div>
+              </div>
+              <div class="prog-pct {% if pct >= 80 %}pct-ok{% elif pct >= 50 %}pct-warn{% else %}pct-danger{% endif %}">{{ pct|floatformat:0 }}%</div>
+              {% endwith %}
+            </div>
+            {% endif %}
+
+            {% if meta.meta_vendas_valor > 0 %}
+            <div class="metric-item">
+              <div class="metric-label">Receita</div>
+              <div class="metric-values">
+                <span class="metric-real" style="font-size:14px">R$ {{ meta.realizado_vendas_valor|floatformat:0 }}</span>
+              </div>
+              <div class="metric-values" style="margin-bottom:4px"><span class="metric-meta">Meta: R$ {{ meta.meta_vendas_valor|floatformat:0 }}</span></div>
+              {% with pct=pval %}
+              <div class="prog-bar">
+                <div class="prog-fill {% if pct >= 80 %}prog-fill-ok{% elif pct >= 50 %}prog-fill-warn{% else %}prog-fill-danger{% endif %}" style="width:{{ pct|floatformat:0 }}%"></div>
+              </div>
+              <div class="prog-pct {% if pct >= 80 %}pct-ok{% elif pct >= 50 %}pct-warn{% else %}pct-danger{% endif %}">{{ pct|floatformat:0 }}%</div>
+              {% endwith %}
+            </div>
+            {% endif %}
+
+            {% if meta.meta_leads_qualificados > 0 %}
+            <div class="metric-item">
+              <div class="metric-label">Leads qualificados</div>
+              <div class="metric-values">
+                <span class="metric-real">{{ meta.realizado_leads_qualificados|default:0 }}</span>
+                <span class="metric-meta">/ {{ meta.meta_leads_qualificados }}</span>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="meta-actions">
+            <button class="btn-secondary btn-sm" onclick="editarMeta({{ meta.pk }})"><i class="fas fa-edit"></i> Editar</button>
+            <button class="btn-danger btn-sm" onclick="excluirMeta({{ meta.pk }}, '{{ meta.vendedor.get_full_name|default:meta.vendedor.username|escapejs }}')"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+        {% endwith %}
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty">
+        <i class="fas fa-bullseye"></i>
+        <p>Nenhuma meta ativa. Crie a primeira meta para come&ccedil;ar a acompanhar o desempenho.</p>
+        <button class="btn-primary" onclick="abrirModalNovaMeta()" style="margin-top:12px"><i class="fas fa-plus"></i> Criar Meta</button>
+      </div>
+      {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+
+  <!-- METAS DE EQUIPE -->
+  {% with metas_equipe=metas_ativas|dictsort:"equipe" %}
+  {% for meta in metas_ativas %}{% if meta.tipo == 'equipe' %}{% if forloop.first %}
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header">
+      <h3><i class="fas fa-users" style="color:var(--success)"></i> Metas de Equipe</h3>
+    </div>
+    <div class="card-body">
+      <div class="meta-grid">
+  {% endif %}
+        <div class="meta-card">
+          <div class="meta-card-header">
+            <div>
+              <div class="meta-card-title">{{ meta.equipe.nome }}</div>
+              <div class="meta-card-sub">{{ meta.get_periodo_display }} &mdash; {{ meta.data_inicio|date:"d/m/Y" }} a {{ meta.data_fim|date:"d/m/Y" }}</div>
+            </div>
+            <span class="meta-tipo-badge meta-tipo-equipe">Equipe</span>
+          </div>
+          <div class="meta-metrics">
+            {% if meta.meta_vendas_quantidade > 0 %}
+            <div class="metric-item">
+              <div class="metric-label">Vendas (qtd)</div>
+              <div class="metric-values">
+                <span class="metric-real">{{ meta.realizado_vendas_quantidade }}</span>
+                <span class="metric-meta">/ {{ meta.meta_vendas_quantidade }}</span>
+              </div>
+              {% with pct=meta.percentual_quantidade %}
+              <div class="prog-bar"><div class="prog-fill {% if pct >= 80 %}prog-fill-ok{% elif pct >= 50 %}prog-fill-warn{% else %}prog-fill-danger{% endif %}" style="width:{{ pct|floatformat:0 }}%"></div></div>
+              <div class="prog-pct {% if pct >= 80 %}pct-ok{% elif pct >= 50 %}pct-warn{% else %}pct-danger{% endif %}">{{ pct|floatformat:0 }}%</div>
+              {% endwith %}
+            </div>
+            {% endif %}
+          </div>
+          <div class="meta-actions">
+            <button class="btn-secondary btn-sm" onclick="editarMeta({{ meta.pk }})"><i class="fas fa-edit"></i> Editar</button>
+            <button class="btn-danger btn-sm" onclick="excluirMeta({{ meta.pk }}, '{{ meta.equipe.nome|escapejs }}')"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+  {% if forloop.last %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}{% endfor %}
+  {% endwith %}
+
+<!-- MODAL NOVA / EDITAR META -->
+<div class="modal-overlay" id="modal-meta" style="display:none">
+  <div class="modal-content">
+    <button class="modal-close" onclick="fecharModal()"><i class="fas fa-times"></i></button>
+    <h3 id="modal-titulo" style="font-size:16px;font-weight:700;color:var(--text-main);margin:0 0 20px;">Nova Meta</h3>
+    <form id="form-meta" method="post" action="{% url 'crm:api_meta_salvar' %}">
+      {% csrf_token %}
+      <input type="hidden" name="meta_id" id="meta-id">
+
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <div class="tipo-toggle">
+          <button type="button" class="tipo-btn active" id="tipo-individual" onclick="setTipo('individual')"><i class="fas fa-user"></i> Individual</button>
+          <button type="button" class="tipo-btn" id="tipo-equipe" onclick="setTipo('equipe')"><i class="fas fa-users"></i> Equipe</button>
+        </div>
+        <input type="hidden" name="tipo" id="campo-tipo" value="individual">
+      </div>
+
+      <div class="form-group" id="campo-vendedor-wrap">
+        <label class="form-label">Vendedor</label>
+        <select name="vendedor_id" id="campo-vendedor" class="form-control">
+          <option value="">Selecione...</option>
+          {% for v in vendedores %}
+          <option value="{{ v.pk }}">{{ v.get_full_name|default:v.username }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group" id="campo-equipe-wrap" style="display:none">
+        <label class="form-label">Equipe</label>
+        <select name="equipe_id" id="campo-equipe" class="form-control">
+          <option value="">Selecione...</option>
+          {% for eq in equipes %}
+          <option value="{{ eq.pk }}">{{ eq.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Per&iacute;odo</label>
+        <select name="periodo" class="form-control" id="campo-periodo" onchange="ajustarDatas()">
+          <option value="mensal">Mensal</option>
+          <option value="trimestral">Trimestral</option>
+          <option value="semestral">Semestral</option>
+          <option value="anual">Anual</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Data in&iacute;cio</label>
+          <input type="date" name="data_inicio" id="campo-inicio" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data fim</label>
+          <input type="date" name="data_fim" id="campo-fim" class="form-control">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Meta vendas (qtd)</label>
+          <input type="number" name="meta_vendas_quantidade" id="campo-qtd" class="form-control" min="0" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Meta receita (R$)</label>
+          <input type="number" name="meta_vendas_valor" id="campo-valor" class="form-control" min="0" step="0.01" placeholder="0,00">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Meta leads qualificados</label>
+        <input type="number" name="meta_leads_qualificados" class="form-control" min="0" placeholder="0">
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button type="button" class="btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Meta</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Calcular stats
+document.addEventListener('DOMContentLoaded', () => {
+  const cards = document.querySelectorAll('.meta-card');
+  let acima = 0, risco = 0;
+  cards.forEach(c => {
+    const pqt = parseFloat(c.dataset.pqt||0);
+    const pval = parseFloat(c.dataset.pval||0);
+    const max = Math.max(pqt, pval);
+    if (max >= 80) acima++;
+    if (max < 50) risco++;
+  });
+  document.getElementById('s-acima').textContent = acima;
+  document.getElementById('s-risco').textContent = risco;
+
+  // data padrão
+  const hoje = new Date();
+  document.getElementById('campo-inicio').value = hoje.toISOString().slice(0,10);
+  ajustarDatas();
+});
+
+let tipoAtual = 'individual';
+
+function setTipo(t) {
+  tipoAtual = t;
+  document.getElementById('campo-tipo').value = t;
+  document.getElementById('tipo-individual').classList.toggle('active', t==='individual');
+  document.getElementById('tipo-equipe').classList.toggle('active', t==='equipe');
+  document.getElementById('campo-vendedor-wrap').style.display = t==='individual' ? '' : 'none';
+  document.getElementById('campo-equipe-wrap').style.display = t==='equipe' ? '' : 'none';
+}
+
+function ajustarDatas() {
+  const periodo = document.getElementById('campo-periodo').value;
+  const inicio = new Date(document.getElementById('campo-inicio').value || new Date());
+  let fim = new Date(inicio);
+  if (periodo === 'mensal') { fim.setMonth(fim.getMonth()+1); fim.setDate(fim.getDate()-1); }
+  else if (periodo === 'trimestral') { fim.setMonth(fim.getMonth()+3); fim.setDate(fim.getDate()-1); }
+  else if (periodo === 'semestral') { fim.setMonth(fim.getMonth()+6); fim.setDate(fim.getDate()-1); }
+  else if (periodo === 'anual') { fim.setFullYear(fim.getFullYear()+1); fim.setDate(fim.getDate()-1); }
+  document.getElementById('campo-fim').value = fim.toISOString().slice(0,10);
+}
+
+function abrirModalNovaMeta() {
+  document.getElementById('modal-titulo').textContent = 'Nova Meta';
+  document.getElementById('form-meta').reset();
+  document.getElementById('meta-id').value = '';
+  setTipo('individual');
+  const hoje = new Date();
+  document.getElementById('campo-inicio').value = hoje.toISOString().slice(0,10);
+  ajustarDatas();
+  document.getElementById('modal-meta').style.display = 'flex';
+}
+
+function fecharModal() {
+  document.getElementById('modal-meta').style.display = 'none';
+}
+
+function editarMeta(pk) {
+  document.getElementById('modal-titulo').textContent = 'Editar Meta';
+  document.getElementById('meta-id').value = pk;
+  document.getElementById('modal-meta').style.display = 'flex';
+}
+
+function excluirMeta(pk, nome) {
+  if (!confirm(`Excluir a meta de "${nome}"?`)) return;
+  const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  fetch(`/crm/metas/${pk}/excluir/`, {
+    method:'POST',
+    headers:{'X-CSRFToken': csrf}
+  }).then(r => r.json()).then(d => { if (d.ok) location.reload(); });
+}
+
+document.getElementById('form-meta').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const fd = new FormData(this);
+  fetch(this.action, { method:'POST', body:fd })
+    .then(r => r.json())
+    .then(d => { if (d.ok) location.reload(); else alert(d.erro||'Erro ao salvar.'); });
+});
+
+document.getElementById('modal-meta').addEventListener('click', function(e) {
+  if (e.target === this) fecharModal();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,1564 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Participar - Carregando...</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-blue: #000b4a;
+            --primary-rgb: 0, 11, 74;
+            --secondary-gold: #ffcc00;
+            --accent-red: #e53e3e;
+            --white: #ffffff;
+            --gray-100: #f7fafc;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: var(--primary-blue);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .main-container {
+            display: flex;
+            max-width: 1200px;
+            width: 100%;
+            background: var(--primary-blue);
+            border-radius: 30px;
+            overflow: hidden;
+        }
+
+        .left-panel {
+            flex: 1 1 50%;
+            width: 50%;
+            background: rgba(255,255,255,0.04);
+            border-right: 1px solid rgba(255,255,255,0.08);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            min-height: 600px;
+        }
+
+        .right-panel {
+            flex: 1;
+            width: 100%;
+            padding: 40px;
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .roulette-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 1;
+        }
+
+        .roulette-wrapper img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .pointer {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            z-index: 10;
+            filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.3));
+        }
+
+        .form-container {
+            background: white;
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+        }
+
+        #result-area {
+            color: white;
+        }
+
+        .form-header {
+            margin-bottom: 40px;
+        }
+
+        .form-header h2 {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--primary-blue);
+            margin-bottom: 10px;
+        }
+
+        .form-header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 8px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #edf2f7;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.1);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            background: var(--primary-blue);
+            color: var(--white);
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(var(--primary-rgb), 0.2);
+            background: #001275;
+        }
+
+        .btn-primary:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .step-progress {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .step {
+            flex: 1;
+            height: 6px;
+            background: #edf2f7;
+            border-radius: 3px;
+            position: relative;
+        }
+
+        .step.active {
+            background: var(--primary-blue);
+        }
+
+        .form-step-content {
+            display: none;
+        }
+
+        .form-step-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .selection-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .selection-card {
+            padding: 20px;
+            border: 2px solid #edf2f7;
+            border-radius: 15px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .selection-card:hover {
+            border-color: var(--primary-blue);
+            background: rgba(var(--primary-rgb), 0.02);
+        }
+
+        .selection-card.active {
+            border-color: var(--primary-blue);
+            background: rgba(var(--primary-rgb), 0.05);
+        }
+
+        .selection-card i {
+            font-size: 24px;
+            color: var(--primary-blue);
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .selection-card span {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .question-text {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--primary-blue);
+        }
+
+        .global-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 11, 74, 0.85);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: opacity 0.3s ease;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #ffcc00;
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 900px) {
+            body {
+                padding: 10px;
+            }
+
+            .main-container {
+                flex-direction: column;
+                border-radius: 20px;
+            }
+
+            .left-panel {
+                width: 100%;
+                padding: 30px 20px;
+                min-height: unset;
+                aspect-ratio: 1/1.2;
+            }
+
+            .right-panel {
+                width: 100%;
+                padding: 30px 20px;
+                background: transparent;
+            }
+
+            .roulette-wrapper {
+                max-width: 320px;
+            }
+
+            .form-header h2 {
+                font-size: 24px;
+            }
+        }
+
+        .btn-spin {
+            display: block;
+            margin: 0 auto;
+            width: 100%;
+            max-width: 300px;
+            padding: 16px 20px;
+            font-size: 16px;
+            font-weight: 800;
+            background: white;
+            color: var(--primary-blue);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            border-radius: 12px;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-spin:active {
+            transform: scale(0.98);
+        }
+
+        .user-info-box {
+            background: rgba(var(--primary-rgb), 0.03);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(var(--primary-rgb), 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+            gap: 10px;
+        }
+
+        @media (max-width: 480px) {
+            .user-info-box {
+                flex-wrap: wrap;
+            }
+
+            .btn-logout {
+                margin-left: auto;
+            }
+        }
+
+        .btn-logout {
+            padding: 6px 10px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .btn-logout:hover {
+            background: #f1f5f9;
+            color: var(--primary-blue);
+            border-color: var(--primary-blue);
+        }
+
+        /* Gamification Styles */
+        .level-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.4);
+        }
+
+        .xp-bar-container {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            margin-top: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .xp-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 1s ease-out;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+
+        .mission-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 11, 74, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .mission-modal-content {
+            background: #fff;
+            width: 100%;
+            max-width: 500px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.3s ease-out;
+            position: relative;
+        }
+
+        .mission-header {
+            background: var(--primary-blue);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .mission-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .mission-close:hover {
+            color: white;
+        }
+
+        .mission-list {
+            padding: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .mission-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--gray-100);
+            border: 1px solid #edf2f7;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            transition: transform 0.2s;
+        }
+
+        .mission-card:hover {
+            border-color: #cbd5e0;
+            transform: translateY(-2px);
+        }
+
+        .mission-card.completed {
+            opacity: 0.6;
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+
+        .mission-icon {
+            font-size: 24px;
+            color: var(--primary-blue);
+            width: 40px;
+            text-align: center;
+        }
+
+        .mission-card.completed .mission-icon {
+            color: #22c55e;
+        }
+
+        .mission-reward {
+            background: #ebf8ff;
+            color: #3182ce;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .mission-reward.completed {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Custom Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-container {
+            background: white;
+            width: 90%;
+            max-width: 450px;
+            border-radius: 24px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-overlay.active .modal-container {
+            transform: scale(1);
+        }
+
+        .modal-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 30px;
+        }
+
+        .modal-icon.success {
+            background: #dcfce7;
+            color: #22c55e;
+        }
+
+        .modal-icon.error {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        .modal-icon.info {
+            background: #eff6ff;
+            color: #3b82f6;
+        }
+
+        .modal-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: #1e293b;
+            margin-bottom: 12px;
+        }
+
+        .modal-message {
+            font-size: 16px;
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 25px;
+            white-space: pre-wrap;
+        }
+
+        .modal-btn {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.2);
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(var(--primary-rgb), 0.3);
+            filter: brightness(1.1);
+        }
+
+        .modal-btn:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Mission Modal -->
+    <div class="mission-modal" id="mission-modal">
+        <div class="mission-modal-content">
+            <div class="mission-close" onclick="$('#mission-modal').fadeOut()"><i class="fas fa-times"></i></div>
+            <div class="mission-header">
+                <i class="fas fa-tasks" style="font-size: 40px; color: var(--secondary-gold); margin-bottom: 15px;"></i>
+                <h2>Missões Extras</h2>
+                <p style="font-size: 14px; opacity: 0.8; margin-top: 5px;">Conclua desafios para ganhar giros grátis e
+                    XP!</p>
+            </div>
+            <div class="mission-list" id="mission-list">
+                <!-- Injetado via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Loading Overlay -->
+    <div class="global-overlay" id="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <h3 id="loading-text" style="font-weight: 600; font-size: 18px;">Processando...</h3>
+    </div>
+
+    <div class="main-container" style="max-width:520px;">
+        <!-- Left Panel: Hidden (roleta moved to /membro/jogar/) -->
+        <div class="left-panel" style="display:none;">
+            <div class="roulette-wrapper" id="roulette-wrapper">
+                <div style="display:flex; align-items:center; justify-content:center; width:100%; height:400px; color:#94a3b8;">
+                    <i class="fas fa-spinner fa-spin" style="font-size:32px;"></i>
+                </div>
+            </div>
+            <div id="roulette-action-area"
+                style="width: 100%; max-width: 400px; margin: 25px auto 0 auto; display: none;">
+                <!-- O botão "GIRAR!" será injetado aqui -->
+            </div>
+        </div>
+
+        <!-- Right Panel: Form Flow -->
+        <div class="right-panel">
+            <div class="form-container">
+
+                <!-- Formulário Base (Invisível no início) -->
+                <form id="multiStepForm" action="/roleta/cadastrar/" method="POST" style="display: none;">
+                    {% csrf_token %}
+                    <div class="step-progress">
+                        <div class="step active" id="step-nav-1"></div>
+                        <div class="step" id="step-nav-2"></div>
+                        <div class="step" id="step-nav-3"></div>
+                        <div class="step" id="step-nav-4"></div>
+                    </div>
+
+                    <!-- STEP 1: Perfil -->
+                    <div class="form-step-content active" id="step-1">
+                        <div id="saldo-container"
+                            style="display:none; background: rgba(var(--primary-rgb), 0.1); padding: 15px; border-radius: 12px; margin-bottom: 25px; text-align: center;">
+                            <div style="font-size: 13px; color: var(--primary-blue); font-weight: 600;">SEU SALDO ATUAL
+                            </div>
+                            <div id="saldo-valor" style="font-size: 24px; font-weight: 800; color: #000b4a;">0 PONTOS
+                            </div>
+                            <div style="font-size: 11px; color: #666; margin-top: 5px;">Custo por giro: <span
+                                    id="custo-giro-display"></span> pontos</div>
+                        </div>
+
+                        <p class="question-text">Você já é cliente Megalink?</p>
+                        <div class="selection-container">
+                            <div class="selection-card" onclick="selectProfile('sim')">
+                                <i class="fas fa-user-check"></i>
+                                <span>Sim, já sou</span>
+                            </div>
+                            <div class="selection-card" onclick="selectProfile('nao')">
+                                <i class="fas fa-user-plus"></i>
+                                <span>Ainda não</span>
+                            </div>
+                        </div>
+
+                        <input type="hidden" id="perfil_cliente" name="perfil_cliente" required>
+                        <input type="hidden" id="id_cliente_hubsoft" name="id_cliente_hubsoft">
+                        <button type="button" class="btn-primary" onclick="nextStep(2)"
+                            style="margin-top: 40px;">Continuar</button>
+                        <p style="margin-top: 16px; font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5;">
+                            Contempla somente assinantes pessoa f&iacute;sica dos planos oferecidos pela Megalink Telecom.
+                        </p>
+                    </div>
+
+                    <!-- STEP 2: Dados Pessoais -->
+                    <div class="form-step-content" id="step-2">
+                        <div id="campos-pessoais">
+                            <div class="form-group">
+                                <label for="nome">Nome Completo</label>
+                                <input type="text" class="form-control" id="nome" name="nome" placeholder="Seu nome">
+                            </div>
+                        </div>
+
+                        <div class="row" style="display:flex; gap:15px">
+                            <div class="form-group" style="flex:1">
+                                <label for="cpf">CPF</label>
+                                <input type="text" class="form-control" id="cpf" name="cpf" placeholder="000.000.000-00"
+                                    required>
+                            </div>
+                            <div class="form-group" id="campo-telefone" style="flex:1">
+                                <label for="telefone">Telefone</label>
+                                <input type="text" class="form-control" id="telefone" name="telefone"
+                                    placeholder="(00) 00000-0000">
+                            </div>
+                        </div>
+
+                        <div class="form-group" id="campo-email">
+                            <label for="email">E-mail</label>
+                            <input type="email" class="form-control" id="email" name="email"
+                                placeholder="seu@email.com">
+                        </div>
+
+                        <button type="button" id="btn-next-2" class="btn-primary" onclick="nextStep(3)">Próximo
+                            Passo</button>
+                    </div>
+
+                    <!-- STEP 3: Endereço -->
+                    <div class="form-step-content" id="step-3">
+                        <div class="row" style="display:flex; gap:15px">
+                            <div class="form-group" style="flex:1">
+                                <label for="cep">CEP</label>
+                                <input type="text" class="form-control" id="cep" name="cep"
+                                    onchange="completa_endereco()">
+                            </div>
+                            <div class="form-group" style="flex:2">
+                                <label for="cidade">Cidade</label>
+                                <select class="form-control" id="cidade" name="cidade">
+                                    <option value="" disabled selected>Carregando cidades...</option>
+                                    <!-- Filled by JS -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row" style="display:flex; gap:15px">
+                            <div class="form-group" style="flex:3">
+                                <label for="rua">Rua</label>
+                                <input type="text" class="form-control" id="rua" name="rua">
+                            </div>
+                            <div class="form-group" style="flex:1">
+                                <label for="numero_casa">Nº</label>
+                                <input type="text" class="form-control" id="numero_casa" name="numero_casa">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bairro">Bairro</label>
+                            <input type="text" class="form-control" id="bairro" name="bairro">
+                        </div>
+
+                        <input type="hidden" name="estado" id="estado" value="RS">
+                        <div style="margin-bottom: 20px; font-size: 13px; color: #666;">
+                            <input type="checkbox" id="concordo_termos" checked> Concordo com os
+                            <a href="/static/clube/Regulamento.pdf" style="color:var(--primary-blue)">termos da
+                                promoção</a>
+                        </div>
+
+                        <button type="button" class="btn-primary" onclick="prepareAndRequestOTP()">Finalizar
+                            Cadastro</button>
+                    </div>
+
+                    <!-- STEP 4: OTP Verification -->
+                    <div class="form-step-content" id="step-4">
+                        <div class="form-header" style="text-align: center;">
+                            <i class="fab fa-whatsapp"
+                                style="font-size: 50px; color: #25D366; margin-bottom: 20px;"></i>
+                            <h3>Verificação de Segurança</h3>
+                            <p>Enviamos um código de 6 dígitos para o seu WhatsApp:</p>
+                            <div id="otp-phone-display"
+                                style="font-weight: 800; font-size: 18px; color: var(--primary-blue); margin: 15px 0;">
+                                (X) XXXX-XXXX
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="otp_code">Código de Verificação</label>
+                            <input type="text" class="form-control" id="otp_code" placeholder="000000" maxlength="6"
+                                style="text-align: center; font-size: 24px; letter-spacing: 10px; font-weight: 800;">
+                        </div>
+
+                        <button type="button" id="btn-validar-otp" class="btn-primary" onclick="validarOTP()">Verificar
+                            e Continuar</button>
+
+                        <div style="text-align: center; margin-top: 20px;">
+                            <a href="javascript:void(0)" onclick="solicitarOTP(true)" id="btn-reenviar"
+                                style="font-size: 13px; color: var(--primary-blue); text-decoration: none;">
+                                Não recebeu? Reenviar código
+                            </a>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Result Area (Used for Errors and Ready to Spin message) -->
+                <div class="result-area" id="result-area" style="text-align: center; margin-top: 20px; display: none;">
+                </div>
+
+                <!-- Custom Result Modal -->
+                <div class="modal-overlay" style="display:none" id="customModal">
+                    <div class="modal-container">
+                        <div class="modal-icon" id="modalIcon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="modal-title" id="modalTitle">Resultado</div>
+                        <div class="modal-message" id="modalMessage">Mensagem do resultado.</div>
+                        <button class="modal-btn" onclick="closeCustomModal()">OK</button>
+                    </div>
+                </div>
+
+                <!-- SCRIPTS -->
+                <script src="/static/clube/js/jquery.min.js"></script>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+                <script>
+                    var sorteado = 0;
+                    var premioGanhado = "";
+                    var mensagemSorteio = "";
+                    var lastKnownPhone = "";
+                    var custoGiro = 0;
+
+                    function getCsrfToken() {
+                        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+                    }
+
+                    function showLoading(text) {
+                        $('#loading-text').text(text || 'Processando...');
+                        $('#loading-overlay').css('display', 'flex').hide().fadeIn(200);
+                    }
+
+                    function hideLoading() {
+                        $('#loading-overlay').fadeOut(200);
+                    }
+
+                    function showCustomModal(title, message, type = 'info') {
+                        const modal = $('#customModal');
+                        const icon = $('#modalIcon');
+                        const titleEl = $('#modalTitle');
+                        const messageEl = $('#modalMessage');
+
+                        titleEl.text(title);
+                        messageEl.text(message);
+
+                        icon.removeClass('success error info');
+                        let iconHtml = '<i class="fas fa-info-circle"></i>';
+
+                        if (type === 'success') {
+                            icon.addClass('success');
+                            iconHtml = '<i class="fas fa-check-circle"></i>';
+                        } else if (type === 'error') {
+                            icon.addClass('error');
+                            iconHtml = '<i class="fas fa-times-circle"></i>';
+                        } else {
+                            icon.addClass('info');
+                        }
+
+                        icon.html(iconHtml);
+                        $('.modal-btn').attr('onclick', 'closeCustomModal()');
+                        modal.addClass('active');
+                    }
+
+                    function closeCustomModal() {
+                        $('#customModal').removeClass('active');
+                    }
+
+                    $(document).ready(function () {
+                        // Initialize input masks
+                        $('#cpf').mask('000.000.000-00');
+                        $('#telefone').mask('(00) 00000-0000');
+                        $('#cep').mask('00000-000');
+
+                        // Load Initialization Data via API
+                        showLoading("Carregando ambiente...");
+                        $.ajax({
+                            url: '/roleta/api/init-dados/',
+                            method: 'GET',
+                            success: function (data) {
+                                hideLoading();
+                                // Title and text
+                                $('#nome-clube-display').text(data.nome_clube);
+                                document.title = 'Participar - ' + data.nome_clube;
+                                $('#custo-giro-display').text(data.custo_giro);
+                                custoGiro = data.custo_giro;
+
+                                // Set Cities
+                                let citiesOptions = '<option value="" disabled selected>Selecione sua cidade</option>';
+                                data.cidades.forEach(function (city) {
+                                    citiesOptions += '<option value="' + city + '">' + city + '</option>';
+                                });
+                                $('#cidade').html(citiesOptions);
+
+                                // Set Roulette Assets
+                                let rouletteHtml = '';
+                                let hasFrames = false;
+                                window.maxFrameIdx = 12; // default
+                                let dbMaxFrame = -1;
+
+                                data.assets.forEach(function (asset) {
+                                    if (asset.tipo === "frame") {
+                                        hasFrames = true;
+                                        if (asset.ordem > dbMaxFrame) dbMaxFrame = asset.ordem;
+                                        let idx = ("00" + asset.ordem).slice(-2);
+                                        let display = (asset.ordem !== 0) ? 'style="display:none"' : '';
+                                        rouletteHtml += '<img id="roleta' + idx + '" src="' + asset.imagem_url + '" ' + display + ' alt="Roulette Frame ' + idx + '">';
+                                    } else if (asset.tipo === "background") {
+                                        $('body').css({
+                                            'background-image': 'url(' + asset.imagem_url + ')',
+                                            'background-size': 'cover',
+                                            'background-position': 'center',
+                                            'background-attachment': 'fixed'
+                                        });
+                                    }
+                                });
+
+                                if (hasFrames) {
+                                    window.maxFrameIdx = dbMaxFrame;
+                                } else {
+                                    // Fallback: Add the 13 static images
+                                    for (var i = 0; i <= 12; i++) {
+                                        let idx = ("00" + i).slice(-2);
+                                        let display = (i !== 0) ? 'style="display:none"' : '';
+                                        rouletteHtml += '<img id="roleta' + idx + '" src="/static/clube/images/roletaPremiosVirtuais' + idx + '.png" ' + display + ' alt="Roulette Frame ' + idx + '">';
+                                    }
+                                    window.maxFrameIdx = 12;
+                                }
+
+                                data.assets.forEach(function (asset) {
+                                    if (asset.tipo === "pointer") {
+                                        rouletteHtml += '<img src="' + asset.imagem_url + '" class="pointer" alt="Pointer">';
+                                    }
+                                });
+
+                                if (!hasFrames && data.assets.length === 0) {
+                                    // Default pointer if absolutely nothing in DB
+                                    let inlineSvg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50 100 L0 0 L100 0 Z' fill='%23dc3545' stroke='white' stroke-width='5'/></svg>";
+                                    rouletteHtml += '<img src="' + inlineSvg + '" class="pointer" alt="Pointer" style="width: 40px; height: 40px; filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.3));">';
+                                }
+
+                                $('#roulette-wrapper').html(rouletteHtml);
+
+                                // Handle App State
+                                if (data.erro) {
+                                    $('#multiStepForm').hide();
+                                    $('#result-area').show();
+                                    if (data.erro === 'jah_cadastrado') {
+                                        $('#result-area').html(
+                                            '<div class="error-msg" style="color: #dc3545; padding: 20px; border: 1px solid #f5c6cb; border-radius: 12px; background: #f8d7da;">' +
+                                            '<i class="fas fa-exclamation-circle" style="font-size: 40px; margin-bottom: 20px;"></i>' +
+                                            '<h3 style="margin-bottom: 15px;">Atenção!</h3>' +
+                                            '<p>Olá <strong>' + (data.nome_ganhador || '') + '</strong>! Você já está participando desta promoção.</p>' +
+                                            '<button onclick="window.location.href=\'/roleta/\'" class="btn-primary" style="margin-top: 20px; width: unset; padding: 10px 30px;">Voltar</button>' +
+                                            '</div>'
+                                        );
+                                    } else {
+                                        let limiteVal = data.limite || data.limite_giros_config || data.limite_giros_por_membro || 0;
+                                        let periodoVal = data.periodo || data.periodo_limite_erro || data.periodo_limite || 'total';
+
+                                        if (data.erro === 'limite_giros') {
+                                            let periodoTraduzido = periodoVal === 'diario' ? 'diários' :
+                                                periodoVal === 'semanal' ? 'semanais' :
+                                                    periodoVal === 'mensal' ? 'mensais' : 'no total';
+                                            $('#result-area').html(
+                                                '<div class="error-msg" style="color: #dc3545; padding: 20px; border: 1px solid #f5c6cb; border-radius: 12px; background: #f8d7da;">' +
+                                                '<i class="fas fa-history" style="font-size: 40px; margin-bottom: 20px;"></i>' +
+                                                '<h3>Atenção!</h3><p>Você atingiu o limite de ' + limiteVal + ' giros ' + periodoTraduzido + '!</p>' +
+                                                '<button onclick="window.location.href=\'/roleta/\'" class="btn-primary" style="margin-top: 20px; width: unset; padding: 10px 30px;">Voltar</button>' +
+                                                '</div>'
+                                            );
+                                        } else {
+                                            $('#result-area').html(
+                                                '<div class="error-msg" style="color: #dc3545; padding: 20px; border: 1px solid #f5c6cb; border-radius: 12px; background: #f8d7da;">' +
+                                                '<h3>Atenção!</h3><p>' + data.erro + '</p>' +
+                                                '<button onclick="window.location.href=\'/roleta/\'" class="btn-primary" style="margin-top: 20px; width: unset; padding: 10px 30px;">Voltar</button>' +
+                                                '</div>'
+                                            );
+                                        }
+                                    }
+                                } else if (data.sorteado_pos !== null && data.sorteado_pos !== undefined) {
+                                    // Show "Girar" button directly
+                                    $('#multiStepForm').hide();
+                                    $('#result-area').show();
+                                    sorteado = data.sorteado_pos;
+                                    premioGanhado = data.premio_nome;
+                                    mensagemSorteio = data.mensagem || "";
+
+
+
+                                    let splitNameStatus = data.nome_ganhador ? data.nome_ganhador.split(' ') : ['Cliente'];
+                                    let nomeExibir = splitNameStatus.length > 1 ? splitNameStatus[0] + ' ' + splitNameStatus[1] : splitNameStatus[0];
+                                    let saldoExibido = (data.saldo_atual !== null && data.saldo_atual !== undefined) ? data.saldo_atual : 0;
+
+                                    $('#result-area').html(
+                                        '<div id="ready-to-spin">' +
+                                        '<div class="user-info-box">' +
+                                        '<div style="display: flex; align-items: center; gap: 12px;">' +
+                                        '<div style="background: var(--primary-blue); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(var(--primary-rgb), 0.2); flex-shrink: 0;">' +
+                                        '<i class="fas fa-user" style="font-size: 20px; color: white;"></i>' +
+                                        '</div>' +
+                                        '<div style="text-align: left;">' +
+                                        '<h3 style="color: #1e293b; font-size: 15px; font-weight: 800; margin: 0 0 3px 0; text-transform: uppercase;">' + nomeExibir + '</h3>' +
+                                        '<div style="display: flex; align-items: baseline; gap: 5px;">' +
+                                        '<span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Restante:</span>' +
+                                        '<strong style="font-size: 16px; color: var(--primary-blue); line-height: 1;">' + saldoExibido + ' <span style="font-size: 11px;">PTs</span></strong>' +
+                                        '</div>' +
+                                        '</div>' +
+                                        '</div>' +
+                                        '</div>' +
+                                        '<div style="margin: 30px 0; text-align: center;">' +
+                                        '<h2 style="color: #000b4a; margin-bottom: 10px; font-size: 24px;">Sorteando prêmio...</h2>' +
+                                        '<p style="color: #666; font-size: 16px;">Cruze os dedos!</p>' +
+                                        '</div>' +
+                                        '</div>'
+                                    );
+
+                                    setTimeout(function () {
+                                        iniciarSorteio();
+                                    }, 500);
+                                } else if (data.is_authenticated) {
+                                    // Membro logado: redirecionar para o hub
+                                    window.location.href = '/roleta/membro/';
+                                    return;
+                                } else if (false) {
+                                    $('#multiStepForm').hide();
+                                    $('#result-area').show();
+
+                                    // Store data globally
+                                    window.authData = data;
+                                    window.authMissoes = data.missoes || [];
+                                    window.authCupons = data.cupons || [];
+                                    window.authIndicacao = data.indicacao || {};
+
+                                    let splitName = data.auth_nome ? data.auth_nome.split(' ') : ['Cliente'];
+                                    let nomeExibir = splitName.length > 1 ? splitName[0] + ' ' + splitName[1] : splitName[0];
+                                    let saldoExibido = (data.auth_saldo !== null && data.auth_saldo !== undefined) ? data.auth_saldo : 0;
+
+                                    // Action button for roulette
+                                    let actionHTML = '';
+                                    if (data.auth_saldo >= data.custo_giro) {
+                                        actionHTML = '<form id="authSpinForm">' +
+                                            '<input type="hidden" name="csrfmiddlewaretoken" value="' + getCsrfToken() + '">' +
+                                            '<input type="hidden" name="acao" value="girar">' +
+                                            '<button type="submit" class="btn-spin">USAR ' + data.custo_giro + ' PONTOS E GIRAR!</button>' +
+                                            '</form>';
+                                    } else {
+                                        actionHTML = '<div style="color: #dc3545; padding: 15px; border: 1px solid #f5c6cb; border-radius: 12px; background: #f8d7da; margin-top: 20px;">' +
+                                            '<strong>Saldo Insuficiente.</strong> Você precisa de ' + data.custo_giro + ' pontos para jogar.' +
+                                            '</div>';
+                                    }
+
+                                    // ── Header com voltar ao menu ──
+
+                                    // ── TAB: Roleta (missões) ──
+                                    let missionsHtml = '';
+                                    if (window.authMissoes.length === 0) {
+                                        missionsHtml = '<div style="text-align:center; color:#94a3b8; padding:20px 0; font-size:13px;">Nenhuma missão ativa.</div>';
+                                    } else {
+                                        window.authMissoes.forEach(m => {
+                                            let done = !m.disponivel;
+                                            let icon = done ? '<i class="fas fa-check-circle" style="color:#10b981; font-size:18px;"></i>' : '<i class="fas fa-medal" style="color:#64748b; font-size:18px;"></i>';
+                                            let badge = done ? 'Concluída' : ('+' + m.recompensa_giros + ' G | +' + m.recompensa_xp + ' XP');
+                                            let bg = done ? '#f8fafc' : '#fff';
+                                            let border = done ? '1px solid #e2e8f0' : '1px solid #cbd5e0';
+                                            let badgeStyle = done ? 'color:#10b981; background:#d1fae5;' : 'color:var(--primary-blue); background:#e0e7ff;';
+                                            missionsHtml += '<div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-radius:10px; margin-bottom:8px; background:' + bg + '; border:' + border + ';">' +
+                                                '<div style="display:flex; align-items:center; gap:12px;">' +
+                                                '<div style="width:24px; text-align:center;">' + icon + '</div>' +
+                                                '<div><div style="font-weight:700; color:#1e293b; font-size:13px;">' + m.nome + '</div>' +
+                                                '<div style="font-size:11px; color:#64748b;">' + (m.limite > 0 ? m.concluidas + '/' + m.limite + ' realizadas' : 'Ilimitado') + '</div></div>' +
+                                                '</div>' +
+                                                '<div style="font-size:12px; font-weight:700; padding:6px 10px; border-radius:6px; white-space:nowrap; ' + badgeStyle + '">' + badge + '</div>' +
+                                                '</div>';
+                                        });
+                                    }
+                                    let missionsCard = '<div style="background:white; border:1px solid #edf2f7; border-radius:15px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">' +
+                                        '<h4 style="font-size:13px; font-weight:800; color:#334155; margin:0 0 12px; text-transform:uppercase;"><i class="fas fa-gift" style="color:#fbbf24; margin-right:5px;"></i>Missões para ganhar giros</h4>' +
+                                        '<div style="max-height:300px; overflow-y:auto;">' + missionsHtml + '</div>' +
+                                        '</div>';
+
+                                    // ── Render ──
+                                    $('#result-area').html(
+                                        '<div id="ready-to-spin">' +
+                                        // Header: voltar + nome + saldo
+                                        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">' +
+                                        '<a href="/roleta/membro/" style="display:flex; align-items:center; gap:6px; color:rgba(255,255,255,0.6); font-size:13px; font-weight:600; text-decoration:none;"><i class="fas fa-arrow-left"></i> Menu</a>' +
+                                        '<div style="display:flex; align-items:center; gap:10px;">' +
+                                        '<span style="font-size:13px; font-weight:700; color:white;">' + nomeExibir + '</span>' +
+                                        '<span style="font-size:13px; font-weight:800; color:#fbbf24;">' + saldoExibido + ' PTs</span>' +
+                                        '</div>' +
+                                        '</div>' +
+                                        missionsCard +
+                                        '</div>'
+                                    );
+
+                                    // Renderizar e exibir o botão na área esquerda (debaixo da roleta)
+                                    $('#roulette-action-area').html(actionHTML).fadeIn();
+                                } else {
+                                    // First load, show form
+                                    $('#multiStepForm').show();
+                                    $('#result-area').hide();
+                                    executeTransition(1);
+                                }
+                            },
+                            error: function () {
+                                showCustomModal('Erro de Conexão', 'Erro de conexão ao carregar configurações iniciais.', 'error');
+                            }
+                        });
+                        // Listener para o giro assíncrono do novo botão inserido
+                        $(document).on('submit', '#authSpinForm', function (e) {
+                            e.preventDefault();
+                            showLoading('Preparando roleta...');
+                            $.ajax({
+                                url: '/roleta/cadastrar/',
+                                method: 'POST',
+                                data: $(this).serialize(),
+                                success: function (response) {
+                                    hideLoading();
+                                    if (response.error) {
+                                        if (response.error === 'limite_giros') {
+                                            let periodoTraduzido = response.periodo === 'diario' ? 'diários' :
+                                                response.periodo === 'semanal' ? 'semanais' :
+                                                    response.periodo === 'mensal' ? 'mensais' : 'no total';
+                                            showCustomModal('Limite Atingido', 'Você atingiu o limite de ' + response.limite + ' giros ' + periodoTraduzido + '!', 'error');
+                                        } else if (response.error === 'saldo_insuficiente') {
+                                            showCustomModal('Saldo Insuficiente', 'Você não tem pontos suficientes. Cada giro custa ' + (response.custo || 1) + ' PTs.', 'error');
+                                        } else if (response.error === 'jah_cadastrado') {
+                                            showCustomModal('Atenção', 'Você já participou desta etapa da promoção.', 'error');
+                                        } else {
+                                            showCustomModal('Atenção', response.error, 'error');
+                                        }
+                                    } else if (response.sorteado_pos !== undefined && response.sorteado_pos !== null) {
+                                        sorteado = parseInt(response.sorteado_pos);
+                                        premioGanhado = response.premio_nome;
+                                        mensagemSorteio = response.mensagem || ("Sua consultora entrará em contato em breve.");
+                                        iniciarSorteio(response.saldo_atual);
+                                    } else {
+                                        showCustomModal('Erro', 'Erro ao processar o resultado do sorteio. Tente novamente.', 'error');
+                                    }
+                                },
+                                error: function (xhr) {
+                                    hideLoading();
+                                    showCustomModal('Erro', 'Logado detectado, mas erro ao tentar girar. O saldo de pontos foi mantido.', 'error');
+                                }
+                            });
+                        });
+
+                    });
+
+                    // ------------------ Gamification Render Logic ------------------
+                    // ── Cupom & Indicação Functions ──
+                    function resgatarCupom(cupomId, btn) {
+                        if (!confirm('Confirmar resgate deste cupom?')) return;
+                        btn.disabled = true;
+                        btn.textContent = '...';
+                        $.ajax({
+                            url: '/roleta/api/cupons/resgatar/',
+                            method: 'POST',
+                            data: {
+                                csrfmiddlewaretoken: getCsrfToken(),
+                                cupom_id: cupomId
+                            },
+                            success: function(res) {
+                                if (res.success) {
+                                    showCustomModal('Cupom Resgatado!', 'Seu código: <strong style="font-size:20px; letter-spacing:2px;">' + res.codigo + '</strong><br><br>Apresente este código no estabelecimento.', 'success');
+                                    btn.textContent = 'Resgatado!';
+                                    btn.style.background = '#10b981';
+                                    // Update saldo display
+                                    if (res.saldo_atual !== undefined) {
+                                        $('.user-info-box strong').html(res.saldo_atual + ' <span style="font-size:10px;">PTs</span>');
+                                    }
+                                } else {
+                                    showCustomModal('Erro', res.error || 'Erro ao resgatar cupom.', 'error');
+                                    btn.disabled = false;
+                                    btn.textContent = 'Resgatar';
+                                }
+                            },
+                            error: function() {
+                                showCustomModal('Erro', 'Erro de conexão.', 'error');
+                                btn.disabled = false;
+                                btn.textContent = 'Resgatar';
+                            }
+                        });
+                    }
+
+                    function copiarLinkIndicacao() {
+                        var input = document.getElementById('link-indicacao-input');
+                        input.select();
+                        navigator.clipboard.writeText(input.value).then(function() {
+                            showCustomModal('Link Copiado!', 'Compartilhe com seus amigos para ganhar pontos.', 'success');
+                        });
+                    }
+
+                    function openMissionsModal() {
+                        let listHtml = '';
+
+                        if (window.authMissoes.length === 0) {
+                            listHtml = '<div style="text-align:center; color:#94a3b8; padding:20px;">Nenhuma missão ativa no momento.</div>';
+                        } else {
+                            window.authMissoes.forEach(m => {
+                                let isCompleted = !m.disponivel;
+                                let styleClass = isCompleted ? 'completed' : '';
+                                let iconHtml = isCompleted ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-medal"></i>';
+                                let btnHtml = isCompleted ? 'Concluída' : ('+' + m.recompensa_giros + ' G | +' + m.recompensa_xp + ' XP');
+
+                                listHtml += '<div class="mission-card ' + styleClass + '">' +
+                                    '<div style="display:flex; align-items:center;">' +
+                                    '<div class="mission-icon">' + iconHtml + '</div>' +
+                                    '<div>' +
+                                    '<div style="font-weight: 700; color: #1e293b; font-size: 15px;">' + m.nome + '</div>' +
+                                    '<div style="font-size: 12px; color: #64748b;">' + (m.limite > 0 ? (m.concluidas + '/' + m.limite + ' realizadas') : 'Ilimitado') + '</div>' +
+                                    '</div>' +
+                                    '</div>' +
+                                    '<div class="mission-reward ' + styleClass + '">' + btnHtml + '</div>' +
+                                    '</div>';
+                            });
+                        }
+
+                        $('#mission-list').html(listHtml);
+                        $('#mission-modal').css('display', 'flex').hide().fadeIn();
+                    }
+
+                    // ------------------ Form Logic ------------------
+
+                    function selectProfile(perfil) {
+                        $('.selection-card').removeClass('active');
+                        if (perfil === 'sim') {
+                            $('.selection-card:first').addClass('active');
+                            $('#campos-pessoais, #campo-telefone, #campo-email').hide();
+                            $('#btn-next-2').text('Finalizar e Girar!');
+                            $('#step-nav-3').css('opacity', '0.3');
+                        } else {
+                            $('.selection-card:last').addClass('active');
+                            $('#campos-pessoais, #campo-telefone, #campo-email').show();
+                            $('#btn-next-2').text('Próximo Passo');
+                            $('#step-nav-3').css('opacity', '1');
+                        }
+                        $('#perfil_cliente').val(perfil);
+                    }
+
+                    function executeTransition(step) {
+                        $('.form-step-content').removeClass('active');
+                        $('#step-' + step).addClass('active');
+                        $('.step').removeClass('active');
+                        for (let i = 1; i <= step; i++) {
+                            $('#step-nav-' + i).addClass('active');
+                        }
+                    }
+
+                    function completa_endereco() {
+                        var cep = $("#cep").val().replace(/\D/g, '');
+                        if (cep.length !== 8) return;
+                        $.ajax({ url: "https://viacep.com.br/ws/" + cep + "/json/", cache: false }).done(function (end) {
+                            if (!end.erro) {
+                                $("#rua").val(end.logradouro);
+                                $("#estado").val(end.uf);
+                                $("#bairro").val(end.bairro);
+                                $("#cidade").val(end.localidade);
+                            }
+                        });
+                    }
+
+                    function nextStep(step) {
+                        if (step === 2 && !$('#perfil_cliente').val()) {
+                            alert('Por favor, selecione seu perfil.'); return;
+                        }
+                        if (step === 3) {
+                            const isClient = $('#perfil_cliente').val() === 'sim';
+                            if (isClient) {
+                                if (!$('#cpf').val()) { alert('Por favor, informe seu CPF.'); return; }
+                            } else {
+                                if (!$('#nome').val() || !$('#cpf').val() || !$('#telefone').val()) {
+                                    alert('Por favor, preencha todos os campos obrigatórios.'); return;
+                                }
+                            }
+
+                            const cpfValue = $('#cpf').val();
+                            const btn = $('#step-2 .btn-primary');
+                            const originalText = btn.text();
+                            btn.prop('disabled', true).text('Verificando...');
+
+                            showLoading('Consultando seu cadastro no clube...');
+                            $.ajax({
+                                url: "/roleta/verificar-cliente/",
+                                method: "POST",
+                                data: { 'cpf': cpfValue, 'csrfmiddlewaretoken': getCsrfToken() },
+                                success: function (response) {
+                                    hideLoading();
+                                    btn.prop('disabled', false).text(originalText);
+
+                                    if (response.is_client) {
+                                        $('#perfil_cliente').val('sim');
+                                        $('.selection-card').removeClass('active');
+                                        $('.selection-card:first').addClass('active');
+                                        $('#saldo-valor').text(response.saldo + ' PONTOS');
+                                        $('#saldo-container').fadeIn();
+
+                                        if (response.id_cliente) $('#id_cliente_hubsoft').val(response.id_cliente);
+                                        if (response.nome_razaosocial) $('#nome').val(response.nome_razaosocial);
+                                        if (response.email_principal) $('#email').val(response.email_principal);
+                                        if (response.telefone_primario) {
+                                            $('#telefone').val(response.telefone_primario);
+                                            lastKnownPhone = response.telefone_primario;
+                                            $('#otp-phone-display').text(response.masked_tel || (lastKnownPhone.substring(0, 4) + "****" + lastKnownPhone.substring(lastKnownPhone.length - 4)));
+                                        }
+
+                                        if (response.cep) $('#cep').val(response.cep);
+                                        if (response.endereco) $('#rua').val(response.endereco);
+                                        if (response.numero) $('#numero_casa').val(response.numero);
+                                        if (response.bairro) $('#bairro').val(response.bairro);
+                                        if (response.cidade) $('#cidade').val(response.cidade.toUpperCase());
+
+                                        if (response.saldo < custoGiro) {
+                                            // Saldo insuficiente, mas ainda permite acesso ao OTP para o usuário
+                                            // validar o telefone e ganhar os pontos de bônus de verificação
+                                            btn.text('Ok! Verificar conta').css('background', '');
+                                            btn.prop('disabled', false);
+                                        }
+                                        solicitarOTP(false);
+                                    } else {
+                                        $('#perfil_cliente').val('nao');
+                                        $('.selection-card').removeClass('active');
+                                        $('.selection-card:last').addClass('active');
+                                        $('#saldo-container').hide();
+                                        executeTransition(step);
+                                    }
+                                },
+                                error: function (xhr) {
+                                    hideLoading();
+                                    btn.prop('disabled', false).text(originalText);
+                                    executeTransition(step); // Allow going forward if error retrieving
+                                }
+                            });
+                            return;
+                        }
+                        executeTransition(step);
+                    }
+
+                    function prepareAndRequestOTP() {
+                        $.ajax({
+                            url: "/roleta/pre-cadastrar/",
+                            method: "POST",
+                            data: {
+                                'nome': $('#nome').val(),
+                                'cpf': $('#cpf').val(),
+                                'telefone': $('#telefone').val(),
+                                'email': $('#email').val(),
+                                'cep': $('#cep').val(),
+                                'cidade': $('#cidade').val(),
+                                'rua': $('#rua').val(),
+                                'numero_casa': $('#numero_casa').val(),
+                                'bairro': $('#bairro').val(),
+                                'csrfmiddlewaretoken': getCsrfToken()
+                            }
+                        });
+
+                        lastKnownPhone = $('#telefone').val();
+                        const tel = lastKnownPhone;
+                        if (tel && tel.length > 4) {
+                            $('#otp-phone-display').text('(**) ****-' + tel.substring(tel.length - 4));
+                        }
+                        solicitarOTP(false);
+                    }
+
+                    function solicitarOTP(reenviar) {
+                        const cpf = $('#cpf').val();
+                        const telefone = $('#telefone').val() || lastKnownPhone;
+
+                        if (reenviar) {
+                            $('#btn-reenviar').text('Enviando...');
+                        }
+
+                        showLoading(reenviar ? 'Reenviando código...' : 'Enviando código WhatsApp...');
+
+                        $.ajax({
+                            url: "/roleta/solicitar-otp/",
+                            method: "POST",
+                            data: {
+                                'cpf': cpf,
+                                'telefone': telefone,
+                                'csrfmiddlewaretoken': getCsrfToken()
+                            },
+                            success: function (response) {
+                                hideLoading();
+                                if (response.success) {
+                                    if (reenviar) {
+                                        alert('Novo código enviado com sucesso!');
+                                        $('#btn-reenviar').text('Não recebeu? Reenviar código');
+                                    } else {
+                                        executeTransition(4);
+                                    }
+                                } else {
+                                    alert('Erro ao enviar código: ' + response.error);
+                                    $('#btn-reenviar').text('Não recebeu? Reenviar código');
+                                }
+                            },
+                            error: function (xhr) {
+                                hideLoading();
+                                if (xhr.status === 429) {
+                                    alert(xhr.responseJSON.error || 'Aguarde para solicitar um novo código.');
+                                } else {
+                                    alert('Erro na conexão. Tente novamente.');
+                                }
+                                $('#btn-reenviar').text('Não recebeu? Reenviar código');
+                            }
+                        });
+                    }
+
+                    function validarOTP() {
+                        const code = $('#otp_code').val();
+                        if (code.length < 6) {
+                            alert('Digite o código de 6 dígitos.');
+                            return;
+                        }
+
+                        $('#btn-validar-otp').prop('disabled', true).text('Verificando...');
+                        showLoading('Validando...');
+
+                        $.ajax({
+                            url: "/roleta/validar-otp/",
+                            method: "POST",
+                            data: {
+                                'codigo': code,
+                                'csrfmiddlewaretoken': getCsrfToken()
+                            },
+                            success: function (response) {
+                                if (response.success) {
+                                    $('#multiStepForm').submit();
+                                } else {
+                                    alert('Falha na validação do OTP:\nErro: ' + (response.error || 'Inválido'));
+                                    $('#btn-validar-otp').prop('disabled', false).text('Verificar e Continuar');
+                                }
+                            },
+                            error: function (xhr) {
+                                hideLoading();
+                                alert('Erro ao validar o código da rede. Tente novamente.');
+                                $('#btn-validar-otp').prop('disabled', false).text('Verificar e Continuar');
+                            }
+                        });
+                    }
+
+                    // ------------------ Roulette Anim Logic ------------------
+
+                    var imagem_atual = 0;
+                    var velocidade = 1000;
+                    var etapa = 0;
+                    var acabou = false;
+                    var contador = 0;
+                    var ciclos_etapa3 = 0;
+
+                    function iniciarSorteio(novoSaldo) {
+                        $('#btnGirar').prop('disabled', true).text('SORTEANDO...');
+
+                        // Atualizar saldo na interface se recebido
+                        if (novoSaldo !== undefined && novoSaldo !== null) {
+                            $('.user-info-box strong').html(novoSaldo + ' <span style="font-size: 11px;">PTs</span>');
+                        }
+
+                        // Reset state variables for a new spin
+                        imagem_atual = 0;
+                        velocidade = 1000;
+                        etapa = 0;
+                        acabou = false;
+                        contador = 0;
+                        ciclos_etapa3 = 0;
+                        trocaImagem();
+                    }
+
+                    function trocaImagem() {
+                        if (!acabou) {
+                            var maxIdx = window.maxFrameIdx || 12;
+                            var image_velha = "roleta" + ("00" + imagem_atual).slice(-2);
+                            var image_nova_idx = (imagem_atual >= maxIdx) ? 0 : imagem_atual + 1;
+                            var image_nova = "roleta" + ("00" + image_nova_idx).slice(-2);
+
+                            $("#" + image_velha).hide(0);
+                            $("#" + image_nova).show(0);
+                            imagem_atual = image_nova_idx;
+
+                            if (etapa === 0) {
+                                velocidade -= 150;
+                                if (velocidade < 100) { etapa = 1; contador = 0; }
+                            } else if (etapa === 1) {
+                                contador++;
+                                if (contador === 40) etapa = 2;
+                            } else if (etapa === 2) {
+                                velocidade += 100;
+                                if (velocidade > 300) { etapa = 3; ciclos_etapa3 = 0; }
+                            } else if (etapa === 3) {
+                                ciclos_etapa3++;
+                                // Wait at least maxIdx iterations in etapa 3 before stopping so we
+                                // are never stuck on the first pass through the target frame
+                                if (ciclos_etapa3 > maxIdx && imagem_atual === sorteado) {
+                                    acabou = true;
+                                }
+                            }
+
+                            setTimeout(trocaImagem, Math.max(velocidade, 50));
+                        } else {
+                            exibirPremio();
+                        }
+                    }
+
+                    function exibirPremio() {
+                        var isLoser = premioGanhado && (premioGanhado.toLowerCase().includes("não foi dessa vez") || premioGanhado.toLowerCase().includes("tente novamente"));
+                        var title = isLoser ? 'RESULTADO' : 'PARABÉNS!';
+                        var type = isLoser ? 'info' : 'success';
+
+                        if (mensagemSorteio) {
+                            showCustomModal(title, mensagemSorteio, type);
+                        } else {
+                            if (isLoser) {
+                                showCustomModal(title, "Poxa, não foi dessa vez! Mas não desanime, novos prêmios vêm por aí!", 'info');
+                            } else {
+                                var msg = premioGanhado || "um prêmio especial";
+                                showCustomModal(title, "Você ganhou: " + msg + "!\n\nSua consultora entrará em contato em breve.", 'success');
+                            }
+                        }
+                        // Apenas fecha o modal, mantendo o painel de info visível
+                        $('.modal-btn').attr('onclick', 'closeCustomModal(); $("#btnGirar").prop("disabled", false).text("USAR 1 PONTOS E GIRAR!");');
+                    }
+                </script>
+</body>
+
+</html>

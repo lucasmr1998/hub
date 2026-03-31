@@ -1,0 +1,1 @@
+# Signal gerar_pdf_quando_documentos_validados migrado de vendas_web

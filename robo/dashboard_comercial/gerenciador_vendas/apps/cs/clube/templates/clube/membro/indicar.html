@@ -1,0 +1,118 @@
+{% extends 'roleta/membro/base_membro.html' %}
+
+{% block title %}Indicar - Megalink{% endblock %}
+
+{% block extra_css %}
+.link-box {
+    background: #f0f7ff; border: 1px solid #dbeafe; border-radius: 14px;
+    padding: 20px; text-align: center; margin-bottom: 20px;
+}
+.link-input-group {
+    display: flex; gap: 8px; margin-top: 10px;
+}
+.link-input {
+    flex: 1; padding: 12px; border: 1px solid #dbeafe; border-radius: 10px;
+    font-size: 13px; color: #1e40af; font-weight: 600; background: white;
+    font-family: 'Inter', sans-serif; outline: none;
+}
+.btn-copy {
+    padding: 12px 16px; background: #3b82f6; color: white; border: none;
+    border-radius: 10px; cursor: pointer; font-size: 15px; transition: opacity 0.2s;
+}
+.btn-copy:hover { opacity: 0.9; }
+.btn-whatsapp {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 12px; padding: 10px 20px; background: #25D366; color: white;
+    border-radius: 10px; font-size: 13px; font-weight: 700;
+    text-decoration: none; transition: opacity 0.2s;
+}
+.btn-whatsapp:hover { opacity: 0.9; }
+.kpi-row {
+    display: flex; gap: 10px; margin-bottom: 20px;
+}
+.kpi-item {
+    flex: 1; text-align: center; padding: 14px; border-radius: 12px; border: 1px solid #e5e7eb;
+}
+.kpi-value { font-size: 22px; font-weight: 800; }
+.kpi-label { font-size: 11px; color: #64748b; font-weight: 600; }
+.indicacao-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid #f3f4f6;
+}
+{% endblock %}
+
+{% block header %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <a href="{% url 'clube:membro_hub' %}" class="btn-voltar" style="margin:0;"><i class="fas fa-arrow-left"></i> Menu</a>
+    <div style="display:flex; align-items:center; gap:10px; color:white;">
+        <span style="font-size:13px; font-weight:700;">{{ membro.nome|truncatewords:1 }}</span>
+        <span style="font-size:13px; font-weight:800; color:#fbbf24;">{{ membro.saldo }} PTs</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="card-page">
+    <div class="card-page-title"><i class="fas fa-user-plus"></i> Indicar Amigos</div>
+
+    <div class="link-box">
+        <p style="font-size:13px; color:#3b82f6; margin-bottom:4px; font-weight:600;">Seu link de indica&ccedil;&atilde;o</p>
+        <p style="font-size:11px; color:#64748b; margin-bottom:10px;">Compartilhe e ganhe pontos quando seu amigo virar cliente!</p>
+        <div class="link-input-group">
+            <input type="text" value="{{ request.scheme }}://{{ request.get_host }}/roleta/indicar/{{ membro.codigo_indicacao }}/" id="link-input" class="link-input" readonly>
+            <button onclick="copiarLink()" class="btn-copy"><i class="fas fa-copy"></i></button>
+        </div>
+        <a href="https://wa.me/?text=Ol%C3%A1!%20Sou%20cliente%20Megalink%20e%20quero%20te%20indicar%20para%20o%20clube%20de%20fidelidade.%20Acesse%3A%20{{ request.scheme }}://{{ request.get_host }}/roleta/indicar/{{ membro.codigo_indicacao }}/" target="_blank" class="btn-whatsapp">
+            <i class="fab fa-whatsapp"></i> Compartilhar no WhatsApp
+        </a>
+    </div>
+
+    <div class="kpi-row">
+        <div class="kpi-item">
+            <div class="kpi-value" style="color:#1e293b;">{{ total }}</div>
+            <div class="kpi-label">Indica&ccedil;&otilde;es</div>
+        </div>
+        <div class="kpi-item" style="background:#ecfdf5; border-color:#a7f3d0;">
+            <div class="kpi-value" style="color:#059669;">{{ convertidas }}</div>
+            <div class="kpi-label" style="color:#059669;">Convertidas</div>
+        </div>
+        <div class="kpi-item" style="background:#fffbeb; border-color:#fde68a;">
+            <div class="kpi-value" style="color:#d97706;">{{ pendentes }}</div>
+            <div class="kpi-label" style="color:#d97706;">Pendentes</div>
+        </div>
+    </div>
+
+    {% if indicacoes %}
+    <h4 style="font-size:14px; font-weight:800; color:#334155; margin-bottom:12px;">Minhas Indica&ccedil;&otilde;es</h4>
+    {% for i in indicacoes %}
+    <div class="indicacao-item">
+        <div>
+            <div style="font-weight:700; font-size:13px; color:#1e293b;">{{ i.nome_indicado }}</div>
+            <div style="font-size:11px; color:#94a3b8;">{{ i.data_indicacao|date:"d/m/Y" }}{% if i.cidade_indicado %} &middot; {{ i.cidade_indicado }}{% endif %}</div>
+        </div>
+        {% if i.status == 'pendente' %}<span class="badge badge-warning">Pendente</span>
+        {% elif i.status == 'contato_feito' %}<span class="badge badge-info">Contato Feito</span>
+        {% elif i.status == 'convertido' %}<span class="badge badge-success">Convertido</span>
+        {% else %}<span class="badge badge-danger">Cancelado</span>{% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="text-center" style="padding:20px 0;">
+        <p class="text-muted" style="font-size:13px;">Voc&ecirc; ainda n&atilde;o fez indica&ccedil;&otilde;es. Compartilhe seu link!</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copiarLink() {
+    var input = document.getElementById('link-input');
+    input.select();
+    navigator.clipboard.writeText(input.value).then(function() {
+        alert('Link copiado!');
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Membros - Admin Roleta{% endblock %}
+
+{% block content %}
+
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <div>
+        <h1 class="page-title">Membros</h1>
+        <p class="page-subtitle">Lista de membros do Clube MegaLink.</p>
+    </div>
+    <a href="{% url 'clube:exportar_csv' %}" class="btn-export">
+        <i class="fas fa-file-csv"></i> Exportar CSV
+    </a>
+</div>
+
+<!-- Filtros -->
+<div class="card" style="margin-bottom:20px;">
+    <form method="get" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+        <div style="flex:1; min-width:200px;">
+            <label class="form-label">Buscar por Nome ou CPF</label>
+            <input type="text" name="q" value="{{ q }}" placeholder="Busca..." class="form-control">
+        </div>
+        <div style="min-width:160px;">
+            <label class="form-label">Cidade</label>
+            <select name="cidade" class="form-control">
+                <option value="">Todas</option>
+                {% for city in todas_cidades %}
+                <option value="{{ city }}" {% if cidade == city %}selected{% endif %}>{{ city }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <button type="submit" class="btn-secondary" style="margin-top:22px;">Filtrar</button>
+        </div>
+    </form>
+</div>
+
+<!-- Tabela -->
+<div class="data-table-container">
+    <div style="overflow-x: auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>CPF</th>
+                    <th>Cidade</th>
+                    <th>Status</th>
+                    <th>Saldo de Pontos</th>
+                    <th>Giros</th>
+                    <th>Cadastro</th>
+                    <th>Hist&oacute;rico</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in participantes %}
+                <tr>
+                    <td><strong>{{ p.nome }}</strong></td>
+                    <td style="font-size:13px;">{{ p.cpf }}</td>
+                    <td>{{ p.cidade }}</td>
+                    <td>
+                        {% if p.validado %}
+                        <span class="badge badge-success">Verificado</span>
+                        {% else %}
+                        <span class="badge badge-warning">Pendente</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="POST" style="display:flex; gap:6px; align-items:center;">
+                            {% csrf_token %}
+                            <input type="hidden" name="membro_id" value="{{ p.id }}">
+                            <input type="number" name="saldo" value="{{ p.saldo }}" class="form-control" style="width:70px; padding:6px 8px;">
+                            <button type="submit" class="btn-primary btn-sm">
+                                <i class="fas fa-save"></i>
+                            </button>
+                        </form>
+                    </td>
+                    <td>
+                        <span class="badge badge-info">{{ p.total_giros }} giros</span>
+                    </td>
+                    <td style="font-size:13px; color:var(--text-muted); white-space:nowrap;">{{ p.data_cadastro|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        <a href="{% url 'clube:dashboard_extrato_membro' p.id %}" class="badge badge-primary" style="text-decoration:none;">Ver Extrato</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center" style="padding:40px; color:var(--text-light);">Nenhum membro encontrado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Paginação -->
+{% if page_obj.has_other_pages %}
+<div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-top:20px;">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&cidade={{ cidade }}" class="btn-secondary btn-sm">&laquo; Anterior</a>
+    {% endif %}
+    <span class="text-sm text-muted">P&aacute;gina {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&cidade={{ cidade }}" class="btn-secondary btn-sm">Pr&oacute;xima &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

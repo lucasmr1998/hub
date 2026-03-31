@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Roleta Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'clube/css/dashboard.css' %}">
+</head>
+
+<body class="login-body">
+    <div class="login-card">
+        <div class="login-brand">Roleta</div>
+        <h2 class="login-title">Entrar no Painel</h2>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Usu&aacute;rio</label>
+                <input type="text" name="username" class="form-control" required autofocus>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Senha</label>
+                <input type="password" name="password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn-primary w-full" style="padding:12px; margin-top:8px;">Entrar</button>
+        </form>
+    </div>
+</body>
+
+</html>

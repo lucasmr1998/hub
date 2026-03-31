@@ -1,0 +1,87 @@
+{% extends "admin_aurora/base_admin.html" %}
+
+{% block title %}Novo Provedor{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <h1>Novo Provedor</h1>
+    <a href="{% url 'admin_aurora:dashboard' %}" class="btn btn-outline btn-sm">
+        <i class="fas fa-arrow-left"></i> Cancelar
+    </a>
+</div>
+
+{% if erros %}
+    <div class="alert alert-error">
+        <i class="fas fa-exclamation-circle"></i>
+        <ul style="margin:4px 0 0 16px;list-style:disc;">
+            {% for erro in erros %}
+                <li>{{ erro }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+<div class="card">
+    <div class="card-title"><i class="fas fa-building"></i> Dados do Provedor</div>
+    <form method="post" action="">
+        {% csrf_token %}
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="nome">Nome do provedor *</label>
+                <input type="text" id="nome" name="nome" value="{{ form.nome|default:'' }}" required placeholder="Ex: Megalink Telecom">
+            </div>
+            <div class="form-group">
+                <label for="cnpj">CNPJ</label>
+                <input type="text" id="cnpj" name="cnpj" value="{{ form.cnpj|default:'' }}" placeholder="00.000.000/0000-00">
+                <div class="form-hint">Opcional</div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="plano">Plano</label>
+            <select id="plano" name="plano">
+                <option value="comercial_starter" {% if form.plano == 'comercial_starter' %}selected{% endif %}>Comercial Starter</option>
+                <option value="comercial_start" {% if form.plano == 'comercial_start' %}selected{% endif %}>Comercial Start</option>
+                <option value="comercial_pro" {% if form.plano == 'comercial_pro' %}selected{% endif %}>Comercial Pro</option>
+            </select>
+        </div>
+
+        <div class="card-title" style="margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0;">
+            <i class="fas fa-user-shield"></i> Administrador do Provedor
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="username">Username *</label>
+                <input type="text" id="username" name="username" value="{{ form.username|default:'' }}" required placeholder="admin">
+            </div>
+            <div class="form-group">
+                <label for="email">Email *</label>
+                <input type="email" id="email" name="email" value="{{ form.email|default:'' }}" required placeholder="admin@provedor.com.br">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="senha">Senha *</label>
+            <input type="password" id="senha" name="senha" required placeholder="Mínimo 8 caracteres">
+        </div>
+
+        <div class="form-group" style="margin-top:20px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input type="checkbox" name="trial" {% if form.trial %}checked{% endif %}>
+                Iniciar com trial de 14 dias
+            </label>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:24px;">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Criar Provedor
+            </button>
+            <a href="{% url 'admin_aurora:dashboard' %}" class="btn btn-outline">
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

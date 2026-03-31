@@ -1,0 +1,82 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Landing Page{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
+    <div>
+        <h1 class="page-title">Configura&ccedil;&atilde;o da Landing Page</h1>
+        <p class="page-subtitle">Edite o conte&uacute;do da p&aacute;gina p&uacute;blica do Clube</p>
+    </div>
+    <a href="{% url 'clube:landing_clube' %}" target="_blank" class="btn-secondary">
+        <i class="fas fa-external-link-alt"></i> Ver P&aacute;gina
+    </a>
+</div>
+
+<form method="post" enctype="multipart/form-data">
+{% csrf_token %}
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+    <!-- Textos -->
+    <div class="card">
+        <div class="card-title">Textos</div>
+
+        <div class="form-group">
+            <label class="form-label">T&iacute;tulo</label>
+            <input type="text" name="titulo" value="{{ config.titulo }}" class="form-control">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Subt&iacute;tulo</label>
+            <input type="text" name="subtitulo" value="{{ config.subtitulo }}" class="form-control">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">WhatsApp (n&uacute;mero com DDD)</label>
+            <input type="text" name="whatsapp_numero" value="{{ config.whatsapp_numero }}" placeholder="5586999999999" class="form-control">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Mensagem WhatsApp</label>
+            <input type="text" name="whatsapp_mensagem" value="{{ config.whatsapp_mensagem }}" class="form-control">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Texto Rodap&eacute;</label>
+            <input type="text" name="texto_rodape" value="{{ config.texto_rodape }}" class="form-control">
+        </div>
+    </div>
+
+    <!-- Visual -->
+    <div class="card">
+        <div class="card-title">Visual</div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Cor Prim&aacute;ria</label>
+                <input type="color" name="cor_primaria" value="{{ config.cor_primaria }}" class="form-control" style="height:38px; cursor:pointer;">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Cor Secund&aacute;ria</label>
+                <input type="color" name="cor_secundaria" value="{{ config.cor_secundaria }}" class="form-control" style="height:38px; cursor:pointer;">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Logo</label>
+            {% if config.logo %}<div style="margin-bottom:8px;"><img src="{{ config.logo.url }}" style="max-height:60px; border-radius:8px;"></div>{% endif %}
+            <input type="file" name="logo" accept="image/*" class="form-control">
+        </div>
+
+        <div class="form-group">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" name="ativo" {% if config.ativo %}checked{% endif %} style="width:18px; height:18px;">
+                <span style="font-size:14px; font-weight:600;">P&aacute;gina ativa</span>
+            </label>
+        </div>
+
+        <button type="submit" class="btn-primary w-full"><i class="fas fa-save"></i> Salvar</button>
+    </div>
+</div>
+</form>
+{% endblock %}

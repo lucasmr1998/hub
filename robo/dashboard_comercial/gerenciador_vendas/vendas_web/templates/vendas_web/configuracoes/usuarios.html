@@ -1,0 +1,210 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Usuarios - Megalink{% endblock %}
+
+{% block custom_css %}
+<style>
+    .user-avatar-sm { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,var(--primary),var(--info)); display:flex; align-items:center; justify-content:center; color:white; font-weight:600; font-size:13px; flex-shrink:0; }
+    .user-cell { display:flex; align-items:center; gap:10px; }
+    .user-cell h4 { margin:0; font-size:14px; font-weight:600; color:var(--text-main); }
+    .user-cell p { margin:0; font-size:12px; color:var(--text-muted); }
+    .group-chip { background:var(--border-light); color:var(--text-muted); padding:2px 8px; border-radius:4px; font-size:11px; font-weight:500; }
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:1000; align-items:center; justify-content:center; }
+    .modal.active { display:flex; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+    <h1 class="page-title">Usuarios</h1>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:8px;padding:0 12px;background:var(--bg-white);">
+            <i class="fas fa-search" style="color:var(--text-light);font-size:13px;"></i>
+            <input type="text" id="searchInput" placeholder="Buscar usuarios..." style="border:none;outline:none;padding:9px 8px;font-size:14px;font-family:inherit;background:transparent;width:220px;">
+        </div>
+        <button class="btn-primary" onclick="openCreateModal()"><i class="fas fa-plus"></i> Novo Usuario</button>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="data-table-container">
+    <div class="table-header">
+        <span class="table-title">Usuarios do Sistema</span>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Grupos</th>
+                    <th>Data de Criacao</th>
+                    <th style="width:100px">Acoes</th>
+                </tr>
+            </thead>
+            <tbody id="usersTableBody">
+                {% for user in users %}
+                <tr data-user-id="{{ user.id }}">
+                    <td>
+                        <div class="user-cell">
+                            <div class="user-avatar-sm">{{ user.first_name|first|default:user.username|first|upper }}</div>
+                            <div class="user-details">
+                                <h4>{{ user.get_full_name|default:user.username }}</h4>
+                                <p>@{{ user.username }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        {% if user.is_superuser %}
+                            <span class="badge badge-warning">Superuser</span>
+                        {% elif user.is_staff %}
+                            <span class="badge badge-info">Staff</span>
+                        {% elif user.is_active %}
+                            <span class="badge badge-success">Ativo</span>
+                        {% else %}
+                            <span class="badge badge-danger">Inativo</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% for group in user.groups.all %}
+                            <span class="group-chip">{{ group.name }}</span>
+                        {% empty %}
+                            <span class="group-chip">Sem grupos</span>
+                        {% endfor %}
+                    </td>
+                    <td style="font-size:12px;color:var(--text-muted);">{{ user.date_joined|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        <div style="display:flex;gap:4px;">
+                            <button class="row-action" onclick="editUser({{ user.id }})" title="Editar" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:none;background:var(--border-light);color:var(--text-muted);cursor:pointer;font-size:12px;">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            {% if not user.is_superuser and user.id != request.user.id %}
+                            <button class="row-action" onclick="deleteUser({{ user.id }}, '{{ user.username }}')" title="Deletar" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:none;background:var(--danger-light);color:var(--danger);cursor:pointer;font-size:12px;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="userModal" class="modal" onclick="if(event.target===this)closeModal()">
+    <div class="modal-content" style="max-width:500px;padding:24px;">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:20px;" id="modalTitle">Novo Usuario</h3>
+        <div id="alertContainer"></div>
+        <form id="userForm">
+            <input type="hidden" id="userId" name="user_id">
+            <div class="form-group"><label class="form-label">Username *</label><input type="text" id="username" name="username" class="form-control" required></div>
+            <div class="form-group"><label class="form-label">Email *</label><input type="email" id="email" name="email" class="form-control" required></div>
+            <div class="form-group"><label class="form-label">Nome</label><input type="text" id="firstName" name="first_name" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Sobrenome</label><input type="text" id="lastName" name="last_name" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Senha <span id="passwordRequired">*</span></label><input type="password" id="password" name="password" class="form-control"><div class="form-hint">Deixe em branco para manter a senha atual (apenas em edicao)</div></div>
+            <div class="form-group">
+                <label class="form-label">Grupos</label>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;">
+                    {% for group in groups %}
+                    <label style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-secondary);cursor:pointer;">
+                        <input type="checkbox" id="group_{{ group.id }}" name="groups" value="{{ group.name }}"> {{ group.name }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="form-group"><label style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-secondary);cursor:pointer;"><input type="checkbox" id="isActive" name="is_active" checked> Usuario ativo</label></div>
+            <div class="form-group"><label style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-secondary);cursor:pointer;"><input type="checkbox" id="isStaff" name="is_staff"> Acesso ao admin (Staff)</label></div>
+        </form>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+            <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
+            <button class="btn-primary" onclick="saveUser()">Salvar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentUser = null, isEditMode = false;
+
+document.getElementById('searchInput').addEventListener('input', function(e) {
+    const s = e.target.value.toLowerCase();
+    document.querySelectorAll('#usersTableBody tr').forEach(row => {
+        const name = row.querySelector('.user-details h4').textContent.toLowerCase();
+        const email = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+        row.style.display = (name.includes(s) || email.includes(s)) ? '' : 'none';
+    });
+});
+
+function openCreateModal() {
+    isEditMode = false; currentUser = null;
+    document.getElementById('modalTitle').textContent = 'Novo Usuario';
+    document.getElementById('passwordRequired').textContent = '*';
+    document.getElementById('userForm').reset();
+    document.getElementById('isActive').checked = true;
+    document.getElementById('userModal').classList.add('active');
+    clearAlerts();
+}
+
+function editUser(userId) {
+    isEditMode = true; currentUser = userId;
+    document.getElementById('modalTitle').textContent = 'Editar Usuario';
+    document.getElementById('passwordRequired').textContent = '';
+    const row = document.querySelector(`tr[data-user-id="${userId}"]`);
+    const username = row.querySelector('.user-details p').textContent.replace('@', '');
+    const email = row.querySelector('td:nth-child(2)').textContent;
+    const fullName = row.querySelector('.user-details h4').textContent;
+    const parts = fullName.split(' ');
+    document.getElementById('userId').value = userId;
+    document.getElementById('username').value = username;
+    document.getElementById('email').value = email;
+    document.getElementById('firstName').value = parts[0] || '';
+    document.getElementById('lastName').value = parts.slice(1).join(' ') || '';
+    document.getElementById('password').value = '';
+    document.querySelectorAll('input[name="groups"]').forEach(cb => cb.checked = false);
+    row.querySelectorAll('.group-chip').forEach(badge => {
+        const g = badge.textContent.trim();
+        if (g !== 'Sem grupos') { const cb = document.querySelector(`input[value="${g}"]`); if (cb) cb.checked = true; }
+    });
+    const statusBadge = row.querySelector('.badge');
+    const txt = statusBadge ? statusBadge.textContent.trim() : '';
+    document.getElementById('isActive').checked = txt !== 'Inativo';
+    document.getElementById('isStaff').checked = (txt === 'Staff' || txt === 'Superuser');
+    document.getElementById('userModal').classList.add('active');
+    clearAlerts();
+}
+
+function closeModal() { document.getElementById('userModal').classList.remove('active'); clearAlerts(); }
+function clearAlerts() { document.getElementById('alertContainer').innerHTML = ''; }
+function showAlert(msg, type) { document.getElementById('alertContainer').innerHTML = `<div class="alert alert-${type==='error'?'danger':type}">${msg}</div>`; }
+
+function saveUser() {
+    const form = document.getElementById('userForm');
+    const fd = new FormData(form);
+    if (!fd.get('username') || !fd.get('email')) { showAlert('Username e email obrigatorios', 'error'); return; }
+    if (!isEditMode && !fd.get('password')) { showAlert('Senha obrigatoria para novos usuarios', 'error'); return; }
+    const data = { username:fd.get('username'), email:fd.get('email'), first_name:fd.get('first_name'), last_name:fd.get('last_name'), password:fd.get('password'), is_active:fd.get('is_active')==='on', is_staff:fd.get('is_staff')==='on', groups:Array.from(document.querySelectorAll('input[name="groups"]:checked')).map(c=>c.value) };
+    const url = isEditMode ? `/api/configuracoes/usuarios/${currentUser}/` : '/api/configuracoes/usuarios/';
+    fetch(url, { method:isEditMode?'PUT':'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body:JSON.stringify(data) })
+    .then(r=>r.json()).then(d=>{ if(d.success){showAlert(d.message,'success');setTimeout(()=>location.reload(),1500);}else{showAlert(d.error,'error');} })
+    .catch(()=>showAlert('Erro ao salvar','error'));
+}
+
+function deleteUser(id, name) {
+    if (!confirm(`Deletar "${name}"? Acao irreversivel.`)) return;
+    fetch(`/api/configuracoes/usuarios/${id}/deletar/`, { method:'DELETE', headers:{'X-CSRFToken':getCookie('csrftoken')} })
+    .then(r=>r.json()).then(d=>{ if(d.success){showAlert(d.message,'success');setTimeout(()=>location.reload(),1500);}else{showAlert(d.error,'error');} })
+    .catch(()=>showAlert('Erro ao deletar','error'));
+}
+
+function getCookie(name) { let v=null; if(document.cookie) document.cookie.split(';').forEach(c=>{ c=c.trim(); if(c.startsWith(name+'=')) v=decodeURIComponent(c.substring(name.length+1)); }); return v; }
+
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+</script>
+{% endblock %}

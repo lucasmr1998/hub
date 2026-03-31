@@ -1,0 +1,78 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Fluxos de Atendimento - Megalink{% endblock %}
+
+{% block custom_css %}
+<style>
+    .fluxo-card { background:var(--bg-white); border:1px solid var(--border); border-radius:12px; overflow:hidden; transition:all 0.2s; }
+    .fluxo-card:hover { box-shadow:0 4px 12px rgba(0,0,0,0.06); }
+    .fluxo-header { padding:20px; background:var(--primary); color:white; position:relative; }
+    .fluxo-status { position:absolute; top:12px; right:12px; }
+    .fluxo-status.ativo { background:var(--success); }
+    .fluxo-status.inativo { background:var(--danger); }
+    .fluxo-status.rascunho { background:var(--warning); color:var(--warning-dark); }
+    .fluxo-status.teste { background:var(--info); }
+    .fluxo-nome { font-size:18px; font-weight:700; margin:0 0 4px; }
+    .fluxo-tipo { font-size:12px; opacity:0.8; margin:0; text-transform:uppercase; letter-spacing:0.04em; }
+    .fluxo-body { padding:20px; }
+    .fluxo-descricao { color:var(--text-muted); font-size:14px; line-height:1.5; margin-bottom:16px; }
+    .fluxo-stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px; }
+    .fluxo-stat-item { text-align:center; padding:12px; background:var(--border-light); border-radius:8px; }
+    .fluxo-stat-num { font-size:20px; font-weight:700; color:var(--text-main); }
+    .fluxo-stat-lbl { font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; }
+    .fluxo-config-box { padding:12px; background:var(--border-light); border-radius:8px; margin-bottom:16px; }
+    .fluxo-config-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; font-size:13px; }
+    .fluxo-config-row .lbl { color:var(--text-muted); }
+    .fluxo-config-row .val { font-weight:600; color:var(--text-main); }
+    .fluxo-config-row .val.sim { color:var(--success); }
+    .fluxo-config-row .val.nao { color:var(--danger); }
+    .fluxo-actions { display:flex; gap:6px; flex-wrap:wrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+    <h1 class="page-title">Fluxos de Atendimento</h1>
+    <div style="display:flex;gap:8px;">
+        <a href="{% url 'vendas_web:questoes_fluxo' %}" class="btn-secondary"><i class="fas fa-list-ol"></i> Questoes</a>
+        <button onclick="window.showNotification('Em desenvolvimento','info')" class="btn-primary"><i class="fas fa-plus"></i> Novo Fluxo</button>
+    </div>
+</div>
+
+<!-- Cards -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px;">
+    {% for fluxo in fluxos %}
+    <div class="fluxo-card">
+        <div class="fluxo-header">
+            <span class="badge fluxo-status {{ fluxo.status }}">{{ fluxo.get_status_display|upper }}</span>
+            <div class="fluxo-nome">{{ fluxo.nome }}</div>
+            <div class="fluxo-tipo">{{ fluxo.get_tipo_fluxo_display }}</div>
+        </div>
+        <div class="fluxo-body">
+            <p class="fluxo-descricao">{{ fluxo.descricao|truncatechars:120 }}</p>
+            <div class="fluxo-stats-grid">
+                <div class="fluxo-stat-item"><div class="fluxo-stat-num">{{ fluxo.questoes.count }}</div><div class="fluxo-stat-lbl">Questoes</div></div>
+                <div class="fluxo-stat-item"><div class="fluxo-stat-num">{{ fluxo.atendimentos.count }}</div><div class="fluxo-stat-lbl">Atendimentos</div></div>
+                <div class="fluxo-stat-item"><div class="fluxo-stat-num">{{ fluxo.max_tentativas }}</div><div class="fluxo-stat-lbl">Max Tentativas</div></div>
+            </div>
+            <div class="fluxo-config-box">
+                <div class="fluxo-config-row"><span class="lbl">Tempo Limite</span><span class="val">{{ fluxo.tempo_limite_minutos|default:"Ilimitado" }}{% if fluxo.tempo_limite_minutos %} min{% endif %}</span></div>
+                <div class="fluxo-config-row"><span class="lbl">Pular Questoes</span><span class="val {{ fluxo.permite_pular_questoes|yesno:'sim,nao' }}">{{ fluxo.permite_pular_questoes|yesno:"Sim,Nao" }}</span></div>
+            </div>
+            <div class="fluxo-actions">
+                <a href="{% url 'vendas_web:questoes_fluxo_por_id' fluxo.id %}" class="btn-primary btn-sm"><i class="fas fa-list-ol"></i> Questoes</a>
+                <button onclick="window.showNotification('Em desenvolvimento','info')" class="btn-secondary btn-sm"><i class="fas fa-edit"></i> Editar</button>
+                <button onclick="window.showNotification('Em desenvolvimento','info')" class="btn-danger btn-sm"><i class="fas fa-trash"></i> Excluir</button>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div style="grid-column:1/-1;" class="empty-state">
+        <i class="fas fa-project-diagram"></i>
+        <p>Nenhum fluxo encontrado</p>
+        <button onclick="window.showNotification('Em desenvolvimento','info')" class="btn-primary"><i class="fas fa-plus"></i> Criar Fluxo</button>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

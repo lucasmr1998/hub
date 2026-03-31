@@ -1,0 +1,139 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Inicial — AuroraISP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #f1f5f9; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+
+        .setup-card { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,.08); max-width: 640px; width: 100%; padding: 40px; }
+        .setup-header { text-align: center; margin-bottom: 32px; }
+        .setup-header h1 { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+        .setup-header p { font-size: .875rem; color: #64748b; }
+
+        .step-label { font-size: .7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px; margin-top: 28px; }
+        .step-label:first-of-type { margin-top: 0; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: .8rem; font-weight: 600; color: #334155; margin-bottom: 6px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: .85rem; font-family: 'Inter', sans-serif; color: #1e293b; transition: border-color .15s; }
+        .form-group input:focus { outline: none; border-color: #818cf8; box-shadow: 0 0 0 3px rgba(129,140,248,.15); }
+        .form-group .hint { font-size: .72rem; color: #94a3b8; margin-top: 4px; }
+
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        .color-input { display: flex; align-items: center; gap: 10px; }
+        .color-input input[type=color] { width: 40px; height: 36px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 2px; cursor: pointer; }
+        .color-input code { font-size: .78rem; color: #64748b; }
+
+        .btn-submit { display: block; width: 100%; padding: 12px; background: #818cf8; color: #fff; border: none; border-radius: 10px; font-size: .9rem; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; margin-top: 28px; transition: background .15s; }
+        .btn-submit:hover { background: #6366f1; }
+
+        .error { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 10px 14px; border-radius: 8px; font-size: .82rem; margin-bottom: 16px; }
+
+        .skip-link { display: block; text-align: center; margin-top: 16px; font-size: .78rem; color: #94a3b8; text-decoration: none; }
+        .skip-link:hover { color: #64748b; }
+
+        .divider { border-top: 1px solid #f1f5f9; margin: 24px 0; }
+    </style>
+</head>
+<body>
+    <div class="setup-card">
+        <div class="setup-header">
+            <h1>Bem vindo ao AuroraISP</h1>
+            <p>Configure sua empresa para começar a usar o sistema.</p>
+        </div>
+
+        {% if erro %}
+        <div class="error"><i class="fas fa-exclamation-circle"></i> {{ erro }}</div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="step-label">1. Sua Empresa</div>
+
+            <div class="form-group">
+                <label for="nome_empresa">Nome da empresa *</label>
+                <input type="text" id="nome_empresa" name="nome_empresa" value="{{ config.nome_empresa|default:tenant.nome }}" required placeholder="Ex: Mega Fibra Telecom">
+            </div>
+
+            <div class="form-group">
+                <label for="logo">Logo da empresa</label>
+                <input type="file" id="logo" name="logo" accept="image/*">
+                <p class="hint">PNG ou JPG, recomendado 200x200px</p>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Cor primária</label>
+                    <div class="color-input">
+                        <input type="color" name="cor_primaria" value="{{ config.cor_primaria|default:'#1F3D59' }}">
+                        <code>{{ config.cor_primaria|default:'#1F3D59' }}</code>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Cor secundária</label>
+                    <div class="color-input">
+                        <input type="color" name="cor_secundaria" value="{{ config.cor_secundaria|default:'#2c5aa0' }}">
+                        <code>{{ config.cor_secundaria|default:'#2c5aa0' }}</code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+            <div class="step-label">2. Integração HubSoft (opcional)</div>
+
+            <div class="form-group">
+                <label for="hubsoft_url">URL da API HubSoft</label>
+                <input type="url" id="hubsoft_url" name="hubsoft_url" placeholder="https://api.suaempresa.hubsoft.com.br">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="hubsoft_client_id">Client ID</label>
+                    <input type="text" id="hubsoft_client_id" name="hubsoft_client_id" placeholder="Ex: 103">
+                </div>
+                <div class="form-group">
+                    <label for="hubsoft_client_secret">Client Secret</label>
+                    <input type="password" id="hubsoft_client_secret" name="hubsoft_client_secret">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="hubsoft_username">Usuário HubSoft</label>
+                    <input type="text" id="hubsoft_username" name="hubsoft_username" placeholder="email@suaempresa.com.br">
+                </div>
+                <div class="form-group">
+                    <label for="hubsoft_password">Senha HubSoft</label>
+                    <input type="password" id="hubsoft_password" name="hubsoft_password">
+                </div>
+            </div>
+
+            <p class="hint"><i class="fas fa-shield-alt"></i> Credenciais armazenadas de forma segura. Necessárias para sincronizar clientes e contratos.</p>
+
+            <button type="submit" class="btn-submit">
+                <i class="fas fa-check"></i> Salvar e começar
+            </button>
+        </form>
+
+        <a href="{% url 'vendas_web:dashboard1' %}" class="skip-link">Pular e configurar depois</a>
+    </div>
+
+    <script>
+        // Atualiza o código hex ao mudar cor
+        document.querySelectorAll('input[type=color]').forEach(input => {
+            input.addEventListener('input', e => {
+                e.target.parentElement.querySelector('code').textContent = e.target.value;
+            });
+        });
+    </script>
+</body>
+</html>

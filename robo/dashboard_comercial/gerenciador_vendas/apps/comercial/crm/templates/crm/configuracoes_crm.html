@@ -1,0 +1,596 @@
+{% extends 'vendas_web/base.html' %}
+{% block extra_css %}
+<style>
+  /* Layout */
+  .cfg-grid { display:grid; grid-template-columns:1fr 380px; gap:20px; }
+  @media(max-width:1024px) { .cfg-grid { grid-template-columns:1fr; } }
+
+  /* Card overrides for inner sections */
+  .card-header { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .card-header h3 { font-size:14px; font-weight:700; color:var(--text-main); margin:0; display:flex; align-items:center; gap:8px; }
+  .card-body { padding:18px; }
+
+  /* Estagios */
+  .estagio-list { display:flex; flex-direction:column; gap:6px; }
+  .estagio-row {
+    display:grid;
+    grid-template-columns: 28px 14px 1fr auto auto auto auto;
+    align-items:center;
+    gap:10px;
+    padding:10px 12px;
+    background:var(--bg-white);
+    border:1px solid var(--border);
+    border-radius:10px;
+    cursor:grab;
+    transition:box-shadow .15s, border-color .15s;
+  }
+  .estagio-row:active { cursor:grabbing; }
+  .estagio-row.drag-over { border:2px dashed var(--primary); background:var(--primary-light); }
+  .estagio-row.dragging-ghost { opacity:.4; }
+  .drag-handle { color:var(--text-light); font-size:15px; cursor:grab; }
+  .estagio-cor-dot { width:14px; height:14px; border-radius:4px; flex-shrink:0; }
+  .estagio-nome-col { min-width:0; }
+  .estagio-nome-txt { font-size:13px; font-weight:600; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .estagio-meta { font-size:11px; color:var(--text-light); margin-top:1px; display:flex; align-items:center; gap:6px; }
+  .tipo-pill { font-size:10px; font-weight:700; padding:1px 7px; border-radius:6px; text-transform:uppercase; }
+  .tipo-novo        { background:var(--primary-light); color:var(--primary-dark); }
+  .tipo-qualificacao{ background:var(--info-light); color:var(--info); }
+  .tipo-negociacao  { background:var(--warning-light); color:var(--warning-dark); }
+  .tipo-fechamento  { background:var(--success-light); color:var(--success-dark); }
+  .tipo-cliente     { background:var(--success-light); color:var(--success-dark); }
+  .tipo-perdido     { background:var(--danger-light); color:var(--danger-dark); }
+  .final-pill { font-size:10px; padding:1px 6px; border-radius:6px; }
+  .pill-ganho  { background:var(--success-light); color:var(--success-dark); }
+  .pill-perdido{ background:var(--danger-light); color:var(--danger-dark); }
+  .estagio-opv-count { font-size:11px; color:var(--text-muted); font-weight:600; white-space:nowrap; }
+  .btn-icon { width:28px; height:28px; border-radius:7px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; transition:all .15s; }
+  .btn-icon-edit   { background:var(--primary-light); color:var(--primary); }
+  .btn-icon-edit:hover   { background:var(--info-light); }
+  .btn-icon-delete { background:var(--danger-light); color:var(--danger); }
+  .btn-icon-delete:hover { background:var(--danger-light); color:var(--danger-dark); }
+  .btn-icon:disabled { opacity:.35; cursor:not-allowed; }
+
+  .ordem-actions { display:flex; align-items:center; gap:8px; padding-top:10px; margin-top:6px; border-top:1px solid var(--border-light); }
+  .ordem-hint { font-size:11px; color:var(--text-light); flex:1; }
+
+  /* Form extras */
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .form-check { display:flex; align-items:center; gap:8px; margin-bottom:8px; cursor:pointer; font-size:13px; color:var(--text-secondary); }
+  .form-check input { width:16px; height:16px; accent-color:var(--primary); }
+  .cor-row { display:flex; align-items:center; gap:10px; }
+  .cor-preview { width:32px; height:32px; border-radius:8px; flex-shrink:0; border:1px solid var(--border); }
+
+  /* Equipes */
+  .equipe-row { display:flex; align-items:center; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--border-light); }
+  .equipe-row:last-child { border-bottom:none; }
+  .equipe-nome { font-size:13px; font-weight:600; color:var(--text-main); }
+  .equipe-desc { font-size:12px; color:var(--text-light); }
+
+  /* Config section */
+  .cfg-section-title { font-size:11px; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:.06em; margin:14px 0 8px; }
+
+  /* Modal inner sections */
+  .modal-head { padding:20px 24px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:var(--bg-white); z-index:2; }
+  .modal-head h3 { font-size:16px; font-weight:700; color:var(--text-main); margin:0; display:flex; align-items:center; gap:8px; }
+  .modal-body { padding:20px 24px 24px; }
+  .modal-footer { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; padding-top:16px; border-top:1px solid var(--border); }
+
+  /* Preview estagio */
+  .estagio-preview { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--border-light); margin-bottom:14px; }
+  .preview-dot { width:12px; height:12px; border-radius:4px; flex-shrink:0; }
+  .preview-nome { font-size:13px; font-weight:600; color:var(--text-main); }
+  .preview-tipo { font-size:10px; color:var(--text-light); }
+
+  /* Toast */
+  .toast { position:fixed; bottom:24px; right:24px; background:var(--text-main); color:#fff; padding:12px 18px; border-radius:10px; font-size:13px; font-weight:600; z-index:9999; transform:translateY(80px); opacity:0; transition:all .3s; display:flex; align-items:center; gap:8px; }
+  .toast.show { transform:translateY(0); opacity:1; }
+  .toast.success { background:var(--success); }
+  .toast.error { background:var(--danger); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+  <div>
+    <h1 class="page-title"><i class="fas fa-cog" style="color:var(--primary)"></i> Configurações do CRM</h1>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <a href="{% url 'vendas_web:configuracoes' %}" class="btn-secondary"><i class="fas fa-arrow-left"></i> Configurações</a>
+    <a href="{% url 'crm:pipeline' %}" class="btn-secondary"><i class="fas fa-stream"></i> Pipeline</a>
+  </div>
+</div>
+
+<div class="cfg-grid">
+
+  <!-- COLUNA PRINCIPAL: ESTAGIOS -->
+  <div>
+    <div class="card" style="padding:0;">
+      <div class="card-header">
+        <h3><i class="fas fa-columns" style="color:var(--primary)"></i> Estágios do Pipeline</h3>
+        <button class="btn-primary btn-sm" onclick="abrirModalEstagio()">
+          <i class="fas fa-plus"></i> Novo Estágio
+        </button>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-light);margin:0 0 14px;display:flex;align-items:center;gap:6px;">
+          <i class="fas fa-grip-vertical"></i> Arraste para reordenar. Clique no lápis para editar ou na lixeira para excluir.
+        </p>
+
+        <div class="estagio-list" id="estagio-list">
+          {% for est in estagios %}
+          <div class="estagio-row"
+               draggable="true"
+               data-pk="{{ est.pk }}"
+               id="est-row-{{ est.pk }}">
+
+            <span class="drag-handle"><i class="fas fa-grip-vertical"></i></span>
+
+            <div class="estagio-cor-dot" style="background:{{ est.cor_hex }}"></div>
+
+            <div class="estagio-nome-col">
+              <div class="estagio-nome-txt">
+                <i class="fas {{ est.icone_fa }}" style="color:{{ est.cor_hex }};font-size:11px;margin-right:4px;"></i>
+                {{ est.nome }}
+              </div>
+              <div class="estagio-meta">
+                <span class="tipo-pill tipo-{{ est.tipo }}">{{ est.tipo }}</span>
+                {% if est.sla_horas %}<span>⏱ {{ est.sla_horas }}h SLA</span>{% endif %}
+                {% if est.is_final_ganho %}<span class="final-pill pill-ganho">✓ Ganho</span>{% endif %}
+                {% if est.is_final_perdido %}<span class="final-pill pill-perdido">✗ Perdido</span>{% endif %}
+              </div>
+            </div>
+
+            <span class="estagio-opv-count" id="opv-count-{{ est.pk }}">
+              — opvs
+            </span>
+
+            <button class="btn-icon btn-icon-edit"
+                    onclick="editarEstagio({{ est.pk }})"
+                    title="Editar">
+              <i class="fas fa-pencil-alt"></i>
+            </button>
+
+            <button class="btn-icon btn-icon-delete"
+                    id="del-btn-{{ est.pk }}"
+                    onclick="excluirEstagio({{ est.pk }}, '{{ est.nome|escapejs }}')"
+                    title="Excluir">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="ordem-actions">
+          <span class="ordem-hint"><i class="fas fa-info-circle"></i> Reordene e clique em Salvar Ordem</span>
+          <button class="btn-success btn-sm" onclick="salvarOrdem(this)">
+            <i class="fas fa-save"></i> Salvar Ordem
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COLUNA LATERAL: CONFIG + EQUIPES -->
+  <div>
+
+    <!-- CONFIG GERAL -->
+    <div class="card" style="padding:0;">
+      <div class="card-header">
+        <h3><i class="fas fa-sliders-h" style="color:var(--primary)"></i> Configuração Geral</h3>
+      </div>
+      <div class="card-body">
+        <form id="form-config" action="{% url 'crm:api_salvar_config' %}" method="post">
+          {% csrf_token %}
+
+          <div class="form-group">
+            <label class="form-label">SLA padrão (horas)</label>
+            <input type="number" name="sla_alerta_horas_padrao" class="form-control"
+                   value="{{ config.sla_alerta_horas_padrao }}" min="1" max="720">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Score mínimo para criar oportunidade automaticamente</label>
+            <input type="number" name="score_minimo_auto_criacao" class="form-control"
+                   value="{{ config.score_minimo_auto_criacao }}" min="0" max="10">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Estágio inicial padrão</label>
+            <select name="estagio_inicial_padrao_id" class="form-control">
+              <option value="">— Nenhum —</option>
+              {% for est in estagios %}
+              <option value="{{ est.pk }}"
+                {% if config.estagio_inicial_padrao_id == est.pk %}selected{% endif %}>
+                {{ est.nome }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="cfg-section-title">Automações</div>
+          <label class="form-check">
+            <input type="checkbox" name="criar_oportunidade_automatico"
+                   {% if config.criar_oportunidade_automatico %}checked{% endif %}>
+            Criar oportunidade automaticamente ao qualificar lead
+          </label>
+          <label class="form-check">
+            <input type="checkbox" name="notificar_responsavel_nova_oportunidade"
+                   {% if config.notificar_responsavel_nova_oportunidade %}checked{% endif %}>
+            Notificar responsável em nova oportunidade
+          </label>
+          <label class="form-check">
+            <input type="checkbox" name="notificar_sla_breach"
+                   {% if config.notificar_sla_breach %}checked{% endif %}>
+            Alertar ao vencer SLA do estágio
+          </label>
+
+          <div class="cfg-section-title" style="margin-top:16px"><i class="fas fa-robot" style="color:var(--primary)"></i> Webhooks N8N</div>
+          <div class="form-group">
+            <label class="form-label">Nova oportunidade</label>
+            <input type="url" name="webhook_n8n_nova_oportunidade" class="form-control"
+                   value="{{ config.webhook_n8n_nova_oportunidade|default:'' }}"
+                   placeholder="https://n8n.seu-dominio.com/...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mudança de estágio</label>
+            <input type="url" name="webhook_n8n_mudanca_estagio" class="form-control"
+                   value="{{ config.webhook_n8n_mudanca_estagio|default:'' }}"
+                   placeholder="https://n8n.seu-dominio.com/...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tarefa vencida</label>
+            <input type="url" name="webhook_n8n_tarefa_vencida" class="form-control"
+                   value="{{ config.webhook_n8n_tarefa_vencida|default:'' }}"
+                   placeholder="https://n8n.seu-dominio.com/...">
+          </div>
+
+          <button type="submit" class="btn-primary" style="width:100%">
+            <i class="fas fa-save"></i> Salvar Configurações
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- EQUIPES -->
+    <div class="card" style="padding:0;">
+      <div class="card-header">
+        <h3><i class="fas fa-users" style="color:var(--success)"></i> Equipes de Vendas</h3>
+        <button class="btn-primary btn-sm" onclick="abrirModalEquipe()">
+          <i class="fas fa-plus"></i> Nova
+        </button>
+      </div>
+      <div class="card-body" style="padding:12px 18px">
+        {% if equipes %}
+        {% for eq in equipes %}
+        <div class="equipe-row">
+          <div>
+            <div class="equipe-nome">{{ eq.nome }}</div>
+            {% if eq.descricao %}
+            <div class="equipe-desc">{{ eq.descricao|truncatechars:60 }}</div>
+            {% endif %}
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn-icon btn-icon-edit"
+                    onclick="editarEquipe({{ eq.pk }}, '{{ eq.nome|escapejs }}', '{{ eq.descricao|escapejs }}')"
+                    title="Editar"><i class="fas fa-pencil-alt"></i></button>
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p style="color:var(--text-light);font-size:13px;text-align:center;padding:12px 0">
+          Nenhuma equipe cadastrada.
+        </p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div><!-- /lateral -->
+</div><!-- /cfg-grid -->
+
+<!-- MODAL ESTAGIO (criar / editar) -->
+<div class="modal-overlay" id="modal-estagio" style="display:none">
+  <div class="modal-content" style="max-width:500px; padding:0; max-height:92vh; overflow-y:auto;">
+    <div class="modal-head">
+      <h3 id="estagio-modal-titulo"><i class="fas fa-columns" style="color:var(--primary)"></i> Novo Estágio</h3>
+      <button class="modal-close" style="position:static; width:30px; height:30px;" onclick="fecharModalEstagio()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <!-- preview ao vivo -->
+      <div class="estagio-preview" id="estagio-preview">
+        <div class="preview-dot" id="preview-dot" style="background:var(--primary)"></div>
+        <div>
+          <div class="preview-nome" id="preview-nome">Novo Estágio</div>
+          <div class="preview-tipo" id="preview-tipo">qualificacao</div>
+        </div>
+      </div>
+
+      <form id="form-estagio" action="{% url 'crm:api_criar_estagio' %}" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="estagio_id" id="est-id">
+
+        <div class="form-group">
+          <label class="form-label">Nome do estágio *</label>
+          <input type="text" name="nome" id="est-nome" class="form-control"
+                 placeholder="Ex: Proposta Enviada" required
+                 oninput="document.getElementById('preview-nome').textContent=this.value||'Novo Estágio'">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select name="tipo" id="est-tipo" class="form-control"
+                    onchange="document.getElementById('preview-tipo').textContent=this.value">
+              <option value="novo">Novo Lead</option>
+              <option value="qualificacao">Qualificação</option>
+              <option value="negociacao">Negociação</option>
+              <option value="fechamento">Fechamento</option>
+              <option value="cliente">Cliente Ativo</option>
+              <option value="perdido">Perdido</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">SLA (horas)</label>
+            <input type="number" name="sla_horas" id="est-sla" class="form-control"
+                   min="0" placeholder="Ex: 48">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Cor</label>
+            <div class="cor-row">
+              <div class="cor-preview" id="est-cor-preview" style="background:var(--primary)"></div>
+              <input type="color" name="cor_hex" id="est-cor" value="#3b82f6"
+                     style="width:64px;height:38px;padding:2px 4px;border:1px solid var(--border);border-radius:8px;cursor:pointer;"
+                     oninput="atualizarCorPreview(this.value)">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ícone (Font Awesome)</label>
+            <input type="text" name="icone_fa" id="est-icone" class="form-control"
+                   value="fa-circle" placeholder="fa-circle">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Classificação final</label>
+          <label class="form-check">
+            <input type="checkbox" name="is_final_ganho" id="est-ganho">
+            <span>Marcar como estágio final — <strong style="color:var(--success)">GANHO</strong> (ex: Cliente Ativo)</span>
+          </label>
+          <label class="form-check">
+            <input type="checkbox" name="is_final_perdido" id="est-perdido">
+            <span>Marcar como estágio final — <strong style="color:var(--danger)">PERDIDO</strong></span>
+          </label>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="fecharModalEstagio()">Cancelar</button>
+          <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Estágio</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EQUIPE -->
+<div class="modal-overlay" id="modal-equipe" style="display:none">
+  <div class="modal-content" style="max-width:500px; padding:0; max-height:92vh; overflow-y:auto;">
+    <div class="modal-head">
+      <h3 id="equipe-modal-titulo"><i class="fas fa-users" style="color:var(--success)"></i> Nova Equipe</h3>
+      <button class="modal-close" style="position:static; width:30px; height:30px;" onclick="fecharModalEquipe()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <form id="form-equipe" action="{% url 'crm:api_criar_equipe' %}" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="equipe_id" id="eq-id">
+        <div class="form-group">
+          <label class="form-label">Nome da equipe *</label>
+          <input type="text" name="nome" id="eq-nome" class="form-control"
+                 placeholder="Ex: Equipe Norte" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Descrição</label>
+          <textarea name="descricao" id="eq-desc" class="form-control" rows="2"
+                    placeholder="Área de atuação, responsável..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="fecharModalEquipe()">Cancelar</button>
+          <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+// ── Carregar contagens de oportunidades por estágio ──────────────────────
+fetch('{% url "crm:api_pipeline_dados" %}')
+  .then(r => r.json())
+  .then(d => {
+    if (!d.ok) return;
+    d.estagios.forEach(e => {
+      const el = document.getElementById(`opv-count-${e.id}`);
+      if (el) el.textContent = `${e.total} oport.`;
+      // Desabilitar lixeira se tiver oportunidades
+      const del = document.getElementById(`del-btn-${e.id}`);
+      if (del && e.total > 0) {
+        del.disabled = true;
+        del.title = `${e.total} oportunidade(s) — mova antes de excluir`;
+      }
+    });
+  });
+
+// ── CONFIG GERAL ─────────────────────────────────────────────────────────
+document.getElementById('form-config').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const fd = new FormData(this);
+  ['criar_oportunidade_automatico','notificar_responsavel_nova_oportunidade','notificar_sla_breach']
+    .forEach(n => { if (!fd.has(n)) fd.set(n, ''); });
+  fetch(this.action, { method:'POST', body:fd })
+    .then(r => r.json())
+    .then(d => d.ok ? toast('Configurações salvas!','success') : toast(d.erro,'error'));
+});
+
+// ── DRAG & DROP ESTAGIOS ─────────────────────────────────────────────────
+let dragEl = null;
+document.querySelectorAll('.estagio-row').forEach(addDrag);
+
+function addDrag(row) {
+  row.addEventListener('dragstart', e => {
+    dragEl = row;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => row.classList.add('dragging-ghost'), 0);
+  });
+  row.addEventListener('dragend', () => {
+    dragEl = null;
+    row.classList.remove('dragging-ghost');
+    document.querySelectorAll('.estagio-row').forEach(r => r.classList.remove('drag-over'));
+  });
+  row.addEventListener('dragover', e => {
+    e.preventDefault();
+    if (dragEl && dragEl !== row) {
+      row.classList.add('drag-over');
+      const list = document.getElementById('estagio-list');
+      const rows = [...list.querySelectorAll('.estagio-row')];
+      if (rows.indexOf(dragEl) < rows.indexOf(row)) list.insertBefore(dragEl, row.nextSibling);
+      else list.insertBefore(dragEl, row);
+    }
+  });
+  row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+  row.addEventListener('drop', e => { e.preventDefault(); row.classList.remove('drag-over'); });
+}
+
+function salvarOrdem(btn) {
+  const ordem = [...document.querySelectorAll('.estagio-row')].map(r => parseInt(r.dataset.pk));
+  const orig = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+  fetch('{% url "crm:api_reordenar_estagios" %}', {
+    method:'POST',
+    headers:{'X-CSRFToken':CSRF,'Content-Type':'application/json'},
+    body: JSON.stringify({ ordem })
+  }).then(r => r.json()).then(d => {
+    btn.disabled = false; btn.innerHTML = orig;
+    d.ok ? toast('Ordem salva com sucesso!','success') : toast(d.erro,'error');
+  });
+}
+
+// ── MODAL ESTAGIO ────────────────────────────────────────────────────────
+function abrirModalEstagio() {
+  document.getElementById('estagio-modal-titulo').innerHTML = '<i class="fas fa-columns" style="color:var(--primary)"></i> Novo Estágio';
+  document.getElementById('form-estagio').reset();
+  document.getElementById('est-id').value = '';
+  document.getElementById('est-cor').value = '#3b82f6';
+  atualizarCorPreview('#3b82f6');
+  document.getElementById('preview-nome').textContent = 'Novo Estágio';
+  document.getElementById('preview-tipo').textContent = 'qualificacao';
+  document.getElementById('modal-estagio').style.display = 'flex';
+  document.getElementById('est-nome').focus();
+}
+
+function editarEstagio(pk) {
+  fetch(`/crm/configuracoes/estagios/${pk}/`)
+    .then(r => r.json())
+    .then(d => {
+      if (!d.ok) { toast(d.erro,'error'); return; }
+      const e = d.estagio;
+      document.getElementById('estagio-modal-titulo').innerHTML = '<i class="fas fa-pencil-alt" style="color:var(--primary)"></i> Editar Estágio';
+      document.getElementById('est-id').value = e.pk;
+      document.getElementById('est-nome').value = e.nome;
+      document.getElementById('est-tipo').value = e.tipo;
+      document.getElementById('est-sla').value = e.sla_horas;
+      document.getElementById('est-cor').value = e.cor_hex;
+      document.getElementById('est-icone').value = e.icone_fa;
+      document.getElementById('est-ganho').checked = e.is_final_ganho;
+      document.getElementById('est-perdido').checked = e.is_final_perdido;
+      atualizarCorPreview(e.cor_hex);
+      document.getElementById('preview-nome').textContent = e.nome;
+      document.getElementById('preview-tipo').textContent = e.tipo;
+      document.getElementById('modal-estagio').style.display = 'flex';
+    });
+}
+
+function fecharModalEstagio() {
+  document.getElementById('modal-estagio').style.display = 'none';
+}
+
+function atualizarCorPreview(cor) {
+  document.getElementById('est-cor-preview').style.background = cor;
+  document.getElementById('preview-dot').style.background = cor;
+  document.getElementById('estagio-preview').style.borderLeftColor = cor;
+}
+
+document.getElementById('form-estagio').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const fd = new FormData(this);
+  fetch(this.action, { method:'POST', body:fd })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) { fecharModalEstagio(); toast('Estágio salvo!','success'); setTimeout(()=>location.reload(),900); }
+      else toast(d.erro||'Erro ao salvar','error');
+    });
+});
+
+function excluirEstagio(pk, nome) {
+  if (!confirm(`Excluir o estágio "${nome}"?\n\nEsta ação é irreversível.`)) return;
+  fetch(`/crm/configuracoes/estagios/${pk}/excluir/`, {
+    method:'POST', headers:{'X-CSRFToken':CSRF}
+  }).then(r => r.json()).then(d => {
+    if (d.ok) { toast('Estágio excluído','success'); setTimeout(()=>location.reload(),800); }
+    else toast(d.erro,'error');
+  });
+}
+
+// ── MODAL EQUIPE ─────────────────────────────────────────────────────────
+function abrirModalEquipe() {
+  document.getElementById('equipe-modal-titulo').innerHTML = '<i class="fas fa-users" style="color:var(--success)"></i> Nova Equipe';
+  document.getElementById('form-equipe').reset();
+  document.getElementById('eq-id').value = '';
+  document.getElementById('modal-equipe').style.display = 'flex';
+  document.getElementById('eq-nome').focus();
+}
+
+function editarEquipe(pk, nome, desc) {
+  document.getElementById('equipe-modal-titulo').innerHTML = '<i class="fas fa-pencil-alt" style="color:var(--success)"></i> Editar Equipe';
+  document.getElementById('eq-id').value = pk;
+  document.getElementById('eq-nome').value = nome;
+  document.getElementById('eq-desc').value = desc;
+  document.getElementById('modal-equipe').style.display = 'flex';
+}
+
+function fecharModalEquipe() { document.getElementById('modal-equipe').style.display = 'none'; }
+
+document.getElementById('form-equipe').addEventListener('submit', function(e) {
+  e.preventDefault();
+  fetch(this.action, { method:'POST', body:new FormData(this) })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) { fecharModalEquipe(); toast('Equipe salva!','success'); setTimeout(()=>location.reload(),900); }
+      else toast(d.erro||'Erro','error');
+    });
+});
+
+// ── Fechar modais clicando no fundo ──────────────────────────────────────
+['modal-estagio','modal-equipe'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+  });
+});
+
+// ── TOAST ────────────────────────────────────────────────────────────────
+function toast(msg, tipo='success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${tipo} show`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3200);
+}
+</script>
+{% endblock %}

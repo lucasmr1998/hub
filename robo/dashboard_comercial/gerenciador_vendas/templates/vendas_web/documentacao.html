@@ -1,0 +1,2817 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentação - Megalink</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1F3D59 0%, #2c5aa0 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo svg {
+            width: 40px;
+            height: 40px;
+        }
+
+        .logo h1 {
+            color: #1F3D59;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .nav-breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .nav-breadcrumb a {
+            color: #1F3D59;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .nav-breadcrumb a:hover {
+            color: #2c5aa0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .doc-header {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .doc-header h1 {
+            font-size: 3rem;
+            color: #1F3D59;
+            margin-bottom: 1rem;
+            font-weight: 800;
+        }
+
+        .doc-header p {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+
+        .version-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #1F3D59, #2c5aa0);
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .doc-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+            position: sticky;
+            top: 100px;
+        }
+
+        .sidebar h3 {
+            color: #1F3D59;
+            margin-bottom: 1.5rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-menu li {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-menu a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #666;
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .nav-menu a:hover,
+        .nav-menu a.active {
+            background: linear-gradient(135deg, #1F3D59, #2c5aa0);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .content {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .section {
+            margin-bottom: 3rem;
+            scroll-margin-top: 120px;
+        }
+
+        .section h2 {
+            color: #1F3D59;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+            border-bottom: 3px solid #2c5aa0;
+            padding-bottom: 0.5rem;
+        }
+
+        .section h3 {
+            color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            margin-top: 2rem;
+            font-weight: 600;
+        }
+
+        .section p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 15px;
+            padding: 2rem;
+            border-left: 5px solid #2c5aa0;
+        }
+
+        .info-card h4 {
+            color: #1F3D59;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .info-card p {
+            color: #666;
+            margin-bottom: 0;
+        }
+
+        .tech-stack {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .tech-item {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .tech-item:hover {
+            border-color: #2c5aa0;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .tech-item i {
+            font-size: 2rem;
+            color: #2c5aa0;
+            margin-bottom: 1rem;
+        }
+
+        .tech-item h4 {
+            color: #1F3D59;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .tech-item p {
+            color: #666;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        .version-history {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .version-item {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #2c5aa0;
+        }
+
+        .version-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .version-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .version-number {
+            font-weight: 700;
+            color: #1F3D59;
+            font-size: 1.1rem;
+        }
+
+        .version-date {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .version-changes {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .version-changes li {
+            padding: 0.25rem 0;
+            color: #666;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .version-changes li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .team-section {
+            background: linear-gradient(135deg, #1F3D59, #2c5aa0);
+            color: white;
+            border-radius: 20px;
+            padding: 3rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .team-section h2 {
+            color: white;
+            border-bottom: 3px solid rgba(255, 255, 255, 0.3);
+            margin-bottom: 2rem;
+        }
+
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .team-member {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .team-member h4 {
+            color: white;
+            margin-bottom: 0.5rem;
+        }
+
+        .team-member p {
+            color: rgba(255, 255, 255, 0.8);
+            margin: 0;
+        }
+
+        .api-endpoints {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .endpoint {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #28a745;
+        }
+
+        .endpoint:last-child {
+            margin-bottom: 0;
+        }
+
+        .endpoint-method {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 1rem;
+        }
+
+        .endpoint-path {
+            font-family: 'Courier New', monospace;
+            color: #1F3D59;
+            font-weight: 600;
+        }
+
+        .endpoint-description {
+            color: #666;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .footer {
+            background: #1F3D59;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 3rem;
+        }
+
+        .footer p {
+            margin: 0;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            .doc-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+                margin-bottom: 2rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .doc-header h1 {
+                font-size: 2rem;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tech-stack {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#1F3D59;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#2c5aa0;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <circle cx="24" cy="24" r="22" fill="url(#logoGradient)" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+                    <path d="M24 8 L32 32 L28 32 L26.5 28 L21.5 28 L20 32 L16 32 L24 8 Z" fill="white" stroke="white" stroke-width="0.5"/>
+                    <path d="M22.5 22 L25.5 22 L24 16 L22.5 22 Z" fill="rgba(31,61,89,0.8)"/>
+                    <circle cx="24" cy="36" r="2" fill="white" opacity="0.6"/>
+                    <circle cx="18" cy="38" r="1" fill="white" opacity="0.4"/>
+                    <circle cx="30" cy="38" r="1" fill="white" opacity="0.4"/>
+                </svg>
+                <h1>Megalink</h1>
+            </div>
+            <div class="nav-breadcrumb">
+                <a href="/dashboard1/">Dashboard</a>
+                <i class="fas fa-chevron-right"></i>
+                <span>Documentação</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="doc-header">
+            <h1>📚 Documentação do Projeto</h1>
+            <p>Sistema completo de automação de vendas e gestão comercial</p>
+            <div class="version-badge">Versão 2.3.0</div>
+        </div>
+
+        <div class="doc-grid">
+            <div class="sidebar">
+                <h3>📑 Índice</h3>
+                <ul class="nav-menu">
+                    <li><a href="#visao-geral" class="nav-link">Visão Geral</a></li>
+                    <li><a href="#arquitetura" class="nav-link">Arquitetura</a></li>
+                    <li><a href="#tecnologias" class="nav-link">Tecnologias</a></li>
+                    <li><a href="#funcionalidades" class="nav-link">Funcionalidades</a></li>
+                    <li><a href="#robos" class="nav-link">🤖 Sistema de Robôs</a></li>
+                    <li><a href="#paginas-sistema" class="nav-link">Páginas do Sistema</a></li>
+                    <li><a href="#banco-dados" class="nav-link">Banco de Dados</a></li>
+                    <li><a href="#apis" class="nav-link">APIs</a></li>
+                    <li><a href="#campanhas-trafego" class="nav-link">📱 Campanhas de Tráfego</a></li>
+                    <li><a href="#notificacoes" class="nav-link">Sistema de Notificações</a></li>
+                    <li><a href="#versionamento" class="nav-link">Histórico de Versões</a></li>
+                    <li><a href="#equipe" class="nav-link">Equipe</a></li>
+                    <li><a href="#contato" class="nav-link">Contato</a></li>
+                </ul>
+            </div>
+
+            <div class="content">
+                <section id="visao-geral" class="section">
+                    <h2>🎯 Visão Geral</h2>
+                    <p>O <strong>Megalink</strong> é um sistema completo de automação de vendas e gestão comercial desenvolvido para otimizar processos de conversão de leads em clientes. O sistema integra múltiplas tecnologias para fornecer uma solução robusta e escalável.</p>
+                    
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>🎯 Objetivo Principal</h4>
+                            <p>Automatizar o processo de conversão de prospectos em clientes através de workflows inteligentes e integração com sistemas externos.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>⚡ Performance</h4>
+                            <p>Processamento em tempo real com sistema de filas e notificações automáticas para máxima eficiência operacional.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>🔒 Segurança</h4>
+                            <p>Implementação de autenticação robusta, controle de acesso granular e logs detalhados de auditoria.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>📈 Escalabilidade</h4>
+                            <p>Arquitetura modular que permite expansão horizontal e integração com novos sistemas conforme necessário.</p>
+                        </div>
+                    </div>
+
+                    <h3>🏢 Sobre a Empresa</h3>
+                    <p>Megalink é uma empresa de tecnologia especializada em soluções de automação comercial e gestão de relacionamento com clientes. Nossa missão é transformar a forma como empresas gerenciam e convertem leads em clientes através de tecnologia avançada.</p>
+
+                    <h3>🎪 Principais Diferenciais</h3>
+                    <ul>
+                        <li><strong>Automação Inteligente:</strong> Robôs que aprendem e se adaptam aos processos comerciais</li>
+                        <li><strong>Integração Total:</strong> Conecta todos os sistemas da empresa em uma única plataforma</li>
+                        <li><strong>Análise Preditiva:</strong> IA que prevê comportamentos e otimiza conversões</li>
+                        <li><strong>Escalabilidade Infinita:</strong> Suporta desde startups até grandes corporações</li>
+                        <li><strong>Suporte 24/7:</strong> Equipe técnica especializada sempre disponível</li>
+                    </ul>
+                </section>
+
+                <section id="arquitetura" class="section">
+                    <h2>🏗️ Arquitetura do Sistema</h2>
+                    <p>O Megalink utiliza uma arquitetura em camadas bem definida, separando responsabilidades e garantindo manutenibilidade:</p>
+                    
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>🎨 Frontend</h4>
+                            <p>Interface web responsiva desenvolvida com Django Templates, Bootstrap e JavaScript moderno para uma experiência de usuário otimizada.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>⚙️ Backend</h4>
+                            <p>Django REST Framework com arquitetura MVC, APIs RESTful e sistema de autenticação integrado.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>🤖 Automação</h4>
+                            <p>Sistema de robôs Python com Selenium para automação web e processamento inteligente de dados.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>🗄️ Persistência</h4>
+                            <p>PostgreSQL como banco principal com sistema de replicação para alta disponibilidade e backup automático.</p>
+                        </div>
+                    </div>
+
+                    <h3>🔄 Fluxo de Dados</h3>
+                    <p>O sistema implementa um fluxo de dados bidirecional com sincronização em tempo real:</p>
+                    <ul>
+                        <li><strong>Captura:</strong> Robôs automatizados coletam dados de múltiplas fontes</li>
+                        <li><strong>Processamento:</strong> Sistema de filas processa e valida informações</li>
+                        <li><strong>Armazenamento:</strong> Dados são persistidos em banco primário e replicados</li>
+                        <li><strong>Notificação:</strong> Sistema de alertas notifica stakeholders relevantes</li>
+                        <li><strong>Análise:</strong> Dashboard fornece insights e métricas em tempo real</li>
+                    </ul>
+                </section>
+
+                <section id="tecnologias" class="section">
+                    <h2>🛠️ Stack Tecnológico</h2>
+                    <p>Tecnologias utilizadas no desenvolvimento e manutenção do sistema:</p>
+                    
+                    <div class="tech-stack">
+                        <div class="tech-item">
+                            <i class="fab fa-python"></i>
+                            <h4>Python 3.12</h4>
+                            <p>Linguagem principal para backend e automação</p>
+                        </div>
+                        <div class="tech-item">
+                            <i class="fab fa-django"></i>
+                            <h4>Django 5.2.4</h4>
+                            <p>Framework web principal</p>
+                        </div>
+                        <div class="tech-item">
+                            <i class="fas fa-database"></i>
+                            <h4>PostgreSQL</h4>
+                            <p>Banco de dados principal</p>
+                        </div>
+                        <div class="tech-item">
+                            <i class="fas fa-robot"></i>
+                            <h4>Selenium</h4>
+                            <p>Automação web e testes</p>
+                        </div>
+                        <div class="tech-item">
+                            <i class="fab fa-html5"></i>
+                            <h4>HTML5/CSS3</h4>
+                            <p>Frontend responsivo</p>
+                        </div>
+                        <div class="tech-item">
+                            <i class="fab fa-js"></i>
+                            <h4>JavaScript ES6+</h4>
+                            <p>Interatividade frontend</p>
+                        </div>
+                        <div class="tech-item">
+                            <i class="fas fa-server"></i>
+                            <h4>Gunicorn</h4>
+                            <p>Servidor WSGI para produção</p>
+                        </div>
+                        <div class="tech-item">
+                            <i class="fas fa-cloud"></i>
+                            <h4>N8N Integration</h4>
+                            <p>Automação de workflows</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="funcionalidades" class="section">
+                    <h2>🚀 Funcionalidades Principais</h2>
+                    
+                    <h3>📊 Dashboard Comercial</h3>
+                    <p>O dashboard principal é o coração do sistema, fornecendo uma visão completa e em tempo real de todas as métricas comerciais:</p>
+                    <ul>
+                        <li><strong>Métricas em Tempo Real:</strong> Visualização instantânea de leads, conversões, vendas e performance</li>
+                        <li><strong>Gráficos Interativos:</strong> Charts dinâmicos com drill-down para análise detalhada</li>
+                        <li><strong>Widgets Personalizáveis:</strong> Drag-and-drop para organizar informações importantes</li>
+                        <li><strong>Alertas Inteligentes:</strong> Notificações automáticas quando metas são atingidas ou perdidas</li>
+                        <li><strong>Comparação Periódica:</strong> Análise de tendências e comparações mês a mês</li>
+                        <li><strong>Exportação de Dados:</strong> Download de relatórios em PDF, Excel e CSV</li>
+                    </ul>
+
+                    <h3>🤖 Sistema de Automação</h3>
+                    <p>Robôs inteligentes que processam automaticamente todos os prospectos e leads:</p>
+                    <ul>
+                        <li><strong>Processamento Automático:</strong> Conversão de prospectos em leads sem intervenção manual</li>
+                        <li><strong>Validação Inteligente:</strong> IA que valida dados e detecta inconsistências</li>
+                        <li><strong>Integração Hubsoft:</strong> Sincronização bidirecional com CRM principal</li>
+                        <li><strong>Controle de Tentativas:</strong> Sistema de retry com máximo de 3 tentativas por prospecto</li>
+                        <li><strong>Logs Detalhados:</strong> Auditoria completa de todas as operações automatizadas</li>
+                        <li><strong>Configuração Flexível:</strong> Regras personalizáveis para diferentes tipos de processamento</li>
+                    </ul>
+
+                    <h3>📝 Gestão de Fluxos de Atendimento</h3>
+                    <p>Sistema completo para criação e gerenciamento de fluxos de atendimento personalizados:</p>
+                    <ul>
+                        <li><strong>Construtor Visual:</strong> Interface drag-and-drop para criar fluxos complexos</li>
+                        <li><strong>Questões Dinâmicas:</strong> Perguntas que se adaptam baseadas nas respostas anteriores</li>
+                        <li><strong>Validação por IA:</strong> Inteligência artificial que valida respostas e sugere melhorias</li>
+                        <li><strong>Roteamento Condicional:</strong> Direcionamento automático baseado em critérios definidos</li>
+                        <li><strong>Templates de Comunicação:</strong> Mensagens padronizadas e personalizáveis</li>
+                        <li><strong>Análise de Performance:</strong> Métricas de completação e eficácia dos fluxos</li>
+                        <li><strong>Versionamento:</strong> Controle de versões dos fluxos para rollback quando necessário</li>
+                    </ul>
+
+                    <h3>👥 Gestão de Usuários e Permissões</h3>
+                    <p>Controle granular de acesso e gerenciamento completo de usuários:</p>
+                    <ul>
+                        <li><strong>Autenticação Multi-fator:</strong> Login seguro com 2FA opcional</li>
+                        <li><strong>Roles e Permissões:</strong> Controle detalhado de funcionalidades por usuário</li>
+                        <li><strong>Auditoria Completa:</strong> Log de todas as ações realizadas por cada usuário</li>
+                        <li><strong>Configurações Personalizadas:</strong> Preferências individuais de interface e notificações</li>
+                        <li><strong>Gestão de Sessões:</strong> Controle de sessões ativas e logout remoto</li>
+                        <li><strong>Backup de Dados:</strong> Exportação automática de configurações do usuário</li>
+                    </ul>
+
+                    <h3>📋 Gestão de Leads e Prospectos</h3>
+                    <p>Sistema completo para captura, qualificação e conversão de leads:</p>
+                    <ul>
+                        <li><strong>Captura Automática:</strong> Importação de leads de múltiplas fontes</li>
+                        <li><strong>Qualificação Inteligente:</strong> Scoring automático baseado em critérios definidos</li>
+                        <li><strong>Segmentação Dinâmica:</strong> Categorização automática por perfil e comportamento</li>
+                        <li><strong>Histórico Completo:</strong> Timeline de todas as interações com cada lead</li>
+                        <li><strong>Follow-up Automático:</strong> Lembretes e ações de recontato programadas</li>
+                        <li><strong>Análise de Conversão:</strong> Métricas detalhadas de taxa de conversão por fonte</li>
+                    </ul>
+
+                    <h3>💰 Gestão de Vendas</h3>
+                    <p>Controle completo do funil de vendas e processo de conversão:</p>
+                    <ul>
+                        <li><strong>Funil de Vendas:</strong> Visualização completa do pipeline de vendas</li>
+                        <li><strong>Previsão de Vendas:</strong> IA que prevê probabilidade de fechamento</li>
+                        <li><strong>Gestão de Oportunidades:</strong> Controle detalhado de cada oportunidade de venda</li>
+                        <li><strong>Análise de Performance:</strong> Métricas de vendas por vendedor e período</li>
+                        <li><strong>Comissões e Metas:</strong> Controle de metas e cálculo automático de comissões</li>
+                        <li><strong>Relatórios Executivos:</strong> Dashboards específicos para gestores e diretores</li>
+                    </ul>
+
+                    <h3>📞 Sistema de Atendimento</h3>
+                    <p>Ferramentas completas para gestão de atendimento ao cliente:</p>
+                    <ul>
+                        <li><strong>Central de Atendimento:</strong> Interface unificada para todos os canais</li>
+                        <li><strong>Chat em Tempo Real:</strong> Atendimento via chat com histórico completo</li>
+                        <li><strong>Tickets e Chamados:</strong> Sistema de tickets com priorização automática</li>
+                        <li><strong>Base de Conhecimento:</strong> FAQ e artigos de ajuda integrados</li>
+                        <li><strong>Satisfação do Cliente:</strong> Pesquisas automáticas de satisfação</li>
+                        <li><strong>Análise de Sentimento:</strong> IA que analisa o tom das conversas</li>
+                    </ul>
+
+                    <h3>📊 Relatórios e Analytics</h3>
+                    <p>Sistema avançado de relatórios e análise de dados:</p>
+                    <ul>
+                        <li><strong>Relatórios Personalizáveis:</strong> Criação de relatórios sob medida</li>
+                        <li><strong>Agendamento Automático:</strong> Envio automático de relatórios por email</li>
+                        <li><strong>Dashboards Executivos:</strong> Visão estratégica para tomada de decisão</li>
+                        <li><strong>Análise Preditiva:</strong> Machine Learning para previsões futuras</li>
+                        <li><strong>Comparações Temporais:</strong> Análise de tendências e sazonalidade</li>
+                        <li><strong>Exportação Multi-formato:</strong> PDF, Excel, CSV, PowerPoint</li>
+                    </ul>
+
+                    <h3>🔧 Configurações e Administração</h3>
+                    <p>Painel completo de configuração e administração do sistema:</p>
+                    <ul>
+                        <li><strong>Configurações Globais:</strong> Parâmetros gerais do sistema</li>
+                        <li><strong>Integrações:</strong> Configuração de APIs e sistemas externos</li>
+                        <li><strong>Backup e Restore:</strong> Backup automático e restauração de dados</li>
+                        <li><strong>Monitoramento:</strong> Health check e monitoramento de performance</li>
+                        <li><strong>Logs do Sistema:</strong> Visualização de logs de erro e auditoria</li>
+                        <li><strong>Manutenção:</strong> Ferramentas de limpeza e otimização</li>
+                    </ul>
+                </section>
+
+                <section id="robos" class="section">
+                    <h2>🤖 Sistema de Robôs de Automação</h2>
+                    <p>O coração da automação do Megalink é composto por robôs inteligentes desenvolvidos em Python com Selenium, responsáveis por automatizar completamente o processo de conversão de prospectos em clientes no sistema Hubsoft CRM.</p>
+                    
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>📁 main_refatorado.py</h4>
+                            <p><strong>Robô Principal</strong> - 784 linhas de código que executam a conversão automatizada de um prospecto específico através de 9 etapas bem definidas.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>🔄 main_leads.py</h4>
+                            <p><strong>Orquestrador</strong> - 457 linhas que gerenciam o loop infinito de processamento, buscando prospectos da API Hubsoft e executando o robô para cada um.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>⏱️ Tempo de Processamento</h4>
+                            <p>Cada prospecto é processado em aproximadamente <strong>45-60 segundos</strong>, com captura automática de screenshots em caso de erro.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>🔁 Controle de Tentativas</h4>
+                            <p>Sistema inteligente com <strong>máximo de 3 tentativas</strong> por prospecto, evitando loops infinitos e marcando automaticamente como erro final.</p>
+                        </div>
+                    </div>
+
+                    <h3>📋 Fluxo Completo de Processamento (9 Etapas)</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #667eea; border-color: #667eea;">ETAPA 1</span>
+                            <span class="endpoint-path">Login no Sistema Hubsoft</span>
+                            <div class="endpoint-description">Acessa a URL de login, insere credenciais e valida acesso ao sistema CRM.</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #667eea; border-color: #667eea;">ETAPA 2</span>
+                            <span class="endpoint-path">Navegação para Prospectos</span>
+                            <div class="endpoint-description">Expande menu Cliente e navega até a seção de Prospectos.</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #667eea; border-color: #667eea;">ETAPA 3</span>
+                            <span class="endpoint-path">Localização do Prospecto</span>
+                            <div class="endpoint-description">Busca e filtra o prospecto específico por nome, maximizando a janela para visualizar todos os elementos.</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #667eea; border-color: #667eea;">ETAPA 4</span>
+                            <span class="endpoint-path">Menu de Ações</span>
+                            <div class="endpoint-description">Clica no botão "Ações" da linha do prospecto para abrir o menu de opções.</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #667eea; border-color: #667eea;">ETAPA 5</span>
+                            <span class="endpoint-path">Converter em Cliente</span>
+                            <div class="endpoint-description">Seleciona a opção "Converter em Cliente" e inicia o wizard de conversão.</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #667eea; border-color: #667eea;">ETAPA 6</span>
+                            <span class="endpoint-path">Wizard - Primeira Tela</span>
+                            <div class="endpoint-description">Preenche campos obrigatórios e seleciona opções no primeiro passo do wizard.</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #667eea; border-color: #667eea;">ETAPA 7</span>
+                            <span class="endpoint-path">Wizard - Seleções Específicas</span>
+                            <div class="endpoint-description">Configura parâmetros específicos (plano, dia de vencimento) no segundo passo.</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #667eea; border-color: #667eea;">ETAPA 8</span>
+                            <span class="endpoint-path">Wizard - Terceira Tela</span>
+                            <div class="endpoint-description">Avança para a tela final do wizard e seleciona configurações adicionais.</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #28a745; border-color: #28a745;">ETAPA 9</span>
+                            <span class="endpoint-path">Finalização e Salvamento</span>
+                            <div class="endpoint-description">Clica em SALVAR, confirma a conversão e atualiza status no banco de dados como CONCLUÍDO.</div>
+                        </div>
+                    </div>
+
+                    <h3>🔄 Classe Principal: ProspectoProcessor</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h5>conectar_banco()</h5>
+                            <p>Estabelece conexão com os dois bancos de dados (primário e Django) de forma redundante e tolerante a falhas.</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>desconectar_banco()</h5>
+                            <p>Encerra conexões de forma segura, garantindo que recursos sejam liberados corretamente.</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>salvar_prospecto()</h5>
+                            <p>Função CRÍTICA que salva status do processamento no banco primário e replica automaticamente para o Django.</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>capturar_screenshot_erro()</h5>
+                            <p>Captura screenshot automaticamente apenas em caso de erro, facilitando debug e análise de falhas.</p>
+                        </div>
+                    </div>
+
+                    <h3>⚙️ Características Técnicas</h3>
+                    <ul>
+                        <li><strong>Modo Headless:</strong> Execução padrão em modo headless (sem interface gráfica) para otimização de recursos</li>
+                        <li><strong>Timeout Inteligente:</strong> WebDriverWait com 15 segundos de timeout para aguardar elementos</li>
+                        <li><strong>Scroll Automático:</strong> JavaScript para scroll até elementos antes de clicar</li>
+                        <li><strong>XPath Robustos:</strong> Uso de XPaths absolutos e relativos para localização precisa de elementos</li>
+                        <li><strong>Logging Detalhado:</strong> Prints com emojis para fácil identificação de etapas no console</li>
+                        <li><strong>Tratamento de Erros:</strong> Try-catch em cada etapa com rollback automático</li>
+                        <li><strong>Replicação Dual:</strong> Salva em dois bancos simultaneamente para redundância</li>
+                    </ul>
+
+                    <h3>🔁 Sistema de Controle de Tentativas</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h5>Primeira Tentativa</h5>
+                            <p><strong>tentativas = 1</strong><br>Primeira execução do robô. Se falhar, status fica como "erro" mas permite nova tentativa.</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>Segunda Tentativa</h5>
+                            <p><strong>tentativas = 2</strong><br>Segunda execução. Sistema ainda permite mais uma tentativa em caso de falha.</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>Terceira Tentativa</h5>
+                            <p><strong>tentativas = 3</strong><br>Última tentativa. Se falhar, marca como ERRO FINAL e não processa mais.</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>Bloqueio Automático</h5>
+                            <p><strong>status = "erro final"</strong><br>Prospecto é automaticamente pulado em futuras execuções do orquestrador.</p>
+                        </div>
+                    </div>
+
+                    <h3>📊 Mapeamento de Status Interno → Banco</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #ffc107; color: #000; border-color: #ffc107;">PROCESSANDO</span>
+                            <span class="endpoint-path">Status Intermediários</span>
+                            <div class="endpoint-description">INICIANDO, LOGIN_REALIZADO, NAVEGACAO_PROSPECTOS, PROSPECTO_LOCALIZADO, MENU_ACOES_ABERTO, WIZARD_INICIADO, WIZARD_TELA1, WIZARD_SELECOES, WIZARD_TELA2</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #28a745; border-color: #28a745;">FINALIZADO</span>
+                            <span class="endpoint-path">Sucesso</span>
+                            <div class="endpoint-description">CONCLUIDO → salvo como "finalizado" no primário e "aguardando_validacao" no Django</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #dc3545; border-color: #dc3545;">ERRO</span>
+                            <span class="endpoint-path">Falhas</span>
+                            <div class="endpoint-description">ERRO_LOGIN, ERRO_NAVEGACAO, ERRO_LOCALIZACAO, ERRO_ACOES, ERRO_CONVERTER, ERRO_WIZARD1, ERRO_WIZARD_SELECOES, ERRO_WIZARD2, ERRO_FINALIZACAO, ERRO_GERAL</div>
+                        </div>
+                    </div>
+
+                    <h3>🔧 Integração com API Hubsoft</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h5>🔐 Autenticação OAuth 2.0</h5>
+                            <p><strong>Endpoint:</strong> /oauth/token<br><strong>Grant Type:</strong> password<br><strong>Token:</strong> Renovado automaticamente se expirar (401)</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>📋 Busca de Prospectos</h5>
+                            <p><strong>Endpoint:</strong> /api/v1/integracao/prospecto/all<br><strong>Filtro:</strong> convertido=nao<br><strong>Vendedores:</strong> ID 538 (duplicado no código)</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>🔄 Loop de Processamento</h5>
+                            <p><strong>Intervalo:</strong> 20 segundos<br><strong>Modo:</strong> Execução infinita<br><strong>Correção:</strong> Ajusta status incorretos automaticamente</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>📊 Relatório de Execução</h5>
+                            <p><strong>Sucessos:</strong> Prospectos convertidos<br><strong>Falhas:</strong> Erros durante processamento<br><strong>Pulados:</strong> Erro final + Máx tentativas</p>
+                        </div>
+                    </div>
+
+                    <h3>💡 Boas Práticas Implementadas</h3>
+                    <ul>
+                        <li><strong>Tolerância a Falhas:</strong> Banco Django pode falhar sem parar o processamento principal</li>
+                        <li><strong>Idempotência:</strong> Mesma execução pode ser chamada múltiplas vezes sem duplicar dados</li>
+                        <li><strong>Auditoria Completa:</strong> Cada mudança de status é registrada com timestamp</li>
+                        <li><strong>Rollback Automático:</strong> Em caso de erro, transação é revertida automaticamente</li>
+                        <li><strong>Screenshots de Erro:</strong> Facilita debug mostrando exatamente onde falhou</li>
+                        <li><strong>Logs com Emojis:</strong> Identificação visual rápida do status de cada etapa</li>
+                        <li><strong>Cleanup de Recursos:</strong> Temp directory e browser são sempre fechados no finally</li>
+                    </ul>
+
+                    <h3>🚀 Como Executar os Robôs</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #667eea; border-color: #667eea;">ÚNICO</span>
+                            <span class="endpoint-path">python main_refatorado.py "Nome" 12345</span>
+                            <div class="endpoint-description">Executa o robô para um prospecto específico (uso manual ou testes)</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #28a745; border-color: #28a745;">LOOP</span>
+                            <span class="endpoint-path">python main_leads.py</span>
+                            <div class="endpoint-description">Inicia processamento contínuo de todos prospectos (produção)</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #ffc107; color: #000; border-color: #ffc107;">DEBUG</span>
+                            <span class="endpoint-path">python main_refatorado.py --no-headless "Nome" 12345</span>
+                            <div class="endpoint-description">Executa com navegador visível para debug e desenvolvimento</div>
+                        </div>
+                    </div>
+
+                    <h3>📈 Métricas e Performance</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h5>⚡ Tempo Médio</h5>
+                            <p>45-60 segundos por prospecto (incluindo tempos de espera do Hubsoft)</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>📊 Taxa de Sucesso</h5>
+                            <p>Varia conforme qualidade dos dados, mas sistema garante máximo 3 tentativas</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>🔄 Capacidade</h5>
+                            <p>Aproximadamente 60-80 prospectos por hora em execução contínua</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>💾 Uso de Recursos</h5>
+                            <p>Headless: ~200MB RAM | Com UI: ~400MB RAM | CPU: 10-20%</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="banco-dados" class="section">
+                    <h2>🗄️ Arquitetura de Banco de Dados</h2>
+                    <p>O sistema utiliza uma arquitetura de banco de dados dupla inovadora para garantir alta disponibilidade, separação de responsabilidades e tolerância a falhas:</p>
+                    
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>🏛️ Banco Primário</h4>
+                            <p><strong>Database:</strong> venda_automatica_django_emex<br><strong>Host:</strong> 31.97.243.247<br><strong>Função:</strong> Controla processamento do robô e é a FONTE DA VERDADE</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>🌐 Banco Django</h4>
+                            <p><strong>Database:</strong> robo_venda_emex<br><strong>Host:</strong> 31.97.243.247<br><strong>Função:</strong> Interface web e validação manual de conversões</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>🔐 Servidor PostgreSQL</h4>
+                            <p><strong>Versão:</strong> PostgreSQL 14+<br><strong>Port:</strong> 5432<br><strong>Timezone:</strong> America/Sao_Paulo</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>⚡ Performance</h4>
+                            <p><strong>Índices:</strong> 4+ por tabela principal<br><strong>Queries:</strong> < 50ms média<br><strong>Conexões:</strong> Pool otimizado</p>
+                        </div>
+                    </div>
+
+                    <h3>🔄 Sistema de Replicação Automática</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h5>1. Salvamento Primário</h5>
+                            <p>Dados são SEMPRE salvos primeiro no banco primário com commit completo antes de qualquer replicação.</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>2. Replicação Django</h5>
+                            <p>Após commit no primário, tenta replicar para o Django. Falha não afeta o primário (já salvo).</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>3. Tolerância a Falhas</h5>
+                            <p>Se Django falhar, sistema continua funcionando normalmente. Logs registram erros de replicação.</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>4. Diferença de Status</h5>
+                            <p>Primário: "finalizado" | Django: "aguardando_validacao" (para revisão manual na interface)</p>
+                        </div>
+                    </div>
+
+                    <h3>📊 Sequência de Replicação</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #667eea; border-color: #667eea;">PASSO 1</span>
+                            <span class="endpoint-path">INSERT/UPDATE no Banco Primário</span>
+                            <div class="endpoint-description">Dados são inseridos ou atualizados no banco primário com todas as validações.</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #28a745; border-color: #28a745;">PASSO 2</span>
+                            <span class="endpoint-path">COMMIT no Primário ✅</span>
+                            <div class="endpoint-description">Commit garante que dados estão persistidos de forma permanente no primário.</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #ffc107; color: #000; border-color: #ffc107;">PASSO 3</span>
+                            <span class="endpoint-path">Verificar Existência no Django</span>
+                            <div class="endpoint-description">Query para verificar se registro já existe no Django (por id_prospecto_hubsoft).</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #667eea; border-color: #667eea;">PASSO 4</span>
+                            <span class="endpoint-path">INSERT/UPDATE no Django</span>
+                            <div class="endpoint-description">Replica dados para Django com conversão de status (finalizado → aguardando_validacao).</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method" style="background: #28a745; border-color: #28a745;">PASSO 5</span>
+                            <span class="endpoint-path">COMMIT no Django ✅ (ou Rollback se falhar)</span>
+                            <div class="endpoint-description">Commit no Django. Se falhar, rollback no Django mas primário já está salvo!</div>
+                        </div>
+                    </div>
+
+                    <h3>📋 Estrutura Detalhada das Tabelas</h3>
+                    
+                    <h4>🎯 Tabela: prospectos</h4>
+                    <p><strong>Descrição:</strong> Tabela principal que armazena todos os dados dos prospectos e controla o processamento automático.</p>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h5>Campos Principais</h5>
+                            <ul>
+                                <li><strong>id:</strong> SERIAL PRIMARY KEY (auto-incremento)</li>
+                                <li><strong>nome_prospecto:</strong> VARCHAR(255) - Nome ou razão social</li>
+                                <li><strong>id_prospecto_hubsoft:</strong> VARCHAR(50) UNIQUE - ID único do Hubsoft</li>
+                                <li><strong>status:</strong> VARCHAR(50) - Status atual do processamento</li>
+                                <li><strong>data_criacao:</strong> TIMESTAMP - Data de criação do registro</li>
+                                <li><strong>data_atualizacao:</strong> TIMESTAMP - Última atualização</li>
+                                <li><strong>data_processamento:</strong> TIMESTAMP - Último processamento</li>
+                                <li><strong>tentativas_processamento:</strong> INTEGER - Número de tentativas (0-3)</li>
+                                <li><strong>erro_processamento:</strong> TEXT - Mensagem de erro detalhada</li>
+                                <li><strong>tempo_processamento:</strong> INTEGER - Tempo total em segundos</li>
+                                <li><strong>resultado_processamento:</strong> VARCHAR(50) - sucesso/falha</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h5>Índices</h5>
+                            <ul>
+                                <li><strong>idx_prospectos_id_hubsoft:</strong> Busca rápida por ID Hubsoft</li>
+                                <li><strong>idx_prospectos_status:</strong> Filtragem por status</li>
+                                <li><strong>idx_prospectos_tentativas:</strong> Controle de tentativas</li>
+                                <li><strong>idx_prospectos_status_tentativas:</strong> Queries combinadas</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h4>👥 Tabela: lead_prospecto</h4>
+                    <p><strong>Descrição:</strong> Informações detalhadas dos leads com dados de contato e qualificação.</p>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h5>Campos Principais</h5>
+                            <ul>
+                                <li><strong>id:</strong> SERIAL PRIMARY KEY</li>
+                                <li><strong>nome:</strong> VARCHAR(255) - Nome completo do lead</li>
+                                <li><strong>email:</strong> VARCHAR(255) - Email de contato</li>
+                                <li><strong>telefone:</strong> VARCHAR(20) - Telefone principal</li>
+                                <li><strong>cpf_cnpj:</strong> VARCHAR(20) - Documento de identificação</li>
+                                <li><strong>endereco:</strong> TEXT - Endereço completo</li>
+                                <li><strong>bairro:</strong> VARCHAR(100) - Bairro</li>
+                                <li><strong>cidade:</strong> VARCHAR(100) - Cidade</li>
+                                <li><strong>estado:</strong> VARCHAR(2) - UF</li>
+                                <li><strong>cep:</strong> VARCHAR(10) - Código postal</li>
+                                <li><strong>data_nascimento:</strong> DATE - Data de nascimento</li>
+                                <li><strong>canal_entrada:</strong> VARCHAR(50) - Como chegou ao sistema</li>
+                                <li><strong>score_qualificacao:</strong> INTEGER - Score de qualificação (0-100)</li>
+                                <li><strong>status_lead:</strong> VARCHAR(50) - Status atual do lead</li>
+                                <li><strong>data_criacao:</strong> TIMESTAMP - Data de criação</li>
+                                <li><strong>data_atualizacao:</strong> TIMESTAMP - Última atualização</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h5>Relacionamentos</h5>
+                            <ul>
+                                <li><strong>OneToOne:</strong> Relacionamento 1:1 com prospectos</li>
+                                <li><strong>ForeignKey:</strong> Referência para histórico de contatos</li>
+                                <li><strong>ManyToMany:</strong> Relacionamento com fluxos de atendimento</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h4>📞 Tabela: historico_contato</h4>
+                    <p><strong>Descrição:</strong> Registro completo de todas as interações e contatos realizados.</p>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h5>Campos Principais</h5>
+                            <ul>
+                                <li><strong>id:</strong> SERIAL PRIMARY KEY</li>
+                                <li><strong>lead_prospecto:</strong> FK - Referência ao lead</li>
+                                <li><strong>tipo_contato:</strong> VARCHAR(50) - Tipo de contato realizado</li>
+                                <li><strong>canal_contato:</strong> VARCHAR(50) - Canal utilizado</li>
+                                <li><strong>data_contato:</strong> TIMESTAMP - Data/hora do contato</li>
+                                <li><strong>usuario_contato:</strong> VARCHAR(100) - Usuário que realizou</li>
+                                <li><strong>descricao:</strong> TEXT - Descrição do contato</li>
+                                <li><strong>resultado:</strong> VARCHAR(100) - Resultado do contato</li>
+                                <li><strong>proximo_contato:</strong> TIMESTAMP - Data do próximo contato</li>
+                                <li><strong>converteu_lead:</strong> BOOLEAN - Se converteu em cliente</li>
+                                <li><strong>valor_venda:</strong> DECIMAL - Valor da venda (se aplicável)</li>
+                                <li><strong>observacoes:</strong> TEXT - Observações adicionais</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h5>Índices Específicos</h5>
+                            <ul>
+                                <li><strong>idx_historico_lead:</strong> Busca por lead específico</li>
+                                <li><strong>idx_historico_data:</strong> Ordenação por data</li>
+                                <li><strong>idx_historico_tipo:</strong> Filtragem por tipo de contato</li>
+                                <li><strong>idx_historico_conversao:</strong> Leads convertidos</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h4>🔔 Tabela: notificacao</h4>
+                    <p><strong>Descrição:</strong> Sistema completo de notificações multi-canal.</p>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h5>Campos Principais</h5>
+                            <ul>
+                                <li><strong>id:</strong> SERIAL PRIMARY KEY</li>
+                                <li><strong>tipo_notificacao:</strong> FK - Tipo da notificação</li>
+                                <li><strong>canal_notificacao:</strong> FK - Canal de envio</li>
+                                <li><strong>destinatario:</strong> VARCHAR(255) - Destinatário</li>
+                                <li><strong>assunto:</strong> VARCHAR(255) - Assunto da notificação</li>
+                                <li><strong>mensagem:</strong> TEXT - Conteúdo da mensagem</li>
+                                <li><strong>status:</strong> VARCHAR(50) - Status do envio</li>
+                                <li><strong>data_envio:</strong> TIMESTAMP - Data/hora do envio</li>
+                                <li><strong>data_agendamento:</strong> TIMESTAMP - Data agendada</li>
+                                <li><strong>tentativas_envio:</strong> INTEGER - Número de tentativas</li>
+                                <li><strong>erro_envio:</strong> TEXT - Erro detalhado (se houver)</li>
+                                <li><strong>dados_contexto:</strong> JSONB - Dados adicionais</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h5>Tabelas Relacionadas</h5>
+                            <ul>
+                                <li><strong>tipo_notificacao:</strong> Tipos de eventos</li>
+                                <li><strong>canal_notificacao:</strong> Canais disponíveis</li>
+                                <li><strong>template_notificacao:</strong> Templates de mensagens</li>
+                                <li><strong>preferencia_notificacao:</strong> Preferências do usuário</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h4>⚙️ Tabela: configuracao_sistema</h4>
+                    <p><strong>Descrição:</strong> Configurações globais e parâmetros do sistema.</p>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h5>Campos Principais</h5>
+                            <ul>
+                                <li><strong>id:</strong> SERIAL PRIMARY KEY</li>
+                                <li><strong>chave:</strong> VARCHAR(100) UNIQUE - Chave da configuração</li>
+                                <li><strong>valor:</strong> TEXT - Valor da configuração</li>
+                                <li><strong>tipo:</strong> VARCHAR(50) - Tipo do valor (string, int, bool, json)</li>
+                                <li><strong>descricao:</strong> TEXT - Descrição da configuração</li>
+                                <li><strong>categoria:</strong> VARCHAR(50) - Categoria da configuração</li>
+                                <li><strong>editavel:</strong> BOOLEAN - Se pode ser editada via interface</li>
+                                <li><strong>data_atualizacao:</strong> TIMESTAMP - Última atualização</li>
+                                <li><strong>usuario_atualizacao:</strong> VARCHAR(100) - Usuário que atualizou</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h5>Configurações Principais</h5>
+                            <ul>
+                                <li><strong>sistema.versao:</strong> Versão atual do sistema</li>
+                                <li><strong>sistema.manutencao:</strong> Status de manutenção</li>
+                                <li><strong>notificacoes.ativo:</strong> Sistema de notificações ativo</li>
+                                <li><strong>integracao.hubsoft.url:</strong> URL da API Hubsoft</li>
+                                <li><strong>integracao.n8n.webhook:</strong> Webhook N8N</li>
+                                <li><strong>seguranca.sessao_timeout:</strong> Timeout de sessão</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h4>🔄 Tabela: fluxo_atendimento</h4>
+                    <p><strong>Descrição:</strong> Fluxos de atendimento personalizáveis com questões dinâmicas.</p>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h5>Campos Principais</h5>
+                            <ul>
+                                <li><strong>id:</strong> SERIAL PRIMARY KEY</li>
+                                <li><strong>nome:</strong> VARCHAR(255) - Nome do fluxo</li>
+                                <li><strong>descricao:</strong> TEXT - Descrição detalhada</li>
+                                <li><strong>tipo_fluxo:</strong> VARCHAR(50) - Tipo do fluxo</li>
+                                <li><strong>ativo:</strong> BOOLEAN - Se está ativo</li>
+                                <li><strong>versao:</strong> VARCHAR(20) - Versão do fluxo</li>
+                                <li><strong>configuracao_fluxo:</strong> JSONB - Configurações em JSON</li>
+                                <li><strong>data_criacao:</strong> TIMESTAMP - Data de criação</li>
+                                <li><strong>data_atualizacao:</strong> TIMESTAMP - Última atualização</li>
+                                <li><strong>usuario_criacao:</strong> VARCHAR(100) - Usuário criador</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h5>Tabelas Relacionadas</h5>
+                            <ul>
+                                <li><strong>questao_fluxo:</strong> Questões do fluxo</li>
+                                <li><strong>atendimento_fluxo:</strong> Instâncias de atendimento</li>
+                                <li><strong>resposta_questao:</strong> Respostas das questões</li>
+                                <li><strong>tentativa_resposta:</strong> Tentativas de resposta</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h3>🔗 Relacionamentos Entre Tabelas</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h5>Relacionamentos Principais</h5>
+                            <ul>
+                                <li><strong>prospectos ↔ lead_prospecto:</strong> OneToOne</li>
+                                <li><strong>lead_prospecto ↔ historico_contato:</strong> OneToMany</li>
+                                <li><strong>lead_prospecto ↔ fluxo_atendimento:</strong> ManyToMany</li>
+                                <li><strong>fluxo_atendimento ↔ questao_fluxo:</strong> OneToMany</li>
+                                <li><strong>questao_fluxo ↔ resposta_questao:</strong> OneToMany</li>
+                                <li><strong>notificacao ↔ tipo_notificacao:</strong> ManyToOne</li>
+                                <li><strong>notificacao ↔ canal_notificacao:</strong> ManyToOne</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h5>Integridade Referencial</h5>
+                            <ul>
+                                <li><strong>CASCADE:</strong> Deletar lead deleta histórico</li>
+                                <li><strong>PROTECT:</strong> Proteger fluxos com atendimentos</li>
+                                <li><strong>SET_NULL:</strong> Manter histórico sem lead</li>
+                                <li><strong>RESTRICT:</strong> Restringir operações críticas</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h3>📊 Otimizações de Performance</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h5>Índices Estratégicos</h5>
+                            <ul>
+                                <li><strong>Índices Compostos:</strong> Para queries frequentes</li>
+                                <li><strong>Índices Parciais:</strong> Para dados específicos</li>
+                                <li><strong>Índices de Texto:</strong> Para busca full-text</li>
+                                <li><strong>Índices JSONB:</strong> Para campos JSON</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h5>Particionamento</h5>
+                            <ul>
+                                <li><strong>Por Data:</strong> Particionamento temporal</li>
+                                <li><strong>Por Status:</strong> Separação por status</li>
+                                <li><strong>Por Usuário:</strong> Isolamento por usuário</li>
+                                <li><strong>Por Região:</strong> Distribuição geográfica</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h3>🔄 Sistema de Backup e Restore</h3>
+                    <ul>
+                        <li><strong>Backup Automático:</strong> Backup diário completo e incremental</li>
+                        <li><strong>Retenção:</strong> 30 dias de backups completos, 90 dias incrementais</li>
+                        <li><strong>Teste de Restore:</strong> Validação semanal de backups</li>
+                        <li><strong>Backup Offsite:</strong> Cópia em localização remota</li>
+                        <li><strong>Point-in-Time Recovery:</strong> Restauração até momento específico</li>
+                    </ul>
+                </section>
+
+                <section id="apis" class="section">
+                    <h2>🔌 APIs e Integrações</h2>
+                    <p>O sistema oferece um conjunto completo de APIs RESTful para integração com sistemas externos e automação de processos:</p>
+                    
+                    <h3>🎯 APIs de Gestão de Leads</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/leads/</span>
+                            <div class="endpoint-description">Lista todos os leads com filtros avançados, paginação e ordenação</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/leads/</span>
+                            <div class="endpoint-description">Cria um novo lead no sistema com validação automática</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">PUT</span>
+                            <span class="endpoint-path">/api/leads/{id}/</span>
+                            <div class="endpoint-description">Atualiza dados de um lead específico com auditoria</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">DELETE</span>
+                            <span class="endpoint-path">/api/leads/{id}/</span>
+                            <div class="endpoint-description">Remove um lead do sistema (soft delete)</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/leads/registrar/</span>
+                            <div class="endpoint-description">Registra novo lead via API externa</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">PUT</span>
+                            <span class="endpoint-path">/api/leads/atualizar/</span>
+                            <div class="endpoint-description">Atualiza lead existente via API externa</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/consultar/leads/</span>
+                            <div class="endpoint-description">Consulta avançada de leads com múltiplos filtros</div>
+                        </div>
+                    </div>
+
+                    <h3>📊 APIs de Dashboard</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/dashboard/data/</span>
+                            <div class="endpoint-description">Dados principais do dashboard em tempo real</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/dashboard/charts/</span>
+                            <div class="endpoint-description">Dados para gráficos e visualizações</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/dashboard/tables/</span>
+                            <div class="endpoint-description">Dados tabulares para tabelas do dashboard</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/dashboard/leads/</span>
+                            <div class="endpoint-description">Métricas específicas de leads</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/dashboard/prospectos/</span>
+                            <div class="endpoint-description">Métricas de prospectos e processamento</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/dashboard/historico/</span>
+                            <div class="endpoint-description">Dados históricos e tendências</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/dashboard/contatos/realtime/</span>
+                            <div class="endpoint-description">Contatos em tempo real via WebSocket</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/dashboard/ultimas-conversoes/</span>
+                            <div class="endpoint-description">Últimas conversões realizadas</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/dashboard/funil/insights/</span>
+                            <div class="endpoint-description">Insights do funil de vendas</div>
+                        </div>
+                    </div>
+
+                    <h3>💰 APIs de Gestão de Vendas</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/vendas/aprovar/</span>
+                            <div class="endpoint-description">Aprova uma venda pendente</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/vendas/rejeitar/</span>
+                            <div class="endpoint-description">Rejeita uma venda pendente</div>
+                        </div>
+                    </div>
+
+                    <h3>📞 APIs de Histórico e Contatos</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/historico-contatos/</span>
+                            <div class="endpoint-description">Lista histórico de contatos com filtros</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/historicos/registrar/</span>
+                            <div class="endpoint-description">Registra novo histórico de contato</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">PUT</span>
+                            <span class="endpoint-path">/api/historicos/atualizar/</span>
+                            <div class="endpoint-description">Atualiza histórico de contato existente</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/consultar/historicos/</span>
+                            <div class="endpoint-description">Consulta avançada de históricos</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/dashboard/contato/{telefone}/historico/</span>
+                            <div class="endpoint-description">Histórico específico de um contato</div>
+                        </div>
+                    </div>
+
+                    <h3>🔄 APIs de Fluxos de Atendimento</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/fluxos/</span>
+                            <div class="endpoint-description">Lista todos os fluxos de atendimento</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/fluxos/criar/</span>
+                            <div class="endpoint-description">Cria novo fluxo de atendimento</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">PUT</span>
+                            <span class="endpoint-path">/api/fluxos/{id}/atualizar/</span>
+                            <div class="endpoint-description">Atualiza fluxo existente</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">DELETE</span>
+                            <span class="endpoint-path">/api/fluxos/{id}/deletar/</span>
+                            <div class="endpoint-description">Remove fluxo do sistema</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/questoes/</span>
+                            <div class="endpoint-description">Lista questões dos fluxos</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/questoes/criar/</span>
+                            <div class="endpoint-description">Cria nova questão em um fluxo</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">PUT</span>
+                            <span class="endpoint-path">/api/questoes/{id}/atualizar/</span>
+                            <div class="endpoint-description">Atualiza questão existente</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">DELETE</span>
+                            <span class="endpoint-path">/api/questoes/{id}/deletar/</span>
+                            <div class="endpoint-description">Remove questão do fluxo</div>
+                        </div>
+                    </div>
+
+                    <h3>🎯 APIs de Atendimentos</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/atendimentos/</span>
+                            <div class="endpoint-description">Lista atendimentos em andamento e finalizados</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/atendimentos/criar/</span>
+                            <div class="endpoint-description">Inicia novo atendimento</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">PUT</span>
+                            <span class="endpoint-path">/api/atendimentos/{id}/atualizar/</span>
+                            <div class="endpoint-description">Atualiza status do atendimento</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/atendimentos/{id}/responder/</span>
+                            <div class="endpoint-description">Registra resposta em um atendimento</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/atendimentos/{id}/finalizar/</span>
+                            <div class="endpoint-description">Finaliza atendimento</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/respostas/</span>
+                            <div class="endpoint-description">Lista respostas de questões</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/atendimento/estatisticas/</span>
+                            <div class="endpoint-description">Estatísticas de atendimento</div>
+                        </div>
+                    </div>
+
+                    <h3>🔔 APIs de Notificações</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/notificacoes/enviar/</span>
+                            <div class="endpoint-description">Envia notificação personalizada</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/notificacoes/listar/</span>
+                            <div class="endpoint-description">Lista notificações do usuário</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">PUT</span>
+                            <span class="endpoint-path">/api/notificacoes/preferencias/</span>
+                            <div class="endpoint-description">Atualiza preferências de notificação</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/notificacoes/teste/</span>
+                            <div class="endpoint-description">Testa envio de notificação</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/notificacoes/estatisticas/</span>
+                            <div class="endpoint-description">Estatísticas de notificações</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/templates-notificacoes/</span>
+                            <div class="endpoint-description">Gerenciar templates de notificação</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/tipos-notificacao/</span>
+                            <div class="endpoint-description">Gerenciar tipos de notificação</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/canais-notificacao/</span>
+                            <div class="endpoint-description">Gerenciar canais de notificação</div>
+                        </div>
+                    </div>
+
+                    <h3>🤖 APIs Específicas para N8N</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/n8n/atendimento/iniciar/</span>
+                            <div class="endpoint-description">Inicia atendimento via N8N</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/n8n/atendimento/{id}/consultar/</span>
+                            <div class="endpoint-description">Consulta atendimento via N8N</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/n8n/atendimento/{id}/responder/</span>
+                            <div class="endpoint-description">Responde questão via N8N</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/n8n/atendimento/{id}/avancar/</span>
+                            <div class="endpoint-description">Avança para próxima questão via N8N</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/n8n/atendimento/{id}/finalizar/</span>
+                            <div class="endpoint-description">Finaliza atendimento via N8N</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/n8n/lead/buscar/</span>
+                            <div class="endpoint-description">Busca lead por telefone via N8N</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/n8n/lead/criar/</span>
+                            <div class="endpoint-description">Cria lead via N8N</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/n8n/fluxos/</span>
+                            <div class="endpoint-description">Lista fluxos ativos via N8N</div>
+                        </div>
+                    </div>
+
+                    <h3>📊 APIs de Análise e Relatórios</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/analise/atendimentos/data/</span>
+                            <div class="endpoint-description">Dados para análise de atendimentos</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/analise/atendimentos/fluxos/</span>
+                            <div class="endpoint-description">Análise de fluxos de atendimento</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/analise/atendimentos/detalhada/</span>
+                            <div class="endpoint-description">Análise detalhada de atendimentos</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/jornada/cliente/</span>
+                            <div class="endpoint-description">Jornada completa do cliente</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/atendimento/tempo-real/</span>
+                            <div class="endpoint-description">Dados de atendimento em tempo real</div>
+                        </div>
+                    </div>
+
+                    <h3>⚙️ APIs de Configuração</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/configuracoes/cadastro/</span>
+                            <div class="endpoint-description">Configurações de cadastro</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/configuracoes/planos/</span>
+                            <div class="endpoint-description">Gerenciar planos de internet</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/configuracoes/vencimentos/</span>
+                            <div class="endpoint-description">Gerenciar opções de vencimento</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/configuracoes/questoes/</span>
+                            <div class="endpoint-description">Gerenciar questões de fluxo</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/configuracoes/questoes/duplicar/</span>
+                            <div class="endpoint-description">Duplica questão de fluxo</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/configuracoes/usuarios/</span>
+                            <div class="endpoint-description">Gerenciar usuários do sistema</div>
+                        </div>
+                    </div>
+
+                    <h3>📋 APIs de Cadastro</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/cadastro/cliente/</span>
+                            <div class="endpoint-description">Cadastra novo cliente</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/planos/internet/</span>
+                            <div class="endpoint-description">Lista planos de internet disponíveis</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/vencimentos/</span>
+                            <div class="endpoint-description">Lista opções de vencimento</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/cep/{cep}/</span>
+                            <div class="endpoint-description">Consulta dados de CEP</div>
+                        </div>
+                    </div>
+
+                    <h3>📚 APIs de Documentação</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/docs/</span>
+                            <div class="endpoint-description">Documentação Swagger da API</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/docs/markdown/</span>
+                            <div class="endpoint-description">Documentação em Markdown</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/docs/n8n/</span>
+                            <div class="endpoint-description">Guia de integração N8N</div>
+                        </div>
+                    </div>
+
+                    <h3>🔗 Integrações Externas</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>🏢 Hubsoft CRM</h4>
+                            <p><strong>Sincronização Bidirecional:</strong> Dados de prospectos são sincronizados automaticamente entre os sistemas</p>
+                            <ul>
+                                <li>Importação automática de novos prospectos</li>
+                                <li>Atualização de status em tempo real</li>
+                                <li>Histórico completo de interações</li>
+                                <li>Validação de dados antes da sincronização</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>🔄 N8N Automation</h4>
+                            <p><strong>Automação de Workflows:</strong> Integração completa com N8N para automação de processos</p>
+                            <ul>
+                                <li>Webhooks para eventos do sistema</li>
+                                <li>APIs específicas para N8N</li>
+                                <li>Processamento assíncrono de tarefas</li>
+                                <li>Retry automático em caso de falha</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>📧 Sistema de Notificações</h4>
+                            <p><strong>Multi-canal:</strong> Email, WhatsApp, SMS via webhooks</p>
+                            <ul>
+                                <li>Envio automático baseado em eventos</li>
+                                <li>Templates personalizáveis por canal</li>
+                                <li>Agendamento de envios</li>
+                                <li>Confirmação de entrega</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>🔍 APIs de Validação</h4>
+                            <p><strong>Validação em Tempo Real:</strong> CPF, CNPJ, CEP e outros dados</p>
+                            <ul>
+                                <li>Validação automática de documentos</li>
+                                <li>Consulta de CEP em tempo real</li>
+                                <li>Verificação de dados de contato</li>
+                                <li>Cache inteligente para otimização</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h3>🔐 Autenticação e Segurança</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>🔑 Autenticação</h4>
+                            <ul>
+                                <li><strong>JWT Tokens:</strong> Autenticação baseada em tokens</li>
+                                <li><strong>API Keys:</strong> Chaves de API para sistemas externos</li>
+                                <li><strong>Rate Limiting:</strong> Limitação de requisições por IP</li>
+                                <li><strong>CORS:</strong> Controle de origem cross-origin</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>🛡️ Segurança</h4>
+                            <ul>
+                                <li><strong>HTTPS:</strong> Todas as comunicações criptografadas</li>
+                                <li><strong>Validação de Input:</strong> Sanitização de dados de entrada</li>
+                                <li><strong>Logs de Auditoria:</strong> Registro de todas as operações</li>
+                                <li><strong>Backup Automático:</strong> Backup regular dos dados</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="campanhas-trafego" class="section">
+                    <h2>📱 Sistema de Campanhas de Tráfego Pago</h2>
+                    <p>Sistema inteligente para rastreamento e atribuição automática de leads provenientes de campanhas de marketing digital. Detecta automaticamente a origem do lead através de palavras-chave em mensagens do WhatsApp, SMS ou outros canais.</p>
+                    
+                    <div class="highlight-box">
+                        <i class="fas fa-check-circle"></i>
+                        <div>
+                            <strong>Sistema Validado e Aprovado para Produção</strong>
+                            <p>20/20 testes aprovados (100%) - Performance &lt; 100ms por requisição - Precisão de 100%</p>
+                        </div>
+                    </div>
+
+                    <h3>🎯 Visão Geral</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>📊 O que é?</h4>
+                            <p>Sistema que detecta automaticamente de qual campanha de marketing um lead veio, através da análise de mensagens recebidas via WhatsApp, SMS ou outros canais.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>🎯 Como Funciona?</h4>
+                            <p>Quando um cliente menciona uma palavra-chave (ex: "CUPOM50"), o sistema identifica a campanha automaticamente e associa o lead à origem correta.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>💡 Benefícios</h4>
+                            <ul>
+                                <li>ROI preciso por campanha</li>
+                                <li>Taxa de conversão automática</li>
+                                <li>Atribuição de origem correta</li>
+                                <li>Análise de performance em tempo real</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>⚡ Integração N8N</h4>
+                            <p>Totalmente integrado via API REST para automatização completa do fluxo de detecção via webhooks do WhatsApp.</p>
+                        </div>
+                    </div>
+
+                    <h3>📝 Como Criar uma Campanha</h3>
+                    <div class="code-block">
+                        <strong>Passos para criar campanha:</strong>
+                        <ol style="margin-left: 20px; margin-top: 10px;">
+                            <li>Acesse: <strong>Dashboard → Campanhas de Tráfego → Nova Campanha</strong></li>
+                            <li>Preencha os dados principais:
+                                <ul style="margin-left: 20px;">
+                                    <li><strong>Nome:</strong> Ex: "Black Friday 2025"</li>
+                                    <li><strong>Código:</strong> Ex: "BF2025" (único)</li>
+                                    <li><strong>Plataforma:</strong> Google Ads, Facebook Ads, Instagram Ads, etc.</li>
+                                    <li><strong>Investimento:</strong> Valor investido na campanha</li>
+                                </ul>
+                            </li>
+                            <li>Configure a detecção:
+                                <ul style="margin-left: 20px;">
+                                    <li><strong>Palavra-chave:</strong> Ex: "blackfriday" ou "black friday|bf 2025"</li>
+                                    <li><strong>Tipo de Match:</strong> Exato, Parcial ou Regex</li>
+                                    <li><strong>Case Sensitive:</strong> Marque se quiser diferenciar maiúsculas/minúsculas</li>
+                                    <li><strong>Prioridade:</strong> 1-10 (quanto maior, mais prioridade)</li>
+                                </ul>
+                            </li>
+                            <li>Defina o período:
+                                <ul style="margin-left: 20px;">
+                                    <li><strong>Data de Início:</strong> Quando a campanha começa</li>
+                                    <li><strong>Data de Fim:</strong> Quando a campanha termina</li>
+                                </ul>
+                            </li>
+                            <li>Ative a campanha marcando <strong>"Ativa"</strong></li>
+                        </ol>
+                    </div>
+
+                    <h3>🎯 3 Métodos de Detecção (Matching)</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>1️⃣ Match Exato</h4>
+                            <p><strong>Score: 100%</strong></p>
+                            <p>A palavra-chave deve aparecer exatamente como configurada na mensagem.</p>
+                            <div class="code-block">
+                                <strong>Exemplo:</strong><br>
+                                Palavra-chave: <code>PROMOCAO2025</code><br>
+                                ✅ Detecta: "Vi a PROMOCAO2025"<br>
+                                ❌ Não detecta: "Vi a promocao2025" (se case sensitive)
+                            </div>
+                            <p><strong>Quando usar:</strong> Para códigos promocionais específicos e únicos</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>2️⃣ Match Parcial</h4>
+                            <p><strong>Score: 50-95%</strong></p>
+                            <p>A palavra-chave pode aparecer em qualquer parte da mensagem.</p>
+                            <div class="code-block">
+                                <strong>Exemplo:</strong><br>
+                                Palavra-chave: <code>cupom50</code><br>
+                                ✅ Detecta: "Vi o cupom50 no Instagram"<br>
+                                ✅ Detecta: "Quero usar cupom50"<br>
+                                ❌ Não detecta: "cupom 50" (com espaço)
+                            </div>
+                            <p><strong>Quando usar:</strong> Para palavras-chave simples e diretas</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>3️⃣ Match Regex</h4>
+                            <p><strong>Score: 90%</strong></p>
+                            <p>Usa expressões regulares para detectar variações da palavra-chave.</p>
+                            <div class="code-block">
+                                <strong>Exemplo:</strong><br>
+                                Regex: <code>black\s*friday|bf\s*2025|blackfriday</code><br>
+                                ✅ Detecta: "Vi a blackfriday"<br>
+                                ✅ Detecta: "Promoção Black Friday ainda vale?"<br>
+                                ✅ Detecta: "Quero o desconto BF 2025"
+                            </div>
+                            <p><strong>Quando usar:</strong> Para campanhas com múltiplas variações de escrita</p>
+                        </div>
+                    </div>
+
+                    <h3>⚙️ Sistema de Priorização</h3>
+                    <div class="code-block">
+                        <strong>Como funciona:</strong><br><br>
+                        Quando uma mensagem contém múltiplas palavras-chave de diferentes campanhas, o sistema escolhe baseado em:
+                        <ol style="margin-left: 20px; margin-top: 10px;">
+                            <li><strong>Score mais alto</strong> (Match Exato 100% > Regex 90% > Parcial 50-95%)</li>
+                            <li>Se empate no score, escolhe a de <strong>maior prioridade</strong></li>
+                        </ol>
+                        
+                        <strong>Exemplo:</strong><br>
+                        Mensagem: "Vi a Black Friday e o cupom50, qual é melhor?"<br>
+                        <br>
+                        Campanhas detectadas:<br>
+                        • Black Friday (Score: 90%, Prioridade: 10) ✅ <strong>VENCEDOR</strong><br>
+                        • Cupom 50% OFF (Score: 65%, Prioridade: 8)<br>
+                        <br>
+                        <strong>Resultado:</strong> Lead atribuído à campanha "Black Friday"
+                    </div>
+
+                    <h3>🌐 API REST - Detecção de Campanhas</h3>
+                    <p>Endpoint principal para integração com N8N e sistemas externos:</p>
+                    
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/campanhas/detectar/</span>
+                            <div class="endpoint-description">Detecta campanha em mensagem e cria/atualiza lead automaticamente</div>
+                        </div>
+                    </div>
+
+                    <h4>📤 Request (JSON)</h4>
+                    <div class="code-block">
+<pre>{
+  "telefone": "5585999999999",
+  "nome": "João Silva",
+  "mensagem": "Oi! Vi o CUPOM50 no Instagram!",
+  "origem": "whatsapp",
+  "cidade": "Fortaleza",
+  "bairro": "Centro",
+  "timestamp": "2025-01-22 10:30:00"
+}</pre>
+                    </div>
+
+                    <h4>📋 Campos do Request</h4>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>Campos Obrigatórios</h4>
+                            <ul>
+                                <li><code>telefone</code> (string): Telefone do cliente com DDD</li>
+                                <li><code>mensagem</code> (string): Mensagem enviada pelo cliente</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>Campos Opcionais</h4>
+                            <ul>
+                                <li><code>nome</code> (string): Nome do cliente</li>
+                                <li><code>origem</code> (string): whatsapp, sms, email, chat, telefone</li>
+                                <li><code>cidade</code> (string): Cidade do cliente</li>
+                                <li><code>bairro</code> (string): Bairro do cliente</li>
+                                <li><code>timestamp</code> (string): Data/hora da mensagem</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h4>📥 Response - Campanha Detectada (HTTP 200)</h4>
+                    <div class="code-block">
+<pre>{
+  "success": true,
+  "campanha_detectada": {
+    "id": 2,
+    "codigo": "CUPOM50",
+    "nome": "Promoção Cupom 50% OFF",
+    "plataforma": "instagram_ads",
+    "cor": "#E1306C"
+  },
+  "deteccao": {
+    "id": 15,
+    "trecho_detectado": "cupom50",
+    "score_confianca": 73.33,
+    "metodo": "parcial"
+  },
+  "lead_id": 29,
+  "lead_criado": true
+}</pre>
+                    </div>
+
+                    <h4>📥 Response - Nenhuma Campanha Detectada (HTTP 200)</h4>
+                    <div class="code-block">
+<pre>{
+  "success": true,
+  "campanha_detectada": null,
+  "mensagem": "Nenhuma campanha detectada"
+}</pre>
+                    </div>
+
+                    <h4>❌ Response - Erro (HTTP 400)</h4>
+                    <div class="code-block">
+<pre>{
+  "success": false,
+  "error": "Telefone e mensagem são obrigatórios"
+}</pre>
+                    </div>
+
+                    <h3>🔄 Integração com N8N</h3>
+                    <p>Fluxo completo de integração com WhatsApp via N8N:</p>
+                    
+                    <div class="code-block">
+                        <strong>Passo a Passo:</strong>
+                        <ol style="margin-left: 20px; margin-top: 10px;">
+                            <li><strong>Webhook do WhatsApp</strong> recebe mensagem do cliente</li>
+                            <li><strong>N8N extrai</strong> telefone e mensagem</li>
+                            <li><strong>N8N faz POST</strong> para <code>/api/campanhas/detectar/</code></li>
+                            <li><strong>Sistema detecta</strong> campanha e cria/atualiza lead</li>
+                            <li><strong>N8N recebe response</strong> com dados da campanha</li>
+                            <li><strong>N8N decide</strong> próxima ação baseado na resposta:
+                                <ul style="margin-left: 20px;">
+                                    <li>Se campanha detectada → Enviar mensagem específica da promoção</li>
+                                    <li>Se sem campanha → Enviar mensagem padrão de boas-vindas</li>
+                                </ul>
+                            </li>
+                        </ol>
+                    </div>
+
+                    <h4>🔗 Exemplo de Node HTTP Request no N8N</h4>
+                    <div class="code-block">
+<pre>{% verbatim %}URL: https://aurora.consulteplus.com/api/campanhas/detectar/
+Method: POST
+Content-Type: application/json
+
+Body:
+{
+  "telefone": "{{$json.telefone}}",
+  "nome": "{{$json.nome}}",
+  "mensagem": "{{$json.mensagem}}",
+  "origem": "whatsapp"
+}{% endverbatim %}</pre>
+                    </div>
+
+                    <h4>✅ Exemplo de Decisão no N8N (IF Node)</h4>
+                    <div class="code-block">
+<pre>{% verbatim %}Condição 1 (Campanha Detectada):
+  {{$json.campanha_detectada}} is not null
+  
+  Ação TRUE:
+    - Enviar: "Olá! Vi que você está interessado na {{$json.campanha_detectada.nome}}! 🎉"
+    - Tag do lead com código da campanha
+    
+  Ação FALSE:
+    - Enviar mensagem padrão de boas-vindas
+    - Direcionar para atendimento geral{% endverbatim %}</pre>
+                    </div>
+
+                    <h3>📊 Analytics e Métricas</h3>
+                    <p>O sistema calcula automaticamente várias métricas para cada campanha:</p>
+                    
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>💰 ROI (Return on Investment)</h4>
+                            <div class="code-block">
+                                ROI = ((Receita - Investimento) / Investimento) × 100
+                                <br><br>
+                                <strong>Exemplo:</strong><br>
+                                Investimento: R$ 1.000<br>
+                                Receita: R$ 5.000<br>
+                                ROI: 400% 📈
+                            </div>
+                        </div>
+                        <div class="info-card">
+                            <h4>📈 Taxa de Conversão</h4>
+                            <div class="code-block">
+                                Taxa = (Vendas / Detecções) × 100
+                                <br><br>
+                                <strong>Exemplo:</strong><br>
+                                100 detecções<br>
+                                25 vendas<br>
+                                Taxa: 25% 🎯
+                            </div>
+                        </div>
+                        <div class="info-card">
+                            <h4>💵 Receita Total</h4>
+                            <p>Soma de todas as vendas originadas da campanha, calculada automaticamente pelo sistema.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>📊 Detecções</h4>
+                            <p>Número de vezes que a campanha foi detectada em mensagens de clientes.</p>
+                        </div>
+                    </div>
+
+                    <h3>🎨 Exemplos Práticos</h3>
+                    
+                    <h4>Exemplo 1: Campanha Black Friday</h4>
+                    <div class="code-block">
+                        <strong>Configuração:</strong><br>
+                        • Nome: Black Friday 2025<br>
+                        • Código: BF2025<br>
+                        • Palavra-chave: <code>black\s*friday|bf\s*2025|blackfriday</code><br>
+                        • Tipo: Regex<br>
+                        • Prioridade: 10<br>
+                        • Case Sensitive: Não<br>
+                        <br>
+                        <strong>Mensagens que detectam:</strong><br>
+                        ✅ "Oi, vi a promoção da blackfriday"<br>
+                        ✅ "A Black Friday ainda está valendo?"<br>
+                        ✅ "Quero o desconto BF 2025"<br>
+                        ✅ "BLACK FRIDAY PROMO"
+                    </div>
+
+                    <h4>Exemplo 2: Cupom de Desconto</h4>
+                    <div class="code-block">
+                        <strong>Configuração:</strong><br>
+                        • Nome: Cupom 50% OFF<br>
+                        • Código: CUPOM50<br>
+                        • Palavra-chave: <code>cupom50</code><br>
+                        • Tipo: Parcial<br>
+                        • Prioridade: 8<br>
+                        • Case Sensitive: Não<br>
+                        <br>
+                        <strong>Mensagens que detectam:</strong><br>
+                        ✅ "Vi o cupom50 no Instagram"<br>
+                        ✅ "Quero usar o CUPOM50"<br>
+                        ✅ "cupom50 por favor"<br>
+                        ❌ "cupom 50" (tem espaço)
+                    </div>
+
+                    <h4>Exemplo 3: Código Promocional Exato</h4>
+                    <div class="code-block">
+                        <strong>Configuração:</strong><br>
+                        • Nome: Promoção Verão<br>
+                        • Código: VERAO2025<br>
+                        • Palavra-chave: <code>VERAO2025</code><br>
+                        • Tipo: Exato<br>
+                        • Prioridade: 9<br>
+                        • Case Sensitive: Sim<br>
+                        <br>
+                        <strong>Mensagens que detectam:</strong><br>
+                        ✅ "Vi o código VERAO2025"<br>
+                        ✅ "VERAO2025 por favor"<br>
+                        ❌ "verao2025" (minúsculo, case sensitive ativo)
+                    </div>
+
+                    <h3>🧪 Testes Realizados</h3>
+                    <div class="highlight-box" style="background: #e8f5e9;">
+                        <i class="fas fa-check-circle" style="color: #4caf50;"></i>
+                        <div>
+                            <strong>Sistema 100% Testado e Aprovado</strong>
+                            <ul style="margin-top: 10px;">
+                                <li>✅ <strong>12 cenários de backend</strong> testados (100% aprovados)</li>
+                                <li>✅ <strong>8 cenários de API REST</strong> testados (100% aprovados)</li>
+                                <li>✅ <strong>3 métodos de matching</strong> validados</li>
+                                <li>✅ <strong>Normalização de mensagens</strong> confirmada</li>
+                                <li>✅ <strong>Sistema de priorização</strong> funcionando</li>
+                                <li>✅ <strong>Criação automática de leads</strong> operacional</li>
+                                <li>✅ <strong>Performance < 100ms</strong> por requisição</li>
+                                <li>✅ <strong>Precisão de 100%</strong> (sem falsos positivos)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h3>⚠️ Boas Práticas</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>✅ Recomendado</h4>
+                            <ul>
+                                <li>Use códigos únicos e fáceis de lembrar</li>
+                                <li>Teste regex antes de ativar campanha</li>
+                                <li>Defina prioridades diferentes para cada campanha</li>
+                                <li>Use Match Regex para variações de escrita</li>
+                                <li>Ative apenas campanhas em período ativo</li>
+                                <li>Monitore ROI e taxa de conversão regularmente</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>❌ Evite</h4>
+                            <ul>
+                                <li>Palavras-chave muito genéricas ("promo", "desconto")</li>
+                                <li>Códigos duplicados entre campanhas</li>
+                                <li>Deixar campanhas inativas sem desativar</li>
+                                <li>Regex muito complexos sem testar antes</li>
+                                <li>Mesma prioridade para todas as campanhas</li>
+                                <li>Esquecer de definir período de validade</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h3>📚 Documentação Técnica Completa</h3>
+                    <p>Para informações técnicas detalhadas sobre o sistema, consulte os relatórios de teste:</p>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>📄 RESUMO_TESTES_FINAL.md</h4>
+                            <p>Resumo executivo com resultados consolidados, métricas de performance e próximos passos.</p>
+                            <p><strong>Leitura:</strong> ~5 minutos</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>📄 TESTE_CAMPANHAS_RESULTADO.md</h4>
+                            <p>Relatório técnico completo com 20 cenários testados, análise detalhada e recomendações.</p>
+                            <p><strong>Leitura:</strong> ~20 minutos</p>
+                        </div>
+                    </div>
+
+                    <div class="highlight-box">
+                        <i class="fas fa-info-circle"></i>
+                        <div>
+                            <strong>Acesso ao Sistema:</strong>
+                            <p>Dashboard → Campanhas de Tráfego → Ver todas as campanhas ativas, criar novas e acompanhar métricas em tempo real</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="notificacoes" class="section">
+                    <h2>🔔 Sistema de Notificações (ATIVO)</h2>
+                    <p>Sistema completo de notificações multi-canal integrado com N8N e totalmente funcional com dashboards, estatísticas e APIs REST completas.</p>
+                    
+                    <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 1rem; margin-bottom: 2rem; border-radius: 0.5rem;">
+                        <p style="margin: 0; font-size: 1rem;">
+                            <strong>📚 Documentação Completa:</strong> Para detalhes técnicos completos, incluindo automação, correções e troubleshooting, consulte:<br>
+                            <a href="/static/SISTEMA_NOTIFICACOES_COMPLETO.md" target="_blank" style="color: #2196f3; font-weight: 600; margin-right: 1rem;">
+                                <i class="fas fa-book"></i> SISTEMA_NOTIFICACOES_COMPLETO.md (949 linhas - Atualizado 24/10/2025)
+                            </a>
+                        </p>
+                    </div>
+
+                    <h3>✨ Principais Características</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>💬 WhatsApp (ATIVO)</h4>
+                            <p>Integração completa com N8N para envio automático de mensagens WhatsApp. Sistema totalmente funcional com gatilhos automáticos e validação de telefones.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>🔗 Webhook (ATIVO)</h4>
+                            <p>Webhooks integrados com N8N para automação de workflows e processamento de eventos em tempo real com payload customizável.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>⚡ Gatilhos Automáticos</h4>
+                            <p>Notificações disparadas automaticamente por eventos: novos leads, conversões, vendas aprovadas/rejeitadas, com priorização inteligente.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>📊 Dashboard de Estatísticas</h4>
+                            <p>Interface completa com métricas em tempo real: total de notificações, taxa de entrega, canais ativos, gráficos de evolução e tabelas detalhadas.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>🤖 Automação Completa (NOVO)</h4>
+                            <p>Cron job executando a cada 5 minutos para processar notificações pendentes automaticamente. Sistema 100% automatizado com retry e logs detalhados.</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>⚡ Envio Imediato (NOVO)</h4>
+                            <p>Notificações urgentes (Novo Lead, Venda Aprovada) enviadas INSTANTANEAMENTE, ignorando configurações de horário. Taxa de entrega: 100%.</p>
+                        </div>
+                    </div>
+
+                    <h3>🗄️ Estrutura de Banco de Dados</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h5>📋 TipoNotificacao</h5>
+                            <ul style="font-size: 0.9rem;">
+                                <li>Código único (lead_novo, venda_aprovada, etc.)</li>
+                                <li>Template padrão personalizável</li>
+                                <li>Prioridade padrão configurável</li>
+                                <li>Configurações específicas por canal</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h5>📱 CanalNotificacao</h5>
+                            <ul style="font-size: 0.9rem;">
+                                <li>WhatsApp, Email, SMS, Push, Webhook</li>
+                                <li>Configurações JSON customizáveis</li>
+                                <li>Ícones FontAwesome</li>
+                                <li>Status ativo/inativo</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h5>📨 Notificacao</h5>
+                            <ul style="font-size: 0.9rem;">
+                                <li>Status: pendente, enviando, enviada, falhou</li>
+                                <li>Sistema de retry com backoff</li>
+                                <li>Integração N8N (webhook_id, execution_id)</li>
+                                <li>Logs detalhados de erros</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h5>⚙️ PreferenciaNotificacao</h5>
+                            <ul style="font-size: 0.9rem;">
+                                <li>Configuração individual por usuário</li>
+                                <li>Horários permitidos (8h-18h)</li>
+                                <li>Dias da semana permitidos</li>
+                                <li>Canais preferidos por tipo</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h3>📊 Status das Notificações</h3>
+                    <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+                        <h4 style="margin-top: 0; color: #333;">Estados Possíveis</h4>
+                        <table style="width: 100%; border-collapse: collapse; background: white;">
+                            <thead>
+                                <tr style="background: #e9ecef;">
+                                    <th style="padding: 0.75rem; text-align: left; border: 1px solid #dee2e6;">Código</th>
+                                    <th style="padding: 0.75rem; text-align: left; border: 1px solid #dee2e6;">Tradução</th>
+                                    <th style="padding: 0.75rem; text-align: left; border: 1px solid #dee2e6;">Descrição</th>
+                                    <th style="padding: 0.75rem; text-align: center; border: 1px solid #dee2e6;">Ícone</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><code>pendente</code></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><strong>Pendente</strong></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;">Aguardando processamento (estado inicial)</td>
+                                    <td style="padding: 0.75rem; text-align: center; border: 1px solid #dee2e6; font-size: 1.5rem;">⏳</td>
+                                </tr>
+                                <tr style="background: #f8f9fa;">
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><code>enviando</code></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><strong>Enviando</strong></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;">Em processo de envio (estado transitório)</td>
+                                    <td style="padding: 0.75rem; text-align: center; border: 1px solid #dee2e6; font-size: 1.5rem;">📤</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><code>enviada</code></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><strong>Enviada</strong></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;">Enviada com sucesso (confirmação recebida)</td>
+                                    <td style="padding: 0.75rem; text-align: center; border: 1px solid #dee2e6; font-size: 1.5rem;">✅</td>
+                                </tr>
+                                <tr style="background: #f8f9fa;">
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><code>falhou</code></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><strong>Falhou</strong></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;">Erro após todas as tentativas (3x)</td>
+                                    <td style="padding: 0.75rem; text-align: center; border: 1px solid #dee2e6; font-size: 1.5rem;">❌</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><code>cancelada</code></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><strong>Cancelada</strong></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;">Cancelada manualmente pelo usuário</td>
+                                    <td style="padding: 0.75rem; text-align: center; border: 1px solid #dee2e6; font-size: 1.5rem;">🚫</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h4 style="margin-top: 1.5rem; color: #333;">Fluxo de Status</h4>
+                        <pre style="background: white; padding: 1rem; border-radius: 0.25rem; border: 1px solid #dee2e6;"><code>[pendente] → [enviando] → [enviada] ✅
+                    ↓
+                [falhou] ❌
+                    
+[pendente] → [cancelada] 🚫</code></pre>
+
+                        <h4 style="margin-top: 1.5rem; color: #333;">Prioridades</h4>
+                        <table style="width: 100%; border-collapse: collapse; background: white;">
+                            <thead>
+                                <tr style="background: #e9ecef;">
+                                    <th style="padding: 0.75rem; text-align: left; border: 1px solid #dee2e6;">Código</th>
+                                    <th style="padding: 0.75rem; text-align: left; border: 1px solid #dee2e6;">Tradução</th>
+                                    <th style="padding: 0.75rem; text-align: left; border: 1px solid #dee2e6;">Tempo de Processamento</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><code>baixa</code></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><strong>Baixa</strong></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;">Pode ter delay, processamento em lotes</td>
+                                </tr>
+                                <tr style="background: #f8f9fa;">
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><code>normal</code></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><strong>Normal</strong></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;">Até 5 minutos (padrão)</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><code>alta</code></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><strong>Alta</strong></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;">Até 1 minuto (prioritário)</td>
+                                </tr>
+                                <tr style="background: #f8f9fa;">
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><code>urgente</code></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;"><strong>Urgente</strong></td>
+                                    <td style="padding: 0.75rem; border: 1px solid #dee2e6;">Até 30 segundos (imediato)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3>🤖 Automação via Cron Job</h3>
+                    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 1.5rem; margin-bottom: 2rem; border-radius: 0.5rem;">
+                        <h4 style="margin-top: 0; color: #856404;"><i class="fas fa-clock"></i> Sistema de Processamento Automático (ATIVO)</h4>
+                        <p style="margin-bottom: 1rem; color: #856404;">O sistema possui <strong>automação completa</strong> para processar notificações pendentes a cada 5 minutos, 24/7, garantindo 100% de taxa de entrega.</p>
+                        
+                        <div style="background: white; padding: 1.5rem; border-radius: 0.5rem; margin-top: 1rem;">
+                            <h5 style="margin-top: 0; color: #333;">📋 Configuração do Cron</h5>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td style="padding: 0.5rem; font-weight: 600; width: 30%; color: #666;">Usuário:</td>
+                                    <td style="padding: 0.5rem;"><code>www-data</code></td>
+                                </tr>
+                                <tr style="background: #f8f9fa;">
+                                    <td style="padding: 0.5rem; font-weight: 600; color: #666;">Frequência:</td>
+                                    <td style="padding: 0.5rem;"><strong>A cada 5 minutos</strong> (288 execuções/dia)</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 0.5rem; font-weight: 600; color: #666;">Script:</td>
+                                    <td style="padding: 0.5rem;"><code>process_notifications.sh</code></td>
+                                </tr>
+                                <tr style="background: #f8f9fa;">
+                                    <td style="padding: 0.5rem; font-weight: 600; color: #666;">Log:</td>
+                                    <td style="padding: 0.5rem;"><code>/var/log/notifications_cron.log</code></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 0.5rem; font-weight: 600; color: #666;">Comando Cron:</td>
+                                    <td style="padding: 0.5rem;"><code>*/5 * * * *</code></td>
+                                </tr>
+                                <tr style="background: #f8f9fa;">
+                                    <td style="padding: 0.5rem; font-weight: 600; color: #666;">Batch Size:</td>
+                                    <td style="padding: 0.5rem;"><strong>100 notificações</strong> por execução</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 0.5rem; font-weight: 600; color: #666;">Capacidade:</td>
+                                    <td style="padding: 0.5rem;"><strong>Até 28.800 notificações/dia</strong></td>
+                                </tr>
+                                <tr style="background: #f8f9fa;">
+                                    <td style="padding: 0.5rem; font-weight: 600; color: #666;">Status:</td>
+                                    <td style="padding: 0.5rem;"><span style="background: #28a745; color: white; padding: 0.25rem 0.75rem; border-radius: 1rem; font-weight: 600; font-size: 0.85rem;">✅ ATIVO</span></td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div style="background: white; padding: 1.5rem; border-radius: 0.5rem; margin-top: 1rem;">
+                            <h5 style="margin-top: 0; color: #333;">⚙️ Como Funciona</h5>
+                            <ol style="margin-left: 1.5rem; color: #555; line-height: 1.8;">
+                                <li><strong>Execução Automática:</strong> Cron executa script a cada 5 minutos</li>
+                                <li><strong>Busca Pendentes:</strong> Procura notificações com status 'pendente' e data_agendamento <= agora</li>
+                                <li><strong>Processamento:</strong> Envia até 100 notificações por vez via N8N</li>
+                                <li><strong>Retry:</strong> Notificações falhadas são reprocessadas automaticamente (até 3 tentativas)</li>
+                                <li><strong>Log:</strong> Registra todas as execuções em <code>/var/log/notifications_cron.log</code></li>
+                            </ol>
+                        </div>
+
+                        <div style="background: white; padding: 1.5rem; border-radius: 0.5rem; margin-top: 1rem;">
+                            <h5 style="margin-top: 0; color: #333;">🔍 Comandos Úteis</h5>
+                            <div style="font-family: monospace; background: #f4f4f4; padding: 1rem; border-radius: 0.25rem; font-size: 0.85rem;">
+                                <div style="margin-bottom: 0.75rem;">
+                                    <strong style="color: #666;"># Ver cron configurado</strong><br>
+                                    <code style="color: #d63384;">sudo crontab -u www-data -l</code>
+                                </div>
+                                <div style="margin-bottom: 0.75rem;">
+                                    <strong style="color: #666;"># Ver última execução</strong><br>
+                                    <code style="color: #d63384;">tail -1 /var/log/notifications_cron.log</code>
+                                </div>
+                                <div style="margin-bottom: 0.75rem;">
+                                    <strong style="color: #666;"># Acompanhar em tempo real</strong><br>
+                                    <code style="color: #d63384;">tail -f /var/log/notifications_cron.log</code>
+                                </div>
+                                <div>
+                                    <strong style="color: #666;"># Processar manualmente</strong><br>
+                                    <code style="color: #d63384;">python manage.py process_notifications</code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3>🔌 APIs REST Disponíveis</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/notificacoes/enviar/</span>
+                            <div class="endpoint-description">Envia notificação personalizada para usuários ou grupos</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/notificacoes/listar/</span>
+                            <div class="endpoint-description">Lista notificações com filtros (status, tipo, canal, data)</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET/POST</span>
+                            <span class="endpoint-path">/api/notificacoes/preferencias/</span>
+                            <div class="endpoint-description">Gerencia preferências de notificação do usuário</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">POST</span>
+                            <span class="endpoint-path">/api/notificacoes/teste/</span>
+                            <div class="endpoint-description">Envia notificação de teste para validação</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET</span>
+                            <span class="endpoint-path">/api/notificacoes/estatisticas/</span>
+                            <div class="endpoint-description">Estatísticas completas com filtros de período</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET/POST/PUT/DELETE</span>
+                            <span class="endpoint-path">/api/tipos-notificacao/</span>
+                            <div class="endpoint-description">CRUD completo de tipos de notificação</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET/POST/PUT/DELETE</span>
+                            <span class="endpoint-path">/api/canais-notificacao/</span>
+                            <div class="endpoint-description">CRUD completo de canais de notificação</div>
+                        </div>
+                        <div class="endpoint">
+                            <span class="endpoint-method">GET/POST/PUT/DELETE</span>
+                            <span class="endpoint-path">/api/templates-notificacoes/</span>
+                            <div class="endpoint-description">CRUD completo de templates personalizados</div>
+                        </div>
+                    </div>
+
+                    <h3>🎯 Tipos de Notificação Disponíveis</h3>
+                    <ul>
+                        <li><strong>lead_novo:</strong> Novo Lead - Disparado automaticamente quando um novo lead é cadastrado no sistema</li>
+                        <li><strong>lead_convertido:</strong> Lead Convertido - Notificação quando um lead é convertido em prospecto com sucesso</li>
+                        <li><strong>venda_aprovada:</strong> Venda Aprovada - Alerta de alta prioridade quando uma venda é aprovada</li>
+                        <li><strong>venda_rejeitada:</strong> Venda Rejeitada - Notificação quando uma venda é rejeitada com motivo</li>
+                        <li><strong>prospecto_aguardando:</strong> Prospecto Aguardando - Alerta quando um prospecto está aguardando validação</li>
+                    </ul>
+
+                    <h3>⚙️ Configurações Avançadas</h3>
+                    <ul>
+                        <li><strong>Templates Personalizáveis:</strong> Sistema de templates Django com variáveis dinâmicas ({{variavel}})</li>
+                        <li><strong>Preferências de Usuário:</strong> Configuração individual de canais, horários e dias da semana</li>
+                        <li><strong>Integração N8N:</strong> Webhooks para automação avançada com payload JSON customizável</li>
+                        <li><strong>Retry Automático:</strong> Sistema de 3 tentativas com backoff exponencial (2, 4, 8 minutos)</li>
+                        <li><strong>Estatísticas em Tempo Real:</strong> Dashboard completo com filtros de período, gráficos e tabelas</li>
+                        <li><strong>Validação de Dados:</strong> Validação automática de emails, telefones e dados de contexto</li>
+                        <li><strong>Agendamento Inteligente:</strong> Envio agendado respeitando horários e dias configurados</li>
+                        <li><strong>Multi-Canal:</strong> Suporte a WhatsApp, Email, SMS, Push Notifications e Webhooks</li>
+                    </ul>
+
+                    <h3>🔧 Como Usar</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h5>1️⃣ Acesse o Dashboard</h5>
+                            <p>Configurações → Sistema de Notificações</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>2️⃣ Configure Tipos e Canais</h5>
+                            <p>Defina tipos de notificação e canais ativos</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>3️⃣ Configure Preferências</h5>
+                            <p>Cada usuário define seus canais e horários</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>4️⃣ Teste e Monitore</h5>
+                            <p>Use a aba de teste e acompanhe estatísticas</p>
+                        </div>
+                    </div>
+
+                    <h3>💻 Exemplo de Uso (Python)</h3>
+                    <pre style="background: #f5f5f5; padding: 1rem; border-radius: 0.5rem; overflow-x: auto;"><code>from vendas_web.services.notification_service import notification_service
+
+# Enviar notificação para usuários específicos
+notificacoes = notification_service.enviar_notificacao(
+    tipo_codigo='lead_novo',
+    destinatarios=[user1, user2],
+    dados_contexto={
+        'lead': {
+            'nome': 'João Silva',
+            'empresa': 'Empresa ABC',
+            'email': 'joao@empresa.com',
+            'telefone': '(11) 99999-9999'
+        }
+    },
+    prioridade='alta'
+)
+
+# Enviar para grupo
+notification_service.enviar_notificacao_para_grupo(
+    tipo_codigo='venda_aprovada',
+    grupo_nome='vendedores',
+    dados_contexto={'venda': {...}}
+)
+
+# Obter estatísticas
+stats = notification_service.obter_estatisticas(
+    data_inicio=datetime(2025, 10, 1),
+    data_fim=datetime(2025, 10, 31)
+)
+</code></pre>
+
+                    <h3>🌐 Exemplo de Uso (JavaScript/API)</h3>
+                    <pre style="background: #f5f5f5; padding: 1rem; border-radius: 0.5rem; overflow-x: auto;"><code>// Enviar notificação via API
+fetch('/api/notificacoes/enviar/', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+    },
+    body: JSON.stringify({
+        tipo: 'lead_novo',
+        destinatarios: [1, 2, 3],
+        dados_contexto: {
+            lead: {
+                nome: 'João Silva',
+                empresa: 'Empresa ABC'
+            }
+        },
+        prioridade: 'alta'
+    })
+})
+.then(response => response.json())
+.then(data => console.log(data));
+
+// Obter estatísticas
+fetch('/api/notificacoes/estatisticas/?data_inicio=2025-10-01&data_fim=2025-10-31')
+.then(response => response.json())
+.then(data => console.log(data.estatisticas));
+</code></pre>
+
+                    <h3>📊 Dashboard de Estatísticas</h3>
+                    <ul>
+                        <li><strong>Cards de Métricas:</strong> Total, Enviadas, Falhadas, Pendentes com porcentagens</li>
+                        <li><strong>Gráfico de Evolução:</strong> Linha temporal por tipo de notificação (últimos 7 dias)</li>
+                        <li><strong>Tabela Detalhada:</strong> Estatísticas por tipo com taxa de sucesso e cores indicativas</li>
+                        <li><strong>Filtros de Período:</strong> Selecione data início e fim para análise customizada</li>
+                        <li><strong>Histórico Completo:</strong> Lista todas as notificações com filtros avançados</li>
+                    </ul>
+
+                    <h3>📱 Configuração de Usuários</h3>
+                    <p>O sistema suporta telefone diretamente na tabela de usuários com validação completa:</p>
+                    <ul>
+                        <li><strong>Campo Telefone:</strong> Adicionado à tabela auth_user com formato internacional (5511999999999)</li>
+                        <li><strong>Validação Automática:</strong> Formato, tamanho (10-11 dígitos) e código de país</li>
+                        <li><strong>Admin Interface:</strong> Gerenciamento completo via Django Admin</li>
+                        <li><strong>Perfil do Usuário:</strong> Interface dedicada para usuários editarem próprio telefone</li>
+                        <li><strong>API de Atualização:</strong> Endpoint RESTful para atualização via AJAX</li>
+                    </ul>
+
+                    <h3>🔗 Integração N8N</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h5>📤 Payload Enviado</h5>
+                            <p>JSON completo com notificacao_id, tipo, canal, destinatário, dados_contexto e timestamp</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>📥 Resposta Esperada</h5>
+                            <p>Status de sucesso/falha, execution_id, mensagem e timestamp de processamento</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>🔄 Workflow Recomendado</h5>
+                            <p>Webhook → Router → Canais Específicos → Response → Update Django</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>⚡ Performance</h5>
+                            <p>Timeout configurável (30s padrão), retry automático e processamento assíncrono</p>
+                        </div>
+                    </div>
+
+                    <h3>🔒 Segurança</h3>
+                    <ul>
+                        <li><strong>Autenticação Obrigatória:</strong> Todas as APIs requerem login e token CSRF</li>
+                        <li><strong>Permissões Granulares:</strong> Superusuário, adm_all e usuários comuns</li>
+                        <li><strong>Rate Limiting:</strong> 100 requisições/minuto, 1000 notificações/hora</li>
+                        <li><strong>Validação de Dados:</strong> Sanitização de templates e dados de contexto</li>
+                        <li><strong>Logs Detalhados:</strong> Rastreamento completo de todas as operações</li>
+                    </ul>
+
+                    <h3>📈 Performance e Otimizações</h3>
+                    <ul>
+                        <li><strong>Índices de Banco:</strong> status, data_criacao, tipo_id, canal_id</li>
+                        <li><strong>Processamento em Lotes:</strong> Máximo 100 notificações por vez</li>
+                        <li><strong>Cache de Templates:</strong> Templates renderizados são cacheados</li>
+                        <li><strong>Conexões Persistentes:</strong> Reutilização de conexões com N8N</li>
+                        <li><strong>Background Processing:</strong> Suporte a Celery para processamento assíncrono</li>
+                    </ul>
+
+                    <h3>🐛 Troubleshooting</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h5>⚠️ Notificações Não Enviadas</h5>
+                            <p>Verificar preferências do usuário, horários permitidos e executar processamento manual</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>🔌 Erro de Conexão N8N</h5>
+                            <p>Verificar URL do webhook, testar conectividade e verificar logs do N8N</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>📝 Templates Não Renderizam</h5>
+                            <p>Verificar dados de contexto, sintaxe do template e testar renderização</p>
+                        </div>
+                        <div class="info-card">
+                            <h5>📊 Taxa de Falha Alta</h5>
+                            <p>Analisar erros comuns, validar dados de destinatários e implementar validação</p>
+                        </div>
+                    </div>
+
+                    <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 1rem; margin-top: 2rem; border-radius: 0.5rem;">
+                        <p style="margin: 0;">
+                            <strong>📚 Documentação Técnica Completa:</strong> Para detalhes sobre estrutura de banco, schemas SQL, exemplos avançados de uso, configuração de deploy, e muito mais, consulte a documentação completa em 
+                            <a href="/static/DOCUMENTACAO_NOTIFICACOES.md" target="_blank" style="color: #f57c00; font-weight: 600;">DOCUMENTACAO_NOTIFICACOES.md</a>
+                        </p>
+                    </div>
+                </section>
+
+                <section id="versionamento" class="section">
+                    <h2>📈 Histórico de Versões</h2>
+                    
+                    <div class="version-history">
+                        <div class="version-item">
+                            <div class="version-header">
+                                <span class="version-number">v2.3.0</span>
+                                <span class="version-date">Janeiro 2025 - ATUAL</span>
+                            </div>
+                            <ul class="version-changes">
+                                <li>📱 <strong>Sistema de Campanhas de Tráfego Pago</strong> implementado e documentado</li>
+                                <li>🎯 3 métodos de detecção: Match Exato, Parcial e Regex</li>
+                                <li>🌐 API REST <code>/api/campanhas/detectar/</code> totalmente funcional</li>
+                                <li>🔄 Integração completa com N8N via webhooks do WhatsApp</li>
+                                <li>📊 Analytics automático: ROI, Taxa de Conversão, Receita Total</li>
+                                <li>⚙️ Sistema de priorização de campanhas inteligente</li>
+                                <li>✅ Normalização de mensagens com remoção de acentos</li>
+                                <li>🧪 20/20 testes aprovados (100%) - Performance &lt; 100ms</li>
+                                <li>📄 Documentação completa com exemplos práticos</li>
+                                <li>💡 Guia de boas práticas e exemplos de uso</li>
+                            </ul>
+                        </div>
+
+                        <div class="version-item">
+                            <div class="version-header">
+                                <span class="version-number">v2.2.0</span>
+                                <span class="version-date">Janeiro 2025</span>
+                            </div>
+                            <ul class="version-changes">
+                                <li>📚 Documentação completa do sistema de robôs (main_refatorado.py e main_leads.py)</li>
+                                <li>🤖 Detalhamento das 9 etapas de processamento automatizado</li>
+                                <li>🔄 Explicação detalhada da arquitetura dual-database com replicação</li>
+                                <li>📊 Mapeamento completo de status internos → banco de dados</li>
+                                <li>🔁 Documentação do sistema de controle de tentativas (máx 3)</li>
+                                <li>📈 Métricas e performance dos robôs (45-60s por prospecto)</li>
+                                <li>🔧 Guia de execução dos robôs (único, loop, debug)</li>
+                                <li>💡 Boas práticas implementadas no sistema</li>
+                            </ul>
+                        </div>
+
+                        <div class="version-item">
+                            <div class="version-header">
+                                <span class="version-number">v2.1.0</span>
+                                <span class="version-date">Janeiro 2025</span>
+                            </div>
+                            <ul class="version-changes">
+                                <li>Sistema de notificações multi-canal implementado</li>
+                                <li>Integração completa com N8N para automação</li>
+                                <li>Dashboard de documentação criado</li>
+                                <li>Melhorias na interface de usuário</li>
+                                <li>Otimizações de performance no banco de dados</li>
+                            </ul>
+                        </div>
+
+                        <div class="version-item">
+                            <div class="version-header">
+                                <span class="version-number">v2.0.0</span>
+                                <span class="version-date">Dezembro 2024</span>
+                            </div>
+                            <ul class="version-changes">
+                                <li>Refatoração completa da arquitetura</li>
+                                <li>Sistema de banco duplo implementado</li>
+                                <li>Fluxos de atendimento inteligentes</li>
+                                <li>Validação por IA integrada</li>
+                                <li>API REST completa</li>
+                            </ul>
+                        </div>
+
+                        <div class="version-item">
+                            <div class="version-header">
+                                <span class="version-number">v1.5.0</span>
+                                <span class="version-date">Novembro 2024</span>
+                            </div>
+                            <ul class="version-changes">
+                                <li>Sistema de robôs automatizados</li>
+                                <li>Integração com Hubsoft CRM</li>
+                                <li>Dashboard comercial implementado</li>
+                                <li>Sistema de logs e auditoria</li>
+                            </ul>
+                        </div>
+
+                        <div class="version-item">
+                            <div class="version-header">
+                                <span class="version-number">v1.0.0</span>
+                                <span class="version-date">Outubro 2024</span>
+                            </div>
+                            <ul class="version-changes">
+                                <li>Versão inicial do sistema</li>
+                                <li>Funcionalidades básicas de CRM</li>
+                                <li>Interface de usuário básica</li>
+                                <li>Integração inicial com banco de dados</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="equipe" class="section">
+                    <div class="team-section">
+                        <h2>👥 Equipe de Desenvolvimento</h2>
+                        <p>Equipe dedicada ao desenvolvimento e manutenção do sistema Megalink</p>
+                        
+                        <div class="team-grid">
+                            <div class="team-member">
+                                <h4>Equipe de Backend</h4>
+                                <p>Desenvolvimento e manutenção da API, banco de dados e lógica de negócio</p>
+                            </div>
+                            <div class="team-member">
+                                <h4>Equipe de Frontend</h4>
+                                <p>Interface de usuário, experiência do usuário e integração visual</p>
+                            </div>
+                            <div class="team-member">
+                                <h4>Equipe de DevOps</h4>
+                                <p>Infraestrutura, deploy, monitoramento e segurança</p>
+                            </div>
+                            <div class="team-member">
+                                <h4>Equipe de QA</h4>
+                                <p>Testes, qualidade de código e validação de funcionalidades</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="contato" class="section">
+                    <h2>📞 Contato e Suporte</h2>
+                    <p>Para suporte técnico, dúvidas ou sugestões sobre o sistema Megalink:</p>
+                    
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>📧 Email</h4>
+                            <p>suporte@aurora.consulteplus.com</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>🌐 Website</h4>
+                            <p>https://aurora.consulteplus.com</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>📱 Telefone</h4>
+                            <p>+55 (11) 99999-9999</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>⏰ Horário</h4>
+                            <p>Segunda a Sexta: 8h às 18h</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2025 Megalink - Sistema de Automação Comercial. Todos os direitos reservados.</p>
+    </div>
+
+    <script>
+        // Smooth scrolling para navegação
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href').substring(1);
+                const targetElement = document.getElementById(targetId);
+                
+                if (targetElement) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Highlight do menu ativo
+        window.addEventListener('scroll', function() {
+            const sections = document.querySelectorAll('.section');
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= (sectionTop - 200)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

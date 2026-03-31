@@ -1,0 +1,124 @@
+{% extends 'parceiros/painel/base.html' %}
+
+{% block title %}Dashboard - {{ parceiro.nome }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:24px;">
+    <h1 style="font-size:22px; font-weight:800; color:#1e293b;">Dashboard</h1>
+    <p style="font-size:13px; color:#64748b;">Vis&atilde;o geral dos seus cupons e resgates.</p>
+</div>
+
+<div class="stats-grid" style="grid-template-columns:repeat(4, 1fr); margin-bottom:24px;">
+    <div class="stat-card">
+        <div class="stat-label">Cupons Ativos</div>
+        <div class="stat-value" style="color:#6366f1;">{{ cupons_ativos }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Resgates</div>
+        <div class="stat-value">{{ total_resgates }}</div>
+        <div class="stat-variation {% if var >= 0 %}up{% else %}down{% endif %}">
+            {% if var >= 0 %}&uarr;{% else %}&darr;{% endif %} {{ var }}%
+        </div>
+        <div class="stat-sub">{{ resgates_7d }} nos &uacute;ltimos 7 dias</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Pendentes / Utilizados</div>
+        <div class="stat-value">
+            <span style="color:#f59e0b;">{{ total_pendentes }}</span>
+            <span style="font-size:16px; color:#94a3b8;"> / </span>
+            <span style="color:#10b981;">{{ total_utilizados }}</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Valor em Compras</div>
+        <div class="stat-value" style="color:#10b981;">R$ {{ total_valor }}</div>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px;">
+    <div class="card" style="padding:20px;">
+        <div class="card-title" style="padding:0 0 12px;">Resgates (&uacute;ltimos 7 dias)</div>
+        <div style="height:250px;">
+            <canvas id="chart-evo"></canvas>
+        </div>
+    </div>
+
+    <div class="card" style="padding:20px;">
+        <div class="card-title" style="padding:0 0 12px;">A&ccedil;&otilde;es R&aacute;pidas</div>
+        <div style="display:flex; flex-direction:column; gap:12px; padding-top:8px;">
+            <a href="{% url 'parceiros:painel_validar' %}" class="btn btn-primary" style="justify-content:center; padding:16px; font-size:15px; border-radius:12px;">
+                <i class="fas fa-qrcode"></i> Validar Cupom
+            </a>
+            <a href="{% url 'parceiros:painel_resgates' %}" class="btn btn-secondary" style="justify-content:center; padding:14px; border-radius:12px;">
+                <i class="fas fa-history"></i> Ver Todos os Resgates
+            </a>
+            <a href="{% url 'parceiros:painel_cupons' %}" class="btn btn-secondary" style="justify-content:center; padding:14px; border-radius:12px;">
+                <i class="fas fa-ticket-alt"></i> Meus Cupons
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+        &Uacute;ltimos Resgates
+        <a href="{% url 'parceiros:painel_resgates' %}" style="font-size:13px; color:#6366f1; font-weight:600; text-decoration:none;">Ver todos &rarr;</a>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Cliente</th>
+                <th>Cupom</th>
+                <th style="text-align:center;">C&oacute;digo</th>
+                <th style="text-align:center;">Valor Compra</th>
+                <th style="text-align:center;">Status</th>
+                <th>Data</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in ultimos %}
+            <tr>
+                <td><strong>{{ r.membro.nome }}</strong></td>
+                <td>{{ r.cupom.titulo }}</td>
+                <td style="text-align:center;"><code>{{ r.codigo_unico }}</code></td>
+                <td style="text-align:center;">{% if r.valor_compra %}R$ {{ r.valor_compra }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                <td style="text-align:center;">
+                    {% if r.status == 'resgatado' %}<span class="badge badge-warning">Pendente</span>
+                    {% elif r.status == 'utilizado' %}<span class="badge badge-success">Utilizado</span>
+                    {% else %}<span class="badge badge-danger">{{ r.get_status_display }}</span>{% endif %}
+                </td>
+                <td>{{ r.data_resgate|date:"d/m/Y H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted" style="padding:30px;">Nenhum resgate ainda.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    new Chart(document.getElementById('chart-evo'), {
+        type: 'line',
+        data: {
+            labels: {{ chart_evo_labels|safe }},
+            datasets: [{
+                label: 'Resgates',
+                data: {{ chart_evo_data|safe }},
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99,102,241,0.1)',
+                fill: true, tension: 0.3, pointRadius: 4, borderWidth: 2,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#f3f4f6' }, border: { display: false } },
+                x: { grid: { display: false }, border: { display: false } }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

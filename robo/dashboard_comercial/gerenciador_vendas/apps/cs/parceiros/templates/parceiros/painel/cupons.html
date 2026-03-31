@@ -1,0 +1,207 @@
+{% extends 'parceiros/painel/base.html' %}
+
+{% block title %}Meus Cupons - {{ parceiro.nome }}{% endblock %}
+
+{% block content %}
+
+<!-- Modal Solicitar Cupom (2 etapas) -->
+<div id="modal-solicitar" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:white; border-radius:20px; padding:32px; max-width:600px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="font-size:18px; font-weight:800; color:#1e293b;"><i class="fas fa-plus-circle" style="color:#6366f1; margin-right:8px;"></i>Solicitar Novo Cupom</h3>
+            <button onclick="fecharModal()" style="background:none; border:none; font-size:20px; color:#94a3b8; cursor:pointer;">&times;</button>
+        </div>
+
+        <!-- Steps indicator -->
+        <div style="display:flex; gap:8px; margin-bottom:24px;">
+            <div id="step-ind-1" style="flex:1; height:4px; border-radius:2px; background:#6366f1;"></div>
+            <div id="step-ind-2" style="flex:1; height:4px; border-radius:2px; background:#e5e7eb;"></div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="solicitar">
+
+            <!-- ETAPA 1: Dados do cupom -->
+            <div id="step-1">
+                <div style="background:#f0f7ff; border:1px solid #dbeafe; border-radius:10px; padding:12px; margin-bottom:20px; font-size:13px; color:#3b82f6;">
+                    <i class="fas fa-info-circle" style="margin-right:6px;"></i>
+                    Seu cupom ser&aacute; analisado pela equipe Megalink antes de ser disponibilizado.
+                </div>
+
+                <div style="margin-bottom:14px;">
+                    <label class="form-label">T&iacute;tulo do Cupom *</label>
+                    <input type="text" name="titulo" id="s-titulo" class="form-control" required placeholder="Ex: 20% de desconto em qualquer produto">
+                </div>
+
+                <div style="margin-bottom:14px;">
+                    <label class="form-label">Descri&ccedil;&atilde;o</label>
+                    <textarea name="descricao" class="form-control" rows="2" placeholder="Detalhes sobre o cupom, regras, etc."></textarea>
+                </div>
+
+                <div style="margin-bottom:14px;">
+                    <label class="form-label">Imagem do Cupom</label>
+                    <input type="file" name="imagem" class="form-control" accept="image/*" onchange="previewImg(this)">
+                    <div id="img-preview" style="margin-top:8px;"></div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+                    <div>
+                        <label class="form-label">C&oacute;digo *</label>
+                        <input type="text" name="codigo" id="s-codigo" class="form-control" required placeholder="DESCONTO20" style="text-transform:uppercase;">
+                    </div>
+                    <div>
+                        <label class="form-label">Tipo de Desconto</label>
+                        <select name="tipo_desconto" class="form-control">
+                            <option value="percentual">Percentual (%)</option>
+                            <option value="fixo">Valor Fixo (R$)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="irEtapa2()"><i class="fas fa-arrow-right"></i> Pr&oacute;ximo</button>
+                </div>
+            </div>
+
+            <!-- ETAPA 2: Configura&ccedil;&otilde;es -->
+            <div id="step-2" style="display:none;">
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:14px;">
+                    <div>
+                        <label class="form-label">Valor Desconto *</label>
+                        <input type="number" name="valor_desconto" id="s-valor" class="form-control" step="0.01" required placeholder="20">
+                    </div>
+                    <div>
+                        <label class="form-label">Estoque (0=ilim.)</label>
+                        <input type="number" name="quantidade_total" class="form-control" value="0" min="0">
+                    </div>
+                    <div>
+                        <label class="form-label">Limite/Cliente</label>
+                        <input type="number" name="limite_por_membro" class="form-control" value="1" min="1">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
+                    <div>
+                        <label class="form-label">In&iacute;cio *</label>
+                        <input type="datetime-local" name="data_inicio" id="s-inicio" class="form-control" required>
+                    </div>
+                    <div>
+                        <label class="form-label">Fim *</label>
+                        <input type="datetime-local" name="data_fim" id="s-fim" class="form-control" required>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="voltarEtapa1()"><i class="fas fa-arrow-left"></i> Voltar</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Enviar Solicita&ccedil;&atilde;o</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div style="margin-bottom:24px; display:flex; justify-content:space-between; align-items:center;">
+    <div>
+        <h1 style="font-size:22px; font-weight:800; color:#1e293b;">Meus Cupons</h1>
+        <p style="font-size:13px; color:#64748b;">Cupons cadastrados para {{ parceiro.nome }}.</p>
+    </div>
+    <button class="btn btn-primary" onclick="document.getElementById('modal-solicitar').style.display='flex'">
+        <i class="fas fa-plus"></i> Solicitar Cupom
+    </button>
+</div>
+
+<div class="card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Cupom</th>
+                <th style="text-align:center;">Desconto</th>
+                <th style="text-align:center;">Estoque</th>
+                <th style="text-align:center;">Resgates</th>
+                <th style="text-align:center;">Utilizados</th>
+                <th style="text-align:center;">Aprova&ccedil;&atilde;o</th>
+                <th>Validade</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in cupons %}
+            <tr>
+                <td>
+                    <strong>{{ c.titulo }}</strong>
+                    <br><small class="text-muted"><code>{{ c.codigo }}</code></small>
+                </td>
+                <td style="text-align:center;">
+                    <span class="font-bold">
+                        {% if c.tipo_desconto == 'percentual' %}{{ c.valor_desconto }}%{% else %}R$ {{ c.valor_desconto }}{% endif %}
+                    </span>
+                </td>
+                <td style="text-align:center;">{{ c.estoque_restante }}</td>
+                <td style="text-align:center;"><span class="font-bold">{{ c.total_resgates }}</span></td>
+                <td style="text-align:center;"><span style="color:#10b981; font-weight:700;">{{ c.total_utilizados }}</span></td>
+                <td style="text-align:center;">
+                    {% if c.status_aprovacao == 'aprovado' %}
+                    <span class="badge badge-success">Aprovado</span>
+                    {% elif c.status_aprovacao == 'pendente' %}
+                    <span class="badge badge-warning">Pendente</span>
+                    {% else %}
+                    <span class="badge badge-danger" title="{{ c.motivo_rejeicao }}">Rejeitado</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <small>{{ c.data_inicio|date:"d/m/Y" }} - {{ c.data_fim|date:"d/m/Y" }}</small>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="text-center text-muted" style="padding:40px;">Nenhum cupom cadastrado.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function previewImg(input) {
+    var preview = document.getElementById('img-preview');
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            preview.innerHTML = '<img src="' + e.target.result + '" style="height:80px; border-radius:8px; border:1px solid #e5e7eb; object-fit:contain;">';
+        };
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        preview.innerHTML = '';
+    }
+}
+
+function fecharModal() {
+    document.getElementById('modal-solicitar').style.display = 'none';
+    // Reset para etapa 1
+    document.getElementById('step-1').style.display = 'block';
+    document.getElementById('step-2').style.display = 'none';
+    document.getElementById('step-ind-1').style.background = '#6366f1';
+    document.getElementById('step-ind-2').style.background = '#e5e7eb';
+}
+
+function irEtapa2() {
+    // Validar campos obrigatórios da etapa 1
+    var titulo = document.getElementById('s-titulo').value.trim();
+    var codigo = document.getElementById('s-codigo').value.trim();
+    if (!titulo || !codigo) {
+        alert('Preencha o título e o código do cupom.');
+        return;
+    }
+    document.getElementById('step-1').style.display = 'none';
+    document.getElementById('step-2').style.display = 'block';
+    document.getElementById('step-ind-1').style.background = '#10b981';
+    document.getElementById('step-ind-2').style.background = '#6366f1';
+}
+
+function voltarEtapa1() {
+    document.getElementById('step-1').style.display = 'block';
+    document.getElementById('step-2').style.display = 'none';
+    document.getElementById('step-ind-1').style.background = '#6366f1';
+    document.getElementById('step-ind-2').style.background = '#e5e7eb';
+}
+</script>
+{% endblock %}

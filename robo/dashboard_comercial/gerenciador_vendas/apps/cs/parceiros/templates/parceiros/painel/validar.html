@@ -1,0 +1,139 @@
+{% extends 'parceiros/painel/base.html' %}
+
+{% block title %}Validar Cupom - {{ parceiro.nome }}{% endblock %}
+
+{% block content %}
+<div style="max-width:520px; margin:0 auto;">
+
+    <div style="margin-bottom:24px; text-align:center;">
+        <h1 style="font-size:22px; font-weight:800; color:#1e293b;">Validar Cupom</h1>
+        <p style="font-size:13px; color:#64748b;">Digite o c&oacute;digo que o cliente apresentar.</p>
+    </div>
+
+    {% if sucesso and resgate %}
+    <!-- Sucesso -->
+    <div class="card" style="padding:32px; text-align:center;">
+        <div style="width:64px; height:64px; border-radius:50%; background:#ecfdf5; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:28px; color:#059669;">
+            <i class="fas fa-check"></i>
+        </div>
+        <h2 style="font-size:20px; font-weight:800; color:#059669; margin-bottom:8px;">Cupom Utilizado!</h2>
+        <p style="color:#64748b; font-size:14px; margin-bottom:20px;">
+            Desconto de
+            <strong>{% if resgate.cupom.tipo_desconto == 'percentual' %}{{ resgate.cupom.valor_desconto }}%{% else %}R$ {{ resgate.cupom.valor_desconto }}{% endif %}</strong>
+            aplicado para <strong>{{ resgate.membro.nome }}</strong>.
+        </p>
+
+        {% if resgate.valor_compra %}
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
+            <div style="background:#f8fafc; border-radius:10px; padding:14px; text-align:center;">
+                <small style="color:#64748b;">Valor Compra</small>
+                <div style="font-size:20px; font-weight:800; color:#1e293b;">R$ {{ resgate.valor_compra }}</div>
+            </div>
+            <div style="background:#ecfdf5; border-radius:10px; padding:14px; text-align:center;">
+                <small style="color:#059669;">Desconto</small>
+                <div style="font-size:20px; font-weight:800; color:#059669;">
+                    {% if resgate.cupom.tipo_desconto == 'percentual' %}{{ resgate.cupom.valor_desconto }}%{% else %}R$ {{ resgate.cupom.valor_desconto }}{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div style="background:#f8fafc; border-radius:10px; padding:14px; margin-bottom:20px;">
+            <small style="color:#64748b;">C&oacute;digo</small>
+            <div style="font-size:18px; font-weight:800; letter-spacing:2px; color:#1e293b;">{{ resgate.codigo_unico }}</div>
+            <small style="color:#64748b;">{{ resgate.data_utilizacao|date:"d/m/Y H:i" }}</small>
+        </div>
+
+        <a href="{% url 'parceiros:painel_validar' %}" class="btn btn-primary" style="text-decoration:none;">
+            <i class="fas fa-redo"></i> Validar outro cupom
+        </a>
+    </div>
+
+    {% elif resgate and not sucesso %}
+    <!-- Cupom encontrado -->
+    {% if erro %}
+    <div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> {{ erro }}</div>
+    {% endif %}
+
+    <div class="card" style="padding:24px; margin-bottom:16px;">
+        <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid #e5e7eb;">
+            {% if parceiro.logo %}
+            <img src="{{ parceiro.logo.url }}" style="width:48px; height:48px; border-radius:10px; object-fit:cover;">
+            {% else %}
+            <div style="width:48px; height:48px; border-radius:10px; background:#e0e7ff; display:flex; align-items:center; justify-content:center;"><i class="fas fa-store" style="color:#6366f1; font-size:20px;"></i></div>
+            {% endif %}
+            <div>
+                <div style="font-weight:700; font-size:16px; color:#1e293b;">{{ resgate.cupom.titulo }}</div>
+                <div style="font-size:13px; color:#64748b;">{{ resgate.cupom.parceiro.nome }}</div>
+            </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; padding:8px 0; font-size:14px;">
+            <span style="color:#64748b;">Cliente</span>
+            <strong>{{ resgate.membro.nome }}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0; font-size:14px;">
+            <span style="color:#64748b;">C&oacute;digo</span>
+            <strong style="letter-spacing:1px;">{{ resgate.codigo_unico }}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0; font-size:14px;">
+            <span style="color:#64748b;">Status</span>
+            {% if resgate.status == 'resgatado' %}<span class="badge badge-success">Pronto para usar</span>
+            {% elif resgate.status == 'utilizado' %}<span class="badge badge-warning">J&aacute; utilizado</span>
+            {% else %}<span class="badge badge-danger">{{ resgate.get_status_display }}</span>{% endif %}
+        </div>
+
+        <div style="text-align:center; padding:20px; margin-top:16px; background:#f8fafc; border-radius:12px; border:2px dashed #6366f1;">
+            <div style="font-size:13px; color:#64748b;">Desconto</div>
+            <div style="font-size:32px; font-weight:800; color:#6366f1;">
+                {% if resgate.cupom.tipo_desconto == 'percentual' %}{{ resgate.cupom.valor_desconto }}%{% else %}R$ {{ resgate.cupom.valor_desconto }}{% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if resgate.status == 'resgatado' %}
+    <form method="post" class="card" style="padding:24px;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="confirmar">
+        <input type="hidden" name="codigo" value="{{ resgate.codigo_unico }}">
+
+        <div style="margin-bottom:16px;">
+            <label class="form-label">Valor da compra (R$)</label>
+            <input type="text" name="valor_compra" class="form-control" placeholder="0,00" inputmode="decimal" style="text-align:center; font-size:18px; font-weight:700;">
+            <small style="color:#94a3b8; display:block; text-align:center; margin-top:4px;">Informe o valor total gasto pelo cliente</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:14px; font-size:15px; border-radius:12px;" onclick="return confirm('Confirmar utiliza\u00e7\u00e3o do cupom?')">
+            <i class="fas fa-check-circle"></i> Confirmar Utiliza&ccedil;&atilde;o
+        </button>
+    </form>
+    {% endif %}
+
+    <div style="text-align:center; margin-top:12px;">
+        <a href="{% url 'parceiros:painel_validar' %}" style="color:#64748b; font-size:13px; text-decoration:none;"><i class="fas fa-arrow-left"></i> Buscar outro c&oacute;digo</a>
+    </div>
+
+    {% else %}
+    <!-- Formul&aacute;rio de busca -->
+    {% if erro %}
+    <div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> {{ erro }}</div>
+    {% endif %}
+
+    <div class="card" style="padding:32px;">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="buscar">
+            <div style="margin-bottom:16px;">
+                <label class="form-label">C&oacute;digo do Cupom</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" name="codigo" class="form-control" required placeholder="A3F8B2C1D4E5" maxlength="20" autocomplete="off" style="text-transform:uppercase; letter-spacing:2px; text-align:center; font-weight:700; font-size:16px;">
+                    <button type="submit" class="btn btn-primary" style="padding:12px 20px;">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

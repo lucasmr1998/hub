@@ -1,0 +1,136 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin{% endblock %} — Aurora Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #f1f5f9; color: #1e293b; min-height: 100vh; }
+
+        /* ── Topbar ── */
+        .admin-topbar {
+            background: #0f172a; height: 52px; display: flex; align-items: center;
+            padding: 0 24px; gap: 16px; position: sticky; top: 0; z-index: 100;
+        }
+        .admin-brand { font-weight: 800; font-size: .9rem; color: #fff; display: flex; align-items: center; gap: 8px; }
+        .admin-brand i { color: #818cf8; }
+        .admin-nav { display: flex; gap: 4px; margin-left: 24px; }
+        .admin-nav a {
+            font-size: .78rem; padding: 6px 14px; border-radius: 99px;
+            color: #94a3b8; text-decoration: none; transition: all .15s;
+        }
+        .admin-nav a:hover { background: #1e293b; color: #e2e8f0; }
+        .admin-nav a.active { background: #818cf8; color: #fff; }
+        .admin-topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+        .admin-topbar-right a { color: #94a3b8; font-size: .78rem; text-decoration: none; }
+        .admin-topbar-right a:hover { color: #e2e8f0; }
+
+        /* ── Content ── */
+        .admin-content { max-width: 1200px; margin: 0 auto; padding: 28px 24px; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .admin-header h1 { font-size: 1.3rem; font-weight: 800; color: #0f172a; }
+
+        /* ── Stats ── */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+        .stat-card {
+            background: #fff; border-radius: 12px; padding: 20px;
+            border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 16px;
+        }
+        .stat-icon {
+            width: 44px; height: 44px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;
+        }
+        .stat-num { font-size: 1.5rem; font-weight: 800; line-height: 1; color: #0f172a; }
+        .stat-label { font-size: .72rem; color: #64748b; margin-top: 2px; }
+
+        /* ── Table ── */
+        .admin-table-wrap { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; }
+        .admin-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+        .admin-table th {
+            text-align: left; padding: 12px 16px; background: #f8fafc;
+            font-weight: 700; font-size: .72rem; text-transform: uppercase;
+            letter-spacing: .05em; color: #64748b; border-bottom: 1px solid #e2e8f0;
+        }
+        .admin-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .admin-table tr:last-child td { border-bottom: none; }
+        .admin-table tr:hover td { background: #f8fafc; }
+
+        /* ── Badges ── */
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: .68rem; font-weight: 600; }
+        .badge-green { background: #dcfce7; color: #166534; }
+        .badge-yellow { background: #fef3c7; color: #92400e; }
+        .badge-red { background: #fee2e2; color: #991b1b; }
+        .badge-blue { background: #dbeafe; color: #1e40af; }
+        .badge-gray { background: #f1f5f9; color: #475569; }
+        .badge-purple { background: #ede9fe; color: #5b21b6; }
+
+        /* ── Buttons ── */
+        .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: .8rem; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; text-decoration: none; border: none; transition: all .15s; }
+        .btn-primary { background: #818cf8; color: #fff; }
+        .btn-primary:hover { background: #6366f1; }
+        .btn-outline { background: transparent; color: #64748b; border: 1px solid #e2e8f0; }
+        .btn-outline:hover { background: #f8fafc; border-color: #cbd5e1; }
+        .btn-danger { background: #fee2e2; color: #dc2626; }
+        .btn-danger:hover { background: #fecaca; }
+        .btn-success { background: #dcfce7; color: #166534; }
+        .btn-success:hover { background: #bbf7d0; }
+        .btn-sm { padding: 4px 10px; font-size: .72rem; }
+
+        /* ── Forms ── */
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: .78rem; font-weight: 600; color: #334155; margin-bottom: 6px; }
+        .form-group input, .form-group select { width: 100%; padding: 9px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: .82rem; font-family: 'Inter', sans-serif; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #818cf8; box-shadow: 0 0 0 3px rgba(129,140,248,.12); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .form-hint { font-size: .7rem; color: #94a3b8; margin-top: 4px; }
+
+        /* ── Cards ── */
+        .card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 24px; margin-bottom: 20px; }
+        .card-title { font-size: .9rem; font-weight: 700; color: #0f172a; margin-bottom: 16px; }
+
+        /* ── Alert ── */
+        .alert { padding: 12px 16px; border-radius: 8px; font-size: .82rem; margin-bottom: 16px; }
+        .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+        .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+
+        /* ── Misc ── */
+        .text-muted { color: #94a3b8; }
+        .text-sm { font-size: .75rem; }
+        .mt-2 { margin-top: 8px; }
+        .mb-3 { margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+
+<div class="admin-topbar">
+    <div class="admin-brand"><i class="fas fa-crown"></i> Aurora Admin</div>
+    <div class="admin-nav">
+        <a href="{% url 'admin_aurora:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+            <i class="fas fa-chart-pie"></i> Dashboard
+        </a>
+        <a href="{% url 'admin_aurora:criar_tenant' %}" class="{% if request.resolver_match.url_name == 'criar_tenant' %}active{% endif %}">
+            <i class="fas fa-plus"></i> Novo Tenant
+        </a>
+        <a href="{% url 'admin_aurora:planos' %}" class="{% if request.resolver_match.url_name == 'planos' or request.resolver_match.url_name == 'plano_detalhe' %}active{% endif %}">
+            <i class="fas fa-tags"></i> Planos
+        </a>
+        <a href="{% url 'admin_aurora:logs' %}" class="{% if request.resolver_match.url_name == 'logs' %}active{% endif %}">
+            <i class="fas fa-file-alt"></i> Logs
+        </a>
+    </div>
+    <div class="admin-topbar-right">
+        <a href="{% url 'vendas_web:dashboard1' %}"><i class="fas fa-arrow-left"></i> Voltar ao sistema</a>
+    </div>
+</div>
+
+<div class="admin-content">
+    {% block content %}{% endblock %}
+</div>
+
+</body>
+</html>

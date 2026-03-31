@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ config.titulo|default:"Clube Megalink" }} &mdash; {{ config.subtitulo|default:"Seu programa de fidelidade" }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: {{ config.cor_primaria|default:"#000b4a" }};
+            --secondary: {{ config.cor_secundaria|default:"#f59e0b" }};
+            --bg: #f3f4f6;
+            --text: #1f2937;
+            --text-muted: #6b7280;
+            --white: #ffffff;
+            --border: #e5e7eb;
+            --radius: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: var(--text); background: var(--bg); }
+        a { text-decoration: none; color: inherit; }
+        img { max-width: 100%; height: auto; }
+
+        /* Header */
+        .header {
+            background: var(--white);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            width: 100%;
+            border-bottom: 1px solid var(--border);
+        }
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 24px;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+        .header-logo img { height: 36px; border-radius: 8px; }
+        .header-logo h1 { font-size: 18px; font-weight: 800; white-space: nowrap; letter-spacing: -0.3px; }
+        .header-search { flex: 1; display: flex; justify-content: center; }
+        .search-input-wrap {
+            display: flex;
+            align-items: center;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            flex: 1;
+        }
+        .search-input-wrap input {
+            padding: 9px 14px;
+            border: none;
+            font-size: 13px;
+            width: 100%;
+            outline: none;
+            color: var(--text);
+            background: transparent;
+        }
+        .search-input-wrap input::placeholder { color: #9ca3af; }
+        .search-input-wrap button {
+            padding: 9px 14px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: color 0.2s;
+        }
+        .search-input-wrap button:hover { color: var(--primary); }
+        .header-select {
+            padding: 9px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            background: var(--bg);
+            color: var(--text);
+            min-width: 140px;
+        }
+        .header-nav {
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            background: var(--primary);
+            padding: 0;
+        }
+        .header-nav a {
+            color: rgba(255,255,255,0.8);
+            padding: 10px 24px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+        .header-nav a:hover {
+            color: var(--white);
+            background: rgba(255,255,255,0.08);
+            border-bottom-color: var(--secondary);
+        }
+        .btn-cta {
+            background: var(--secondary);
+            color: var(--primary);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-cta:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(245,158,11,0.4); }
+
+        /* Hero / Banners */
+        .hero {
+            position: relative;
+            overflow: hidden;
+            max-width: 1200px;
+            margin: 24px auto;
+            padding: 0 24px;
+        }
+        .hero-inner {
+            border-radius: var(--radius);
+            overflow: hidden;
+            position: relative;
+        }
+        .hero-slides { display: flex; transition: transform 0.5s ease; }
+        .hero-slide { min-width: 100%; }
+        .hero-slide { position: relative; }
+        .hero-slide img { width: 100%; height: 300px; object-fit: cover; }
+        .hero-overlay {
+            position: absolute;
+            top: 0; right: 0; bottom: 0;
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 32px 40px;
+            color: var(--white);
+        }
+        .hero-overlay h2 { font-size: 36px; font-weight: 800; margin-bottom: 8px; line-height: 1.1; font-family: 'Poppins', sans-serif; }
+        .hero-overlay p { font-size: 16px; opacity: 0.85; font-family: 'Poppins', sans-serif; }
+        .hero-placeholder {
+            width: 100%;
+            height: 300px;
+            background: linear-gradient(135deg, var(--primary) 0%, #001a8f 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            text-align: center;
+            padding: 40px;
+        }
+        .hero-placeholder h2 { font-size: 36px; font-weight: 800; margin-bottom: 8px; }
+        .hero-placeholder p { font-size: 18px; opacity: 0.8; }
+        .hero-dots {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+        }
+        .hero-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.4);
+            cursor: pointer;
+            border: none;
+        }
+        .hero-dot.active { background: var(--secondary); }
+
+        /* Sections */
+        .section {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 48px 24px;
+        }
+        .section-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        .section-subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 32px;
+        }
+
+        /* Como Funciona */
+        .how-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+        .how-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .how-card i {
+            font-size: 32px;
+            color: var(--secondary);
+            margin-bottom: 12px;
+        }
+        .how-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+        .how-card p { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+        /* Categorias */
+        .cat-bar {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            margin-bottom: 32px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .cat-bar::-webkit-scrollbar { height: 4px; }
+        .cat-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .cat-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            background: var(--white);
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-muted);
+        }
+        .cat-btn:hover, .cat-btn.active {
+            background: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+        }
+
+        /* Cards grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 20px;
+        }
+        .premios-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .premios-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* Parceiro card */
+        .parceiro-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .parceiro-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+        .parceiro-logo {
+            width: 100%;
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f9fafb;
+            padding: 16px;
+        }
+        .parceiro-logo img { max-height: 80px; max-width: 160px; object-fit: contain; }
+        .parceiro-logo .placeholder-icon { font-size: 48px; color: var(--border); }
+        .parceiro-info { padding: 16px; }
+        .parceiro-info h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+        .parceiro-info .cat-tag {
+            display: inline-block;
+            font-size: 11px;
+            color: var(--secondary);
+            background: #fef3c7;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .parceiro-info .cupons-count {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Cupom card */
+        .cupom-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            transition: transform 0.2s;
+        }
+        .cupom-card:hover { transform: translateY(-4px); }
+        .cupom-img {
+            width: 100%;
+            height: 140px;
+            background: #f9fafb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .cupom-img img { width: 100%; height: 100%; object-fit: cover; }
+        .cupom-img .placeholder-icon { font-size: 48px; color: var(--border); }
+        .cupom-body { padding: 16px; }
+        .cupom-body h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+        .cupom-body .parceiro-name { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+        .cupom-desconto {
+            display: inline-block;
+            background: var(--primary);
+            color: var(--white);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        /* Premio card */
+        .premio-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .premio-card i { font-size: 36px; color: var(--secondary); margin-bottom: 12px; }
+        .premio-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+        .premio-card .estoque { font-size: 12px; color: var(--text-muted); }
+
+        /* Niveis */
+        .niveis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .nivel-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border-top: 4px solid var(--secondary);
+        }
+        .nivel-card h3 { font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 4px; }
+        .nivel-card .xp { font-size: 13px; color: var(--text-muted); }
+
+        /* CTA */
+        .cta-section {
+            background: var(--primary);
+            padding: 48px 24px;
+            text-align: center;
+            color: var(--white);
+        }
+        .cta-section h2 { font-size: 28px; font-weight: 800; margin-bottom: 12px; }
+        .cta-section p { font-size: 16px; opacity: 0.8; margin-bottom: 24px; }
+
+        /* Footer */
+        .footer {
+            background: #111827;
+            color: #9ca3af;
+            padding: 32px 24px;
+            text-align: center;
+            font-size: 13px;
+        }
+        .footer a { color: var(--secondary); }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            /* Header mobile */
+            .header-top {
+                padding: 10px 16px;
+                flex-wrap: nowrap;
+            }
+            .header-search { display: none; }
+            .header-logo h1 { font-size: 15px; }
+            .btn-cta { padding: 8px 16px; font-size: 12px; }
+            .header-nav { display: none; }
+
+            /* Hero mobile */
+            .hero { padding: 0 16px; margin: 16px auto; }
+            .hero-slide img, .hero-placeholder { height: 180px; }
+            .hero-placeholder h2 { font-size: 22px; }
+            .hero-overlay {
+                width: 100%;
+                background: linear-gradient(to right, transparent 0%, rgba(0,11,74,0.85) 40%);
+                padding: 20px;
+                text-align: right;
+            }
+            .hero-overlay h2 { font-size: 22px; }
+            .hero-overlay p { font-size: 12px; }
+
+            /* Sections mobile */
+            .section { padding: 28px 16px; }
+            .section-title { font-size: 18px; }
+            .section-subtitle { font-size: 13px; margin-bottom: 20px; }
+
+            /* Como funciona mobile */
+            .how-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+            .how-card { padding: 16px; }
+            .how-card i { font-size: 24px; }
+            .how-card h3 { font-size: 14px; }
+            .how-card p { font-size: 12px; }
+
+            /* Cards mobile */
+            .cards-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+            .parceiro-logo { height: 100px; padding: 12px; }
+            .parceiro-logo img { max-height: 60px; }
+            .parceiro-info { padding: 12px; }
+            .parceiro-info h3 { font-size: 13px; }
+            .cupom-img { height: 100px; }
+            .cupom-body { padding: 12px; }
+            .cupom-body h3 { font-size: 12px; }
+            .cupom-desconto { font-size: 11px; padding: 3px 8px; }
+
+            /* Premios mobile */
+            .premios-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+            .premio-card { padding: 16px; }
+            .premio-card i { font-size: 28px; }
+            .premio-card h3 { font-size: 13px; }
+
+            /* Niveis mobile */
+            .niveis-grid { grid-template-columns: 1fr; gap: 12px; }
+            .nivel-card { padding: 16px; }
+
+            /* CTA mobile */
+            .cta-section { padding: 32px 16px; }
+            .cta-section h2 { font-size: 20px; }
+            .cta-section p { font-size: 14px; }
+
+            /* Categorias mobile */
+            .cat-btn { padding: 6px 12px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+    <div class="header-top">
+        <div class="header-logo">
+            {% if config.logo %}
+                <img src="{{ config.logo.url }}" alt="{{ config.titulo }}">
+            {% else %}
+                <i class="fas fa-star" style="font-size:24px; color:var(--secondary);"></i>
+            {% endif %}
+            <h1>{{ config.titulo|default:"Clube Megalink" }}</h1>
+        </div>
+
+        <div class="header-search">
+            <form method="get" action="{% url 'clube:landing_clube' %}" style="display:flex; align-items:center; gap:10px;">
+                <div class="search-input-wrap">
+                    <input type="text" name="busca" value="{{ busca_ativa|default:'' }}" placeholder="Buscar parceiros e ofertas">
+                    <button type="submit"><i class="fas fa-search"></i></button>
+                </div>
+                {% if cidades %}
+                <select name="cidade" class="header-select" onchange="this.form.submit()">
+                    <option value="">Todas as cidades</option>
+                    {% for c in cidades %}
+                    <option value="{{ c.id }}" {% if cidade_ativa == c.id|stringformat:"d" %}selected{% endif %}>{{ c.nome }}</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+            </form>
+        </div>
+
+        <a href="{% url 'clube:roleta_index' %}" class="btn-cta">
+            <i class="fas fa-sign-in-alt"></i> Entrar
+        </a>
+    </div>
+
+    <nav class="header-nav">
+        <a href="#cupons"><i class="fas fa-tags"></i> Cupons em Destaque</a>
+        <a href="#parceiros"><i class="fas fa-store"></i> Parceiros</a>
+        <a href="#premios"><i class="fas fa-gift"></i> Pr&ecirc;mios</a>
+        <a href="#como-funciona"><i class="fas fa-info-circle"></i> Como Funciona</a>
+    </nav>
+</header>
+
+<!-- HERO / BANNERS -->
+<section class="hero">
+    <div class="hero-inner">
+        {% if banners %}
+        <div class="hero-slides" id="hero-slides">
+            {% for banner in banners %}
+            <div class="hero-slide">
+                {% if banner.link %}<a href="{{ banner.link }}" target="_blank">{% endif %}
+                <img src="{{ banner.imagem.url }}" alt="{{ banner.titulo }}">
+                {% if banner.link %}</a>{% endif %}
+                {% if banner.titulo %}
+                <div class="hero-overlay">
+                    <h2>{{ config.titulo|default:"Clube Megalink" }}</h2>
+                    <p>{{ config.subtitulo|default:"Descontos exclusivos para voce" }}</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% if banners|length > 1 %}
+        <div class="hero-dots" id="hero-dots">
+            {% for banner in banners %}
+            <button class="hero-dot {% if forloop.first %}active{% endif %}" onclick="goSlide({{ forloop.counter0 }})"></button>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="hero-placeholder">
+            <div>
+                <h2>{{ config.titulo|default:"Clube Megalink" }}</h2>
+                <p>{{ config.subtitulo|default:"Descontos exclusivos, premios e muito mais!" }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- COMO FUNCIONA -->
+<section class="section" id="como-funciona">
+    <h2 class="section-title">Como Funciona</h2>
+    <p class="section-subtitle">Simples, r&aacute;pido e cheio de vantagens</p>
+    <div class="how-grid">
+        <div class="how-card">
+            <i class="fas fa-user-plus"></i>
+            <h3>Cadastre-se</h3>
+            <p>Basta ser cliente Megalink. Valide seu acesso via WhatsApp e comece a aproveitar.</p>
+        </div>
+        <div class="how-card">
+            <i class="fas fa-sync-alt"></i>
+            <h3>Gire a Roleta</h3>
+            <p>Use seus giros para concorrer a pr&ecirc;mios exclusivos toda semana.</p>
+        </div>
+        <div class="how-card">
+            <i class="fas fa-ticket-alt"></i>
+            <h3>Resgate Cupons</h3>
+            <p>Descontos em parceiros da sua cidade. Apresente o cupom e aproveite.</p>
+        </div>
+        <div class="how-card">
+            <i class="fas fa-trophy"></i>
+            <h3>Suba de N&iacute;vel</h3>
+            <p>Acumule XP girando e indicando amigos. Quanto maior o n&iacute;vel, mais benef&iacute;cios.</p>
+        </div>
+    </div>
+</section>
+
+<!-- CATEGORIAS + PARCEIROS -->
+{% if parceiros %}
+<section class="section" id="parceiros">
+    <h2 class="section-title">Nossos Parceiros</h2>
+    <p class="section-subtitle">Descontos exclusivos para membros do Clube</p>
+
+    {% if categorias %}
+    <div class="cat-bar">
+        <a href="{% url 'clube:landing_clube' %}" class="cat-btn {% if not categoria_ativa %}active{% endif %}">
+            <i class="fas fa-th"></i> Todos
+        </a>
+        {% for cat in categorias %}
+        <a href="{% url 'clube:landing_clube' %}?categoria={{ cat.slug }}" class="cat-btn {% if categoria_ativa == cat.slug %}active{% endif %}">
+            <i class="{{ cat.icone }}"></i> {{ cat.nome }}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="cards-grid">
+        {% for p in parceiros %}
+        <div class="parceiro-card">
+            <div class="parceiro-logo">
+                {% if p.logo %}
+                    <img src="{{ p.logo.url }}" alt="{{ p.nome }}">
+                {% else %}
+                    <i class="fas fa-store placeholder-icon"></i>
+                {% endif %}
+            </div>
+            <div class="parceiro-info">
+                <h3>{{ p.nome }}</h3>
+                {% if p.categoria %}
+                <span class="cat-tag"><i class="{{ p.categoria.icone }}"></i> {{ p.categoria.nome }}</span>
+                {% endif %}
+                {% if p.total_cupons %}
+                <div class="cupons-count"><i class="fas fa-ticket-alt"></i> {{ p.total_cupons }} cupom{{ p.total_cupons|pluralize:"ns" }} dispon&iacute;ve{{ p.total_cupons|pluralize:"l,is" }}</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if parceiros.has_other_pages %}
+    <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-top:24px;">
+        {% if parceiros.has_previous %}
+        <a href="?pagina={{ parceiros.previous_page_number }}{% if categoria_ativa %}&categoria={{ categoria_ativa }}{% endif %}" style="padding:8px 14px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-weight:600; color:var(--text-muted); background:var(--white);">&larr; Anterior</a>
+        {% endif %}
+        <span style="font-size:13px; color:var(--text-muted);">{{ parceiros.number }} de {{ parceiros.paginator.num_pages }}</span>
+        {% if parceiros.has_next %}
+        <a href="?pagina={{ parceiros.next_page_number }}{% if categoria_ativa %}&categoria={{ categoria_ativa }}{% endif %}" style="padding:8px 14px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-weight:600; color:var(--text-muted); background:var(--white);">Pr&oacute;xima &rarr;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endif %}
+
+<!-- CUPONS EM DESTAQUE -->
+{% if cupons %}
+<section class="section" id="cupons" style="background:var(--white); max-width:100%; padding-left:max(24px, calc((100% - 1200px)/2 + 24px)); padding-right:max(24px, calc((100% - 1200px)/2 + 24px));">
+    <h2 class="section-title">Cupons em Destaque</h2>
+    <p class="section-subtitle">Aproveite os descontos dispon&iacute;veis agora</p>
+    <div class="cards-grid">
+        {% for c in cupons %}
+        <div class="cupom-card">
+            <div class="cupom-img">
+                {% if c.imagem %}
+                    <img src="{{ c.imagem.url }}" alt="{{ c.titulo }}">
+                {% else %}
+                    <i class="fas fa-tag placeholder-icon"></i>
+                {% endif %}
+            </div>
+            <div class="cupom-body">
+                <h3>{{ c.titulo }}</h3>
+                <div class="parceiro-name"><i class="fas fa-store"></i> {{ c.parceiro.nome }}</div>
+                {% if c.tipo_desconto == 'percentual' %}
+                    <span class="cupom-desconto">{{ c.valor_desconto|floatformat:0 }}% OFF</span>
+                {% else %}
+                    <span class="cupom-desconto">R$ {{ c.valor_desconto|floatformat:2 }} OFF</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if cupons.has_other_pages %}
+    <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-top:24px;">
+        {% if cupons.has_previous %}
+        <a href="?pagina_cupons={{ cupons.previous_page_number }}" style="padding:8px 14px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-weight:600; color:var(--text-muted); background:var(--white);">&larr; Anterior</a>
+        {% endif %}
+        <span style="font-size:13px; color:var(--text-muted);">{{ cupons.number }} de {{ cupons.paginator.num_pages }}</span>
+        {% if cupons.has_next %}
+        <a href="?pagina_cupons={{ cupons.next_page_number }}" style="padding:8px 14px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-weight:600; color:var(--text-muted); background:var(--white);">Pr&oacute;xima &rarr;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endif %}
+
+<!-- PREMIOS DA ROLETA -->
+{% if premios %}
+<section class="section" id="premios">
+    <h2 class="section-title"><i class="fas fa-gift" style="color:var(--secondary);"></i> Pr&ecirc;mios da Roleta</h2>
+    <p class="section-subtitle">Gire e concorra a pr&ecirc;mios incr&iacute;veis</p>
+    <div class="premios-grid">
+        {% for premio in premios %}
+        <div class="premio-card">
+            <i class="fas fa-gift"></i>
+            <h3>{{ premio.nome }}</h3>
+            <div class="estoque">Dispon&iacute;vel</div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+
+<!-- CTA + FOOTER -->
+<section style="background:linear-gradient(180deg, var(--primary) 0%, #000720 100%); padding:0;">
+    <!-- CTA -->
+    <div style="max-width:800px; margin:0 auto; text-align:center; padding:56px 24px 40px;">
+        <div style="font-size:48px; margin-bottom:16px;">🎁</div>
+        <h2 style="color:var(--white); font-size:28px; font-weight:800; margin-bottom:12px;">Fa&ccedil;a parte do Clube Megalink!</h2>
+        <p style="color:rgba(255,255,255,0.7); font-size:15px; margin-bottom:28px; line-height:1.6;">
+            Descontos exclusivos em parceiros da sua cidade, pr&ecirc;mios na roleta e muito mais.<br>
+            Tudo gratuito para clientes Megalink.
+        </p>
+        {% if config.whatsapp_numero %}
+        <a href="https://wa.me/{{ config.whatsapp_numero }}?text={{ config.whatsapp_mensagem|urlencode }}" target="_blank" class="btn-cta" style="font-size:16px; padding:16px 36px;">
+            <i class="fab fa-whatsapp" style="font-size:20px;"></i> Quero Participar
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Separador -->
+    <div style="max-width:1200px; margin:0 auto; padding:0 24px;">
+        <div style="height:1px; background:rgba(255,255,255,0.1);"></div>
+    </div>
+
+    <!-- Footer -->
+    <div style="max-width:1200px; margin:0 auto; padding:28px 24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:32px; height:32px; background:var(--secondary); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                    <span style="color:var(--primary); font-size:16px; font-weight:800;">M</span>
+                </div>
+                <div>
+                    <div style="color:rgba(255,255,255,0.9); font-size:13px; font-weight:700;">Clube Megalink</div>
+                    <div style="color:rgba(255,255,255,0.4); font-size:11px;">Megalink Telecom</div>
+                </div>
+            </div>
+            <div style="display:flex; gap:20px; align-items:center;">
+                {% if config.whatsapp_numero %}
+                <a href="https://wa.me/{{ config.whatsapp_numero }}" target="_blank" style="color:rgba(255,255,255,0.5); font-size:12px; display:flex; align-items:center; gap:4px;">
+                    <i class="fab fa-whatsapp"></i> WhatsApp
+                </a>
+                {% endif %}
+                <a href="{% url 'clube:roleta_index' %}" style="color:rgba(255,255,255,0.5); font-size:12px; display:flex; align-items:center; gap:4px;">
+                    <i class="fas fa-sign-in-alt"></i> Entrar
+                </a>
+            </div>
+        </div>
+        <div style="text-align:center; margin-top:20px;">
+            <p style="color:rgba(255,255,255,0.3); font-size:11px;">&#169; 2026 Megalink Telecom. Todos os direitos reservados.</p>
+        </div>
+    </div>
+</section>
+
+<!-- SCRIPTS -->
+<script>
+{% if banners|length > 1 %}
+var currentSlide = 0;
+var totalSlides = {{ banners|length }};
+var slidesEl = document.getElementById('hero-slides');
+var dots = document.querySelectorAll('.hero-dot');
+
+function goSlide(n) {
+    currentSlide = n;
+    slidesEl.style.transform = 'translateX(-' + (n * 100) + '%)';
+    dots.forEach(function(d, i) { d.classList.toggle('active', i === n); });
+}
+
+setInterval(function() {
+    goSlide((currentSlide + 1) % totalSlides);
+}, 5000);
+{% endif %}
+</script>
+
+</body>
+</html>

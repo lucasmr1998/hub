@@ -1,0 +1,256 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Criar Modelo de Carteirinha{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Criar Modelo de Carteirinha</h1>
+        <p class="page-subtitle">Configure o visual e veja o preview em tempo real.</p>
+    </div>
+    <a href="{% url 'carteirinha:dashboard_modelos_carteirinha' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a>
+</div>
+
+<form method="post" enctype="multipart/form-data">
+{% csrf_token %}
+
+<div style="display:grid; grid-template-columns:1fr 400px; gap:24px; align-items:flex-start;">
+
+    <!-- Formulario -->
+    <div>
+        <!-- Dados basicos -->
+        <div class="card" style="padding:24px; margin-bottom:20px;">
+            <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;"><i class="fas fa-info-circle" style="color:var(--primary); margin-right:6px;"></i>Dados B&aacute;sicos</h3>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div class="form-group">
+                    <label class="form-label">Nome do Modelo *</label>
+                    <input type="text" name="nome" id="f-nome" class="form-control" required placeholder="Ex: Cart&atilde;o Ouro">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Texto da Marca</label>
+                    <input type="text" name="texto_marca" id="f-marca" class="form-control" value="Clube Megalink" oninput="atualizarPreview()">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Descri&ccedil;&atilde;o</label>
+                <textarea name="descricao" class="form-control" rows="2" placeholder="Descri&ccedil;&atilde;o interna (n&atilde;o aparece no cart&atilde;o)"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Texto do Rodap&eacute;</label>
+                <input type="text" name="texto_rodape" id="f-rodape" class="form-control" value="um clube filiado" oninput="atualizarPreview()">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Logo (opcional)</label>
+                <input type="file" name="logo" class="form-control" accept="image/*">
+            </div>
+
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" name="ativo" checked> Ativo
+            </label>
+        </div>
+
+        <!-- Visual -->
+        <div class="card" style="padding:24px; margin-bottom:20px;">
+            <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;"><i class="fas fa-palette" style="color:var(--primary); margin-right:6px;"></i>Visual</h3>
+
+            <div class="form-group">
+                <label class="form-label">Tipo de Fundo</label>
+                <select name="tipo_fundo" id="f-tipo-fundo" class="form-control" onchange="atualizarPreview()">
+                    <option value="cor">Cores / Gradiente</option>
+                    <option value="imagem">Imagem de Fundo</option>
+                </select>
+            </div>
+
+            <div id="sec-cores">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div class="form-group">
+                        <label class="form-label">Cor Prim&aacute;ria</label>
+                        <input type="color" name="cor_fundo_primaria" id="f-cor1" value="#000b4a" style="width:100%; height:40px; border:1px solid var(--border); border-radius:8px; cursor:pointer;" oninput="atualizarPreview()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cor Secund&aacute;ria (gradiente)</label>
+                        <input type="color" name="cor_fundo_secundaria" id="f-cor2" value="#1a2d4a" style="width:100%; height:40px; border:1px solid var(--border); border-radius:8px; cursor:pointer;" oninput="atualizarPreview()">
+                    </div>
+                </div>
+            </div>
+
+            <div id="sec-imagem" style="display:none;">
+                <div class="form-group">
+                    <label class="form-label">Imagem de Fundo (600x380px)</label>
+                    <input type="file" name="imagem_fundo" class="form-control" accept="image/*">
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+                <div class="form-group">
+                    <label class="form-label">Cor Texto</label>
+                    <input type="color" name="cor_texto" id="f-cor-txt" value="#ffffff" style="width:100%; height:40px; border:1px solid var(--border); border-radius:8px; cursor:pointer;" oninput="atualizarPreview()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cor Labels</label>
+                    <input type="color" name="cor_texto_secundario" id="f-cor-label" value="#94a3b8" style="width:100%; height:40px; border:1px solid var(--border); border-radius:8px; cursor:pointer;" oninput="atualizarPreview()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cor Destaque</label>
+                    <input type="color" name="cor_destaque" id="f-cor-dest" value="#fbbf24" style="width:100%; height:40px; border:1px solid var(--border); border-radius:8px; cursor:pointer;" oninput="atualizarPreview()">
+                </div>
+            </div>
+        </div>
+
+        <!-- Campos -->
+        <div class="card" style="padding:24px; margin-bottom:20px;">
+            <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;"><i class="fas fa-list-check" style="color:var(--primary); margin-right:6px;"></i>Campos Vis&iacute;veis</h3>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+                <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer; padding:8px; background:var(--bg-page); border-radius:6px;">
+                    <input type="checkbox" name="mostrar_nome" checked onchange="atualizarPreview()"> Nome
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer; padding:8px; background:var(--bg-page); border-radius:6px;">
+                    <input type="checkbox" name="mostrar_cpf" checked onchange="atualizarPreview()"> CPF
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer; padding:8px; background:var(--bg-page); border-radius:6px;">
+                    <input type="checkbox" name="mostrar_nivel" checked onchange="atualizarPreview()"> N&iacute;vel
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer; padding:8px; background:var(--bg-page); border-radius:6px;">
+                    <input type="checkbox" name="mostrar_data_emissao" checked onchange="atualizarPreview()"> Data Emiss&atilde;o
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer; padding:8px; background:var(--bg-page); border-radius:6px;">
+                    <input type="checkbox" name="mostrar_data_validade" onchange="atualizarPreview()"> Data Validade
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer; padding:8px; background:var(--bg-page); border-radius:6px;">
+                    <input type="checkbox" name="mostrar_qr_code" checked onchange="atualizarPreview()"> QR Code
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer; padding:8px; background:var(--bg-page); border-radius:6px;">
+                    <input type="checkbox" name="mostrar_foto" onchange="atualizarPreview()"> Foto
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer; padding:8px; background:var(--bg-page); border-radius:6px;">
+                    <input type="checkbox" name="mostrar_pontos" onchange="atualizarPreview()"> Pontos
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer; padding:8px; background:var(--bg-page); border-radius:6px;">
+                    <input type="checkbox" name="mostrar_cidade" onchange="atualizarPreview()"> Cidade
+                </label>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%; padding:14px; justify-content:center; font-size:15px;">
+            <i class="fas fa-save"></i> Criar Modelo
+        </button>
+    </div>
+
+    <!-- Preview (sticky) -->
+    <div style="position:sticky; top:24px;">
+        <div class="card" style="padding:20px;">
+            <h3 style="font-size:14px; font-weight:700; margin-bottom:16px; text-align:center;">
+                <i class="fas fa-eye" style="color:var(--primary); margin-right:4px;"></i>Preview em Tempo Real
+            </h3>
+
+            <div id="preview-cartao" style="
+                aspect-ratio: 1.58/1;
+                border-radius:14px;
+                overflow:hidden;
+                position:relative;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+                font-family: 'Inter', sans-serif;
+                background: linear-gradient(135deg, #000b4a 0%, #1a2d4a 100%);
+            ">
+                <!-- Decoracao -->
+                <div style="position:absolute; top:-40px; right:-40px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,0.06);"></div>
+                <div style="position:absolute; top:30px; right:60px; width:120px; height:120px; border-radius:50%; background:rgba(255,255,255,0.04);"></div>
+                <div style="position:absolute; bottom:-60px; left:-30px; width:180px; height:180px; border-radius:50%; background:rgba(255,255,255,0.05);"></div>
+
+                <div style="position:relative; z-index:1; height:100%; display:flex; flex-direction:column; justify-content:space-between; padding:20px;">
+                    <!-- Topo -->
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <div id="pv-marca" style="font-size:16px; font-weight:800; color:#ffffff;">Clube Megalink</div>
+                            <div id="pv-rodape" style="font-size:9px; color:#94a3b8; margin-top:2px;">um clube filiado</div>
+                        </div>
+                        <div id="pv-qr" style="width:48px; height:48px; background:white; border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+                            <i class="fas fa-qrcode" style="font-size:28px; color:var(--text-main);"></i>
+                        </div>
+                    </div>
+
+                    <!-- Centro -->
+                    <div>
+                        <div id="pv-nome" style="font-size:15px; font-weight:800; color:#ffffff; margin-bottom:3px;">Nome: JO&Atilde;O DA SILVA</div>
+                        <div id="pv-cpf" style="font-size:11px; color:#94a3b8; margin-bottom:2px;">CPF/CNPJ: 123.456.789-00</div>
+                        <div id="pv-emissao" style="font-size:11px; color:#94a3b8;">Data de Emiss&atilde;o: 19/03/2026</div>
+                        <div id="pv-validade" style="font-size:11px; color:#94a3b8; display:none;">Validade: 19/03/2027</div>
+                    </div>
+
+                    <!-- Rodape -->
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <span id="pv-nivel" style="font-size:10px; font-weight:700; padding:3px 10px; border-radius:5px; background:#fbbf24; color:var(--text-main);">Prata</span>
+                            <span id="pv-pontos" style="font-size:10px; font-weight:700; padding:3px 10px; border-radius:5px; background:rgba(255,255,255,0.15); color:#ffffff; display:none;">150 PTs</span>
+                            <span id="pv-cidade" style="font-size:10px; color:#94a3b8; padding:3px 0; display:none;">Floriano - PI</span>
+                        </div>
+                        <div id="pv-foto" style="width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,0.15); border:2px solid rgba(255,255,255,0.3); display:none; align-items:center; justify-content:center;">
+                            <i class="fas fa-user" style="font-size:16px; color:#94a3b8;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</form>
+
+<script>
+function atualizarPreview() {
+    var cor1 = document.getElementById('f-cor1').value;
+    var cor2 = document.getElementById('f-cor2').value;
+    var corTxt = document.getElementById('f-cor-txt').value;
+    var corLabel = document.getElementById('f-cor-label').value;
+    var corDest = document.getElementById('f-cor-dest').value;
+    var marca = document.getElementById('f-marca').value || 'Clube Megalink';
+    var rodape = document.getElementById('f-rodape').value;
+    var tipoFundo = document.getElementById('f-tipo-fundo').value;
+
+    // Fundo
+    var preview = document.getElementById('preview-cartao');
+    if (tipoFundo === 'cor') {
+        preview.style.background = 'linear-gradient(135deg, ' + cor1 + ' 0%, ' + cor2 + ' 100%)';
+        document.getElementById('sec-cores').style.display = 'block';
+        document.getElementById('sec-imagem').style.display = 'none';
+    } else {
+        document.getElementById('sec-cores').style.display = 'none';
+        document.getElementById('sec-imagem').style.display = 'block';
+    }
+
+    // Textos
+    document.getElementById('pv-marca').style.color = corTxt;
+    document.getElementById('pv-marca').textContent = marca;
+    document.getElementById('pv-rodape').style.color = corLabel;
+    document.getElementById('pv-rodape').textContent = rodape;
+
+    // Cores dos dados
+    document.getElementById('pv-nome').style.color = corTxt;
+    document.getElementById('pv-cpf').style.color = corLabel;
+    document.getElementById('pv-emissao').style.color = corLabel;
+    document.getElementById('pv-validade').style.color = corLabel;
+    document.getElementById('pv-nivel').style.background = corDest;
+    document.getElementById('pv-pontos').style.color = corTxt;
+    document.getElementById('pv-cidade').style.color = corLabel;
+
+    // Campos
+    var cb = function(name) { return document.querySelector('input[name="' + name + '"]').checked; };
+    document.getElementById('pv-nome').style.display = cb('mostrar_nome') ? 'block' : 'none';
+    document.getElementById('pv-cpf').style.display = cb('mostrar_cpf') ? 'block' : 'none';
+    document.getElementById('pv-nivel').style.display = cb('mostrar_nivel') ? 'inline-block' : 'none';
+    document.getElementById('pv-emissao').style.display = cb('mostrar_data_emissao') ? 'block' : 'none';
+    document.getElementById('pv-validade').style.display = cb('mostrar_data_validade') ? 'block' : 'none';
+    document.getElementById('pv-qr').style.display = cb('mostrar_qr_code') ? 'flex' : 'none';
+    document.getElementById('pv-foto').style.display = cb('mostrar_foto') ? 'flex' : 'none';
+    document.getElementById('pv-pontos').style.display = cb('mostrar_pontos') ? 'inline-block' : 'none';
+    document.getElementById('pv-cidade').style.display = cb('mostrar_cidade') ? 'inline-block' : 'none';
+}
+</script>
+
+{% endblock %}

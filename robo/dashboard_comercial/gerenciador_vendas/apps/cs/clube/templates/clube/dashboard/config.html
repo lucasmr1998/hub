@@ -1,0 +1,87 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Configura&ccedil;&otilde;es - Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <h1 class="page-title">Configura&ccedil;&otilde;es</h1>
+    <p class="page-subtitle">Ajustes globais do {{ config.nome_clube }}.</p>
+</div>
+
+<div class="card" style="max-width:640px;">
+    <div class="card-title">Ajustes Globais</div>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label class="form-label">Nome do Clube</label>
+            <input type="text" name="nome_clube" value="{{ config.nome_clube }}" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Custo por Giro (Pontos)</label>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <input type="number" name="custo_giro" value="{{ config.custo_giro }}" class="form-control" style="width:120px;" required min="0">
+                <span class="text-muted text-sm">pontos por tentativa</span>
+            </div>
+            <span class="form-hint"><i class="fas fa-info-circle"></i> Cada giro desconta este valor do saldo do membro.</span>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">XP Ganho por Giro</label>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <input type="number" name="xp_por_giro" value="{{ config.xp_por_giro }}" class="form-control" style="width:120px;" required min="0">
+                <span class="text-muted text-sm">XP garantido</span>
+            </div>
+            <span class="form-hint"><i class="fas fa-gift"></i> XP passivo ganho ao jogar.</span>
+        </div>
+
+        <hr style="border:none; border-top:1px solid var(--border); margin:24px 0;">
+
+        <div style="margin-bottom:18px;">
+            <label class="form-label" style="text-transform:uppercase; letter-spacing:0.05em; font-size:11px;">
+                <i class="fas fa-lock" style="color:var(--primary); margin-right:4px;"></i> Limite de Giros por Pessoa
+            </label>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">M&aacute;x. de Giros</label>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <input type="number" name="limite_giros_por_membro" value="{{ config.limite_giros_por_membro }}" class="form-control" style="width:100px;" min="0">
+                    <span class="text-muted text-sm">giros</span>
+                </div>
+                <span class="form-hint"><strong>0</strong> = sem limite.</span>
+            </div>
+
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Per&iacute;odo de Contagem</label>
+                <select name="periodo_limite" id="id_periodo_limite" class="form-control">
+                    <option value="total">Total (para sempre)</option>
+                    <option value="diario">Di&aacute;rio (por dia corrido)</option>
+                    <option value="semanal">Semanal (&uacute;ltimos 7 dias)</option>
+                    <option value="mensal">Mensal (m&ecirc;s atual)</option>
+                </select>
+                <script>document.getElementById('id_periodo_limite').value = '{{ config.periodo_limite }}';</script>
+                <span class="form-hint"><i class="fas fa-calendar"></i> Janela de tempo para contar os giros.</span>
+            </div>
+        </div>
+
+        {% if config.limite_giros_por_membro > 0 %}
+        <div class="alert alert-info">
+            <i class="fas fa-shield-alt"></i>
+            <span>Cada membro pode girar no m&aacute;ximo <strong>{{ config.limite_giros_por_membro }}x</strong> no per&iacute;odo <strong>{{ config.get_periodo_limite_display }}</strong>.</span>
+        </div>
+        {% else %}
+        <div class="alert" style="background:var(--border-light); color:var(--text-muted); border:1px solid var(--border);">
+            <i class="fas fa-infinity"></i>
+            <span>Limite desativado — membros podem girar sem restri&ccedil;&atilde;o (desde que tenham saldo).</span>
+        </div>
+        {% endif %}
+
+        <button type="submit" class="btn-primary w-full" style="padding:12px; margin-top:8px;">Salvar Configura&ccedil;&otilde;es</button>
+    </form>
+</div>
+{% endblock %}

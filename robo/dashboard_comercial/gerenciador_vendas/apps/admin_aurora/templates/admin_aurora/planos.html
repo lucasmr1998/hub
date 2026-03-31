@@ -1,0 +1,247 @@
+{% extends "admin_aurora/base_admin.html" %}
+
+{% block title %}Planos{% endblock %}
+
+{% block content %}
+<style>
+    .planos-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 12px;
+    }
+    .plano-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 24px;
+        transition: box-shadow .2s, border-color .2s;
+        position: relative;
+    }
+    .plano-card:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,.08);
+        border-color: #cbd5e1;
+    }
+    .plano-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+    .plano-card-nome {
+        font-size: .95rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .plano-card-destaque {
+        color: #eab308;
+        font-size: 1rem;
+        margin-left: 8px;
+    }
+    .plano-card-preco {
+        font-size: 1.3rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 4px;
+    }
+    .plano-card-preco span {
+        font-size: .78rem;
+        font-weight: 500;
+        color: #64748b;
+    }
+    .plano-card-transacional {
+        font-size: .78rem;
+        color: #64748b;
+        margin-bottom: 12px;
+    }
+    .plano-card-features {
+        font-size: .75rem;
+        color: #94a3b8;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .plano-card-inactive {
+        opacity: .55;
+    }
+    .modulo-section {
+        margin-bottom: 32px;
+    }
+    .modulo-section-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .planos-empty {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 32px;
+        color: #94a3b8;
+        font-size: .85rem;
+    }
+</style>
+
+<div class="admin-header">
+    <h1><i class="fas fa-tags"></i> Planos AuroraISP</h1>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Comercial -->
+<div class="modulo-section">
+    <div class="modulo-section-title">
+        <span class="badge badge-green">Comercial</span>
+    </div>
+    <div class="planos-grid">
+        {% for plano in planos_comercial %}
+        <div class="plano-card {% if not plano.ativo %}plano-card-inactive{% endif %}">
+            <div class="plano-card-header">
+                <div style="display:flex;align-items:center;">
+                    <span class="plano-card-nome">{{ plano.nome }}</span>
+                    {% if plano.destaque %}
+                        <span class="plano-card-destaque"><i class="fas fa-star"></i></span>
+                    {% endif %}
+                </div>
+                {% if plano.tier == 'starter' %}
+                    <span class="badge badge-gray">Starter</span>
+                {% elif plano.tier == 'start' %}
+                    <span class="badge badge-blue">Start</span>
+                {% elif plano.tier == 'pro' %}
+                    <span class="badge badge-purple">Pro</span>
+                {% endif %}
+            </div>
+            <div class="plano-card-preco">
+                R$ {{ plano.preco_mensal }} <span>/mês</span>
+            </div>
+            <div class="plano-card-transacional">
+                R$ {{ plano.preco_transacional }} {{ plano.unidade_transacional }}
+            </div>
+            <div class="plano-card-features">
+                <i class="fas fa-list-check"></i> {{ plano.features.count }} features
+            </div>
+            {% if not plano.ativo %}
+                <div style="margin-bottom:12px;">
+                    <span class="badge badge-red">Inativo</span>
+                </div>
+            {% endif %}
+            <a href="{% url 'admin_aurora:plano_detalhe' plano.pk %}" class="btn btn-outline btn-sm" style="width:100%;justify-content:center;">
+                <i class="fas fa-cog"></i> Gerenciar
+            </a>
+        </div>
+        {% empty %}
+        <div class="planos-empty">
+            Nenhum plano cadastrado para o módulo Comercial.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Marketing -->
+<div class="modulo-section">
+    <div class="modulo-section-title">
+        <span class="badge badge-blue">Marketing</span>
+    </div>
+    <div class="planos-grid">
+        {% for plano in planos_marketing %}
+        <div class="plano-card {% if not plano.ativo %}plano-card-inactive{% endif %}">
+            <div class="plano-card-header">
+                <div style="display:flex;align-items:center;">
+                    <span class="plano-card-nome">{{ plano.nome }}</span>
+                    {% if plano.destaque %}
+                        <span class="plano-card-destaque"><i class="fas fa-star"></i></span>
+                    {% endif %}
+                </div>
+                {% if plano.tier == 'starter' %}
+                    <span class="badge badge-gray">Starter</span>
+                {% elif plano.tier == 'start' %}
+                    <span class="badge badge-blue">Start</span>
+                {% elif plano.tier == 'pro' %}
+                    <span class="badge badge-purple">Pro</span>
+                {% endif %}
+            </div>
+            <div class="plano-card-preco">
+                R$ {{ plano.preco_mensal }} <span>/mês</span>
+            </div>
+            <div class="plano-card-transacional">
+                R$ {{ plano.preco_transacional }} {{ plano.unidade_transacional }}
+            </div>
+            <div class="plano-card-features">
+                <i class="fas fa-list-check"></i> {{ plano.features.count }} features
+            </div>
+            {% if not plano.ativo %}
+                <div style="margin-bottom:12px;">
+                    <span class="badge badge-red">Inativo</span>
+                </div>
+            {% endif %}
+            <a href="{% url 'admin_aurora:plano_detalhe' plano.pk %}" class="btn btn-outline btn-sm" style="width:100%;justify-content:center;">
+                <i class="fas fa-cog"></i> Gerenciar
+            </a>
+        </div>
+        {% empty %}
+        <div class="planos-empty">
+            Nenhum plano cadastrado para o módulo Marketing.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- CS -->
+<div class="modulo-section">
+    <div class="modulo-section-title">
+        <span class="badge badge-yellow">CS</span>
+    </div>
+    <div class="planos-grid">
+        {% for plano in planos_cs %}
+        <div class="plano-card {% if not plano.ativo %}plano-card-inactive{% endif %}">
+            <div class="plano-card-header">
+                <div style="display:flex;align-items:center;">
+                    <span class="plano-card-nome">{{ plano.nome }}</span>
+                    {% if plano.destaque %}
+                        <span class="plano-card-destaque"><i class="fas fa-star"></i></span>
+                    {% endif %}
+                </div>
+                {% if plano.tier == 'starter' %}
+                    <span class="badge badge-gray">Starter</span>
+                {% elif plano.tier == 'start' %}
+                    <span class="badge badge-blue">Start</span>
+                {% elif plano.tier == 'pro' %}
+                    <span class="badge badge-purple">Pro</span>
+                {% endif %}
+            </div>
+            <div class="plano-card-preco">
+                R$ {{ plano.preco_mensal }} <span>/mês</span>
+            </div>
+            <div class="plano-card-transacional">
+                R$ {{ plano.preco_transacional }} {{ plano.unidade_transacional }}
+            </div>
+            <div class="plano-card-features">
+                <i class="fas fa-list-check"></i> {{ plano.features.count }} features
+            </div>
+            {% if not plano.ativo %}
+                <div style="margin-bottom:12px;">
+                    <span class="badge badge-red">Inativo</span>
+                </div>
+            {% endif %}
+            <a href="{% url 'admin_aurora:plano_detalhe' plano.pk %}" class="btn btn-outline btn-sm" style="width:100%;justify-content:center;">
+                <i class="fas fa-cog"></i> Gerenciar
+            </a>
+        </div>
+        {% empty %}
+        <div class="planos-empty">
+            Nenhum plano cadastrado para o módulo CS.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

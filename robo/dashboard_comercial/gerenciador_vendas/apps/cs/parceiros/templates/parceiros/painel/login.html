@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Painel do Parceiro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:#f8fafc; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+        .login-card { background:white; border-radius:20px; padding:40px; max-width:400px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.08); }
+        .login-brand { text-align:center; margin-bottom:32px; }
+        .login-brand-icon { width:56px; height:56px; border-radius:16px; background:#6366f1; display:flex; align-items:center; justify-content:center; margin:0 auto 12px; color:white; font-size:24px; }
+        .login-brand h1 { font-size:22px; font-weight:800; color:#1e293b; }
+        .login-brand p { font-size:13px; color:#64748b; margin-top:4px; }
+        .form-group { margin-bottom:16px; }
+        .form-label { display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px; }
+        .form-control { width:100%; padding:12px 16px; border:1px solid #d1d5db; border-radius:10px; font-size:14px; font-family:'Inter',sans-serif; outline:none; transition:border-color 0.2s; }
+        .form-control:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,0.1); }
+        .btn-login { width:100%; padding:14px; background:#6366f1; color:white; border:none; border-radius:12px; font-size:15px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; transition:background 0.2s; }
+        .btn-login:hover { background:#4f46e5; }
+        .alert-error { background:#fef2f2; border:1px solid #fecaca; color:#dc2626; padding:12px 16px; border-radius:10px; margin-bottom:16px; font-size:13px; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-brand">
+            <div class="login-brand-icon"><i class="fas fa-handshake"></i></div>
+            <h1>Painel do Parceiro</h1>
+            <p>Acesse com suas credenciais</p>
+        </div>
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert-error">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Usu&aacute;rio</label>
+                <input type="text" name="username" class="form-control" required autofocus>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Senha</label>
+                <input type="password" name="password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn-login">Entrar</button>
+        </form>
+    </div>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</body>
+</html>

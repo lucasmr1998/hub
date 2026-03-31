@@ -1,0 +1,1285 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Análise de Atendimentos - Megalink{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+{% endblock %}
+
+{% block custom_css %}
+<style>
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .analysis-card {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 14px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.05);
+        margin-bottom: 2rem;
+    }
+
+    .card-header {
+        background: #fff;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-top-left-radius: 14px;
+        border-top-right-radius: 14px;
+    }
+
+    .card-content {
+        padding: 2rem;
+    }
+
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .metric-card {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        text-align: center;
+    }
+
+    .metric-value {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-label {
+        font-size: 1rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .coming-soon {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #666;
+    }
+
+    .coming-soon i {
+        font-size: 4rem;
+        margin-bottom: 2rem;
+        color: #1F3D59;
+    }
+
+    .coming-soon h3 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        color: #333;
+    }
+
+    .coming-soon p {
+        font-size: 1rem;
+        line-height: 1.6;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .feature-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 3rem;
+    }
+
+    .feature-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .feature-icon {
+        width: 40px;
+        height: 40px;
+        background: #1F3D59;
+        color: white;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .feature-content h4 {
+        margin-bottom: 0.5rem;
+        color: #333;
+    }
+
+    .feature-content p {
+        color: #666;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header da Página -->
+    <div class="analysis-card">
+        <div class="card-header">
+            <div style="display:flex; align-items:center; gap:.5rem;">
+                <i class="fas fa-chart-line" style="color:#1F3D59"></i>
+                <strong>Análise de Atendimentos</strong>
+            </div>
+        </div>
+        <div class="card-content">
+            <!-- Filtros -->
+            <div class="filters-section" style="margin-bottom: 2rem;">
+                <div class="filters-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div class="filter-field">
+                        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Data Início</label>
+                        <input type="date" id="dataInicio" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px;">
+                    </div>
+                    <div class="filter-field">
+                        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Data Fim</label>
+                        <input type="date" id="dataFim" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px;">
+                    </div>
+                    <div class="filter-field">
+                        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Fluxo</label>
+                        <select id="fluxoFilter" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px;">
+                            <option value="">Todos os fluxos</option>
+                        </select>
+                    </div>
+                    <div class="filter-field">
+                        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Status</label>
+                        <select id="statusFilter" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px;">
+                            <option value="">Todos os status</option>
+                            <option value="iniciado">Iniciado</option>
+                            <option value="em_andamento">Em Andamento</option>
+                            <option value="completado">Completado</option>
+                            <option value="abandonado">Abandonado</option>
+                            <option value="pausado">Pausado</option>
+                            <option value="erro">Erro</option>
+                            <option value="cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="filter-actions" style="display: flex; gap: 1rem;">
+                    <button id="btnFiltrar" style="background: #1F3D59; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-search"></i> Aplicar Filtros
+                    </button>
+                    <button id="btnLimparFiltros" style="background: #e0e0e0; color: #333; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-times"></i> Limpar
+                    </button>
+                    <button id="btnExportar" style="background: #27ae60; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-download"></i> Exportar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Métricas Principais -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value" id="totalAtendimentos">0</div>
+                    <div class="metric-label">Total Atendimentos</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+                    <div class="metric-value" id="taxaCompletude">0%</div>
+                    <div class="metric-label">Taxa de Completude</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #1F3D59, #2a4f73);">
+                    <div class="metric-value" id="tempoMedio">0s</div>
+                    <div class="metric-label">Tempo Médio</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
+                    <div class="metric-value" id="scoreMedio">0</div>
+                    <div class="metric-label">Score Médio</div>
+                </div>
+            </div>
+
+            <!-- Métricas de Contatos -->
+            <div style="margin-top: 2rem;">
+                <h3 style="color: #333; font-size: 1.2rem; margin-bottom: 1rem;">Métricas de Contatos</h3>
+                <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                    <div class="metric-card" style="background: linear-gradient(135deg, #3498db, #2980b9);">
+                        <div class="metric-value" id="totalContatos">0</div>
+                        <div class="metric-label">Total Contatos</div>
+                    </div>
+                    <div class="metric-card" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
+                        <div class="metric-value" id="contatosConvertidos">0</div>
+                        <div class="metric-label">Contatos Convertidos</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+                        <div class="metric-value" id="vendasConfirmadas">0</div>
+                        <div class="metric-label">Vendas Confirmadas</div>
+                    </div>
+                    <div class="metric-card" style="background: linear-gradient(135deg, #16a085, #1abc9c);">
+                        <div class="metric-value" id="taxaConversao">0%</div>
+                        <div class="metric-label">Taxa Conversão</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráficos -->
+            <div style="margin-top: 3rem;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                    <!-- Gráfico de Evolução -->
+                    <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <h3 style="color: #333; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-chart-line" style="color: #1F3D59;"></i>
+                            Evolução dos Últimos 7 Dias
+                        </h3>
+                        <div style="position: relative; height: 300px;">
+                            <canvas id="evolucaoChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Gráfico de Status -->
+                    <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <h3 style="color: #333; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-chart-pie" style="color: #1F3D59;"></i>
+                            Distribuição por Status
+                        </h3>
+                        <div style="position: relative; height: 300px;">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Fluxos -->
+                <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 2rem;">
+                    <h3 style="color: #333; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-chart-bar" style="color: #1F3D59;"></i>
+                        Top 10 Fluxos por Volume
+                    </h3>
+                    <div style="position: relative; height: 300px;">
+                        <canvas id="fluxosChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabela de Atendimentos Detalhados -->
+            <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-top: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="color: #333; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-table" style="color: #1F3D59;"></i>
+                        Atendimentos Detalhados
+                    </h3>
+                    <input type="text" id="searchAtendimentos" placeholder="Buscar por nome, telefone, fluxo..." 
+                           style="padding: 0.5rem; border: 2px solid #e0e0e0; border-radius: 6px; width: 300px;">
+                </div>
+                
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f8f9fa;">
+                                <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #e0e0e0; font-weight: 600;">Lead</th>
+                                <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #e0e0e0; font-weight: 600;">Fluxo</th>
+                                <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #e0e0e0; font-weight: 600;">Status</th>
+                                <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #e0e0e0; font-weight: 600;">Progresso</th>
+                                <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #e0e0e0; font-weight: 600;">Data Início</th>
+                                <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #e0e0e0; font-weight: 600;">Tempo</th>
+                                <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #e0e0e0; font-weight: 600;">Score</th>
+                                <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #e0e0e0; font-weight: 600;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="atendimentosTableBody">
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 2rem; color: #666;">
+                                    <i class="fas fa-spinner fa-spin" style="font-size: 1.5rem; margin-bottom: 1rem;"></i>
+                                    <div>Carregando atendimentos...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginação -->
+                <div id="paginacao" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e0e0e0;">
+                    <div id="paginacaoInfo" style="color: #666; font-size: 0.9rem;">Carregando...</div>
+                    <div id="paginacaoControls" style="display: flex; gap: 0.5rem;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal da Jornada do Cliente -->
+<div id="modalJornada" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 20px; padding: 0; min-width: 90vw; max-width: 95vw; max-height: 90vh; overflow: hidden;">
+        <!-- Header do Modal -->
+        <div style="background: linear-gradient(135deg, #1F3D59, #2a4f73); color: white; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3 style="margin: 0; font-size: 1.5rem;">Jornada Completa do Cliente</h3>
+                <div id="clienteInfo" style="margin-top: 0.5rem; opacity: 0.9; font-size: 0.9rem;"></div>
+            </div>
+            <button onclick="fecharModalJornada()" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; padding: 0.5rem;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Conteúdo do Modal -->
+        <div style="padding: 2rem; max-height: calc(90vh - 120px); overflow-y: auto;">
+            <!-- Estatísticas da Jornada -->
+            <div id="estatisticasJornada" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem;">
+                <!-- Cards de estatísticas serão inseridos aqui -->
+            </div>
+
+            <!-- Abas -->
+            <div style="border-bottom: 2px solid #e0e0e0; margin-bottom: 2rem;">
+                <div style="display: flex; gap: 2rem;">
+                    <button id="tabTimeline" onclick="showTab('timeline')" style="background: none; border: none; padding: 1rem 0; border-bottom: 3px solid #1F3D59; color: #1F3D59; font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-timeline"></i> Timeline
+                    </button>
+                    <button id="tabAtendimentos" onclick="showTab('atendimentos')" style="background: none; border: none; padding: 1rem 0; border-bottom: 3px solid transparent; color: #666; font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-comments"></i> Atendimentos
+                    </button>
+                    <button id="tabContatos" onclick="showTab('contatos')" style="background: none; border: none; padding: 1rem 0; border-bottom: 3px solid transparent; color: #666; font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-phone"></i> Contatos
+                    </button>
+                    <button id="tabTempoReal" onclick="showTab('tempo-real')" style="background: none; border: none; padding: 1rem 0; border-bottom: 3px solid transparent; color: #666; font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-clock"></i> Tempo Real
+                    </button>
+                </div>
+            </div>
+
+            <!-- Conteúdo das Abas -->
+            <div id="tabContent">
+                <!-- Timeline -->
+                <div id="content-timeline" style="display: block;">
+                    <div id="timelineContainer">
+                        <div style="text-align: center; padding: 2rem; color: #666;">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                            <div style="margin-top: 1rem;">Carregando timeline...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Atendimentos -->
+                <div id="content-atendimentos" style="display: none;">
+                    <div id="atendimentosDetalhados">
+                        <div style="text-align: center; padding: 2rem; color: #666;">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                            <div style="margin-top: 1rem;">Carregando atendimentos...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contatos -->
+                <div id="content-contatos" style="display: none;">
+                    <div id="contatosDetalhados">
+                        <div style="text-align: center; padding: 2rem; color: #666;">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                            <div style="margin-top: 1rem;">Carregando contatos...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tempo Real -->
+                <div id="content-tempo-real" style="display: none;">
+                    <div id="tempoRealContainer">
+                        <div style="text-align: center; padding: 2rem; color: #666;">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                            <div style="margin-top: 1rem;">Carregando dados em tempo real...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // URLs das APIs
+    const API_URLS = {
+        data: '{% url "vendas_web:api_analise_atendimentos_data" %}',
+        fluxos: '{% url "vendas_web:api_analise_atendimentos_fluxos" %}',
+        detalhada: '{% url "vendas_web:api_analise_detalhada_atendimentos" %}',
+        jornada: '{% url "vendas_web:api_jornada_cliente_completa" %}',
+        tempoReal: '{% url "vendas_web:api_atendimento_em_tempo_real" %}'
+    };
+
+    // Variáveis globais
+    let chartEvolucao = null;
+    let chartStatus = null;
+    let chartFluxos = null;
+    let currentPage = 1;
+    let currentFilters = {};
+    let searchTimeout = null;
+
+    // Função para mostrar loading
+    function showLoading(element, show = true) {
+        if (show) {
+            element.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Carregando...';
+        }
+    }
+
+    // Função para obter filtros atuais
+    function getCurrentFilters() {
+        return {
+            data_inicio: document.getElementById('dataInicio').value,
+            data_fim: document.getElementById('dataFim').value,
+            fluxo_id: document.getElementById('fluxoFilter').value,
+            status: document.getElementById('statusFilter').value
+        };
+    }
+
+    // Função para carregar fluxos no filtro
+    async function loadFluxos() {
+        try {
+            const response = await fetch(API_URLS.fluxos);
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            const select = document.getElementById('fluxoFilter');
+            select.innerHTML = '<option value="">Todos os fluxos</option>';
+            
+            data.fluxos.forEach(fluxo => {
+                const option = document.createElement('option');
+                option.value = fluxo.id;
+                option.textContent = `${fluxo.nome} (${fluxo.total_atendimentos})`;
+                select.appendChild(option);
+            });
+            
+        } catch (error) {
+            console.error('Erro ao carregar fluxos:', error);
+        }
+    }
+
+    // Função para carregar dados principais
+    async function loadAnalysisData() {
+        try {
+            const params = new URLSearchParams(getCurrentFilters());
+            const response = await fetch(`${API_URLS.data}?${params}`);
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            // Atualizar métricas principais
+            updateMainMetrics(data.metricas_principais);
+            
+            // Atualizar métricas de contatos
+            updateContactMetrics(data.metricas_contatos);
+            
+            // Atualizar gráficos
+            updateCharts(data.graficos);
+            
+        } catch (error) {
+            console.error('Erro ao carregar dados de análise:', error);
+        }
+    }
+
+    // Função para atualizar métricas principais
+    function updateMainMetrics(metrics) {
+        document.getElementById('totalAtendimentos').textContent = metrics.total_atendimentos || 0;
+        document.getElementById('taxaCompletude').textContent = `${metrics.taxa_completude || 0}%`;
+        document.getElementById('tempoMedio').textContent = metrics.tempo_medio_formatado || '0s';
+        document.getElementById('scoreMedio').textContent = metrics.score_medio_qualificacao || 0;
+    }
+
+    // Função para atualizar métricas de contatos
+    function updateContactMetrics(metrics) {
+        document.getElementById('totalContatos').textContent = metrics.total_contatos || 0;
+        document.getElementById('contatosConvertidos').textContent = metrics.contatos_convertidos || 0;
+        document.getElementById('vendasConfirmadas').textContent = metrics.vendas_confirmadas || 0;
+        document.getElementById('taxaConversao').textContent = `${metrics.taxa_conversao_contatos || 0}%`;
+    }
+
+    // Função para atualizar gráficos
+    function updateCharts(graficos) {
+        updateEvolucaoChart(graficos.evolucao_7_dias);
+        updateStatusChart(graficos.distribuicao_status);
+        updateFluxosChart(graficos.distribuicao_fluxo);
+    }
+
+    // Gráfico de evolução
+    function updateEvolucaoChart(data) {
+        const ctx = document.getElementById('evolucaoChart').getContext('2d');
+        
+        if (chartEvolucao) {
+            chartEvolucao.destroy();
+        }
+        
+        chartEvolucao = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(item => item.date),
+                datasets: [
+                    {
+                        label: 'Total Atendimentos',
+                        data: data.map(item => item.atendimentos),
+                        borderColor: '#1F3D59',
+                        backgroundColor: 'rgba(31, 61, 89, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Completados',
+                        data: data.map(item => item.completados),
+                        borderColor: '#27ae60',
+                        backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    // Gráfico de status
+    function updateStatusChart(data) {
+        const ctx = document.getElementById('statusChart').getContext('2d');
+        
+        if (chartStatus) {
+            chartStatus.destroy();
+        }
+        
+        const colors = [
+            '#1F3D59', '#27ae60', '#f39c12', '#e74c3c', 
+            '#9b59b6', '#3498db', '#95a5a6', '#34495e'
+        ];
+        
+        chartStatus = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.map(item => item.status),
+                datasets: [{
+                    data: data.map(item => item.count),
+                    backgroundColor: colors.slice(0, data.length),
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+
+    // Gráfico de fluxos
+    function updateFluxosChart(data) {
+        const ctx = document.getElementById('fluxosChart').getContext('2d');
+        
+        if (chartFluxos) {
+            chartFluxos.destroy();
+        }
+        
+        chartFluxos = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(item => item.fluxo__nome || 'Sem nome'),
+                datasets: [{
+                    label: 'Quantidade de Atendimentos',
+                    data: data.map(item => item.count),
+                    backgroundColor: '#1F3D59',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            maxRotation: 45
+                        }
+                    },
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    // Função para carregar atendimentos detalhados
+    async function loadDetailedAttendances(page = 1, search = '') {
+        try {
+            const filters = getCurrentFilters();
+            const params = new URLSearchParams({
+                ...filters,
+                page: page,
+                per_page: 20,
+                search: search
+            });
+            
+            const response = await fetch(`${API_URLS.detalhada}?${params}`);
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            updateAttendancesTable(data.atendimentos);
+            updatePagination(data.page, data.pages, data.total);
+            
+        } catch (error) {
+            console.error('Erro ao carregar atendimentos detalhados:', error);
+            document.getElementById('atendimentosTableBody').innerHTML = 
+                '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #e74c3c;">Erro ao carregar dados</td></tr>';
+        }
+    }
+
+    // Função para atualizar tabela de atendimentos
+    function updateAttendancesTable(atendimentos) {
+        const tbody = document.getElementById('atendimentosTableBody');
+        
+        if (atendimentos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #666;">Nenhum atendimento encontrado</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = '';
+        
+        atendimentos.forEach(atendimento => {
+            const row = document.createElement('tr');
+            row.style.borderBottom = '1px solid #e0e0e0';
+            
+            // Status badge
+            const statusClass = getStatusBadgeClass(atendimento.status);
+            
+            // Barra de progresso
+            const progressBar = `
+                <div style="background: #e0e0e0; border-radius: 10px; height: 6px; width: 100%; margin-bottom: 0.25rem;">
+                    <div style="background: #27ae60; height: 100%; border-radius: 10px; width: ${atendimento.progresso_percentual}%;"></div>
+                </div>
+                <small style="color: #666;">${atendimento.progresso_percentual}% (${atendimento.questao_atual}/${atendimento.total_questoes})</small>
+            `;
+            
+            row.innerHTML = `
+                <td style="padding: 1rem;">
+                    <div style="font-weight: 600;">${atendimento.lead.nome}</div>
+                    <div style="color: #666; font-size: 0.9rem;">${atendimento.lead.telefone}</div>
+                    ${atendimento.lead.email ? `<div style="color: #666; font-size: 0.85rem;">${atendimento.lead.email}</div>` : ''}
+                </td>
+                <td style="padding: 1rem;">
+                    <div style="font-weight: 600;">${atendimento.fluxo.nome}</div>
+                    <div style="color: #666; font-size: 0.85rem; text-transform: capitalize;">${atendimento.fluxo.tipo}</div>
+                </td>
+                <td style="padding: 1rem;">
+                    <span style="padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600; ${statusClass}">
+                        ${atendimento.status_display}
+                    </span>
+                </td>
+                <td style="padding: 1rem;">
+                    ${progressBar}
+                </td>
+                <td style="padding: 1rem; color: #666; font-size: 0.9rem;">
+                    ${atendimento.data_inicio}
+                </td>
+                <td style="padding: 1rem; color: #666; font-size: 0.9rem;">
+                    ${atendimento.tempo_total}
+                </td>
+                <td style="padding: 1rem; text-align: center;">
+                    ${atendimento.score_qualificacao ? 
+                        `<span style="background: #1F3D59; color: white; padding: 0.25rem 0.5rem; border-radius: 50%; font-weight: 600; font-size: 0.9rem;">${atendimento.score_qualificacao}</span>` : 
+                        '<span style="color: #666;">-</span>'
+                    }
+                </td>
+                <td style="padding: 1rem; text-align: center;">
+                    <button onclick="visualizarJornada(${atendimento.id})" style="background: #1F3D59; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
+                        <i class="fas fa-eye"></i> Ver Jornada
+                    </button>
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+    }
+
+    // Função para obter classe CSS do status badge
+    function getStatusBadgeClass(status) {
+        const statusMap = {
+            'completado': 'background: #d4edda; color: #155724;',
+            'abandonado': 'background: #f8d7da; color: #721c24;',
+            'em_andamento': 'background: #d1ecf1; color: #0c5460;',
+            'iniciado': 'background: #fff3cd; color: #856404;',
+            'pausado': 'background: #e2e3e5; color: #383d41;',
+            'erro': 'background: #f8d7da; color: #721c24;',
+            'cancelado': 'background: #e2e3e5; color: #383d41;'
+        };
+        return statusMap[status] || 'background: #e2e3e5; color: #383d41;';
+    }
+
+    // Função para atualizar paginação
+    function updatePagination(page, totalPages, total) {
+        const info = document.getElementById('paginacaoInfo');
+        const controls = document.getElementById('paginacaoControls');
+        
+        info.textContent = `Mostrando página ${page} de ${totalPages} (${total} total)`;
+        
+        controls.innerHTML = '';
+        
+        if (totalPages <= 1) return;
+        
+        // Botão anterior
+        const prevBtn = document.createElement('button');
+        prevBtn.textContent = 'Anterior';
+        prevBtn.style.cssText = 'padding: 0.5rem 1rem; border: 1px solid #e0e0e0; background: white; border-radius: 6px; cursor: pointer;';
+        prevBtn.disabled = page === 1;
+        if (page > 1) {
+            prevBtn.onclick = () => {
+                currentPage = page - 1;
+                loadDetailedAttendances(currentPage, document.getElementById('searchAtendimentos').value);
+            };
+        }
+        controls.appendChild(prevBtn);
+        
+        // Páginas
+        const startPage = Math.max(1, page - 2);
+        const endPage = Math.min(totalPages, page + 2);
+        
+        for (let i = startPage; i <= endPage; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.textContent = i;
+            pageBtn.style.cssText = `padding: 0.5rem 1rem; border: 1px solid #e0e0e0; background: ${i === page ? '#1F3D59' : 'white'}; color: ${i === page ? 'white' : '#333'}; border-radius: 6px; cursor: pointer;`;
+            pageBtn.onclick = () => {
+                currentPage = i;
+                loadDetailedAttendances(currentPage, document.getElementById('searchAtendimentos').value);
+            };
+            controls.appendChild(pageBtn);
+        }
+        
+        // Botão próximo
+        const nextBtn = document.createElement('button');
+        nextBtn.textContent = 'Próximo';
+        nextBtn.style.cssText = 'padding: 0.5rem 1rem; border: 1px solid #e0e0e0; background: white; border-radius: 6px; cursor: pointer;';
+        nextBtn.disabled = page === totalPages;
+        if (page < totalPages) {
+            nextBtn.onclick = () => {
+                currentPage = page + 1;
+                loadDetailedAttendances(currentPage, document.getElementById('searchAtendimentos').value);
+            };
+        }
+        controls.appendChild(nextBtn);
+    }
+
+    // Função para aplicar filtros
+    function applyFilters() {
+        currentFilters = getCurrentFilters();
+        currentPage = 1;
+        loadAnalysisData();
+        loadDetailedAttendances(1, document.getElementById('searchAtendimentos').value);
+    }
+
+    // Função para limpar filtros
+    function clearFilters() {
+        document.getElementById('dataInicio').value = '';
+        document.getElementById('dataFim').value = '';
+        document.getElementById('fluxoFilter').value = '';
+        document.getElementById('statusFilter').value = '';
+        document.getElementById('searchAtendimentos').value = '';
+        applyFilters();
+    }
+
+    // Função para exportar dados
+    function exportData() {
+        // Implementar exportação
+        alert('Funcionalidade de exportação em desenvolvimento');
+    }
+
+    // Funções do Modal de Jornada
+    async function visualizarJornada(atendimentoId) {
+        try {
+            // Abrir modal
+            document.getElementById('modalJornada').style.display = 'block';
+            
+            // Carregar dados da jornada
+            const response = await fetch(`${API_URLS.jornada}?atendimento_id=${atendimentoId}`);
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            // Atualizar informações do cliente
+            updateClienteInfo(data.lead);
+            
+            // Atualizar estatísticas
+            updateEstatisticasJornada(data.estatisticas);
+            
+            // Atualizar timeline
+            updateTimeline(data.timeline);
+            
+            // Guardar dados para outras abas
+            window.jornadaData = data;
+            window.currentAtendimentoId = atendimentoId;
+            
+        } catch (error) {
+            console.error('Erro ao carregar jornada:', error);
+            alert('Erro ao carregar dados da jornada: ' + error.message);
+            fecharModalJornada();
+        }
+    }
+
+    function fecharModalJornada() {
+        document.getElementById('modalJornada').style.display = 'none';
+        // Limpar dados
+        window.jornadaData = null;
+        window.currentAtendimentoId = null;
+    }
+
+    function updateClienteInfo(lead) {
+        const clienteInfo = document.getElementById('clienteInfo');
+        clienteInfo.innerHTML = `
+            <strong>${lead.nome}</strong> • ${lead.telefone} 
+            ${lead.email ? `• ${lead.email}` : ''} 
+            • ${lead.origem} • Cadastrado em ${lead.data_cadastro}
+        `;
+    }
+
+    function updateEstatisticasJornada(stats) {
+        const container = document.getElementById('estatisticasJornada');
+        container.innerHTML = `
+            <div style="background: linear-gradient(135deg, #3498db, #2980b9); color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; margin-bottom: 0.5rem;">${stats.total_contatos}</div>
+                <div style="font-size: 0.9rem; opacity: 0.9;">Total Contatos</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; margin-bottom: 0.5rem;">${stats.taxa_sucesso_contatos}%</div>
+                <div style="font-size: 0.9rem; opacity: 0.9;">Taxa Sucesso</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #9b59b6, #8e44ad); color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; margin-bottom: 0.5rem;">${stats.total_atendimentos}</div>
+                <div style="font-size: 0.9rem; opacity: 0.9;">Atendimentos</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #f39c12, #e67e22); color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; margin-bottom: 0.5rem;">${stats.taxa_completude_atendimentos}%</div>
+                <div style="font-size: 0.9rem; opacity: 0.9;">Taxa Completude</div>
+            </div>
+        `;
+    }
+
+    function updateTimeline(timeline) {
+        const container = document.getElementById('timelineContainer');
+        
+        if (timeline.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: #666;">
+                    <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <div>Nenhum evento encontrado na jornada</div>
+                </div>
+            `;
+            return;
+        }
+
+        let timelineHtml = '<div style="position: relative; padding-left: 2rem;">';
+        
+        timeline.forEach((evento, index) => {
+            const isLast = index === timeline.length - 1;
+            
+            timelineHtml += `
+                <div style="position: relative; margin-bottom: 2rem; ${!isLast ? 'border-left: 2px solid #e0e0e0;' : ''} padding-left: 2rem; padding-bottom: 1rem;">
+                    <div style="position: absolute; left: -9px; top: 0; width: 16px; height: 16px; background: ${evento.cor}; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
+                    
+                    <div style="background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                            <div>
+                                <h4 style="margin: 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
+                                    <i class="fas fa-${evento.icone}" style="color: ${evento.cor};"></i>
+                                    ${evento.titulo}
+                                </h4>
+                                <p style="margin: 0.5rem 0 0 0; color: #666; font-size: 0.9rem;">${evento.descricao}</p>
+                            </div>
+                            <div style="color: #666; font-size: 0.8rem; white-space: nowrap;">${evento.data}</div>
+                        </div>
+                        
+                        ${evento.detalhes.transcricao ? `
+                            <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; margin-top: 1rem; border-left: 4px solid ${evento.cor};">
+                                <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">💬 Transcrição:</div>
+                                <div style="font-style: italic; color: #555; font-size: 0.9rem;">"${evento.detalhes.transcricao}"</div>
+                            </div>
+                        ` : ''}
+                        
+                        ${evento.detalhes.observacoes ? `
+                            <div style="margin-top: 1rem; padding: 0.75rem; background: #fff3cd; border-radius: 6px; border-left: 4px solid #f39c12;">
+                                <div style="font-size: 0.8rem; color: #856404; font-weight: 600; margin-bottom: 0.25rem;">📝 Observações:</div>
+                                <div style="color: #856404; font-size: 0.85rem;">${evento.detalhes.observacoes}</div>
+                            </div>
+                        ` : ''}
+                        
+                        ${evento.tipo === 'atendimento' && evento.detalhes.respostas ? `
+                            <div style="margin-top: 1rem;">
+                                <button onclick="toggleRespostas(${index})" style="background: #1F3D59; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
+                                    <i class="fas fa-list"></i> Ver Respostas (${evento.detalhes.respostas.length})
+                                </button>
+                                <div id="respostas-${index}" style="display: none; margin-top: 1rem;">
+                                    ${evento.detalhes.respostas.map(r => `
+                                        <div style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem;">
+                                            <div style="font-weight: 600; color: #333; margin-bottom: 0.5rem;">Q${r.indice}: ${r.questao}</div>
+                                            <div style="color: #555; font-size: 0.9rem;">
+                                                ${r.respondida ? `✅ ${r.resposta}` : '❌ Não respondida'}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        timelineHtml += '</div>';
+        container.innerHTML = timelineHtml;
+    }
+
+    function toggleRespostas(index) {
+        const element = document.getElementById(`respostas-${index}`);
+        element.style.display = element.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function showTab(tabName) {
+        // Resetar abas
+        const tabs = ['timeline', 'atendimentos', 'contatos', 'tempo-real'];
+        tabs.forEach(tab => {
+            document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1).replace('-', 'Real')}`).style.borderBottom = '3px solid transparent';
+            document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1).replace('-', 'Real')}`).style.color = '#666';
+            document.getElementById(`content-${tab}`).style.display = 'none';
+        });
+        
+        // Ativar aba selecionada
+        const tabButton = document.getElementById(`tab${tabName.charAt(0).toUpperCase() + tabName.slice(1).replace('-', 'Real')}`);
+        tabButton.style.borderBottom = '3px solid #1F3D59';
+        tabButton.style.color = '#1F3D59';
+        document.getElementById(`content-${tabName}`).style.display = 'block';
+        
+        // Carregar conteúdo específico se necessário
+        if (tabName === 'atendimentos') {
+            loadAtendimentosDetalhados();
+        } else if (tabName === 'contatos') {
+            loadContatosDetalhados();
+        } else if (tabName === 'tempo-real') {
+            loadTempoReal();
+        }
+    }
+
+    function loadAtendimentosDetalhados() {
+        if (!window.jornadaData) return;
+        
+        const container = document.getElementById('atendimentosDetalhados');
+        const atendimentos = window.jornadaData.atendimentos;
+        
+        if (atendimentos.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: #666;">
+                    <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <div>Nenhum atendimento encontrado</div>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        atendimentos.forEach(atendimento => {
+            const statusClass = getStatusBadgeClass(atendimento.status);
+            
+            html += `
+                <div style="background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                        <div>
+                            <h4 style="margin: 0; color: #333;">${atendimento.fluxo.nome}</h4>
+                            <p style="margin: 0.5rem 0; color: #666; font-size: 0.9rem;">${atendimento.fluxo.descricao || 'Sem descrição'}</p>
+                        </div>
+                        <span style="padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600; ${statusClass}">
+                            ${atendimento.status_display}
+                        </span>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.25rem;">Progresso</div>
+                            <div style="background: #e0e0e0; border-radius: 10px; height: 6px; margin-bottom: 0.25rem;">
+                                <div style="background: #27ae60; height: 100%; border-radius: 10px; width: ${atendimento.progresso_percentual}%;"></div>
+                            </div>
+                            <div style="font-size: 0.8rem; color: #666;">${atendimento.progresso_percentual}% (${atendimento.questoes_respondidas}/${atendimento.total_questoes})</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.25rem;">Tempo Total</div>
+                            <div style="font-weight: 600; color: #333;">${atendimento.tempo_formatado}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.25rem;">Score</div>
+                            <div style="font-weight: 600; color: #333;">${atendimento.score_qualificacao || 'N/A'}</div>
+                        </div>
+                    </div>
+
+                    ${atendimento.observacoes ? `
+                        <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; border-left: 4px solid #1F3D59;">
+                            <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">💬 Observações:</div>
+                            <div style="color: #555; font-size: 0.9rem;">${atendimento.observacoes}</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+
+    function loadContatosDetalhados() {
+        if (!window.jornadaData) return;
+        
+        const container = document.getElementById('contatosDetalhados');
+        const contatos = window.jornadaData.historico_contatos;
+        
+        if (contatos.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: #666;">
+                    <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <div>Nenhum contato encontrado</div>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        contatos.forEach(contato => {
+            const cor = contato.sucesso ? '#27ae60' : '#e74c3c';
+            
+            html += `
+                <div style="background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                        <div>
+                            <h4 style="margin: 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-phone" style="color: ${cor};"></i>
+                                ${contato.status_display}
+                            </h4>
+                            <p style="margin: 0.5rem 0; color: #666; font-size: 0.9rem;">Telefone: ${contato.telefone}</p>
+                        </div>
+                        <div style="color: #666; font-size: 0.8rem;">${contato.data_hora}</div>
+                    </div>
+
+                    ${contato.nome_contato ? `
+                        <div style="margin-bottom: 1rem;">
+                            <span style="background: #e3f2fd; color: #1976d2; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem;">
+                                👤 ${contato.nome_contato}
+                            </span>
+                        </div>
+                    ` : ''}
+                    
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.25rem;">Duração</div>
+                            <div style="font-weight: 600; color: #333;">${contato.duracao_formatada || 'N/A'}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.25rem;">Sucesso</div>
+                            <div style="font-weight: 600; color: ${cor};">${contato.sucesso ? 'Sim' : 'Não'}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.25rem;">Origem</div>
+                            <div style="font-weight: 600; color: #333;">${contato.origem_contato || 'N/A'}</div>
+                        </div>
+                    </div>
+
+                    ${contato.transcricao ? `
+                        <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; margin-top: 1rem; border-left: 4px solid ${cor};">
+                            <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">💬 Transcrição:</div>
+                            <div style="font-style: italic; color: #555; font-size: 0.9rem;">"${contato.transcricao}"</div>
+                        </div>
+                    ` : ''}
+                    
+                    ${contato.observacoes ? `
+                        <div style="background: #fff3cd; border-radius: 8px; padding: 1rem; margin-top: 1rem; border-left: 4px solid #f39c12;">
+                            <div style="font-size: 0.8rem; color: #856404; margin-bottom: 0.5rem;">📝 Observações:</div>
+                            <div style="color: #856404; font-size: 0.9rem;">${contato.observacoes}</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+
+    async function loadTempoReal() {
+        if (!window.currentAtendimentoId) return;
+        
+        try {
+            const response = await fetch(`${API_URLS.tempoReal}?atendimento_id=${window.currentAtendimentoId}`);
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            const container = document.getElementById('tempoRealContainer');
+            
+            let html = `
+                <div style="background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <h3 style="margin: 0 0 1.5rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-clock" style="color: #1F3D59;"></i>
+                        Status em Tempo Real
+                    </h3>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-bottom: 2rem;">
+                        <div style="text-align: center; padding: 1.5rem; background: #f8f9fa; border-radius: 12px;">
+                            <div style="font-size: 2rem; font-weight: bold; color: #1F3D59; margin-bottom: 0.5rem;">${data.atendimento.progresso_percentual}%</div>
+                            <div style="color: #666; font-size: 0.9rem;">Progresso</div>
+                        </div>
+                        <div style="text-align: center; padding: 1.5rem; background: #f8f9fa; border-radius: 12px;">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #27ae60; margin-bottom: 0.5rem;">${data.atendimento.questoes_respondidas}/${data.atendimento.total_questoes}</div>
+                            <div style="color: #666; font-size: 0.9rem;">Questões</div>
+                        </div>
+                        <div style="text-align: center; padding: 1.5rem; background: #f8f9fa; border-radius: 12px;">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #f39c12; margin-bottom: 0.5rem;">${data.atendimento.tempo_formatado}</div>
+                            <div style="color: #666; font-size: 0.9rem;">Tempo Total</div>
+                        </div>
+                    </div>
+            `;
+            
+            if (data.questao_atual) {
+                html += `
+                    <div style="background: #e3f2fd; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0 0 1rem 0; color: #1976d2;">🔄 Questão Atual (${data.questao_atual.indice})</h4>
+                        <div style="color: #333; font-weight: 600; margin-bottom: 0.5rem;">${data.questao_atual.titulo}</div>
+                        ${data.questao_atual.descricao ? `<div style="color: #666; font-size: 0.9rem;">${data.questao_atual.descricao}</div>` : ''}
+                    </div>
+                `;
+            }
+            
+            if (data.proxima_questao) {
+                html += `
+                    <div style="background: #f3e5f5; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0 0 1rem 0; color: #7b1fa2;">⏭️ Próxima Questão (${data.proxima_questao.indice})</h4>
+                        <div style="color: #333; font-weight: 600;">${data.proxima_questao.titulo}</div>
+                    </div>
+                `;
+            }
+            
+            // Lista de todas as questões
+            html += `
+                <div style="margin-top: 2rem;">
+                    <h4 style="color: #333; margin-bottom: 1rem;">📝 Todas as Questões</h4>
+                    <div style="display: grid; gap: 0.5rem;">
+            `;
+            
+            data.todas_questoes.forEach(questao => {
+                const statusIcon = questao.respondida ? '✅' : '⏳';
+                const statusColor = questao.respondida ? '#27ae60' : '#666';
+                
+                html += `
+                    <div style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: ${questao.respondida ? '#f8fff8' : '#f8f9fa'}; border-radius: 8px; border-left: 4px solid ${statusColor};">
+                        <div style="font-size: 1.2rem;">${statusIcon}</div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #333;">Q${questao.indice}: ${questao.titulo}</div>
+                            ${questao.respondida ? `<div style="color: #666; font-size: 0.9rem; margin-top: 0.25rem;">Resposta: ${questao.resposta}</div>` : ''}
+                        </div>
+                        <div style="color: ${statusColor}; font-size: 0.8rem; text-transform: uppercase; font-weight: 600;">
+                            ${questao.respondida ? 'Respondida' : 'Pendente'}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            </div>
+            `;
+            
+            container.innerHTML = html;
+            
+        } catch (error) {
+            console.error('Erro ao carregar dados em tempo real:', error);
+            document.getElementById('tempoRealContainer').innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: #e74c3c;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <div>Erro ao carregar dados em tempo real</div>
+        </div>
+            `;
+        }
+    }
+
+    // Função principal de inicialização
+    async function initAnalysisPage() {
+        try {
+            // Carregar fluxos para o filtro
+            await loadFluxos();
+            
+            // Definir data padrão (últimos 30 dias)
+            const hoje = new Date();
+            const inicio = new Date(hoje.getTime() - (30 * 24 * 60 * 60 * 1000));
+            
+            document.getElementById('dataFim').value = hoje.toISOString().split('T')[0];
+            document.getElementById('dataInicio').value = inicio.toISOString().split('T')[0];
+            
+            // Carregar dados iniciais
+            await loadAnalysisData();
+            await loadDetailedAttendances();
+            
+        } catch (error) {
+            console.error('Erro ao inicializar página de análise:', error);
+        }
+    }
+
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar página
+        initAnalysisPage();
+        
+        // Botões de filtro
+        document.getElementById('btnFiltrar').addEventListener('click', applyFilters);
+        document.getElementById('btnLimparFiltros').addEventListener('click', clearFilters);
+        document.getElementById('btnExportar').addEventListener('click', exportData);
+        
+        // Busca de atendimentos
+        document.getElementById('searchAtendimentos').addEventListener('input', function(e) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                currentPage = 1;
+                loadDetailedAttendances(1, e.target.value);
+            }, 500);
+        });
+        
+        // Auto-refresh a cada 30 segundos
+        setInterval(() => {
+            loadAnalysisData();
+            loadDetailedAttendances(currentPage, document.getElementById('searchAtendimentos').value);
+        }, 30000);
+    });
+</script>
+{% endblock %}
