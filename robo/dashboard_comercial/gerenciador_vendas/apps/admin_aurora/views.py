@@ -83,7 +83,7 @@ def tenant_detalhe_view(request, tenant_id):
     from apps.comercial.leads.models import LeadProspecto
     from apps.integracoes.models import IntegracaoAPI
     leads_count = LeadProspecto.all_tenants.filter(tenant=tenant).count()
-    integracao = IntegracaoAPI.objects.filter(tenant=tenant, tipo='hubsoft').first()
+    integracao = IntegracaoAPI.objects.filter(tipo='hubsoft').first()
 
     if request.method == 'POST':
         action = request.POST.get('action')
