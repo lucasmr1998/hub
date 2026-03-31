@@ -35,8 +35,20 @@ Os models já foram migrados para os apps modulares (29/03). Restavam apps legad
 - [x] Corrigir settings_local.py para herdar INSTALLED_APPS do settings.py
 - [x] `manage.py check` passando (0 erros)
 - [x] 16 testes de isolamento passando
+- [x] Migrar admin.py do vendas_web para apps modulares (Phase 2: admin split)
+  - [x] apps/sistema/admin.py — AdminSiteCustom, ConfiguracaoEmpresa, ConfiguracaoSistema, LogSistema, StatusConfiguravel, UserAdmin
+  - [x] apps/comercial/leads/admin.py — LeadProspecto, Prospecto, HistoricoContato, ImagemLeadProspecto
+  - [x] apps/comercial/atendimento/admin.py — FluxoAtendimento, QuestaoFluxo, AtendimentoFluxo, TentativaResposta, RespostaQuestao
+  - [x] apps/comercial/cadastro/admin.py — ConfiguracaoCadastro, PlanoInternet, OpcaoVencimento, CadastroCliente, DocumentoLead
+  - [x] apps/comercial/viabilidade/admin.py — CidadeViabilidade
+  - [x] apps/notificacoes/admin.py — TipoNotificacao, CanalNotificacao, PreferenciaNotificacao, Notificacao, TemplateNotificacao
+  - [x] apps/marketing/campanhas/admin.py — CampanhaTrafego, DeteccaoCampanha
+  - [x] vendas_web/admin.py esvaziado (apenas comentarios de referencia)
 - [ ] Remover monkey-patch de User em `vendas_web/models.py`
 - [ ] Migrar views/URLs do `vendas_web` para apps modulares (escopo grande, tarefa separada)
+  - [x] Dashboard & Relatórios: 29 views migradas para `apps/dashboard/views.py` (31/03)
+  - [x] URLs atualizadas em `vendas_web/urls.py` para importar de `apps.dashboard`
+  - [x] Funil insights migrado de `vendas_web/funil_insights.py` para `apps/dashboard/views.py`
 - [ ] Remover pastas `crm/` e `integracoes/` legadas da raiz (após validação em produção)
 
 ---

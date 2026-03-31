@@ -2,7 +2,7 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 from . import views
 from . import views_api_atendimento
-from .funil_insights import dashboard_funil_insights
+from apps.dashboard import views as dashboard_views
 
 app_name = 'vendas_web'
 
@@ -11,45 +11,45 @@ urlpatterns = [
     path('', views.home_view, name='home'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
-    
-    # Dashboard principal
-    path('dashboard/', views.dashboard_view, name='dashboard'),
-    path('dashboard1/', views.dashboard1, name='dashboard1'),  # Nova rota para o template
-    
-    # APIs para dados do dashboard
-    path('api/dashboard/data/', views.dashboard_data, name='dashboard_data'),
-    path('api/dashboard/charts/', views.dashboard_charts_data, name='dashboard_charts'),
-    path('api/dashboard/tables/', views.dashboard_tables_data, name='dashboard_tables'),
-    path('api/dashboard/leads/', views.dashboard_leads_data, name='dashboard_leads'),
-    path('api/dashboard/prospectos/', views.dashboard_prospectos_data, name='dashboard_prospectos'),
-    path('api/dashboard/historico/', views.dashboard_historico_data, name='dashboard_historico'),
-    path('api/dashboard/contatos/realtime/', views.dashboard_contatos_realtime, name='dashboard_contatos_realtime'),
-    path('api/dashboard/contato/<str:telefone>/historico/', views.dashboard_contato_historico, name='dashboard_contato_historico'),
-    path('api/dashboard/ultimas-conversoes/', views.dashboard_ultimas_conversoes, name='dashboard_ultimas_conversoes'),  # Nova rota
-    
+
+    # Dashboard principal (migrado para apps.dashboard)
+    path('dashboard/', dashboard_views.dashboard_view, name='dashboard'),
+    path('dashboard1/', dashboard_views.dashboard1, name='dashboard1'),
+
+    # APIs para dados do dashboard (migrado para apps.dashboard)
+    path('api/dashboard/data/', dashboard_views.dashboard_data, name='dashboard_data'),
+    path('api/dashboard/charts/', dashboard_views.dashboard_charts_data, name='dashboard_charts'),
+    path('api/dashboard/tables/', dashboard_views.dashboard_tables_data, name='dashboard_tables'),
+    path('api/dashboard/leads/', dashboard_views.dashboard_leads_data, name='dashboard_leads'),
+    path('api/dashboard/prospectos/', dashboard_views.dashboard_prospectos_data, name='dashboard_prospectos'),
+    path('api/dashboard/historico/', dashboard_views.dashboard_historico_data, name='dashboard_historico'),
+    path('api/dashboard/contatos/realtime/', dashboard_views.dashboard_contatos_realtime, name='dashboard_contatos_realtime'),
+    path('api/dashboard/contato/<str:telefone>/historico/', dashboard_views.dashboard_contato_historico, name='dashboard_contato_historico'),
+    path('api/dashboard/ultimas-conversoes/', dashboard_views.dashboard_ultimas_conversoes, name='dashboard_ultimas_conversoes'),
+
     # APIs para validação de vendas
     path('api/vendas/aprovar/', views.aprovar_venda_api, name='aprovar_venda'),
     path('api/vendas/rejeitar/', views.rejeitar_venda_api, name='rejeitar_venda'),
-    
+
     # API para histórico de contatos
     path('api/historico-contatos/', views.historico_contatos_api, name='historico_contatos'),
-    
-    # API para insights do funil de vendas
-    path('api/dashboard/funil/insights/', dashboard_funil_insights, name='dashboard_funil_insights'),
-    
+
+    # API para insights do funil de vendas (migrado para apps.dashboard)
+    path('api/dashboard/funil/insights/', dashboard_views.dashboard_funil_insights, name='dashboard_funil_insights'),
+
     # Rotas adicionais para navegação
     path('leads/', views.leads_view, name='leads'),
     path('leads/<int:lead_id>/conversa/', views.visualizar_conversa_lead, name='visualizar_conversa_lead'),
     path('leads/<int:lead_id>/conversa/pdf/', views.visualizar_conversa_pdf, name='visualizar_conversa_pdf'),
-    path('vendas/', views.vendas_view, name='vendas'),
-    path('relatorios/', views.relatorios_view, name='relatorios'),
-    path('relatorios/leads/', views.relatorio_leads_view, name='relatorio_leads'),
-    path('relatorios/clientes/', views.relatorio_clientes_view, name='relatorio_clientes'),
-    path('relatorios/atendimentos/', views.relatorio_atendimentos_view, name='relatorio_atendimentos'),
-    path('analise/atendimentos/', views.analise_atendimentos_view, name='analise_atendimentos'),
-    path('relatorio/conversoes/', views.relatorio_conversoes_view, name='relatorio_conversoes'),
-    path('ajuda/', views.ajuda_view, name='ajuda'),
-    path('documentacao/', views.documentacao_view, name='documentacao'),
+    path('vendas/', dashboard_views.vendas_view, name='vendas'),
+    path('relatorios/', dashboard_views.relatorios_view, name='relatorios'),
+    path('relatorios/leads/', dashboard_views.relatorio_leads_view, name='relatorio_leads'),
+    path('relatorios/clientes/', dashboard_views.relatorio_clientes_view, name='relatorio_clientes'),
+    path('relatorios/atendimentos/', dashboard_views.relatorio_atendimentos_view, name='relatorio_atendimentos'),
+    path('analise/atendimentos/', dashboard_views.analise_atendimentos_view, name='analise_atendimentos'),
+    path('relatorio/conversoes/', dashboard_views.relatorio_conversoes_view, name='relatorio_conversoes'),
+    path('ajuda/', dashboard_views.ajuda_view, name='ajuda'),
+    path('documentacao/', dashboard_views.documentacao_view, name='documentacao'),
     
     # Rotas para cadastro de clientes
     path('cadastro/', views.cadastro_cliente_view, name='cadastro_cliente'),
@@ -137,17 +137,17 @@ urlpatterns = [
     path('api/consultar/atendimentos/', views_api_atendimento.consultar_atendimentos_api, name='consultar_atendimentos_api'),
     path('api/consultar/respostas/', views_api_atendimento.consultar_respostas_api, name='consultar_respostas_api'),
 
-    # APIs de análise de atendimentos
-    path('api/analise/atendimentos/data/', views.api_analise_atendimentos_data, name='api_analise_atendimentos_data'),
-    path('api/analise/atendimentos/fluxos/', views.api_analise_atendimentos_fluxos, name='api_analise_atendimentos_fluxos'),
-    path('api/analise/atendimentos/detalhada/', views.api_analise_detalhada_atendimentos, name='api_analise_detalhada_atendimentos'),
-    path('api/jornada/cliente/', views.api_jornada_cliente_completa, name='api_jornada_cliente_completa'),
-    path('api/atendimento/tempo-real/', views.api_atendimento_em_tempo_real, name='api_atendimento_em_tempo_real'),
+    # APIs de análise de atendimentos (migrado para apps.dashboard)
+    path('api/analise/atendimentos/data/', dashboard_views.api_analise_atendimentos_data, name='api_analise_atendimentos_data'),
+    path('api/analise/atendimentos/fluxos/', dashboard_views.api_analise_atendimentos_fluxos, name='api_analise_atendimentos_fluxos'),
+    path('api/analise/atendimentos/detalhada/', dashboard_views.api_analise_detalhada_atendimentos, name='api_analise_detalhada_atendimentos'),
+    path('api/jornada/cliente/', dashboard_views.api_jornada_cliente_completa, name='api_jornada_cliente_completa'),
+    path('api/atendimento/tempo-real/', dashboard_views.api_atendimento_em_tempo_real, name='api_atendimento_em_tempo_real'),
 
-    # Documentação da API
-    path('api/docs/', views.api_swagger_view, name='api_swagger'),
-    path('api/docs/markdown/', views.api_documentation_view, name='api_documentation'),
-    path('api/docs/n8n/', views.n8n_guide_view, name='n8n_guide'),
+    # Documentação da API (migrado para apps.dashboard)
+    path('api/docs/', dashboard_views.api_swagger_view, name='api_swagger'),
+    path('api/docs/markdown/', dashboard_views.api_documentation_view, name='api_documentation'),
+    path('api/docs/n8n/', dashboard_views.n8n_guide_view, name='n8n_guide'),
 
     # ========================================================================
     # PÁGINAS DE CONFIGURAÇÃO E GERENCIAMENTO

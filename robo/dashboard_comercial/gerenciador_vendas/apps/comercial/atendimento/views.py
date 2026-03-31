@@ -1,12 +1,401 @@
-# Views serão migradas de vendas_web.views_api_atendimento
-# Endpoints: consultar_fluxos_api, criar_fluxo_api, atualizar_fluxo_api, deletar_fluxo_api,
-# consultar_questoes_api, criar_questao_api, atualizar_questao_api, deletar_questao_api,
-# consultar_atendimentos_api, criar_atendimento_api, atualizar_atendimento_api,
-# responder_questao_api, finalizar_atendimento_api, consultar_respostas_api,
-# estatisticas_atendimento_api,
-# N8N: iniciar_atendimento_n8n, consultar_atendimento_n8n, responder_questao_n8n,
-# avancar_questao_n8n, finalizar_atendimento_n8n, buscar_lead_por_telefone_n8n,
-# criar_lead_n8n, listar_fluxos_ativos_n8n, obter_questao_n8n,
-# pausar_atendimento_n8n, retomar_atendimento_n8n,
-# consultar_tentativas_resposta_n8n, obter_questao_inteligente_n8n,
-# estatisticas_atendimento_inteligente_n8n
+# ============================================================================
+# IMPORTS
+# ============================================================================
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
+from django.db import models
+
+import json
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Models
+from apps.comercial.atendimento.models import (
+    FluxoAtendimento,
+    QuestaoFluxo,
+)
+
+
+# ============================================================================
+# FUNÇÕES DE SERIALIZAÇÃO - APIs de Atendimento
+# ============================================================================
+
+def _serialize_fluxo_atendimento(fluxo):
+    """Serializa um objeto FluxoAtendimento"""
+    try:
+        return {
+            'id': fluxo.id,
+            'nome': fluxo.nome,
+            'descricao': fluxo.descricao,
+            'tipo_fluxo': fluxo.tipo_fluxo,
+            'ativo': fluxo.ativo,
+            'data_criacao': fluxo.data_criacao.isoformat() if fluxo.data_criacao else None,
+            'data_atualizacao': fluxo.data_atualizacao.isoformat() if fluxo.data_atualizacao else None,
+            'total_questoes': getattr(fluxo, 'get_total_questoes', lambda: 0)(),
+            'total_atendimentos': getattr(fluxo, 'get_total_atendimentos', lambda: 0)(),
+            'taxa_completacao': getattr(fluxo, 'get_taxa_completacao', lambda: '0.0%')(),
+            'status': getattr(fluxo, 'get_status_display', lambda: 'N/A')(),
+            'prioridade': getattr(fluxo, 'prioridade', None),
+            'tags': getattr(fluxo, 'tags', ''),
+            'configuracoes': getattr(fluxo, 'configuracoes', {}),
+            'estatisticas': getattr(fluxo, 'get_estatisticas', lambda: {})()
+        }
+    except Exception as e:
+        return {
+            'id': fluxo.id,
+            'nome': getattr(fluxo, 'nome', 'N/A'),
+            'error': f'Erro na serialização: {str(e)}'
+        }
+
+
+def _serialize_questao_fluxo(questao):
+    """Serializa um objeto QuestaoFluxo"""
+    try:
+        return {
+            'id': questao.id,
+            'fluxo_id': questao.fluxo.id if questao.fluxo else None,
+            'fluxo_nome': questao.fluxo.nome if questao.fluxo else 'N/A',
+            'indice': questao.indice,
+            'titulo': questao.titulo,
+            'descricao': questao.descricao,
+            'tipo_questao': questao.tipo_questao,
+            'tipo_validacao': questao.tipo_validacao,
+            'opcoes_resposta': getattr(questao, 'get_opcoes_formatadas', lambda: [])(),
+            'resposta_padrao': questao.resposta_padrao,
+            'regex_validacao': questao.regex_validacao,
+            'tamanho_minimo': questao.tamanho_minimo,
+            'tamanho_maximo': questao.tamanho_maximo,
+            'valor_minimo': float(questao.valor_minimo) if questao.valor_minimo else None,
+            'valor_maximo': float(questao.valor_maximo) if questao.valor_maximo else None,
+            'questao_dependencia_id': questao.questao_dependencia.id if questao.questao_dependencia else None,
+            'valor_dependencia': questao.valor_dependencia,
+            'ativo': questao.ativo,
+            'permite_voltar': questao.permite_voltar,
+            'permite_editar': questao.permite_editar,
+            'ordem_exibicao': questao.ordem_exibicao
+        }
+    except Exception as e:
+        return {
+            'id': questao.id,
+            'titulo': getattr(questao, 'titulo', 'N/A'),
+            'error': f'Erro na serialização: {str(e)}'
+        }
+
+
+def _serialize_atendimento_fluxo(atendimento):
+    """Serializa um objeto AtendimentoFluxo"""
+    try:
+        return {
+            'id': atendimento.id,
+            'lead_id': atendimento.lead.id if atendimento.lead else None,
+            'lead_nome': atendimento.lead.nome_razaosocial if atendimento.lead else 'N/A',
+            'fluxo_id': atendimento.fluxo.id if atendimento.fluxo else None,
+            'fluxo_nome': atendimento.fluxo.nome if atendimento.fluxo else 'N/A',
+            'historico_contato_id': atendimento.historico_contato.id if atendimento.historico_contato else None,
+            'status': atendimento.status,
+            'status_display': getattr(atendimento, 'get_status_display', lambda: 'N/A')(),
+            'questao_atual': atendimento.questao_atual,
+            'total_questoes': atendimento.total_questoes,
+            'questoes_respondidas': atendimento.questoes_respondidas,
+            'progresso_percentual': getattr(atendimento, 'get_progresso_percentual', lambda: 0)(),
+            'data_inicio': atendimento.data_inicio.isoformat() if atendimento.data_inicio else None,
+            'data_ultima_atividade': atendimento.data_ultima_atividade.isoformat() if atendimento.data_ultima_atividade else None,
+            'data_conclusao': atendimento.data_conclusao.isoformat() if atendimento.data_conclusao else None,
+            'tempo_total': atendimento.tempo_total,
+            'tempo_formatado': getattr(atendimento, 'get_tempo_formatado', lambda: 'N/A')(),
+            'tentativas_atual': atendimento.tentativas_atual,
+            'max_tentativas': atendimento.max_tentativas,
+            'dados_respostas': atendimento.dados_respostas,
+            'respostas_formatadas': getattr(atendimento, 'get_respostas_formatadas', lambda: [])(),
+            'observacoes': atendimento.observacoes,
+            'ip_origem': atendimento.ip_origem,
+            'user_agent': atendimento.user_agent,
+            'dispositivo': atendimento.dispositivo,
+            'id_externo': atendimento.id_externo,
+            'resultado_final': atendimento.resultado_final,
+            'score_qualificacao': atendimento.score_qualificacao,
+            'pode_avancar': getattr(atendimento, 'pode_avancar', lambda: False)(),
+            'pode_voltar': getattr(atendimento, 'pode_voltar', lambda: False)(),
+            'pode_ser_reiniciado': getattr(atendimento, 'pode_ser_reiniciado', lambda: False)()
+        }
+    except Exception as e:
+        return {
+            'id': atendimento.id,
+            'error': f'Erro na serialização: {str(e)}'
+        }
+
+
+# ============================================================================
+# VIEWS DE CONFIGURAÇÃO DE ATENDIMENTO
+# ============================================================================
+
+@login_required
+def fluxos_atendimento_view(request):
+    """View para gerenciar fluxos de atendimento"""
+    fluxos = FluxoAtendimento.objects.all().order_by('-data_criacao')
+    return render(request, 'vendas_web/configuracoes/fluxos.html', {
+        'fluxos': fluxos
+    })
+
+
+@login_required
+def questoes_fluxo_view(request, fluxo_id=None):
+    """View para gerenciar questões do fluxo"""
+    fluxos = FluxoAtendimento.objects.filter(ativo=True).order_by('nome')
+    questoes = []
+    fluxo_selecionado = None
+
+    if fluxo_id:
+        try:
+            fluxo_selecionado = FluxoAtendimento.objects.get(id=fluxo_id)
+            questoes = QuestaoFluxo.objects.filter(fluxo=fluxo_selecionado).order_by('indice')
+        except FluxoAtendimento.DoesNotExist:
+            pass
+
+    return render(request, 'vendas_web/configuracoes/questoes.html', {
+        'fluxos': fluxos,
+        'questoes': questoes,
+        'fluxo_selecionado': fluxo_selecionado
+    })
+
+
+# ============================================================================
+# APIS DE GERENCIAMENTO - QUESTÕES DE FLUXO
+# ============================================================================
+
+@login_required
+@require_http_methods(["GET", "POST", "PUT", "DELETE"])
+def api_questoes_fluxo_gerencia(request):
+    """API para gerenciar questões dos fluxos"""
+    try:
+        if request.method == 'GET':
+            fluxo_id = request.GET.get('fluxo_id')
+            if fluxo_id:
+                questoes = QuestaoFluxo.objects.filter(fluxo_id=fluxo_id).order_by('indice')
+            else:
+                questoes = QuestaoFluxo.objects.all().order_by('fluxo__nome', 'indice')
+
+            data = []
+            for questao in questoes:
+                data.append({
+                    'id': questao.id,
+                    'fluxo_id': questao.fluxo.id,
+                    'fluxo_nome': questao.fluxo.nome,
+                    'indice': questao.indice,
+                    'titulo': questao.titulo,
+                    'descricao': questao.descricao,
+                    'tipo_questao': questao.tipo_questao,
+                    'tipo_questao_display': questao.get_tipo_questao_display(),
+                    'tipo_validacao': questao.tipo_validacao,
+                    'tipo_validacao_display': questao.get_tipo_validacao_display(),
+                    'opcoes_resposta': questao.opcoes_resposta,
+                    'resposta_padrao': questao.resposta_padrao,
+                    'regex_validacao': questao.regex_validacao,
+                    'tamanho_minimo': questao.tamanho_minimo,
+                    'tamanho_maximo': questao.tamanho_maximo,
+                    'valor_minimo': questao.valor_minimo,
+                    'valor_maximo': questao.valor_maximo,
+                    'max_tentativas': questao.max_tentativas,
+                    'estrategia_erro': questao.estrategia_erro,
+                    'estrategia_erro_display': questao.get_estrategia_erro_display() if questao.estrategia_erro else None,
+                    'mensagem_erro_padrao': questao.mensagem_erro_padrao,
+                    'mensagem_tentativa_esgotada': questao.mensagem_tentativa_esgotada,
+                    'instrucoes_resposta_correta': questao.instrucoes_resposta_correta,
+                    'opcoes_dinamicas_fonte': questao.opcoes_dinamicas_fonte,
+                    'opcoes_dinamicas_fonte_display': questao.get_opcoes_dinamicas_fonte_display() if questao.opcoes_dinamicas_fonte else None,
+                    'permite_voltar': questao.permite_voltar,
+                    'permite_editar': questao.permite_editar,
+                    'ordem_exibicao': questao.ordem_exibicao,
+                    'ativo': questao.ativo
+                })
+            return JsonResponse({'success': True, 'data': data})
+
+        elif request.method == 'POST':
+            data = json.loads(request.body)
+
+            # Validar se o fluxo existe
+            try:
+                fluxo = FluxoAtendimento.objects.get(id=data.get('fluxo_id'))
+            except FluxoAtendimento.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Fluxo não encontrado'
+                }, status=404)
+
+            # Calcular próximo índice se não fornecido
+            indice = data.get('indice')
+            if not indice:
+                ultimo_indice = QuestaoFluxo.objects.filter(fluxo=fluxo).aggregate(
+                    models.Max('indice')
+                )['indice__max'] or 0
+                indice = ultimo_indice + 1
+
+            questao = QuestaoFluxo.objects.create(
+                fluxo=fluxo,
+                indice=indice,
+                titulo=data.get('titulo'),
+                descricao=data.get('descricao', ''),
+                tipo_questao=data.get('tipo_questao'),
+                tipo_validacao=data.get('tipo_validacao', 'obrigatoria'),
+                opcoes_resposta=data.get('opcoes_resposta', []),
+                resposta_padrao=data.get('resposta_padrao', ''),
+                regex_validacao=data.get('regex_validacao', ''),
+                tamanho_minimo=data.get('tamanho_minimo'),
+                tamanho_maximo=data.get('tamanho_maximo'),
+                valor_minimo=data.get('valor_minimo'),
+                valor_maximo=data.get('valor_maximo'),
+                max_tentativas=data.get('max_tentativas'),
+                estrategia_erro=data.get('estrategia_erro', 'repetir'),
+                mensagem_erro_padrao=data.get('mensagem_erro_padrao', ''),
+                mensagem_tentativa_esgotada=data.get('mensagem_tentativa_esgotada', ''),
+                instrucoes_resposta_correta=data.get('instrucoes_resposta_correta', ''),
+                opcoes_dinamicas_fonte=data.get('opcoes_dinamicas_fonte'),
+                permite_voltar=data.get('permite_voltar', True),
+                permite_editar=data.get('permite_editar', True),
+                ordem_exibicao=data.get('ordem_exibicao', indice),
+                ativo=data.get('ativo', True)
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Questão criada com sucesso!',
+                'id': questao.id
+            })
+
+        elif request.method == 'PUT':
+            data = json.loads(request.body)
+            questao_id = data.get('id')
+
+            try:
+                questao = QuestaoFluxo.objects.get(id=questao_id)
+            except QuestaoFluxo.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Questão não encontrada'
+                }, status=404)
+
+            # Atualizar campos
+            questao.titulo = data.get('titulo', questao.titulo)
+            questao.descricao = data.get('descricao', questao.descricao)
+            questao.tipo_questao = data.get('tipo_questao', questao.tipo_questao)
+            questao.tipo_validacao = data.get('tipo_validacao', questao.tipo_validacao)
+            questao.opcoes_resposta = data.get('opcoes_resposta', questao.opcoes_resposta)
+            questao.resposta_padrao = data.get('resposta_padrao', questao.resposta_padrao)
+            questao.regex_validacao = data.get('regex_validacao', questao.regex_validacao)
+            questao.tamanho_minimo = data.get('tamanho_minimo', questao.tamanho_minimo)
+            questao.tamanho_maximo = data.get('tamanho_maximo', questao.tamanho_maximo)
+            questao.valor_minimo = data.get('valor_minimo', questao.valor_minimo)
+            questao.valor_maximo = data.get('valor_maximo', questao.valor_maximo)
+            questao.max_tentativas = data.get('max_tentativas', questao.max_tentativas)
+            questao.estrategia_erro = data.get('estrategia_erro', questao.estrategia_erro)
+            questao.mensagem_erro_padrao = data.get('mensagem_erro_padrao', questao.mensagem_erro_padrao)
+            questao.mensagem_tentativa_esgotada = data.get('mensagem_tentativa_esgotada', questao.mensagem_tentativa_esgotada)
+            questao.instrucoes_resposta_correta = data.get('instrucoes_resposta_correta', questao.instrucoes_resposta_correta)
+            questao.opcoes_dinamicas_fonte = data.get('opcoes_dinamicas_fonte', questao.opcoes_dinamicas_fonte)
+            questao.permite_voltar = data.get('permite_voltar', questao.permite_voltar)
+            questao.permite_editar = data.get('permite_editar', questao.permite_editar)
+            questao.ordem_exibicao = data.get('ordem_exibicao', questao.ordem_exibicao)
+            questao.ativo = data.get('ativo', questao.ativo)
+
+            # Atualizar índice se fornecido
+            novo_indice = data.get('indice')
+            if novo_indice and novo_indice != questao.indice:
+                questao.indice = novo_indice
+
+            questao.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Questão atualizada com sucesso!'
+            })
+
+        elif request.method == 'DELETE':
+            data = json.loads(request.body)
+            questao_id = data.get('id')
+
+            try:
+                questao = QuestaoFluxo.objects.get(id=questao_id)
+                questao.delete()
+
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Questão excluída com sucesso!'
+                })
+            except QuestaoFluxo.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Questão não encontrada'
+                }, status=404)
+
+    except Exception as e:
+        logger.error(f"Erro na API de questões dos fluxos: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_duplicar_questao_fluxo(request):
+    """API para duplicar uma questão do fluxo"""
+    try:
+        data = json.loads(request.body)
+        questao_id = data.get('id')
+
+        try:
+            questao_original = QuestaoFluxo.objects.get(id=questao_id)
+        except QuestaoFluxo.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Questão não encontrada'
+            }, status=404)
+
+        # Calcular próximo índice
+        ultimo_indice = QuestaoFluxo.objects.filter(fluxo=questao_original.fluxo).aggregate(
+            models.Max('indice')
+        )['indice__max'] or 0
+        novo_indice = ultimo_indice + 1
+
+        # Criar cópia da questão
+        questao_duplicada = QuestaoFluxo.objects.create(
+            fluxo=questao_original.fluxo,
+            indice=novo_indice,
+            titulo=f"{questao_original.titulo} (Cópia)",
+            descricao=questao_original.descricao,
+            tipo_questao=questao_original.tipo_questao,
+            tipo_validacao=questao_original.tipo_validacao,
+            opcoes_resposta=questao_original.opcoes_resposta,
+            resposta_padrao=questao_original.resposta_padrao,
+            regex_validacao=questao_original.regex_validacao,
+            tamanho_minimo=questao_original.tamanho_minimo,
+            tamanho_maximo=questao_original.tamanho_maximo,
+            valor_minimo=questao_original.valor_minimo,
+            valor_maximo=questao_original.valor_maximo,
+            max_tentativas=questao_original.max_tentativas,
+            estrategia_erro=questao_original.estrategia_erro,
+            mensagem_erro_padrao=questao_original.mensagem_erro_padrao,
+            mensagem_tentativa_esgotada=questao_original.mensagem_tentativa_esgotada,
+            instrucoes_resposta_correta=questao_original.instrucoes_resposta_correta,
+            opcoes_dinamicas_fonte=questao_original.opcoes_dinamicas_fonte,
+            permite_voltar=questao_original.permite_voltar,
+            permite_editar=questao_original.permite_editar,
+            ordem_exibicao=novo_indice,
+            ativo=questao_original.ativo
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Questão duplicada com sucesso!',
+            'id': questao_duplicada.id
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao duplicar questão: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
