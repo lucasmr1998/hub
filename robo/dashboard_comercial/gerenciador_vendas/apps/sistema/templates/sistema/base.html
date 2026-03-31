@@ -609,26 +609,30 @@
                 const newTitle = doc.querySelector('title');
                 if (newTitle) document.title = newTitle.textContent;
 
-                // Executar scripts inline do novo conteudo
+                // Executar scripts inline do novo conteudo (em escopo isolado)
                 const scripts = mainContent.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
                     if (oldScript.src) {
                         newScript.src = oldScript.src;
                     } else {
-                        newScript.textContent = oldScript.textContent;
+                        // Envolver em IIFE para evitar redeclaração de const/let
+                        newScript.textContent = `(function(){${oldScript.textContent}})();`;
                     }
                     oldScript.replaceWith(newScript);
                 });
 
                 // Extrair e executar scripts do block extra_js (fora do main)
+                // Remover scripts SPA anteriores
+                document.querySelectorAll('[data-spa-script]').forEach(el => el.remove());
                 const newBodyScripts = doc.querySelectorAll('body > script:not([src])');
                 newBodyScripts.forEach(s => {
                     if (s.textContent.includes('API_URLS') || s.textContent.includes('DOMContentLoaded')) {
                         const exec = document.createElement('script');
-                        exec.textContent = s.textContent;
+                        // Envolver em IIFE para evitar redeclaração de const/let
+                        exec.textContent = `(function(){${s.textContent}})();`;
+                        exec.setAttribute('data-spa-script', 'true');
                         document.body.appendChild(exec);
-                        setTimeout(() => exec.remove(), 100);
                     }
                 });
 
