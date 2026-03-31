@@ -20,6 +20,7 @@ _EXEMPT_PATTERNS = [
     re.compile(r"^login/?$"),
     re.compile(r"^logout/?$"),
     re.compile(r"^$"),
+    re.compile(r"^health/?$"),
 ]
 
 

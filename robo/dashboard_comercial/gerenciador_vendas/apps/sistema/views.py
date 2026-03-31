@@ -4,12 +4,30 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
+from django.db import connection
+from django_ratelimit.decorators import ratelimit
 import json
 import logging
 
 from apps.sistema.models import ConfiguracaoEmpresa
 
 logger = logging.getLogger(__name__)
+
+
+def health_check(request):
+    """Health check endpoint for monitoring."""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        db_ok = True
+    except Exception:
+        db_ok = False
+
+    status = 200 if db_ok else 503
+    return JsonResponse({
+        'status': 'healthy' if db_ok else 'unhealthy',
+        'database': 'ok' if db_ok else 'error',
+    }, status=status)
 
 
 @login_required
@@ -95,6 +113,7 @@ def home_view(request):
         return redirect('sistema:login')
 
 
+@ratelimit(key='ip', rate='5/m', method='POST', block=True)
 def login_view(request):
     """View para página de login"""
     if request.user.is_authenticated:

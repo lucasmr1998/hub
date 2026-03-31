@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.db import models
+from django_ratelimit.decorators import ratelimit
 
 import json
 import traceback
@@ -141,6 +142,7 @@ Ao aceitar este contrato, você concorda com todos os termos descritos.''',
         })
 
 
+@ratelimit(key='ip', rate='10/m', method='ALL', block=True)
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_cadastro_cliente(request):
@@ -457,6 +459,7 @@ def api_upload_documento(request):
         }, status=500)
 
 
+@ratelimit(key='ip', rate='10/m', method='ALL', block=True)
 @csrf_exempt
 @require_http_methods(["GET"])
 def api_consulta_cep(request, cep):

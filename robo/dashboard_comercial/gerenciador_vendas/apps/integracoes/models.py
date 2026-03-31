@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
 
+from apps.sistema.encrypted_fields import EncryptedCharField, EncryptedTextField
+
 
 class IntegracaoAPI(models.Model):
     """
@@ -38,7 +40,7 @@ class IntegracaoAPI(models.Model):
         verbose_name="Client ID",
     )
 
-    client_secret = models.CharField(
+    client_secret = EncryptedCharField(
         max_length=500,
         verbose_name="Client Secret",
     )
@@ -48,7 +50,7 @@ class IntegracaoAPI(models.Model):
         verbose_name="Usuário",
     )
 
-    password = models.CharField(
+    password = EncryptedCharField(
         max_length=200,
         verbose_name="Senha",
     )
@@ -60,7 +62,7 @@ class IntegracaoAPI(models.Model):
     )
 
     # --- Token cacheado ---------------------------------------------------
-    access_token = models.TextField(
+    access_token = EncryptedTextField(
         blank=True,
         default='',
         verbose_name="Access Token (cache)",

@@ -10,7 +10,7 @@ responsavel: "Dev"
 **Data:** 30/03/2026
 **Responsável:** Dev
 **Prioridade:** 🟡 Média
-**Status:** ⏳ Aguardando
+**Status:** 🔧 Em andamento
 
 ---
 
@@ -22,13 +22,14 @@ As pastas `apps/cs/nps/` e `apps/cs/retencao/` existem no projeto mas não estã
 
 ## Tarefas
 
-- [ ] Definir models do app `nps` (PesquisaNPS, RespostaNPS, configurações)
-- [ ] Definir models do app `retencao` (AlertaChurn, AcaoRetencao, ScoreCliente)
-- [ ] Criar views e templates básicos para ambos
-- [ ] Registrar em `INSTALLED_APPS`
-- [ ] Gerar migrations
-- [ ] Criar URLs e integrar no menu do CS
-- [ ] Adicionar TenantMixin nos models
+- [x] Definir models do app `nps` (ConfiguracaoNPS, PesquisaNPS com TenantMixin)
+- [x] Definir models do app `retencao` (ScoreCliente, AlertaChurn, AcaoRetencao com TenantMixin)
+- [x] Criar views e URLs básicos para ambos
+- [x] Registrar em `INSTALLED_APPS`
+- [ ] Gerar migrations (executar manualmente)
+- [ ] Integrar no menu do CS
+- [x] Adicionar TenantMixin nos models
+- [x] Registrar models no admin
 
 ---
 

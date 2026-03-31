@@ -74,10 +74,13 @@ INSTALLED_APPS = [
     'apps.cs.parceiros',
     'apps.cs.indicacoes',
     'apps.cs.carteirinha',
+    'apps.cs.nps',
+    'apps.cs.retencao',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'csp.middleware.CSPMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -96,30 +99,30 @@ SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False').lower() == 
 SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
 CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'False').lower() == 'true'
 
-# Content Security Policy - Permitir Chart.js
+# Content Security Policy (django-csp com nonces)
+# Nonces permitem inline scripts/styles com atributo nonce="{{ request.csp_nonce }}"
+# TODO: adicionar nonces a todos os templates e remover 'unsafe-inline'
 CSP_DEFAULT_SRC = ("'self'",)
 CSP_SCRIPT_SRC = (
     "'self'",
-    "'unsafe-inline'",
-    "'unsafe-eval'",
+    "'unsafe-inline'",  # TODO: remover após adicionar nonces a todos os templates
     "https://cdnjs.cloudflare.com",
     "https://code.jquery.com",
-    "https://cdn.jsdelivr.net",  # Para Chart.js
+    "https://cdn.jsdelivr.net",
 )
 CSP_STYLE_SRC = (
     "'self'",
-    "'unsafe-inline'",
+    "'unsafe-inline'",  # TODO: remover após adicionar nonces a todos os templates
     "https://cdnjs.cloudflare.com",
-)
-CSP_IMG_SRC = (
-    "'self'",
-    "data:",
-    "https:",
+    "https://fonts.googleapis.com",
 )
 CSP_FONT_SRC = (
     "'self'",
+    "https://fonts.gstatic.com",
     "https://cdnjs.cloudflare.com",
 )
+CSP_IMG_SRC = ("'self'", "data:",)
+CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src']
 
 ROOT_URLCONF = 'gerenciador_vendas.urls'
 
@@ -292,4 +295,48 @@ EMAIL_TEMPLATES = {
         'subject': 'Erro no Sistema - {{ erro.tipo }}',
         'template': 'emails/sistema_erro.html'
     }
+}
+
+# ── Structured Logging ─────────────────────────────────────────────────────
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'pii': {
+            '()': 'apps.sistema.logging_filters.PIIFilter',
+        },
+    },
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'json': {
+            'format': '{levelname} {asctime} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+            'filters': ['pii'],
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'apps': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
 }

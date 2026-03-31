@@ -4,6 +4,9 @@ from . import views
 app_name = 'sistema'
 
 urlpatterns = [
+    # Health check
+    path('health/', views.health_check, name='health_check'),
+
     # Setup inicial
     path('setup/', views.setup_inicial_view, name='setup_inicial'),
 
