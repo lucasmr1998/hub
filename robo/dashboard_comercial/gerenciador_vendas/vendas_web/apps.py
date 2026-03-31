@@ -7,4 +7,6 @@ class VendasWebConfig(AppConfig):
     verbose_name = '📊 Gestão Comercial'
 
     def ready(self):
-        from . import signals  # noqa: F401
+        # Signals migrados para apps/comercial/leads/signals.py e apps/comercial/cadastro/signals.py
+        # from . import signals  # noqa: F401
+        pass
