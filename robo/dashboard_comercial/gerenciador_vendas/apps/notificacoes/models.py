@@ -57,7 +57,6 @@ class TipoNotificacao(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         verbose_name = "Tipo de Notificação"
         verbose_name_plural = "📢 01. Tipos de Notificação"
         ordering = ['nome']
@@ -100,7 +99,6 @@ class CanalNotificacao(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         verbose_name = "Canal de Notificação"
         verbose_name_plural = "📱 02. Canais de Notificação"
         ordering = ['nome']
@@ -145,7 +143,6 @@ class PreferenciaNotificacao(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         unique_together = ['usuario', 'tipo_notificacao', 'canal_preferido']
         verbose_name = "Preferência de Notificação"
         verbose_name_plural = "⚙️ 03. Preferências de Notificação"
@@ -266,7 +263,6 @@ class Notificacao(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         verbose_name = "Notificação"
         verbose_name_plural = "📨 04. Notificações"
         ordering = ['-data_criacao']
@@ -319,7 +315,6 @@ class TemplateNotificacao(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         unique_together = ['tipo_notificacao', 'canal']
         verbose_name = "Template de Notificação"
         verbose_name_plural = "📝 05. Templates de Notificação"

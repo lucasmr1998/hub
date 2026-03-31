@@ -121,7 +121,7 @@ class LogIntegracaoAdmin(admin.ModelAdmin):
     def lead_link(self, obj):
         if obj.lead:
             from django.urls import reverse
-            url = reverse('admin:vendas_web_leadprospecto_change', args=[obj.lead.pk])
+            url = reverse('admin:leads_leadprospecto_change', args=[obj.lead.pk])
             return format_html('<a href="{}">{}</a>', url, obj.lead.nome_razaosocial)
         return '-'
 
@@ -252,7 +252,7 @@ class ClienteHubsoftAdmin(admin.ModelAdmin):
     def lead_link(self, obj):
         if obj.lead:
             from django.urls import reverse
-            url = reverse('admin:vendas_web_leadprospecto_change', args=[obj.lead.pk])
+            url = reverse('admin:leads_leadprospecto_change', args=[obj.lead.pk])
             return format_html('<a href="{}">{}</a>', url, obj.lead.nome_razaosocial)
         return '-'
 

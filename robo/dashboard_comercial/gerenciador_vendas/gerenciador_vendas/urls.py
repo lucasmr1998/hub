@@ -44,6 +44,4 @@ urlpatterns = [
     path('cs/indicacoes/',  include('apps.cs.indicacoes.urls')),
     path('cs/carteirinha/', include('apps.cs.carteirinha.urls')),
 
-    # === Legado (fallback para rotas ainda nao migradas) ===
-    path('', include('vendas_web.urls')),
 ]

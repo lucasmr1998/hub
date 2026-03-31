@@ -138,7 +138,7 @@ class OportunidadeVenda(TenantMixin):
     ]
 
     lead = models.OneToOneField(
-        'vendas_web.LeadProspecto',
+        'leads.LeadProspecto',
         on_delete=models.CASCADE,
         related_name='oportunidade_crm',
         verbose_name="Lead"
@@ -165,7 +165,7 @@ class OportunidadeVenda(TenantMixin):
     data_fechamento_real = models.DateTimeField(null=True, blank=True, verbose_name="Data de Fechamento Real")
 
     plano_interesse = models.ForeignKey(
-        'vendas_web.PlanoInternet', on_delete=models.SET_NULL, null=True, blank=True,
+        'cadastro.PlanoInternet', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='oportunidades', verbose_name="Plano de Interesse"
     )
 
@@ -276,7 +276,7 @@ class TarefaCRM(TenantMixin):
         related_name='tarefas', verbose_name="Oportunidade"
     )
     lead = models.ForeignKey(
-        'vendas_web.LeadProspecto', on_delete=models.CASCADE, null=True, blank=True,
+        'leads.LeadProspecto', on_delete=models.CASCADE, null=True, blank=True,
         related_name='tarefas_crm', verbose_name="Lead"
     )
     responsavel = models.ForeignKey(
@@ -340,7 +340,7 @@ class NotaInterna(TenantMixin):
         related_name='notas', verbose_name="Oportunidade"
     )
     lead = models.ForeignKey(
-        'vendas_web.LeadProspecto', on_delete=models.CASCADE, null=True, blank=True,
+        'leads.LeadProspecto', on_delete=models.CASCADE, null=True, blank=True,
         related_name='notas_crm', verbose_name="Lead"
     )
     autor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notas_crm', verbose_name="Autor")
@@ -444,7 +444,7 @@ class SegmentoCRM(TenantMixin):
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default='manual', verbose_name="Tipo")
     regras_filtro = models.JSONField(default=dict, blank=True, verbose_name="Regras de Filtro (JSON)")
     leads = models.ManyToManyField(
-        'vendas_web.LeadProspecto', through='MembroSegmento',
+        'leads.LeadProspecto', through='MembroSegmento',
         blank=True, related_name='segmentos_crm', verbose_name="Leads"
     )
     cor_hex = models.CharField(max_length=7, default='#764ba2', verbose_name="Cor (HEX)")
@@ -467,7 +467,7 @@ class SegmentoCRM(TenantMixin):
 
 class MembroSegmento(TenantMixin):
     segmento = models.ForeignKey(SegmentoCRM, on_delete=models.CASCADE, related_name='membros')
-    lead = models.ForeignKey('vendas_web.LeadProspecto', on_delete=models.CASCADE, related_name='membros_segmento')
+    lead = models.ForeignKey('leads.LeadProspecto', on_delete=models.CASCADE, related_name='membros_segmento')
     adicionado_manualmente = models.BooleanField(default=False)
     adicionado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     data_adicao = models.DateTimeField(auto_now_add=True)
@@ -511,7 +511,7 @@ class AlertaRetencao(TenantMixin):
         related_name='alertas_retencao', verbose_name="Cliente Hubsoft"
     )
     lead = models.ForeignKey(
-        'vendas_web.LeadProspecto', on_delete=models.SET_NULL, null=True, blank=True,
+        'leads.LeadProspecto', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='alertas_retencao', verbose_name="Lead"
     )
     oportunidade = models.ForeignKey(

@@ -102,7 +102,6 @@ class FluxoAtendimento(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'fluxos_atendimento'
         verbose_name = "Fluxo de Atendimento"
         verbose_name_plural = "🤖 01. Fluxos de Atendimento"
@@ -486,7 +485,6 @@ class QuestaoFluxo(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'questoes_fluxo'
         verbose_name = "Questão do Fluxo"
         verbose_name_plural = "🤖 02. Questões do Fluxo"
@@ -1093,7 +1091,6 @@ class TentativaResposta(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'tentativas_resposta'
         verbose_name = 'Tentativa de Resposta'
         verbose_name_plural = "🔧 02. Tentativas de Resposta"
@@ -1152,7 +1149,7 @@ class AtendimentoFluxo(TenantMixin):
 
     # Relacionamentos principais
     lead = models.ForeignKey(
-        'vendas_web.LeadProspecto',
+        'leads.LeadProspecto',
         on_delete=models.CASCADE,
         related_name='atendimentos_fluxo',
         verbose_name="Lead/Prospecto"
@@ -1167,7 +1164,7 @@ class AtendimentoFluxo(TenantMixin):
 
     # Relacionamento opcional com histórico de contato
     historico_contato = models.ForeignKey(
-        'vendas_web.HistoricoContato',
+        'leads.HistoricoContato',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -1298,7 +1295,6 @@ class AtendimentoFluxo(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'atendimentos_fluxo'
         verbose_name = "Atendimento de Fluxo"
         verbose_name_plural = "🤖 03. Atendimentos de Fluxo"
@@ -1804,7 +1800,6 @@ class RespostaQuestao(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'respostas_questao'
         verbose_name = "Resposta de Questão"
         verbose_name_plural = "🔧 01. Respostas de Questões"

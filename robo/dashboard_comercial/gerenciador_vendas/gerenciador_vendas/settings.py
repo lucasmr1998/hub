@@ -45,9 +45,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_spectacular',
 
-    # === App legado (views, urls e admin ainda aqui) ===
-    'vendas_web',
-
     # === Base ===
     'apps.sistema',
     'apps.notificacoes',

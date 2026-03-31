@@ -71,11 +71,9 @@ class CidadeViabilidade(TenantMixin):
     data_atualizacao = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
 
     class Meta:
-        app_label = 'vendas_web'
         verbose_name = "Cidade com Viabilidade"
         verbose_name_plural = "📡 Viabilidade Técnica — Cidades"
         ordering = ['estado', 'cidade', 'cep']
-        app_label = 'viabilidade'
         indexes = [
             models.Index(fields=['cidade', 'estado']),
         ]

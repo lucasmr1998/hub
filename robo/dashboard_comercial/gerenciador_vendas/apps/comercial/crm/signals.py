@@ -8,7 +8,7 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
-@receiver(post_save, sender='vendas_web.LeadProspecto')
+@receiver(post_save, sender='leads.LeadProspecto')
 def criar_oportunidade_automatica(sender, instance, created, **kwargs):
     """
     Cria OportunidadeVenda automaticamente quando um lead é qualificado.
@@ -62,7 +62,7 @@ def criar_oportunidade_automatica(sender, instance, created, **kwargs):
         logger.error(f"[CRM] Erro ao criar OportunidadeVenda para lead {instance.pk}: {e}")
 
 
-@receiver(post_save, sender='vendas_web.HistoricoContato')
+@receiver(post_save, sender='leads.HistoricoContato')
 def verificar_conversao_historico(sender, instance, created, **kwargs):
     """
     Quando HistoricoContato.converteu_venda=True, move a oportunidade do lead

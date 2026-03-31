@@ -329,7 +329,6 @@ class ConfiguracaoCadastro(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'configuracoes_cadastro'
         verbose_name = 'Configuração de Cadastro'
         verbose_name_plural = "⚙️ 02. Configurações de Cadastro"
@@ -439,7 +438,6 @@ class PlanoInternet(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'planos_internet'
         verbose_name = 'Plano de Internet'
         verbose_name_plural = "⚙️ 03. Planos de Internet"
@@ -483,7 +481,6 @@ class OpcaoVencimento(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'opcoes_vencimento'
         verbose_name = 'Opção de Vencimento'
         verbose_name_plural = "⚙️ 04. Opções de Vencimento"
@@ -514,7 +511,7 @@ class DocumentoLead(TenantMixin):
     ]
 
     lead = models.ForeignKey(
-        'vendas_web.LeadProspecto',
+        'leads.LeadProspecto',
         on_delete=models.CASCADE,
         related_name='documentos',
         verbose_name="Lead/Prospecto"
@@ -577,7 +574,6 @@ class DocumentoLead(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'documentos_lead'
         verbose_name = 'Documento do Lead'
         verbose_name_plural = "📈 02. Documentos do Lead"
@@ -710,7 +706,7 @@ class CadastroCliente(TenantMixin):
 
     # Integração com Lead
     lead_gerado = models.ForeignKey(
-        'vendas_web.LeadProspecto',
+        'leads.LeadProspecto',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -806,7 +802,6 @@ class CadastroCliente(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'cadastros_clientes'
         verbose_name = 'Cadastro de Cliente'
         verbose_name_plural = "📈 01. Cadastros de Clientes"

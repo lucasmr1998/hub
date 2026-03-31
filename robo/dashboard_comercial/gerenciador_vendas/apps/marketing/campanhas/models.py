@@ -194,7 +194,6 @@ class CampanhaTrafego(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'campanha_trafego'
         verbose_name = "Campanha de Tráfego"
         verbose_name_plural = "📢 Campanhas de Tráfego"
@@ -281,7 +280,7 @@ class DeteccaoCampanha(TenantMixin):
 
     # Relacionamentos
     lead = models.ForeignKey(
-        'vendas_web.LeadProspecto',
+        'leads.LeadProspecto',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -466,7 +465,6 @@ class DeteccaoCampanha(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'deteccao_campanha'
         verbose_name = "Detecção de Campanha"
         verbose_name_plural = "📊 Detecções de Campanhas"

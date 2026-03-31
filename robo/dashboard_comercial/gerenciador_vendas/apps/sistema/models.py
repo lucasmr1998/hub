@@ -252,7 +252,6 @@ class ConfiguracaoEmpresa(models.Model):
     all_tenants = models.Manager()
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'vendas_web_configuracaoempresa'
         verbose_name = "Configuração da Empresa"
         verbose_name_plural = "Configurações da Empresa"
@@ -305,7 +304,6 @@ class ConfiguracaoSistema(models.Model):
     all_tenants = models.Manager()
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'configuracao_sistema'
         verbose_name = "Configuração do Sistema"
         verbose_name_plural = "Configurações do Sistema"
@@ -336,7 +334,6 @@ class ConfiguracaoRecontato(models.Model):
     all_tenants = models.Manager()
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'configuracoes_recontato'
         verbose_name = 'Configuração de Recontato'
         verbose_name_plural = "Configurações de Recontato"
@@ -385,7 +382,6 @@ class StatusConfiguravel(models.Model):
     all_tenants = models.Manager()
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'status_configuravel'
         verbose_name = "Status Configurável"
         verbose_name_plural = "Status Configuráveis"
@@ -436,7 +432,6 @@ class LogSistema(models.Model):
     all_tenants = models.Manager()
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'log_sistema'
         verbose_name = "Log do Sistema"
         verbose_name_plural = "Logs do Sistema"

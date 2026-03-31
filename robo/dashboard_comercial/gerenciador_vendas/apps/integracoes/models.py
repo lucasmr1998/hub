@@ -128,7 +128,7 @@ class LogIntegracao(models.Model):
     )
 
     lead = models.ForeignKey(
-        'vendas_web.LeadProspecto',
+        'leads.LeadProspecto',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -213,7 +213,7 @@ class ClienteHubsoft(models.Model):
     """
 
     lead = models.ForeignKey(
-        'vendas_web.LeadProspecto',
+        'leads.LeadProspecto',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

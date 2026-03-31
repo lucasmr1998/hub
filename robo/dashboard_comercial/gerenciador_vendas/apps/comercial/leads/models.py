@@ -276,7 +276,7 @@ class LeadProspecto(TenantMixin):
 
     # Campos de Campanhas de Tráfego Pago
     campanha_origem = models.ForeignKey(
-        'vendas_web.CampanhaTrafego',
+        'campanhas.CampanhaTrafego',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -286,7 +286,7 @@ class LeadProspecto(TenantMixin):
     )
 
     campanha_conversao = models.ForeignKey(
-        'vendas_web.CampanhaTrafego',
+        'campanhas.CampanhaTrafego',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -455,7 +455,6 @@ class LeadProspecto(TenantMixin):
         return url
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'leads_prospectos'
         verbose_name = "Lead/Prospecto"
         verbose_name_plural = "📊 01. Leads/Prospectos"
@@ -751,7 +750,6 @@ class ImagemLeadProspecto(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'imagens_lead_prospecto'
         verbose_name = "Imagem do Lead"
         verbose_name_plural = "Imagens do Lead"
@@ -898,7 +896,6 @@ class Prospecto(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'prospectos'
         verbose_name = "Prospecto"
         verbose_name_plural = "📊 02. Prospectos"
@@ -1267,7 +1264,6 @@ class HistoricoContato(TenantMixin):
     )
 
     class Meta:
-        app_label = 'vendas_web'
         db_table = 'historico_contato'
         verbose_name = "Histórico de Contato"
         verbose_name_plural = "📊 03. Histórico de Contatos"
