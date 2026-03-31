@@ -20,12 +20,14 @@ def criar_oportunidade_automatica(sender, instance, created, **kwargs):
     if getattr(instance, '_skip_crm_signal', False):
         return
 
-    # Verificar se já existe oportunidade para este lead
-    if OportunidadeVenda.objects.filter(lead=instance).exists():
+    # Verificar se já existe oportunidade para este lead (all_tenants para funcionar em signals)
+    if OportunidadeVenda.all_tenants.filter(lead=instance).exists():
         return
 
     try:
-        config = ConfiguracaoCRM.get_config()
+        config = ConfiguracaoCRM.all_tenants.filter(pk=1).first()
+        if not config:
+            return
     except Exception:
         return
 
