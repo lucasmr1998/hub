@@ -152,12 +152,26 @@ class Command(BaseCommand):
     help = 'Popula features dos planos conforme documentacao GTM.'
 
     def handle(self, *args, **options):
+        NOMES = {
+            ('comercial', 'starter'): 'Comercial Starter',
+            ('comercial', 'start'): 'Comercial Start',
+            ('comercial', 'pro'): 'Comercial Pro',
+            ('marketing', 'starter'): 'Marketing Starter',
+            ('marketing', 'start'): 'Marketing Start',
+            ('marketing', 'pro'): 'Marketing Pro',
+            ('cs', 'starter'): 'CS Starter',
+            ('cs', 'start'): 'CS Start',
+            ('cs', 'pro'): 'CS Pro',
+        }
+
         for (modulo, tier), features in FEATURES.items():
-            try:
-                plano = Plano.objects.get(modulo=modulo, tier=tier)
-            except Plano.DoesNotExist:
-                self.stdout.write(self.style.WARNING(f'Plano {modulo}/{tier} nao encontrado. Pulando.'))
-                continue
+            plano, created = Plano.objects.get_or_create(
+                modulo=modulo,
+                tier=tier,
+                defaults={'nome': NOMES.get((modulo, tier), f'{modulo} {tier}'.title())},
+            )
+            if created:
+                self.stdout.write(self.style.WARNING(f'Plano {modulo}/{tier} criado.'))
 
             plano.features.all().delete()
             for slug, nome, cat in features:
