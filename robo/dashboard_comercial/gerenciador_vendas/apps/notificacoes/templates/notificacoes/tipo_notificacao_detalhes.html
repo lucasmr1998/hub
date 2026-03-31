@@ -1,0 +1,1951 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}{{ tipo.nome }} - Notificações{% endblock %}
+
+{% block extra_css %}
+<style>
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    /* Breadcrumb */
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+        font-size: 0.9rem;
+        color: #6b7280;
+    }
+
+    .breadcrumb a {
+        color: #1F3D59;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .breadcrumb a:hover {
+        color: #2c5282;
+        text-decoration: underline;
+    }
+
+    .breadcrumb-separator {
+        color: #9ca3af;
+    }
+
+    /* Header da Página */
+    .page-header {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e5e7eb;
+    }
+
+    .page-header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .page-title {
+        color: #1f2937;
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .tipo-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .badge-ativo {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-inativo {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .prioridade-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .prioridade-urgente {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .prioridade-alta {
+        background: #fed7aa;
+        color: #9a3412;
+    }
+
+    .prioridade-normal {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .prioridade-baixa {
+        background: #f3f4f6;
+        color: #4b5563;
+    }
+
+    .page-description {
+        color: #6b7280;
+        font-size: 1rem;
+        margin: 1rem 0 0 0;
+        line-height: 1.6;
+    }
+
+    .tipo-meta {
+        display: flex;
+        gap: 2rem;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .tipo-meta-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .meta-label {
+        color: #6b7280;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .meta-value {
+        color: #1f2937;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+
+    /* Tabs */
+    .tabs-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+
+    .tabs-header {
+        display: flex;
+        background: #f9fafb;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .tab-button {
+        flex: 1;
+        padding: 1rem 1.5rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #6b7280;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        justify-content: center;
+        border-bottom: 3px solid transparent;
+    }
+
+    .tab-button:hover {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .tab-button.active {
+        background: white;
+        color: #1F3D59;
+        border-bottom-color: #1F3D59;
+    }
+
+    .tab-content {
+        display: none;
+        padding: 2rem;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    /* Cards */
+    .content-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+    }
+
+    .card-header {
+        background: #f8fafc;
+        padding: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin: 0;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    /* Botões */
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        background: #1F3D59;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #2c5282;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-secondary {
+        background: #6b7280;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #4b5563;
+    }
+
+    .btn-success {
+        background: #059669;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #047857;
+    }
+
+    .btn-outline {
+        background: white;
+        color: #1F3D59;
+        border: 2px solid #1F3D59;
+    }
+
+    .btn-outline:hover {
+        background: #1F3D59;
+        color: white;
+    }
+
+    .btn-sm {
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+    }
+
+    /* Tabelas */
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table th,
+    .table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .table th {
+        background: #f9fafb;
+        font-weight: 600;
+        color: #374151;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .table td {
+        color: #1f2937;
+        font-size: 0.9rem;
+    }
+
+    .table tr:hover {
+        background: #f8fafc;
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .status-ativo {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-inativo {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    /* Webhook Config */
+    .webhook-config {
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+    }
+
+    .webhook-config h4 {
+        color: #1f2937;
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0 0 1rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: border-color 0.2s ease;
+        font-family: inherit;
+    }
+
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+        outline: none;
+        border-color: #1F3D59;
+        box-shadow: 0 0 0 3px rgba(31, 61, 89, 0.1);
+    }
+
+    .form-textarea {
+        resize: vertical;
+        font-family: 'Courier New', monospace;
+    }
+
+    .form-help {
+        display: block;
+        font-size: 0.85rem;
+        color: #6b7280;
+        margin-top: 0.25rem;
+    }
+
+    .form-grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .collapsible-section {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        overflow: hidden;
+    }
+
+    .collapsible-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background: #f9fafb;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .collapsible-header:hover {
+        background: #f3f4f6;
+    }
+
+    .collapsible-header h5 {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #1f2937;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .collapsible-icon {
+        transition: transform 0.3s;
+    }
+
+    .collapsible-icon.open {
+        transform: rotate(180deg);
+    }
+
+    .collapsible-content {
+        padding: 0 1rem;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease, padding 0.3s ease;
+    }
+
+    .collapsible-content.open {
+        max-height: 1000px;
+        padding: 1rem;
+    }
+
+    /* Toggle Switch Styles */
+    .toggle-switch {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .toggle-input {
+        display: none;
+    }
+
+    .toggle-label {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+        cursor: pointer;
+    }
+
+    .toggle-slider {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        border-radius: 24px;
+        transition: 0.3s;
+    }
+
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        border-radius: 50%;
+        transition: 0.3s;
+    }
+
+    .toggle-input:checked + .toggle-label .toggle-slider {
+        background-color: #10b981;
+    }
+
+    .toggle-input:checked + .toggle-label .toggle-slider:before {
+        transform: translateX(26px);
+    }
+
+    .toggle-text {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #374151;
+        min-width: 50px;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6b7280;
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .empty-state-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state-text {
+        font-size: 0.95rem;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .container {
+            padding: 1rem;
+        }
+
+        .page-header-top {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .tabs-header {
+            overflow-x: auto;
+        }
+
+        .tipo-meta {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .table {
+            font-size: 0.85rem;
+        }
+
+        .table th,
+        .table td {
+            padding: 0.75rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+        <a href="{% url 'notificacoes:configuracoes_notificacoes' %}">
+            <i class="fas fa-bell"></i> Notificações
+        </a>
+        <span class="breadcrumb-separator">/</span>
+        <span>{{ tipo.nome }}</span>
+    </div>
+
+    <!-- Header da Página -->
+    <div class="page-header">
+        <div class="page-header-top">
+            <div>
+                <h1 class="page-title">
+                    <i class="fas fa-tag"></i>
+                    {{ tipo.nome }}
+                </h1>
+                <p class="page-description">
+                    {{ tipo.descricao }}
+                </p>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                <span class="tipo-badge {% if tipo.ativo %}badge-ativo{% else %}badge-inativo{% endif %}">
+                    {% if tipo.ativo %}
+                        <i class="fas fa-check-circle"></i> Ativo
+                    {% else %}
+                        <i class="fas fa-times-circle"></i> Inativo
+                    {% endif %}
+                </span>
+                <span class="prioridade-badge prioridade-{{ tipo.prioridade_padrao }}">
+                    {{ tipo.get_prioridade_padrao_display }}
+                </span>
+            </div>
+        </div>
+
+        <div class="tipo-meta">
+            <div class="tipo-meta-item">
+                <span class="meta-label">Código</span>
+                <code class="meta-value">{{ tipo.codigo }}</code>
+            </div>
+            <div class="tipo-meta-item">
+                <span class="meta-label">Usuários Inscritos</span>
+                <span class="meta-value">{{ preferencias_count }}</span>
+            </div>
+            <div class="tipo-meta-item">
+                <span class="meta-label">Notificações Enviadas</span>
+                <span class="meta-value">{{ notificacoes_count }}</span>
+            </div>
+            <div class="tipo-meta-item">
+                <span class="meta-label">Canais Configurados</span>
+                <span class="meta-value">{{ canais|length }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs-container">
+        <div class="tabs-header">
+            <button class="tab-button active" onclick="showTab('canais')">
+                <i class="fas fa-broadcast-tower"></i>
+                Canais Disponíveis
+            </button>
+            <button class="tab-button" onclick="showTab('preferencias')">
+                <i class="fas fa-users"></i>
+                Preferências de Usuários
+            </button>
+            <button class="tab-button" onclick="showTab('historico')">
+                <i class="fas fa-history"></i>
+                Histórico
+            </button>
+        </div>
+
+        <!-- Tab: Canais -->
+        <div id="tab-canais" class="tab-content active">
+            <div class="card-header">
+                <h3 class="card-title">Canais Disponíveis para este Tipo</h3>
+                <p style="color: #6b7280; font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                    Configure quais canais podem ser usados para enviar este tipo de notificação
+                </p>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Canal</th>
+                            <th>Código</th>
+                            <th>Ícone</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for canal in canais %}
+                        <tr>
+                            <td><strong>{{ canal.nome }}</strong></td>
+                            <td><code>{{ canal.codigo }}</code></td>
+                            <td><i class="{{ canal.icone }}"></i></td>
+                            <td>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" 
+                                           id="canal_{{ canal.id }}" 
+                                           class="toggle-input" 
+                                           {% if canal.ativo %}checked{% endif %}
+                                           onchange="toggleCanalStatus({{ canal.id }}, this.checked)">
+                                    <label for="canal_{{ canal.id }}" class="toggle-label">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <span class="toggle-text">
+                                        {% if canal.ativo %}Ativo{% else %}Inativo{% endif %}
+                                    </span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="actions">
+                                    <!-- Botão de configuração específica por canal -->
+                                    {% if canal.codigo == 'webhook' %}
+                                        <button class="btn btn-primary btn-sm" onclick="configurarCanal('webhook', {{ canal.id }}, {{ tipo.id }})">
+                                            <i class="fas fa-cog"></i> Configurar Webhook
+                                        </button>
+                                    {% elif canal.codigo == 'email' %}
+                                        <button class="btn btn-primary btn-sm" onclick="configurarCanal('email', {{ canal.id }}, {{ tipo.id }})">
+                                            <i class="fas fa-cog"></i> Configurar SMTP
+                                        </button>
+                                    {% elif canal.codigo == 'whatsapp' %}
+                                        <button class="btn btn-primary btn-sm" onclick="configurarCanal('whatsapp', {{ canal.id }}, {{ tipo.id }})">
+                                            <i class="fab fa-whatsapp"></i> Configurar WhatsApp
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <!-- Configurações Específicas por Canal (Dinâmico) -->
+                <div id="canalConfigContainer"></div>
+
+                <!-- Template de Configuração de Webhook (Oculto) -->
+                <template id="webhookConfigTemplate">
+                    <div class="webhook-config">
+                        <h4>
+                            <i class="fas fa-link"></i>
+                            Configuração do Webhook para "{{ tipo.nome }}"
+                        </h4>
+                        
+                        <form id="webhookConfigForm">
+                        <input type="hidden" name="tipo_id" value="{{ tipo.id }}">
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="webhookUrl">
+                                <i class="fas fa-globe"></i> URL de Destino *
+                            </label>
+                            <input 
+                                type="url" 
+                                class="form-input" 
+                                id="webhookUrl" 
+                                name="webhook_url" 
+                                value="{{ webhook_config.url|default:'' }}"
+                                placeholder="https://n8n.aurora.consulteplus.com/webhook/notifications"
+                                required
+                            >
+                            <small class="form-help">
+                                URL completa do endpoint que receberá as notificações deste tipo
+                            </small>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label class="form-label" for="webhookMethod">
+                                    <i class="fas fa-exchange-alt"></i> Método HTTP
+                                </label>
+                                <select class="form-select" id="webhookMethod" name="webhook_method">
+                                    <option value="POST" {% if webhook_config.method == 'POST' %}selected{% endif %}>POST</option>
+                                    <option value="PUT" {% if webhook_config.method == 'PUT' %}selected{% endif %}>PUT</option>
+                                    <option value="PATCH" {% if webhook_config.method == 'PATCH' %}selected{% endif %}>PATCH</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="webhookTimeout">
+                                    <i class="fas fa-clock"></i> Timeout (segundos)
+                                </label>
+                                <input 
+                                    type="number" 
+                                    class="form-input" 
+                                    id="webhookTimeout" 
+                                    name="webhook_timeout" 
+                                    value="{{ webhook_config.timeout|default:'30' }}"
+                                    min="5"
+                                    max="300"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="webhookHeaders">
+                                <i class="fas fa-code"></i> Headers Personalizados (JSON)
+                            </label>
+                            <textarea 
+                                class="form-textarea" 
+                                id="webhookHeaders" 
+                                name="webhook_headers" 
+                                rows="5"
+                                placeholder='{"Authorization": "Bearer seu-token-aqui", "Content-Type": "application/json", "X-Custom-Header": "value"}'
+                            >{{ webhook_config.headers_json|default:'' }}</textarea>
+                            <small class="form-help">
+                                Headers HTTP adicionais em formato JSON. Ex: {"Authorization": "Bearer token"}
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="webhookFrequency">
+                                <i class="fas fa-sync-alt"></i> Frequência de Envio
+                            </label>
+                            <select class="form-select" id="webhookFrequency" name="webhook_frequency">
+                                <option value="imediato" {% if webhook_config.frequency == 'imediato' %}selected{% endif %}>
+                                    ⚡ Imediato (envia assim que o evento ocorre)
+                                </option>
+                                <option value="agrupado_5min" {% if webhook_config.frequency == 'agrupado_5min' %}selected{% endif %}>
+                                    📦 Agrupado - A cada 5 minutos
+                                </option>
+                                <option value="agrupado_15min" {% if webhook_config.frequency == 'agrupado_15min' %}selected{% endif %}>
+                                    📦 Agrupado - A cada 15 minutos
+                                </option>
+                                <option value="agrupado_1hora" {% if webhook_config.frequency == 'agrupado_1hora' %}selected{% endif %}>
+                                    📦 Agrupado - A cada 1 hora
+                                </option>
+                                <option value="agrupado_diario" {% if webhook_config.frequency == 'agrupado_diario' %}selected{% endif %}>
+                                    📦 Agrupado - Diariamente às 18:00
+                                </option>
+                            </select>
+                            <small class="form-help">
+                                Define se as notificações serão enviadas imediatamente ou agrupadas em lotes
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="webhookRetries">
+                                <i class="fas fa-redo"></i> Tentativas de Retry
+                            </label>
+                            <input 
+                                type="number" 
+                                class="form-input" 
+                                id="webhookRetries" 
+                                name="webhook_retries" 
+                                value="{{ webhook_config.max_retries|default:'3' }}"
+                                min="0"
+                                max="10"
+                            >
+                            <small class="form-help">
+                                Número de tentativas automáticas em caso de falha (padrão: 3)
+                            </small>
+                        </div>
+
+                        <div class="collapsible-section">
+                            <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                                <h5>
+                                    <i class="fas fa-shield-alt"></i>
+                                    Configurações Avançadas (Opcional)
+                                </h5>
+                                <i class="fas fa-chevron-down collapsible-icon"></i>
+                            </div>
+                            <div class="collapsible-content">
+                                <div class="form-grid-2">
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="fas fa-key"></i> Tipo de Autenticação
+                                        </label>
+                                        <select class="form-select" name="webhook_auth_type">
+                                            <option value="none" {% if webhook_config.auth_type == 'none' %}selected{% endif %}>Nenhuma</option>
+                                            <option value="bearer" {% if webhook_config.auth_type == 'bearer' %}selected{% endif %}>Bearer Token</option>
+                                            <option value="basic" {% if webhook_config.auth_type == 'basic' %}selected{% endif %}>Basic Auth</option>
+                                            <option value="api_key" {% if webhook_config.auth_type == 'api_key' %}selected{% endif %}>API Key</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="fas fa-certificate"></i> Verificar SSL/TLS
+                                        </label>
+                                        <select class="form-select" name="webhook_verify_ssl">
+                                            <option value="true" {% if webhook_config.verify_ssl != False %}selected{% endif %}>Sim (Recomendado)</option>
+                                            <option value="false" {% if webhook_config.verify_ssl == False %}selected{% endif %}>Não</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">
+                                        <i class="fas fa-file-code"></i> Payload Customizado (JSON)
+                                    </label>
+                                    <textarea 
+                                        class="form-textarea" 
+                                        name="webhook_custom_payload" 
+                                        rows="6"
+                                        placeholder='{"tipo": "{{ tipo }}", "dados": {{ dados_contexto }}, "timestamp": "{{ timestamp }}"}'
+                                    >{{ webhook_config.custom_payload|default:'' }}</textarea>
+                                    <small class="form-help">
+                                        Template JSON personalizado. Deixe vazio para usar o padrão do sistema. Variáveis disponíveis: {{ tipo }}, {{ dados_contexto }}, {{ timestamp }}, {{ destinatario }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+                            <button type="button" class="btn btn-secondary" onclick="testarWebhook()">
+                                <i class="fas fa-vial"></i>
+                                Testar Webhook
+                            </button>
+                            <button type="submit" class="btn btn-primary" onclick="salvarWebhookConfig(event)">
+                                <i class="fas fa-save"></i>
+                                Salvar Configuração
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                </template>
+                
+                <!-- Template de Configuração de Email/SMTP (para futuro) -->
+                <template id="emailConfigTemplate">
+                    <div class="webhook-config">
+                        <h4>
+                            <i class="fas fa-envelope"></i>
+                            Configuração de Email/SMTP para "{{ tipo.nome }}"
+                        </h4>
+                        <p style="color: #6b7280; margin-top: 1rem;">
+                            Configurações de SMTP serão disponibilizadas em breve.
+                        </p>
+                    </div>
+                </template>
+                
+                <!-- Template de Configuração de WhatsApp -->
+                <template id="whatsappConfigTemplate">
+                    <div class="webhook-config">
+                        <h4>
+                            <i class="fab fa-whatsapp"></i>
+                            Configuração de WhatsApp para "{{ tipo.nome }}"
+                        </h4>
+                        <p style="color: #6b7280; margin-top: 1rem;">
+                            Configuração automática via N8N. O sistema enviará automaticamente as notificações para o WhatsApp através do webhook configurado.
+                        </p>
+                        
+                        <form id="whatsappConfigForm">
+                        <input type="hidden" name="tipo_id" value="{{ tipo.id }}">
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-file-code"></i> Template de Mensagem WhatsApp
+                            </label>
+                            <textarea 
+                                class="form-textarea" 
+                                name="whatsapp_message_template" 
+                                rows="8"
+                                placeholder='Olá {{ usuario_nome }}! 
+
+{{ mensagem }}
+
+Data: {{ data_hora }}
+Tipo: {{ tipo_notificacao }}
+
+Atenciosamente,
+Equipe Aurora'
+                            >{{ whatsapp_config.message_template|default:'' }}</textarea>
+                            <small class="form-help">
+                                Template da mensagem WhatsApp. Variáveis disponíveis: {{ usuario_nome }}, {{ mensagem }}, {{ data_hora }}, {{ tipo_notificacao }}, {{ dados_contexto }}
+                            </small>
+                        </div>
+
+                        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+                            <button type="button" class="btn btn-secondary" onclick="testarWhatsAppWebhook()">
+                                <i class="fab fa-whatsapp"></i>
+                                Testar WhatsApp
+                            </button>
+                            <button type="submit" class="btn btn-primary" onclick="salvarWhatsAppConfig(event)">
+                                <i class="fas fa-save"></i>
+                                Salvar Configuração
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Tab: Preferências -->
+        <div id="tab-preferencias" class="tab-content">
+            <div class="card-header">
+                <div>
+                    <h3 class="card-title">Gerenciamento de Preferências de Usuários</h3>
+                    <p style="color: #6b7280; font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                        Configure quais usuários do sistema devem receber notificações de "{{ tipo.nome }}"
+                    </p>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Resumo de Preferências -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; padding: 1.5rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e5e7eb;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 2rem; font-weight: 700; color: #1F3D59;">{{ usuarios_com_status|length }}</div>
+                        <div style="color: #6b7280; font-size: 0.875rem; font-weight: 500;">Total de Usuários</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 2rem; font-weight: 700; color: #059669;">{{ preferencias_count }}</div>
+                        <div style="color: #6b7280; font-size: 0.875rem; font-weight: 500;">Com Notificação Ativa</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 2rem; font-weight: 700; color: #6b7280;">{{ usuarios_sem_notificacao_count }}</div>
+                        <div style="color: #6b7280; font-size: 0.875rem; font-weight: 500;">Sem Notificação</div>
+                    </div>
+                </div>
+
+                <!-- Lista de Todos os Usuários -->
+                <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+                    <div style="background: #f9fafb; padding: 1rem 1.5rem; border-bottom: 1px solid #e5e7eb;">
+                        <h4 style="margin: 0; font-size: 1.1rem; font-weight: 600; color: #1f2937;">
+                            <i class="fas fa-users"></i> Usuários do Sistema
+                        </h4>
+                        <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 0.9rem;">
+                            Clique em "Ativar Notificação" para configurar as preferências de um usuário
+                        </p>
+                    </div>
+                    
+                    <div style="max-height: 600px; overflow-y: auto;">
+                        {% for item in usuarios_com_status %}
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid #f3f4f6; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                            <!-- Informações do Usuário -->
+                            <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
+                                <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1rem;">
+                                    {{ item.usuario.get_full_name.0|default:item.usuario.username.0|upper }}
+                                </div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600; color: #1f2937; font-size: 1rem;">
+                                        {{ item.usuario.get_full_name|default:item.usuario.username }}
+                                    </div>
+                                    <div style="color: #6b7280; font-size: 0.875rem;">
+                                        {{ item.usuario.email }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Status e Ações -->
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                {% if item.tem_preferencia %}
+                                    <!-- Usuário já tem preferência configurada -->
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        {% if item.ativo %}
+                                            <span class="status-badge status-ativo">
+                                                <i class="fas fa-bell"></i> Ativo
+                                            </span>
+                                        {% else %}
+                                            <span class="status-badge status-inativo">
+                                                <i class="fas fa-bell-slash"></i> Pausado
+                                            </span>
+                                        {% endif %}
+                                        
+                                        <!-- Informações da Preferência -->
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; color: #6b7280; font-size: 0.85rem;">
+                                            <i class="{{ item.preferencia.canal_preferido.icone }}"></i>
+                                            <span>{{ item.preferencia.canal_preferido.nome }}</span>
+                                            <span>•</span>
+                                            <span>{{ item.preferencia.horario_inicio|time:"H:i" }}-{{ item.preferencia.horario_fim|time:"H:i" }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button class="btn btn-secondary btn-sm" onclick="editarPreferencia({{ item.preferencia.id }})">
+                                            <i class="fas fa-edit"></i> Editar
+                                        </button>
+                                        {% if item.ativo %}
+                                            <button class="btn btn-sm" style="background: #f59e0b; color: white;" onclick="pausarPreferencia({{ item.preferencia.id }})">
+                                                <i class="fas fa-pause"></i> Pausar
+                                            </button>
+                                        {% else %}
+                                            <button class="btn btn-success btn-sm" onclick="ativarPreferencia({{ item.preferencia.id }})">
+                                                <i class="fas fa-play"></i> Ativar
+                                            </button>
+                                        {% endif %}
+                                        <button class="btn btn-sm" style="background: #dc2626; color: white;" onclick="removerPreferencia({{ item.preferencia.id }}, '{{ item.usuario.get_full_name|default:item.usuario.username }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                {% else %}
+                                    <!-- Usuário não tem preferência configurada -->
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <span style="color: #6b7280; font-size: 0.9rem; font-style: italic;">
+                                            Sem notificação configurada
+                                        </span>
+                                        <button class="btn btn-primary btn-sm" onclick="ativarNotificacaoUsuario({{ item.usuario.id }}, '{{ item.usuario.get_full_name|default:item.usuario.username }}')">
+                                            <i class="fas fa-bell"></i> Ativar Notificação
+                                        </button>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Histórico -->
+        <div id="tab-historico" class="tab-content">
+            <div class="card-header">
+                <h3 class="card-title">Histórico de Notificações Enviadas</h3>
+                <p style="color: #6b7280; font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                    Últimas 50 notificações do tipo "{{ tipo.nome }}"
+                </p>
+            </div>
+            <div class="card-body">
+                {% if notificacoes %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Data/Hora</th>
+                            <th>Destinatário</th>
+                            <th>Canal</th>
+                            <th>Título</th>
+                            <th>Status</th>
+                            <th>Tentativas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for notif in notificacoes %}
+                        <tr>
+                            <td style="white-space: nowrap;">
+                                {{ notif.data_criacao|date:"d/m/Y H:i" }}
+                            </td>
+                            <td>
+                                {% if notif.destinatario %}
+                                    {{ notif.destinatario.username }}
+                                {% else %}
+                                    {{ notif.destinatario_email|default:notif.destinatario_telefone }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                <i class="{{ notif.canal.icone }}"></i>
+                                {{ notif.canal.nome }}
+                            </td>
+                            <td>{{ notif.titulo|truncatechars:40 }}</td>
+                            <td>
+                                {% if notif.status == 'enviada' %}
+                                    <span class="status-badge" style="background: #dcfce7; color: #166534;">
+                                        <i class="fas fa-check"></i> Enviada
+                                    </span>
+                                {% elif notif.status == 'pendente' %}
+                                    <span class="status-badge" style="background: #fef3c7; color: #92400e;">
+                                        <i class="fas fa-clock"></i> Pendente
+                                    </span>
+                                {% elif notif.status == 'falhou' %}
+                                    <span class="status-badge" style="background: #fee2e2; color: #991b1b;">
+                                        <i class="fas fa-times"></i> Falhou
+                                    </span>
+                                {% elif notif.status == 'enviando' %}
+                                    <span class="status-badge" style="background: #dbeafe; color: #1e40af;">
+                                        <i class="fas fa-spinner"></i> Enviando
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span style="font-size: 0.85rem; color: #6b7280;">
+                                    {{ notif.tentativas }}/{{ notif.max_tentativas }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">📊</div>
+                    <div class="empty-state-title">Nenhuma notificação enviada</div>
+                    <div class="empty-state-text">
+                        Ainda não foram enviadas notificações deste tipo
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Sistema de Tabs
+function showTab(tabName) {
+    // Remover active de todas as abas
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    // Ativar aba selecionada
+    event.target.classList.add('active');
+    document.getElementById(`tab-${tabName}`).classList.add('active');
+}
+
+// Toggle collapsible section
+function toggleCollapsible(header) {
+    const content = header.nextElementSibling;
+    const icon = header.querySelector('.collapsible-icon');
+    
+    content.classList.toggle('open');
+    icon.classList.toggle('open');
+}
+
+// Configurar canal específico
+function configurarCanal(canalCodigo, canalId, tipoId) {
+    const container = document.getElementById('canalConfigContainer');
+    
+    // Limpar conteúdo anterior
+    container.innerHTML = '';
+    
+    // Buscar template específico do canal
+    const templateId = canalCodigo + 'ConfigTemplate';
+    const template = document.getElementById(templateId);
+    
+    if (!template) {
+        alert('⚠️ Configuração para este canal ainda não está disponível.');
+        return;
+    }
+    
+    // Clonar e inserir template
+    const clone = template.content.cloneNode(true);
+    container.appendChild(clone);
+    
+    // Scroll suave até a configuração
+    setTimeout(() => {
+        container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
+    
+    // Carregar dados salvos (se existir)
+    carregarConfigCanal(canalCodigo, tipoId);
+}
+
+// Salvar configuração do webhook
+async function salvarWebhookConfig(event) {
+    event.preventDefault();
+    
+    const form = document.getElementById('webhookConfigForm');
+    const formData = new FormData(form);
+    
+    // Validar headers JSON
+    const headersText = document.getElementById('webhookHeaders').value.trim();
+    if (headersText) {
+        try {
+            JSON.parse(headersText);
+        } catch (e) {
+            alert('❌ Erro: O formato dos Headers não é um JSON válido!\n\nVerifique a sintaxe.');
+            return;
+        }
+    }
+    
+    // Preparar dados
+    const data = {
+        tipo_id: formData.get('tipo_id'),
+        webhook_config: {
+            url: formData.get('webhook_url'),
+            method: formData.get('webhook_method'),
+            timeout: parseInt(formData.get('webhook_timeout')),
+            headers: headersText ? JSON.parse(headersText) : {},
+            frequency: formData.get('webhook_frequency'),
+            max_retries: parseInt(formData.get('webhook_retries')),
+            auth_type: formData.get('webhook_auth_type'),
+            verify_ssl: formData.get('webhook_verify_ssl') === 'true',
+            custom_payload: formData.get('webhook_custom_payload') || null
+        }
+    };
+    
+    try {
+        const response = await fetch('/api/notificacoes/webhook/config/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Configuração do webhook salva com sucesso!');
+        } else {
+            alert('❌ Erro ao salvar: ' + (result.error || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('❌ Erro ao salvar configuração: ' + error.message);
+    }
+}
+
+// Testar webhook
+async function testarWebhook() {
+    const url = document.getElementById('webhookUrl').value;
+    
+    if (!url) {
+        alert('⚠️ Por favor, preencha a URL do webhook primeiro!');
+        return;
+    }
+    
+    const tipoId = document.querySelector('input[name="tipo_id"]').value;
+    
+    try {
+        const response = await fetch('/api/notificacoes/webhook/test/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                tipo_id: tipoId,
+                webhook_url: url
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Webhook testado com sucesso!\n\n' + 
+                  'Status: ' + result.status_code + '\n' +
+                  'Tempo de resposta: ' + result.response_time + 'ms');
+        } else {
+            alert('❌ Erro no teste do webhook:\n\n' + (result.error || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('❌ Erro ao testar webhook: ' + error.message);
+    }
+}
+
+// Funções de Gerenciamento de Preferências
+function ativarNotificacaoUsuario(usuarioId, nomeUsuario) {
+    // Buscar canais disponíveis
+    fetch('/api/notificacoes/canais/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.canais.length > 0) {
+                mostrarModalConfiguracaoUsuario(usuarioId, nomeUsuario, data.canais);
+            } else {
+                alert('❌ Erro: Nenhum canal de notificação disponível.');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao buscar canais:', error);
+            alert('❌ Erro ao carregar canais de notificação.');
+        });
+}
+
+function mostrarModalConfiguracaoUsuario(usuarioId, nomeUsuario, canais) {
+    // Criar modal dinâmico
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(0,0,0,0.5); z-index: 1000; display: flex; 
+        align-items: center; justify-content: center;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: white; border-radius: 12px; padding: 2rem; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
+            <h3 style="margin: 0 0 1rem 0; color: #1f2937; font-size: 1.25rem;">
+                <i class="fas fa-bell"></i> Ativar Notificação para ${nomeUsuario}
+            </h3>
+            
+            <form id="configuracaoUsuarioForm">
+                <input type="hidden" name="usuario_id" value="${usuarioId}">
+                <input type="hidden" name="tipo_id" value="{{ tipo.id }}">
+                
+                <div class="form-group">
+                    <label class="form-label">Canal Preferido *</label>
+                    <select class="form-select" name="canal_id" required>
+                        <option value="">Selecione um canal</option>
+                        ${canais.map(canal => `
+                            <option value="${canal.id}">
+                                <i class="${canal.icone}"></i> ${canal.nome}
+                            </option>
+                        `).join('')}
+                    </select>
+                </div>
+                
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Horário Início</label>
+                        <input type="time" class="form-input" name="horario_inicio" value="08:00" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Horário Fim</label>
+                        <input type="time" class="form-input" name="horario_fim" value="18:00" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Dias da Semana *</label>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-top: 0.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal;">
+                            <input type="checkbox" name="dias_semana" value="0" checked> Segunda
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal;">
+                            <input type="checkbox" name="dias_semana" value="1" checked> Terça
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal;">
+                            <input type="checkbox" name="dias_semana" value="2" checked> Quarta
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal;">
+                            <input type="checkbox" name="dias_semana" value="3" checked> Quinta
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal;">
+                            <input type="checkbox" name="dias_semana" value="4" checked> Sexta
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal;">
+                            <input type="checkbox" name="dias_semana" value="5"> Sábado
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal;">
+                            <input type="checkbox" name="dias_semana" value="6"> Domingo
+                        </label>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModalConfiguracao()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Salvar Configuração
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Adicionar evento de submit
+    modal.querySelector('#configuracaoUsuarioForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        salvarConfiguracaoUsuario(this);
+    });
+    
+    // Fechar modal ao clicar fora
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            fecharModalConfiguracao();
+        }
+    });
+}
+
+function fecharModalConfiguracao() {
+    const modal = document.querySelector('div[style*="position: fixed"]');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+async function salvarConfiguracaoUsuario(form) {
+    const formData = new FormData(form);
+    
+    // Coletar dias da semana selecionados
+    const diasSemana = Array.from(form.querySelectorAll('input[name="dias_semana"]:checked'))
+        .map(input => parseInt(input.value));
+    
+    if (diasSemana.length === 0) {
+        alert('❌ Selecione pelo menos um dia da semana.');
+        return;
+    }
+    
+    const data = {
+        usuario_id: formData.get('usuario_id'),
+        tipo_id: formData.get('tipo_id'),
+        canal_id: formData.get('canal_id'),
+        horario_inicio: formData.get('horario_inicio'),
+        horario_fim: formData.get('horario_fim'),
+        dias_semana: diasSemana,
+        ativo: true
+    };
+    
+    try {
+        const response = await fetch('/api/notificacoes/preferencias/criar/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Notificação ativada com sucesso para o usuário!');
+            fecharModalConfiguracao();
+            location.reload();
+        } else {
+            alert('❌ Erro ao ativar notificação: ' + (result.error || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('❌ Erro ao salvar configuração: ' + error.message);
+    }
+}
+
+async function editarPreferencia(preferenciaId) {
+    try {
+        // Buscar dados da preferência atual
+        const response = await fetch(`/api/notificacoes/preferencias/${preferenciaId}/dados/`);
+        const result = await response.json();
+        
+        if (!result.success) {
+            alert('❌ Erro ao carregar dados da preferência: ' + (result.error || 'Erro desconhecido'));
+            return;
+        }
+        
+        // Buscar canais disponíveis
+        const canaisResponse = await fetch('/api/notificacoes/canais/');
+        const canaisResult = await canaisResponse.json();
+        
+        if (!canaisResult.success) {
+            alert('❌ Erro ao carregar canais: ' + (canaisResult.error || 'Erro desconhecido'));
+            return;
+        }
+        
+        mostrarModalEdicaoPreferencia(preferenciaId, result.preferencia, canaisResult.canais);
+        
+    } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+        alert('❌ Erro ao carregar dados da preferência');
+    }
+}
+
+function mostrarModalEdicaoPreferencia(preferenciaId, preferencia, canais) {
+    // Criar modal dinâmico
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(0,0,0,0.5); z-index: 1000; display: flex; 
+        align-items: center; justify-content: center;
+    `;
+    
+    // Converter dias da semana para checkboxes
+    const diasSemana = preferencia.dias_semana || [];
+    const diasCheckboxes = [0,1,2,3,4,5,6].map(dia => {
+        const diasNomes = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+        const checked = diasSemana.includes(dia) ? 'checked' : '';
+        return `
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal;">
+                <input type="checkbox" name="dias_semana" value="${dia}" ${checked}> ${diasNomes[dia]}
+            </label>
+        `;
+    }).join('');
+    
+    modal.innerHTML = `
+        <div style="background: white; border-radius: 12px; padding: 2rem; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
+            <h3 style="margin: 0 0 1rem 0; color: #1f2937; font-size: 1.25rem;">
+                <i class="fas fa-edit"></i> Editar Preferência de Notificação
+            </h3>
+            <p style="color: #6b7280; margin: 0 0 1.5rem 0; font-size: 0.9rem;">
+                Usuário: <strong>${preferencia.usuario_nome}</strong>
+            </p>
+            
+            <form id="edicaoPreferenciaForm">
+                <input type="hidden" name="preferencia_id" value="${preferenciaId}">
+                
+                <div class="form-group">
+                    <label class="form-label">Canal Preferido *</label>
+                    <select class="form-select" name="canal_id" required>
+                        <option value="">Selecione um canal</option>
+                        ${canais.map(canal => `
+                            <option value="${canal.id}" ${canal.id == preferencia.canal_id ? 'selected' : ''}>
+                                ${canal.nome}
+                            </option>
+                        `).join('')}
+                    </select>
+                </div>
+                
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Horário Início</label>
+                        <input type="time" class="form-input" name="horario_inicio" value="${preferencia.horario_inicio}" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Horário Fim</label>
+                        <input type="time" class="form-input" name="horario_fim" value="${preferencia.horario_fim}" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Dias da Semana *</label>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-top: 0.5rem;">
+                        ${diasCheckboxes}
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" name="ativo">
+                        <option value="true" ${preferencia.ativo ? 'selected' : ''}>Ativo</option>
+                        <option value="false" ${!preferencia.ativo ? 'selected' : ''}>Pausado</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModalEdicao()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Adicionar evento de submit
+    modal.querySelector('#edicaoPreferenciaForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        salvarEdicaoPreferencia(this);
+    });
+    
+    // Fechar modal ao clicar fora
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            fecharModalEdicao();
+        }
+    });
+}
+
+function fecharModalEdicao() {
+    const modal = document.querySelector('div[style*="position: fixed"]');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+async function salvarEdicaoPreferencia(form) {
+    const formData = new FormData(form);
+    
+    // Coletar dias da semana selecionados
+    const diasSemana = Array.from(form.querySelectorAll('input[name="dias_semana"]:checked'))
+        .map(input => parseInt(input.value));
+    
+    if (diasSemana.length === 0) {
+        alert('❌ Selecione pelo menos um dia da semana.');
+        return;
+    }
+    
+    const data = {
+        preferencia_id: formData.get('preferencia_id'),
+        canal_id: formData.get('canal_id'),
+        horario_inicio: formData.get('horario_inicio'),
+        horario_fim: formData.get('horario_fim'),
+        dias_semana: diasSemana,
+        ativo: formData.get('ativo') === 'true'
+    };
+    
+    try {
+        const response = await fetch('/api/notificacoes/preferencias/editar/', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Preferência atualizada com sucesso!');
+            fecharModalEdicao();
+            location.reload();
+        } else {
+            alert('❌ Erro ao atualizar preferência: ' + (result.error || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('❌ Erro ao salvar alterações: ' + error.message);
+    }
+}
+
+async function pausarPreferencia(preferenciaId) {
+    if (!confirm('Deseja pausar as notificações para este usuário?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/notificacoes/preferencias/${preferenciaId}/pausar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            alert('✅ Preferência pausada com sucesso!');
+            location.reload();
+        } else {
+            alert('❌ Erro ao pausar: ' + (result.error || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('❌ Erro ao pausar preferência');
+    }
+}
+
+async function ativarPreferencia(preferenciaId) {
+    try {
+        const response = await fetch(`/api/notificacoes/preferencias/${preferenciaId}/ativar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            alert('✅ Preferência ativada com sucesso!');
+            location.reload();
+        } else {
+            alert('❌ Erro ao ativar: ' + (result.error || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('❌ Erro ao ativar preferência');
+    }
+}
+
+async function removerPreferencia(preferenciaId, nomeUsuario) {
+    if (!confirm(`Tem certeza que deseja remover as notificações para "${nomeUsuario}"?\n\nEste usuário não receberá mais notificações deste tipo.`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/notificacoes/preferencias/${preferenciaId}/`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            alert('✅ Preferência removida com sucesso!');
+            location.reload();
+        } else {
+            alert('❌ Erro ao remover: ' + (result.error || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('❌ Erro ao remover preferência');
+    }
+}
+
+// Carregar configuração salva do canal
+async function carregarConfigCanal(canalCodigo, tipoId) {
+    if (canalCodigo === 'webhook') {
+        try {
+            const response = await fetch(`/api/notificacoes/webhook/config/?tipo_id=${tipoId}`);
+            const result = await response.json();
+            
+            if (result.success && result.config) {
+                const config = result.config;
+                
+                // Preencher campos com dados salvos
+                if (document.getElementById('webhookUrl')) {
+                    document.getElementById('webhookUrl').value = config.url || '';
+                    document.getElementById('webhookMethod').value = config.method || 'POST';
+                    document.getElementById('webhookTimeout').value = config.timeout || 30;
+                    document.getElementById('webhookHeaders').value = config.headers_json || '';
+                    document.getElementById('webhookFrequency').value = config.frequency || 'imediato';
+                    document.getElementById('webhookRetries').value = config.max_retries || 3;
+                    
+                    // Configurações avançadas
+                    const authTypeSelect = document.querySelector('[name="webhook_auth_type"]');
+                    const verifySSLSelect = document.querySelector('[name="webhook_verify_ssl"]');
+                    const customPayloadTextarea = document.querySelector('[name="webhook_custom_payload"]');
+                    
+                    if (authTypeSelect) authTypeSelect.value = config.auth_type || 'none';
+                    if (verifySSLSelect) verifySSLSelect.value = config.verify_ssl !== false ? 'true' : 'false';
+                    if (customPayloadTextarea) customPayloadTextarea.value = config.custom_payload || '';
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao carregar configuração do webhook:', error);
+        }
+    } else if (canalCodigo === 'whatsapp') {
+        try {
+            const response = await fetch(`/api/notificacoes/whatsapp/config/?tipo_id=${tipoId}`);
+            const result = await response.json();
+            
+            if (result.success && result.config) {
+                const config = result.config;
+                
+                // Preencher campos com dados salvos
+                const messageTemplateTextarea = document.querySelector('[name="whatsapp_message_template"]');
+                
+                if (messageTemplateTextarea) {
+                    messageTemplateTextarea.value = config.message_template || '';
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao carregar configuração do WhatsApp:', error);
+        }
+    }
+}
+
+// Salvar configuração do WhatsApp
+async function salvarWhatsAppConfig(event) {
+    event.preventDefault();
+    
+    const form = document.getElementById('whatsappConfigForm');
+    const formData = new FormData(form);
+    
+    // Debug: verificar se o campo está sendo capturado
+    const templateValue = formData.get('whatsapp_message_template');
+    console.log('Valor do template capturado:', templateValue);
+    console.log('Tipo ID capturado:', formData.get('tipo_id'));
+    
+    // Validação removida - apenas template de mensagem é configurável
+    
+    // Preparar dados
+    const data = {
+        tipo_id: formData.get('tipo_id'),
+        whatsapp_config: {
+            url: 'https://automation-n8n.v4riem.easypanel.host/webhook/5a88a51b-f099-4ea9-afb5-68a10254bcdd', // URL fixa
+            method: 'POST', // Método fixo
+            timeout: 30, // Timeout fixo
+            headers: {}, // Headers vazios
+            frequency: 'imediato', // Frequência fixa
+            max_retries: 3, // Retry fixo
+            message_template: formData.get('whatsapp_message_template') || null,
+            phone_format: 'e164' // Formato fixo
+        }
+    };
+    
+    console.log('Dados sendo enviados:', data);
+    
+        try {
+            console.log('Enviando requisição para:', '/api/notificacoes/whatsapp/config/salvar/');
+            const response = await fetch('/api/notificacoes/whatsapp/config/salvar/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            });
+            
+            console.log('Status da resposta:', response.status);
+            const result = await response.json();
+            console.log('Resposta da API:', result);
+        
+        if (result.success) {
+            alert('✅ Configuração do WhatsApp salva com sucesso!');
+        } else {
+            alert('❌ Erro ao salvar: ' + (result.error || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('❌ Erro ao salvar configuração: ' + error.message);
+    }
+}
+
+// Alternar status do canal
+async function toggleCanalStatus(canalId, ativo) {
+    try {
+        const response = await fetch(`/api/notificacoes/canais/${canalId}/toggle/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                ativo: ativo
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Atualizar o texto do toggle
+            const toggleText = document.querySelector(`#canal_${canalId}`).parentElement.nextElementSibling;
+            if (toggleText) {
+                toggleText.textContent = ativo ? 'Ativo' : 'Inativo';
+            }
+            
+            // Mostrar mensagem de sucesso
+            const status = ativo ? 'ativado' : 'desativado';
+            alert(`✅ Canal ${status} com sucesso!`);
+        } else {
+            alert('❌ Erro ao alterar status do canal: ' + (result.message || 'Erro desconhecido'));
+            // Reverter o toggle
+            document.getElementById(`canal_${canalId}`).checked = !ativo;
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('❌ Erro ao alterar status do canal: ' + error.message);
+        // Reverter o toggle
+        document.getElementById(`canal_${canalId}`).checked = !ativo;
+    }
+}
+
+// Testar webhook do WhatsApp
+async function testarWhatsAppWebhook() {
+    const url = 'https://automation-n8n.v4riem.easypanel.host/webhook/5a88a51b-f099-4ea9-afb5-68a10254bcdd';
+    const tipoId = document.querySelector('input[name="tipo_id"]').value;
+    
+    // Capturar o template atual do formulário
+    const templateTextarea = document.querySelector('[name="whatsapp_message_template"]');
+    const templateAtual = templateTextarea ? templateTextarea.value : '';
+    
+    console.log('Template atual para teste:', templateAtual);
+    
+    try {
+        const response = await fetch('/api/notificacoes/whatsapp/test/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                tipo_id: tipoId,
+                whatsapp_webhook_url: url,
+                message_template: templateAtual
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            let mensagem = '✅ Webhook do WhatsApp testado com sucesso!\n\n' + 
+                          'Status: ' + result.status_code + '\n' +
+                          'Tempo de resposta: ' + result.response_time + 'ms\n\n';
+            
+            if (result.template_usado) {
+                mensagem += '🎯 Template personalizado foi usado no teste!\n\n';
+            }
+            
+            mensagem += 'Mensagem de teste enviada para o N8N!';
+            
+            alert(mensagem);
+        } else {
+            alert('❌ Erro no teste do webhook do WhatsApp:\n\n' + (result.error || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('❌ Erro ao testar webhook do WhatsApp: ' + error.message);
+    }
+}
+
+// Utility function
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}
+

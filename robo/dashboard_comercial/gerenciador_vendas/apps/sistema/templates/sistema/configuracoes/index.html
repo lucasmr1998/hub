@@ -1,0 +1,104 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Configuracoes - Megalink{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+    <div>
+        <h1 class="page-title">Configuracoes</h1>
+        <p class="page-subtitle">Gerencie as configuracoes e parametros do sistema</p>
+    </div>
+</div>
+
+<!-- Config cards grid -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:32px;">
+
+    <a href="{% url 'sistema:configuracoes_usuarios' %}" class="card" style="padding:24px;text-decoration:none;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';this.style.borderColor='var(--primary)'" onmouseout="this.style.boxShadow='';this.style.borderColor='var(--border)'">
+        <div style="font-size:14px;margin-bottom:12px;"><i class="fas fa-users-cog" style="color:var(--primary);font-size:20px;"></i></div>
+        <div style="font-size:15px;font-weight:600;color:var(--text-main);margin-bottom:6px;">Gerenciar Usuarios</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5;margin-bottom:14px;">Crie, edite e gerencie usuarios do sistema, permissoes e grupos de acesso</div>
+        <span class="badge badge-primary">Gerenciar</span>
+    </a>
+
+    <a href="{% url 'notificacoes:configuracoes_notificacoes' %}" class="card" style="padding:24px;text-decoration:none;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';this.style.borderColor='var(--primary)'" onmouseout="this.style.boxShadow='';this.style.borderColor='var(--border)'">
+        <div style="font-size:14px;margin-bottom:12px;"><i class="fas fa-bell" style="color:var(--warning);font-size:20px;"></i></div>
+        <div style="font-size:15px;font-weight:600;color:var(--text-main);margin-bottom:6px;">Sistema de Notificacoes</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5;margin-bottom:14px;">Configure notificacoes, templates, preferencias e visualize estatisticas</div>
+        <span class="badge badge-warning">Configurar</span>
+    </a>
+
+    <a href="{% url 'comercial_cadastro:configuracoes_cadastro' %}" class="card" style="padding:24px;text-decoration:none;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';this.style.borderColor='var(--primary)'" onmouseout="this.style.boxShadow='';this.style.borderColor='var(--border)'">
+        <div style="font-size:14px;margin-bottom:12px;"><i class="fas fa-clipboard-list" style="color:var(--success);font-size:20px;"></i></div>
+        <div style="font-size:15px;font-weight:600;color:var(--text-main);margin-bottom:6px;">Configuracoes de Cadastro</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5;margin-bottom:14px;">Configure as paginas de cadastro de clientes, campos obrigatorios e validacoes</div>
+        <span class="badge badge-success">Configurar</span>
+    </a>
+
+    <a href="{% url 'comercial_cadastro:planos_internet' %}" class="card" style="padding:24px;text-decoration:none;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';this.style.borderColor='var(--primary)'" onmouseout="this.style.boxShadow='';this.style.borderColor='var(--border)'">
+        <div style="font-size:14px;margin-bottom:12px;"><i class="fas fa-wifi" style="color:var(--info);font-size:20px;"></i></div>
+        <div style="font-size:15px;font-weight:600;color:var(--text-main);margin-bottom:6px;">Planos de Internet</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5;margin-bottom:14px;">Gerencie os planos de internet disponiveis para venda</div>
+        <span class="badge badge-info">Configurar</span>
+    </a>
+
+    <a href="{% url 'comercial_cadastro:opcoes_vencimento' %}" class="card" style="padding:24px;text-decoration:none;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';this.style.borderColor='var(--primary)'" onmouseout="this.style.boxShadow='';this.style.borderColor='var(--border)'">
+        <div style="font-size:14px;margin-bottom:12px;"><i class="fas fa-calendar-alt" style="color:var(--primary);font-size:20px;"></i></div>
+        <div style="font-size:15px;font-weight:600;color:var(--text-main);margin-bottom:6px;">Opcoes de Vencimento</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5;margin-bottom:14px;">Configure os dias de vencimento disponiveis para os clientes</div>
+        <span class="badge badge-primary">Configurar</span>
+    </a>
+
+    <a href="{% url 'marketing_campanhas:campanhas_trafego' %}" class="card" style="padding:24px;text-decoration:none;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';this.style.borderColor='var(--primary)'" onmouseout="this.style.boxShadow='';this.style.borderColor='var(--border)'">
+        <div style="font-size:14px;margin-bottom:12px;"><i class="fas fa-bullhorn" style="color:var(--danger);font-size:20px;"></i></div>
+        <div style="font-size:15px;font-weight:600;color:var(--text-main);margin-bottom:6px;">Campanhas de Trafego</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5;margin-bottom:14px;">Gerencie campanhas de marketing e rastreie a origem dos leads</div>
+        <span class="badge badge-danger">Configurar</span>
+    </a>
+
+    <a href="{% url 'comercial_atendimento:fluxos_atendimento' %}" class="card" style="padding:24px;text-decoration:none;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';this.style.borderColor='var(--primary)'" onmouseout="this.style.boxShadow='';this.style.borderColor='var(--border)'">
+        <div style="font-size:14px;margin-bottom:12px;"><i class="fas fa-project-diagram" style="color:var(--text-muted);font-size:20px;"></i></div>
+        <div style="font-size:15px;font-weight:600;color:var(--text-main);margin-bottom:6px;">Fluxos de Atendimento</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5;margin-bottom:14px;">Crie e gerencie fluxos de atendimento automatizados</div>
+        <span class="badge badge-muted">Gerenciar</span>
+    </a>
+
+    <a href="{% url 'comercial_atendimento:questoes_fluxo' %}" class="card" style="padding:24px;text-decoration:none;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';this.style.borderColor='var(--primary)'" onmouseout="this.style.boxShadow='';this.style.borderColor='var(--border)'">
+        <div style="font-size:14px;margin-bottom:12px;"><i class="fas fa-question-circle" style="color:var(--text-muted);font-size:20px;"></i></div>
+        <div style="font-size:15px;font-weight:600;color:var(--text-main);margin-bottom:6px;">Questoes do Fluxo</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5;margin-bottom:14px;">Configure as questoes e validacoes dos fluxos de atendimento</div>
+        <span class="badge badge-muted">Gerenciar</span>
+    </a>
+
+    <a href="{% url 'sistema:configuracoes_recontato' %}" class="card" style="padding:24px;text-decoration:none;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';this.style.borderColor='var(--primary)'" onmouseout="this.style.boxShadow='';this.style.borderColor='var(--border)'">
+        <div style="font-size:14px;margin-bottom:12px;"><i class="fas fa-redo" style="color:var(--warning);font-size:20px;"></i></div>
+        <div style="font-size:15px;font-weight:600;color:var(--text-main);margin-bottom:6px;">Recontato</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5;margin-bottom:14px;">Configure regras de recontato automatico para leads</div>
+        <span class="badge badge-warning">Configurar</span>
+    </a>
+
+</div>
+
+<!-- Stats -->
+<div class="card" style="padding:20px;">
+    <div style="font-size:15px;font-weight:600;color:var(--text-main);margin-bottom:16px;">Estatisticas do Sistema</div>
+    <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="stat-card">
+            <div class="stat-label">CONFIGURACOES ATIVAS</div>
+            <div class="stat-value" id="totalConfiguracoes">5</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">FLUXOS ATIVOS</div>
+            <div class="stat-value" id="totalFluxos">3</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">QUESTOES CONFIGURADAS</div>
+            <div class="stat-value" id="totalQuestoes">15</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">PLANOS DISPONIVEIS</div>
+            <div class="stat-value" id="totalPlanos">4</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -34,10 +34,10 @@ def configuracoes_notificacoes_view(request):
     """View para gerenciar sistema de notificações (temporariamente desativado)"""
     if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
         messages.error(request, 'Você não tem permissão para acessar esta página.')
-        return redirect('vendas_web:dashboard1')
+        return redirect('dashboard:dashboard1')
 
     messages.info(request, 'Sistema de notificações em manutenção. Em breve será reimplementado.')
-    return redirect('vendas_web:dashboard1')
+    return redirect('dashboard:dashboard1')
 
 
 @login_required
@@ -46,14 +46,14 @@ def tipo_notificacao_detalhes_view(request, tipo_id):
     # Verificar se o usuário tem permissão
     if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
         messages.error(request, 'Você não tem permissão para acessar esta página.')
-        return redirect('vendas_web:dashboard1')
+        return redirect('dashboard:dashboard1')
 
     # Buscar o tipo de notificação
     try:
         tipo = TipoNotificacao.objects.get(id=tipo_id)
     except TipoNotificacao.DoesNotExist:
         messages.error(request, 'Tipo de notificação não encontrado.')
-        return redirect('vendas_web:configuracoes_notificacoes')
+        return redirect('notificacoes:configuracoes_notificacoes')
 
     # Buscar todos os canais e verificar quais têm template para este tipo
     canais = CanalNotificacao.objects.all().order_by('nome')
@@ -176,7 +176,7 @@ def tipo_notificacao_detalhes_view(request, tipo_id):
         'whatsapp_config': whatsapp_config,
     }
 
-    return render(request, 'vendas_web/configuracoes/tipo_notificacao_detalhes.html', context)
+    return render(request, 'notificacoes/tipo_notificacao_detalhes.html', context)
 
 
 # ============================================================================

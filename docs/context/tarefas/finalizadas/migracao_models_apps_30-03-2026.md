@@ -44,11 +44,33 @@ Os models já foram migrados para os apps modulares (29/03). Restavam apps legad
   - [x] apps/notificacoes/admin.py — TipoNotificacao, CanalNotificacao, PreferenciaNotificacao, Notificacao, TemplateNotificacao
   - [x] apps/marketing/campanhas/admin.py — CampanhaTrafego, DeteccaoCampanha
   - [x] vendas_web/admin.py esvaziado (apenas comentarios de referencia)
+- [x] Phase 4: Templates migrados para diretórios dos apps (31/03)
+    - [x] apps/sistema/templates/sistema/ — login.html, configuracoes/{index,usuarios,recontato}.html
+    - [x] apps/dashboard/templates/dashboard/ — 12 templates (dashboard, new_dash, vendas, relatorios, ajuda, api_swagger, n8n_guide, etc.)
+    - [x] apps/comercial/leads/templates/comercial/leads/ — leads.html
+    - [x] apps/comercial/cadastro/templates/comercial/cadastro/ — cadastro.html, configuracoes/{cadastro,planos,vencimentos}.html
+    - [x] apps/comercial/atendimento/templates/comercial/atendimento/ — fluxos.html, questoes.html
+    - [x] apps/notificacoes/templates/notificacoes/ — notificacoes.html, tipo_notificacao_detalhes.html
+    - [x] apps/marketing/campanhas/templates/marketing/campanhas/ — campanhas.html
+    - [x] render() calls atualizados em todas as views dos apps
+    - [x] {% extends 'vendas_web/base.html' %} mantido (base.html fica no vendas_web por ora)
+    - [x] Templates originais preservados em vendas_web/templates/ (sem exclusao)
 - [ ] Remover monkey-patch de User em `vendas_web/models.py`
-- [ ] Migrar views/URLs do `vendas_web` para apps modulares (escopo grande, tarefa separada)
+- [x] Migrar views/URLs do `vendas_web` para apps modulares
   - [x] Dashboard & Relatórios: 29 views migradas para `apps/dashboard/views.py` (31/03)
   - [x] URLs atualizadas em `vendas_web/urls.py` para importar de `apps.dashboard`
   - [x] Funil insights migrado de `vendas_web/funil_insights.py` para `apps/dashboard/views.py`
+  - [x] Phase 5: URLs migradas para urls.py de cada app modular (31/03)
+    - [x] apps/sistema/urls.py — auth, configuracoes, usuarios (10 routes)
+    - [x] apps/comercial/leads/urls.py — leads, prospectos, historicos, vendas (20 routes)
+    - [x] apps/comercial/atendimento/urls.py — fluxos, questoes, atendimentos, N8N (38 routes)
+    - [x] apps/comercial/cadastro/urls.py — cadastro, planos, vencimentos, CEP (12 routes)
+    - [x] apps/comercial/viabilidade/urls.py — viabilidade tecnica (1 route)
+    - [x] apps/notificacoes/urls.py — notificacoes, templates, canais, whatsapp (25 routes)
+    - [x] apps/marketing/campanhas/urls.py — campanhas de trafego (4 routes)
+    - [x] apps/dashboard/urls.py — dashboard, relatorios, analise, docs (29 routes)
+    - [x] gerenciador_vendas/urls.py atualizado com includes modulares
+    - [x] vendas_web/urls.py esvaziado (todas as rotas migradas)
 - [ ] Remover pastas `crm/` e `integracoes/` legadas da raiz (após validação em produção)
 
 ---

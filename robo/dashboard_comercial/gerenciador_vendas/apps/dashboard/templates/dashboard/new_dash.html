@@ -1,0 +1,563 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Dashboard - Megalink{% endblock %}
+
+{% block custom_css %}
+<style>
+    /* ── Dashboard-specific overrides ──────────────────────────── */
+    .dash-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+
+    .dash-stat {
+        background: var(--bg-white);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px 24px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .dash-stat:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+
+    .dash-stat.active {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+    }
+
+    .dash-stat-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+    }
+
+    .dash-stat-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--text-main);
+        line-height: 1;
+        margin-bottom: 6px;
+    }
+
+    .dash-stat-change {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-light);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .dash-stat-change.positive { color: var(--success); }
+    .dash-stat-change.negative { color: var(--danger); }
+
+    .dash-stat-change .badge-pct {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 6px;
+        background: var(--border-light);
+        color: var(--text-muted);
+    }
+
+    .dash-stat-change.positive .badge-pct { background: var(--success-light); color: var(--success-dark); }
+    .dash-stat-change.negative .badge-pct { background: var(--danger-light); color: var(--danger-dark); }
+
+    /* Chart card */
+    .chart-wrap {
+        background: var(--bg-white);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+    }
+
+    .chart-wrap-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+
+    .chart-wrap-title { font-size: 16px; font-weight: 600; color: var(--text-main); }
+    .chart-wrap-subtitle { font-size: 13px; color: var(--text-muted); }
+
+    .chart-area { position: relative; height: 300px; }
+    .chart-area canvas { width: 100% !important; height: 100% !important; }
+
+    .chart-overlay {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-light);
+        font-size: 14px;
+        background: rgba(255,255,255,0.8);
+    }
+
+    /* Conversions section */
+    .conversions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+    }
+
+    .conversion-card {
+        background: var(--bg-white);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px;
+        transition: box-shadow 0.2s;
+    }
+
+    .conversion-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+
+    .conversion-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    .conversion-separator {
+        height: 1px;
+        background: var(--border-light);
+        margin: 10px 0;
+    }
+
+    .conversion-field {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 3px 0;
+        font-size: 13px;
+    }
+
+    .field-label { color: var(--text-muted); }
+    .field-value { color: var(--text-secondary); font-weight: 500; }
+
+    .conversions-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 16px;
+        font-size: 13px;
+        color: var(--text-muted);
+    }
+
+    .view-all-link { color: var(--primary); font-weight: 600; }
+    .view-all-link:hover { text-decoration: underline; }
+
+    /* Loading */
+    .dash-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 80px 20px;
+        color: var(--text-light);
+        gap: 12px;
+    }
+
+    .dash-loading i { font-size: 24px; }
+
+    .error-message {
+        background: var(--danger-light);
+        border: 1px solid #fecaca;
+        color: var(--danger-dark);
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin: 16px 0;
+        text-align: center;
+        font-size: 14px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .dash-stats { grid-template-columns: repeat(2,1fr); }
+        .chart-area { height: 220px; }
+    }
+    @media (max-width: 480px) {
+        .dash-stats { grid-template-columns: 1fr; }
+        .dash-stat-value { font-size: 24px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Skeleton Loading -->
+<div id="loading">
+    <div class="dash-stats">
+        <div class="skeleton skeleton-stat"></div>
+        <div class="skeleton skeleton-stat"></div>
+        <div class="skeleton skeleton-stat"></div>
+        <div class="skeleton skeleton-stat"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:7fr 3fr;gap:20px;">
+        <div class="skeleton" style="height:340px;border-radius:12px;"></div>
+        <div class="skeleton" style="height:340px;border-radius:12px;"></div>
+    </div>
+</div>
+
+<!-- Main dashboard (hidden until loaded) -->
+<div id="mainContent" style="display:none;">
+    <!-- Stat cards -->
+    <div class="dash-stats" id="statsGrid">
+        <div class="dash-stat" data-series="atendimentos">
+            <div class="dash-stat-label">ATENDIMENTOS</div>
+            <div class="dash-stat-value" id="fluxosInicializados">0</div>
+            <div class="dash-stat-change neutral" id="fluxosChangeWrap">
+                <span class="badge-pct" id="fluxosPct">0.00%</span>
+                <span id="fluxosChange">Fluxos inicializados</span>
+            </div>
+        </div>
+
+        <div class="dash-stat active" data-series="leads">
+            <div class="dash-stat-label">LEADS</div>
+            <div class="dash-stat-value" id="leadsCadastrados">0</div>
+            <div class="dash-stat-change neutral" id="leadsChangeWrap">
+                <span class="badge-pct" id="leadsPct">0.00%</span>
+                <span id="leadsChange">Leads cadastrados</span>
+            </div>
+        </div>
+
+        <div class="dash-stat" data-series="prospectos">
+            <div class="dash-stat-label">PROSPECTOS</div>
+            <div class="dash-stat-value" id="totalProspectos">0</div>
+            <div class="dash-stat-change neutral" id="prospectosChangeWrap">
+                <span class="badge-pct" id="prospectosPct">0.00%</span>
+                <span id="prospectosChange">Prospectos HubSoft</span>
+            </div>
+        </div>
+
+        <div class="dash-stat" data-series="vendas">
+            <div class="dash-stat-label">CLIENTES</div>
+            <div class="dash-stat-value" id="vendasValidadas">0</div>
+            <div class="dash-stat-change neutral" id="vendasChangeWrap">
+                <span class="badge-pct" id="vendasPct">0.00%</span>
+                <span id="vendasChange">Clientes HubSoft</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts row -->
+    <div style="display:grid; grid-template-columns:7fr 3fr; gap:20px; margin-bottom:24px;">
+        <!-- Line chart -->
+        <div class="chart-wrap">
+            <div class="chart-wrap-header">
+                <div>
+                    <div class="chart-wrap-title">Evolucao Diaria (Ultimos 7 dias)</div>
+                    <div class="chart-wrap-subtitle">Leads capturados por dia</div>
+                </div>
+                <i id="trendsStatus" class="fas fa-info-circle" style="color:var(--text-light);visibility:hidden;" title=""></i>
+            </div>
+            <div class="chart-area">
+                <canvas id="trendsChart"></canvas>
+                <div id="trendsOverlay" class="chart-overlay" style="display:none;"></div>
+            </div>
+        </div>
+
+        <!-- Recent leads card -->
+        <div class="chart-wrap">
+            <div class="chart-wrap-header">
+                <div class="chart-wrap-title">Leads Recentes</div>
+                <a href="{% url 'comercial_leads:leads' %}" class="view-all-link">Ver todos</a>
+            </div>
+            <div id="conversoesGrid" style="font-size:13px; color:var(--text-muted);">
+                Nenhum lead ainda.
+            </div>
+            <div class="conversions-footer">
+                <div id="conversoesInfo"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error -->
+    <div id="errorMessage" class="error-message" style="display:none;"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // URLs das APIs
+    const API_URLS = {
+        data: '{% url "dashboard:dashboard_data" %}',
+        charts: '{% url "dashboard:dashboard_charts" %}',
+        tables: '{% url "dashboard:dashboard_tables" %}',
+        leads: '{% url "dashboard:dashboard_leads" %}',
+        prospectos: '{% url "dashboard:dashboard_prospectos" %}',
+        historico: '{% url "dashboard:dashboard_historico" %}',
+        realtimeContatos: '{% url "dashboard:dashboard_contatos_realtime" %}',
+        ultimasConversoes: '{% url "dashboard:dashboard_ultimas_conversoes" %}'
+    };
+
+    // ── Chart rendering (Canvas) ──────────────────────────────────
+    function drawLineChartOnCanvas(canvas, labels, values, options = {}) {
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const parent = canvas.parentElement;
+
+        requestAnimationFrame(() => {
+            let width = parent ? parent.clientWidth : 600;
+            let height = parent ? parent.clientHeight : 300;
+            width = Math.max(280, width);
+            height = Math.max(180, height);
+
+            canvas.width = Math.floor(width * dpr);
+            canvas.height = Math.floor(height * dpr);
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            const pad = { top: 24, right: 16, bottom: 32, left: 40 };
+            const gridColor = '#e5e7eb';
+            const lineColor = options.lineColor || '#3b82f6';
+            const fillColor = options.fillColor || 'rgba(59,130,246,0.08)';
+            const textColor = '#94a3b8';
+            const font = '11px Inter, system-ui, sans-serif';
+
+            ctx.clearRect(0, 0, width, height);
+            const innerW = width - pad.left - pad.right;
+            const innerH = height - pad.top - pad.bottom;
+            if (innerW <= 0 || innerH <= 0 || !values || !values.length) return;
+
+            const minVal = Math.min(0, Math.min(...values));
+            const maxVal = Math.max(1, Math.max(...values));
+            const p = (maxVal - minVal) * 0.1;
+            const yMin = minVal - p, yMax = maxVal + p, yRange = yMax - yMin || 1;
+            const xStep = values.length > 1 ? innerW / (values.length - 1) : innerW;
+            const yToPix = v => pad.top + innerH - ((v - yMin) / yRange) * innerH;
+
+            // Grid
+            ctx.strokeStyle = gridColor; ctx.lineWidth = 1; ctx.font = font;
+            ctx.fillStyle = textColor; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+            for (let i = 0; i <= 5; i++) {
+                const t = i / 5;
+                const yPix = pad.top + t * innerH;
+                ctx.beginPath(); ctx.moveTo(pad.left, yPix); ctx.lineTo(pad.left + innerW, yPix); ctx.stroke();
+                ctx.fillText(String(Math.round((yMin + (1 - t) * yRange) * 100) / 100), pad.left - 6, yPix);
+            }
+
+            // Line
+            ctx.lineWidth = 2; ctx.strokeStyle = lineColor;
+            ctx.beginPath();
+            for (let i = 0; i < values.length; i++) {
+                const x = pad.left + i * xStep, y = yToPix(values[i]);
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Fill
+            ctx.fillStyle = fillColor;
+            ctx.lineTo(pad.left + innerW, pad.top + innerH);
+            ctx.lineTo(pad.left, pad.top + innerH);
+            ctx.closePath(); ctx.fill();
+
+            // Dots
+            ctx.fillStyle = lineColor;
+            for (let i = 0; i < values.length; i++) {
+                ctx.beginPath(); ctx.arc(pad.left + i * xStep, yToPix(values[i]), 3, 0, Math.PI * 2); ctx.fill();
+            }
+
+            // X labels
+            ctx.fillStyle = textColor; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+            const step = Math.ceil(labels.length / 7);
+            for (let i = 0; i < labels.length; i += step) {
+                ctx.fillText(String(labels[i]), pad.left + i * xStep, pad.top + innerH + 8);
+            }
+
+            canvas._lineChartState = { labels, values, padding: pad, innerW, innerH, xStep, yToPix, lineColor, dpr, width, height };
+        });
+    }
+
+    // ── Period state ──────────────────────────────────────────────
+    let SELECTED_START = null, SELECTED_END = null;
+    function formatDateYMD(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+    function buildUrlWithRange(base) {
+        const url = new URL(base, location.origin);
+        if (SELECTED_START) url.searchParams.set('start', SELECTED_START);
+        if (SELECTED_END) url.searchParams.set('end', SELECTED_END);
+        return url.toString();
+    }
+    function initializeDateRangeDefaults() {
+        const today = new Date();
+        SELECTED_START = formatDateYMD(new Date(today.getFullYear(), today.getMonth(), 1));
+        SELECTED_END = formatDateYMD(today);
+    }
+
+    // ── Retry fetch ───────────────────────────────────────────────
+    let _retryCount = 0;
+    const _RETRY_DELAYS = [2,3,5,8,13,21];
+    async function fetchComRetry(url, opts = {}) {
+        while (_retryCount <= 30) {
+            try {
+                const resp = await fetch(url, { ...opts, signal: AbortSignal.timeout(15000) });
+                if (resp.status >= 502 && resp.status <= 504) throw new Error(`HTTP ${resp.status}`);
+                const ct = resp.headers.get('content-type') || '';
+                if (!ct.includes('application/json')) throw new Error('Non-JSON');
+                _retryCount = 0;
+                return resp;
+            } catch (err) {
+                _retryCount++;
+                if (_retryCount > 30) throw err;
+                await new Promise(r => setTimeout(r, _RETRY_DELAYS[Math.min(_retryCount-1, _RETRY_DELAYS.length-1)] * 1000));
+            }
+        }
+    }
+
+    function showError(msg) {
+        if (/503|502|504|JSON/i.test(msg)) return;
+        const el = document.getElementById('errorMessage');
+        if (el) { el.textContent = msg; el.style.display = 'block'; }
+    }
+    function hideError() { const el = document.getElementById('errorMessage'); if (el) el.style.display = 'none'; }
+
+    // ── Load data ─────────────────────────────────────────────────
+    async function loadDashboardData() {
+        try {
+            const resp = await fetchComRetry(buildUrlWithRange(API_URLS.data));
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            if (data.error) throw new Error(data.error);
+            const s = data.stats;
+            document.getElementById('fluxosInicializados').textContent = s.atendimentos;
+            document.getElementById('leadsCadastrados').textContent = s.leads;
+            document.getElementById('totalProspectos').textContent = s.prospectos;
+            document.getElementById('vendasValidadas').textContent = s.vendas;
+
+            const fmt = (v, d) => { const sn = d >= 0 ? '+' : ''; return `${v} (${sn}${d})`; };
+            document.getElementById('fluxosPct').textContent = s.atendimentos_variacao;
+            document.getElementById('leadsPct').textContent = s.leads_variacao;
+            document.getElementById('prospectosPct').textContent = s.prospectos_variacao;
+            document.getElementById('vendasPct').textContent = s.vendas_variacao;
+
+            // Update change classes
+            [['fluxosChangeWrap', s.atendimentos_diff], ['leadsChangeWrap', s.leads_diff],
+             ['prospectosChangeWrap', s.prospectos_diff], ['vendasChangeWrap', s.vendas_diff]].forEach(([id, diff]) => {
+                const el = document.getElementById(id);
+                if (el) { el.classList.remove('positive','negative','neutral'); el.classList.add(diff > 0 ? 'positive' : diff < 0 ? 'negative' : 'neutral'); }
+            });
+            hideError();
+        } catch (e) { showError(`Erro: ${e.message}`); }
+    }
+
+    async function loadChartsData() {
+        try {
+            const resp = await fetchComRetry(buildUrlWithRange(API_URLS.charts));
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            if (data.error) throw new Error(data.error);
+
+            if (Array.isArray(data.leadsUltimos7Dias) && data.leadsUltimos7Dias.length) {
+                updateTrendsChart(data.leadsUltimos7Dias);
+                document.getElementById('trendsOverlay').style.display = 'none';
+            } else {
+                document.getElementById('trendsOverlay').textContent = 'Sem dados para o periodo.';
+                document.getElementById('trendsOverlay').style.display = 'flex';
+            }
+
+            window.TRENDS_SERIES = {
+                atendimentos: data.atendimentosUltimos7Dias,
+                leads: data.leadsUltimos7Dias,
+                prospectos: data.prospectosUltimos7Dias,
+                vendas: data.vendasUltimos7Dias
+            };
+            hideError();
+        } catch (e) {
+            document.getElementById('trendsOverlay').textContent = 'Erro ao carregar graficos.';
+            document.getElementById('trendsOverlay').style.display = 'flex';
+        }
+    }
+
+    async function loadUltimasConversoes() {
+        try {
+            const resp = await fetchComRetry(buildUrlWithRange(API_URLS.ultimasConversoes));
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            if (data.error) throw new Error(data.error);
+            updateConversaoCards(data.conversoes);
+        } catch (e) {}
+    }
+
+    function updateTrendsChart(data) {
+        const canvas = document.getElementById('trendsChart');
+        if (!canvas) return;
+        const labels = data.map(i => i.date);
+        const values = data.map(i => Number(i.count) || 0);
+        setTimeout(() => drawLineChartOnCanvas(canvas, labels, values, { lineColor: '#3b82f6', fillColor: 'rgba(59,130,246,0.08)' }), 100);
+    }
+
+    function updateConversaoCards(conversoes) {
+        const grid = document.getElementById('conversoesGrid');
+        const info = document.getElementById('conversoesInfo');
+        if (!grid) return;
+        if (!conversoes || !conversoes.length) {
+            grid.innerHTML = '<span style="color:var(--text-light)">Nenhum lead ainda.</span>';
+            return;
+        }
+        grid.innerHTML = conversoes.slice(0, 5).map(c => `
+            <div style="padding:10px 0; border-bottom:1px solid var(--border-light); display:flex; justify-content:space-between; align-items:center; gap:12px;">
+                <div style="min-width:0; flex:1;">
+                    <div class="truncate" style="font-weight:600; color:var(--text-main); font-size:13px;" title="${c.nome}">${c.nome}</div>
+                    <div class="truncate" style="font-size:12px; color:var(--text-muted);">${c.servico_nome || ''}</div>
+                </div>
+                <span class="badge ${c.ativo ? 'badge-success' : 'badge-muted'}" style="flex-shrink:0;">${c.ativo ? 'Ativo' : 'Inativo'}</span>
+            </div>
+        `).join('');
+        if (info) info.innerHTML = `<span>${conversoes.length} conversoes</span>`;
+    }
+
+    function setTrendsStatus(msg, isError, tooltip) {
+        const el = document.getElementById('trendsStatus');
+        if (!el) return;
+        el.title = tooltip || msg || '';
+        el.style.visibility = msg ? 'visible' : 'hidden';
+    }
+
+    function setTrendsOverlay(msg) {
+        const o = document.getElementById('trendsOverlay');
+        if (!o) return;
+        if (msg) { o.textContent = msg; o.style.display = 'flex'; } else { o.style.display = 'none'; }
+    }
+
+    // ── Init ──────────────────────────────────────────────────────
+    async function refreshDashboard() {
+        await Promise.allSettled([loadDashboardData(), loadChartsData(), loadUltimasConversoes()]);
+    }
+
+    document.addEventListener('DOMContentLoaded', async function() {
+        initializeDateRangeDefaults();
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+        await refreshDashboard();
+
+        // Click stat cards to switch chart series
+        document.querySelectorAll('.dash-stat').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.dash-stat').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                const key = card.dataset.series;
+                if (window.TRENDS_SERIES && window.TRENDS_SERIES[key]) {
+                    updateTrendsChart(window.TRENDS_SERIES[key]);
+                }
+            });
+        });
+
+        // Auto-refresh (registrado para cleanup SPA)
+        window._pageIntervals = window._pageIntervals || [];
+        window._pageIntervals.push(setInterval(refreshDashboard, 30000));
+    });
+
+    // Resize chart on window resize
+    window.addEventListener('resize', () => {
+        const canvas = document.getElementById('trendsChart');
+        if (canvas && canvas._lineChartState) {
+            const { labels, values } = canvas._lineChartState;
+            drawLineChartOnCanvas(canvas, labels, values, { lineColor: '#3b82f6', fillColor: 'rgba(59,130,246,0.08)' });
+        }
+    });
+</script>
+{% endblock %}

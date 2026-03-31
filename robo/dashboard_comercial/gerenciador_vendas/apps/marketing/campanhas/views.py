@@ -38,7 +38,7 @@ def campanhas_trafego_view(request):
     total_deteccoes = sum(c.contador_deteccoes for c in campanhas)
     total_leads = sum(c.total_leads for c in campanhas)
 
-    return render(request, 'vendas_web/configuracoes/campanhas.html', {
+    return render(request, 'marketing/campanhas/campanhas.html', {
         'campanhas': campanhas,
         'total_campanhas': total_campanhas,
         'campanhas_ativas': campanhas_ativas,
@@ -65,7 +65,7 @@ def deteccoes_campanha_view(request):
 
     campanhas = CampanhaTrafego.objects.filter(ativa=True).order_by('nome')
 
-    return render(request, 'vendas_web/configuracoes/deteccoes.html', {
+    return render(request, 'marketing/campanhas/deteccoes.html', {
         'deteccoes': deteccoes,
         'campanhas': campanhas,
     })

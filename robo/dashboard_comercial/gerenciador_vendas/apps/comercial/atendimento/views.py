@@ -136,7 +136,7 @@ def _serialize_atendimento_fluxo(atendimento):
 def fluxos_atendimento_view(request):
     """View para gerenciar fluxos de atendimento"""
     fluxos = FluxoAtendimento.objects.all().order_by('-data_criacao')
-    return render(request, 'vendas_web/configuracoes/fluxos.html', {
+    return render(request, 'comercial/atendimento/fluxos.html', {
         'fluxos': fluxos
     })
 
@@ -155,7 +155,7 @@ def questoes_fluxo_view(request, fluxo_id=None):
         except FluxoAtendimento.DoesNotExist:
             pass
 
-    return render(request, 'vendas_web/configuracoes/questoes.html', {
+    return render(request, 'comercial/atendimento/questoes.html', {
         'fluxos': fluxos,
         'questoes': questoes,
         'fluxo_selecionado': fluxo_selecionado

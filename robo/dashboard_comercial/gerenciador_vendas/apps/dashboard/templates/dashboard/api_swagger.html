@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation - Dashboard Comercial</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
+    <style>
+        html {
+            box-sizing: border-box;
+            overflow: -moz-scrollbars-vertical;
+            overflow-y: scroll;
+        }
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+        body {
+            margin:0;
+            background: #fafafa;
+        }
+        .swagger-ui .topbar {
+            background-color: #1F3D59;
+        }
+        .swagger-ui .topbar .download-url-wrapper .select-label {
+            color: white;
+        }
+        .custom-header {
+            background: linear-gradient(135deg, #1F3D59, #2a4f73);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .custom-header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 300;
+        }
+        .custom-header p {
+            margin: 0.5rem 0 0 0;
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        .info-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            max-width: 1200px;
+            margin: 0 auto 2rem;
+            padding: 0 1rem;
+        }
+        .info-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #1F3D59;
+        }
+        .info-card h3 {
+            margin: 0 0 0.5rem 0;
+            color: #1F3D59;
+            font-size: 1.2rem;
+        }
+        .info-card p {
+            margin: 0;
+            color: #666;
+            line-height: 1.5;
+        }
+        .endpoints-list {
+            list-style: none;
+            padding: 0;
+            margin: 0.5rem 0 0 0;
+        }
+        .endpoints-list li {
+            background: #f8f9fa;
+            margin: 0.25rem 0;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .method-get { border-left: 4px solid #28a745; }
+        .method-post { border-left: 4px solid #007bff; }
+        .method-put { border-left: 4px solid #ffc107; }
+        .method-delete { border-left: 4px solid #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="custom-header">
+        <h1>🚀 API Dashboard Comercial</h1>
+        <p>Documentação interativa e completa da API</p>
+    </div>
+
+    <div class="info-cards">
+        <div class="info-card">
+            <h3>📋 APIs Públicas (Registro/Atualização)</h3>
+            <p>Endpoints para criar e atualizar dados. Não requerem autenticação.</p>
+            <ul class="endpoints-list">
+                <li class="method-post">POST /api/leads/registrar/</li>
+                <li class="method-post">POST /api/leads/atualizar/</li>
+                <li class="method-post">POST /api/prospectos/registrar/</li>
+                <li class="method-post">POST /api/prospectos/atualizar/</li>
+                <li class="method-post">POST /api/historicos/registrar/</li>
+                <li class="method-post">POST /api/historicos/atualizar/</li>
+            </ul>
+        </div>
+
+        <div class="info-card">
+            <h3>🔍 APIs de Consulta</h3>
+            <p>Endpoints para consultar dados. Requerem autenticação.</p>
+            <ul class="endpoints-list">
+                <li class="method-get">GET /api/consultar/leads/</li>
+                <li class="method-get">GET /api/consultar/historicos/</li>
+                <li class="method-get">GET /api/consultar/fluxos/</li>
+                <li class="method-get">GET /api/consultar/questoes/</li>
+                <li class="method-get">GET /api/consultar/atendimentos/</li>
+                <li class="method-get">GET /api/consultar/respostas/</li>
+            </ul>
+        </div>
+
+        <div class="info-card">
+            <h3>📊 APIs do Dashboard</h3>
+            <p>Endpoints para dados do dashboard. Requerem autenticação.</p>
+            <ul class="endpoints-list">
+                <li class="method-get">GET /api/dashboard/data/</li>
+                <li class="method-get">GET /api/dashboard/charts/</li>
+                <li class="method-get">GET /api/dashboard/prospectos/</li>
+            </ul>
+        </div>
+
+        <div class="info-card">
+            <h3>💰 APIs de Vendas</h3>
+            <p>Endpoints para validação de vendas. Requerem autenticação.</p>
+            <ul class="endpoints-list">
+                <li class="method-post">POST /api/vendas/aprovar/</li>
+                <li class="method-post">POST /api/vendas/rejeitar/</li>
+                <li class="method-get">GET /api/vendas/historico-contatos/</li>
+            </ul>
+        </div>
+
+        <div class="info-card">
+            <h3>🤖 APIs N8N</h3>
+            <p>Endpoints específicos para integração com N8N. Permitem controle completo dos fluxos de atendimento.</p>
+            <ul class="endpoints-list">
+                <li class="method-get">GET /api/n8n/lead/buscar/</li>
+                <li class="method-post">POST /api/n8n/lead/criar/</li>
+                <li class="method-get">GET /api/n8n/fluxos/</li>
+                <li class="method-post">POST /api/n8n/atendimento/iniciar/</li>
+                <li class="method-get">GET /api/n8n/atendimento/{id}/consultar/</li>
+                <li class="method-post">POST /api/n8n/atendimento/{id}/responder/</li>
+                <li class="method-post">POST /api/n8n/atendimento/{id}/avancar/</li>
+                <li class="method-post">POST /api/n8n/atendimento/{id}/finalizar/</li>
+            </ul>
+        </div>
+
+        <div class="info-card">
+            <h3>🔧 Características Especiais</h3>
+            <p>Recursos avançados do sistema:</p>
+            <ul style="margin-top: 0.5rem;">
+                <li>✅ Status configuráveis via admin</li>
+                <li>✅ Logs automáticos de todas operações</li>
+                <li>✅ Relacionamentos automáticos via id_hubsoft</li>
+                <li>✅ Suporte a múltiplos formatos de data</li>
+                <li>✅ Validação de dados robusta</li>
+                <li>✅ Integração completa com N8N</li>
+                <li>✅ Contabilização automática de questões</li>
+                <li>✅ Fluxos de atendimento dinâmicos</li>
+            </ul>
+        </div>
+
+        <div class="info-card">
+            <h3>📚 Recursos Adicionais</h3>
+            <p>Links úteis para desenvolvedores:</p>
+            <ul style="margin-top: 0.5rem;">
+                <li><a href="{% url 'dashboard:api_documentation' %}" target="_blank">📖 Documentação Completa</a></li>
+                <li><a href="{% url 'dashboard:n8n_guide' %}" target="_blank">🤖 Guia N8N</a></li>
+                <li><a href="/admin/" target="_blank">⚙️ Django Admin</a></li>
+                <li><a href="{% url 'dashboard:dashboard1' %}" target="_blank">📊 Dashboard</a></li>
+                <li><a href="{% url 'dashboard:analise_atendimentos' %}" target="_blank">📊 Análise de Atendimentos</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="swagger-ui"></div>
+
+    <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            const spec = {
+                "openapi": "3.0.3",
+                "info": {
+                    "title": "Dashboard Comercial API",
+                    "description": "API completa para gerenciamento de leads, prospectos e histórico de contatos",
+                    "version": "1.0.0",
+                    "contact": {
+                        "name": "Suporte API",
+                        "email": "suporte@dashhboard.com"
+                    }
+                },
+                "servers": [
+                    {
+                        "url": window.location.origin,
+                        "description": "Servidor atual"
+                    }
+                ],
+                "tags": [
+                    {
+                        "name": "Leads",
+                        "description": "Operações com leads"
+                    },
+                    {
+                        "name": "Prospectos", 
+                        "description": "Operações com prospectos"
+                    },
+                    {
+                        "name": "Histórico",
+                        "description": "Operações com histórico de contatos"
+                    },
+                    {
+                        "name": "Dashboard",
+                        "description": "APIs do dashboard"
+                    },
+                    {
+                        "name": "Vendas",
+                        "description": "Validação de vendas"
+                    },
+                    {
+                        "name": "Atendimento",
+                        "description": "APIs de fluxos de atendimento"
+                    },
+                    {
+                        "name": "Sistema",
+                        "description": "Utilitários do sistema"
+                    },
+                    {
+                        "name": "N8N",
+                        "description": "APIs específicas para integração com N8N"
+                    }
+                ],
+                "paths": {
+                    "/api/leads/registrar/": {
+                        "post": {
+                            "tags": ["Leads"],
+                            "summary": "Registrar novo lead",
+                            "description": "Cria um novo lead no sistema",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/LeadCreateRequest"
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {
+                                "201": {
+                                    "description": "Lead criado com sucesso",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/LeadResponse"
+                                            }
+                                        }
+                                    }
+                                },
+                                "400": {
+                                    "description": "Dados inválidos",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/ErrorResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "/api/leads/atualizar/": {
+                        "post": {
+                            "tags": ["Leads"],
+                            "summary": "Atualizar lead existente",
+                            "description": "Atualiza um lead existente usando filtros dinâmicos",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/LeadUpdateRequest"
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {
+                                "200": {
+                                    "description": "Lead atualizado com sucesso",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/LeadResponse"
+                                            }
+                                        }
+                                    }
+                                },
+                                "404": {
+                                    "description": "Lead não encontrado"
+                                },
+                                "400": {
+                                    "description": "Dados inválidos"
+                                }
+                            }
+                        }
+                    },
+                    "/api/prospectos/registrar/": {
+                        "post": {
+                            "tags": ["Prospectos"],
+                            "summary": "Registrar novo prospecto",
+                            "description": "Cria um novo prospecto no sistema",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/ProspectoCreateRequest"
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {
+                                "201": {
+                                    "description": "Prospecto criado com sucesso"
+                                },
+                                "400": {
+                                    "description": "Dados inválidos"
+                                }
+                            }
+                        }
+                    },
+                    "/api/prospectos/atualizar/": {
+                        "post": {
+                            "tags": ["Prospectos"],
+                            "summary": "Atualizar prospecto existente",
+                            "description": "Atualiza um prospecto existente usando filtros dinâmicos",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/ProspectoUpdateRequest"
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {
+                                "200": {
+                                    "description": "Prospecto atualizado com sucesso"
+                                },
+                                "404": {
+                                    "description": "Prospecto não encontrado"
+                                }
+                            }
+                        }
+                    },
+                    "/api/historicos/registrar/": {
+                        "post": {
+                            "tags": ["Histórico"],
+                            "summary": "Registrar histórico de contato",
+                            "description": "Cria um novo registro de histórico de contato",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/HistoricoCreateRequest"
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {
+                                "201": {
+                                    "description": "Histórico criado com sucesso"
+                                },
+                                "400": {
+                                    "description": "Dados inválidos"
+                                }
+                            }
+                        }
+                    },
+                    "/api/verificar-relacionamentos/": {
+                        "post": {
+                            "tags": ["Sistema"],
+                            "summary": "Verificar relacionamentos automáticos",
+                            "description": "Verifica e cria relacionamentos entre leads e prospectos baseado no id_hubsoft",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object"
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {
+                                "200": {
+                                    "description": "Verificação concluída",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "success": {"type": "boolean"},
+                                                    "relacionamentos_criados": {"type": "integer"},
+                                                    "message": {"type": "string"}
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "/api/consultar/leads/": {
+                        "get": {
+                            "tags": ["Leads"],
+                            "summary": "Consultar leads",
+                            "description": "Consulta leads com filtros e paginação. Requer autenticação.",
+                            "security": [{"sessionAuth": []}],
+                            "parameters": [
+                                {
+                                    "name": "search",
+                                    "in": "query",
+                                    "description": "Busca por nome, email, telefone, empresa",
+                                    "schema": {"type": "string"}
+                                },
+                                {
+                                    "name": "origem",
+                                    "in": "query",
+                                    "description": "Filtro por origem",
+                                    "schema": {
+                                        "type": "string",
+                                        "enum": ["site", "facebook", "instagram", "google", "whatsapp", "indicacao", "telefone", "email", "outros"]
+                                    }
+                                },
+                                {
+                                    "name": "status_api",
+                                    "in": "query",
+                                    "description": "Filtro por status (configurável via admin)",
+                                    "schema": {"type": "string"}
+                                },
+                                {
+                                    "name": "ativo",
+                                    "in": "query",
+                                    "description": "Filtro por status ativo",
+                                    "schema": {"type": "boolean"}
+                                },
+                                {
+                                    "name": "page",
+                                    "in": "query",
+                                    "description": "Número da página",
+                                    "schema": {"type": "integer", "default": 1}
+                                },
+                                {
+                                    "name": "per_page",
+                                    "in": "query",
+                                    "description": "Itens por página",
+                                    "schema": {"type": "integer", "default": 20, "maximum": 100}
+                                }
+                            ],
+                            "responses": {
+                                "200": {
+                                    "description": "Lista de leads",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/LeadListResponse"
+                                            }
+                                        }
+                                    }
+                                },
+                                "401": {
+                                    "description": "Não autenticado"
+                                }
+                            }
+                        }
+                    },
+                    "/api/dashboard/data/": {
+                        "get": {
+                            "tags": ["Dashboard"],
+                            "summary": "Dados principais do dashboard",
+                            "description": "Retorna métricas principais: atendimentos, leads, prospectos, vendas",
+                            "security": [{"sessionAuth": []}],
+                            "responses": {
+                                "200": {
+                                    "description": "Dados do dashboard",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/DashboardDataResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "/api/vendas/aprovar/": {
+                        "post": {
+                            "tags": ["Vendas"],
+                            "summary": "Aprovar venda",
+                            "description": "Aprova uma venda de prospecto",
+                            "security": [{"sessionAuth": []}],
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "required": ["prospecto_id", "observacoes"],
+                                            "properties": {
+                                                "prospecto_id": {"type": "integer"},
+                                                "observacoes": {"type": "string"}
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {
+                                "200": {
+                                    "description": "Venda aprovada com sucesso"
+                                },
+                                "400": {
+                                    "description": "Dados inválidos"
+                                },
+                                "404": {
+                                    "description": "Prospecto não encontrado"
+                                }
+                            }
+                        }
+                    },
+                    "/api/consultar/fluxos/": {
+                        "get": {
+                            "tags": ["Atendimento"],
+                            "summary": "Consultar fluxos de atendimento",
+                            "description": "Consulta fluxos de atendimento com filtros e paginação. Requer autenticação.",
+                            "security": [{"sessionAuth": []}],
+                            "parameters": [
+                                {
+                                    "name": "search",
+                                    "in": "query",
+                                    "description": "Busca por nome, descrição ou tags",
+                                    "schema": {"type": "string"}
+                                },
+                                {
+                                    "name": "tipo_fluxo",
+                                    "in": "query",
+                                    "description": "Filtro por tipo de fluxo",
+                                    "schema": {
+                                        "type": "string",
+                                        "enum": ["qualificacao", "vendas", "suporte", "onboarding", "outros"]
+                                    }
+                                },
+                                {
+                                    "name": "ativo",
+                                    "in": "query",
+                                    "description": "Filtro por status ativo",
+                                    "schema": {"type": "boolean"}
+                                },
+                                {
+                                    "name": "status",
+                                    "in": "query",
+                                    "description": "Filtro por status (configurável via admin)",
+                                    "schema": {"type": "string"}
+                                },
+                                {
+                                    "name": "page",
+                                    "in": "query",
+                                    "description": "Número da página",
+                                    "schema": {"type": "integer", "default": 1}
+                                },
+                                {
+                                    "name": "per_page",
+                                    "in": "query",
+                                    "description": "Itens por página",
+                                    "schema": {"type": "integer", "default": 20, "maximum": 100}
+                                }
+                            ],
+                            "responses": {
+                                "200": {
+                                    "description": "Lista de fluxos",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/FluxoListResponse"
+                                            }
+                                        }
+                                    }
+                                },
+                                "401": {
+                                    "description": "Não autenticado"
+                                }
+                            }
+                        }
+                    },
+                    "/api/consultar/questoes/": {
+                        "get": {
+                            "tags": ["Atendimento"],
+                            "summary": "Consultar questões de fluxo",
+                            "description": "Consulta questões de fluxo com filtros e paginação. Requer autenticação.",
+                            "security": [{"sessionAuth": []}],
+                            "parameters": [
+                                {
+                                    "name": "fluxo_id",
+                                    "in": "query",
+                                    "description": "Filtro por ID do fluxo",
+                                    "schema": {"type": "integer"}
+                                },
+                                {
+                                    "name": "search",
+                                    "in": "query",
+                                    "description": "Busca por título ou descrição",
+                                    "schema": {"type": "string"}
+                                },
+                                {
+                                    "name": "tipo_questao",
+                                    "in": "query",
+                                    "description": "Filtro por tipo de questão",
+                                    "schema": {
+                                        "type": "string",
+                                        "enum": ["texto", "numero", "email", "telefone", "cpf_cnpj", "cep", "endereco", "select", "multiselect", "data", "hora", "data_hora", "boolean", "escala", "arquivo"]
+                                    }
+                                },
+                                {
+                                    "name": "tipo_validacao",
+                                    "in": "query",
+                                    "description": "Filtro por tipo de validação",
+                                    "schema": {
+                                        "type": "string",
+                                        "enum": ["obrigatoria", "opcional", "condicional"]
+                                    }
+                                },
+                                {
+                                    "name": "ativo",
+                                    "in": "query",
+                                    "description": "Filtro por status ativo",
+                                    "schema": {"type": "boolean"}
+                                },
+                                {
+                                    "name": "page",
+                                    "in": "query",
+                                    "description": "Número da página",
+                                    "schema": {"type": "integer", "default": 1}
+                                },
+                                {
+                                    "name": "per_page",
+                                    "in": "query",
+                                    "description": "Itens por página",
+                                    "schema": {"type": "integer", "default": 20, "maximum": 100}
+                                }
+                            ],
+                            "responses": {
+                                "200": {
+                                    "description": "Lista de questões",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/QuestaoListResponse"
+                                            }
+                                        }
+                                    }
+                                },
+                                "401": {
+                                    "description": "Não autenticado"
+                                }
+                            }
+                        }
+                    },
+                    "/api/consultar/atendimentos/": {
+                        "get": {
+                            "tags": ["Atendimento"],
+                            "summary": "Consultar atendimentos de fluxo",
+                            "description": "Consulta atendimentos de fluxo com filtros e paginação. Requer autenticação.",
+                            "security": [{"sessionAuth": []}],
+                            "parameters": [
+                                {
+                                    "name": "lead_id",
+                                    "in": "query",
+                                    "description": "Filtro por ID do lead",
+                                    "schema": {"type": "integer"}
+                                },
+                                {
+                                    "name": "fluxo_id",
+                                    "in": "query",
+                                    "description": "Filtro por ID do fluxo",
+                                    "schema": {"type": "integer"}
+                                },
+                                {
+                                    "name": "status",
+                                    "in": "query",
+                                    "description": "Filtro por status",
+                                    "schema": {
+                                        "type": "string",
+                                        "enum": ["iniciado", "em_andamento", "pausado", "completado", "abandonado", "erro", "cancelado", "aguardando_validacao", "validado", "rejeitado"]
+                                    }
+                                },
+                                {
+                                    "name": "search",
+                                    "in": "query",
+                                    "description": "Busca por nome do lead, fluxo ou observações",
+                                    "schema": {"type": "string"}
+                                },
+                                {
+                                    "name": "score_min",
+                                    "in": "query",
+                                    "description": "Score de qualificação mínimo (1-10)",
+                                    "schema": {"type": "integer", "minimum": 1, "maximum": 10}
+                                },
+                                {
+                                    "name": "score_max",
+                                    "in": "query",
+                                    "description": "Score de qualificação máximo (1-10)",
+                                    "schema": {"type": "integer", "minimum": 1, "maximum": 10}
+                                },
+                                {
+                                    "name": "page",
+                                    "in": "query",
+                                    "description": "Número da página",
+                                    "schema": {"type": "integer", "default": 1}
+                                },
+                                {
+                                    "name": "per_page",
+                                    "in": "query",
+                                    "description": "Itens por página",
+                                    "schema": {"type": "integer", "default": 20, "maximum": 100}
+                                }
+                            ],
+                            "responses": {
+                                "200": {
+                                    "description": "Lista de atendimentos",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/AtendimentoListResponse"
+                                            }
+                                        }
+                                    }
+                                },
+                                "401": {
+                                    "description": "Não autenticado"
+                                }
+                            }
+                        }
+                    },
+                    "/api/consultar/respostas/": {
+                        "get": {
+                            "tags": ["Atendimento"],
+                            "summary": "Consultar respostas de questões",
+                            "description": "Consulta respostas de questões com filtros e paginação. Requer autenticação.",
+                            "security": [{"sessionAuth": []}],
+                            "parameters": [
+                                {
+                                    "name": "atendimento_id",
+                                    "in": "query",
+                                    "description": "Filtro por ID do atendimento",
+                                    "schema": {"type": "integer"}
+                                },
+                                {
+                                    "name": "questao_id",
+                                    "in": "query",
+                                    "description": "Filtro por ID da questão",
+                                    "schema": {"type": "integer"}
+                                },
+                                {
+                                    "name": "valida",
+                                    "in": "query",
+                                    "description": "Filtro por respostas válidas",
+                                    "schema": {"type": "boolean"}
+                                },
+                                {
+                                    "name": "page",
+                                    "in": "query",
+                                    "description": "Número da página",
+                                    "schema": {"type": "integer", "default": 1}
+                                },
+                                {
+                                    "name": "per_page",
+                                    "in": "query",
+                                    "description": "Itens por página",
+                                    "schema": {"type": "integer", "default": 20, "maximum": 100}
+                                }
+                            ],
+                            "responses": {
+                                "200": {
+                                    "description": "Lista de respostas",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/RespostaListResponse"
+                                            }
+                                        }
+                                    }
+                                },
+                                "401": {
+                                    "description": "Não autenticado"
+                                }
+                            }
+                        }
+                    },
+                    "/api/n8n/lead/buscar/": {
+                        "get": {
+                            "tags": ["N8N"],
+                            "summary": "Buscar lead por telefone (N8N)",
+                            "description": "API específica para N8N buscar lead por número de telefone",
+                            "parameters": [
+                                {
+                                    "name": "telefone",
+                                    "in": "query",
+                                    "required": true,
+                                    "description": "Número do telefone para busca",
+                                    "schema": {"type": "string"}
+                                }
+                            ],
+                            "responses": {
+                                "200": {
+                                    "description": "Resultado da busca",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/N8NLeadSearchResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "/api/n8n/lead/criar/": {
+                        "post": {
+                            "tags": ["N8N"],
+                            "summary": "Criar ou retornar lead existente (N8N)",
+                            "description": "API para N8N criar novo lead ou retornar existente se já houver",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/N8NLeadCreateRequest"
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {
+                                "201": {
+                                    "description": "Lead criado ou encontrado",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/N8NLeadCreateResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "/api/n8n/fluxos/": {
+                        "get": {
+                            "tags": ["N8N"],
+                            "summary": "Listar fluxos ativos (N8N)",
+                            "description": "API para N8N consultar fluxos de atendimento ativos",
+                            "parameters": [
+                                {
+                                    "name": "tipo",
+                                    "in": "query",
+                                    "description": "Filtrar por tipo de fluxo",
+                                    "schema": {
+                                        "type": "string",
+                                        "enum": ["qualificacao", "vendas", "suporte", "onboarding", "pesquisa", "customizado"]
+                                    }
+                                }
+                            ],
+                            "responses": {
+                                "200": {
+                                    "description": "Lista de fluxos ativos",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/N8NFluxosResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "/api/n8n/atendimento/iniciar/": {
+                        "post": {
+                            "tags": ["N8N"],
+                            "summary": "Iniciar atendimento (N8N)",
+                            "description": "API para N8N iniciar um novo atendimento com fluxo específico",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/N8NAtendimentoIniciarRequest"
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {
+                                "201": {
+                                    "description": "Atendimento iniciado com sucesso",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/N8NAtendimentoIniciarResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "/api/n8n/atendimento/{atendimento_id}/consultar/": {
+                        "get": {
+                            "tags": ["N8N"],
+                            "summary": "Consultar status do atendimento (N8N)",
+                            "description": "API para N8N consultar o status atual de um atendimento",
+                            "parameters": [
+                                {
+                                    "name": "atendimento_id",
+                                    "in": "path",
+                                    "required": true,
+                                    "schema": {"type": "integer"}
+                                }
+                            ],
+                            "responses": {
+                                "200": {
+                                    "description": "Status do atendimento",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/N8NAtendimentoStatusResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "/api/n8n/atendimento/{atendimento_id}/responder/": {
+                        "post": {
+                            "tags": ["N8N"],
+                            "summary": "Registrar resposta de questão (N8N)",
+                            "description": "API para N8N registrar resposta para uma questão específica",
+                            "parameters": [
+                                {
+                                    "name": "atendimento_id",
+                                    "in": "path",
+                                    "required": true,
+                                    "schema": {"type": "integer"}
+                                }
+                            ],
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/N8NResponderQuestaoRequest"
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {
+                                "200": {
+                                    "description": "Resposta registrada com sucesso",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/N8NResponderQuestaoResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "/api/n8n/atendimento/{atendimento_id}/avancar/": {
+                        "post": {
+                            "tags": ["N8N"],
+                            "summary": "Avançar para próxima questão (N8N)",
+                            "description": "API para N8N avançar para a próxima questão do fluxo",
+                            "parameters": [
+                                {
+                                    "name": "atendimento_id",
+                                    "in": "path",
+                                    "required": true,
+                                    "schema": {"type": "integer"}
+                                }
+                            ],
+                            "responses": {
+                                "200": {
+                                    "description": "Questão avançada com sucesso",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/N8NAvancarQuestaoResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "/api/n8n/atendimento/{atendimento_id}/finalizar/": {
+                        "post": {
+                            "tags": ["N8N"],
+                            "summary": "Finalizar atendimento (N8N)",
+                            "description": "API para N8N finalizar um atendimento",
+                            "parameters": [
+                                {
+                                    "name": "atendimento_id",
+                                    "in": "path",
+                                    "required": true,
+                                    "schema": {"type": "integer"}
+                                }
+                            ],
+                            "requestBody": {
+                                "required": false,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/N8NFinalizarAtendimentoRequest"
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {
+                                "200": {
+                                    "description": "Atendimento finalizado com sucesso",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/N8NFinalizarAtendimentoResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "/api/n8n/atendimento/{atendimento_id}/pausar/": {
+                        "post": {
+                            "tags": ["N8N"],
+                            "summary": "Pausar atendimento (N8N)",
+                            "description": "API para N8N pausar um atendimento em andamento",
+                            "parameters": [
+                                {
+                                    "name": "atendimento_id",
+                                    "in": "path",
+                                    "required": true,
+                                    "schema": {"type": "integer"}
+                                }
+                            ],
+                            "requestBody": {
+                                "required": false,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "motivo_pausa": {"type": "string"}
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {
+                                "200": {
+                                    "description": "Atendimento pausado com sucesso"
+                                }
+                            }
+                        }
+                    },
+                    "/api/n8n/atendimento/{atendimento_id}/retomar/": {
+                        "post": {
+                            "tags": ["N8N"],
+                            "summary": "Retomar atendimento (N8N)",
+                            "description": "API para N8N retomar um atendimento pausado",
+                            "parameters": [
+                                {
+                                    "name": "atendimento_id",
+                                    "in": "path",
+                                    "required": true,
+                                    "schema": {"type": "integer"}
+                                }
+                            ],
+                            "requestBody": {
+                                "required": false,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "observacoes_retomada": {"type": "string"}
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {
+                                "200": {
+                                    "description": "Atendimento retomado com sucesso"
+                                }
+                            }
+                        }
+                    },
+                    "/api/n8n/fluxo/{fluxo_id}/questao/{indice_questao}/": {
+                        "get": {
+                            "tags": ["N8N"],
+                            "summary": "Obter questão específica (N8N)",
+                            "description": "API para N8N obter detalhes de uma questão específica de um fluxo",
+                            "parameters": [
+                                {
+                                    "name": "fluxo_id",
+                                    "in": "path",
+                                    "required": true,
+                                    "schema": {"type": "integer"}
+                                },
+                                {
+                                    "name": "indice_questao",
+                                    "in": "path",
+                                    "required": true,
+                                    "schema": {"type": "integer"}
+                                }
+                            ],
+                            "responses": {
+                                "200": {
+                                    "description": "Detalhes da questão",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/N8NQuestaoResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "components": {
+                    "securitySchemes": {
+                        "sessionAuth": {
+                            "type": "apiKey",
+                            "in": "cookie",
+                            "name": "sessionid",
+                            "description": "Cookie de sessão do Django. Faça login em /admin/login/ primeiro."
+                        }
+                    },
+                    "schemas": {
+                        "LeadCreateRequest": {
+                            "type": "object",
+                            "required": ["nome_razaosocial", "telefone"],
+                            "properties": {
+                                "nome_razaosocial": {
+                                    "type": "string",
+                                    "description": "Nome ou razão social",
+                                    "example": "Maria Silva"
+                                },
+                                "telefone": {
+                                    "type": "string",
+                                    "description": "Telefone com código do país",
+                                    "example": "+5585999999999"
+                                },
+                                "email": {
+                                    "type": "string",
+                                    "format": "email",
+                                    "example": "maria@exemplo.com"
+                                },
+                                "origem": {
+                                    "type": "string",
+                                    "enum": ["site", "facebook", "instagram", "google", "whatsapp", "indicacao", "telefone", "email", "outros"],
+                                    "default": "site"
+                                },
+                                "valor": {
+                                    "type": "number",
+                                    "format": "decimal",
+                                    "example": 1500.50
+                                },
+                                "empresa": {
+                                    "type": "string",
+                                    "example": "Empresa ABC"
+                                },
+                                "id_hubsoft": {
+                                    "type": "string",
+                                    "description": "ID para relacionamento automático",
+                                    "example": "HUB123"
+                                },
+                                "status_api": {
+                                    "type": "string",
+                                    "description": "Status configurável via admin",
+                                    "default": "pendente"
+                                },
+                                "data_nascimento": {
+                                    "type": "string",
+                                    "description": "Data em formato DD/MM/YYYY ou YYYY-MM-DD",
+                                    "example": "14/11/1985"
+                                }
+                            }
+                        },
+                        "LeadUpdateRequest": {
+                            "type": "object",
+                            "required": ["termo_busca", "busca"],
+                            "properties": {
+                                "termo_busca": {
+                                    "type": "string",
+                                    "description": "Campo para filtrar",
+                                    "example": "id_hubsoft"
+                                },
+                                "busca": {
+                                    "description": "Valor a buscar",
+                                    "example": "HUB123"
+                                },
+                                "status_api": {
+                                    "type": "string",
+                                    "example": "processado"
+                                },
+                                "score_qualificacao": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 10,
+                                    "example": 8
+                                }
+                            }
+                        },
+                        "ProspectoCreateRequest": {
+                            "type": "object",
+                            "required": ["nome_prospecto"],
+                            "properties": {
+                                "nome_prospecto": {
+                                    "type": "string",
+                                    "example": "João da Silva"
+                                },
+                                "lead": {
+                                    "type": "integer",
+                                    "description": "ID do lead relacionado",
+                                    "example": 123
+                                },
+                                "id_prospecto_hubsoft": {
+                                    "type": "string",
+                                    "example": "HUB123"
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "description": "Status configurável via admin",
+                                    "default": "pendente"
+                                },
+                                "prioridade": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 5,
+                                    "default": 1
+                                },
+                                "score_conversao": {
+                                    "type": "number",
+                                    "format": "decimal",
+                                    "minimum": 0,
+                                    "maximum": 100,
+                                    "example": 75.5
+                                }
+                            }
+                        },
+                        "ProspectoUpdateRequest": {
+                            "type": "object",
+                            "required": ["termo_busca", "busca"],
+                            "properties": {
+                                "termo_busca": {
+                                    "type": "string",
+                                    "example": "id_prospecto_hubsoft"
+                                },
+                                "busca": {
+                                    "example": "HUB123"
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "example": "processando"
+                                }
+                            }
+                        },
+                        "HistoricoCreateRequest": {
+                            "type": "object",
+                            "required": ["telefone", "status"],
+                            "properties": {
+                                "telefone": {
+                                    "type": "string",
+                                    "example": "+5585988887777"
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "description": "Status configurável via admin",
+                                    "example": "fluxo_inicializado"
+                                },
+                                "lead": {
+                                    "type": "integer",
+                                    "example": 123
+                                },
+                                "nome_contato": {
+                                    "type": "string",
+                                    "example": "João"
+                                },
+                                "duracao_segundos": {
+                                    "type": "integer",
+                                    "example": 42
+                                },
+                                "sucesso": {
+                                    "type": "boolean",
+                                    "default": false
+                                }
+                            }
+                        },
+                        "LeadResponse": {
+                            "type": "object",
+                            "properties": {
+                                "success": {"type": "boolean"},
+                                "id": {"type": "integer"},
+                                "lead": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {"type": "integer"},
+                                        "nome_razaosocial": {"type": "string"},
+                                        "telefone": {"type": "string"},
+                                        "status_api": {"type": "string"},
+                                        "status_api_display": {"type": "string"},
+                                        "origem_display": {"type": "string"},
+                                        "data_cadastro": {"type": "string", "format": "date-time"}
+                                    }
+                                }
+                            }
+                        },
+                        "LeadListResponse": {
+                            "type": "object",
+                            "properties": {
+                                "results": {
+                                    "type": "array",
+                                    "items": {"$ref": "#/components/schemas/LeadResponse/properties/lead"}
+                                },
+                                "total": {"type": "integer"},
+                                "page": {"type": "integer"},
+                                "per_page": {"type": "integer"},
+                                "pages": {"type": "integer"}
+                            }
+                        },
+                        "DashboardDataResponse": {
+                            "type": "object",
+                            "properties": {
+                                "stats": {
+                                    "type": "object",
+                                    "properties": {
+                                        "atendimentos": {"type": "integer"},
+                                        "leads": {"type": "integer"},
+                                        "prospectos": {"type": "integer"},
+                                        "vendas": {"type": "integer"},
+                                        "atendimentos_variacao": {"type": "string"},
+                                        "leads_variacao": {"type": "string"},
+                                        "prospectos_variacao": {"type": "string"},
+                                        "vendas_variacao": {"type": "string"}
+                                    }
+                                }
+                            }
+                        },
+                        "FluxoListResponse": {
+                            "type": "object",
+                            "properties": {
+                                "results": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {"type": "integer"},
+                                            "nome": {"type": "string"},
+                                            "descricao": {"type": "string"},
+                                            "tipo_fluxo": {"type": "string"},
+                                            "ativo": {"type": "boolean"},
+                                            "status": {"type": "string"},
+                                            "total_questoes": {"type": "integer"},
+                                            "total_atendimentos": {"type": "integer"},
+                                            "taxa_completacao": {"type": "string"}
+                                        }
+                                    }
+                                },
+                                "total": {"type": "integer"},
+                                "page": {"type": "integer"},
+                                "per_page": {"type": "integer"},
+                                "pages": {"type": "integer"}
+                            }
+                        },
+                        "QuestaoListResponse": {
+                            "type": "object",
+                            "properties": {
+                                "results": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {"type": "integer"},
+                                            "fluxo_id": {"type": "integer"},
+                                            "fluxo_nome": {"type": "string"},
+                                            "indice": {"type": "integer"},
+                                            "titulo": {"type": "string"},
+                                            "tipo_questao": {"type": "string"},
+                                            "tipo_validacao": {"type": "string"},
+                                            "ativo": {"type": "boolean"}
+                                        }
+                                    }
+                                },
+                                "total": {"type": "integer"},
+                                "page": {"type": "integer"},
+                                "per_page": {"type": "integer"},
+                                "pages": {"type": "integer"}
+                            }
+                        },
+                        "AtendimentoListResponse": {
+                            "type": "object",
+                            "properties": {
+                                "results": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {"type": "integer"},
+                                            "lead_id": {"type": "integer"},
+                                            "lead_nome": {"type": "string"},
+                                            "fluxo_id": {"type": "integer"},
+                                            "fluxo_nome": {"type": "string"},
+                                            "status": {"type": "string"},
+                                            "status_display": {"type": "string"},
+                                            "questao_atual": {"type": "integer"},
+                                            "progresso_percentual": {"type": "number"},
+                                            "score_qualificacao": {"type": "integer"}
+                                        }
+                                    }
+                                },
+                                "total": {"type": "integer"},
+                                "page": {"type": "integer"},
+                                "per_page": {"type": "integer"},
+                                "pages": {"type": "integer"}
+                            }
+                        },
+                        "RespostaListResponse": {
+                            "type": "object",
+                            "properties": {
+                                "results": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {"type": "integer"},
+                                            "atendimento_id": {"type": "integer"},
+                                            "questao_id": {"type": "integer"},
+                                            "questao_titulo": {"type": "string"},
+                                            "resposta": {"type": "string"},
+                                            "valida": {"type": "boolean"},
+                                            "data_resposta": {"type": "string", "format": "date-time"}
+                                        }
+                                    }
+                                },
+                                "total": {"type": "integer"},
+                                "page": {"type": "integer"},
+                                "per_page": {"type": "integer"},
+                                "pages": {"type": "integer"}
+                            }
+                        },
+                        "ErrorResponse": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string",
+                                    "example": "Campos obrigatórios ausentes: nome_razaosocial, telefone"
+                                }
+                            }
+                        },
+                        "N8NLeadSearchResponse": {
+                            "type": "object",
+                            "properties": {
+                                "encontrado": {"type": "boolean"},
+                                "total_encontrados": {"type": "integer"},
+                                "leads": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {"type": "integer"},
+                                            "nome": {"type": "string"},
+                                            "email": {"type": "string"},
+                                            "telefone": {"type": "string"},
+                                            "origem": {"type": "string"},
+                                            "status_api": {"type": "string"},
+                                            "data_cadastro": {"type": "string"},
+                                            "score_qualificacao": {"type": "integer"},
+                                            "total_contatos": {"type": "integer"},
+                                            "total_atendimentos": {"type": "integer"}
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "N8NLeadCreateRequest": {
+                            "type": "object",
+                            "required": ["nome_razaosocial", "telefone"],
+                            "properties": {
+                                "nome_razaosocial": {"type": "string", "example": "João Silva"},
+                                "telefone": {"type": "string", "example": "5511999887766"},
+                                "email": {"type": "string", "example": "joao@email.com"},
+                                "origem": {"type": "string", "enum": ["site", "facebook", "instagram", "google", "whatsapp", "indicacao", "telefone", "email", "outros"], "default": "whatsapp"},
+                                "canal_entrada": {"type": "string", "default": "whatsapp"},
+                                "tipo_entrada": {"type": "string", "enum": ["contato_whatsapp", "cadastro_site", "telefone", "formulario", "importacao", "api_externa"], "default": "contato_whatsapp"},
+                                "cpf_cnpj": {"type": "string"},
+                                "endereco": {"type": "string"},
+                                "cidade": {"type": "string"},
+                                "estado": {"type": "string"},
+                                "cep": {"type": "string"},
+                                "observacoes": {"type": "string"},
+                                "criar_historico_contato": {"type": "boolean", "default": true}
+                            }
+                        },
+                        "N8NLeadCreateResponse": {
+                            "type": "object",
+                            "properties": {
+                                "lead_existente": {"type": "boolean"},
+                                "lead_criado": {"type": "boolean"},
+                                "lead_id": {"type": "integer"},
+                                "lead": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {"type": "integer"},
+                                        "nome": {"type": "string"},
+                                        "email": {"type": "string"},
+                                        "telefone": {"type": "string"},
+                                        "origem": {"type": "string"},
+                                        "status_api": {"type": "string"},
+                                        "data_cadastro": {"type": "string"}
+                                    }
+                                }
+                            }
+                        },
+                        "N8NFluxosResponse": {
+                            "type": "object",
+                            "properties": {
+                                "fluxos": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {"type": "integer"},
+                                            "nome": {"type": "string"},
+                                            "descricao": {"type": "string"},
+                                            "tipo_fluxo": {"type": "string"},
+                                            "total_questoes": {"type": "integer"},
+                                            "max_tentativas": {"type": "integer"},
+                                            "tempo_limite_minutos": {"type": "integer"},
+                                            "permite_pular_questoes": {"type": "boolean"},
+                                            "estatisticas": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "total_atendimentos": {"type": "integer"},
+                                                    "atendimentos_completados": {"type": "integer"},
+                                                    "taxa_completacao": {"type": "number"},
+                                                    "tempo_medio_segundos": {"type": "number"}
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "total": {"type": "integer"}
+                            }
+                        },
+                        "N8NAtendimentoIniciarRequest": {
+                            "type": "object",
+                            "required": ["lead_id", "fluxo_id"],
+                            "properties": {
+                                "lead_id": {"type": "integer", "example": 123},
+                                "fluxo_id": {"type": "integer", "example": 1},
+                                "ip_origem": {"type": "string", "example": "192.168.1.100"},
+                                "user_agent": {"type": "string", "example": "N8N-Bot/1.0"},
+                                "dispositivo": {"type": "string", "example": "whatsapp"},
+                                "observacoes": {"type": "string", "example": "Atendimento iniciado via N8N"}
+                            }
+                        },
+                        "N8NAtendimentoIniciarResponse": {
+                            "type": "object",
+                            "properties": {
+                                "atendimento_id": {"type": "integer"},
+                                "lead_id": {"type": "integer"},
+                                "fluxo_id": {"type": "integer"},
+                                "status": {"type": "string"},
+                                "questao_atual": {"type": "integer"},
+                                "total_questoes": {"type": "integer"},
+                                "progresso_percentual": {"type": "number"},
+                                "primeira_questao": {"$ref": "#/components/schemas/N8NQuestaoResponse"},
+                                "data_inicio": {"type": "string"}
+                            }
+                        },
+                        "N8NAtendimentoStatusResponse": {
+                            "type": "object",
+                            "properties": {
+                                "atendimento_id": {"type": "integer"},
+                                "lead_id": {"type": "integer"},
+                                "lead_nome": {"type": "string"},
+                                "lead_telefone": {"type": "string"},
+                                "fluxo_id": {"type": "integer"},
+                                "fluxo_nome": {"type": "string"},
+                                "status": {"type": "string"},
+                                "questao_atual": {"type": "integer"},
+                                "total_questoes": {"type": "integer"},
+                                "questoes_respondidas": {"type": "integer"},
+                                "progresso_percentual": {"type": "number"},
+                                "questao_atual_obj": {"$ref": "#/components/schemas/N8NQuestaoResponse"},
+                                "proxima_questao": {"$ref": "#/components/schemas/N8NQuestaoResponse"},
+                                "pode_avancar": {"type": "boolean"},
+                                "pode_voltar": {"type": "boolean"},
+                                "data_inicio": {"type": "string"},
+                                "data_ultima_atividade": {"type": "string"},
+                                "respostas": {"type": "object"}
+                            }
+                        },
+                        "N8NResponderQuestaoRequest": {
+                            "type": "object",
+                            "required": ["resposta"],
+                            "properties": {
+                                "resposta": {"type": "string", "example": "João Silva"},
+                                "indice_questao": {"type": "integer", "example": 1},
+                                "validar": {"type": "boolean", "default": true},
+                                "criar_registro_detalhado": {"type": "boolean", "default": false},
+                                "ip_origem": {"type": "string"},
+                                "user_agent": {"type": "string"},
+                                "dados_extras": {"type": "object"}
+                            }
+                        },
+                        "N8NResponderQuestaoResponse": {
+                            "type": "object",
+                            "properties": {
+                                "sucesso": {"type": "boolean"},
+                                "mensagem": {"type": "string"},
+                                "atendimento_id": {"type": "integer"},
+                                "questao_respondida": {"type": "integer"},
+                                "questao_atual": {"type": "integer"},
+                                "questoes_respondidas": {"type": "integer"},
+                                "progresso_percentual": {"type": "number"},
+                                "questao_atual_obj": {"$ref": "#/components/schemas/N8NQuestaoResponse"},
+                                "proxima_questao": {"$ref": "#/components/schemas/N8NQuestaoResponse"},
+                                "pode_avancar": {"type": "boolean"},
+                                "atendimento_status": {"type": "string"}
+                            }
+                        },
+                        "N8NAvancarQuestaoResponse": {
+                            "type": "object",
+                            "properties": {
+                                "sucesso": {"type": "boolean"},
+                                "atendimento_id": {"type": "integer"},
+                                "questao_atual": {"type": "integer"},
+                                "questoes_respondidas": {"type": "integer"},
+                                "progresso_percentual": {"type": "number"},
+                                "atendimento_status": {"type": "string"},
+                                "proxima_questao": {"$ref": "#/components/schemas/N8NQuestaoResponse"},
+                                "finalizado": {"type": "boolean"},
+                                "data_conclusao": {"type": "string"}
+                            }
+                        },
+                        "N8NFinalizarAtendimentoRequest": {
+                            "type": "object",
+                            "properties": {
+                                "sucesso": {"type": "boolean", "default": true},
+                                "observacoes": {"type": "string", "example": "Atendimento finalizado com sucesso"}
+                            }
+                        },
+                        "N8NFinalizarAtendimentoResponse": {
+                            "type": "object",
+                            "properties": {
+                                "sucesso": {"type": "boolean"},
+                                "atendimento_id": {"type": "integer"},
+                                "status": {"type": "string"},
+                                "data_conclusao": {"type": "string"},
+                                "tempo_total": {"type": "integer"},
+                                "tempo_formatado": {"type": "string"},
+                                "score_qualificacao": {"type": "integer"},
+                                "questoes_respondidas": {"type": "integer"},
+                                "total_questoes": {"type": "integer"},
+                                "progresso_percentual": {"type": "number"}
+                            }
+                        },
+                        "N8NQuestaoResponse": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "integer"},
+                                "indice": {"type": "integer"},
+                                "titulo": {"type": "string"},
+                                "descricao": {"type": "string"},
+                                "tipo_questao": {"type": "string", "enum": ["texto", "numero", "email", "telefone", "cpf_cnpj", "cep", "endereco", "select", "multiselect", "data", "hora", "data_hora", "boolean", "escala", "arquivo"]},
+                                "tipo_validacao": {"type": "string", "enum": ["obrigatoria", "opcional", "condicional"]},
+                                "opcoes_resposta": {"type": "array", "items": {"type": "string"}},
+                                "resposta_padrao": {"type": "string"},
+                                "regex_validacao": {"type": "string"},
+                                "tamanho_minimo": {"type": "integer"},
+                                "tamanho_maximo": {"type": "integer"},
+                                "valor_minimo": {"type": "number"},
+                                "valor_maximo": {"type": "number"},
+                                "permite_voltar": {"type": "boolean"},
+                                "permite_editar": {"type": "boolean"},
+                                "questao_dependencia_id": {"type": "integer"},
+                                "valor_dependencia": {"type": "string"}
+                            }
+                        }
+                    }
+                }
+            };
+
+            SwaggerUIBundle({
+                url: '',
+                spec: spec,
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout",
+                tryItOutEnabled: true,
+                requestInterceptor: (request) => {
+                    // Adicionar CSRF token se necessário
+                    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+                    if (csrfToken) {
+                        request.headers['X-CSRFToken'] = csrfToken.value;
+                    }
+                    return request;
+                }
+            });
+        };
+    </script>
+</body>
+</html>

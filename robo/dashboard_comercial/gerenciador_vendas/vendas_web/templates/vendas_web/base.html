@@ -38,18 +38,18 @@
 
         <!-- Modules -->
         <div class="topbar-modules">
-            <a href="{% url 'vendas_web:dashboard1' %}"
+            <a href="{% url 'dashboard:dashboard1' %}"
                class="topbar-module {% if request.resolver_match.url_name == 'dashboard1' or request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                 <i class="fas fa-chart-pie"></i> Dashboard
             </a>
             {% if modulo_comercial %}
-            <a href="{% url 'vendas_web:vendas' %}"
+            <a href="{% url 'dashboard:vendas' %}"
                class="topbar-module {% if request.resolver_match.url_name == 'vendas' or request.resolver_match.url_name == 'cadastro_cliente' or 'crm' in request.resolver_match.app_name|default:'' %}active{% endif %}">
                 <i class="fas fa-handshake"></i> Comercial
             </a>
             {% endif %}
             {% if modulo_marketing or modulo_comercial %}
-            <a href="{% url 'vendas_web:leads' %}"
+            <a href="{% url 'comercial_leads:leads' %}"
                class="topbar-module {% if request.resolver_match.url_name == 'leads' or request.resolver_match.url_name == 'campanhas_trafego' or request.resolver_match.url_name == 'configuracoes_cadastro' %}active{% endif %}">
                 <i class="fas fa-bullhorn"></i> Marketing
             </a>
@@ -60,7 +60,7 @@
                 <i class="fas fa-star"></i> CS
             </a>
             {% endif %}
-            <a href="{% url 'vendas_web:relatorio_leads' %}"
+            <a href="{% url 'dashboard:relatorio_leads' %}"
                class="topbar-module {% if '/relatorios' in request.path or request.resolver_match.url_name == 'analise_atendimentos' %}active{% endif %}">
                 <i class="fas fa-chart-bar"></i> Relatorios
             </a>
@@ -97,10 +97,10 @@
         {% if request.resolver_match.url_name == 'vendas' or request.resolver_match.url_name == 'cadastro_cliente' or 'crm' in request.resolver_match.app_name|default:'' %}
             <!-- ── Sidebar: Comercial ── -->
             <div class="sidebar-section-label">COMERCIAL</div>
-            <a href="{% url 'vendas_web:vendas' %}" class="nav-item {% if request.resolver_match.url_name == 'vendas' %}active{% endif %}">
+            <a href="{% url 'dashboard:vendas' %}" class="nav-item {% if request.resolver_match.url_name == 'vendas' %}active{% endif %}">
                 <i class="fas fa-shopping-cart"></i><span class="nav-text">Vendas</span>
             </a>
-            <a href="{% url 'vendas_web:cadastro_cliente' %}" class="nav-item {% if request.resolver_match.url_name == 'cadastro_cliente' %}active{% endif %}">
+            <a href="{% url 'comercial_cadastro:cadastro_cliente' %}" class="nav-item {% if request.resolver_match.url_name == 'cadastro_cliente' %}active{% endif %}">
                 <i class="fas fa-id-card"></i><span class="nav-text">Cadastro</span>
             </a>
             {% if plano_comercial == 'pro' %}
@@ -119,26 +119,26 @@
         {% elif request.resolver_match.url_name == 'leads' or request.resolver_match.url_name == 'campanhas_trafego' or request.resolver_match.url_name == 'configuracoes_cadastro' %}
             <!-- ── Sidebar: Marketing ── -->
             <div class="sidebar-section-label">MARKETING</div>
-            <a href="{% url 'vendas_web:leads' %}" class="nav-item {% if request.resolver_match.url_name == 'leads' %}active{% endif %}">
+            <a href="{% url 'comercial_leads:leads' %}" class="nav-item {% if request.resolver_match.url_name == 'leads' %}active{% endif %}">
                 <i class="fas fa-user-plus"></i><span class="nav-text">Leads</span>
             </a>
-            <a href="{% url 'vendas_web:campanhas_trafego' %}" class="nav-item {% if request.resolver_match.url_name == 'campanhas_trafego' %}active{% endif %}">
+            <a href="{% url 'marketing_campanhas:campanhas_trafego' %}" class="nav-item {% if request.resolver_match.url_name == 'campanhas_trafego' %}active{% endif %}">
                 <i class="fas fa-bullhorn"></i><span class="nav-text">Campanhas</span>
             </a>
-            <a href="{% url 'vendas_web:configuracoes_cadastro' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes_cadastro' %}active{% endif %}">
+            <a href="{% url 'comercial_cadastro:configuracoes_cadastro' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes_cadastro' %}active{% endif %}">
                 <i class="fas fa-globe"></i><span class="nav-text">Landing Page</span>
             </a>
 
         {% elif request.resolver_match.url_name == 'relatorios' or request.resolver_match.url_name == 'relatorio_leads' or request.resolver_match.url_name == 'relatorio_clientes' or request.resolver_match.url_name == 'relatorio_atendimentos' or request.resolver_match.url_name == 'relatorio_conversoes' or request.resolver_match.url_name == 'analise_atendimentos' %}
             <!-- ── Sidebar: Relatorios ── -->
             <div class="sidebar-section-label">RELATORIOS</div>
-            <a href="{% url 'vendas_web:relatorio_leads' %}" class="nav-item {% if request.resolver_match.url_name == 'relatorio_leads' %}active{% endif %}">
+            <a href="{% url 'dashboard:relatorio_leads' %}" class="nav-item {% if request.resolver_match.url_name == 'relatorio_leads' %}active{% endif %}">
                 <i class="fas fa-user-plus"></i><span class="nav-text">Leads</span>
             </a>
-            <a href="{% url 'vendas_web:relatorio_clientes' %}" class="nav-item {% if request.resolver_match.url_name == 'relatorio_clientes' %}active{% endif %}">
+            <a href="{% url 'dashboard:relatorio_clientes' %}" class="nav-item {% if request.resolver_match.url_name == 'relatorio_clientes' %}active{% endif %}">
                 <i class="fas fa-users"></i><span class="nav-text">Clientes</span>
             </a>
-            <a href="{% url 'vendas_web:relatorio_atendimentos' %}" class="nav-item {% if request.resolver_match.url_name == 'relatorio_atendimentos' %}active{% endif %}">
+            <a href="{% url 'dashboard:relatorio_atendimentos' %}" class="nav-item {% if request.resolver_match.url_name == 'relatorio_atendimentos' %}active{% endif %}">
                 <i class="fas fa-headset"></i><span class="nav-text">Atendimentos</span>
             </a>
 
@@ -182,41 +182,41 @@
         {% elif '/configuracoes' in request.path %}
             <!-- ── Sidebar: Configuracoes (via menu perfil) ── -->
             <div class="sidebar-section-label">GERAL</div>
-            <a href="{% url 'vendas_web:configuracoes' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes' %}active{% endif %}">
+            <a href="{% url 'sistema:configuracoes' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes' %}active{% endif %}">
                 <i class="fas fa-sliders-h"></i><span class="nav-text">Painel</span>
             </a>
-            <a href="{% url 'vendas_web:configuracoes_usuarios' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes_usuarios' %}active{% endif %}">
+            <a href="{% url 'sistema:configuracoes_usuarios' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes_usuarios' %}active{% endif %}">
                 <i class="fas fa-users-cog"></i><span class="nav-text">Usuarios</span>
             </a>
 
             <div class="sidebar-section-label">PRODUTOS</div>
-            <a href="{% url 'vendas_web:planos_internet' %}" class="nav-item {% if request.resolver_match.url_name == 'planos_internet' %}active{% endif %}">
+            <a href="{% url 'comercial_cadastro:planos_internet' %}" class="nav-item {% if request.resolver_match.url_name == 'planos_internet' %}active{% endif %}">
                 <i class="fas fa-wifi"></i><span class="nav-text">Planos</span>
             </a>
-            <a href="{% url 'vendas_web:opcoes_vencimento' %}" class="nav-item {% if request.resolver_match.url_name == 'opcoes_vencimento' %}active{% endif %}">
+            <a href="{% url 'comercial_cadastro:opcoes_vencimento' %}" class="nav-item {% if request.resolver_match.url_name == 'opcoes_vencimento' %}active{% endif %}">
                 <i class="fas fa-calendar-alt"></i><span class="nav-text">Vencimentos</span>
             </a>
 
             <div class="sidebar-section-label">ATENDIMENTO</div>
-            <a href="{% url 'vendas_web:fluxos_atendimento' %}" class="nav-item {% if request.resolver_match.url_name == 'fluxos_atendimento' %}active{% endif %}">
+            <a href="{% url 'comercial_atendimento:fluxos_atendimento' %}" class="nav-item {% if request.resolver_match.url_name == 'fluxos_atendimento' %}active{% endif %}">
                 <i class="fas fa-project-diagram"></i><span class="nav-text">Fluxos</span>
             </a>
-            <a href="{% url 'vendas_web:questoes_fluxo' %}" class="nav-item {% if request.resolver_match.url_name == 'questoes_fluxo' %}active{% endif %}">
+            <a href="{% url 'comercial_atendimento:questoes_fluxo' %}" class="nav-item {% if request.resolver_match.url_name == 'questoes_fluxo' %}active{% endif %}">
                 <i class="fas fa-list-ol"></i><span class="nav-text">Questoes</span>
             </a>
-            <a href="{% url 'vendas_web:configuracoes_recontato' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes_recontato' %}active{% endif %}">
+            <a href="{% url 'sistema:configuracoes_recontato' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes_recontato' %}active{% endif %}">
                 <i class="fas fa-redo"></i><span class="nav-text">Recontato</span>
             </a>
 
             <div class="sidebar-section-label">SISTEMA</div>
-            <a href="{% url 'vendas_web:configuracoes_notificacoes' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes_notificacoes' %}active{% endif %}">
+            <a href="{% url 'notificacoes:configuracoes_notificacoes' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes_notificacoes' %}active{% endif %}">
                 <i class="fas fa-bell"></i><span class="nav-text">Notificacoes</span>
             </a>
 
         {% else %}
             <!-- ── Sidebar: Dashboard (padrao) ── -->
             <div class="sidebar-section-label">DASHBOARD</div>
-            <a href="{% url 'vendas_web:dashboard1' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard1' or request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+            <a href="{% url 'dashboard:dashboard1' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard1' or request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                 <i class="fas fa-chart-line"></i><span class="nav-text">Visao Geral</span>
             </a>
         {% endif %}
@@ -261,7 +261,7 @@
         <div class="config-sidebar-content">
             <div class="config-section">
                 <h4 class="config-section-title">Painel Principal</h4>
-                <a href="{% url 'vendas_web:configuracoes' %}" class="config-item">
+                <a href="{% url 'sistema:configuracoes' %}" class="config-item">
                     <i class="fas fa-sliders-h"></i>
                     <span>Configuracoes</span>
                 </a>
@@ -269,7 +269,7 @@
             {% if user.is_authenticated %}
             <div class="config-section">
                 <h4 class="config-section-title">Conta</h4>
-                <a href="{% url 'vendas_web:logout' %}" class="config-item logout-item" id="logoutLink">
+                <a href="{% url 'sistema:logout' %}" class="config-item logout-item" id="logoutLink">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Sair da Conta</span>
                 </a>

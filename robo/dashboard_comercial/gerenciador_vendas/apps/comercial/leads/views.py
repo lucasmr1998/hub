@@ -35,13 +35,13 @@ logger = logging.getLogger(__name__)
 # VIEWS DE PÁGINA
 # ============================================================================
 
-@login_required(login_url='vendas_web:login')
+@login_required(login_url='sistema:login')
 def leads_view(request):
     """View para a página de gerenciamento de leads"""
     context = {
         'user': request.user
     }
-    return render(request, 'vendas_web/leads.html', context)
+    return render(request, 'comercial/leads/leads.html', context)
 
 
 @login_required

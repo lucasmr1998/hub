@@ -20,7 +20,7 @@ def setup_inicial_view(request):
     """
     tenant = request.tenant
     if not tenant:
-        return redirect('vendas_web:home')
+        return redirect('sistema:home')
 
     config = ConfiguracaoEmpresa.all_tenants.filter(tenant=tenant, ativo=True).first()
 
@@ -75,7 +75,7 @@ def setup_inicial_view(request):
                 }
             )
 
-        return redirect('vendas_web:dashboard1')
+        return redirect('dashboard:dashboard1')
 
     return render(request, 'sistema/setup_inicial.html', {
         'config': config,
@@ -90,15 +90,15 @@ def setup_inicial_view(request):
 def home_view(request):
     """View para página inicial - redireciona baseado no status de autenticação"""
     if request.user.is_authenticated:
-        return redirect('vendas_web:dashboard1')
+        return redirect('dashboard:dashboard1')
     else:
-        return redirect('vendas_web:login')
+        return redirect('sistema:login')
 
 
 def login_view(request):
     """View para página de login"""
     if request.user.is_authenticated:
-        return redirect('vendas_web:dashboard1')
+        return redirect('dashboard:dashboard1')
 
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -109,14 +109,14 @@ def login_view(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, f'Bem-vindo, {user.first_name or user.username}!')
-                return redirect('vendas_web:dashboard1')
+                return redirect('dashboard:dashboard1')
             else:
                 messages.error(request, 'Usuário ou senha incorretos.')
         else:
             messages.error(request, 'Por favor, preencha todos os campos.')
 
     config = ConfiguracaoEmpresa.get_configuracao_ativa()
-    return render(request, 'vendas_web/login.html', {'config_empresa': config})
+    return render(request, 'sistema/login.html', {'config_empresa': config})
 
 
 def logout_view(request):
@@ -124,7 +124,7 @@ def logout_view(request):
     if request.user.is_authenticated:
         logout(request)
         messages.success(request, 'Você foi desconectado com sucesso.')
-    return redirect('vendas_web:home')
+    return redirect('sistema:home')
 
 
 # ============================================================================
@@ -134,7 +134,7 @@ def logout_view(request):
 @login_required
 def configuracoes_view(request):
     """View principal para configurações do sistema"""
-    return render(request, 'vendas_web/configuracoes/index.html')
+    return render(request, 'sistema/configuracoes/index.html')
 
 
 @login_required
@@ -145,7 +145,7 @@ def configuracoes_usuarios_view(request):
     # Verificar se o usuário tem permissão para gerenciar usuários
     if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
         messages.error(request, 'Você não tem permissão para acessar esta página.')
-        return redirect('vendas_web:dashboard1')
+        return redirect('dashboard:dashboard1')
 
     users = User.objects.all().order_by('-date_joined')
     groups = Group.objects.all().order_by('name')
@@ -155,7 +155,7 @@ def configuracoes_usuarios_view(request):
         'groups': groups,
         'user': request.user
     }
-    return render(request, 'vendas_web/configuracoes/usuarios.html', context)
+    return render(request, 'sistema/configuracoes/usuarios.html', context)
 
 
 @login_required
@@ -163,7 +163,7 @@ def configuracoes_recontato_view(request):
     """View para gerenciar configurações de recontato"""
     from vendas_web.models import ConfiguracaoRecontato
     configuracoes = ConfiguracaoRecontato.objects.all()
-    return render(request, 'vendas_web/configuracoes/recontato.html', {
+    return render(request, 'sistema/configuracoes/recontato.html', {
         'configuracoes': configuracoes
     })
 
@@ -392,16 +392,16 @@ def perfil_usuario_view(request):
             request.user.telefone = telefone if telefone else None
             request.user.save()
             messages.success(request, 'Telefone atualizado com sucesso!')
-            return redirect('vendas_web:perfil_usuario')
+            return redirect('sistema:perfil_usuario')
 
         context = {
             'page_title': 'Meu Perfil',
             'user': request.user
         }
 
-        return render(request, 'vendas_web/perfil_usuario.html', context)
+        return render(request, 'sistema/perfil_usuario.html', context)
 
     except Exception as e:
         logger.error(f'Erro na view de perfil: {str(e)}')
         messages.error(request, 'Erro ao carregar perfil. Tente novamente.')
-        return redirect('vendas_web:dashboard1')
+        return redirect('dashboard:dashboard1')

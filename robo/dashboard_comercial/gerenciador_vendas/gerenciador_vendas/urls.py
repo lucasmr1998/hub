@@ -23,18 +23,27 @@ urlpatterns = [
     # === API REST (DRF + OpenAPI) ===
     path('api/', include('apps.api.urls')),
 
-    # === App legado (views e URLs ainda aqui, migração incremental) ===
-    path('', include('vendas_web.urls')),
-
     # === Apps modulares ===
-    path('',              include('apps.sistema.urls')),
+    path('', include('apps.sistema.urls')),
+    path('', include('apps.comercial.leads.urls')),
+    path('', include('apps.comercial.atendimento.urls')),
+    path('', include('apps.comercial.cadastro.urls')),
+    path('', include('apps.comercial.viabilidade.urls')),
+    path('', include('apps.notificacoes.urls')),
+    path('', include('apps.marketing.campanhas.urls')),
+    path('', include('apps.dashboard.urls')),
+
+    # === Apps com prefixo proprio ===
     path('aurora-admin/', include('apps.admin_aurora.urls')),
     path('integracoes/',  include('apps.integracoes.urls')),
     path('crm/',          include('apps.comercial.crm.urls')),
 
-    # === Módulo CS ===
+    # === Modulo CS ===
     path('cs/clube/',       include('apps.cs.clube.urls')),
     path('cs/parceiros/',   include('apps.cs.parceiros.urls')),
     path('cs/indicacoes/',  include('apps.cs.indicacoes.urls')),
     path('cs/carteirinha/', include('apps.cs.carteirinha.urls')),
+
+    # === Legado (fallback para rotas ainda nao migradas) ===
+    path('', include('vendas_web.urls')),
 ]

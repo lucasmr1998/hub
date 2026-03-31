@@ -1,0 +1,759 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Opções de Vencimento - MegaLink{% endblock %}
+
+{% block extra_css %}
+<style>
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+
+    .breadcrumb a {
+        color: #6b7280;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .breadcrumb a:hover {
+        color: #1F3D59;
+    }
+
+    .breadcrumb-separator {
+        color: #9ca3af;
+    }
+
+    .page-header {
+        margin-bottom: 2rem;
+    }
+
+    .page-title-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .page-title {
+        color: #1f2937;
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .page-subtitle {
+        color: #6b7280;
+        font-size: 1rem;
+        margin: 0;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        background: #1F3D59;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #2c5282;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(31, 61, 89, 0.3);
+    }
+
+    .btn-secondary {
+        background: #6b7280;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #4b5563;
+        transform: translateY(-1px);
+    }
+
+    /* Lista de Opções */
+    .opcoes-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .opcoes-card-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        background: #f9fafb;
+    }
+
+    .opcoes-card-header h3 {
+        color: #1f2937;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .loading-container {
+        padding: 3rem;
+        text-align: center;
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #e5e7eb;
+        border-top: 4px solid #1F3D59;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .opcoes-grid {
+        padding: 1.5rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .empty-state {
+        padding: 4rem 2rem;
+        text-align: center;
+    }
+
+    .empty-state-icon {
+        font-size: 4rem;
+        color: #d1d5db;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state-title {
+        color: #6b7280;
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state-text {
+        color: #9ca3af;
+        font-size: 0.95rem;
+        margin-bottom: 2rem;
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* Opção Card */
+    .opcao-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        position: relative;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .opcao-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        border-color: #1F3D59;
+    }
+
+    .opcao-card.inativo {
+        opacity: 0.6;
+    }
+
+    .opcao-status {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 8px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+
+    .status-ativo {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-inativo {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .opcao-dia {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #1F3D59;
+        margin-bottom: 0.5rem;
+        line-height: 1;
+    }
+
+    .opcao-card.inativo .opcao-dia {
+        color: #9ca3af;
+    }
+
+    .opcao-descricao {
+        font-size: 0.9rem;
+        color: #6b7280;
+        margin-bottom: 1rem;
+        min-height: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .opcao-actions {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+    }
+
+    .btn-edit {
+        background: #059669;
+        color: white;
+        border: none;
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .btn-edit:hover {
+        background: #047857;
+        transform: translateY(-1px);
+    }
+
+    .btn-danger {
+        background: #dc2626;
+        color: white;
+        border: none;
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .btn-danger:hover {
+        background: #b91c1c;
+        transform: translateY(-1px);
+    }
+
+    /* Modal */
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    .modal-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f9fafb;
+    }
+
+    .modal-header h2 {
+        margin: 0;
+        color: #1f2937;
+        font-size: 1.5rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #6b7280;
+        padding: 0.5rem;
+        transition: color 0.2s;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+    }
+
+    .btn-close:hover {
+        color: #1f2937;
+        background: #e5e7eb;
+    }
+
+    .form-section {
+        padding: 1.5rem;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #374151;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #1F3D59;
+        box-shadow: 0 0 0 3px rgba(31, 61, 89, 0.1);
+    }
+
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        margin-bottom: 0 !important;
+        font-weight: 500;
+        color: #374151;
+    }
+
+    .checkbox-label input[type="checkbox"] {
+        width: auto;
+        margin: 0;
+        cursor: pointer;
+    }
+
+    .modal-footer {
+        padding: 1.5rem;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        background: #f9fafb;
+    }
+
+    @media (max-width: 768px) {
+        .page-title-wrapper {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .opcoes-grid {
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+        <a href="{% url 'sistema:configuracoes' %}">
+            <i class="fas fa-cog"></i> Configurações
+        </a>
+        <span class="breadcrumb-separator">/</span>
+        <span style="color: #1f2937; font-weight: 500;">Opções de Vencimento</span>
+    </div>
+
+    <!-- Header -->
+    <div class="page-header">
+        <div class="page-title-wrapper">
+            <h1 class="page-title">
+                <i class="fas fa-calendar-alt" style="color: #1F3D59;"></i>
+                Opções de Vencimento
+            </h1>
+            <button onclick="abrirModalNovaOpcao()" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nova Opção
+            </button>
+        </div>
+        <p class="page-subtitle">
+            Configure os dias de vencimento disponíveis para os clientes
+        </p>
+    </div>
+
+    <!-- Lista de Opções -->
+    <div class="opcoes-card">
+        <div class="opcoes-card-header">
+            <h3>
+                <i class="fas fa-list"></i>
+                Opções Cadastradas
+            </h3>
+        </div>
+
+        <!-- Loading -->
+        <div id="loadingOpcoes" class="loading-container" style="display: none;">
+            <div class="spinner"></div>
+            <p style="color: #6b7280; margin-top: 1rem;">Carregando opções...</p>
+        </div>
+
+        <!-- Grid de Opções -->
+        <div id="opcoesGrid" class="opcoes-grid">
+            <!-- Opções serão carregadas aqui via JavaScript -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-state-icon">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+            <h3 class="empty-state-title">Nenhuma opção encontrada</h3>
+            <p class="empty-state-text">Crie sua primeira opção de vencimento para disponibilizar aos clientes</p>
+            <button onclick="abrirModalNovaOpcao()" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Criar Primeira Opção
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Nova/Editar Opção -->
+<div id="modalOpcao" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitulo">
+                <i class="fas fa-calendar-alt"></i>
+                <span id="modalTituloTexto">Nova Opção de Vencimento</span>
+            </h2>
+            <button onclick="fecharModal()" class="btn-close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form id="formOpcao" onsubmit="salvarOpcao(event)">
+            <input type="hidden" id="opcao_id" name="id">
+
+            <div class="form-section">
+                <div class="form-group">
+                    <label for="dia_vencimento">
+                        <i class="fas fa-calendar-day"></i> Dia do Vencimento *
+                    </label>
+                    <select id="dia_vencimento" name="dia_vencimento" required>
+                        <option value="">Selecione o dia</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="descricao">
+                        <i class="fas fa-info-circle"></i> Descrição
+                    </label>
+                    <input type="text" id="descricao" name="descricao"
+                           placeholder="Ex: Todo dia 5 do mês">
+                </div>
+
+                <div class="form-group">
+                    <label for="ordem_exibicao">
+                        <i class="fas fa-sort"></i> Ordem de Exibição
+                    </label>
+                    <input type="number" id="ordem_exibicao" name="ordem_exibicao"
+                           placeholder="0" min="0">
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="ativo" name="ativo" checked>
+                        <i class="fas fa-toggle-on" style="color: #059669;"></i>
+                        Opção Ativa
+                    </label>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" onclick="fecharModal()" class="btn btn-secondary">
+                    <i class="fas fa-times"></i>
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i>
+                    <span id="btnSalvarTexto">Salvar Opção</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let opcoes = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    carregarOpcoes();
+    preencherSelectDias();
+});
+
+function preencherSelectDias() {
+    const select = document.getElementById('dia_vencimento');
+    for (let i = 1; i <= 31; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = i;
+        select.appendChild(option);
+    }
+}
+
+async function carregarOpcoes() {
+    const loading = document.getElementById('loadingOpcoes');
+    const grid = document.getElementById('opcoesGrid');
+    const emptyState = document.getElementById('emptyState');
+
+    loading.style.display = 'block';
+    grid.style.display = 'none';
+    emptyState.style.display = 'none';
+
+    try {
+        const response = await fetch('/api/configuracoes/vencimentos/', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            opcoes = data.data;
+            renderizarOpcoes(opcoes);
+        } else {
+            throw new Error(data.error || 'Erro ao carregar opções');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao carregar opções: ' + error.message);
+    } finally {
+        loading.style.display = 'none';
+    }
+}
+
+function renderizarOpcoes(opcoesLista) {
+    const grid = document.getElementById('opcoesGrid');
+    const emptyState = document.getElementById('emptyState');
+
+    if (opcoesLista.length === 0) {
+        grid.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+    }
+
+    grid.style.display = 'grid';
+    emptyState.style.display = 'none';
+
+    grid.innerHTML = opcoesLista.map(opcao => `
+        <div class="opcao-card ${opcao.ativo ? '' : 'inativo'}">
+            <div class="opcao-status ${opcao.ativo ? 'status-ativo' : 'status-inativo'}">
+                ${opcao.ativo ? 'ATIVO' : 'INATIVO'}
+            </div>
+
+            <div class="opcao-dia">${opcao.dia_vencimento}</div>
+            <div class="opcao-descricao">
+                ${opcao.descricao || `Todo dia ${opcao.dia_vencimento} do mês`}
+            </div>
+
+            <div class="opcao-actions">
+                <button onclick="editarOpcao(${opcao.id})" class="btn-edit">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="excluirOpcao(${opcao.id})" class="btn-danger">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function abrirModalNovaOpcao() {
+    document.getElementById('modalTituloTexto').textContent = 'Nova Opção de Vencimento';
+    document.getElementById('btnSalvarTexto').textContent = 'Salvar Opção';
+    document.getElementById('formOpcao').reset();
+    document.getElementById('opcao_id').value = '';
+    document.getElementById('ativo').checked = true;
+    document.getElementById('modalOpcao').style.display = 'flex';
+}
+
+function editarOpcao(id) {
+    const opcao = opcoes.find(o => o.id === id);
+    if (!opcao) return;
+
+    document.getElementById('modalTituloTexto').textContent = 'Editar Opção de Vencimento';
+    document.getElementById('btnSalvarTexto').textContent = 'Salvar Alterações';
+
+    document.getElementById('opcao_id').value = opcao.id;
+    document.getElementById('dia_vencimento').value = opcao.dia_vencimento;
+    document.getElementById('descricao').value = opcao.descricao || '';
+    document.getElementById('ordem_exibicao').value = opcao.ordem_exibicao;
+    document.getElementById('ativo').checked = opcao.ativo;
+
+    document.getElementById('modalOpcao').style.display = 'flex';
+}
+
+async function salvarOpcao(event) {
+    event.preventDefault();
+
+    const formData = new FormData(event.target);
+    const data = {
+        dia_vencimento: parseInt(formData.get('dia_vencimento')),
+        descricao: formData.get('descricao'),
+        ordem_exibicao: parseInt(formData.get('ordem_exibicao')) || 0,
+        ativo: formData.get('ativo') === 'on'
+    };
+
+    const opcaoId = formData.get('id');
+    const isEdit = opcaoId && opcaoId !== '';
+
+    if (isEdit) {
+        data.id = parseInt(opcaoId);
+    }
+
+    try {
+        const response = await fetch('/api/configuracoes/vencimentos/', {
+            method: isEdit ? 'PUT' : 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert(result.message);
+            fecharModal();
+            carregarOpcoes();
+        } else {
+            throw new Error(result.error || 'Erro ao salvar opção');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao salvar opção: ' + error.message);
+    }
+}
+
+async function excluirOpcao(id) {
+    if (!confirm('Tem certeza que deseja excluir esta opção de vencimento?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/configuracoes/vencimentos/', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ id: id })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert(result.message);
+            carregarOpcoes();
+        } else {
+            throw new Error(result.error || 'Erro ao excluir opção');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao excluir opção: ' + error.message);
+    }
+}
+
+function fecharModal() {
+    document.getElementById('modalOpcao').style.display = 'none';
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Fechar modal ao clicar fora
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('modalOpcao');
+    if (event.target === modal) {
+        fecharModal();
+    }
+});
+</script>
+{% endblock %}

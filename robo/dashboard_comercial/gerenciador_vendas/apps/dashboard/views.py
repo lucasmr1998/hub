@@ -36,28 +36,28 @@ def dashboard_view(request):
     context = {
         'user': request.user if request.user.is_authenticated else None
     }
-    return render(request, 'vendas_web/new_dash.html', context)
+    return render(request, 'dashboard/new_dash.html', context)
 
 
-@login_required(login_url='vendas_web:login')
+@login_required(login_url='sistema:login')
 def dashboard1(request):
     """View alternativa do dashboard - alias para dashboard_view"""
     context = {
         'user': request.user
     }
-    return render(request, 'vendas_web/new_dash.html', context)
+    return render(request, 'dashboard/new_dash.html', context)
 
 
-@login_required(login_url='vendas_web:login')
+@login_required(login_url='sistema:login')
 def vendas_view(request):
     """View para a página de gerenciamento de vendas (prospectos)"""
     context = {
         'user': request.user
     }
-    return render(request, 'vendas_web/vendas.html', context)
+    return render(request, 'dashboard/vendas.html', context)
 
 
-@login_required(login_url='vendas_web:login')
+@login_required(login_url='sistema:login')
 def relatorios_view(request):
     """View para a página principal de relatórios"""
     from vendas_web.models import LeadProspecto, Prospecto, HistoricoContato
@@ -244,7 +244,7 @@ def relatorios_view(request):
         'user': request.user,
         'stats': stats
     }
-    return render(request, 'vendas_web/relatorios.html', context)
+    return render(request, 'dashboard/relatorios.html', context)
 
 
 def relatorio_leads_view(request):
@@ -271,7 +271,7 @@ def relatorio_leads_view(request):
         por_dia.append({'data': d.strftime('%d/%m'), 'total': LeadProspecto.objects.filter(data_cadastro__date=d).count()})
     por_dia.reverse()
 
-    return render(request, 'vendas_web/relatorio_leads_page.html', {
+    return render(request, 'dashboard/relatorio_leads_page.html', {
         'stats': {
             'total': total, 'hoje': leads_hoje, 'semana': leads_7d, 'mes': leads_30d,
         },
@@ -316,7 +316,7 @@ def relatorio_clientes_view(request):
         evolucao.append({'data': d.strftime('%d/%m'), 'total': ServicoClienteHubsoft.objects.filter(status_prefixo='servico_habilitado', data_habilitacao__date=d).count()})
     evolucao.reverse()
 
-    return render(request, 'vendas_web/relatorio_clientes_page.html', {
+    return render(request, 'dashboard/relatorio_clientes_page.html', {
         'stats': {
             'total_clientes': total_clientes, 'ativos': ativos, 'total_servicos': total_servicos,
             'habilitados': habilitados, 'aguardando': aguardando, 'cancelados': cancelados,
@@ -354,7 +354,7 @@ def relatorio_atendimentos_view(request):
         por_dia.append({'data': d.strftime('%d/%m'), 'total': HistoricoContato.objects.filter(data_hora_contato__date=d, status='fluxo_inicializado').count()})
     por_dia.reverse()
 
-    return render(request, 'vendas_web/relatorio_atendimentos_page.html', {
+    return render(request, 'dashboard/relatorio_atendimentos_page.html', {
         'stats': {
             'total': total, 'hoje': atend_hoje, 'semana': atend_7d, 'mes': atend_30d,
         },
@@ -370,7 +370,7 @@ def analise_atendimentos_view(request):
     context = {
         'user': request.user if request.user.is_authenticated else None
     }
-    return render(request, 'vendas_web/analise_atendimentos.html', context)
+    return render(request, 'dashboard/analise_atendimentos.html', context)
 
 
 def relatorio_conversoes_view(request):
@@ -378,7 +378,7 @@ def relatorio_conversoes_view(request):
     context = {
         'user': request.user if request.user.is_authenticated else None
     }
-    return render(request, 'vendas_web/relatorio_conversoes.html', context)
+    return render(request, 'dashboard/relatorio_conversoes.html', context)
 
 
 def ajuda_view(request):
@@ -387,7 +387,7 @@ def ajuda_view(request):
         'user': request.user if request.user.is_authenticated else None,
         'page_title': 'Central de Ajuda - Megalink'
     }
-    return render(request, 'vendas_web/ajuda.html', context)
+    return render(request, 'dashboard/ajuda.html', context)
 
 
 def documentacao_view(request):
@@ -396,7 +396,7 @@ def documentacao_view(request):
         'user': request.user if request.user.is_authenticated else None,
         'page_title': 'Documentação - Megalink'
     }
-    return render(request, 'vendas_web/documentacao.html', context)
+    return render(request, 'dashboard/documentacao.html', context)
 
 
 def api_swagger_view(request):
@@ -404,7 +404,7 @@ def api_swagger_view(request):
     context = {
         'user': request.user if request.user.is_authenticated else None
     }
-    return render(request, 'vendas_web/api_swagger.html', context)
+    return render(request, 'dashboard/api_swagger.html', context)
 
 
 def api_documentation_view(request):
@@ -429,7 +429,7 @@ def n8n_guide_view(request):
     context = {
         'user': request.user if request.user.is_authenticated else None
     }
-    return render(request, 'vendas_web/n8n_guide.html', context)
+    return render(request, 'dashboard/n8n_guide.html', context)
 
 
 # ============================================================================

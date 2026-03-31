@@ -131,12 +131,12 @@ Ao aceitar este contrato, você concorda com todos os termos descritos.''',
             'vencimentos': vencimentos
         }
 
-        return render(request, 'vendas_web/cadastro.html', context)
+        return render(request, 'comercial/cadastro/cadastro.html', context)
 
     except Exception as e:
         # Log do erro
         logger.error("Erro na view de cadastro: %s", e, exc_info=True)
-        return render(request, 'vendas_web/cadastro.html', {
+        return render(request, 'comercial/cadastro/cadastro.html', {
             'error': 'Erro ao carregar configurações. Tente novamente.'
         })
 
@@ -692,7 +692,7 @@ def api_consulta_cep(request, cep):
 def configuracoes_cadastro_view(request):
     """View para gerenciar configurações de cadastro"""
     configuracoes = ConfiguracaoCadastro.objects.all()
-    return render(request, 'vendas_web/configuracoes/cadastro.html', {
+    return render(request, 'comercial/cadastro/configuracoes/cadastro.html', {
         'configuracoes': configuracoes
     })
 
@@ -801,7 +801,7 @@ def salvar_configuracoes_cadastro_view(request):
 def planos_internet_view(request):
     """View para gerenciar planos de internet"""
     planos = PlanoInternet.objects.all().order_by('ordem_exibicao', 'nome')
-    return render(request, 'vendas_web/configuracoes/planos.html', {
+    return render(request, 'comercial/cadastro/configuracoes/planos.html', {
         'planos': planos
     })
 
@@ -810,7 +810,7 @@ def planos_internet_view(request):
 def opcoes_vencimento_view(request):
     """View para gerenciar opções de vencimento"""
     opcoes = OpcaoVencimento.objects.all().order_by('ordem_exibicao', 'dia_vencimento')
-    return render(request, 'vendas_web/configuracoes/vencimentos.html', {
+    return render(request, 'comercial/cadastro/configuracoes/vencimentos.html', {
         'opcoes': opcoes
     })
 

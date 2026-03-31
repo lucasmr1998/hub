@@ -1,0 +1,1001 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Gerenciador de Página de Cadastro - MegaLink{% endblock %}
+
+{% block custom_css %}
+<style>
+    /* Tabs */
+    .tabs-container { background:var(--bg-white); border-radius:12px; border:1px solid var(--border); overflow:hidden; }
+    .tabs-header { display:flex; background:var(--border-light); border-bottom:1px solid var(--border); overflow-x:auto; }
+    .tab-button { flex:1; padding:12px 16px; background:none; border:none; cursor:pointer; font-weight:500; font-size:13px; color:var(--text-muted); transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:6px; min-width:160px; }
+    .tab-button:hover { background:var(--bg-white); color:var(--text-main); }
+    .tab-button.active { background:var(--bg-white); color:var(--primary); border-bottom:2px solid var(--primary); }
+    .tab-content { display:none; padding:24px; }
+    .tab-content.active { display:block; }
+
+    /* Card overrides for this page */
+    .card-header { padding:16px 20px; border-bottom:1px solid var(--border); background:var(--border-light); }
+    .card-title { color:var(--text-main); font-size:15px; font-weight:600; margin:0; display:flex; align-items:center; gap:8px; }
+    .card-body { padding:20px; }
+
+    /* Forms */
+    .form-input, .form-select, .form-textarea { width:100%; padding:9px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; color:var(--text-main); background:var(--bg-white); }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,0.1); }
+    .form-textarea { resize:vertical; min-height:100px; }
+
+    /* Grid */
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+
+    /* Preview */
+    .preview-container { background:var(--border-light); border:2px dashed var(--border); border-radius:12px; padding:12px; }
+    .preview-iframe { width:100%; border:1px solid var(--border); border-radius:8px; background:white; }
+
+    /* Status */
+    .status-active { background:var(--success-light); color:var(--success-dark); }
+    .status-inactive { background:var(--danger-light); color:var(--danger-dark); }
+
+    /* Table */
+    .table { width:100%; border-collapse:collapse; }
+    .table th { padding:10px 14px; text-align:left; font-weight:700; font-size:11px; text-transform:uppercase; color:var(--text-muted); border-bottom:1px solid var(--border); background:var(--border-light); }
+    .table td { padding:12px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:13px; }
+    .table tbody tr:hover { background:var(--border-light); }
+
+    /* Color picker */
+    .color-picker-container { display:flex; align-items:center; gap:12px; }
+    .color-picker { width:50px; height:40px; border:1px solid var(--border); border-radius:6px; cursor:pointer; }
+
+    /* Switch */
+    .switch { position:relative; display:inline-block; width:50px; height:24px; }
+    .switch input { opacity:0; width:0; height:0; }
+    .slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#ccc; transition:.4s; border-radius:24px; }
+    .slider:before { position:absolute; content:""; height:18px; width:18px; left:3px; bottom:3px; background:white; transition:.4s; border-radius:50%; }
+    input:checked + .slider { background:var(--primary); }
+    input:checked + .slider:before { transform:translateX(26px); }
+
+    @media (max-width:768px) {
+        .grid-2, .grid-3 { grid-template-columns:1fr; }
+        .tabs-header { flex-direction:column; }
+        .tab-button { min-width:auto; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- CSRF Token para AJAX -->
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+<div>
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+        <h1 class="page-title">Landing Page</h1>
+        <div style="display:flex;gap:8px;">
+            <button onclick="previewPage()" class="btn-secondary btn-sm"><i class="fas fa-eye"></i> Visualizar</button>
+            <button onclick="saveAllSettings()" class="btn-primary btn-sm"><i class="fas fa-save"></i> Salvar</button>
+        </div>
+    </div>
+
+    <!-- Sistema de Abas -->
+    <div class="tabs-container">
+        <div class="tabs-header">
+            <button class="tab-button active" onclick="switchTab('visual')">
+                Visual & Design
+            </button>
+            <button class="tab-button" onclick="switchTab('content')">
+                Conteúdo & Textos
+            </button>
+            <button class="tab-button" onclick="switchTab('forms')">
+                Formulários & Campos
+            </button>
+            <button class="tab-button" onclick="switchTab('advanced')">
+                Configurações Avançadas
+            </button>
+        </div>
+
+        <!-- Aba Visual & Design -->
+        <div id="tab-visual" class="tab-content active">
+            <div class="grid-2" style="align-items: stretch;">
+                <!-- Preview da Página -->
+                <div class="card" style="display: flex; flex-direction: column;">
+                    <div class="card-header">
+                        <h3 class="card-title">Preview da Página</h3>
+                    </div>
+                    <div class="card-body" style="flex: 1; display: flex; flex-direction: column;">
+                        <div class="preview-container" style="flex: 1; min-height: 500px;">
+                            <iframe id="pagePreview" class="preview-iframe" src="{% url 'comercial_cadastro:cadastro_cliente' %}" style="height: 100%; min-height: 500px;"></iframe>
+                        </div>
+                        <div style="margin-top: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                            <button onclick="refreshPreview()" class="btn-secondary">
+                                Atualizar Preview
+                            </button>
+                            <button onclick="openInNewTab()" class="btn-primary">
+                                Abrir em Nova Aba
+                            </button>
+                            <button onclick="resetPreview()" class="btn-danger">
+                                Resetar Preview
+                            </button>
+                        </div>
+                        <div style="margin-top: 1rem; padding: 1rem; background: #e8f5e8; border-radius: 8px; border-left: 4px solid #28a745;">
+                            <strong>💡 Dica:</strong> As mudanças visuais são aplicadas em tempo real no preview. Use os controles acima para personalizar a aparência da página.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configurações Visuais -->
+                <div class="card" style="display: flex; flex-direction: column;">
+                    <div class="card-header">
+                        <h3 class="card-title">Configurações Visuais</h3>
+                    </div>
+                    <div class="card-body" style="flex: 1; overflow-y: auto;">
+                        <!-- Logo -->
+                        <div class="form-group">
+                            <label class="form-label">URL da Logo</label>
+                            <div style="margin-bottom: 0.5rem;">
+                                <small style="color: #6c757d;">Atualmente:</small><br>
+                                <small style="color: #6c757d; word-break: break-all;">{{ configuracoes.0.logo_url|default:"https://i.ibb.co/q3MyCdBZ/Ativo-33.png" }}</small>
+            </div>
+            <div>
+                                <small style="color: #6c757d;">Alterar:</small>
+                                <input type="url" id="logoUrl" class="form-input" value="{{ configuracoes.0.logo_url|default:'' }}" placeholder="https://exemplo.com/logo.png" onchange="updatePreviewInRealTime()">
+                                <small style="color: #6c757d;">URL da imagem da logo</small>
+                            </div>
+                        </div>
+
+                        <!-- Tipo de Background -->
+                        <div class="form-group">
+                            <label class="form-label">Tipo de Background</label>
+                            <select id="backgroundType" class="form-select" onchange="updatePreviewInRealTime()">
+                                <option value="gradient" {% if configuracoes.0.background_type == 'gradient' %}selected{% endif %}>Gradiente</option>
+                                <option value="solid" {% if configuracoes.0.background_type == 'solid' %}selected{% endif %}>Cor Sólida</option>
+                                <option value="image" {% if configuracoes.0.background_type == 'image' %}selected{% endif %}>Imagem</option>
+                </select>
+            </div>
+
+                        <!-- Cor de Background 1 -->
+                        <div class="form-group">
+                            <label class="form-label">Cor de Background 1</label>
+                            <div class="color-picker-container">
+                                <input type="color" id="backgroundColor1" class="color-picker" value="{{ configuracoes.0.background_color_1|default:'#667eea' }}" onchange="updatePreviewInRealTime()">
+                                <input type="text" id="backgroundColor1Text" class="form-input" value="{{ configuracoes.0.background_color_1|default:'#667eea' }}" style="flex: 1;" onchange="updatePreviewInRealTime()">
+                            </div>
+                            <small style="color: #6c757d;">Cor principal ou inicial do gradiente</small>
+                        </div>
+
+                        <!-- Cor de Background 2 -->
+                        <div class="form-group">
+                            <label class="form-label">Cor de Background 2</label>
+                            <div class="color-picker-container">
+                                <input type="color" id="backgroundColor2" class="color-picker" value="{{ configuracoes.0.background_color_2|default:'#764ba2' }}" onchange="updatePreviewInRealTime()">
+                                <input type="text" id="backgroundColor2Text" class="form-input" value="{{ configuracoes.0.background_color_2|default:'#764ba2' }}" style="flex: 1;" onchange="updatePreviewInRealTime()">
+                            </div>
+                            <small style="color: #6c757d;">Cor secundária ou final do gradiente</small>
+                        </div>
+
+                        <!-- URL da Imagem de Background -->
+                        <div class="form-group">
+                            <label class="form-label">URL da Imagem de Background</label>
+                            <input type="url" id="backgroundImageUrl" class="form-input" value="{{ configuracoes.0.background_image_url|default:'' }}" placeholder="https://exemplo.com/background.jpg" onchange="updatePreviewInRealTime()">
+                            <small style="color: #6c757d;">URL da imagem de fundo (se tipo = imagem)</small>
+                        </div>
+
+                        <!-- Cor Primária -->
+                        <div class="form-group">
+                            <label class="form-label">Cor Primária</label>
+                            <div class="color-picker-container">
+                                <input type="color" id="primaryColor" class="color-picker" value="{{ configuracoes.0.primary_color|default:'#667eea' }}" onchange="updatePreviewInRealTime()">
+                                <input type="text" id="primaryColorText" class="form-input" value="{{ configuracoes.0.primary_color|default:'#667eea' }}" style="flex: 1;" onchange="updatePreviewInRealTime()">
+                            </div>
+                            <small style="color: #6c757d;">Cor principal para botões e destaques</small>
+                        </div>
+
+                        <!-- Cor Secundária -->
+                        <div class="form-group">
+                            <label class="form-label">Cor Secundária</label>
+                            <div class="color-picker-container">
+                                <input type="color" id="secondaryColor" class="color-picker" value="{{ configuracoes.0.secondary_color|default:'#764ba2' }}" onchange="updatePreviewInRealTime()">
+                                <input type="text" id="secondaryColorText" class="form-input" value="{{ configuracoes.0.secondary_color|default:'#764ba2' }}" style="flex: 1;" onchange="updatePreviewInRealTime()">
+                            </div>
+                            <small style="color: #6c757d;">Cor secundária para elementos</small>
+                        </div>
+
+                        <!-- Cor de Sucesso -->
+                        <div class="form-group">
+                            <label class="form-label">Cor de Sucesso</label>
+                            <div class="color-picker-container">
+                                <input type="color" id="successColor" class="color-picker" value="{{ configuracoes.0.success_color|default:'#2ecc71' }}" onchange="updatePreviewInRealTime()">
+                                <input type="text" id="successColorText" class="form-input" value="{{ configuracoes.0.success_color|default:'#2ecc71' }}" style="flex: 1;" onchange="updatePreviewInRealTime()">
+                            </div>
+                        </div>
+
+                        <!-- Cor de Erro -->
+                        <div class="form-group">
+                            <label class="form-label">Cor de Erro</label>
+                            <div class="color-picker-container">
+                                <input type="color" id="errorColor" class="color-picker" value="{{ configuracoes.0.error_color|default:'#e74c3c' }}" onchange="updatePreviewInRealTime()">
+                                <input type="text" id="errorColorText" class="form-input" value="{{ configuracoes.0.error_color|default:'#e74c3c' }}" style="flex: 1;" onchange="updatePreviewInRealTime()">
+                            </div>
+                        </div>
+
+                        <!-- Fonte Principal -->
+                        <div class="form-group">
+                            <label class="form-label">Fonte Principal</label>
+                            <select id="primaryFont" class="form-select" onchange="updatePreviewInRealTime()">
+                                <option value="Inter">Inter</option>
+                                <option value="Roboto">Roboto</option>
+                                <option value="Open Sans">Open Sans</option>
+                                <option value="Poppins">Poppins</option>
+                            </select>
+                        </div>
+
+                        <!-- Tamanho da Fonte Base -->
+                        <div class="form-group">
+                            <label class="form-label">Tamanho da Fonte Base</label>
+                            <select id="fontSize" class="form-select" onchange="updatePreviewInRealTime()">
+                                <option value="14px">Pequeno (14px)</option>
+                                <option value="16px" selected>Médio (16px)</option>
+                                <option value="18px">Grande (18px)</option>
+                            </select>
+                        </div>
+
+                        <button onclick="saveVisualSettings()" class="btn-primary">
+                            Salvar Configurações Visuais
+            </button>
+                    </div>
+                </div>
+        </div>
+    </div>
+
+        <!-- Aba Conteúdo & Textos -->
+        <div id="tab-content" class="tab-content">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Textos da Página</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">Título Principal</label>
+                            <input type="text" id="mainTitle" class="form-input" value="{{ configuracoes.0.titulo_pagina|default:'Escolha o Melhor Plano para Você' }}">
+        </div>
+        
+                        <div class="form-group">
+                            <label class="form-label">Subtítulo</label>
+                            <textarea id="subtitle" class="form-textarea" placeholder="Descrição da página...">{{ configuracoes.0.subtitulo_pagina|default:'Encontre o plano ideal para suas necessidades de internet' }}</textarea>
+        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Mensagem de Sucesso</label>
+                            <textarea id="successMessage" class="form-textarea" placeholder="Mensagem exibida após cadastro bem-sucedido...">{{ configuracoes.0.mensagem_sucesso|default:'Parabéns! Seu cadastro foi realizado com sucesso.' }}</textarea>
+        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Instruções Pós-Cadastro</label>
+                            <textarea id="postInstructions" class="form-textarea" placeholder="Instruções exibidas após o cadastro...">{{ configuracoes.0.instrucoes_pos_cadastro|default:'Em breve nossa equipe entrará em contato para agendar a instalação.' }}</textarea>
+                        </div>
+
+                        <button onclick="saveContentSettings()" class="btn-primary">
+                            Salvar Conteúdo
+            </button>
+        </div>
+    </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Informações de Contato</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">Telefone de Suporte</label>
+                            <input type="text" id="supportPhone" class="form-input" value="{{ configuracoes.0.telefone_suporte|default:'(89) 2221-0068' }}" placeholder="(00) 0000-0000">
+</div>
+
+                        <div class="form-group">
+                            <label class="form-label">WhatsApp de Suporte</label>
+                            <input type="text" id="supportWhatsapp" class="form-input" value="{{ configuracoes.0.whatsapp_suporte|default:'558922210068' }}" placeholder="5500000000000">
+        </div>
+        
+                        <div class="form-group">
+                            <label class="form-label">Email de Suporte</label>
+                            <input type="email" id="supportEmail" class="form-input" value="{{ configuracoes.0.email_suporte|default:'contato@megalinkpiaui.com.br' }}" placeholder="contato@exemplo.com">
+                        </div>
+
+                        <button onclick="saveContentSettings()" class="btn-primary">
+                            Salvar Informações de Contato
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aba Formulários & Campos -->
+        <div id="tab-forms" class="tab-content">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Campos Obrigatórios</h3>
+                    </div>
+                    <div class="card-body">
+                    <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="cpfRequired" {% if configuracoes.0.cpf_obrigatorio %}checked{% endif %}>
+                                CPF Obrigatório
+                            </label>
+                    </div>
+
+                    <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="emailRequired" {% if configuracoes.0.email_obrigatorio %}checked{% endif %}>
+                                Email Obrigatório
+                            </label>
+                    </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="phoneRequired" {% if configuracoes.0.telefone_obrigatorio %}checked{% endif %}>
+                                Telefone Obrigatório
+                            </label>
+                </div>
+                
+                <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="addressRequired" {% if configuracoes.0.endereco_obrigatorio %}checked{% endif %}>
+                                Endereço Obrigatório
+                            </label>
+                        </div>
+
+                        <button onclick="saveFormSettings()" class="btn-primary">
+                            Salvar Configurações de Campos
+                        </button>
+                </div>
+            </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Validações</h3>
+                    </div>
+                    <div class="card-body">
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                                <input type="checkbox" id="validateCep" {% if configuracoes.0.validar_cep %}checked{% endif %}>
+                                Validar CEP
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                                <input type="checkbox" id="validateCpf" {% if configuracoes.0.validar_cpf %}checked{% endif %}>
+                                Validar CPF
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="showProgressBar" {% if configuracoes.0.mostrar_progress_bar %}checked{% endif %}>
+                                Mostrar Barra de Progresso
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Número de Etapas</label>
+                            <input type="number" id="numberOfSteps" class="form-input" value="{{ configuracoes.0.numero_etapas|default:4 }}" min="1" max="10">
+                        </div>
+
+                        <button onclick="saveFormSettings()" class="btn-primary">
+                            Salvar Validações
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aba Configurações Avançadas -->
+        <div id="tab-advanced" class="tab-content">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Integrações</h3>
+                    </div>
+                    <div class="card-body">
+                <div class="form-group">
+                    <label class="checkbox-label">
+                                <input type="checkbox" id="autoCreateLead" {% if configuracoes.0.criar_lead_automatico %}checked{% endif %}>
+                        Criar Lead Automaticamente
+                    </label>
+                            <small style="color: #6c757d;">Ativar criação automática de leads após cadastro</small>
+                </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Origem Padrão do Lead</label>
+                            <select id="leadOrigin" class="form-select">
+                                <option value="site" {% if configuracoes.0.origem_lead_padrao == 'site' %}selected{% endif %}>Site</option>
+                                <option value="telefone" {% if configuracoes.0.origem_lead_padrao == 'telefone' %}selected{% endif %}>Telefone</option>
+                                <option value="whatsapp" {% if configuracoes.0.origem_lead_padrao == 'whatsapp' %}selected{% endif %}>WhatsApp</option>
+                                <option value="facebook" {% if configuracoes.0.origem_lead_padrao == 'facebook' %}selected{% endif %}>Facebook</option>
+                                <option value="google" {% if configuracoes.0.origem_lead_padrao == 'google' %}selected{% endif %}>Google</option>
+                                <option value="indicacao" {% if configuracoes.0.origem_lead_padrao == 'indicacao' %}selected{% endif %}>Indicação</option>
+                            </select>
+            </div>
+
+                        <button onclick="saveAdvancedSettings()" class="btn-primary">
+                            Salvar Integrações
+                </button>
+            </div>
+    </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Notificações</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="sendEmailConfirmation" {% if configuracoes.0.enviar_email_confirmacao %}checked{% endif %}>
+                                Enviar Email de Confirmação
+                            </label>
+                            <small style="color: #6c757d;">Enviar email após cadastro bem-sucedido</small>
+</div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="sendWhatsappConfirmation" {% if configuracoes.0.enviar_whatsapp_confirmacao %}checked{% endif %}>
+                                Enviar WhatsApp de Confirmação
+                            </label>
+                            <small style="color: #6c757d;">Enviar mensagem via WhatsApp após cadastro</small>
+                        </div>
+
+                        <button onclick="saveAdvancedSettings()" class="btn-primary">
+                            Salvar Notificações
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📊 Estatísticas da Página</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="grid-3">
+                            <div style="text-align: center; padding: 1rem; background: #f8f9ff; border-radius: 8px;">
+                                <div style="font-size: 2rem; font-weight: bold; color: #667eea;">1,247</div>
+                                <div style="color: #6c757d; font-size: 0.9rem;">Visualizações Hoje</div>
+                            </div>
+                            <div style="text-align: center; padding: 1rem; background: #f8f9ff; border-radius: 8px;">
+                                <div style="font-size: 2rem; font-weight: bold; color: #667eea;">89</div>
+                                <div style="color: #6c757d; font-size: 0.9rem;">Conversões Hoje</div>
+                            </div>
+                            <div style="text-align: center; padding: 1rem; background: #f8f9ff; border-radius: 8px;">
+                                <div style="font-size: 2rem; font-weight: bold; color: #667eea;">7.1%</div>
+                                <div style="color: #6c757d; font-size: 0.9rem;">Taxa de Conversão</div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 1.5rem;">
+                            <h4 style="color: #1F3D59; margin-bottom: 1rem;">Plano Mais Popular</h4>
+                            <div style="background: #e8f5e8; padding: 1rem; border-radius: 8px; border-left: 4px solid #28a745;">
+                                <strong>Plano Intermediário</strong><br>
+                                <small style="color: #6c757d;">100 Mbps - R$ 79,90</small>
+                            </div>
+                        </div>
+
+                        <button onclick="viewDetailedStats()" class="btn-secondary" style="margin-top: 1rem;">
+                            📊 Ver Estatísticas Detalhadas
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Sistema de Abas
+function switchTab(tabName) {
+    // Remove active de todas as abas
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    // Adiciona active na aba selecionada
+    event.target.classList.add('active');
+    document.getElementById('tab-' + tabName).classList.add('active');
+}
+
+// Funções de Preview
+function refreshPreview() {
+    const iframe = document.getElementById('pagePreview');
+    iframe.src = iframe.src;
+}
+
+function resetPreview() {
+    if (confirm('Deseja resetar o preview para as configurações padrão?')) {
+        // Resetar valores padrão
+        document.getElementById('logoUrl').value = '';
+        document.getElementById('backgroundType').value = 'gradient';
+        document.getElementById('backgroundColor1').value = '#667eea';
+        document.getElementById('backgroundColor2').value = '#764ba2';
+        document.getElementById('backgroundImageUrl').value = '';
+        document.getElementById('primaryColor').value = '#667eea';
+        document.getElementById('secondaryColor').value = '#764ba2';
+        document.getElementById('successColor').value = '#2ecc71';
+        document.getElementById('errorColor').value = '#e74c3c';
+        document.getElementById('primaryFont').value = 'Inter';
+        document.getElementById('fontSize').value = '16px';
+        
+        // Atualizar campos de texto
+        document.getElementById('primaryColorText').value = '#667eea';
+        document.getElementById('secondaryColorText').value = '#764ba2';
+        document.getElementById('backgroundColor1Text').value = '#667eea';
+        document.getElementById('backgroundColor2Text').value = '#764ba2';
+        document.getElementById('successColorText').value = '#2ecc71';
+        document.getElementById('errorColorText').value = '#e74c3c';
+        
+        // Limpar localStorage
+        localStorage.removeItem('cadastroVisualSettings');
+        
+        // Aplicar mudanças
+        updatePreviewInRealTime();
+        
+        alert('Preview resetado para as configurações padrão!');
+    }
+}
+
+function openInNewTab() {
+    window.open('{% url "comercial_cadastro:cadastro_cliente" %}', '_blank');
+}
+
+function previewPage() {
+    window.open('{% url "comercial_cadastro:cadastro_cliente" %}', '_blank');
+}
+
+// Funções de Configuração Visual
+function applyVisualChanges() {
+    const primaryColor = document.getElementById('primaryColor').value;
+    const secondaryColor = document.getElementById('secondaryColor').value;
+    const backgroundColor = document.getElementById('backgroundColor').value;
+    const primaryFont = document.getElementById('primaryFont').value;
+    const fontSize = document.getElementById('fontSize').value;
+    
+    // Atualizar campos de texto
+    document.getElementById('primaryColorText').value = primaryColor;
+    document.getElementById('secondaryColorText').value = secondaryColor;
+    document.getElementById('backgroundColorText').value = backgroundColor;
+    
+    // Aplicar mudanças no preview
+    applyChangesToPreview({
+        primaryColor, secondaryColor, backgroundColor, primaryFont, fontSize
+    });
+    
+    // Salvar no localStorage para persistência
+    saveVisualSettings({
+        primaryColor, secondaryColor, backgroundColor, primaryFont, fontSize
+    });
+    
+    console.log('Aplicando mudanças visuais:', {
+        primaryColor, secondaryColor, backgroundColor, primaryFont, fontSize
+    });
+    
+    alert('Mudanças visuais aplicadas com sucesso!');
+}
+
+// Função para aplicar mudanças no preview
+function applyChangesToPreview(settings) {
+    const iframe = document.getElementById('pagePreview');
+    
+    if (iframe && iframe.contentWindow && iframe.contentDocument) {
+        try {
+            const iframeDoc = iframe.contentDocument;
+            const iframeBody = iframeDoc.body;
+            
+            if (iframeBody) {
+                // Aplicar estilos CSS dinamicamente
+                let customStyles = iframeDoc.getElementById('custom-preview-styles');
+                if (!customStyles) {
+                    customStyles = iframeDoc.createElement('style');
+                    customStyles.id = 'custom-preview-styles';
+                    iframeDoc.head.appendChild(customStyles);
+                }
+                
+                // CSS personalizado baseado nas configurações
+                let backgroundStyle = '';
+                if (settings.backgroundType === 'gradient') {
+                    backgroundStyle = `background: linear-gradient(135deg, ${settings.backgroundColor1}, ${settings.backgroundColor2}) !important;`;
+                } else if (settings.backgroundType === 'solid') {
+                    backgroundStyle = `background: ${settings.backgroundColor1} !important;`;
+                } else if (settings.backgroundType === 'image' && settings.backgroundImageUrl) {
+                    backgroundStyle = `background: url('${settings.backgroundImageUrl}') center/cover !important;`;
+                }
+
+                customStyles.textContent = `
+                    :root {
+                        --primary-color: ${settings.primaryColor};
+                        --secondary-color: ${settings.secondaryColor};
+                        --success-color: ${settings.successColor};
+                        --error-color: ${settings.errorColor};
+                        --background-color-1: ${settings.backgroundColor1};
+                        --background-color-2: ${settings.backgroundColor2};
+                        --primary-font: '${settings.primaryFont}', sans-serif;
+                        --font-size: ${settings.fontSize};
+                    }
+                    
+                    body {
+                        font-family: var(--primary-font) !important;
+                        font-size: var(--font-size) !important;
+                        ${backgroundStyle}
+                    }
+                    
+                    .btn-primary, .plan-card.selected, .payment-option.selected {
+                        background: linear-gradient(135deg, ${settings.primaryColor}, ${settings.secondaryColor}) !important;
+                    }
+                    
+                    .plan-card:hover {
+                        border-color: ${settings.primaryColor} !important;
+                        box-shadow: 0 15px 40px ${settings.primaryColor}20 !important;
+                    }
+                    
+                    .form-group input:focus, .form-group select:focus {
+                        border-color: ${settings.primaryColor} !important;
+                        box-shadow: 0 0 0 3px ${settings.primaryColor}10 !important;
+                    }
+                    
+                    .progress-step.active .step-label {
+                        color: ${settings.primaryColor} !important;
+                    }
+                    
+                    .value, .cents {
+                        color: ${settings.primaryColor} !important;
+                    }
+                    
+                    .payment-option:hover {
+                        border-color: ${settings.primaryColor} !important;
+                        background: ${settings.primaryColor}10 !important;
+                    }
+                    
+                    .checkbox-container input:checked + .checkmark {
+                        background: ${settings.primaryColor} !important;
+                        border-color: ${settings.primaryColor} !important;
+                    }
+                    
+                    .spinner {
+                        border-top-color: ${settings.primaryColor} !important;
+                    }
+                    
+                    .success-message, .btn-success {
+                        background: ${settings.successColor} !important;
+                        color: white !important;
+                    }
+                    
+                    .error-message, .btn-danger {
+                        background: ${settings.errorColor} !important;
+                        color: white !important;
+                    }
+                    
+                    .logo {
+                        background-image: url('${settings.logoUrl}') !important;
+                        background-size: contain !important;
+                        background-repeat: no-repeat !important;
+                        background-position: center !important;
+                    }
+                `;
+                
+                console.log('Estilos aplicados no preview:', settings);
+            }
+        } catch (error) {
+            console.error('Erro ao aplicar mudanças no preview:', error);
+            // Fallback: recarregar o iframe
+            refreshPreview();
+        }
+    }
+}
+
+// Função para salvar configurações no localStorage
+function saveVisualSettings() {
+    const settings = {
+        logoUrl: document.getElementById('logoUrl').value,
+        backgroundType: document.getElementById('backgroundType').value,
+        backgroundColor1: document.getElementById('backgroundColor1').value,
+        backgroundColor2: document.getElementById('backgroundColor2').value,
+        backgroundImageUrl: document.getElementById('backgroundImageUrl').value,
+        primaryColor: document.getElementById('primaryColor').value,
+        secondaryColor: document.getElementById('secondaryColor').value,
+        successColor: document.getElementById('successColor').value,
+        errorColor: document.getElementById('errorColor').value,
+        primaryFont: document.getElementById('primaryFont').value,
+        fontSize: document.getElementById('fontSize').value
+    };
+    
+    // Salvar no banco de dados via AJAX
+    fetch('/configuracoes/cadastro/save/', {
+        method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Configurações visuais salvas no banco de dados!');
+            // Também salvar localmente para backup
+            localStorage.setItem('cadastroVisualSettings', JSON.stringify(settings));
+        } else {
+            alert('Erro ao salvar configurações: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao salvar configurações. Verifique a conexão.');
+    });
+}
+
+// Função para carregar configurações do localStorage
+function loadVisualSettings() {
+    const saved = localStorage.getItem('cadastroVisualSettings');
+    if (saved) {
+        try {
+            const settings = JSON.parse(saved);
+            
+            // Aplicar valores nos campos
+            document.getElementById('primaryColor').value = settings.primaryColor || '#667eea';
+            document.getElementById('secondaryColor').value = settings.secondaryColor || '#764ba2';
+            document.getElementById('backgroundColor').value = settings.backgroundColor || '#f8f9fa';
+            document.getElementById('primaryFont').value = settings.primaryFont || 'Inter';
+            document.getElementById('fontSize').value = settings.fontSize || '16px';
+            
+            // Atualizar campos de texto
+            document.getElementById('primaryColorText').value = settings.primaryColor || '#667eea';
+            document.getElementById('secondaryColorText').value = settings.secondaryColor || '#764ba2';
+            document.getElementById('backgroundColorText').value = settings.backgroundColor || '#f8f9fa';
+            
+            // Aplicar no preview
+            applyChangesToPreview(settings);
+            
+            console.log('Configurações visuais carregadas:', settings);
+        } catch (error) {
+            console.error('Erro ao carregar configurações:', error);
+        }
+    }
+}
+
+// Funções de Conteúdo
+function saveContentSettings() {
+    const settings = {
+        mainTitle: document.getElementById('mainTitle').value,
+        subtitle: document.getElementById('subtitle').value,
+        successMessage: document.getElementById('successMessage').value,
+        postInstructions: document.getElementById('postInstructions').value,
+        supportPhone: document.getElementById('supportPhone').value,
+        supportWhatsapp: document.getElementById('supportWhatsapp').value,
+        supportEmail: document.getElementById('supportEmail').value
+    };
+    
+    saveToDatabase(settings, 'Configurações de conte\u00fado salvas com sucesso!');
+    
+    alert('Conteúdo atualizado com sucesso!');
+    refreshPreview();
+}
+
+function updateLinks() {
+    const successUrl = document.getElementById('successUrl').value;
+    const errorUrl = document.getElementById('errorUrl').value;
+    const helpUrl = document.getElementById('helpUrl').value;
+    const privacyUrl = document.getElementById('privacyUrl').value;
+    
+    console.log('Atualizando links:', {
+        successUrl, errorUrl, helpUrl, privacyUrl
+    });
+    
+    alert('Links atualizados com sucesso!');
+}
+
+// Funções de Formulário
+function saveFormSettings() {
+    const settings = {
+        cpfRequired: document.getElementById('cpfRequired').checked,
+        emailRequired: document.getElementById('emailRequired').checked,
+        phoneRequired: document.getElementById('phoneRequired').checked,
+        addressRequired: document.getElementById('addressRequired').checked,
+        validateCep: document.getElementById('validateCep').checked,
+        validateCpf: document.getElementById('validateCpf').checked,
+        showProgressBar: document.getElementById('showProgressBar').checked,
+        numberOfSteps: parseInt(document.getElementById('numberOfSteps').value)
+    };
+    
+    saveToDatabase(settings, 'Configurações de formul\u00e1rio salvas com sucesso!');
+}
+
+// Funções Avançadas
+function saveAdvancedSettings() {
+    const settings = {
+        autoCreateLead: document.getElementById('autoCreateLead').checked,
+        leadOrigin: document.getElementById('leadOrigin').value,
+        sendEmailConfirmation: document.getElementById('sendEmailConfirmation').checked,
+        sendWhatsappConfirmation: document.getElementById('sendWhatsappConfirmation').checked
+    };
+    
+    saveToDatabase(settings, 'Configurações avan\u00e7adas salvas com sucesso!');
+}
+
+// Função auxiliar para salvar no banco de dados
+function saveToDatabase(settings, successMessage) {
+    fetch('/configuracoes/cadastro/save/', {
+        method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(successMessage);
+        } else {
+            alert('Erro ao salvar: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao salvar configurações. Verifique a conexão.');
+    });
+}
+
+function viewDetailedStats() {
+    alert('Abrindo estatísticas detalhadas...');
+}
+
+// Função para salvar todas as configurações
+function saveAllSettings() {
+    if (confirm('Deseja salvar todas as configurações de uma vez?')) {
+        // Coletar TODAS as configurações
+        const allSettings = {
+            // Configurações Visuais
+            logoUrl: document.getElementById('logoUrl').value,
+            backgroundType: document.getElementById('backgroundType').value,
+            backgroundColor1: document.getElementById('backgroundColor1').value,
+            backgroundColor2: document.getElementById('backgroundColor2').value,
+            backgroundImageUrl: document.getElementById('backgroundImageUrl').value,
+            primaryColor: document.getElementById('primaryColor').value,
+            secondaryColor: document.getElementById('secondaryColor').value,
+            successColor: document.getElementById('successColor').value,
+            errorColor: document.getElementById('errorColor').value,
+            primaryFont: document.getElementById('primaryFont').value,
+            fontSize: document.getElementById('fontSize').value,
+            
+            // Configurações de Conteúdo
+            mainTitle: document.getElementById('mainTitle').value,
+            subtitle: document.getElementById('subtitle').value,
+            successMessage: document.getElementById('successMessage').value,
+            postInstructions: document.getElementById('postInstructions').value,
+            supportPhone: document.getElementById('supportPhone').value,
+            supportWhatsapp: document.getElementById('supportWhatsapp').value,
+            supportEmail: document.getElementById('supportEmail').value,
+            
+            // Configurações de Formulário
+            cpfRequired: document.getElementById('cpfRequired').checked,
+            emailRequired: document.getElementById('emailRequired').checked,
+            phoneRequired: document.getElementById('phoneRequired').checked,
+            addressRequired: document.getElementById('addressRequired').checked,
+            validateCep: document.getElementById('validateCep').checked,
+            validateCpf: document.getElementById('validateCpf').checked,
+            showProgressBar: document.getElementById('showProgressBar').checked,
+            numberOfSteps: parseInt(document.getElementById('numberOfSteps').value),
+            
+            // Configurações Avançadas
+            autoCreateLead: document.getElementById('autoCreateLead').checked,
+            leadOrigin: document.getElementById('leadOrigin').value,
+            sendEmailConfirmation: document.getElementById('sendEmailConfirmation').checked,
+            sendWhatsappConfirmation: document.getElementById('sendWhatsappConfirmation').checked
+        };
+        
+        // Salvar no banco de dados
+        fetch('/configuracoes/cadastro/save/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify(allSettings)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Todas as configurações foram salvas com sucesso!');
+                refreshPreview();
+            } else {
+                alert('❌ Erro ao salvar: ' + (data.message || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('❌ Erro ao salvar configurações. Verifique a conexão com o servidor.');
+        });
+    }
+}
+
+// Função para preview em tempo real
+function updatePreviewInRealTime() {
+    // Coletar todas as configurações
+    const logoUrl = document.getElementById('logoUrl').value;
+    const backgroundType = document.getElementById('backgroundType').value;
+    const backgroundColor1 = document.getElementById('backgroundColor1').value;
+    const backgroundColor2 = document.getElementById('backgroundColor2').value;
+    const backgroundImageUrl = document.getElementById('backgroundImageUrl').value;
+    const primaryColor = document.getElementById('primaryColor').value;
+    const secondaryColor = document.getElementById('secondaryColor').value;
+    const successColor = document.getElementById('successColor').value;
+    const errorColor = document.getElementById('errorColor').value;
+    const primaryFont = document.getElementById('primaryFont').value;
+    const fontSize = document.getElementById('fontSize').value;
+    
+    // Atualizar campos de texto
+    document.getElementById('primaryColorText').value = primaryColor;
+    document.getElementById('secondaryColorText').value = secondaryColor;
+    document.getElementById('backgroundColor1Text').value = backgroundColor1;
+    document.getElementById('backgroundColor2Text').value = backgroundColor2;
+    document.getElementById('successColorText').value = successColor;
+    document.getElementById('errorColorText').value = errorColor;
+    
+    // Aplicar mudanças no preview imediatamente
+    applyChangesToPreview({
+        logoUrl, backgroundType, backgroundColor1, backgroundColor2, backgroundImageUrl,
+        primaryColor, secondaryColor, successColor, errorColor, primaryFont, fontSize
+    });
+}
+
+// Função para aguardar o iframe carregar
+function waitForIframeLoad() {
+    const iframe = document.getElementById('pagePreview');
+    if (iframe) {
+        iframe.onload = function() {
+            // Aguardar um pouco mais para garantir que o conteúdo esteja carregado
+            setTimeout(() => {
+                loadVisualSettings();
+            }, 1000);
+        };
+    }
+}
+
+// Sincronizar color pickers com campos de texto
+document.addEventListener('DOMContentLoaded', function() {
+    const colorPickers = document.querySelectorAll('input[type="color"]');
+    colorPickers.forEach(picker => {
+        picker.addEventListener('change', function() {
+            const textField = document.getElementById(this.id + 'Text');
+            if (textField) {
+                textField.value = this.value;
+            }
+            updatePreviewInRealTime();
+        });
+    });
+    
+    const textFields = document.querySelectorAll('input[type="text"][id$="Text"]');
+    textFields.forEach(field => {
+        field.addEventListener('change', function() {
+            const colorPicker = document.getElementById(this.id.replace('Text', ''));
+            if (colorPicker && this.value.match(/^#[0-9A-F]{6}$/i)) {
+                colorPicker.value = this.value;
+            }
+            updatePreviewInRealTime();
+        });
+    });
+    
+    // Aguardar o iframe carregar
+    waitForIframeLoad();
+});
+
+// Função auxiliar para obter CSRF Token
+function getCsrfToken() {
+    const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfInput) {
+        return csrfInput.value;
+    }
+    
+    // Fallback: tentar pegar do cookie
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='));
+    
+    return cookieValue ? cookieValue.split('=')[1] : '';
+}
+</script>
+{% endblock %}

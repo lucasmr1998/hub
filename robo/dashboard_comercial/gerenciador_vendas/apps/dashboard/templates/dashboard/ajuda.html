@@ -1,0 +1,1737 @@
+{% extends 'vendas_web/base.html' %}
+
+{% block title %}Central de Ajuda - MegaLink{% endblock %}
+
+{% block custom_css %}
+  <style>
+    /* Página de Ajuda */
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    .title { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem; }
+    .title h1 { font-size: 2rem; font-weight: 700; color: #1F3D59; }
+    .title i { font-size: 2rem; color: #667eea; }
+
+    /* Layout Principal */
+    .help-layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 2rem;
+      min-height: 70vh;
+    }
+
+    /* Sidebar de Navegação */
+    .help-sidebar {
+      background: white;
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      height: fit-content;
+      position: sticky;
+      top: 2rem;
+    }
+
+    .help-nav {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .help-nav-item {
+      margin-bottom: 0.5rem;
+    }
+
+    .help-nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      color: #64748b;
+      text-decoration: none;
+      border-radius: 10px;
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+
+    .help-nav-link:hover,
+    .help-nav-link.active {
+      background: #eef3f7;
+      color: #1F3D59;
+      transform: translateX(4px);
+    }
+
+    .help-nav-link i {
+      width: 20px;
+      text-align: center;
+      font-size: 1.1rem;
+    }
+
+    .help-nav-section {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .help-nav-section-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 1rem;
+    }
+
+    /* Conteúdo Principal */
+    .help-content {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .help-section {
+      display: none;
+    }
+
+    .help-section.active {
+      display: block;
+    }
+
+    .help-section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1F3D59;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .help-section-title i {
+      color: #667eea;
+    }
+
+    .help-section-description {
+      color: #64748b;
+      font-size: 1.1rem;
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+
+    /* Cards de Ajuda */
+    .help-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .help-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .help-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+      border-color: #667eea;
+    }
+
+    .help-card-icon {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .help-card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #1F3D59;
+      margin-bottom: 0.5rem;
+    }
+
+    .help-card-description {
+      color: #64748b;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    /* FAQ */
+    .faq-item {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .faq-question {
+      padding: 1.25rem;
+      background: #f8fafc;
+      border: none;
+      width: 100%;
+      text-align: left;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1F3D59;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.3s ease;
+    }
+
+    .faq-question:hover {
+      background: #eef3f7;
+    }
+
+    .faq-question.active {
+      background: #667eea;
+      color: white;
+    }
+
+    .faq-icon {
+      transition: transform 0.3s ease;
+    }
+
+    .faq-question.active .faq-icon {
+      transform: rotate(180deg);
+    }
+
+    .faq-answer {
+      padding: 0 1.25rem;
+      max-height: 0;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .faq-answer.active {
+      padding: 1.25rem;
+      max-height: 500px;
+    }
+
+    .faq-answer-content {
+      color: #64748b;
+      line-height: 1.6;
+    }
+
+    /* Tutoriais */
+    .tutorial-step {
+      background: #f8fafc;
+      border-left: 4px solid #667eea;
+      border-radius: 0 12px 12px 0;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .tutorial-step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      background: #667eea;
+      color: white;
+      border-radius: 50%;
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+
+    .tutorial-step-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #1F3D59;
+      margin-bottom: 0.75rem;
+    }
+
+    .tutorial-step-content {
+      color: #64748b;
+      line-height: 1.6;
+    }
+
+    .tutorial-step-content ul {
+      margin: 0.75rem 0;
+      padding-left: 1.5rem;
+    }
+
+    .tutorial-step-content li {
+      margin-bottom: 0.5rem;
+    }
+
+    /* Contato */
+    .contact-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .contact-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .contact-card-icon {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.5rem;
+      margin: 0 auto 1rem;
+    }
+
+    .contact-card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #1F3D59;
+      margin-bottom: 0.5rem;
+    }
+
+    .contact-card-info {
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+
+    .contact-card-link {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .contact-card-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Status do Sistema */
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .status-item {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin: 0 auto 0.5rem;
+    }
+
+    .status-indicator.online {
+      background: #10b981;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    }
+
+    .status-indicator.offline {
+      background: #ef4444;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+    }
+
+    .status-indicator.maintenance {
+      background: #f59e0b;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+    }
+
+    .status-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #1F3D59;
+      margin-bottom: 0.25rem;
+    }
+
+    .status-description {
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+
+    /* Botões de Ação */
+    .help-actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-help {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-help-primary {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+    }
+
+    .btn-help-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-help-secondary {
+      background: #eef3f7;
+      color: #1F3D59;
+      border: 1px solid #d1d5db;
+    }
+
+    .btn-help-secondary:hover {
+      background: #d1d5db;
+      transform: translateY(-2px);
+    }
+
+    /* Responsividade */
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+
+      .help-layout {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      .help-sidebar {
+        position: static;
+        order: 2;
+      }
+
+      .help-content {
+        order: 1;
+        padding: 1.5rem;
+      }
+
+      .help-cards {
+        grid-template-columns: 1fr;
+      }
+
+      .contact-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .status-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .help-actions {
+        flex-direction: column;
+      }
+
+      .btn-help {
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .title h1 {
+        font-size: 1.5rem;
+      }
+
+      .help-content {
+        padding: 1rem;
+      }
+
+      .help-sidebar {
+        padding: 1rem;
+      }
+
+      .status-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Animações */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .help-section.active {
+      animation: fadeIn 0.5s ease;
+    }
+
+    /* Destaque para links importantes */
+    .highlight-link {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .highlight-link:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="title">
+    <i class="fas fa-question-circle"></i>
+    <h1>Central de Ajuda</h1>
+  </div>
+
+  <div class="help-layout">
+    <!-- Sidebar de Navegação -->
+    <div class="help-sidebar">
+      <ul class="help-nav">
+        <li class="help-nav-item">
+          <a href="#inicio" class="help-nav-link active" data-section="inicio">
+            <i class="fas fa-home"></i>
+            Início
+          </a>
+        </li>
+        <li class="help-nav-item">
+          <a href="#dashboard" class="help-nav-link" data-section="dashboard">
+            <i class="fas fa-tachometer-alt"></i>
+            Dashboard
+          </a>
+        </li>
+        <li class="help-nav-item">
+          <a href="#leads" class="help-nav-link" data-section="leads">
+            <i class="fas fa-users"></i>
+            Gerenciar Leads
+          </a>
+        </li>
+        <li class="help-nav-item">
+          <a href="#vendas" class="help-nav-link" data-section="vendas">
+            <i class="fas fa-handshake"></i>
+            Validação de Vendas
+          </a>
+        </li>
+        <li class="help-nav-item">
+          <a href="#relatorios" class="help-nav-link" data-section="relatorios">
+            <i class="fas fa-chart-bar"></i>
+            Relatórios
+          </a>
+        </li>
+      </ul>
+
+      <div class="help-nav-section">
+        <div class="help-nav-section-title">Suporte</div>
+        <ul class="help-nav">
+          <li class="help-nav-item">
+            <a href="#faq" class="help-nav-link" data-section="faq">
+              <i class="fas fa-question"></i>
+              FAQ
+            </a>
+          </li>
+          <li class="help-nav-item">
+            <a href="#tutoriais" class="help-nav-link" data-section="tutoriais">
+              <i class="fas fa-play-circle"></i>
+              Tutoriais
+            </a>
+          </li>
+          <li class="help-nav-item">
+            <a href="#contato" class="help-nav-link" data-section="contato">
+              <i class="fas fa-envelope"></i>
+              Contato
+            </a>
+          </li>
+          <li class="help-nav-item">
+            <a href="#status" class="help-nav-link" data-section="status">
+              <i class="fas fa-server"></i>
+              Status do Sistema
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div class="help-content">
+      <!-- Seção Início -->
+      <div id="inicio" class="help-section active">
+        <h2 class="help-section-title">
+          <i class="fas fa-home"></i>
+          Bem-vindo à Central de Ajuda
+        </h2>
+        <p class="help-section-description">
+          Encontre aqui todas as informações necessárias para utilizar a plataforma MegaLink de forma eficiente. 
+          Nossa ferramenta foi desenvolvida para facilitar o gerenciamento de leads e vendas.
+        </p>
+
+        <div class="help-cards">
+          <div class="help-card" onclick="showSection('dashboard')">
+            <div class="help-card-icon">
+              <i class="fas fa-tachometer-alt"></i>
+            </div>
+            <h3 class="help-card-title">Dashboard</h3>
+            <p class="help-card-description">
+              Visualize métricas importantes, estatísticas de conversão e acompanhe o desempenho da sua equipe.
+            </p>
+          </div>
+
+          <div class="help-card" onclick="showSection('leads')">
+            <div class="help-card-icon">
+              <i class="fas fa-users"></i>
+            </div>
+            <h3 class="help-card-title">Gerenciar Leads</h3>
+            <p class="help-card-description">
+              Organize, filtre e acompanhe todos os leads da sua empresa em um só lugar.
+            </p>
+          </div>
+
+          <div class="help-card" onclick="showSection('vendas')">
+            <div class="help-card-icon">
+              <i class="fas fa-handshake"></i>
+            </div>
+            <h3 class="help-card-title">Validação de Vendas</h3>
+            <p class="help-card-description">
+              Valide e gerencie o processo de vendas com aprovações e acompanhamento detalhado.
+            </p>
+          </div>
+
+          <div class="help-card" onclick="showSection('relatorios')">
+            <div class="help-card-icon">
+              <i class="fas fa-chart-bar"></i>
+            </div>
+            <h3 class="help-card-title">Relatórios</h3>
+            <p class="help-card-description">
+              Gere relatórios detalhados e exporte dados para análise externa.
+            </p>
+          </div>
+        </div>
+
+        <div class="help-actions">
+          <a href="#tutoriais" class="btn-help btn-help-primary" onclick="showSection('tutoriais')">
+            <i class="fas fa-play"></i>
+            Começar Tutorial
+          </a>
+          <a href="#contato" class="btn-help btn-help-secondary" onclick="showSection('contato')">
+            <i class="fas fa-envelope"></i>
+            Entrar em Contato
+          </a>
+        </div>
+      </div>
+
+      <!-- Seção Dashboard -->
+      <div id="dashboard" class="help-section">
+        <h2 class="help-section-title">
+          <i class="fas fa-tachometer-alt"></i>
+          Dashboard
+        </h2>
+        <p class="help-section-description">
+          O dashboard é o centro de controle da sua operação. Aqui você encontra todas as métricas importantes em tempo real para acompanhar o desempenho da sua equipe e identificar oportunidades de melhoria.
+        </p>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">1</div>
+          <h3 class="tutorial-step-title">Cards de Estatísticas</h3>
+          <div class="tutorial-step-content">
+            <p>No topo do dashboard você encontra os principais indicadores:</p>
+            <ul>
+              <li><strong>📊 Total de Leads:</strong> Quantidade total de leads cadastrados no sistema</li>
+              <li><strong>💰 Valor Total:</strong> Soma de todos os valores dos leads com potencial de venda</li>
+              <li><strong>📈 Taxa de Conversão:</strong> Percentual de leads que se converteram em vendas</li>
+              <li><strong>📅 Leads Hoje:</strong> Novos leads recebidos no dia atual</li>
+              <li><strong>📆 Esta Semana:</strong> Total de leads da semana atual</li>
+            </ul>
+            <p><strong>💡 Dica:</strong> Clique nos cards para ver detalhes específicos de cada métrica.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">2</div>
+          <h3 class="tutorial-step-title">Gráfico de Evolução</h3>
+          <div class="tutorial-step-content">
+            <p>O gráfico principal mostra a evolução dos leads ao longo do tempo:</p>
+            <ul>
+              <li><strong>Linha Azul:</strong> Leads recebidos por dia</li>
+              <li><strong>Linha Verde:</strong> Leads convertidos em vendas</li>
+              <li><strong>Período:</strong> Últimos 30 dias por padrão</li>
+              <li><strong>Interação:</strong> Passe o mouse sobre os pontos para ver valores específicos</li>
+            </ul>
+            <p><strong>📱 Mobile:</strong> No celular, o gráfico é responsivo e pode ser rolado horizontalmente se necessário.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">3</div>
+          <h3 class="tutorial-step-title">Funil de Conversão</h3>
+          <div class="tutorial-step-content">
+            <p>A seção "Funil de Conversão - Hoje" mostra:</p>
+            <ul>
+              <li><strong>Leads Recebidos:</strong> Total de leads do dia</li>
+              <li><strong>Em Processamento:</strong> Leads sendo trabalhados</li>
+              <li><strong>Convertidos:</strong> Leads que viraram vendas</li>
+              <li><strong>Taxa de Conversão:</strong> Percentual de sucesso</li>
+            </ul>
+            <p><strong>🔍 Visualizar:</strong> Clique em "Visualizar todos" para ver a lista detalhada de conversões.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">4</div>
+          <h3 class="tutorial-step-title">Tabelas de Dados</h3>
+          <div class="tutorial-step-content">
+            <p>As tabelas mostram informações detalhadas:</p>
+            <ul>
+              <li><strong>Aba Leads:</strong> Lista dos leads mais recentes</li>
+              <li><strong>Aba Prospectos:</strong> Leads em processo de validação</li>
+              <li><strong>Aba Histórico:</strong> Últimas atividades do sistema</li>
+              <li><strong>Paginação:</strong> Navegue entre as páginas de resultados</li>
+            </ul>
+            <p><strong>📊 Exportar:</strong> Use os botões de exportação para baixar os dados em Excel ou PDF.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">5</div>
+          <h3 class="tutorial-step-title">Atualização em Tempo Real</h3>
+          <div class="tutorial-step-content">
+            <p>O dashboard se atualiza automaticamente:</p>
+            <ul>
+              <li><strong>Intervalo:</strong> A cada 30 segundos</li>
+              <li><strong>Indicador:</strong> Pequeno ponto verde mostra quando foi a última atualização</li>
+              <li><strong>Manual:</strong> Clique no botão de atualizar para forçar uma atualização</li>
+              <li><strong>Notificações:</strong> Alertas aparecem quando há novos leads importantes</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seção Leads -->
+      <div id="leads" class="help-section">
+        <h2 class="help-section-title">
+          <i class="fas fa-users"></i>
+          Gerenciar Leads
+        </h2>
+        <p class="help-section-description">
+          Gerencie todos os seus leads de forma organizada e eficiente. Filtre, edite e acompanhe o histórico de cada lead para maximizar suas conversões.
+        </p>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">1</div>
+          <h3 class="tutorial-step-title">Visão Geral dos Leads</h3>
+          <div class="tutorial-step-content">
+            <p>A página de leads mostra uma tabela completa com todas as informações importantes:</p>
+            <ul>
+              <li><strong>🆔 ID:</strong> Identificador único do lead no sistema</li>
+              <li><strong>👤 Lead:</strong> Nome/razão social e empresa do cliente</li>
+              <li><strong>📞 Contato:</strong> Email e telefone para comunicação</li>
+              <li><strong>💰 Valor:</strong> Valor estimado da venda (quando disponível)</li>
+              <li><strong>📍 Origem:</strong> Canal que trouxe o lead (site, Facebook, etc.)</li>
+              <li><strong>📊 Status:</strong> Situação atual do processamento</li>
+              <li><strong>📅 Data:</strong> Data e hora do cadastro</li>
+              <li><strong>⚡ Ações:</strong> Botões para visualizar e gerenciar</li>
+            </ul>
+            <p><strong>💡 Dica:</strong> A tabela é responsiva e funciona perfeitamente no mobile com scroll horizontal.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">2</div>
+          <h3 class="tutorial-step-title">Sistema de Filtros</h3>
+          <div class="tutorial-step-content">
+            <p>Use os filtros avançados para encontrar exatamente o que precisa:</p>
+            <ul>
+              <li><strong>🔍 Pesquisar:</strong> Busque por nome, email, telefone ou empresa</li>
+              <li><strong>📊 Status API:</strong> Pendente, Processado, Sucesso, Erro, Rejeitado</li>
+              <li><strong>📍 Origem:</strong> Site, Facebook, Instagram, Google Ads, WhatsApp, Indicação, etc.</li>
+              <li><strong>✅ Situação:</strong> Ativos ou Inativos</li>
+              <li><strong>📅 Data Início/Fim:</strong> Filtre por período específico</li>
+              <li><strong>💰 Com Valor:</strong> Leads com ou sem valor definido</li>
+            </ul>
+            <p><strong>⚡ Rápido:</strong> Os filtros são aplicados automaticamente conforme você digita ou seleciona.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">3</div>
+          <h3 class="tutorial-step-title">Estatísticas em Tempo Real</h3>
+          <div class="tutorial-step-content">
+            <p>No topo da página você vê estatísticas importantes:</p>
+            <ul>
+              <li><strong>📊 Total de Leads:</strong> Quantidade total no sistema</li>
+              <li><strong>💰 Valor Total:</strong> Soma de todos os valores dos leads</li>
+              <li><strong>⚠️ Com Erro:</strong> Leads que tiveram problemas no processamento</li>
+              <li><strong>📅 Hoje:</strong> Leads recebidos no dia atual</li>
+              <li><strong>📆 Esta Semana:</strong> Total de leads da semana</li>
+            </ul>
+            <p><strong>🔄 Atualização:</strong> As estatísticas se atualizam automaticamente conforme os filtros são aplicados.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">4</div>
+          <h3 class="tutorial-step-title">Ações Disponíveis</h3>
+          <div class="tutorial-step-content">
+            <p>Para cada lead você tem as seguintes opções:</p>
+            <ul>
+              <li><strong>👁️ Visualizar:</strong> Ver todos os detalhes completos do lead</li>
+              <li><strong>📝 Editar:</strong> Modificar informações do lead</li>
+              <li><strong>📚 Histórico:</strong> Ver timeline completa de contatos</li>
+              <li><strong>📊 Exportar:</strong> Baixar dados em Excel, CSV ou PDF</li>
+              <li><strong>➕ Novo Lead:</strong> Cadastrar um novo lead manualmente</li>
+            </ul>
+            <p><strong>📱 Mobile:</strong> No celular, as ações ficam em botões maiores e mais fáceis de tocar.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">5</div>
+          <h3 class="tutorial-step-title">Paginação e Navegação</h3>
+          <div class="tutorial-step-content">
+            <p>Navegue facilmente pelos seus leads:</p>
+            <ul>
+              <li><strong>📄 Por Página:</strong> Escolha quantos leads ver (10, 20, 50, 100)</li>
+              <li><strong>⬅️➡️ Navegação:</strong> Botões Anterior/Próximo</li>
+              <li><strong>🔢 Páginas:</strong> Clique diretamente no número da página</li>
+              <li><strong>📊 Informações:</strong> Veja quantos registros estão sendo exibidos</li>
+            </ul>
+            <p><strong>💾 Lembrar:</strong> O sistema lembra suas preferências de filtros e paginação.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">6</div>
+          <h3 class="tutorial-step-title">Cadastro de Novos Leads</h3>
+          <div class="tutorial-step-content">
+            <p>Para cadastrar um novo lead manualmente:</p>
+            <ul>
+              <li><strong>1️⃣ Clique:</strong> No botão "Novo Lead" no topo da página</li>
+              <li><strong>2️⃣ Preencha:</strong> Os campos obrigatórios (Nome e Telefone)</li>
+              <li><strong>3️⃣ Adicione:</strong> Informações adicionais como email, empresa, valor</li>
+              <li><strong>4️⃣ Selecione:</strong> A origem do lead</li>
+              <li><strong>5️⃣ Salve:</strong> Clique em "Salvar" para confirmar</li>
+            </ul>
+            <p><strong>✅ Validação:</strong> O sistema valida os dados antes de salvar.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seção Vendas -->
+      <div id="vendas" class="help-section">
+        <h2 class="help-section-title">
+          <i class="fas fa-handshake"></i>
+          Validação de Vendas
+        </h2>
+        <p class="help-section-description">
+          Gerencie o processo de validação de vendas com aprovações, rejeições e acompanhamento detalhado. Esta seção é essencial para garantir a qualidade das vendas e manter o controle sobre o processo comercial.
+        </p>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">1</div>
+          <h3 class="tutorial-step-title">Visão Geral da Validação</h3>
+          <div class="tutorial-step-content">
+            <p>A página de vendas mostra todos os prospectos que precisam ser validados:</p>
+            <ul>
+              <li><strong>🆔 ID:</strong> Identificador único do prospecto</li>
+              <li><strong>👤 Prospecto:</strong> Nome e informações do cliente</li>
+              <li><strong>🔗 Lead Relacionado:</strong> Dados do lead original</li>
+              <li><strong>📊 Status:</strong> Situação atual da validação</li>
+              <li><strong>📅 Data Criação:</strong> Quando o prospecto foi criado</li>
+              <li><strong>⚡ Ações:</strong> Botões para visualizar e validar</li>
+            </ul>
+            <p><strong>💡 Dica:</strong> Os prospectos são criados automaticamente quando um lead é convertido.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">2</div>
+          <h3 class="tutorial-step-title">Estatísticas de Vendas</h3>
+          <div class="tutorial-step-content">
+            <p>No topo da página você acompanha o desempenho:</p>
+            <ul>
+              <li><strong>📊 Total de Prospectos:</strong> Quantidade total no sistema</li>
+              <li><strong>⏳ Aguardando Validação:</strong> Prospectos que precisam de análise</li>
+              <li><strong>✅ Vendas Aprovadas:</strong> Vendas validadas com sucesso</li>
+              <li><strong>❌ Vendas Rejeitadas:</strong> Vendas que foram rejeitadas</li>
+              <li><strong>📈 Score Médio:</strong> Pontuação média de conversão</li>
+            </ul>
+            <p><strong>🔄 Tempo Real:</strong> As estatísticas se atualizam conforme as validações são processadas.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">3</div>
+          <h3 class="tutorial-step-title">Processo de Validação</h3>
+          <div class="tutorial-step-content">
+            <p>O fluxo de validação funciona em etapas:</p>
+            <ul>
+              <li><strong>1️⃣ Conversão:</strong> Lead é convertido em prospecto</li>
+              <li><strong>2️⃣ Aguardando:</strong> Prospecto fica "Aguardando Validação"</li>
+              <li><strong>3️⃣ Análise:</strong> Validador analisa as informações</li>
+              <li><strong>4️⃣ Decisão:</strong> Aprova ou rejeita a venda</li>
+              <li><strong>5️⃣ Registro:</strong> Sistema registra histórico completo</li>
+              <li><strong>6️⃣ Finalização:</strong> Venda é finalizada ou retornada</li>
+            </ul>
+            <p><strong>📚 Histórico:</strong> Todo o processo fica registrado para auditoria.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">4</div>
+          <h3 class="tutorial-step-title">Como Validar uma Venda</h3>
+          <div class="tutorial-step-content">
+            <p>Para validar um prospecto, siga estes passos:</p>
+            <ul>
+              <li><strong>1️⃣ Clique:</strong> No botão "Validar Venda" na lista</li>
+              <li><strong>2️⃣ Revise:</strong> As informações do lead relacionado</li>
+              <li><strong>3️⃣ Analise:</strong> Verifique se os dados estão corretos</li>
+              <li><strong>4️⃣ Observe:</strong> Adicione observações sobre a validação</li>
+              <li><strong>5️⃣ Decida:</strong> Escolha "Aprovar" ou "Rejeitar"</li>
+              <li><strong>6️⃣ Confirme:</strong> Confirme a ação final</li>
+            </ul>
+            <p><strong>⚠️ Importante:</strong> As observações são obrigatórias para documentar a decisão.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">5</div>
+          <h3 class="tutorial-step-title">Status de Validação</h3>
+          <div class="tutorial-step-content">
+            <p>Entenda cada status do processo:</p>
+            <ul>
+              <li><strong>⏳ Aguardando Validação:</strong> Prospecto aguardando análise</li>
+              <li><strong>✅ Validação Aprovada:</strong> Venda foi aprovada e validada</li>
+              <li><strong>❌ Validação Rejeitada:</strong> Venda foi rejeitada</li>
+              <li><strong>🔄 Processado:</strong> Prospecto em processamento</li>
+              <li><strong>🏁 Finalizado:</strong> Processo completamente concluído</li>
+              <li><strong>⚠️ Erro:</strong> Problema no processamento</li>
+            </ul>
+            <p><strong>🎨 Cores:</strong> Cada status tem uma cor específica para fácil identificação.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">6</div>
+          <h3 class="tutorial-step-title">Filtros e Busca</h3>
+          <div class="tutorial-step-content">
+            <p>Use os filtros para organizar sua visualização:</p>
+            <ul>
+              <li><strong>🔍 Pesquisar:</strong> Busque por nome do prospecto</li>
+              <li><strong>📊 Status:</strong> Filtre por status de validação</li>
+              <li><strong>⭐ Prioridade:</strong> Filtre por nível de prioridade</li>
+              <li><strong>📅 Período:</strong> Filtre por data de criação</li>
+              <li><strong>🧹 Limpar:</strong> Remova todos os filtros</li>
+            </ul>
+            <p><strong>⚡ Rápido:</strong> Os filtros são aplicados em tempo real conforme você seleciona.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">7</div>
+          <h3 class="tutorial-step-title">Visualização Detalhada</h3>
+          <div class="tutorial-step-content">
+            <p>Para ver todos os detalhes de um prospecto:</p>
+            <ul>
+              <li><strong>👁️ Visualizar:</strong> Clique no botão de visualizar</li>
+              <li><strong>📋 Informações:</strong> Veja dados completos do prospecto</li>
+              <li><strong>🔗 Lead:</strong> Acesse informações do lead relacionado</li>
+              <li><strong>📚 Histórico:</strong> Veja timeline de atividades</li>
+              <li><strong>📊 Score:</strong> Verifique pontuação de conversão</li>
+            </ul>
+            <p><strong>📱 Responsivo:</strong> O modal se adapta perfeitamente ao mobile.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seção Relatórios -->
+      <div id="relatorios" class="help-section">
+        <h2 class="help-section-title">
+          <i class="fas fa-chart-bar"></i>
+          Relatórios
+        </h2>
+        <p class="help-section-description">
+          Acesse relatórios detalhados sobre leads, conversões e performance da equipe. Use os dados para tomar decisões estratégicas e otimizar seus processos comerciais.
+        </p>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">1</div>
+          <h3 class="tutorial-step-title">Tipos de Relatórios Disponíveis</h3>
+          <div class="tutorial-step-content">
+            <p>O sistema oferece diversos tipos de relatórios:</p>
+            <ul>
+              <li><strong>📊 Relatório de Leads:</strong> Análise completa de leads por período, origem e status</li>
+              <li><strong>💰 Relatório de Conversões:</strong> Performance de vendas e taxa de conversão</li>
+              <li><strong>📞 Análise de Atendimentos:</strong> Métricas de atendimento e fluxos</li>
+              <li><strong>👥 Relatório de Performance:</strong> Desempenho individual e da equipe</li>
+              <li><strong>📈 Relatório de Tendências:</strong> Evolução dos indicadores ao longo do tempo</li>
+              <li><strong>🎯 Relatório de Origem:</strong> Análise por canal de aquisição</li>
+            </ul>
+            <p><strong>💡 Dica:</strong> Cada relatório pode ser filtrado por período, equipe ou critérios específicos.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">2</div>
+          <h3 class="tutorial-step-title">Acessando os Relatórios</h3>
+          <div class="tutorial-step-content">
+            <p>Para acessar os relatórios:</p>
+            <ul>
+              <li><strong>1️⃣ Menu:</strong> Clique em "Análises" no menu principal</li>
+              <li><strong>2️⃣ Escolha:</strong> Selecione o tipo de relatório desejado</li>
+              <li><strong>3️⃣ Configure:</strong> Defina período e filtros</li>
+              <li><strong>4️⃣ Visualize:</strong> Veja os dados na tela</li>
+              <li><strong>5️⃣ Exporte:</strong> Baixe em Excel, PDF ou CSV</li>
+            </ul>
+            <p><strong>📱 Mobile:</strong> Todos os relatórios são responsivos e funcionam no celular.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">3</div>
+          <h3 class="tutorial-step-title">Relatório de Leads</h3>
+          <div class="tutorial-step-content">
+            <p>Este relatório mostra informações detalhadas sobre leads:</p>
+            <ul>
+              <li><strong>📊 Estatísticas Gerais:</strong> Total, valores, conversões</li>
+              <li><strong>📍 Por Origem:</strong> Performance de cada canal</li>
+              <li><strong>📅 Por Período:</strong> Evolução temporal</li>
+              <li><strong>👤 Por Vendedor:</strong> Performance individual</li>
+              <li><strong>💰 Por Valor:</strong> Distribuição de valores</li>
+              <li><strong>📈 Tendências:</strong> Gráficos de evolução</li>
+            </ul>
+            <p><strong>🔍 Filtros:</strong> Filtre por data, origem, status, vendedor e outros critérios.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">4</div>
+          <h3 class="tutorial-step-title">Relatório de Conversões</h3>
+          <div class="tutorial-step-content">
+            <p>Analise a performance de vendas:</p>
+            <ul>
+              <li><strong>📈 Taxa de Conversão:</strong> Percentual de leads convertidos</li>
+              <li><strong>💰 Valor Convertido:</strong> Total de vendas realizadas</li>
+              <li><strong>⏱️ Tempo Médio:</strong> Tempo entre lead e conversão</li>
+              <li><strong>🎯 Por Origem:</strong> Qual canal converte melhor</li>
+              <li><strong>👥 Por Equipe:</strong> Performance por vendedor</li>
+              <li><strong>📊 Funil:</strong> Análise do funil de vendas</li>
+            </ul>
+            <p><strong>💡 Insight:</strong> Use estes dados para otimizar seus processos de vendas.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">5</div>
+          <h3 class="tutorial-step-title">Exportando Dados</h3>
+          <div class="tutorial-step-content">
+            <p>Para exportar relatórios:</p>
+            <ul>
+              <li><strong>1️⃣ Configure:</strong> Selecione período e filtros desejados</li>
+              <li><strong>2️⃣ Escolha:</strong> Formato de exportação (Excel, PDF, CSV)</li>
+              <li><strong>3️⃣ Clique:</strong> No botão "Exportar"</li>
+              <li><strong>4️⃣ Aguarde:</strong> O sistema processa o relatório</li>
+              <li><strong>5️⃣ Baixe:</strong> Faça download do arquivo gerado</li>
+            </ul>
+            <p><strong>📁 Formatos:</strong> Excel (.xlsx), PDF (.pdf), CSV (.csv) para análise em outras ferramentas.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">6</div>
+          <h3 class="tutorial-step-title">Gráficos e Visualizações</h3>
+          <div class="tutorial-step-content">
+            <p>Os relatórios incluem visualizações interativas:</p>
+            <ul>
+              <li><strong>📊 Gráficos de Linha:</strong> Evolução temporal dos indicadores</li>
+              <li><strong>📈 Gráficos de Barras:</strong> Comparação entre períodos</li>
+              <li><strong>🥧 Gráficos de Pizza:</strong> Distribuição por categorias</li>
+              <li><strong>📋 Tabelas:</strong> Dados detalhados e exportáveis</li>
+              <li><strong>🎯 Indicadores:</strong> KPIs principais em destaque</li>
+            </ul>
+            <p><strong>🖱️ Interativo:</strong> Passe o mouse sobre os gráficos para ver detalhes.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">7</div>
+          <h3 class="tutorial-step-title">Agendamento (Em Breve)</h3>
+          <div class="tutorial-step-content">
+            <p>Em breve você poderá agendar relatórios automáticos:</p>
+            <ul>
+              <li><strong>📅 Agendamento:</strong> Configure frequência (diário, semanal, mensal)</li>
+              <li><strong>📧 Email:</strong> Receba relatórios automaticamente por email</li>
+              <li><strong>🎯 Personalização:</strong> Escolha quais dados incluir</li>
+              <li><strong>👥 Destinatários:</strong> Envie para diferentes pessoas da equipe</li>
+              <li><strong>📱 Notificações:</strong> Alertas quando relatórios estão prontos</li>
+            </ul>
+            <p><strong>🚀 Futuro:</strong> Esta funcionalidade está em desenvolvimento.</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">8</div>
+          <h3 class="tutorial-step-title">Dicas para Análise</h3>
+          <div class="tutorial-step-content">
+            <p>Use os relatórios para tomar decisões estratégicas:</p>
+            <ul>
+              <li><strong>📊 Compare Períodos:</strong> Analise evolução mês a mês</li>
+              <li><strong>🎯 Identifique Tendências:</strong> Veja padrões nos dados</li>
+              <li><strong>💰 Otimize Investimentos:</strong> Foque nos canais que mais convertem</li>
+              <li><strong>👥 Treine Equipe:</strong> Use dados para capacitação</li>
+              <li><strong>📈 Defina Metas:</strong> Estabeleça objetivos baseados em dados</li>
+            </ul>
+            <p><strong>💡 Pro Tip:</strong> Exporte dados para análise mais profunda em Excel ou Power BI.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seção FAQ -->
+      <div id="faq" class="help-section">
+        <h2 class="help-section-title">
+          <i class="fas fa-question"></i>
+          Perguntas Frequentes
+        </h2>
+        <p class="help-section-description">
+          Encontre respostas para as dúvidas mais comuns sobre a plataforma.
+        </p>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            Como faço para cadastrar um novo lead manualmente?
+            <i class="fas fa-chevron-down faq-icon"></i>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-content">
+              <p>Para cadastrar um novo lead manualmente:</p>
+              <ol>
+                <li>Acesse a seção "Gerenciar Leads" no menu</li>
+                <li>Clique no botão "Novo Lead" no topo da página</li>
+                <li>Preencha os campos obrigatórios: Nome e Telefone</li>
+                <li>Adicione informações opcionais: Email, Empresa, Valor</li>
+                <li>Selecione a origem do lead (Site, Facebook, Indicação, etc.)</li>
+                <li>Clique em "Salvar" para confirmar</li>
+              </ol>
+              <p><strong>💡 Dica:</strong> O sistema valida automaticamente os dados antes de salvar.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            Como funciona o processo de validação de vendas?
+            <i class="fas fa-chevron-down faq-icon"></i>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-content">
+              <p>O processo de validação funciona em etapas:</p>
+              <ol>
+                <li><strong>Conversão:</strong> Lead é convertido em prospecto automaticamente</li>
+                <li><strong>Aguardando:</strong> Prospecto fica "Aguardando Validação"</li>
+                <li><strong>Análise:</strong> Validador analisa as informações do lead relacionado</li>
+                <li><strong>Decisão:</strong> Aprova ou rejeita a venda com observações</li>
+                <li><strong>Registro:</strong> Sistema registra histórico completo da validação</li>
+                <li><strong>Finalização:</strong> Venda é finalizada ou retornada para correção</li>
+              </ol>
+              <p><strong>⚠️ Importante:</strong> As observações são obrigatórias para documentar a decisão.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            Posso exportar os dados para análise externa?
+            <i class="fas fa-chevron-down faq-icon"></i>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-content">
+              <p>Sim! Você pode exportar dados em vários formatos:</p>
+              <ul>
+                <li><strong>📊 Excel (.xlsx):</strong> Para análise detalhada e gráficos</li>
+                <li><strong>📄 CSV:</strong> Para importar em outros sistemas</li>
+                <li><strong>📋 PDF:</strong> Para relatórios impressos e apresentações</li>
+              </ul>
+              <p><strong>🔍 Filtros:</strong> Use os filtros para selecionar exatamente os dados que deseja exportar por período, origem, status, etc.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            Como vejo o histórico completo de um prospecto?
+            <i class="fas fa-chevron-down faq-icon"></i>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-content">
+              <p>Para visualizar o histórico completo:</p>
+              <ol>
+                <li>Acesse a seção "Validação de Vendas"</li>
+                <li>Clique no botão "Visualizar" do prospecto desejado</li>
+                <li>No modal que abrir, você verá:</li>
+                <ul>
+                  <li><strong>📋 Informações do Prospecto:</strong> ID, nome, status, prioridade, score</li>
+                  <li><strong>🔗 Lead Relacionado:</strong> Dados completos do lead original</li>
+                  <li><strong>📚 Histórico:</strong> Timeline de todas as atividades</li>
+                </ul>
+                <li>Clique em "Ver Histórico" para detalhes completos</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            O que significa cada status de lead e prospecto?
+            <i class="fas fa-chevron-down faq-icon"></i>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-content">
+              <p><strong>Status de Leads:</strong></p>
+              <ul>
+                <li><strong>⏳ Pendente:</strong> Aguardando processamento inicial</li>
+                <li><strong>✅ Processado:</strong> Processado com sucesso</li>
+                <li><strong>🎯 Sucesso:</strong> Convertido em venda</li>
+                <li><strong>❌ Erro:</strong> Problema no processamento</li>
+                <li><strong>🚫 Rejeitado:</strong> Não qualificado para venda</li>
+              </ul>
+              <p><strong>Status de Prospectos:</strong></p>
+              <ul>
+                <li><strong>⏳ Aguardando Validação:</strong> Aguardando análise do validador</li>
+                <li><strong>✅ Validação Aprovada:</strong> Venda foi aprovada</li>
+                <li><strong>❌ Validação Rejeitada:</strong> Venda foi rejeitada</li>
+                <li><strong>🔄 Processado:</strong> Em processamento</li>
+                <li><strong>🏁 Finalizado:</strong> Processo completamente concluído</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            Como interpreto os gráficos do dashboard?
+            <i class="fas fa-chevron-down faq-icon"></i>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-content">
+              <p>Os gráficos do dashboard mostram:</p>
+              <ul>
+                <li><strong>📊 Gráfico Principal:</strong> Evolução de leads (linha azul) e conversões (linha verde) ao longo do tempo</li>
+                <li><strong>📈 Cards de Estatísticas:</strong> Números atuais e variações em relação ao período anterior</li>
+                <li><strong>🎯 Funil de Conversão:</strong> Quantos leads foram recebidos, processados e convertidos hoje</li>
+                <li><strong>📋 Tabelas:</strong> Dados detalhados organizados por abas (Leads, Prospectos, Histórico)</li>
+              </ul>
+              <p><strong>💡 Dica:</strong> Passe o mouse sobre os gráficos para ver valores específicos e use os filtros para analisar períodos diferentes.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            Como uso os filtros para encontrar leads específicos?
+            <i class="fas fa-chevron-down faq-icon"></i>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-content">
+              <p>Os filtros permitem encontrar leads específicos:</p>
+              <ul>
+                <li><strong>🔍 Pesquisar:</strong> Digite nome, email, telefone ou empresa</li>
+                <li><strong>📊 Status API:</strong> Filtre por Pendente, Processado, Sucesso, Erro, Rejeitado</li>
+                <li><strong>📍 Origem:</strong> Selecione Site, Facebook, Instagram, Google Ads, WhatsApp, Indicação</li>
+                <li><strong>✅ Situação:</strong> Ativos ou Inativos</li>
+                <li><strong>📅 Data:</strong> Defina período específico com data início e fim</li>
+                <li><strong>💰 Com Valor:</strong> Leads com ou sem valor definido</li>
+              </ul>
+              <p><strong>⚡ Rápido:</strong> Os filtros são aplicados automaticamente conforme você digita ou seleciona.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            O sistema funciona no celular?
+            <i class="fas fa-chevron-down faq-icon"></i>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-content">
+              <p>Sim! O sistema é totalmente responsivo e funciona perfeitamente no celular:</p>
+              <ul>
+                <li><strong>📱 Menu Mobile:</strong> Menu hambúrguer para navegação fácil</li>
+                <li><strong>📊 Dashboard:</strong> Gráficos e cards adaptados para tela pequena</li>
+                <li><strong>📋 Tabelas:</strong> Scroll horizontal para ver todas as colunas</li>
+                <li><strong>🔍 Filtros:</strong> Interface otimizada para toque</li>
+                <li><strong>👆 Botões:</strong> Tamanho adequado para dedos (44px mínimo)</li>
+                <li><strong>📄 Modais:</strong> Se adaptam à tela do celular</li>
+              </ul>
+              <p><strong>💡 Dica:</strong> No mobile, use o menu hambúrguer (☰) no canto superior direito para navegar.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            Como entro em contato com o suporte?
+            <i class="fas fa-chevron-down faq-icon"></i>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-content">
+              <p>Você pode entrar em contato conosco de várias formas:</p>
+              <ul>
+                <li><strong>📧 Email:</strong> suporte@megalink.com.br</li>
+                <li><strong>📱 WhatsApp:</strong> (11) 99999-9999</li>
+                <li><strong>📞 Telefone:</strong> (11) 3333-4444</li>
+                <li><strong>💬 Chat Online:</strong> Disponível no canto inferior direito</li>
+                <li><strong>📋 Formulário:</strong> Use o formulário de contato na seção "Contato"</li>
+              </ul>
+              <p><strong>⏰ Horário:</strong> Segunda a Sexta, das 8h às 18h</p>
+              <p><strong>💡 Dica:</strong> Para problemas urgentes, use o WhatsApp para resposta mais rápida.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            Como faço para filtrar leads por data?
+            <i class="fas fa-chevron-down faq-icon"></i>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-content">
+              <p>Para filtrar por data:</p>
+              <ol>
+                <li>Abra a seção de filtros</li>
+                <li>Defina a "Data Início"</li>
+                <li>Defina a "Data Fim"</li>
+                <li>Clique em "Filtrar"</li>
+              </ol>
+              <p>Você pode usar apenas uma data ou ambas para definir um período específico.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seção Tutoriais -->
+      <div id="tutoriais" class="help-section">
+        <h2 class="help-section-title">
+          <i class="fas fa-play-circle"></i>
+          Tutoriais em Vídeo
+        </h2>
+        <p class="help-section-description">
+          Aprenda a usar a plataforma com nossos tutoriais em vídeo. Em breve disponíveis!
+        </p>
+
+        <div class="help-cards">
+          <div class="help-card">
+            <div class="help-card-icon">
+              <i class="fas fa-play"></i>
+            </div>
+            <h3 class="help-card-title">Primeiros Passos</h3>
+            <p class="help-card-description">
+              Tutorial completo para começar a usar a plataforma MegaLink.
+            </p>
+          </div>
+
+          <div class="help-card">
+            <div class="help-card-icon">
+              <i class="fas fa-users"></i>
+            </div>
+            <h3 class="help-card-title">Gerenciando Leads</h3>
+            <p class="help-card-description">
+              Como cadastrar, editar e organizar seus leads de forma eficiente.
+            </p>
+          </div>
+
+          <div class="help-card">
+            <div class="help-card-icon">
+              <i class="fas fa-handshake"></i>
+            </div>
+            <h3 class="help-card-title">Validação de Vendas</h3>
+            <p class="help-card-description">
+              Processo completo de validação e aprovação de vendas.
+            </p>
+          </div>
+
+          <div class="help-card">
+            <div class="help-card-icon">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <h3 class="help-card-title">Relatórios e Análises</h3>
+            <p class="help-card-description">
+              Como gerar e interpretar relatórios para tomar melhores decisões.
+            </p>
+          </div>
+        </div>
+
+        <div class="help-actions">
+          <a href="#contato" class="btn-help btn-help-primary" onclick="showSection('contato')">
+            <i class="fas fa-envelope"></i>
+            Solicitar Tutorial Personalizado
+          </a>
+        </div>
+      </div>
+
+      <!-- Seção Contato -->
+      <div id="contato" class="help-section">
+        <h2 class="help-section-title">
+          <i class="fas fa-envelope"></i>
+          Entre em Contato
+        </h2>
+        <p class="help-section-description">
+          Precisa de ajuda? Nossa equipe está pronta para atendê-lo. Escolha a forma de contato mais conveniente.
+        </p>
+
+        <div class="contact-grid">
+          <div class="contact-card">
+            <div class="contact-card-icon">
+              <i class="fas fa-envelope"></i>
+            </div>
+            <h3 class="contact-card-title">Email</h3>
+            <p class="contact-card-info">
+              <a href="mailto:suporte@megalink.com" class="contact-card-link">
+                suporte@megalink.com
+              </a>
+            </p>
+            <p class="contact-card-info">Resposta em até 24h</p>
+          </div>
+
+          <div class="contact-card">
+            <div class="contact-card-icon">
+              <i class="fab fa-whatsapp"></i>
+            </div>
+            <h3 class="contact-card-title">WhatsApp</h3>
+            <p class="contact-card-info">
+              <a href="https://wa.me/5511999999999" class="contact-card-link" target="_blank">
+                (11) 99999-9999
+              </a>
+            </p>
+            <p class="contact-card-info">Segunda a Sexta, 8h às 18h</p>
+          </div>
+
+          <div class="contact-card">
+            <div class="contact-card-icon">
+              <i class="fas fa-phone"></i>
+            </div>
+            <h3 class="contact-card-title">Telefone</h3>
+            <p class="contact-card-info">
+              <a href="tel:+5511333333333" class="contact-card-link">
+                (11) 3333-3333
+              </a>
+            </p>
+            <p class="contact-card-info">Segunda a Sexta, 8h às 18h</p>
+          </div>
+
+          <div class="contact-card">
+            <div class="contact-card-icon">
+              <i class="fas fa-comments"></i>
+            </div>
+            <h3 class="contact-card-title">Chat Online</h3>
+            <p class="contact-card-info">
+              <a href="#" class="contact-card-link" onclick="alert('Chat em breve disponível!')">
+                Iniciar Conversa
+              </a>
+            </p>
+            <p class="contact-card-info">Disponível 24/7</p>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">💡</div>
+          <h3 class="tutorial-step-title">Dicas para um Atendimento Mais Rápido</h3>
+          <div class="tutorial-step-content">
+            <ul>
+              <li>Descreva claramente o problema ou dúvida</li>
+              <li>Inclua prints ou capturas de tela quando possível</li>
+              <li>Informe seu usuário e empresa</li>
+              <li>Mencione os passos que já tentou</li>
+              <li>Seja específico sobre o que espera como solução</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seção Status -->
+      <div id="status" class="help-section">
+        <h2 class="help-section-title">
+          <i class="fas fa-server"></i>
+          Status do Sistema
+        </h2>
+        <p class="help-section-description">
+          Monitore o status de todos os serviços da plataforma MegaLink em tempo real.
+        </p>
+
+        <div class="status-grid">
+          <div class="status-item">
+            <div class="status-indicator online"></div>
+            <div class="status-name">Plataforma Web</div>
+            <div class="status-description">Operacional</div>
+          </div>
+
+          <div class="status-item">
+            <div class="status-indicator online"></div>
+            <div class="status-name">API de Leads</div>
+            <div class="status-description">Operacional</div>
+          </div>
+
+          <div class="status-item">
+            <div class="status-indicator online"></div>
+            <div class="status-name">Banco de Dados</div>
+            <div class="status-description">Operacional</div>
+          </div>
+
+          <div class="status-item">
+            <div class="status-indicator online"></div>
+            <div class="status-name">Integrações</div>
+            <div class="status-description">Operacional</div>
+          </div>
+
+          <div class="status-item">
+            <div class="status-indicator online"></div>
+            <div class="status-name">Relatórios</div>
+            <div class="status-description">Operacional</div>
+          </div>
+
+          <div class="status-item">
+            <div class="status-indicator online"></div>
+            <div class="status-name">Notificações</div>
+            <div class="status-description">Operacional</div>
+          </div>
+        </div>
+
+        <div class="tutorial-step">
+          <div class="tutorial-step-number">ℹ️</div>
+          <h3 class="tutorial-step-title">Legenda de Status</h3>
+          <div class="tutorial-step-content">
+            <ul>
+              <li><strong>🟢 Operacional:</strong> Serviço funcionando normalmente</li>
+              <li><strong>🔴 Indisponível:</strong> Serviço temporariamente fora do ar</li>
+              <li><strong>🟡 Manutenção:</strong> Serviço em manutenção programada</li>
+            </ul>
+            <p>Última atualização: <strong id="lastUpdate">Carregando...</strong></p>
+          </div>
+        </div>
+
+        <div class="help-actions">
+          <button class="btn-help btn-help-secondary" onclick="checkStatus()">
+            <i class="fas fa-sync-alt"></i>
+            Atualizar Status
+          </button>
+          <a href="#contato" class="btn-help btn-help-primary" onclick="showSection('contato')">
+            <i class="fas fa-exclamation-triangle"></i>
+            Reportar Problema
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Navegação entre seções
+  function showSection(sectionId) {
+    // Remover classe active de todos os links e seções
+    document.querySelectorAll('.help-nav-link').forEach(link => {
+      link.classList.remove('active');
+    });
+    document.querySelectorAll('.help-section').forEach(section => {
+      section.classList.remove('active');
+    });
+
+    // Adicionar classe active ao link e seção selecionados
+    const link = document.querySelector(`[data-section="${sectionId}"]`);
+    const section = document.getElementById(sectionId);
+    
+    if (link) link.classList.add('active');
+    if (section) section.classList.add('active');
+
+    // Scroll suave para o topo do conteúdo
+    document.querySelector('.help-content').scrollIntoView({ 
+      behavior: 'smooth',
+      block: 'start'
+    });
+  }
+
+  // Adicionar event listeners para os links de navegação
+  document.addEventListener('DOMContentLoaded', function() {
+    // Event listeners para links do menu lateral
+    document.querySelectorAll('.help-nav-link').forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const sectionId = this.getAttribute('data-section');
+        if (sectionId) {
+          showSection(sectionId);
+        }
+      });
+    });
+
+    // Garantir que a seção "inicio" esteja ativa por padrão
+    const inicioSection = document.getElementById('inicio');
+    const inicioLink = document.querySelector('[data-section="inicio"]');
+    
+    if (inicioSection && !inicioSection.classList.contains('active')) {
+      inicioSection.classList.add('active');
+    }
+    if (inicioLink && !inicioLink.classList.contains('active')) {
+      inicioLink.classList.add('active');
+    }
+  });
+
+  // FAQ Accordion
+  document.addEventListener('DOMContentLoaded', function() {
+    const faqQuestions = document.querySelectorAll('.faq-question');
+    
+    faqQuestions.forEach(question => {
+      question.addEventListener('click', function() {
+        const answer = this.nextElementSibling;
+        const isActive = this.classList.contains('active');
+        
+        // Fechar todas as outras FAQs
+        faqQuestions.forEach(q => {
+          q.classList.remove('active');
+          q.nextElementSibling.classList.remove('active');
+        });
+        
+        // Toggle da FAQ atual
+        if (!isActive) {
+          this.classList.add('active');
+          answer.classList.add('active');
+        }
+      });
+    });
+
+    // Atualizar timestamp do status
+    updateStatusTimestamp();
+  });
+
+  // Atualizar timestamp do status
+  function updateStatusTimestamp() {
+    const now = new Date();
+    const timestamp = now.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    document.getElementById('lastUpdate').textContent = timestamp;
+  }
+
+  // Verificar status do sistema
+  function checkStatus() {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
+    button.disabled = true;
+    
+    // Simular verificação de status
+    setTimeout(() => {
+      updateStatusTimestamp();
+      button.innerHTML = originalText;
+      button.disabled = false;
+      
+      // Mostrar notificação de sucesso
+      showNotification('Status atualizado com sucesso!', 'success');
+    }, 2000);
+  }
+
+  // Sistema de notificações
+  function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: ${type === 'success' ? '#10b981' : '#3b82f6'};
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 10000;
+      font-weight: 500;
+      animation: slideIn 0.3s ease;
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      notification.style.animation = 'slideOut 0.3s ease';
+      setTimeout(() => {
+        document.body.removeChild(notification);
+      }, 300);
+    }, 3000);
+  }
+
+  // Adicionar estilos de animação
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(100%); opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
+
+  // Smooth scroll para links internos
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        target.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+    });
+  });
+
+  // Busca rápida (funcionalidade futura)
+  function quickSearch(query) {
+    // Implementar busca rápida na documentação
+    console.log('Busca por:', query);
+  }
+
+  // Atalhos de teclado
+  document.addEventListener('keydown', function(e) {
+    // Ctrl + K para busca rápida
+    if (e.ctrlKey && e.key === 'k') {
+      e.preventDefault();
+      const query = prompt('Digite sua busca:');
+      if (query) quickSearch(query);
+    }
+    
+    // ESC para fechar modais/FAQs
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.faq-question.active').forEach(q => {
+        q.classList.remove('active');
+        q.nextElementSibling.classList.remove('active');
+      });
+    }
+  });
+</script>
+{% endblock %}
