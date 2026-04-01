@@ -1,40 +1,93 @@
-<div class="tarefa-card {{ extra_class }}" style="display:flex; align-items:flex-start; gap:12px; padding:14px 16px; background:var(--bg-white,#fff); border:1px solid var(--border,#e2e8f0); border-radius:10px; margin-bottom:8px; border-left:3px solid {% if tarefa.prioridade == 'urgente' %}#ef4444{% elif tarefa.prioridade == 'alta' %}#f97316{% elif tarefa.prioridade == 'normal' %}#3b82f6{% else %}#94a3b8{% endif %};">
-    <div style="flex-shrink:0; margin-top:2px;">
+{% load static %}
+<div class="tarefa-card {{ extra_class }}" id="tarefa-{{ tarefa.pk }}" style="display:flex; align-items:flex-start; gap:12px; padding:14px 16px; background:var(--bg-white,#fff); border:1px solid var(--border,#e2e8f0); border-radius:10px; margin-bottom:8px; border-left:3px solid {% if tarefa.prioridade == 'urgente' %}#ef4444{% elif tarefa.prioridade == 'alta' %}#f97316{% elif tarefa.prioridade == 'normal' %}#3b82f6{% else %}#94a3b8{% endif %};">
+
+    <!-- Botão concluir (clicável) -->
+    <div style="flex-shrink:0; margin-top:2px; cursor:pointer;" onclick="concluirTarefa({{ tarefa.pk }}, this)" title="{% if tarefa.status == 'concluida' %}Concluída{% else %}Clique para concluir{% endif %}">
         {% if tarefa.status == 'concluida' %}
-            <i class="fas fa-check-circle" style="color:#22c55e; font-size:16px;"></i>
+            <i class="fas fa-check-circle" style="color:#22c55e; font-size:18px;"></i>
         {% elif tarefa.status == 'vencida' or tarefa.status == 'cancelada' %}
-            <i class="fas fa-times-circle" style="color:#ef4444; font-size:16px;"></i>
+            <i class="fas fa-times-circle" style="color:#ef4444; font-size:18px;"></i>
         {% else %}
-            <i class="far fa-circle" style="color:#94a3b8; font-size:16px;"></i>
+            <i class="far fa-circle" style="color:#cbd5e1; font-size:18px; transition:color .15s;"></i>
         {% endif %}
     </div>
+
+    <!-- Conteúdo -->
     <div style="flex:1; min-width:0;">
-        <div style="font-size:13px; font-weight:600; color:var(--text-main,#1e293b); margin-bottom:4px;">
+        <div style="font-size:13px; font-weight:600; color:var(--text-main,#1e293b); margin-bottom:4px; {% if tarefa.status == 'concluida' %}text-decoration:line-through; color:#94a3b8;{% endif %}">
             {{ tarefa.titulo }}
         </div>
+        {% if tarefa.descricao %}
+        <div style="font-size:12px; color:var(--text-light,#64748b); margin-bottom:6px; line-height:1.4;">
+            {{ tarefa.descricao|truncatechars:100 }}
+        </div>
+        {% endif %}
         <div style="display:flex; gap:8px; flex-wrap:wrap; font-size:11px; color:var(--text-light,#64748b);">
             <span><i class="fas fa-tag"></i> {{ tarefa.get_tipo_display }}</span>
             {% if tarefa.oportunidade %}
-            <span><i class="fas fa-briefcase"></i> {{ tarefa.oportunidade.titulo|truncatechars:30 }}</span>
+            <a href="{% url 'crm:oportunidade_detalhe' tarefa.oportunidade.pk %}" style="color:var(--primary,#818cf8); text-decoration:none;">
+                <i class="fas fa-briefcase"></i> {{ tarefa.oportunidade.titulo|truncatechars:25 }}
+            </a>
             {% endif %}
             {% if tarefa.responsavel %}
             <span><i class="fas fa-user"></i> {{ tarefa.responsavel.get_full_name|default:tarefa.responsavel.username }}</span>
             {% endif %}
             {% if tarefa.data_vencimento %}
-            <span style="{% if tarefa.status != 'concluida' %}{% now 'U' as now_ts %}{% widthratio tarefa.data_vencimento|date:'U' 1 1 as venc_ts %}{% endif %}">
-                <i class="fas fa-clock"></i> {{ tarefa.data_vencimento|date:"d/m H:i" }}
-            </span>
+            <span><i class="fas fa-clock"></i> {{ tarefa.data_vencimento|date:"d/m H:i" }}</span>
             {% endif %}
         </div>
     </div>
-    <div style="flex-shrink:0; display:flex; gap:4px;">
-        <span style="font-size:10px; padding:3px 8px; border-radius:99px; font-weight:600;
-            background:{% if tarefa.prioridade == 'urgente' %}#fef2f2; color:#dc2626{% elif tarefa.prioridade == 'alta' %}#fff7ed; color:#ea580c{% elif tarefa.prioridade == 'normal' %}#eff6ff; color:#2563eb{% else %}#f8fafc; color:#64748b{% endif %};">
-            {{ tarefa.get_prioridade_display }}
-        </span>
-        <span style="font-size:10px; padding:3px 8px; border-radius:99px; font-weight:600;
-            background:{% if tarefa.status == 'concluida' %}#f0fdf4; color:#16a34a{% elif tarefa.status == 'em_andamento' %}#fffbeb; color:#d97706{% elif tarefa.status == 'vencida' %}#fef2f2; color:#dc2626{% else %}#f8fafc; color:#64748b{% endif %};">
-            {{ tarefa.get_status_display }}
-        </span>
+
+    <!-- Badges + Ações -->
+    <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+        <div style="display:flex; gap:4px;">
+            <span style="font-size:10px; padding:3px 8px; border-radius:99px; font-weight:600;
+                background:{% if tarefa.prioridade == 'urgente' %}#fef2f2; color:#dc2626{% elif tarefa.prioridade == 'alta' %}#fff7ed; color:#ea580c{% elif tarefa.prioridade == 'normal' %}#eff6ff; color:#2563eb{% else %}#f8fafc; color:#64748b{% endif %};">
+                {{ tarefa.get_prioridade_display }}
+            </span>
+            <span style="font-size:10px; padding:3px 8px; border-radius:99px; font-weight:600;
+                background:{% if tarefa.status == 'concluida' %}#f0fdf4; color:#16a34a{% elif tarefa.status == 'em_andamento' %}#fffbeb; color:#d97706{% elif tarefa.status == 'vencida' %}#fef2f2; color:#dc2626{% else %}#f8fafc; color:#64748b{% endif %};">
+                {{ tarefa.get_status_display }}
+            </span>
+        </div>
+        {% if tarefa.status != 'concluida' and tarefa.status != 'cancelada' %}
+        <div style="display:flex; gap:4px;">
+            <button onclick="concluirTarefa({{ tarefa.pk }}, this)" title="Concluir"
+                style="background:#22c55e; color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                <i class="fas fa-check"></i> Concluir
+            </button>
+        </div>
+        {% endif %}
     </div>
 </div>
+
+<script>
+function concluirTarefa(pk, el) {
+    if (!confirm('Marcar tarefa como concluída?')) return;
+    fetch('/crm/tarefas/' + pk + '/concluir/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            location.reload();
+        } else {
+            alert(data.erro || 'Erro ao concluir tarefa');
+        }
+    })
+    .catch(() => alert('Erro de conexão'));
+}
+
+function getCookie(name) {
+    const cookies = document.cookie.split(';');
+    for (let c of cookies) {
+        c = c.trim();
+        if (c.startsWith(name + '=')) return decodeURIComponent(c.substring(name.length + 1));
+    }
+    return '';
+}
+</script>
