@@ -618,5 +618,8 @@ class ConfiguracaoCRM(TenantMixin):
 
     @classmethod
     def get_config(cls):
-        obj, _ = cls.objects.get_or_create(pk=1)
+        """Retorna a config do tenant atual (via TenantManager)."""
+        obj = cls.objects.first()
+        if not obj:
+            obj = cls.objects.create()
         return obj
