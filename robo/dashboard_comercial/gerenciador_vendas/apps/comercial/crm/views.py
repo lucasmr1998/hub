@@ -473,12 +473,14 @@ def tarefas_lista(request):
     )
     tarefas_vencidas = qs.filter(data_vencimento__lt=timezone.now(), status__in=['pendente', 'em_andamento', 'vencida'])
     tarefas_todas = qs.exclude(status='concluida')
+    tarefas_concluidas = qs.filter(status='concluida').order_by('-data_conclusao')[:20]
 
     context = {
         'tarefas_hoje': tarefas_hoje,
         'tarefas_semana': tarefas_semana,
         'tarefas_vencidas': tarefas_vencidas,
         'tarefas_todas': tarefas_todas,
+        'tarefas_concluidas': tarefas_concluidas,
         'page_title': 'Tarefas CRM',
     }
     return render(request, 'crm/tarefas_lista.html', context)

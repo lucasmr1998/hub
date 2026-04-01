@@ -101,6 +101,10 @@
       <i class="fas fa-list"></i> Todas Pendentes
       <span class="tab-count">{{ tarefas_todas|length }}</span>
     </button>
+    <button class="tab-btn" onclick="switchTab(this,'tab-concluidas')">
+      <i class="fas fa-check-double"></i> Concluidas
+      <span class="tab-count" style="background:#f0fdf4;color:#16a34a;">{{ tarefas_concluidas|length }}</span>
+    </button>
   </div>
 
   <!-- HOJE -->
@@ -184,6 +188,29 @@
     </div>
     {% else %}
     <div class="empty"><i class="fas fa-inbox"></i><p>Nenhuma tarefa pendente.</p></div>
+    {% endif %}
+  </div>
+
+  <!-- CONCLUIDAS -->
+  <div id="tab-concluidas" class="tab-panel">
+    {% if tarefas_concluidas %}
+    <div class="tarefa-list">
+      {% for t in tarefas_concluidas %}
+      <div class="tarefa-card" data-id="{{ t.pk }}" style="opacity:0.7;">
+        <div style="flex-shrink:0;"><i class="fas fa-check-circle" style="color:#22c55e; font-size:16px;"></i></div>
+        <div class="tarefa-body">
+          <div class="tarefa-titulo" style="text-decoration:line-through; color:#94a3b8;">{{ t.titulo }}</div>
+          <div class="tarefa-meta">
+            <span class="tipo-badge tipo-{{ t.tipo }}">{{ t.get_tipo_display }}</span>
+            {% if t.data_conclusao %}<span><i class="fas fa-check"></i> Concluida {{ t.data_conclusao|timesince }} atras</span>{% endif %}
+            {% if t.lead %}<span class="tarefa-lead"><i class="fas fa-user"></i> {{ t.lead.nome_razaosocial|truncatechars:28 }}</span>{% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-inbox"></i><p>Nenhuma tarefa concluida ainda.</p></div>
     {% endif %}
   </div>
 
