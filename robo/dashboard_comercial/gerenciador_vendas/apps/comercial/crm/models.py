@@ -9,6 +9,38 @@ from apps.sistema.mixins import TenantMixin
 # PIPELINE
 # ============================================================================
 
+class Pipeline(TenantMixin):
+    """Pipeline de vendas. Cada tenant pode ter múltiplos pipelines."""
+    TIPO_CHOICES = [
+        ('vendas', 'Vendas'),
+        ('suporte', 'Suporte'),
+        ('onboarding', 'Onboarding'),
+        ('custom', 'Personalizado'),
+    ]
+
+    nome = models.CharField(max_length=100, verbose_name="Nome")
+    slug = models.SlugField(verbose_name="Slug")
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='vendas', verbose_name="Tipo")
+    descricao = models.TextField(blank=True, verbose_name="Descrição")
+    cor_hex = models.CharField(max_length=7, default='#667eea', verbose_name="Cor")
+    icone_fa = models.CharField(max_length=50, default='fa-funnel-dollar', verbose_name="Ícone")
+    padrao = models.BooleanField(default=False, verbose_name="Pipeline padrão",
+        help_text="Pipeline usado ao criar oportunidades automaticamente")
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    ordem = models.PositiveIntegerField(default=0, verbose_name="Ordem")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'crm_pipelines'
+        verbose_name = "Pipeline"
+        verbose_name_plural = "📊 00. Pipelines"
+        ordering = ['ordem', 'nome']
+        unique_together = [['tenant', 'slug']]
+
+    def __str__(self):
+        return self.nome
+
+
 class PipelineEstagio(TenantMixin):
     TIPO_CHOICES = [
         ('novo', 'Novo Lead'),
@@ -20,8 +52,12 @@ class PipelineEstagio(TenantMixin):
         ('perdido', 'Perdido'),
     ]
 
+    pipeline = models.ForeignKey(
+        Pipeline, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='estagios', verbose_name="Pipeline"
+    )
     nome = models.CharField(max_length=100, verbose_name="Nome")
-    slug = models.SlugField(unique=True, verbose_name="Slug")
+    slug = models.SlugField(verbose_name="Slug")
     ordem = models.PositiveIntegerField(default=0, verbose_name="Ordem")
     cor_hex = models.CharField(max_length=7, default='#667eea', verbose_name="Cor (HEX)")
     icone_fa = models.CharField(max_length=50, default='fa-circle', verbose_name="Ícone FontAwesome")
@@ -38,6 +74,7 @@ class PipelineEstagio(TenantMixin):
         verbose_name = "Estágio do Pipeline"
         verbose_name_plural = "🏷️ 01. Estágios do Pipeline"
         ordering = ['ordem']
+        unique_together = [['pipeline', 'slug']]
 
     def __str__(self):
         return self.nome
@@ -137,6 +174,10 @@ class OportunidadeVenda(TenantMixin):
         ('urgente', 'Urgente'),
     ]
 
+    pipeline = models.ForeignKey(
+        Pipeline, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='oportunidades_pipeline', verbose_name="Pipeline"
+    )
     lead = models.OneToOneField(
         'leads.LeadProspecto',
         on_delete=models.CASCADE,
@@ -552,6 +593,10 @@ class ConfiguracaoCRM(TenantMixin):
     sla_alerta_horas_padrao = models.PositiveIntegerField(default=48, verbose_name="SLA Padrão (horas)")
     criar_oportunidade_automatico = models.BooleanField(default=True, verbose_name="Criar Oportunidade Automaticamente")
     score_minimo_auto_criacao = models.IntegerField(default=7, verbose_name="Score Mínimo para Auto-Criação")
+    pipeline_padrao = models.ForeignKey(
+        Pipeline, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='+', verbose_name="Pipeline Padrão"
+    )
     estagio_inicial_padrao = models.ForeignKey(
         PipelineEstagio, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='+', verbose_name="Estágio Inicial Padrão"

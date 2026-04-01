@@ -76,7 +76,20 @@ def _oportunidade_para_dict(op):
 
 @login_required
 def pipeline_view(request):
-    estagios = PipelineEstagio.objects.filter(ativo=True).order_by('ordem')
+    from .models import Pipeline
+
+    pipelines = Pipeline.objects.filter(ativo=True)
+    pipeline_id = request.GET.get('pipeline')
+    if pipeline_id:
+        pipeline_atual = pipelines.filter(pk=pipeline_id).first()
+    else:
+        pipeline_atual = pipelines.filter(padrao=True).first() or pipelines.first()
+
+    if pipeline_atual:
+        estagios = PipelineEstagio.objects.filter(pipeline=pipeline_atual, ativo=True).order_by('ordem')
+    else:
+        estagios = PipelineEstagio.objects.filter(ativo=True).order_by('ordem')
+
     vendedores = []
     from django.contrib.auth.models import User
     for u in User.objects.filter(is_active=True, perfil__tenant=request.tenant).order_by('first_name'):
@@ -85,7 +98,9 @@ def pipeline_view(request):
     context = {
         'estagios': estagios,
         'vendedores': vendedores,
-        'page_title': 'Pipeline CRM',
+        'pipelines': pipelines,
+        'pipeline_atual': pipeline_atual,
+        'page_title': f'Pipeline: {pipeline_atual.nome}' if pipeline_atual else 'Pipeline CRM',
     }
     return render(request, 'crm/pipeline.html', context)
 
@@ -93,7 +108,11 @@ def pipeline_view(request):
 @login_required
 @require_GET
 def api_pipeline_dados(request):
-    estagios = PipelineEstagio.objects.filter(ativo=True).order_by('ordem')
+    pipeline_id = request.GET.get('pipeline')
+    if pipeline_id:
+        estagios = PipelineEstagio.objects.filter(pipeline_id=pipeline_id, ativo=True).order_by('ordem')
+    else:
+        estagios = PipelineEstagio.objects.filter(ativo=True).order_by('ordem')
 
     # Filtros
     responsavel_id = request.GET.get('responsavel')
@@ -101,8 +120,11 @@ def api_pipeline_dados(request):
     search = request.GET.get('search', '').strip()
 
     qs = OportunidadeVenda.objects.filter(ativo=True).select_related(
-        'lead', 'estagio', 'responsavel', 'plano_interesse'
+        'lead', 'estagio', 'responsavel', 'plano_interesse', 'pipeline'
     ).prefetch_related('tarefas', 'tags')
+
+    if pipeline_id:
+        qs = qs.filter(pipeline_id=pipeline_id)
 
     # Regra de visibilidade: superuser vê tudo, vendedor vê as suas + não atribuídas
     if not request.user.is_superuser:

@@ -44,4 +44,7 @@ urlpatterns = [
     path('cs/indicacoes/',  include('apps.cs.indicacoes.urls')),
     path('cs/carteirinha/', include('apps.cs.carteirinha.urls')),
 
+    # === Suporte ===
+    path('suporte/', include('apps.suporte.urls')),
+
 ]

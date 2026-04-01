@@ -1,0 +1,152 @@
+from django.db import models
+from django.contrib.auth.models import User
+from django.utils import timezone
+
+from apps.sistema.mixins import TenantMixin
+
+
+class CategoriaTicket(TenantMixin):
+    nome = models.CharField(max_length=100, verbose_name="Nome")
+    slug = models.SlugField(verbose_name="Slug")
+    descricao = models.TextField(blank=True, verbose_name="Descrição")
+    icone = models.CharField(max_length=50, default='fa-tag', verbose_name="Ícone FontAwesome")
+    ordem = models.PositiveIntegerField(default=0, verbose_name="Ordem")
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+
+    class Meta:
+        db_table = 'suporte_categorias'
+        verbose_name = "Categoria de Ticket"
+        verbose_name_plural = "Categorias de Ticket"
+        ordering = ['ordem']
+        unique_together = [['tenant', 'slug']]
+
+    def __str__(self):
+        return self.nome
+
+
+class SLAConfig(TenantMixin):
+    PLANO_CHOICES = [
+        ('starter', 'Starter'),
+        ('start', 'Start'),
+        ('pro', 'Pro'),
+    ]
+
+    plano_tier = models.CharField(max_length=10, choices=PLANO_CHOICES, verbose_name="Plano")
+    tempo_primeira_resposta_horas = models.PositiveIntegerField(verbose_name="SLA Primeira Resposta (horas)")
+    tempo_resolucao_horas = models.PositiveIntegerField(verbose_name="SLA Resolução (horas)")
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+
+    class Meta:
+        db_table = 'suporte_sla_config'
+        verbose_name = "Configuração de SLA"
+        verbose_name_plural = "Configurações de SLA"
+        unique_together = [['tenant', 'plano_tier']]
+
+    def __str__(self):
+        return f"SLA {self.get_plano_tier_display()}: {self.tempo_primeira_resposta_horas}h resposta, {self.tempo_resolucao_horas}h resolução"
+
+
+class Ticket(TenantMixin):
+    PRIORIDADE_CHOICES = [
+        ('baixa', 'Baixa'),
+        ('normal', 'Normal'),
+        ('alta', 'Alta'),
+        ('urgente', 'Urgente'),
+    ]
+    STATUS_CHOICES = [
+        ('aberto', 'Aberto'),
+        ('em_andamento', 'Em Andamento'),
+        ('aguardando_cliente', 'Aguardando Cliente'),
+        ('resolvido', 'Resolvido'),
+        ('fechado', 'Fechado'),
+    ]
+
+    numero = models.PositiveIntegerField(verbose_name="Número", editable=False)
+    titulo = models.CharField(max_length=255, verbose_name="Título")
+    descricao = models.TextField(verbose_name="Descrição")
+    categoria = models.ForeignKey(
+        CategoriaTicket, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tickets', verbose_name="Categoria"
+    )
+    prioridade = models.CharField(max_length=10, choices=PRIORIDADE_CHOICES, default='normal', verbose_name="Prioridade")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='aberto', verbose_name="Status")
+
+    solicitante = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='tickets_abertos', verbose_name="Solicitante"
+    )
+    atendente = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tickets_atribuidos', verbose_name="Atendente"
+    )
+    tenant_cliente = models.ForeignKey(
+        'sistema.Tenant', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tickets_suporte', verbose_name="Tenant Cliente",
+        help_text="Qual provedor abriu este ticket"
+    )
+
+    sla_horas = models.PositiveIntegerField(null=True, blank=True, verbose_name="SLA (horas)")
+    data_abertura = models.DateTimeField(auto_now_add=True, verbose_name="Data de Abertura")
+    data_primeira_resposta = models.DateTimeField(null=True, blank=True, verbose_name="Primeira Resposta")
+    data_resolucao = models.DateTimeField(null=True, blank=True, verbose_name="Data de Resolução")
+    data_fechamento = models.DateTimeField(null=True, blank=True, verbose_name="Data de Fechamento")
+
+    class Meta:
+        db_table = 'suporte_tickets'
+        verbose_name = "Ticket"
+        verbose_name_plural = "Tickets"
+        ordering = ['-data_abertura']
+        indexes = [
+            models.Index(fields=['status', 'prioridade']),
+            models.Index(fields=['atendente', 'status']),
+            models.Index(fields=['tenant_cliente']),
+        ]
+        unique_together = [['tenant', 'numero']]
+
+    def __str__(self):
+        return f"#{self.numero} {self.titulo}"
+
+    @property
+    def sla_cumprido(self):
+        if not self.sla_horas:
+            return True
+        referencia = self.data_resolucao or timezone.now()
+        horas = (referencia - self.data_abertura).total_seconds() / 3600
+        return horas <= self.sla_horas
+
+    def save(self, *args, **kwargs):
+        if not self.numero:
+            from django.db.models import Max
+            ultimo = Ticket.all_tenants.filter(tenant=self.tenant).aggregate(Max('numero'))
+            self.numero = (ultimo['numero__max'] or 0) + 1
+
+        if not self.sla_horas and self.tenant_cliente:
+            tier = getattr(self.tenant_cliente, 'plano_comercial', 'starter')
+            sla = SLAConfig.all_tenants.filter(tenant=self.tenant, plano_tier=tier).first()
+            if sla:
+                self.sla_horas = sla.tempo_resolucao_horas
+
+        super().save(*args, **kwargs)
+
+
+class ComentarioTicket(TenantMixin):
+    ticket = models.ForeignKey(
+        Ticket, on_delete=models.CASCADE,
+        related_name='comentarios', verbose_name="Ticket"
+    )
+    autor = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Autor")
+    mensagem = models.TextField(verbose_name="Mensagem")
+    interno = models.BooleanField(
+        default=False, verbose_name="Comentário Interno",
+        help_text="Visível apenas para a equipe de suporte"
+    )
+    data_criacao = models.DateTimeField(auto_now_add=True, verbose_name="Data")
+
+    class Meta:
+        db_table = 'suporte_comentarios'
+        verbose_name = "Comentário"
+        verbose_name_plural = "Comentários"
+        ordering = ['data_criacao']
+
+    def __str__(self):
+        return f"#{self.ticket.numero} — {self.autor.username}"

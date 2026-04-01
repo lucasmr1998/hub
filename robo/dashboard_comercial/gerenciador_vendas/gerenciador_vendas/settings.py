@@ -76,6 +76,9 @@ INSTALLED_APPS = [
     'apps.cs.carteirinha',
     'apps.cs.nps',
     'apps.cs.retencao',
+
+    # === Suporte ===
+    'apps.suporte',
 ]
 
 MIDDLEWARE = [

@@ -52,6 +52,7 @@ def criar_oportunidade_automatica(sender, instance, created, **kwargs):
     try:
         OportunidadeVenda.objects.create(
             lead=instance,
+            pipeline=getattr(config, 'pipeline_padrao', None),
             estagio=config.estagio_inicial_padrao,
             valor_estimado=getattr(instance, 'valor', None),
             origem_crm='automatico',
