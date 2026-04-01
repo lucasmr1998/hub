@@ -911,12 +911,63 @@ def configuracoes_crm(request):
         from django.shortcuts import redirect
         return redirect('crm:pipeline')
 
+    from .models import Pipeline
+
     config = ConfiguracaoCRM.get_config()
-    estagios = PipelineEstagio.objects.order_by('ordem')
+    pipelines = Pipeline.objects.all().order_by('ordem')
+
+    # Pipeline selecionado para editar estágios
+    pipeline_id = request.GET.get('pipeline')
+    if pipeline_id:
+        pipeline_atual = Pipeline.objects.filter(pk=pipeline_id).first()
+    else:
+        pipeline_atual = pipelines.first()
+
+    if pipeline_atual:
+        estagios = PipelineEstagio.objects.filter(pipeline=pipeline_atual).order_by('ordem')
+    else:
+        estagios = PipelineEstagio.objects.order_by('ordem')
+
     equipes = EquipeVendas.objects.filter(ativo=True)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'criar_pipeline':
+            from django.utils.text import slugify
+            nome = request.POST.get('nome', '').strip()
+            tipo = request.POST.get('tipo', 'vendas')
+            if nome:
+                slug = slugify(nome)
+                Pipeline.objects.create(
+                    nome=nome, slug=slug, tipo=tipo,
+                    cor_hex=request.POST.get('cor_hex', '#667eea'),
+                )
+            return redirect('crm:configuracoes')
+
+        elif action == 'editar_pipeline':
+            pid = request.POST.get('pipeline_id')
+            p = Pipeline.objects.filter(pk=pid).first()
+            if p:
+                p.nome = request.POST.get('nome', p.nome)
+                p.tipo = request.POST.get('tipo', p.tipo)
+                p.cor_hex = request.POST.get('cor_hex', p.cor_hex)
+                p.padrao = request.POST.get('padrao') == 'on'
+                p.save()
+                # Se marcou como padrão, desmarcar os outros
+                if p.padrao:
+                    Pipeline.objects.exclude(pk=p.pk).update(padrao=False)
+            return redirect(f'/crm/configuracoes/?pipeline={pid}')
+
+        elif action == 'excluir_pipeline':
+            pid = request.POST.get('pipeline_id')
+            Pipeline.objects.filter(pk=pid).delete()
+            return redirect('crm:configuracoes')
 
     context = {
         'config': config,
+        'pipelines': pipelines,
+        'pipeline_atual': pipeline_atual,
         'estagios': estagios,
         'equipes': equipes,
         'page_title': 'Configurações do CRM',
@@ -983,6 +1034,12 @@ def api_criar_estagio(request):
     else:
         est = PipelineEstagio()
         est.ordem = PipelineEstagio.objects.count() + 1
+
+    # Associar ao pipeline
+    pipeline_id = request.POST.get('pipeline_id')
+    if pipeline_id:
+        from .models import Pipeline
+        est.pipeline_id = pipeline_id
 
     est.nome = nome
     est.slug = slugify(nome)

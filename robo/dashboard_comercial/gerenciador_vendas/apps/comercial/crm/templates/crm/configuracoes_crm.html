@@ -100,13 +100,92 @@
   </div>
 </div>
 
+<!-- PIPELINES -->
+<div class="card" style="padding:0; margin-bottom:20px;">
+  <div class="card-header">
+    <h3><i class="fas fa-stream" style="color:var(--primary)"></i> Pipelines</h3>
+  </div>
+  <div class="card-body">
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+      {% for p in pipelines %}
+      <a href="?pipeline={{ p.pk }}"
+         style="display:flex; align-items:center; gap:8px; padding:10px 16px; border-radius:10px;
+                border:2px solid {% if pipeline_atual and pipeline_atual.pk == p.pk %}var(--primary){% else %}var(--border){% endif %};
+                background:{% if pipeline_atual and pipeline_atual.pk == p.pk %}var(--primary-light){% else %}var(--bg-white){% endif %};
+                text-decoration:none; color:var(--text-main); font-size:13px; font-weight:600; transition:all .15s;">
+        <span style="width:10px; height:10px; border-radius:4px; background:{{ p.cor_hex }};"></span>
+        {{ p.nome }}
+        {% if p.padrao %}<span style="font-size:10px; color:var(--primary); font-weight:700;">PADRÃO</span>{% endif %}
+      </a>
+      {% empty %}
+      <p style="font-size:13px; color:var(--text-light);">Nenhum pipeline criado ainda.</p>
+      {% endfor %}
+    </div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; padding-top:12px; border-top:1px solid var(--border);">
+      <form method="post" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="criar_pipeline">
+        <div>
+          <label style="display:block; font-size:11px; font-weight:600; color:var(--text-light); margin-bottom:4px;">Nome</label>
+          <input type="text" name="nome" required placeholder="Ex: Vendas B2B" style="padding:7px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; width:200px;">
+        </div>
+        <div>
+          <label style="display:block; font-size:11px; font-weight:600; color:var(--text-light); margin-bottom:4px;">Tipo</label>
+          <select name="tipo" style="padding:7px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px;">
+            <option value="vendas">Vendas</option>
+            <option value="suporte">Suporte</option>
+            <option value="onboarding">Onboarding</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block; font-size:11px; font-weight:600; color:var(--text-light); margin-bottom:4px;">Cor</label>
+          <input type="color" name="cor_hex" value="#667eea" style="width:40px; height:34px; border:1px solid var(--border); border-radius:8px; padding:2px; cursor:pointer;">
+        </div>
+        <button type="submit" class="btn-primary btn-sm"><i class="fas fa-plus"></i> Criar Pipeline</button>
+      </form>
+    </div>
+
+    {% if pipeline_atual %}
+    <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border);">
+      <form method="post" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="editar_pipeline">
+        <input type="hidden" name="pipeline_id" value="{{ pipeline_atual.pk }}">
+        <input type="text" name="nome" value="{{ pipeline_atual.nome }}" style="padding:7px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; width:200px;">
+        <select name="tipo" style="padding:7px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px;">
+          <option value="vendas" {% if pipeline_atual.tipo == 'vendas' %}selected{% endif %}>Vendas</option>
+          <option value="suporte" {% if pipeline_atual.tipo == 'suporte' %}selected{% endif %}>Suporte</option>
+          <option value="onboarding" {% if pipeline_atual.tipo == 'onboarding' %}selected{% endif %}>Onboarding</option>
+          <option value="custom" {% if pipeline_atual.tipo == 'custom' %}selected{% endif %}>Personalizado</option>
+        </select>
+        <input type="color" name="cor_hex" value="{{ pipeline_atual.cor_hex }}" style="width:40px; height:34px; border:1px solid var(--border); border-radius:8px; padding:2px; cursor:pointer;">
+        <label style="font-size:12px; display:flex; align-items:center; gap:4px; cursor:pointer;">
+          <input type="checkbox" name="padrao" {% if pipeline_atual.padrao %}checked{% endif %}> Padrão
+        </label>
+        <button type="submit" class="btn-secondary btn-sm"><i class="fas fa-save"></i> Salvar</button>
+      </form>
+      <form method="post" style="display:inline; margin-left:8px;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="excluir_pipeline">
+        <input type="hidden" name="pipeline_id" value="{{ pipeline_atual.pk }}">
+        <button type="submit" class="btn-danger btn-sm" onclick="return confirm('Excluir pipeline {{ pipeline_atual.nome }}? Isso exclui todos os estágios.')">
+          <i class="fas fa-trash"></i> Excluir
+        </button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
 <div class="cfg-grid">
 
   <!-- COLUNA PRINCIPAL: ESTAGIOS -->
   <div>
     <div class="card" style="padding:0;">
       <div class="card-header">
-        <h3><i class="fas fa-columns" style="color:var(--primary)"></i> Estágios do Pipeline</h3>
+        <h3><i class="fas fa-columns" style="color:var(--primary)"></i> Estágios{% if pipeline_atual %}: {{ pipeline_atual.nome }}{% endif %}</h3>
         <button class="btn-primary btn-sm" onclick="abrirModalEstagio()">
           <i class="fas fa-plus"></i> Novo Estágio
         </button>
@@ -307,6 +386,7 @@
       <form id="form-estagio" action="{% url 'crm:api_criar_estagio' %}" method="post">
         {% csrf_token %}
         <input type="hidden" name="estagio_id" id="est-id">
+        {% if pipeline_atual %}<input type="hidden" name="pipeline_id" value="{{ pipeline_atual.pk }}">{% endif %}
 
         <div class="form-group">
           <label class="form-label">Nome do estágio *</label>
