@@ -1,0 +1,141 @@
+{% extends 'sistema/base.html' %}
+
+{% block extra_css %}
+<style>
+    .equipe-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:16px; margin-bottom:24px; }
+    .equipe-card { background:var(--bg-white,#fff); border:1px solid var(--border,#e2e8f0); border-radius:12px; overflow:hidden; }
+    .equipe-header { padding:16px 18px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--border,#e2e8f0); }
+    .equipe-cor { width:12px; height:12px; border-radius:4px; flex-shrink:0; }
+    .equipe-nome { font-size:15px; font-weight:700; color:var(--text-main,#1e293b); flex:1; }
+    .equipe-actions { display:flex; gap:4px; }
+    .equipe-body { padding:16px 18px; }
+    .membro-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #f1f5f9; }
+    .membro-row:last-child { border-bottom:none; }
+    .membro-avatar { width:32px; height:32px; border-radius:50%; background:var(--primary,#818cf8); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; }
+    .membro-info { flex:1; }
+    .membro-nome { font-size:13px; font-weight:600; color:var(--text-main,#1e293b); }
+    .membro-cargo { font-size:11px; color:var(--text-light,#64748b); }
+    .add-form { background:#f8fafc; border-radius:10px; padding:14px; margin-top:12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:24px;">
+    <h1 class="page-title" style="font-size:1.3rem; font-weight:800;"><i class="fas fa-users" style="color:var(--primary,#818cf8);"></i> Equipes de Vendas</h1>
+</div>
+
+<!-- Criar equipe -->
+<div class="card" style="padding:16px; margin-bottom:24px;">
+    <form method="post" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="criar_equipe">
+        <div>
+            <label style="display:block; font-size:11px; font-weight:600; color:var(--text-light,#64748b); margin-bottom:4px;">Nome da equipe</label>
+            <input type="text" name="nome" required placeholder="Ex: Equipe Nordeste" style="padding:8px 12px; border:1px solid var(--border,#e2e8f0); border-radius:8px; font-size:13px; width:220px;">
+        </div>
+        <div>
+            <label style="display:block; font-size:11px; font-weight:600; color:var(--text-light,#64748b); margin-bottom:4px;">Descricao</label>
+            <input type="text" name="descricao" placeholder="Opcional" style="padding:8px 12px; border:1px solid var(--border,#e2e8f0); border-radius:8px; font-size:13px; width:200px;">
+        </div>
+        <div>
+            <label style="display:block; font-size:11px; font-weight:600; color:var(--text-light,#64748b); margin-bottom:4px;">Cor</label>
+            <input type="color" name="cor_hex" value="#667eea" style="width:40px; height:36px; border:1px solid var(--border,#e2e8f0); border-radius:8px; padding:2px; cursor:pointer;">
+        </div>
+        <button type="submit" class="btn-primary" style="padding:8px 16px; font-size:13px;"><i class="fas fa-plus"></i> Criar Equipe</button>
+    </form>
+</div>
+
+<!-- Equipes -->
+<div class="equipe-grid">
+    {% for equipe in equipes %}
+    <div class="equipe-card">
+        <div class="equipe-header">
+            <div class="equipe-cor" style="background:{{ equipe.cor_hex }};"></div>
+            <div class="equipe-nome">{{ equipe.nome }}</div>
+            <div class="equipe-actions">
+                <form method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="excluir_equipe">
+                    <input type="hidden" name="equipe_id" value="{{ equipe.pk }}">
+                    <button type="submit" onclick="return confirm('Excluir equipe {{ equipe.nome }}?')" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:13px;" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+        <div class="equipe-body">
+            {% if equipe.descricao %}
+            <p style="font-size:12px; color:var(--text-light,#64748b); margin-bottom:12px;">{{ equipe.descricao }}</p>
+            {% endif %}
+
+            {% if equipe.lider %}
+            <div style="font-size:11px; color:var(--text-light,#64748b); margin-bottom:8px;">
+                <i class="fas fa-crown" style="color:#f59e0b;"></i> Lider: <strong>{{ equipe.lider.get_full_name|default:equipe.lider.username }}</strong>
+            </div>
+            {% endif %}
+
+            <div style="font-size:11px; font-weight:700; color:var(--text-light,#64748b); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px;">
+                Membros ({{ equipe.membros.count }})
+            </div>
+
+            {% for membro in equipe.membros.all %}
+            <div class="membro-row">
+                <div class="membro-avatar" style="background:{{ equipe.cor_hex }};">
+                    {{ membro.user.first_name|first|default:membro.user.username|first|upper }}
+                </div>
+                <div class="membro-info">
+                    <div class="membro-nome">{{ membro.user.get_full_name|default:membro.user.username }}</div>
+                    <div class="membro-cargo">{{ membro.get_cargo_display }}</div>
+                </div>
+                <form method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="remover_membro">
+                    <input type="hidden" name="membro_id" value="{{ membro.pk }}">
+                    <button type="submit" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:12px;" title="Remover">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </form>
+            </div>
+            {% empty %}
+            <p style="font-size:12px; color:#94a3b8; text-align:center; padding:12px 0;">Sem membros</p>
+            {% endfor %}
+
+            <!-- Adicionar membro -->
+            <div class="add-form">
+                <form method="post" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="adicionar_membro">
+                    <input type="hidden" name="equipe_id" value="{{ equipe.pk }}">
+                    <div style="flex:1; min-width:140px;">
+                        <label style="display:block; font-size:10px; font-weight:600; color:var(--text-light,#64748b); margin-bottom:3px;">Usuario</label>
+                        <select name="user_id" required style="width:100%; padding:6px 10px; border:1px solid var(--border,#e2e8f0); border-radius:6px; font-size:12px;">
+                            <option value="">Selecionar...</option>
+                            {% for u in usuarios %}
+                            <option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:10px; font-weight:600; color:var(--text-light,#64748b); margin-bottom:3px;">Cargo</label>
+                        <select name="cargo" style="padding:6px 10px; border:1px solid var(--border,#e2e8f0); border-radius:6px; font-size:12px;">
+                            <option value="vendedor">Vendedor</option>
+                            <option value="supervisor">Supervisor</option>
+                            <option value="gerente">Gerente</option>
+                            <option value="diretor">Diretor</option>
+                        </select>
+                    </div>
+                    <button type="submit" style="background:var(--primary,#818cf8); color:#fff; border:none; border-radius:6px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer;">
+                        <i class="fas fa-plus"></i> Adicionar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div style="grid-column:1/-1; text-align:center; padding:48px; color:#94a3b8;">
+        <i class="fas fa-users" style="font-size:36px; margin-bottom:12px; display:block;"></i>
+        <p style="font-size:14px;">Nenhuma equipe criada ainda.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

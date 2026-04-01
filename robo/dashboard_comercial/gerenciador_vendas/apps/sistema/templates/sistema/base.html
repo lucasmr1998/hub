@@ -115,18 +115,24 @@
             <a href="{% url 'crm:tarefas_lista' %}" class="nav-item {% if request.resolver_match.url_name == 'tarefas_lista' %}active{% endif %}">
                 <i class="fas fa-tasks"></i><span class="nav-text">Tarefas</span>
             </a>
-            <a href="{% url 'crm:metas' %}" class="nav-item {% if request.resolver_match.url_name == 'metas' %}active{% endif %}">
-                <i class="fas fa-bullseye"></i><span class="nav-text">Metas</span>
-            </a>
             <a href="{% url 'crm:retencao' %}" class="nav-item {% if request.resolver_match.url_name == 'retencao' %}active{% endif %}">
                 <i class="fas fa-shield-alt"></i><span class="nav-text">Retenção</span>
             </a>
-            <a href="{% url 'crm:segmentos_lista' %}" class="nav-item {% if request.resolver_match.url_name == 'segmentos' %}active{% endif %}">
+            <a href="{% url 'crm:segmentos_lista' %}" class="nav-item {% if request.resolver_match.url_name == 'segmentos_lista' %}active{% endif %}">
                 <i class="fas fa-filter"></i><span class="nav-text">Segmentos</span>
+            </a>
+            <a href="{% url 'crm:desempenho' %}" class="nav-item {% if request.resolver_match.url_name == 'desempenho' %}active{% endif %}">
+                <i class="fas fa-chart-line"></i><span class="nav-text">Desempenho</span>
             </a>
             <div class="sidebar-section-label" style="margin-top:12px;">CONFIGURAÇÕES CRM</div>
             <a href="{% url 'crm:configuracoes' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes' and 'crm' in request.resolver_match.app_name|default:'' %}active{% endif %}">
-                <i class="fas fa-cog"></i><span class="nav-text">Config. Pipeline</span>
+                <i class="fas fa-cog"></i><span class="nav-text">Pipelines</span>
+            </a>
+            <a href="{% url 'crm:metas' %}" class="nav-item {% if request.resolver_match.url_name == 'metas' %}active{% endif %}">
+                <i class="fas fa-bullseye"></i><span class="nav-text">Metas</span>
+            </a>
+            <a href="{% url 'crm:equipes' %}" class="nav-item {% if request.resolver_match.url_name == 'equipes' %}active{% endif %}">
+                <i class="fas fa-users"></i><span class="nav-text">Equipes</span>
             </a>
             {% endif %}
 

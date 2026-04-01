@@ -1129,6 +1129,71 @@ def api_criar_equipe(request):
 
 
 @login_required
+def equipes_view(request):
+    """Gerenciar equipes de vendas e seus membros."""
+    from django.shortcuts import redirect
+    from django.contrib.auth.models import User
+
+    equipes = EquipeVendas.objects.prefetch_related('membros').all()
+    usuarios = User.objects.filter(is_active=True, perfil__tenant=request.tenant).order_by('first_name')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'criar_equipe':
+            nome = request.POST.get('nome', '').strip()
+            if nome:
+                EquipeVendas.objects.create(
+                    nome=nome,
+                    descricao=request.POST.get('descricao', '').strip(),
+                    cor_hex=request.POST.get('cor_hex', '#667eea'),
+                )
+            return redirect('crm:equipes')
+
+        elif action == 'editar_equipe':
+            eid = request.POST.get('equipe_id')
+            eq = EquipeVendas.objects.filter(pk=eid).first()
+            if eq:
+                eq.nome = request.POST.get('nome', eq.nome).strip()
+                eq.descricao = request.POST.get('descricao', '').strip()
+                eq.cor_hex = request.POST.get('cor_hex', eq.cor_hex)
+                lider_id = request.POST.get('lider')
+                eq.lider_id = lider_id if lider_id else None
+                eq.save()
+            return redirect('crm:equipes')
+
+        elif action == 'excluir_equipe':
+            eid = request.POST.get('equipe_id')
+            EquipeVendas.objects.filter(pk=eid).delete()
+            return redirect('crm:equipes')
+
+        elif action == 'adicionar_membro':
+            eid = request.POST.get('equipe_id')
+            uid = request.POST.get('user_id')
+            cargo = request.POST.get('cargo', 'vendedor')
+            if eid and uid:
+                eq = EquipeVendas.objects.filter(pk=eid).first()
+                user = User.objects.filter(pk=uid).first()
+                if eq and user:
+                    PerfilVendedor.objects.get_or_create(
+                        user=user,
+                        defaults={'equipe': eq, 'cargo': cargo},
+                    )
+            return redirect('crm:equipes')
+
+        elif action == 'remover_membro':
+            membro_id = request.POST.get('membro_id')
+            PerfilVendedor.objects.filter(pk=membro_id).delete()
+            return redirect('crm:equipes')
+
+    return render(request, 'crm/equipes.html', {
+        'equipes': equipes,
+        'usuarios': usuarios,
+        'page_title': 'Equipes de Vendas',
+    })
+
+
+@login_required
 @require_POST
 def api_segmento_salvar(request):
     from django.utils.text import slugify as _slugify

@@ -60,6 +60,7 @@ urlpatterns = [
     path('configuracoes/estagios/<int:pk>/', views.api_estagio_detalhe, name='api_estagio_detalhe'),
     path('configuracoes/estagios/<int:pk>/excluir/', views.api_excluir_estagio, name='api_excluir_estagio'),
     path('configuracoes/equipes/criar/', views.api_criar_equipe, name='api_criar_equipe'),
+    path('equipes/', views.equipes_view, name='equipes'),
 
     # Webhooks inbound
     path('webhook/hubsoft/contrato/', views.webhook_hubsoft_contrato, name='webhook_hubsoft_contrato'),
