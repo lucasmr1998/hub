@@ -60,6 +60,10 @@
                 <i class="fas fa-star"></i> CS
             </a>
             {% endif %}
+            <a href="{% url 'suporte:dashboard' %}"
+               class="topbar-module {% if '/suporte/' in request.path %}active{% endif %}">
+                <i class="fas fa-headset"></i> Suporte
+            </a>
             <a href="{% url 'dashboard:relatorio_leads' %}"
                class="topbar-module {% if '/relatorios' in request.path or request.resolver_match.url_name == 'analise_atendimentos' %}active{% endif %}">
                 <i class="fas fa-chart-bar"></i> Relatorios
@@ -113,6 +117,16 @@
             </a>
             <a href="{% url 'crm:metas' %}" class="nav-item {% if request.resolver_match.url_name == 'metas' %}active{% endif %}">
                 <i class="fas fa-bullseye"></i><span class="nav-text">Metas</span>
+            </a>
+            <a href="{% url 'crm:retencao' %}" class="nav-item {% if request.resolver_match.url_name == 'retencao' %}active{% endif %}">
+                <i class="fas fa-shield-alt"></i><span class="nav-text">Retenção</span>
+            </a>
+            <a href="{% url 'crm:segmentos' %}" class="nav-item {% if request.resolver_match.url_name == 'segmentos' %}active{% endif %}">
+                <i class="fas fa-filter"></i><span class="nav-text">Segmentos</span>
+            </a>
+            <div class="sidebar-section-label" style="margin-top:12px;">CONFIGURAÇÕES CRM</div>
+            <a href="{% url 'crm:configuracoes' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes' and 'crm' in request.resolver_match.app_name|default:'' %}active{% endif %}">
+                <i class="fas fa-cog"></i><span class="nav-text">Config. Pipeline</span>
             </a>
             {% endif %}
 
@@ -177,6 +191,19 @@
             <div class="sidebar-section-label" style="margin-top:12px;">INDICACOES</div>
             <a href="{% url 'indicacoes:dashboard_indicacoes_home' %}" class="nav-item {% if 'indicacoes' in request.resolver_match.app_name|default:'' %}active{% endif %}">
                 <i class="fas fa-share-alt"></i><span class="nav-text">Dashboard</span>
+            </a>
+
+        {% elif '/suporte/' in request.path %}
+            <!-- ── Sidebar: Suporte ── -->
+            <div class="sidebar-section-label">SUPORTE</div>
+            <a href="{% url 'suporte:dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' and 'suporte' in request.resolver_match.app_name|default:'' %}active{% endif %}">
+                <i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span>
+            </a>
+            <a href="{% url 'suporte:ticket_lista' %}" class="nav-item {% if request.resolver_match.url_name == 'ticket_lista' %}active{% endif %}">
+                <i class="fas fa-list"></i><span class="nav-text">Tickets</span>
+            </a>
+            <a href="{% url 'suporte:ticket_criar' %}" class="nav-item {% if request.resolver_match.url_name == 'ticket_criar' %}active{% endif %}">
+                <i class="fas fa-plus-circle"></i><span class="nav-text">Novo Ticket</span>
             </a>
 
         {% elif '/configuracoes' in request.path %}
