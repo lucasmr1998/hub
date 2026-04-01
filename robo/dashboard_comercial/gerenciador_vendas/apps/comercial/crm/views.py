@@ -907,8 +907,9 @@ def segmento_detalhe(request, pk):
 
 @login_required
 def configuracoes_crm(request):
+    from django.shortcuts import redirect
+
     if not request.user.is_superuser:
-        from django.shortcuts import redirect
         return redirect('crm:pipeline')
 
     from .models import Pipeline
