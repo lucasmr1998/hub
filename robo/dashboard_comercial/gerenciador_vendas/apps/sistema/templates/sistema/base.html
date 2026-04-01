@@ -115,12 +115,6 @@
             <a href="{% url 'crm:tarefas_lista' %}" class="nav-item {% if request.resolver_match.url_name == 'tarefas_lista' %}active{% endif %}">
                 <i class="fas fa-tasks"></i><span class="nav-text">Tarefas</span>
             </a>
-            <a href="{% url 'crm:retencao' %}" class="nav-item {% if request.resolver_match.url_name == 'retencao' %}active{% endif %}">
-                <i class="fas fa-shield-alt"></i><span class="nav-text">Retenção</span>
-            </a>
-            <a href="{% url 'crm:segmentos_lista' %}" class="nav-item {% if request.resolver_match.url_name == 'segmentos_lista' %}active{% endif %}">
-                <i class="fas fa-filter"></i><span class="nav-text">Segmentos</span>
-            </a>
             <a href="{% url 'crm:desempenho' %}" class="nav-item {% if request.resolver_match.url_name == 'desempenho' %}active{% endif %}">
                 <i class="fas fa-chart-line"></i><span class="nav-text">Desempenho</span>
             </a>
@@ -147,6 +141,9 @@
             </a>
             <a href="{% url 'comercial_cadastro:configuracoes_cadastro' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes_cadastro' %}active{% endif %}">
                 <i class="fas fa-globe"></i><span class="nav-text">Landing Page</span>
+            </a>
+            <a href="{% url 'crm:segmentos_lista' %}" class="nav-item {% if request.resolver_match.url_name == 'segmentos_lista' %}active{% endif %}">
+                <i class="fas fa-filter"></i><span class="nav-text">Segmentos</span>
             </a>
 
         {% elif request.resolver_match.url_name == 'relatorios' or request.resolver_match.url_name == 'relatorio_leads' or request.resolver_match.url_name == 'relatorio_clientes' or request.resolver_match.url_name == 'relatorio_atendimentos' or request.resolver_match.url_name == 'relatorio_conversoes' or request.resolver_match.url_name == 'analise_atendimentos' %}
@@ -197,6 +194,11 @@
             <div class="sidebar-section-label" style="margin-top:12px;">INDICACOES</div>
             <a href="{% url 'indicacoes:dashboard_indicacoes_home' %}" class="nav-item {% if 'indicacoes' in request.resolver_match.app_name|default:'' %}active{% endif %}">
                 <i class="fas fa-share-alt"></i><span class="nav-text">Dashboard</span>
+            </a>
+
+            <div class="sidebar-section-label" style="margin-top:12px;">RETENCAO</div>
+            <a href="{% url 'crm:retencao' %}" class="nav-item {% if request.resolver_match.url_name == 'retencao' %}active{% endif %}">
+                <i class="fas fa-shield-alt"></i><span class="nav-text">Alertas de Churn</span>
             </a>
 
         {% elif '/suporte/' in request.path %}
