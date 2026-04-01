@@ -938,7 +938,12 @@ def configuracoes_crm(request):
             nome = request.POST.get('nome', '').strip()
             tipo = request.POST.get('tipo', 'vendas')
             if nome:
-                slug = slugify(nome)
+                base_slug = slugify(nome)
+                slug = base_slug
+                counter = 1
+                while Pipeline.objects.filter(slug=slug).exists():
+                    slug = f"{base_slug}-{counter}"
+                    counter += 1
                 Pipeline.objects.create(
                     nome=nome, slug=slug, tipo=tipo,
                     cor_hex=request.POST.get('cor_hex', '#667eea'),
@@ -1042,7 +1047,14 @@ def api_criar_estagio(request):
         est.pipeline_id = pipeline_id
 
     est.nome = nome
-    est.slug = slugify(nome)
+    base_slug = slugify(nome)
+    slug = base_slug
+    counter = 1
+    qs = PipelineEstagio.objects.filter(pipeline_id=est.pipeline_id) if est.pipeline_id else PipelineEstagio.objects.all()
+    while qs.filter(slug=slug).exclude(pk=est.pk if est.pk else None).exists():
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+    est.slug = slug
     est.tipo = request.POST.get('tipo', 'qualificacao')
     est.cor_hex = request.POST.get('cor_hex', '#667eea')
     est.icone_fa = request.POST.get('icone_fa', 'fa-circle')
