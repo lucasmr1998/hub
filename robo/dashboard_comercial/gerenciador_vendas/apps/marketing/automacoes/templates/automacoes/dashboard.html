@@ -1,0 +1,155 @@
+{% extends 'sistema/base.html' %}
+
+{% block title %}Dashboard - Automações{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+    <div>
+        <h1 class="page-title"><i class="fas fa-robot" style="color:var(--primary);"></i> Dashboard de Automações</h1>
+        <p class="page-subtitle">Visão geral das execuções, métricas e logs.</p>
+    </div>
+    <a href="{% url 'marketing_automacoes:lista' %}" class="btn-secondary"><i class="fas fa-list"></i> Ver Regras</a>
+</div>
+
+<!-- KPIs -->
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr); margin-bottom:24px;">
+    <div class="stat-card">
+        <div class="stat-label">EXECUÇÕES HOJE</div>
+        <div class="stat-value">{{ total_hoje }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">TAXA DE SUCESSO</div>
+        <div class="stat-value" style="color:var(--success);">{{ taxa_sucesso }}%</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">REGRAS ATIVAS</div>
+        <div class="stat-value">{{ regras_ativas }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">PENDENTES (DELAY)</div>
+        <div class="stat-value" style="color:var(--warning);">{{ pendentes }}</div>
+    </div>
+</div>
+
+<!-- Gráfico + Top Regras -->
+<div style="display:grid; grid-template-columns:2fr 1fr; gap:20px; margin-bottom:24px;">
+    <!-- Gráfico -->
+    <div class="card" style="padding:20px;">
+        <div style="font-size:14px; font-weight:700; color:var(--text-main); margin-bottom:12px;">Execuções (últimos 30 dias)</div>
+        <div style="height:220px;">
+            <canvas id="chartExecucoes"></canvas>
+        </div>
+    </div>
+
+    <!-- Top Regras -->
+    <div class="card" style="padding:20px;">
+        <div style="font-size:14px; font-weight:700; color:var(--text-main); margin-bottom:12px;">Top Regras</div>
+        {% for regra in top_regras %}
+        <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border);">
+            <div style="flex:1; min-width:0;">
+                <div style="font-size:12px; font-weight:600; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ regra.nome }}</div>
+                <div style="font-size:10px; color:var(--text-muted);">{{ regra.taxa_sucesso }}% sucesso</div>
+            </div>
+            <div style="font-size:14px; font-weight:800; color:var(--primary);">{{ regra.total_execucoes }}</div>
+        </div>
+        {% empty %}
+        <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">Nenhuma regra executada</div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Erros Recentes -->
+{% if erros_recentes %}
+<div class="card" style="padding:20px; margin-bottom:24px;">
+    <div style="font-size:14px; font-weight:700; color:var(--danger); margin-bottom:12px;"><i class="fas fa-exclamation-triangle"></i> Erros Recentes</div>
+    <table style="width:100%; border-collapse:collapse; font-size:.82rem;">
+        <thead>
+            <tr style="background:var(--bg-subtle); font-size:.72rem; text-transform:uppercase; color:var(--text-muted);">
+                <th style="padding:8px 12px; text-align:left;">Data</th>
+                <th style="padding:8px 12px; text-align:left;">Regra</th>
+                <th style="padding:8px 12px; text-align:left;">Lead</th>
+                <th style="padding:8px 12px; text-align:left;">Erro</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in erros_recentes %}
+            <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:8px 12px; white-space:nowrap; color:var(--text-muted);">{{ log.data_execucao|date:"d/m H:i" }}</td>
+                <td style="padding:8px 12px; font-weight:600;">{{ log.regra.nome }}</td>
+                <td style="padding:8px 12px;">{% if log.lead %}{{ log.lead.nome_razaosocial }}{% else %}—{% endif %}</td>
+                <td style="padding:8px 12px; font-size:11px; color:var(--danger);">{{ log.resultado|truncatechars:80 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Log completo -->
+<div class="card" style="padding:20px;">
+    <div style="font-size:14px; font-weight:700; color:var(--text-main); margin-bottom:12px;">Histórico de Execuções</div>
+    <table style="width:100%; border-collapse:collapse; font-size:.82rem;">
+        <thead>
+            <tr style="background:var(--bg-subtle); font-size:.72rem; text-transform:uppercase; color:var(--text-muted);">
+                <th style="padding:8px 12px; text-align:left;">Data</th>
+                <th style="padding:8px 12px; text-align:left;">Regra</th>
+                <th style="padding:8px 12px; text-align:left;">Ação</th>
+                <th style="padding:8px 12px; text-align:left;">Lead</th>
+                <th style="padding:8px 12px; text-align:center;">Status</th>
+                <th style="padding:8px 12px; text-align:left;">Resultado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:8px 12px; white-space:nowrap; color:var(--text-muted);">{{ log.data_execucao|date:"d/m H:i" }}</td>
+                <td style="padding:8px 12px; font-weight:600;">{{ log.regra.nome|truncatechars:30 }}</td>
+                <td style="padding:8px 12px;">{% if log.acao %}{{ log.acao.get_tipo_display }}{% elif log.nodo %}{{ log.nodo.subtipo }}{% else %}—{% endif %}</td>
+                <td style="padding:8px 12px;">{% if log.lead %}{{ log.lead.nome_razaosocial|truncatechars:25 }}{% else %}—{% endif %}</td>
+                <td style="padding:8px 12px; text-align:center;">
+                    {% if log.status == 'sucesso' %}<span class="badge badge-success">Sucesso</span>
+                    {% elif log.status == 'erro' %}<span class="badge badge-danger">Erro</span>
+                    {% elif log.status == 'agendado' %}<span class="badge badge-warning">Agendado</span>
+                    {% else %}<span class="badge badge-muted">{{ log.get_status_display }}</span>{% endif %}
+                </td>
+                <td style="padding:8px 12px; font-size:11px; color:var(--text-muted); max-width:200px; overflow:hidden; text-overflow:ellipsis;">{{ log.resultado|truncatechars:60 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" style="padding:24px; text-align:center; color:var(--text-muted);">Nenhuma execução registrada.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    new Chart(document.getElementById('chartExecucoes'), {
+        type: 'line',
+        data: {
+            labels: {{ chart_labels|safe }},
+            datasets: [{
+                label: 'Execuções',
+                data: {{ chart_values|safe }},
+                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--primary').trim(),
+                backgroundColor: 'rgba(59,130,246,0.08)',
+                fill: true, tension: 0.3, pointRadius: 2, borderWidth: 2,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false } },
+                x: { grid: { display: false }, border: { display: false }, ticks: { maxTicksLimit: 10 } },
+            }
+        }
+    });
+});
+</script>
+
+{% endblock %}

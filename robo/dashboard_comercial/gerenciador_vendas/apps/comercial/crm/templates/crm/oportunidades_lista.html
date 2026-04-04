@@ -134,26 +134,41 @@
       <h1 class="page-title"><i class="fas fa-briefcase" style="color:var(--primary);margin-right:8px"></i> Oportunidades</h1>
     </div>
 
-    <input type="text" id="busca" class="form-control" placeholder="Buscar lead, telefone..." oninput="filtrar()">
-
-    <select id="filtro-estagio" class="form-control" onchange="filtrar()">
-      <option value="">Todos os estágios</option>
-      {% for e in estagios %}
-      <option value="{{ e.pk }}">{{ e.nome }}</option>
-      {% endfor %}
-    </select>
-
-    <select id="filtro-prioridade" class="form-control" onchange="filtrar()">
-      <option value="">Todas prioridades</option>
-      <option value="urgente">Urgente</option>
-      <option value="alta">Alta</option>
-      <option value="normal">Normal</option>
-      <option value="baixa">Baixa</option>
-    </select>
-
     <a href="{% url 'crm:pipeline' %}" class="btn-secondary" style="text-decoration:none;">
       <i class="fas fa-columns"></i> Kanban
     </a>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card" style="margin-bottom:14px; padding:12px 16px;">
+    <button class="filter-toggle" id="filterToggleOp" onclick="document.getElementById('filtrosContentOp').classList.toggle('open'); this.classList.toggle('open');">
+      <i class="fas fa-filter"></i> Filtros
+      <i class="fas fa-chevron-right chevron"></i>
+    </button>
+    <div id="filtrosContentOp" class="filter-body{% if filtro_search or filtro_estagio or filtro_responsavel or filtro_tag %} open{% endif %}">
+      <div class="filter-row">
+        <div class="form-group"><label class="form-label">Pesquisar</label><input type="text" id="busca" class="form-control" value="{{ filtro_search }}" placeholder="Nome, telefone..." oninput="filtrar()"></div>
+        <div class="form-group"><label class="form-label">Estágio</label>
+          <select id="filtro-estagio" class="form-control" onchange="filtrarServer()">
+            <option value="">Todos</option>
+            {% for e in estagios %}<option value="{{ e.pk }}" {% if filtro_estagio == e.pk|stringformat:"d" %}selected{% endif %}>{{ e.nome }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Responsável</label>
+          <select id="filtro-responsavel" class="form-control" onchange="filtrarServer()">
+            <option value="">Todos</option>
+            {% for v in vendedores %}<option value="{{ v.id }}" {% if filtro_responsavel == v.id|stringformat:"d" %}selected{% endif %}>{{ v.nome }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Tag</label>
+          <select id="filtro-tag" class="form-control" onchange="filtrarServer()">
+            <option value="">Todas</option>
+            {% for tag in tags %}<option value="{{ tag.nome }}" {% if filtro_tag == tag.nome %}selected{% endif %}>{{ tag.nome }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group"><button class="btn-secondary" onclick="window.location.href='{% url 'crm:oportunidades_lista' %}'" style="width:100%;margin-top:20px;"><i class="fas fa-times"></i> Limpar</button></div>
+      </div>
+    </div>
   </div>
 
   <!-- CARDS RESUMO POR ESTÁGIO -->
@@ -286,6 +301,19 @@
 {% block extra_js %}
 <script>
 let estagioFiltro = '';
+
+function filtrarServer() {
+  const params = new URLSearchParams();
+  const search = document.getElementById('busca').value;
+  const estagio = document.getElementById('filtro-estagio').value;
+  const resp = document.getElementById('filtro-responsavel').value;
+  const tag = document.getElementById('filtro-tag').value;
+  if (search) params.set('search', search);
+  if (estagio) params.set('estagio', estagio);
+  if (resp) params.set('responsavel', resp);
+  if (tag) params.set('tag', tag);
+  window.location.href = '{% url "crm:oportunidades_lista" %}?' + params.toString();
+}
 
 function filtrar() {
   const busca   = document.getElementById('busca').value.toLowerCase();

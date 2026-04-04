@@ -83,9 +83,41 @@
     </button>
   </div>
 
+  <!-- Filtros -->
+  <div class="card" style="margin-bottom:14px; padding:12px 16px;">
+    <button class="filter-toggle" id="filterToggleTarefas" onclick="document.getElementById('filtrosContentTarefas').classList.toggle('open'); this.classList.toggle('open');">
+      <i class="fas fa-filter"></i> Filtros
+      <i class="fas fa-chevron-right chevron"></i>
+    </button>
+    <div id="filtrosContentTarefas" class="filter-body{% if filtro_tipo or filtro_responsavel or filtro_prioridade or filtro_search %} open{% endif %}">
+      <div class="filter-row">
+        <div class="form-group"><label class="form-label">Pesquisar</label><input type="text" id="filtro-search" class="form-control" value="{{ filtro_search }}" placeholder="Titulo, lead..." onchange="aplicarFiltros()"></div>
+        <div class="form-group"><label class="form-label">Tipo</label>
+          <select id="filtro-tipo" class="form-control" onchange="aplicarFiltros()">
+            <option value="">Todos</option>
+            {% for value, label in tipos_tarefa %}<option value="{{ value }}" {% if filtro_tipo == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Responsável</label>
+          <select id="filtro-responsavel" class="form-control" onchange="aplicarFiltros()">
+            <option value="">Todos</option>
+            {% for v in vendedores %}<option value="{{ v.id }}" {% if filtro_responsavel == v.id|stringformat:"d" %}selected{% endif %}>{{ v.nome }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Prioridade</label>
+          <select id="filtro-prioridade" class="form-control" onchange="aplicarFiltros()">
+            <option value="">Todas</option>
+            {% for value, label in prioridades %}<option value="{{ value }}" {% if filtro_prioridade == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group"><button class="btn-secondary" onclick="limparFiltrosTarefas()" style="width:100%;margin-top:20px;"><i class="fas fa-times"></i> Limpar</button></div>
+      </div>
+    </div>
+  </div>
+
   <!-- TABS -->
   <div class="tabs-wrap">
-    <button class="tab-btn active" onclick="switchTab(this,'tab-hoje')">
+    <button class="tab-btn" onclick="switchTab(this,'tab-hoje')">
       <i class="fas fa-sun"></i> Hoje
       <span class="tab-count">{{ tarefas_hoje|length }}</span>
     </button>
@@ -97,7 +129,7 @@
       <i class="fas fa-exclamation-triangle"></i> Vencidas
       <span class="tab-count" style="{% if tarefas_vencidas %}background:var(--danger-light);color:var(--danger){% endif %}">{{ tarefas_vencidas|length }}</span>
     </button>
-    <button class="tab-btn" onclick="switchTab(this,'tab-todas')">
+    <button class="tab-btn active" onclick="switchTab(this,'tab-todas')">
       <i class="fas fa-list"></i> Todas Pendentes
       <span class="tab-count">{{ tarefas_todas|length }}</span>
     </button>
@@ -108,7 +140,7 @@
   </div>
 
   <!-- HOJE -->
-  <div id="tab-hoje" class="tab-panel active">
+  <div id="tab-hoje" class="tab-panel">
     {% if tarefas_hoje %}
     <div class="tarefa-list">
       {% for t in tarefas_hoje %}{% include 'crm/_tarefa_card.html' with tarefa=t extra_class="" %}{% endfor %}
@@ -159,7 +191,7 @@
   </div>
 
   <!-- TODAS -->
-  <div id="tab-todas" class="tab-panel">
+  <div id="tab-todas" class="tab-panel active">
     {% if tarefas_todas %}
     <div class="tarefa-list">
       {% for t in tarefas_todas %}
@@ -274,6 +306,23 @@ const URLS = {
   criar:    "{% url 'crm:api_tarefa_criar' %}",
   concluir: (pk) => `/crm/tarefas/${pk}/concluir/`,
 };
+
+function aplicarFiltros() {
+  const params = new URLSearchParams();
+  const search = document.getElementById('filtro-search').value;
+  const tipo = document.getElementById('filtro-tipo').value;
+  const resp = document.getElementById('filtro-responsavel').value;
+  const prio = document.getElementById('filtro-prioridade').value;
+  if (search) params.set('search', search);
+  if (tipo) params.set('tipo', tipo);
+  if (resp) params.set('responsavel', resp);
+  if (prio) params.set('prioridade', prio);
+  window.location.href = '{% url "crm:tarefas_lista" %}?' + params.toString();
+}
+
+function limparFiltrosTarefas() {
+  window.location.href = '{% url "crm:tarefas_lista" %}';
+}
 
 function switchTab(btn, id) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));

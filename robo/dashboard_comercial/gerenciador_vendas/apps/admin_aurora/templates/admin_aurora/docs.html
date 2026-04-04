@@ -1,0 +1,163 @@
+{% extends 'admin_aurora/base_admin.html' %}
+
+{% block title %}Documentação{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <h1><i class="fas fa-book" style="color:#818cf8;"></i> Documentação</h1>
+</div>
+
+<div class="docs-layout">
+    <!-- Sidebar de navegação -->
+    <div class="docs-sidebar">
+        <div class="docs-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="docs-search" placeholder="Buscar documento..." oninput="filterDocs(this.value)">
+        </div>
+
+        <div class="docs-tree" id="docs-tree">
+            {% for item in tree %}
+                {% if item.type == 'dir' %}
+                <div class="dt-folder" data-name="{{ item.name|lower }}">
+                    <div class="dt-folder-header" onclick="this.parentElement.classList.toggle('open')">
+                        <i class="fas fa-chevron-right dt-arrow"></i>
+                        <i class="fas fa-folder dt-folder-icon"></i>
+                        <span>{{ item.name }}</span>
+                        <span class="dt-count">{{ item.count }}</span>
+                    </div>
+                    <div class="dt-folder-body">
+                        {% for child in item.children %}
+                            {% if child.type == 'dir' %}
+                            <div class="dt-folder dt-nested" data-name="{{ child.name|lower }}">
+                                <div class="dt-folder-header" onclick="this.parentElement.classList.toggle('open')">
+                                    <i class="fas fa-chevron-right dt-arrow"></i>
+                                    <i class="fas fa-folder dt-folder-icon"></i>
+                                    <span>{{ child.name }}</span>
+                                    <span class="dt-count">{{ child.count }}</span>
+                                </div>
+                                <div class="dt-folder-body">
+                                    {% for f in child.children %}
+                                        {% if f.type == 'file' %}
+                                        <a href="?file={{ f.path }}" class="dt-file {% if current_file == f.path %}active{% endif %}" data-name="{{ f.name|lower }}">
+                                            <i class="fas fa-file-alt"></i> {{ f.name }}
+                                        </a>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% elif child.type == 'file' %}
+                            <a href="?file={{ child.path }}" class="dt-file {% if current_file == child.path %}active{% endif %}" data-name="{{ child.name|lower }}">
+                                <i class="fas fa-file-alt"></i> {{ child.name }}
+                            </a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% elif item.type == 'file' %}
+                <a href="?file={{ item.path }}" class="dt-file dt-root {% if current_file == item.path %}active{% endif %}" data-name="{{ item.name|lower }}">
+                    <i class="fas fa-file-alt"></i> {{ item.name }}
+                </a>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Conteúdo -->
+    <div class="docs-content">
+        {% if html_content %}
+        <div class="card">
+            <div class="docs-breadcrumb">
+                <a href="{% url 'admin_aurora:docs' %}"><i class="fas fa-book"></i> Docs</a>
+                <span>/</span>
+                <span>{{ current_file }}</span>
+            </div>
+            <div class="md-content">
+                {{ html_content|safe }}
+            </div>
+        </div>
+        {% else %}
+        <div class="card" style="text-align:center; padding:60px 24px;">
+            <i class="fas fa-book-open" style="font-size:3rem; color:#cbd5e1; margin-bottom:16px;"></i>
+            <h3 style="font-size:1rem; color:#64748b; margin-bottom:8px;">Selecione um documento</h3>
+            <p style="font-size:.82rem; color:#94a3b8;">Navegue pela árvore de documentos na lateral esquerda.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.docs-layout { display: grid; grid-template-columns: 280px 1fr; gap: 20px; min-height: calc(100vh - 140px); }
+
+/* Sidebar */
+.docs-sidebar { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; position: sticky; top: 72px; max-height: calc(100vh - 100px); display: flex; flex-direction: column; }
+.docs-search { padding: 12px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px; }
+.docs-search i { color: #94a3b8; font-size: .8rem; }
+.docs-search input { border: none; outline: none; font-size: .8rem; font-family: 'Inter', sans-serif; flex: 1; color: #334155; }
+.docs-tree { overflow-y: auto; padding: 8px; flex: 1; }
+
+/* Tree items */
+.dt-folder { margin-bottom: 2px; }
+.dt-folder-header { display: flex; align-items: center; gap: 6px; padding: 6px 10px; cursor: pointer; font-size: .78rem; font-weight: 600; color: #334155; border-radius: 6px; user-select: none; }
+.dt-folder-header:hover { background: #f8fafc; }
+.dt-arrow { font-size: .55rem; color: #94a3b8; transition: transform .2s; width: 10px; }
+.dt-folder.open > .dt-folder-header .dt-arrow { transform: rotate(90deg); }
+.dt-folder-icon { color: #f59e0b; font-size: .75rem; }
+.dt-count { font-size: .62rem; color: #94a3b8; margin-left: auto; }
+.dt-folder-body { display: none; padding-left: 12px; }
+.dt-folder.open > .dt-folder-body { display: block; }
+.dt-file { display: flex; align-items: center; gap: 6px; padding: 5px 10px; font-size: .75rem; color: #64748b; text-decoration: none; border-radius: 6px; margin: 1px 0; }
+.dt-file:hover { background: #f8fafc; color: #334155; }
+.dt-file.active { background: #ede9fe; color: #6366f1; font-weight: 600; }
+.dt-file i { font-size: .65rem; flex-shrink: 0; }
+
+/* Breadcrumb */
+.docs-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: .75rem; color: #94a3b8; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; }
+.docs-breadcrumb a { color: #818cf8; text-decoration: none; }
+.docs-breadcrumb a:hover { text-decoration: underline; }
+
+/* Markdown content */
+.md-content { font-size: .85rem; line-height: 1.7; color: #334155; }
+.md-content h1 { font-size: 1.3rem; font-weight: 800; color: #0f172a; border-bottom: 2px solid #818cf8; padding-bottom: 8px; margin: 24px 0 16px; }
+.md-content h1:first-child { margin-top: 0; }
+.md-content h2 { font-size: 1.05rem; font-weight: 700; color: #1e293b; margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; }
+.md-content h3 { font-size: .92rem; font-weight: 700; color: #334155; margin: 20px 0 8px; }
+.md-content p { margin-bottom: 10px; }
+.md-content table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: .8rem; }
+.md-content th { background: #f8fafc; padding: 8px 12px; text-align: left; font-weight: 700; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: #64748b; border: 1px solid #e2e8f0; }
+.md-content td { padding: 8px 12px; border: 1px solid #e2e8f0; }
+.md-content tr:hover td { background: #f8fafc; }
+.md-content hr { border: none; border-top: 1px solid #e2e8f0; margin: 20px 0; }
+.md-content ul, .md-content ol { margin-bottom: 12px; padding-left: 20px; }
+.md-content li { margin-bottom: 4px; }
+.md-content strong { color: #0f172a; }
+.md-content code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: .8rem; color: #6366f1; }
+.md-content pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; overflow-x: auto; margin: 12px 0; }
+.md-content pre code { background: none; color: inherit; padding: 0; }
+</style>
+
+<script>
+function filterDocs(q) {
+    q = q.toLowerCase();
+    document.querySelectorAll('.dt-file').forEach(el => {
+        const match = el.dataset.name.includes(q);
+        el.style.display = match ? '' : 'none';
+    });
+    document.querySelectorAll('.dt-folder').forEach(el => {
+        const hasVisible = el.querySelector('.dt-file:not([style*="display: none"])');
+        el.style.display = hasVisible ? '' : 'none';
+        if (q && hasVisible) el.classList.add('open');
+    });
+}
+
+// Auto-open folder containing active file
+document.querySelectorAll('.dt-file.active').forEach(el => {
+    let parent = el.parentElement;
+    while (parent) {
+        if (parent.classList && parent.classList.contains('dt-folder')) {
+            parent.classList.add('open');
+        }
+        parent = parent.parentElement;
+    }
+});
+</script>
+{% endblock %}

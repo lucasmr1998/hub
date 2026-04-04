@@ -2,7 +2,7 @@ from django.db import models
 from apps.sistema.mixins import TenantMixin
 
 class Cidade(TenantMixin):
-    nome = models.CharField(max_length=100, unique=True)
+    nome = models.CharField(max_length=100)
     ativo = models.BooleanField(default=True)
 
     def __str__(self):
@@ -13,6 +13,7 @@ class Cidade(TenantMixin):
         verbose_name_plural = "Cidades"
         ordering = ['nome']
         db_table = 'roleta_cidade'
+        unique_together = ('tenant', 'nome')
 
 class PremioRoleta(TenantMixin):
     nome = models.CharField(max_length=255)
@@ -96,7 +97,7 @@ class NivelClube(TenantMixin):
 
 class MembroClube(TenantMixin):
     nome = models.CharField(max_length=255)
-    cpf = models.CharField(max_length=14, unique=True)
+    cpf = models.CharField(max_length=14)
     email = models.EmailField(null=True, blank=True)
     telefone = models.CharField(max_length=20, null=True, blank=True)
     cep = models.CharField(max_length=10, null=True, blank=True)
@@ -109,7 +110,7 @@ class MembroClube(TenantMixin):
     data_cadastro = models.DateTimeField(auto_now_add=True)
     id_cliente_hubsoft = models.IntegerField(null=True, blank=True, db_index=True)
     validado = models.BooleanField(default=False, db_index=True, help_text="Se o membro já validou o OTP")
-    codigo_indicacao = models.CharField(max_length=10, unique=True, blank=True, null=True, help_text="Código único para link de indicação")
+    codigo_indicacao = models.CharField(max_length=10, blank=True, null=True, help_text="Código único para link de indicação")
 
     def save(self, *args, **kwargs):
         if not self.codigo_indicacao:
@@ -134,9 +135,10 @@ class MembroClube(TenantMixin):
         verbose_name = "Membro do Clube"
         verbose_name_plural = "Membros do Clube"
         db_table = 'roleta_membroclube'
+        unique_together = ('tenant', 'cpf')
 
 class RegraPontuacao(TenantMixin):
-    gatilho = models.CharField(max_length=50, unique=True, help_text="Identificador único (ex: cadastro, indicacao)")
+    gatilho = models.CharField(max_length=50, help_text="Identificador único (ex: cadastro, indicacao)")
     nome_exibicao = models.CharField(max_length=100, help_text="Ex: Bônus de Boas Vindas")
     pontos_saldo = models.IntegerField(default=0, help_text="Quantos Giros/Saldo a pessoa ganha")
     pontos_xp = models.IntegerField(default=0, help_text="Quanto XP a pessoa ganha")
@@ -151,6 +153,7 @@ class RegraPontuacao(TenantMixin):
         verbose_name = "Regra de Pontuação"
         verbose_name_plural = "Regras de Pontuação"
         db_table = 'roleta_regrapontuacao'
+        unique_together = ('tenant', 'gatilho')
 
 class ExtratoPontuacao(TenantMixin):
     membro = models.ForeignKey(MembroClube, on_delete=models.CASCADE, related_name='extratos')

@@ -1,6 +1,6 @@
 """
 Settings para desenvolvimento local.
-Usa SQLite para não depender do PostgreSQL de produção.
+Usa PostgreSQL local (aurora_dev).
 
 Uso: python manage.py runserver --settings=gerenciador_vendas.settings_local
 """
@@ -12,8 +12,12 @@ SECRET_KEY = 'dev-local-insecure-key-only-for-testing'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db_local.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'aurora_dev',
+        'USER': 'postgres',
+        'PASSWORD': 'admin123',
+        'HOST': '127.0.0.1',
+        'PORT': '5432',
     }
 }
 

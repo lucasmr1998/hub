@@ -1,0 +1,299 @@
+{% extends 'sistema/base.html' %}
+{% load static %}
+
+{% block title %}Inbox — Aurora{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'inbox/css/inbox.css' %}">
+{% endblock %}
+
+{% block content %}
+<script>
+    document.body.classList.add('inbox-page');
+    var sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.style.display = 'none';
+    var main = document.querySelector('.main-content');
+    if (main) { main.style.padding = '0'; main.style.marginLeft = '0'; }
+</script>
+<div class="inbox-container" id="inboxApp">
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         PAINEL ESQUERDO: Lista de Conversas
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="inbox-sidebar" id="inboxSidebar">
+        <div class="inbox-sidebar-header">
+            <div class="inbox-sidebar-top">
+                <h2 class="inbox-sidebar-title">Conversas</h2>
+                <div class="inbox-sidebar-icons">
+                    <button class="ib-icon-btn" id="filterMenuBtn" title="Filtros"><i class="fas fa-sliders-h"></i></button>
+                    <button class="ib-icon-btn" id="sortBtn" title="Ordenar"><i class="fas fa-sort"></i></button>
+                </div>
+            </div>
+            <!-- Filtros por atribuição -->
+            <div class="inbox-assign-tabs">
+                <button class="inbox-assign-tab" data-agente="me">Minhas <span class="ib-count" id="countMine">0</span></button>
+                <button class="inbox-assign-tab" data-agente="unassigned">Não atribuídas <span class="ib-count" id="countUnassigned">0</span></button>
+                <button class="inbox-assign-tab active" data-agente="">Todas <span class="ib-count" id="countAll">0</span></button>
+            </div>
+            <!-- Busca -->
+            <div class="inbox-search">
+                <i class="fas fa-search"></i>
+                <input type="text" id="inboxSearch" placeholder="Buscar conversas...">
+            </div>
+        </div>
+        <div class="inbox-conversation-list" id="conversationList">
+            <div class="inbox-loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Carregando...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         PAINEL CENTRAL: Chat
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="inbox-chat" id="inboxChat">
+        <!-- Estado vazio -->
+        <div class="inbox-empty-state" id="emptyState">
+            <div class="empty-icon"><i class="fas fa-comments"></i></div>
+            <h3>Selecione uma conversa</h3>
+            <p>Escolha uma conversa na lista para começar a atender</p>
+        </div>
+
+        <!-- Header do chat -->
+        <div class="inbox-chat-header" id="chatHeader" style="display:none;">
+            <div class="chat-header-info">
+                <button class="chat-back-btn" id="chatBackBtn" title="Voltar"><i class="fas fa-arrow-left"></i></button>
+                <div class="chat-contact-avatar" id="chatAvatar">?</div>
+                <div class="chat-header-details">
+                    <span class="chat-header-name" id="chatName">—</span>
+                    <span class="chat-header-sub" id="chatMeta">—</span>
+                </div>
+            </div>
+            <div class="chat-header-actions">
+                <div class="chat-resolve-group">
+                    <button class="chat-resolve-btn" id="resolveBtn">Resolver</button>
+                    <button class="chat-resolve-dropdown" id="resolveDropdown"><i class="fas fa-chevron-down"></i></button>
+                    <div class="chat-resolve-menu" id="resolveMenu" style="display:none;">
+                        <button data-action="resolver"><i class="fas fa-check"></i> Resolver</button>
+                        <button data-action="pendente"><i class="fas fa-clock"></i> Marcar pendente</button>
+                        <button data-action="reabrir"><i class="fas fa-redo"></i> Reabrir</button>
+                    </div>
+                </div>
+                <button class="ib-icon-btn" id="transferBtn" title="Transferir"><i class="fas fa-share"></i></button>
+                <button class="ib-icon-btn" id="moreBtn" title="Mais opções"><i class="fas fa-ellipsis-v"></i></button>
+                <button class="ib-icon-btn" id="toggleContextBtn" title="Info do contato"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+
+        <!-- Mensagens -->
+        <div class="inbox-messages" id="messageList" style="display:none;"></div>
+
+        <!-- Input de mensagem -->
+        <div class="inbox-input-area" id="inputArea" style="display:none;">
+            <!-- Tabs Responder / Nota Privada -->
+            <div class="input-tabs">
+                <button class="input-tab active" data-mode="reply"><i class="fas fa-reply"></i> Responder</button>
+                <button class="input-tab" data-mode="note"><i class="fas fa-lock"></i> Nota Privada</button>
+            </div>
+            <div class="input-editor">
+                <textarea id="messageInput" placeholder="Shift + Enter para nova linha. Comece com '/' para selecionar uma resposta pronta." rows="3"></textarea>
+                <div class="input-toolbar">
+                    <div class="input-toolbar-left">
+                        <button class="ib-toolbar-btn" title="Emoji"><i class="fas fa-smile"></i></button>
+                        <button class="ib-toolbar-btn" title="Anexar arquivo"><i class="fas fa-paperclip"></i></button>
+                    </div>
+                    <div class="input-toolbar-right">
+                        <button class="input-send-btn" id="sendBtn">
+                            Enviar <span class="send-shortcut">Ctrl+Enter</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Dropdown respostas rápidas -->
+            <div class="quick-response-dropdown" id="quickResponseDropdown" style="display:none;">
+                <div class="quick-response-search">
+                    <input type="text" id="quickResponseSearch" placeholder="Buscar resposta...">
+                </div>
+                <div class="quick-response-list" id="quickResponseList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         PAINEL DIREITO: Contexto (estilo Chatwoot)
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="inbox-context" id="inboxContext">
+        <!-- Contacto header -->
+        <div class="ctx-contact-header">
+            <div class="ctx-contact-avatar" id="ctxAvatar">?</div>
+            <div class="ctx-contact-name" id="ctxName">—</div>
+            <div class="ctx-contact-status"><i class="fas fa-envelope"></i> Indisponível</div>
+        </div>
+
+        <div class="ctx-contact-details" id="ctxDetails">
+            <div class="ctx-detail-row">
+                <i class="fas fa-phone"></i>
+                <span id="ctxPhone">—</span>
+            </div>
+            <div class="ctx-detail-row">
+                <i class="fas fa-envelope"></i>
+                <span id="ctxEmail">—</span>
+            </div>
+        </div>
+
+        <div class="ctx-divider"></div>
+
+        <!-- Ações da conversa -->
+        <div class="ctx-section">
+            <h4 class="ctx-section-title">Ações da conversa</h4>
+
+            <div class="ctx-action-row">
+                <span class="ctx-action-label">Agente atribuído</span>
+                <span class="ctx-action-link" id="ctxAssignMe">→ Atribuir a mim</span>
+            </div>
+            <div class="ctx-action-field">
+                <select id="agentSelect" class="ctx-select">
+                    <option value="">Nenhum</option>
+                    {% for agente in agentes %}
+                    <option value="{{ agente.id }}">{{ agente.get_full_name|default:agente.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="ctx-action-row">
+                <span class="ctx-action-label">Equipe atribuída</span>
+            </div>
+            <div class="ctx-action-field">
+                <select id="teamSelect" class="ctx-select">
+                    <option value="">Nenhum</option>
+                    {% for eq in equipes %}
+                    <option value="{{ eq.id }}">{{ eq.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="ctx-action-row">
+                <span class="ctx-action-label">Prioridade</span>
+            </div>
+            <div class="ctx-action-field">
+                <select id="prioritySelect" class="ctx-select">
+                    <option value="baixa">Baixa</option>
+                    <option value="normal" selected>Normal</option>
+                    <option value="alta">Alta</option>
+                    <option value="urgente">Urgente</option>
+                </select>
+            </div>
+
+            <div class="ctx-action-row">
+                <span class="ctx-action-label">Etiquetas da conversa</span>
+            </div>
+            <div class="ctx-action-field">
+                <div class="label-chips" id="labelChips"></div>
+                <select id="labelSelect" class="ctx-select">
+                    <option value="">+ Adicionar etiqueta</option>
+                    {% for etiqueta in etiquetas %}
+                    <option value="{{ etiqueta.id }}" data-cor="{{ etiqueta.cor_hex }}">{{ etiqueta.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="ctx-divider"></div>
+
+        <!-- Informações do lead -->
+        <div class="ctx-section">
+            <h4 class="ctx-section-title">Lead / CRM</h4>
+            <div id="ctxLeadInfo" class="ctx-info-block">
+                <p class="ctx-empty">—</p>
+            </div>
+        </div>
+
+        <div class="ctx-divider"></div>
+
+        <!-- Notas -->
+        <div class="ctx-section">
+            <h4 class="ctx-section-title">Notas Internas</h4>
+            <div id="notesList" class="ctx-notes-list"></div>
+            <div class="ctx-notes-input">
+                <textarea id="noteInput" placeholder="Adicionar nota..." rows="2"></textarea>
+                <button id="addNoteBtn" class="ctx-btn-sm">Salvar</button>
+            </div>
+        </div>
+
+        <div class="ctx-divider"></div>
+
+        <!-- Ticket -->
+        <div class="ctx-section">
+            <h4 class="ctx-section-title">Ticket de Suporte</h4>
+            <div id="ticketInfo" style="display:none;"></div>
+            <button id="createTicketBtn" class="ctx-btn-outline">
+                <i class="fas fa-plus"></i> Criar Ticket
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal criar ticket -->
+<div class="modal-overlay" id="ticketModal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Criar Ticket de Suporte</h3>
+            <button class="modal-close" id="ticketModalClose"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <label>Título</label>
+            <input type="text" id="ticketTitulo" placeholder="Descreva o problema..." class="modal-input">
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" id="ticketCancelBtn">Cancelar</button>
+            <button class="btn-primary" id="ticketConfirmBtn">Criar Ticket</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal transferir -->
+<div class="modal-overlay" id="transferModal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Transferir Conversa</h3>
+            <button class="modal-close" id="transferModalClose"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <label>Transferir para:</label>
+            <select id="transferTarget" class="modal-input" style="margin-bottom:12px;">
+                <optgroup label="Agentes">
+                    {% for agente in agentes %}
+                    <option value="agente:{{ agente.id }}">{{ agente.get_full_name|default:agente.username }}</option>
+                    {% endfor %}
+                </optgroup>
+                {% if equipes %}
+                <optgroup label="Equipes">
+                    {% for eq in equipes %}
+                    <option value="equipe:{{ eq.id }}">{{ eq.nome }}</option>
+                    {% endfor %}
+                </optgroup>
+                {% endif %}
+                {% if filas %}
+                <optgroup label="Filas">
+                    {% for f in filas %}
+                    <option value="fila:{{ f.id }}">{{ f.nome }} ({{ f.equipe.nome }})</option>
+                    {% endfor %}
+                </optgroup>
+                {% endif %}
+            </select>
+            <label>Motivo (opcional)</label>
+            <input type="text" id="transferMotivo" placeholder="Ex: Assunto financeiro" class="modal-input">
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" id="transferCancelBtn">Cancelar</button>
+            <button class="btn-primary" id="transferConfirmBtn">Transferir</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'inbox/js/inbox.js' %}"></script>
+{% endblock %}

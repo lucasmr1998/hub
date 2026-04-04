@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import views_n8n
+from apps.inbox import views_n8n as inbox_views_n8n
 
 app_name = 'api_n8n'
 
@@ -33,4 +34,8 @@ urlpatterns = [
 
     # ── Campanhas ───────────────────────────────────────────────────
     path('campanhas/detectar/', views_n8n.CampanhaDeteccaoAPIView.as_view(), name='campanha_detectar'),
+
+    # ── Inbox ───────────────────────────────────────────────────────
+    path('inbox/mensagem-recebida/', inbox_views_n8n.InboxMensagemRecebidaAPIView.as_view(), name='inbox_mensagem_recebida'),
+    path('inbox/status-mensagem/', inbox_views_n8n.InboxStatusMensagemAPIView.as_view(), name='inbox_status_mensagem'),
 ]

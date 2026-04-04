@@ -1,0 +1,644 @@
+{% extends 'sistema/base.html' %}
+{% load static %}
+
+{% block title %}Configurações do Inbox{% endblock %}
+
+{% block extra_css %}
+<style>
+    .config-tabs {
+        display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .config-tab {
+        padding: 8px 16px; border: 1px solid var(--border, #e2e8f0); border-radius: 8px;
+        background: #fff; font-size: 13px; font-family: inherit; cursor: pointer;
+        color: var(--text-light, #64748b); transition: all .2s; text-decoration: none;
+    }
+    .config-tab:hover { background: var(--bg-main, #f1f5f9); }
+    .config-tab.active { background: var(--primary, #3b82f6); color: #fff; border-color: var(--primary); }
+    .config-section { display: none; }
+    .config-section.active { display: block; }
+    .cfg-card {
+        background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 12px;
+        margin-bottom: 16px;
+    }
+    .cfg-card-header {
+        padding: 14px 18px; border-bottom: 1px solid var(--border-light, #f1f5f9);
+        display: flex; justify-content: space-between; align-items: center;
+        font-size: 14px; font-weight: 600;
+    }
+    .cfg-card-body { padding: 18px; }
+    .cfg-row {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 10px 0; border-bottom: 1px solid var(--border-light, #f1f5f9);
+        gap: 12px;
+    }
+    .cfg-row:last-child { border-bottom: none; }
+    .cfg-row-info { flex: 1; min-width: 0; }
+    .cfg-row-name { font-size: 13px; font-weight: 600; color: var(--text-main, #1e293b); }
+    .cfg-row-meta { font-size: 12px; color: var(--text-light, #94a3b8); }
+    .cfg-form-inline {
+        display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-top: 12px;
+        padding-top: 12px; border-top: 1px solid var(--border-light, #f1f5f9);
+    }
+    .cfg-form-group { display: flex; flex-direction: column; gap: 4px; }
+    .cfg-form-group label { font-size: 11px; font-weight: 600; color: var(--text-light, #94a3b8); text-transform: uppercase; }
+    .cfg-input {
+        padding: 7px 12px; border: 1px solid var(--border, #e2e8f0); border-radius: 8px;
+        font-size: 13px; font-family: inherit; outline: none;
+    }
+    .cfg-input:focus { border-color: var(--primary, #3b82f6); }
+    .cfg-select { padding: 7px 12px; border: 1px solid var(--border, #e2e8f0); border-radius: 8px; font-size: 13px; font-family: inherit; }
+    .cfg-textarea { padding: 7px 12px; border: 1px solid var(--border, #e2e8f0); border-radius: 8px; font-size: 13px; font-family: inherit; width: 100%; box-sizing: border-box; resize: vertical; }
+    .btn-sm {
+        padding: 6px 14px; border: none; border-radius: 6px; font-size: 12px;
+        font-family: inherit; cursor: pointer; transition: background .2s;
+    }
+    .btn-primary-sm { background: var(--primary, #3b82f6); color: #fff; }
+    .btn-primary-sm:hover { background: #2563eb; }
+    .btn-danger-sm { background: #fee2e2; color: #dc2626; }
+    .btn-danger-sm:hover { background: #fecaca; }
+    .btn-icon { background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 4px; font-size: 13px; }
+    .btn-icon:hover { background: var(--bg-main, #f1f5f9); }
+    .btn-icon.danger { color: #dc2626; }
+    .color-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; }
+    .member-chip {
+        display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px;
+        background: var(--bg-main, #f1f5f9); border-radius: 6px; font-size: 12px; margin: 2px;
+    }
+    .member-chip form { display: inline; }
+    .horario-grid { display: grid; grid-template-columns: auto 1fr 1fr auto; gap: 8px; align-items: center; }
+    .horario-grid label { font-size: 13px; }
+    .cfg-check { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+    .cfg-check input[type="checkbox"] { accent-color: var(--primary, #3b82f6); }
+    .cfg-check label { font-size: 13px; }
+
+    @media (max-width: 768px) {
+        .cfg-form-inline { flex-direction: column; align-items: stretch; }
+        .horario-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block sidebar %}
+    <div class="sidebar-section-label">ATENDIMENTO</div>
+    <a href="{% url 'inbox:inbox' %}" class="nav-item">
+        <i class="fas fa-comments"></i><span class="nav-text">Inbox</span>
+    </a>
+
+    <div class="sidebar-section-label" style="margin-top:12px;">SUPORTE</div>
+    <a href="{% url 'suporte:dashboard' %}" class="nav-item">
+        <i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span>
+    </a>
+    <a href="{% url 'suporte:ticket_lista' %}" class="nav-item">
+        <i class="fas fa-list"></i><span class="nav-text">Tickets</span>
+    </a>
+    <a href="{% url 'suporte:ticket_criar' %}" class="nav-item">
+        <i class="fas fa-plus-circle"></i><span class="nav-text">Novo Ticket</span>
+    </a>
+
+    <div class="sidebar-section-label" style="margin-top:12px;">CONFIGURAÇÕES</div>
+    <a href="{% url 'inbox:configuracoes' %}" class="nav-item active">
+        <i class="fas fa-cog"></i><span class="nav-text">Configurações</span>
+    </a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:center;">
+    <h1 style="font-size:20px;font-weight:700;margin:0;">
+        <i class="fas fa-cog" style="color:var(--primary);margin-right:8px;"></i> Configurações do Inbox
+    </h1>
+</div>
+
+<!-- Tabs -->
+<div class="config-tabs">
+    <a class="config-tab active" data-tab="equipes"><i class="fas fa-users"></i> Equipes</a>
+    <a class="config-tab" data-tab="filas"><i class="fas fa-stream"></i> Filas</a>
+    <a class="config-tab" data-tab="respostas"><i class="fas fa-bolt"></i> Respostas Rápidas</a>
+    <a class="config-tab" data-tab="etiquetas"><i class="fas fa-tags"></i> Etiquetas</a>
+    <a class="config-tab" data-tab="canais"><i class="fas fa-plug"></i> Canais</a>
+    <a class="config-tab" data-tab="horario"><i class="fas fa-clock"></i> Horário</a>
+    <a class="config-tab" data-tab="faq"><i class="fas fa-question-circle"></i> FAQ</a>
+    <a class="config-tab" data-tab="widget"><i class="fas fa-comment-dots"></i> Widget</a>
+    <a class="config-tab" data-tab="geral"><i class="fas fa-sliders-h"></i> Geral</a>
+</div>
+
+{% if messages %}
+<div style="margin-bottom:16px;">
+    {% for message in messages %}
+    <div style="padding:10px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:13px;color:#166534;">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- ═══ TAB: Equipes ═══ -->
+<div class="config-section active" id="tab-equipes">
+    {% for equipe in equipes %}
+    <div class="cfg-card">
+        <div class="cfg-card-header">
+            <span><span class="color-dot" style="background:{{ equipe.cor_hex }}"></span> {{ equipe.nome }}</span>
+            <form method="post" style="display:inline;">{% csrf_token %}
+                <input type="hidden" name="action" value="excluir_equipe">
+                <input type="hidden" name="equipe_id" value="{{ equipe.id }}">
+                <button type="submit" class="btn-icon danger" title="Excluir" onclick="return confirm('Excluir equipe?')"><i class="fas fa-trash"></i></button>
+            </form>
+        </div>
+        <div class="cfg-card-body">
+            <div style="margin-bottom:8px;font-size:12px;color:var(--text-light);">Membros:</div>
+            {% for membro in equipe.membros.all %}
+            <span class="member-chip">
+                {{ membro.user.get_full_name|default:membro.user.username }} ({{ membro.get_cargo_display }})
+                <form method="post" style="display:inline;">{% csrf_token %}
+                    <input type="hidden" name="action" value="remover_membro">
+                    <input type="hidden" name="membro_id" value="{{ membro.id }}">
+                    <button type="submit" class="btn-icon danger" style="font-size:10px;padding:1px 3px;" title="Remover"><i class="fas fa-times"></i></button>
+                </form>
+            </span>
+            {% empty %}
+            <span style="font-size:12px;color:var(--text-light);">Nenhum membro</span>
+            {% endfor %}
+
+            <form method="post" class="cfg-form-inline">{% csrf_token %}
+                <input type="hidden" name="action" value="adicionar_membro">
+                <input type="hidden" name="equipe_id" value="{{ equipe.id }}">
+                <div class="cfg-form-group">
+                    <label>Usuário</label>
+                    <select name="user_id" class="cfg-select" required>
+                        <option value="">Selecionar...</option>
+                        {% for u in usuarios %}
+                        <option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="cfg-form-group">
+                    <label>Cargo</label>
+                    <select name="cargo" class="cfg-select">
+                        <option value="agente">Agente</option>
+                        <option value="supervisor">Supervisor</option>
+                        <option value="gerente">Gerente</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-plus"></i> Adicionar</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="cfg-card">
+        <div class="cfg-card-header">Nova Equipe</div>
+        <div class="cfg-card-body">
+            <form method="post" class="cfg-form-inline" style="border:none;padding-top:0;margin-top:0;">{% csrf_token %}
+                <input type="hidden" name="action" value="criar_equipe">
+                <div class="cfg-form-group">
+                    <label>Nome</label>
+                    <input type="text" name="nome" class="cfg-input" required placeholder="Ex: Suporte Técnico">
+                </div>
+                <div class="cfg-form-group">
+                    <label>Cor</label>
+                    <input type="color" name="cor_hex" value="#667eea" style="height:34px;border:none;cursor:pointer;">
+                </div>
+                <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-plus"></i> Criar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ TAB: Filas ═══ -->
+<div class="config-section" id="tab-filas">
+    {% for fila in filas %}
+    <div class="cfg-card">
+        <div class="cfg-card-header">
+            <span>{{ fila.nome }} <span style="font-size:11px;color:var(--text-light);">({{ fila.equipe.nome }} · {{ fila.get_modo_distribuicao_display }})</span></span>
+            <form method="post" style="display:inline;">{% csrf_token %}
+                <input type="hidden" name="action" value="excluir_fila">
+                <input type="hidden" name="fila_id" value="{{ fila.id }}">
+                <button type="submit" class="btn-icon danger" title="Excluir" onclick="return confirm('Excluir fila?')"><i class="fas fa-trash"></i></button>
+            </form>
+        </div>
+        <div class="cfg-card-body">
+            <div style="font-size:12px;color:var(--text-light);margin-bottom:6px;">Regras de roteamento:</div>
+            {% for regra in fila.regras.all %}
+            <div class="cfg-row">
+                <div class="cfg-row-info">
+                    <span class="cfg-row-name">{{ regra.get_tipo_display }}</span>
+                    <span class="cfg-row-meta">
+                        {% if regra.tipo == 'canal' and regra.canal %}→ {{ regra.canal.nome }}{% endif %}
+                        {% if regra.tipo == 'etiqueta' and regra.etiqueta %}→ {{ regra.etiqueta.nome }}{% endif %}
+                        {% if regra.tipo == 'horario' %}→ {{ regra.horario_inicio }} - {{ regra.horario_fim }} ({{ regra.dias_semana }}){% endif %}
+                    </span>
+                </div>
+                <form method="post">{% csrf_token %}
+                    <input type="hidden" name="action" value="excluir_regra">
+                    <input type="hidden" name="regra_id" value="{{ regra.id }}">
+                    <button type="submit" class="btn-icon danger"><i class="fas fa-times"></i></button>
+                </form>
+            </div>
+            {% empty %}
+            <span style="font-size:12px;color:var(--text-light);">Nenhuma regra</span>
+            {% endfor %}
+
+            <form method="post" class="cfg-form-inline">{% csrf_token %}
+                <input type="hidden" name="action" value="criar_regra">
+                <input type="hidden" name="fila_id" value="{{ fila.id }}">
+                <div class="cfg-form-group">
+                    <label>Tipo</label>
+                    <select name="tipo" class="cfg-select">
+                        <option value="canal">Por Canal</option>
+                        <option value="etiqueta">Por Etiqueta</option>
+                        <option value="horario">Por Horário</option>
+                    </select>
+                </div>
+                <div class="cfg-form-group">
+                    <label>Canal</label>
+                    <select name="canal_id" class="cfg-select">
+                        <option value="">—</option>
+                        {% for c in canais %}<option value="{{ c.id }}">{{ c.nome }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="cfg-form-group">
+                    <label>Etiqueta</label>
+                    <select name="etiqueta_id" class="cfg-select">
+                        <option value="">—</option>
+                        {% for e in etiquetas_list %}<option value="{{ e.id }}">{{ e.nome }}</option>{% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-plus"></i> Regra</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="cfg-card">
+        <div class="cfg-card-header">Nova Fila</div>
+        <div class="cfg-card-body">
+            <form method="post" class="cfg-form-inline" style="border:none;padding-top:0;margin-top:0;">{% csrf_token %}
+                <input type="hidden" name="action" value="criar_fila">
+                <div class="cfg-form-group">
+                    <label>Nome</label>
+                    <input type="text" name="nome" class="cfg-input" required placeholder="Ex: WhatsApp Vendas">
+                </div>
+                <div class="cfg-form-group">
+                    <label>Equipe</label>
+                    <select name="equipe_id" class="cfg-select" required>
+                        {% for eq in equipes %}<option value="{{ eq.id }}">{{ eq.nome }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="cfg-form-group">
+                    <label>Distribuição</label>
+                    <select name="modo_distribuicao" class="cfg-select">
+                        {% for k, v in modos_distribuicao %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-plus"></i> Criar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ TAB: Respostas Rápidas ═══ -->
+<div class="config-section" id="tab-respostas">
+    <div class="cfg-card">
+        <div class="cfg-card-header">Respostas Rápidas</div>
+        <div class="cfg-card-body">
+            {% for r in respostas %}
+            <div class="cfg-row">
+                <div class="cfg-row-info">
+                    <span class="cfg-row-name">{{ r.titulo }} {% if r.atalho %}<code style="font-size:11px;color:var(--primary);">{{ r.atalho }}</code>{% endif %}</span>
+                    <div class="cfg-row-meta">{{ r.conteudo|truncatechars:80 }}</div>
+                </div>
+                <form method="post">{% csrf_token %}
+                    <input type="hidden" name="action" value="excluir_resposta">
+                    <input type="hidden" name="resposta_id" value="{{ r.id }}">
+                    <button type="submit" class="btn-icon danger"><i class="fas fa-trash"></i></button>
+                </form>
+            </div>
+            {% endfor %}
+
+            <form method="post" class="cfg-form-inline">{% csrf_token %}
+                <input type="hidden" name="action" value="criar_resposta">
+                <div class="cfg-form-group">
+                    <label>Título</label>
+                    <input type="text" name="titulo" class="cfg-input" required placeholder="Saudação">
+                </div>
+                <div class="cfg-form-group">
+                    <label>Atalho</label>
+                    <input type="text" name="atalho" class="cfg-input" placeholder="/ola">
+                </div>
+                <div class="cfg-form-group" style="flex:1;">
+                    <label>Conteúdo</label>
+                    <textarea name="conteudo" class="cfg-textarea" rows="2" required placeholder="Olá! Como posso ajudar?"></textarea>
+                </div>
+                <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-plus"></i> Criar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ TAB: Etiquetas ═══ -->
+<div class="config-section" id="tab-etiquetas">
+    <div class="cfg-card">
+        <div class="cfg-card-header">Etiquetas</div>
+        <div class="cfg-card-body">
+            {% for e in etiquetas_list %}
+            <div class="cfg-row">
+                <div class="cfg-row-info">
+                    <span class="cfg-row-name"><span class="color-dot" style="background:{{ e.cor_hex }}"></span> {{ e.nome }}</span>
+                </div>
+                <form method="post">{% csrf_token %}
+                    <input type="hidden" name="action" value="excluir_etiqueta">
+                    <input type="hidden" name="etiqueta_id" value="{{ e.id }}">
+                    <button type="submit" class="btn-icon danger"><i class="fas fa-trash"></i></button>
+                </form>
+            </div>
+            {% endfor %}
+
+            <form method="post" class="cfg-form-inline">{% csrf_token %}
+                <input type="hidden" name="action" value="criar_etiqueta">
+                <div class="cfg-form-group">
+                    <label>Nome</label>
+                    <input type="text" name="nome" class="cfg-input" required placeholder="VIP">
+                </div>
+                <div class="cfg-form-group">
+                    <label>Cor</label>
+                    <input type="color" name="cor_hex" value="#667eea" style="height:34px;border:none;cursor:pointer;">
+                </div>
+                <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-plus"></i> Criar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ TAB: Canais ═══ -->
+<div class="config-section" id="tab-canais">
+    {% for canal in canais %}
+    <div class="cfg-card">
+        <div class="cfg-card-header">{{ canal.nome }} ({{ canal.get_tipo_display }})</div>
+        <div class="cfg-card-body">
+            <form method="post">{% csrf_token %}
+                <input type="hidden" name="action" value="editar_canal">
+                <input type="hidden" name="canal_id" value="{{ canal.id }}">
+                <div class="cfg-form-group" style="margin-bottom:8px;">
+                    <label>Webhook de envio (URL para onde enviar mensagens do agente)</label>
+                    <input type="url" name="webhook_envio_url" class="cfg-input" style="width:100%;"
+                           value="{{ canal.configuracao.webhook_envio_url|default:'' }}"
+                           placeholder="https://n8n.exemplo.com/webhook/inbox-enviar">
+                </div>
+                <button type="submit" class="btn-sm btn-primary-sm">Salvar</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ═══ TAB: Horário ═══ -->
+<div class="config-section" id="tab-horario">
+    <div class="cfg-card">
+        <div class="cfg-card-header">Horário de Atendimento</div>
+        <div class="cfg-card-body">
+            <form method="post">{% csrf_token %}
+                <input type="hidden" name="action" value="salvar_horario">
+                <div id="horarioContainer"></div>
+                <script>
+                var horariosData = {{ horarios_json|safe }};
+                var diasSemana = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+                var container = document.getElementById('horarioContainer');
+                var html = '<div class="horario-grid">';
+                for (var i = 0; i < 7; i++) {
+                    var h = horariosData[i] || {};
+                    var checked = h.ativo !== undefined ? h.ativo : (i < 5);
+                    var inicio = h.hora_inicio || (i < 5 ? '08:00' : (i === 5 ? '08:00' : ''));
+                    var fim = h.hora_fim || (i < 5 ? '18:00' : (i === 5 ? '12:00' : ''));
+                    html += '<label><input type="checkbox" name="dia_' + i + '_ativo" ' + (checked ? 'checked' : '') + '> ' + diasSemana[i] + '</label>';
+                    html += '<input type="time" name="dia_' + i + '_inicio" class="cfg-input" value="' + inicio + '">';
+                    html += '<input type="time" name="dia_' + i + '_fim" class="cfg-input" value="' + fim + '">';
+                    html += '<span></span>';
+                }
+                html += '</div>';
+                container.innerHTML = html;
+                </script>
+                <div style="margin-top:12px;">
+                    <button type="submit" class="btn-sm btn-primary-sm">Salvar Horários</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="cfg-card">
+        <div class="cfg-card-header">Mensagem Fora do Horário</div>
+        <div class="cfg-card-body">
+            <form method="post">{% csrf_token %}
+                <input type="hidden" name="action" value="salvar_config">
+                <textarea name="mensagem_fora_horario" class="cfg-textarea" rows="3">{{ config.mensagem_fora_horario }}</textarea>
+                <div style="margin-top:8px;">
+                    <button type="submit" class="btn-sm btn-primary-sm">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ TAB: FAQ ═══ -->
+<div class="config-section" id="tab-faq">
+    {% for cat in categorias_faq %}
+    <div class="cfg-card">
+        <div class="cfg-card-header">
+            <span><i class="fas {{ cat.icone }}" style="color:{{ cat.cor }};margin-right:6px;"></i> {{ cat.nome }}</span>
+            <form method="post" style="display:inline;">{% csrf_token %}
+                <input type="hidden" name="action" value="excluir_categoria_faq">
+                <input type="hidden" name="categoria_faq_id" value="{{ cat.id }}">
+                <button type="submit" class="btn-icon danger" title="Excluir" onclick="return confirm('Excluir categoria e todos os artigos?')"><i class="fas fa-trash"></i></button>
+            </form>
+        </div>
+        <div class="cfg-card-body">
+            {% for artigo in cat.artigos.all %}
+            <div class="cfg-row">
+                <div class="cfg-row-info">
+                    <span class="cfg-row-name">{{ artigo.titulo }}</span>
+                    <div class="cfg-row-meta">{{ artigo.conteudo|truncatechars:100 }} · {{ artigo.visualizacoes }} views</div>
+                </div>
+                <form method="post">{% csrf_token %}
+                    <input type="hidden" name="action" value="excluir_artigo_faq">
+                    <input type="hidden" name="artigo_faq_id" value="{{ artigo.id }}">
+                    <button type="submit" class="btn-icon danger"><i class="fas fa-times"></i></button>
+                </form>
+            </div>
+            {% empty %}
+            <span style="font-size:12px;color:var(--text-light);">Nenhum artigo</span>
+            {% endfor %}
+
+            <form method="post" class="cfg-form-inline">{% csrf_token %}
+                <input type="hidden" name="action" value="criar_artigo_faq">
+                <input type="hidden" name="categoria_faq_id" value="{{ cat.id }}">
+                <div class="cfg-form-group">
+                    <label>Título</label>
+                    <input type="text" name="titulo" class="cfg-input" required placeholder="Ex: Como trocar de plano?">
+                </div>
+                <div class="cfg-form-group" style="flex:1;">
+                    <label>Conteúdo</label>
+                    <textarea name="conteudo" class="cfg-textarea" rows="2" required placeholder="Resposta do artigo..."></textarea>
+                </div>
+                <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-plus"></i> Artigo</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="cfg-card">
+        <div class="cfg-card-header">Nova Categoria</div>
+        <div class="cfg-card-body">
+            <form method="post" class="cfg-form-inline" style="border:none;padding-top:0;margin-top:0;">{% csrf_token %}
+                <input type="hidden" name="action" value="criar_categoria_faq">
+                <div class="cfg-form-group">
+                    <label>Nome</label>
+                    <input type="text" name="nome" class="cfg-input" required placeholder="Ex: Planos e Preços">
+                </div>
+                <div class="cfg-form-group">
+                    <label>Ícone</label>
+                    <input type="text" name="icone" class="cfg-input" value="fa-circle-question" placeholder="fa-wifi">
+                </div>
+                <div class="cfg-form-group">
+                    <label>Cor</label>
+                    <input type="color" name="cor" value="#667eea" style="height:34px;border:none;cursor:pointer;">
+                </div>
+                <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-plus"></i> Criar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ TAB: Widget ═══ -->
+<div class="config-section" id="tab-widget">
+    <div class="cfg-card">
+        <div class="cfg-card-header">Configurações do Widget</div>
+        <div class="cfg-card-body">
+            <form method="post">{% csrf_token %}
+                <input type="hidden" name="action" value="salvar_widget_config">
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                    <div class="cfg-form-group">
+                        <label>Título</label>
+                        <input type="text" name="titulo" class="cfg-input" value="{{ widget_config.titulo }}" style="width:100%;">
+                    </div>
+                    <div class="cfg-form-group">
+                        <label>Mensagem de Boas Vindas</label>
+                        <input type="text" name="mensagem_boas_vindas" class="cfg-input" value="{{ widget_config.mensagem_boas_vindas }}" style="width:100%;">
+                    </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+                    <div class="cfg-form-group">
+                        <label>Cor Primária</label>
+                        <input type="color" name="cor_primaria" value="{{ widget_config.cor_primaria }}" style="height:34px;width:100%;border:none;cursor:pointer;">
+                    </div>
+                    <div class="cfg-form-group">
+                        <label>Cor do Header</label>
+                        <input type="color" name="cor_header" value="{{ widget_config.cor_header }}" style="height:34px;width:100%;border:none;cursor:pointer;">
+                    </div>
+                    <div class="cfg-form-group">
+                        <label>Posição</label>
+                        <select name="posicao" class="cfg-select">
+                            <option value="bottom-right" {% if widget_config.posicao == 'bottom-right' %}selected{% endif %}>Inferior Direito</option>
+                            <option value="bottom-left" {% if widget_config.posicao == 'bottom-left' %}selected{% endif %}>Inferior Esquerdo</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <div class="cfg-check">
+                        <input type="checkbox" name="widget_ativo" id="wgt_ativo" {% if widget_config.ativo %}checked{% endif %}>
+                        <label for="wgt_ativo">Widget ativo</label>
+                    </div>
+                    <div class="cfg-check">
+                        <input type="checkbox" name="mostrar_faq" id="wgt_faq" {% if widget_config.mostrar_faq %}checked{% endif %}>
+                        <label for="wgt_faq">Mostrar FAQ no widget</label>
+                    </div>
+                    <div class="cfg-check">
+                        <input type="checkbox" name="pedir_dados_antes" id="wgt_dados" {% if widget_config.pedir_dados_antes %}checked{% endif %}>
+                        <label for="wgt_dados">Pedir dados antes de iniciar chat</label>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <div class="cfg-form-group">
+                        <label>Campos obrigatórios (quando pedir dados)</label>
+                        <div style="display:flex;gap:16px;margin-top:4px;">
+                            <div class="cfg-check">
+                                <input type="checkbox" name="campo_nome" {% if 'nome' in widget_config.campos_obrigatorios %}checked{% endif %}>
+                                <label>Nome</label>
+                            </div>
+                            <div class="cfg-check">
+                                <input type="checkbox" name="campo_email" {% if 'email' in widget_config.campos_obrigatorios %}checked{% endif %}>
+                                <label>E-mail</label>
+                            </div>
+                            <div class="cfg-check">
+                                <input type="checkbox" name="campo_telefone" {% if 'telefone' in widget_config.campos_obrigatorios %}checked{% endif %}>
+                                <label>Telefone</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cfg-form-group" style="margin-bottom:16px;">
+                    <label>Domínios permitidos (um por linha, vazio = todos)</label>
+                    <textarea name="dominios_permitidos" class="cfg-textarea" rows="3" placeholder="exemplo.com.br&#10;meusite.com">{% for d in widget_config.dominios_permitidos %}{{ d }}{% if not forloop.last %}&#10;{% endif %}{% endfor %}</textarea>
+                </div>
+
+                <button type="submit" class="btn-sm btn-primary-sm">Salvar Widget</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="cfg-card">
+        <div class="cfg-card-header">Código para Embed</div>
+        <div class="cfg-card-body">
+            <p style="font-size:12px;color:var(--text-light);margin-bottom:8px;">Cole este código no HTML do site do provedor, antes do <code>&lt;/body&gt;</code>:</p>
+            <pre style="background:var(--bg-main,#f1f5f9);padding:12px;border-radius:8px;font-size:12px;overflow-x:auto;position:relative;" id="embedCode">&lt;script src="{{ request.scheme }}://{{ request.get_host }}/static/inbox/widget/aurora-chat.js" data-token="{{ widget_config.token_publico }}"&gt;&lt;/script&gt;</pre>
+            <button class="btn-sm btn-primary-sm" style="margin-top:8px;" onclick="navigator.clipboard.writeText(document.getElementById('embedCode').textContent);this.textContent='Copiado!';setTimeout(()=>this.textContent='Copiar código',2000);">Copiar código</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ TAB: Geral ═══ -->
+<div class="config-section" id="tab-geral">
+    <div class="cfg-card">
+        <div class="cfg-card-header">Configurações Gerais</div>
+        <div class="cfg-card-body">
+            <form method="post">{% csrf_token %}
+                <input type="hidden" name="action" value="salvar_config">
+
+                <div class="cfg-form-group" style="margin-bottom:12px;">
+                    <label>Distribuição padrão (para filas sem configuração específica)</label>
+                    <select name="distribuicao_padrao" class="cfg-select">
+                        {% for k, v in modos_distribuicao %}
+                        <option value="{{ k }}" {% if config.distribuicao_padrao == k %}selected{% endif %}>{{ v }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="cfg-check">
+                    <input type="checkbox" name="atribuir_ao_responder" id="cfg_atribuir"
+                           {% if config.atribuir_ao_responder %}checked{% endif %}>
+                    <label for="cfg_atribuir">Atribuir conversa ao agente automaticamente quando ele responder</label>
+                </div>
+
+                <div style="margin-top:12px;">
+                    <button type="submit" class="btn-sm btn-primary-sm">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.config-tab').forEach(function(tab) {
+    tab.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.querySelectorAll('.config-tab').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelectorAll('.config-section').forEach(function(s) { s.classList.remove('active'); });
+        tab.classList.add('active');
+        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    });
+});
+</script>
+{% endblock %}

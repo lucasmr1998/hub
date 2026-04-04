@@ -142,7 +142,7 @@ class PerfilVendedor(TenantMixin):
 # ============================================================================
 
 class TagCRM(TenantMixin):
-    nome = models.CharField(max_length=50, unique=True, verbose_name="Nome")
+    nome = models.CharField(max_length=50, verbose_name="Nome")
     cor_hex = models.CharField(max_length=7, default='#667eea', verbose_name="Cor (HEX)")
     criado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     data_criacao = models.DateTimeField(auto_now_add=True)
@@ -152,6 +152,7 @@ class TagCRM(TenantMixin):
         verbose_name = "Tag CRM"
         verbose_name_plural = "🏷️ 04. Tags CRM"
         ordering = ['nome']
+        unique_together = ('tenant', 'nome')
 
     def __str__(self):
         return self.nome

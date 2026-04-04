@@ -37,6 +37,8 @@ urlpatterns = [
     path('aurora-admin/', include('apps.admin_aurora.urls')),
     path('integracoes/',  include('apps.integracoes.urls')),
     path('crm/',          include('apps.comercial.crm.urls')),
+    path('marketing/automacoes/', include('apps.marketing.automacoes.urls')),
+    path('marketing/segmentos/', include('apps.marketing.segmentos_urls')),
 
     # === Modulo CS ===
     path('cs/clube/',       include('apps.cs.clube.urls')),
@@ -46,5 +48,11 @@ urlpatterns = [
 
     # === Suporte ===
     path('suporte/', include('apps.suporte.urls')),
+
+    # === Inbox ===
+    path('inbox/', include('apps.inbox.urls')),
+
+    # === Widget público (sem login) ===
+    path('api/public/widget/', include('apps.inbox.urls_public')),
 
 ]

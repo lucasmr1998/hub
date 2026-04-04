@@ -34,6 +34,10 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(','
 # Application definition
 
 INSTALLED_APPS = [
+    # === Channels (ASGI / WebSocket) ===
+    # 'daphne' adicionado em produção via settings_production.py (precisa estar antes de staticfiles)
+    'channels',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -59,6 +63,7 @@ INSTALLED_APPS = [
 
     # === Módulo Marketing ===
     'apps.marketing.campanhas',
+    'apps.marketing.automacoes',
 
     # === API ===
     'apps.api',
@@ -79,6 +84,9 @@ INSTALLED_APPS = [
 
     # === Suporte ===
     'apps.suporte',
+
+    # === Inbox ===
+    'apps.inbox',
 ]
 
 MIDDLEWARE = [
@@ -128,6 +136,21 @@ CSP_IMG_SRC = ("'self'", "data:",)
 CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src']
 
 ROOT_URLCONF = 'gerenciador_vendas.urls'
+
+# ASGI / Channels
+ASGI_APPLICATION = 'gerenciador_vendas.asgi.application'
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
+# Em produção com Redis, usar:
+# CHANNEL_LAYERS = {
+#     'default': {
+#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
+#         'CONFIG': {'hosts': [os.environ.get('REDIS_URL', 'redis://localhost:6379/0')]},
+#     },
+# }
 
 TEMPLATES = [
     {

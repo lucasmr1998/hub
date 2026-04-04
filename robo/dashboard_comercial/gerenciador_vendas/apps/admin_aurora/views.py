@@ -1,5 +1,8 @@
+import re
 from datetime import date, timedelta
+from pathlib import Path
 
+import markdown
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.http import HttpResponseForbidden, JsonResponse
@@ -12,6 +15,10 @@ from apps.sistema.models import (
     Tenant, PerfilUsuario, ConfiguracaoEmpresa, LogSistema,
     Plano, FeaturePlano,
 )
+
+# Caminho base dos docs (relativo ao manage.py -> sobe até hub/)
+DOCS_BASE = Path(__file__).resolve().parent.parent.parent.parent.parent.parent / 'docs'
+TAREFAS_PATH = DOCS_BASE / 'context' / 'tarefas'
 
 
 def staff_required(view_func):
@@ -384,4 +391,142 @@ def plano_detalhe_view(request, plano_id):
         'features_por_categoria': features_por_categoria,
         'categorias': categorias,
         'tenants_usando': tenants_usando,
+    })
+
+
+# ============================================================================
+# DOCUMENTAÇÃO E PRODUTO
+# ============================================================================
+
+def _md_to_html(md_text):
+    """Converte markdown para HTML."""
+    return markdown.markdown(md_text, extensions=['tables', 'fenced_code', 'toc', 'nl2br'])
+
+
+def _read_md(path):
+    """Lê arquivo markdown com fallback."""
+    try:
+        return path.read_text(encoding='utf-8')
+    except Exception:
+        return ''
+
+
+def _build_doc_tree(base_path, prefix=''):
+    """Constrói árvore de documentos a partir de uma pasta."""
+    items = []
+    if not base_path.exists():
+        return items
+
+    dirs = sorted(p for p in base_path.iterdir() if p.is_dir() and not p.name.startswith('.'))
+    files = sorted(p for p in base_path.iterdir() if p.is_file() and p.suffix == '.md' and p.name.upper() != 'TEMPLATE.MD')
+
+    for d in dirs:
+        children = _build_doc_tree(d, prefix=f'{prefix}/{d.name}' if prefix else d.name)
+        if children:
+            items.append({
+                'type': 'dir',
+                'name': d.name,
+                'path': f'{prefix}/{d.name}' if prefix else d.name,
+                'children': children,
+                'count': sum(1 for c in children if c['type'] == 'file') + sum(c.get('count', 0) for c in children if c['type'] == 'dir'),
+            })
+
+    for f in files:
+        name = f.stem.replace('-', ' ').replace('_', ' ')
+        # Remove prefixo numérico (00-, 01-, etc)
+        name = re.sub(r'^\d+\s*', '', name).strip()
+        items.append({
+            'type': 'file',
+            'name': name or f.stem,
+            'filename': f.name,
+            'path': f'{prefix}/{f.name}' if prefix else f.name,
+        })
+
+    return items
+
+
+@staff_required
+def produto_view(request):
+    """Status do Produto — renderiza 00-STATUS_PRODUTO.md"""
+    status_path = DOCS_BASE / 'PRODUTO' / '00-STATUS_PRODUTO.md'
+    md_content = _read_md(status_path)
+    html_content = _md_to_html(md_content)
+
+    return render(request, 'admin_aurora/produto.html', {
+        'html_content': html_content,
+    })
+
+
+@staff_required
+def docs_view(request):
+    """Navegador de documentação — lê pastas de docs/"""
+    tree = _build_doc_tree(DOCS_BASE)
+
+    # Se um arquivo foi solicitado, renderizar
+    file_path = request.GET.get('file', '')
+    html_content = ''
+    current_file = ''
+    md_raw = ''
+
+    if file_path:
+        full_path = DOCS_BASE / file_path
+        if full_path.exists() and full_path.suffix == '.md':
+            md_raw = _read_md(full_path)
+            html_content = _md_to_html(md_raw)
+            current_file = file_path
+
+    return render(request, 'admin_aurora/docs.html', {
+        'tree': tree,
+        'html_content': html_content,
+        'current_file': current_file,
+    })
+
+
+@staff_required
+def backlog_view(request):
+    """Backlog de tarefas — lê docs/context/tarefas/"""
+    pendentes = []
+    finalizadas = []
+
+    backlog_path = TAREFAS_PATH / 'backlog'
+    final_path = TAREFAS_PATH / 'finalizadas'
+
+    for folder, lista in [(backlog_path, pendentes), (final_path, finalizadas)]:
+        if not folder.exists():
+            continue
+        for f in sorted(folder.iterdir()):
+            if f.suffix != '.md' or f.name.upper() == 'TEMPLATE.MD':
+                continue
+            content = _read_md(f)
+            # Extrair título e metadados do frontmatter
+            titulo = f.stem.replace('-', ' ').replace('_', ' ')
+            prioridade = ''
+            responsavel = ''
+            status = ''
+
+            for line in content.split('\n')[:15]:
+                if line.startswith('name:'):
+                    titulo = line.split(':', 1)[1].strip().strip('"')
+                elif 'prioridade' in line.lower() and ':' in line:
+                    prioridade = line.split(':', 1)[1].strip().strip('"')
+                elif 'responsavel' in line.lower() and ':' in line:
+                    responsavel = line.split(':', 1)[1].strip().strip('"')
+                elif 'status' in line.lower() and ':' in line and '**Status:**' in line:
+                    status = line.split(':', 1)[1].strip().strip('*').strip()
+
+            lista.append({
+                'filename': f.name,
+                'titulo': titulo,
+                'prioridade': prioridade,
+                'responsavel': responsavel,
+                'status': status,
+                'folder': folder.name,
+                'path': f'context/tarefas/{folder.name}/{f.name}',
+            })
+
+    return render(request, 'admin_aurora/backlog.html', {
+        'pendentes': pendentes,
+        'finalizadas': finalizadas,
+        'total_pendentes': len(pendentes),
+        'total_finalizadas': len(finalizadas),
     })

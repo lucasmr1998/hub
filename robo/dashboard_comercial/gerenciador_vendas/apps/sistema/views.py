@@ -180,7 +180,7 @@ def configuracoes_usuarios_view(request):
 @login_required
 def configuracoes_recontato_view(request):
     """View para gerenciar configurações de recontato"""
-    from vendas_web.models import ConfiguracaoRecontato
+    from apps.sistema.models import ConfiguracaoRecontato
     configuracoes = ConfiguracaoRecontato.objects.all()
     return render(request, 'sistema/configuracoes/recontato.html', {
         'configuracoes': configuracoes

@@ -95,9 +95,13 @@ def pipeline_view(request):
     for u in User.objects.filter(is_active=True, perfil__tenant=request.tenant).order_by('first_name'):
         vendedores.append({'id': u.pk, 'nome': u.get_full_name() or u.username})
 
+    from .models import TagCRM
+    tags = TagCRM.objects.all().order_by('nome')
+
     context = {
         'estagios': estagios,
         'vendedores': vendedores,
+        'tags': tags,
         'pipelines': pipelines,
         'pipeline_atual': pipeline_atual,
         'page_title': f'Pipeline: {pipeline_atual.nome}' if pipeline_atual else 'Pipeline CRM',
@@ -108,7 +112,7 @@ def pipeline_view(request):
 @login_required
 @require_GET
 def api_pipeline_dados(request):
-    pipeline_id = request.GET.get('pipeline')
+    pipeline_id = request.GET.get('pipeline_id') or request.GET.get('pipeline')
     if pipeline_id:
         estagios = PipelineEstagio.objects.filter(pipeline_id=pipeline_id, ativo=True).order_by('ordem')
     else:
@@ -131,10 +135,21 @@ def api_pipeline_dados(request):
         from django.db.models import Q
         qs = qs.filter(Q(responsavel=request.user) | Q(responsavel__isnull=True))
 
+    tag = request.GET.get('tag', '').strip()
+    valor_range = request.GET.get('valor', '').strip()
+
     if responsavel_id:
         qs = qs.filter(responsavel_id=responsavel_id)
     if prioridade:
         qs = qs.filter(prioridade=prioridade)
+    if tag:
+        qs = qs.filter(tags__nome=tag)
+    if valor_range:
+        if valor_range == '1000+':
+            qs = qs.filter(valor_estimado__gte=1000)
+        elif '-' in valor_range:
+            parts = valor_range.split('-')
+            qs = qs.filter(valor_estimado__gte=Decimal(parts[0]), valor_estimado__lte=Decimal(parts[1]))
     if search:
         from django.db.models import Q
         qs = qs.filter(
@@ -273,19 +288,52 @@ def _atualizar_meta_venda(oportunidade, usuario):
 
 @login_required
 def oportunidades_lista(request):
+    from django.db.models import Q
+    from .models import TagCRM
+
     qs = OportunidadeVenda.objects.filter(ativo=True).select_related(
         'lead', 'estagio', 'responsavel'
-    ).order_by('estagio__ordem', '-data_criacao')
+    ).prefetch_related('tags').order_by('estagio__ordem', '-data_criacao')
 
     if not request.user.is_superuser:
-        from django.db.models import Q
         qs = qs.filter(Q(responsavel=request.user) | Q(responsavel__isnull=True))
 
+    # Filtros
+    search = request.GET.get('search', '').strip()
+    estagio_id = request.GET.get('estagio')
+    responsavel_id = request.GET.get('responsavel')
+    tag_nome = request.GET.get('tag', '').strip()
+
+    if search:
+        qs = qs.filter(
+            Q(lead__nome_razaosocial__icontains=search) |
+            Q(lead__telefone__icontains=search) |
+            Q(titulo__icontains=search)
+        )
+    if estagio_id:
+        qs = qs.filter(estagio_id=estagio_id)
+    if responsavel_id:
+        qs = qs.filter(responsavel_id=responsavel_id)
+    if tag_nome:
+        qs = qs.filter(tags__nome=tag_nome)
+
     estagios = PipelineEstagio.objects.filter(ativo=True).order_by('ordem')
+    tags = TagCRM.objects.all().order_by('nome')
+
+    from django.contrib.auth.models import User
+    vendedores = []
+    for u in User.objects.filter(is_active=True, perfil__tenant=request.tenant).order_by('first_name'):
+        vendedores.append({'id': u.pk, 'nome': u.get_full_name() or u.username})
 
     context = {
         'oportunidades': qs,
         'estagios': estagios,
+        'tags': tags,
+        'vendedores': vendedores,
+        'filtro_search': search,
+        'filtro_estagio': estagio_id,
+        'filtro_responsavel': responsavel_id,
+        'filtro_tag': tag_nome,
         'page_title': 'Oportunidades',
     }
     return render(request, 'crm/oportunidades_lista.html', context)
@@ -321,12 +369,19 @@ def oportunidade_detalhe(request, pk):
     from django.contrib.auth.models import User
     vendedores = User.objects.filter(is_active=True, perfil__tenant=request.tenant).order_by('first_name')
 
+    # Timeline de automações para este lead
+    from apps.marketing.automacoes.models import LogExecucao as LogAutomacao
+    logs_automacao = LogAutomacao.all_tenants.filter(
+        tenant=request.tenant, lead=lead,
+    ).select_related('regra', 'acao', 'nodo').order_by('-data_execucao')[:20]
+
     context = {
         'oportunidade': oportunidade,
         'lead': lead,
         'historico_contatos': historico_contatos,
         'cliente_hubsoft': cliente_hubsoft,
         'historico_estagios': historico_estagios,
+        'logs_automacao': logs_automacao,
         'estagios': estagios,
         'vendedores': vendedores,
         'page_title': f'CRM — {oportunidade.titulo or lead.nome_razaosocial}',
@@ -460,9 +515,33 @@ def api_tarefas_oportunidade(request, pk):
 
 @login_required
 def tarefas_lista(request):
-    qs = TarefaCRM.objects.filter(
-        responsavel=request.user
-    ).select_related('lead', 'oportunidade', 'criado_por').order_by('data_vencimento')
+    from django.db.models import Q
+
+    # Base: tarefas do usuário logado (superuser vê todas)
+    if request.user.is_superuser:
+        qs = TarefaCRM.objects.all()
+    else:
+        qs = TarefaCRM.objects.filter(responsavel=request.user)
+
+    qs = qs.select_related('lead', 'oportunidade', 'criado_por', 'responsavel').order_by('data_vencimento')
+
+    # Filtros
+    filtro_tipo = request.GET.get('tipo', '')
+    filtro_responsavel = request.GET.get('responsavel', '')
+    filtro_prioridade = request.GET.get('prioridade', '')
+    filtro_search = request.GET.get('search', '').strip()
+
+    if filtro_tipo:
+        qs = qs.filter(tipo=filtro_tipo)
+    if filtro_responsavel:
+        qs = qs.filter(responsavel_id=filtro_responsavel)
+    if filtro_prioridade:
+        qs = qs.filter(prioridade=filtro_prioridade)
+    if filtro_search:
+        qs = qs.filter(
+            Q(titulo__icontains=filtro_search) |
+            Q(lead__nome_razaosocial__icontains=filtro_search)
+        )
 
     hoje = timezone.now().date()
     tarefas_hoje = qs.filter(data_vencimento__date=hoje, status__in=['pendente', 'em_andamento'])
@@ -475,12 +554,25 @@ def tarefas_lista(request):
     tarefas_todas = qs.exclude(status='concluida')
     tarefas_concluidas = qs.filter(status='concluida').order_by('-data_conclusao')[:20]
 
+    # Dados para filtros
+    from django.contrib.auth.models import User
+    vendedores = []
+    for u in User.objects.filter(is_active=True, perfil__tenant=request.tenant).order_by('first_name'):
+        vendedores.append({'id': u.pk, 'nome': u.get_full_name() or u.username})
+
     context = {
         'tarefas_hoje': tarefas_hoje,
         'tarefas_semana': tarefas_semana,
         'tarefas_vencidas': tarefas_vencidas,
         'tarefas_todas': tarefas_todas,
         'tarefas_concluidas': tarefas_concluidas,
+        'vendedores': vendedores,
+        'filtro_tipo': filtro_tipo,
+        'filtro_responsavel': filtro_responsavel,
+        'filtro_prioridade': filtro_prioridade,
+        'filtro_search': filtro_search,
+        'tipos_tarefa': TarefaCRM.TIPO_CHOICES,
+        'prioridades': TarefaCRM.PRIORIDADE_CHOICES,
         'page_title': 'Tarefas CRM',
     }
     return render(request, 'crm/tarefas_lista.html', context)
@@ -1196,7 +1288,6 @@ def equipes_view(request):
 @login_required
 @require_POST
 def api_segmento_salvar(request):
-    from django.utils.text import slugify as _slugify
     seg_id = request.POST.get('seg_id')
     nome = request.POST.get('nome', '').strip()
     if not nome:
@@ -1212,8 +1303,164 @@ def api_segmento_salvar(request):
     seg.tipo = request.POST.get('tipo', 'manual')
     seg.cor_hex = request.POST.get('cor_hex', '#764ba2')
     seg.icone_fa = request.POST.get('icone_fa', 'fa-users')
+
+    # Regras dinâmicas
+    regras_json = request.POST.get('regras_json', '')
+    if regras_json:
+        try:
+            regras = json.loads(regras_json)
+            seg.regras_filtro = {'regras': regras}
+        except (json.JSONDecodeError, TypeError):
+            pass
+
     seg.save()
+
+    # Atualizar membros se dinâmico/híbrido
+    if seg.tipo in ('dinamico', 'hibrido') and seg.regras_filtro.get('regras'):
+        from .services.segmentos import atualizar_membros_segmento
+        atualizar_membros_segmento(seg)
+
     return JsonResponse({'ok': True, 'id': seg.pk})
+
+
+@login_required
+def segmento_criar(request):
+    """Página dedicada de criação de segmento."""
+    return render(request, 'crm/segmento_criar.html', {'segmento': None})
+
+
+@login_required
+def segmento_editar(request, pk):
+    """Página dedicada de edição de segmento."""
+    segmento = get_object_or_404(SegmentoCRM, pk=pk)
+    return render(request, 'crm/segmento_criar.html', {'segmento': segmento})
+
+
+@login_required
+@require_POST
+def api_preview_regras(request):
+    """Preview de leads que atendem as regras (sem salvar)."""
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'total': 0, 'leads': []})
+
+    regras = data.get('regras', [])
+    if not regras:
+        return JsonResponse({'total': 0, 'leads': []})
+
+    from .services.segmentos import filtrar_leads_por_regras
+    qs = filtrar_leads_por_regras(regras)
+    total = qs.count()
+
+    # Novos (últimos 7 dias)
+    from datetime import timedelta
+    novos = qs.filter(data_cadastro__gte=timezone.now() - timedelta(days=7)).count()
+
+    # Amostra
+    leads = []
+    for l in qs[:20]:
+        leads.append({
+            'id': l.pk,
+            'nome': l.nome_razaosocial,
+            'telefone': l.telefone or '',
+            'origem': l.origem or '',
+            'score': l.score_qualificacao or 0,
+        })
+
+    return JsonResponse({'total': total, 'novos': novos, 'leads': leads})
+
+
+def _filtrar_leads_por_regras(regras):
+    """Aplica regras de filtro a LeadProspecto e retorna queryset."""
+    from apps.comercial.leads.models import LeadProspecto
+    from django.db.models import Q
+    from datetime import timedelta
+
+    qs = LeadProspecto.objects.all()
+
+    for r in regras:
+        campo = r.get('campo', '')
+        operador = r.get('operador', 'igual')
+        valor = r.get('valor', '')
+
+        if not campo or not valor:
+            continue
+
+        # Campos especiais
+        if campo == 'dias_cadastro':
+            try:
+                dias = int(valor)
+            except ValueError:
+                continue
+            data_limite = timezone.now() - timedelta(days=dias)
+            if operador in ('maior', 'maior_igual'):
+                qs = qs.filter(data_cadastro__lte=data_limite)
+            elif operador in ('menor', 'menor_igual'):
+                qs = qs.filter(data_cadastro__gte=data_limite)
+            continue
+
+        # Mapear campo para field do model
+        field_map = {
+            'origem': 'origem',
+            'score_qualificacao': 'score_qualificacao',
+            'cidade': 'cidade',
+            'estado': 'estado',
+            'bairro': 'bairro',
+            'valor': 'valor',
+            'status_api': 'status_api',
+        }
+        field = field_map.get(campo)
+        if not field:
+            continue
+
+        # Aplicar operador
+        if operador == 'igual':
+            qs = qs.filter(**{f'{field}__iexact': valor})
+        elif operador == 'diferente':
+            qs = qs.exclude(**{f'{field}__iexact': valor})
+        elif operador == 'contem':
+            qs = qs.filter(**{f'{field}__icontains': valor})
+        elif operador == 'maior':
+            qs = qs.filter(**{f'{field}__gt': valor})
+        elif operador == 'menor':
+            qs = qs.filter(**{f'{field}__lt': valor})
+        elif operador == 'maior_igual':
+            qs = qs.filter(**{f'{field}__gte': valor})
+        elif operador == 'menor_igual':
+            qs = qs.filter(**{f'{field}__lte': valor})
+
+    return qs
+
+
+def _atualizar_membros_segmento(segmento):
+    """Atualiza membros de um segmento dinâmico com base nas regras."""
+    from .models import MembroSegmento
+
+    regras = segmento.regras_filtro.get('regras', [])
+    if not regras:
+        return
+
+    leads = _filtrar_leads_por_regras(regras)
+    lead_ids = set(leads.values_list('pk', flat=True))
+
+    # Remover quem não atende mais (exceto manuais)
+    MembroSegmento.all_tenants.filter(
+        segmento=segmento, adicionado_manualmente=False
+    ).exclude(lead_id__in=lead_ids).delete()
+
+    # Adicionar quem atende e não está
+    existentes = set(segmento.membros.values_list('lead_id', flat=True))
+    novos = lead_ids - existentes
+    for lead_id in novos:
+        MembroSegmento.objects.create(
+            tenant=segmento.tenant, segmento=segmento,
+            lead_id=lead_id, adicionado_manualmente=False,
+        )
+
+    segmento.total_leads = segmento.membros.count()
+    segmento.ultima_atualizacao_dinamica = timezone.now()
+    segmento.save(update_fields=['total_leads', 'ultima_atualizacao_dinamica'])
 
 
 @login_required

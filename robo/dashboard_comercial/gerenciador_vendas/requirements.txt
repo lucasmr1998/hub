@@ -12,3 +12,6 @@ django-ratelimit==4.1.0
 cryptography==44.0.0
 ruff==0.9.10
 django-csp==4.0
+channels==4.1.0
+channels-redis==4.2.0
+daphne==4.1.0

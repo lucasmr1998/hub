@@ -337,6 +337,37 @@
     width: 200px;
   }
 
+  /* Pipeline dropdown */
+  .pipeline-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 6px;
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    min-width: 260px;
+    z-index: 50;
+    padding: 6px;
+  }
+  .pipeline-dropdown.show { display: block; }
+  .pipeline-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all .15s;
+  }
+  .pipeline-dropdown-item:hover { background: var(--bg-subtle); color: var(--text-main); }
+  .pipeline-dropdown-item.active { background: var(--primary-light); color: var(--primary); font-weight: 700; }
+
   /* Responsivo */
   @media (max-width: 768px) {
     .kanban-column { flex: 0 0 250px; }
@@ -355,10 +386,30 @@
   <!-- Toolbar -->
   <div class="pipeline-toolbar">
     <div class="page-header" style="flex:1;margin-bottom:0">
-      <h1 class="page-title"><i class="fas fa-stream" style="color:var(--primary);margin-right:8px;"></i>Pipeline CRM</h1>
+      <div style="position:relative; display:inline-block;">
+        <button id="pipelineDropdownBtn" onclick="document.getElementById('pipelineDropdown').classList.toggle('show')" style="display:flex; align-items:center; gap:10px; background:none; border:none; cursor:pointer; padding:0;">
+          <h1 class="page-title" style="margin:0;">
+            {% if pipeline_atual %}
+            <span style="width:10px; height:10px; border-radius:50%; background:{{ pipeline_atual.cor_hex }}; display:inline-block; margin-right:6px;"></span>{{ pipeline_atual.nome }}
+            {% else %}Pipeline CRM{% endif %}
+          </h1>
+          {% if pipelines|length > 1 %}
+          <i class="fas fa-chevron-down" style="font-size:12px; color:var(--text-muted);"></i>
+          {% endif %}
+        </button>
+        {% if pipelines|length > 1 %}
+        <div id="pipelineDropdown" class="pipeline-dropdown">
+          {% for p in pipelines %}
+          <a href="javascript:void(0)" onclick="trocarPipeline({{ p.pk }}, '{{ p.nome|escapejs }}', '{{ p.cor_hex }}')" class="pipeline-dropdown-item {% if pipeline_atual.pk == p.pk %}active{% endif %}" data-id="{{ p.pk }}">
+            <span style="width:8px; height:8px; border-radius:50%; background:{{ p.cor_hex }}; flex-shrink:0;"></span>
+            {{ p.nome }}
+            {% if p.padrao %}<span style="font-size:10px; color:var(--text-muted); margin-left:auto;">padrão</span>{% endif %}
+          </a>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
     </div>
-
-    <input type="text" id="searchPipeline" placeholder="Buscar lead…" class="form-control">
 
     <button onclick="carregarPipeline()" class="btn-primary">
       <i class="fas fa-sync-alt"></i> Atualizar
@@ -367,6 +418,41 @@
     <button onclick="toggleView()" class="btn-secondary" id="btnToggleView">
       <i class="fas fa-list"></i> <span id="toggleViewLabel">Lista</span>
     </button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card" style="margin-bottom:14px; padding:12px 16px;">
+    <button class="filter-toggle" id="filterToggle" onclick="document.getElementById('filtrosContent').classList.toggle('open'); this.classList.toggle('open');">
+      <i class="fas fa-filter"></i> Filtros
+      <i class="fas fa-chevron-right chevron"></i>
+    </button>
+    <div id="filtrosContent" class="filter-body">
+      <div class="filter-row">
+        <div class="form-group"><label class="form-label">Pesquisar</label><input type="text" id="searchPipeline" class="form-control" placeholder="Nome, telefone..."></div>
+        <div class="form-group"><label class="form-label">Responsável</label>
+          <select id="filtroResponsavel" class="form-control" onchange="carregarPipeline()">
+            <option value="">Todos</option>
+            {% for v in vendedores %}<option value="{{ v.id }}">{{ v.nome }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Tag</label>
+          <select id="filtroTag" class="form-control" onchange="carregarPipeline()">
+            <option value="">Todas</option>
+            {% for tag in tags %}<option value="{{ tag.nome }}">{{ tag.nome }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Valor</label>
+          <select id="filtroValor" class="form-control" onchange="carregarPipeline()">
+            <option value="">Qualquer</option>
+            <option value="0-100">Até R$ 100</option>
+            <option value="100-500">R$ 100 a R$ 500</option>
+            <option value="500-1000">R$ 500 a R$ 1.000</option>
+            <option value="1000+">Acima de R$ 1.000</option>
+          </select>
+        </div>
+        <div class="form-group"><button class="btn-secondary" onclick="limparFiltros()" style="width:100%;margin-top:20px;"><i class="fas fa-times"></i> Limpar</button></div>
+      </div>
+    </div>
   </div>
 
   <!-- Kanban Board -->
@@ -506,6 +592,15 @@ function renderListView(estagios) {
 document.addEventListener('DOMContentLoaded', () => {
   carregarPipeline();
 
+  // Fechar dropdowns ao clicar fora
+  document.addEventListener('click', (e) => {
+    const dd = document.getElementById('pipelineDropdown');
+    const btn = document.getElementById('pipelineDropdownBtn');
+    if (dd && !dd.contains(e.target) && !btn.contains(e.target)) {
+      dd.classList.remove('show');
+    }
+  });
+
   // Fechar context menu ao clicar fora
   document.addEventListener('click', (e) => {
     if (!e.target.closest('#globalContextMenu') && !e.target.closest('.card-menu-btn')) {
@@ -521,19 +616,58 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+let _currentPipelineId = {% if pipeline_atual %}{{ pipeline_atual.pk }}{% else %}null{% endif %};
+
+function trocarPipeline(id, nome, cor) {
+  _currentPipelineId = id;
+
+  // Atualizar título
+  const titleEl = document.querySelector('#pipelineDropdownBtn .page-title');
+  if (titleEl) {
+    titleEl.innerHTML = `<span style="width:10px;height:10px;border-radius:50%;background:${cor};display:inline-block;margin-right:6px;"></span>${nome}`;
+  }
+
+  // Atualizar active no dropdown
+  document.querySelectorAll('.pipeline-dropdown-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.id == id);
+  });
+
+  // Fechar dropdown
+  document.getElementById('pipelineDropdown').classList.remove('show');
+
+  // Carregar dados (vai recriar as colunas)
+  carregarPipeline();
+}
+
+function limparFiltros() {
+  document.getElementById('searchPipeline').value = '';
+  document.getElementById('filtroResponsavel').value = '';
+  document.getElementById('filtroTag').value = '';
+  document.getElementById('filtroValor').value = '';
+  carregarPipeline();
+}
+
 function carregarPipeline() {
   mostrarLoader(true);
 
   const search = document.getElementById('searchPipeline').value;
+  const responsavel = document.getElementById('filtroResponsavel').value;
+  const tag = document.getElementById('filtroTag').value;
+  const valor = document.getElementById('filtroValor').value;
 
   const params = new URLSearchParams();
   if (search) params.append('search', search);
+  if (responsavel) params.append('responsavel', responsavel);
+  if (tag) params.append('tag', tag);
+  if (valor) params.append('valor', valor);
+  if (_currentPipelineId) params.append('pipeline_id', _currentPipelineId);
 
   fetch(`{% url 'crm:api_pipeline_dados' %}?${params}`)
     .then(r => r.json())
     .then(data => {
       if (!data.ok) throw new Error('Erro ao carregar dados');
       _lastData = data.estagios;
+      reconstruirColunas(data.estagios);
       renderPipeline(data.estagios);
       if (_currentView === 'list') renderListView(data.estagios);
     })
@@ -542,6 +676,41 @@ function carregarPipeline() {
       mostrarNotificacao('Erro ao carregar pipeline', 'error');
     })
     .finally(() => mostrarLoader(false));
+}
+
+function reconstruirColunas(estagios) {
+  const board = document.getElementById('kanbanBoard');
+  board.innerHTML = '';
+
+  estagios.forEach(e => {
+    const col = document.createElement('div');
+    col.className = 'kanban-column';
+    col.id = `col-${e.id}`;
+    col.setAttribute('data-estagio-id', e.id);
+    col.setAttribute('ondragover', 'onDragOver(event)');
+    col.setAttribute('ondragleave', 'onDragLeave(event)');
+    col.setAttribute('ondrop', `onDrop(event, ${e.id})`);
+
+    col.innerHTML = `
+      <div class="column-header">
+        <div class="column-title">
+          <span class="column-dot" style="background:${e.cor};"></span>
+          ${e.nome}
+        </div>
+        <div class="column-meta">
+          <span id="count-${e.id}"><i class="fas fa-circle" style="font-size:8px;"></i> ${e.total}</span>
+          <span id="valor-${e.id}" style="color:var(--success);">R$ ${formatarValor(e.total_valor)}</span>
+        </div>
+      </div>
+      <div class="column-cards" id="cards-${e.id}">
+        <div class="drop-zone-empty" id="empty-${e.id}">
+          <i class="fas fa-inbox" style="margin-right:6px;"></i> Sem oportunidades
+        </div>
+      </div>
+    `;
+
+    board.appendChild(col);
+  });
 }
 
 function renderPipeline(estagios) {

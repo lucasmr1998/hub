@@ -166,14 +166,16 @@
         </label>
         <button type="submit" class="btn-secondary btn-sm"><i class="fas fa-save"></i> Salvar</button>
       </form>
-      <form method="post" style="display:inline; margin-left:8px;">
+      {% if not pipeline_atual.padrao %}
+      <form method="post" style="display:inline; margin-left:4px;">
         {% csrf_token %}
         <input type="hidden" name="action" value="excluir_pipeline">
         <input type="hidden" name="pipeline_id" value="{{ pipeline_atual.pk }}">
-        <button type="submit" class="btn-danger btn-sm" onclick="return confirm('Excluir pipeline {{ pipeline_atual.nome }}? Isso exclui todos os estágios.')">
-          <i class="fas fa-trash"></i> Excluir
+        <button type="submit" class="btn-icon" style="color:var(--danger); font-size:14px; border:none; background:none; cursor:pointer; padding:6px 8px; border-radius:6px; transition:all .2s;" onmouseover="this.style.background='var(--danger-light)'" onmouseout="this.style.background='none'" onclick="return confirm('Excluir pipeline {{ pipeline_atual.nome }}? Isso exclui todos os estágios.')" title="Excluir pipeline">
+          <i class="fas fa-trash"></i>
         </button>
       </form>
+      {% endif %}
     </div>
     {% endif %}
   </div>
@@ -330,38 +332,6 @@
       </div>
     </div>
 
-    <!-- EQUIPES -->
-    <div class="card" style="padding:0;">
-      <div class="card-header">
-        <h3><i class="fas fa-users" style="color:var(--success)"></i> Equipes de Vendas</h3>
-        <button class="btn-primary btn-sm" onclick="abrirModalEquipe()">
-          <i class="fas fa-plus"></i> Nova
-        </button>
-      </div>
-      <div class="card-body" style="padding:12px 18px">
-        {% if equipes %}
-        {% for eq in equipes %}
-        <div class="equipe-row">
-          <div>
-            <div class="equipe-nome">{{ eq.nome }}</div>
-            {% if eq.descricao %}
-            <div class="equipe-desc">{{ eq.descricao|truncatechars:60 }}</div>
-            {% endif %}
-          </div>
-          <div style="display:flex; gap:6px;">
-            <button class="btn-icon btn-icon-edit"
-                    onclick="editarEquipe({{ eq.pk }}, '{{ eq.nome|escapejs }}', '{{ eq.descricao|escapejs }}')"
-                    title="Editar"><i class="fas fa-pencil-alt"></i></button>
-          </div>
-        </div>
-        {% endfor %}
-        {% else %}
-        <p style="color:var(--text-light);font-size:13px;text-align:center;padding:12px 0">
-          Nenhuma equipe cadastrada.
-        </p>
-        {% endif %}
-      </div>
-    </div>
 
   </div><!-- /lateral -->
 </div><!-- /cfg-grid -->

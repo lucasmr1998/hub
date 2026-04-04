@@ -36,7 +36,7 @@ from apps.comercial.crm.models import (
 from apps.marketing.campanhas.models import CampanhaTrafego, DeteccaoCampanha
 from apps.notificacoes.models import TipoNotificacao, CanalNotificacao, Notificacao
 from apps.integracoes.models import IntegracaoAPI, ClienteHubsoft, ServicoClienteHubsoft
-from apps.cs.clube.models import MembroClube, NivelClube, RegraPontuacao, ExtratoPontuacao, PremioRoleta
+from apps.cs.clube.models import MembroClube, NivelClube, RegraPontuacao, ExtratoPontuacao, PremioRoleta, ParticipanteRoleta
 from apps.cs.parceiros.models import CategoriaParceiro, Parceiro, CupomDesconto, ResgateCupom
 from apps.cs.indicacoes.models import Indicacao
 from apps.suporte.models import CategoriaTicket, SLAConfig, Ticket, ComentarioTicket
@@ -434,8 +434,8 @@ def run():
     ]
     for nome, gatilho, saldo, xp in regras:
         RegraPontuacao.all_tenants.get_or_create(
-            gatilho=gatilho,
-            defaults={'tenant': tenant, 'nome_exibicao': nome, 'pontos_saldo': saldo, 'pontos_xp': xp, 'ativo': True},
+            tenant=tenant, gatilho=gatilho,
+            defaults={'nome_exibicao': nome, 'pontos_saldo': saldo, 'pontos_xp': xp, 'ativo': True},
         )
 
     # Membros do Clube
@@ -540,6 +540,59 @@ def run():
         )
     print("  4 premios da roleta")
 
+    # ── Distribuir data_cadastro dos membros nos ultimos 7 dias ────────
+    for i, m in enumerate(MembroClube.all_tenants.filter(tenant=tenant)):
+        dias_atras = random.randint(0, 6)
+        horas = random.randint(8, 22)
+        MembroClube.all_tenants.filter(pk=m.pk).update(
+            data_cadastro=timezone.now() - timedelta(days=dias_atras, hours=horas)
+        )
+    print("  Datas de cadastro distribuidas nos ultimos 7 dias")
+
+    # ── Regra telefone_verificado (para grafico de Validacoes) ─────────
+    regra_tel, _ = RegraPontuacao.all_tenants.get_or_create(
+        tenant=tenant, gatilho='telefone_verificado',
+        defaults={'nome_exibicao': 'Telefone Verificado', 'pontos_saldo': 5, 'pontos_xp': 10, 'ativo': True},
+    )
+    # Criar extratos de validacao distribuidos nos ultimos 7 dias
+    membros_validar = list(MembroClube.all_tenants.filter(tenant=tenant, validado=True))
+    count_val = 0
+    for m in membros_validar:
+        dias_atras = random.randint(0, 6)
+        ep = ExtratoPontuacao.objects.create(
+            tenant=tenant, membro=m, regra=regra_tel,
+            pontos_saldo_ganhos=5, pontos_xp_ganhos=10,
+            descricao_extra='Telefone verificado via OTP',
+        )
+        ExtratoPontuacao.all_tenants.filter(pk=ep.pk).update(
+            data_recebimento=timezone.now() - timedelta(days=dias_atras, hours=random.randint(8, 22))
+        )
+        count_val += 1
+    print(f"  {count_val} validacoes de telefone criadas")
+
+    # ── ParticipanteRoleta (Giros + Ganhadores) ───────────────────────
+    nomes_premios = [p[0] for p in premios]
+    count_giros = 0
+    for m in membros_validar:
+        n_giros = random.randint(1, 4)
+        for _ in range(n_giros):
+            ganhou = random.random() < 0.3  # 30% chance de ganhar
+            premio_nome = random.choice(nomes_premios) if ganhou else 'Não foi dessa vez'
+            pr = ParticipanteRoleta.objects.create(
+                tenant=tenant, membro=m,
+                nome=m.nome, cpf=m.cpf, email=m.email,
+                telefone=m.telefone, cidade=m.cidade, estado=m.estado,
+                premio=premio_nome,
+                status='ganhou' if ganhou else 'reservado',
+                saldo=m.saldo,
+            )
+            dias_atras = random.randint(0, 6)
+            ParticipanteRoleta.all_tenants.filter(pk=pr.pk).update(
+                data_criacao=timezone.now() - timedelta(days=dias_atras, hours=random.randint(8, 22))
+            )
+            count_giros += 1
+    print(f"  {count_giros} giros da roleta ({ParticipanteRoleta.all_tenants.filter(tenant=tenant, status='ganhou').count()} ganhadores)")
+
     # ── Suporte: Tickets ───────────────────────────────────────────────
     # Categorias e SLA ja criados pelo seed_aurora, criar para Megalink tambem
     cats_ticket = [
@@ -596,7 +649,466 @@ def run():
             )
     print("  3 tickets + comentarios")
 
-    # ── Logs do Sistema ────────────────────────────────────────────────
+    # ══════════════════════════════════════════════════════════════════════
+    # ██  AURORA HQ — Popular TODOS os modulos  ██████████████████████████
+    # ══════════════════════════════════════════════════════════════════════
+    aurora_t = Tenant.objects.filter(slug='aurora-hq').first()
+    if aurora_t:
+        set_current_tenant(aurora_t)
+        print("\n--- AURORA HQ ---")
+
+        # Usuarios Aurora
+        aurora_user = User.objects.filter(username='aurora').first()
+        aurora_users = {}
+        aurora_vendedores = [
+            ('lucas_aurora', 'Lucas', 'Mendes', 'lucas@auroraisp.com.br'),
+            ('camila_aurora', 'Camila', 'Reis', 'camila@auroraisp.com.br'),
+            ('rafael_aurora', 'Rafael', 'Costa', 'rafael@auroraisp.com.br'),
+        ]
+        for uname, first, last, email in aurora_vendedores:
+            u, created = User.objects.get_or_create(
+                username=uname,
+                defaults={'first_name': first, 'last_name': last, 'email': email, 'is_staff': True},
+            )
+            if created:
+                u.set_password('aurora123')
+                u.save()
+            PerfilUsuario.objects.get_or_create(user=u, defaults={'tenant': aurora_t})
+            aurora_users[uname] = u
+        if aurora_user:
+            aurora_users['aurora'] = aurora_user
+        print(f"  {len(aurora_users)} usuarios Aurora")
+
+        # Planos (produtos Aurora = planos SaaS que Aurora vende)
+        planos_aurora_data = [
+            ('Comercial Start', 0, 0, Decimal('297.00')),
+            ('Comercial Pro', 0, 0, Decimal('497.00')),
+            ('Marketing Start', 0, 0, Decimal('397.00')),
+            ('Marketing Pro', 0, 0, Decimal('697.00')),
+            ('CS Start', 0, 0, Decimal('197.00')),
+        ]
+        planos_a = {}
+        for nome_pl, down, up, valor in planos_aurora_data:
+            p, _ = PlanoInternet.all_tenants.get_or_create(
+                tenant=aurora_t, nome=nome_pl,
+                defaults={'velocidade_download': down, 'velocidade_upload': up, 'valor_mensal': valor, 'ativo': True},
+            )
+            planos_a[nome_pl] = p
+        for dia in [5, 10, 15]:
+            OpcaoVencimento.all_tenants.get_or_create(
+                tenant=aurora_t, dia_vencimento=dia,
+                defaults={'descricao': f'Dia {dia} de cada mes', 'ativo': True},
+            )
+        print("  5 planos Aurora + 3 vencimentos")
+
+        # Campanhas Aurora
+        campanhas_aurora = {
+            'linkedin-isp': ('LinkedIn ISPs', 'linkedin-isp', 'outro', 'pago'),
+            'abrint-evento': ('Evento ABRINT 2026', 'abrint-evento', 'outro', 'organico'),
+            'google-aurora': ('Google Ads Aurora', 'google-aurora', 'google_ads', 'pago'),
+            'indicacao-parceiro': ('Indicacao Parceiros', 'indicacao-parceiro', 'whatsapp', 'organico'),
+        }
+        camp_a = {}
+        for codigo, (nome_c, cod, plat, tipo) in campanhas_aurora.items():
+            c, _ = CampanhaTrafego.all_tenants.get_or_create(
+                tenant=aurora_t, codigo=cod,
+                defaults={'nome': nome_c, 'plataforma': plat, 'tipo_trafego': tipo, 'ativa': True, 'palavra_chave': cod},
+            )
+            camp_a[codigo] = c
+        print(f"  {len(camp_a)} campanhas Aurora")
+
+        # Pipeline B2B
+        pipeline_a, _ = Pipeline.all_tenants.get_or_create(
+            tenant=aurora_t, slug='vendas-b2b',
+            defaults={'nome': 'Vendas B2B Provedores', 'tipo': 'vendas', 'padrao': True, 'cor_hex': '#8b5cf6'},
+        )
+        estagios_b2b = [
+            (1, 'Lead Identificado', 'lead-identificado', 'novo', '#94a3b8', 5),
+            (2, 'Contato Inicial', 'contato-inicial', 'qualificacao', '#3b82f6', 15),
+            (3, 'Demo Agendada', 'demo-agendada', 'qualificacao', '#06b6d4', 30),
+            (4, 'Trial Ativo', 'trial-ativo', 'negociacao', '#f59e0b', 50),
+            (5, 'Proposta Enviada', 'proposta-enviada', 'negociacao', '#a855f7', 70),
+            (6, 'Negociacao', 'negociacao', 'fechamento', '#ec4899', 85),
+            (7, 'Cliente Ativo', 'cliente-ativo', 'cliente', '#22c55e', 100),
+            (8, 'Perdido', 'perdido', 'perdido', '#ef4444', 0),
+        ]
+        est_a = {}
+        for ordem, nome_e, slug_e, tipo_e, cor, prob in estagios_b2b:
+            e, _ = PipelineEstagio.all_tenants.get_or_create(
+                tenant=aurora_t, pipeline=pipeline_a, slug=slug_e,
+                defaults={'nome': nome_e, 'tipo': tipo_e, 'ordem': ordem, 'cor_hex': cor,
+                          'probabilidade_padrao': prob, 'is_final_ganho': (slug_e == 'cliente-ativo'),
+                          'is_final_perdido': (slug_e == 'perdido')},
+            )
+            est_a[slug_e] = e
+
+        ConfiguracaoCRM.all_tenants.get_or_create(
+            tenant=aurora_t,
+            defaults={'pipeline_padrao': pipeline_a, 'estagio_inicial_padrao': est_a['lead-identificado'],
+                      'criar_oportunidade_automatico': True, 'score_minimo_auto_criacao': 6},
+        )
+
+        # Tags B2B
+        tags_b2b = ['Enterprise', 'PME', 'HubSoft', 'ABRINT', 'Trial']
+        tags_a = {}
+        for t_nome in tags_b2b:
+            tg, _ = TagCRM.all_tenants.get_or_create(tenant=aurora_t, nome=t_nome, defaults={'cor_hex': '#8b5cf6'})
+            tags_a[t_nome] = tg
+
+        # Equipe Aurora
+        equipe_a, _ = EquipeVendas.all_tenants.get_or_create(
+            tenant=aurora_t, nome='Equipe Comercial Aurora',
+            defaults={'descricao': 'Time comercial B2B', 'lider': aurora_users.get('lucas_aurora'), 'cor_hex': '#8b5cf6'},
+        )
+        for uname, user in aurora_users.items():
+            PerfilVendedor.all_tenants.get_or_create(
+                user=user, defaults={'equipe': equipe_a, 'cargo': 'gerente' if uname == 'lucas_aurora' else 'vendedor', 'tenant': aurora_t},
+            )
+        print("  Pipeline B2B + 8 estagios + equipe + tags")
+
+        # Leads B2B (provedores como leads)
+        provedores_leads = [
+            ('Megalink Internet', '12345678000101', '86999001001', 'contato@megalink.com.br', 'Teresina', 'PI'),
+            ('NetFibra Telecom', '98765432000199', '11999002002', 'contato@netfibra.com.br', 'Sao Paulo', 'SP'),
+            ('VeloxNet', '55566677000188', '21999003003', 'admin@veloxnet.com.br', 'Rio de Janeiro', 'RJ'),
+            ('FibraMax ISP', '11122233000155', '31999004004', 'suporte@fibramax.com.br', 'Belo Horizonte', 'MG'),
+            ('ConectaJa', '44455566000177', '41999005005', 'contato@conectaja.com.br', 'Curitiba', 'PR'),
+            ('TurboNet', '77788899000166', '51999006006', 'admin@turbonet.com.br', 'Porto Alegre', 'RS'),
+            ('SpeedLink Telecom', '33344455000144', '61999007007', 'contato@speedlink.com.br', 'Brasilia', 'DF'),
+            ('RapiNet Fibra', '22233344000133', '71999008008', 'admin@rapinet.com.br', 'Salvador', 'BA'),
+            ('TopNet ISP', '66677788000122', '81999009009', 'suporte@topnet.com.br', 'Recife', 'PE'),
+            ('AlphaFibra', '99988877000111', '85999010010', 'admin@alphafibra.com.br', 'Fortaleza', 'CE'),
+            ('DataLink Telecom', '11223344000166', '62999011011', 'contato@datalink.com.br', 'Goiania', 'GO'),
+            ('FibraNet Sul', '55667788000155', '48999012012', 'admin@fibranetsul.com.br', 'Florianopolis', 'SC'),
+            ('MaxiTelecom', '99887766000144', '92999013013', 'suporte@maxitelecom.com.br', 'Manaus', 'AM'),
+            ('PrimeNet ISP', '33221100000133', '65999014014', 'contato@primenet.com.br', 'Cuiaba', 'MT'),
+            ('NovaFibra', '77665544000122', '98999015015', 'admin@novafibra.com.br', 'Sao Luis', 'MA'),
+            ('GigaNet Telecom', '11009988000111', '79999016016', 'contato@giganet.com.br', 'Aracaju', 'SE'),
+            ('UltraLink ISP', '22334455000199', '84999017017', 'admin@ultralink.com.br', 'Natal', 'RN'),
+            ('BrasilFibra', '44556677000188', '96999018018', 'suporte@brasilfibra.com.br', 'Macapa', 'AP'),
+            ('CityNet Telecom', '66778899000177', '63999019019', 'contato@citynet.com.br', 'Teresina', 'PI'),
+            ('ProFibra ISP', '88990011000166', '69999020020', 'admin@profibra.com.br', 'Porto Velho', 'RO'),
+        ]
+        estagio_dist_a = ['lead-identificado'] * 3 + ['contato-inicial'] * 4 + ['demo-agendada'] * 4 + \
+                         ['trial-ativo'] * 3 + ['proposta-enviada'] * 2 + ['negociacao'] * 2 + \
+                         ['cliente-ativo'] * 1 + ['perdido'] * 1
+
+        leads_a = []
+        for i, (nome_l, cnpj, tel, email, cidade, estado) in enumerate(provedores_leads):
+            plano_escolhido = random.choice(list(planos_a.values()))
+            score = random.randint(4, 10)
+            dias_atras = random.randint(0, 45)
+
+            lead = LeadProspecto(
+                tenant=aurora_t, nome_razaosocial=nome_l,
+                telefone=tel, email=email, cpf_cnpj=cnpj,
+                valor=plano_escolhido.valor_mensal,
+                origem=random.choice(['linkedin', 'site', 'indicacao', 'evento']),
+                status_api=random.choice(['processado', 'sucesso', 'pendente']),
+                score_qualificacao=score,
+                cidade=cidade, estado=estado, cep='01000-000',
+                bairro='Centro', campanha_origem=random.choice(list(camp_a.values())),
+            )
+            lead._skip_crm_signal = True
+            lead.save()
+            LeadProspecto.all_tenants.filter(pk=lead.pk).update(
+                data_cadastro=timezone.now() - timedelta(days=dias_atras, hours=random.randint(0, 23))
+            )
+            leads_a.append(lead)
+        print(f"  {len(leads_a)} leads B2B Aurora")
+
+        # Prospectos Aurora
+        for lead in leads_a[:10]:
+            Prospecto.all_tenants.get_or_create(
+                tenant=aurora_t, lead=lead,
+                defaults={'status': 'processado'},
+            )
+        print("  10 prospectos Aurora")
+
+        # Historicos de contato Aurora
+        count_hist_a = 0
+        for lead in leads_a:
+            HistoricoContato.objects.create(
+                tenant=aurora_t, lead=lead, telefone=lead.telefone,
+                status='atendido', origem_contato='whatsapp',
+                observacoes=f'Primeiro contato com {lead.nome_razaosocial}',
+            )
+            count_hist_a += 1
+            if lead.score_qualificacao >= 6:
+                HistoricoContato.objects.create(
+                    tenant=aurora_t, lead=lead, telefone=lead.telefone,
+                    status='convertido', origem_contato='whatsapp',
+                    observacoes=f'Demo agendada com {lead.nome_razaosocial}',
+                    converteu_venda=lead.score_qualificacao >= 8,
+                    valor_venda=lead.valor if lead.score_qualificacao >= 8 else None,
+                )
+                count_hist_a += 1
+        print(f"  {count_hist_a} historicos de contato Aurora")
+
+        # Fluxo de Atendimento Aurora
+        fluxo_a, _ = FluxoAtendimento.all_tenants.get_or_create(
+            tenant=aurora_t, nome='Fluxo Qualificacao B2B',
+            defaults={'tipo_fluxo': 'qualificacao', 'status': 'ativo', 'ativo': True},
+        )
+        questoes_b2b = [
+            'Qual o nome do provedor?', 'Quantos clientes ativos?', 'Qual ERP utiliza?',
+            'Qual modulo tem interesse?', 'Qual a principal dor hoje?', 'Quer agendar uma demo?',
+        ]
+        for idx, q in enumerate(questoes_b2b):
+            QuestaoFluxo.all_tenants.get_or_create(
+                tenant=aurora_t, fluxo=fluxo_a, indice=idx,
+                defaults={'titulo': q, 'tipo_questao': 'texto', 'ativo': True},
+            )
+        total_q_a = QuestaoFluxo.all_tenants.filter(fluxo=fluxo_a).count()
+        for lead in leads_a[:8]:
+            AtendimentoFluxo.all_tenants.get_or_create(
+                tenant=aurora_t, lead=lead, fluxo=fluxo_a,
+                defaults={'status': 'finalizado' if lead.score_qualificacao >= 7 else 'em_andamento', 'total_questoes': total_q_a},
+            )
+        print("  1 fluxo B2B + 6 questoes + 8 atendimentos")
+
+        # Oportunidades CRM Aurora
+        for i, lead in enumerate(leads_a):
+            est_slug = estagio_dist_a[i % len(estagio_dist_a)]
+            vendedor = random.choice(list(aurora_users.values()))
+            op = OportunidadeVenda.objects.create(
+                tenant=aurora_t, pipeline=pipeline_a, lead=lead,
+                estagio=est_a[est_slug], responsavel=vendedor,
+                titulo=lead.nome_razaosocial, valor_estimado=lead.valor,
+                probabilidade=est_a[est_slug].probabilidade_padrao,
+                origem_crm='automatico' if lead.score_qualificacao >= 7 else 'manual',
+            )
+            if random.random() > 0.5:
+                op.tags.add(random.choice(list(tags_a.values())))
+        print(f"  {len(leads_a)} oportunidades CRM Aurora")
+
+        # Tarefas CRM Aurora
+        ops_a = OportunidadeVenda.all_tenants.filter(
+            tenant=aurora_t, ativo=True
+        ).exclude(estagio__tipo__in=['cliente', 'perdido'])[:10]
+        tipos_tarefa_b2b = ['ligacao', 'email', 'followup', 'proposta', 'whatsapp']
+        for op in ops_a:
+            TarefaCRM.objects.create(
+                tenant=aurora_t, oportunidade=op, lead=op.lead, responsavel=op.responsavel,
+                tipo=random.choice(tipos_tarefa_b2b),
+                titulo=f'Followup {op.lead.nome_razaosocial}',
+                status=random.choice(['pendente', 'pendente', 'em_andamento']),
+                prioridade=random.choice(['normal', 'alta', 'urgente']),
+                data_vencimento=timezone.now() + timedelta(days=random.randint(-2, 7)),
+            )
+        print(f"  {ops_a.count()} tarefas CRM Aurora")
+
+        # Notas internas Aurora
+        notas_b2b = [
+            'Provedor com 5.000 clientes, muito interessado no modulo Comercial.',
+            'Usa HubSoft. Integração nativa é o diferencial decisivo.',
+            'Pediu referencia de case. Enviar dados do case Megalink.',
+            'Demo realizada, feedback muito positivo. Aguardando proposta.',
+            'Trial ativo ha 15 dias, engajamento alto no CRM.',
+        ]
+        for op in OportunidadeVenda.all_tenants.filter(tenant=aurora_t)[:8]:
+            NotaInterna.objects.create(
+                tenant=aurora_t, oportunidade=op, lead=op.lead,
+                autor=op.responsavel, conteudo=random.choice(notas_b2b),
+                tipo=random.choice(['geral', 'reuniao', 'ligacao', 'importante']),
+            )
+        print("  8 notas internas Aurora")
+
+        # Metas Aurora
+        for u in aurora_users.values():
+            MetaVendas.all_tenants.get_or_create(
+                tenant=aurora_t, vendedor=u, periodo='mensal',
+                data_inicio=timezone.now().replace(day=1).date(),
+                defaults={
+                    'tipo': 'individual',
+                    'data_fim': (timezone.now().replace(day=1) + timedelta(days=32)).replace(day=1).date() - timedelta(days=1),
+                    'meta_vendas_quantidade': random.randint(5, 15),
+                    'meta_vendas_valor': Decimal(str(random.randint(10000, 30000))),
+                    'meta_leads_qualificados': random.randint(20, 40),
+                    'criado_por': aurora_user or u,
+                },
+            )
+        print(f"  {len(aurora_users)} metas Aurora")
+
+        # Deteccoes de campanha Aurora
+        for lead in leads_a[:6]:
+            campanha = random.choice(list(camp_a.values()))
+            DeteccaoCampanha.objects.create(
+                tenant=aurora_t, lead=lead, campanha=campanha,
+                telefone=lead.telefone, mensagem_original=f'Vim pelo {campanha.nome}',
+                mensagem_normalizada=f'vim pelo {campanha.nome.lower()}',
+                trecho_detectado=campanha.codigo, metodo_deteccao='keyword',
+                score_confianca=Decimal('0.90'), origem='whatsapp',
+            )
+        print("  6 deteccoes de campanha Aurora")
+
+        # Notificacoes Aurora
+        for codigo, nome_n, prio in tipos_notif:
+            TipoNotificacao.all_tenants.get_or_create(
+                tenant=aurora_t, codigo=codigo,
+                defaults={'nome': nome_n, 'prioridade_padrao': prio, 'ativo': True},
+            )
+        for codigo, nome_n in canais:
+            CanalNotificacao.all_tenants.get_or_create(
+                tenant=aurora_t, codigo=codigo,
+                defaults={'nome': nome_n, 'ativo': True},
+            )
+        tipo_lead_a = TipoNotificacao.all_tenants.filter(tenant=aurora_t, codigo='lead_novo').first()
+        canal_sistema = CanalNotificacao.all_tenants.filter(tenant=aurora_t, codigo='sistema').first()
+        if tipo_lead_a and canal_sistema:
+            for lead in leads_a[:6]:
+                Notificacao.objects.create(
+                    tenant=aurora_t, tipo=tipo_lead_a, canal=canal_sistema,
+                    titulo=f'Novo lead: {lead.nome_razaosocial}',
+                    mensagem=f'Provedor identificado via {lead.origem}',
+                    status='enviada',
+                )
+        print("  Notificacoes Aurora")
+
+        # ── CS Aurora ──────────────────────────────────────────────────
+        for nome_n, xp in niveis:
+            NivelClube.all_tenants.get_or_create(
+                tenant=aurora_t, nome=nome_n,
+                defaults={'xp_necessario': xp},
+            )
+        for nome_r, gatilho, saldo, xp in regras:
+            RegraPontuacao.all_tenants.get_or_create(
+                gatilho=gatilho, tenant=aurora_t,
+                defaults={'nome_exibicao': nome_r, 'pontos_saldo': saldo, 'pontos_xp': xp, 'ativo': True},
+            )
+
+        membros_aurora = []
+        for lead in leads_a[:12]:
+            m, _ = MembroClube.all_tenants.get_or_create(
+                tenant=aurora_t, cpf=lead.cpf_cnpj.replace('.', '').replace('-', '')[:14],
+                defaults={
+                    'nome': lead.nome_razaosocial, 'email': lead.email,
+                    'telefone': lead.telefone, 'cep': '01000-000',
+                    'cidade': lead.cidade, 'estado': lead.estado,
+                    'saldo': random.randint(50, 500),
+                    'xp_total': random.randint(100, 3000),
+                    'validado': True,
+                },
+            )
+            membros_aurora.append(m)
+
+        regra_pgto_a = RegraPontuacao.all_tenants.filter(tenant=aurora_t, gatilho='pagamento_em_dia').first()
+        if regra_pgto_a:
+            for m in membros_aurora[:8]:
+                ExtratoPontuacao.all_tenants.get_or_create(
+                    tenant=aurora_t, membro=m, regra=regra_pgto_a,
+                    defaults={'pontos_saldo_ganhos': 10, 'pontos_xp_ganhos': 5, 'descricao_extra': 'Mensalidade em dia'},
+                )
+
+        for nome_pr, qtd in premios:
+            PremioRoleta.all_tenants.get_or_create(
+                tenant=aurora_t, nome=nome_pr,
+                defaults={'quantidade': qtd, 'probabilidade': qtd},
+            )
+
+        cats_aurora = [
+            ('Software', 'software', 'fa-laptop-code'),
+            ('Infraestrutura', 'infraestrutura', 'fa-server'),
+            ('Consultoria', 'consultoria', 'fa-handshake'),
+            ('Treinamento', 'treinamento', 'fa-chalkboard-teacher'),
+        ]
+        categorias_a = {}
+        for nome_c, slug_c, icone_c in cats_aurora:
+            c, _ = CategoriaParceiro.all_tenants.get_or_create(
+                tenant=aurora_t, slug=slug_c,
+                defaults={'nome': nome_c, 'icone': icone_c},
+            )
+            categorias_a[slug_c] = c
+
+        parceiros_aurora_data = [
+            ('MikroTik Brasil', 'infraestrutura', '11988001001'),
+            ('HubSoft ERP', 'software', '11988002002'),
+            ('FibraConsult', 'consultoria', '11988003003'),
+            ('ISP Academy', 'treinamento', '11988004004'),
+            ('CloudCore Hosting', 'infraestrutura', '11988005005'),
+        ]
+        for nome_pa, cat_s, tel_pa in parceiros_aurora_data:
+            p, _ = Parceiro.all_tenants.get_or_create(
+                tenant=aurora_t, nome=nome_pa,
+                defaults={'categoria': categorias_a[cat_s], 'contato_telefone': tel_pa, 'ativo': True},
+            )
+            CupomDesconto.all_tenants.get_or_create(
+                tenant=aurora_t, parceiro=p, codigo=f'AURORA{nome_pa[:3].upper()}',
+                defaults={
+                    'titulo': f'10% OFF - {nome_pa}', 'descricao': 'Desconto exclusivo para clientes Aurora',
+                    'tipo_desconto': 'percentual', 'valor_desconto': 10, 'modalidade': 'pontos', 'custo_pontos': 50,
+                    'data_inicio': timezone.now().date(), 'data_fim': (timezone.now() + timedelta(days=90)).date(),
+                    'ativo': True,
+                },
+            )
+
+        for m in membros_aurora[:5]:
+            Indicacao.all_tenants.get_or_create(
+                tenant=aurora_t, membro_indicador=m,
+                nome_indicado=f'Provedor indicado por {m.nome.split()[0]}',
+                defaults={
+                    'telefone_indicado': f'1199{random.randint(1000000, 9999999)}',
+                    'status': random.choice(['pendente', 'contato_feito', 'convertido']),
+                },
+            )
+        print(f"  Aurora CS: {len(membros_aurora)} membros, 5 parceiros, 5 indicacoes, 4 premios")
+
+        # Distribuir datas de cadastro dos membros Aurora
+        for m in MembroClube.all_tenants.filter(tenant=aurora_t):
+            MembroClube.all_tenants.filter(pk=m.pk).update(
+                data_cadastro=timezone.now() - timedelta(days=random.randint(0, 6), hours=random.randint(8, 22))
+            )
+
+        # Regra telefone_verificado Aurora
+        regra_tel_a, _ = RegraPontuacao.all_tenants.get_or_create(
+            tenant=aurora_t, gatilho='telefone_verificado',
+            defaults={'nome_exibicao': 'Telefone Verificado', 'pontos_saldo': 5, 'pontos_xp': 10, 'ativo': True},
+        )
+        for m in membros_aurora[:8]:
+            ep = ExtratoPontuacao.objects.create(
+                tenant=aurora_t, membro=m, regra=regra_tel_a,
+                pontos_saldo_ganhos=5, pontos_xp_ganhos=10,
+                descricao_extra='Telefone verificado via OTP',
+            )
+            ExtratoPontuacao.all_tenants.filter(pk=ep.pk).update(
+                data_recebimento=timezone.now() - timedelta(days=random.randint(0, 6), hours=random.randint(8, 22))
+            )
+
+        # Giros da roleta Aurora
+        nomes_premios_a = [p[0] for p in premios]
+        count_giros_a = 0
+        for m in membros_aurora:
+            for _ in range(random.randint(1, 3)):
+                ganhou = random.random() < 0.3
+                premio_nome = random.choice(nomes_premios_a) if ganhou else 'Não foi dessa vez'
+                pr = ParticipanteRoleta.objects.create(
+                    tenant=aurora_t, membro=m,
+                    nome=m.nome, cpf=m.cpf, email=m.email,
+                    telefone=m.telefone, cidade=m.cidade, estado=m.estado,
+                    premio=premio_nome, status='ganhou' if ganhou else 'reservado', saldo=m.saldo,
+                )
+                ParticipanteRoleta.all_tenants.filter(pk=pr.pk).update(
+                    data_criacao=timezone.now() - timedelta(days=random.randint(0, 6), hours=random.randint(8, 22))
+                )
+                count_giros_a += 1
+        print(f"  Aurora: {count_giros_a} giros, validacoes e datas distribuidas")
+
+        # Logs Aurora
+        logs_aurora = [
+            ('INFO', 'leads', 'Novo provedor identificado via LinkedIn'),
+            ('INFO', 'crm', 'Demo agendada com NetFibra Telecom'),
+            ('WARNING', 'suporte', 'SLA proximo de vencer no ticket #1'),
+            ('INFO', 'cs', 'Clube: 3 novos membros esta semana'),
+            ('ERROR', 'integracoes', 'Timeout ao sincronizar dados do provedor'),
+            ('INFO', 'marketing', 'Campanha ABRINT gerou 4 leads'),
+        ]
+        for nivel, modulo, msg in logs_aurora:
+            LogSistema.objects.create(tenant=aurora_t, nivel=nivel, modulo=modulo, mensagem=msg)
+        print(f"  {len(logs_aurora)} logs Aurora")
+
+        set_current_tenant(tenant)  # Volta para Megalink
+
+    # ── Logs do Sistema (Megalink) ─────────────────────────────────────
     logs = [
         ('INFO', 'leads', 'Sincronizacao concluida: 30 leads processados'),
         ('INFO', 'integracoes', 'HubSoft: 8 clientes sincronizados'),
@@ -613,22 +1125,23 @@ def run():
     ]
     for nivel, modulo, msg in logs:
         LogSistema.objects.create(tenant=tenant, nivel=nivel, modulo=modulo, mensagem=msg)
-    print(f"  {len(logs)} logs do sistema")
+    print(f"  {len(logs)} logs Megalink")
 
-    # ── Resumo ─────────────────────────────────────────────────────────
-    print("\n=== RESUMO ===")
-    print(f"  Leads: {LeadProspecto.all_tenants.filter(tenant=tenant).count()}")
-    print(f"  Prospectos: {Prospecto.all_tenants.filter(tenant=tenant).count()}")
-    print(f"  Historicos: {HistoricoContato.all_tenants.filter(tenant=tenant).count()}")
-    print(f"  Atendimentos: {AtendimentoFluxo.all_tenants.filter(tenant=tenant).count()}")
-    print(f"  Oportunidades CRM: {OportunidadeVenda.all_tenants.filter(tenant=tenant).count()}")
-    print(f"  Tarefas CRM: {TarefaCRM.all_tenants.filter(tenant=tenant).count()}")
-    print(f"  Clientes HubSoft: {ClienteHubsoft.objects.count()}")
-    print(f"  Membros Clube: {MembroClube.all_tenants.filter(tenant=tenant).count()}")
-    print(f"  Parceiros: {Parceiro.all_tenants.filter(tenant=tenant).count()}")
-    print(f"  Tickets: {Ticket.all_tenants.count()}")
-    print(f"  Campanhas: {CampanhaTrafego.all_tenants.filter(tenant=tenant).count()}")
-    print(f"  Notificacoes: {Notificacao.all_tenants.filter(tenant=tenant).count()}")
+    # ── Resumo Geral ───────────────────────────────────────────────────
+    print("\n=== RESUMO POR TENANT ===")
+    for t in Tenant.objects.all():
+        print(f"\n  [{t.nome}]")
+        print(f"    Leads: {LeadProspecto.all_tenants.filter(tenant=t).count()}")
+        print(f"    Prospectos: {Prospecto.all_tenants.filter(tenant=t).count()}")
+        print(f"    Historicos: {HistoricoContato.all_tenants.filter(tenant=t).count()}")
+        print(f"    Atendimentos: {AtendimentoFluxo.all_tenants.filter(tenant=t).count()}")
+        print(f"    Oportunidades CRM: {OportunidadeVenda.all_tenants.filter(tenant=t).count()}")
+        print(f"    Tarefas CRM: {TarefaCRM.all_tenants.filter(tenant=t).count()}")
+        print(f"    Membros Clube: {MembroClube.all_tenants.filter(tenant=t).count()}")
+        print(f"    Parceiros: {Parceiro.all_tenants.filter(tenant=t).count()}")
+        print(f"    Tickets: {Ticket.all_tenants.filter(tenant=t).count()}")
+        print(f"    Campanhas: {CampanhaTrafego.all_tenants.filter(tenant=t).count()}")
+        print(f"    Notificacoes: {Notificacao.all_tenants.filter(tenant=t).count()}")
     print("\nSistema populado com sucesso!")
 
 

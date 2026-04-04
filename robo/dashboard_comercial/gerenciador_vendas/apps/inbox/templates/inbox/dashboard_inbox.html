@@ -1,0 +1,222 @@
+{% extends 'sistema/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Inbox{% endblock %}
+
+{% block extra_css %}
+<style>
+    .inbox-stats {
+        display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px;
+    }
+    .inbox-stat-card {
+        background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 12px;
+        padding: 18px; display: flex; align-items: center; gap: 14px;
+    }
+    .inbox-stat-icon {
+        width: 44px; height: 44px; border-radius: 10px; display: flex;
+        align-items: center; justify-content: center; font-size: 18px;
+    }
+    .inbox-stat-icon.blue { background: #dbeafe; color: #2563eb; }
+    .inbox-stat-icon.yellow { background: #fef3c7; color: #d97706; }
+    .inbox-stat-icon.green { background: #dcfce7; color: #16a34a; }
+    .inbox-stat-icon.purple { background: #ede9fe; color: #7c3aed; }
+    .inbox-stat-icon.gray { background: #f1f5f9; color: #64748b; }
+    .inbox-stat-value { font-size: 24px; font-weight: 800; color: var(--text-main, #1e293b); }
+    .inbox-stat-label { font-size: 12px; color: var(--text-light, #94a3b8); }
+    .inbox-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .inbox-card {
+        background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 12px;
+        padding: 20px;
+    }
+    .inbox-card h3 {
+        font-size: 14px; font-weight: 700; margin: 0 0 16px 0; color: var(--text-main, #1e293b);
+    }
+    .inbox-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .inbox-table th {
+        text-align: left; padding: 8px 12px; font-weight: 600;
+        color: var(--text-light, #94a3b8); font-size: 11px; text-transform: uppercase;
+        border-bottom: 1px solid var(--border, #e2e8f0);
+    }
+    .inbox-table td {
+        padding: 10px 12px; border-bottom: 1px solid var(--border-light, #f1f5f9);
+    }
+    .equipe-badge {
+        display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px;
+        border-radius: 6px; font-size: 12px; font-weight: 500; color: #fff;
+    }
+
+    @media (max-width: 1024px) {
+        .inbox-stats { grid-template-columns: repeat(3, 1fr); }
+        .inbox-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+        .inbox-stats { grid-template-columns: repeat(2, 1fr); }
+    }
+</style>
+{% endblock %}
+
+{% block sidebar %}
+    <div class="sidebar-section-label">ATENDIMENTO</div>
+    <a href="{% url 'inbox:inbox' %}" class="nav-item">
+        <i class="fas fa-comments"></i><span class="nav-text">Inbox</span>
+    </a>
+    <a href="{% url 'inbox:dashboard' %}" class="nav-item active">
+        <i class="fas fa-chart-line"></i><span class="nav-text">Dashboard</span>
+    </a>
+
+    <div class="sidebar-section-label" style="margin-top:12px;">SUPORTE</div>
+    <a href="{% url 'suporte:dashboard' %}" class="nav-item">
+        <i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span>
+    </a>
+    <a href="{% url 'suporte:ticket_lista' %}" class="nav-item">
+        <i class="fas fa-list"></i><span class="nav-text">Tickets</span>
+    </a>
+    <a href="{% url 'suporte:ticket_criar' %}" class="nav-item">
+        <i class="fas fa-plus-circle"></i><span class="nav-text">Novo Ticket</span>
+    </a>
+
+    <div class="sidebar-section-label" style="margin-top:12px;">CONFIGURAÇÕES</div>
+    <a href="{% url 'inbox:configuracoes' %}" class="nav-item">
+        <i class="fas fa-cog"></i><span class="nav-text">Configurações</span>
+    </a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 style="font-size:20px;font-weight:700;margin:0;">
+        <i class="fas fa-chart-line" style="color:var(--primary);margin-right:8px;"></i> Dashboard do Inbox
+    </h1>
+</div>
+
+<!-- KPIs -->
+<div class="inbox-stats">
+    <div class="inbox-stat-card">
+        <div class="inbox-stat-icon blue"><i class="fas fa-comments"></i></div>
+        <div><div class="inbox-stat-value">{{ abertas }}</div><div class="inbox-stat-label">Abertas</div></div>
+    </div>
+    <div class="inbox-stat-card">
+        <div class="inbox-stat-icon yellow"><i class="fas fa-clock"></i></div>
+        <div><div class="inbox-stat-value">{{ pendentes }}</div><div class="inbox-stat-label">Pendentes</div></div>
+    </div>
+    <div class="inbox-stat-card">
+        <div class="inbox-stat-icon green"><i class="fas fa-check-circle"></i></div>
+        <div><div class="inbox-stat-value">{{ resolvidas_hoje }}</div><div class="inbox-stat-label">Resolvidas Hoje</div></div>
+    </div>
+    <div class="inbox-stat-card">
+        <div class="inbox-stat-icon purple"><i class="fas fa-stopwatch"></i></div>
+        <div>
+            <div class="inbox-stat-value">
+                {% if avg_primeira_resposta %}
+                    {% widthratio avg_primeira_resposta 60 1 %}min
+                {% else %}
+                    —
+                {% endif %}
+            </div>
+            <div class="inbox-stat-label">Tempo Medio 1a Resposta</div>
+        </div>
+    </div>
+    <div class="inbox-stat-card">
+        <div class="inbox-stat-icon gray"><i class="fas fa-inbox"></i></div>
+        <div><div class="inbox-stat-value">{{ total_conversas }}</div><div class="inbox-stat-label">Total Conversas</div></div>
+    </div>
+</div>
+
+<!-- Gráfico + Volume por canal -->
+<div class="inbox-grid">
+    <div class="inbox-card">
+        <h3><i class="fas fa-chart-area" style="margin-right:6px;"></i> Volume (últimos 30 dias)</h3>
+        <canvas id="volumeChart" height="200"></canvas>
+    </div>
+    <div class="inbox-card">
+        <h3><i class="fas fa-plug" style="margin-right:6px;"></i> Por Canal</h3>
+        <table class="inbox-table">
+            <thead><tr><th>Canal</th><th>Conversas</th></tr></thead>
+            <tbody>
+            {% for c in por_canal %}
+            <tr><td>{{ c.canal__nome }}</td><td><strong>{{ c.total }}</strong></td></tr>
+            {% empty %}
+            <tr><td colspan="2" style="color:var(--text-light);">Sem dados</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        {% if por_equipe %}
+        <h3 style="margin-top:20px;"><i class="fas fa-users" style="margin-right:6px;"></i> Por Equipe</h3>
+        {% for eq in por_equipe %}
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-light,#f1f5f9);">
+            <span class="equipe-badge" style="background:{{ eq.equipe__cor_hex|default:'#667eea' }}">{{ eq.equipe__nome }}</span>
+            <strong>{{ eq.total }}</strong>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</div>
+
+<!-- Ranking agentes -->
+{% if por_agente %}
+<div class="inbox-card">
+    <h3><i class="fas fa-trophy" style="margin-right:6px;color:#f59e0b;"></i> Ranking de Agentes (30 dias)</h3>
+    <table class="inbox-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Agente</th>
+                <th>Resolvidas</th>
+                <th>Tempo Medio 1a Resposta</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for a in por_agente %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ a.agente__first_name }} {{ a.agente__last_name }}</td>
+            <td><strong>{{ a.total_resolvidas }}</strong></td>
+            <td>
+                {% if a.avg_tempo %}
+                    {% widthratio a.avg_tempo 60 1 %}min
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+var data = {{ ultimos_30_json|safe }};
+var labels = data.map(function(d) { return d.dia; });
+var counts = data.map(function(d) { return d.count; });
+
+new Chart(document.getElementById('volumeChart'), {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'Conversas',
+            data: counts,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59,130,246,0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 2,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, ticks: { precision: 0 } },
+            x: { ticks: { maxTicksLimit: 10 } }
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -14,4 +14,9 @@ urlpatterns = [
     # Planos
     path('planos/', views.planos_view, name='planos'),
     path('planos/<int:plano_id>/', views.plano_detalhe_view, name='plano_detalhe'),
+
+    # Documentação e Produto
+    path('produto/', views.produto_view, name='produto'),
+    path('docs/', views.docs_view, name='docs'),
+    path('backlog/', views.backlog_view, name='backlog'),
 ]

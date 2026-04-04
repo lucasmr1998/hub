@@ -387,3 +387,87 @@ class TemplateNotificacaoFactory(factory.django.DjangoModelFactory):
     corpo_html = '<p>Corpo HTML</p>'
     corpo_texto = 'Corpo texto'
     tenant = factory.SubFactory(TenantFactory)
+
+
+# ──────────────────────────────────────────────
+# Factories — Automações
+# ──────────────────────────────────────────────
+
+from apps.marketing.automacoes.models import (
+    RegraAutomacao, CondicaoRegra, AcaoRegra, LogExecucao,
+    NodoFluxo, ConexaoNodo, ExecucaoPendente,
+)
+
+
+class RegraAutomacaoFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = RegraAutomacao
+
+    nome = factory.Sequence(lambda n: f'Regra Automação {n}')
+    evento = 'lead_criado'
+    ativa = True
+    tenant = factory.SubFactory(TenantFactory)
+
+
+class CondicaoRegraFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = CondicaoRegra
+
+    regra = factory.SubFactory(RegraAutomacaoFactory)
+    campo = 'lead.origem'
+    operador = 'igual'
+    valor = 'whatsapp'
+    tenant = factory.SubFactory(TenantFactory)
+
+
+class AcaoRegraFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = AcaoRegra
+
+    regra = factory.SubFactory(RegraAutomacaoFactory)
+    tipo = 'notificacao_sistema'
+    configuracao = 'Novo lead: {{nome}}'
+    tenant = factory.SubFactory(TenantFactory)
+
+
+class LogExecucaoFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = LogExecucao
+
+    regra = factory.SubFactory(RegraAutomacaoFactory)
+    status = 'sucesso'
+    resultado = 'OK'
+    tenant = factory.SubFactory(TenantFactory)
+
+
+class NodoFluxoFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = NodoFluxo
+
+    regra = factory.SubFactory(RegraAutomacaoFactory)
+    tipo = 'action'
+    subtipo = 'enviar_whatsapp'
+    configuracao = factory.LazyFunction(lambda: {'template': 'Olá {{nome}}!'})
+    tenant = factory.SubFactory(TenantFactory)
+
+
+class ConexaoNodoFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = ConexaoNodo
+
+    regra = factory.SubFactory(RegraAutomacaoFactory)
+    nodo_origem = factory.SubFactory(NodoFluxoFactory)
+    nodo_destino = factory.SubFactory(NodoFluxoFactory)
+    tipo_saida = 'default'
+    tenant = factory.SubFactory(TenantFactory)
+
+
+class ExecucaoPendenteFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = ExecucaoPendente
+
+    regra = factory.SubFactory(RegraAutomacaoFactory)
+    data_agendada = factory.LazyFunction(timezone.now)
+    status = 'pendente'
+    contexto_json = factory.LazyFunction(dict)
+    tenant = factory.SubFactory(TenantFactory)

@@ -45,7 +45,6 @@ class CampanhaTrafego(TenantMixin):
 
     codigo = models.CharField(
         max_length=50,
-        unique=True,
         verbose_name="Código Único",
         help_text="Código identificador único (ex: BF2024, CUPOM50)"
     )
@@ -198,6 +197,7 @@ class CampanhaTrafego(TenantMixin):
         verbose_name = "Campanha de Tráfego"
         verbose_name_plural = "📢 Campanhas de Tráfego"
         ordering = ['-ativa', 'ordem_exibicao', 'nome']
+        unique_together = ('tenant', 'codigo')
         indexes = [
             models.Index(fields=['codigo']),
             models.Index(fields=['ativa']),

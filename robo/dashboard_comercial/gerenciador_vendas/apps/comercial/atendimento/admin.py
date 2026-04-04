@@ -263,7 +263,7 @@ class FluxoAtendimentoAdmin(admin.ModelAdmin):
         except (TypeError, AttributeError):
             return "Erro ao carregar estatísticas"
 
-        add_questao_url = f"/admin/vendas_web/questaofluxo/add/?fluxo={obj.id}"
+        add_questao_url = f"/admin/atendimento/questaofluxo/add/?fluxo={obj.id}"
 
         html = f"""
         <div style="background:#f8f9fa;padding:15px;border-radius:8px;border:1px solid #dee2e6;">

@@ -17,7 +17,7 @@ from django.utils import timezone
 
 from apps.sistema.decorators import api_token_required
 from apps.marketing.campanhas.models import CampanhaTrafego, DeteccaoCampanha
-from vendas_web.models import LeadProspecto
+from apps.comercial.leads.models import LeadProspecto
 
 logger = logging.getLogger(__name__)
 

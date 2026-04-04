@@ -322,35 +322,8 @@ class StatusConfiguravelAdmin(admin.ModelAdmin):
 # ============================================================================
 
 class UserAdmin(BaseUserAdmin):
-    """Admin customizado para User com campo telefone"""
-
-    fieldsets = BaseUserAdmin.fieldsets + (
-        ('Informações de Contato', {
-            'fields': ('telefone',)
-        }),
-    )
-
-    add_fieldsets = BaseUserAdmin.add_fieldsets + (
-        ('Informações de Contato', {
-            'fields': ('telefone',)
-        }),
-    )
-
-    list_display = BaseUserAdmin.list_display + ('telefone',)
-
-    search_fields = BaseUserAdmin.search_fields + ('telefone',)
-
-    def telefone_formatado(self, obj):
-        """Exibe telefone formatado"""
-        if obj.telefone:
-            numeros = ''.join(filter(str.isdigit, obj.telefone))
-            if len(numeros) >= 10:
-                if len(numeros) == 11:
-                    return f"({numeros[:2]}) {numeros[2:7]}-{numeros[7:]}"
-                elif len(numeros) == 10:
-                    return f"({numeros[:2]}) {numeros[2:6]}-{numeros[6:]}"
-        return obj.telefone or '-'
-    telefone_formatado.short_description = 'Telefone'
+    """Admin customizado para User — telefone migrado para PerfilUsuario"""
+    pass
 
 
 # Desregistrar o admin padrao do User e registrar o customizado

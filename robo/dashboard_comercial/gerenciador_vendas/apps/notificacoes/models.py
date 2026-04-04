@@ -20,7 +20,6 @@ class TipoNotificacao(TenantMixin):
     codigo = models.CharField(
         max_length=50,
         choices=TIPOS,
-        unique=True,
         verbose_name="Código"
     )
     nome = models.CharField(
@@ -60,6 +59,7 @@ class TipoNotificacao(TenantMixin):
         verbose_name = "Tipo de Notificação"
         verbose_name_plural = "📢 01. Tipos de Notificação"
         ordering = ['nome']
+        unique_together = ('tenant', 'codigo')
 
     def __str__(self):
         return self.nome
@@ -75,7 +75,6 @@ class CanalNotificacao(TenantMixin):
     codigo = models.CharField(
         max_length=20,
         choices=CANAIS,
-        unique=True,
         verbose_name="Código"
     )
     nome = models.CharField(
@@ -102,6 +101,7 @@ class CanalNotificacao(TenantMixin):
         verbose_name = "Canal de Notificação"
         verbose_name_plural = "📱 02. Canais de Notificação"
         ordering = ['nome']
+        unique_together = ('tenant', 'codigo')
 
     def __str__(self):
         return self.nome

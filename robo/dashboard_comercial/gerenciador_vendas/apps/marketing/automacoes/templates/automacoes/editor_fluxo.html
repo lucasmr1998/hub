@@ -1,0 +1,433 @@
+{% extends 'sistema/base.html' %}
+
+{% block title %}Editor — {{ regra.nome }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow@0.0.59/dist/drawflow.min.css">
+<style>
+/* ── Layout ── */
+.editor-layout { display:flex; height:calc(100vh - 160px); }
+.editor-sidebar { width:240px; background:var(--bg-white); border:1px solid var(--border); border-radius:10px 0 0 10px; overflow-y:auto; padding:16px; flex-shrink:0; }
+.editor-canvas { flex:1; position:relative; background:#f8fafc; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+.editor-config { width:320px; background:var(--bg-white); border:1px solid var(--border); border-radius:0 10px 10px 0; overflow-y:auto; padding:16px; display:none; flex-shrink:0; }
+
+/* ── Toolbar ── */
+.editor-toolbar { display:flex; align-items:center; gap:12px; padding:10px 16px; background:var(--bg-white); border:1px solid var(--border); border-radius:10px; margin-bottom:14px; }
+.editor-toolbar h2 { font-size:15px; font-weight:700; color:var(--text-main); flex:1; margin:0; }
+
+/* ── Draggable nodes ── */
+.node-section { margin-bottom:16px; }
+.node-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); margin-bottom:8px; }
+.node-draggable { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:500; color:var(--text-secondary); cursor:grab; transition:all .15s; border:1px solid transparent; margin-bottom:4px; }
+.node-draggable:hover { background:var(--bg-subtle); border-color:var(--border); }
+.node-draggable:active { cursor:grabbing; }
+.node-draggable i { width:20px; text-align:center; }
+
+/* ── Drawflow overrides ── */
+#drawflow { width:100%; height:100%; }
+.drawflow .drawflow-node { border-radius:10px; border:2px solid var(--border); background:var(--bg-white); min-width:180px; font-family:'Inter',sans-serif; font-size:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+.drawflow .drawflow-node.selected { border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,.15); }
+.drawflow .drawflow-node .title-box { background:var(--bg-subtle); padding:8px 12px; font-weight:700; font-size:12px; border-radius:8px 8px 0 0; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:6px; }
+.drawflow .drawflow-node .box { padding:10px 12px; font-size:11px; color:var(--text-muted); }
+.drawflow .connection .main-path { stroke:var(--primary); stroke-width:2; }
+.drawflow .drawflow-node .input, .drawflow .drawflow-node .output { width:12px; height:12px; }
+.drawflow .drawflow-node .output { background:var(--primary); }
+
+/* Node type colors */
+.drawflow .drawflow-node[data-tipo="trigger"] .title-box { background:#eff6ff; color:#1e40af; }
+.drawflow .drawflow-node[data-tipo="condition"] .title-box { background:#fef3c7; color:#92400e; }
+.drawflow .drawflow-node[data-tipo="action"] .title-box { background:#ecfdf5; color:#065f46; }
+.drawflow .drawflow-node[data-tipo="delay"] .title-box { background:#f5f3ff; color:#5b21b6; }
+
+/* Config panel */
+.config-group { margin-bottom:14px; }
+.config-group label { display:block; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; letter-spacing:.03em; }
+.config-group input, .config-group select, .config-group textarea { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:12px; font-family:'Inter',sans-serif; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Toolbar -->
+<div class="editor-toolbar">
+    <a href="{% url 'marketing_automacoes:lista' %}" style="color:var(--text-muted); font-size:16px;"><i class="fas fa-arrow-left"></i></a>
+    <h2><i class="fas fa-project-diagram" style="color:var(--primary);"></i> {{ regra.nome }}</h2>
+    <span class="badge badge-{% if regra.ativa %}success{% else %}warning{% endif %}" style="font-size:11px;">{% if regra.ativa %}Ativa{% else %}Pausada{% endif %}</span>
+    <button onclick="salvarFluxo()" class="btn-primary" style="padding:6px 16px; font-size:12px;">
+        <i class="fas fa-save"></i> Salvar
+    </button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow@0.0.59/dist/drawflow.min.js"></script>
+
+<div class="editor-layout">
+    <!-- Sidebar: paleta de nós -->
+    <div class="editor-sidebar">
+        <div class="node-section">
+            <div class="node-section-title">Gatilhos</div>
+            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="trigger" data-subtipo="{{ regra.evento }}" data-nome="{{ regra.get_evento_display }}">
+                <i class="fas fa-bolt" style="color:#f59e0b;"></i> {{ regra.get_evento_display }}
+            </div>
+        </div>
+
+        <div class="node-section">
+            <div class="node-section-title">Condições</div>
+            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="condition" data-subtipo="campo_check" data-nome="Verificar Campo">
+                <i class="fas fa-code-branch" style="color:#f59e0b;"></i> Verificar Campo
+            </div>
+        </div>
+
+        <div class="node-section">
+            <div class="node-section-title">Ações</div>
+            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="enviar_whatsapp" data-nome="Enviar WhatsApp">
+                <i class="fab fa-whatsapp" style="color:#25D366;"></i> Enviar WhatsApp
+            </div>
+            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="enviar_email" data-nome="Enviar E-mail">
+                <i class="fas fa-envelope" style="color:#3b82f6;"></i> Enviar E-mail
+            </div>
+            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="notificacao_sistema" data-nome="Notificação">
+                <i class="fas fa-bell" style="color:#f59e0b;"></i> Notificação
+            </div>
+            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="criar_tarefa" data-nome="Criar Tarefa">
+                <i class="fas fa-tasks" style="color:#3b82f6;"></i> Criar Tarefa
+            </div>
+            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="mover_estagio" data-nome="Mover Estágio">
+                <i class="fas fa-columns" style="color:#8b5cf6;"></i> Mover Estágio
+            </div>
+            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="dar_pontos" data-nome="Dar Pontos">
+                <i class="fas fa-star" style="color:#f59e0b;"></i> Dar Pontos
+            </div>
+            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="webhook" data-nome="Webhook">
+                <i class="fas fa-plug" style="color:#64748b;"></i> Webhook
+            </div>
+        </div>
+
+        <div class="node-section">
+            <div class="node-section-title">Controle</div>
+            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="delay" data-subtipo="delay" data-nome="Atraso">
+                <i class="fas fa-clock" style="color:#8b5cf6;"></i> Atraso
+            </div>
+        </div>
+    </div>
+
+    <!-- Canvas Drawflow -->
+    <div class="editor-canvas">
+        <div id="drawflow" ondrop="dropNode(event)" ondragover="event.preventDefault()"></div>
+    </div>
+
+    <!-- Config panel -->
+    <div class="editor-config" id="configPanel">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+            <h3 style="font-size:14px; font-weight:700; color:var(--text-main); margin:0;" id="configTitle">Configuração</h3>
+            <button onclick="fecharConfig()" style="background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:14px;"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="configBody"></div>
+    </div>
+</div>
+
+<script>
+// ── Drawflow init ──
+const container = document.getElementById('drawflow');
+const editor = new Drawflow(container);
+editor.reroute = true;
+editor.start();
+
+let nodeCounter = 0;
+let selectedNodeId = null;
+
+// ── Drag & Drop ──
+function dragNode(ev) {
+    ev.dataTransfer.setData('tipo', ev.target.dataset.tipo);
+    ev.dataTransfer.setData('subtipo', ev.target.dataset.subtipo);
+    ev.dataTransfer.setData('nome', ev.target.dataset.nome);
+}
+
+function dropNode(ev) {
+    ev.preventDefault();
+    const tipo = ev.dataTransfer.getData('tipo');
+    const subtipo = ev.dataTransfer.getData('subtipo');
+    const nome = ev.dataTransfer.getData('nome');
+
+    const rect = container.getBoundingClientRect();
+    const x = ev.clientX - rect.left;
+    const y = ev.clientY - rect.top;
+
+    addNodeToEditor(tipo, subtipo, nome, x, y);
+}
+
+function addNodeToEditor(tipo, subtipo, nome, x, y) {
+    nodeCounter++;
+    const id = 'node_' + nodeCounter;
+
+    // Definir inputs/outputs baseado no tipo
+    let inputs = 1, outputs = 1;
+    if (tipo === 'trigger') { inputs = 0; outputs = 1; }
+    if (tipo === 'condition') { inputs = 1; outputs = 2; }  // 2 saídas: true/false
+
+    // Ícones por tipo
+    const icones = {
+        'trigger': '<i class="fas fa-bolt" style="color:#f59e0b;"></i>',
+        'condition': '<i class="fas fa-code-branch" style="color:#f59e0b;"></i>',
+        'action': '<i class="fas fa-play" style="color:#16a34a;"></i>',
+        'delay': '<i class="fas fa-clock" style="color:#8b5cf6;"></i>',
+    };
+    const iconeSubtipos = {
+        'enviar_whatsapp': '<i class="fab fa-whatsapp" style="color:#25D366;"></i>',
+        'criar_tarefa': '<i class="fas fa-tasks" style="color:#3b82f6;"></i>',
+        'mover_estagio': '<i class="fas fa-columns" style="color:#8b5cf6;"></i>',
+        'notificacao_sistema': '<i class="fas fa-bell" style="color:#f59e0b;"></i>',
+        'dar_pontos': '<i class="fas fa-star" style="color:#f59e0b;"></i>',
+        'webhook': '<i class="fas fa-plug" style="color:#64748b;"></i>',
+        'enviar_email': '<i class="fas fa-envelope" style="color:#3b82f6;"></i>',
+    };
+
+    const icone = iconeSubtipos[subtipo] || icones[tipo] || '';
+    let html = `<div class="title-box">${icone} ${nome}</div>`;
+
+    if (tipo === 'condition') {
+        html += `<div class="box" style="font-size:11px;color:var(--text-muted);">
+            <div style="margin-bottom:4px;">Saída 1: ✅ Sim</div>
+            <div>Saída 2: ❌ Não</div>
+        </div>`;
+    } else if (tipo === 'delay') {
+        html += `<div class="box">⏱ Configurar tempo</div>`;
+    } else if (tipo === 'action') {
+        html += `<div class="box">Clique para configurar</div>`;
+    }
+
+    const nodeId = editor.addNode(
+        id, inputs, outputs, x, y, id,
+        { tipo, subtipo, nome, config: {} },
+        html
+    );
+
+    // Marcar com data-tipo para CSS
+    setTimeout(() => {
+        const el = document.querySelector(`#node-${nodeId}`);
+        if (el) el.setAttribute('data-tipo', tipo);
+    }, 50);
+
+    return nodeId;
+}
+
+// ── Seleção de nó (config panel) ──
+editor.on('nodeSelected', function(nodeId) {
+    selectedNodeId = nodeId;
+    const node = editor.getNodeFromId(nodeId);
+    if (node && node.data) {
+        abrirConfig(nodeId, node.data);
+    }
+});
+
+// Double-click também abre config
+editor.on('nodeMoved', function(nodeId) {
+    // mantém selecionado após mover
+});
+
+editor.on('nodeUnselected', function() {
+    selectedNodeId = null;
+    fecharConfig();
+});
+
+function abrirConfig(nodeId, data) {
+    const panel = document.getElementById('configPanel');
+    const body = document.getElementById('configBody');
+    const title = document.getElementById('configTitle');
+
+    title.textContent = data.nome || 'Configuração';
+    panel.style.display = 'block';
+
+    let html = '';
+
+    if (data.tipo === 'condition') {
+        html = `
+            <div class="config-group"><label>Campo</label>
+                <select id="cfg_campo" onchange="salvarConfigNodo()">
+                    <option value="">Selecione...</option>
+                    <optgroup label="Lead">
+                        <option value="lead.origem" ${data.config.campo==='lead.origem'?'selected':''}>Origem</option>
+                        <option value="lead.score_qualificacao" ${data.config.campo==='lead.score_qualificacao'?'selected':''}>Score</option>
+                        <option value="lead.cidade" ${data.config.campo==='lead.cidade'?'selected':''}>Cidade</option>
+                        <option value="lead.estado" ${data.config.campo==='lead.estado'?'selected':''}>Estado</option>
+                        <option value="lead.valor" ${data.config.campo==='lead.valor'?'selected':''}>Valor</option>
+                    </optgroup>
+                    <optgroup label="CRM">
+                        <option value="estagio" ${data.config.campo==='estagio'?'selected':''}>Estágio</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div class="config-group"><label>Operador</label>
+                <select id="cfg_operador" onchange="salvarConfigNodo()">
+                    <option value="igual" ${data.config.operador==='igual'?'selected':''}>é igual a</option>
+                    <option value="diferente" ${data.config.operador==='diferente'?'selected':''}>é diferente de</option>
+                    <option value="contem" ${data.config.operador==='contem'?'selected':''}>contém</option>
+                    <option value="maior" ${data.config.operador==='maior'?'selected':''}>maior que</option>
+                    <option value="menor" ${data.config.operador==='menor'?'selected':''}>menor que</option>
+                </select>
+            </div>
+            <div class="config-group"><label>Valor</label>
+                <input type="text" id="cfg_valor" value="${data.config.valor||''}" onchange="salvarConfigNodo()" placeholder="Ex: whatsapp, 7, Teresina">
+            </div>
+        `;
+    } else if (data.tipo === 'action') {
+        html = `
+            <div class="config-group"><label>Mensagem / Config</label>
+                <textarea id="cfg_template" rows="5" onchange="salvarConfigNodo()" placeholder="Olá {{nome}}, bem vindo!">${data.config.template||''}</textarea>
+            </div>
+        `;
+    } else if (data.tipo === 'delay') {
+        html = `
+            <div class="config-group"><label>Tempo</label>
+                <div style="display:flex;gap:8px;">
+                    <input type="number" id="cfg_delay_valor" value="${data.config.valor||30}" min="1" style="width:80px;" onchange="salvarConfigNodo()">
+                    <select id="cfg_delay_unidade" onchange="salvarConfigNodo()">
+                        <option value="minutos" ${data.config.unidade==='minutos'?'selected':''}>Minutos</option>
+                        <option value="horas" ${data.config.unidade==='horas'?'selected':''}>Horas</option>
+                        <option value="dias" ${data.config.unidade==='dias'?'selected':''}>Dias</option>
+                    </select>
+                </div>
+            </div>
+        `;
+    } else if (data.tipo === 'trigger') {
+        html = `<p style="font-size:12px;color:var(--text-muted);">Gatilho: ${data.nome}. Conecte aos próximos nós.</p>`;
+    }
+
+    // Botão deletar
+    html += `<div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
+        <button onclick="deletarNodo()" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--danger); background:none; color:var(--danger); font-size:12px; font-weight:600; cursor:pointer;">
+            <i class="fas fa-trash"></i> Remover nó
+        </button>
+    </div>`;
+
+    body.innerHTML = html;
+}
+
+function fecharConfig() {
+    document.getElementById('configPanel').style.display = 'none';
+}
+
+function salvarConfigNodo() {
+    if (!selectedNodeId) return;
+    const nodeData = editor.getNodeFromId(selectedNodeId);
+    const data = nodeData.data;
+
+    if (data.tipo === 'condition') {
+        data.config = {
+            campo: document.getElementById('cfg_campo')?.value || '',
+            operador: document.getElementById('cfg_operador')?.value || 'igual',
+            valor: document.getElementById('cfg_valor')?.value || '',
+        };
+    } else if (data.tipo === 'action') {
+        data.config = {
+            template: document.getElementById('cfg_template')?.value || '',
+        };
+    } else if (data.tipo === 'delay') {
+        data.config = {
+            valor: parseInt(document.getElementById('cfg_delay_valor')?.value || 30),
+            unidade: document.getElementById('cfg_delay_unidade')?.value || 'minutos',
+        };
+    }
+
+    editor.updateNodeDataFromId(selectedNodeId, data);
+}
+
+function deletarNodo() {
+    if (selectedNodeId) {
+        editor.removeNodeId('node-' + selectedNodeId);
+        fecharConfig();
+    }
+}
+
+// ── Salvar fluxo ──
+function salvarFluxo() {
+    const drawflowData = editor.export();
+    const nodos = [];
+    const conexoes = [];
+
+    // Extrair nodos
+    for (const [moduleKey, moduleData] of Object.entries(drawflowData.drawflow)) {
+        for (const [nodeId, node] of Object.entries(moduleData.data)) {
+            nodos.push({
+                id_temp: nodeId,
+                tipo: node.data.tipo,
+                subtipo: node.data.subtipo,
+                config: node.data.config || {},
+                pos_x: Math.round(node.pos_x),
+                pos_y: Math.round(node.pos_y),
+                ordem: parseInt(nodeId),
+            });
+
+            // Extrair conexões das outputs
+            for (const [outputKey, outputConns] of Object.entries(node.outputs)) {
+                for (const conn of outputConns.connections) {
+                    let tipoSaida = 'default';
+                    if (node.data.tipo === 'condition') {
+                        tipoSaida = outputKey === 'output_1' ? 'true' : 'false';
+                    }
+                    conexoes.push({
+                        origem: nodeId,
+                        destino: conn.node,
+                        tipo_saida: tipoSaida,
+                    });
+                }
+            }
+        }
+    }
+
+    fetch('{% url "marketing_automacoes:salvar_fluxo" regra.pk %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: JSON.stringify({
+            drawflow_state: drawflowData,
+            nodos: nodos,
+            conexoes: conexoes,
+        }),
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.ok) {
+            // Feedback visual
+            const btn = document.querySelector('.btn-primary');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> Salvo!';
+            btn.style.background = 'var(--success)';
+            setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 2000);
+        } else {
+            alert(d.erro || 'Erro ao salvar');
+        }
+    });
+}
+
+// ── Carregar fluxo existente ──
+const fluxoSalvo = {{ fluxo_json|safe }};
+if (fluxoSalvo && fluxoSalvo.drawflow) {
+    try {
+        editor.import(fluxoSalvo);
+        // Restaurar data-tipo nos nós para CSS
+        setTimeout(() => {
+            for (const [moduleKey, moduleData] of Object.entries(fluxoSalvo.drawflow)) {
+                for (const [nodeId, node] of Object.entries(moduleData.data)) {
+                    const el = document.querySelector(`#node-${nodeId}`);
+                    if (el && node.data && node.data.tipo) {
+                        el.setAttribute('data-tipo', node.data.tipo);
+                    }
+                }
+            }
+        }, 100);
+    } catch(e) {
+        console.warn('Erro ao importar fluxo:', e);
+    }
+}
+
+// ── Delete com tecla ──
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Delete' && selectedNodeId) {
+        deletarNodo();
+    }
+});
+</script>
+
+{% endblock %}

@@ -17,13 +17,8 @@ import os
 logger = logging.getLogger(__name__)
 
 # Models
-from vendas_web.models import (
-    LeadProspecto,
-    Prospecto,
-    HistoricoContato,
-    FluxoAtendimento,
-    AtendimentoFluxo,
-)
+from apps.comercial.leads.models import LeadProspecto, Prospecto, HistoricoContato
+from apps.comercial.atendimento.models import FluxoAtendimento, AtendimentoFluxo
 from apps.integracoes.models import ClienteHubsoft, ServicoClienteHubsoft
 
 
@@ -60,7 +55,7 @@ def vendas_view(request):
 @login_required(login_url='sistema:login')
 def relatorios_view(request):
     """View para a página principal de relatórios"""
-    from vendas_web.models import LeadProspecto, Prospecto, HistoricoContato
+    from apps.comercial.leads.models import LeadProspecto, Prospecto, HistoricoContato
     from apps.integracoes.models import ClienteHubsoft, ServicoClienteHubsoft
     from django.db.models import Count, Q, Avg, Sum
     from datetime import datetime, timedelta
@@ -249,7 +244,7 @@ def relatorios_view(request):
 
 def relatorio_leads_view(request):
     """Relatorio focado em Leads — reutiliza dados da view principal"""
-    from vendas_web.models import LeadProspecto
+    from apps.comercial.leads.models import LeadProspecto
     from django.db.models import Count
     from datetime import datetime, timedelta
     import json
@@ -332,7 +327,7 @@ def relatorio_clientes_view(request):
 
 def relatorio_atendimentos_view(request):
     """Relatorio focado em Atendimentos — somente leitura"""
-    from vendas_web.models import HistoricoContato
+    from apps.comercial.leads.models import HistoricoContato
     from django.db.models import Count
     from datetime import datetime, timedelta
     import json

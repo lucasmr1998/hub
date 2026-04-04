@@ -239,7 +239,7 @@ function removerMembro(membroPk, nome) {
 }
 
 function dispararCampanha() {
-  if (!confirm(`Disparar campanha para ${{{ segmento.total_leads }}} leads?`)) return;
+  if (!confirm('Disparar campanha para {{ segmento.total_leads }} leads?')) return;
   fetch(`/crm/segmentos/${SEG_ID}/disparar-campanha/`, {
     method: 'POST',
     headers: { 'X-CSRFToken': CSRF }

@@ -402,7 +402,7 @@ class LeadProspectoAdmin(admin.ModelAdmin):
         erro = 0
         for lead in leads_aptos:
             try:
-                from vendas_web.services.contrato_service import anexar_documentos_e_aceitar_contrato
+                from apps.comercial.cadastro.services.contrato_service import anexar_documentos_e_aceitar_contrato
                 resultado = anexar_documentos_e_aceitar_contrato(lead)
                 if resultado:
                     sucesso += 1

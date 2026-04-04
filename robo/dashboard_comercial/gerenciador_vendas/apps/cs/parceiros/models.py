@@ -7,7 +7,7 @@ from apps.sistema.validators import tenant_upload_path
 class CategoriaParceiro(TenantMixin):
     """Categoria para agrupar parceiros (ex: Alimentacao, Beleza, Esporte)."""
     nome = models.CharField(max_length=100)
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField()
     icone = models.CharField(max_length=50, default='fas fa-tag', help_text="Classe FontAwesome")
     ordem = models.IntegerField(default=0)
     ativo = models.BooleanField(default=True)
@@ -20,6 +20,7 @@ class CategoriaParceiro(TenantMixin):
         verbose_name_plural = "Categorias de Parceiros"
         ordering = ['ordem', 'nome']
         db_table = 'parceiros_categoriaparceiro'
+        unique_together = ('tenant', 'slug')
 
 
 class Parceiro(TenantMixin):
@@ -60,7 +61,7 @@ class CupomDesconto(TenantMixin):
     titulo = models.CharField(max_length=255, help_text="Ex: 20% off no Restaurante X")
     descricao = models.TextField(blank=True)
     imagem = models.ImageField(upload_to=tenant_upload_path, null=True, blank=True)
-    codigo = models.CharField(max_length=50, unique=True)
+    codigo = models.CharField(max_length=50)
     tipo_desconto = models.CharField(max_length=15, choices=TIPO_DESCONTO)
     valor_desconto = models.DecimalField(max_digits=10, decimal_places=2)
     modalidade = models.CharField(max_length=15, choices=MODALIDADE_CHOICES, default='gratuito')
@@ -105,6 +106,7 @@ class CupomDesconto(TenantMixin):
         verbose_name_plural = "Cupons de Desconto"
         ordering = ['-data_cadastro']
         db_table = 'parceiros_cupomdesconto'
+        unique_together = ('tenant', 'codigo')
 
 
 class ResgateCupom(TenantMixin):
@@ -117,7 +119,7 @@ class ResgateCupom(TenantMixin):
 
     membro = models.ForeignKey('clube.MembroClube', on_delete=models.CASCADE, related_name='resgates_cupom')
     cupom = models.ForeignKey(CupomDesconto, on_delete=models.CASCADE, related_name='resgates')
-    codigo_unico = models.CharField(max_length=20, unique=True)
+    codigo_unico = models.CharField(max_length=20)
     pontos_gastos = models.IntegerField(default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='resgatado', db_index=True)
     valor_compra = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Valor total da compra no estabelecimento")
@@ -132,3 +134,4 @@ class ResgateCupom(TenantMixin):
         verbose_name_plural = "Resgates de Cupom"
         ordering = ['-data_resgate']
         db_table = 'parceiros_resgatecupom'
+        unique_together = ('tenant', 'codigo_unico')

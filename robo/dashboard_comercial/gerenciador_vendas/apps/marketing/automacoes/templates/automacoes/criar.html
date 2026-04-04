@@ -1,0 +1,320 @@
+{% extends 'sistema/base.html' %}
+
+{% block title %}Nova Automação - Marketing{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
+    <a href="{% url 'marketing_automacoes:lista' %}" style="color:var(--text-muted); font-size:18px;"><i class="fas fa-arrow-left"></i></a>
+    <div>
+        <h1 class="page-title">Nova Automação</h1>
+        <p class="page-subtitle">Configure o evento, as condições e as ações que serão executadas.</p>
+    </div>
+</div>
+
+<form method="post" id="form-automacao">
+{% csrf_token %}
+
+<!-- STEP 1: Nome e Descrição -->
+<div class="card" style="padding:20px; margin-bottom:16px;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+        <div style="width:28px; height:28px; background:var(--primary); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">1</div>
+        <h3 style="font-size:15px; font-weight:700; color:var(--text-main); margin:0;">Identificação</h3>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div>
+            <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">NOME DA AUTOMAÇÃO</label>
+            <input type="text" name="nome" placeholder="Ex: Boas vindas ao novo lead" style="width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:8px; font-size:14px;" required>
+        </div>
+        <div>
+            <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">DESCRIÇÃO (opcional)</label>
+            <input type="text" name="descricao" placeholder="O que essa automação faz?" style="width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:8px; font-size:14px;">
+        </div>
+    </div>
+</div>
+
+<!-- STEP 2: Evento (Quando) -->
+<div class="card" style="padding:20px; margin-bottom:16px;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+        <div style="width:28px; height:28px; background:var(--warning); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">2</div>
+        <h3 style="font-size:15px; font-weight:700; color:var(--text-main); margin:0;"><i class="fas fa-bolt" style="color:var(--warning);"></i> Quando isso acontecer...</h3>
+    </div>
+
+    <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:8px;">EVENTO GATILHO</label>
+    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px;" id="eventos-grid">
+
+        <label class="evento-card" onclick="selecionarEvento(this)">
+            <input type="radio" name="evento" value="lead_criado" style="display:none;">
+            <div class="evento-icon" style="background:#eff6ff;"><i class="fas fa-user-plus" style="color:var(--primary);"></i></div>
+            <div class="evento-info">
+                <div class="evento-nome">Novo lead criado</div>
+                <div class="evento-desc">Quando um lead é cadastrado no sistema</div>
+            </div>
+        </label>
+
+        <label class="evento-card" onclick="selecionarEvento(this)">
+            <input type="radio" name="evento" value="lead_qualificado" style="display:none;">
+            <div class="evento-icon" style="background:#f0fdf4;"><i class="fas fa-star" style="color:var(--success);"></i></div>
+            <div class="evento-info">
+                <div class="evento-nome">Lead qualificado</div>
+                <div class="evento-desc">Quando o score do lead atinge o mínimo</div>
+            </div>
+        </label>
+
+        <label class="evento-card" onclick="selecionarEvento(this)">
+            <input type="radio" name="evento" value="lead_sem_contato" style="display:none;">
+            <div class="evento-icon" style="background:#fef3c7;"><i class="fas fa-clock" style="color:var(--warning);"></i></div>
+            <div class="evento-info">
+                <div class="evento-nome">Lead sem contato</div>
+                <div class="evento-desc">Quando um lead fica X dias sem interação</div>
+            </div>
+        </label>
+
+        <label class="evento-card" onclick="selecionarEvento(this)">
+            <input type="radio" name="evento" value="oportunidade_movida" style="display:none;">
+            <div class="evento-icon" style="background:#f5f3ff;"><i class="fas fa-columns" style="color:#8b5cf6;"></i></div>
+            <div class="evento-info">
+                <div class="evento-nome">Oportunidade movida</div>
+                <div class="evento-desc">Quando uma oportunidade muda de estágio</div>
+            </div>
+        </label>
+
+        <label class="evento-card" onclick="selecionarEvento(this)">
+            <input type="radio" name="evento" value="venda_aprovada" style="display:none;">
+            <div class="evento-icon" style="background:#f0fdf4;"><i class="fas fa-check-circle" style="color:var(--success);"></i></div>
+            <div class="evento-info">
+                <div class="evento-nome">Venda aprovada</div>
+                <div class="evento-desc">Quando um contrato é aprovado no HubSoft</div>
+            </div>
+        </label>
+
+        <label class="evento-card" onclick="selecionarEvento(this)">
+            <input type="radio" name="evento" value="cliente_aniversario" style="display:none;">
+            <div class="evento-icon" style="background:#fdf2f8;"><i class="fas fa-birthday-cake" style="color:#ec4899;"></i></div>
+            <div class="evento-info">
+                <div class="evento-nome">Aniversário de cliente</div>
+                <div class="evento-desc">Quando o cliente completa X dias/meses</div>
+            </div>
+        </label>
+
+        <label class="evento-card" onclick="selecionarEvento(this)">
+            <input type="radio" name="evento" value="indicacao_convertida" style="display:none;">
+            <div class="evento-icon" style="background:#ecfeff;"><i class="fas fa-share-alt" style="color:#06b6d4;"></i></div>
+            <div class="evento-info">
+                <div class="evento-nome">Indicação convertida</div>
+                <div class="evento-desc">Quando uma indicação vira cliente</div>
+            </div>
+        </label>
+
+        <label class="evento-card" onclick="selecionarEvento(this)">
+            <input type="radio" name="evento" value="tarefa_vencida" style="display:none;">
+            <div class="evento-icon" style="background:#fef2f2;"><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i></div>
+            <div class="evento-info">
+                <div class="evento-nome">Tarefa vencida</div>
+                <div class="evento-desc">Quando uma tarefa do CRM vence</div>
+            </div>
+        </label>
+
+        <label class="evento-card" onclick="selecionarEvento(this)">
+            <input type="radio" name="evento" value="docs_validados" style="display:none;">
+            <div class="evento-icon" style="background:#eff6ff;"><i class="fas fa-file-check" style="color:var(--primary);"></i></div>
+            <div class="evento-info">
+                <div class="evento-nome">Documentos validados</div>
+                <div class="evento-desc">Quando todos os docs do lead são aprovados</div>
+            </div>
+        </label>
+
+    </div>
+</div>
+
+<!-- STEP 3: Condições (Se) -->
+<div class="card" style="padding:20px; margin-bottom:16px;" id="section-condicoes">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+        <div style="width:28px; height:28px; background:var(--info); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">3</div>
+        <h3 style="font-size:15px; font-weight:700; color:var(--text-main); margin:0;"><i class="fas fa-filter" style="color:var(--info);"></i> Somente se... <span style="font-size:12px; font-weight:400; color:var(--text-muted);">(opcional)</span></h3>
+    </div>
+
+    <div id="condicoes-container">
+        <div class="condicao-row" style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+            <select name="condicao_campo[]" style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; min-width:180px;">
+                <option value="">Selecione o campo...</option>
+                <optgroup label="Lead">
+                    <option value="lead.origem">Origem do lead</option>
+                    <option value="lead.score">Score de qualificação</option>
+                    <option value="lead.cidade">Cidade</option>
+                    <option value="lead.estado">Estado</option>
+                    <option value="lead.valor">Valor do plano</option>
+                    <option value="lead.campanha">Campanha de origem</option>
+                </optgroup>
+                <optgroup label="CRM">
+                    <option value="crm.estagio">Estágio do pipeline</option>
+                    <option value="crm.pipeline">Pipeline</option>
+                    <option value="crm.responsavel">Responsável</option>
+                </optgroup>
+                <optgroup label="Cliente">
+                    <option value="cliente.plano">Plano contratado</option>
+                    <option value="cliente.dias_ativo">Dias como cliente</option>
+                </optgroup>
+            </select>
+
+            <select name="condicao_operador[]" style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px;">
+                <option value="igual">é igual a</option>
+                <option value="diferente">é diferente de</option>
+                <option value="contem">contém</option>
+                <option value="maior">é maior que</option>
+                <option value="menor">é menor que</option>
+                <option value="maior_igual">é maior ou igual a</option>
+                <option value="menor_igual">é menor ou igual a</option>
+            </select>
+
+            <input type="text" name="condicao_valor[]" placeholder="Valor" style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; flex:1;">
+
+            <button type="button" onclick="this.closest('.condicao-row').remove()" style="color:var(--danger); background:none; border:none; cursor:pointer; padding:6px; font-size:14px;"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+
+    <button type="button" onclick="adicionarCondicao()" style="background:none; border:1px dashed var(--border); border-radius:8px; padding:8px 16px; font-size:12px; color:var(--primary); cursor:pointer; font-weight:600; display:flex; align-items:center; gap:6px;">
+        <i class="fas fa-plus"></i> Adicionar condição
+    </button>
+</div>
+
+<!-- STEP 4: Ações (Então) -->
+<div class="card" style="padding:20px; margin-bottom:24px;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+        <div style="width:28px; height:28px; background:var(--success); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">4</div>
+        <h3 style="font-size:15px; font-weight:700; color:var(--text-main); margin:0;"><i class="fas fa-play" style="color:var(--success);"></i> Então executar...</h3>
+    </div>
+
+    <div id="acoes-container">
+        <div class="acao-item" style="border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+                <span style="background:var(--primary-light); color:var(--primary); font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px;">AÇÃO 1</span>
+                <div style="flex:1;"></div>
+                <button type="button" onclick="this.closest('.acao-item').remove()" style="color:var(--danger); background:none; border:none; cursor:pointer; font-size:13px;"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div>
+                    <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">TIPO DE AÇÃO</label>
+                    <select name="acao_tipo[]" onchange="configurarAcao(this)" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px;">
+                        <option value="">Selecione...</option>
+                        <optgroup label="Comunicação">
+                            <option value="enviar_whatsapp">Enviar WhatsApp</option>
+                            <option value="enviar_email">Enviar E-mail</option>
+                            <option value="notificacao_sistema">Notificação no sistema</option>
+                        </optgroup>
+                        <optgroup label="CRM">
+                            <option value="criar_tarefa">Criar tarefa no CRM</option>
+                            <option value="mover_estagio">Mover estágio no pipeline</option>
+                            <option value="atribuir_responsavel">Atribuir responsável</option>
+                        </optgroup>
+                        <optgroup label="CS / Fidelização">
+                            <option value="dar_pontos">Dar pontos no Clube</option>
+                            <option value="criar_indicacao">Registrar indicação</option>
+                        </optgroup>
+                        <optgroup label="Integração">
+                            <option value="webhook">Chamar webhook externo</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div class="acao-config-container">
+                    <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">CONFIGURAÇÃO</label>
+                    <textarea name="acao_config[]" placeholder="Será preenchido conforme o tipo de ação" rows="2" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; resize:vertical;"></textarea>
+                </div>
+            </div>
+
+            <!-- Delay opcional -->
+            <div style="margin-top:12px; display:flex; align-items:center; gap:8px;">
+                <label style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px; cursor:pointer;">
+                    <input type="checkbox" name="acao_delay_ativo[]" onchange="this.parentElement.nextElementSibling.style.display=this.checked?'flex':'none'">
+                    <i class="fas fa-clock"></i> Atrasar execução
+                </label>
+                <div style="display:none; align-items:center; gap:6px;">
+                    <input type="number" name="acao_delay_valor[]" min="1" value="1" style="width:60px; padding:6px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+                    <select name="acao_delay_unidade[]" style="padding:6px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+                        <option value="minutos">minutos</option>
+                        <option value="horas">horas</option>
+                        <option value="dias">dias</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button type="button" onclick="adicionarAcao()" style="background:none; border:1px dashed var(--border); border-radius:8px; padding:10px 16px; font-size:12px; color:var(--success); cursor:pointer; font-weight:600; display:flex; align-items:center; gap:6px; width:100%; justify-content:center;">
+        <i class="fas fa-plus"></i> Adicionar outra ação
+    </button>
+</div>
+
+<!-- Botões -->
+<div style="display:flex; justify-content:flex-end; gap:12px; margin-bottom:40px;">
+    <a href="{% url 'marketing_automacoes:lista' %}" class="btn-secondary" style="padding:10px 24px;">Cancelar</a>
+    <button type="submit" class="btn-primary" style="padding:10px 24px; display:flex; align-items:center; gap:8px;">
+        <i class="fas fa-save"></i> Salvar Automação
+    </button>
+</div>
+
+</form>
+
+<style>
+.evento-card {
+    display:flex; align-items:center; gap:12px; padding:14px 16px;
+    border:2px solid var(--border); border-radius:10px; cursor:pointer;
+    transition:all .2s; background:var(--bg-white);
+}
+.evento-card:hover { border-color:var(--primary-light); background:var(--bg-subtle); }
+.evento-card.selected { border-color:var(--primary); background:var(--primary-light); box-shadow:0 0 0 3px rgba(59,130,246,.15); }
+.evento-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.evento-info { min-width:0; }
+.evento-nome { font-size:13px; font-weight:700; color:var(--text-main); margin-bottom:2px; }
+.evento-desc { font-size:11px; color:var(--text-muted); line-height:1.4; }
+</style>
+
+<script>
+function selecionarEvento(el) {
+    document.querySelectorAll('.evento-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    el.querySelector('input[type=radio]').checked = true;
+}
+
+function adicionarCondicao() {
+    const container = document.getElementById('condicoes-container');
+    const row = container.querySelector('.condicao-row').cloneNode(true);
+    row.querySelectorAll('input[type=text]').forEach(i => i.value = '');
+    row.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+    container.appendChild(row);
+}
+
+let acaoCount = 1;
+function adicionarAcao() {
+    acaoCount++;
+    const container = document.getElementById('acoes-container');
+    const first = container.querySelector('.acao-item');
+    const clone = first.cloneNode(true);
+    clone.querySelector('span').textContent = 'AÇÃO ' + acaoCount;
+    clone.querySelectorAll('input[type=text], textarea').forEach(i => i.value = '');
+    clone.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+    clone.querySelectorAll('input[type=checkbox]').forEach(c => { c.checked = false; });
+    container.appendChild(clone);
+}
+
+function configurarAcao(select) {
+    const container = select.closest('.acao-item').querySelector('.acao-config-container textarea');
+    const tipo = select.value;
+    const placeholders = {
+        'enviar_whatsapp': 'Olá {{nome}}, bem vindo à {{empresa}}! Seu plano {{plano}} está sendo ativado.',
+        'enviar_email': 'Assunto: Bem vindo!\nCorpo: Olá {{nome}}, obrigado por escolher a {{empresa}}.',
+        'notificacao_sistema': 'Novo lead {{nome}} cadastrado via {{origem}}',
+        'criar_tarefa': 'Título: Contatar {{nome}}\nTipo: ligacao\nPrioridade: alta',
+        'mover_estagio': 'Pipeline: vendas-b2c\nEstágio: qualificado',
+        'atribuir_responsavel': 'Responsável: auto (round-robin)',
+        'dar_pontos': 'Pontos: 50\nMotivo: Indicação convertida',
+        'webhook': 'URL: https://\nMétodo: POST\nHeaders: {"Authorization": "Bearer ..."}',
+    };
+    container.placeholder = placeholders[tipo] || 'Configure os parâmetros da ação';
+}
+</script>
+
+{% endblock %}

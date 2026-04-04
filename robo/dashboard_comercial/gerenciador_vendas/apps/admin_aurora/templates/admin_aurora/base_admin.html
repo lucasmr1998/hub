@@ -119,6 +119,15 @@
         <a href="{% url 'admin_aurora:planos' %}" class="{% if request.resolver_match.url_name == 'planos' or request.resolver_match.url_name == 'plano_detalhe' %}active{% endif %}">
             <i class="fas fa-tags"></i> Planos
         </a>
+        <a href="{% url 'admin_aurora:produto' %}" class="{% if request.resolver_match.url_name == 'produto' %}active{% endif %}">
+            <i class="fas fa-cube"></i> Produto
+        </a>
+        <a href="{% url 'admin_aurora:docs' %}" class="{% if request.resolver_match.url_name == 'docs' %}active{% endif %}">
+            <i class="fas fa-book"></i> Docs
+        </a>
+        <a href="{% url 'admin_aurora:backlog' %}" class="{% if request.resolver_match.url_name == 'backlog' %}active{% endif %}">
+            <i class="fas fa-tasks"></i> Backlog
+        </a>
         <a href="{% url 'admin_aurora:logs' %}" class="{% if request.resolver_match.url_name == 'logs' %}active{% endif %}">
             <i class="fas fa-file-alt"></i> Logs
         </a>

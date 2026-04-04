@@ -120,3 +120,31 @@ def verificar_conversao_historico(sender, instance, created, **kwargs):
         logger.info(f"[CRM] Oportunidade {oportunidade.pk} movida para '{estagio_ganho.nome}' por conversão IVR")
     except Exception as e:
         logger.error(f"[CRM] Erro ao mover oportunidade por conversão IVR: {e}")
+
+
+@receiver(post_save, sender='leads.LeadProspecto')
+def avaliar_segmentos_dinamicos(sender, instance, **kwargs):
+    """Avalia se o lead deve entrar/sair de segmentos dinâmicos."""
+    if getattr(instance, '_skip_segmento', False):
+        return
+    if not instance.tenant:
+        return
+
+    try:
+        from .services.segmentos import avaliar_lead_em_segmentos
+        segmentos_adicionados = avaliar_lead_em_segmentos(instance)
+
+        # Disparar automação para cada segmento em que o lead entrou
+        if segmentos_adicionados:
+            from apps.marketing.automacoes.engine import disparar_evento
+            for seg in segmentos_adicionados:
+                disparar_evento('lead_entrou_segmento', {
+                    'lead': instance,
+                    'lead_nome': instance.nome_razaosocial,
+                    'telefone': instance.telefone,
+                    'nome': instance.nome_razaosocial,
+                    'segmento': seg,
+                    'segmento_nome': seg.nome,
+                }, tenant=instance.tenant)
+    except Exception as e:
+        logger.error(f"[CRM] Erro ao avaliar segmentos para lead {instance.pk}: {e}")
