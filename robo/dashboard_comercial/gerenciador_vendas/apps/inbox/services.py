@@ -146,20 +146,38 @@ def receber_mensagem(telefone, nome, conteudo, tenant, tipo_conteudo='texto',
     if not conversa:
         nova_conversa = True
         lead = buscar_lead_por_telefone(fone, tenant)
+
+        # Se não existe lead com esse telefone, criar automaticamente
+        if not lead:
+            from apps.comercial.leads.models import LeadProspecto
+            lead = LeadProspecto(
+                tenant=tenant,
+                nome_razaosocial=nome or fone,
+                telefone=fone,
+                origem='whatsapp' if canal_tipo == 'whatsapp' else 'outros',
+                canal_entrada=canal_tipo,
+                tipo_entrada='receptivo',
+                status_api='pendente',
+            )
+            lead._skip_crm_signal = True
+            lead._skip_automacao = True
+            lead._skip_segmento = True
+            lead.save()
+            logger.info("[Inbox] Lead criado automaticamente: %s (telefone=%s)", lead.nome_razaosocial, fone)
+
         conversa = Conversa(
             tenant=tenant,
             canal=canal,
             lead=lead,
-            contato_nome=nome or (lead.nome_razaosocial if lead else ''),
+            contato_nome=nome or lead.nome_razaosocial,
             contato_telefone=fone,
-            contato_email=lead.email if lead and lead.email else '',
+            contato_email=lead.email if lead.email else '',
             status='aberta',
         )
         conversa.save()
 
-        # Criar HistoricoContato para backward compatibility
-        if lead:
-            _criar_historico_contato(lead, fone, tenant)
+        # Criar HistoricoContato
+        _criar_historico_contato(lead, fone, tenant)
 
         # Distribuição automática (equipe + fila + agente)
         from .distribution import distribuir_conversa, verificar_horario_atendimento

@@ -2,9 +2,10 @@
    INBOX — Chatwoot-style Three-Panel Layout
    ═══════════════════════════════════════════════════════════════════ */
 
-.main-content:has(.inbox-container) { padding: 0; margin-left: 0; overflow: hidden; }
+body.inbox-page { overflow: hidden; }
 body.inbox-page .main-content { padding: 0; margin-left: 0; overflow: hidden; }
 body.inbox-page .sidebar { display: none; }
+.main-content:has(.inbox-container) { padding: 0; margin-left: 0; overflow: hidden; }
 
 .inbox-container {
     display: flex;
@@ -240,6 +241,7 @@ body.inbox-page .sidebar { display: none; }
 .inbox-messages {
     flex: 1; overflow-y: auto; padding: 16px;
     display: flex; flex-direction: column; gap: 6px; background: #f8fafc;
+    min-height: 0;
 }
 
 .msg-bubble {
@@ -285,7 +287,7 @@ body.inbox-page .sidebar { display: none; }
 
 .inbox-input-area {
     border-top: 1px solid #e2e8f0; background: #fff; flex-shrink: 0;
-    position: relative;
+    position: relative; margin-top: auto;
 }
 
 .input-tabs {

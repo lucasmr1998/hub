@@ -105,7 +105,7 @@
                 <button class="input-tab" data-mode="note"><i class="fas fa-lock"></i> Nota Privada</button>
             </div>
             <div class="input-editor">
-                <textarea id="messageInput" placeholder="Shift + Enter para nova linha. Comece com '/' para selecionar uma resposta pronta." rows="3"></textarea>
+                <textarea id="messageInput" placeholder="Shift + Enter para nova linha. Comece com '/' para selecionar uma resposta pronta." rows="1"></textarea>
                 <div class="input-toolbar">
                     <div class="input-toolbar-left">
                         <button class="ib-toolbar-btn" id="emojiBtn" title="Emoji"><i class="fas fa-smile"></i></button>
@@ -317,5 +317,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'inbox/js/inbox.js' %}?v=6"></script>
+<script src="{% static 'inbox/js/inbox.js' %}?v=7"></script>
 {% endblock %}

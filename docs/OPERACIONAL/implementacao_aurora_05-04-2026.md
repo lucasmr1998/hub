@@ -1,9 +1,10 @@
 # Implementação Aurora — Primeiro Cliente
 
 **Data início:** 05/04/2026
+**Última atualização:** 06/04/2026
 **Status:** 🔧 Em andamento
 **Cliente:** AuroraISP (nós mesmos)
-**WhatsApp:** Uazapi
+**WhatsApp:** Uazapi (consulteplus.uazapi.com)
 **ERP:** Nenhum (por enquanto)
 
 ---
@@ -20,49 +21,42 @@ Usar a própria plataforma Aurora para gerenciar leads, atendimento e vendas da 
 Cliente (WhatsApp)
     │
     ▼
-Uazapi (API WhatsApp)
+Uazapi (consulteplus.uazapi.com)
     │
-    ├── Webhook → Aurora /inbox/api/n8n/mensagem-recebida/
-    │              (ou endpoint dedicado Uazapi)
+    ├── Webhook → Aurora /inbox/api/webhook/uazapi/{canal_id}/
+    │              (Provider Pattern, escalável)
     │
     └── API ← Aurora envia mensagens
-              POST /send/text, /send/image, etc.
+              POST /send/text  {number, text}
+              POST /send/media {number, type, file}
+              POST /send/menu  {number, type, choices}
 ```
 
-**Sem ERP:** Leads e oportunidades ficam apenas no Aurora. Sem sync com sistema externo.
-**Sem N8N (por enquanto):** Integração direta Aurora ↔ Uazapi via API REST.
+**Sem ERP:** Leads e oportunidades ficam apenas no Aurora.
+**Sem N8N:** Integração direta Aurora ↔ Uazapi via Provider Pattern.
 
 ---
 
-## Fase 1 — Tenant Aurora
+## Fase 1 — Tenant Aurora ✅ Concluída
 
-### 1.1 Criar tenant
+### 1.1 Tenant criado
 
-```bash
-python manage.py criar_tenant \
-  --nome "AuroraISP" \
-  --slug "aurora" \
-  --plano full_pro \
-  --admin-user lucas \
-  --admin-email lucas@auroraísp.com.br \
-  --admin-senha XXXXX \
-  --settings=gerenciador_vendas.settings_local
-```
+Tenant "Aurora HQ" (slug: `aurora-hq`, ID: 3) com plano full_pro.
 
-### 1.2 Seed inicial
+### 1.2 Seeds executados
 
 ```bash
-python manage.py seed_planos --settings=gerenciador_vendas.settings_local
-python manage.py seed_funcionalidades --settings=gerenciador_vendas.settings_local
-python manage.py seed_perfis --tenant aurora --settings=gerenciador_vendas.settings_local
+python manage.py seed_planos          # 9 planos, 115 features
+python manage.py seed_funcionalidades # 35 funcionalidades
+python manage.py seed_perfis          # 11 perfis padrão por tenant
 ```
 
-### 1.3 Configurações
+### 1.3 Configurações ✅
 
-- [ ] ConfiguracaoEmpresa (logo Aurora, cores da marca)
-- [ ] ConfiguracaoCRM (pipeline padrão, estágios)
-- [ ] Planos de internet (não se aplica, Aurora vende software)
+- [x] ConfiguracaoEmpresa (logo Aurora, cores da marca)
+- [x] Perfis de permissão (11 perfis padrão criados)
 - [ ] Pipeline personalizado para venda de SaaS
+- [ ] ConfiguracaoCRM (pipeline padrão, estágios)
 
 ### 1.4 Pipeline sugerido para venda SaaS
 
@@ -79,128 +73,140 @@ python manage.py seed_perfis --tenant aurora --settings=gerenciador_vendas.setti
 
 ---
 
-## Fase 2 — Integração Uazapi
+## Fase 2 — Integração Uazapi ✅ Concluída
 
-### 2.1 Sobre o Uazapi
-
-Uazapi é uma API para WhatsApp (não oficial, baseada em Baileys/WPPConnect). Permite enviar e receber mensagens via REST API + Webhooks.
-
-**Docs:** https://docs.uazapi.com/
-
-### 2.2 Dados da instância
+### 2.1 Dados da instância
 
 | Item | Valor | Status |
 |------|-------|--------|
-| URL base da API | `https://______.uazapi.com` ou self-hosted | Preencher |
-| Token da instância | `XXXXX` | Preencher |
-| Número WhatsApp | `55XX9XXXXXXXX` | Preencher |
-| Webhook URL configurado | `https://aurora.../inbox/api/uazapi/webhook/` | Configurar |
+| URL base da API | `https://consulteplus.uazapi.com` | ✅ Configurado |
+| Token da instância | `9ef0cf61-87b3-444a-8769-07b0b74563e5` | ✅ Em configuracoes_extras |
+| Número WhatsApp | `553181167572` | ✅ Conectado |
+| Nome da instância | `AuroraISP` | ✅ |
+| IntegracaoAPI ID | `1` (tipo=uazapi, tenant=Aurora HQ) | ✅ |
+| CanalInbox ID | `6` (tipo=whatsapp, provedor=uazapi) | ✅ |
+| Webhook URL | `/inbox/api/webhook/uazapi/6/` | ✅ Configurado no Uazapi |
 
-### 2.3 Endpoints Uazapi que vamos usar
+### 2.2 Arquitetura implementada (Provider Pattern)
+
+```
+apps/inbox/providers/
+    __init__.py          # Registry + get_provider(canal) factory
+    base.py              # BaseProvider ABC
+    uazapi.py            # UazapiProvider (wraps UazapiService)
+    webhook.py           # GenericWebhookProvider (fallback N8N)
+```
+
+Para adicionar novo provider (ex: Evolution API): criar `evolution.py` com `@register_provider`. Zero mudanças em services.py ou views.py.
+
+### 2.3 Endpoints implementados no UazapiService
+
+**Headers:** `Content-Type: application/json`, `Accept: application/json`, `token: TOKEN`
 
 #### Enviar mensagens (Aurora → Uazapi)
 
-| Ação | Método | Endpoint | Body |
-|------|--------|----------|------|
-| Texto | POST | `/send/text` | `{phone, message}` |
-| Imagem | POST | `/send/image` | `{phone, image, caption}` |
-| Documento | POST | `/send/document` | `{phone, document, fileName}` |
-| Áudio | POST | `/send/audio` | `{phone, audio}` |
+| Método | Endpoint | Body | Status |
+|--------|----------|------|--------|
+| `enviar_texto` | POST `/send/text` | `{number, text}` | ✅ Testado |
+| `enviar_midia` | POST `/send/media` | `{number, type, file, caption?, docName?}` | ✅ Implementado |
+| `enviar_imagem` | via `/send/media` type=image | | ✅ |
+| `enviar_documento` | via `/send/media` type=document | | ✅ |
+| `enviar_audio` | via `/send/media` type=audio | | ✅ |
+| `enviar_video` | via `/send/media` type=video | | ✅ |
+| `enviar_sticker` | via `/send/media` type=sticker | | ✅ |
+| `enviar_voz` | via `/send/media` type=ptt | | ✅ |
+| `enviar_menu` | POST `/send/menu` | `{number, type, text, choices, ...}` | ✅ Implementado |
+| `enviar_botoes` | via `/send/menu` type=button | | ✅ |
+| `enviar_lista` | via `/send/menu` type=list | | ✅ |
+| `enviar_enquete` | via `/send/menu` type=poll | | ✅ |
+| `enviar_carrossel` | via `/send/menu` type=carousel | | ✅ |
+| `enviar_vcard` | POST `/send/contact` | `{number, contactName, contactPhone}` | ✅ |
+| `enviar_localizacao` | POST `/send/location` | `{number, lat, lng, name, address}` | ✅ |
+| `enviar_presenca` | POST `/send/presence` | `{number, type}` | ✅ |
+| `enviar_botao_pix` | POST `/send/pix` | `{number, key, amount, description}` | ✅ |
+| `solicitar_localizacao` | POST `/send/requestLocation` | `{number, text}` | ✅ |
+| `solicitar_pagamento` | POST `/send/requestPayment` | `{number, amount, description}` | ✅ |
+| `enviar_story_texto` | POST `/send/stories` | `{type:text, text, backgroundColor}` | ✅ |
+| `enviar_story_midia` | POST `/send/stories` | `{type, file, caption}` | ✅ |
 
-**Headers:** `Content-Type: application/json`, `token: TOKEN_INSTANCIA`
+#### Consultas
+
+| Método | Endpoint | Status |
+|--------|----------|--------|
+| `status_instancia` | GET `/instance/status` | ✅ Testado |
+| `verificar_numero` | POST `/misc/checkNumber` | ✅ |
+| `marcar_como_lido` | POST `/chat/markAsRead` | ✅ |
 
 #### Receber mensagens (Uazapi → Aurora via Webhook)
 
-O Uazapi envia POST para a URL configurada com payload:
+Formato real do payload Uazapi:
 
 ```json
 {
-  "event": "message",
-  "data": {
-    "key": {
-      "remoteJid": "5589999999999@s.whatsapp.net",
-      "fromMe": false,
-      "id": "XXXXX"
+    "BaseUrl": "https://consulteplus.uazapi.com",
+    "EventType": "messages",
+    "chat": {
+        "phone": "+55 53 8152-1653",
+        "wa_chatid": "555381521653@s.whatsapp.net",
+        "wa_contactName": "Nome do Contato",
+        "name": "Nome"
     },
     "message": {
-      "conversation": "Olá, quero saber mais sobre o Aurora"
+        "text": "oi",
+        "messageType": "Conversation",
+        "fromMe": false,
+        "messageid": "3EB016C93EBA029158EF14",
+        "senderName": "Nome do Contato",
+        "chatid": "555381521653@s.whatsapp.net"
     },
-    "messageTimestamp": 1234567890,
-    "pushName": "Nome do Contato"
-  }
+    "token": "9ef0cf61-87b3-444a-8769-07b0b74563e5"
 }
 ```
 
-#### Outros endpoints úteis
+**UazapiProvider.parse_webhook** suporta dois formatos:
+1. Formato Uazapi real (`EventType`, `message.text`, `chat.phone`)
+2. Formato Baileys/legacy (`event`, `data.key.remoteJid`, `data.message.conversation`)
 
-| Ação | Método | Endpoint |
-|------|--------|----------|
-| Status da instância | GET | `/instance/status` |
-| Info do contato | GET | `/contact/info/{phone}` |
-| Marcar como lido | POST | `/chat/markAsRead` |
-| Verificar número | POST | `/misc/checkNumber` |
+### 2.4 Testes realizados
 
-### 2.4 Implementação no Aurora
+| Teste | Resultado |
+|-------|-----------|
+| Testar conexão (botão na página de integrações) | ✅ Uazapi conectado |
+| Receber mensagem via webhook (WhatsApp → Inbox) | ✅ Mensagem aparece no Inbox |
+| Enviar mensagem texto (Inbox → WhatsApp) | ✅ Mensagem chega no WhatsApp |
+| Resolver conversa (não aparece mais no inbox) | ✅ |
 
-#### Model de integração
+### 2.5 Problemas encontrados e resolvidos
 
-Usar o `IntegracaoAPI` existente com `tipo='uazapi'`:
-
-```python
-IntegracaoAPI(
-    tenant=tenant,
-    nome='Uazapi Aurora',
-    tipo='uazapi',
-    base_url='https://xxxxx.uazapi.com',
-    access_token='TOKEN_INSTANCIA',
-    ativa=True,
-    configuracoes_extras={
-        'numero_whatsapp': '55XX9XXXXXXXX',
-        'webhook_secret': 'XXXXX',  # validação do webhook
-    }
-)
-```
-
-#### Service de integração
-
-Criar `apps/integracoes/services/uazapi.py`:
-
-```python
-class UazapiService:
-    def enviar_texto(self, telefone, mensagem) → dict
-    def enviar_imagem(self, telefone, url_imagem, legenda) → dict
-    def enviar_documento(self, telefone, url_doc, nome_arquivo) → dict
-    def verificar_numero(self, telefone) → bool
-    def status_instancia(self) → dict
-```
-
-#### Webhook receiver
-
-Criar endpoint `POST /inbox/api/uazapi/webhook/` que:
-1. Valida token do webhook
-2. Parseia payload do Uazapi
-3. Cria/atualiza Conversa no Inbox
-4. Cria Mensagem
-5. Dispara signal `mensagem_recebida` (para automações)
-
-#### Canal no Inbox
-
-Criar CanalInbox `tipo='whatsapp_uazapi'` com webhook de envio apontando para o UazapiService.
+| Problema | Causa | Solução |
+|----------|-------|---------|
+| 404 no webhook | Uazapi envia sem barra final, APPEND_SLASH=False | Adicionada rota sem barra |
+| 400 Bad Request | Payload Uazapi diferente do esperado (não é Baileys) | Implementado `_parse_uazapi_format` |
+| 401 Invalid token no envio | Campo `access_token` criptografado com chave diferente | Token salvo em `configuracoes_extras` |
+| 400 Missing required fields | Uazapi usa `number`/`text` em vez de `phone`/`message` | Corrigido no UazapiService |
+| DisallowedHost | Domínio ngrok não no ALLOWED_HOSTS | `ALLOWED_HOSTS = ['*']` no settings_local |
 
 ---
 
-## Fase 3 — Configuração do Inbox
+## Fase 3 — Configuração do Inbox 🔧 Em andamento
 
+- [x] Canal WhatsApp Aurora criado (ID 6, provedor=uazapi)
+- [x] Accordion colapsável no painel de contexto
+- [x] Conversas anteriores do contato
+- [x] Emoji picker inline
+- [x] Botão anexar arquivo
+- [x] Equipe, prioridade e etiquetas funcionando
+- [x] Conversas resolvidas não aparecem por padrão
+- [x] Menu sidebar reorganizado (Suporte unificado)
 - [ ] Criar equipe "Vendas Aurora"
 - [ ] Criar fila "WhatsApp" vinculada à equipe
-- [ ] Criar canal "WhatsApp Aurora" tipo whatsapp com webhook de envio
 - [ ] Configurar horário de atendimento
 - [ ] Criar respostas rápidas (saudação, preço, agendar demo)
 - [ ] Configurar mensagem fora do horário
 
 ---
 
-## Fase 4 — CRM e Pipeline
+## Fase 4 — CRM e Pipeline (pendente)
 
 - [ ] Pipeline "Vendas SaaS" com 8 estágios
 - [ ] Tags: Provedor Pequeno, Provedor Médio, Provedor Grande, HubSoft, MK, IXC
@@ -209,7 +215,7 @@ Criar CanalInbox `tipo='whatsapp_uazapi'` com webhook de envio apontando para o 
 
 ---
 
-## Fase 5 — Automações básicas
+## Fase 5 — Automações básicas (pendente)
 
 - [ ] Lead criado → Notificação no sistema
 - [ ] Lead sem contato 2 dias → Alerta
@@ -218,7 +224,7 @@ Criar CanalInbox `tipo='whatsapp_uazapi'` com webhook de envio apontando para o 
 
 ---
 
-## Fase 6 — Marketing
+## Fase 6 — Marketing (pendente)
 
 - [ ] Campanha "Orgânico LinkedIn"
 - [ ] Campanha "Orgânico WhatsApp"
@@ -231,19 +237,24 @@ Criar CanalInbox `tipo='whatsapp_uazapi'` com webhook de envio apontando para o 
 
 ```
 INFRA
-  [ ] Tenant Aurora criado
-  [ ] Seeds rodados (planos, funcionalidades, perfis)
+  [x] Tenant Aurora criado (Aurora HQ, ID 3)
+  [x] Seeds rodados (planos, funcionalidades, perfis)
   [ ] Usuários criados com perfis de permissão
+  [ ] Deploy em servidor
 
 UAZAPI
-  [ ] UazapiService criado em apps/integracoes/services/uazapi.py
-  [ ] IntegracaoAPI criada com tipo='uazapi'
-  [ ] Webhook receiver criado
-  [ ] Canal WhatsApp criado no Inbox
-  [ ] Testar envio de mensagem
-  [ ] Testar recebimento de mensagem via webhook
+  [x] UazapiService criado (20+ endpoints)
+  [x] IntegracaoAPI criada (ID 1, tipo=uazapi)
+  [x] Provider Pattern implementado (escalável multi-provider)
+  [x] Webhook receiver criado e testado
+  [x] Canal WhatsApp criado (ID 6, provedor=uazapi)
+  [x] Testar envio de mensagem ✅
+  [x] Testar recebimento de mensagem via webhook ✅
 
 INBOX
+  [x] Mensagens chegam e são respondidas via WhatsApp
+  [x] Accordion, emoji, anexos, conversas anteriores
+  [x] Equipe/prioridade/etiquetas salvam
   [ ] Equipe e fila configuradas
   [ ] Respostas rápidas criadas
   [ ] Horário de atendimento configurado
@@ -263,11 +274,19 @@ MARKETING
 
 ---
 
+## Decisões tomadas
+
+| Decisão | Resultado |
+|---------|-----------|
+| Usar N8N como middleware? | **Não.** Integração direta via Provider Pattern. |
+| Formato de autenticação Uazapi | Header `token: TOKEN` |
+| Formato de payload envio | `{number, text}` para texto, `{number, type, file}` para mídia |
+| Escalabilidade multi-provider | Provider Pattern implementado. Novo provider = 1 arquivo. |
+
 ## Decisões pendentes
 
 | Decisão | Opções | Status |
 |---------|--------|--------|
-| Usar N8N como middleware? | Direto Aurora↔Uazapi vs Aurora→N8N→Uazapi | Decidir |
 | Bot de atendimento automático? | Sim (fluxo de qualificação) vs Não (só inbox manual) | Decidir |
 | Domínio do painel | app.auroraisp.com.br ou outro | Decidir |
 | Deploy | VPS, Docker, ou cloud | Decidir |

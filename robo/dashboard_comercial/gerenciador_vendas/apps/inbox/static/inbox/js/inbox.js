@@ -367,6 +367,9 @@
     // ── WebSocket ─────────────────────────────────────────────────────
 
     function connectWebSocket() {
+        // WebSocket requer ASGI server (Daphne/Uvicorn).
+        // Em dev com runserver, usa polling.
+        // Tenta uma vez, se falhar usa polling silenciosamente.
         const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
         try {
             state.ws = new WebSocket(protocol + '//' + location.host + '/ws/inbox/');
@@ -381,9 +384,10 @@
             state.ws.onclose = () => {
                 state.wsConnected = false;
                 if (!state.pollTimer) state.pollTimer = setInterval(loadConversas, POLL_INTERVAL);
-                setTimeout(connectWebSocket, 5000);
+                // Não reconecta automaticamente em dev
             };
             state.ws.onerror = () => {
+                state.wsConnected = false;
                 if (!state.pollTimer) state.pollTimer = setInterval(loadConversas, POLL_INTERVAL);
             };
         } catch(e) {
