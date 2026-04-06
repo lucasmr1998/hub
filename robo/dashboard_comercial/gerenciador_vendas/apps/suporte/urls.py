@@ -8,4 +8,11 @@ urlpatterns = [
     path('tickets/', views.ticket_lista, name='ticket_lista'),
     path('tickets/criar/', views.ticket_criar, name='ticket_criar'),
     path('tickets/<int:pk>/', views.ticket_detalhe, name='ticket_detalhe'),
+
+    # Base de conhecimento
+    path('conhecimento/', views.base_conhecimento, name='base_conhecimento'),
+    path('conhecimento/gerenciar/', views.gerenciar_conhecimento, name='gerenciar_conhecimento'),
+    path('conhecimento/artigo/<slug:slug>/', views.artigo_conhecimento, name='artigo_conhecimento'),
+    path('conhecimento/api/feedback/<int:pk>/', views.api_artigo_feedback, name='api_artigo_feedback'),
+    path('conhecimento/api/buscar/', views.api_buscar_conhecimento, name='api_buscar_conhecimento'),
 ]

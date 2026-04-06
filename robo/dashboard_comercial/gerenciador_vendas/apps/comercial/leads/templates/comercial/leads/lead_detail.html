@@ -1,0 +1,387 @@
+{% extends 'sistema/base.html' %}
+{% load leads_tags %}
+
+{% block title %}{{ lead.nome_razaosocial }} - Lead #{{ lead.id }}{% endblock %}
+
+{% block custom_css %}
+<style>
+    .lead-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+    .lead-header-left { display:flex; align-items:center; gap:16px; }
+    .lead-header-left h1 { font-size:22px; font-weight:700; color:var(--text-main); margin:0; }
+    .lead-header-left .lead-id { font-size:13px; color:var(--text-muted); font-weight:400; }
+    .lead-actions { display:flex; gap:8px; }
+
+    .lead-back { display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--text-muted); text-decoration:none; margin-bottom:16px; transition:color 0.15s; }
+    .lead-back:hover { color:var(--primary); }
+
+    .lead-grid { display:grid; grid-template-columns:2fr 1fr; gap:20px; }
+
+    .lead-card { background:var(--bg-white); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+    .lead-card-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+    .lead-card-header h2 { font-size:15px; font-weight:600; color:var(--text-main); margin:0; }
+    .lead-card-header i { color:var(--text-muted); font-size:14px; }
+    .lead-card-body { padding:20px; }
+
+    .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .detail-item { }
+    .detail-item label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-light); display:block; margin-bottom:4px; }
+    .detail-item span { font-size:14px; color:var(--text-main); word-break:break-word; }
+    .detail-item .detail-empty { color:var(--text-light); font-style:italic; }
+
+    .lead-sidebar-card + .lead-sidebar-card { margin-top:20px; }
+
+    .status-timeline { display:flex; flex-direction:column; gap:0; }
+    .timeline-item { display:flex; gap:12px; position:relative; padding-bottom:20px; }
+    .timeline-item:last-child { padding-bottom:0; }
+    .timeline-item:not(:last-child)::before { content:''; position:absolute; left:15px; top:32px; bottom:0; width:2px; background:var(--border); }
+    .timeline-dot { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:12px; color:#fff; }
+    .timeline-content { flex:1; min-width:0; }
+    .timeline-content .timeline-title { font-size:13px; font-weight:600; color:var(--text-main); }
+    .timeline-content .timeline-date { font-size:11px; color:var(--text-muted); margin-top:2px; }
+    .timeline-content .timeline-desc { font-size:12px; color:var(--text-secondary); margin-top:4px; }
+    .timeline-item { cursor:pointer; }
+    .timeline-item:hover .timeline-content .timeline-title { color:var(--primary); }
+
+    .obs-box { font-size:14px; color:var(--text-secondary); background:var(--border-light); padding:14px; border-radius:8px; line-height:1.5; }
+
+    .img-gallery { display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:8px; }
+    .img-gallery img { width:100%; height:80px; object-fit:cover; border-radius:8px; border:1px solid var(--border); cursor:pointer; transition:opacity 0.15s; }
+    .img-gallery img:hover { opacity:0.8; }
+
+    .empty-hint { font-size:13px; color:var(--text-light); text-align:center; padding:20px 0; }
+    .empty-hint i { display:block; font-size:24px; margin-bottom:8px; color:var(--border); }
+
+    @media (max-width:900px) {
+        .lead-grid { grid-template-columns:1fr; }
+        .detail-grid { grid-template-columns:1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<a href="{% url 'comercial_leads:leads' %}" class="lead-back">
+    <i class="fas fa-arrow-left"></i> Voltar para Leads
+</a>
+
+<div class="lead-header">
+    <div class="lead-header-left">
+        <h1>{{ lead.nome_razaosocial }} <span class="lead-id">#{{ lead.id }}</span></h1>
+    </div>
+    <div class="lead-actions">
+        {% if lead.telefone %}
+        <a href="https://wa.me/{{ lead.telefone }}" target="_blank" class="btn-secondary btn-sm" style="text-decoration:none;">
+            <i class="fab fa-whatsapp"></i> WhatsApp
+        </a>
+        {% endif %}
+        {% if lead.html_conversa_path %}
+        <a href="{% url 'comercial_leads:visualizar_conversa_lead' lead.id %}" class="btn-secondary btn-sm" style="text-decoration:none;" target="_blank">
+            <i class="fas fa-comments"></i> Conversa
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="lead-grid">
+    <!-- Coluna principal -->
+    <div>
+        <!-- Informacoes pessoais -->
+        <div class="lead-card">
+            <div class="lead-card-header"><i class="fas fa-user"></i><h2>Informacoes Pessoais</h2></div>
+            <div class="lead-card-body">
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Nome / Razao Social</label>
+                        <span>{{ lead.nome_razaosocial }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>CPF / CNPJ</label>
+                        <span>{{ lead.cpf_cnpj|default_if_none:"" }}{% if not lead.cpf_cnpj %}<em class="detail-empty">Nao informado</em>{% endif %}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>RG</label>
+                        <span>{{ lead.rg|default_if_none:"" }}{% if not lead.rg %}<em class="detail-empty">Nao informado</em>{% endif %}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Data de Nascimento</label>
+                        <span>{% if lead.data_nascimento %}{{ lead.data_nascimento|date:"d/m/Y" }}{% else %}<em class="detail-empty">Nao informada</em>{% endif %}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Email</label>
+                        <span>{{ lead.email|default_if_none:"" }}{% if not lead.email %}<em class="detail-empty">Nao informado</em>{% endif %}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Telefone</label>
+                        <span>{{ lead.telefone }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Empresa</label>
+                        <span>{{ lead.empresa|default_if_none:"" }}{% if not lead.empresa %}<em class="detail-empty">Nao informada</em>{% endif %}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Valor</label>
+                        <span style="font-weight:600">{{ lead.get_valor_formatado }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Endereco -->
+        <div class="lead-card" style="margin-top:20px;">
+            <div class="lead-card-header"><i class="fas fa-map-marker-alt"></i><h2>Endereco</h2></div>
+            <div class="lead-card-body">
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Rua</label>
+                        <span>{{ lead.rua|default_if_none:"" }}{% if not lead.rua %}<em class="detail-empty">Nao informada</em>{% endif %}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Numero</label>
+                        <span>{{ lead.numero_residencia|default_if_none:"" }}{% if not lead.numero_residencia %}<em class="detail-empty">Nao informado</em>{% endif %}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Bairro</label>
+                        <span>{{ lead.bairro|default_if_none:"" }}{% if not lead.bairro %}<em class="detail-empty">Nao informado</em>{% endif %}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Cidade / UF</label>
+                        <span>{% if lead.cidade %}{{ lead.cidade }}{% if lead.estado %} - {{ lead.estado }}{% endif %}{% else %}<em class="detail-empty">Nao informada</em>{% endif %}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>CEP</label>
+                        <span>{{ lead.cep|default_if_none:"" }}{% if not lead.cep %}<em class="detail-empty">Nao informado</em>{% endif %}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Ponto de Referencia</label>
+                        <span>{{ lead.ponto_referencia|default_if_none:"" }}{% if not lead.ponto_referencia %}<em class="detail-empty">Nao informado</em>{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Observacoes -->
+        {% if lead.observacoes %}
+        <div class="lead-card" style="margin-top:20px;">
+            <div class="lead-card-header"><i class="fas fa-sticky-note"></i><h2>Observacoes</h2></div>
+            <div class="lead-card-body">
+                <div class="obs-box">{{ lead.observacoes|linebreaksbr }}</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Historico de contatos -->
+        <div class="lead-card" style="margin-top:20px;">
+            <div class="lead-card-header"><i class="fas fa-history"></i><h2>Historico de Contatos</h2></div>
+            <div class="lead-card-body">
+                {% if historicos %}
+                <div class="status-timeline">
+                    {% for h in historicos %}
+                    <a href="{% url 'comercial_leads:historico_detail' h.id %}" class="timeline-item" style="text-decoration:none;color:inherit;">
+                        <div class="timeline-dot" style="background:{% if h.status == 'venda_confirmada' %}var(--success){% elif h.status == 'erro_sistema' or h.status == 'venda_rejeitada' %}var(--danger){% elif h.status == 'transferido_humano' or h.status == 'aguardando_validacao' %}var(--warning){% else %}var(--primary){% endif %};">
+                            <i class="fas {% if h.status == 'venda_confirmada' %}fa-check{% elif h.status == 'transferido_humano' %}fa-user{% elif h.status == 'erro_sistema' %}fa-exclamation{% else %}fa-comment{% endif %}"></i>
+                        </div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">
+                                {{ h.get_status_display|default:h.status }}
+                                <i class="fas fa-chevron-right" style="font-size:10px;color:var(--text-light);margin-left:6px;"></i>
+                            </div>
+                            <div class="timeline-date">{{ h.data_hora_contato|date:"d/m/Y H:i" }}{% if h.origem_contato %} &middot; {{ h.get_origem_contato_display }}{% endif %}</div>
+                            {% if h.observacoes %}<div class="timeline-desc">{{ h.observacoes|truncatewords:20 }}</div>{% endif %}
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-hint">
+                    <i class="fas fa-inbox"></i>
+                    Nenhum historico de contato registrado.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div>
+        <!-- Status -->
+        <div class="lead-card lead-sidebar-card">
+            <div class="lead-card-header"><i class="fas fa-info-circle"></i><h2>Status</h2></div>
+            <div class="lead-card-body">
+                <div style="display:flex; flex-direction:column; gap:14px;">
+                    <div class="detail-item">
+                        <label>Status</label>
+                        <span>
+                            {% if lead.status_api == 'pendente' %}<span class="badge badge-warning">Pendente</span>
+                            {% elif lead.status_api == 'processado' %}<span class="badge badge-success">Processado</span>
+                            {% elif lead.status_api == 'erro' %}<span class="badge badge-danger">Erro</span>
+                            {% elif lead.status_api == 'sucesso' %}<span class="badge badge-success">Sucesso</span>
+                            {% elif lead.status_api == 'rejeitado' %}<span class="badge badge-danger">Rejeitado</span>
+                            {% elif lead.status_api == 'aguardando_retry' %}<span class="badge badge-warning">Aguardando Retry</span>
+                            {% elif lead.status_api == 'processamento_manual' %}<span class="badge badge-info">Proc. Manual</span>
+                            {% elif lead.status_api == 'cliente' %}<span class="badge badge-success">Cliente</span>
+                            {% else %}<span class="badge badge-muted">{{ lead.status_api }}</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Ativo</label>
+                        <span>{% if lead.ativo %}<span class="badge badge-success">Sim</span>{% else %}<span class="badge badge-danger">Nao</span>{% endif %}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Origem</label>
+                        <span><span class="badge badge-muted">{{ lead.get_origem_display }}</span></span>
+                    </div>
+                    {% if lead.canal_entrada %}
+                    <div class="detail-item">
+                        <label>Canal de Entrada</label>
+                        <span>{{ lead.get_canal_entrada_display }}</span>
+                    </div>
+                    {% endif %}
+                    {% if lead.score_qualificacao %}
+                    <div class="detail-item">
+                        <label>Score de Qualificacao</label>
+                        <span style="font-weight:700; font-size:18px;">{{ lead.score_qualificacao }}/10</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Documentacao e Contrato -->
+        <div class="lead-card lead-sidebar-card">
+            <div class="lead-card-header"><i class="fas fa-file-alt"></i><h2>Documentacao e Contrato</h2></div>
+            <div class="lead-card-body">
+                <div style="display:flex; flex-direction:column; gap:14px;">
+                    <div class="detail-item">
+                        <label>Documentacao</label>
+                        <span>
+                            {% if lead.documentacao_validada %}<span class="badge badge-success">Validada</span>
+                            {% elif lead.documentacao_completa %}<span class="badge badge-warning">Pendente validacao</span>
+                            {% else %}<span class="badge badge-muted">Nao enviada</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Contrato</label>
+                        <span>
+                            {% if lead.contrato_aceito %}<span class="badge badge-success">Aceito</span>
+                            {% else %}<span class="badge badge-muted">Pendente</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% if lead.data_aceite_contrato %}
+                    <div class="detail-item">
+                        <label>Data Aceite</label>
+                        <span>{{ lead.data_aceite_contrato|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Datas -->
+        <div class="lead-card lead-sidebar-card">
+            <div class="lead-card-header"><i class="fas fa-calendar"></i><h2>Datas</h2></div>
+            <div class="lead-card-body">
+                <div style="display:flex; flex-direction:column; gap:14px;">
+                    <div class="detail-item">
+                        <label>Cadastro</label>
+                        <span>{{ lead.data_cadastro|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Ultima Atualizacao</label>
+                        <span>{{ lead.data_atualizacao|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    {% if lead.data_ultimo_contato %}
+                    <div class="detail-item">
+                        <label>Ultimo Contato</label>
+                        <span>{{ lead.data_ultimo_contato|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    {% endif %}
+                    {% if lead.tentativas_contato %}
+                    <div class="detail-item">
+                        <label>Tentativas de Contato</label>
+                        <span>{{ lead.tentativas_contato }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- IDs e Integracao -->
+        {% if lead.id_hubsoft or lead.id_origem %}
+        <div class="lead-card lead-sidebar-card">
+            <div class="lead-card-header"><i class="fas fa-link"></i><h2>Integracao</h2></div>
+            <div class="lead-card-body">
+                <div style="display:flex; flex-direction:column; gap:14px;">
+                    {% if lead.id_hubsoft %}
+                    <div class="detail-item">
+                        <label>ID HubSoft</label>
+                        <span>{{ lead.id_hubsoft }}</span>
+                    </div>
+                    {% endif %}
+                    {% if lead.id_origem %}
+                    <div class="detail-item">
+                        <label>ID Origem</label>
+                        <span>{{ lead.id_origem }}</span>
+                    </div>
+                    {% endif %}
+                    {% if lead.id_origem_servico %}
+                    <div class="detail-item">
+                        <label>ID Origem Servico</label>
+                        <span>{{ lead.id_origem_servico }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Campos Personalizados -->
+        {% if campos_custom %}
+        <div class="lead-card lead-sidebar-card">
+            <div class="lead-card-header"><i class="fas fa-puzzle-piece"></i><h2>Campos Personalizados</h2></div>
+            <div class="lead-card-body">
+                <div style="display:flex; flex-direction:column; gap:14px;">
+                    {% for campo in campos_custom %}
+                    {% with valor=dados_custom|dict_get:campo.slug %}
+                    <div class="detail-item">
+                        <label>{{ campo.nome }}{% if campo.obrigatorio %} *{% endif %}</label>
+                        <span>
+                            {% if campo.tipo == 'booleano' %}
+                                {% if valor %}
+                                    <span class="badge badge-success">Sim</span>
+                                {% else %}
+                                    <span class="badge badge-muted">Nao</span>
+                                {% endif %}
+                            {% elif valor %}
+                                {{ valor }}
+                            {% else %}
+                                <em class="detail-empty">Nao preenchido</em>
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endwith %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Imagens -->
+        {% if imagens %}
+        <div class="lead-card lead-sidebar-card">
+            <div class="lead-card-header"><i class="fas fa-images"></i><h2>Imagens ({{ imagens.count }})</h2></div>
+            <div class="lead-card-body">
+                <div class="img-gallery">
+                    {% for img in imagens %}
+                    <img src="{{ img.link_url }}" alt="{{ img.descricao|default:'Imagem' }}" title="{{ img.descricao|default:'Imagem' }} - {{ img.data_criacao|date:'d/m/Y' }}" onclick="window.open(this.src,'_blank')">
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

@@ -661,6 +661,33 @@
             });
         });
 
+        // Base de Conhecimento - busca rápida
+        let kbTimeout;
+        const kbInput = document.getElementById('kbSearch');
+        if (kbInput) {
+            kbInput.addEventListener('input', function() {
+                clearTimeout(kbTimeout);
+                const q = this.value.trim();
+                if (q.length < 2) { document.getElementById('kbResults').innerHTML = ''; return; }
+                kbTimeout = setTimeout(() => {
+                    fetchJSON('/suporte/conhecimento/api/buscar/?q=' + encodeURIComponent(q))
+                    .then(d => {
+                        const container = document.getElementById('kbResults');
+                        if (!d.artigos || !d.artigos.length) {
+                            container.innerHTML = '<p style="font-size:11px;color:var(--text-muted);padding:4px;">Nenhum artigo encontrado.</p>';
+                            return;
+                        }
+                        container.innerHTML = d.artigos.map(a =>
+                            `<div style="padding:6px 0;border-bottom:1px solid var(--border-light,#f1f5f9);">
+                                <a href="/suporte/conhecimento/artigo/${a.slug}/" target="_blank" style="font-size:12px;font-weight:600;color:var(--text-main);text-decoration:none;">${esc(a.titulo)}</a>
+                                <div style="font-size:11px;color:var(--text-muted);">${esc(a.categoria__nome || '')} ${a.resumo ? '· ' + esc(a.resumo.substring(0, 60)) : ''}</div>
+                            </div>`
+                        ).join('');
+                    });
+                }, 300);
+            });
+        }
+
         // Close dropdowns on outside click
         document.addEventListener('click', e => {
             const dd = document.getElementById('quickResponseDropdown');

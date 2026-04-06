@@ -1,0 +1,135 @@
+{% extends 'sistema/base.html' %}
+
+{% block title %}Base de Conhecimento{% endblock %}
+
+{% block custom_css %}
+<style>
+    .kb-layout { display:grid; grid-template-columns:240px 1fr; gap:20px; }
+    .kb-sidebar { }
+    .kb-cat-list { list-style:none; padding:0; margin:0; }
+    .kb-cat-item { display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:8px; font-size:13px; color:var(--text-secondary); cursor:pointer; transition:all .15s; text-decoration:none; margin-bottom:2px; }
+    .kb-cat-item:hover { background:var(--bg-subtle); }
+    .kb-cat-item.active { background:var(--primary-light); color:var(--primary); font-weight:600; }
+    .kb-cat-icon { width:24px; text-align:center; font-size:14px; }
+    .kb-cat-count { margin-left:auto; font-size:11px; color:var(--text-muted); background:var(--border-light); padding:1px 6px; border-radius:4px; }
+    .kb-search { margin-bottom:20px; }
+    .kb-search input { width:100%; padding:10px 14px 10px 38px; border:1px solid var(--border); border-radius:10px; font-size:14px; font-family:inherit; outline:none; }
+    .kb-search input:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,.1); }
+    .kb-search-wrap { position:relative; }
+    .kb-search-wrap i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-muted); }
+    .kb-destaques { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px; margin-bottom:24px; }
+    .kb-destaque { background:var(--bg-white); border:1px solid var(--border); border-radius:10px; padding:16px; transition:all .15s; }
+    .kb-destaque:hover { box-shadow:0 2px 8px rgba(0,0,0,.06); border-color:var(--primary-light); }
+    .kb-destaque h4 { margin:0 0 4px; font-size:14px; font-weight:600; }
+    .kb-destaque h4 a { color:var(--text-main); text-decoration:none; }
+    .kb-destaque p { margin:0; font-size:12px; color:var(--text-muted); }
+    .kb-destaque-cat { font-size:11px; color:var(--primary); font-weight:500; margin-bottom:6px; }
+    .kb-artigo-row { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border-light); }
+    .kb-artigo-row:last-child { border-bottom:none; }
+    .kb-artigo-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; color:#fff; flex-shrink:0; }
+    .kb-artigo-info { flex:1; min-width:0; }
+    .kb-artigo-info h4 { margin:0; font-size:13px; font-weight:600; }
+    .kb-artigo-info h4 a { color:var(--text-main); text-decoration:none; }
+    .kb-artigo-info h4 a:hover { color:var(--primary); }
+    .kb-artigo-info p { margin:2px 0 0; font-size:12px; color:var(--text-muted); }
+    .kb-artigo-meta { font-size:11px; color:var(--text-muted); text-align:right; white-space:nowrap; }
+    .kb-tag { display:inline-block; padding:1px 6px; border-radius:3px; font-size:10px; background:var(--border-light); color:var(--text-muted); margin-right:3px; }
+    @media (max-width:768px) { .kb-layout { grid-template-columns:1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <div>
+        <h1 class="page-title"><i class="fas fa-book" style="color:var(--primary);margin-right:8px;"></i> Base de Conhecimento</h1>
+        <p style="font-size:13px;color:var(--text-muted);margin:4px 0 0;">{{ total_artigos }} artigo{{ total_artigos|pluralize:"s" }} disponíve{{ total_artigos|pluralize:"l,is" }}</p>
+    </div>
+    <a href="{% url 'suporte:gerenciar_conhecimento' %}" class="btn-secondary"><i class="fas fa-cog"></i> Gerenciar</a>
+</div>
+
+<!-- Busca -->
+<div class="kb-search">
+    <form method="get" class="kb-search-wrap">
+        <i class="fas fa-search"></i>
+        <input type="text" name="q" value="{{ busca }}" placeholder="Buscar artigos, procedimentos, scripts..." autofocus>
+    </form>
+</div>
+
+{% if destaques and not busca %}
+<h3 style="font-size:14px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">DESTAQUES</h3>
+<div class="kb-destaques">
+    {% for art in destaques %}
+    <div class="kb-destaque">
+        <div class="kb-destaque-cat"><i class="fas {{ art.categoria.icone }}"></i> {{ art.categoria.nome }}</div>
+        <h4><a href="{% url 'suporte:artigo_conhecimento' art.slug %}">{{ art.titulo }}</a></h4>
+        <p>{{ art.resumo|default:art.conteudo|truncatechars:80 }}</p>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="kb-layout">
+    <!-- Sidebar categorias -->
+    <div class="kb-sidebar">
+        <h3 style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">CATEGORIAS</h3>
+        <ul class="kb-cat-list">
+            <li>
+                <a href="{% url 'suporte:base_conhecimento' %}" class="kb-cat-item {% if not categoria_ativa %}active{% endif %}">
+                    <span class="kb-cat-icon"><i class="fas fa-layer-group"></i></span> Todas
+                    <span class="kb-cat-count">{{ total_artigos }}</span>
+                </a>
+            </li>
+            {% for cat in categorias %}
+            <li>
+                <a href="?categoria={{ cat.slug }}" class="kb-cat-item {% if categoria_ativa == cat.slug %}active{% endif %}">
+                    <span class="kb-cat-icon" style="color:{{ cat.cor_hex }};"><i class="fas {{ cat.icone }}"></i></span> {{ cat.nome }}
+                    <span class="kb-cat-count">{{ cat.total_artigos }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Lista de artigos -->
+    <div>
+        {% if busca %}
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Resultados para "<strong>{{ busca }}</strong>"</p>
+        {% endif %}
+
+        <div class="card" style="padding:16px;">
+            {% for art in artigos %}
+            <div class="kb-artigo-row">
+                <div class="kb-artigo-icon" style="background:{{ art.categoria.cor_hex }}">
+                    <i class="fas {{ art.categoria.icone }}"></i>
+                </div>
+                <div class="kb-artigo-info">
+                    <h4>
+                        {% if art.destaque %}<i class="fas fa-star" style="color:#f59e0b;font-size:11px;"></i> {% endif %}
+                        <a href="{% url 'suporte:artigo_conhecimento' art.slug %}">{{ art.titulo }}</a>
+                    </h4>
+                    <p>{{ art.resumo|default:art.conteudo|truncatechars:120 }}</p>
+                    {% for tag in art.tags_lista %}
+                    <span class="kb-tag">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+                <div class="kb-artigo-meta">
+                    <div><i class="fas fa-eye"></i> {{ art.visualizacoes }}</div>
+                    <div>{{ art.atualizado_em|date:"d/m/Y" }}</div>
+                </div>
+            </div>
+            {% empty %}
+            <div style="text-align:center;padding:40px;color:var(--text-muted);">
+                <i class="fas fa-book-open" style="font-size:32px;opacity:.3;margin-bottom:8px;display:block;"></i>
+                {% if busca %}
+                <p>Nenhum artigo encontrado para "{{ busca }}"</p>
+                {% else %}
+                <p>Nenhum artigo publicado</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

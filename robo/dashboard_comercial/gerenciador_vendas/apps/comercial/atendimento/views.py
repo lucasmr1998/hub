@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 from apps.comercial.atendimento.models import (
     FluxoAtendimento,
     QuestaoFluxo,
+    NodoFluxoAtendimento,
+    ConexaoNodoAtendimento,
+    AtendimentoFluxo,
+    LogFluxoAtendimento,
 )
 
 
@@ -399,3 +403,208 @@ def api_duplicar_questao_fluxo(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# ============================================================================
+# EDITOR VISUAL DE FLUXO (Drawflow)
+# ============================================================================
+
+@login_required(login_url='sistema:login')
+def editor_fluxo_view(request, fluxo_id):
+    """Renderiza o editor visual de fluxo (Drawflow)."""
+    from django.shortcuts import get_object_or_404
+    fluxo = get_object_or_404(FluxoAtendimento, pk=fluxo_id)
+
+    # Se nao tem fluxo_json mas tem nodos no banco, montar dados para reconstruir
+    nodos_db = []
+    conexoes_db = []
+    if not fluxo.fluxo_json:
+        for nodo in fluxo.nodos.all().order_by('ordem'):
+            nodos_db.append({
+                'id': nodo.id,
+                'tipo': nodo.tipo,
+                'subtipo': nodo.subtipo,
+                'nome': nodo.subtipo.replace('_', ' ').title() if nodo.subtipo else nodo.get_tipo_display(),
+                'config': nodo.configuracao,
+                'pos_x': nodo.pos_x,
+                'pos_y': nodo.pos_y,
+            })
+        for conn in fluxo.conexoes.all():
+            conexoes_db.append({
+                'origem': conn.nodo_origem_id,
+                'destino': conn.nodo_destino_id,
+                'tipo_saida': conn.tipo_saida,
+            })
+
+    context = {
+        'fluxo': fluxo,
+        'fluxo_json': json.dumps(fluxo.fluxo_json) if fluxo.fluxo_json else '{}',
+        'nodos_db': json.dumps(nodos_db),
+        'conexoes_db': json.dumps(conexoes_db),
+    }
+    return render(request, 'comercial/atendimento/editor_fluxo.html', context)
+
+
+@login_required(login_url='sistema:login')
+@require_http_methods(["POST"])
+def salvar_fluxo_api(request, fluxo_id):
+    """Salva o estado do editor visual (nodos + conexoes)."""
+    from django.shortcuts import get_object_or_404
+    fluxo = get_object_or_404(FluxoAtendimento, pk=fluxo_id)
+
+    try:
+        data = json.loads(request.body)
+        drawflow_state = data.get('drawflow_state', {})
+        nodos_data = data.get('nodos', [])
+        conexoes_data = data.get('conexoes', [])
+
+        # Salvar estado bruto do Drawflow para re-import
+        fluxo.fluxo_json = drawflow_state
+        fluxo.modo_fluxo = True
+        fluxo.save(update_fields=['fluxo_json', 'modo_fluxo'])
+
+        # Recriar nodos e conexoes
+        fluxo.nodos.all().delete()
+        fluxo.conexoes.all().delete()
+
+        # Mapear id_temp → NodoFluxoAtendimento.pk
+        id_map = {}
+        for nodo_data in nodos_data:
+            nodo = NodoFluxoAtendimento.objects.create(
+                tenant=fluxo.tenant,
+                fluxo=fluxo,
+                tipo=nodo_data.get('tipo', 'entrada'),
+                subtipo=nodo_data.get('subtipo', ''),
+                configuracao=nodo_data.get('config', {}),
+                pos_x=nodo_data.get('pos_x', 0),
+                pos_y=nodo_data.get('pos_y', 0),
+                ordem=nodo_data.get('ordem', 0),
+            )
+            id_map[str(nodo_data.get('id_temp', ''))] = nodo
+
+        # Criar conexoes
+        for conn_data in conexoes_data:
+            origem = id_map.get(str(conn_data.get('origem')))
+            destino = id_map.get(str(conn_data.get('destino')))
+            if origem and destino:
+                ConexaoNodoAtendimento.objects.create(
+                    tenant=fluxo.tenant,
+                    fluxo=fluxo,
+                    nodo_origem=origem,
+                    nodo_destino=destino,
+                    tipo_saida=conn_data.get('tipo_saida', 'default'),
+                )
+
+        return JsonResponse({'ok': True, 'nodos': len(id_map)})
+
+    except Exception as e:
+        logger.error(f"Erro ao salvar fluxo visual: {e}")
+        return JsonResponse({'ok': False, 'erro': str(e)}, status=400)
+
+
+# ============================================================================
+# ACOMPANHAMENTO DE SESSOES
+# ============================================================================
+
+@login_required(login_url='sistema:login')
+def sessoes_atendimento_view(request):
+    """Tela de acompanhamento de sessoes ativas e historico."""
+    status_filter = request.GET.get('status', '')
+    fluxo_filter = request.GET.get('fluxo', '')
+
+    sessoes = AtendimentoFluxo.objects.select_related(
+        'lead', 'fluxo', 'nodo_atual'
+    ).order_by('-data_inicio')
+
+    if status_filter == 'em_andamento':
+        sessoes = sessoes.filter(status__in=['iniciado', 'em_andamento', 'pausado'])
+    elif status_filter:
+        sessoes = sessoes.filter(status=status_filter)
+    if fluxo_filter:
+        sessoes = sessoes.filter(fluxo_id=fluxo_filter)
+
+    fluxos = FluxoAtendimento.objects.all().order_by('nome')
+
+    context = {
+        'sessoes': sessoes[:100],
+        'fluxos': fluxos,
+        'status_filter': status_filter,
+        'fluxo_filter': fluxo_filter,
+    }
+    return render(request, 'comercial/atendimento/sessoes.html', context)
+
+
+@login_required(login_url='sistema:login')
+def sessao_detalhe_view(request, atendimento_id):
+    """Detalhe de uma sessao com logs de execucao."""
+    from django.shortcuts import get_object_or_404
+    sessao = get_object_or_404(
+        AtendimentoFluxo.objects.select_related('lead', 'fluxo', 'nodo_atual'),
+        pk=atendimento_id
+    )
+    logs = LogFluxoAtendimento.objects.filter(
+        atendimento=sessao
+    ).select_related('nodo').order_by('data_execucao')
+
+    context = {
+        'sessao': sessao,
+        'logs': logs,
+    }
+    return render(request, 'comercial/atendimento/sessao_detalhe.html', context)
+
+
+@login_required(login_url='sistema:login')
+def sessao_fluxo_visual_view(request, atendimento_id):
+    """Visualizacao do fluxo com destaque do nodo atual da sessao."""
+    from django.shortcuts import get_object_or_404
+    sessao = get_object_or_404(
+        AtendimentoFluxo.objects.select_related('lead', 'fluxo', 'nodo_atual'),
+        pk=atendimento_id
+    )
+    fluxo = sessao.fluxo
+
+    # IDs dos nodos ja executados (via logs)
+    nodos_executados = list(
+        LogFluxoAtendimento.objects.filter(
+            atendimento=sessao, status='sucesso'
+        ).exclude(nodo__isnull=True).values_list('nodo_id', flat=True).distinct()
+    )
+
+    # Nodo atual
+    nodo_atual_id = sessao.nodo_atual_id
+
+    context = {
+        'sessao': sessao,
+        'fluxo': fluxo,
+        'fluxo_json': json.dumps(fluxo.fluxo_json) if fluxo.fluxo_json else '{}',
+        'nodos_executados': json.dumps(nodos_executados),
+        'nodo_atual_id': nodo_atual_id or 0,
+    }
+
+    # Se nao tem fluxo_json, montar dos nodos do banco
+    if not fluxo.fluxo_json:
+        nodos_db = []
+        conexoes_db = []
+        for nodo in fluxo.nodos.all().order_by('ordem'):
+            nodos_db.append({
+                'id': nodo.id,
+                'tipo': nodo.tipo,
+                'subtipo': nodo.subtipo,
+                'nome': nodo.subtipo.replace('_', ' ').title() if nodo.subtipo else nodo.get_tipo_display(),
+                'config': nodo.configuracao,
+                'pos_x': nodo.pos_x,
+                'pos_y': nodo.pos_y,
+            })
+        for conn in fluxo.conexoes.all():
+            conexoes_db.append({
+                'origem': conn.nodo_origem_id,
+                'destino': conn.nodo_destino_id,
+                'tipo_saida': conn.tipo_saida,
+            })
+        context['nodos_db'] = json.dumps(nodos_db)
+        context['conexoes_db'] = json.dumps(conexoes_db)
+    else:
+        context['nodos_db'] = '[]'
+        context['conexoes_db'] = '[]'
+
+    return render(request, 'comercial/atendimento/sessao_fluxo_visual.html', context)

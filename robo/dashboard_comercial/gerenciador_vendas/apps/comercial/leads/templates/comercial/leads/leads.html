@@ -39,14 +39,9 @@
     .row-action { width:30px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:6px; border:none; background:var(--border-light); color:var(--text-muted); cursor:pointer; font-size:12px; transition:all 0.15s; }
     .row-action:hover { background:var(--primary-light); color:var(--primary); }
 
-    .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .detail-item label { font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-light); display:block; margin-bottom:2px; }
-    .detail-item span { font-size:14px; color:var(--text-main); }
-
     @media (max-width:768px) {
         .leads-stats { grid-template-columns:repeat(2,1fr); }
         .filter-row { grid-template-columns:1fr; }
-        .detail-grid { grid-template-columns:1fr; }
         .leads-header { flex-direction:column; align-items:flex-start; }
     }
 </style>
@@ -117,13 +112,6 @@
     <div class="pagination" id="paginationControls"></div>
 </div>
 
-<div class="modal-overlay" id="detailModal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
-    <div class="modal-content" style="max-width:700px;">
-        <button class="modal-close" onclick="document.getElementById('detailModal').style.display='none'">&times;</button>
-        <h3 style="font-size:18px;font-weight:700;margin-bottom:20px;" id="detailTitle">Detalhes</h3>
-        <div id="detailBody"></div>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -155,7 +143,7 @@ async function loadLeads() {
             <td><span class="badge badge-muted">${l.origem_display||l.origem}</span></td>
             <td>${statusBadge(l.status_api, l.status_api_display||l.status_api)}</td>
             <td style="font-size:12px;color:var(--text-muted);white-space:nowrap" title="${fmtDateFull(l.data_cadastro)}">${fmtDate(l.data_cadastro)}</td>
-            <td><div class="row-actions" style="justify-content:center"><button class="row-action" title="Ver detalhes" onclick="viewLead(${l.id})"><i class="fas fa-eye"></i></button><button class="row-action whatsapp" title="WhatsApp" onclick="window.open('https://wa.me/${(l.telefone||'').replace(/\\D/g,'')}','_blank')"><i class="fab fa-whatsapp"></i></button></div></td>
+            <td><div class="row-actions" style="justify-content:center"><a class="row-action" title="Ver detalhes" href="/leads/${l.id}/" style="text-decoration:none;"><i class="fas fa-eye"></i></a><button class="row-action whatsapp" title="WhatsApp" onclick="window.open('https://wa.me/${(l.telefone||'').replace(/\\D/g,'')}','_blank')"><i class="fab fa-whatsapp"></i></button></div></td>
         </tr>`).join('');
         const total=data.total, s=(data.page-1)*data.per_page+1, e=Math.min(data.page*data.per_page,total);
         document.getElementById('totalCount').textContent=`${total} registro(s)`;
@@ -197,24 +185,6 @@ function applyFilters() {
 }
 
 document.getElementById('filterSearch').addEventListener('keydown',e=>{if(e.key==='Enter')applyFilters();});
-
-async function viewLead(id) {
-    const data=await(await fetch(`${API_URL}?id=${id}`)).json(); if(!data.results||!data.results.length)return; const l=data.results[0];
-    document.getElementById('detailTitle').textContent=l.nome_razaosocial;
-    const f=(lbl,val)=>`<div class="detail-item"><label>${lbl}</label><span>${val||'-'}</span></div>`;
-    document.getElementById('detailBody').innerHTML=`<div class="detail-grid">
-        ${f('Nome',l.nome_razaosocial)}${f('Telefone',fmtPhone(l.telefone))}${f('Email',l.email)}${f('CPF/CNPJ',l.cpf_cnpj)}
-        ${f('Empresa',l.empresa)}${f('Valor',l.valor_formatado)}${f('Origem',l.origem_display||l.origem)}
-        ${f('Status',statusBadge(l.status_api, l.status_api_display||l.status_api))}
-        ${f('Data Cadastro',fmtDate(l.data_cadastro))}${f('Canal',l.canal_entrada)}
-        ${f('Cidade',`${l.cidade||'-'} ${l.estado?'- '+l.estado:''}`)}${f('Bairro',l.bairro)}
-        ${f('CEP',l.cep)}${f('Endereco',`${l.rua||'-'}${l.numero_residencia?', '+l.numero_residencia:''}`)}
-        ${f('Documentacao',l.documentacao_validada?'<span class="badge badge-success">Validada</span>':l.documentacao_completa?'<span class="badge badge-warning">Pendente</span>':'<span class="badge badge-muted">Nao enviada</span>')}
-        ${f('Contrato',l.contrato_aceito?'<span class="badge badge-success">Aceito</span>':'<span class="badge badge-muted">Pendente</span>')}
-        ${f('Nascimento',l.data_nascimento)}${f('Referencia',l.ponto_referencia)}
-    </div>${l.observacoes?`<div style="margin-top:16px"><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-light);display:block;margin-bottom:4px">Observacoes</label><p style="font-size:14px;color:var(--text-secondary);background:var(--border-light);padding:12px;border-radius:8px">${l.observacoes}</p></div>`:''}`;
-    document.getElementById('detailModal').style.display='flex';
-}
 
 document.addEventListener('DOMContentLoaded',()=>{loadLeads();loadStats();});
 </script>

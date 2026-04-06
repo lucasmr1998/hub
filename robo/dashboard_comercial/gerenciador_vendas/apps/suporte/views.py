@@ -1,8 +1,10 @@
 import logging
 from django.contrib.auth.decorators import login_required
+from django.db import models
+from django.db.models import Count, Q
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
-from django.db.models import Count, Q
 
 from .models import Ticket, ComentarioTicket, CategoriaTicket
 
@@ -185,3 +187,183 @@ def ticket_detalhe(request, pk):
         'atendentes': atendentes,
         'status_choices': Ticket.STATUS_CHOICES,
     })
+
+
+# ============================================================================
+# BASE DE CONHECIMENTO
+# ============================================================================
+
+@login_required
+def base_conhecimento(request):
+    """Página principal da base de conhecimento."""
+    from .models import CategoriaConhecimento, ArtigoConhecimento
+
+    busca = request.GET.get('q', '').strip()
+    categoria_slug = request.GET.get('categoria', '')
+
+    categorias = CategoriaConhecimento.objects.filter(ativo=True).order_by('ordem')
+
+    if busca:
+        artigos = ArtigoConhecimento.objects.filter(
+            publicado=True,
+        ).filter(
+            Q(titulo__icontains=busca) |
+            Q(conteudo__icontains=busca) |
+            Q(tags__icontains=busca) |
+            Q(resumo__icontains=busca)
+        ).select_related('categoria', 'autor')
+    elif categoria_slug:
+        artigos = ArtigoConhecimento.objects.filter(
+            publicado=True, categoria__slug=categoria_slug,
+        ).select_related('categoria', 'autor')
+    else:
+        artigos = ArtigoConhecimento.objects.filter(
+            publicado=True,
+        ).select_related('categoria', 'autor')
+
+    destaques = ArtigoConhecimento.objects.filter(publicado=True, destaque=True).select_related('categoria')[:5]
+
+    return render(request, 'suporte/base_conhecimento.html', {
+        'categorias': categorias,
+        'artigos': artigos[:50],
+        'destaques': destaques,
+        'busca': busca,
+        'categoria_ativa': categoria_slug,
+        'total_artigos': artigos.count(),
+    })
+
+
+@login_required
+def artigo_conhecimento(request, slug):
+    """Detalhe de um artigo da base de conhecimento."""
+    from .models import ArtigoConhecimento
+
+    artigo = get_object_or_404(ArtigoConhecimento, slug=slug, publicado=True)
+
+    # Incrementar visualizações
+    ArtigoConhecimento.objects.filter(pk=artigo.pk).update(visualizacoes=models.F('visualizacoes') + 1)
+
+    # Artigos relacionados (mesma categoria)
+    relacionados = ArtigoConhecimento.objects.filter(
+        categoria=artigo.categoria, publicado=True,
+    ).exclude(pk=artigo.pk).order_by('-atualizado_em')[:5]
+
+    return render(request, 'suporte/artigo_conhecimento.html', {
+        'artigo': artigo,
+        'relacionados': relacionados,
+    })
+
+
+@login_required
+def api_artigo_feedback(request, pk):
+    """POST: Registrar feedback (útil sim/não)."""
+    from .models import ArtigoConhecimento
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Use POST'}, status=405)
+
+    try:
+        import json
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+
+    voto = body.get('voto')  # 'sim' ou 'nao'
+    if voto == 'sim':
+        ArtigoConhecimento.objects.filter(pk=pk).update(util_sim=models.F('util_sim') + 1)
+    elif voto == 'nao':
+        ArtigoConhecimento.objects.filter(pk=pk).update(util_nao=models.F('util_nao') + 1)
+
+    return JsonResponse({'success': True})
+
+
+@login_required
+def gerenciar_conhecimento(request):
+    """CRUD de categorias e artigos da base de conhecimento."""
+    from .models import CategoriaConhecimento, ArtigoConhecimento
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'criar_categoria':
+            from django.utils.text import slugify
+            nome = request.POST.get('nome', '').strip()
+            if nome:
+                CategoriaConhecimento.objects.get_or_create(
+                    tenant=request.tenant, slug=slugify(nome),
+                    defaults={
+                        'nome': nome,
+                        'icone': request.POST.get('icone', 'fa-book'),
+                        'cor_hex': request.POST.get('cor_hex', '#3b82f6'),
+                    }
+                )
+
+        elif action == 'criar_artigo':
+            from django.utils.text import slugify
+            titulo = request.POST.get('titulo', '').strip()
+            categoria_id = request.POST.get('categoria_id')
+            if titulo and categoria_id:
+                ArtigoConhecimento.objects.create(
+                    tenant=request.tenant,
+                    categoria_id=categoria_id,
+                    titulo=titulo,
+                    slug=slugify(titulo),
+                    conteudo=request.POST.get('conteudo', ''),
+                    resumo=request.POST.get('resumo', ''),
+                    tags=request.POST.get('tags', ''),
+                    autor=request.user,
+                    publicado=request.POST.get('publicado') == 'on',
+                    destaque=request.POST.get('destaque') == 'on',
+                )
+
+        elif action == 'editar_artigo':
+            from django.utils.text import slugify
+            artigo_id = request.POST.get('artigo_id')
+            artigo = get_object_or_404(ArtigoConhecimento, pk=artigo_id)
+            artigo.titulo = request.POST.get('titulo', artigo.titulo).strip()
+            artigo.slug = slugify(artigo.titulo)
+            artigo.conteudo = request.POST.get('conteudo', artigo.conteudo)
+            artigo.resumo = request.POST.get('resumo', '')
+            artigo.tags = request.POST.get('tags', '')
+            artigo.categoria_id = request.POST.get('categoria_id', artigo.categoria_id)
+            artigo.publicado = request.POST.get('publicado') == 'on'
+            artigo.destaque = request.POST.get('destaque') == 'on'
+            artigo.save()
+
+        elif action == 'excluir_artigo':
+            artigo_id = request.POST.get('artigo_id')
+            ArtigoConhecimento.objects.filter(pk=artigo_id).delete()
+
+        elif action == 'excluir_categoria':
+            cat_id = request.POST.get('categoria_id')
+            CategoriaConhecimento.objects.filter(pk=cat_id).delete()
+
+        return redirect('suporte:gerenciar_conhecimento')
+
+    categorias = CategoriaConhecimento.objects.filter(ativo=True).order_by('ordem')
+    artigos = ArtigoConhecimento.objects.all().select_related('categoria', 'autor').order_by('-atualizado_em')
+
+    return render(request, 'suporte/gerenciar_conhecimento.html', {
+        'categorias': categorias,
+        'artigos': artigos,
+    })
+
+
+@login_required
+def api_buscar_conhecimento(request):
+    """GET: Busca rápida de artigos (para o Inbox)."""
+    from .models import ArtigoConhecimento
+
+    q = request.GET.get('q', '').strip()
+    if not q or len(q) < 2:
+        return JsonResponse({'artigos': []})
+
+    artigos = ArtigoConhecimento.objects.filter(
+        publicado=True,
+    ).filter(
+        Q(titulo__icontains=q) |
+        Q(conteudo__icontains=q) |
+        Q(tags__icontains=q)
+    ).values('id', 'titulo', 'resumo', 'categoria__nome', 'slug')[:10]
+
+    return JsonResponse({'artigos': list(artigos)})

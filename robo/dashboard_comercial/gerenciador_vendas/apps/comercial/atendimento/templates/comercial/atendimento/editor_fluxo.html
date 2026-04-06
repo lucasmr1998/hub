@@ -1,0 +1,592 @@
+{% extends 'sistema/base.html' %}
+
+{% block title %}Editor — {{ fluxo.nome }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow@0.0.59/dist/drawflow.min.css">
+<style>
+.editor-layout { display:flex; height:calc(100vh - 160px); }
+.editor-sidebar { width:240px; background:var(--bg-white); border:1px solid var(--border); border-radius:10px 0 0 10px; overflow-y:auto; padding:16px; flex-shrink:0; }
+.editor-canvas { flex:1; position:relative; background:#f8fafc; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+.editor-config { width:320px; background:var(--bg-white); border:1px solid var(--border); border-radius:0 10px 10px 0; overflow-y:auto; padding:16px; display:none; flex-shrink:0; }
+
+.editor-toolbar { display:flex; align-items:center; gap:12px; padding:10px 16px; background:var(--bg-white); border:1px solid var(--border); border-radius:10px; margin-bottom:14px; }
+.editor-toolbar h2 { font-size:15px; font-weight:700; color:var(--text-main); flex:1; margin:0; }
+
+.sidebar-node-search { width:100%; padding:7px 10px 7px 30px; border:1px solid var(--border); border-radius:8px; font-size:12px; font-family:'Inter',sans-serif; margin-bottom:12px; outline:none; }
+.sidebar-node-search:focus { border-color:var(--primary); }
+.sidebar-search-wrap { position:relative; }
+.sidebar-search-wrap i { position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:11px; color:var(--text-muted); pointer-events:none; }
+
+.node-section { margin-bottom:4px; }
+.node-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); padding:8px 4px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none; border-radius:6px; }
+.node-section-title:hover { background:var(--bg-subtle,#f1f5f9); }
+.node-section-title .chevron { font-size:9px; transition:transform .2s; }
+.node-section.collapsed .chevron { transform:rotate(-90deg); }
+.node-section.collapsed .node-section-items { display:none; }
+.node-section-items { padding-bottom:4px; }
+.node-draggable { display:flex; align-items:center; gap:8px; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:500; color:var(--text-secondary); cursor:grab; transition:all .15s; border:1px solid transparent; margin-bottom:2px; }
+.node-draggable:hover { background:var(--bg-subtle,#f1f5f9); border-color:var(--border); }
+.node-draggable:active { cursor:grabbing; }
+.node-draggable i { width:20px; text-align:center; flex-shrink:0; }
+.node-draggable.hidden { display:none; }
+
+#drawflow { width:100%; height:100%; }
+.drawflow .drawflow-node { border-radius:10px; border:2px solid var(--border); background:var(--bg-white); min-width:180px; font-family:'Inter',sans-serif; font-size:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+.drawflow .drawflow-node.selected { border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,.15); }
+.drawflow .drawflow-node .title-box { background:var(--bg-subtle,#f1f5f9); padding:8px 12px; font-weight:700; font-size:12px; border-radius:8px 8px 0 0; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:6px; }
+.drawflow .drawflow-node .box { padding:10px 12px; font-size:11px; color:var(--text-muted); }
+.drawflow .connection .main-path { stroke:var(--primary); stroke-width:2; }
+.drawflow .drawflow-node .input, .drawflow .drawflow-node .output { width:12px; height:12px; }
+.drawflow .drawflow-node .output { background:var(--primary); }
+
+.drawflow .drawflow-node[data-tipo="entrada"] .title-box { background:#eff6ff; color:#1e40af; }
+.drawflow .drawflow-node[data-tipo="questao"] .title-box { background:#ecfeff; color:#155e75; }
+.drawflow .drawflow-node[data-tipo="condicao"] .title-box { background:#fef3c7; color:#92400e; }
+.drawflow .drawflow-node[data-tipo="acao"] .title-box { background:#ecfdf5; color:#065f46; }
+.drawflow .drawflow-node[data-tipo="delay"] .title-box { background:#f5f3ff; color:#5b21b6; }
+.drawflow .drawflow-node[data-tipo="finalizacao"] .title-box { background:#fff1f2; color:#9f1239; }
+
+.config-group { margin-bottom:14px; }
+.config-group label { display:block; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; letter-spacing:.03em; }
+.config-group input, .config-group select, .config-group textarea { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:12px; font-family:'Inter',sans-serif; box-sizing:border-box; }
+.config-group textarea { resize:vertical; min-height:60px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="editor-toolbar">
+    <a href="{% url 'comercial_atendimento:fluxos_atendimento' %}" style="color:var(--text-muted); font-size:16px;"><i class="fas fa-arrow-left"></i></a>
+    <h2><i class="fas fa-project-diagram" style="color:var(--primary);"></i> {{ fluxo.nome }}</h2>
+    <span class="badge badge-{% if fluxo.status == 'ativo' %}success{% elif fluxo.status == 'rascunho' %}warning{% else %}muted{% endif %}" style="font-size:11px;">{{ fluxo.get_status_display }}</span>
+    <button onclick="salvarFluxo()" class="btn-primary" id="btnSalvar" style="padding:6px 16px; font-size:12px;">
+        <i class="fas fa-save"></i> Salvar
+    </button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow@0.0.59/dist/drawflow.min.js"></script>
+
+<div class="editor-layout">
+    <!-- Sidebar -->
+    <div class="editor-sidebar">
+        <div class="sidebar-search-wrap">
+            <i class="fas fa-search"></i>
+            <input type="text" class="sidebar-node-search" id="nodeSearch" placeholder="Buscar nos...">
+        </div>
+
+        <!-- Entrada -->
+        <div class="node-section">
+            <div class="node-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
+                <span><i class="fas fa-play-circle" style="color:#3b82f6;margin-right:4px;"></i> Entrada</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="node-section-items">
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="entrada" data-subtipo="inicio_fluxo" data-nome="Inicio do Fluxo">
+                    <i class="fas fa-play-circle" style="color:#3b82f6;"></i> Inicio do Fluxo
+                </div>
+            </div>
+        </div>
+
+        <!-- Questoes -->
+        <div class="node-section">
+            <div class="node-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
+                <span><i class="fas fa-comment-dots" style="color:#0891b2;margin-right:4px;"></i> Questoes</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="node-section-items">
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="texto" data-nome="Pergunta Texto"><i class="fas fa-comment-dots" style="color:#0891b2;"></i> Pergunta Texto</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="numero" data-nome="Pergunta Numero"><i class="fas fa-hashtag" style="color:#0891b2;"></i> Pergunta Numero</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="email" data-nome="Pergunta Email"><i class="fas fa-envelope" style="color:#0891b2;"></i> Pergunta Email</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="telefone" data-nome="Pergunta Telefone"><i class="fas fa-phone" style="color:#0891b2;"></i> Pergunta Telefone</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="cpf_cnpj" data-nome="Pergunta CPF/CNPJ"><i class="fas fa-id-card" style="color:#0891b2;"></i> Pergunta CPF/CNPJ</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="cep" data-nome="Pergunta CEP"><i class="fas fa-map-marker-alt" style="color:#0891b2;"></i> Pergunta CEP</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="select" data-nome="Selecao Unica"><i class="fas fa-list" style="color:#0891b2;"></i> Selecao Unica</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="multiselect" data-nome="Selecao Multipla"><i class="fas fa-check-square" style="color:#0891b2;"></i> Selecao Multipla</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="boolean" data-nome="Sim/Nao"><i class="fas fa-toggle-on" style="color:#0891b2;"></i> Sim/Nao</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="escala" data-nome="Escala 1-10"><i class="fas fa-sliders-h" style="color:#0891b2;"></i> Escala 1-10</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="data" data-nome="Pergunta Data"><i class="fas fa-calendar" style="color:#0891b2;"></i> Pergunta Data</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="planos_internet" data-nome="Selecao de Planos"><i class="fas fa-wifi" style="color:#0891b2;"></i> Selecao de Planos</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="vencimentos" data-nome="Selecao Vencimentos"><i class="fas fa-calendar-check" style="color:#0891b2;"></i> Selecao Vencimentos</div>
+            </div>
+        </div>
+
+        <!-- Condicoes -->
+        <div class="node-section">
+            <div class="node-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
+                <span><i class="fas fa-code-branch" style="color:#d97706;margin-right:4px;"></i> Condicoes</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="node-section-items">
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="condicao" data-subtipo="campo_check" data-nome="Verificar Campo"><i class="fas fa-code-branch" style="color:#d97706;"></i> Verificar Campo</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="condicao" data-subtipo="resposta_check" data-nome="Verificar Resposta"><i class="fas fa-spell-check" style="color:#d97706;"></i> Verificar Resposta</div>
+            </div>
+        </div>
+
+        <!-- Acoes -->
+        <div class="node-section">
+            <div class="node-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
+                <span><i class="fas fa-play" style="color:#059669;margin-right:4px;"></i> Acoes</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="node-section-items">
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="acao" data-subtipo="enviar_whatsapp" data-nome="Enviar WhatsApp"><i class="fab fa-whatsapp" style="color:#25D366;"></i> Enviar WhatsApp</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="acao" data-subtipo="enviar_email" data-nome="Enviar E-mail"><i class="fas fa-envelope" style="color:#3b82f6;"></i> Enviar E-mail</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="acao" data-subtipo="webhook" data-nome="Webhook"><i class="fas fa-plug" style="color:#64748b;"></i> Webhook</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="acao" data-subtipo="criar_tarefa" data-nome="Criar Tarefa"><i class="fas fa-tasks" style="color:#3b82f6;"></i> Criar Tarefa</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="acao" data-subtipo="mover_estagio" data-nome="Mover Estagio"><i class="fas fa-columns" style="color:#8b5cf6;"></i> Mover Estagio</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="acao" data-subtipo="notificacao_sistema" data-nome="Notificacao"><i class="fas fa-bell" style="color:#f59e0b;"></i> Notificacao</div>
+            </div>
+        </div>
+
+        <!-- Controle -->
+        <div class="node-section">
+            <div class="node-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
+                <span><i class="fas fa-clock" style="color:#7c3aed;margin-right:4px;"></i> Controle</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="node-section-items">
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="delay" data-subtipo="delay" data-nome="Atraso"><i class="fas fa-clock" style="color:#7c3aed;"></i> Atraso</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="finalizacao" data-subtipo="finalizar" data-nome="Finalizar Fluxo"><i class="fas fa-stop-circle" style="color:#e11d48;"></i> Finalizar Fluxo</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="finalizacao" data-subtipo="calcular_score" data-nome="Finalizar com Score"><i class="fas fa-flag-checkered" style="color:#e11d48;"></i> Finalizar com Score</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Canvas Drawflow -->
+    <div class="editor-canvas">
+        <div id="drawflow"></div>
+    </div>
+
+    <!-- Config Panel -->
+    <div class="editor-config" id="configPanel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="font-size:14px;font-weight:700;margin:0;" id="configTitle">Configuracao</h3>
+            <button onclick="fecharConfig()" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-muted);">&times;</button>
+        </div>
+        <div id="configBody"></div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const container = document.getElementById('drawflow');
+const editor = new Drawflow(container);
+editor.reroute = true;
+editor.start();
+
+let selectedNodeId = null;
+let nodeCounter = 0;
+
+// ── Drag & Drop ──
+function dragNode(ev) {
+    ev.dataTransfer.setData('tipo', ev.target.getAttribute('data-tipo'));
+    ev.dataTransfer.setData('subtipo', ev.target.getAttribute('data-subtipo'));
+    ev.dataTransfer.setData('nome', ev.target.getAttribute('data-nome'));
+}
+
+container.addEventListener('dragover', e => e.preventDefault());
+container.addEventListener('drop', function(ev) {
+    ev.preventDefault();
+    const tipo = ev.dataTransfer.getData('tipo');
+    const subtipo = ev.dataTransfer.getData('subtipo');
+    const nome = ev.dataTransfer.getData('nome');
+    const rect = container.getBoundingClientRect();
+    const x = ev.clientX - rect.left;
+    const y = ev.clientY - rect.top;
+    addNodeToEditor(tipo, subtipo, nome, x, y);
+});
+
+// ── Adicionar no ──
+function addNodeToEditor(tipo, subtipo, nome, x, y) {
+    nodeCounter++;
+    const nodeId = `node_${nodeCounter}`;
+
+    let inputs = 1, outputs = 1;
+    if (tipo === 'entrada') { inputs = 0; outputs = 1; }
+    if (tipo === 'condicao') { inputs = 1; outputs = 2; }
+    if (tipo === 'finalizacao') { inputs = 1; outputs = 0; }
+
+    const iconMap = {
+        'entrada': '<i class="fas fa-play-circle" style="color:#3b82f6;"></i>',
+        'questao': '<i class="fas fa-comment-dots" style="color:#0891b2;"></i>',
+        'condicao': '<i class="fas fa-code-branch" style="color:#d97706;"></i>',
+        'acao': '<i class="fas fa-play" style="color:#059669;"></i>',
+        'delay': '<i class="fas fa-clock" style="color:#7c3aed;"></i>',
+        'finalizacao': '<i class="fas fa-flag-checkered" style="color:#e11d48;"></i>',
+    };
+
+    const subtipoIcons = {
+        'enviar_whatsapp': '<i class="fab fa-whatsapp" style="color:#25D366;"></i>',
+        'enviar_email': '<i class="fas fa-envelope" style="color:#3b82f6;"></i>',
+        'webhook': '<i class="fas fa-plug" style="color:#64748b;"></i>',
+        'criar_tarefa': '<i class="fas fa-tasks" style="color:#3b82f6;"></i>',
+        'mover_estagio': '<i class="fas fa-columns" style="color:#8b5cf6;"></i>',
+        'notificacao_sistema': '<i class="fas fa-bell" style="color:#f59e0b;"></i>',
+    };
+
+    const icon = subtipoIcons[subtipo] || iconMap[tipo] || '';
+
+    let boxContent = '';
+    if (tipo === 'questao') boxContent = '<div class="box">Clique para configurar a pergunta</div>';
+    else if (tipo === 'condicao') boxContent = '<div class="box">✅ Sim &nbsp;&nbsp; ❌ Nao</div>';
+    else if (tipo === 'delay') boxContent = '<div class="box">⏱ Configurar tempo</div>';
+    else if (tipo === 'acao') boxContent = '<div class="box">Clique para configurar</div>';
+    else if (tipo === 'finalizacao') boxContent = '<div class="box">Fim do fluxo</div>';
+    else boxContent = '<div class="box">Ponto de entrada</div>';
+
+    const html = `<div class="title-box">${icon} ${nome}</div>${boxContent}`;
+
+    const id = editor.addNode(
+        nodeId, inputs, outputs, x, y,
+        nodeId,
+        { tipo, subtipo, nome, config: {} },
+        html
+    );
+
+    setTimeout(() => {
+        const el = document.querySelector(`#node-${id}`);
+        if (el) el.setAttribute('data-tipo', tipo);
+    }, 50);
+
+    return id;
+}
+
+// ── Selecao e Config ──
+editor.on('nodeSelected', function(nodeId) {
+    selectedNodeId = nodeId;
+    const node = editor.getNodeFromId(nodeId);
+    abrirConfig(nodeId, node.data);
+});
+
+editor.on('nodeUnselected', function() {
+    selectedNodeId = null;
+});
+
+function abrirConfig(nodeId, data) {
+    const panel = document.getElementById('configPanel');
+    const body = document.getElementById('configBody');
+    const title = document.getElementById('configTitle');
+    panel.style.display = 'block';
+    title.textContent = data.nome || 'Configuracao';
+
+    const config = data.config || {};
+    let html = '';
+
+    if (data.tipo === 'questao') {
+        html = `
+        <div class="config-group"><label>Titulo da Pergunta</label><input type="text" id="cfg_titulo" value="${config.titulo||''}" onchange="salvarConfigNodo()"></div>
+        <div class="config-group"><label>Descricao / Instrucoes</label><textarea id="cfg_descricao" onchange="salvarConfigNodo()">${config.descricao||''}</textarea></div>
+        <div class="config-group"><label>Opcoes de Resposta (uma por linha)</label><textarea id="cfg_opcoes" rows="4" onchange="salvarConfigNodo()" placeholder="Opcao 1&#10;Opcao 2&#10;Opcao 3">${(config.opcoes_resposta||[]).join('\\n')}</textarea></div>
+        <div class="config-group"><label>Obrigatoria</label><select id="cfg_obrigatoria" onchange="salvarConfigNodo()"><option value="true" ${config.obrigatoria!==false?'selected':''}>Sim</option><option value="false" ${config.obrigatoria===false?'selected':''}>Nao</option></select></div>
+        <div class="config-group"><label>Max Tentativas</label><input type="number" id="cfg_max_tent" value="${config.max_tentativas||3}" min="1" max="10" onchange="salvarConfigNodo()"></div>
+        <div class="config-group"><label>Mensagem de Erro</label><input type="text" id="cfg_msg_erro" value="${config.mensagem_erro||''}" onchange="salvarConfigNodo()" placeholder="Resposta invalida. Tente novamente."></div>
+        <div class="config-group"><label>Webhook Validacao (URL)</label><input type="url" id="cfg_webhook_val" value="${config.webhook_validacao||''}" onchange="salvarConfigNodo()"></div>
+        `;
+    } else if (data.tipo === 'condicao') {
+        html = `
+        <div class="config-group"><label>Campo</label>
+            <select id="cfg_campo" onchange="salvarConfigNodo()">
+                <optgroup label="Lead">
+                    <option value="lead.origem" ${config.campo==='lead.origem'?'selected':''}>Origem</option>
+                    <option value="lead.score_qualificacao" ${config.campo==='lead.score_qualificacao'?'selected':''}>Score</option>
+                    <option value="lead.cidade" ${config.campo==='lead.cidade'?'selected':''}>Cidade</option>
+                    <option value="lead.estado" ${config.campo==='lead.estado'?'selected':''}>Estado</option>
+                    <option value="lead.valor" ${config.campo==='lead.valor'?'selected':''}>Valor</option>
+                    <option value="lead.status_api" ${config.campo==='lead.status_api'?'selected':''}>Status</option>
+                    <option value="lead.cpf_cnpj" ${config.campo==='lead.cpf_cnpj'?'selected':''}>CPF/CNPJ</option>
+                    <option value="lead.email" ${config.campo==='lead.email'?'selected':''}>Email</option>
+                </optgroup>
+                <optgroup label="Resposta Anterior">
+                    <option value="ultima_resposta" ${config.campo==='ultima_resposta'?'selected':''}>Ultima Resposta</option>
+                </optgroup>
+            </select>
+        </div>
+        <div class="config-group"><label>Operador</label>
+            <select id="cfg_operador" onchange="salvarConfigNodo()">
+                <option value="igual" ${config.operador==='igual'?'selected':''}>Igual</option>
+                <option value="diferente" ${config.operador==='diferente'?'selected':''}>Diferente</option>
+                <option value="contem" ${config.operador==='contem'?'selected':''}>Contem</option>
+                <option value="maior" ${config.operador==='maior'?'selected':''}>Maior que</option>
+                <option value="menor" ${config.operador==='menor'?'selected':''}>Menor que</option>
+                <option value="maior_igual" ${config.operador==='maior_igual'?'selected':''}>Maior ou igual</option>
+                <option value="menor_igual" ${config.operador==='menor_igual'?'selected':''}>Menor ou igual</option>
+            </select>
+        </div>
+        <div class="config-group"><label>Valor</label><input type="text" id="cfg_valor" value="${config.valor||''}" onchange="salvarConfigNodo()"></div>
+        `;
+    } else if (data.tipo === 'acao') {
+        let extra = '';
+        if (data.subtipo === 'webhook') {
+            extra = `<div class="config-group"><label>URL do Webhook</label><input type="url" id="cfg_url" value="${config.url||''}" onchange="salvarConfigNodo()"></div>
+                     <div class="config-group"><label>Metodo</label><select id="cfg_metodo" onchange="salvarConfigNodo()"><option value="POST" ${config.metodo==='POST'?'selected':''}>POST</option><option value="GET" ${config.metodo==='GET'?'selected':''}>GET</option></select></div>`;
+        } else if (data.subtipo === 'enviar_whatsapp') {
+            extra = `<div class="config-group"><label>Webhook N8N (URL)</label><input type="url" id="cfg_webhook_url" value="${config.webhook_url||''}" onchange="salvarConfigNodo()"></div>`;
+        } else if (data.subtipo === 'criar_tarefa') {
+            extra = `<div class="config-group"><label>Titulo da Tarefa</label><input type="text" id="cfg_titulo_tarefa" value="${config.titulo||''}" onchange="salvarConfigNodo()"></div>`;
+        } else if (data.subtipo === 'mover_estagio') {
+            extra = `<div class="config-group"><label>Slug do Estagio</label><input type="text" id="cfg_estagio" value="${config.estagio||''}" onchange="salvarConfigNodo()"></div>`;
+        }
+        html = `
+        <div class="config-group"><label>Template / Mensagem</label><textarea id="cfg_template" rows="4" onchange="salvarConfigNodo()" placeholder="Ola {{lead_nome}}, ...">${config.template||''}</textarea></div>
+        <p style="font-size:11px;color:var(--text-muted);margin:0 0 12px;">Variaveis: {{lead_nome}}, {{lead_telefone}}, {{lead_email}}, {{ultima_resposta}}</p>
+        ${extra}
+        `;
+    } else if (data.tipo === 'delay') {
+        html = `
+        <div class="config-group"><label>Tempo</label><input type="number" id="cfg_delay_valor" value="${config.valor||30}" min="1" onchange="salvarConfigNodo()"></div>
+        <div class="config-group"><label>Unidade</label>
+            <select id="cfg_delay_unidade" onchange="salvarConfigNodo()">
+                <option value="minutos" ${config.unidade==='minutos'||!config.unidade?'selected':''}>Minutos</option>
+                <option value="horas" ${config.unidade==='horas'?'selected':''}>Horas</option>
+                <option value="dias" ${config.unidade==='dias'?'selected':''}>Dias</option>
+            </select>
+        </div>
+        `;
+    } else if (data.tipo === 'finalizacao') {
+        html = `
+        <div class="config-group"><label>Mensagem Final</label><input type="text" id="cfg_msg_final" value="${config.mensagem_final||'Atendimento finalizado'}" onchange="salvarConfigNodo()"></div>
+        ${data.subtipo==='calcular_score'?`<div class="config-group"><label>Score (1-10)</label><input type="number" id="cfg_score" value="${config.score||''}" min="1" max="10" onchange="salvarConfigNodo()"></div>`:''}
+        `;
+    } else if (data.tipo === 'entrada') {
+        html = `
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Ponto de entrada do fluxo. O canal define quando este fluxo e ativado automaticamente.</p>
+        <div class="config-group"><label>Canal de Ativacao</label>
+            <select id="cfg_canal" onchange="salvarConfigNodo()">
+                <option value="qualquer" ${config.canal==='qualquer'||!config.canal?'selected':''}>Qualquer Canal</option>
+                <option value="whatsapp" ${config.canal==='whatsapp'?'selected':''}>WhatsApp</option>
+                <option value="site" ${config.canal==='site'?'selected':''}>Site</option>
+                <option value="facebook" ${config.canal==='facebook'?'selected':''}>Facebook</option>
+                <option value="instagram" ${config.canal==='instagram'?'selected':''}>Instagram</option>
+                <option value="google" ${config.canal==='google'?'selected':''}>Google Ads</option>
+                <option value="telefone" ${config.canal==='telefone'?'selected':''}>Telefone</option>
+                <option value="email" ${config.canal==='email'?'selected':''}>Email</option>
+                <option value="indicacao" ${config.canal==='indicacao'?'selected':''}>Indicacao</option>
+                <option value="manual" ${config.canal==='manual'?'selected':''}>Manual (somente API)</option>
+            </select>
+        </div>
+        `;
+    } else {
+        html = `<p style="font-size:13px;color:var(--text-muted);">Conecte ao proximo no.</p>`;
+    }
+
+    // Botao deletar
+    html += `<div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border);"><button onclick="deletarNodo()" class="btn-danger" style="width:100%;padding:8px;font-size:12px;"><i class="fas fa-trash"></i> Excluir No</button></div>`;
+
+    body.innerHTML = html;
+}
+
+function salvarConfigNodo() {
+    if (!selectedNodeId) return;
+    const node = editor.getNodeFromId(selectedNodeId);
+    const data = node.data;
+    const config = data.config || {};
+
+    if (data.tipo === 'questao') {
+        config.titulo = document.getElementById('cfg_titulo')?.value || '';
+        config.descricao = document.getElementById('cfg_descricao')?.value || '';
+        const opcoesRaw = document.getElementById('cfg_opcoes')?.value || '';
+        config.opcoes_resposta = opcoesRaw.split('\n').map(o => o.trim()).filter(o => o);
+        config.obrigatoria = document.getElementById('cfg_obrigatoria')?.value === 'true';
+        config.max_tentativas = parseInt(document.getElementById('cfg_max_tent')?.value) || 3;
+        config.mensagem_erro = document.getElementById('cfg_msg_erro')?.value || '';
+        config.webhook_validacao = document.getElementById('cfg_webhook_val')?.value || '';
+    } else if (data.tipo === 'condicao') {
+        config.campo = document.getElementById('cfg_campo')?.value || '';
+        config.operador = document.getElementById('cfg_operador')?.value || 'igual';
+        config.valor = document.getElementById('cfg_valor')?.value || '';
+    } else if (data.tipo === 'acao') {
+        config.template = document.getElementById('cfg_template')?.value || '';
+        if (data.subtipo === 'webhook') {
+            config.url = document.getElementById('cfg_url')?.value || '';
+            config.metodo = document.getElementById('cfg_metodo')?.value || 'POST';
+        } else if (data.subtipo === 'enviar_whatsapp') {
+            config.webhook_url = document.getElementById('cfg_webhook_url')?.value || '';
+        } else if (data.subtipo === 'criar_tarefa') {
+            config.titulo = document.getElementById('cfg_titulo_tarefa')?.value || '';
+        } else if (data.subtipo === 'mover_estagio') {
+            config.estagio = document.getElementById('cfg_estagio')?.value || '';
+        }
+    } else if (data.tipo === 'delay') {
+        config.valor = parseInt(document.getElementById('cfg_delay_valor')?.value) || 30;
+        config.unidade = document.getElementById('cfg_delay_unidade')?.value || 'minutos';
+    } else if (data.tipo === 'finalizacao') {
+        config.mensagem_final = document.getElementById('cfg_msg_final')?.value || '';
+        const scoreEl = document.getElementById('cfg_score');
+        if (scoreEl) config.score = parseInt(scoreEl.value) || null;
+    } else if (data.tipo === 'entrada') {
+        config.canal = document.getElementById('cfg_canal')?.value || 'qualquer';
+    }
+
+    data.config = config;
+    editor.updateNodeDataFromId(selectedNodeId, data);
+}
+
+function fecharConfig() {
+    document.getElementById('configPanel').style.display = 'none';
+    selectedNodeId = null;
+}
+
+function deletarNodo() {
+    if (selectedNodeId) {
+        editor.removeNodeId(`node-${selectedNodeId}`);
+        fecharConfig();
+    }
+}
+
+// ── Salvar fluxo ──
+function salvarFluxo() {
+    const drawflowData = editor.export();
+    const nodos = [];
+    const conexoes = [];
+
+    for (const [moduleKey, moduleData] of Object.entries(drawflowData.drawflow)) {
+        for (const [nodeId, node] of Object.entries(moduleData.data)) {
+            nodos.push({
+                id_temp: nodeId,
+                tipo: node.data.tipo,
+                subtipo: node.data.subtipo,
+                config: node.data.config || {},
+                pos_x: Math.round(node.pos_x),
+                pos_y: Math.round(node.pos_y),
+                ordem: parseInt(nodeId),
+            });
+
+            for (const [outputKey, outputConns] of Object.entries(node.outputs)) {
+                for (const conn of outputConns.connections) {
+                    let tipoSaida = 'default';
+                    if (node.data.tipo === 'condicao') {
+                        tipoSaida = outputKey === 'output_1' ? 'true' : 'false';
+                    }
+                    conexoes.push({
+                        origem: nodeId,
+                        destino: conn.node,
+                        tipo_saida: tipoSaida,
+                    });
+                }
+            }
+        }
+    }
+
+    const btn = document.getElementById('btnSalvar');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+    fetch('{% url "comercial_atendimento:salvar_fluxo" fluxo.pk %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: JSON.stringify({
+            drawflow_state: drawflowData,
+            nodos: nodos,
+            conexoes: conexoes,
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.ok) {
+            btn.innerHTML = '<i class="fas fa-check"></i> Salvo!';
+            btn.style.background = 'var(--success)';
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fas fa-save"></i> Salvar';
+                btn.style.background = '';
+                btn.disabled = false;
+            }, 2000);
+        } else {
+            window.showNotification(d.erro || 'Erro ao salvar', 'error');
+            btn.innerHTML = '<i class="fas fa-save"></i> Salvar';
+            btn.disabled = false;
+        }
+    })
+    .catch(e => {
+        window.showNotification('Erro: ' + e.message, 'error');
+        btn.innerHTML = '<i class="fas fa-save"></i> Salvar';
+        btn.disabled = false;
+    });
+}
+
+// ── Carregar fluxo salvo ──
+const fluxoSalvo = {{ fluxo_json|safe }};
+const nodosDB = {{ nodos_db|safe }};
+const conexoesDB = {{ conexoes_db|safe }};
+
+if (fluxoSalvo && fluxoSalvo.drawflow) {
+    // Carregar do estado Drawflow salvo
+    try {
+        editor.import(fluxoSalvo);
+        setTimeout(() => {
+            for (const [moduleKey, moduleData] of Object.entries(fluxoSalvo.drawflow)) {
+                for (const [nodeId, node] of Object.entries(moduleData.data)) {
+                    const el = document.querySelector(`#node-${nodeId}`);
+                    if (el && node.data && node.data.tipo) {
+                        el.setAttribute('data-tipo', node.data.tipo);
+                    }
+                    const num = parseInt(nodeId);
+                    if (!isNaN(num) && num > nodeCounter) nodeCounter = num;
+                }
+            }
+        }, 100);
+    } catch(e) {
+        console.warn('Erro ao importar fluxo:', e);
+    }
+} else if (nodosDB && nodosDB.length > 0) {
+    // Reconstruir do banco de dados (nodos criados via script/API)
+    const idMap = {};  // db_id -> drawflow_node_id
+    for (const nodo of nodosDB) {
+        const drawflowId = addNodeToEditor(
+            nodo.tipo, nodo.subtipo, nodo.nome,
+            nodo.pos_x, nodo.pos_y
+        );
+        idMap[nodo.id] = drawflowId;
+        // Restaurar config
+        const nodeData = editor.getNodeFromId(drawflowId);
+        nodeData.data.config = nodo.config || {};
+        editor.updateNodeDataFromId(drawflowId, nodeData.data);
+    }
+    // Criar conexoes
+    setTimeout(() => {
+        for (const conn of conexoesDB) {
+            const origemId = idMap[conn.origem];
+            const destinoId = idMap[conn.destino];
+            if (origemId && destinoId) {
+                let outputClass = 'output_1';
+                let inputClass = 'input_1';
+                if (conn.tipo_saida === 'false') {
+                    outputClass = 'output_2';
+                }
+                try {
+                    editor.addConnection(origemId, destinoId, outputClass, inputClass);
+                } catch(e) {
+                    console.warn('Erro conexao:', conn, e);
+                }
+            }
+        }
+    }, 200);
+}
+
+// ── Teclado ──
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Delete' && selectedNodeId) {
+        deletarNodo();
+    }
+});
+
+// ── Busca na sidebar ──
+document.getElementById('nodeSearch').addEventListener('input', function(e) {
+    const q = e.target.value.toLowerCase();
+    document.querySelectorAll('.node-draggable').forEach(n => {
+        const nome = (n.getAttribute('data-nome') || '').toLowerCase();
+        const subtipo = (n.getAttribute('data-subtipo') || '').toLowerCase();
+        n.classList.toggle('hidden', q && !nome.includes(q) && !subtipo.includes(q));
+    });
+    document.querySelectorAll('.node-section').forEach(s => {
+        if (q) s.classList.remove('collapsed');
+        else if (!s.querySelector('.node-draggable:not(.hidden)')) s.classList.add('collapsed');
+    });
+});
+</script>
+{% endblock %}

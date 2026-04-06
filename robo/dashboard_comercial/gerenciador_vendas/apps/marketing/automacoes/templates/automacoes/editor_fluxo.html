@@ -325,9 +325,20 @@ function abrirConfig(nodeId, data) {
                         <option value="lead.cidade" ${data.config.campo==='lead.cidade'?'selected':''}>Cidade</option>
                         <option value="lead.estado" ${data.config.campo==='lead.estado'?'selected':''}>Estado</option>
                         <option value="lead.valor" ${data.config.campo==='lead.valor'?'selected':''}>Valor</option>
+                        <option value="lead.campanha" ${data.config.campo==='lead.campanha'?'selected':''}>Campanha</option>
                     </optgroup>
                     <optgroup label="CRM">
                         <option value="estagio" ${data.config.campo==='estagio'?'selected':''}>Estágio</option>
+                        <option value="crm.estagio" ${data.config.campo==='crm.estagio'?'selected':''}>Estágio (CRM)</option>
+                        <option value="crm.pipeline" ${data.config.campo==='crm.pipeline'?'selected':''}>Pipeline</option>
+                        <option value="crm.responsavel" ${data.config.campo==='crm.responsavel'?'selected':''}>Responsável</option>
+                    </optgroup>
+                    <optgroup label="Temporal">
+                        <option value="dias_sem_contato" ${data.config.campo==='dias_sem_contato'?'selected':''}>Dias sem contato</option>
+                        <option value="cliente.dias_ativo" ${data.config.campo==='cliente.dias_ativo'?'selected':''}>Dias como cliente</option>
+                    </optgroup>
+                    <optgroup label="Cliente">
+                        <option value="cliente.plano" ${data.config.campo==='cliente.plano'?'selected':''}>Plano contratado</option>
                     </optgroup>
                 </select>
             </div>

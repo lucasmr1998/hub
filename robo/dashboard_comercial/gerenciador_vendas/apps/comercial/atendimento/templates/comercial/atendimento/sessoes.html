@@ -1,0 +1,89 @@
+{% extends 'sistema/base.html' %}
+
+{% block title %}Sessoes de Atendimento{% endblock %}
+
+{% block custom_css %}
+<style>
+    .sessoes-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+    .sessoes-header h1 { font-size:22px; font-weight:700; color:var(--text-main); margin:0; }
+    .sessoes-filters { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .sessoes-filters select { padding:6px 10px; border:1px solid var(--border); border-radius:8px; font-size:12px; font-family:inherit; }
+
+    .sessao-card { background:var(--bg-white); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:8px; display:flex; align-items:center; gap:16px; transition:all .15s; cursor:pointer; text-decoration:none; color:inherit; }
+    .sessao-card:hover { box-shadow:0 2px 8px rgba(0,0,0,0.06); border-color:var(--primary); }
+
+    .sessao-avatar { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:#fff; flex-shrink:0; }
+    .sessao-info { flex:1; min-width:0; }
+    .sessao-nome { font-size:14px; font-weight:600; color:var(--text-main); }
+    .sessao-fluxo { font-size:12px; color:var(--text-muted); margin-top:2px; }
+    .sessao-nodo { font-size:11px; color:var(--text-light); margin-top:2px; }
+    .sessao-meta { display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
+    .sessao-data { font-size:11px; color:var(--text-muted); }
+
+    .progress-bar-wrap { width:120px; height:6px; background:var(--border-light); border-radius:3px; overflow:hidden; }
+    .progress-bar-fill { height:100%; border-radius:3px; transition:width .3s; }
+
+    .empty-state { text-align:center; padding:40px; color:var(--text-light); }
+    .empty-state i { font-size:32px; display:block; margin-bottom:8px; color:var(--border); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="sessoes-header">
+    <h1><i class="fas fa-headset" style="color:var(--text-muted);margin-right:8px;"></i>Sessoes de Atendimento</h1>
+    <div class="sessoes-filters">
+        <select onchange="location.href='?status='+this.value+'&fluxo={{ fluxo_filter }}'">
+            <option value="">Todos os status</option>
+            <option value="iniciado" {% if status_filter == 'iniciado' %}selected{% endif %}>Iniciado</option>
+            <option value="em_andamento" {% if status_filter == 'em_andamento' %}selected{% endif %}>Em Andamento</option>
+            <option value="pausado" {% if status_filter == 'pausado' %}selected{% endif %}>Pausado</option>
+            <option value="completado" {% if status_filter == 'completado' %}selected{% endif %}>Completado</option>
+            <option value="abandonado" {% if status_filter == 'abandonado' %}selected{% endif %}>Abandonado</option>
+        </select>
+        <select onchange="location.href='?status={{ status_filter }}&fluxo='+this.value">
+            <option value="">Todos os fluxos</option>
+            {% for f in fluxos %}
+            <option value="{{ f.id }}" {% if fluxo_filter == f.id|stringformat:"d" %}selected{% endif %}>{{ f.nome }}</option>
+            {% endfor %}
+        </select>
+        <a href="{% url 'comercial_atendimento:fluxos_atendimento' %}" class="btn-secondary btn-sm"><i class="fas fa-project-diagram"></i> Fluxos</a>
+    </div>
+</div>
+
+{% if sessoes %}
+{% for s in sessoes %}
+<a href="{% url 'comercial_atendimento:sessao_detalhe' s.id %}" class="sessao-card">
+    <div class="sessao-avatar" style="background:{% if s.status == 'completado' %}var(--success){% elif s.status == 'em_andamento' or s.status == 'iniciado' %}var(--primary){% elif s.status == 'pausado' %}var(--warning){% else %}var(--text-muted){% endif %};">
+        {% if s.status == 'completado' %}<i class="fas fa-check"></i>{% elif s.status == 'em_andamento' or s.status == 'iniciado' %}<i class="fas fa-comments"></i>{% elif s.status == 'pausado' %}<i class="fas fa-pause"></i>{% else %}<i class="fas fa-times"></i>{% endif %}
+    </div>
+    <div class="sessao-info">
+        <div class="sessao-nome">{{ s.lead.nome_razaosocial|default:"Lead desconhecido" }} <span class="badge badge-{% if s.status == 'completado' %}success{% elif s.status == 'em_andamento' or s.status == 'iniciado' %}info{% elif s.status == 'pausado' %}warning{% else %}muted{% endif %}" style="font-size:10px;">{{ s.get_status_display }}</span></div>
+        <div class="sessao-fluxo">{{ s.fluxo.nome }} {% if s.fluxo.modo_fluxo %}<span class="badge badge-primary" style="font-size:9px;">Visual</span>{% endif %}</div>
+        <div class="sessao-nodo">
+            {% if s.nodo_atual %}
+                Aguardando: <strong>{{ s.nodo_atual.configuracao.titulo|default:s.nodo_atual.get_tipo_display }}</strong>
+            {% elif s.status == 'completado' %}
+                Finalizado {% if s.score_qualificacao %}(Score: {{ s.score_qualificacao }}){% endif %}
+            {% else %}
+                Questao {{ s.questao_atual }}/{{ s.total_questoes }}
+            {% endif %}
+        </div>
+    </div>
+    <div class="sessao-meta">
+        <div class="sessao-data">{{ s.data_inicio|date:"d/m/Y H:i" }}</div>
+        <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" style="width:{{ s.get_progresso_percentual }}%;background:{% if s.status == 'completado' %}var(--success){% else %}var(--primary){% endif %};"></div>
+        </div>
+        <div style="font-size:10px;color:var(--text-light);">{{ s.questoes_respondidas }}/{{ s.total_questoes }} respostas</div>
+    </div>
+</a>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+    <i class="fas fa-inbox"></i>
+    Nenhuma sessao encontrada.
+</div>
+{% endif %}
+
+{% endblock %}

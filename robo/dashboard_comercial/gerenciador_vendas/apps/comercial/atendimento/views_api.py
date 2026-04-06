@@ -1399,34 +1399,50 @@ def iniciar_atendimento_n8n(request):
             return JsonResponse({'error': 'Fluxo não pode ser usado'}, status=400)
         
         # Criar novo atendimento
+        total_q = fluxo.nodos.filter(tipo='questao').count() if fluxo.modo_fluxo else fluxo.get_total_questoes()
         atendimento = AtendimentoFluxo.objects.create(
             lead=lead,
             fluxo=fluxo,
-            total_questoes=fluxo.get_total_questoes(),
+            total_questoes=total_q,
             max_tentativas=fluxo.max_tentativas,
             ip_origem=data.get('ip_origem'),
             user_agent=data.get('user_agent'),
             dispositivo=data.get('dispositivo'),
             observacoes=data.get('observacoes')
         )
-        
-        # Buscar primeira questão
-        primeira_questao = fluxo.get_questao_por_indice(1)
-        
-        response_data = {
-            'atendimento_id': atendimento.id,
-            'lead_id': lead.id,
-            'fluxo_id': fluxo.id,
-            'status': atendimento.status,
-            'questao_atual': atendimento.questao_atual,
-            'total_questoes': atendimento.total_questoes,
-            'progresso_percentual': atendimento.get_progresso_percentual(),
-            'primeira_questao': _serialize_questao_fluxo(primeira_questao) if primeira_questao else None,
-            'data_inicio': atendimento.data_inicio.isoformat()
-        }
-        
-        _criar_log_api('INFO', 'iniciar_atendimento_n8n', f'Atendimento {atendimento.id} iniciado para lead {lead.id}', request=request)
-        
+
+        # Modo visual (node-based) vs legado (questoes lineares)
+        if fluxo.modo_fluxo:
+            from apps.comercial.atendimento.engine import iniciar_fluxo_visual
+            resultado = iniciar_fluxo_visual(atendimento)
+            response_data = {
+                'atendimento_id': atendimento.id,
+                'lead_id': lead.id,
+                'fluxo_id': fluxo.id,
+                'status': atendimento.status,
+                'modo_fluxo': True,
+                'total_questoes': total_q,
+                'progresso_percentual': atendimento.get_progresso_percentual(),
+                'resultado': resultado,
+                'data_inicio': atendimento.data_inicio.isoformat()
+            }
+        else:
+            # Buscar primeira questão (legado)
+            primeira_questao = fluxo.get_questao_por_indice(1)
+            response_data = {
+                'atendimento_id': atendimento.id,
+                'lead_id': lead.id,
+                'fluxo_id': fluxo.id,
+                'status': atendimento.status,
+                'questao_atual': atendimento.questao_atual,
+                'total_questoes': atendimento.total_questoes,
+                'progresso_percentual': atendimento.get_progresso_percentual(),
+                'primeira_questao': _serialize_questao_fluxo(primeira_questao) if primeira_questao else None,
+                'data_inicio': atendimento.data_inicio.isoformat()
+            }
+
+        _criar_log_api('INFO', 'iniciar_atendimento_n8n', f'Atendimento {atendimento.id} iniciado para lead {lead.id} (modo_fluxo={fluxo.modo_fluxo})', request=request)
+
         return JsonResponse(response_data, status=201)
         
     except Exception as e:
@@ -1507,10 +1523,29 @@ def responder_questao_n8n(request, atendimento_id):
         # Verificar se atendimento está ativo
         if atendimento.status not in ['iniciado', 'em_andamento', 'pausado']:
             return JsonResponse({'error': 'Atendimento não está ativo'}, status=400)
-        
+
+        # Modo visual (node-based)
+        if atendimento.fluxo.modo_fluxo:
+            from apps.comercial.atendimento.engine import processar_resposta_visual
+            resultado = processar_resposta_visual(atendimento, data['resposta'])
+
+            if atendimento.status == 'iniciado':
+                atendimento.status = 'em_andamento'
+                atendimento.save(update_fields=['status'])
+
+            return JsonResponse({
+                'success': resultado.get('tipo') != 'erro',
+                'modo_fluxo': True,
+                'atendimento_id': atendimento.id,
+                'questoes_respondidas': atendimento.questoes_respondidas,
+                'progresso_percentual': atendimento.get_progresso_percentual(),
+                'resultado': resultado,
+            })
+
+        # Modo legado (questoes lineares)
         # Determinar índice da questão (usar atual ou especificada)
         indice_questao = data.get('indice_questao', atendimento.questao_atual)
-        
+
         # Obter IP e User Agent para rastreamento inteligente
         ip_origem = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or request.META.get('REMOTE_ADDR')
         user_agent = request.META.get('HTTP_USER_AGENT', '')

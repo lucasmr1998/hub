@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import CategoriaTicket, SLAConfig, Ticket, ComentarioTicket
+from .models import (
+    CategoriaTicket, SLAConfig, Ticket, ComentarioTicket,
+    CategoriaConhecimento, ArtigoConhecimento,
+)
 
 
 class ComentarioInline(admin.TabularInline):
@@ -33,3 +36,18 @@ class TicketAdmin(admin.ModelAdmin):
 class ComentarioTicketAdmin(admin.ModelAdmin):
     list_display = ['ticket', 'autor', 'interno', 'data_criacao']
     list_filter = ['interno']
+
+
+@admin.register(CategoriaConhecimento)
+class CategoriaConhecimentoAdmin(admin.ModelAdmin):
+    list_display = ['nome', 'slug', 'icone', 'ordem', 'ativo']
+    list_editable = ['ordem', 'ativo']
+    prepopulated_fields = {'slug': ('nome',)}
+
+
+@admin.register(ArtigoConhecimento)
+class ArtigoConhecimentoAdmin(admin.ModelAdmin):
+    list_display = ['titulo', 'categoria', 'publicado', 'destaque', 'visualizacoes', 'atualizado_em']
+    list_filter = ['publicado', 'destaque', 'categoria']
+    search_fields = ['titulo', 'conteudo', 'tags']
+    prepopulated_fields = {'slug': ('titulo',)}

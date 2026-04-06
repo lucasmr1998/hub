@@ -427,6 +427,14 @@ class LeadProspecto(TenantMixin):
         help_text="Indica se os documentos e o HTML do atendimento foram anexados ao contrato no HubSoft",
     )
 
+    # Campos customizáveis por tenant
+    dados_custom = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Dados Customizados",
+        help_text="Campos personalizados definidos pelo tenant",
+    )
+
     PDF_BASE_URL = 'https://megalink.matrixdobrasil.ai/atendimento/export-to-pdf/id/{codigo}/protocolo/{protocolo}'
 
     def gerar_url_pdf(self):
@@ -1299,3 +1307,64 @@ class HistoricoContato(TenantMixin):
         except Exception:
             mapping = dict(self.STATUS_CHOICES)
             return mapping.get(self.status, self.status)
+
+
+class CampoCustomizado(TenantMixin):
+    """
+    Define campos personalizados que cada tenant pode criar para seus leads.
+    Os valores ficam armazenados em LeadProspecto.dados_custom (JSONField).
+    """
+    TIPO_CHOICES = [
+        ('texto', 'Texto'),
+        ('numero', 'Numero'),
+        ('decimal', 'Decimal'),
+        ('data', 'Data'),
+        ('booleano', 'Sim/Nao'),
+        ('select', 'Lista de opcoes'),
+        ('textarea', 'Texto longo'),
+    ]
+
+    nome = models.CharField(
+        max_length=100,
+        verbose_name="Nome do Campo",
+        help_text="Nome exibido no formulario",
+    )
+    slug = models.SlugField(
+        max_length=100,
+        verbose_name="Identificador",
+        help_text="Chave unica usada no JSON (gerado automaticamente)",
+    )
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPO_CHOICES,
+        default='texto',
+        verbose_name="Tipo do Campo",
+    )
+    opcoes = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Opcoes",
+        help_text="Lista de opcoes para campos do tipo 'select'. Ex: [\"Opcao 1\", \"Opcao 2\"]",
+    )
+    obrigatorio = models.BooleanField(
+        default=False,
+        verbose_name="Obrigatorio",
+    )
+    ordem = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Ordem de exibicao",
+    )
+    ativo = models.BooleanField(
+        default=True,
+        verbose_name="Ativo",
+    )
+
+    class Meta:
+        db_table = 'campos_customizados_lead'
+        verbose_name = "Campo Customizado"
+        verbose_name_plural = "Campos Customizados"
+        ordering = ['ordem', 'nome']
+        unique_together = [('tenant', 'slug')]
+
+    def __str__(self):
+        return f"{self.nome} ({self.get_tipo_display()})"

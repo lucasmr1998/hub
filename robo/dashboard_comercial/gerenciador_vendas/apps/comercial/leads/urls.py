@@ -6,6 +6,11 @@ app_name = 'comercial_leads'
 urlpatterns = [
     # Paginas de leads
     path('leads/', views.leads_view, name='leads'),
+    path('leads/<int:lead_id>/', views.lead_detail_view, name='lead_detail'),
+    path('historico/<int:historico_id>/', views.historico_detail_view, name='historico_detail'),
+    path('configuracoes/campos-leads/', views.campos_custom_view, name='campos_custom'),
+    path('api/campos-custom/', views.api_campos_custom, name='api_campos_custom'),
+    path('api/campos-custom/<int:campo_id>/', views.api_campo_custom_detalhe, name='api_campo_custom_detalhe'),
     path('leads/<int:lead_id>/conversa/', views.visualizar_conversa_lead, name='visualizar_conversa_lead'),
     path('leads/<int:lead_id>/conversa/pdf/', views.visualizar_conversa_pdf, name='visualizar_conversa_pdf'),
 

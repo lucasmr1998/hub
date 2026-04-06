@@ -65,10 +65,14 @@ def on_oportunidade_movida(sender, instance, created, **kwargs):
     disparar_evento('oportunidade_movida', {
         'oportunidade': instance,
         'oportunidade_titulo': instance.titulo,
-        'estagio': instance.estagio.nome if instance.estagio else '',
-        'pipeline': instance.pipeline.nome if instance.pipeline else '',
+        'estagio': instance.estagio.slug if instance.estagio else '',
+        'estagio_nome': instance.estagio.nome if instance.estagio else '',
+        'pipeline': instance.pipeline.slug if instance.pipeline else '',
+        'pipeline_nome': instance.pipeline.nome if instance.pipeline else '',
         'lead': instance.lead,
-        'responsavel': instance.responsavel,
+        'lead_nome': instance.lead.nome_razaosocial if instance.lead else '',
+        'responsavel': instance.responsavel.get_full_name() if instance.responsavel else '',
+        'telefone': instance.lead.telefone if instance.lead else '',
         'nome': instance.titulo,
     }, tenant=instance.tenant)
 

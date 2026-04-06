@@ -242,6 +242,21 @@
             </div>
         </div>
 
+        <!-- Accordion: Base de Conhecimento -->
+        <div class="ctx-accordion">
+            <div class="ctx-accordion-header" onclick="this.parentElement.classList.toggle('open')">
+                <span>Base de Conhecimento</span><i class="fas fa-plus ctx-accordion-icon"></i>
+            </div>
+            <div class="ctx-accordion-body">
+                <div style="position:relative;margin-bottom:8px;">
+                    <input type="text" id="kbSearch" placeholder="Buscar artigos..." style="width:100%;padding:7px 10px 7px 28px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box;">
+                    <i class="fas fa-search" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--text-muted);"></i>
+                </div>
+                <div id="kbResults" style="max-height:200px;overflow-y:auto;"></div>
+                <a href="{% url 'suporte:base_conhecimento' %}" target="_blank" style="display:block;text-align:center;font-size:11px;color:var(--primary);margin-top:6px;text-decoration:none;">Abrir base completa <i class="fas fa-external-link-alt"></i></a>
+            </div>
+        </div>
+
         <!-- Accordion: Conversas anteriores -->
         <div class="ctx-accordion">
             <div class="ctx-accordion-header" onclick="this.parentElement.classList.toggle('open')">
@@ -317,5 +332,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'inbox/js/inbox.js' %}?v=7"></script>
+<script src="{% static 'inbox/js/inbox.js' %}?v=8"></script>
 {% endblock %}

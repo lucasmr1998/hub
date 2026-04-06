@@ -101,6 +101,41 @@ class FluxoAtendimento(TenantMixin):
         verbose_name="Ativo"
     )
 
+    # Canal que ativa este fluxo (None = qualquer canal / manual)
+    CANAL_CHOICES = [
+        ('qualquer', 'Qualquer Canal'),
+        ('whatsapp', 'WhatsApp'),
+        ('site', 'Site'),
+        ('facebook', 'Facebook'),
+        ('instagram', 'Instagram'),
+        ('google', 'Google Ads'),
+        ('telefone', 'Telefone'),
+        ('email', 'Email'),
+        ('indicacao', 'Indicacao'),
+        ('manual', 'Manual (somente API)'),
+    ]
+    canal = models.CharField(
+        max_length=20,
+        choices=CANAL_CHOICES,
+        default='qualquer',
+        verbose_name="Canal de Ativacao",
+        help_text="Canal que dispara este fluxo automaticamente. 'Manual' = somente via API.",
+        db_index=True,
+    )
+
+    # Dual-mode: legado (questoes lineares) vs visual (nodos + conexoes)
+    modo_fluxo = models.BooleanField(
+        default=False,
+        verbose_name="Modo Fluxo Visual",
+        help_text="True = fluxograma visual com nodos, False = questoes lineares (legado)"
+    )
+    fluxo_json = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Estado do Editor",
+        help_text="Estado do Drawflow para re-import do editor visual"
+    )
+
     class Meta:
         db_table = 'fluxos_atendimento'
         verbose_name = "Fluxo de Atendimento"
@@ -143,7 +178,11 @@ class FluxoAtendimento(TenantMixin):
 
     def pode_ser_usado(self):
         """Verifica se o fluxo pode ser usado"""
-        return self.status == 'ativo' and self.ativo and self.get_total_questoes() > 0
+        if not (self.status == 'ativo' and self.ativo):
+            return False
+        if self.modo_fluxo:
+            return self.nodos.filter(tipo='entrada').exists()
+        return self.get_total_questoes() > 0
 
     def get_estatisticas(self):
         """Retorna estatísticas básicas do fluxo"""
@@ -1186,6 +1225,17 @@ class AtendimentoFluxo(TenantMixin):
         help_text="Índice da questão atual no fluxo"
     )
 
+    # Posicao no modo fluxo visual (nodo atual)
+    nodo_atual = models.ForeignKey(
+        'NodoFluxoAtendimento',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='atendimentos_atuais',
+        verbose_name="Nodo Atual",
+        help_text="Nodo atual no modo fluxo visual"
+    )
+
     total_questoes = models.PositiveIntegerField(
         verbose_name="Total de Questões",
         help_text="Total de questões no fluxo"
@@ -1823,3 +1873,211 @@ class RespostaQuestao(TenantMixin):
                 segundos = self.tempo_resposta % 60
                 return f"{minutos}m {segundos}s"
         return "N/A"
+
+
+# ============================================================================
+# SISTEMA DE FLUXOS VISUAIS (NODE-BASED)
+# Paralelo ao legado (QuestaoFluxo). Ativado via FluxoAtendimento.modo_fluxo
+# ============================================================================
+
+class NodoFluxoAtendimento(TenantMixin):
+    """No do fluxograma visual de atendimento."""
+
+    TIPO_CHOICES = [
+        ('entrada', 'Entrada'),
+        ('questao', 'Questao'),
+        ('condicao', 'Condicao'),
+        ('acao', 'Acao'),
+        ('delay', 'Delay'),
+        ('finalizacao', 'Finalizacao'),
+    ]
+
+    fluxo = models.ForeignKey(
+        FluxoAtendimento,
+        on_delete=models.CASCADE,
+        related_name='nodos',
+        verbose_name="Fluxo"
+    )
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPO_CHOICES,
+        verbose_name="Tipo do Nodo"
+    )
+    subtipo = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Subtipo",
+        help_text="Ex: texto, select, campo_check, enviar_whatsapp, webhook"
+    )
+    configuracao = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Configuracao",
+        help_text="Config do nodo: titulo, opcoes, campo/operador/valor, template, delay"
+    )
+    pos_x = models.IntegerField(default=0, verbose_name="Posicao X")
+    pos_y = models.IntegerField(default=0, verbose_name="Posicao Y")
+    ordem = models.PositiveIntegerField(default=0, verbose_name="Ordem")
+
+    class Meta:
+        db_table = 'atendimento_nodofluxo'
+        verbose_name = "Nodo do Fluxo"
+        verbose_name_plural = "Nodos do Fluxo"
+        ordering = ['ordem']
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} - {self.subtipo or 'sem subtipo'} (#{self.id})"
+
+
+class ConexaoNodoAtendimento(TenantMixin):
+    """Aresta dirigida entre dois nodos do fluxograma de atendimento."""
+
+    TIPO_SAIDA_CHOICES = [
+        ('default', 'Padrao'),
+        ('true', 'Verdadeiro (Sim)'),
+        ('false', 'Falso (Nao)'),
+    ]
+
+    fluxo = models.ForeignKey(
+        FluxoAtendimento,
+        on_delete=models.CASCADE,
+        related_name='conexoes',
+        verbose_name="Fluxo"
+    )
+    nodo_origem = models.ForeignKey(
+        NodoFluxoAtendimento,
+        on_delete=models.CASCADE,
+        related_name='saidas',
+        verbose_name="Nodo Origem"
+    )
+    nodo_destino = models.ForeignKey(
+        NodoFluxoAtendimento,
+        on_delete=models.CASCADE,
+        related_name='entradas',
+        verbose_name="Nodo Destino"
+    )
+    tipo_saida = models.CharField(
+        max_length=10,
+        choices=TIPO_SAIDA_CHOICES,
+        default='default',
+        verbose_name="Tipo de Saida"
+    )
+
+    class Meta:
+        db_table = 'atendimento_conexaonodo'
+        verbose_name = "Conexao"
+        verbose_name_plural = "Conexoes"
+        unique_together = [['nodo_origem', 'nodo_destino', 'tipo_saida']]
+
+    def __str__(self):
+        return f"{self.nodo_origem} → {self.nodo_destino} ({self.tipo_saida})"
+
+
+class ExecucaoFluxoAtendimento(TenantMixin):
+    """Fila de execucoes pendentes (delays) no fluxo visual de atendimento."""
+
+    STATUS_CHOICES = [
+        ('pendente', 'Pendente'),
+        ('executado', 'Executado'),
+        ('cancelado', 'Cancelado'),
+        ('erro', 'Erro'),
+    ]
+
+    atendimento = models.ForeignKey(
+        'AtendimentoFluxo',
+        on_delete=models.CASCADE,
+        related_name='execucoes_pendentes',
+        verbose_name="Atendimento"
+    )
+    nodo = models.ForeignKey(
+        NodoFluxoAtendimento,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='execucoes_pendentes',
+        verbose_name="Nodo"
+    )
+    contexto_json = models.JSONField(
+        default=dict,
+        verbose_name="Contexto",
+        help_text="Contexto serializado para retomar execucao"
+    )
+    data_agendada = models.DateTimeField(
+        db_index=True,
+        verbose_name="Data Agendada"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pendente',
+        verbose_name="Status"
+    )
+    data_criacao = models.DateTimeField(auto_now_add=True)
+    data_execucao = models.DateTimeField(null=True, blank=True)
+    resultado = models.TextField(blank=True)
+
+    class Meta:
+        db_table = 'atendimento_execucao_pendente'
+        verbose_name = "Execucao Pendente"
+        verbose_name_plural = "Execucoes Pendentes"
+        ordering = ['data_agendada']
+        indexes = [
+            models.Index(fields=['status', 'data_agendada']),
+        ]
+
+    def __str__(self):
+        return f"Exec #{self.id} - {self.status} - {self.data_agendada}"
+
+
+class LogFluxoAtendimento(TenantMixin):
+    """Registro de cada passo executado no fluxo visual de atendimento."""
+
+    STATUS_CHOICES = [
+        ('sucesso', 'Sucesso'),
+        ('erro', 'Erro'),
+        ('aguardando', 'Aguardando Resposta'),
+        ('agendado', 'Agendado (Delay)'),
+    ]
+
+    atendimento = models.ForeignKey(
+        'AtendimentoFluxo',
+        on_delete=models.CASCADE,
+        related_name='logs_fluxo',
+        verbose_name="Atendimento"
+    )
+    nodo = models.ForeignKey(
+        NodoFluxoAtendimento,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='logs',
+        verbose_name="Nodo"
+    )
+    lead = models.ForeignKey(
+        'leads.LeadProspecto',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='logs_fluxo_atendimento',
+        verbose_name="Lead",
+        db_index=True,
+    )
+    tipo_nodo = models.CharField(max_length=20, blank=True, verbose_name="Tipo do Nodo")
+    subtipo_nodo = models.CharField(max_length=50, blank=True, verbose_name="Subtipo do Nodo")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='sucesso')
+    mensagem = models.TextField(blank=True, verbose_name="Mensagem/Resultado")
+    dados = models.JSONField(default=dict, blank=True, verbose_name="Dados Extras")
+    data_execucao = models.DateTimeField(auto_now_add=True, verbose_name="Data de Execucao")
+
+    class Meta:
+        db_table = 'atendimento_log_fluxo'
+        verbose_name = "Log do Fluxo"
+        verbose_name_plural = "Logs do Fluxo"
+        ordering = ['-data_execucao']
+        indexes = [
+            models.Index(fields=['atendimento', '-data_execucao']),
+            models.Index(fields=['lead', '-data_execucao']),
+        ]
+
+    def __str__(self):
+        return f"[{self.status}] {self.tipo_nodo}/{self.subtipo_nodo} - {self.data_execucao}"

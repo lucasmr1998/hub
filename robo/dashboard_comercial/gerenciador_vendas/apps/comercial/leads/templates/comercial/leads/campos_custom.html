@@ -1,0 +1,260 @@
+{% extends 'sistema/base.html' %}
+
+{% block title %}Campos Personalizados - Leads{% endblock %}
+
+{% block custom_css %}
+<style>
+    .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+    .page-header h1 { font-size:22px; font-weight:700; color:var(--text-main); margin:0; }
+    .page-header p { font-size:13px; color:var(--text-muted); margin:4px 0 0 0; }
+
+    .cfg-card { background:#fff; border:1px solid var(--border); border-radius:12px; margin-bottom:16px; }
+    .cfg-card-header { padding:14px 18px; border-bottom:1px solid var(--border-light); display:flex; justify-content:space-between; align-items:center; font-size:14px; font-weight:600; }
+    .cfg-card-body { padding:18px; }
+
+    .campo-row { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border-light); gap:12px; }
+    .campo-row:last-child { border-bottom:none; }
+    .campo-info { flex:1; min-width:0; }
+    .campo-nome { font-size:14px; font-weight:600; color:var(--text-main); }
+    .campo-meta { font-size:12px; color:var(--text-light); margin-top:2px; }
+    .campo-actions { display:flex; gap:4px; }
+
+    .btn-icon { background:none; border:none; cursor:pointer; padding:6px 8px; border-radius:6px; font-size:13px; color:var(--text-muted); transition:all .15s; }
+    .btn-icon:hover { background:var(--border-light); color:var(--text-main); }
+    .btn-icon.danger:hover { background:#fee2e2; color:#dc2626; }
+
+    .form-card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:16px; }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .form-group { display:flex; flex-direction:column; gap:4px; }
+    .form-group label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-light); }
+    .form-group input, .form-group select { padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; }
+    .form-group input:focus, .form-group select:focus { border-color:var(--primary); outline:none; }
+    .form-check { display:flex; align-items:center; gap:8px; padding-top:20px; }
+    .form-check input { accent-color:var(--primary); }
+    .form-check label { font-size:13px; color:var(--text-secondary); }
+    .form-actions { display:flex; gap:8px; margin-top:16px; justify-content:flex-end; }
+
+    .opcoes-container { grid-column:1/-1; }
+    .opcoes-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+    .opcao-chip { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; background:var(--border-light); border-radius:6px; font-size:12px; }
+    .opcao-chip button { background:none; border:none; cursor:pointer; color:var(--text-light); font-size:14px; padding:0 2px; }
+    .opcao-chip button:hover { color:#dc2626; }
+    .opcao-add { display:flex; gap:6px; margin-top:8px; }
+    .opcao-add input { flex:1; }
+
+    .empty-state { text-align:center; padding:40px 20px; color:var(--text-light); }
+    .empty-state i { font-size:32px; display:block; margin-bottom:8px; color:var(--border); }
+
+    @media (max-width:768px) {
+        .form-grid { grid-template-columns:1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-sliders-h" style="color:var(--text-muted);margin-right:8px;"></i>Campos Personalizados</h1>
+        <p>Defina campos extras para os leads do seu provedor</p>
+    </div>
+    <button class="btn-primary" onclick="toggleForm()"><i class="fas fa-plus"></i> Novo Campo</button>
+</div>
+
+<!-- Formulario de criacao/edicao -->
+<div class="form-card" id="formCard" style="display:none;">
+    <h3 style="font-size:15px;font-weight:600;margin:0 0 16px 0;" id="formTitle">Novo Campo</h3>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Nome do Campo</label>
+            <input type="text" id="fieldNome" placeholder="Ex: Plano Desejado">
+        </div>
+        <div class="form-group">
+            <label>Tipo</label>
+            <select id="fieldTipo" onchange="toggleOpcoes()">
+                <option value="texto">Texto</option>
+                <option value="numero">Numero</option>
+                <option value="decimal">Decimal</option>
+                <option value="data">Data</option>
+                <option value="booleano">Sim/Nao</option>
+                <option value="select">Lista de opcoes</option>
+                <option value="textarea">Texto longo</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Ordem de exibicao</label>
+            <input type="number" id="fieldOrdem" value="0" min="0">
+        </div>
+        <div class="form-check">
+            <input type="checkbox" id="fieldObrigatorio">
+            <label for="fieldObrigatorio">Campo obrigatorio</label>
+        </div>
+        <div class="opcoes-container" id="opcoesContainer" style="display:none;">
+            <div class="form-group">
+                <label>Opcoes</label>
+                <div class="opcoes-list" id="opcoesList"></div>
+                <div class="opcao-add">
+                    <input type="text" id="novaOpcao" placeholder="Digitar opcao..." onkeydown="if(event.key==='Enter'){event.preventDefault();addOpcao();}">
+                    <button class="btn-secondary btn-sm" type="button" onclick="addOpcao()"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button class="btn-secondary" onclick="cancelForm()">Cancelar</button>
+        <button class="btn-primary" onclick="saveField()" id="btnSave">Criar Campo</button>
+    </div>
+</div>
+
+<!-- Lista de campos -->
+<div class="cfg-card">
+    <div class="cfg-card-header">
+        <span><i class="fas fa-list" style="margin-right:6px;color:var(--text-muted);"></i> Campos Configurados</span>
+        <span class="badge badge-primary" id="camposCount">{{ campos|length }}</span>
+    </div>
+    <div class="cfg-card-body" id="camposList">
+        {% if campos %}
+        {% for campo in campos %}
+        <div class="campo-row" id="campo-{{ campo.id }}">
+            <div class="campo-info">
+                <div class="campo-nome">
+                    {{ campo.nome }}
+                    {% if campo.obrigatorio %}<span class="badge badge-warning" style="font-size:10px;margin-left:6px;">Obrigatorio</span>{% endif %}
+                    {% if not campo.ativo %}<span class="badge badge-muted" style="font-size:10px;margin-left:6px;">Inativo</span>{% endif %}
+                </div>
+                <div class="campo-meta">
+                    <span class="badge badge-muted">{{ campo.get_tipo_display }}</span>
+                    &middot; slug: <code style="font-size:11px;">{{ campo.slug }}</code>
+                    {% if campo.opcoes %}&middot; {{ campo.opcoes|length }} opcoes{% endif %}
+                </div>
+            </div>
+            <div class="campo-actions">
+                <button class="btn-icon" title="Editar" onclick="editField({{ campo.id }}, '{{ campo.nome }}', '{{ campo.tipo }}', {{ campo.obrigatorio|yesno:'true,false' }}, {{ campo.ordem }}, {{ campo.opcoes|safe }}, {{ campo.ativo|yesno:'true,false' }})"><i class="fas fa-edit"></i></button>
+                <button class="btn-icon danger" title="Excluir" onclick="deleteField({{ campo.id }}, '{{ campo.nome }}')"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state" id="emptyState">
+            <i class="fas fa-puzzle-piece"></i>
+            Nenhum campo personalizado configurado.<br>Clique em "Novo Campo" para comecar.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const API_URL = '{% url "comercial_leads:api_campos_custom" %}';
+let editingId = null;
+let opcoes = [];
+
+function getCSRF() {
+    return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1] || '';
+}
+
+function toggleForm() {
+    editingId = null;
+    document.getElementById('formTitle').textContent = 'Novo Campo';
+    document.getElementById('btnSave').textContent = 'Criar Campo';
+    document.getElementById('fieldNome').value = '';
+    document.getElementById('fieldTipo').value = 'texto';
+    document.getElementById('fieldOrdem').value = '0';
+    document.getElementById('fieldObrigatorio').checked = false;
+    opcoes = [];
+    renderOpcoes();
+    toggleOpcoes();
+    document.getElementById('formCard').style.display = 'block';
+    document.getElementById('fieldNome').focus();
+}
+
+function cancelForm() {
+    document.getElementById('formCard').style.display = 'none';
+    editingId = null;
+}
+
+function toggleOpcoes() {
+    const tipo = document.getElementById('fieldTipo').value;
+    document.getElementById('opcoesContainer').style.display = tipo === 'select' ? 'block' : 'none';
+}
+
+function addOpcao() {
+    const input = document.getElementById('novaOpcao');
+    const val = input.value.trim();
+    if (!val) return;
+    opcoes.push(val);
+    input.value = '';
+    renderOpcoes();
+}
+
+function removeOpcao(idx) {
+    opcoes.splice(idx, 1);
+    renderOpcoes();
+}
+
+function renderOpcoes() {
+    const list = document.getElementById('opcoesList');
+    list.innerHTML = opcoes.map((o, i) =>
+        `<span class="opcao-chip">${o}<button onclick="removeOpcao(${i})">&times;</button></span>`
+    ).join('');
+}
+
+function editField(id, nome, tipo, obrigatorio, ordem, fieldOpcoes, ativo) {
+    editingId = id;
+    document.getElementById('formTitle').textContent = 'Editar Campo';
+    document.getElementById('btnSave').textContent = 'Salvar';
+    document.getElementById('fieldNome').value = nome;
+    document.getElementById('fieldTipo').value = tipo;
+    document.getElementById('fieldOrdem').value = ordem;
+    document.getElementById('fieldObrigatorio').checked = obrigatorio;
+    opcoes = Array.isArray(fieldOpcoes) ? [...fieldOpcoes] : [];
+    renderOpcoes();
+    toggleOpcoes();
+    document.getElementById('formCard').style.display = 'block';
+    document.getElementById('fieldNome').focus();
+}
+
+async function saveField() {
+    const nome = document.getElementById('fieldNome').value.trim();
+    if (!nome) { window.showNotification('Nome e obrigatorio', 'error'); return; }
+    const payload = {
+        nome,
+        tipo: document.getElementById('fieldTipo').value,
+        ordem: parseInt(document.getElementById('fieldOrdem').value) || 0,
+        obrigatorio: document.getElementById('fieldObrigatorio').checked,
+        opcoes: document.getElementById('fieldTipo').value === 'select' ? opcoes : [],
+    };
+
+    try {
+        const url = editingId ? `${API_URL}${editingId}/` : API_URL;
+        const method = editingId ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+            method, headers: {'Content-Type':'application/json', 'X-CSRFToken': getCSRF()},
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Erro'); }
+        window.showNotification(editingId ? 'Campo atualizado' : 'Campo criado', 'success');
+        cancelForm();
+        location.reload();
+    } catch (e) {
+        window.showNotification(e.message, 'error');
+    }
+}
+
+async function deleteField(id, nome) {
+    if (!confirm(`Excluir o campo "${nome}"?\n\nDados ja salvos neste campo nos leads serao mantidos no JSON, mas o campo nao sera mais exibido.`)) return;
+    try {
+        const res = await fetch(`${API_URL}${id}/`, {
+            method: 'DELETE', headers: {'X-CSRFToken': getCSRF()}
+        });
+        if (!res.ok) throw new Error('Erro ao excluir');
+        window.showNotification('Campo excluido', 'success');
+        document.getElementById(`campo-${id}`).remove();
+    } catch (e) {
+        window.showNotification(e.message, 'error');
+    }
+}
+</script>
+{% endblock %}

@@ -65,9 +65,9 @@
       <a href="{% url 'crm:segmento_detalhe' seg.pk %}" class="btn-secondary btn-sm">
         <i class="fas fa-eye"></i> Ver
       </a>
-      <button class="btn-secondary btn-sm" onclick="editarSegmento({{ seg.pk }}, '{{ seg.nome|escapejs }}', '{{ seg.descricao|escapejs }}', '{{ seg.tipo }}', '{{ seg.cor_hex }}', '{{ seg.icone_fa }}')">
+      <a href="{% url 'marketing_segmentos:segmento_editar' seg.pk %}" class="btn-secondary btn-sm" style="text-decoration:none;">
         <i class="fas fa-edit"></i>
-      </button>
+      </a>
     </div>
   </div>
   {% endfor %}

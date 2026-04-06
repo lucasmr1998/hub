@@ -150,3 +150,76 @@ class ComentarioTicket(TenantMixin):
 
     def __str__(self):
         return f"#{self.ticket.numero} — {self.autor.username}"
+
+
+# ============================================================================
+# BASE DE CONHECIMENTO — artigos internos para agentes
+# ============================================================================
+
+class CategoriaConhecimento(TenantMixin):
+    """Categoria de artigos da base de conhecimento interna."""
+    nome = models.CharField(max_length=100, verbose_name="Nome")
+    slug = models.SlugField(verbose_name="Slug")
+    descricao = models.TextField(blank=True, verbose_name="Descrição")
+    icone = models.CharField(max_length=50, default='fa-book', verbose_name="Ícone FA")
+    cor_hex = models.CharField(max_length=7, default='#3b82f6', verbose_name="Cor")
+    ordem = models.PositiveIntegerField(default=0, verbose_name="Ordem")
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+
+    class Meta:
+        db_table = 'suporte_categorias_conhecimento'
+        verbose_name = "Categoria (Base de Conhecimento)"
+        verbose_name_plural = "Categorias (Base de Conhecimento)"
+        ordering = ['ordem', 'nome']
+        unique_together = [['tenant', 'slug']]
+
+    def __str__(self):
+        return self.nome
+
+    @property
+    def total_artigos(self):
+        return self.artigos_conhecimento.filter(publicado=True).count()
+
+
+class ArtigoConhecimento(TenantMixin):
+    """Artigo da base de conhecimento interna (para agentes)."""
+    categoria = models.ForeignKey(
+        CategoriaConhecimento, on_delete=models.CASCADE,
+        related_name='artigos_conhecimento', verbose_name="Categoria",
+    )
+    titulo = models.CharField(max_length=255, verbose_name="Título")
+    slug = models.SlugField(max_length=255, verbose_name="Slug")
+    conteudo = models.TextField(verbose_name="Conteúdo",
+        help_text="Suporta Markdown para formatação")
+    resumo = models.CharField(max_length=300, blank=True, verbose_name="Resumo",
+        help_text="Resumo curto exibido na listagem")
+    tags = models.CharField(max_length=500, blank=True, verbose_name="Tags",
+        help_text="Separadas por vírgula (ex: roteador, instalacao, fibra)")
+    publicado = models.BooleanField(default=True, verbose_name="Publicado")
+    destaque = models.BooleanField(default=False, verbose_name="Destaque",
+        help_text="Aparece em destaque no topo da base")
+    autor = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='artigos_conhecimento', verbose_name="Autor",
+    )
+    visualizacoes = models.PositiveIntegerField(default=0, verbose_name="Visualizações")
+    util_sim = models.PositiveIntegerField(default=0, verbose_name="Útil: Sim")
+    util_nao = models.PositiveIntegerField(default=0, verbose_name="Útil: Não")
+    criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    atualizado_em = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+
+    class Meta:
+        db_table = 'suporte_artigos_conhecimento'
+        verbose_name = "Artigo (Base de Conhecimento)"
+        verbose_name_plural = "Artigos (Base de Conhecimento)"
+        ordering = ['-destaque', '-atualizado_em']
+        unique_together = [['tenant', 'slug']]
+
+    def __str__(self):
+        return self.titulo
+
+    @property
+    def tags_lista(self):
+        if not self.tags:
+            return []
+        return [t.strip() for t in self.tags.split(',') if t.strip()]

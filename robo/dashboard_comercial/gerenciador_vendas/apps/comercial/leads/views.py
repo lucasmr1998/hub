@@ -26,7 +26,7 @@ from apps.sistema.utils import (
     _safe_ordering,
 )
 
-from .models import LeadProspecto, ImagemLeadProspecto, Prospecto, HistoricoContato
+from .models import LeadProspecto, ImagemLeadProspecto, Prospecto, HistoricoContato, CampoCustomizado
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,160 @@ def leads_view(request):
         'user': request.user
     }
     return render(request, 'comercial/leads/leads.html', context)
+
+
+@login_required(login_url='sistema:login')
+def lead_detail_view(request, lead_id):
+    """View para a página de detalhes de um lead"""
+    try:
+        lead = LeadProspecto.objects.get(id=lead_id)
+    except LeadProspecto.DoesNotExist:
+        raise Http404("Lead não encontrado")
+
+    # Buscar imagens do lead
+    imagens = ImagemLeadProspecto.objects.filter(lead=lead).order_by('-data_criacao')
+
+    # Buscar histórico de contatos
+    historicos = HistoricoContato.objects.filter(lead=lead).order_by('-data_hora_contato')
+
+    # Campos customizados do tenant
+    campos_custom = CampoCustomizado.objects.filter(ativo=True).order_by('ordem', 'nome')
+    dados_custom = lead.dados_custom or {}
+
+    context = {
+        'lead': lead,
+        'imagens': imagens,
+        'historicos': historicos,
+        'campos_custom': campos_custom,
+        'dados_custom': dados_custom,
+    }
+    return render(request, 'comercial/leads/lead_detail.html', context)
+
+
+@login_required(login_url='sistema:login')
+def historico_detail_view(request, historico_id):
+    """View para a página de detalhes de um histórico de contato"""
+    try:
+        historico = HistoricoContato.objects.select_related('lead').get(id=historico_id)
+    except HistoricoContato.DoesNotExist:
+        raise Http404("Histórico não encontrado")
+
+    # Buscar conversas e mensagens do inbox associadas ao lead
+    conversas = []
+    mensagens = []
+    if historico.lead:
+        from apps.inbox.models import Conversa, Mensagem
+        conversas = Conversa.objects.filter(lead=historico.lead).order_by('-ultima_mensagem_em')
+        # Buscar mensagens de todas as conversas do lead
+        conversa_ids = conversas.values_list('id', flat=True)
+        mensagens = Mensagem.objects.filter(conversa_id__in=conversa_ids).order_by('data_envio')
+
+    context = {
+        'h': historico,
+        'lead': historico.lead,
+        'conversas': conversas,
+        'mensagens': mensagens,
+    }
+    return render(request, 'comercial/leads/historico_detail.html', context)
+
+
+@login_required(login_url='sistema:login')
+def campos_custom_view(request):
+    """Pagina de configuracao dos campos customizaveis de leads"""
+    campos = CampoCustomizado.objects.all().order_by('ordem', 'nome')
+    return render(request, 'comercial/leads/campos_custom.html', {'campos': campos})
+
+
+@login_required(login_url='sistema:login')
+@csrf_exempt
+def api_campos_custom(request):
+    """API para criar e listar campos customizados"""
+    if request.method == 'GET':
+        campos = CampoCustomizado.objects.all().order_by('ordem', 'nome')
+        result = []
+        for c in campos:
+            result.append({
+                'id': c.id, 'nome': c.nome, 'slug': c.slug,
+                'tipo': c.tipo, 'tipo_display': c.get_tipo_display(),
+                'opcoes': c.opcoes, 'obrigatorio': c.obrigatorio,
+                'ordem': c.ordem, 'ativo': c.ativo,
+            })
+        return JsonResponse({'campos': result})
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            from django.utils.text import slugify
+            nome = data.get('nome', '').strip()
+            if not nome:
+                return JsonResponse({'error': 'Nome e obrigatorio'}, status=400)
+            slug = slugify(nome).replace('-', '_')
+            # Garantir slug unico
+            base_slug = slug
+            counter = 1
+            while CampoCustomizado.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}_{counter}"
+                counter += 1
+            campo = CampoCustomizado.objects.create(
+                nome=nome,
+                slug=slug,
+                tipo=data.get('tipo', 'texto'),
+                opcoes=data.get('opcoes', []),
+                obrigatorio=data.get('obrigatorio', False),
+                ordem=data.get('ordem', 0),
+                ativo=True,
+            )
+            return JsonResponse({
+                'id': campo.id, 'nome': campo.nome, 'slug': campo.slug,
+                'tipo': campo.tipo, 'tipo_display': campo.get_tipo_display(),
+                'opcoes': campo.opcoes, 'obrigatorio': campo.obrigatorio,
+                'ordem': campo.ordem, 'ativo': campo.ativo,
+            }, status=201)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    return JsonResponse({'error': 'Metodo nao permitido'}, status=405)
+
+
+@login_required(login_url='sistema:login')
+@csrf_exempt
+def api_campo_custom_detalhe(request, campo_id):
+    """API para editar e deletar um campo customizado"""
+    try:
+        campo = CampoCustomizado.objects.get(id=campo_id)
+    except CampoCustomizado.DoesNotExist:
+        return JsonResponse({'error': 'Campo nao encontrado'}, status=404)
+
+    if request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            if 'nome' in data:
+                campo.nome = data['nome'].strip()
+            if 'tipo' in data:
+                campo.tipo = data['tipo']
+            if 'opcoes' in data:
+                campo.opcoes = data['opcoes']
+            if 'obrigatorio' in data:
+                campo.obrigatorio = data['obrigatorio']
+            if 'ordem' in data:
+                campo.ordem = data['ordem']
+            if 'ativo' in data:
+                campo.ativo = data['ativo']
+            campo.save()
+            return JsonResponse({
+                'id': campo.id, 'nome': campo.nome, 'slug': campo.slug,
+                'tipo': campo.tipo, 'tipo_display': campo.get_tipo_display(),
+                'opcoes': campo.opcoes, 'obrigatorio': campo.obrigatorio,
+                'ordem': campo.ordem, 'ativo': campo.ativo,
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    if request.method == 'DELETE':
+        campo.delete()
+        return JsonResponse({'ok': True})
+
+    return JsonResponse({'error': 'Metodo nao permitido'}, status=405)
 
 
 @login_required
@@ -1160,6 +1314,7 @@ def consultar_leads_api(request):
             data['valor_formatado'] = item.get_valor_formatado()
             data['origem_display'] = item.get_origem_display()
             data['status_api_display'] = item.get_status_api_display()
+            data['dados_custom'] = item.dados_custom or {}
             results.append(data)
 
         return JsonResponse({

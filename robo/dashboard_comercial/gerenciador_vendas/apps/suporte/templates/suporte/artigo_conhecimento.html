@@ -1,0 +1,112 @@
+{% extends 'sistema/base.html' %}
+
+{% block title %}{{ artigo.titulo }} — Base de Conhecimento{% endblock %}
+
+{% block custom_css %}
+<style>
+    .art-layout { display:grid; grid-template-columns:1fr 280px; gap:24px; }
+    .art-content { background:var(--bg-white); border:1px solid var(--border); border-radius:12px; padding:28px; }
+    .art-content h1 { font-size:22px; font-weight:700; margin:0 0 8px; color:var(--text-main); }
+    .art-meta { display:flex; align-items:center; gap:12px; font-size:12px; color:var(--text-muted); margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid var(--border-light); }
+    .art-meta-item { display:flex; align-items:center; gap:4px; }
+    .art-body { font-size:14px; line-height:1.8; color:var(--text-secondary); }
+    .art-body h2 { font-size:18px; font-weight:700; color:var(--text-main); margin:24px 0 8px; }
+    .art-body h3 { font-size:15px; font-weight:600; color:var(--text-main); margin:20px 0 6px; }
+    .art-body p { margin:0 0 12px; }
+    .art-body ul, .art-body ol { margin:0 0 12px; padding-left:24px; }
+    .art-body li { margin-bottom:4px; }
+    .art-body code { background:var(--bg-subtle); padding:2px 6px; border-radius:4px; font-size:13px; }
+    .art-body pre { background:var(--bg-subtle); padding:14px; border-radius:8px; overflow-x:auto; font-size:13px; margin:0 0 12px; }
+    .art-body blockquote { border-left:3px solid var(--primary); padding:8px 16px; margin:0 0 12px; background:var(--bg-subtle); color:var(--text-muted); }
+    .art-sidebar { }
+    .art-sidebar-card { background:var(--bg-white); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:12px; }
+    .art-sidebar-card h3 { font-size:13px; font-weight:700; color:var(--text-main); margin:0 0 10px; }
+    .art-feedback { display:flex; gap:8px; }
+    .art-feedback-btn { flex:1; padding:8px; border:1px solid var(--border); border-radius:8px; background:var(--bg-white); cursor:pointer; font-size:12px; font-family:inherit; text-align:center; transition:all .15s; }
+    .art-feedback-btn:hover { background:var(--bg-subtle); }
+    .art-feedback-btn.voted { background:var(--primary-light); border-color:var(--primary); color:var(--primary); }
+    .art-related a { display:block; padding:8px 0; font-size:13px; color:var(--text-secondary); text-decoration:none; border-bottom:1px solid var(--border-light); }
+    .art-related a:hover { color:var(--primary); }
+    .art-related a:last-child { border-bottom:none; }
+    .art-tag { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; background:var(--border-light); color:var(--text-muted); margin:2px; }
+    @media (max-width:768px) { .art-layout { grid-template-columns:1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:16px;">
+    <a href="{% url 'suporte:base_conhecimento' %}" style="color:var(--text-muted);font-size:13px;text-decoration:none;">
+        <i class="fas fa-arrow-left"></i> Base de Conhecimento
+    </a>
+    <span style="color:var(--text-muted);font-size:13px;"> / {{ artigo.categoria.nome }}</span>
+</div>
+
+<div class="art-layout">
+    <!-- Conteúdo -->
+    <div class="art-content">
+        <h1>{{ artigo.titulo }}</h1>
+        <div class="art-meta">
+            <span class="art-meta-item" style="color:{{ artigo.categoria.cor_hex }};"><i class="fas {{ artigo.categoria.icone }}"></i> {{ artigo.categoria.nome }}</span>
+            {% if artigo.autor %}<span class="art-meta-item"><i class="fas fa-user"></i> {{ artigo.autor.get_full_name|default:artigo.autor.username }}</span>{% endif %}
+            <span class="art-meta-item"><i class="fas fa-calendar"></i> {{ artigo.atualizado_em|date:"d/m/Y" }}</span>
+            <span class="art-meta-item"><i class="fas fa-eye"></i> {{ artigo.visualizacoes }} views</span>
+        </div>
+        <div class="art-body">
+            {{ artigo.conteudo|linebreaksbr }}
+        </div>
+
+        {% if artigo.tags %}
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border-light);">
+            <span style="font-size:11px;color:var(--text-muted);font-weight:600;">TAGS:</span>
+            {% for tag in artigo.tags_lista %}
+            <span class="art-tag">{{ tag }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="art-sidebar">
+        <!-- Feedback -->
+        <div class="art-sidebar-card">
+            <h3>Este artigo foi útil?</h3>
+            <div class="art-feedback">
+                <button class="art-feedback-btn" onclick="feedback({{ artigo.pk }}, 'sim', this)">
+                    <i class="fas fa-thumbs-up"></i> Sim ({{ artigo.util_sim }})
+                </button>
+                <button class="art-feedback-btn" onclick="feedback({{ artigo.pk }}, 'nao', this)">
+                    <i class="fas fa-thumbs-down"></i> Não ({{ artigo.util_nao }})
+                </button>
+            </div>
+        </div>
+
+        <!-- Relacionados -->
+        {% if relacionados %}
+        <div class="art-sidebar-card">
+            <h3>Artigos relacionados</h3>
+            <div class="art-related">
+                {% for r in relacionados %}
+                <a href="{% url 'suporte:artigo_conhecimento' r.slug %}">{{ r.titulo }}</a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function feedback(pk, voto, btn) {
+    fetch(`/suporte/conhecimento/api/feedback/${pk}/`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''},
+        body: JSON.stringify({voto}),
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            btn.classList.add('voted');
+            btn.innerHTML = voto === 'sim' ? '<i class="fas fa-thumbs-up"></i> Obrigado!' : '<i class="fas fa-thumbs-down"></i> Obrigado!';
+        }
+    });
+}
+</script>
+{% endblock %}

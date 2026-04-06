@@ -1,6 +1,6 @@
 {% extends 'sistema/base.html' %}
 
-{% block title %}Fluxos de Atendimento - Megalink{% endblock %}
+{% block title %}Fluxos de Atendimento{% endblock %}
 
 {% block custom_css %}
 <style>
@@ -15,7 +15,7 @@
     .fluxo-nome { font-size:18px; font-weight:700; margin:0 0 4px; }
     .fluxo-tipo { font-size:12px; opacity:0.8; margin:0; text-transform:uppercase; letter-spacing:0.04em; }
     .fluxo-body { padding:20px; }
-    .fluxo-descricao { color:var(--text-muted); font-size:14px; line-height:1.5; margin-bottom:16px; }
+    .fluxo-descricao { color:var(--text-muted); font-size:14px; line-height:1.5; margin-bottom:16px; min-height:20px; }
     .fluxo-stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px; }
     .fluxo-stat-item { text-align:center; padding:12px; background:var(--border-light); border-radius:8px; }
     .fluxo-stat-num { font-size:20px; font-weight:700; color:var(--text-main); }
@@ -27,6 +27,25 @@
     .fluxo-config-row .val.sim { color:var(--success); }
     .fluxo-config-row .val.nao { color:var(--danger); }
     .fluxo-actions { display:flex; gap:6px; flex-wrap:wrap; }
+
+    /* Modal/Form */
+    .form-card { background:var(--bg-white); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px; display:none; }
+    .form-card.open { display:block; }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .form-group { display:flex; flex-direction:column; gap:4px; }
+    .form-group.full { grid-column:1/-1; }
+    .form-group label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-light); }
+    .form-group input, .form-group select, .form-group textarea { padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color:var(--primary); outline:none; }
+    .form-group textarea { resize:vertical; min-height:60px; }
+    .form-check { display:flex; align-items:center; gap:8px; padding-top:20px; }
+    .form-check input { accent-color:var(--primary); }
+    .form-check label { font-size:13px; color:var(--text-secondary); text-transform:none; font-weight:normal; letter-spacing:normal; }
+    .form-actions { display:flex; gap:8px; margin-top:16px; justify-content:flex-end; }
+
+    @media (max-width:768px) {
+        .form-grid { grid-template-columns:1fr; }
+    }
 </style>
 {% endblock %}
 
@@ -35,22 +54,89 @@
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
     <h1 class="page-title">Fluxos de Atendimento</h1>
     <div style="display:flex;gap:8px;">
+        <a href="{% url 'comercial_atendimento:sessoes_atendimento' %}" class="btn-secondary"><i class="fas fa-headset"></i> Sessoes</a>
         <a href="{% url 'comercial_atendimento:questoes_fluxo' %}" class="btn-secondary"><i class="fas fa-list-ol"></i> Questoes</a>
-        <button onclick="window.showNotification('Em desenvolvimento','info')" class="btn-primary"><i class="fas fa-plus"></i> Novo Fluxo</button>
+        <button onclick="openForm()" class="btn-primary"><i class="fas fa-plus"></i> Novo Fluxo</button>
+    </div>
+</div>
+
+<!-- Form criar/editar -->
+<div class="form-card" id="formCard">
+    <h3 style="font-size:16px;font-weight:600;margin:0 0 16px;" id="formTitle">Novo Fluxo</h3>
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Nome do Fluxo *</label>
+            <input type="text" id="fNome" placeholder="Ex: Qualificacao de Vendas">
+        </div>
+        <div class="form-group">
+            <label>Tipo</label>
+            <select id="fTipo">
+                <option value="qualificacao">Qualificacao de Lead</option>
+                <option value="vendas">Vendas</option>
+                <option value="suporte">Suporte</option>
+                <option value="onboarding">Onboarding</option>
+                <option value="pesquisa">Pesquisa de Satisfacao</option>
+                <option value="customizado">Customizado</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Status</label>
+            <select id="fStatus">
+                <option value="rascunho">Rascunho</option>
+                <option value="ativo">Ativo</option>
+                <option value="inativo">Inativo</option>
+                <option value="teste">Em Teste</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Canal de Ativacao</label>
+            <select id="fCanal">
+                <option value="qualquer">Qualquer Canal</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="site">Site</option>
+                <option value="facebook">Facebook</option>
+                <option value="instagram">Instagram</option>
+                <option value="google">Google Ads</option>
+                <option value="telefone">Telefone</option>
+                <option value="email">Email</option>
+                <option value="indicacao">Indicacao</option>
+                <option value="manual">Manual (somente API)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Max Tentativas</label>
+            <input type="number" id="fMaxTentativas" value="3" min="1" max="10">
+        </div>
+        <div class="form-group">
+            <label>Tempo Limite (minutos)</label>
+            <input type="number" id="fTempoLimite" placeholder="Vazio = ilimitado" min="1">
+        </div>
+        <div class="form-check">
+            <input type="checkbox" id="fPularQuestoes">
+            <label for="fPularQuestoes">Permitir pular questoes opcionais</label>
+        </div>
+        <div class="form-group full">
+            <label>Descricao</label>
+            <textarea id="fDescricao" placeholder="Descreva o objetivo deste fluxo..."></textarea>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button class="btn-secondary" onclick="closeForm()">Cancelar</button>
+        <button class="btn-primary" onclick="saveFluxo()" id="btnSave">Criar Fluxo</button>
     </div>
 </div>
 
 <!-- Cards -->
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px;">
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px;" id="fluxosGrid">
     {% for fluxo in fluxos %}
-    <div class="fluxo-card">
+    <div class="fluxo-card" id="fluxo-{{ fluxo.id }}">
         <div class="fluxo-header">
             <span class="badge fluxo-status {{ fluxo.status }}">{{ fluxo.get_status_display|upper }}</span>
             <div class="fluxo-nome">{{ fluxo.nome }}</div>
             <div class="fluxo-tipo">{{ fluxo.get_tipo_fluxo_display }}</div>
         </div>
         <div class="fluxo-body">
-            <p class="fluxo-descricao">{{ fluxo.descricao|truncatechars:120 }}</p>
+            <p class="fluxo-descricao">{{ fluxo.descricao|default:"Sem descricao"|truncatechars:120 }}</p>
             <div class="fluxo-stats-grid">
                 <div class="fluxo-stat-item"><div class="fluxo-stat-num">{{ fluxo.questoes.count }}</div><div class="fluxo-stat-lbl">Questoes</div></div>
                 <div class="fluxo-stat-item"><div class="fluxo-stat-num">{{ fluxo.atendimentos.count }}</div><div class="fluxo-stat-lbl">Atendimentos</div></div>
@@ -59,20 +145,146 @@
             <div class="fluxo-config-box">
                 <div class="fluxo-config-row"><span class="lbl">Tempo Limite</span><span class="val">{{ fluxo.tempo_limite_minutos|default:"Ilimitado" }}{% if fluxo.tempo_limite_minutos %} min{% endif %}</span></div>
                 <div class="fluxo-config-row"><span class="lbl">Pular Questoes</span><span class="val {{ fluxo.permite_pular_questoes|yesno:'sim,nao' }}">{{ fluxo.permite_pular_questoes|yesno:"Sim,Nao" }}</span></div>
+                <div class="fluxo-config-row"><span class="lbl">Canal</span><span class="val">{{ fluxo.get_canal_display }}</span></div>
             </div>
             <div class="fluxo-actions">
-                <a href="{% url 'comercial_atendimento:questoes_fluxo_por_id' fluxo.id %}" class="btn-primary btn-sm"><i class="fas fa-list-ol"></i> Questoes</a>
-                <button onclick="window.showNotification('Em desenvolvimento','info')" class="btn-secondary btn-sm"><i class="fas fa-edit"></i> Editar</button>
-                <button onclick="window.showNotification('Em desenvolvimento','info')" class="btn-danger btn-sm"><i class="fas fa-trash"></i> Excluir</button>
+                <a href="{% url 'comercial_atendimento:sessoes_atendimento' %}?fluxo={{ fluxo.id }}&status=em_andamento" class="btn-primary btn-sm"><i class="fas fa-headset"></i> Ativos</a>
+                <a href="{% url 'comercial_atendimento:editor_fluxo' fluxo.id %}" class="btn-secondary btn-sm"><i class="fas fa-project-diagram"></i> Editor</a>
+                <a href="{% url 'comercial_atendimento:questoes_fluxo_por_id' fluxo.id %}" class="btn-secondary btn-sm"><i class="fas fa-list-ol"></i> Questoes</a>
+                <button onclick="editFluxo({{ fluxo.id }}, '{{ fluxo.nome|escapejs }}', '{{ fluxo.tipo_fluxo }}', '{{ fluxo.status }}', {{ fluxo.max_tentativas }}, {{ fluxo.tempo_limite_minutos|default:'null' }}, {{ fluxo.permite_pular_questoes|yesno:'true,false' }}, '{{ fluxo.descricao|default:""|escapejs }}', '{{ fluxo.canal }}')" class="btn-secondary btn-sm"><i class="fas fa-edit"></i> Editar</button>
+                <button onclick="deleteFluxo({{ fluxo.id }}, '{{ fluxo.nome|escapejs }}', {{ fluxo.atendimentos.count }})" class="btn-danger btn-sm"><i class="fas fa-trash"></i> Excluir</button>
             </div>
         </div>
     </div>
     {% empty %}
-    <div style="grid-column:1/-1;" class="empty-state">
+    <div style="grid-column:1/-1;" class="empty-state" id="emptyState">
         <i class="fas fa-project-diagram"></i>
         <p>Nenhum fluxo encontrado</p>
-        <button onclick="window.showNotification('Em desenvolvimento','info')" class="btn-primary"><i class="fas fa-plus"></i> Criar Fluxo</button>
+        <button onclick="openForm()" class="btn-primary"><i class="fas fa-plus"></i> Criar Fluxo</button>
     </div>
     {% endfor %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const API_BASE = '{% url "comercial_atendimento:api_fluxos_consultar" %}';
+const API_CRIAR = '{% url "comercial_atendimento:api_fluxos_criar" %}';
+let editingId = null;
+
+function getCSRF() {
+    return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1] || '';
+}
+
+function openForm() {
+    editingId = null;
+    document.getElementById('formTitle').textContent = 'Novo Fluxo';
+    document.getElementById('btnSave').textContent = 'Criar Fluxo';
+    document.getElementById('fNome').value = '';
+    document.getElementById('fTipo').value = 'qualificacao';
+    document.getElementById('fStatus').value = 'rascunho';
+    document.getElementById('fMaxTentativas').value = '3';
+    document.getElementById('fTempoLimite').value = '';
+    document.getElementById('fPularQuestoes').checked = false;
+    document.getElementById('fCanal').value = 'qualquer';
+    document.getElementById('fDescricao').value = '';
+    document.getElementById('formCard').classList.add('open');
+    document.getElementById('fNome').focus();
+}
+
+function editFluxo(id, nome, tipo, status, maxTent, tempoLimite, pular, descricao, canal) {
+    editingId = id;
+    document.getElementById('formTitle').textContent = 'Editar Fluxo';
+    document.getElementById('btnSave').textContent = 'Salvar';
+    document.getElementById('fNome').value = nome;
+    document.getElementById('fTipo').value = tipo;
+    document.getElementById('fStatus').value = status;
+    document.getElementById('fMaxTentativas').value = maxTent;
+    document.getElementById('fTempoLimite').value = tempoLimite || '';
+    document.getElementById('fPularQuestoes').checked = pular;
+    document.getElementById('fCanal').value = canal || 'qualquer';
+    document.getElementById('fDescricao').value = descricao;
+    document.getElementById('formCard').classList.add('open');
+    document.getElementById('fNome').focus();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function closeForm() {
+    document.getElementById('formCard').classList.remove('open');
+    editingId = null;
+}
+
+async function saveFluxo() {
+    const nome = document.getElementById('fNome').value.trim();
+    if (!nome) { window.showNotification('Nome e obrigatorio', 'error'); return; }
+
+    const payload = {
+        nome: nome,
+        tipo_fluxo: document.getElementById('fTipo').value,
+        status: document.getElementById('fStatus').value,
+        max_tentativas: parseInt(document.getElementById('fMaxTentativas').value) || 3,
+        permite_pular_questoes: document.getElementById('fPularQuestoes').checked,
+        canal: document.getElementById('fCanal').value,
+        descricao: document.getElementById('fDescricao').value.trim(),
+    };
+    const tempoLimite = document.getElementById('fTempoLimite').value;
+    if (tempoLimite) payload.tempo_limite_minutos = parseInt(tempoLimite);
+
+    try {
+        let url, method;
+        if (editingId) {
+            url = API_CRIAR.replace('criar/', `${editingId}/atualizar/`);
+            method = 'PUT';
+        } else {
+            url = API_CRIAR;
+            method = 'POST';
+        }
+
+        const res = await fetch(url, {
+            method,
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRF()},
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erro ao salvar');
+
+        window.showNotification(editingId ? 'Fluxo atualizado' : 'Fluxo criado', 'success');
+        closeForm();
+        location.reload();
+    } catch (e) {
+        window.showNotification(e.message, 'error');
+    }
+}
+
+async function deleteFluxo(id, nome, atendimentos) {
+    if (atendimentos > 0) {
+        if (!confirm(`O fluxo "${nome}" tem ${atendimentos} atendimento(s) vinculado(s).\n\nA exclusao sera bloqueada pela API se houver atendimentos. Deseja tentar?`)) return;
+    } else {
+        if (!confirm(`Excluir o fluxo "${nome}"?\n\nEsta acao nao pode ser desfeita.`)) return;
+    }
+
+    try {
+        const url = API_CRIAR.replace('criar/', `${id}/deletar/`);
+        const res = await fetch(url, {
+            method: 'DELETE',
+            headers: {'X-CSRFToken': getCSRF()}
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erro ao excluir');
+
+        window.showNotification('Fluxo excluido', 'success');
+        const card = document.getElementById(`fluxo-${id}`);
+        if (card) card.remove();
+
+        // Se nao sobrou nenhum card, mostra empty state
+        const grid = document.getElementById('fluxosGrid');
+        if (!grid.querySelector('.fluxo-card')) {
+            grid.innerHTML = '<div style="grid-column:1/-1;" class="empty-state"><i class="fas fa-project-diagram"></i><p>Nenhum fluxo encontrado</p><button onclick="openForm()" class="btn-primary"><i class="fas fa-plus"></i> Criar Fluxo</button></div>';
+        }
+    } catch (e) {
+        window.showNotification(e.message, 'error');
+    }
+}
+</script>
 {% endblock %}

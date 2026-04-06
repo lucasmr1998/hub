@@ -236,7 +236,129 @@ Tabela: `crm_segmentos` | Unique: (tenant, nome)
 ## 3. Automações (`apps/marketing/automacoes/`)
 
 ### O que faz
-Motor de automação do hub. Define regras que reagem a eventos do sistema (lead criado, venda aprovada, tarefa vencida, etc.) e executam ações automaticamente (enviar WhatsApp, criar tarefa CRM, dar pontos no clube, etc.). Suporta dois modos: legacy linear e editor visual com fluxograma Drawflow.
+Motor de automação do hub. Define regras que reagem a eventos do sistema e executam ações automaticamente. Os eventos são disparados de duas formas: **signals** (tempo real, quando algo acontece no sistema) e **cron** (periódico, a cada 5 minutos).
+
+### Como funciona (arquitetura)
+
+```
+═══════════════════════════════════════════════════════════════
+  TEMPO REAL (Signals Django — post_save)
+═══════════════════════════════════════════════════════════════
+
+  Lead salvo (created=True)
+      │  signal: on_lead_criado
+      ▼
+  engine.disparar_evento('lead_criado', contexto, tenant)
+      │
+      ├── Busca regras ativas com evento='lead_criado'
+      ├── Para cada regra:
+      │       ├── Verifica controles (rate limit, cooldown)
+      │       └── _processar_fluxo() → BFS no grafo Drawflow
+      │               │
+      │               ├── Trigger Node → segue default
+      │               ├── Condition Node → avalia campo/operador/valor
+      │               │       ├── true → segue saída 1
+      │               │       └── false → segue saída 2
+      │               ├── Action Node → executa ação
+      │               │       ├── notificacao_sistema → cria Notificacao
+      │               │       ├── criar_tarefa → cria TarefaCRM
+      │               │       ├── mover_estagio → move OportunidadeVenda
+      │               │       ├── atribuir_responsavel → round-robin
+      │               │       ├── dar_pontos → MembroClube.saldo
+      │               │       └── webhook → POST externo
+      │               └── Delay Node → cria ExecucaoPendente (cron retoma)
+      │
+      └── Registra LogExecucao + atualiza contadores
+
+
+  Oportunidade salva (created=False)
+      │  signal: on_oportunidade_movida
+      ▼
+  engine.disparar_evento('oportunidade_movida', {estagio: 'demo-agendada', ...})
+      │
+      └── Mesmo fluxo acima (busca regras, processa grafo)
+
+
+  Lead salvo (created=False, score >= 7)
+      │  signal: on_lead_qualificado
+      ▼
+  engine.disparar_evento('lead_qualificado', ...)
+
+
+  Todos os docs do lead validados
+      │  signal: on_docs_validados
+      ▼
+  engine.disparar_evento('docs_validados', ...)
+
+
+  Indicação convertida
+      │  signal: on_indicacao_convertida
+      ▼
+  engine.disparar_evento('indicacao_convertida', ...)
+
+
+  Lead entrou em segmento dinâmico
+      │  signal: avaliar_segmentos_dinamicos (apps/comercial/crm/signals.py)
+      ▼
+  engine.disparar_evento('lead_entrou_segmento', ...)
+
+
+═══════════════════════════════════════════════════════════════
+  PERIÓDICO (Cron — executar_automacoes_cron, a cada 5 min)
+═══════════════════════════════════════════════════════════════
+
+  python manage.py executar_automacoes_cron
+      │
+      ├── 1. Processar delays pendentes
+      │       Busca ExecucaoPendente com data_agendada <= now
+      │       Retoma execução do nodo onde parou
+      │
+      ├── 2. Lead sem contato
+      │       Para cada regra com evento='lead_sem_contato':
+      │           Extrai dias da condição (ex: 2 dias)
+      │           Busca leads com último HistoricoContato antes do limite
+      │           Exclui leads já disparados no período
+      │           Dispara: engine.disparar_evento('lead_sem_contato', {
+      │               dias_sem_contato: 2, lead: ..., lead_nome: ...
+      │           })
+      │
+      ├── 3. Tarefa vencida
+      │       Busca TarefaCRM pendente/em_andamento com data_vencimento vencida
+      │       Dispara: engine.disparar_evento('tarefa_vencida', ...)
+      │
+      └── 4. Disparo por segmento
+              Para cada regra com segmento vinculado:
+              Aplica regras_filtro do segmento
+              Dispara evento para cada lead do segmento
+
+
+═══════════════════════════════════════════════════════════════
+  RESUMO: Quem dispara o quê
+═══════════════════════════════════════════════════════════════
+
+  ┌─────────────────────────┬──────────────┬────────────────────────────┐
+  │ Evento                  │ Disparado por│ Quando                     │
+  ├─────────────────────────┼──────────────┼────────────────────────────┤
+  │ lead_criado             │ Signal       │ Lead salvo (created=True)  │
+  │ lead_qualificado        │ Signal       │ Lead score >= 7            │
+  │ oportunidade_movida     │ Signal       │ Oportunidade salva         │
+  │ docs_validados          │ Signal       │ Todos docs status=validado │
+  │ indicacao_convertida    │ Signal       │ Indicação status=convertido│
+  │ lead_entrou_segmento    │ Signal       │ Lead avaliado em segmento  │
+  │ mensagem_recebida       │ Signal       │ Mensagem tipo=contato      │
+  │ conversa_aberta         │ Signal       │ Conversa criada            │
+  │ conversa_resolvida      │ Signal       │ Conversa status=resolvida  │
+  ├─────────────────────────┼──────────────┼────────────────────────────┤
+  │ lead_sem_contato        │ Cron (5min)  │ Lead sem HistoricoContato  │
+  │ tarefa_vencida          │ Cron (5min)  │ TarefaCRM data vencida     │
+  │ disparo_segmento        │ Cron (5min)  │ Regra com segmento FK      │
+  ├─────────────────────────┼──────────────┼────────────────────────────┤
+  │ venda_aprovada          │ Signal*      │ *Pendente implementação    │
+  │ cliente_aniversario     │ Cron*        │ *Pendente implementação    │
+  └─────────────────────────┴──────────────┴────────────────────────────┘
+
+  * = evento definido no model mas signal/cron ainda não implementado
+```
 
 ### Models (7)
 
@@ -448,15 +570,51 @@ Todas as ações suportam variáveis de contexto: `{{lead_nome}}`, `{{lead_telef
 | `on_docs_validados` | ImagemLeadProspecto (post_save, status=validado) | `docs_validados` | TODOS os docs validados |
 | `on_indicacao_convertida` | Indicacao (post_save, status=convertido) | `indicacao_convertida` | Sempre |
 
-**Contexto disponível nos signals:**
+**Contexto disponível nos signals (variáveis que podem ser usadas nas condições e templates):**
 
-| Variável | Disponível em |
-|----------|---------------|
-| `lead`, `lead_nome`, `lead_telefone`, `lead_email` | Todos |
-| `lead_origem`, `lead_score`, `lead_valor` | lead_criado |
-| `oportunidade`, `oportunidade_titulo`, `estagio`, `pipeline`, `responsavel` | oportunidade_movida |
-| `indicacao`, `nome_indicado`, `telefone_indicado`, `membro_indicador` | indicacao_convertida |
-| `segmento`, `segmento_nome` | lead_entrou_segmento |
+| Variável | Tipo | Disponível em |
+|----------|------|---------------|
+| `lead` | Objeto LeadProspecto | Todos (exceto indicacao) |
+| `lead_nome` | String | Todos |
+| `lead_telefone` | String | lead_criado, lead_sem_contato |
+| `lead_email` | String | lead_criado |
+| `lead_origem` | String | lead_criado |
+| `lead_score` | Integer | lead_criado, lead_qualificado |
+| `lead_valor` | String | lead_criado |
+| `telefone` | String (alias) | Todos |
+| `nome` | String (alias) | Todos |
+| `estagio` | String (**slug** do estágio) | oportunidade_movida |
+| `estagio_nome` | String (nome amigável) | oportunidade_movida |
+| `pipeline` | String (slug) | oportunidade_movida |
+| `pipeline_nome` | String (nome amigável) | oportunidade_movida |
+| `oportunidade` | Objeto | oportunidade_movida |
+| `oportunidade_titulo` | String | oportunidade_movida |
+| `responsavel` | String (nome completo) | oportunidade_movida |
+| `dias_sem_contato` | Integer | lead_sem_contato (cron) |
+| `indicacao` | Objeto | indicacao_convertida |
+| `nome_indicado` | String | indicacao_convertida |
+| `telefone_indicado` | String | indicacao_convertida |
+| `membro_indicador` | String | indicacao_convertida |
+| `segmento` | Objeto | lead_entrou_segmento |
+| `segmento_nome` | String | lead_entrou_segmento |
+
+**Campos disponíveis para condições no editor visual:**
+
+| Campo | Chave no contexto | Quando usar |
+|-------|-------------------|-------------|
+| Origem | `lead.origem` | lead_criado |
+| Score | `lead.score_qualificacao` | lead_criado, lead_qualificado |
+| Cidade | `lead.cidade` | lead_criado |
+| Estado | `lead.estado` | lead_criado |
+| Valor | `lead.valor` | lead_criado |
+| Campanha | `lead.campanha` | lead_criado |
+| Estágio | `estagio` | oportunidade_movida (slug: "demo-agendada") |
+| Estágio (CRM) | `crm.estagio` | Alias, resolve para estagio |
+| Pipeline | `crm.pipeline` | oportunidade_movida |
+| Responsável | `crm.responsavel` | oportunidade_movida |
+| Dias sem contato | `dias_sem_contato` | lead_sem_contato (cron) |
+| Dias como cliente | `cliente.dias_ativo` | cliente_aniversario |
+| Plano | `cliente.plano` | venda_aprovada |
 
 ### Management Command
 

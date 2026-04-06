@@ -84,6 +84,80 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
     except Exception as e:
         logger.error("Erro ao disparar automação mensagem_recebida: %s", e)
 
+    # Disparar fluxo de atendimento por canal (se houver fluxo ativo)
+    try:
+        conversa = instance.conversa
+        lead = conversa.lead
+        canal = conversa.canal.tipo if conversa.canal_id else ''
+        if lead and canal:
+            from apps.comercial.atendimento.engine import iniciar_por_canal, processar_resposta_visual
+            from apps.comercial.atendimento.models import AtendimentoFluxo
+
+            # Verificar se ja tem atendimento ativo aguardando resposta
+            ativo = AtendimentoFluxo.objects.filter(
+                lead=lead, fluxo__modo_fluxo=True,
+                status__in=['iniciado', 'em_andamento'],
+                nodo_atual__tipo='questao',
+            ).select_related('fluxo', 'nodo_atual').first()
+
+            if ativo:
+                # Processar resposta do lead no fluxo ativo
+                resultado = processar_resposta_visual(ativo, instance.conteudo)
+                logger.info("Resposta processada no fluxo: atendimento=%s, resultado=%s", ativo.id, resultado.get('tipo'))
+            else:
+                # Tentar iniciar novo fluxo
+                atendimento, resultado = iniciar_por_canal(lead, canal, tenant=instance.tenant)
+                if atendimento:
+                    logger.info("Fluxo atendimento iniciado: atendimento=%s, canal=%s", atendimento.id, canal)
+
+            # Enviar resposta do bot de volta no inbox
+            if resultado and resultado.get('tipo') == 'questao':
+                questao = resultado.get('questao', {})
+                texto = questao.get('titulo', '')
+                opcoes = questao.get('opcoes_resposta', [])
+                if opcoes:
+                    texto += '\n\n' + '\n'.join(f'{i+1}. {o}' for i, o in enumerate(opcoes))
+
+                if texto:
+                    from apps.inbox.models import Mensagem as MensagemInbox
+                    msg = MensagemInbox(
+                        tenant=instance.tenant,
+                        conversa=conversa,
+                        remetente_tipo='bot',
+                        remetente_nome='Aurora',
+                        tipo_conteudo='texto',
+                        conteudo=texto,
+                    )
+                    msg._skip_automacao = True
+                    msg.save()
+
+                    conversa.ultima_mensagem_em = msg.data_envio
+                    conversa.ultima_mensagem_preview = texto[:255]
+                    conversa.save(update_fields=['ultima_mensagem_em', 'ultima_mensagem_preview'])
+
+                    # Enviar via webhook externo (WhatsApp)
+                    from apps.inbox.services import _enviar_webhook_async
+                    _enviar_webhook_async(conversa, msg)
+
+            elif resultado and resultado.get('tipo') == 'finalizado':
+                from apps.inbox.models import Mensagem as MensagemInbox
+                msg_final = resultado.get('mensagem', 'Atendimento finalizado. Obrigado!')
+                msg = MensagemInbox(
+                    tenant=instance.tenant,
+                    conversa=conversa,
+                    remetente_tipo='bot',
+                    remetente_nome='Aurora',
+                    tipo_conteudo='texto',
+                    conteudo=msg_final,
+                )
+                msg._skip_automacao = True
+                msg.save()
+                from apps.inbox.services import _enviar_webhook_async
+                _enviar_webhook_async(conversa, msg)
+
+    except Exception as e:
+        logger.error("Erro ao processar fluxo de atendimento por canal: %s", e, exc_info=True)
+
 
 @receiver(post_save, sender='inbox.Conversa')
 def on_conversa_resolvida(sender, instance, created, **kwargs):
