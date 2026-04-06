@@ -1,0 +1,267 @@
+# Sistema de Permissões — AuroraISP
+
+**Última atualização:** 05/04/2026
+**Status:** ✅ Implementado
+**Localização:** `apps/sistema/`
+
+---
+
+## Visão Geral
+
+O sistema de permissões controla o acesso de cada usuário a funcionalidades específicas do sistema. Funciona em 3 camadas:
+
+```
+Camada 1: PERFIL DE PERMISSÃO (role reutilizável)
+    Admin cria perfis como "Vendedor", "Supervisor", "Gerente"
+    Cada perfil tem uma lista de funcionalidades habilitadas
+
+Camada 2: FUNCIONALIDADE (granular)
+    35 funcionalidades fixas agrupadas por módulo
+    Cada funcionalidade = 1 checkbox no perfil
+
+Camada 3: ATRIBUIÇÃO (usuário → perfil)
+    Cada usuário recebe 1 perfil
+    Muda o perfil = muda para todos os usuários com aquele perfil
+```
+
+**Retrocompatível:** superusers passam tudo. Usuários sem perfil atribuído também (legado).
+
+---
+
+## Arquitetura
+
+### Models
+
+```
+Funcionalidade (35 registros fixos, seed)
+    ├── modulo: comercial | marketing | cs | inbox | configuracoes
+    ├── codigo: "comercial.ver_pipeline" (unique)
+    ├── nome: "Ver Pipeline"
+    └── descricao: "Visualizar pipeline Kanban e oportunidades"
+
+PerfilPermissao (criado pelo admin, por tenant)
+    ├── nome: "Vendedor" (unique por tenant)
+    ├── descricao: "Acesso básico ao comercial"
+    └── funcionalidades: M2M → Funcionalidade
+
+PermissaoUsuario (1:1 com User)
+    ├── user: OneToOne User
+    ├── tenant: FK Tenant
+    └── perfil: FK PerfilPermissao (nullable)
+```
+
+### Como a verificação funciona
+
+```
+Request chega
+    │
+    ▼
+PermissaoMiddleware (apps/sistema/middleware.py)
+    │
+    ├── Superuser? → passa
+    ├── Sem PermissaoUsuario? → passa (retrocompatível)
+    ├── URL contém /crm/ ? → verifica perm.acesso_comercial
+    ├── URL contém /marketing/ ? → verifica perm.acesso_marketing
+    ├── URL contém /cs/ ou /roleta/ ? → verifica perm.acesso_cs
+    ├── URL contém /inbox/ ou /suporte/ ? → verifica perm.acesso_inbox
+    └── URL contém /configuracoes ? → verifica perm.acesso_configuracoes
+         │
+         └── Se não tem acesso → HTTP 403 "Acesso negado"
+```
+
+A sidebar e topbar filtram os menus via context processor (`perm` e `is_superuser` disponíveis em todos os templates).
+
+---
+
+## 35 Funcionalidades
+
+### Comercial (9)
+
+| Código | Nome | Escopo |
+|--------|------|--------|
+| `comercial.ver_dashboard` | Ver Dashboard | Acesso ao dashboard comercial |
+| `comercial.ver_pipeline` | Ver Pipeline | Visualizar pipeline Kanban |
+| `comercial.mover_oportunidade` | Mover Oportunidades | Arrastar entre estágios |
+| `comercial.ver_todas_oportunidades` | Ver Todas as Oportunidades | Escopo supervisor/gerente (não só as suas) |
+| `comercial.criar_tarefa` | Criar e Editar Tarefas | CRUD de tarefas no CRM |
+| `comercial.ver_desempenho` | Ver Relatórios de Desempenho | Dashboard de performance |
+| `comercial.gerenciar_metas` | Gerenciar Metas | CRUD de metas de vendas |
+| `comercial.gerenciar_equipes` | Gerenciar Equipes | Criar equipes e atribuir membros |
+| `comercial.configurar_pipeline` | Configurar Pipelines | Pipelines, estágios, webhooks, config CRM |
+
+### Marketing (7)
+
+| Código | Nome | Escopo |
+|--------|------|--------|
+| `marketing.ver_leads` | Ver Leads | Lista de leads e detalhes |
+| `marketing.gerenciar_campanhas` | Gerenciar Campanhas | CRUD campanhas de tráfego |
+| `marketing.ver_segmentos` | Ver Segmentos | Visualizar segmentos e membros |
+| `marketing.gerenciar_segmentos` | Gerenciar Segmentos | Criar/editar regras de filtro |
+| `marketing.ver_automacoes` | Ver Automações | Lista e histórico |
+| `marketing.gerenciar_automacoes` | Gerenciar Automações | Editor visual, criar/editar |
+| `marketing.configurar` | Configurar Marketing | Landing page, ativar/desativar automações |
+
+### Customer Success (6)
+
+| Código | Nome | Escopo |
+|--------|------|--------|
+| `cs.ver_dashboard` | Ver Dashboard CS | Dashboard do Clube |
+| `cs.gerenciar_membros` | Gerenciar Membros | Editar saldo e extrato |
+| `cs.gerenciar_cupons` | Gerenciar Cupons e Parceiros | CRUD parceiros, cupons, resgates |
+| `cs.aprovar_cupons` | Aprovar/Rejeitar Cupons | Aprovação de cupons de parceiros |
+| `cs.gerenciar_indicacoes` | Gerenciar Indicações | Status e conversão de indicações |
+| `cs.configurar` | Configurar CS | Regras, níveis, banners, carteirinhas |
+
+### Inbox / Suporte (8)
+
+| Código | Nome | Escopo |
+|--------|------|--------|
+| `inbox.ver_minhas` | Ver Minhas Conversas | Apenas atribuídas a mim |
+| `inbox.ver_equipe` | Ver Conversas da Equipe | Escopo supervisor |
+| `inbox.ver_todas` | Ver Todas as Conversas | Todas do tenant |
+| `inbox.responder` | Responder Conversas | Enviar mensagens e notas |
+| `inbox.transferir_agente` | Transferir para Agente | Entre agentes da mesma equipe |
+| `inbox.transferir_equipe` | Transferir entre Equipes | Entre equipes/filas |
+| `inbox.resolver` | Resolver e Reabrir | Mudar status da conversa |
+| `inbox.configurar` | Configurar Inbox | Equipes, filas, horários, canais, widget |
+
+### Configurações (5)
+
+| Código | Nome | Escopo |
+|--------|------|--------|
+| `config.gerenciar_usuarios` | Gerenciar Usuários | CRUD de usuários |
+| `config.gerenciar_perfis` | Gerenciar Perfis | Criar/editar perfis de permissão |
+| `config.gerenciar_planos` | Gerenciar Planos e Vencimentos | CRUD planos de internet |
+| `config.gerenciar_fluxos` | Gerenciar Fluxos de Atendimento | Configurar bot |
+| `config.gerenciar_notificacoes` | Gerenciar Notificações | Tipos e canais |
+
+---
+
+## Onde gerenciar
+
+| O que | Onde | Quem acessa |
+|-------|------|-------------|
+| Criar/editar perfis | Configurações > Usuários > botão "Perfis" (`/configuracoes/perfis/`) | Admin |
+| Atribuir perfil a usuário | Configurações > Usuários > Editar > select "Perfil de Permissão" | Admin |
+| Seed de funcionalidades | `python manage.py seed_funcionalidades` | DevOps |
+| Django Admin | `/admin/sistema/funcionalidade/` e `/admin/sistema/perfilpermissao/` | Superuser |
+
+---
+
+## Exemplos de perfis sugeridos
+
+### Vendedor
+Comercial: ver_dashboard, ver_pipeline, mover_oportunidade, criar_tarefa
+Inbox: ver_minhas, responder
+
+### Supervisor Comercial
+Tudo do Vendedor +
+Comercial: ver_todas_oportunidades, ver_desempenho
+Inbox: ver_equipe, transferir_agente
+
+### Gerente Comercial
+Tudo do Supervisor +
+Comercial: gerenciar_metas, gerenciar_equipes, configurar_pipeline
+Inbox: ver_todas, transferir_equipe, resolver
+
+### Analista Marketing
+Marketing: ver_leads, gerenciar_campanhas, ver_segmentos, gerenciar_segmentos, ver_automacoes
+
+### Gerente Marketing
+Tudo do Analista +
+Marketing: gerenciar_automacoes, configurar
+
+### Operador CS
+CS: ver_dashboard, gerenciar_membros, gerenciar_cupons, gerenciar_indicacoes
+
+### Agente Suporte
+Inbox: ver_minhas, responder, transferir_agente, resolver
+
+### Admin
+Todas as 35 funcionalidades
+
+---
+
+## Arquivos do sistema
+
+| Arquivo | O que contém |
+|---------|-------------|
+| `apps/sistema/models.py` | Funcionalidade, PerfilPermissao, PermissaoUsuario |
+| `apps/sistema/middleware.py` | PermissaoMiddleware (verifica por URL) |
+| `apps/sistema/decorators.py` | `@permissao_required` (verifica por módulo + papel) |
+| `apps/sistema/context_processors.py` | `perm` e `is_superuser` em templates |
+| `apps/sistema/admin.py` | Admin para Funcionalidade, PerfilPermissao, PermissaoUsuario |
+| `apps/sistema/management/commands/seed_funcionalidades.py` | Seed das 35 funcionalidades |
+| `apps/sistema/templates/sistema/configuracoes/perfis_permissao.html` | Página de gestão de perfis |
+| `apps/sistema/templates/sistema/configuracoes/usuarios.html` | Atribuição de perfil por usuário |
+| `apps/sistema/templates/sistema/base.html` | Sidebar/topbar filtrados por permissões |
+
+---
+
+## O que funciona hoje
+
+1. **Middleware bloqueia acesso por módulo** (URL-based, HTTP 403)
+2. **Topbar esconde módulos** sem acesso
+3. **Sidebar esconde menus de configuração** para não-gerentes
+4. **Perfis reutilizáveis** com checkboxes de funcionalidades por módulo
+5. **Atribuição** via select na edição de usuário
+6. **Retrocompatível** (superuser e sem perfil = acesso total)
+7. **35 funcionalidades seedadas** via management command
+
+---
+
+## O que falta implementar (futuro)
+
+### Prioridade alta
+
+1. **Aplicar verificação granular nas views**
+   Hoje o middleware bloqueia por módulo (URL). Mas dentro do módulo, todas as funcionalidades estão liberadas. Exemplo: se o perfil tem `comercial.ver_pipeline` mas não tem `comercial.configurar_pipeline`, o middleware libera ambas porque a URL é `/crm/...`.
+   **Solução:** aplicar `@permissao_required` ou `perm.tem('comercial.configurar_pipeline')` nas views sensíveis (configurações, metas, equipes).
+
+2. **Filtro de escopo nos querysets**
+   Hoje o CRM já filtra por `request.user` para vendedores (não-superuser vê só suas oportunidades). Mas não está integrado com o sistema de permissões.
+   **Solução:** usar `perm.escopo_comercial()` e `perm.escopo_inbox()` para filtrar querysets baseado nas funcionalidades `ver_todas_oportunidades`, `ver_equipe`, etc.
+
+3. **Aplicar permissões no Inbox**
+   O Inbox não filtra conversas por agente/equipe baseado nas permissões. Todos veem tudo.
+   **Solução:** na view `api_conversas`, verificar `inbox.ver_minhas` / `inbox.ver_equipe` / `inbox.ver_todas` e filtrar o queryset.
+
+### Prioridade média
+
+4. **Cache de permissões**
+   Hoje cada request faz query no banco (user → permissao → perfil → funcionalidades M2M). Em alto tráfego pode impactar.
+   **Solução:** cachear `perm.funcionalidades` em memória por sessão ou usar `select_related`/`prefetch_related` no middleware.
+
+5. **Audit log de mudanças de perfil**
+   Registrar quando um perfil é criado/editado/excluído e quando um usuário muda de perfil.
+   **Solução:** signal `post_save` em PerfilPermissao e PermissaoUsuario, salvar em LogSistema.
+
+6. **Herança de perfis**
+   Permitir que um perfil herde de outro (ex: "Supervisor" herda tudo de "Vendedor" e adiciona funcionalidades).
+   **Solução:** campo `pai` FK em PerfilPermissao. Na verificação, unir funcionalidades do perfil + pai.
+
+### Prioridade baixa
+
+7. **Permissões por objeto**
+   Controlar acesso a registros específicos (ex: vendedor X só pode ver leads da cidade Y).
+   **Solução:** model `RestricaoObjeto` com filtros dinâmicos. Complexidade alta, avaliar necessidade real.
+
+8. **Funcionalidades customizáveis por tenant**
+   Hoje as 35 funcionalidades são fixas (seed). Um tenant pode querer criar funcionalidades próprias.
+   **Solução:** campo `tenant` nullable em Funcionalidade. Se null = global, se preenchido = custom do tenant.
+
+---
+
+## Preocupações
+
+### Segurança
+- **Hoje a verificação é apenas por URL (middleware).** Um usuário com acesso ao módulo comercial pode acessar todas as funcionalidades do módulo, mesmo sem ter as funcionalidades habilitadas. A verificação granular nas views é o próximo passo crítico.
+- **APIs não verificam funcionalidades.** As APIs REST (`/api/v1/...`) só verificam token, não perfil de permissão. Para N8N isso é ok (acesso de serviço), mas se expor APIs para o frontend SPA no futuro, precisa verificar.
+
+### Performance
+- **M2M query a cada request.** A verificação `perm.acesso_comercial` faz `perfil.funcionalidades.filter(modulo='comercial').exists()` que é uma query. Com `prefetch_related` no middleware resolve.
+- **35 funcionalidades é gerenciável.** Se crescer para 100+, a página de perfis precisa de busca/filtro.
+
+### Operacional
+- **Seed obrigatório.** Em cada deploy, rodar `python manage.py seed_funcionalidades`. Se esquecer, a página de perfis fica sem funcionalidades para marcar.
+- **Migration de perfis existentes.** Se já existem perfis criados com o modelo antigo (campos booleanos), eles perdem as permissões ao migrar. Precisa reconfigurar manualmente.

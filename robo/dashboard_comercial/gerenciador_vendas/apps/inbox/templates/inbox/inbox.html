@@ -25,8 +25,16 @@
             <div class="inbox-sidebar-top">
                 <h2 class="inbox-sidebar-title">Conversas</h2>
                 <div class="inbox-sidebar-icons">
-                    <button class="ib-icon-btn" id="filterMenuBtn" title="Filtros"><i class="fas fa-sliders-h"></i></button>
-                    <button class="ib-icon-btn" id="sortBtn" title="Ordenar"><i class="fas fa-sort"></i></button>
+                    <div style="position:relative;">
+                        <button class="ib-icon-btn" id="filterMenuBtn" title="Filtros"><i class="fas fa-filter"></i></button>
+                        <div class="inbox-filter-dropdown" id="filterDropdown" style="display:none;">
+                            <button class="inbox-filter-opt active" data-status="">Todas</button>
+                            <button class="inbox-filter-opt" data-status="aberta">Abertas</button>
+                            <button class="inbox-filter-opt" data-status="pendente">Pendentes</button>
+                            <button class="inbox-filter-opt" data-status="resolvida">Resolvidas</button>
+                        </div>
+                    </div>
+                    <button class="ib-icon-btn" id="sortBtn" title="Ordenar"><i class="fas fa-arrow-down-short-wide"></i></button>
                 </div>
             </div>
             <!-- Filtros por atribuição -->
@@ -100,8 +108,9 @@
                 <textarea id="messageInput" placeholder="Shift + Enter para nova linha. Comece com '/' para selecionar uma resposta pronta." rows="3"></textarea>
                 <div class="input-toolbar">
                     <div class="input-toolbar-left">
-                        <button class="ib-toolbar-btn" title="Emoji"><i class="fas fa-smile"></i></button>
-                        <button class="ib-toolbar-btn" title="Anexar arquivo"><i class="fas fa-paperclip"></i></button>
+                        <button class="ib-toolbar-btn" id="emojiBtn" title="Emoji"><i class="fas fa-smile"></i></button>
+                        <button class="ib-toolbar-btn" id="attachBtn" title="Anexar arquivo"><i class="fas fa-paperclip"></i></button>
+                        <input type="file" id="attachInput" style="display:none;" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt">
                     </div>
                     <div class="input-toolbar-right">
                         <button class="input-send-btn" id="sendBtn">
@@ -110,6 +119,9 @@
                     </div>
                 </div>
             </div>
+            <!-- Emoji picker -->
+            <div class="emoji-picker" id="emojiPicker" style="display:none;"></div>
+
             <!-- Dropdown respostas rápidas -->
             <div class="quick-response-dropdown" id="quickResponseDropdown" style="display:none;">
                 <div class="quick-response-search">
@@ -142,94 +154,104 @@
             </div>
         </div>
 
-        <div class="ctx-divider"></div>
-
-        <!-- Ações da conversa -->
-        <div class="ctx-section">
-            <h4 class="ctx-section-title">Ações da conversa</h4>
-
-            <div class="ctx-action-row">
-                <span class="ctx-action-label">Agente atribuído</span>
-                <span class="ctx-action-link" id="ctxAssignMe">→ Atribuir a mim</span>
+        <!-- Accordion: Ações da conversa -->
+        <div class="ctx-accordion">
+            <div class="ctx-accordion-header" onclick="this.parentElement.classList.toggle('open')">
+                <span>Ações da conversa</span><i class="fas fa-plus ctx-accordion-icon"></i>
             </div>
-            <div class="ctx-action-field">
-                <select id="agentSelect" class="ctx-select">
-                    <option value="">Nenhum</option>
-                    {% for agente in agentes %}
-                    <option value="{{ agente.id }}">{{ agente.get_full_name|default:agente.username }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="ctx-action-row">
-                <span class="ctx-action-label">Equipe atribuída</span>
-            </div>
-            <div class="ctx-action-field">
-                <select id="teamSelect" class="ctx-select">
-                    <option value="">Nenhum</option>
-                    {% for eq in equipes %}
-                    <option value="{{ eq.id }}">{{ eq.nome }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="ctx-action-row">
-                <span class="ctx-action-label">Prioridade</span>
-            </div>
-            <div class="ctx-action-field">
-                <select id="prioritySelect" class="ctx-select">
-                    <option value="baixa">Baixa</option>
-                    <option value="normal" selected>Normal</option>
-                    <option value="alta">Alta</option>
-                    <option value="urgente">Urgente</option>
-                </select>
-            </div>
-
-            <div class="ctx-action-row">
-                <span class="ctx-action-label">Etiquetas da conversa</span>
-            </div>
-            <div class="ctx-action-field">
-                <div class="label-chips" id="labelChips"></div>
-                <select id="labelSelect" class="ctx-select">
-                    <option value="">+ Adicionar etiqueta</option>
-                    {% for etiqueta in etiquetas %}
-                    <option value="{{ etiqueta.id }}" data-cor="{{ etiqueta.cor_hex }}">{{ etiqueta.nome }}</option>
-                    {% endfor %}
-                </select>
+            <div class="ctx-accordion-body">
+                <div class="ctx-action-row">
+                    <span class="ctx-action-label">Agente atribuído</span>
+                    <span class="ctx-action-link" id="ctxAssignMe">→ Atribuir a mim</span>
+                </div>
+                <div class="ctx-action-field">
+                    <select id="agentSelect" class="ctx-select">
+                        <option value="">Nenhum</option>
+                        {% for agente in agentes %}
+                        <option value="{{ agente.id }}">{{ agente.get_full_name|default:agente.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="ctx-action-row"><span class="ctx-action-label">Equipe</span></div>
+                <div class="ctx-action-field">
+                    <select id="teamSelect" class="ctx-select">
+                        <option value="">Nenhum</option>
+                        {% for eq in equipes %}
+                        <option value="{{ eq.id }}">{{ eq.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="ctx-action-row"><span class="ctx-action-label">Prioridade</span></div>
+                <div class="ctx-action-field">
+                    <select id="prioritySelect" class="ctx-select">
+                        <option value="baixa">Baixa</option>
+                        <option value="normal" selected>Normal</option>
+                        <option value="alta">Alta</option>
+                        <option value="urgente">Urgente</option>
+                    </select>
+                </div>
+                <div class="ctx-action-row"><span class="ctx-action-label">Etiquetas</span></div>
+                <div class="ctx-action-field">
+                    <div class="label-chips" id="labelChips"></div>
+                    <select id="labelSelect" class="ctx-select">
+                        <option value="">+ Adicionar etiqueta</option>
+                        {% for etiqueta in etiquetas %}
+                        <option value="{{ etiqueta.id }}" data-cor="{{ etiqueta.cor_hex }}">{{ etiqueta.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
         </div>
 
-        <div class="ctx-divider"></div>
-
-        <!-- Informações do lead -->
-        <div class="ctx-section">
-            <h4 class="ctx-section-title">Lead / CRM</h4>
-            <div id="ctxLeadInfo" class="ctx-info-block">
-                <p class="ctx-empty">—</p>
+        <!-- Accordion: Lead / CRM -->
+        <div class="ctx-accordion">
+            <div class="ctx-accordion-header" onclick="this.parentElement.classList.toggle('open')">
+                <span>Lead / CRM</span><i class="fas fa-plus ctx-accordion-icon"></i>
+            </div>
+            <div class="ctx-accordion-body">
+                <div id="ctxLeadInfo" class="ctx-info-block">
+                    <p class="ctx-empty">—</p>
+                </div>
             </div>
         </div>
 
-        <div class="ctx-divider"></div>
-
-        <!-- Notas -->
-        <div class="ctx-section">
-            <h4 class="ctx-section-title">Notas Internas</h4>
-            <div id="notesList" class="ctx-notes-list"></div>
-            <div class="ctx-notes-input">
-                <textarea id="noteInput" placeholder="Adicionar nota..." rows="2"></textarea>
-                <button id="addNoteBtn" class="ctx-btn-sm">Salvar</button>
+        <!-- Accordion: Notas Internas -->
+        <div class="ctx-accordion">
+            <div class="ctx-accordion-header" onclick="this.parentElement.classList.toggle('open')">
+                <span>Notas do contacto</span><i class="fas fa-plus ctx-accordion-icon"></i>
+            </div>
+            <div class="ctx-accordion-body">
+                <div id="notesList" class="ctx-notes-list"></div>
+                <div class="ctx-notes-input">
+                    <textarea id="noteInput" placeholder="Adicionar nota..." rows="2"></textarea>
+                    <button id="addNoteBtn" class="ctx-btn-sm">Salvar</button>
+                </div>
             </div>
         </div>
 
-        <div class="ctx-divider"></div>
+        <!-- Accordion: Ticket -->
+        <div class="ctx-accordion">
+            <div class="ctx-accordion-header" onclick="this.parentElement.classList.toggle('open')">
+                <span>Ticket de Suporte</span><i class="fas fa-plus ctx-accordion-icon"></i>
+            </div>
+            <div class="ctx-accordion-body">
+                <div id="ticketInfo" style="display:none;"></div>
+                <button id="createTicketBtn" class="ctx-btn-outline">
+                    <i class="fas fa-plus"></i> Criar Ticket
+                </button>
+            </div>
+        </div>
 
-        <!-- Ticket -->
-        <div class="ctx-section">
-            <h4 class="ctx-section-title">Ticket de Suporte</h4>
-            <div id="ticketInfo" style="display:none;"></div>
-            <button id="createTicketBtn" class="ctx-btn-outline">
-                <i class="fas fa-plus"></i> Criar Ticket
-            </button>
+        <!-- Accordion: Conversas anteriores -->
+        <div class="ctx-accordion">
+            <div class="ctx-accordion-header" onclick="this.parentElement.classList.toggle('open')">
+                <span>Conversas anteriores</span><i class="fas fa-plus ctx-accordion-icon"></i>
+            </div>
+            <div class="ctx-accordion-body">
+                <div id="previousConversations">
+                    <p style="font-size:12px;color:var(--text-muted);">Selecione uma conversa.</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -295,5 +317,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'inbox/js/inbox.js' %}"></script>
+<script src="{% static 'inbox/js/inbox.js' %}?v=6"></script>
 {% endblock %}

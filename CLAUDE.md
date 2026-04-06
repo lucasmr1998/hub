@@ -91,8 +91,9 @@ Módulo principal da AuroraISP (Comercial + CS + Marketing). Em produção na Me
 - **Admin Aurora:** Painel /aurora-admin/ para gerenciar tenants, planos (9 planos, 115 features) e monitorar o SaaS.
 - **CS migrado do megaroleta:** apps clube, parceiros, indicacoes e carteirinha integrados ao hub.
 - **API REST:** DRF com TokenAuth + SessionAuth. Endpoints em `/api/v1/`. Swagger em `/api/docs/`.
-- **Segurança:** 5 vulnerabilidades críticas e 12 altas/médias corrigidas. Secrets em variáveis de ambiente. `@api_token_required` para N8N, `@login_required` para painel. PIIFilter no logging. Validação de uploads. Isolamento de tenant em uploads.
-- **Testes:** 225 testes passando, 10 arquivos de teste, 28+ factories. CI/CD com GitHub Actions.
+- **Permissões granulares:** 35 funcionalidades por módulo, perfis reutilizáveis (PerfilPermissao M2M Funcionalidade), PermissaoMiddleware por URL, sidebar/topbar filtrados. Seed: `python manage.py seed_funcionalidades`. Docs em `docs/PRODUTO/11-PERMISSOES.md`.
+- **Segurança:** 5 vulnerabilidades críticas e 12 altas/médias corrigidas. Secrets em variáveis de ambiente. `@api_token_required` para N8N, `@login_required` para painel. `@permissao_required` para controle granular. PIIFilter no logging. Validação de uploads. Isolamento de tenant em uploads.
+- **Testes:** 70+ testes passando (automações, CRM, views, ações do engine). 10+ arquivos de teste, 35+ factories. CI/CD com GitHub Actions.
 - **Migrations:** limpas e regeneradas do zero para todos os apps.
 
 ### megaroleta/

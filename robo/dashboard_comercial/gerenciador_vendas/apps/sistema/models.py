@@ -219,6 +219,195 @@ class PerfilUsuario(models.Model):
 
 
 # ============================================================================
+# PERMISSÕES — controle granular por módulo + funcionalidade
+# ============================================================================
+
+class Funcionalidade(models.Model):
+    """
+    Funcionalidade individual do sistema (ex: 'ver_pipeline', 'criar_tarefa').
+    Seed fixo, não editável pelo tenant.
+    """
+    MODULO_CHOICES = [
+        ('comercial', 'Comercial'),
+        ('marketing', 'Marketing'),
+        ('cs', 'Customer Success'),
+        ('inbox', 'Inbox / Suporte'),
+        ('configuracoes', 'Configurações'),
+    ]
+
+    modulo = models.CharField(max_length=20, choices=MODULO_CHOICES, verbose_name="Módulo")
+    codigo = models.CharField(max_length=50, unique=True, verbose_name="Código",
+        help_text="Identificador único (ex: comercial.ver_pipeline)")
+    nome = models.CharField(max_length=100, verbose_name="Nome",
+        help_text="Nome amigável (ex: Ver Pipeline)")
+    descricao = models.CharField(max_length=255, blank=True, verbose_name="Descrição")
+    ordem = models.PositiveIntegerField(default=0, verbose_name="Ordem de exibição")
+
+    class Meta:
+        app_label = 'sistema'
+        db_table = 'sistema_funcionalidade'
+        verbose_name = "Funcionalidade"
+        verbose_name_plural = "Funcionalidades"
+        ordering = ['modulo', 'ordem']
+
+    def __str__(self):
+        return f"[{self.modulo}] {self.nome}"
+
+
+class PerfilPermissao(models.Model):
+    """
+    Perfil de permissão reutilizável.
+    Define quais funcionalidades estão liberadas.
+    Atribuído a múltiplos usuários.
+    """
+    tenant = models.ForeignKey(
+        Tenant, on_delete=models.CASCADE,
+        related_name='perfis_permissao', verbose_name="Tenant",
+    )
+    nome = models.CharField(max_length=100, verbose_name="Nome do Perfil",
+        help_text="Ex: Vendedor, Supervisor Comercial, Agente Suporte")
+    descricao = models.TextField(blank=True, verbose_name="Descrição")
+    funcionalidades = models.ManyToManyField(
+        Funcionalidade, blank=True,
+        related_name='perfis', verbose_name="Funcionalidades",
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'sistema'
+        db_table = 'sistema_perfil_permissao'
+        verbose_name = "Perfil de Permissão"
+        verbose_name_plural = "Perfis de Permissão"
+        unique_together = [['tenant', 'nome']]
+        ordering = ['nome']
+
+    def __str__(self):
+        return self.nome
+
+    @property
+    def total_usuarios(self):
+        return self.usuarios.count()
+
+    def tem_funcionalidade(self, codigo):
+        """Verifica se o perfil tem uma funcionalidade específica."""
+        return self.funcionalidades.filter(codigo=codigo).exists()
+
+    def funcionalidades_por_modulo(self):
+        """Retorna dict {modulo: [lista de codigos]}."""
+        result = {}
+        for f in self.funcionalidades.all():
+            result.setdefault(f.modulo, []).append(f.codigo)
+        return result
+
+
+class PermissaoUsuario(models.Model):
+    """
+    Vincula um usuário a um PerfilPermissao.
+    As permissões efetivas vêm do perfil.
+    """
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE,
+        related_name='permissoes', verbose_name="Usuário",
+    )
+    tenant = models.ForeignKey(
+        Tenant, on_delete=models.CASCADE,
+        related_name='permissoes_usuarios', verbose_name="Tenant",
+    )
+    perfil = models.ForeignKey(
+        PerfilPermissao, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='usuarios', verbose_name="Perfil de Permissão",
+    )
+
+    class Meta:
+        app_label = 'sistema'
+        db_table = 'sistema_permissao_usuario'
+        verbose_name = "Permissão de Usuário"
+        verbose_name_plural = "Permissões de Usuários"
+
+    def __str__(self):
+        return f"{self.user.username} → {self.perfil.nome if self.perfil else 'Sem perfil'}"
+
+    # ── Verificação de permissões ──
+
+    def tem(self, codigo):
+        """Verifica se o usuário tem uma funcionalidade. Ex: perm.tem('comercial.ver_pipeline')"""
+        if not self.perfil:
+            return False
+        return self.perfil.tem_funcionalidade(codigo)
+
+    @property
+    def acesso_comercial(self):
+        if not self.perfil:
+            return False
+        return self.perfil.funcionalidades.filter(modulo='comercial').exists()
+
+    @property
+    def acesso_marketing(self):
+        if not self.perfil:
+            return False
+        return self.perfil.funcionalidades.filter(modulo='marketing').exists()
+
+    @property
+    def acesso_cs(self):
+        if not self.perfil:
+            return False
+        return self.perfil.funcionalidades.filter(modulo='cs').exists()
+
+    @property
+    def acesso_inbox(self):
+        if not self.perfil:
+            return False
+        return self.perfil.funcionalidades.filter(modulo='inbox').exists()
+
+    @property
+    def acesso_configuracoes(self):
+        if not self.perfil:
+            return False
+        return self.perfil.funcionalidades.filter(modulo='configuracoes').exists()
+
+    @property
+    def papel_comercial(self):
+        if not self.perfil:
+            return 'vendedor'
+        if self.tem('comercial.configurar_pipeline'):
+            return 'gerente'
+        if self.tem('comercial.ver_todas_oportunidades'):
+            return 'supervisor'
+        return 'vendedor'
+
+    @property
+    def papel_inbox(self):
+        if not self.perfil:
+            return 'agente'
+        if self.tem('inbox.configurar'):
+            return 'gerente'
+        if self.tem('inbox.ver_equipe'):
+            return 'supervisor'
+        return 'agente'
+
+    def escopo_comercial(self):
+        return {'vendedor': 'meus', 'supervisor': 'equipe', 'gerente': 'todos'}.get(self.papel_comercial, 'meus')
+
+    def escopo_inbox(self):
+        return {'agente': 'meus', 'supervisor': 'equipe', 'gerente': 'todos'}.get(self.papel_inbox, 'meus')
+
+    def pode_configurar(self, modulo):
+        if self.acesso_configuracoes:
+            return True
+        return self.tem(f'{modulo}.configurar') or self.tem(f'{modulo}.configurar_pipeline')
+
+    @staticmethod
+    def get_for_user(user):
+        if user.is_superuser:
+            return None
+        try:
+            return user.permissoes
+        except PermissaoUsuario.DoesNotExist:
+            return None
+
+
+# ============================================================================
 # CONFIGURACOES — migradas de vendas_web
 # ============================================================================
 

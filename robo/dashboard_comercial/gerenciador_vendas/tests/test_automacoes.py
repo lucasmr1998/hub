@@ -21,6 +21,7 @@ from apps.marketing.automacoes.models import (
 )
 from apps.marketing.automacoes.engine import (
     disparar_evento, _substituir_variaveis, executar_pendentes, _verificar_controles,
+    _acao_criar_tarefa, _acao_mover_estagio, _acao_atribuir_responsavel, _acao_dar_pontos,
 )
 from apps.notificacoes.models import TipoNotificacao, CanalNotificacao, Notificacao
 
@@ -348,6 +349,9 @@ class EngineDispararEventoTest(TestCase):
 
 class AutomacoesTenantIsolationTest(TestCase):
     def test_regras_isoladas_por_tenant(self):
+        from apps.sistema.middleware import set_current_tenant
+        set_current_tenant(None)
+
         t1 = TenantFactory()
         t2 = TenantFactory()
         TipoNotificacao.all_tenants.create(tenant=t1, codigo='lead_novo', nome='T', descricao='T', template_padrao='T', prioridade_padrao='normal')
@@ -395,34 +399,26 @@ class AutomacoesViewsTest(TestCase):
         self.assertContains(resp, 'Nova Automação')
 
     def test_criar_automacao_post(self):
+        """Criar automação (nome/descricao) redireciona para editor visual."""
         resp = self.client.post(reverse('marketing_automacoes:criar'), {
             'nome': 'Regra de teste',
             'descricao': 'Teste automatizado',
-            'evento': 'lead_criado',
-            'condicao_campo[]': ['lead.origem'],
-            'condicao_operador[]': ['igual'],
-            'condicao_valor[]': ['whatsapp'],
-            'acao_tipo[]': ['notificacao_sistema'],
-            'acao_config[]': ['Lead {{nome}}'],
         })
         self.assertEqual(resp.status_code, 302)
         regra = RegraAutomacao.all_tenants.filter(tenant=self.tenant, nome='Regra de teste').first()
         self.assertIsNotNone(regra)
-        self.assertEqual(regra.condicoes.count(), 1)
-        self.assertEqual(regra.acoes.count(), 1)
+        self.assertTrue(regra.modo_fluxo)
+        self.assertIn('fluxo', resp.url)
 
     def test_editar_automacao(self):
         regra = RegraAutomacaoFactory(tenant=self.tenant, nome='Original')
         resp = self.client.post(reverse('marketing_automacoes:editar', args=[regra.pk]), {
             'nome': 'Editada',
-            'evento': 'venda_aprovada',
-            'acao_tipo[]': ['criar_tarefa'],
-            'acao_config[]': ['Título: Teste'],
+            'descricao': 'Descrição editada',
         })
         self.assertEqual(resp.status_code, 302)
         regra.refresh_from_db()
         self.assertEqual(regra.nome, 'Editada')
-        self.assertEqual(regra.evento, 'venda_aprovada')
 
     def test_toggle_automacao(self):
         regra = RegraAutomacaoFactory(tenant=self.tenant, ativa=True)
@@ -751,6 +747,29 @@ class NovasViewsTest(TestCase):
         resp = self.client.get(reverse('marketing_automacoes:dashboard'))
         self.assertEqual(resp.status_code, 200)
 
+    def test_salvar_fluxo(self):
+        regra = RegraAutomacaoFactory(tenant=self.tenant)
+        payload = {
+            'drawflow_state': {'drawflow': {'Home': {'data': {}}}},
+            'nodos': [
+                {'id_temp': '1', 'tipo': 'trigger', 'subtipo': 'lead_criado', 'config': {}, 'pos_x': 100, 'pos_y': 100, 'ordem': 1},
+                {'id_temp': '2', 'tipo': 'action', 'subtipo': 'notificacao_sistema', 'config': {'template': 'Ola'}, 'pos_x': 400, 'pos_y': 100, 'ordem': 2},
+            ],
+            'conexoes': [
+                {'origem': '1', 'destino': '2', 'tipo_saida': 'default'},
+            ],
+        }
+        import json
+        resp = self.client.post(
+            reverse('marketing_automacoes:salvar_fluxo', args=[regra.pk]),
+            data=json.dumps(payload),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()['ok'])
+        self.assertEqual(regra.nodos.count(), 2)
+        self.assertEqual(regra.conexoes.count(), 1)
+
     def test_timeline_lead(self):
         lead = LeadProspectoFactory.build(tenant=self.tenant)
         lead._skip_crm_signal = True
@@ -760,3 +779,184 @@ class NovasViewsTest(TestCase):
         resp = self.client.get(reverse('marketing_automacoes:api_lead_timeline', args=[lead.pk]))
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()['logs'], [])
+
+
+# ============================================================================
+# TESTES DE AÇÕES INDIVIDUAIS DO ENGINE
+# ============================================================================
+
+class AcaoCriarTarefaTest(TestCase):
+    def setUp(self):
+        self.tenant = TenantFactory()
+        self.user = UserFactory(is_staff=True)
+        self.perfil = PerfilFactory(user=self.user, tenant=self.tenant)
+        set_current_tenant(self.tenant)
+
+    def test_criar_tarefa_com_lead(self):
+        from apps.comercial.crm.models import TarefaCRM
+        regra = RegraAutomacaoFactory(tenant=self.tenant)
+        acao = AcaoRegraFactory(
+            tenant=self.tenant, regra=regra, tipo='criar_tarefa',
+            configuracao='Título: Contatar {{nome}}\nTipo: ligacao\nPrioridade: alta',
+        )
+        lead = LeadProspectoFactory.build(tenant=self.tenant)
+        lead._skip_crm_signal = True
+        lead._skip_automacao = True
+        lead._skip_segmento = True
+        lead.save()
+
+        resultado = _acao_criar_tarefa(regra, acao, {'nome': 'João', 'lead': lead})
+        self.assertIn('Tarefa criada', resultado)
+        tarefa = TarefaCRM.all_tenants.filter(tenant=self.tenant).last()
+        self.assertIsNotNone(tarefa)
+        self.assertEqual(tarefa.titulo, 'Contatar João')
+        self.assertEqual(tarefa.tipo, 'ligacao')
+        self.assertEqual(tarefa.prioridade, 'alta')
+
+    def test_criar_tarefa_sem_responsavel_usa_staff(self):
+        from apps.comercial.crm.models import TarefaCRM
+        regra = RegraAutomacaoFactory(tenant=self.tenant)
+        acao = AcaoRegraFactory(
+            tenant=self.tenant, regra=regra, tipo='criar_tarefa',
+            configuracao='Título: Teste',
+        )
+        resultado = _acao_criar_tarefa(regra, acao, {'nome': 'X'})
+        self.assertIn('Tarefa criada', resultado)
+        tarefa = TarefaCRM.all_tenants.filter(tenant=self.tenant).last()
+        self.assertEqual(tarefa.responsavel, self.user)
+
+
+class AcaoMoverEstagioTest(TestCase):
+    def setUp(self):
+        self.tenant = TenantFactory()
+        set_current_tenant(self.tenant)
+
+    def test_mover_estagio_com_sucesso(self):
+        from apps.comercial.crm.models import Pipeline, PipelineEstagio
+        pipeline = Pipeline.all_tenants.create(tenant=self.tenant, nome='Vendas', slug='vendas')
+        estagio1 = PipelineEstagio.all_tenants.create(
+            tenant=self.tenant, pipeline=pipeline, nome='Novo', slug='novo', ordem=1,
+        )
+        estagio2 = PipelineEstagio.all_tenants.create(
+            tenant=self.tenant, pipeline=pipeline, nome='Qualificado', slug='qualificado', ordem=2,
+        )
+        lead = LeadProspectoFactory.build(tenant=self.tenant)
+        lead._skip_crm_signal = True
+        lead._skip_automacao = True
+        lead._skip_segmento = True
+        lead.save()
+        from apps.comercial.crm.models import OportunidadeVenda
+        opp = OportunidadeVenda.all_tenants.create(
+            tenant=self.tenant, lead=lead, pipeline=pipeline, estagio=estagio1,
+        )
+
+        regra = RegraAutomacaoFactory(tenant=self.tenant)
+        acao = AcaoRegraFactory(
+            tenant=self.tenant, regra=regra, tipo='mover_estagio',
+            configuracao='Estágio: qualificado',
+        )
+        resultado = _acao_mover_estagio(regra, acao, {'oportunidade': opp})
+        self.assertIn('Qualificado', resultado)
+        opp.refresh_from_db()
+        self.assertEqual(opp.estagio, estagio2)
+
+    def test_mover_estagio_sem_oportunidade(self):
+        regra = RegraAutomacaoFactory(tenant=self.tenant)
+        acao = AcaoRegraFactory(
+            tenant=self.tenant, regra=regra, tipo='mover_estagio',
+            configuracao='Estágio: qualificado',
+        )
+        resultado = _acao_mover_estagio(regra, acao, {})
+        self.assertIn('Sem oportunidade', resultado)
+
+
+class AcaoAtribuirResponsavelTest(TestCase):
+    def setUp(self):
+        self.tenant = TenantFactory()
+        self.user1 = UserFactory(is_staff=True, username='vendedor1')
+        self.user2 = UserFactory(is_staff=True, username='vendedor2')
+        PerfilFactory(user=self.user1, tenant=self.tenant)
+        PerfilFactory(user=self.user2, tenant=self.tenant)
+        set_current_tenant(self.tenant)
+
+    def test_atribuir_round_robin(self):
+        from apps.comercial.crm.models import Pipeline, PipelineEstagio, OportunidadeVenda
+        pipeline = Pipeline.all_tenants.create(tenant=self.tenant, nome='V', slug='v')
+        estagio = PipelineEstagio.all_tenants.create(
+            tenant=self.tenant, pipeline=pipeline, nome='N', slug='n', ordem=1,
+        )
+        lead = LeadProspectoFactory.build(tenant=self.tenant)
+        lead._skip_crm_signal = True
+        lead._skip_automacao = True
+        lead._skip_segmento = True
+        lead.save()
+        opp = OportunidadeVenda.all_tenants.create(
+            tenant=self.tenant, lead=lead, pipeline=pipeline, estagio=estagio,
+        )
+
+        regra = RegraAutomacaoFactory(tenant=self.tenant)
+        acao = AcaoRegraFactory(
+            tenant=self.tenant, regra=regra, tipo='atribuir_responsavel',
+            configuracao='Responsável: auto (round-robin)',
+        )
+        resultado = _acao_atribuir_responsavel(regra, acao, {'oportunidade': opp})
+        self.assertIn('Responsável atribuído', resultado)
+        opp.refresh_from_db()
+        self.assertIn(opp.responsavel, [self.user1, self.user2])
+
+    def test_atribuir_sem_oportunidade(self):
+        regra = RegraAutomacaoFactory(tenant=self.tenant)
+        acao = AcaoRegraFactory(
+            tenant=self.tenant, regra=regra, tipo='atribuir_responsavel',
+            configuracao='auto',
+        )
+        resultado = _acao_atribuir_responsavel(regra, acao, {})
+        self.assertIn('Sem oportunidade', resultado)
+
+
+class AcaoDarPontosTest(TestCase):
+    def setUp(self):
+        self.tenant = TenantFactory()
+        set_current_tenant(self.tenant)
+
+    def test_dar_pontos_com_sucesso(self):
+        membro = MembroClubeFactory(tenant=self.tenant, cpf='12345678901', saldo=10)
+        lead = LeadProspectoFactory.build(tenant=self.tenant, cpf_cnpj='123.456.789-01')
+        lead._skip_crm_signal = True
+        lead._skip_automacao = True
+        lead._skip_segmento = True
+        lead.save()
+
+        regra = RegraAutomacaoFactory(tenant=self.tenant)
+        acao = AcaoRegraFactory(
+            tenant=self.tenant, regra=regra, tipo='dar_pontos',
+            configuracao='Pontos: 50\nMotivo: Teste',
+        )
+        resultado = _acao_dar_pontos(regra, acao, {'lead': lead})
+        self.assertIn('50 pontos', resultado)
+        membro.refresh_from_db()
+        self.assertEqual(membro.saldo, 60)
+
+    def test_dar_pontos_sem_cpf(self):
+        regra = RegraAutomacaoFactory(tenant=self.tenant)
+        acao = AcaoRegraFactory(
+            tenant=self.tenant, regra=regra, tipo='dar_pontos',
+            configuracao='Pontos: 10',
+        )
+        resultado = _acao_dar_pontos(regra, acao, {})
+        self.assertIn('CPF não encontrado', resultado)
+
+    def test_dar_pontos_membro_nao_encontrado(self):
+        lead = LeadProspectoFactory.build(tenant=self.tenant, cpf_cnpj='999.888.777-66')
+        lead._skip_crm_signal = True
+        lead._skip_automacao = True
+        lead._skip_segmento = True
+        lead.save()
+
+        regra = RegraAutomacaoFactory(tenant=self.tenant)
+        acao = AcaoRegraFactory(
+            tenant=self.tenant, regra=regra, tipo='dar_pontos',
+            configuracao='Pontos: 10',
+        )
+        resultado = _acao_dar_pontos(regra, acao, {'lead': lead})
+        self.assertIn('Membro não encontrado', resultado)

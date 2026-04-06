@@ -79,29 +79,6 @@
 </style>
 {% endblock %}
 
-{% block sidebar %}
-    <div class="sidebar-section-label">ATENDIMENTO</div>
-    <a href="{% url 'inbox:inbox' %}" class="nav-item">
-        <i class="fas fa-comments"></i><span class="nav-text">Inbox</span>
-    </a>
-
-    <div class="sidebar-section-label" style="margin-top:12px;">SUPORTE</div>
-    <a href="{% url 'suporte:dashboard' %}" class="nav-item">
-        <i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span>
-    </a>
-    <a href="{% url 'suporte:ticket_lista' %}" class="nav-item">
-        <i class="fas fa-list"></i><span class="nav-text">Tickets</span>
-    </a>
-    <a href="{% url 'suporte:ticket_criar' %}" class="nav-item">
-        <i class="fas fa-plus-circle"></i><span class="nav-text">Novo Ticket</span>
-    </a>
-
-    <div class="sidebar-section-label" style="margin-top:12px;">CONFIGURAÇÕES</div>
-    <a href="{% url 'inbox:configuracoes' %}" class="nav-item active">
-        <i class="fas fa-cog"></i><span class="nav-text">Configurações</span>
-    </a>
-{% endblock %}
-
 {% block content %}
 <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;">
     <h1 style="font-size:20px;font-weight:700;margin:0;">

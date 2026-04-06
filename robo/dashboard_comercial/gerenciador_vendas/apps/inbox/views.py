@@ -20,12 +20,21 @@ from .models import (
 )
 from .serializers import ConversaOutputSerializer, MensagemOutputSerializer
 from . import services
+from apps.sistema.decorators import user_tem_funcionalidade
+
+
+def _check_perm(request, codigo):
+    if not user_tem_funcionalidade(request, codigo):
+        return JsonResponse({'error': 'Sem permissão para esta ação'}, status=403)
+    return None
 
 
 # ── View principal ─────────────────────────────────────────────────────
 
 @login_required
 def inbox_view(request):
+    denied = _check_perm(request, 'inbox.ver_minhas')
+    if denied: return denied
     agentes = User.objects.filter(is_active=True).order_by('first_name')
     etiquetas = EtiquetaConversa.objects.all()
     equipes = EquipeInbox.objects.filter(ativo=True)
@@ -51,11 +60,29 @@ def api_conversas(request):
     """GET: Lista conversas com filtros."""
     qs = Conversa.objects.select_related('canal', 'agente', 'lead').prefetch_related('etiquetas')
 
+    # Escopo de visibilidade baseado em funcionalidade
+    if not user_tem_funcionalidade(request, 'inbox.ver_todas'):
+        if user_tem_funcionalidade(request, 'inbox.ver_equipe'):
+            # Supervisor: vê conversas de agentes da sua equipe + não atribuídas
+            from .models import MembroEquipeInbox
+            membro = MembroEquipeInbox.objects.filter(user=request.user).first()
+            if membro:
+                equipe_users = MembroEquipeInbox.objects.filter(equipe=membro.equipe).values_list('user_id', flat=True)
+                from django.db.models import Q
+                qs = qs.filter(Q(agente_id__in=equipe_users) | Q(agente__isnull=True))
+            else:
+                from django.db.models import Q
+                qs = qs.filter(Q(agente=request.user) | Q(agente__isnull=True))
+        else:
+            # Agente: só as suas + não atribuídas
+            from django.db.models import Q
+            qs = qs.filter(Q(agente=request.user) | Q(agente__isnull=True))
+
     status_filter = request.GET.get('status')
     if status_filter:
         qs = qs.filter(status=status_filter)
     else:
-        qs = qs.exclude(status='arquivada')
+        qs = qs.exclude(status__in=['arquivada', 'resolvida'])
 
     agente_filter = request.GET.get('agente')
     if agente_filter == 'me':
@@ -77,6 +104,12 @@ def api_conversas(request):
             Q(contato_telefone__icontains=busca) |
             Q(numero__icontains=busca)
         )
+
+    ordem = request.GET.get('ordem', 'desc')
+    if ordem == 'asc':
+        qs = qs.order_by('ultima_mensagem_em')
+    else:
+        qs = qs.order_by('-ultima_mensagem_em')
 
     conversas = qs[:100]
     data = ConversaOutputSerializer(conversas, many=True).data
@@ -142,6 +175,29 @@ def api_conversa_detalhe(request, pk):
             'status': t.status,
         }
 
+    # Conversas anteriores do mesmo contato
+    if conversa.contato_telefone:
+        anteriores = Conversa.all_tenants.filter(
+            tenant=conversa.tenant,
+            contato_telefone=conversa.contato_telefone,
+        ).exclude(pk=conversa.pk).order_by('-data_abertura')[:10]
+
+        data['conversas_anteriores'] = [
+            {
+                'id': c.id,
+                'numero': c.numero,
+                'status': c.status,
+                'agente': c.agente.get_full_name() if c.agente else '',
+                'data_abertura': c.data_abertura.isoformat() if c.data_abertura else '',
+                'data_resolucao': c.data_resolucao.isoformat() if c.data_resolucao else '',
+                'preview': c.ultima_mensagem_preview or '',
+                'total_mensagens': c.mensagens.count(),
+            }
+            for c in anteriores
+        ]
+    else:
+        data['conversas_anteriores'] = []
+
     # Notas internas
     notas = conversa.notas_internas.select_related('autor').all()[:20]
     data['notas'] = [
@@ -180,6 +236,8 @@ def api_mensagens(request, pk):
 @require_http_methods(["POST"])
 def api_enviar_mensagem(request, pk):
     """POST: Agente envia mensagem."""
+    denied = _check_perm(request, 'inbox.responder')
+    if denied: return denied
     conversa = _get_conversa(pk, request)
 
     try:
@@ -231,6 +289,8 @@ def api_atribuir(request, pk):
 @require_http_methods(["POST"])
 def api_resolver(request, pk):
     """POST: Resolver conversa."""
+    denied = _check_perm(request, 'inbox.resolver')
+    if denied: return denied
     conversa = _get_conversa(pk, request)
     services.resolver_conversa(conversa, request.user)
     return JsonResponse({'success': True})
@@ -249,6 +309,8 @@ def api_reabrir(request, pk):
 @require_http_methods(["POST"])
 def api_transferir(request, pk):
     """POST: Transferir conversa para agente, equipe ou fila."""
+    denied = _check_perm(request, 'inbox.transferir_agente')
+    if denied: return denied
     conversa = _get_conversa(pk, request)
 
     try:
@@ -312,8 +374,44 @@ def api_criar_ticket(request, pk):
 
 @login_required
 @require_http_methods(["POST"])
+def api_atualizar_conversa(request, pk):
+    """POST: Atualizar campos da conversa (equipe, prioridade, etiquetas)."""
+    conversa = _get_conversa(pk, request)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+
+    campos_update = []
+
+    if 'prioridade' in body:
+        conversa.prioridade = body['prioridade']
+        campos_update.append('prioridade')
+
+    if 'equipe_id' in body:
+        equipe_id = body['equipe_id']
+        if equipe_id:
+            conversa.equipe_id = equipe_id
+        else:
+            conversa.equipe = None
+        campos_update.append('equipe_id')
+
+    if campos_update:
+        conversa.save(update_fields=campos_update)
+
+    if 'etiquetas' in body:
+        etiqueta_ids = body['etiquetas']
+        etiquetas = EtiquetaConversa.objects.filter(id__in=etiqueta_ids)
+        conversa.etiquetas.set(etiquetas)
+
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_http_methods(["POST"])
 def api_etiquetas_conversa(request, pk):
-    """POST: Atualizar etiquetas da conversa."""
+    """POST: Atualizar etiquetas da conversa (legacy)."""
     conversa = _get_conversa(pk, request)
 
     try:
@@ -425,6 +523,8 @@ def api_atualizar_status_agente(request):
 @login_required
 def configuracoes_inbox(request):
     """Página de configurações do Inbox (equipes, filas, respostas, etc)."""
+    denied = _check_perm(request, 'inbox.configurar')
+    if denied: return denied
     from django.contrib import messages as django_messages
 
     if request.method == 'POST':

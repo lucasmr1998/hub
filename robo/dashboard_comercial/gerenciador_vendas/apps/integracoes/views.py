@@ -1,8 +1,19 @@
+import json
+import logging
+from datetime import timedelta
+
+from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Count
 from django.http import JsonResponse
+from django.shortcuts import render
+from django.utils import timezone
+from django.views.decorators.http import require_http_methods
 
-from .models import ClienteHubsoft, ServicoClienteHubsoft
+from .models import IntegracaoAPI, LogIntegracao, ClienteHubsoft, ServicoClienteHubsoft
 from apps.comercial.leads.models import ImagemLeadProspecto, LeadProspecto
+from apps.sistema.decorators import user_tem_funcionalidade
+
+logger = logging.getLogger(__name__)
 
 
 def _servico_para_dict(s):
@@ -258,3 +269,200 @@ def api_clientes_hubsoft(request):
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+# ============================================================================
+# PÁGINA DE GERENCIAMENTO DE INTEGRAÇÕES
+# ============================================================================
+
+TIPO_INFO = {
+    'hubsoft': {'icon': 'fas fa-server', 'cor': '#2563eb', 'descricao': 'ERP de gestão para provedores de internet'},
+    'uazapi': {'icon': 'fab fa-whatsapp', 'cor': '#25D366', 'descricao': 'API de WhatsApp para envio e recebimento de mensagens'},
+    'n8n': {'icon': 'fas fa-project-diagram', 'cor': '#ff6d5a', 'descricao': 'Plataforma de automação de fluxos e webhooks'},
+    'outro': {'icon': 'fas fa-plug', 'cor': '#64748b', 'descricao': 'Integração customizada'},
+}
+
+
+@login_required
+def integracoes_view(request):
+    """Página de gerenciamento de integrações."""
+    integracoes = IntegracaoAPI.objects.all().order_by('-ativa', 'nome')
+
+    for integ in integracoes:
+        info = TIPO_INFO.get(integ.tipo, TIPO_INFO['outro'])
+        integ.icon = info['icon']
+        integ.cor = info['cor']
+        integ.tipo_descricao = info['descricao']
+        integ.logs_recentes = integ.logs.order_by('-data_criacao')[:5]
+        integ.total_chamadas_24h = integ.logs.filter(
+            data_criacao__gte=timezone.now() - timedelta(hours=24)
+        ).count()
+        integ.erros_24h = integ.logs.filter(
+            data_criacao__gte=timezone.now() - timedelta(hours=24),
+            sucesso=False,
+        ).count()
+
+    tipos_disponiveis = IntegracaoAPI.TIPO_CHOICES
+
+    return render(request, 'integracoes/integracoes.html', {
+        'integracoes': integracoes,
+        'tipos_disponiveis': tipos_disponiveis,
+        'tipo_info': TIPO_INFO,
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_integracao_criar(request):
+    """Criar nova integração."""
+    try:
+        data = json.loads(request.body)
+        nome = data.get('nome', '').strip()
+        tipo = data.get('tipo', 'outro')
+        base_url = data.get('base_url', '').strip()
+
+        if not nome or not base_url:
+            return JsonResponse({'error': 'Nome e URL são obrigatórios'}, status=400)
+
+        integ = IntegracaoAPI.objects.create(
+            nome=nome,
+            tipo=tipo,
+            base_url=base_url,
+            client_id=data.get('client_id', ''),
+            client_secret=data.get('client_secret', ''),
+            username=data.get('username', ''),
+            password=data.get('password', ''),
+            access_token=data.get('access_token', ''),
+            ativa=data.get('ativa', True),
+            configuracoes_extras=data.get('configuracoes_extras', {}),
+        )
+        return JsonResponse({'success': True, 'id': integ.pk, 'message': f'Integração "{nome}" criada'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["PUT"])
+def api_integracao_editar(request, pk):
+    """Editar integração existente."""
+    try:
+        integ = IntegracaoAPI.objects.get(pk=pk)
+        data = json.loads(request.body)
+
+        if 'nome' in data:
+            integ.nome = data['nome'].strip()
+        if 'base_url' in data:
+            integ.base_url = data['base_url'].strip()
+        if 'tipo' in data:
+            integ.tipo = data['tipo']
+        if 'client_id' in data:
+            integ.client_id = data['client_id']
+        if 'client_secret' in data and data['client_secret']:
+            integ.client_secret = data['client_secret']
+        if 'username' in data:
+            integ.username = data['username']
+        if 'password' in data and data['password']:
+            integ.password = data['password']
+        if 'access_token' in data and data['access_token']:
+            integ.access_token = data['access_token']
+        if 'ativa' in data:
+            integ.ativa = data['ativa']
+        if 'configuracoes_extras' in data:
+            integ.configuracoes_extras = data['configuracoes_extras']
+
+        integ.save()
+        return JsonResponse({'success': True, 'message': f'Integração "{integ.nome}" atualizada'})
+    except IntegracaoAPI.DoesNotExist:
+        return JsonResponse({'error': 'Integração não encontrada'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["DELETE"])
+def api_integracao_excluir(request, pk):
+    """Excluir integração."""
+    try:
+        integ = IntegracaoAPI.objects.get(pk=pk)
+        nome = integ.nome
+        integ.delete()
+        return JsonResponse({'success': True, 'message': f'Integração "{nome}" excluída'})
+    except IntegracaoAPI.DoesNotExist:
+        return JsonResponse({'error': 'Integração não encontrada'}, status=404)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_integracao_toggle(request, pk):
+    """Ativar/desativar integração."""
+    try:
+        integ = IntegracaoAPI.objects.get(pk=pk)
+        integ.ativa = not integ.ativa
+        integ.save(update_fields=['ativa'])
+        return JsonResponse({'success': True, 'ativa': integ.ativa})
+    except IntegracaoAPI.DoesNotExist:
+        return JsonResponse({'error': 'Integração não encontrada'}, status=404)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_integracao_testar(request, pk):
+    """Testar conexão com a integração."""
+    import requests as http_requests
+
+    try:
+        integ = IntegracaoAPI.objects.get(pk=pk)
+
+        if integ.tipo == 'hubsoft':
+            from apps.integracoes.services.hubsoft import HubsoftService, HubsoftServiceError
+            try:
+                service = HubsoftService(integ)
+                service.obter_token()
+                return JsonResponse({'success': True, 'message': 'Conexão HubSoft OK. Token obtido com sucesso.'})
+            except HubsoftServiceError as e:
+                return JsonResponse({'success': False, 'message': f'Falha: {e}'})
+
+        elif integ.tipo == 'uazapi':
+            try:
+                token = integ.configuracoes_extras.get('token', '') or integ.access_token or ''
+                if not token:
+                    return JsonResponse({'success': False, 'message': 'Token não configurado. Preencha o campo Token/API Key.'})
+                resp = http_requests.get(
+                    f"{integ.base_url.rstrip('/')}/instance/status",
+                    headers={
+                        'Accept': 'application/json',
+                        'token': token,
+                    },
+                    timeout=10,
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    status = data.get('status', data.get('state', 'desconhecido'))
+                    return JsonResponse({'success': True, 'message': f'Uazapi conectado. Status: {status}'})
+                else:
+                    return JsonResponse({'success': False, 'message': f'Uazapi retornou HTTP {resp.status_code}. Verifique o token.'})
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': f'Erro de conexão: {e}'})
+
+        elif integ.tipo == 'n8n':
+            try:
+                resp = http_requests.get(
+                    f"{integ.base_url.rstrip('/')}/healthz",
+                    timeout=10,
+                )
+                if resp.status_code == 200:
+                    return JsonResponse({'success': True, 'message': 'N8N online e respondendo.'})
+                else:
+                    return JsonResponse({'success': False, 'message': f'N8N retornou HTTP {resp.status_code}'})
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': f'Erro de conexão: {e}'})
+
+        else:
+            try:
+                resp = http_requests.get(integ.base_url, timeout=10)
+                return JsonResponse({'success': True, 'message': f'URL respondeu com HTTP {resp.status_code}'})
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': f'Erro: {e}'})
+
+    except IntegracaoAPI.DoesNotExist:
+        return JsonResponse({'error': 'Integração não encontrada'}, status=404)

@@ -17,12 +17,13 @@
 {% block content %}
 <!-- Header -->
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-    <h1 class="page-title">Usuarios</h1>
+    <h1 class="page-title">Usuarios e Permissões</h1>
     <div style="display:flex;gap:8px;align-items:center;">
         <div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:8px;padding:0 12px;background:var(--bg-white);">
             <i class="fas fa-search" style="color:var(--text-light);font-size:13px;"></i>
             <input type="text" id="searchInput" placeholder="Buscar usuarios..." style="border:none;outline:none;padding:9px 8px;font-size:14px;font-family:inherit;background:transparent;width:220px;">
         </div>
+        <a href="{% url 'sistema:perfis_permissao' %}" class="btn-secondary"><i class="fas fa-shield-alt"></i> Perfis</a>
         <button class="btn-primary" onclick="openCreateModal()"><i class="fas fa-plus"></i> Novo Usuario</button>
     </div>
 </div>
@@ -39,14 +40,15 @@
                     <th>Usuario</th>
                     <th>Email</th>
                     <th>Status</th>
-                    <th>Grupos</th>
+                    <th>Permissões</th>
                     <th>Data de Criacao</th>
                     <th style="width:100px">Acoes</th>
                 </tr>
             </thead>
             <tbody id="usersTableBody">
                 {% for user in users %}
-                <tr data-user-id="{{ user.id }}">
+                <tr data-user-id="{{ user.id }}"
+                    data-perfil-id="{% if user.perm and user.perm.perfil %}{{ user.perm.perfil.id }}{% endif %}">
                     <td>
                         <div class="user-cell">
                             <div class="user-avatar-sm">{{ user.first_name|first|default:user.username|first|upper }}</div>
@@ -69,11 +71,13 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% for group in user.groups.all %}
-                            <span class="group-chip">{{ group.name }}</span>
-                        {% empty %}
-                            <span class="group-chip">Sem grupos</span>
-                        {% endfor %}
+                        {% if user.is_superuser %}
+                            <span class="group-chip" style="background:#fef3c7;color:#d97706;">Superuser</span>
+                        {% elif user.perm and user.perm.perfil %}
+                            <span class="group-chip" style="background:#dbeafe;color:#2563eb;">{{ user.perm.perfil.nome }}</span>
+                        {% else %}
+                            <span class="group-chip">Sem perfil</span>
+                        {% endif %}
                     </td>
                     <td style="font-size:12px;color:var(--text-muted);">{{ user.date_joined|date:"d/m/Y H:i" }}</td>
                     <td>
@@ -108,16 +112,18 @@
             <div class="form-group"><label class="form-label">Nome</label><input type="text" id="firstName" name="first_name" class="form-control"></div>
             <div class="form-group"><label class="form-label">Sobrenome</label><input type="text" id="lastName" name="last_name" class="form-control"></div>
             <div class="form-group"><label class="form-label">Senha <span id="passwordRequired">*</span></label><input type="password" id="password" name="password" class="form-control"><div class="form-hint">Deixe em branco para manter a senha atual (apenas em edicao)</div></div>
+            <!-- Perfil de permissão -->
             <div class="form-group">
-                <label class="form-label">Grupos</label>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;">
-                    {% for group in groups %}
-                    <label style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-secondary);cursor:pointer;">
-                        <input type="checkbox" id="group_{{ group.id }}" name="groups" value="{{ group.name }}"> {{ group.name }}
-                    </label>
+                <label class="form-label"><i class="fas fa-shield-alt" style="color:var(--primary);margin-right:4px;"></i> Perfil de Permissão</label>
+                <select id="perfilId" name="perfil_id" class="form-control">
+                    <option value="">Sem perfil (acesso total)</option>
+                    {% for perfil in perfis %}
+                    <option value="{{ perfil.id }}">{{ perfil.nome }}</option>
                     {% endfor %}
-                </div>
+                </select>
+                <div class="form-hint">Define quais módulos e papéis o usuário tem acesso. Gerencie perfis no botão "Perfis".</div>
             </div>
+
             <div class="form-group"><label style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-secondary);cursor:pointer;"><input type="checkbox" id="isActive" name="is_active" checked> Usuario ativo</label></div>
             <div class="form-group"><label style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-secondary);cursor:pointer;"><input type="checkbox" id="isStaff" name="is_staff"> Acesso ao admin (Staff)</label></div>
         </form>
@@ -133,6 +139,11 @@
 <script>
 let currentUser = null, isEditMode = false;
 
+function getCookie(name) { let v=null; if(document.cookie) document.cookie.split(';').forEach(c=>{ c=c.trim(); if(c.startsWith(name+'=')) v=decodeURIComponent(c.substring(name.length+1)); }); return v; }
+const CSRF = getCookie('csrftoken');
+const headers = {'Content-Type':'application/json','X-CSRFToken':CSRF};
+
+// ── Busca ──
 document.getElementById('searchInput').addEventListener('input', function(e) {
     const s = e.target.value.toLowerCase();
     document.querySelectorAll('#usersTableBody tr').forEach(row => {
@@ -142,12 +153,14 @@ document.getElementById('searchInput').addEventListener('input', function(e) {
     });
 });
 
+// ── Modal Usuários ──
 function openCreateModal() {
     isEditMode = false; currentUser = null;
     document.getElementById('modalTitle').textContent = 'Novo Usuario';
     document.getElementById('passwordRequired').textContent = '*';
     document.getElementById('userForm').reset();
     document.getElementById('isActive').checked = true;
+    document.getElementById('perfilId').value = '';
     document.getElementById('userModal').classList.add('active');
     clearAlerts();
 }
@@ -157,23 +170,15 @@ function editUser(userId) {
     document.getElementById('modalTitle').textContent = 'Editar Usuario';
     document.getElementById('passwordRequired').textContent = '';
     const row = document.querySelector(`tr[data-user-id="${userId}"]`);
-    const username = row.querySelector('.user-details p').textContent.replace('@', '');
-    const email = row.querySelector('td:nth-child(2)').textContent;
-    const fullName = row.querySelector('.user-details h4').textContent;
-    const parts = fullName.split(' ');
     document.getElementById('userId').value = userId;
-    document.getElementById('username').value = username;
-    document.getElementById('email').value = email;
+    document.getElementById('username').value = row.querySelector('.user-details p').textContent.replace('@', '');
+    document.getElementById('email').value = row.querySelector('td:nth-child(2)').textContent;
+    const parts = row.querySelector('.user-details h4').textContent.split(' ');
     document.getElementById('firstName').value = parts[0] || '';
     document.getElementById('lastName').value = parts.slice(1).join(' ') || '';
     document.getElementById('password').value = '';
-    document.querySelectorAll('input[name="groups"]').forEach(cb => cb.checked = false);
-    row.querySelectorAll('.group-chip').forEach(badge => {
-        const g = badge.textContent.trim();
-        if (g !== 'Sem grupos') { const cb = document.querySelector(`input[value="${g}"]`); if (cb) cb.checked = true; }
-    });
-    const statusBadge = row.querySelector('.badge');
-    const txt = statusBadge ? statusBadge.textContent.trim() : '';
+    document.getElementById('perfilId').value = row.dataset.perfilId || '';
+    const txt = (row.querySelector('.badge')?.textContent || '').trim();
     document.getElementById('isActive').checked = txt !== 'Inativo';
     document.getElementById('isStaff').checked = (txt === 'Staff' || txt === 'Superuser');
     document.getElementById('userModal').classList.add('active');
@@ -185,25 +190,27 @@ function clearAlerts() { document.getElementById('alertContainer').innerHTML = '
 function showAlert(msg, type) { document.getElementById('alertContainer').innerHTML = `<div class="alert alert-${type==='error'?'danger':type}">${msg}</div>`; }
 
 function saveUser() {
-    const form = document.getElementById('userForm');
-    const fd = new FormData(form);
+    const fd = new FormData(document.getElementById('userForm'));
     if (!fd.get('username') || !fd.get('email')) { showAlert('Username e email obrigatorios', 'error'); return; }
     if (!isEditMode && !fd.get('password')) { showAlert('Senha obrigatoria para novos usuarios', 'error'); return; }
-    const data = { username:fd.get('username'), email:fd.get('email'), first_name:fd.get('first_name'), last_name:fd.get('last_name'), password:fd.get('password'), is_active:fd.get('is_active')==='on', is_staff:fd.get('is_staff')==='on', groups:Array.from(document.querySelectorAll('input[name="groups"]:checked')).map(c=>c.value) };
+    const perfilVal = document.getElementById('perfilId').value;
+    const data = {
+        username:fd.get('username'), email:fd.get('email'), first_name:fd.get('first_name'), last_name:fd.get('last_name'),
+        password:fd.get('password'), is_active:fd.get('is_active')==='on', is_staff:fd.get('is_staff')==='on',
+        groups:[], perfil_id: perfilVal ? parseInt(perfilVal) : null,
+    };
     const url = isEditMode ? `/api/configuracoes/usuarios/${currentUser}/` : '/api/configuracoes/usuarios/';
-    fetch(url, { method:isEditMode?'PUT':'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body:JSON.stringify(data) })
+    fetch(url, { method:isEditMode?'PUT':'POST', headers, body:JSON.stringify(data) })
     .then(r=>r.json()).then(d=>{ if(d.success){showAlert(d.message,'success');setTimeout(()=>location.reload(),1500);}else{showAlert(d.error,'error');} })
     .catch(()=>showAlert('Erro ao salvar','error'));
 }
 
 function deleteUser(id, name) {
     if (!confirm(`Deletar "${name}"? Acao irreversivel.`)) return;
-    fetch(`/api/configuracoes/usuarios/${id}/deletar/`, { method:'DELETE', headers:{'X-CSRFToken':getCookie('csrftoken')} })
+    fetch(`/api/configuracoes/usuarios/${id}/deletar/`, { method:'DELETE', headers })
     .then(r=>r.json()).then(d=>{ if(d.success){showAlert(d.message,'success');setTimeout(()=>location.reload(),1500);}else{showAlert(d.error,'error');} })
     .catch(()=>showAlert('Erro ao deletar','error'));
 }
-
-function getCookie(name) { let v=null; if(document.cookie) document.cookie.split(';').forEach(c=>{ c=c.trim(); if(c.startsWith(name+'=')) v=decodeURIComponent(c.substring(name.length+1)); }); return v; }
 
 document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
 </script>

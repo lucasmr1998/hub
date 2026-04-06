@@ -1,4 +1,4 @@
-from apps.sistema.models import ConfiguracaoEmpresa
+from apps.sistema.models import ConfiguracaoEmpresa, PermissaoUsuario
 
 
 def empresa_context(request):
@@ -25,6 +25,11 @@ def empresa_context(request):
     }
 
     if not tenant:
+        # Mesmo sem tenant, precisa setar permissões para o template
+        user = getattr(request, 'user', None)
+        ctx['perm'] = None
+        ctx['is_superuser'] = user.is_superuser if user and user.is_authenticated else False
+        ctx['user_funcs'] = None if (user and user.is_authenticated) else set()
         return ctx
 
     ctx['modulo_comercial'] = tenant.modulo_comercial
@@ -44,5 +49,22 @@ def empresa_context(request):
     else:
         ctx['empresa_nome'] = tenant.nome
         ctx['setup_completo'] = False
+
+    # Permissões do usuário para a sidebar
+    user = getattr(request, 'user', None)
+    if user and user.is_authenticated:
+        if user.is_superuser:
+            ctx['perm'] = None  # superuser = tudo liberado
+            ctx['is_superuser'] = True
+            ctx['user_funcs'] = None  # None = tudo liberado
+        else:
+            ctx['perm'] = PermissaoUsuario.get_for_user(user)
+            ctx['is_superuser'] = False
+            # Cachear funcionalidades como set (do middleware ou direto)
+            ctx['user_funcs'] = getattr(request, 'user_funcionalidades', None)
+    else:
+        ctx['perm'] = None
+        ctx['is_superuser'] = False
+        ctx['user_funcs'] = set()
 
     return ctx

@@ -157,32 +157,6 @@
 </style>
 {% endblock %}
 
-{% block sidebar %}
-    <div class="sidebar-section-label">ATENDIMENTO</div>
-    <a href="{% url 'inbox:inbox' %}" class="nav-item {% if 'inbox' in request.resolver_match.app_name|default:'' and request.resolver_match.url_name == 'inbox' %}active{% endif %}">
-        <i class="fas fa-comments"></i><span class="nav-text">Inbox</span>
-    </a>
-    <a href="{% url 'inbox:dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' and 'inbox' in request.resolver_match.app_name|default:'' %}active{% endif %}">
-        <i class="fas fa-chart-line"></i><span class="nav-text">Dashboard Inbox</span>
-    </a>
-
-    <div class="sidebar-section-label" style="margin-top:12px;">SUPORTE</div>
-    <a href="{% url 'suporte:dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-        <i class="fas fa-tachometer-alt"></i><span class="nav-text">Dashboard</span>
-    </a>
-    <a href="{% url 'suporte:ticket_lista' %}" class="nav-item {% if request.resolver_match.url_name == 'ticket_lista' %}active{% endif %}">
-        <i class="fas fa-list"></i><span class="nav-text">Tickets</span>
-    </a>
-    <a href="{% url 'suporte:ticket_criar' %}" class="nav-item {% if request.resolver_match.url_name == 'ticket_criar' %}active{% endif %}">
-        <i class="fas fa-plus-circle"></i><span class="nav-text">Novo Ticket</span>
-    </a>
-
-    <div class="sidebar-section-label" style="margin-top:12px;">CONFIGURAÇÕES</div>
-    <a href="{% url 'inbox:configuracoes' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes' and 'inbox' in request.resolver_match.app_name|default:'' %}active{% endif %}">
-        <i class="fas fa-cog"></i><span class="nav-text">Configurações</span>
-    </a>
-{% endblock %}
-
 {% block content %}
 <div class="suporte-header">
     <h1><i class="fas fa-headset" style="color:var(--primary);margin-right:8px;"></i> Suporte</h1>

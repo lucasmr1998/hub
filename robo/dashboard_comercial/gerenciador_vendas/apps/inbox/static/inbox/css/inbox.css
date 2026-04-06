@@ -20,6 +20,22 @@ body.inbox-page .sidebar { display: none; }
     border-radius: 6px; color: #64748b; font-size: 15px; transition: all .15s;
 }
 .ib-icon-btn:hover { background: #f1f5f9; color: #1e293b; }
+.ib-icon-btn.active { background: #dbeafe; color: #2563eb; }
+
+/* Filter / Sort dropdowns */
+.inbox-filter-dropdown {
+    position: absolute; z-index: 50; top: 100%; right: 0;
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.08); padding: 4px;
+    min-width: 160px; margin-top: 4px;
+}
+.inbox-filter-opt {
+    display: block; width: 100%; text-align: left; padding: 8px 12px;
+    border: none; background: none; font-size: 13px; font-family: inherit;
+    color: #475569; border-radius: 6px; cursor: pointer;
+}
+.inbox-filter-opt:hover { background: #f1f5f9; }
+.inbox-filter-opt.active { background: #dbeafe; color: #2563eb; font-weight: 600; }
 
 .ib-count {
     display: inline-flex; align-items: center; justify-content: center;
@@ -370,7 +386,37 @@ body.inbox-page .sidebar { display: none; }
 
 .ctx-divider { height: 1px; background: #e2e8f0; margin: 4px 0; }
 
-/* Sections */
+/* Accordion */
+/* Emoji picker */
+.emoji-picker {
+    position: absolute; bottom: 100%; left: 0; z-index: 50;
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.12); padding: 8px;
+    width: 280px; max-height: 200px; overflow-y: auto;
+    display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px;
+}
+.emoji-picker button {
+    background: none; border: none; font-size: 20px; padding: 4px;
+    cursor: pointer; border-radius: 6px; line-height: 1;
+}
+.emoji-picker button:hover { background: #f1f5f9; }
+
+.ctx-accordion { border-bottom: 1px solid #e2e8f0; }
+.ctx-accordion-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px; cursor: pointer; user-select: none;
+    font-size: 13px; font-weight: 600; color: #1e293b;
+    transition: background .15s;
+}
+.ctx-accordion-header:hover { background: #f8fafc; }
+.ctx-accordion-icon { font-size: 11px; color: #94a3b8; transition: transform .2s; }
+.ctx-accordion.open .ctx-accordion-icon { transform: rotate(45deg); }
+.ctx-accordion-body {
+    display: none; padding: 0 16px 12px;
+}
+.ctx-accordion.open .ctx-accordion-body { display: block; }
+
+/* Sections (legacy) */
 .ctx-section { padding: 12px 16px; }
 .ctx-section-title {
     font-size: 13px; font-weight: 700; color: #1e293b; margin: 0 0 10px;

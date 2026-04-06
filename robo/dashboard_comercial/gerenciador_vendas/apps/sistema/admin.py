@@ -8,6 +8,7 @@ from apps.sistema.models import (
     ConfiguracaoEmpresa,
     ConfiguracaoSistema,
     LogSistema,
+    PermissaoUsuario,
     StatusConfiguravel,
 )
 
@@ -329,3 +330,34 @@ class UserAdmin(BaseUserAdmin):
 # Desregistrar o admin padrao do User e registrar o customizado
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
+
+
+from apps.sistema.models import Funcionalidade, PerfilPermissao
+
+
+@admin.register(Funcionalidade)
+class FuncionalidadeAdmin(admin.ModelAdmin):
+    list_display = ('codigo', 'nome', 'modulo', 'ordem')
+    list_filter = ('modulo',)
+    search_fields = ('codigo', 'nome')
+    ordering = ('modulo', 'ordem')
+
+
+@admin.register(PerfilPermissao)
+class PerfilPermissaoAdmin(admin.ModelAdmin):
+    list_display = ('nome', 'tenant', 'total_usuarios')
+    list_filter = ('tenant',)
+    search_fields = ('nome',)
+    filter_horizontal = ('funcionalidades',)
+
+    def total_usuarios(self, obj):
+        return obj.total_usuarios
+    total_usuarios.short_description = 'Usuários'
+
+
+@admin.register(PermissaoUsuario)
+class PermissaoUsuarioAdmin(admin.ModelAdmin):
+    list_display = ('user', 'tenant', 'perfil')
+    list_filter = ('tenant', 'perfil')
+    search_fields = ('user__username', 'user__first_name', 'user__last_name')
+    raw_id_fields = ('user',)

@@ -9,6 +9,7 @@ from .settings import *  # noqa: F401,F403
 
 DEBUG = True
 SECRET_KEY = 'dev-local-insecure-key-only-for-testing'
+ALLOWED_HOSTS = ['*']
 
 DATABASES = {
     'default': {

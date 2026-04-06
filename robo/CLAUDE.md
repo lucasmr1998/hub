@@ -82,7 +82,8 @@ Implementado e validado localmente, pendente deploy em produção.
 
 ### Segurança
 
-- **Decorators de autenticação:** `@api_token_required` (27 endpoints N8N), `@login_required` (21 endpoints painel), 3 endpoints públicos
+- **Decorators de autenticação:** `@api_token_required` (27 endpoints N8N), `@login_required` (21 endpoints painel), `@permissao_required('modulo', 'papel_minimo')` para controle granular, 3 endpoints públicos
+- **Permissões granulares:** `Funcionalidade` (35 registros fixos), `PerfilPermissao` (M2M funcionalidades, por tenant), `PermissaoUsuario` (user → perfil). `PermissaoMiddleware` bloqueia por URL/módulo. Sidebar/topbar filtrados. Seed: `seed_funcionalidades`. Docs: `docs/PRODUTO/11-PERMISSOES.md`.
 - **Webhook:** `@webhook_token_required` para webhooks HubSoft
 - **IDOR:** helper `get_tenant_object_or_404` para isolamento de tenant nas APIs
 - **PII:** PIIFilter no logging (CPF, email, telefone). 35+ prints removidos

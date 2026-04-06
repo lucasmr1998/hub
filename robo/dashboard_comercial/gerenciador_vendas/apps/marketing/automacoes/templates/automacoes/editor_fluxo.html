@@ -15,13 +15,25 @@
 .editor-toolbar { display:flex; align-items:center; gap:12px; padding:10px 16px; background:var(--bg-white); border:1px solid var(--border); border-radius:10px; margin-bottom:14px; }
 .editor-toolbar h2 { font-size:15px; font-weight:700; color:var(--text-main); flex:1; margin:0; }
 
+/* ── Sidebar search ── */
+.sidebar-node-search { width:100%; padding:7px 10px 7px 30px; border:1px solid var(--border); border-radius:8px; font-size:12px; font-family:'Inter',sans-serif; margin-bottom:12px; outline:none; }
+.sidebar-node-search:focus { border-color:var(--primary); }
+.sidebar-search-wrap { position:relative; }
+.sidebar-search-wrap i { position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:11px; color:var(--text-muted); pointer-events:none; }
+
 /* ── Draggable nodes ── */
-.node-section { margin-bottom:16px; }
-.node-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); margin-bottom:8px; }
-.node-draggable { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:500; color:var(--text-secondary); cursor:grab; transition:all .15s; border:1px solid transparent; margin-bottom:4px; }
+.node-section { margin-bottom:4px; }
+.node-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); padding:8px 4px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none; border-radius:6px; }
+.node-section-title:hover { background:var(--bg-subtle); }
+.node-section-title .chevron { font-size:9px; transition:transform .2s; }
+.node-section.collapsed .chevron { transform:rotate(-90deg); }
+.node-section.collapsed .node-section-items { display:none; }
+.node-section-items { padding-bottom:4px; }
+.node-draggable { display:flex; align-items:center; gap:8px; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:500; color:var(--text-secondary); cursor:grab; transition:all .15s; border:1px solid transparent; margin-bottom:2px; }
 .node-draggable:hover { background:var(--bg-subtle); border-color:var(--border); }
 .node-draggable:active { cursor:grabbing; }
-.node-draggable i { width:20px; text-align:center; }
+.node-draggable i { width:20px; text-align:center; flex-shrink:0; }
+.node-draggable.hidden { display:none; }
 
 /* ── Drawflow overrides ── */
 #drawflow { width:100%; height:100%; }
@@ -63,49 +75,109 @@
 <div class="editor-layout">
     <!-- Sidebar: paleta de nós -->
     <div class="editor-sidebar">
-        <div class="node-section">
-            <div class="node-section-title">Gatilhos</div>
-            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="trigger" data-subtipo="{{ regra.evento }}" data-nome="{{ regra.get_evento_display }}">
-                <i class="fas fa-bolt" style="color:#f59e0b;"></i> {{ regra.get_evento_display }}
+        <!-- Busca -->
+        <div class="sidebar-search-wrap">
+            <i class="fas fa-search"></i>
+            <input type="text" class="sidebar-node-search" id="nodeSearch" placeholder="Buscar nós...">
+        </div>
+
+        <!-- Gatilhos (colapsado por padrão) -->
+        <div class="node-section collapsed">
+            <div class="node-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
+                <span><i class="fas fa-bolt" style="color:#f59e0b;margin-right:4px;"></i> Gatilhos</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="node-section-items">
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="trigger" data-subtipo="lead_criado" data-nome="Novo lead criado">
+                    <i class="fas fa-user-plus" style="color:#3b82f6;"></i> Novo lead criado
+                </div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="trigger" data-subtipo="lead_qualificado" data-nome="Lead qualificado">
+                    <i class="fas fa-star" style="color:#16a34a;"></i> Lead qualificado
+                </div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="trigger" data-subtipo="lead_sem_contato" data-nome="Lead sem contato">
+                    <i class="fas fa-clock" style="color:#f59e0b;"></i> Lead sem contato
+                </div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="trigger" data-subtipo="oportunidade_movida" data-nome="Oportunidade movida">
+                    <i class="fas fa-columns" style="color:#8b5cf6;"></i> Oportunidade movida
+                </div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="trigger" data-subtipo="venda_aprovada" data-nome="Venda aprovada">
+                    <i class="fas fa-check-circle" style="color:#16a34a;"></i> Venda aprovada
+                </div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="trigger" data-subtipo="cliente_aniversario" data-nome="Aniversário de cliente">
+                    <i class="fas fa-birthday-cake" style="color:#ec4899;"></i> Aniversário
+                </div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="trigger" data-subtipo="indicacao_convertida" data-nome="Indicação convertida">
+                    <i class="fas fa-share-alt" style="color:#06b6d4;"></i> Indicação convertida
+                </div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="trigger" data-subtipo="tarefa_vencida" data-nome="Tarefa vencida">
+                    <i class="fas fa-exclamation-triangle" style="color:#ef4444;"></i> Tarefa vencida
+                </div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="trigger" data-subtipo="docs_validados" data-nome="Documentos validados">
+                    <i class="fas fa-file-alt" style="color:#3b82f6;"></i> Docs validados
+                </div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="trigger" data-subtipo="lead_entrou_segmento" data-nome="Lead entrou em segmento">
+                    <i class="fas fa-layer-group" style="color:#8b5cf6;"></i> Entrou em segmento
+                </div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="trigger" data-subtipo="mensagem_recebida" data-nome="Mensagem recebida">
+                    <i class="fas fa-comment" style="color:#06b6d4;"></i> Mensagem recebida
+                </div>
             </div>
         </div>
 
-        <div class="node-section">
-            <div class="node-section-title">Condições</div>
-            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="condition" data-subtipo="campo_check" data-nome="Verificar Campo">
-                <i class="fas fa-code-branch" style="color:#f59e0b;"></i> Verificar Campo
+        <!-- Condições -->
+        <div class="node-section collapsed">
+            <div class="node-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
+                <span><i class="fas fa-code-branch" style="color:#f59e0b;margin-right:4px;"></i> Condições</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="node-section-items">
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="condition" data-subtipo="campo_check" data-nome="Verificar Campo">
+                    <i class="fas fa-code-branch" style="color:#f59e0b;"></i> Verificar Campo
+                </div>
             </div>
         </div>
 
-        <div class="node-section">
-            <div class="node-section-title">Ações</div>
-            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="enviar_whatsapp" data-nome="Enviar WhatsApp">
-                <i class="fab fa-whatsapp" style="color:#25D366;"></i> Enviar WhatsApp
+        <!-- Ações -->
+        <div class="node-section collapsed">
+            <div class="node-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
+                <span><i class="fas fa-play" style="color:#16a34a;margin-right:4px;"></i> Ações</span>
+                <i class="fas fa-chevron-down chevron"></i>
             </div>
-            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="enviar_email" data-nome="Enviar E-mail">
-                <i class="fas fa-envelope" style="color:#3b82f6;"></i> Enviar E-mail
-            </div>
-            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="notificacao_sistema" data-nome="Notificação">
-                <i class="fas fa-bell" style="color:#f59e0b;"></i> Notificação
-            </div>
-            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="criar_tarefa" data-nome="Criar Tarefa">
-                <i class="fas fa-tasks" style="color:#3b82f6;"></i> Criar Tarefa
-            </div>
-            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="mover_estagio" data-nome="Mover Estágio">
-                <i class="fas fa-columns" style="color:#8b5cf6;"></i> Mover Estágio
-            </div>
-            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="dar_pontos" data-nome="Dar Pontos">
-                <i class="fas fa-star" style="color:#f59e0b;"></i> Dar Pontos
-            </div>
-            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="webhook" data-nome="Webhook">
-                <i class="fas fa-plug" style="color:#64748b;"></i> Webhook
+            <div class="node-section-items">
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="enviar_whatsapp" data-nome="Enviar WhatsApp">
+                    <i class="fab fa-whatsapp" style="color:#25D366;"></i> Enviar WhatsApp
+                </div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="enviar_email" data-nome="Enviar E-mail">
+                    <i class="fas fa-envelope" style="color:#3b82f6;"></i> Enviar E-mail
+                </div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="notificacao_sistema" data-nome="Notificação">
+                    <i class="fas fa-bell" style="color:#f59e0b;"></i> Notificação
+                </div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="criar_tarefa" data-nome="Criar Tarefa">
+                    <i class="fas fa-tasks" style="color:#3b82f6;"></i> Criar Tarefa
+                </div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="mover_estagio" data-nome="Mover Estágio">
+                    <i class="fas fa-columns" style="color:#8b5cf6;"></i> Mover Estágio
+                </div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="dar_pontos" data-nome="Dar Pontos">
+                    <i class="fas fa-star" style="color:#f59e0b;"></i> Dar Pontos
+                </div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="webhook" data-nome="Webhook">
+                    <i class="fas fa-plug" style="color:#64748b;"></i> Webhook
+                </div>
             </div>
         </div>
 
-        <div class="node-section">
-            <div class="node-section-title">Controle</div>
-            <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="delay" data-subtipo="delay" data-nome="Atraso">
-                <i class="fas fa-clock" style="color:#8b5cf6;"></i> Atraso
+        <!-- Controle -->
+        <div class="node-section collapsed">
+            <div class="node-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
+                <span><i class="fas fa-clock" style="color:#8b5cf6;margin-right:4px;"></i> Controle</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="node-section-items">
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="delay" data-subtipo="delay" data-nome="Atraso">
+                    <i class="fas fa-clock" style="color:#8b5cf6;"></i> Atraso
+                </div>
             </div>
         </div>
     </div>
@@ -137,9 +209,11 @@ let selectedNodeId = null;
 
 // ── Drag & Drop ──
 function dragNode(ev) {
-    ev.dataTransfer.setData('tipo', ev.target.dataset.tipo);
-    ev.dataTransfer.setData('subtipo', ev.target.dataset.subtipo);
-    ev.dataTransfer.setData('nome', ev.target.dataset.nome);
+    const el = ev.target.closest('.node-draggable');
+    if (!el) return;
+    ev.dataTransfer.setData('tipo', el.dataset.tipo);
+    ev.dataTransfer.setData('subtipo', el.dataset.subtipo);
+    ev.dataTransfer.setData('nome', el.dataset.nome);
 }
 
 function dropNode(ev) {
@@ -147,6 +221,7 @@ function dropNode(ev) {
     const tipo = ev.dataTransfer.getData('tipo');
     const subtipo = ev.dataTransfer.getData('subtipo');
     const nome = ev.dataTransfer.getData('nome');
+    if (!tipo || !nome) return;
 
     const rect = container.getBoundingClientRect();
     const x = ev.clientX - rect.left;
@@ -427,6 +502,21 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Delete' && selectedNodeId) {
         deletarNodo();
     }
+});
+
+// ── Busca de nós na sidebar ──
+document.getElementById('nodeSearch').addEventListener('input', function() {
+    const q = this.value.toLowerCase().trim();
+    document.querySelectorAll('.node-draggable').forEach(el => {
+        const nome = el.dataset.nome?.toLowerCase() || '';
+        const subtipo = el.dataset.subtipo?.toLowerCase() || '';
+        el.classList.toggle('hidden', q && !nome.includes(q) && !subtipo.includes(q));
+    });
+    // Expandir todas as seções ao buscar, colapsar ao limpar
+    document.querySelectorAll('.node-section').forEach(sec => {
+        if (q) sec.classList.remove('collapsed');
+        else sec.classList.add('collapsed');
+    });
 });
 </script>
 

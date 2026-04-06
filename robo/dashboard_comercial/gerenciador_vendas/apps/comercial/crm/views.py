@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_GET
 
-from apps.sistema.decorators import webhook_token_required
+from apps.sistema.decorators import webhook_token_required, user_tem_funcionalidade
 from apps.sistema.models import PerfilUsuario
 
 from .models import (
@@ -25,6 +25,13 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 # HELPERS
 # ============================================================================
+
+def _check_perm(request, codigo):
+    """Retorna JsonResponse 403 se o usuário não tem a funcionalidade, ou None se tem."""
+    if not user_tem_funcionalidade(request, codigo):
+        return JsonResponse({'error': 'Sem permissão para esta ação'}, status=403)
+    return None
+
 
 def _disparar_webhook(url, payload):
     if not url:
@@ -76,6 +83,8 @@ def _oportunidade_para_dict(op):
 
 @login_required
 def pipeline_view(request):
+    denied = _check_perm(request, 'comercial.ver_pipeline')
+    if denied: return denied
     from .models import Pipeline
 
     pipelines = Pipeline.objects.filter(ativo=True)
@@ -130,8 +139,8 @@ def api_pipeline_dados(request):
     if pipeline_id:
         qs = qs.filter(pipeline_id=pipeline_id)
 
-    # Regra de visibilidade: superuser vê tudo, vendedor vê as suas + não atribuídas
-    if not request.user.is_superuser:
+    # Regra de visibilidade baseada em funcionalidade
+    if not user_tem_funcionalidade(request, 'comercial.ver_todas_oportunidades'):
         from django.db.models import Q
         qs = qs.filter(Q(responsavel=request.user) | Q(responsavel__isnull=True))
 
@@ -190,6 +199,8 @@ def api_pipeline_dados(request):
 @login_required
 @require_POST
 def api_mover_oportunidade(request):
+    denied = _check_perm(request, 'comercial.mover_oportunidade')
+    if denied: return denied
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
@@ -515,10 +526,12 @@ def api_tarefas_oportunidade(request, pk):
 
 @login_required
 def tarefas_lista(request):
+    denied = _check_perm(request, 'comercial.criar_tarefa')
+    if denied: return denied
     from django.db.models import Q
 
-    # Base: tarefas do usuário logado (superuser vê todas)
-    if request.user.is_superuser:
+    # Base: tarefas do usuário logado (ver_todas_oportunidades vê todas)
+    if user_tem_funcionalidade(request, 'comercial.ver_todas_oportunidades'):
         qs = TarefaCRM.objects.all()
     else:
         qs = TarefaCRM.objects.filter(responsavel=request.user)
@@ -713,6 +726,8 @@ def api_nota_deletar(request, pk):
 
 @login_required
 def desempenho_view(request):
+    denied = _check_perm(request, 'comercial.ver_desempenho')
+    if denied: return denied
     from django.contrib.auth.models import User
     hoje = timezone.now().date()
     mes_inicio = hoje.replace(day=1)
@@ -792,6 +807,8 @@ def api_desempenho_dados(request):
 
 @login_required
 def metas_view(request):
+    denied = _check_perm(request, 'comercial.gerenciar_metas')
+    if denied: return denied
     hoje = timezone.now().date()
     metas_ativas = MetaVendas.objects.filter(
         data_inicio__lte=hoje, data_fim__gte=hoje
@@ -813,6 +830,8 @@ def metas_view(request):
 @login_required
 @require_POST
 def api_meta_criar(request):
+    denied = _check_perm(request, 'comercial.gerenciar_metas')
+    if denied: return denied
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
@@ -1001,6 +1020,8 @@ def segmento_detalhe(request, pk):
 
 @login_required
 def configuracoes_crm(request):
+    denied = _check_perm(request, 'comercial.configurar_pipeline')
+    if denied: return denied
     from django.shortcuts import redirect
 
     if not request.user.is_superuser:
@@ -1223,6 +1244,8 @@ def api_criar_equipe(request):
 @login_required
 def equipes_view(request):
     """Gerenciar equipes de vendas e seus membros."""
+    denied = _check_perm(request, 'comercial.gerenciar_equipes')
+    if denied: return denied
     from django.shortcuts import redirect
     from django.contrib.auth.models import User
 

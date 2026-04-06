@@ -22,16 +22,36 @@ class CanalInbox(TenantMixin):
         default=dict, blank=True, verbose_name="Configuração",
         help_text="URLs de webhook, tokens, etc. Ex: {webhook_envio_url: '...'}"
     )
+
+    # Provider abstraction
+    integracao = models.ForeignKey(
+        'integracoes.IntegracaoAPI', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='canais', verbose_name="Integração",
+        help_text="Integração de API vinculada a este canal",
+    )
+    provedor = models.CharField(
+        max_length=30, blank=True, default='',
+        verbose_name="Provedor",
+        help_text="Slug do provider: uazapi, evolution, meta_cloud, twilio, webhook",
+    )
+    identificador_canal = models.CharField(
+        max_length=100, blank=True, default='',
+        verbose_name="Identificador",
+        help_text="Número de telefone, ID da instância, etc.",
+    )
+
     criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
 
     class Meta:
         db_table = 'inbox_canais'
         verbose_name = "Canal"
         verbose_name_plural = "Canais"
-        unique_together = [['tenant', 'tipo']]
+        unique_together = [['tenant', 'tipo', 'identificador_canal']]
 
     def __str__(self):
-        return f"{self.nome} ({self.get_tipo_display()})"
+        extra = f" · {self.identificador_canal}" if self.identificador_canal else ''
+        return f"{self.nome} ({self.get_tipo_display()}{extra})"
 
 
 class EtiquetaConversa(TenantMixin):

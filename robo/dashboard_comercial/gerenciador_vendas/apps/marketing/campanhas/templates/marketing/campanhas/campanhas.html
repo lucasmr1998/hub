@@ -4,10 +4,10 @@
 
 {% block custom_css %}
 <style>
-    .campanhas-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; }
+    .campanhas-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
     .campanha-card { background:var(--bg-white); border:1px solid var(--border); border-radius:12px; overflow:hidden; transition:all 0.2s; }
     .campanha-card:hover { box-shadow:0 4px 12px rgba(0,0,0,0.06); }
-    .campanha-header { padding:20px; color:white; position:relative; }
+    .campanha-header { padding:20px; color:white; position:relative; background:linear-gradient(135deg, var(--primary), var(--primary-dark)); }
     .campanha-header h3 { font-size:16px; font-weight:700; margin:0 0 4px; }
     .campanha-codigo { font-size:12px; opacity:0.8; }
     .campanha-body { padding:16px 20px; }
@@ -72,7 +72,7 @@
 <div class="campanhas-grid">
     {% for campanha in campanhas %}
     <div class="campanha-card">
-        <div class="campanha-header" style="background:linear-gradient(135deg, {{ campanha.cor_identificacao }}, {{ campanha.cor_identificacao }}dd);">
+        <div class="campanha-header">
             <span class="status-badge {% if campanha.ativa %}status-ativa{% else %}status-inativa{% endif %}">
                 {% if campanha.ativa %}Ativa{% else %}Inativa{% endif %}
             </span>

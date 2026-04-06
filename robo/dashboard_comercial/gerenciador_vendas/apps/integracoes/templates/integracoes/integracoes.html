@@ -1,0 +1,313 @@
+{% extends 'sistema/base.html' %}
+
+{% block title %}Integrações{% endblock %}
+
+{% block custom_css %}
+<style>
+    .integ-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; }
+    .integ-card { background:var(--bg-white); border:1px solid var(--border); border-radius:12px; overflow:hidden; transition:all .2s; }
+    .integ-card:hover { box-shadow:0 4px 12px rgba(0,0,0,.06); }
+    .integ-header { padding:16px 20px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--border-light); }
+    .integ-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; color:#fff; flex-shrink:0; }
+    .integ-info { flex:1; min-width:0; }
+    .integ-info h3 { margin:0; font-size:14px; font-weight:700; color:var(--text-main); }
+    .integ-info p { margin:2px 0 0; font-size:11px; color:var(--text-muted); }
+    .integ-body { padding:16px 20px; }
+    .integ-field { margin-bottom:10px; }
+    .integ-field-label { font-size:10px; font-weight:600; text-transform:uppercase; color:var(--text-muted); letter-spacing:.03em; margin-bottom:3px; }
+    .integ-field-value { font-size:12px; color:var(--text-secondary); word-break:break-all; }
+    .integ-stats { display:flex; gap:16px; padding:10px 20px; background:var(--bg-subtle); font-size:11px; color:var(--text-muted); }
+    .integ-stat strong { color:var(--text-main); }
+    .integ-actions { display:flex; gap:6px; padding:12px 20px; border-top:1px solid var(--border-light); }
+    .integ-btn { padding:5px 12px; border-radius:6px; font-size:11px; font-weight:600; border:1px solid var(--border); background:var(--bg-white); color:var(--text-secondary); cursor:pointer; font-family:inherit; transition:all .15s; }
+    .integ-btn:hover { background:var(--bg-subtle); }
+    .integ-btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .integ-btn.success { background:var(--success); color:#fff; border-color:var(--success); }
+    .integ-btn.danger { color:var(--danger); border-color:var(--danger); }
+    .integ-btn.danger:hover { background:#fee2e2; }
+    .status-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:4px; }
+    .status-dot.active { background:var(--success); }
+    .status-dot.inactive { background:var(--text-muted); }
+
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:1000; align-items:center; justify-content:center; }
+    .modal.active { display:flex; }
+    .modal-content { background:var(--bg-white); border-radius:16px; max-width:560px; width:90%; max-height:90vh; overflow-y:auto; padding:24px; }
+    .modal-close { position:absolute; top:16px; right:16px; background:none; border:none; font-size:20px; color:var(--text-muted); cursor:pointer; }
+    .form-group-sm { margin-bottom:12px; }
+    .form-group-sm label { font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px; text-transform:uppercase; }
+    .form-group-sm input, .form-group-sm select, .form-group-sm textarea { width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; }
+    .form-group-sm input:focus, .form-group-sm select:focus { outline:none; border-color:var(--primary); }
+    .form-hint { font-size:11px; color:var(--text-muted); margin-top:2px; }
+    .form-row-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+    .test-result { margin-top:8px; padding:8px 12px; border-radius:6px; font-size:12px; display:none; }
+    .test-result.success { background:#dcfce7; color:#166534; display:block; }
+    .test-result.error { background:#fee2e2; color:#991b1b; display:block; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <div>
+        <h1 class="page-title">Integrações</h1>
+        <p style="font-size:13px;color:var(--text-muted);margin:4px 0 0;">Gerencie conexões com sistemas externos (ERP, WhatsApp, automação).</p>
+    </div>
+    <button class="btn-primary" onclick="abrirModal()"><i class="fas fa-plus"></i> Nova Integração</button>
+</div>
+
+{% if integracoes %}
+<div class="integ-grid">
+    {% for integ in integracoes %}
+    <div class="integ-card" id="card-{{ integ.pk }}"
+         data-nome="{{ integ.nome }}"
+         data-tipo="{{ integ.tipo }}"
+         data-url="{{ integ.base_url }}"
+         data-client-id="{{ integ.client_id }}"
+         data-username="{{ integ.username }}"
+         data-token="{{ integ.access_token }}"
+         data-extras='{{ integ.configuracoes_extras|safe }}'>
+        <div class="integ-header">
+            <div class="integ-icon" style="background:{{ integ.cor }}"><i class="{{ integ.icon }}"></i></div>
+            <div class="integ-info">
+                <h3><span class="status-dot {% if integ.ativa %}active{% else %}inactive{% endif %}"></span>{{ integ.nome }}</h3>
+                <p>{{ integ.get_tipo_display }} · {{ integ.tipo_descricao }}</p>
+            </div>
+        </div>
+        <div class="integ-body">
+            <div class="integ-field">
+                <div class="integ-field-label">URL Base</div>
+                <div class="integ-field-value">{{ integ.base_url }}</div>
+            </div>
+            {% if integ.username %}
+            <div class="integ-field">
+                <div class="integ-field-label">Usuário</div>
+                <div class="integ-field-value">{{ integ.username }}</div>
+            </div>
+            {% endif %}
+            {% if integ.configuracoes_extras %}
+            <div class="integ-field">
+                <div class="integ-field-label">Config extras</div>
+                <div class="integ-field-value" style="font-size:11px;font-family:monospace;">
+                    {% for key, val in integ.configuracoes_extras.items %}{{ key }}: {{ val }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <div class="integ-stats">
+            <span><strong>{{ integ.total_chamadas_24h }}</strong> chamadas (24h)</span>
+            <span>{% if integ.erros_24h %}<span style="color:var(--danger);"><strong>{{ integ.erros_24h }}</strong> erros</span>{% else %}<span style="color:var(--success);">Sem erros</span>{% endif %}</span>
+            {% if integ.token_valido %}<span style="color:var(--success);"><i class="fas fa-check-circle"></i> Token válido</span>{% endif %}
+        </div>
+        <div class="integ-actions">
+            <button class="integ-btn primary" onclick="testarConexao({{ integ.pk }})"><i class="fas fa-plug"></i> Testar</button>
+            <button class="integ-btn" onclick="editarIntegracao({{ integ.pk }})"><i class="fas fa-edit"></i> Editar</button>
+            <button class="integ-btn" onclick="toggleIntegracao({{ integ.pk }})">
+                {% if integ.ativa %}<i class="fas fa-pause"></i> Desativar{% else %}<i class="fas fa-play"></i> Ativar{% endif %}
+            </button>
+            <button class="integ-btn danger" onclick="excluirIntegracao({{ integ.pk }}, '{{ integ.nome }}')"><i class="fas fa-trash"></i></button>
+        </div>
+        <div class="test-result" id="test-{{ integ.pk }}"></div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:60px;">
+    <i class="fas fa-plug" style="font-size:40px;color:var(--text-muted);opacity:.3;margin-bottom:12px;"></i>
+    <p style="font-size:14px;color:var(--text-muted);">Nenhuma integração configurada</p>
+    <button class="btn-primary" onclick="abrirModal()" style="margin-top:12px;"><i class="fas fa-plus"></i> Criar primeira integração</button>
+</div>
+{% endif %}
+
+<!-- Modal criar/editar -->
+<div id="integModal" class="modal" onclick="if(event.target===this)fecharModal()">
+    <div class="modal-content" style="position:relative;">
+        <button class="modal-close" onclick="fecharModal()">&times;</button>
+        <h3 id="modalTitle" style="font-size:18px;font-weight:700;margin:0 0 20px;">Nova Integração</h3>
+
+        <form id="integForm">
+            <input type="hidden" id="integId">
+
+            <div class="form-row-2">
+                <div class="form-group-sm">
+                    <label>Nome *</label>
+                    <input type="text" id="integNome" required placeholder="Ex: Uazapi Aurora">
+                </div>
+                <div class="form-group-sm">
+                    <label>Tipo *</label>
+                    <select id="integTipo">
+                        {% for val, label in tipos_disponiveis %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group-sm">
+                <label>URL Base *</label>
+                <input type="url" id="integUrl" required placeholder="https://api.exemplo.com">
+            </div>
+
+            <!-- Campos OAuth (HubSoft) -->
+            <div id="camposOAuth">
+                <div class="form-row-2">
+                    <div class="form-group-sm">
+                        <label>Client ID</label>
+                        <input type="text" id="integClientId" placeholder="Client ID">
+                    </div>
+                    <div class="form-group-sm">
+                        <label>Client Secret</label>
+                        <input type="password" id="integClientSecret" placeholder="Deixe vazio para manter">
+                    </div>
+                </div>
+                <div class="form-row-2">
+                    <div class="form-group-sm">
+                        <label>Usuário</label>
+                        <input type="text" id="integUsername" placeholder="Usuário da API">
+                    </div>
+                    <div class="form-group-sm">
+                        <label>Senha</label>
+                        <input type="password" id="integPassword" placeholder="Deixe vazio para manter">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Campo Token (Uazapi/N8N) -->
+            <div id="camposToken" style="display:none;">
+                <div class="form-group-sm">
+                    <label>Token / API Key</label>
+                    <input type="password" id="integToken" placeholder="Token da instância">
+                    <div class="form-hint">Token de autenticação da API</div>
+                </div>
+            </div>
+
+            <div class="form-group-sm">
+                <label>Configurações Extras (JSON)</label>
+                <textarea id="integExtras" rows="3" placeholder='{"numero_whatsapp": "5589999999999"}' style="font-family:monospace;font-size:12px;"></textarea>
+                <div class="form-hint">Parâmetros adicionais em formato JSON</div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+                <button type="button" class="btn-secondary" onclick="fecharModal()">Cancelar</button>
+                <button type="button" class="btn-primary" onclick="salvarIntegracao()"><i class="fas fa-save"></i> Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function getCookie(n){let v=null;if(document.cookie)document.cookie.split(';').forEach(c=>{c=c.trim();if(c.startsWith(n+'='))v=decodeURIComponent(c.substring(n.length+1))});return v}
+const CSRF=getCookie('csrftoken'), H={'Content-Type':'application/json','X-CSRFToken':CSRF};
+let editId = null;
+
+// Toggle campos baseado no tipo
+document.getElementById('integTipo').addEventListener('change', function() {
+    const isOAuth = this.value === 'hubsoft';
+    document.getElementById('camposOAuth').style.display = isOAuth ? 'block' : 'none';
+    document.getElementById('camposToken').style.display = isOAuth ? 'none' : 'block';
+});
+
+function abrirModal() {
+    editId = null;
+    document.getElementById('modalTitle').textContent = 'Nova Integração';
+    document.getElementById('integForm').reset();
+    document.getElementById('integId').value = '';
+    document.getElementById('integTipo').dispatchEvent(new Event('change'));
+    document.getElementById('integModal').classList.add('active');
+}
+
+function fecharModal() {
+    document.getElementById('integModal').classList.remove('active');
+}
+
+function editarIntegracao(pk) {
+    editId = pk;
+    document.getElementById('modalTitle').textContent = 'Editar Integração';
+    document.getElementById('integId').value = pk;
+
+    const card = document.getElementById('card-' + pk);
+    document.getElementById('integNome').value = card.dataset.nome || '';
+    document.getElementById('integUrl').value = card.dataset.url || '';
+    document.getElementById('integTipo').value = card.dataset.tipo || 'outro';
+    document.getElementById('integClientId').value = card.dataset.clientId || '';
+    document.getElementById('integUsername').value = card.dataset.username || '';
+    document.getElementById('integClientSecret').value = '';
+    document.getElementById('integPassword').value = '';
+    document.getElementById('integToken').value = '';
+
+    try {
+        const extras = card.dataset.extras;
+        document.getElementById('integExtras').value = extras && extras !== '{}' ? JSON.stringify(JSON.parse(extras), null, 2) : '';
+    } catch(e) { document.getElementById('integExtras').value = ''; }
+
+    document.getElementById('integTipo').dispatchEvent(new Event('change'));
+    document.getElementById('integModal').classList.add('active');
+}
+
+function salvarIntegracao() {
+    const nome = document.getElementById('integNome').value.trim();
+    const tipo = document.getElementById('integTipo').value;
+    const base_url = document.getElementById('integUrl').value.trim();
+
+    if (!nome || !base_url) { alert('Nome e URL são obrigatórios'); return; }
+
+    const data = { nome, tipo, base_url, configuracoes_extras: {} };
+
+    if (tipo === 'hubsoft') {
+        data.client_id = document.getElementById('integClientId').value;
+        data.client_secret = document.getElementById('integClientSecret').value;
+        data.username = document.getElementById('integUsername').value;
+        data.password = document.getElementById('integPassword').value;
+    } else {
+        data.access_token = document.getElementById('integToken').value;
+    }
+
+    const extras = document.getElementById('integExtras').value.trim();
+    if (extras) {
+        try { data.configuracoes_extras = JSON.parse(extras); }
+        catch(e) { alert('JSON de configurações extras inválido'); return; }
+    }
+
+    const url = editId ? `/integracoes/api/${editId}/editar/` : '/integracoes/api/criar/';
+    const method = editId ? 'PUT' : 'POST';
+
+    fetch(url, {method, headers:H, body:JSON.stringify(data)})
+    .then(r=>r.json()).then(d=>{
+        if(d.success){fecharModal();location.reload();}
+        else alert(d.error);
+    });
+}
+
+function testarConexao(pk) {
+    const el = document.getElementById('test-' + pk);
+    el.className = 'test-result';
+    el.textContent = 'Testando...';
+    el.style.display = 'block';
+    el.style.background = '#f1f5f9';
+    el.style.color = '#64748b';
+
+    fetch(`/integracoes/api/${pk}/testar/`, {method:'POST', headers:H})
+    .then(r=>r.json()).then(d=>{
+        el.className = 'test-result ' + (d.success ? 'success' : 'error');
+        el.innerHTML = `<i class="fas fa-${d.success?'check-circle':'times-circle'}"></i> ${d.message}`;
+    }).catch(()=>{
+        el.className = 'test-result error';
+        el.textContent = 'Erro de conexão';
+    });
+}
+
+function toggleIntegracao(pk) {
+    fetch(`/integracoes/api/${pk}/toggle/`, {method:'POST', headers:H})
+    .then(r=>r.json()).then(d=>{ if(d.success) location.reload(); });
+}
+
+function excluirIntegracao(pk, nome) {
+    if(!confirm(`Excluir integração "${nome}"?`)) return;
+    fetch(`/integracoes/api/${pk}/excluir/`, {method:'DELETE', headers:H})
+    .then(r=>r.json()).then(d=>{ if(d.success) location.reload(); else alert(d.error); });
+}
+
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') fecharModal(); });
+</script>
+{% endblock %}

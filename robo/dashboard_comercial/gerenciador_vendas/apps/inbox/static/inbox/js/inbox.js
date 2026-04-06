@@ -12,6 +12,8 @@
         conversas: [],
         currentConversaId: null,
         agenteFilter: '',
+        statusFilter: '',
+        sortOrder: 'desc', // 'desc' = mais recente, 'asc' = mais antiga
         searchQuery: '',
         inputMode: 'reply', // 'reply' ou 'note'
         respostasRapidas: [],
@@ -74,6 +76,8 @@
     function loadConversas() {
         let url = '/inbox/api/conversas/?';
         if (state.agenteFilter) url += 'agente=' + state.agenteFilter + '&';
+        if (state.statusFilter) url += 'status=' + state.statusFilter + '&';
+        if (state.sortOrder) url += 'ordem=' + state.sortOrder + '&';
         if (state.searchQuery) url += 'q=' + encodeURIComponent(state.searchQuery) + '&';
 
         fetchJSON(url).then(data => {
@@ -165,14 +169,16 @@
             document.getElementById('ctxPhone').textContent = data.contato_telefone || '—';
             document.getElementById('ctxEmail').textContent = data.contato_email || '—';
 
-            // Agent
+            // Agent, Equipe, Prioridade
             document.getElementById('agentSelect').value = data.agente_id || '';
+            document.getElementById('teamSelect').value = data.equipe_id || '';
+            document.getElementById('prioritySelect').value = data.prioridade || 'normal';
 
             // Labels
             const chipDiv = document.getElementById('labelChips');
             if (data.etiquetas && data.etiquetas.length) {
                 chipDiv.innerHTML = data.etiquetas.map(e =>
-                    `<span class="label-chip" style="background:${e.cor_hex}">${esc(e.nome)}</span>`
+                    `<span class="label-chip" data-id="${e.id}" style="background:${e.cor_hex}">${esc(e.nome)}</span>`
                 ).join('');
             } else {
                 chipDiv.innerHTML = '';
@@ -209,6 +215,28 @@
             } else {
                 ticketInfo.style.display = 'none';
                 ticketBtn.style.display = 'inline-flex';
+            }
+
+            // Conversas anteriores
+            const prevDiv = document.getElementById('previousConversations');
+            if (prevDiv) {
+                const prev = data.conversas_anteriores || [];
+                if (prev.length) {
+                    prevDiv.innerHTML = prev.map(c => {
+                        const statusBadge = c.status === 'resolvida' ? '✅' : c.status === 'aberta' ? '🔵' : '⏳';
+                        const dataStr = c.data_abertura ? new Date(c.data_abertura).toLocaleDateString('pt-BR') : '';
+                        return `<div style="padding:8px 0;border-bottom:1px solid var(--border-light,#f1f5f9);font-size:12px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <span style="font-weight:600;color:var(--text-main);">${statusBadge} #${c.numero}</span>
+                                <span style="color:var(--text-muted);font-size:11px;">${dataStr}</span>
+                            </div>
+                            <div style="color:var(--text-muted);margin-top:2px;">${esc(c.preview || 'Sem preview')}</div>
+                            ${c.agente ? `<div style="color:var(--text-muted);font-size:10px;margin-top:2px;"><i class="fas fa-user" style="font-size:9px;"></i> ${esc(c.agente)} · ${c.total_mensagens} msg</div>` : ''}
+                        </div>`;
+                    }).join('');
+                } else {
+                    prevDiv.innerHTML = '<p style="font-size:12px;color:var(--text-muted);">Nenhuma conversa anterior.</p>';
+                }
             }
 
             // Notes
@@ -390,11 +418,69 @@
             });
         });
 
+        // Filter button
+        $('filterMenuBtn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            const dd = document.getElementById('filterDropdown');
+            dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+        });
+        document.querySelectorAll('.inbox-filter-opt').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.inbox-filter-opt').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                state.statusFilter = this.dataset.status;
+                document.getElementById('filterDropdown').style.display = 'none';
+                $('filterMenuBtn').classList.toggle('active', !!state.statusFilter);
+                loadConversas();
+            });
+        });
+
+        // Sort button
+        $('sortBtn').addEventListener('click', function() {
+            state.sortOrder = state.sortOrder === 'desc' ? 'asc' : 'desc';
+            this.classList.toggle('active', state.sortOrder === 'asc');
+            this.title = state.sortOrder === 'desc' ? 'Mais recentes primeiro' : 'Mais antigas primeiro';
+            loadConversas();
+        });
+
         // Search
         let searchTimeout;
         $('inboxSearch').addEventListener('input', function() {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => { state.searchQuery = this.value.trim(); loadConversas(); }, 300);
+        });
+
+        // Emoji picker
+        const EMOJIS = ['😀','😂','😊','😍','🥰','😘','😎','🤔','👍','👎','❤️','🔥','✅','❌','⭐','🎉','📌','📎','💬','🙏','👋','🤝','💡','⚡','📞','📧','🕐','📅','✍️','🏠','🚀','💰','🎯','👀','🙂'];
+        const pickerEl = document.getElementById('emojiPicker');
+        if (pickerEl) {
+            pickerEl.innerHTML = EMOJIS.map(e => `<button type="button" onclick="document.getElementById('messageInput').value+='${e}';document.getElementById('messageInput').focus();document.getElementById('emojiPicker').style.display='none';">${e}</button>`).join('');
+        }
+        $('emojiBtn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            pickerEl.style.display = pickerEl.style.display === 'none' ? 'grid' : 'none';
+        });
+
+        // Anexar arquivo
+        $('attachBtn').addEventListener('click', function() {
+            document.getElementById('attachInput').click();
+        });
+        document.getElementById('attachInput')?.addEventListener('change', function() {
+            if (!this.files.length || !state.currentConversaId) return;
+            const file = this.files[0];
+            const formData = new FormData();
+            formData.append('arquivo', file);
+            formData.append('conteudo', file.name);
+
+            fetch('/inbox/api/conversas/' + state.currentConversaId + '/enviar/', {
+                method: 'POST',
+                headers: {'X-CSRFToken': CSRF_TOKEN},
+                body: formData,
+            })
+            .then(r => r.json())
+            .then(d => { if (d.success) loadMensagens(state.currentConversaId); })
+            .catch(() => {});
+            this.value = '';
         });
 
         // Send
@@ -459,7 +545,43 @@
 
         // Assign to me
         $('ctxAssignMe').addEventListener('click', () => {
-            // TODO: dedicated assign-to-me endpoint
+            if (!state.currentConversaId) return;
+            // Pegar ID do user logado pelo select (primeira opção que não é vazio)
+            const select = document.getElementById('agentSelect');
+            // Buscar user ID via cookie ou tentar atribuir via endpoint
+            fetchJSON('/inbox/api/conversas/' + state.currentConversaId + '/atribuir/', {
+                method: 'POST', body: JSON.stringify({ agente_id: parseInt(select.value) || 0 }),
+            });
+        });
+
+        // Equipe
+        $('teamSelect').addEventListener('change', function() {
+            if (!state.currentConversaId) return;
+            fetchJSON('/inbox/api/conversas/' + state.currentConversaId + '/atualizar/', {
+                method: 'POST', body: JSON.stringify({ equipe_id: this.value ? parseInt(this.value) : null }),
+            }).then(() => loadConversas());
+        });
+
+        // Prioridade
+        $('prioritySelect').addEventListener('change', function() {
+            if (!state.currentConversaId) return;
+            fetchJSON('/inbox/api/conversas/' + state.currentConversaId + '/atualizar/', {
+                method: 'POST', body: JSON.stringify({ prioridade: this.value }),
+            });
+        });
+
+        // Etiquetas
+        $('labelSelect').addEventListener('change', function() {
+            if (!state.currentConversaId || !this.value) return;
+            const etiquetaId = parseInt(this.value);
+            // Pegar etiquetas atuais e adicionar a nova
+            const chips = document.getElementById('labelChips');
+            const atuais = Array.from(chips.querySelectorAll('.label-chip')).map(c => parseInt(c.dataset.id)).filter(Boolean);
+            if (!atuais.includes(etiquetaId)) atuais.push(etiquetaId);
+            fetchJSON('/inbox/api/conversas/' + state.currentConversaId + '/atualizar/', {
+                method: 'POST', body: JSON.stringify({ etiquetas: atuais }),
+            }).then(() => loadConversaDetalhe(state.currentConversaId));
+            this.value = '';
         });
 
         // Notes
@@ -541,6 +663,10 @@
             if (dd && !dd.contains(e.target)) dd.style.display = 'none';
             const rm = document.getElementById('resolveMenu');
             if (rm && !rm.contains(e.target) && !e.target.closest('.chat-resolve-group')) rm.style.display = 'none';
+            const fd = document.getElementById('filterDropdown');
+            if (fd && !fd.contains(e.target) && !e.target.closest('#filterMenuBtn')) fd.style.display = 'none';
+            const ep = document.getElementById('emojiPicker');
+            if (ep && !ep.contains(e.target) && !e.target.closest('#emojiBtn')) ep.style.display = 'none';
         });
 
         // Load

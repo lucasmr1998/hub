@@ -112,9 +112,9 @@ def resolver_tenant(tenant_slug):
 
 def receber_mensagem(telefone, nome, conteudo, tenant, tipo_conteudo='texto',
                      identificador_externo='', metadata=None, canal_tipo='whatsapp',
-                     arquivo_url='', arquivo_nome=''):
+                     arquivo_url='', arquivo_nome='', canal=None):
     """
-    Processa mensagem recebida de qualquer fonte (N8N, widget, etc).
+    Processa mensagem recebida de qualquer fonte (N8N, widget, provider webhook, etc).
 
     1. Normaliza telefone
     2. Busca/cria Conversa
@@ -122,15 +122,17 @@ def receber_mensagem(telefone, nome, conteudo, tenant, tipo_conteudo='texto',
     4. Cria Mensagem
     5. Atualiza contadores da Conversa
 
-    Retorna (conversa, mensagem).
+    Param canal: CanalInbox já resolvido (vem do webhook dispatcher). Se None, faz get_or_create.
+    Retorna (conversa, mensagem, nova_conversa).
     """
     fone = normalizar_telefone(telefone)
 
     # Buscar ou criar canal
-    canal, _ = CanalInbox.all_tenants.get_or_create(
-        tenant=tenant, tipo=canal_tipo,
-        defaults={'nome': dict(CanalInbox.TIPO_CHOICES).get(canal_tipo, canal_tipo)}
-    )
+    if canal is None:
+        canal, _ = CanalInbox.all_tenants.get_or_create(
+            tenant=tenant, tipo=canal_tipo, identificador_canal='',
+            defaults={'nome': dict(CanalInbox.TIPO_CHOICES).get(canal_tipo, canal_tipo)}
+        )
 
     # Buscar conversa aberta existente para este telefone+canal
     conversa = Conversa.all_tenants.filter(
@@ -281,7 +283,37 @@ def enviar_mensagem(conversa, conteudo, user, tipo_conteudo='texto',
 
 
 def _enviar_webhook_async(conversa, mensagem):
-    """Envia mensagem para webhook externo em background thread."""
+    """Envia mensagem via provider correto em background thread."""
+    canal = conversa.canal
+
+    def _send():
+        try:
+            if canal.provedor and canal.integracao:
+                # Usa provider abstraction (Uazapi, Evolution, Twilio, etc)
+                from apps.inbox.providers import get_provider
+                provider = get_provider(canal)
+                result = provider.enviar_mensagem(conversa, mensagem)
+                msg_id = provider.extrair_msg_id(result)
+                if msg_id:
+                    Mensagem.all_tenants.filter(pk=mensagem.pk).update(
+                        identificador_externo=msg_id
+                    )
+                logger.info("[Provider:%s] Mensagem enviada para %s", canal.provedor, conversa.contato_telefone)
+            else:
+                # Fallback: webhook genérico (N8N, etc)
+                _enviar_via_webhook_legado(conversa, mensagem)
+        except Exception as e:
+            logger.error("Erro ao enviar mensagem via %s: %s", canal.provedor or 'webhook', e)
+            Mensagem.all_tenants.filter(pk=mensagem.pk).update(
+                erro_envio=str(e)[:500]
+            )
+
+    thread = threading.Thread(target=_send, daemon=True)
+    thread.start()
+
+
+def _enviar_via_webhook_legado(conversa, mensagem):
+    """Fallback: envia via webhook_envio_url do canal (N8N, custom)."""
     webhook_url = (conversa.canal.configuracao or {}).get('webhook_envio_url')
     if not webhook_url:
         return
@@ -298,24 +330,16 @@ def _enviar_webhook_async(conversa, mensagem):
         'tenant': conversa.tenant.slug if conversa.tenant else '',
     }
 
-    def _send():
-        try:
-            resp = requests.post(webhook_url, json=payload, timeout=10)
-            if resp.status_code >= 400:
-                logger.warning(
-                    "Webhook inbox falhou: status=%s url=%s", resp.status_code, webhook_url
-                )
-                Mensagem.all_tenants.filter(pk=mensagem.pk).update(
-                    erro_envio=f"Webhook retornou {resp.status_code}"
-                )
-        except Exception as e:
-            logger.error("Erro ao enviar webhook inbox: %s", e)
+    try:
+        resp = requests.post(webhook_url, json=payload, timeout=10)
+        if resp.status_code >= 400:
+            logger.warning("Webhook inbox falhou: status=%s url=%s", resp.status_code, webhook_url)
             Mensagem.all_tenants.filter(pk=mensagem.pk).update(
-                erro_envio=str(e)[:500]
+                erro_envio=f"Webhook retornou {resp.status_code}"
             )
-
-    thread = threading.Thread(target=_send, daemon=True)
-    thread.start()
+    except Exception as e:
+        logger.error("Erro ao enviar webhook inbox: %s", e)
+        Mensagem.all_tenants.filter(pk=mensagem.pk).update(erro_envio=str(e)[:500])
 
 
 # ── Ações de conversa ──────────────────────────────────────────────────

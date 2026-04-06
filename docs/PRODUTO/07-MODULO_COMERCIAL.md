@@ -12,7 +12,7 @@ O módulo Comercial cobre todo o funil de vendas do provedor: da captação do l
 
 ```
 Lead chega (WhatsApp/Site/Instagram)
-    │
+    │   
     ▼
 ┌─────────┐     ┌──────────────┐     ┌──────────┐     ┌──────────────┐
 │  LEADS  │────▶│ ATENDIMENTO  │────▶│ CADASTRO │────▶│ VIABILIDADE  │

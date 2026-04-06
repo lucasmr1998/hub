@@ -157,22 +157,45 @@ def configuracoes_view(request):
 
 
 @login_required
+def perfis_permissao_view(request):
+    """Página dedicada para gerenciar perfis de permissão."""
+    if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
+        perm = getattr(request.user, 'permissoes', None)
+        if not perm or not perm.acesso_configuracoes:
+            messages.error(request, 'Sem permissão.')
+            return redirect('dashboard:dashboard1')
+    return render(request, 'sistema/configuracoes/perfis_permissao.html')
+
+
+@login_required
 def configuracoes_usuarios_view(request):
     """View para gerenciar usuários do sistema"""
     from django.contrib.auth.models import User, Group
 
-    # Verificar se o usuário tem permissão para gerenciar usuários
+    # Verificar permissão: superuser, adm_all, ou funcionalidade config.gerenciar_usuarios
+    from apps.sistema.decorators import user_tem_funcionalidade
     if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
-        messages.error(request, 'Você não tem permissão para acessar esta página.')
-        return redirect('dashboard:dashboard1')
+        if not user_tem_funcionalidade(request, 'config.gerenciar_usuarios'):
+            messages.error(request, 'Você não tem permissão para acessar esta página.')
+            return redirect('dashboard:dashboard1')
+
+    from apps.sistema.models import PermissaoUsuario, PerfilPermissao
 
     users = User.objects.all().order_by('-date_joined')
     groups = Group.objects.all().order_by('name')
 
+    # Pré-carregar permissões de cada usuário
+    permissoes = {p.user_id: p for p in PermissaoUsuario.objects.select_related('perfil').filter(user__in=users)}
+    for u in users:
+        u.perm = permissoes.get(u.id)
+
+    perfis = PerfilPermissao.objects.filter(tenant=request.tenant).order_by('nome') if request.tenant else PerfilPermissao.objects.none()
+
     context = {
         'users': users,
         'groups': groups,
-        'user': request.user
+        'perfis': perfis,
+        'user': request.user,
     }
     return render(request, 'sistema/configuracoes/usuarios.html', context)
 
@@ -240,6 +263,21 @@ def api_usuarios_criar(request):
                 user.groups.add(group)
             except Group.DoesNotExist:
                 pass
+
+        # Criar PerfilUsuario se não existir
+        from apps.sistema.models import PerfilUsuario, PermissaoUsuario, PerfilPermissao
+        if not hasattr(user, 'perfil'):
+            PerfilUsuario.objects.create(user=user, tenant=request.tenant)
+
+        # Atribuir perfil de permissão
+        perfil_id = data.get('perfil_id')
+        if perfil_id:
+            perfil_perm = PerfilPermissao.objects.filter(pk=perfil_id, tenant=request.tenant).first()
+            if perfil_perm:
+                PermissaoUsuario.objects.update_or_create(
+                    user=user,
+                    defaults={'tenant': request.tenant, 'perfil': perfil_perm},
+                )
 
         return JsonResponse({
             'success': True,
@@ -314,6 +352,16 @@ def api_usuarios_editar(request, user_id):
                 except Group.DoesNotExist:
                     pass
 
+        # Atualizar perfil de permissão
+        from apps.sistema.models import PermissaoUsuario, PerfilPermissao
+        perfil_id = data.get('perfil_id')
+        if perfil_id is not None:
+            perfil_perm = PerfilPermissao.objects.filter(pk=perfil_id, tenant=request.tenant).first() if perfil_id else None
+            PermissaoUsuario.objects.update_or_create(
+                user=user,
+                defaults={'tenant': request.tenant, 'perfil': perfil_perm},
+            )
+
         return JsonResponse({
             'success': True,
             'message': 'Usuário atualizado com sucesso',
@@ -374,6 +422,106 @@ def api_usuarios_deletar(request, user_id):
 
 
 # ============================================================================
+# APIs DE PERFIS DE PERMISSÃO
+# ============================================================================
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def api_perfis_permissao(request):
+    """GET: lista perfis. POST: cria perfil."""
+    from apps.sistema.models import PerfilPermissao
+
+    if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
+        perm = getattr(request.user, 'permissoes', None)
+        if not perm or not perm.acesso_configuracoes:
+            return JsonResponse({'error': 'Sem permissão'}, status=403)
+
+    from apps.sistema.models import Funcionalidade
+
+    if request.method == 'GET':
+        perfis = PerfilPermissao.objects.filter(tenant=request.tenant).prefetch_related('funcionalidades').order_by('nome')
+        # Todas as funcionalidades disponíveis
+        todas = list(Funcionalidade.objects.all().values('id', 'modulo', 'codigo', 'nome', 'descricao', 'ordem'))
+
+        data = []
+        for p in perfis:
+            func_ids = list(p.funcionalidades.values_list('id', flat=True))
+            data.append({
+                'id': p.id, 'nome': p.nome, 'descricao': p.descricao,
+                'funcionalidades': func_ids,
+                'total_usuarios': p.total_usuarios,
+            })
+
+        return JsonResponse({'perfis': data, 'funcionalidades': todas})
+
+    # POST: criar
+    try:
+        data = json.loads(request.body)
+        nome = data.get('nome', '').strip()
+        if not nome:
+            return JsonResponse({'error': 'Nome é obrigatório'}, status=400)
+
+        if PerfilPermissao.objects.filter(tenant=request.tenant, nome=nome).exists():
+            return JsonResponse({'error': f'Perfil "{nome}" já existe'}, status=400)
+
+        perfil = PerfilPermissao.objects.create(
+            tenant=request.tenant, nome=nome,
+            descricao=data.get('descricao', ''),
+        )
+        func_ids = data.get('funcionalidades', [])
+        if func_ids:
+            perfil.funcionalidades.set(Funcionalidade.objects.filter(id__in=func_ids))
+
+        return JsonResponse({'success': True, 'message': f'Perfil "{nome}" criado', 'id': perfil.id})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["PUT", "DELETE"])
+def api_perfil_permissao_detalhe(request, perfil_id):
+    """PUT: edita perfil. DELETE: exclui perfil."""
+    from apps.sistema.models import PerfilPermissao
+
+    if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
+        perm = getattr(request.user, 'permissoes', None)
+        if not perm or not perm.acesso_configuracoes:
+            return JsonResponse({'error': 'Sem permissão'}, status=403)
+
+    try:
+        perfil = PerfilPermissao.objects.get(pk=perfil_id, tenant=request.tenant)
+    except PerfilPermissao.DoesNotExist:
+        return JsonResponse({'error': 'Perfil não encontrado'}, status=404)
+
+    if request.method == 'DELETE':
+        nome = perfil.nome
+        perfil.delete()
+        return JsonResponse({'success': True, 'message': f'Perfil "{nome}" excluído'})
+
+    # PUT: editar
+    try:
+        from apps.sistema.models import Funcionalidade
+        data = json.loads(request.body)
+        if 'nome' in data:
+            nome = data['nome'].strip()
+            if PerfilPermissao.objects.filter(tenant=request.tenant, nome=nome).exclude(pk=perfil_id).exists():
+                return JsonResponse({'error': f'Perfil "{nome}" já existe'}, status=400)
+            perfil.nome = nome
+        if 'descricao' in data:
+            perfil.descricao = data['descricao']
+
+        perfil.save()
+
+        if 'funcionalidades' in data:
+            func_ids = data['funcionalidades']
+            perfil.funcionalidades.set(Funcionalidade.objects.filter(id__in=func_ids))
+
+        return JsonResponse({'success': True, 'message': f'Perfil "{perfil.nome}" atualizado'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# ============================================================================
 # VIEWS DE PERFIL E TELEFONE — migradas de vendas_web/views.py
 # ============================================================================
 
@@ -404,23 +552,58 @@ def atualizar_telefone_view(request):
 
 @login_required
 def perfil_usuario_view(request):
-    """View para exibir e editar perfil do usuário"""
-    try:
-        if request.method == 'POST':
-            telefone = request.POST.get('telefone', '').strip()
-            request.user.telefone = telefone if telefone else None
-            request.user.save()
-            messages.success(request, 'Telefone atualizado com sucesso!')
-            return redirect('sistema:perfil_usuario')
+    """View para exibir e editar perfil do usuário."""
+    from apps.sistema.models import PerfilUsuario, PermissaoUsuario, Funcionalidade
 
-        context = {
-            'page_title': 'Meu Perfil',
-            'user': request.user
-        }
+    user = request.user
+    perfil = getattr(user, 'perfil', None)
+    perm = PermissaoUsuario.get_for_user(user)
 
-        return render(request, 'sistema/perfil_usuario.html', context)
+    if request.method == 'POST':
+        # Atualizar dados pessoais
+        user.first_name = request.POST.get('first_name', '').strip()
+        user.last_name = request.POST.get('last_name', '').strip()
+        user.email = request.POST.get('email', '').strip()
+        user.save(update_fields=['first_name', 'last_name', 'email'])
 
-    except Exception as e:
-        logger.error(f'Erro na view de perfil: {str(e)}')
-        messages.error(request, 'Erro ao carregar perfil. Tente novamente.')
-        return redirect('dashboard:dashboard1')
+        telefone = request.POST.get('telefone', '').strip()
+        if perfil:
+            perfil.telefone = telefone or None
+            perfil.save(update_fields=['telefone'])
+
+        # Trocar senha (opcional)
+        nova_senha = request.POST.get('nova_senha', '').strip()
+        if nova_senha:
+            senha_atual = request.POST.get('senha_atual', '')
+            if user.check_password(senha_atual):
+                user.set_password(nova_senha)
+                user.save()
+                from django.contrib.auth import update_session_auth_hash
+                update_session_auth_hash(request, user)
+                messages.success(request, 'Senha alterada com sucesso.')
+            else:
+                messages.error(request, 'Senha atual incorreta.')
+                return redirect('sistema:perfil_usuario')
+
+        messages.success(request, 'Perfil atualizado com sucesso.')
+        return redirect('sistema:perfil_usuario')
+
+    # Montar lista de funcionalidades agrupadas por módulo
+    funcionalidades_usuario = []
+    if perm and perm.perfil:
+        func_ids = set(perm.perfil.funcionalidades.values_list('id', flat=True))
+        todas = Funcionalidade.objects.all().order_by('modulo', 'ordem')
+        by_modulo = {}
+        for f in todas:
+            by_modulo.setdefault(f.modulo, []).append({
+                'nome': f.nome,
+                'tem': f.id in func_ids,
+            })
+        funcionalidades_usuario = by_modulo
+
+    context = {
+        'perfil': perfil,
+        'perm': perm,
+        'funcionalidades': funcionalidades_usuario,
+    }
+    return render(request, 'sistema/perfil_usuario.html', context)

@@ -10,9 +10,21 @@ class IntegracaoAPI(models.Model):
     Cada registro representa uma conexão com um sistema (Hubsoft, etc).
     """
     TIPO_CHOICES = [
-        ('hubsoft', 'Hubsoft'),
+        ('hubsoft', 'HubSoft'),
+        ('uazapi', 'Uazapi (WhatsApp)'),
+        ('evolution', 'Evolution API (WhatsApp)'),
+        ('meta_cloud', 'Meta Cloud API (WhatsApp)'),
+        ('twilio_whatsapp', 'Twilio (WhatsApp)'),
+        ('n8n', 'N8N (Automação)'),
         ('outro', 'Outro'),
     ]
+
+    tenant = models.ForeignKey(
+        'sistema.Tenant', on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name='integracoes',
+        verbose_name="Tenant",
+    )
 
     nome = models.CharField(
         max_length=200,

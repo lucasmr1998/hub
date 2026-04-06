@@ -15,7 +15,7 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 
-from apps.sistema.decorators import api_token_required
+from apps.sistema.decorators import api_token_required, user_tem_funcionalidade
 from apps.marketing.campanhas.models import CampanhaTrafego, DeteccaoCampanha
 from apps.comercial.leads.models import LeadProspecto
 
@@ -29,6 +29,8 @@ logger = logging.getLogger(__name__)
 @login_required
 def campanhas_trafego_view(request):
     """View para gerenciar campanhas de tráfego pago"""
+    if not user_tem_funcionalidade(request, 'marketing.gerenciar_campanhas'):
+        return JsonResponse({'error': 'Sem permissão'}, status=403)
     campanhas = CampanhaTrafego.objects.all().order_by('-ativa', 'ordem_exibicao', 'nome')
 
     # Calcular estatísticas gerais

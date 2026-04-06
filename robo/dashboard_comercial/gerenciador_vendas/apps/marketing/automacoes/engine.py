@@ -152,7 +152,7 @@ def _agendar_acao_legacy(regra, acao, contexto, lead=None):
     from .models import ExecucaoPendente
 
     data_agendada = timezone.now() + acao.delay_timedelta
-    ExecucaoPendente.objects.create(
+    ExecucaoPendente.all_tenants.create(
         tenant=regra.tenant, regra=regra, acao=acao, lead=lead,
         contexto_json=_serializar_contexto(contexto),
         data_agendada=data_agendada,
@@ -200,7 +200,7 @@ def _executar_nodo_e_seguir(regra, nodo, contexto, lead):
         delay = _calcular_delay_nodo(config)
         data_agendada = timezone.now() + delay
 
-        ExecucaoPendente.objects.create(
+        ExecucaoPendente.all_tenants.create(
             tenant=regra.tenant, regra=regra, nodo=nodo, lead=lead,
             contexto_json=_serializar_contexto(contexto),
             data_agendada=data_agendada,
@@ -370,7 +370,7 @@ def _registrar_log(regra, acao, status, contexto, resultado, lead=None, nodo=Non
 
     dados_safe = _serializar_contexto(contexto)
 
-    LogExecucao.objects.create(
+    LogExecucao.all_tenants.create(
         tenant=regra.tenant,
         regra=regra,
         acao=acao,
@@ -404,9 +404,11 @@ def _get_executor(tipo):
     """Retorna a função executora para um tipo de ação."""
     return {
         'enviar_whatsapp': _acao_enviar_whatsapp,
+        'enviar_email': _acao_enviar_email,
         'notificacao_sistema': _acao_notificacao_sistema,
         'criar_tarefa': _acao_criar_tarefa,
         'mover_estagio': _acao_mover_estagio,
+        'atribuir_responsavel': _acao_atribuir_responsavel,
         'dar_pontos': _acao_dar_pontos,
         'webhook': _acao_webhook,
     }.get(tipo)
@@ -446,15 +448,89 @@ def _acao_enviar_whatsapp(regra, acao, contexto):
         raise Exception(f'Falha ao enviar WhatsApp: {e}')
 
 
+def _acao_enviar_email(regra, acao, contexto):
+    """Envia e-mail via webhook N8N."""
+    config = acao.configuracao
+    mensagem = _substituir_variaveis(config, contexto)
+
+    email = contexto.get('email', '')
+    if not email:
+        lead = contexto.get('lead')
+        if lead and hasattr(lead, 'email'):
+            email = lead.email or ''
+    if not email:
+        return 'E-mail do destinatário não encontrado'
+
+    assunto = f'Automação: {regra.nome}'
+    corpo = mensagem
+    for line in mensagem.split('\n'):
+        if line.lower().startswith('assunto:'):
+            assunto = line.split(':', 1)[1].strip()
+        elif line.lower().startswith('corpo:'):
+            corpo = line.split(':', 1)[1].strip()
+
+    webhook_url = 'https://automation-n8n.v4riem.easypanel.host/webhook/5a88a51b-f099-4ea9-afb5-68a10254bcdd'
+
+    try:
+        resp = requests.post(webhook_url, json={
+            'tipo': 'email', 'regra': regra.nome,
+            'email': email, 'assunto': assunto, 'mensagem': corpo,
+        }, timeout=15)
+        return f'E-mail enviado para {email} (status {resp.status_code})'
+    except requests.RequestException as e:
+        raise Exception(f'Falha ao enviar e-mail: {e}')
+
+
+def _acao_atribuir_responsavel(regra, acao, contexto):
+    """Atribui responsável à oportunidade (round-robin ou fixo)."""
+    from apps.comercial.crm.models import OportunidadeVenda
+    from apps.sistema.models import PerfilUsuario
+
+    oportunidade = contexto.get('oportunidade')
+    if not oportunidade:
+        lead = contexto.get('lead')
+        if lead and hasattr(lead, 'pk'):
+            oportunidade = OportunidadeVenda.objects.filter(lead=lead).first()
+    if not oportunidade:
+        return 'Sem oportunidade para atribuir'
+
+    config = acao.configuracao.strip().lower()
+
+    if 'round-robin' in config or 'auto' in config:
+        perfis = PerfilUsuario.objects.filter(
+            tenant=regra.tenant, user__is_staff=True, user__is_active=True,
+        ).select_related('user')
+        if not perfis.exists():
+            return 'Nenhum agente disponível para round-robin'
+        from apps.comercial.crm.models import OportunidadeVenda as OV
+        counts = {}
+        for p in perfis:
+            counts[p.user_id] = OV.objects.filter(responsavel=p.user, ativo=True).count()
+        user_id = min(counts, key=counts.get)
+        from django.contrib.auth.models import User
+        responsavel = User.objects.get(pk=user_id)
+    else:
+        from django.contrib.auth.models import User
+        responsavel = User.objects.filter(
+            is_staff=True, username__icontains=config.split(':')[-1].strip()
+        ).first()
+        if not responsavel:
+            return f'Responsável não encontrado: {config}'
+
+    oportunidade.responsavel = responsavel
+    oportunidade.save(update_fields=['responsavel'])
+    return f'Responsável atribuído: {responsavel.get_full_name() or responsavel.username}'
+
+
 def _acao_notificacao_sistema(regra, acao, contexto):
     from apps.notificacoes.models import Notificacao, TipoNotificacao, CanalNotificacao
 
     mensagem = _substituir_variaveis(acao.configuracao, contexto)
-    tipo = TipoNotificacao.objects.filter(codigo='lead_novo').first()
-    canal = CanalNotificacao.objects.filter(codigo='sistema').first()
+    tipo = TipoNotificacao.all_tenants.filter(tenant=regra.tenant, codigo='lead_novo').first()
+    canal = CanalNotificacao.all_tenants.filter(tenant=regra.tenant, codigo='sistema').first()
 
     if tipo and canal:
-        Notificacao.objects.create(
+        Notificacao.all_tenants.create(
             tenant=regra.tenant, tipo=tipo, canal=canal,
             titulo=f'Automação: {regra.nome}', mensagem=mensagem, status='enviada',
         )

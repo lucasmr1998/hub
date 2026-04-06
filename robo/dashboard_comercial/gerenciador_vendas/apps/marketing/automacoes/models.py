@@ -33,7 +33,7 @@ class RegraAutomacao(TenantMixin):
 
     nome = models.CharField(max_length=200)
     descricao = models.TextField(blank=True)
-    evento = models.CharField(max_length=50, choices=EVENTO_CHOICES)
+    evento = models.CharField(max_length=50, choices=EVENTO_CHOICES, blank=True, default='', help_text='Definido no editor visual como nó gatilho')
     ativa = models.BooleanField(default=True, db_index=True)
     criado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='automacoes_criadas')
     data_criacao = models.DateTimeField(auto_now_add=True)

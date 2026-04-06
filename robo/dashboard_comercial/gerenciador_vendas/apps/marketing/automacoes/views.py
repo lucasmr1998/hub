@@ -6,15 +6,25 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from apps.sistema.decorators import user_tem_funcionalidade
+
 from .models import (
-    RegraAutomacao, CondicaoRegra, AcaoRegra, LogExecucao,
+    RegraAutomacao, LogExecucao,
     NodoFluxo, ConexaoNodo, ExecucaoPendente,
 )
+
+
+def _check_perm(request, codigo):
+    if not user_tem_funcionalidade(request, codigo):
+        return JsonResponse({'error': 'Sem permissão para esta ação'}, status=403)
+    return None
 
 
 @login_required
 def lista_automacoes(request):
     """Lista de automações configuradas pelo tenant."""
+    denied = _check_perm(request, 'marketing.ver_automacoes')
+    if denied: return denied
     regras = RegraAutomacao.objects.all().prefetch_related('condicoes', 'acoes')
 
     hoje = timezone.now().date()
@@ -39,6 +49,8 @@ def lista_automacoes(request):
 @login_required
 def criar_automacao(request):
     """Criar nova automação."""
+    denied = _check_perm(request, 'marketing.gerenciar_automacoes')
+    if denied: return denied
     if request.method == 'POST':
         return _salvar_automacao(request)
     return render(request, 'automacoes/criar.html')
@@ -51,64 +63,24 @@ def editar_automacao(request, pk):
     if request.method == 'POST':
         return _salvar_automacao(request, regra)
 
-    context = {
-        'regra': regra,
-        'condicoes': regra.condicoes.all(),
-        'acoes': regra.acoes.all(),
-    }
-    return render(request, 'automacoes/criar.html', context)
+    return render(request, 'automacoes/criar.html', {'regra': regra})
 
 
 def _salvar_automacao(request, regra=None):
-    """Salva ou atualiza uma regra de automação."""
+    """Salva ou atualiza uma regra de automação (apenas nome/descrição, resto no editor visual)."""
     tenant = request.tenant
+    is_new = regra is None
 
-    if regra is None:
-        regra = RegraAutomacao(tenant=tenant, criado_por=request.user)
+    if is_new:
+        regra = RegraAutomacao(tenant=tenant, criado_por=request.user, modo_fluxo=True)
 
     regra.nome = request.POST.get('nome', '').strip()
     regra.descricao = request.POST.get('descricao', '').strip()
-    regra.evento = request.POST.get('evento', '')
     regra.save()
 
-    # Limpar e recriar condições
-    regra.condicoes.all().delete()
-    campos = request.POST.getlist('condicao_campo[]')
-    operadores = request.POST.getlist('condicao_operador[]')
-    valores = request.POST.getlist('condicao_valor[]')
-
-    for i, campo in enumerate(campos):
-        if campo and i < len(operadores) and i < len(valores) and valores[i]:
-            CondicaoRegra.objects.create(
-                tenant=tenant,
-                regra=regra,
-                campo=campo,
-                operador=operadores[i],
-                valor=valores[i],
-                ordem=i,
-            )
-
-    # Limpar e recriar ações
-    regra.acoes.all().delete()
-    tipos = request.POST.getlist('acao_tipo[]')
-    configs = request.POST.getlist('acao_config[]')
-    delays_ativos = request.POST.getlist('acao_delay_ativo[]')
-    delays_valor = request.POST.getlist('acao_delay_valor[]')
-    delays_unidade = request.POST.getlist('acao_delay_unidade[]')
-
-    for i, tipo in enumerate(tipos):
-        if tipo:
-            delay_ativo = 'on' in delays_ativos if i < len(delays_ativos) else False
-            AcaoRegra.objects.create(
-                tenant=tenant,
-                regra=regra,
-                tipo=tipo,
-                configuracao=configs[i] if i < len(configs) else '',
-                ordem=i,
-                delay_ativo=delay_ativo,
-                delay_valor=int(delays_valor[i]) if i < len(delays_valor) and delays_valor[i] else 0,
-                delay_unidade=delays_unidade[i] if i < len(delays_unidade) else 'minutos',
-            )
+    # Nova automação → redireciona para o editor visual
+    if is_new:
+        return redirect('marketing_automacoes:editor_fluxo', pk=regra.pk)
 
     return redirect('marketing_automacoes:lista')
 
@@ -117,6 +89,8 @@ def _salvar_automacao(request, regra=None):
 @require_POST
 def toggle_automacao(request, pk):
     """Ativar/desativar automação via AJAX."""
+    denied = _check_perm(request, 'marketing.gerenciar_automacoes')
+    if denied: return denied
     regra = get_object_or_404(RegraAutomacao, pk=pk)
     regra.ativa = not regra.ativa
     regra.save(update_fields=['ativa'])
@@ -127,6 +101,8 @@ def toggle_automacao(request, pk):
 @require_POST
 def excluir_automacao(request, pk):
     """Excluir automação."""
+    denied = _check_perm(request, 'marketing.gerenciar_automacoes')
+    if denied: return denied
     regra = get_object_or_404(RegraAutomacao, pk=pk)
     regra.delete()
     return redirect('marketing_automacoes:lista')

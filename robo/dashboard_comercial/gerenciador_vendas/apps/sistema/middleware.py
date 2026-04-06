@@ -16,6 +16,8 @@ _EXEMPT_PATTERNS = [
     re.compile(r"^favicon\.ico$"),
     re.compile(r"^api/"),
     re.compile(r"^integracoes/api/"),
+    re.compile(r"^inbox/api/uazapi/webhook/"),
+    re.compile(r"^inbox/api/webhook/"),
     re.compile(r"^cadastro/?$"),
     re.compile(r"^login/?$"),
     re.compile(r"^logout/?$"),
@@ -111,3 +113,77 @@ class TenantMiddleware(MiddlewareMixin):
     def process_response(self, request, response):
         _thread_locals.tenant = None
         return response
+
+
+# ── Permissão Middleware ───────────────────────────────────────────────────
+
+# Mapeamento: prefixo de URL → (campo de acesso, campo de papel mínimo para config)
+_MODULO_MAP = [
+    ('/crm/', 'acesso_comercial'),
+    ('/comercial/', 'acesso_comercial'),
+    ('/marketing/', 'acesso_marketing'),
+    ('/cs/', 'acesso_cs'),
+    ('/roleta/', 'acesso_cs'),
+    ('/inbox/', 'acesso_inbox'),
+    ('/suporte/', 'acesso_inbox'),
+    ('/configuracoes', 'acesso_configuracoes'),
+]
+
+_PERM_SKIP_PATHS = (
+    '/login/', '/logout/', '/admin/', '/aurora-admin/', '/static/', '/media/',
+    '/api/', '/setup/', '/cadastro/',
+)
+
+
+class PermissaoMiddleware:
+    """
+    Verifica permissões por módulo baseado na URL.
+    Superusers e usuários sem PermissaoUsuario (legado) passam livremente.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Só verifica em requests autenticados
+        if not hasattr(request, 'user') or not request.user.is_authenticated:
+            return self.get_response(request)
+
+        # Superuser passa tudo
+        if request.user.is_superuser:
+            return self.get_response(request)
+
+        # Pular paths isentos
+        if any(request.path.startswith(p) for p in _PERM_SKIP_PATHS):
+            return self.get_response(request)
+
+        # Buscar permissões
+        from apps.sistema.models import PermissaoUsuario
+        perm = PermissaoUsuario.get_for_user(request.user)
+
+        # Se não tem PermissaoUsuario cadastrado, passa (retrocompatibilidade)
+        if perm is None:
+            request.user_funcionalidades = None  # None = tudo liberado
+            return self.get_response(request)
+
+        # Cachear códigos de funcionalidade no request (evita N+1)
+        if perm.perfil:
+            request.user_funcionalidades = set(
+                perm.perfil.funcionalidades.values_list('codigo', flat=True)
+            )
+        else:
+            request.user_funcionalidades = set()
+
+        # Verificar módulo pela URL
+        for prefixo, campo_acesso in _MODULO_MAP:
+            if prefixo in request.path:
+                if not getattr(perm, campo_acesso, False):
+                    from django.http import HttpResponseForbidden
+                    return HttpResponseForbidden(
+                        '<h2>Acesso negado</h2>'
+                        '<p>Você não tem permissão para acessar este módulo. '
+                        'Contate o administrador.</p>'
+                    )
+                break
+
+        return self.get_response(request)
