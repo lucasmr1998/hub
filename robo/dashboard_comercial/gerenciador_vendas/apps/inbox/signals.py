@@ -84,6 +84,60 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
     except Exception as e:
         logger.error("Erro ao disparar automação mensagem_recebida: %s", e)
 
+    # Encaminhar para webhook N8N do tenant (se configurado)
+    try:
+        from apps.integracoes.models import IntegracaoAPI
+        conversa = instance.conversa
+
+        integracao_n8n = IntegracaoAPI.objects.filter(
+            tenant=instance.tenant,
+            tipo='n8n',
+            ativa=True,
+        ).first()
+
+        if integracao_n8n and integracao_n8n.base_url:
+            import requests
+            import threading
+
+            # Payload no formato compativel com Uazapi/N8N
+            payload = {
+                'data': {
+                    'remoteJid': conversa.contato_telefone,
+                    'fromMe': False,
+                    'text': instance.conteudo,
+                    'messageType': {'texto': 'Conversation', 'imagem': 'ImageMessage', 'audio': 'AudioMessage', 'video': 'videoMessage', 'arquivo': 'DocumentMessage'}.get(instance.tipo_conteudo, 'Conversation'),
+                    'mediaUrl': instance.arquivo_url or None,
+                    'id': str(instance.pk),
+                    'source': 'aurora',
+                    'caption': None,
+                    'reactionMessage': None,
+                },
+                'session_id': f'sessionid_{conversa.contato_telefone}',
+                'conversa_id': conversa.pk,
+                'tenant': instance.tenant.nome if instance.tenant else '',
+            }
+
+            if conversa.lead:
+                payload['lead_id'] = conversa.lead.pk
+                payload['lead_nome'] = conversa.lead.nome_razaosocial
+                payload['lead_email'] = conversa.lead.email or ''
+
+            def _enviar():
+                try:
+                    headers = {'Content-Type': 'application/json'}
+                    token = integracao_n8n.access_token or ''
+                    if token:
+                        headers['Authorization'] = f'Bearer {token}'
+                    resp = requests.post(integracao_n8n.base_url, json=payload, headers=headers, timeout=10)
+                    logger.info("Mensagem encaminhada para N8N: tenant=%s, status=%s", instance.tenant, resp.status_code)
+                except Exception as ex:
+                    logger.error("Erro ao encaminhar para N8N: %s", ex)
+
+            threading.Thread(target=_enviar, daemon=True).start()
+
+    except Exception as e:
+        logger.error("Erro ao encaminhar para N8N: %s", e)
+
     # Disparar fluxo de atendimento por canal (se houver fluxo ativo)
     try:
         conversa = instance.conversa

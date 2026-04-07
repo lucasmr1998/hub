@@ -6,6 +6,13 @@
 - **NUNCA rodar comandos que afetem o banco de producao.** Sempre usar `--settings=gerenciador_vendas.settings_local` (SQLite local).
 - Isso inclui: `migrate`, `makemigrations`, `createsuperuser`, `flush`, `loaddata`, `dumpdata`, `dbshell`, ou qualquer script que conecte ao PostgreSQL de producao.
 
+### Multi-Tenancy (CRITICO)
+- **TODA query deve filtrar por tenant.** Nunca usar `.objects.all()` em views sem filtro de tenant.
+- Models com `TenantMixin` usam `TenantManager` que filtra automaticamente. Models sem `TenantMixin` (como `IntegracaoAPI`) devem ser filtrados manualmente: `.filter(tenant=request.tenant)`.
+- **Nunca expor dados de um tenant para outro.** Isso inclui: views, APIs, templates, selects, admin.
+- Ao criar qualquer view, API ou query: **sempre verificar se o tenant esta sendo filtrado**.
+- Ao criar models novos: **sempre usar TenantMixin** ou adicionar FK tenant com filtro manual.
+
 ### Escopo de Edicao
 - **`robo/` liberado para edicao.** Estrutura modular em `apps/` e a fonte da verdade.
 - **NAO editar** o projeto `megaroleta/`. Apenas leitura.

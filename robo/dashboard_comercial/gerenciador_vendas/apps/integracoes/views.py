@@ -246,10 +246,12 @@ def api_clientes_hubsoft(request):
                     'count': item['total'],
                 }
 
-        total_clientes = ClienteHubsoft.objects.count()
-        total_ativos = ClienteHubsoft.objects.filter(ativo=True).count()
-        total_servicos = ServicoClienteHubsoft.objects.count()
-        total_com_alteracao = ClienteHubsoft.objects.filter(houve_alteracao=True).count()
+        # Filtrar por leads do tenant (ClienteHubsoft nao tem tenant FK)
+        leads_tenant = LeadProspecto.objects.values_list('id', flat=True)
+        total_clientes = ClienteHubsoft.objects.filter(lead_id__in=leads_tenant).count()
+        total_ativos = ClienteHubsoft.objects.filter(lead_id__in=leads_tenant, ativo=True).count()
+        total_servicos = ServicoClienteHubsoft.objects.filter(cliente__lead_id__in=leads_tenant).count()
+        total_com_alteracao = ClienteHubsoft.objects.filter(lead_id__in=leads_tenant, houve_alteracao=True).count()
 
         clientes_data = [_cliente_hubsoft_para_dict(c) for c in clientes]
 
@@ -286,7 +288,7 @@ TIPO_INFO = {
 @login_required
 def integracoes_view(request):
     """Página de gerenciamento de integrações."""
-    integracoes = IntegracaoAPI.objects.all().order_by('-ativa', 'nome')
+    integracoes = IntegracaoAPI.objects.filter(tenant=request.tenant).order_by('-ativa', 'nome')
 
     for integ in integracoes:
         info = TIPO_INFO.get(integ.tipo, TIPO_INFO['outro'])
@@ -325,6 +327,7 @@ def api_integracao_criar(request):
             return JsonResponse({'error': 'Nome e URL são obrigatórios'}, status=400)
 
         integ = IntegracaoAPI.objects.create(
+            tenant=request.tenant,
             nome=nome,
             tipo=tipo,
             base_url=base_url,
@@ -346,7 +349,7 @@ def api_integracao_criar(request):
 def api_integracao_editar(request, pk):
     """Editar integração existente."""
     try:
-        integ = IntegracaoAPI.objects.get(pk=pk)
+        integ = IntegracaoAPI.objects.get(pk=pk, tenant=request.tenant)
         data = json.loads(request.body)
 
         if 'nome' in data:
@@ -383,7 +386,7 @@ def api_integracao_editar(request, pk):
 def api_integracao_excluir(request, pk):
     """Excluir integração."""
     try:
-        integ = IntegracaoAPI.objects.get(pk=pk)
+        integ = IntegracaoAPI.objects.get(pk=pk, tenant=request.tenant)
         nome = integ.nome
         integ.delete()
         return JsonResponse({'success': True, 'message': f'Integração "{nome}" excluída'})
@@ -396,7 +399,7 @@ def api_integracao_excluir(request, pk):
 def api_integracao_toggle(request, pk):
     """Ativar/desativar integração."""
     try:
-        integ = IntegracaoAPI.objects.get(pk=pk)
+        integ = IntegracaoAPI.objects.get(pk=pk, tenant=request.tenant)
         integ.ativa = not integ.ativa
         integ.save(update_fields=['ativa'])
         return JsonResponse({'success': True, 'ativa': integ.ativa})
@@ -411,7 +414,7 @@ def api_integracao_testar(request, pk):
     import requests as http_requests
 
     try:
-        integ = IntegracaoAPI.objects.get(pk=pk)
+        integ = IntegracaoAPI.objects.get(pk=pk, tenant=request.tenant)
 
         if integ.tipo == 'hubsoft':
             from apps.integracoes.services.hubsoft import HubsoftService, HubsoftServiceError
