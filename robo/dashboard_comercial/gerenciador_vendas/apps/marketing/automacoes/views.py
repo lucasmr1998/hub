@@ -128,9 +128,33 @@ def historico_automacao(request, pk):
 def editor_fluxo(request, pk):
     """Editor visual de fluxograma com Drawflow."""
     regra = get_object_or_404(RegraAutomacao, pk=pk)
+
+    # Se nao tem fluxo_json mas tem nodos no banco, montar para reconstruir
+    nodos_db = []
+    conexoes_db = []
+    if not regra.fluxo_json:
+        for nodo in regra.nodos.all().order_by('ordem'):
+            nodos_db.append({
+                'id': nodo.id,
+                'tipo': nodo.tipo,
+                'subtipo': nodo.subtipo,
+                'nome': nodo.subtipo.replace('_', ' ').title() if nodo.subtipo else nodo.get_tipo_display(),
+                'config': nodo.configuracao,
+                'pos_x': nodo.pos_x,
+                'pos_y': nodo.pos_y,
+            })
+        for conn in regra.conexoes.all():
+            conexoes_db.append({
+                'origem': conn.nodo_origem_id,
+                'destino': conn.nodo_destino_id,
+                'tipo_saida': conn.tipo_saida,
+            })
+
     return render(request, 'automacoes/editor_fluxo.html', {
         'regra': regra,
         'fluxo_json': json.dumps(regra.fluxo_json) if regra.fluxo_json else '{}',
+        'nodos_db': json.dumps(nodos_db),
+        'conexoes_db': json.dumps(conexoes_db),
     })
 
 

@@ -179,7 +179,9 @@ def _executar_nodo_e_seguir(regra, nodo, contexto, lead):
     """Executa um nodo e segue conexões de saída recursivamente."""
 
     if nodo.tipo == 'trigger':
-        # Trigger apenas passa para o próximo
+        # Trigger: registrar e passar para o próximo
+        _registrar_log(regra, None, 'sucesso', contexto,
+                       f'Gatilho: {nodo.subtipo}', lead=lead, nodo=nodo)
         for conexao in nodo.saidas.filter(tipo_saida='default'):
             _executar_nodo_e_seguir(regra, conexao.nodo_destino, contexto, lead)
 

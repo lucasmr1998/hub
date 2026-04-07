@@ -76,7 +76,7 @@
         </div>
 
         <!-- Entrada -->
-        <div class="node-section">
+        <div class="node-section collapsed">
             <div class="node-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
                 <span><i class="fas fa-play-circle" style="color:#3b82f6;margin-right:4px;"></i> Entrada</span>
                 <i class="fas fa-chevron-down chevron"></i>
@@ -88,31 +88,22 @@
             </div>
         </div>
 
-        <!-- Questoes -->
-        <div class="node-section">
+        <!-- Interacao -->
+        <div class="node-section collapsed">
             <div class="node-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
-                <span><i class="fas fa-comment-dots" style="color:#0891b2;margin-right:4px;"></i> Questoes</span>
+                <span><i class="fab fa-whatsapp" style="color:#25D366;margin-right:4px;"></i> Interacao</span>
                 <i class="fas fa-chevron-down chevron"></i>
             </div>
             <div class="node-section-items">
-                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="texto" data-nome="Pergunta Texto"><i class="fas fa-comment-dots" style="color:#0891b2;"></i> Pergunta Texto</div>
-                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="numero" data-nome="Pergunta Numero"><i class="fas fa-hashtag" style="color:#0891b2;"></i> Pergunta Numero</div>
-                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="email" data-nome="Pergunta Email"><i class="fas fa-envelope" style="color:#0891b2;"></i> Pergunta Email</div>
-                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="telefone" data-nome="Pergunta Telefone"><i class="fas fa-phone" style="color:#0891b2;"></i> Pergunta Telefone</div>
-                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="cpf_cnpj" data-nome="Pergunta CPF/CNPJ"><i class="fas fa-id-card" style="color:#0891b2;"></i> Pergunta CPF/CNPJ</div>
-                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="cep" data-nome="Pergunta CEP"><i class="fas fa-map-marker-alt" style="color:#0891b2;"></i> Pergunta CEP</div>
-                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="select" data-nome="Selecao Unica"><i class="fas fa-list" style="color:#0891b2;"></i> Selecao Unica</div>
-                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="multiselect" data-nome="Selecao Multipla"><i class="fas fa-check-square" style="color:#0891b2;"></i> Selecao Multipla</div>
-                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="boolean" data-nome="Sim/Nao"><i class="fas fa-toggle-on" style="color:#0891b2;"></i> Sim/Nao</div>
-                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="escala" data-nome="Escala 1-10"><i class="fas fa-sliders-h" style="color:#0891b2;"></i> Escala 1-10</div>
-                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="data" data-nome="Pergunta Data"><i class="fas fa-calendar" style="color:#0891b2;"></i> Pergunta Data</div>
-                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="planos_internet" data-nome="Selecao de Planos"><i class="fas fa-wifi" style="color:#0891b2;"></i> Selecao de Planos</div>
-                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="vencimentos" data-nome="Selecao Vencimentos"><i class="fas fa-calendar-check" style="color:#0891b2;"></i> Selecao Vencimentos</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="texto" data-nome="Texto"><i class="fas fa-comment-dots" style="color:#0891b2;"></i> Texto</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="select" data-nome="Selecao"><i class="fas fa-list" style="color:#0891b2;"></i> Selecao</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="imagem" data-nome="Imagem"><i class="fas fa-image" style="color:#0891b2;"></i> Imagem</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="questao" data-subtipo="pix" data-nome="Pix"><i class="fas fa-qrcode" style="color:#0891b2;"></i> Pix</div>
             </div>
         </div>
 
         <!-- Condicoes -->
-        <div class="node-section">
+        <div class="node-section collapsed">
             <div class="node-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
                 <span><i class="fas fa-code-branch" style="color:#d97706;margin-right:4px;"></i> Condicoes</span>
                 <i class="fas fa-chevron-down chevron"></i>
@@ -124,14 +115,13 @@
         </div>
 
         <!-- Acoes -->
-        <div class="node-section">
+        <div class="node-section collapsed">
             <div class="node-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
                 <span><i class="fas fa-play" style="color:#059669;margin-right:4px;"></i> Acoes</span>
                 <i class="fas fa-chevron-down chevron"></i>
             </div>
             <div class="node-section-items">
-                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="acao" data-subtipo="enviar_whatsapp" data-nome="Enviar WhatsApp"><i class="fab fa-whatsapp" style="color:#25D366;"></i> Enviar WhatsApp</div>
-                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="acao" data-subtipo="enviar_email" data-nome="Enviar E-mail"><i class="fas fa-envelope" style="color:#3b82f6;"></i> Enviar E-mail</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="acao" data-subtipo="criar_oportunidade" data-nome="Criar Oportunidade"><i class="fas fa-funnel-dollar" style="color:#8b5cf6;"></i> Criar Oportunidade</div>
                 <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="acao" data-subtipo="webhook" data-nome="Webhook"><i class="fas fa-plug" style="color:#64748b;"></i> Webhook</div>
                 <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="acao" data-subtipo="criar_tarefa" data-nome="Criar Tarefa"><i class="fas fa-tasks" style="color:#3b82f6;"></i> Criar Tarefa</div>
                 <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="acao" data-subtipo="mover_estagio" data-nome="Mover Estagio"><i class="fas fa-columns" style="color:#8b5cf6;"></i> Mover Estagio</div>
@@ -140,7 +130,7 @@
         </div>
 
         <!-- Controle -->
-        <div class="node-section">
+        <div class="node-section collapsed">
             <div class="node-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
                 <span><i class="fas fa-clock" style="color:#7c3aed;margin-right:4px;"></i> Controle</span>
                 <i class="fas fa-chevron-down chevron"></i>
@@ -179,6 +169,10 @@ editor.start();
 
 let selectedNodeId = null;
 let nodeCounter = 0;
+
+// Integracoes de IA disponiveis
+const integracoesIA = {{ integracoes_ia|safe }};
+const integracoesIAOpts = integracoesIA.map(i => `<option value="${i.id}">${i.nome} (${i.tipo})</option>`).join('');
 
 // ── Drag & Drop ──
 function dragNode(ev) {
@@ -219,6 +213,7 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
     };
 
     const subtipoIcons = {
+        'criar_oportunidade': '<i class="fas fa-funnel-dollar" style="color:#8b5cf6;"></i>',
         'enviar_whatsapp': '<i class="fab fa-whatsapp" style="color:#25D366;"></i>',
         'enviar_email': '<i class="fas fa-envelope" style="color:#3b82f6;"></i>',
         'webhook': '<i class="fas fa-plug" style="color:#64748b;"></i>',
@@ -230,19 +225,25 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
     const icon = subtipoIcons[subtipo] || iconMap[tipo] || '';
 
     let boxContent = '';
-    if (tipo === 'questao') boxContent = '<div class="box">Clique para configurar a pergunta</div>';
+    if (tipo === 'questao') boxContent = `<div class="box"><span class="node-subtipo">${subtipo}</span></div>`;
     else if (tipo === 'condicao') boxContent = '<div class="box">✅ Sim &nbsp;&nbsp; ❌ Nao</div>';
     else if (tipo === 'delay') boxContent = '<div class="box">⏱ Configurar tempo</div>';
-    else if (tipo === 'acao') boxContent = '<div class="box">Clique para configurar</div>';
+    else if (tipo === 'acao') boxContent = `<div class="box">${nome}</div>`;
     else if (tipo === 'finalizacao') boxContent = '<div class="box">Fim do fluxo</div>';
     else boxContent = '<div class="box">Ponto de entrada</div>';
 
     const html = `<div class="title-box">${icon} ${nome}</div>${boxContent}`;
 
+    // Config padrao por subtipo
+    let defaultConfig = {};
+    if (subtipo === 'whatsapp') {
+        defaultConfig = { espera_resposta: false };
+    }
+
     const id = editor.addNode(
         nodeId, inputs, outputs, x, y,
         nodeId,
-        { tipo, subtipo, nome, config: {} },
+        { tipo, subtipo, nome, config: defaultConfig },
         html
     );
 
@@ -276,14 +277,72 @@ function abrirConfig(nodeId, data) {
     let html = '';
 
     if (data.tipo === 'questao') {
+        // Modelos prontos
+        const modelos = [
+            {id:'', label:'Personalizado'},
+            {id:'nome', label:'Nome completo', titulo:'Qual seu nome completo?', salvar_em:'nome_razaosocial', validacao:'texto'},
+            {id:'email', label:'E-mail', titulo:'Qual seu e-mail?', salvar_em:'email', validacao:'email'},
+            {id:'telefone', label:'Telefone', titulo:'Qual seu telefone?', salvar_em:'telefone', validacao:'telefone'},
+            {id:'cpf', label:'CPF/CNPJ', titulo:'Qual seu CPF ou CNPJ?', salvar_em:'cpf_cnpj', validacao:'cpf_cnpj'},
+            {id:'cidade', label:'Cidade', titulo:'Em qual cidade voce mora?', salvar_em:'cidade', validacao:'texto'},
+            {id:'cep', label:'CEP', titulo:'Qual seu CEP?', salvar_em:'cep', validacao:'cep'},
+            {id:'endereco', label:'Endereco', titulo:'Qual seu endereco completo?', salvar_em:'rua', validacao:'texto'},
+            {id:'plano', label:'Plano desejado', titulo:'Qual plano te interessa?', salvar_em:'', validacao:'select'},
+        ];
+        const modeloOpts = modelos.map(m => `<option value="${m.id}" ${config.modelo===m.id?'selected':''}>${m.label}</option>`).join('');
+
+        // Campos do lead para salvar resposta
+        const camposLead = [
+            {id:'', label:'Nao salvar (apenas registro)'},
+            {id:'nome_razaosocial', label:'Nome / Razao Social'},
+            {id:'email', label:'Email'},
+            {id:'telefone', label:'Telefone'},
+            {id:'cpf_cnpj', label:'CPF / CNPJ'},
+            {id:'rg', label:'RG'},
+            {id:'cidade', label:'Cidade'},
+            {id:'estado', label:'Estado'},
+            {id:'cep', label:'CEP'},
+            {id:'rua', label:'Rua'},
+            {id:'numero_residencia', label:'Numero'},
+            {id:'bairro', label:'Bairro'},
+            {id:'ponto_referencia', label:'Ponto de Referencia'},
+            {id:'empresa', label:'Empresa'},
+            {id:'data_nascimento', label:'Data de Nascimento'},
+            {id:'observacoes', label:'Observacoes'},
+        ];
+        const salvarOpts = camposLead.map(c => `<option value="${c.id}" ${config.salvar_em===c.id?'selected':''}>${c.label}</option>`).join('');
+
+        // Validacao por tipo
+        const tiposValidacao = [
+            {id:'texto', label:'Texto livre'},
+            {id:'email', label:'E-mail'},
+            {id:'telefone', label:'Telefone'},
+            {id:'cpf_cnpj', label:'CPF/CNPJ'},
+            {id:'cep', label:'CEP'},
+            {id:'numero', label:'Numero'},
+        ];
+        const validacaoOpts = tiposValidacao.map(v => `<option value="${v.id}" ${config.validacao===v.id?'selected':''}>${v.label}</option>`).join('');
+
+        const subtipo = data.subtipo || 'texto';
+        const isSelect = subtipo === 'select';
+
         html = `
+        <div class="config-group"><label>Modelo Pronto</label><select id="cfg_modelo" onchange="aplicarModelo()">${modeloOpts}</select></div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
         <div class="config-group"><label>Titulo da Pergunta</label><input type="text" id="cfg_titulo" value="${config.titulo||''}" onchange="salvarConfigNodo()"></div>
         <div class="config-group"><label>Descricao / Instrucoes</label><textarea id="cfg_descricao" onchange="salvarConfigNodo()">${config.descricao||''}</textarea></div>
-        <div class="config-group"><label>Opcoes de Resposta (uma por linha)</label><textarea id="cfg_opcoes" rows="4" onchange="salvarConfigNodo()" placeholder="Opcao 1&#10;Opcao 2&#10;Opcao 3">${(config.opcoes_resposta||[]).join('\\n')}</textarea></div>
-        <div class="config-group"><label>Obrigatoria</label><select id="cfg_obrigatoria" onchange="salvarConfigNodo()"><option value="true" ${config.obrigatoria!==false?'selected':''}>Sim</option><option value="false" ${config.obrigatoria===false?'selected':''}>Nao</option></select></div>
+        ${isSelect ? `<div class="config-group"><label>Opcoes (uma por linha)</label><textarea id="cfg_opcoes" rows="4" onchange="salvarConfigNodo()" placeholder="Opcao 1&#10;Opcao 2&#10;Opcao 3">${(config.opcoes_resposta||[]).join('\\n')}</textarea></div>` : ''}
+        <div class="config-group"><label>Validacao</label><select id="cfg_validacao" onchange="salvarConfigNodo()">${validacaoOpts}</select></div>
+        <div class="config-group"><label>Regex (opcional)</label><input type="text" id="cfg_regex" value="${config.regex||''}" onchange="salvarConfigNodo()" placeholder="Ex: ^[A-Za-z ]{3,}$"></div>
+        <div class="config-group"><label>Salvar Resposta Em</label><select id="cfg_salvar_em" onchange="salvarConfigNodo()">${salvarOpts}</select></div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
+        <div class="config-group"><label>Espera Resposta?</label><select id="cfg_espera_resposta" onchange="salvarConfigNodo()"><option value="true" ${config.espera_resposta!==false?'selected':''}>Sim (pausa e aguarda)</option><option value="false" ${config.espera_resposta===false?'selected':''}>Nao (envia e continua)</option></select></div>
         <div class="config-group"><label>Max Tentativas</label><input type="number" id="cfg_max_tent" value="${config.max_tentativas||3}" min="1" max="10" onchange="salvarConfigNodo()"></div>
         <div class="config-group"><label>Mensagem de Erro</label><input type="text" id="cfg_msg_erro" value="${config.mensagem_erro||''}" onchange="salvarConfigNodo()" placeholder="Resposta invalida. Tente novamente."></div>
-        <div class="config-group"><label>Webhook Validacao (URL)</label><input type="url" id="cfg_webhook_val" value="${config.webhook_validacao||''}" onchange="salvarConfigNodo()"></div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
+        <div class="config-group"><label>Webhook de Validacao (URL)</label><input type="url" id="cfg_webhook_val" value="${config.webhook_validacao||''}" onchange="salvarConfigNodo()" placeholder="https://n8n.exemplo.com/webhook/..."></div>
+        <div class="config-group"><label>Prompt de Validacao</label><textarea id="cfg_prompt_val" rows="3" onchange="salvarConfigNodo()" placeholder="Verifique se a resposta contem nome e sobrenome...">${config.prompt_validacao||''}</textarea></div>
+        <div class="config-group"><label>Integracao IA</label><select id="cfg_integracao_ia" onchange="salvarConfigNodo()"><option value="">Nenhuma (usar webhook)</option>${integracoesIAOpts}</select></div>
         `;
     } else if (data.tipo === 'condicao') {
         html = `
@@ -328,10 +387,14 @@ function abrirConfig(nodeId, data) {
             extra = `<div class="config-group"><label>Titulo da Tarefa</label><input type="text" id="cfg_titulo_tarefa" value="${config.titulo||''}" onchange="salvarConfigNodo()"></div>`;
         } else if (data.subtipo === 'mover_estagio') {
             extra = `<div class="config-group"><label>Slug do Estagio</label><input type="text" id="cfg_estagio" value="${config.estagio||''}" onchange="salvarConfigNodo()"></div>`;
+        } else if (data.subtipo === 'criar_oportunidade') {
+            extra = `<div class="config-group"><label>Titulo da Oportunidade</label><input type="text" id="cfg_titulo_oport" value="${config.titulo||'{{lead_nome}}'}" onchange="salvarConfigNodo()" placeholder="{{lead_nome}}"></div>
+                     <div class="config-group"><label>Estagio Inicial (slug)</label><input type="text" id="cfg_estagio_oport" value="${config.estagio||''}" onchange="salvarConfigNodo()" placeholder="Vazio = primeiro do pipeline"></div>`;
         }
+        const needsTemplate = !['criar_oportunidade', 'mover_estagio'].includes(data.subtipo);
         html = `
-        <div class="config-group"><label>Template / Mensagem</label><textarea id="cfg_template" rows="4" onchange="salvarConfigNodo()" placeholder="Ola {{lead_nome}}, ...">${config.template||''}</textarea></div>
-        <p style="font-size:11px;color:var(--text-muted);margin:0 0 12px;">Variaveis: {{lead_nome}}, {{lead_telefone}}, {{lead_email}}, {{ultima_resposta}}</p>
+        ${needsTemplate ? `<div class="config-group"><label>Template / Mensagem</label><textarea id="cfg_template" rows="4" onchange="salvarConfigNodo()" placeholder="Ola {{lead_nome}}, ...">${config.template||''}</textarea></div>
+        <p style="font-size:11px;color:var(--text-muted);margin:0 0 12px;">Variaveis: {{lead_nome}}, {{lead_telefone}}, {{lead_email}}, {{ultima_resposta}}</p>` : ''}
         ${extra}
         `;
     } else if (data.tipo === 'delay') {
@@ -385,14 +448,22 @@ function salvarConfigNodo() {
     const config = data.config || {};
 
     if (data.tipo === 'questao') {
+        config.modelo = document.getElementById('cfg_modelo')?.value || '';
         config.titulo = document.getElementById('cfg_titulo')?.value || '';
         config.descricao = document.getElementById('cfg_descricao')?.value || '';
-        const opcoesRaw = document.getElementById('cfg_opcoes')?.value || '';
-        config.opcoes_resposta = opcoesRaw.split('\n').map(o => o.trim()).filter(o => o);
-        config.obrigatoria = document.getElementById('cfg_obrigatoria')?.value === 'true';
+        const opcoesEl = document.getElementById('cfg_opcoes');
+        if (opcoesEl) {
+            config.opcoes_resposta = opcoesEl.value.split('\n').map(o => o.trim()).filter(o => o);
+        }
+        config.validacao = document.getElementById('cfg_validacao')?.value || 'texto';
+        config.regex = document.getElementById('cfg_regex')?.value || '';
+        config.salvar_em = document.getElementById('cfg_salvar_em')?.value || '';
+        config.espera_resposta = document.getElementById('cfg_espera_resposta')?.value === 'true';
         config.max_tentativas = parseInt(document.getElementById('cfg_max_tent')?.value) || 3;
         config.mensagem_erro = document.getElementById('cfg_msg_erro')?.value || '';
         config.webhook_validacao = document.getElementById('cfg_webhook_val')?.value || '';
+        config.prompt_validacao = document.getElementById('cfg_prompt_val')?.value || '';
+        config.integracao_ia_id = document.getElementById('cfg_integracao_ia')?.value || '';
     } else if (data.tipo === 'condicao') {
         config.campo = document.getElementById('cfg_campo')?.value || '';
         config.operador = document.getElementById('cfg_operador')?.value || 'igual';
@@ -408,6 +479,9 @@ function salvarConfigNodo() {
             config.titulo = document.getElementById('cfg_titulo_tarefa')?.value || '';
         } else if (data.subtipo === 'mover_estagio') {
             config.estagio = document.getElementById('cfg_estagio')?.value || '';
+        } else if (data.subtipo === 'criar_oportunidade') {
+            config.titulo = document.getElementById('cfg_titulo_oport')?.value || '{{lead_nome}}';
+            config.estagio = document.getElementById('cfg_estagio_oport')?.value || '';
         }
     } else if (data.tipo === 'delay') {
         config.valor = parseInt(document.getElementById('cfg_delay_valor')?.value) || 30;
@@ -434,6 +508,31 @@ function deletarNodo() {
         editor.removeNodeId(`node-${selectedNodeId}`);
         fecharConfig();
     }
+}
+
+// ── Aplicar modelo pronto ──
+function aplicarModelo() {
+    const modelos = {
+        'nome': {titulo:'Qual seu nome completo?', salvar_em:'nome_razaosocial', validacao:'texto'},
+        'email': {titulo:'Qual seu e-mail?', salvar_em:'email', validacao:'email'},
+        'telefone': {titulo:'Qual seu telefone?', salvar_em:'telefone', validacao:'telefone'},
+        'cpf': {titulo:'Qual seu CPF ou CNPJ?', salvar_em:'cpf_cnpj', validacao:'cpf_cnpj'},
+        'cidade': {titulo:'Em qual cidade voce mora?', salvar_em:'cidade', validacao:'texto'},
+        'cep': {titulo:'Qual seu CEP?', salvar_em:'cep', validacao:'cep'},
+        'endereco': {titulo:'Qual seu endereco completo?', salvar_em:'rua', validacao:'texto'},
+        'plano': {titulo:'Qual plano te interessa?', salvar_em:'', validacao:'select'},
+    };
+    const id = document.getElementById('cfg_modelo')?.value;
+    if (!id || !modelos[id]) return;
+    const m = modelos[id];
+    document.getElementById('cfg_titulo').value = m.titulo;
+    if (document.getElementById('cfg_salvar_em')) {
+        document.getElementById('cfg_salvar_em').value = m.salvar_em;
+    }
+    if (document.getElementById('cfg_validacao')) {
+        document.getElementById('cfg_validacao').value = m.validacao;
+    }
+    salvarConfigNodo();
 }
 
 // ── Salvar fluxo ──

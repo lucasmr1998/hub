@@ -436,11 +436,20 @@ def editor_fluxo_view(request, fluxo_id):
                 'tipo_saida': conn.tipo_saida,
             })
 
+    # Integracoes de IA disponiveis
+    from apps.integracoes.models import IntegracaoAPI
+    integracoes_ia = IntegracaoAPI.objects.filter(
+        tipo__in=['openai', 'anthropic', 'groq', 'google_ai'],
+        ativa=True,
+    ).values_list('id', 'nome', 'tipo')
+    integracoes_ia_list = [{'id': i[0], 'nome': i[1], 'tipo': i[2]} for i in integracoes_ia]
+
     context = {
         'fluxo': fluxo,
         'fluxo_json': json.dumps(fluxo.fluxo_json) if fluxo.fluxo_json else '{}',
         'nodos_db': json.dumps(nodos_db),
         'conexoes_db': json.dumps(conexoes_db),
+        'integracoes_ia': json.dumps(integracoes_ia_list),
     }
     return render(request, 'comercial/atendimento/editor_fluxo.html', context)
 

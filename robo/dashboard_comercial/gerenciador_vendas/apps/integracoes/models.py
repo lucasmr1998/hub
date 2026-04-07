@@ -16,6 +16,10 @@ class IntegracaoAPI(models.Model):
         ('meta_cloud', 'Meta Cloud API (WhatsApp)'),
         ('twilio_whatsapp', 'Twilio (WhatsApp)'),
         ('n8n', 'N8N (Automação)'),
+        ('openai', 'OpenAI'),
+        ('anthropic', 'Anthropic (Claude)'),
+        ('groq', 'Groq'),
+        ('google_ai', 'Google AI (Gemini)'),
         ('outro', 'Outro'),
     ]
 

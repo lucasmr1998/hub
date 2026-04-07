@@ -8,17 +8,20 @@
 
 ## Contexto
 
-O modulo de Fluxos e o motor de fluxos conversacionais (bot) da AuroraISP. Permite criar questionarios inteligentes que guiam o lead por etapas de qualificacao, venda, suporte ou onboarding. Cada fluxo e composto por questoes ordenadas com validacao, roteamento condicional e opcoes dinamicas.
+O modulo de Fluxos e o motor de fluxos conversacionais (bot) da AuroraISP. Suporta dois modos:
 
-A **execucao** dos fluxos (sessoes de atendimento, respostas, tentativas, integracao N8N) esta documentada em `14-MODULO_ATENDIMENTO.md`.
+- **Legado (questoes lineares):** QuestaoFluxo com perguntas sequenciais e roteamento por indice
+- **Visual (node-based):** Editor Drawflow com nodos de diferentes tipos conectados por arestas
+
+O campo `FluxoAtendimento.modo_fluxo` define qual engine usar. Os dois modos coexistem.
+
+A **execucao** dos fluxos esta documentada em `14-MODULO_ATENDIMENTO.md`.
 
 ---
 
-## Models
+## FluxoAtendimento
 
-### FluxoAtendimento
-
-Define um fluxo/bot reutilizavel.
+Define um fluxo reutilizavel.
 
 | Campo | Tipo | Descricao |
 |-------|------|-----------|
@@ -26,178 +29,209 @@ Define um fluxo/bot reutilizavel.
 | descricao | TextField | Descricao detalhada |
 | tipo_fluxo | CharField(20) | qualificacao, vendas, suporte, onboarding, pesquisa, customizado |
 | status | CharField(20) | ativo, inativo, rascunho, teste |
-| max_tentativas | PositiveInteger | Maximo de tentativas para completar (padrao: 3) |
+| canal | CharField(20) | Canal que ativa o fluxo: qualquer, whatsapp, site, facebook, instagram, google, telefone, email, indicacao, manual |
+| max_tentativas | PositiveInteger | Maximo de tentativas (padrao: 3) |
 | tempo_limite_minutos | PositiveInteger | Tempo limite em minutos |
 | permite_pular_questoes | Boolean | Permite pular questoes opcionais |
+| modo_fluxo | Boolean | False = legado, True = visual (node-based) |
+| fluxo_json | JSONField | Estado do editor Drawflow para re-import |
 | criado_por | CharField(100) | Usuario criador |
 | ativo | Boolean | Ativo/inativo |
 
 **Tabela:** `fluxos_atendimento`
 
-**Metodos:**
-- `get_questoes_ordenadas()` — questoes ativas ordenadas por indice
-- `get_total_questoes()` — contagem de questoes ativas
-- `pode_ser_usado()` — verifica se esta ativo e tem questoes
-- `get_estatisticas()` — total de atendimentos, taxa de completacao, tempo medio
-
 ---
 
-### QuestaoFluxo
+## Sistema Visual (Node-Based)
 
-Questao individual dentro de um fluxo. Suporta 20+ tipos e validacao multicamada.
+### NodoFluxoAtendimento
 
-**Tabela:** `questoes_fluxo`
-**Constraint unico:** (fluxo, indice)
+No do fluxograma visual.
 
-#### Campos basicos
+| Campo | Tipo | Descricao |
+|-------|------|-----------|
+| fluxo | FK → FluxoAtendimento | Fluxo pai (cascade) |
+| tipo | CharField(20) | entrada, questao, condicao, acao, delay, finalizacao |
+| subtipo | CharField(50) | Ex: texto, select, campo_check, webhook, criar_oportunidade |
+| configuracao | JSONField | Config especifica do no |
+| pos_x, pos_y | IntegerField | Posicao no canvas |
+| ordem | PositiveIntegerField | Ordem |
+
+**Tabela:** `atendimento_nodofluxo`
+
+### ConexaoNodoAtendimento
+
+Aresta dirigida entre dois nodos.
 
 | Campo | Tipo | Descricao |
 |-------|------|-----------|
 | fluxo | FK → FluxoAtendimento | Fluxo pai |
-| indice | PositiveInteger | Ordem no fluxo |
-| titulo | CharField(255) | Texto da questao |
-| descricao | TextField | Instrucoes adicionais |
-| tipo_questao | CharField(20) | Tipo (ver tabela abaixo) |
-| tipo_validacao | CharField(25) | obrigatoria, opcional, condicional, ia_assistida, validacao_customizada |
-| opcoes_resposta | JSONField | Opcoes para select/multiselect |
-| resposta_padrao | TextField | Resposta padrao/placeholder |
-| ativo | Boolean | Se a questao esta ativa |
+| nodo_origem | FK → NodoFluxoAtendimento | Origem |
+| nodo_destino | FK → NodoFluxoAtendimento | Destino |
+| tipo_saida | CharField(10) | default, true, false |
 
-#### Tipos de questao
-
-| Tipo | Descricao |
-|------|-----------|
-| texto | Texto livre |
-| numero | Numerico inteiro |
-| email | E-mail com validacao |
-| telefone | Telefone com validacao |
-| cpf_cnpj | CPF ou CNPJ com validacao |
-| cep | CEP com validacao |
-| endereco | Endereco completo |
-| select | Lista de opcoes (escolha unica) |
-| multiselect | Lista de opcoes (multipla escolha) |
-| data | Data |
-| hora | Hora |
-| data_hora | Data e hora |
-| boolean | Sim/Nao |
-| escala | Escala numerica (ex: 1 a 10) |
-| arquivo | Upload de arquivo |
-| planos_internet | Selecao dinamica de planos (PlanoInternet) |
-| vencimentos | Selecao dinamica de vencimentos (OpcaoVencimento) |
-| opcoes_dinamicas | Opcoes carregadas de fonte externa |
-| ia_validacao | Validacao via IA |
-| condicional_complexa | Logica condicional avancada |
-
-#### Validacao
-
-| Campo | Descricao |
-|-------|-----------|
-| regex_validacao | Regex para validacao customizada |
-| tamanho_minimo / tamanho_maximo | Limites de caracteres |
-| valor_minimo / valor_maximo | Limites numericos |
-| prompt_ia_validacao | Prompt para validacao IA (template com `{{resposta}}`) |
-| criterios_ia | Criterios com pesos: `{criterio: peso}` |
-| webhook_n8n_validacao | URL do webhook N8N para validacao externa |
-| webhook_n8n_pos_resposta | URL chamada apos resposta valida |
-
-#### Roteamento inteligente
-
-| Campo | Descricao |
-|-------|-----------|
-| questao_dependencia | Questao que precisa ser respondida antes |
-| valor_dependencia | Valor exigido na questao dependente |
-| roteamento_respostas | Mapa `{valor_resposta: questao_id}` para routing condicional |
-| questao_padrao_proxima | Proxima questao padrao (fallback do roteamento) |
-
-Logica de roteamento (em ordem de prioridade):
-1. Rota especifica por valor da resposta (`roteamento_respostas`)
-2. Acoes especiais (ver_mais_planos, ver_mais_vencimentos)
-3. Questao padrao proxima (`questao_padrao_proxima`)
-4. Proxima sequencial por indice
-5. Fim do fluxo
-
-#### Estrategia de erro
-
-| Campo | Descricao |
-|-------|-----------|
-| max_tentativas | Maximo de tentativas antes de aplicar estrategia (padrao: 3) |
-| estrategia_erro | repetir, pular, redirecionar, finalizar, escalar_humano |
-| questao_erro_redirecionamento | Questao destino em caso de redirecionamento |
-| mensagem_erro_padrao | Mensagem de erro customizada |
-| mensagem_tentativa_esgotada | Mensagem quando esgota tentativas |
-
-| Estrategia | Comportamento |
-|------------|--------------|
-| repetir | Repete a questao com mensagem de erro |
-| pular | Avanca para a proxima questao |
-| redirecionar | Envia para uma questao especifica |
-| finalizar | Encerra o atendimento |
-| escalar_humano | Transfere para atendente humano |
-
-#### Opcoes dinamicas
-
-| Campo | Descricao |
-|-------|-----------|
-| opcoes_dinamicas_fonte | planos_internet, opcoes_vencimento, api_externa, query_customizada |
-| query_opcoes_dinamicas | SQL ou config para buscar opcoes |
-| variaveis_contexto | Variaveis para template: `{nome: valor}` |
-| template_questao | Template com variaveis: "Ola {{nome}}, qual plano?" |
-
-#### Comportamento
-
-| Campo | Descricao |
-|-------|-----------|
-| permite_voltar | Permite voltar para esta questao |
-| permite_editar | Permite editar resposta apos enviar |
-| ordem_exibicao | Ordem de exibicao (visual) |
+**Tabela:** `atendimento_conexaonodo`
+**Constraint:** unique (nodo_origem, nodo_destino, tipo_saida)
 
 ---
 
-## Exemplo de roteamento
+## Tipos de Nodos
 
-```
-Questao 1: "Qual plano voce prefere?"
-  tipo: select
-  opcoes_dinamicas_fonte: planos_internet
-  roteamento_respostas: {"1": 3, "2": 3, "3": 4}
+### Entrada
 
-  Se resposta = plano 1 ou 2 → vai para questao 3
-  Se resposta = plano 3 → vai para questao 4
-  Se resposta = "ver_mais_planos" → mostra todos os planos
-  Default → proxima sequencial (questao 2)
-```
+Ponto de inicio do fluxo. 0 inputs, 1 output.
+
+**Config:** `canal` (canal que ativa o fluxo)
+
+### Questao (Interacao)
+
+Envia mensagem ao lead. Pode esperar resposta ou nao.
+
+**Subtipos na sidebar:** Texto, Selecao, Imagem, Pix
+
+**Config:**
+
+| Campo | Descricao |
+|-------|-----------|
+| modelo | Modelo pronto: nome, email, telefone, cpf, cidade, cep, endereco, plano |
+| titulo | Texto da pergunta |
+| descricao | Instrucoes adicionais |
+| opcoes_resposta | Lista de opcoes (para selecao) |
+| espera_resposta | true = pausa e aguarda, false = envia e continua |
+| validacao | Tipo: texto, email, telefone, cpf_cnpj, cep, numero |
+| regex | Regex customizado de validacao |
+| salvar_em | Campo do lead onde salvar a resposta (nome_razaosocial, email, telefone, cpf_cnpj, cidade, cep, rua, etc.) |
+| max_tentativas | Maximo de tentativas (padrao: 3) |
+| mensagem_erro | Mensagem quando resposta invalida |
+| webhook_validacao | URL do webhook para validacao externa |
+| prompt_validacao | Prompt enviado ao webhook/IA junto com a resposta |
+| integracao_ia_id | ID da integracao de IA para validacao (OpenAI, Claude, Groq, Gemini) |
+
+**Cascata de validacao:**
+1. Resposta vazia (se espera_resposta)
+2. Opcoes (para selecao)
+3. Tipo (email, telefone, CPF, CEP, numero)
+4. Regex
+5. Integracao IA (chama provider configurado)
+6. Webhook externo
+
+**Modelos prontos:** Ao selecionar um modelo (ex: "Nome"), preenche automaticamente titulo, validacao e campo de salvamento.
+
+### Condicao
+
+Avalia uma condicao e segue branch true ou false. 1 input, 2 outputs.
+
+**Subtipos:** campo_check, resposta_check
+
+**Config:**
+
+| Campo | Descricao |
+|-------|-----------|
+| campo | Campo a verificar (lead.origem, lead.score, lead.cidade, ultima_resposta, etc.) |
+| operador | igual, diferente, contem, maior, menor, maior_igual, menor_igual |
+| valor | Valor para comparacao |
+
+### Acao
+
+Executa algo e continua. 1 input, 1 output.
+
+**Subtipos:**
+
+| Subtipo | Descricao |
+|---------|-----------|
+| criar_oportunidade | Cria oportunidade no CRM (pipeline padrao, estagio inicial) |
+| webhook | Chama URL externa (GET/POST) |
+| criar_tarefa | Cria tarefa no CRM |
+| mover_estagio | Move oportunidade de estagio |
+| notificacao_sistema | Cria notificacao no sistema |
+
+### Delay
+
+Pausa a execucao por um tempo. 1 input, 1 output.
+
+**Config:** `valor` (numero) + `unidade` (minutos, horas, dias)
+
+### Finalizacao
+
+Finaliza o atendimento. 1 input, 0 outputs.
+
+**Subtipos:** finalizar (simples), calcular_score (com score 1-10)
+
+**Config:** `mensagem_final`, `score` (para calcular_score)
 
 ---
 
-## Endpoints — Configuracao
+## Editor Visual
+
+**URL:** `/configuracoes/fluxos/<id>/editor/`
+**Biblioteca:** Drawflow v0.0.59 (CDN)
+**Layout:** Sidebar (paleta de nos) + Canvas (Drawflow) + Config Panel (direita)
+
+**Sidebar (todos colapsados por padrao):**
+- Entrada: Inicio do Fluxo
+- Interacao (icone WhatsApp): Texto, Selecao, Imagem, Pix
+- Condicoes: Verificar Campo, Verificar Resposta
+- Acoes: Criar Oportunidade, Webhook, Criar Tarefa, Mover Estagio, Notificacao
+- Controle: Atraso, Finalizar Fluxo, Finalizar com Score
+
+**Salvar:** POST para `/api/fluxos/<id>/salvar-fluxo/` com `{drawflow_state, nodos[], conexoes[]}`
+
+**Carregar:** Importa de `fluxo_json` ou reconstroi do banco se nao houver JSON salvo.
+
+---
+
+## Integracao com IA
+
+A validacao por IA usa o modulo de integracoes (`apps/integracoes/`). O provedor configura uma integracao do tipo OpenAI, Anthropic, Groq ou Google AI com API key e modelo.
+
+**Providers suportados:**
+
+| Provider | Tipo | Modelo padrao |
+|----------|------|---------------|
+| OpenAI | openai | gpt-4o-mini |
+| Anthropic | anthropic | claude-haiku-4-5-20251001 |
+| Groq | groq | llama-3.1-8b-instant |
+| Google AI | google_ai | gemini-2.0-flash |
+
+**Fluxo:** Resposta do lead + prompt de validacao → API do provider → JSON `{valido, mensagem}` → aceita ou rejeita
+
+---
+
+## Canal de Ativacao
+
+Cada fluxo tem um `canal` que define quando e ativado automaticamente:
+
+1. Mensagem chega no Inbox (ex: WhatsApp)
+2. Signal `on_mensagem_recebida` detecta o canal
+3. Engine busca fluxo ativo para o canal (`buscar_fluxo_por_canal`)
+4. Prioridade: fluxo do canal exato → fluxo "qualquer" → nenhum
+5. Cria atendimento e inicia o fluxo
+6. Pergunta do bot e enviada de volta no Inbox como mensagem "Aurora"
+
+---
+
+## Endpoints
 
 ### Paginas (HTML)
 
 | URL | Descricao |
 |-----|-----------|
-| `/configuracoes/fluxos/` | Gerenciamento de fluxos |
-| `/configuracoes/questoes/` | Gerenciamento de questoes |
-| `/configuracoes/questoes/<fluxo_id>/` | Questoes de um fluxo especifico |
+| `/configuracoes/fluxos/` | Gerenciamento de fluxos (CRUD + botoes Editor Visual, Ativos, Questoes) |
+| `/configuracoes/fluxos/<id>/editor/` | Editor visual Drawflow |
+| `/configuracoes/sessoes/` | Acompanhamento de sessoes ativas |
+| `/configuracoes/sessoes/<id>/` | Detalhe da sessao com logs |
+| `/configuracoes/sessoes/<id>/fluxo/` | Visualizacao do fluxo ao vivo (nodo atual pulsando) |
+| `/configuracoes/questoes/` | Gerenciamento de questoes (legado) |
 
-### APIs de Fluxos
+### APIs
 
 | Metodo | URL | Descricao |
 |--------|-----|-----------|
-| GET | `/api/fluxos/` | Listar fluxos (paginado, filtravel) |
+| GET | `/api/fluxos/` | Listar fluxos |
 | POST | `/api/fluxos/criar/` | Criar fluxo |
 | PUT | `/api/fluxos/<id>/atualizar/` | Atualizar fluxo |
-| DELETE | `/api/fluxos/<id>/deletar/` | Deletar fluxo (bloqueia se tem atendimentos) |
-
-### APIs de Questoes
-
-| Metodo | URL | Descricao |
-|--------|-----|-----------|
-| GET | `/api/questoes/` | Listar questoes (filtra por fluxo_id) |
-| POST | `/api/questoes/criar/` | Criar questao |
-| PUT | `/api/questoes/<id>/atualizar/` | Atualizar questao |
-| DELETE | `/api/questoes/<id>/deletar/` | Deletar questao (bloqueia se tem respostas) |
-| GET/POST/PUT/DELETE | `/api/configuracoes/questoes/` | CRUD unificado para gerencia |
-| POST | `/api/configuracoes/questoes/duplicar/` | Duplicar questao |
+| DELETE | `/api/fluxos/<id>/deletar/` | Deletar fluxo |
+| POST | `/api/fluxos/<id>/salvar-fluxo/` | Salvar editor visual |
 
 ---
 
@@ -205,15 +239,16 @@ Questao 1: "Qual plano voce prefere?"
 
 ```
 FluxoAtendimento
-├── questoes → QuestaoFluxo (1:N, cascade)
-└── atendimentos → AtendimentoFluxo (1:N, cascade)
+├── questoes → QuestaoFluxo (1:N, legado)
+├── nodos → NodoFluxoAtendimento (1:N, visual)
+├── conexoes → ConexaoNodoAtendimento (1:N, visual)
+└── atendimentos → AtendimentoFluxo (1:N)
 
-QuestaoFluxo
-├── questao_dependencia → QuestaoFluxo (self-ref, opcional)
-├── questao_padrao_proxima → QuestaoFluxo (self-ref, opcional)
-├── questao_erro_redirecionamento → QuestaoFluxo (self-ref, opcional)
-├── respostas → RespostaQuestao (1:N)
-└── tentativas → TentativaResposta (1:N)
+NodoFluxoAtendimento
+├── saidas → ConexaoNodoAtendimento (1:N)
+├── entradas → ConexaoNodoAtendimento (1:N)
+├── logs → LogFluxoAtendimento (1:N)
+└── execucoes_pendentes → ExecucaoFluxoAtendimento (1:N)
 ```
 
 ---
@@ -222,8 +257,12 @@ QuestaoFluxo
 
 | Arquivo | Descricao |
 |---------|-----------|
-| `apps/comercial/atendimento/models.py` | Models FluxoAtendimento e QuestaoFluxo |
-| `apps/comercial/atendimento/views.py` | Views HTML de configuracao |
-| `apps/comercial/atendimento/views_api.py` | APIs de CRUD de fluxos e questoes |
-| `apps/comercial/atendimento/admin.py` | Admin com inlines e acoes |
-| Templates: `fluxos.html`, `questoes.html` | Interface de configuracao |
+| `models.py` | FluxoAtendimento, NodoFluxoAtendimento, ConexaoNodoAtendimento, ExecucaoFluxoAtendimento, LogFluxoAtendimento + legado |
+| `engine.py` | Engine visual: traversal, validacao (tipo/regex/IA/webhook), acoes, delays |
+| `views.py` | Editor visual, salvar fluxo, sessoes, detalhe, fluxo ao vivo |
+| `views_api.py` | APIs CRUD, N8N dual-mode |
+| `templates/editor_fluxo.html` | Editor Drawflow |
+| `templates/sessoes.html` | Lista de sessoes |
+| `templates/sessao_detalhe.html` | Detalhe com logs |
+| `templates/sessao_fluxo_visual.html` | Fluxo ao vivo read-only |
+| `templates/fluxos.html` | CRUD de fluxos |

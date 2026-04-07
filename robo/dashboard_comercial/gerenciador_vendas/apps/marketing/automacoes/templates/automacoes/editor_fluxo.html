@@ -489,10 +489,12 @@ function salvarFluxo() {
 
 // ── Carregar fluxo existente ──
 const fluxoSalvo = {{ fluxo_json|safe }};
+const nodosDB = {{ nodos_db|safe }};
+const conexoesDB = {{ conexoes_db|safe }};
+
 if (fluxoSalvo && fluxoSalvo.drawflow) {
     try {
         editor.import(fluxoSalvo);
-        // Restaurar data-tipo nos nós para CSS
         setTimeout(() => {
             for (const [moduleKey, moduleData] of Object.entries(fluxoSalvo.drawflow)) {
                 for (const [nodeId, node] of Object.entries(moduleData.data)) {
@@ -506,6 +508,27 @@ if (fluxoSalvo && fluxoSalvo.drawflow) {
     } catch(e) {
         console.warn('Erro ao importar fluxo:', e);
     }
+} else if (nodosDB && nodosDB.length > 0) {
+    // Reconstruir do banco (nodos criados via script/API)
+    const idMap = {};
+    for (const nodo of nodosDB) {
+        const drawflowId = addNodeToEditor(nodo.tipo, nodo.subtipo, nodo.nome, nodo.pos_x, nodo.pos_y);
+        idMap[nodo.id] = drawflowId;
+        const nodeData = editor.getNodeFromId(drawflowId);
+        nodeData.data.config = nodo.config || {};
+        editor.updateNodeDataFromId(drawflowId, nodeData.data);
+    }
+    setTimeout(() => {
+        for (const conn of conexoesDB) {
+            const origemId = idMap[conn.origem];
+            const destinoId = idMap[conn.destino];
+            if (origemId && destinoId) {
+                let outputClass = 'output_1';
+                if (conn.tipo_saida === 'false') outputClass = 'output_2';
+                try { editor.addConnection(origemId, destinoId, outputClass, 'input_1'); } catch(e) {}
+            }
+        }
+    }, 200);
 }
 
 // ── Delete com tecla ──

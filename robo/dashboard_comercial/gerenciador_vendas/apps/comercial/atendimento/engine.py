@@ -148,6 +148,11 @@ def processar_resposta_visual(atendimento, resposta):
     atendimento.dados_respostas = dados
     atendimento.questoes_respondidas += 1
 
+    # Salvar resposta no campo do lead (se configurado)
+    salvar_em = config.get('salvar_em', '')
+    if salvar_em and atendimento.lead:
+        _salvar_no_lead(atendimento.lead, salvar_em, resposta)
+
     # Adicionar resposta ao contexto
     contexto[f'resposta_nodo_{nodo_atual.id}'] = resposta
     contexto['ultima_resposta'] = resposta
@@ -238,16 +243,30 @@ def _executar_nodo(atendimento, nodo, contexto):
         return None  # Passa direto
 
     elif nodo.tipo == 'questao':
-        # PAUSA: retorna dados da questao para o lead responder
-        atendimento.nodo_atual = nodo
-        atendimento.save(update_fields=['nodo_atual', 'dados_respostas', 'questoes_respondidas'])
-        titulo = nodo.configuracao.get('titulo', 'Responda:')
-        _registrar_log(atendimento, nodo, 'aguardando', f'Pergunta: {titulo}')
-        return {
-            'tipo': 'questao',
-            'questao': _montar_dados_questao(nodo),
-            'mensagem': titulo,
-        }
+        config = nodo.configuracao
+        titulo = config.get('titulo', 'Responda:')
+        espera = config.get('espera_resposta', True)
+
+        if espera:
+            # PAUSA: retorna dados da questao para o lead responder
+            atendimento.nodo_atual = nodo
+            atendimento.save(update_fields=['nodo_atual', 'dados_respostas', 'questoes_respondidas'])
+            _registrar_log(atendimento, nodo, 'aguardando', f'Pergunta: {titulo}')
+            return {
+                'tipo': 'questao',
+                'questao': _montar_dados_questao(nodo),
+                'mensagem': titulo,
+            }
+        else:
+            # NAO ESPERA: envia mensagem e continua o fluxo
+            _registrar_log(atendimento, nodo, 'sucesso', f'Mensagem enviada: {titulo}')
+            # Retornar dados para o signal enviar no inbox, mas nao pausar
+            atendimento._mensagem_pendente = {
+                'tipo': 'mensagem',
+                'questao': _montar_dados_questao(nodo),
+                'mensagem': titulo,
+            }
+            return None  # Continua percorrendo
 
     elif nodo.tipo == 'condicao':
         return None  # Avaliacao e log acontecem em _seguir_conexoes
@@ -382,7 +401,9 @@ def _executar_acao(nodo, contexto, atendimento):
     config = nodo.configuracao
     template = config.get('template', '')
 
-    if subtipo == 'webhook':
+    if subtipo == 'criar_oportunidade':
+        _acao_criar_oportunidade(config, contexto, atendimento)
+    elif subtipo == 'webhook':
         _acao_webhook(config, contexto)
     elif subtipo == 'enviar_whatsapp':
         _acao_enviar_whatsapp(config, contexto, atendimento)
@@ -396,6 +417,73 @@ def _executar_acao(nodo, contexto, atendimento):
         _acao_mover_estagio(config, contexto, atendimento)
     else:
         logger.warning(f'Atendimento engine: subtipo de acao desconhecido: {subtipo}')
+
+
+def _acao_criar_oportunidade(config, contexto, atendimento):
+    """Cria oportunidade no CRM para o lead, se ainda nao existir."""
+    try:
+        from apps.comercial.crm.models import OportunidadeVenda, Pipeline, PipelineEstagio
+        from django.contrib.auth.models import User
+
+        lead = atendimento.lead
+        if not lead:
+            return
+
+        # Se ja existe oportunidade, nao duplicar
+        if OportunidadeVenda.objects.filter(lead=lead).exists():
+            logger.info(f'Oportunidade ja existe para lead {lead.id}, pulando.')
+            return
+
+        tenant = atendimento.fluxo.tenant
+
+        # Buscar pipeline (config ou padrao do tenant)
+        pipeline = None
+        pipeline_id = config.get('pipeline_id')
+        if pipeline_id:
+            pipeline = Pipeline.objects.filter(id=pipeline_id).first()
+        if not pipeline:
+            pipeline = Pipeline.objects.filter(tenant=tenant, padrao=True).first()
+        if not pipeline:
+            pipeline = Pipeline.objects.filter(tenant=tenant).first()
+
+        # Buscar estagio inicial (config ou primeiro do pipeline)
+        estagio = None
+        estagio_slug = config.get('estagio', '')
+        if estagio_slug and pipeline:
+            estagio = PipelineEstagio.objects.filter(pipeline=pipeline, slug=estagio_slug).first()
+        if not estagio and pipeline:
+            estagio = PipelineEstagio.objects.filter(pipeline=pipeline).order_by('ordem').first()
+        if not estagio:
+            estagio = PipelineEstagio.objects.filter(tenant=tenant).order_by('ordem').first()
+
+        if not estagio:
+            logger.error('Criar oportunidade: nenhum estagio encontrado')
+            return
+
+        # Responsavel
+        responsavel = None
+        resp_id = config.get('responsavel_id')
+        if resp_id:
+            responsavel = User.objects.filter(id=resp_id).first()
+
+        titulo = _substituir_variaveis(
+            config.get('titulo', '{{lead_nome}}'),
+            contexto
+        )
+
+        OportunidadeVenda.objects.create(
+            tenant=tenant,
+            lead=lead,
+            pipeline=pipeline,
+            estagio=estagio,
+            responsavel=responsavel,
+            titulo=titulo,
+            valor_estimado=lead.valor,
+            origem_crm='automatico',
+        )
+    except Exception as e:
+        logger.error(f'Criar oportunidade erro: {e}')
+        raise
 
 
 def _acao_webhook(config, contexto):
@@ -465,16 +553,26 @@ def _acao_criar_tarefa(config, contexto, atendimento):
     """Cria tarefa no CRM."""
     try:
         from apps.comercial.crm.models import TarefaCRM
+        from django.contrib.auth.models import User
         titulo = _substituir_variaveis(config.get('titulo', 'Tarefa do fluxo'), contexto)
+        # Buscar responsavel: config > primeiro user staff do tenant
+        responsavel = None
+        resp_id = config.get('responsavel_id')
+        if resp_id:
+            responsavel = User.objects.filter(id=resp_id).first()
+        if not responsavel:
+            responsavel = User.objects.filter(is_staff=True, is_active=True).first()
         TarefaCRM.objects.create(
             tenant=atendimento.fluxo.tenant,
             titulo=titulo,
             tipo=config.get('tipo_tarefa', 'ligacao'),
             prioridade=config.get('prioridade', 'media'),
             lead=atendimento.lead,
+            responsavel=responsavel,
         )
     except Exception as e:
         logger.error(f'Criar tarefa erro: {e}')
+        raise
 
 
 def _acao_mover_estagio(config, contexto, atendimento):
@@ -512,21 +610,82 @@ def _montar_dados_questao(nodo):
 
 def _validar_resposta_questao(config, resposta):
     """Valida resposta de uma questao. Retorna (valida, mensagem_erro)."""
-    obrigatoria = config.get('obrigatoria', True)
+    import re
 
-    if obrigatoria and not str(resposta).strip():
-        return False, config.get('mensagem_erro', 'Resposta obrigatoria')
+    espera = config.get('espera_resposta', True)
+    resp_str = str(resposta).strip()
+    msg_erro = config.get('mensagem_erro', '')
 
+    # Se nao espera resposta, sempre valida
+    if not espera:
+        return True, None
+
+    # Resposta vazia
+    if not resp_str:
+        return False, msg_erro or 'Resposta obrigatoria'
+
+    # Validacao por opcoes
     opcoes = config.get('opcoes_resposta', [])
-    if opcoes and str(resposta).strip() not in [str(o) for o in opcoes]:
-        # Verificar se e indice
+    if opcoes and resp_str not in [str(o) for o in opcoes]:
         try:
             idx = int(resposta)
             if 0 <= idx < len(opcoes):
                 return True, None
         except (ValueError, TypeError):
             pass
-        return False, config.get('mensagem_erro', 'Opcao invalida')
+        return False, msg_erro or 'Opcao invalida'
+
+    # Validacao por tipo
+    validacao = config.get('validacao', 'texto')
+    if validacao == 'email' and '@' not in resp_str:
+        return False, msg_erro or 'Informe um e-mail valido'
+    elif validacao == 'telefone' and len(re.sub(r'\D', '', resp_str)) < 10:
+        return False, msg_erro or 'Informe um telefone valido'
+    elif validacao == 'cpf_cnpj' and len(re.sub(r'\D', '', resp_str)) not in (11, 14):
+        return False, msg_erro or 'Informe um CPF ou CNPJ valido'
+    elif validacao == 'cep' and len(re.sub(r'\D', '', resp_str)) != 8:
+        return False, msg_erro or 'Informe um CEP valido'
+    elif validacao == 'numero':
+        try:
+            float(resp_str.replace(',', '.'))
+        except ValueError:
+            return False, msg_erro or 'Informe um numero valido'
+
+    # Validacao por regex
+    regex = config.get('regex', '')
+    if regex:
+        try:
+            if not re.match(regex, resp_str):
+                return False, msg_erro or 'Formato invalido'
+        except re.error:
+            logger.warning(f'Regex invalido na config: {regex}')
+
+    # Validacao por integracao IA
+    integracao_ia_id = config.get('integracao_ia_id', '')
+    if integracao_ia_id:
+        try:
+            resultado_ia = _validar_com_ia(integracao_ia_id, resp_str, config)
+            if resultado_ia and not resultado_ia.get('valido', True):
+                return False, resultado_ia.get('mensagem', msg_erro or 'Resposta invalida segundo a IA')
+        except Exception as e:
+            logger.error(f'Validacao IA erro: {e}')
+
+    # Validacao por webhook
+    webhook_url = config.get('webhook_validacao', '')
+    if webhook_url:
+        try:
+            prompt = config.get('prompt_validacao', '')
+            res = requests.post(webhook_url, json={
+                'resposta': resp_str,
+                'prompt': prompt,
+                'config': {k: v for k, v in config.items() if k not in ('webhook_validacao',)},
+            }, timeout=10)
+            if res.status_code == 200:
+                data = res.json()
+                if not data.get('valido', True):
+                    return False, data.get('mensagem', msg_erro or 'Resposta invalida')
+        except Exception as e:
+            logger.error(f'Webhook validacao erro: {e}')
 
     return True, None
 
@@ -565,6 +724,121 @@ def _construir_contexto(atendimento):
         contexto[f'resposta_nodo_{nodo_key}'] = resp_data.get('resposta', '')
 
     return contexto
+
+
+def _validar_com_ia(integracao_id, resposta, config):
+    """Valida resposta usando uma integracao de IA configurada."""
+    from apps.integracoes.models import IntegracaoAPI
+
+    integracao = IntegracaoAPI.objects.filter(id=integracao_id, ativa=True).first()
+    if not integracao:
+        logger.warning(f'Integracao IA {integracao_id} nao encontrada ou inativa')
+        return None
+
+    prompt = config.get('prompt_validacao', '')
+    titulo = config.get('titulo', '')
+    mensagem = f"Pergunta: {titulo}\nResposta do usuario: {resposta}\n\n{prompt}\n\nResponda em JSON: {{\"valido\": true/false, \"mensagem\": \"explicacao\"}}"
+
+    tipo = integracao.tipo
+    base_url = integracao.base_url
+    api_key = integracao.access_token or integracao.client_secret or ''
+    modelo = (integracao.configuracoes_extras or {}).get('modelo', '')
+
+    headers = {'Content-Type': 'application/json'}
+    payload = {}
+
+    if tipo == 'openai':
+        headers['Authorization'] = f'Bearer {api_key}'
+        url = base_url or 'https://api.openai.com/v1/chat/completions'
+        payload = {
+            'model': modelo or 'gpt-4o-mini',
+            'messages': [{'role': 'user', 'content': mensagem}],
+            'response_format': {'type': 'json_object'},
+            'max_tokens': 200,
+        }
+    elif tipo == 'anthropic':
+        headers['x-api-key'] = api_key
+        headers['anthropic-version'] = '2023-06-01'
+        url = base_url or 'https://api.anthropic.com/v1/messages'
+        payload = {
+            'model': modelo or 'claude-haiku-4-5-20251001',
+            'max_tokens': 200,
+            'messages': [{'role': 'user', 'content': mensagem}],
+        }
+    elif tipo == 'groq':
+        headers['Authorization'] = f'Bearer {api_key}'
+        url = base_url or 'https://api.groq.com/openai/v1/chat/completions'
+        payload = {
+            'model': modelo or 'llama-3.1-8b-instant',
+            'messages': [{'role': 'user', 'content': mensagem}],
+            'max_tokens': 200,
+        }
+    elif tipo == 'google_ai':
+        url = (base_url or f'https://generativelanguage.googleapis.com/v1beta/models/{modelo or "gemini-2.0-flash"}:generateContent') + f'?key={api_key}'
+        payload = {
+            'contents': [{'parts': [{'text': mensagem}]}],
+        }
+        headers.pop('Authorization', None)
+    else:
+        # Tipo generico: POST com payload padrao
+        headers['Authorization'] = f'Bearer {api_key}'
+        url = base_url
+        payload = {'prompt': mensagem}
+
+    try:
+        import json as json_mod
+        res = requests.post(url, json=payload, headers=headers, timeout=15)
+        if res.status_code != 200:
+            logger.error(f'IA {tipo} retornou {res.status_code}: {res.text[:200]}')
+            return None
+
+        data = res.json()
+
+        # Extrair texto da resposta conforme o provider
+        texto = ''
+        if tipo in ('openai', 'groq'):
+            texto = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+        elif tipo == 'anthropic':
+            texto = data.get('content', [{}])[0].get('text', '')
+        elif tipo == 'google_ai':
+            texto = data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
+        else:
+            texto = data.get('content', data.get('text', data.get('result', str(data))))
+
+        # Tentar parsear JSON da resposta
+        try:
+            # Limpar markdown se vier ```json ... ```
+            texto_limpo = texto.strip()
+            if texto_limpo.startswith('```'):
+                texto_limpo = texto_limpo.split('\n', 1)[1].rsplit('```', 1)[0].strip()
+            resultado = json_mod.loads(texto_limpo)
+            return resultado
+        except (json_mod.JSONDecodeError, IndexError):
+            # Se nao e JSON, interpretar como texto
+            lower = texto.lower()
+            valido = 'valido' in lower or 'true' in lower or 'sim' in lower
+            return {'valido': valido, 'mensagem': texto[:200]}
+
+    except Exception as e:
+        logger.error(f'Erro chamando IA {tipo}: {e}')
+        return None
+
+
+def _salvar_no_lead(lead, campo, valor):
+    """Salva a resposta em um campo do lead."""
+    campos_permitidos = {
+        'nome_razaosocial', 'email', 'telefone', 'cpf_cnpj', 'rg',
+        'cidade', 'estado', 'cep', 'rua', 'numero_residencia',
+        'bairro', 'ponto_referencia', 'empresa', 'observacoes',
+        'data_nascimento',
+    }
+    if campo not in campos_permitidos:
+        return
+    try:
+        setattr(lead, campo, valor)
+        lead.save(update_fields=[campo])
+    except Exception as e:
+        logger.error(f'Erro ao salvar no lead campo {campo}: {e}')
 
 
 def _calcular_delay(config):
