@@ -2,9 +2,10 @@ from django.db import models
 from django.utils import timezone
 
 from apps.sistema.encrypted_fields import EncryptedCharField, EncryptedTextField
+from apps.sistema.mixins import TenantMixin
 
 
-class IntegracaoAPI(models.Model):
+class IntegracaoAPI(TenantMixin):
     """
     Armazena credenciais e configuração de APIs externas.
     Cada registro representa uma conexão com um sistema (Hubsoft, etc).
@@ -23,12 +24,7 @@ class IntegracaoAPI(models.Model):
         ('outro', 'Outro'),
     ]
 
-    tenant = models.ForeignKey(
-        'sistema.Tenant', on_delete=models.CASCADE,
-        null=True, blank=True,
-        related_name='integracoes',
-        verbose_name="Tenant",
-    )
+    # tenant FK herdado de TenantMixin
 
     nome = models.CharField(
         max_length=200,
@@ -126,7 +122,7 @@ class IntegracaoAPI(models.Model):
         return timezone.now() < self.token_expira_em
 
 
-class LogIntegracao(models.Model):
+class LogIntegracao(TenantMixin):
     """
     Registro de cada chamada feita a uma API externa, para auditoria e debug.
     """
@@ -224,7 +220,7 @@ class LogIntegracao(models.Model):
         return f"[{status}] {self.metodo} {self.endpoint} — {self.data_criacao:%d/%m/%Y %H:%M}"
 
 
-class ClienteHubsoft(models.Model):
+class ClienteHubsoft(TenantMixin):
     """
     Espelho local do cliente retornado pela API GET /api/v1/integracao/cliente.
     Sincronizado periodicamente com o Hubsoft.
@@ -320,7 +316,7 @@ class ClienteHubsoft(models.Model):
         return f"{self.nome_razaosocial} (ID: {self.id_cliente}) — {status}"
 
 
-class ServicoClienteHubsoft(models.Model):
+class ServicoClienteHubsoft(TenantMixin):
     """
     Serviço contratado vinculado a um ClienteHubsoft.
     Cada cliente pode ter múltiplos serviços.

@@ -89,7 +89,7 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
         from apps.integracoes.models import IntegracaoAPI
         conversa = instance.conversa
 
-        integracao_n8n = IntegracaoAPI.objects.filter(
+        integracao_n8n = IntegracaoAPI.all_tenants.filter(
             tenant=instance.tenant,
             tipo='n8n',
             ativa=True,
