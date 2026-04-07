@@ -105,19 +105,35 @@ hub/
 └── megaroleta/                  ← legacy (read-only)
 ```
 
+### Bancos de dados
+
+| Ambiente | Settings | Banco | Uso |
+|----------|----------|-------|-----|
+| **Dev SQLite** | `settings_local` | `db_local.sqlite3` | Desenvolvimento rapido, testes |
+| **Dev PostgreSQL** | `settings_local_pg` | `aurora_dev` (localhost:5432, user: postgres, pass: admin123) | Testes com banco real, validacao |
+| **Producao** | `settings` | PostgreSQL remoto (variaveis .env) | **NUNCA usar no desenvolvimento** |
+
 ### Como rodar
 
 ```bash
 cd robo/dashboard_comercial/gerenciador_vendas
+
+# SQLite (padrao para desenvolvimento)
 python manage.py runserver 8001 --settings=gerenciador_vendas.settings_local
+
+# PostgreSQL local (para testar com banco real)
+python manage.py runserver 8001 --settings=gerenciador_vendas.settings_local_pg
 ```
 
 ### Commands essenciais
 
 ```bash
-# Migrations locais
+# Migrations (SQLite)
 python manage.py makemigrations --settings=gerenciador_vendas.settings_local
 python manage.py migrate --settings=gerenciador_vendas.settings_local
+
+# Migrations (PostgreSQL local)
+python manage.py migrate --settings=gerenciador_vendas.settings_local_pg
 
 # Testes
 python manage.py test tests/ --settings=gerenciador_vendas.settings_local
