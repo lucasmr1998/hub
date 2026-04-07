@@ -296,14 +296,59 @@ class _NodoAcaoAdapter:
     def __init__(self, nodo):
         self.pk = nodo.pk
         self.tipo = nodo.subtipo
-        self.configuracao = nodo.configuracao.get('template', '')
-        # Para executores que parseiam linhas da config
-        if not self.configuracao and nodo.configuracao:
-            linhas = []
-            for k, v in nodo.configuracao.items():
-                if k not in ('template',):
-                    linhas.append(f'{k}: {v}')
-            self.configuracao = '\n'.join(linhas)
+        self._config_json = nodo.configuracao or {}
+
+        # Montar configuracao como string para executores legacy
+        # Cada executor parseia de forma diferente
+        subtipo = nodo.subtipo
+        c = self._config_json
+
+        if subtipo == 'enviar_whatsapp' or subtipo == 'enviar_email':
+            partes = []
+            if c.get('assunto'):
+                partes.append(f'assunto: {c["assunto"]}')
+            if c.get('template'):
+                partes.append(f'corpo: {c["template"]}')
+            self.configuracao = '\n'.join(partes) if partes else c.get('template', '')
+
+        elif subtipo == 'notificacao_sistema':
+            self.configuracao = c.get('template', '')
+            self._titulo = c.get('titulo', '')
+
+        elif subtipo == 'criar_tarefa':
+            partes = []
+            if c.get('titulo'):
+                partes.append(f'titulo: {c["titulo"]}')
+            if c.get('tipo_tarefa'):
+                partes.append(f'tipo: {c["tipo_tarefa"]}')
+            if c.get('prioridade'):
+                partes.append(f'prioridade: {c["prioridade"]}')
+            self.configuracao = '\n'.join(partes)
+
+        elif subtipo == 'mover_estagio':
+            partes = []
+            if c.get('estagio'):
+                partes.append(f'estagio: {c["estagio"]}')
+            if c.get('pipeline'):
+                partes.append(f'pipeline: {c["pipeline"]}')
+            self.configuracao = '\n'.join(partes)
+
+        elif subtipo == 'atribuir_responsavel':
+            modo = c.get('modo', 'round-robin')
+            usuario = c.get('usuario', '')
+            self.configuracao = f'{modo}: {usuario}' if usuario else modo
+
+        elif subtipo == 'dar_pontos':
+            self.configuracao = f'pontos: {c.get("pontos", 10)}\nmotivo: {c.get("motivo", "")}'
+
+        elif subtipo == 'webhook':
+            self.configuracao = c.get('url', '')
+
+        else:
+            self.configuracao = c.get('template', '')
+            if not self.configuracao:
+                linhas = [f'{k}: {v}' for k, v in c.items()]
+                self.configuracao = '\n'.join(linhas)
 
 
 def _executar_acao_nodo(regra, nodo, contexto, lead):
@@ -528,16 +573,19 @@ def _acao_notificacao_sistema(regra, acao, contexto):
     from apps.notificacoes.models import Notificacao, TipoNotificacao, CanalNotificacao
 
     mensagem = _substituir_variaveis(acao.configuracao, contexto)
+    titulo = getattr(acao, '_titulo', '') or f'Automacao: {regra.nome}'
+    titulo = _substituir_variaveis(titulo, contexto)
+
     tipo = TipoNotificacao.all_tenants.filter(tenant=regra.tenant, codigo='lead_novo').first()
     canal = CanalNotificacao.all_tenants.filter(tenant=regra.tenant, codigo='sistema').first()
 
     if tipo and canal:
         Notificacao.all_tenants.create(
             tenant=regra.tenant, tipo=tipo, canal=canal,
-            titulo=f'Automação: {regra.nome}', mensagem=mensagem, status='enviada',
+            titulo=titulo, mensagem=mensagem, status='enviada',
         )
-        return 'Notificação criada'
-    return 'Tipo/canal de notificação não encontrado'
+        return 'Notificacao criada'
+    return 'Tipo/canal de notificacao nao encontrado'
 
 
 def _acao_criar_tarefa(regra, acao, contexto):

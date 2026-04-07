@@ -314,68 +314,213 @@ function abrirConfig(nodeId, data) {
 
     let html = '';
 
-    if (data.tipo === 'condition') {
+    const c = data.config || {};
+    const sel = (id, val) => val===id ? 'selected' : '';
+
+    if (data.tipo === 'trigger') {
+        // Config especifica por tipo de gatilho
+        if (data.subtipo === 'oportunidade_movida') {
+            html = `
+                <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Dispara quando uma oportunidade muda de estagio no CRM.</p>
+                <div class="config-group"><label>De qual estagio (slug)</label>
+                    <input type="text" id="cfg_estagio_de" value="${c.estagio_de||''}" onchange="salvarConfigNodo()" placeholder="Vazio = qualquer estagio">
+                </div>
+                <div class="config-group"><label>Para qual estagio (slug)</label>
+                    <input type="text" id="cfg_estagio_para" value="${c.estagio_para||''}" onchange="salvarConfigNodo()" placeholder="Vazio = qualquer estagio">
+                </div>
+                <div class="config-group"><label>Pipeline (slug)</label>
+                    <input type="text" id="cfg_pipeline" value="${c.pipeline||''}" onchange="salvarConfigNodo()" placeholder="Vazio = qualquer pipeline">
+                </div>
+            `;
+        } else if (data.subtipo === 'lead_sem_contato') {
+            html = `
+                <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Dispara para leads sem contato por X dias (via cron).</p>
+                <div class="config-group"><label>Dias sem contato</label>
+                    <input type="number" id="cfg_dias" value="${c.dias||3}" min="1" onchange="salvarConfigNodo()">
+                </div>
+            `;
+        } else if (data.subtipo === 'lead_entrou_segmento') {
+            html = `
+                <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Dispara quando um lead entra em um segmento.</p>
+                <div class="config-group"><label>Segmento (nome ou ID)</label>
+                    <input type="text" id="cfg_segmento" value="${c.segmento||''}" onchange="salvarConfigNodo()" placeholder="Vazio = qualquer segmento">
+                </div>
+            `;
+        } else if (data.subtipo === 'mensagem_recebida') {
+            html = `
+                <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Dispara quando uma mensagem de contato e recebida no Inbox.</p>
+                <div class="config-group"><label>Canal</label>
+                    <select id="cfg_canal" onchange="salvarConfigNodo()">
+                        <option value="" ${sel('',c.canal)}>Qualquer canal</option>
+                        <option value="whatsapp" ${sel('whatsapp',c.canal)}>WhatsApp</option>
+                        <option value="email" ${sel('email',c.canal)}>E-mail</option>
+                        <option value="widget" ${sel('widget',c.canal)}>Chat Widget</option>
+                    </select>
+                </div>
+            `;
+        } else {
+            html = `<p style="font-size:12px;color:var(--text-muted);">Gatilho: ${data.nome}. Conecte aos proximos nos.</p>`;
+        }
+
+    } else if (data.tipo === 'condition') {
         html = `
             <div class="config-group"><label>Campo</label>
                 <select id="cfg_campo" onchange="salvarConfigNodo()">
                     <option value="">Selecione...</option>
                     <optgroup label="Lead">
-                        <option value="lead.origem" ${data.config.campo==='lead.origem'?'selected':''}>Origem</option>
-                        <option value="lead.score_qualificacao" ${data.config.campo==='lead.score_qualificacao'?'selected':''}>Score</option>
-                        <option value="lead.cidade" ${data.config.campo==='lead.cidade'?'selected':''}>Cidade</option>
-                        <option value="lead.estado" ${data.config.campo==='lead.estado'?'selected':''}>Estado</option>
-                        <option value="lead.valor" ${data.config.campo==='lead.valor'?'selected':''}>Valor</option>
-                        <option value="lead.campanha" ${data.config.campo==='lead.campanha'?'selected':''}>Campanha</option>
+                        <option value="lead.origem" ${sel('lead.origem',c.campo)}>Origem</option>
+                        <option value="lead.score_qualificacao" ${sel('lead.score_qualificacao',c.campo)}>Score</option>
+                        <option value="lead.cidade" ${sel('lead.cidade',c.campo)}>Cidade</option>
+                        <option value="lead.estado" ${sel('lead.estado',c.campo)}>Estado</option>
+                        <option value="lead.valor" ${sel('lead.valor',c.campo)}>Valor</option>
+                        <option value="lead.status_api" ${sel('lead.status_api',c.campo)}>Status</option>
+                        <option value="lead.email" ${sel('lead.email',c.campo)}>Email</option>
+                        <option value="lead.cpf_cnpj" ${sel('lead.cpf_cnpj',c.campo)}>CPF/CNPJ</option>
+                        <option value="lead.campanha" ${sel('lead.campanha',c.campo)}>Campanha</option>
                     </optgroup>
                     <optgroup label="CRM">
-                        <option value="estagio" ${data.config.campo==='estagio'?'selected':''}>Estágio</option>
-                        <option value="crm.estagio" ${data.config.campo==='crm.estagio'?'selected':''}>Estágio (CRM)</option>
-                        <option value="crm.pipeline" ${data.config.campo==='crm.pipeline'?'selected':''}>Pipeline</option>
-                        <option value="crm.responsavel" ${data.config.campo==='crm.responsavel'?'selected':''}>Responsável</option>
+                        <option value="estagio" ${sel('estagio',c.campo)}>Estagio atual</option>
+                        <option value="crm.pipeline" ${sel('crm.pipeline',c.campo)}>Pipeline</option>
+                        <option value="crm.responsavel" ${sel('crm.responsavel',c.campo)}>Responsavel</option>
                     </optgroup>
                     <optgroup label="Temporal">
-                        <option value="dias_sem_contato" ${data.config.campo==='dias_sem_contato'?'selected':''}>Dias sem contato</option>
-                        <option value="cliente.dias_ativo" ${data.config.campo==='cliente.dias_ativo'?'selected':''}>Dias como cliente</option>
-                    </optgroup>
-                    <optgroup label="Cliente">
-                        <option value="cliente.plano" ${data.config.campo==='cliente.plano'?'selected':''}>Plano contratado</option>
+                        <option value="dias_sem_contato" ${sel('dias_sem_contato',c.campo)}>Dias sem contato</option>
                     </optgroup>
                 </select>
             </div>
             <div class="config-group"><label>Operador</label>
                 <select id="cfg_operador" onchange="salvarConfigNodo()">
-                    <option value="igual" ${data.config.operador==='igual'?'selected':''}>é igual a</option>
-                    <option value="diferente" ${data.config.operador==='diferente'?'selected':''}>é diferente de</option>
-                    <option value="contem" ${data.config.operador==='contem'?'selected':''}>contém</option>
-                    <option value="maior" ${data.config.operador==='maior'?'selected':''}>maior que</option>
-                    <option value="menor" ${data.config.operador==='menor'?'selected':''}>menor que</option>
+                    <option value="igual" ${sel('igual',c.operador)}>e igual a</option>
+                    <option value="diferente" ${sel('diferente',c.operador)}>e diferente de</option>
+                    <option value="contem" ${sel('contem',c.operador)}>contem</option>
+                    <option value="maior" ${sel('maior',c.operador)}>maior que</option>
+                    <option value="menor" ${sel('menor',c.operador)}>menor que</option>
+                    <option value="maior_igual" ${sel('maior_igual',c.operador)}>maior ou igual</option>
+                    <option value="menor_igual" ${sel('menor_igual',c.operador)}>menor ou igual</option>
                 </select>
             </div>
             <div class="config-group"><label>Valor</label>
-                <input type="text" id="cfg_valor" value="${data.config.valor||''}" onchange="salvarConfigNodo()" placeholder="Ex: whatsapp, 7, Teresina">
+                <input type="text" id="cfg_valor" value="${c.valor||''}" onchange="salvarConfigNodo()" placeholder="Ex: whatsapp, 7, Recife">
             </div>
         `;
+
     } else if (data.tipo === 'action') {
-        html = `
-            <div class="config-group"><label>Mensagem / Config</label>
-                <textarea id="cfg_template" rows="5" onchange="salvarConfigNodo()" placeholder="Olá {{nome}}, bem vindo!">${data.config.template||''}</textarea>
-            </div>
-        `;
+        // Config especifica por tipo de acao
+        if (data.subtipo === 'enviar_whatsapp') {
+            html = `
+                <div class="config-group"><label>Mensagem</label>
+                    <textarea id="cfg_template" rows="4" onchange="salvarConfigNodo()" placeholder="Ola {{lead_nome}}, ...">${c.template||''}</textarea>
+                </div>
+                <p style="font-size:11px;color:var(--text-muted);margin:0 0 12px;">Variaveis: {{lead_nome}}, {{lead_telefone}}, {{lead_email}}, {{lead_cidade}}</p>
+            `;
+        } else if (data.subtipo === 'enviar_email') {
+            html = `
+                <div class="config-group"><label>Assunto</label>
+                    <input type="text" id="cfg_assunto" value="${c.assunto||''}" onchange="salvarConfigNodo()" placeholder="Assunto do email">
+                </div>
+                <div class="config-group"><label>Corpo</label>
+                    <textarea id="cfg_template" rows="4" onchange="salvarConfigNodo()" placeholder="Ola {{lead_nome}}, ...">${c.template||''}</textarea>
+                </div>
+                <p style="font-size:11px;color:var(--text-muted);margin:0 0 12px;">Variaveis: {{lead_nome}}, {{lead_email}}</p>
+            `;
+        } else if (data.subtipo === 'notificacao_sistema') {
+            html = `
+                <div class="config-group"><label>Titulo</label>
+                    <input type="text" id="cfg_titulo" value="${c.titulo||''}" onchange="salvarConfigNodo()" placeholder="Ex: Novo lead qualificado">
+                </div>
+                <div class="config-group"><label>Mensagem</label>
+                    <textarea id="cfg_template" rows="3" onchange="salvarConfigNodo()" placeholder="{{lead_nome}} foi qualificado...">${c.template||''}</textarea>
+                </div>
+            `;
+        } else if (data.subtipo === 'criar_tarefa') {
+            html = `
+                <div class="config-group"><label>Titulo da Tarefa</label>
+                    <input type="text" id="cfg_titulo" value="${c.titulo||''}" onchange="salvarConfigNodo()" placeholder="Contatar {{lead_nome}}">
+                </div>
+                <div class="config-group"><label>Tipo</label>
+                    <select id="cfg_tipo_tarefa" onchange="salvarConfigNodo()">
+                        <option value="ligacao" ${sel('ligacao',c.tipo_tarefa)}>Ligacao</option>
+                        <option value="followup" ${sel('followup',c.tipo_tarefa)}>Follow-up</option>
+                        <option value="visita" ${sel('visita',c.tipo_tarefa)}>Visita</option>
+                        <option value="whatsapp" ${sel('whatsapp',c.tipo_tarefa)}>WhatsApp</option>
+                        <option value="email" ${sel('email',c.tipo_tarefa)}>Email</option>
+                    </select>
+                </div>
+                <div class="config-group"><label>Prioridade</label>
+                    <select id="cfg_prioridade" onchange="salvarConfigNodo()">
+                        <option value="baixa" ${sel('baixa',c.prioridade)}>Baixa</option>
+                        <option value="normal" ${sel('normal',c.prioridade)}>Normal</option>
+                        <option value="alta" ${sel('alta',c.prioridade)}>Alta</option>
+                        <option value="urgente" ${sel('urgente',c.prioridade)}>Urgente</option>
+                    </select>
+                </div>
+            `;
+        } else if (data.subtipo === 'mover_estagio') {
+            html = `
+                <div class="config-group"><label>Para qual estagio (slug)</label>
+                    <input type="text" id="cfg_estagio" value="${c.estagio||''}" onchange="salvarConfigNodo()" placeholder="Ex: qualificado, negociacao">
+                </div>
+                <div class="config-group"><label>Pipeline (slug)</label>
+                    <input type="text" id="cfg_pipeline" value="${c.pipeline||''}" onchange="salvarConfigNodo()" placeholder="Vazio = pipeline atual">
+                </div>
+            `;
+        } else if (data.subtipo === 'atribuir_responsavel') {
+            html = `
+                <div class="config-group"><label>Modo</label>
+                    <select id="cfg_modo_atribuicao" onchange="salvarConfigNodo()">
+                        <option value="round-robin" ${sel('round-robin',c.modo)}>Round-robin (automatico)</option>
+                        <option value="fixo" ${sel('fixo',c.modo)}>Usuario fixo</option>
+                    </select>
+                </div>
+                <div class="config-group"><label>Usuario (se fixo)</label>
+                    <input type="text" id="cfg_usuario" value="${c.usuario||''}" onchange="salvarConfigNodo()" placeholder="Username do responsavel">
+                </div>
+            `;
+        } else if (data.subtipo === 'dar_pontos') {
+            html = `
+                <div class="config-group"><label>Quantidade de pontos</label>
+                    <input type="number" id="cfg_pontos" value="${c.pontos||10}" min="1" onchange="salvarConfigNodo()">
+                </div>
+                <div class="config-group"><label>Motivo</label>
+                    <input type="text" id="cfg_motivo" value="${c.motivo||''}" onchange="salvarConfigNodo()" placeholder="Ex: Indicacao convertida">
+                </div>
+            `;
+        } else if (data.subtipo === 'webhook') {
+            html = `
+                <div class="config-group"><label>URL</label>
+                    <input type="url" id="cfg_url" value="${c.url||''}" onchange="salvarConfigNodo()" placeholder="https://...">
+                </div>
+                <div class="config-group"><label>Metodo</label>
+                    <select id="cfg_metodo" onchange="salvarConfigNodo()">
+                        <option value="POST" ${sel('POST',c.metodo)}>POST</option>
+                        <option value="GET" ${sel('GET',c.metodo)}>GET</option>
+                    </select>
+                </div>
+                <div class="config-group"><label>Payload extra (JSON)</label>
+                    <textarea id="cfg_payload" rows="3" onchange="salvarConfigNodo()" placeholder='{"chave": "valor"}'>${c.payload||''}</textarea>
+                </div>
+            `;
+        } else {
+            html = `
+                <div class="config-group"><label>Configuracao</label>
+                    <textarea id="cfg_template" rows="5" onchange="salvarConfigNodo()" placeholder="Configure a acao...">${c.template||''}</textarea>
+                </div>
+            `;
+        }
+
     } else if (data.tipo === 'delay') {
         html = `
-            <div class="config-group"><label>Tempo</label>
+            <div class="config-group"><label>Tempo de espera</label>
                 <div style="display:flex;gap:8px;">
-                    <input type="number" id="cfg_delay_valor" value="${data.config.valor||30}" min="1" style="width:80px;" onchange="salvarConfigNodo()">
+                    <input type="number" id="cfg_delay_valor" value="${c.valor||30}" min="1" style="width:80px;" onchange="salvarConfigNodo()">
                     <select id="cfg_delay_unidade" onchange="salvarConfigNodo()">
-                        <option value="minutos" ${data.config.unidade==='minutos'?'selected':''}>Minutos</option>
-                        <option value="horas" ${data.config.unidade==='horas'?'selected':''}>Horas</option>
-                        <option value="dias" ${data.config.unidade==='dias'?'selected':''}>Dias</option>
+                        <option value="minutos" ${sel('minutos',c.unidade)}>Minutos</option>
+                        <option value="horas" ${sel('horas',c.unidade)}>Horas</option>
+                        <option value="dias" ${sel('dias',c.unidade)}>Dias</option>
                     </select>
                 </div>
             </div>
         `;
-    } else if (data.tipo === 'trigger') {
-        html = `<p style="font-size:12px;color:var(--text-muted);">Gatilho: ${data.nome}. Conecte aos próximos nós.</p>`;
     }
 
     // Botão deletar
@@ -397,21 +542,42 @@ function salvarConfigNodo() {
     const nodeData = editor.getNodeFromId(selectedNodeId);
     const data = nodeData.data;
 
-    if (data.tipo === 'condition') {
-        data.config = {
-            campo: document.getElementById('cfg_campo')?.value || '',
-            operador: document.getElementById('cfg_operador')?.value || 'igual',
-            valor: document.getElementById('cfg_valor')?.value || '',
-        };
+    const g = (id) => document.getElementById(id)?.value || '';
+
+    if (data.tipo === 'trigger') {
+        if (data.subtipo === 'oportunidade_movida') {
+            data.config = { estagio_de: g('cfg_estagio_de'), estagio_para: g('cfg_estagio_para'), pipeline: g('cfg_pipeline') };
+        } else if (data.subtipo === 'lead_sem_contato') {
+            data.config = { dias: parseInt(g('cfg_dias')) || 3 };
+        } else if (data.subtipo === 'lead_entrou_segmento') {
+            data.config = { segmento: g('cfg_segmento') };
+        } else if (data.subtipo === 'mensagem_recebida') {
+            data.config = { canal: g('cfg_canal') };
+        }
+    } else if (data.tipo === 'condition') {
+        data.config = { campo: g('cfg_campo'), operador: g('cfg_operador') || 'igual', valor: g('cfg_valor') };
     } else if (data.tipo === 'action') {
-        data.config = {
-            template: document.getElementById('cfg_template')?.value || '',
-        };
+        if (data.subtipo === 'enviar_whatsapp') {
+            data.config = { template: g('cfg_template') };
+        } else if (data.subtipo === 'enviar_email') {
+            data.config = { assunto: g('cfg_assunto'), template: g('cfg_template') };
+        } else if (data.subtipo === 'notificacao_sistema') {
+            data.config = { titulo: g('cfg_titulo'), template: g('cfg_template') };
+        } else if (data.subtipo === 'criar_tarefa') {
+            data.config = { titulo: g('cfg_titulo'), tipo_tarefa: g('cfg_tipo_tarefa'), prioridade: g('cfg_prioridade') };
+        } else if (data.subtipo === 'mover_estagio') {
+            data.config = { estagio: g('cfg_estagio'), pipeline: g('cfg_pipeline') };
+        } else if (data.subtipo === 'atribuir_responsavel') {
+            data.config = { modo: g('cfg_modo_atribuicao'), usuario: g('cfg_usuario') };
+        } else if (data.subtipo === 'dar_pontos') {
+            data.config = { pontos: parseInt(g('cfg_pontos')) || 10, motivo: g('cfg_motivo') };
+        } else if (data.subtipo === 'webhook') {
+            data.config = { url: g('cfg_url'), metodo: g('cfg_metodo'), payload: g('cfg_payload') };
+        } else {
+            data.config = { template: g('cfg_template') };
+        }
     } else if (data.tipo === 'delay') {
-        data.config = {
-            valor: parseInt(document.getElementById('cfg_delay_valor')?.value || 30),
-            unidade: document.getElementById('cfg_delay_unidade')?.value || 'minutos',
-        };
+        data.config = { valor: parseInt(g('cfg_delay_valor')) || 30, unidade: g('cfg_delay_unidade') || 'minutos' };
     }
 
     editor.updateNodeDataFromId(selectedNodeId, data);
