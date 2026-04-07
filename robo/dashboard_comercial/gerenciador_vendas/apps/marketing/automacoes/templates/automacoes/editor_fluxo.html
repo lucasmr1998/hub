@@ -304,6 +304,69 @@ editor.on('nodeUnselected', function() {
     fecharConfig();
 });
 
+// Helpers para selects dinamicos
+function pipelineOpts(selected) {
+    return '<option value="">Qualquer pipeline</option>' +
+        PIPELINES.map(p => `<option value="${p.slug}" ${p.slug===selected?'selected':''}>${p.nome}</option>`).join('');
+}
+function estagioOpts(selected, pipelineSlug) {
+    let filtrados = ESTAGIOS;
+    if (pipelineSlug) {
+        const pip = PIPELINES.find(p => p.slug === pipelineSlug);
+        if (pip) filtrados = ESTAGIOS.filter(e => e.pipeline_id === pip.id);
+    }
+    return '<option value="">Qualquer estagio</option>' +
+        filtrados.map(e => `<option value="${e.slug}" ${e.slug===selected?'selected':''}>${e.nome}</option>`).join('');
+}
+function usuarioOpts(selected) {
+    return '<option value="">Round-robin (automatico)</option>' +
+        USUARIOS.map(u => {
+            const nome = (u.first_name && u.last_name) ? `${u.first_name} ${u.last_name}` : u.username;
+            return `<option value="${u.username}" ${u.username===selected?'selected':''}>${nome}</option>`;
+        }).join('');
+}
+
+function atualizarCampoValor() {
+    const campo = document.getElementById('cfg_campo')?.value || '';
+    const container = document.getElementById('cfg_valor_container');
+    if (!container) return;
+    // Recriar o campo de valor conforme o campo selecionado
+    const node = editor.getNodeFromId(selectedNodeId);
+    const valorAtual = node?.data?.config?.valor || '';
+    // Usar a funcao valorInput definida dentro de abrirConfig - recriar aqui
+    let html = '';
+    if (campo === 'lead.origem') {
+        html = `<select id="cfg_valor" onchange="salvarConfigNodo()">${ORIGENS_LEAD.map(o => `<option value="${o}">${o}</option>`).join('')}</select>`;
+    } else if (campo === 'lead.status_api') {
+        html = `<select id="cfg_valor" onchange="salvarConfigNodo()">${STATUS_LEAD.map(s => `<option value="${s}">${s}</option>`).join('')}</select>`;
+    } else if (campo === 'estagio') {
+        html = `<select id="cfg_valor" onchange="salvarConfigNodo()"><option value="">Selecione...</option>${ESTAGIOS.map(e => `<option value="${e.slug}">${e.nome}</option>`).join('')}</select>`;
+    } else if (campo === 'crm.pipeline') {
+        html = `<select id="cfg_valor" onchange="salvarConfigNodo()">${PIPELINES.map(p => `<option value="${p.slug}">${p.nome}</option>`).join('')}</select>`;
+    } else if (campo === 'crm.responsavel') {
+        html = `<select id="cfg_valor" onchange="salvarConfigNodo()">${USUARIOS.map(u => `<option value="${u.username}">${u.first_name||u.username}</option>`).join('')}</select>`;
+    } else if (campo === 'lead.estado') {
+        const estados = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+        html = `<select id="cfg_valor" onchange="salvarConfigNodo()"><option value="">Selecione...</option>${estados.map(e => `<option value="${e}">${e}</option>`).join('')}</select>`;
+    } else {
+        html = `<input type="text" id="cfg_valor" value="" onchange="salvarConfigNodo()" placeholder="Digite o valor...">`;
+    }
+    container.innerHTML = html;
+}
+
+function atualizarEstagios() {
+    const pip = document.getElementById('cfg_pipeline')?.value || '';
+    const de = document.getElementById('cfg_estagio_de');
+    const para = document.getElementById('cfg_estagio_para');
+    if (de) de.innerHTML = estagioOpts('', pip);
+    if (para) para.innerHTML = estagioOpts('', pip);
+}
+function atualizarEstagioMover() {
+    const pip = document.getElementById('cfg_pipeline')?.value || '';
+    const el = document.getElementById('cfg_estagio');
+    if (el) el.innerHTML = estagioOpts('', pip);
+}
+
 function abrirConfig(nodeId, data) {
     const panel = document.getElementById('configPanel');
     const body = document.getElementById('configBody');
@@ -322,14 +385,14 @@ function abrirConfig(nodeId, data) {
         if (data.subtipo === 'oportunidade_movida') {
             html = `
                 <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Dispara quando uma oportunidade muda de estagio no CRM.</p>
-                <div class="config-group"><label>De qual estagio (slug)</label>
-                    <input type="text" id="cfg_estagio_de" value="${c.estagio_de||''}" onchange="salvarConfigNodo()" placeholder="Vazio = qualquer estagio">
+                <div class="config-group"><label>Pipeline</label>
+                    <select id="cfg_pipeline" onchange="atualizarEstagios();salvarConfigNodo()">${pipelineOpts(c.pipeline)}</select>
                 </div>
-                <div class="config-group"><label>Para qual estagio (slug)</label>
-                    <input type="text" id="cfg_estagio_para" value="${c.estagio_para||''}" onchange="salvarConfigNodo()" placeholder="Vazio = qualquer estagio">
+                <div class="config-group"><label>De qual estagio</label>
+                    <select id="cfg_estagio_de" onchange="salvarConfigNodo()">${estagioOpts(c.estagio_de, c.pipeline)}</select>
                 </div>
-                <div class="config-group"><label>Pipeline (slug)</label>
-                    <input type="text" id="cfg_pipeline" value="${c.pipeline||''}" onchange="salvarConfigNodo()" placeholder="Vazio = qualquer pipeline">
+                <div class="config-group"><label>Para qual estagio</label>
+                    <select id="cfg_estagio_para" onchange="salvarConfigNodo()">${estagioOpts(c.estagio_para, c.pipeline)}</select>
                 </div>
             `;
         } else if (data.subtipo === 'lead_sem_contato') {
@@ -340,10 +403,11 @@ function abrirConfig(nodeId, data) {
                 </div>
             `;
         } else if (data.subtipo === 'lead_entrou_segmento') {
+            const segOpts = '<option value="">Qualquer segmento</option>' + SEGMENTOS.map(s => `<option value="${s.nome}" ${s.nome===c.segmento?'selected':''}>${s.nome}</option>`).join('');
             html = `
                 <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Dispara quando um lead entra em um segmento.</p>
-                <div class="config-group"><label>Segmento (nome ou ID)</label>
-                    <input type="text" id="cfg_segmento" value="${c.segmento||''}" onchange="salvarConfigNodo()" placeholder="Vazio = qualquer segmento">
+                <div class="config-group"><label>Segmento</label>
+                    <select id="cfg_segmento" onchange="salvarConfigNodo()">${segOpts}</select>
                 </div>
             `;
         } else if (data.subtipo === 'mensagem_recebida') {
@@ -363,9 +427,29 @@ function abrirConfig(nodeId, data) {
         }
 
     } else if (data.tipo === 'condition') {
+        // Gerar campo de valor dinamico conforme o campo selecionado
+        function valorInput(campo, valor) {
+            if (campo === 'lead.origem') {
+                return `<select id="cfg_valor" onchange="salvarConfigNodo()">${ORIGENS_LEAD.map(o => `<option value="${o}" ${o===valor?'selected':''}>${o}</option>`).join('')}</select>`;
+            } else if (campo === 'lead.status_api') {
+                return `<select id="cfg_valor" onchange="salvarConfigNodo()">${STATUS_LEAD.map(s => `<option value="${s}" ${s===valor?'selected':''}>${s}</option>`).join('')}</select>`;
+            } else if (campo === 'estagio') {
+                return `<select id="cfg_valor" onchange="salvarConfigNodo()"><option value="">Selecione...</option>${ESTAGIOS.map(e => `<option value="${e.slug}" ${e.slug===valor?'selected':''}>${e.nome}</option>`).join('')}</select>`;
+            } else if (campo === 'crm.pipeline') {
+                return `<select id="cfg_valor" onchange="salvarConfigNodo()">${PIPELINES.map(p => `<option value="${p.slug}" ${p.slug===valor?'selected':''}>${p.nome}</option>`).join('')}</select>`;
+            } else if (campo === 'crm.responsavel') {
+                return `<select id="cfg_valor" onchange="salvarConfigNodo()">${USUARIOS.map(u => `<option value="${u.username}" ${u.username===valor?'selected':''}>${u.first_name||u.username}</option>`).join('')}</select>`;
+            } else if (campo === 'lead.estado') {
+                const estados = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+                return `<select id="cfg_valor" onchange="salvarConfigNodo()"><option value="">Selecione...</option>${estados.map(e => `<option value="${e}" ${e===valor?'selected':''}>${e}</option>`).join('')}</select>`;
+            } else {
+                return `<input type="text" id="cfg_valor" value="${valor||''}" onchange="salvarConfigNodo()" placeholder="Digite o valor...">`;
+            }
+        }
+
         html = `
             <div class="config-group"><label>Campo</label>
-                <select id="cfg_campo" onchange="salvarConfigNodo()">
+                <select id="cfg_campo" onchange="atualizarCampoValor();salvarConfigNodo()">
                     <option value="">Selecione...</option>
                     <optgroup label="Lead">
                         <option value="lead.origem" ${sel('lead.origem',c.campo)}>Origem</option>
@@ -376,7 +460,6 @@ function abrirConfig(nodeId, data) {
                         <option value="lead.status_api" ${sel('lead.status_api',c.campo)}>Status</option>
                         <option value="lead.email" ${sel('lead.email',c.campo)}>Email</option>
                         <option value="lead.cpf_cnpj" ${sel('lead.cpf_cnpj',c.campo)}>CPF/CNPJ</option>
-                        <option value="lead.campanha" ${sel('lead.campanha',c.campo)}>Campanha</option>
                     </optgroup>
                     <optgroup label="CRM">
                         <option value="estagio" ${sel('estagio',c.campo)}>Estagio atual</option>
@@ -400,7 +483,7 @@ function abrirConfig(nodeId, data) {
                 </select>
             </div>
             <div class="config-group"><label>Valor</label>
-                <input type="text" id="cfg_valor" value="${c.valor||''}" onchange="salvarConfigNodo()" placeholder="Ex: whatsapp, 7, Recife">
+                <div id="cfg_valor_container">${valorInput(c.campo, c.valor)}</div>
             </div>
         `;
 
@@ -457,11 +540,11 @@ function abrirConfig(nodeId, data) {
             `;
         } else if (data.subtipo === 'mover_estagio') {
             html = `
-                <div class="config-group"><label>Para qual estagio (slug)</label>
-                    <input type="text" id="cfg_estagio" value="${c.estagio||''}" onchange="salvarConfigNodo()" placeholder="Ex: qualificado, negociacao">
+                <div class="config-group"><label>Pipeline</label>
+                    <select id="cfg_pipeline" onchange="atualizarEstagioMover();salvarConfigNodo()">${pipelineOpts(c.pipeline)}</select>
                 </div>
-                <div class="config-group"><label>Pipeline (slug)</label>
-                    <input type="text" id="cfg_pipeline" value="${c.pipeline||''}" onchange="salvarConfigNodo()" placeholder="Vazio = pipeline atual">
+                <div class="config-group"><label>Para qual estagio</label>
+                    <select id="cfg_estagio" onchange="salvarConfigNodo()">${estagioOpts(c.estagio, c.pipeline)}</select>
                 </div>
             `;
         } else if (data.subtipo === 'atribuir_responsavel') {
@@ -472,8 +555,8 @@ function abrirConfig(nodeId, data) {
                         <option value="fixo" ${sel('fixo',c.modo)}>Usuario fixo</option>
                     </select>
                 </div>
-                <div class="config-group"><label>Usuario (se fixo)</label>
-                    <input type="text" id="cfg_usuario" value="${c.usuario||''}" onchange="salvarConfigNodo()" placeholder="Username do responsavel">
+                <div class="config-group"><label>Responsavel</label>
+                    <select id="cfg_usuario" onchange="salvarConfigNodo()">${usuarioOpts(c.usuario)}</select>
                 </div>
             `;
         } else if (data.subtipo === 'dar_pontos') {
@@ -656,6 +739,12 @@ function salvarFluxo() {
 // ── Carregar fluxo existente ──
 const fluxoSalvo = {{ fluxo_json|safe }};
 const nodosDB = {{ nodos_db|safe }};
+const PIPELINES = {{ pipelines_json|safe }};
+const ESTAGIOS = {{ estagios_json|safe }};
+const USUARIOS = {{ usuarios_json|safe }};
+const SEGMENTOS = {{ segmentos_json|safe }};
+const ORIGENS_LEAD = ['site','facebook','instagram','google','whatsapp','indicacao','telefone','email','outros'];
+const STATUS_LEAD = ['pendente','processado','erro','sucesso','rejeitado','aguardando_retry','processamento_manual'];
 const conexoesDB = {{ conexoes_db|safe }};
 
 if (fluxoSalvo && fluxoSalvo.drawflow) {

@@ -150,11 +150,24 @@ def editor_fluxo(request, pk):
                 'tipo_saida': conn.tipo_saida,
             })
 
+    # Dados do banco para selects dinamicos
+    from apps.comercial.crm.models import Pipeline, PipelineEstagio, SegmentoCRM
+    from django.contrib.auth.models import User
+
+    pipelines = list(Pipeline.objects.values('id', 'nome', 'slug'))
+    estagios = list(PipelineEstagio.objects.values('id', 'nome', 'slug', 'pipeline_id', 'ordem').order_by('pipeline_id', 'ordem'))
+    usuarios = list(User.objects.filter(is_staff=True, is_active=True).values('id', 'username', 'first_name', 'last_name'))
+    segmentos = list(SegmentoCRM.objects.values('id', 'nome'))
+
     return render(request, 'automacoes/editor_fluxo.html', {
         'regra': regra,
         'fluxo_json': json.dumps(regra.fluxo_json) if regra.fluxo_json else '{}',
         'nodos_db': json.dumps(nodos_db),
         'conexoes_db': json.dumps(conexoes_db),
+        'pipelines_json': json.dumps(pipelines),
+        'estagios_json': json.dumps(estagios),
+        'usuarios_json': json.dumps(usuarios),
+        'segmentos_json': json.dumps(segmentos),
     })
 
 

@@ -1,7 +1,7 @@
 # Módulo de Automações — AuroraISP
 
-**Última atualização:** 03/04/2026
-**Status:** ✅ Implementado (Phase 1 a 7 concluídas)
+**Ultima atualizacao:** 06/04/2026
+**Status:** ✅ Implementado
 **Localização:** `apps/marketing/automacoes/`
 
 ---
@@ -135,16 +135,16 @@ Chamado pelo cron. Busca `ExecucaoPendente` com `status=pendente` e `data_agenda
 
 ## Ações Implementadas
 
-| Tipo | Código | O que faz | Config esperada |
-|------|--------|-----------|-----------------|
-| WhatsApp | `enviar_whatsapp` | POST para webhook N8N | Mensagem com `{{variáveis}}` |
-| Notificação | `notificacao_sistema` | Cria Notificacao no sistema | Mensagem com `{{variáveis}}` |
-| Criar Tarefa | `criar_tarefa` | Cria TarefaCRM | `Título: ...\nTipo: ligacao\nPrioridade: alta` |
-| Mover Estágio | `mover_estagio` | Move OportunidadeVenda | `Estágio: slug-do-estagio` |
-| Dar Pontos | `dar_pontos` | Adiciona saldo ao MembroClube | `Pontos: 50\nMotivo: ...` |
-| Webhook | `webhook` | Chama URL externa | `URL: https://...\nMétodo: POST` |
-| E-mail | `enviar_email` | Não implementado | — |
-| Atribuir Responsável | `atribuir_responsavel` | Não implementado | — |
+| Tipo | Codigo | O que faz | Config no editor |
+|------|--------|-----------|------------------|
+| WhatsApp | `enviar_whatsapp` | POST para webhook N8N | Mensagem com `{{variaveis}}` |
+| E-mail | `enviar_email` | Envia via webhook N8N | Assunto + corpo com `{{variaveis}}` |
+| Notificacao | `notificacao_sistema` | Cria Notificacao no sistema | Titulo + mensagem com `{{variaveis}}` |
+| Criar Tarefa | `criar_tarefa` | Cria TarefaCRM | Titulo, tipo (select), prioridade (select) |
+| Mover Estagio | `mover_estagio` | Move OportunidadeVenda | Pipeline (select), estagio (select filtrado) |
+| Atribuir Responsavel | `atribuir_responsavel` | Atribui vendedor a oportunidade | Modo (round-robin/fixo), responsavel (select) |
+| Dar Pontos | `dar_pontos` | Adiciona saldo ao MembroClube | Quantidade + motivo |
+| Webhook | `webhook` | Chama URL externa | URL, metodo (POST/GET), payload JSON |
 
 ### Substituição de variáveis
 
@@ -206,18 +206,39 @@ O template de mensagem suporta `{{variável}}`. Variáveis disponíveis dependem
 | `action` | 1 | 1 (default) | Executa ação, segue para o próximo |
 | `delay` | 1 | 1 (default) | Cria ExecucaoPendente, para execução (retoma via cron) |
 
-### Configuração por tipo de nó (painel direito)
+### Configuracao especifica por tipo de no (painel direito)
 
-**Condição:**
-- Campo (select): lead.origem, lead.score_qualificacao, lead.cidade, lead.estado, lead.valor, estagio
-- Operador (select): igual, diferente, contém, maior, menor
-- Valor (text)
+**Gatilhos:**
+- **Oportunidade movida:** Pipeline (select), estagio de (select filtrado), estagio para (select filtrado)
+- **Lead sem contato:** Dias sem contato (numero)
+- **Entrou em segmento:** Segmento (select com segmentos do CRM)
+- **Mensagem recebida:** Canal (select: WhatsApp/Email/Widget)
+- Outros gatilhos: informativo (disparam sempre)
 
-**Ação:**
-- Mensagem/Config (textarea): template com `{{variáveis}}`
+**Condicao:**
+- Campo (select com optgroups Lead/CRM/Temporal)
+- Operador (select: igual, diferente, contem, maior, menor, maior_igual, menor_igual)
+- Valor (campo dinamico conforme o campo selecionado):
+  - Origem → select com origens do lead
+  - Status → select com status do lead
+  - Estagio → select com estagios dos pipelines
+  - Pipeline → select com pipelines
+  - Responsavel → select com usuarios staff
+  - Estado → select com UFs
+  - Demais → input texto livre
+
+**Acoes:**
+- **Enviar WhatsApp:** Mensagem com variaveis
+- **Enviar Email:** Assunto + corpo com variaveis
+- **Notificacao:** Titulo + mensagem
+- **Criar Tarefa:** Titulo, tipo (select: ligacao/followup/visita/whatsapp/email), prioridade (select)
+- **Mover Estagio:** Pipeline (select), estagio destino (select filtrado por pipeline)
+- **Atribuir Responsavel:** Modo (round-robin/fixo), responsavel (select com usuarios staff)
+- **Dar Pontos:** Quantidade + motivo
+- **Webhook:** URL, metodo (POST/GET), payload JSON
 
 **Delay:**
-- Tempo (number) + Unidade (minutos/horas/dias)
+- Tempo (numero) + Unidade (select: minutos/horas/dias)
 
 ### Serialização
 
@@ -237,7 +258,7 @@ O backend recebe:
 }
 ```
 
-**Carregar:** view passa `regra.fluxo_json` → `editor.import(data)` no JS.
+**Carregar:** view passa `regra.fluxo_json` → `editor.import(data)` no JS. Se `fluxo_json` estiver vazio mas existirem nodos no banco, o editor reconstroi o grafo automaticamente.
 
 ---
 
@@ -423,14 +444,24 @@ ExecucaoPendenteFactory # status='pendente'
 
 ---
 
-## Limitações conhecidas
+## Testes E2E
 
-1. **Sem Celery:** delays usam tabela `ExecucaoPendente` + cron (latência máxima = intervalo do cron, ex: 5 min)
-2. **Ações não implementadas:** `enviar_email` e `atribuir_responsavel` existem como opção mas não têm executor
-3. **Eventos não implementados:** `venda_aprovada` (precisa webhook HubSoft) e `cliente_aniversario` (precisa campo data_nascimento)
-4. **Webhook WhatsApp hardcoded:** URL do N8N está fixa no código, deveria ser configurável por tenant
-5. **Sem deduplicação de ações:** se 2 regras mandam WhatsApp para o mesmo lead no mesmo minuto, manda 2x (usar `max_execucoes_por_lead` para controlar)
-6. **Editor visual:** painel de config abre ao clicar no nó. Se não abrir, verificar console do browser
+Management command para validar todos os componentes end-to-end:
+
+```bash
+python manage.py testar_automacoes --settings=gerenciador_vendas.settings_local
+```
+
+18 testes cobrindo: gatilhos (5 eventos via signal real), condicoes (7 operadores), acoes (notificacao + tarefa verificadas no banco), delay (pendente → execucao → resultado), rate limit (2 permitidas, 3a bloqueada), fluxo visual completo (trigger → condition → branch true/false), substituicao de variaveis.
+
+---
+
+## Limitacoes conhecidas
+
+1. **Sem Celery:** delays usam tabela `ExecucaoPendente` + cron (latencia maxima = intervalo do cron, ex: 5 min)
+2. **Eventos nao implementados:** `venda_aprovada` (precisa webhook HubSoft) e `cliente_aniversario` (precisa campo data_nascimento)
+3. **Webhook WhatsApp hardcoded:** URL do N8N esta fixa no codigo, deveria ser configuravel por tenant
+4. **Sem deduplicacao de acoes:** se 2 regras mandam WhatsApp para o mesmo lead no mesmo minuto, manda 2x (usar `max_execucoes_por_lead` para controlar)
 
 ---
 

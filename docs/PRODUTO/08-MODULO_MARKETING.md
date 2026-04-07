@@ -660,25 +660,72 @@ python manage.py executar_automacoes_cron --tenant megalink  # tenant específic
 
 ### Editor Visual (Drawflow)
 
-O editor visual é o principal diferencial do módulo. Permite montar automações como fluxogramas, similar ao N8N/Zapier.
+O editor visual e o principal diferencial do modulo. Permite montar automacoes como fluxogramas, similar ao N8N/Zapier.
 
-**Tipos de nó na paleta:**
+**Tipos de no na paleta:**
 
-| Categoria | Nós disponíveis | Inputs/Outputs |
+| Categoria | Nos disponiveis | Inputs/Outputs |
 |-----------|-----------------|----------------|
 | **Gatilhos** | 11 eventos (lead_criado, venda_aprovada, etc.) | 0 in / 1 out |
-| **Condições** | Verificar Campo (campo + operador + valor) | 1 in / 2 out (sim/não) |
-| **Ações** | WhatsApp, E-mail, Notificação, Criar Tarefa, Mover Estágio, Dar Pontos, Webhook | 1 in / 1 out |
+| **Condicoes** | Verificar Campo (campo + operador + valor) | 1 in / 2 out (sim/nao) |
+| **Acoes** | WhatsApp, E-mail, Notificacao, Criar Tarefa, Mover Estagio, Atribuir Responsavel, Dar Pontos, Webhook | 1 in / 1 out |
 | **Controle** | Atraso (minutos/horas/dias) | 1 in / 1 out |
 
-**Painel de configuração (abre ao selecionar nó):**
-- **Condição:** campo (select com optgroups Lead/CRM), operador, valor
-- **Ação:** textarea com template e {{variáveis}}
-- **Delay:** número + unidade (minutos/horas/dias)
-- **Gatilho:** informativo (sem config)
-- Todos: botão "Remover nó"
+**Painel de configuracao especifica por tipo (abre ao selecionar no):**
 
-**Persistência:** estado do Drawflow salvo como JSON em `regra.fluxo_json`. Nodos e conexões persistidos como records no banco (NodoFluxo, ConexaoNodo) para o engine processar.
+Gatilhos:
+- **Oportunidade movida:** Pipeline (select), estagio de (select filtrado), estagio para (select filtrado)
+- **Lead sem contato:** Dias sem contato (numero)
+- **Entrou em segmento:** Segmento (select com segmentos do CRM)
+- **Mensagem recebida:** Canal (select: WhatsApp/Email/Widget)
+- Outros gatilhos: informativo (disparam sempre)
+
+Condicoes:
+- **Campo:** select com optgroups (Lead: origem/score/cidade/estado/valor/status/email/cpf | CRM: estagio/pipeline/responsavel | Temporal: dias sem contato)
+- **Operador:** igual, diferente, contem, maior, menor, maior ou igual, menor ou igual
+- **Valor:** campo dinamico que muda conforme o campo selecionado:
+  - Origem → select com origens (site, facebook, whatsapp...)
+  - Status → select com status do lead
+  - Estagio → select com estagios de todos os pipelines
+  - Pipeline → select com pipelines
+  - Responsavel → select com usuarios staff
+  - Estado → select com UFs
+  - Demais → input texto livre
+
+Acoes:
+- **Enviar WhatsApp:** Mensagem com variaveis {{lead_nome}}, {{lead_telefone}}...
+- **Enviar Email:** Assunto + corpo com variaveis
+- **Notificacao:** Titulo + mensagem
+- **Criar Tarefa:** Titulo, tipo (select: ligacao/followup/visita/whatsapp/email), prioridade (select: baixa/normal/alta/urgente)
+- **Mover Estagio:** Pipeline (select), estagio destino (select filtrado por pipeline)
+- **Atribuir Responsavel:** Modo (round-robin/fixo), responsavel (select com usuarios staff)
+- **Dar Pontos:** Quantidade + motivo
+- **Webhook:** URL, metodo (POST/GET), payload JSON
+
+Controle:
+- **Atraso:** Tempo + unidade (minutos/horas/dias)
+
+Todos os nos: botao "Remover no"
+
+**Persistencia:** estado do Drawflow salvo como JSON em `regra.fluxo_json`. Nodos e conexoes persistidos como records no banco (NodoFluxo, ConexaoNodo) para o engine processar. Se `fluxo_json` estiver vazio mas existirem nodos no banco, o editor reconstroi o grafo automaticamente.
+
+### Testes E2E
+
+Management command `testar_automacoes` valida todos os componentes end-to-end:
+
+```bash
+python manage.py testar_automacoes --settings=gerenciador_vendas.settings_local
+```
+
+18 testes cobrindo:
+- **T1:** Gatilho via signal real (cria lead → dispara → verifica notificacao no banco + lead no log)
+- **T2:** Condicao com branching (score > 5 → branch TRUE executa, FALSE nao)
+- **T3:** Acao notificacao (verifica criacao no banco com variaveis substituidas)
+- **T4:** Acao criar tarefa (verifica no CRM: titulo, lead, responsavel)
+- **T5:** Delay + pendentes (cria pendente → verifica que acao NAO executa → simula tempo → executa → verifica resultado)
+- **T6:** Rate limit (2 permitidas, 3a bloqueada)
+- **T7:** Fluxo completo E2E (trigger → condicao cidade=Recife → TRUE cria tarefa → FALSE nao executa)
+- **T8:** Substituicao de variaveis (simples e de objeto)
 
 ### Admin
 
