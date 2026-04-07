@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import views_n8n
+from . import views_crm_n8n
 from apps.inbox import views_n8n as inbox_views_n8n
 
 app_name = 'api_n8n'
@@ -38,4 +39,14 @@ urlpatterns = [
     # ── Inbox ───────────────────────────────────────────────────────
     path('inbox/mensagem-recebida/', inbox_views_n8n.InboxMensagemRecebidaAPIView.as_view(), name='inbox_mensagem_recebida'),
     path('inbox/status-mensagem/', inbox_views_n8n.InboxStatusMensagemAPIView.as_view(), name='inbox_status_mensagem'),
+    path('inbox/enviar/', views_crm_n8n.InboxEnviarAPIView.as_view(), name='inbox_enviar'),
+
+    # ── CRM ─────────────────────────────────────────────────────────
+    path('crm/pipelines/', views_crm_n8n.PipelineListAPIView.as_view(), name='crm_pipelines'),
+    path('crm/estagios/', views_crm_n8n.EstagioListAPIView.as_view(), name='crm_estagios'),
+    path('crm/oportunidades/', views_crm_n8n.OportunidadeAPIView.as_view(), name='crm_oportunidades'),
+    path('crm/oportunidades/buscar/', views_crm_n8n.OportunidadeBuscaAPIView.as_view(), name='crm_oportunidades_buscar'),
+    path('crm/oportunidades/<int:pk>/', views_crm_n8n.OportunidadeAPIView.as_view(), name='crm_oportunidade_detail'),
+    path('crm/tarefas/', views_crm_n8n.TarefaAPIView.as_view(), name='crm_tarefas'),
+    path('crm/tarefas/<int:pk>/', views_crm_n8n.TarefaAPIView.as_view(), name='crm_tarefa_detail'),
 ]
