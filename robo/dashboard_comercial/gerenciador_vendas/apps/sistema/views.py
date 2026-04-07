@@ -279,6 +279,10 @@ def api_usuarios_criar(request):
                     defaults={'tenant': request.tenant, 'perfil': perfil_perm},
                 )
 
+        from apps.sistema.utils import registrar_acao
+        registrar_acao('config', 'criar', 'usuario', user.id,
+                       f'Usuario criado: {user.username} ({user.email})', request=request)
+
         return JsonResponse({
             'success': True,
             'message': 'Usuário criado com sucesso',
@@ -607,3 +611,39 @@ def perfil_usuario_view(request):
         'funcionalidades': funcionalidades_usuario,
     }
     return render(request, 'sistema/perfil_usuario.html', context)
+
+
+@login_required(login_url='sistema:login')
+def logs_auditoria_view(request):
+    """Tela centralizada de logs de auditoria."""
+    from apps.sistema.models import LogSistema
+
+    categoria = request.GET.get('categoria', '')
+    acao_filter = request.GET.get('acao', '')
+    usuario_filter = request.GET.get('usuario', '')
+    nivel = request.GET.get('nivel', '')
+    entidade = request.GET.get('entidade', '')
+
+    logs = LogSistema.objects.order_by('-data_criacao')
+
+    if categoria:
+        logs = logs.filter(categoria=categoria)
+    if acao_filter:
+        logs = logs.filter(acao__icontains=acao_filter)
+    if usuario_filter:
+        logs = logs.filter(usuario__icontains=usuario_filter)
+    if nivel:
+        logs = logs.filter(nivel=nivel)
+    if entidade:
+        logs = logs.filter(entidade__icontains=entidade)
+
+    context = {
+        'logs': logs[:200],
+        'categoria': categoria,
+        'acao_filter': acao_filter,
+        'usuario_filter': usuario_filter,
+        'nivel': nivel,
+        'entidade': entidade,
+        'categorias': LogSistema.CATEGORIA_CHOICES,
+    }
+    return render(request, 'sistema/logs_auditoria.html', context)

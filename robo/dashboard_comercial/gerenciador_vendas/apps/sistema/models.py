@@ -602,6 +602,20 @@ class LogSistema(models.Model):
         ('CRITICAL', 'Critical'),
     ]
 
+    CATEGORIA_CHOICES = [
+        ('auth', 'Autenticacao'),
+        ('leads', 'Leads'),
+        ('crm', 'CRM'),
+        ('inbox', 'Inbox'),
+        ('suporte', 'Suporte'),
+        ('cs', 'Customer Success'),
+        ('marketing', 'Marketing'),
+        ('config', 'Configuracoes'),
+        ('admin', 'Admin Aurora'),
+        ('integracao', 'Integracoes'),
+        ('sistema', 'Sistema'),
+    ]
+
     tenant = models.ForeignKey(
         Tenant, on_delete=models.CASCADE,
         related_name='logs',
@@ -609,13 +623,19 @@ class LogSistema(models.Model):
         null=True, blank=True,
     )
 
-    nivel = models.CharField(max_length=10, choices=NIVEL_CHOICES, default='INFO', verbose_name="Nível")
-    modulo = models.CharField(max_length=100, verbose_name="Módulo")
+    nivel = models.CharField(max_length=10, choices=NIVEL_CHOICES, default='INFO', verbose_name="Nivel")
+    modulo = models.CharField(max_length=100, verbose_name="Modulo")
     mensagem = models.TextField(verbose_name="Mensagem")
     dados_extras = models.JSONField(null=True, blank=True, verbose_name="Dados Extras")
-    usuario = models.CharField(max_length=100, null=True, blank=True, verbose_name="Usuário")
+    usuario = models.CharField(max_length=100, null=True, blank=True, verbose_name="Usuario")
     ip = models.GenericIPAddressField(null=True, blank=True, verbose_name="IP")
-    data_criacao = models.DateTimeField(default=timezone.now, verbose_name="Data de Criação")
+    data_criacao = models.DateTimeField(default=timezone.now, verbose_name="Data de Criacao")
+
+    # Campos de classificacao (auditoria)
+    categoria = models.CharField(max_length=20, choices=CATEGORIA_CHOICES, blank=True, default='', verbose_name="Categoria", db_index=True)
+    acao = models.CharField(max_length=50, blank=True, default='', verbose_name="Acao")
+    entidade = models.CharField(max_length=50, blank=True, default='', verbose_name="Entidade")
+    entidade_id = models.IntegerField(null=True, blank=True, verbose_name="ID da Entidade")
 
     objects = TenantManager()
     all_tenants = models.Manager()
@@ -629,6 +649,9 @@ class LogSistema(models.Model):
             models.Index(fields=['nivel']),
             models.Index(fields=['data_criacao']),
             models.Index(fields=['modulo']),
+            models.Index(fields=['categoria']),
+            models.Index(fields=['categoria', 'acao']),
+            models.Index(fields=['entidade', 'entidade_id']),
         ]
 
     def __str__(self):

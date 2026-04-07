@@ -34,4 +34,7 @@ urlpatterns = [
 
     # Configuracoes de recontato
     path('configuracoes/recontato/', views.configuracoes_recontato_view, name='configuracoes_recontato'),
+
+    # Logs de auditoria
+    path('configuracoes/logs/', views.logs_auditoria_view, name='logs_auditoria'),
 ]

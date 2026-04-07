@@ -94,6 +94,11 @@ def toggle_automacao(request, pk):
     regra = get_object_or_404(RegraAutomacao, pk=pk)
     regra.ativa = not regra.ativa
     regra.save(update_fields=['ativa'])
+
+    from apps.sistema.utils import registrar_acao
+    registrar_acao('marketing', 'ativar' if regra.ativa else 'desativar', 'automacao', regra.pk,
+                   f'Automacao {"ativada" if regra.ativa else "desativada"}: {regra.nome}', request=request)
+
     return JsonResponse({'ok': True, 'ativa': regra.ativa})
 
 
@@ -104,6 +109,12 @@ def excluir_automacao(request, pk):
     denied = _check_perm(request, 'marketing.gerenciar_automacoes')
     if denied: return denied
     regra = get_object_or_404(RegraAutomacao, pk=pk)
+    nome = regra.nome
+
+    from apps.sistema.utils import registrar_acao
+    registrar_acao('marketing', 'excluir', 'automacao', regra.pk,
+                   f'Automacao excluida: {nome}', request=request, nivel='WARNING')
+
     regra.delete()
     return redirect('marketing_automacoes:lista')
 

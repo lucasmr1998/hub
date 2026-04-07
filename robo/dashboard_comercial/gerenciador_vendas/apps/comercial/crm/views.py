@@ -267,6 +267,12 @@ def api_mover_oportunidade(request):
     except Exception:
         pass
 
+    # Log de auditoria
+    from apps.sistema.utils import registrar_acao
+    registrar_acao('crm', 'mover', 'oportunidade', oportunidade.pk,
+                   f'{oportunidade.lead.nome_razaosocial}: {estagio_anterior.nome} -> {estagio_novo.nome}',
+                   request=request, dados_extras={'estagio_de': estagio_anterior.slug, 'estagio_para': estagio_novo.slug})
+
     return JsonResponse({
         'ok': True,
         'oportunidade': _oportunidade_para_dict(oportunidade),
@@ -418,6 +424,12 @@ def api_atribuir_responsavel(request, pk):
         oportunidade.responsavel = None
     oportunidade.save(update_fields=['responsavel', 'data_atualizacao'])
     nome = oportunidade.responsavel.get_full_name() if oportunidade.responsavel else None
+
+    from apps.sistema.utils import registrar_acao
+    registrar_acao('crm', 'atribuir', 'oportunidade', oportunidade.pk,
+                   f'Responsavel atribuido: {nome or "removido"} para {oportunidade.lead.nome_razaosocial}',
+                   request=request)
+
     return JsonResponse({'ok': True, 'responsavel_nome': nome})
 
 
@@ -604,6 +616,11 @@ def api_tarefa_concluir(request, pk):
     tarefa.data_conclusao = timezone.now()
     tarefa.resultado = data.get('resultado', '')
     tarefa.save(update_fields=['status', 'data_conclusao', 'resultado', 'data_atualizacao'])
+
+    from apps.sistema.utils import registrar_acao
+    registrar_acao('crm', 'concluir', 'tarefa', tarefa.pk,
+                   f'Tarefa concluida: {tarefa.titulo}', request=request)
+
     return JsonResponse({'ok': True})
 
 
@@ -657,6 +674,11 @@ def api_tarefa_criar(request):
         prioridade=data.get('prioridade', 'normal'),
         data_vencimento=vencimento,
     )
+
+    from apps.sistema.utils import registrar_acao
+    registrar_acao('crm', 'criar', 'tarefa', tarefa.pk,
+                   f'Tarefa criada: {tarefa.titulo}', request=request)
+
     return JsonResponse({'ok': True, 'id': tarefa.pk})
 
 

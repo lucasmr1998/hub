@@ -1,0 +1,136 @@
+{% extends 'sistema/base.html' %}
+
+{% block title %}Logs de Auditoria{% endblock %}
+
+{% block custom_css %}
+<style>
+    .logs-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+    .logs-header h1 { font-size:22px; font-weight:700; color:var(--text-main); margin:0; }
+    .logs-filters { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .logs-filters select, .logs-filters input { padding:6px 10px; border:1px solid var(--border); border-radius:8px; font-size:12px; font-family:inherit; }
+    .logs-filters input { width:120px; }
+
+    .log-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .log-table thead th { padding:10px 12px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); text-align:left; border-bottom:2px solid var(--border); background:var(--border-light); white-space:nowrap; }
+    .log-table tbody td { padding:10px 12px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); }
+    .log-table tbody tr:hover { background:var(--border-light); }
+
+    .log-msg { max-width:350px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .log-date { white-space:nowrap; font-size:12px; color:var(--text-muted); }
+
+    .cat-badge { font-size:10px; padding:2px 8px; border-radius:4px; font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
+    .cat-auth { background:#eff6ff; color:#1e40af; }
+    .cat-leads { background:#ecfdf5; color:#065f46; }
+    .cat-crm { background:#f5f3ff; color:#5b21b6; }
+    .cat-inbox { background:#ecfeff; color:#155e75; }
+    .cat-suporte { background:#fef3c7; color:#92400e; }
+    .cat-marketing { background:#fce7f3; color:#9d174d; }
+    .cat-config { background:#f1f5f9; color:#475569; }
+    .cat-admin { background:#fee2e2; color:#991b1b; }
+    .cat-sistema { background:#f1f5f9; color:#64748b; }
+
+    .empty-state { text-align:center; padding:40px; color:var(--text-light); }
+    .empty-state i { font-size:32px; display:block; margin-bottom:8px; color:var(--border); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="logs-header">
+    <h1><i class="fas fa-clipboard-list" style="color:var(--text-muted);margin-right:8px;"></i>Logs de Auditoria</h1>
+    <div class="logs-filters">
+        <select onchange="aplicarFiltros()" id="fCategoria">
+            <option value="">Todas categorias</option>
+            {% for code, label in categorias %}
+            <option value="{{ code }}" {% if categoria == code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <select onchange="aplicarFiltros()" id="fNivel">
+            <option value="">Todos niveis</option>
+            <option value="INFO" {% if nivel == 'INFO' %}selected{% endif %}>Info</option>
+            <option value="WARNING" {% if nivel == 'WARNING' %}selected{% endif %}>Warning</option>
+            <option value="ERROR" {% if nivel == 'ERROR' %}selected{% endif %}>Error</option>
+        </select>
+        <input type="text" id="fUsuario" placeholder="Usuario..." value="{{ usuario_filter }}" onkeydown="if(event.key==='Enter')aplicarFiltros()">
+        <input type="text" id="fEntidade" placeholder="Entidade..." value="{{ entidade }}" onkeydown="if(event.key==='Enter')aplicarFiltros()">
+        <button class="btn-primary btn-sm" onclick="aplicarFiltros()"><i class="fas fa-search"></i></button>
+        {% if categoria or nivel or usuario_filter or entidade %}
+        <a href="{% url 'sistema:logs_auditoria' %}" class="btn-secondary btn-sm"><i class="fas fa-times"></i> Limpar</a>
+        {% endif %}
+    </div>
+</div>
+
+<div style="background:var(--bg-white);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+    <table class="log-table">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Categoria</th>
+                <th>Acao</th>
+                <th>Usuario</th>
+                <th>Entidade</th>
+                <th>Mensagem</th>
+                <th>Nivel</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td class="log-date">{{ log.data_criacao|date:"d/m/Y H:i:s" }}</td>
+                <td>
+                    {% if log.categoria %}
+                    <span class="cat-badge cat-{{ log.categoria }}">{{ log.categoria }}</span>
+                    {% else %}
+                    <span class="cat-badge cat-sistema">sistema</span>
+                    {% endif %}
+                </td>
+                <td style="font-weight:600;">{{ log.acao|default:log.modulo }}</td>
+                <td>{{ log.usuario|default:"-" }}</td>
+                <td>
+                    {% if log.entidade %}
+                    {{ log.entidade }}{% if log.entidade_id %} #{{ log.entidade_id }}{% endif %}
+                    {% else %}-{% endif %}
+                </td>
+                <td class="log-msg" title="{{ log.mensagem }}">{{ log.mensagem|truncatechars:80 }}</td>
+                <td>
+                    {% if log.nivel == 'ERROR' or log.nivel == 'CRITICAL' %}
+                    <span class="badge badge-danger">{{ log.nivel }}</span>
+                    {% elif log.nivel == 'WARNING' %}
+                    <span class="badge badge-warning">{{ log.nivel }}</span>
+                    {% else %}
+                    <span class="badge badge-muted">{{ log.nivel }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7">
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        Nenhum log encontrado.
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function aplicarFiltros() {
+    const params = new URLSearchParams();
+    const cat = document.getElementById('fCategoria').value;
+    const nivel = document.getElementById('fNivel').value;
+    const usuario = document.getElementById('fUsuario').value.trim();
+    const entidade = document.getElementById('fEntidade').value.trim();
+    if (cat) params.set('categoria', cat);
+    if (nivel) params.set('nivel', nivel);
+    if (usuario) params.set('usuario', usuario);
+    if (entidade) params.set('entidade', entidade);
+    location.href = '{% url "sistema:logs_auditoria" %}?' + params.toString();
+}
+</script>
+{% endblock %}

@@ -293,6 +293,9 @@ def api_resolver(request, pk):
     if denied: return denied
     conversa = _get_conversa(pk, request)
     services.resolver_conversa(conversa, request.user)
+    from apps.sistema.utils import registrar_acao
+    registrar_acao('inbox', 'resolver', 'conversa', conversa.pk,
+                   f'Conversa resolvida: {conversa.contato_nome}', request=request)
     return JsonResponse({'success': True})
 
 
@@ -302,6 +305,9 @@ def api_reabrir(request, pk):
     """POST: Reabrir conversa."""
     conversa = _get_conversa(pk, request)
     services.reabrir_conversa(conversa, request.user)
+    from apps.sistema.utils import registrar_acao
+    registrar_acao('inbox', 'reabrir', 'conversa', conversa.pk,
+                   f'Conversa reaberta: {conversa.contato_nome}', request=request)
     return JsonResponse({'success': True})
 
 

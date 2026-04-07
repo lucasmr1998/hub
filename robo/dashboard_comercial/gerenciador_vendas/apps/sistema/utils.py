@@ -215,6 +215,58 @@ def _criar_log_sistema(nivel, modulo, mensagem, dados_extras=None, request=None)
         logger.warning("Erro ao criar log: %s", str(e))
 
 
+def registrar_acao(categoria, acao, entidade, entidade_id, mensagem, request=None, dados_extras=None, nivel='INFO'):
+    """
+    Registra uma acao de auditoria no LogSistema.
+
+    Args:
+        categoria: auth, leads, crm, inbox, suporte, cs, marketing, config, admin, sistema
+        acao: criar, editar, excluir, mover, atribuir, login, logout, validar, aprovar, rejeitar
+        entidade: lead, oportunidade, tarefa, conversa, ticket, usuario, campanha, segmento, etc.
+        entidade_id: PK do objeto afetado (int ou None)
+        mensagem: Descricao da acao
+        request: HttpRequest para extrair IP, usuario e tenant
+        dados_extras: dict com dados adicionais
+        nivel: INFO (padrao), WARNING, ERROR
+    """
+    try:
+        from apps.sistema.models import LogSistema
+        from apps.sistema.middleware import get_current_tenant
+
+        ip = None
+        usuario = None
+        tenant = None
+
+        if request:
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip = x_forwarded_for.split(',')[0].strip()
+            else:
+                ip = request.META.get('REMOTE_ADDR')
+            if request.user.is_authenticated:
+                usuario = request.user.username
+            tenant = getattr(request, 'tenant', None)
+
+        if not tenant:
+            tenant = get_current_tenant()
+
+        LogSistema.objects.create(
+            tenant=tenant,
+            nivel=nivel,
+            modulo=f'{categoria}.{acao}',
+            mensagem=mensagem,
+            dados_extras=dados_extras,
+            usuario=usuario,
+            ip=ip,
+            categoria=categoria,
+            acao=acao,
+            entidade=entidade,
+            entidade_id=int(entidade_id) if entidade_id else None,
+        )
+    except Exception as e:
+        logger.warning("Erro ao registrar acao: %s", str(e))
+
+
 def get_client_ip(request):
     """Função para obter o IP real do cliente"""
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')

@@ -291,6 +291,12 @@ def enviar_mensagem(conversa, conteudo, user, tipo_conteudo='texto',
         'mensagens_nao_lidas', 'tempo_primeira_resposta_seg', 'agente',
     ])
 
+    # Log de auditoria
+    from apps.sistema.utils import registrar_acao
+    registrar_acao('inbox', 'enviar_mensagem', 'conversa', conversa.pk,
+                   f'Mensagem enviada por {user.username} para {conversa.contato_nome}',
+                   dados_extras={'canal': conversa.canal.tipo if conversa.canal_id else ''})
+
     # Enviar via webhook externo (fire-and-forget)
     _enviar_webhook_async(conversa, mensagem)
 

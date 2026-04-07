@@ -329,6 +329,11 @@ def registrar_lead_api(request):
             request=request
         )
 
+        from apps.sistema.utils import registrar_acao
+        registrar_acao('leads', 'criar', 'lead', lead.id,
+                       f'Lead criado: {lead.nome_razaosocial}', request=request,
+                       dados_extras={'origem': lead.origem, 'telefone': lead.telefone})
+
         return JsonResponse({'success': True, 'id': lead.id, 'lead': _serialize_instance(lead)}, status=201)
     except Exception as e:
         # Log de erro
@@ -1494,6 +1499,10 @@ def aprovar_venda_api(request):
 
         prospecto.save()
 
+        from apps.sistema.utils import registrar_acao
+        registrar_acao('leads', 'aprovar', 'prospecto', prospecto.id,
+                       f'Venda aprovada: prospecto #{prospecto.id}', request=request)
+
         return JsonResponse({
             'success': True,
             'message': 'Venda aprovada com sucesso',
@@ -1553,6 +1562,11 @@ def rejeitar_venda_api(request):
         _atualizar_resultado_processamento(prospecto, rejeicao_data)
 
         prospecto.save()
+
+        from apps.sistema.utils import registrar_acao
+        registrar_acao('leads', 'rejeitar', 'prospecto', prospecto.id,
+                       f'Venda rejeitada: prospecto #{prospecto.id}. Motivo: {motivo_rejeicao[:100]}',
+                       request=request, nivel='WARNING')
 
         return JsonResponse({
             'success': True,
