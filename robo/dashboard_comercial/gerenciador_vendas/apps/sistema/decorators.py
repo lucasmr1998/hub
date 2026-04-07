@@ -36,29 +36,44 @@ def webhook_token_required(view_func):
 
 
 def api_token_required(view_func):
-    """Valida token de API no header Authorization para integrações externas (N8N).
+    """Valida token de API no header Authorization para integracoes externas.
 
-    Espera: Authorization: Bearer <N8N_API_TOKEN>
-    Retorna 401 se ausente ou inválido.
+    Espera: Authorization: Bearer <token>
+    Fluxo: busca token por tenant no banco, fallback para env var global.
     """
     @functools.wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        expected_token = os.environ.get('N8N_API_TOKEN', '')
-        if not expected_token:
-            logger.error("[SEGURANÇA] N8N_API_TOKEN não definido no ambiente.")
-            return JsonResponse({'error': 'API não configurada'}, status=503)
-
         auth_header = request.META.get('HTTP_AUTHORIZATION', '')
         if not auth_header.startswith('Bearer '):
-            logger.warning("[SEGURANÇA] API sem token: %s %s", request.method, request.path)
-            return JsonResponse({'error': 'Token obrigatório'}, status=401)
+            return JsonResponse({'error': 'Token obrigatorio'}, status=401)
 
-        token = auth_header[7:]
-        if token != expected_token:
-            logger.warning("[SEGURANÇA] API com token inválido: %s %s", request.method, request.path)
-            return JsonResponse({'error': 'Token inválido'}, status=401)
+        token = auth_header[7:].strip()
 
-        return view_func(request, *args, **kwargs)
+        # 1. Buscar token por tenant no banco
+        try:
+            from apps.integracoes.models import IntegracaoAPI
+            integracao = IntegracaoAPI.all_tenants.filter(
+                api_token=token, ativa=True,
+            ).select_related('tenant').first()
+            if integracao and integracao.tenant:
+                request.tenant = integracao.tenant
+                from apps.sistema.middleware import _thread_local
+                _thread_local.tenant = integracao.tenant
+                return view_func(request, *args, **kwargs)
+        except Exception:
+            pass
+
+        # 2. Fallback: token global N8N
+        n8n_token = os.environ.get('N8N_API_TOKEN', '')
+        if n8n_token and token == n8n_token:
+            return view_func(request, *args, **kwargs)
+
+        # 3. Fallback: webhook token
+        webhook_token = os.environ.get('WEBHOOK_SECRET_TOKEN', '')
+        if webhook_token and token == webhook_token:
+            return view_func(request, *args, **kwargs)
+
+        return JsonResponse({'error': 'Token invalido'}, status=401)
     return wrapper
 
 

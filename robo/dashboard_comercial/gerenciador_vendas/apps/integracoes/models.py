@@ -26,6 +26,15 @@ class IntegracaoAPI(TenantMixin):
 
     # tenant FK herdado de TenantMixin
 
+    api_token = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        verbose_name="Token de API",
+        help_text="Token unico para autenticar chamadas externas. Identifica o tenant automaticamente.",
+        db_index=True,
+    )
+
     nome = models.CharField(
         max_length=200,
         verbose_name="Nome da Integração",
