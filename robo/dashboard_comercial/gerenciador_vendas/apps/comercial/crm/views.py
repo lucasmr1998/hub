@@ -12,6 +12,7 @@ from django.views.decorators.http import require_POST, require_GET
 
 from apps.sistema.decorators import webhook_token_required, user_tem_funcionalidade
 from apps.sistema.models import PerfilUsuario
+from apps.sistema.utils import auditar
 
 from .models import (
     PipelineEstagio, OportunidadeVenda, HistoricoPipelineEstagio,
@@ -688,6 +689,7 @@ def api_tarefa_criar(request):
 
 @login_required
 @require_POST
+@auditar('crm', 'criar', 'nota')
 def api_nota_criar(request):
     try:
         data = json.loads(request.body)
@@ -736,6 +738,7 @@ def api_nota_fixar(request, pk):
 
 @login_required
 @require_POST
+@auditar('crm', 'excluir', 'nota')
 def api_nota_deletar(request, pk):
     nota = get_object_or_404(NotaInterna, pk=pk, autor=request.user)
     nota.delete()
@@ -851,6 +854,7 @@ def metas_view(request):
 
 @login_required
 @require_POST
+@auditar('crm', 'criar', 'meta')
 def api_meta_criar(request):
     denied = _check_perm(request, 'comercial.gerenciar_metas')
     if denied: return denied
@@ -909,6 +913,7 @@ def retencao_view(request):
 
 @login_required
 @require_POST
+@auditar('crm', 'tratar', 'alerta')
 def api_tratar_alerta(request, pk):
     alerta = get_object_or_404(AlertaRetencao, pk=pk)
     alerta.status = 'em_tratamento'
@@ -919,6 +924,7 @@ def api_tratar_alerta(request, pk):
 
 @login_required
 @require_POST
+@auditar('crm', 'resolver', 'alerta')
 def api_resolver_alerta(request, pk):
     alerta = get_object_or_404(AlertaRetencao, pk=pk)
     try:
@@ -1138,6 +1144,7 @@ def api_reordenar_estagios(request):
 
 @login_required
 @require_POST
+@auditar('crm', 'editar', 'configuracao')
 def api_salvar_config(request):
     if not request.user.is_superuser:
         return JsonResponse({'ok': False, 'erro': 'Sem permissão'}, status=403)
@@ -1162,6 +1169,7 @@ def api_salvar_config(request):
 
 @login_required
 @require_POST
+@auditar('crm', 'criar', 'estagio')
 def api_criar_estagio(request):
     if not request.user.is_superuser:
         return JsonResponse({'ok': False, 'erro': 'Sem permissão'}, status=403)
@@ -1229,6 +1237,7 @@ def api_estagio_detalhe(request, pk):
 
 @login_required
 @require_POST
+@auditar('crm', 'excluir', 'estagio')
 def api_excluir_estagio(request, pk):
     if not request.user.is_superuser:
         return JsonResponse({'ok': False, 'erro': 'Sem permissão'}, status=403)
@@ -1243,6 +1252,7 @@ def api_excluir_estagio(request, pk):
 
 @login_required
 @require_POST
+@auditar('crm', 'criar', 'equipe')
 def api_criar_equipe(request):
     if not request.user.is_superuser:
         return JsonResponse({'ok': False, 'erro': 'Sem permissão'}, status=403)
@@ -1332,6 +1342,7 @@ def equipes_view(request):
 
 @login_required
 @require_POST
+@auditar('marketing', 'salvar', 'segmento')
 def api_segmento_salvar(request):
     seg_id = request.POST.get('seg_id')
     nome = request.POST.get('nome', '').strip()
@@ -1527,6 +1538,7 @@ def api_segmento_buscar_leads(request, pk):
 
 @login_required
 @require_POST
+@auditar('marketing', 'adicionar_lead', 'segmento')
 def api_segmento_adicionar_lead(request, pk):
     seg = get_object_or_404(SegmentoCRM, pk=pk)
     try:
@@ -1550,6 +1562,7 @@ def api_segmento_adicionar_lead(request, pk):
 
 @login_required
 @require_POST
+@auditar('marketing', 'remover_lead', 'segmento')
 def api_segmento_remover_membro(request, pk):
     from .models import MembroSegmento
     try:
@@ -1568,6 +1581,7 @@ def api_segmento_remover_membro(request, pk):
 
 @login_required
 @require_POST
+@auditar('marketing', 'disparar', 'segmento')
 def api_segmento_disparar_campanha(request, pk):
     seg = get_object_or_404(SegmentoCRM, pk=pk)
     config = ConfiguracaoCRM.get_config()
@@ -1587,6 +1601,7 @@ def api_segmento_disparar_campanha(request, pk):
 
 @login_required
 @require_POST
+@auditar('crm', 'salvar', 'meta')
 def api_meta_salvar(request):
     """Cria ou atualiza MetaVendas via FormData."""
     from django.contrib.auth.models import User as AuthUser
@@ -1625,6 +1640,7 @@ def api_meta_salvar(request):
 
 @login_required
 @require_POST
+@auditar('crm', 'excluir', 'meta')
 def api_meta_excluir(request, pk):
     meta = get_object_or_404(MetaVendas, pk=pk)
     meta.delete()

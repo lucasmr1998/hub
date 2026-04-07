@@ -21,6 +21,7 @@ from .models import (
 from .serializers import ConversaOutputSerializer, MensagemOutputSerializer
 from . import services
 from apps.sistema.decorators import user_tem_funcionalidade
+from apps.sistema.utils import auditar
 
 
 def _check_perm(request, codigo):
@@ -266,6 +267,7 @@ def api_enviar_mensagem(request, pk):
 
 @login_required
 @require_http_methods(["POST"])
+@auditar('inbox', 'atribuir', 'conversa')
 def api_atribuir(request, pk):
     """POST: Atribuir conversa a um agente."""
     conversa = _get_conversa(pk, request)
@@ -313,6 +315,7 @@ def api_reabrir(request, pk):
 
 @login_required
 @require_http_methods(["POST"])
+@auditar('inbox', 'transferir', 'conversa')
 def api_transferir(request, pk):
     """POST: Transferir conversa para agente, equipe ou fila."""
     denied = _check_perm(request, 'inbox.transferir_agente')
@@ -351,6 +354,7 @@ def api_transferir(request, pk):
 
 @login_required
 @require_http_methods(["POST"])
+@auditar('suporte', 'criar', 'ticket')
 def api_criar_ticket(request, pk):
     """POST: Criar ticket de suporte a partir da conversa."""
     conversa = _get_conversa(pk, request)

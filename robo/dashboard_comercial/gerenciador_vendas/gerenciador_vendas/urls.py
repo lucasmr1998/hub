@@ -38,6 +38,7 @@ urlpatterns = [
     path('integracoes/',  include('apps.integracoes.urls')),
     path('crm/',          include('apps.comercial.crm.urls')),
     path('marketing/automacoes/', include('apps.marketing.automacoes.urls')),
+    path('marketing/emails/',     include('apps.marketing.emails.urls')),
     path('marketing/segmentos/', include('apps.marketing.segmentos_urls')),
 
     # === Modulo CS ===

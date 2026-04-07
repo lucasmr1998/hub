@@ -215,6 +215,35 @@ def _criar_log_sistema(nivel, modulo, mensagem, dados_extras=None, request=None)
         logger.warning("Erro ao criar log: %s", str(e))
 
 
+def auditar(categoria, acao, entidade):
+    """
+    Decorator que registra log de auditoria automaticamente apos views POST/PUT/DELETE.
+    Registra apenas se a resposta for sucesso (status < 400).
+
+    Uso:
+        @auditar('crm', 'criar', 'nota')
+        def api_nota_criar(request): ...
+    """
+    import functools
+    def decorator(view_func):
+        @functools.wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            response = view_func(request, *args, **kwargs)
+            if hasattr(response, 'status_code') and response.status_code < 400:
+                try:
+                    import json as _json
+                    data = _json.loads(response.content) if response.content else {}
+                    eid = data.get('id') or data.get('pk') or (args[0] if args else None)
+                    msg = data.get('message', data.get('mensagem', f'{acao} {entidade}'))
+                    registrar_acao(categoria, acao, entidade, eid, str(msg)[:200], request=request)
+                except Exception:
+                    registrar_acao(categoria, acao, entidade, args[0] if args else None,
+                                  f'{acao} {entidade}', request=request)
+            return response
+        return wrapper
+    return decorator
+
+
 def registrar_acao(categoria, acao, entidade, entidade_id, mensagem, request=None, dados_extras=None, nivel='INFO'):
     """
     Registra uma acao de auditoria no LogSistema.

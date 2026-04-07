@@ -10,6 +10,7 @@ import json
 import logging
 
 from apps.sistema.models import ConfiguracaoEmpresa
+from apps.sistema.utils import auditar
 
 logger = logging.getLogger(__name__)
 
@@ -306,6 +307,7 @@ def api_usuarios_criar(request):
 
 @login_required
 @require_http_methods(["PUT"])
+@auditar('config', 'editar', 'usuario')
 def api_usuarios_editar(request, user_id):
     """API para editar usuário existente"""
     from django.contrib.auth.models import User, Group
@@ -391,6 +393,7 @@ def api_usuarios_editar(request, user_id):
 
 @login_required
 @require_http_methods(["DELETE"])
+@auditar('config', 'excluir', 'usuario')
 def api_usuarios_deletar(request, user_id):
     """API para deletar usuário"""
     from django.contrib.auth.models import User
@@ -431,6 +434,7 @@ def api_usuarios_deletar(request, user_id):
 
 @login_required
 @require_http_methods(["GET", "POST"])
+@auditar('config', 'gerenciar', 'perfil_permissao')
 def api_perfis_permissao(request):
     """GET: lista perfis. POST: cria perfil."""
     from apps.sistema.models import PerfilPermissao
@@ -483,6 +487,7 @@ def api_perfis_permissao(request):
 
 @login_required
 @require_http_methods(["PUT", "DELETE"])
+@auditar('config', 'gerenciar', 'perfil_permissao')
 def api_perfil_permissao_detalhe(request, perfil_id):
     """PUT: edita perfil. DELETE: exclui perfil."""
     from apps.sistema.models import PerfilPermissao

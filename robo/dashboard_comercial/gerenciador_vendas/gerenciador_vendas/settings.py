@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     # === Módulo Marketing ===
     'apps.marketing.campanhas',
     'apps.marketing.automacoes',
+    'apps.marketing.emails',
 
     # === API ===
     'apps.api',

@@ -13,15 +13,15 @@ from pathlib import Path
 from datetime import datetime
 
 WORKSPACE   = Path(__file__).parent.parent
-OUTPUT_PATH = WORKSPACE / "exports" / "hub.html"
+OUTPUT_PATH = WORKSPACE / "robo" / "exports" / "hub.html"
 
 INCLUDE_ROOTS = [
-    (WORKSPACE / "docs",               "Documentacao"),
-    (WORKSPACE / "exports" / "drafts", "Drafts"),
+    (WORKSPACE / "robo" / "docs",                "Documentacao"),
+    (WORKSPACE / "robo" / "exports" / "drafts",  "Drafts"),
 ]
 ROOT_FILES   = [WORKSPACE / "CLAUDE.md"]
 IGNORE_FILES = {"TEMPLATE.MD"}
-TAREFAS_PATH = WORKSPACE / "docs" / "context" / "tarefas"
+TAREFAS_PATH = WORKSPACE / "robo" / "docs" / "context" / "tarefas"
 
 
 # ── Docs ──────────────────────────────────────────────────────────────────────

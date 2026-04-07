@@ -21,6 +21,7 @@ from apps.comercial.atendimento.models import (
     AtendimentoFluxo,
     LogFluxoAtendimento,
 )
+from apps.sistema.utils import auditar
 
 
 # ============================================================================
@@ -456,6 +457,7 @@ def editor_fluxo_view(request, fluxo_id):
 
 @login_required(login_url='sistema:login')
 @require_http_methods(["POST"])
+@auditar('crm', 'salvar_fluxo', 'fluxo_atendimento')
 def salvar_fluxo_api(request, fluxo_id):
     """Salva o estado do editor visual (nodos + conexoes)."""
     from django.shortcuts import get_object_or_404

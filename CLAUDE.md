@@ -10,9 +10,9 @@
 
 ## Hub de Documentos
 
-O arquivo `exports/hub.html` é o gestor visual unificado de documentos e backlog.
+O arquivo `robo/exports/hub.html` é o gestor visual unificado de documentos e backlog.
 
-**Regra:** sempre que um arquivo `.md` for criado ou modificado em `docs/` ou `exports/drafts/`, ou uma tarefa for criada/atualizada em `docs/context/tarefas/`, rodar automaticamente:
+**Regra:** sempre que um arquivo `.md` for criado ou modificado em `robo/docs/` ou `robo/exports/drafts/`, ou uma tarefa for criada/atualizada em `robo/docs/context/tarefas/`, rodar automaticamente:
 
 ```
 python scripts/gerar_hub.py
@@ -28,31 +28,31 @@ Isso garante que o hub reflita sempre o estado atual do workspace.
 Ao final de conversas relevantes ou quando o usuário solicitar, salvar um resumo em:
 
 ```
-docs/context/reunioes/assunto_DD-MM-AAAA.md
+robo/docs/context/reunioes/assunto_DD-MM-AAAA.md
 ```
 
-Template em `docs/context/reunioes/TEMPLATE.md`.
+Template em `robo/docs/context/reunioes/TEMPLATE.md`.
 Exemplo: `gtm_posicionamento_26-03-2026.md`
 
 ### Tarefas
 Registrar tarefas ativas, pendentes ou concluídas em:
 
 ```
-docs/context/tarefas/assunto_DD-MM-AAAA.md
+robo/docs/context/tarefas/assunto_DD-MM-AAAA.md
 ```
 
-Template em `docs/context/tarefas/TEMPLATE.md`.
+Template em `robo/docs/context/tarefas/TEMPLATE.md`.
 Exemplo: `criar_logo_26-03-2026.md`
 
 ---
 
 ## Gestão de Tarefas
 
-Toda implementação deve estar vinculada a uma tarefa em `docs/context/tarefas/`. Se o usuário solicitar algo que não tenha tarefa correspondente, **criar a tarefa antes de começar a implementar**. Isso garante rastreabilidade e controle do backlog.
+Toda implementação deve estar vinculada a uma tarefa em `robo/docs/context/tarefas/`. Se o usuário solicitar algo que não tenha tarefa correspondente, **criar a tarefa antes de começar a implementar**. Isso garante rastreabilidade e controle do backlog.
 
-- Tarefas pendentes ficam em `docs/context/tarefas/backlog/`
-- Tarefas concluídas ficam em `docs/context/tarefas/finalizadas/`
-- Template em `docs/context/tarefas/TEMPLATE.md`
+- Tarefas pendentes ficam em `robo/docs/context/tarefas/backlog/`
+- Tarefas concluídas ficam em `robo/docs/context/tarefas/finalizadas/`
+- Template em `robo/docs/context/tarefas/TEMPLATE.md`
 - Ao finalizar uma tarefa, mover o arquivo para `finalizadas/` e rodar `python scripts/gerar_hub.py`
 
 ---
@@ -68,7 +68,7 @@ Toda implementação deve estar vinculada a uma tarefa em `docs/context/tarefas/
 
 Este workspace (`hub/`) centraliza a estratégia e documentação da **AuroraISP** — hub de tecnologia com IA para provedores de internet.
 
-Os projetos de código ficam em pastas separadas e não devem ser editados sem autorização. A documentação estratégica fica em `docs/`.
+Os projetos de código ficam em pastas separadas e não devem ser editados sem autorização. A documentação estratégica fica em `robo/docs/`.
 
 ---
 
@@ -91,10 +91,12 @@ Módulo principal da AuroraISP (Comercial + CS + Marketing). Em produção na Me
 - **Admin Aurora:** Painel /aurora-admin/ para gerenciar tenants, planos (9 planos, 115 features) e monitorar o SaaS.
 - **CS migrado do megaroleta:** apps clube, parceiros, indicacoes e carteirinha integrados ao hub.
 - **API REST:** DRF com TokenAuth + SessionAuth. Endpoints em `/api/v1/`. Swagger em `/api/docs/`.
-- **Permissões granulares:** 35 funcionalidades por módulo, perfis reutilizáveis (PerfilPermissao M2M Funcionalidade), PermissaoMiddleware por URL, sidebar/topbar filtrados. Seed: `python manage.py seed_funcionalidades`. Docs em `docs/PRODUTO/11-PERMISSOES.md`.
+- **Permissões granulares:** 35 funcionalidades por módulo, perfis reutilizáveis (PerfilPermissao M2M Funcionalidade), PermissaoMiddleware por URL, sidebar/topbar filtrados. Seed: `python manage.py seed_funcionalidades`. Docs em `robo/docs/PRODUTO/11-PERMISSOES.md`.
 - **Segurança:** 5 vulnerabilidades críticas e 12 altas/médias corrigidas. Secrets em variáveis de ambiente. `@api_token_required` para N8N, `@login_required` para painel. `@permissao_required` para controle granular. PIIFilter no logging. Validação de uploads. Isolamento de tenant em uploads.
 - **Testes:** 70+ testes passando (automações, CRM, views, ações do engine). 10+ arquivos de teste, 35+ factories. CI/CD com GitHub Actions.
 - **Migrations:** limpas e regeneradas do zero para todos os apps.
+- **Frontend:** Design system em `FRONTEND_BLUEPRINT.md`. Topbar (52px) + Sidebar (220px). CSS em `apps/sistema/static/sistema/css/dashboard.css`. Font: Inter. Icons: FontAwesome 6.
+- **Como rodar:** `cd robo/dashboard_comercial/gerenciador_vendas && python manage.py runserver 8001 --settings=gerenciador_vendas.settings_local`
 
 ### megaroleta/
 Módulo **CS / Clube de Benefícios** da AuroraISP. **Legacy.** Os apps principais (clube, parceiros, indicacoes, carteirinha) foram migrados para `robo/apps/cs/`.
@@ -145,7 +147,7 @@ ISPRO AI (isproai.com.br) — sem case real, sem integração HubSoft profunda, 
 ## Estrutura de Documentação
 
 ```
-docs/
+robo/docs/
 ├── GTM/                     — estratégia de go-to-market
 │   ├── 00-README.md
 │   ├── 01-PESQUISA_MERCADO.md
@@ -190,7 +192,7 @@ Para adotar uma perspectiva específica, indicar o agente desejado. Cada agente 
 | Tech | Tech Lead, Data Analyst, Segurança (AppSec), DevOps, QA |
 | Operações | RevOps, Jurídico |
 
-Definições completas em `docs/AGENTES/`.
+Definições completas em `robo/docs/AGENTES/`.
 
 ### Identificação obrigatória do agente
 

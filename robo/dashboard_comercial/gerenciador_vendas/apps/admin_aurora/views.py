@@ -15,6 +15,7 @@ from apps.sistema.models import (
     Tenant, PerfilUsuario, ConfiguracaoEmpresa, LogSistema,
     Plano, FeaturePlano,
 )
+from apps.sistema.utils import auditar
 
 # Caminho base dos docs (relativo ao manage.py -> sobe até hub/)
 DOCS_BASE = Path(__file__).resolve().parent.parent.parent.parent.parent.parent / 'docs'
@@ -79,6 +80,7 @@ def dashboard_view(request):
 
 
 @staff_required
+@auditar('admin', 'gerenciar', 'tenant')
 def tenant_detalhe_view(request, tenant_id):
     """Detalhe e edição de um tenant."""
     if not _user_can_access_tenant(request.user, tenant_id):
@@ -131,6 +133,7 @@ def tenant_detalhe_view(request, tenant_id):
 
 
 @superuser_required
+@auditar('admin', 'criar', 'tenant')
 def criar_tenant_view(request):
     """Criar novo tenant via UI. Somente superusers."""
     if request.method == 'POST':
@@ -306,6 +309,7 @@ def logs_view(request):
 
 @superuser_required
 @require_POST
+@auditar('admin', 'toggle', 'tenant')
 def api_toggle_tenant(request):
     """Ativa/desativa um tenant via API. Somente superusers."""
     tenant_id = request.POST.get('tenant_id')
@@ -334,6 +338,7 @@ def planos_view(request):
 
 
 @staff_required
+@auditar('admin', 'gerenciar', 'plano')
 def plano_detalhe_view(request, plano_id):
     """Detalhe e edição de um plano com suas features."""
     plano = get_object_or_404(Plano, pk=plano_id)

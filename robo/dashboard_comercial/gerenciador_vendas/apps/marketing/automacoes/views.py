@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.sistema.decorators import user_tem_funcionalidade
+from apps.sistema.utils import auditar
 
 from .models import (
     RegraAutomacao, LogExecucao,
@@ -47,6 +48,7 @@ def lista_automacoes(request):
 
 
 @login_required
+@auditar('marketing', 'criar', 'automacao')
 def criar_automacao(request):
     """Criar nova automação."""
     denied = _check_perm(request, 'marketing.gerenciar_automacoes')
@@ -184,6 +186,7 @@ def editor_fluxo(request, pk):
 
 @login_required
 @require_POST
+@auditar('marketing', 'salvar_fluxo', 'automacao')
 def salvar_fluxo(request, pk):
     """Salva o fluxograma: persiste nodos e conexões no banco."""
     regra = get_object_or_404(RegraAutomacao, pk=pk)

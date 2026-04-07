@@ -1,0 +1,811 @@
+{% extends 'sistema/base.html' %}
+
+{% block title %}Editor — {{ template.nome }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Layout principal ── */
+.email-editor-layout { display:flex; height:calc(100vh - 160px); gap:0; }
+.email-sidebar { width:260px; background:var(--bg-white); border:1px solid var(--border); border-radius:10px 0 0 10px; overflow-y:auto; flex-shrink:0; display:flex; flex-direction:column; }
+.email-canvas-wrap { flex:1; background:#e5e7eb; border-top:1px solid var(--border); border-bottom:1px solid var(--border); overflow-y:auto; display:flex; justify-content:center; padding:24px 16px; }
+.email-config-panel { width:300px; background:var(--bg-white); border:1px solid var(--border); border-radius:0 10px 10px 0; overflow-y:auto; flex-shrink:0; }
+
+/* ── Toolbar ── */
+.email-toolbar { display:flex; align-items:center; gap:12px; padding:10px 16px; background:var(--bg-white); border:1px solid var(--border); border-radius:10px; margin-bottom:14px; }
+.email-toolbar h2 { font-size:15px; font-weight:700; color:var(--text-main); flex:1; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* ── Sidebar: blocos ── */
+.sidebar-header { padding:14px 16px; border-bottom:1px solid var(--border); }
+.sidebar-header h3 { font-size:13px; font-weight:700; margin:0; color:var(--text-main); }
+.sidebar-blocks { padding:8px 12px; flex:1; overflow-y:auto; }
+.block-section { margin-bottom:4px; }
+.block-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); padding:8px 4px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none; border-radius:6px; }
+.block-section-title:hover { background:var(--bg-subtle); }
+.block-section-items { padding-bottom:4px; }
+.block-draggable { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:500; color:var(--text-secondary); cursor:grab; transition:all .15s; border:1px solid transparent; margin-bottom:2px; }
+.block-draggable:hover { background:var(--bg-subtle); border-color:var(--border); }
+.block-draggable:active { cursor:grabbing; }
+.block-draggable i { width:20px; text-align:center; flex-shrink:0; }
+
+/* ── Canvas ── */
+.email-canvas { width:600px; min-height:400px; background:#fff; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.08); position:relative; }
+.email-canvas.drag-over { outline:2px dashed var(--primary); outline-offset:4px; }
+.canvas-drop-zone { min-height:80px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:13px; border:2px dashed var(--border); border-radius:8px; margin:16px; transition:all .2s; }
+.canvas-drop-zone:empty::after { content:'Arraste blocos aqui para começar'; }
+.canvas-drop-zone.drag-hover { border-color:var(--primary); background:rgba(59,130,246,0.04); }
+
+/* ── Blocos no canvas ── */
+.canvas-block { position:relative; border:2px solid transparent; border-radius:6px; transition:border-color .15s; cursor:pointer; }
+.canvas-block:hover { border-color:var(--border); }
+.canvas-block.selected { border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,0.1); }
+.canvas-block .block-actions { position:absolute; top:-12px; right:8px; display:none; gap:4px; z-index:10; }
+.canvas-block:hover .block-actions, .canvas-block.selected .block-actions { display:flex; }
+.block-action-btn { width:24px; height:24px; border-radius:6px; border:1px solid var(--border); background:var(--bg-white); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--text-muted); transition:all .15s; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
+.block-action-btn:hover { color:var(--primary); border-color:var(--primary); }
+.block-action-btn.danger:hover { color:var(--danger); border-color:var(--danger); }
+.canvas-block .drag-handle { position:absolute; left:-12px; top:50%; transform:translateY(-50%); width:24px; height:24px; border-radius:6px; background:var(--bg-white); border:1px solid var(--border); cursor:grab; display:none; align-items:center; justify-content:center; font-size:10px; color:var(--text-muted); box-shadow:0 1px 3px rgba(0,0,0,0.1); }
+.canvas-block:hover .drag-handle { display:flex; }
+.canvas-block .block-type-badge { position:absolute; top:-10px; left:8px; background:var(--bg-white); border:1px solid var(--border); border-radius:4px; padding:1px 6px; font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:none; }
+.canvas-block:hover .block-type-badge, .canvas-block.selected .block-type-badge { display:block; }
+.drop-indicator { height:3px; background:var(--primary); border-radius:2px; margin:2px 0; transition:all .15s; }
+
+/* ── Config panel ── */
+.config-header { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.config-header h3 { font-size:13px; font-weight:700; margin:0; color:var(--text-main); }
+.config-body { padding:16px; }
+.config-group { margin-bottom:14px; }
+.config-group label { display:block; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; letter-spacing:.03em; }
+.config-group input, .config-group select, .config-group textarea { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:12px; font-family:'Inter',sans-serif; box-sizing:border-box; }
+.config-group input[type="color"] { height:36px; padding:2px; cursor:pointer; }
+.config-group textarea { min-height:60px; resize:vertical; }
+.config-tabs { display:flex; gap:4px; margin-bottom:16px; }
+.config-tab { flex:1; padding:7px 8px; border-radius:8px; font-size:11px; font-weight:600; text-align:center; cursor:pointer; border:none; background:var(--bg-subtle); color:var(--text-muted); transition:all .2s; }
+.config-tab.active { background:var(--primary); color:#fff; }
+
+/* ── Preview toggle ── */
+.preview-toggle { display:flex; gap:4px; background:var(--bg-subtle); border-radius:8px; padding:3px; }
+.preview-toggle button { padding:5px 12px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; border:none; background:transparent; color:var(--text-muted); transition:all .2s; }
+.preview-toggle button.active { background:var(--bg-white); color:var(--text-main); box-shadow:0 1px 3px rgba(0,0,0,0.08); }
+
+/* ── Variáveis dropdown ── */
+.var-dropdown { position:absolute; background:var(--bg-white); border:1px solid var(--border); border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.12); z-index:100; width:240px; max-height:280px; overflow-y:auto; }
+.var-group-title { font-size:10px; font-weight:700; text-transform:uppercase; color:var(--text-muted); padding:8px 12px 4px; }
+.var-item { padding:6px 12px; font-size:12px; cursor:pointer; display:flex; justify-content:space-between; }
+.var-item:hover { background:var(--bg-subtle); }
+.var-item code { font-size:11px; color:var(--primary); }
+
+/* ── Responsivo ── */
+.email-canvas.mobile-preview { width:375px; }
+
+/* ── Sortable ghost ── */
+.sortable-ghost { opacity:0.4; }
+.sortable-drag { opacity:0.9; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Toolbar -->
+<div class="email-toolbar">
+    <a href="{% url 'marketing_emails:lista' %}" style="color:var(--text-muted); font-size:16px;"><i class="fas fa-arrow-left"></i></a>
+    <h2><i class="fas fa-envelope" style="color:var(--primary);"></i> <span id="templateNome">{{ template.nome }}</span></h2>
+    <span class="badge badge-{% if template.status == 'ativo' %}success{% elif template.status == 'rascunho' %}warning{% else %}default{% endif %}" id="statusBadge" style="font-size:11px;">{{ template.get_status_display }}</span>
+
+    <div class="preview-toggle">
+        <button class="active" onclick="setPreviewMode('desktop', this)"><i class="fas fa-desktop"></i></button>
+        <button onclick="setPreviewMode('mobile', this)"><i class="fas fa-mobile-alt"></i></button>
+    </div>
+
+    <button onclick="previewEmail()" class="btn-primary" style="padding:6px 14px; font-size:12px; background:var(--bg-subtle); color:var(--text-main); border:1px solid var(--border);">
+        <i class="fas fa-eye"></i> Preview
+    </button>
+    <button onclick="salvarTemplate()" class="btn-primary" style="padding:6px 16px; font-size:12px;">
+        <i class="fas fa-save"></i> Salvar
+    </button>
+</div>
+
+<!-- Sortable.js -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+
+<div class="email-editor-layout">
+    <!-- ═══ SIDEBAR: Blocos ═══ -->
+    <div class="email-sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fas fa-puzzle-piece" style="color:var(--primary); margin-right:6px;"></i> Blocos</h3>
+        </div>
+        <div class="sidebar-blocks">
+            <!-- Estrutura -->
+            <div class="block-section">
+                <div class="block-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
+                    <span>Estrutura</span>
+                </div>
+                <div class="block-section-items">
+                    <div class="block-draggable" draggable="true" data-tipo="cabecalho"><i class="fas fa-heading" style="color:#6366f1;"></i> Cabeçalho</div>
+                    <div class="block-draggable" draggable="true" data-tipo="rodape"><i class="fas fa-shoe-prints" style="color:#6b7280;"></i> Rodapé</div>
+                    <div class="block-draggable" draggable="true" data-tipo="colunas"><i class="fas fa-columns" style="color:#8b5cf6;"></i> Colunas</div>
+                    <div class="block-draggable" draggable="true" data-tipo="divisor"><i class="fas fa-minus" style="color:#9ca3af;"></i> Divisor</div>
+                    <div class="block-draggable" draggable="true" data-tipo="espacamento"><i class="fas fa-arrows-alt-v" style="color:#d1d5db;"></i> Espaçamento</div>
+                </div>
+            </div>
+
+            <!-- Conteúdo -->
+            <div class="block-section">
+                <div class="block-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
+                    <span>Conteúdo</span>
+                </div>
+                <div class="block-section-items">
+                    <div class="block-draggable" draggable="true" data-tipo="texto"><i class="fas fa-align-left" style="color:#3b82f6;"></i> Texto</div>
+                    <div class="block-draggable" draggable="true" data-tipo="imagem"><i class="fas fa-image" style="color:#10b981;"></i> Imagem</div>
+                    <div class="block-draggable" draggable="true" data-tipo="botao"><i class="fas fa-square" style="color:#f59e0b;"></i> Botão (CTA)</div>
+                    <div class="block-draggable" draggable="true" data-tipo="lista"><i class="fas fa-list-ul" style="color:#06b6d4;"></i> Lista</div>
+                </div>
+            </div>
+
+            <!-- Marketing -->
+            <div class="block-section">
+                <div class="block-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
+                    <span>Marketing</span>
+                </div>
+                <div class="block-section-items">
+                    <div class="block-draggable" draggable="true" data-tipo="card_plano"><i class="fas fa-credit-card" style="color:#ec4899;"></i> Card de Plano</div>
+                    <div class="block-draggable" draggable="true" data-tipo="depoimento"><i class="fas fa-quote-right" style="color:#14b8a6;"></i> Depoimento</div>
+                    <div class="block-draggable" draggable="true" data-tipo="html_custom"><i class="fas fa-code" style="color:#6b7280;"></i> HTML Custom</div>
+                </div>
+            </div>
+
+            <!-- Variáveis -->
+            <div class="block-section" style="margin-top:12px; border-top:1px solid var(--border); padding-top:8px;">
+                <div class="block-section-title">
+                    <span><i class="fas fa-at" style="color:var(--primary); margin-right:4px;"></i> Variáveis</span>
+                </div>
+                <div class="block-section-items" style="font-size:11px;">
+                    {% for grupo, vars in variaveis.items %}
+                    <div style="padding:4px 12px; font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">{{ grupo }}</div>
+                    {% for v in vars %}
+                    <div class="var-copy-item" style="padding:3px 12px; cursor:pointer; display:flex; justify-content:space-between; border-radius:4px;" onclick="copiarVariavel('{{ v.var }}')" title="Clique para copiar">
+                        <span style="color:var(--text-secondary);">{{ v.label }}</span>
+                        <code style="color:var(--primary); font-size:10px;">{{ v.var }}</code>
+                    </div>
+                    {% endfor %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ CANVAS ═══ -->
+    <div class="email-canvas-wrap">
+        <div class="email-canvas" id="emailCanvas">
+            <div class="canvas-drop-zone" id="dropZone">
+                <!-- Blocos renderizados aqui -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ CONFIG PANEL ═══ -->
+    <div class="email-config-panel" id="configPanel">
+        <div class="config-header">
+            <h3 id="configTitle">Configurações do Email</h3>
+        </div>
+        <div class="config-body" id="configBody">
+            <!-- Config global (padrão) -->
+            <div id="globalConfig">
+                <div class="config-group">
+                    <label>Nome do template</label>
+                    <input type="text" id="cfgNome" value="{{ template.nome }}" onchange="updateGlobal()">
+                </div>
+                <div class="config-group">
+                    <label>Assunto do email</label>
+                    <input type="text" id="cfgAssunto" value="{{ template.assunto }}" placeholder="Ex: Olá {{lead.nome}}, temos uma oferta!" onchange="updateGlobal()">
+                </div>
+                <div class="config-group">
+                    <label>Largura (px)</label>
+                    <input type="number" id="cfgLargura" value="600" min="400" max="800" onchange="updateGlobal()">
+                </div>
+                <div class="config-group">
+                    <label>Cor de fundo</label>
+                    <input type="color" id="cfgCorFundo" value="#f5f5f5" onchange="updateGlobal()">
+                </div>
+                <div class="config-group">
+                    <label>Cor de fundo do conteúdo</label>
+                    <input type="color" id="cfgCorConteudo" value="#ffffff" onchange="updateGlobal()">
+                </div>
+                <div class="config-group">
+                    <label>Fonte</label>
+                    <select id="cfgFonte" onchange="updateGlobal()">
+                        <option value="Arial, Helvetica, sans-serif">Arial</option>
+                        <option value="'Helvetica Neue', Helvetica, sans-serif">Helvetica</option>
+                        <option value="Georgia, serif">Georgia</option>
+                        <option value="Verdana, sans-serif">Verdana</option>
+                        <option value="Tahoma, sans-serif">Tahoma</option>
+                    </select>
+                </div>
+                <div class="config-group">
+                    <label>Status</label>
+                    <select id="cfgStatus">
+                        <option value="rascunho" {% if template.status == 'rascunho' %}selected{% endif %}>Rascunho</option>
+                        <option value="ativo" {% if template.status == 'ativo' %}selected{% endif %}>Ativo</option>
+                        <option value="arquivado" {% if template.status == 'arquivado' %}selected{% endif %}>Arquivado</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Config do bloco selecionado (dinâmico) -->
+            <div id="blockConfig" style="display:none;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================================================
+// STATE
+// ============================================================================
+let blocos = {{ blocos_json|safe }};
+let configGlobal = {{ config_json|safe }};
+let selectedBlockId = null;
+let blockIdCounter = blocos.length ? Math.max(...blocos.map(b => parseInt((b.id||'0').replace('blk_',''))||0)) + 1 : 1;
+
+// Inicializar config global dos inputs
+if (configGlobal.largura) document.getElementById('cfgLargura').value = configGlobal.largura;
+if (configGlobal.cor_fundo) document.getElementById('cfgCorFundo').value = configGlobal.cor_fundo;
+if (configGlobal.cor_fundo_conteudo) document.getElementById('cfgCorConteudo').value = configGlobal.cor_fundo_conteudo;
+if (configGlobal.fonte_padrao) document.getElementById('cfgFonte').value = configGlobal.fonte_padrao;
+
+// ============================================================================
+// DEFAULTS POR TIPO DE BLOCO
+// ============================================================================
+const BLOCK_DEFAULTS = {
+    cabecalho: { logo_url:'', cor_fundo:'#1a1a2e', altura:80, alinhamento:'center' },
+    texto: { conteudo:'<p>Escreva seu texto aqui...</p>', alinhamento:'left', padding:'20px 24px', cor_texto:'#333333', tamanho_fonte:'14px' },
+    imagem: { url:'', alt_text:'Imagem', largura:'100%', link:'', border_radius:'0', alinhamento:'center', padding:'10px 24px' },
+    botao: { texto:'Clique aqui', url:'#', cor_botao:'#3b82f6', cor_texto:'#ffffff', border_radius:'6px', tamanho:'medio', alinhamento:'center', padding:'16px 24px' },
+    divisor: { estilo:'solid', cor:'#e5e7eb', espessura:'1px', largura:'100%', margem:'10px 24px' },
+    espacamento: { altura:20 },
+    colunas: { layout:'2', gap:'16px', padding:'10px 24px', colunas:[{blocos:[]},{blocos:[]}] },
+    card_plano: { nome:'Plano', preco:'R$ 99,90/mês', beneficios:['Benefício 1','Benefício 2','Benefício 3'], texto_botao:'Assinar', url_botao:'#', cor_destaque:'#3b82f6', cor_fundo:'#ffffff', padding:'16px 24px' },
+    lista: { itens:['Item 1','Item 2','Item 3'], estilo:'check', cor_icone:'#3b82f6', padding:'10px 24px' },
+    depoimento: { texto:'Depoimento do cliente aqui...', nome:'Nome do Cliente', cargo:'Cargo', foto_url:'', padding:'16px 24px' },
+    rodape: { texto:'© 2026 Sua Empresa. Todos os direitos reservados.', cor_fundo:'#1a1a2e', cor_texto:'#aaaaaa', link_descadastro:true, redes_sociais:{}, padding:'24px' },
+    html_custom: { html:'<p>Seu HTML aqui</p>' },
+};
+
+// ============================================================================
+// LABELS POR TIPO
+// ============================================================================
+const BLOCK_LABELS = {
+    cabecalho:'Cabeçalho', texto:'Texto', imagem:'Imagem', botao:'Botão',
+    divisor:'Divisor', espacamento:'Espaçamento', colunas:'Colunas',
+    card_plano:'Card de Plano', lista:'Lista', depoimento:'Depoimento',
+    rodape:'Rodapé', html_custom:'HTML Custom',
+};
+
+// ============================================================================
+// RENDER CANVAS
+// ============================================================================
+function renderCanvas() {
+    const zone = document.getElementById('dropZone');
+    if (!blocos.length) {
+        zone.innerHTML = '';
+        return;
+    }
+
+    zone.innerHTML = blocos.map((b, i) => {
+        const sel = b.id === selectedBlockId ? 'selected' : '';
+        return `<div class="canvas-block ${sel}" data-id="${b.id}" data-index="${i}" onclick="selectBlock('${b.id}')">
+            <span class="block-type-badge">${BLOCK_LABELS[b.tipo]||b.tipo}</span>
+            <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
+            <div class="block-actions">
+                <button class="block-action-btn" onclick="event.stopPropagation();duplicateBlock('${b.id}')" title="Duplicar"><i class="fas fa-copy"></i></button>
+                <button class="block-action-btn" onclick="event.stopPropagation();moveBlock('${b.id}',-1)" title="Subir"><i class="fas fa-chevron-up"></i></button>
+                <button class="block-action-btn" onclick="event.stopPropagation();moveBlock('${b.id}',1)" title="Descer"><i class="fas fa-chevron-down"></i></button>
+                <button class="block-action-btn danger" onclick="event.stopPropagation();removeBlock('${b.id}')" title="Excluir"><i class="fas fa-trash"></i></button>
+            </div>
+            <div class="block-preview">${renderBlockPreview(b)}</div>
+        </div>`;
+    }).join('');
+
+    initSortable();
+}
+
+function renderBlockPreview(block) {
+    const p = block.props || {};
+    switch(block.tipo) {
+        case 'cabecalho':
+            return `<div style="background:${p.cor_fundo||'#1a1a2e'}; padding:16px 24px; text-align:${p.alinhamento||'center'}; min-height:${p.altura||80}px; display:flex; align-items:center; justify-content:${p.alinhamento||'center'}; border-radius:6px 6px 0 0;">
+                ${p.logo_url ? `<img src="${p.logo_url}" style="max-height:${(p.altura||80)-20}px;">` : '<span style="color:#fff; font-size:13px; opacity:0.6;">Logo aqui</span>'}
+            </div>`;
+        case 'texto':
+            return `<div style="padding:${p.padding||'20px 24px'}; font-size:${p.tamanho_fonte||'14px'}; color:${p.cor_texto||'#333'}; text-align:${p.alinhamento||'left'}; line-height:1.6;">${p.conteudo||'Texto...'}</div>`;
+        case 'imagem':
+            return `<div style="padding:${p.padding||'10px 24px'}; text-align:${p.alinhamento||'center'};">
+                ${p.url ? `<img src="${p.url}" style="max-width:${p.largura||'100%'}; border-radius:${p.border_radius||'0'};">` : '<div style="background:#f3f4f6; padding:32px; color:#9ca3af; border-radius:8px;"><i class="fas fa-image" style="font-size:24px;"></i><br>Adicionar imagem</div>'}
+            </div>`;
+        case 'botao':
+            return `<div style="padding:${p.padding||'16px 24px'}; text-align:${p.alinhamento||'center'};">
+                <span style="display:inline-block; background:${p.cor_botao||'#3b82f6'}; color:${p.cor_texto||'#fff'}; padding:10px 24px; border-radius:${p.border_radius||'6px'}; font-weight:600; font-size:13px;">${p.texto||'Botão'}</span>
+            </div>`;
+        case 'divisor':
+            if (p.estilo === 'espaco') return `<div style="padding:${p.margem||'10px 24px'}">&nbsp;</div>`;
+            return `<div style="padding:${p.margem||'10px 24px'}"><hr style="border:none; border-top:${p.espessura||'1px'} ${p.estilo||'solid'} ${p.cor||'#e5e7eb'}; width:${p.largura||'100%'};"></div>`;
+        case 'espacamento':
+            return `<div style="height:${p.altura||20}px; background:repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(0,0,0,0.02) 5px, rgba(0,0,0,0.02) 10px); display:flex; align-items:center; justify-content:center;"><span style="font-size:10px; color:#ccc;">${p.altura||20}px</span></div>`;
+        case 'colunas':
+            const layouts = {'1':['100%'],'2':['50%','50%'],'3':['33%','33%','33%'],'1-2':['33%','67%'],'2-1':['67%','33%']};
+            const cols = layouts[p.layout||'2'] || layouts['2'];
+            return `<div style="padding:${p.padding||'10px 24px'}; display:flex; gap:${p.gap||'16px'};">${cols.map((w,i) => `<div style="width:${w}; min-height:60px; background:#f9fafb; border:1px dashed #e5e7eb; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; color:#ccc;">Coluna ${i+1}</div>`).join('')}</div>`;
+        case 'card_plano':
+            return `<div style="padding:${p.padding||'16px 24px'};">
+                <div style="border:2px solid ${p.cor_destaque||'#3b82f6'}; border-radius:10px; overflow:hidden;">
+                    <div style="background:${p.cor_destaque||'#3b82f6'}; color:#fff; text-align:center; padding:12px; font-weight:700;">${p.nome||'Plano'}</div>
+                    <div style="text-align:center; padding:16px;"><div style="font-size:22px; font-weight:800; color:${p.cor_destaque||'#3b82f6'};">${p.preco||'R$ 0'}</div></div>
+                    <div style="padding:8px 20px 16px;">${(p.beneficios||[]).map(b => `<div style="font-size:12px; padding:3px 0;">✓ ${b}</div>`).join('')}</div>
+                </div>
+            </div>`;
+        case 'lista':
+            const icons = {check:'✓', bullet:'•', star:'★', arrow:'→', numero:''};
+            return `<div style="padding:${p.padding||'10px 24px'};">${(p.itens||[]).map((item,i) => `<div style="font-size:13px; padding:3px 0;"><span style="color:${p.cor_icone||'#3b82f6'}; margin-right:8px;">${p.estilo==='numero'?(i+1)+'.':icons[p.estilo||'check']}</span>${item}</div>`).join('')}</div>`;
+        case 'depoimento':
+            return `<div style="padding:${p.padding||'16px 24px'};"><div style="background:#f9fafb; border-left:4px solid #3b82f6; border-radius:0 8px 8px 0; padding:16px;">
+                <p style="font-style:italic; color:#555; font-size:13px; margin:0 0 8px;">"${p.texto||'...'}"</p>
+                <div style="font-size:12px; font-weight:700;">${p.nome||''}</div>
+                <div style="font-size:11px; color:#888;">${p.cargo||''}</div>
+            </div></div>`;
+        case 'rodape':
+            return `<div style="background:${p.cor_fundo||'#1a1a2e'}; padding:${p.padding||'24px'}; text-align:center; color:${p.cor_texto||'#aaa'}; font-size:11px; border-radius:0 0 6px 6px;">${p.texto||'Rodapé'}</div>`;
+        case 'html_custom':
+            return `<div style="padding:10px 24px; background:#fefce8; border:1px dashed #fbbf24; border-radius:6px; margin:8px 16px;"><div style="font-size:11px; color:#92400e; margin-bottom:4px;"><i class="fas fa-code"></i> HTML Custom</div><pre style="font-size:10px; color:#555; margin:0; white-space:pre-wrap; max-height:80px; overflow:hidden;">${(p.html||'').substring(0,200)}</pre></div>`;
+        default:
+            return `<div style="padding:20px; color:#ccc; text-align:center;">Bloco: ${block.tipo}</div>`;
+    }
+}
+
+// ============================================================================
+// SORTABLE (drag-and-drop reordenação)
+// ============================================================================
+let sortableInstance = null;
+
+function initSortable() {
+    const zone = document.getElementById('dropZone');
+    if (sortableInstance) sortableInstance.destroy();
+
+    sortableInstance = new Sortable(zone, {
+        animation: 150,
+        handle: '.drag-handle',
+        ghostClass: 'sortable-ghost',
+        dragClass: 'sortable-drag',
+        onEnd: function(evt) {
+            const movedBlock = blocos.splice(evt.oldIndex, 1)[0];
+            blocos.splice(evt.newIndex, 0, movedBlock);
+            renderCanvas();
+        }
+    });
+}
+
+// ============================================================================
+// DRAG FROM SIDEBAR
+// ============================================================================
+document.querySelectorAll('.block-draggable').forEach(el => {
+    el.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('block-tipo', el.dataset.tipo);
+        e.dataTransfer.effectAllowed = 'copy';
+    });
+});
+
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; dropZone.classList.add('drag-hover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-hover'));
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-hover');
+    const tipo = e.dataTransfer.getData('block-tipo');
+    if (!tipo) return;
+    addBlock(tipo);
+});
+
+// ============================================================================
+// BLOCK OPERATIONS
+// ============================================================================
+function addBlock(tipo, index) {
+    const id = 'blk_' + (blockIdCounter++);
+    const bloco = { tipo, id, props: JSON.parse(JSON.stringify(BLOCK_DEFAULTS[tipo] || {})) };
+    if (index !== undefined) {
+        blocos.splice(index, 0, bloco);
+    } else {
+        blocos.push(bloco);
+    }
+    selectedBlockId = id;
+    renderCanvas();
+    showBlockConfig(bloco);
+}
+
+function selectBlock(id) {
+    selectedBlockId = id;
+    const bloco = blocos.find(b => b.id === id);
+    if (bloco) showBlockConfig(bloco);
+    renderCanvas();
+}
+
+function removeBlock(id) {
+    blocos = blocos.filter(b => b.id !== id);
+    if (selectedBlockId === id) {
+        selectedBlockId = null;
+        showGlobalConfig();
+    }
+    renderCanvas();
+}
+
+function duplicateBlock(id) {
+    const orig = blocos.find(b => b.id === id);
+    if (!orig) return;
+    const idx = blocos.indexOf(orig);
+    const newId = 'blk_' + (blockIdCounter++);
+    const copia = { tipo: orig.tipo, id: newId, props: JSON.parse(JSON.stringify(orig.props)) };
+    blocos.splice(idx + 1, 0, copia);
+    selectedBlockId = newId;
+    renderCanvas();
+    showBlockConfig(copia);
+}
+
+function moveBlock(id, dir) {
+    const idx = blocos.findIndex(b => b.id === id);
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= blocos.length) return;
+    [blocos[idx], blocos[newIdx]] = [blocos[newIdx], blocos[idx]];
+    renderCanvas();
+}
+
+// ============================================================================
+// CONFIG PANEL
+// ============================================================================
+function showGlobalConfig() {
+    document.getElementById('globalConfig').style.display = '';
+    document.getElementById('blockConfig').style.display = 'none';
+    document.getElementById('configTitle').textContent = 'Configurações do Email';
+}
+
+function showBlockConfig(bloco) {
+    document.getElementById('globalConfig').style.display = 'none';
+    const container = document.getElementById('blockConfig');
+    container.style.display = '';
+    document.getElementById('configTitle').textContent = BLOCK_LABELS[bloco.tipo] || bloco.tipo;
+
+    const p = bloco.props;
+    let html = '';
+
+    // Gerar campos de configuração por tipo
+    switch(bloco.tipo) {
+        case 'cabecalho':
+            html = `
+                ${field('URL do Logo', 'text', 'logo_url', p.logo_url)}
+                ${field('Cor de fundo', 'color', 'cor_fundo', p.cor_fundo)}
+                ${field('Altura (px)', 'number', 'altura', p.altura)}
+                ${selectField('Alinhamento', 'alinhamento', p.alinhamento, [['left','Esquerda'],['center','Centro'],['right','Direita']])}
+            `;
+            break;
+        case 'texto':
+            html = `
+                ${textareaField('Conteúdo (HTML)', 'conteudo', p.conteudo)}
+                <div style="margin-bottom:8px;"><button type="button" class="block-action-btn" style="width:auto; height:auto; padding:4px 10px; font-size:11px;" onclick="insertVarAtCursor()"><i class="fas fa-at"></i> Inserir variável</button></div>
+                ${selectField('Alinhamento', 'alinhamento', p.alinhamento, [['left','Esquerda'],['center','Centro'],['right','Direita']])}
+                ${field('Cor do texto', 'color', 'cor_texto', p.cor_texto)}
+                ${selectField('Tamanho da fonte', 'tamanho_fonte', p.tamanho_fonte, [['12px','12px'],['13px','13px'],['14px','14px (padrão)'],['16px','16px'],['18px','18px'],['20px','20px'],['24px','24px']])}
+                ${field('Padding', 'text', 'padding', p.padding)}
+            `;
+            break;
+        case 'imagem':
+            html = `
+                ${field('URL da imagem', 'text', 'url', p.url)}
+                ${field('Texto alternativo', 'text', 'alt_text', p.alt_text)}
+                ${field('Largura', 'text', 'largura', p.largura)}
+                ${field('Link ao clicar', 'text', 'link', p.link)}
+                ${field('Border radius', 'text', 'border_radius', p.border_radius)}
+                ${selectField('Alinhamento', 'alinhamento', p.alinhamento, [['left','Esquerda'],['center','Centro'],['right','Direita']])}
+                ${field('Padding', 'text', 'padding', p.padding)}
+            `;
+            break;
+        case 'botao':
+            html = `
+                ${field('Texto do botão', 'text', 'texto', p.texto)}
+                ${field('URL (link)', 'text', 'url', p.url)}
+                ${field('Cor do botão', 'color', 'cor_botao', p.cor_botao)}
+                ${field('Cor do texto', 'color', 'cor_texto', p.cor_texto)}
+                ${field('Border radius', 'text', 'border_radius', p.border_radius)}
+                ${selectField('Tamanho', 'tamanho', p.tamanho, [['pequeno','Pequeno'],['medio','Médio'],['grande','Grande']])}
+                ${selectField('Alinhamento', 'alinhamento', p.alinhamento, [['left','Esquerda'],['center','Centro'],['right','Direita']])}
+                ${field('Padding', 'text', 'padding', p.padding)}
+            `;
+            break;
+        case 'divisor':
+            html = `
+                ${selectField('Estilo', 'estilo', p.estilo, [['solid','Linha sólida'],['dashed','Tracejado'],['dotted','Pontilhado'],['espaco','Espaço (sem linha)']])}
+                ${field('Cor', 'color', 'cor', p.cor)}
+                ${field('Espessura', 'text', 'espessura', p.espessura)}
+                ${field('Largura', 'text', 'largura', p.largura)}
+                ${field('Margem', 'text', 'margem', p.margem)}
+            `;
+            break;
+        case 'espacamento':
+            html = `${field('Altura (px)', 'number', 'altura', p.altura)}`;
+            break;
+        case 'colunas':
+            html = `
+                ${selectField('Layout', 'layout', p.layout, [['1','1 coluna'],['2','2 colunas (50/50)'],['3','3 colunas'],['1-2','1/3 + 2/3'],['2-1','2/3 + 1/3']])}
+                ${field('Gap', 'text', 'gap', p.gap)}
+                ${field('Padding', 'text', 'padding', p.padding)}
+                <div style="padding:8px; background:var(--bg-subtle); border-radius:6px; font-size:11px; color:var(--text-muted);">
+                    <i class="fas fa-info-circle"></i> Blocos internos das colunas são editados na Fase 2.
+                </div>
+            `;
+            break;
+        case 'card_plano':
+            html = `
+                ${field('Nome do plano', 'text', 'nome', p.nome)}
+                ${field('Preço', 'text', 'preco', p.preco)}
+                ${textareaField('Benefícios (um por linha)', 'beneficios', (p.beneficios||[]).join('\\n'))}
+                ${field('Texto do botão', 'text', 'texto_botao', p.texto_botao)}
+                ${field('URL do botão', 'text', 'url_botao', p.url_botao)}
+                ${field('Cor destaque', 'color', 'cor_destaque', p.cor_destaque)}
+                ${field('Padding', 'text', 'padding', p.padding)}
+            `;
+            break;
+        case 'lista':
+            html = `
+                ${textareaField('Itens (um por linha)', 'itens', (p.itens||[]).join('\\n'))}
+                ${selectField('Estilo', 'estilo', p.estilo, [['check','Check ✓'],['bullet','Bullet •'],['star','Estrela ★'],['arrow','Seta →'],['numero','Numerado']])}
+                ${field('Cor do ícone', 'color', 'cor_icone', p.cor_icone)}
+                ${field('Padding', 'text', 'padding', p.padding)}
+            `;
+            break;
+        case 'depoimento':
+            html = `
+                ${textareaField('Texto do depoimento', 'texto', p.texto)}
+                ${field('Nome', 'text', 'nome', p.nome)}
+                ${field('Cargo / Empresa', 'text', 'cargo', p.cargo)}
+                ${field('URL da foto', 'text', 'foto_url', p.foto_url)}
+                ${field('Padding', 'text', 'padding', p.padding)}
+            `;
+            break;
+        case 'rodape':
+            html = `
+                ${textareaField('Texto', 'texto', p.texto)}
+                ${field('Cor de fundo', 'color', 'cor_fundo', p.cor_fundo)}
+                ${field('Cor do texto', 'color', 'cor_texto', p.cor_texto)}
+                ${checkboxField('Link de descadastro', 'link_descadastro', p.link_descadastro)}
+                ${field('Padding', 'text', 'padding', p.padding)}
+            `;
+            break;
+        case 'html_custom':
+            html = `${textareaField('Código HTML', 'html', p.html)}`;
+            break;
+    }
+
+    // Botão voltar para config global
+    html += `<div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border);"><button type="button" onclick="deselectBlock()" style="font-size:12px; color:var(--text-muted); background:none; border:none; cursor:pointer;"><i class="fas fa-arrow-left"></i> Voltar às configurações globais</button></div>`;
+
+    container.innerHTML = html;
+
+    // Bind onchange para todos os campos
+    container.querySelectorAll('input, select, textarea').forEach(el => {
+        el.addEventListener('change', () => updateBlockProp(bloco.id, el.dataset.prop, getFieldValue(el)));
+        el.addEventListener('input', () => {
+            if (el.type === 'color' || el.type === 'range') {
+                updateBlockProp(bloco.id, el.dataset.prop, getFieldValue(el));
+            }
+        });
+    });
+}
+
+function deselectBlock() {
+    selectedBlockId = null;
+    showGlobalConfig();
+    renderCanvas();
+}
+
+function updateBlockProp(blockId, prop, value) {
+    const bloco = blocos.find(b => b.id === blockId);
+    if (!bloco) return;
+
+    // Tratar campos especiais
+    if (prop === 'beneficios' || prop === 'itens') {
+        bloco.props[prop] = value.split('\n').filter(l => l.trim());
+    } else {
+        bloco.props[prop] = value;
+    }
+    renderCanvas();
+}
+
+function getFieldValue(el) {
+    if (el.type === 'checkbox') return el.checked;
+    if (el.type === 'number') return parseInt(el.value) || 0;
+    return el.value;
+}
+
+function updateGlobal() {
+    configGlobal = {
+        largura: parseInt(document.getElementById('cfgLargura').value) || 600,
+        cor_fundo: document.getElementById('cfgCorFundo').value,
+        cor_fundo_conteudo: document.getElementById('cfgCorConteudo').value,
+        fonte_padrao: document.getElementById('cfgFonte').value,
+    };
+    document.getElementById('templateNome').textContent = document.getElementById('cfgNome').value;
+
+    // Atualizar largura do canvas
+    const canvas = document.getElementById('emailCanvas');
+    canvas.style.width = configGlobal.largura + 'px';
+}
+
+// ============================================================================
+// FIELD HELPERS
+// ============================================================================
+function field(label, type, prop, value) {
+    const v = value !== undefined && value !== null ? value : '';
+    return `<div class="config-group"><label>${label}</label><input type="${type}" data-prop="${prop}" value="${type==='color'? v : escapeAttr(String(v))}"></div>`;
+}
+
+function selectField(label, prop, value, options) {
+    const opts = options.map(([val, lbl]) => `<option value="${val}" ${val==value?'selected':''}>${lbl}</option>`).join('');
+    return `<div class="config-group"><label>${label}</label><select data-prop="${prop}">${opts}</select></div>`;
+}
+
+function textareaField(label, prop, value) {
+    return `<div class="config-group"><label>${label}</label><textarea data-prop="${prop}" rows="4">${escapeHtml(String(value||''))}</textarea></div>`;
+}
+
+function checkboxField(label, prop, value) {
+    return `<div class="config-group" style="display:flex; align-items:center; gap:8px;"><input type="checkbox" data-prop="${prop}" ${value?'checked':''} style="width:auto;"><label style="margin:0; cursor:pointer;">${label}</label></div>`;
+}
+
+function escapeAttr(s) { return s.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ============================================================================
+// VARIÁVEIS
+// ============================================================================
+function copiarVariavel(v) {
+    navigator.clipboard.writeText(v).then(() => {
+        showToast('Variável copiada: ' + v);
+    });
+}
+
+function insertVarAtCursor() {
+    const textarea = document.querySelector('#blockConfig textarea[data-prop="conteudo"]');
+    if (!textarea) return;
+    const vars = [
+        {g:'Lead', items:[['{{lead.nome}}','Nome'],['{{lead.email}}','Email'],['{{lead.telefone}}','Telefone'],['{{lead.cidade}}','Cidade']]},
+        {g:'Empresa', items:[['{{tenant.nome}}','Empresa'],['{{tenant.site}}','Site']]},
+    ];
+    let menu = '<div style="padding:4px 0;">';
+    vars.forEach(g => {
+        menu += `<div style="font-size:10px; font-weight:700; color:var(--text-muted); padding:6px 12px;">${g.g}</div>`;
+        g.items.forEach(([v,l]) => {
+            menu += `<div style="padding:4px 12px; cursor:pointer; font-size:12px;" onmouseover="this.style.background='var(--bg-subtle)'" onmouseout="this.style.background=''" onclick="doInsertVar('${v}')">${l} <code style="color:var(--primary); font-size:10px;">${v}</code></div>`;
+        });
+    });
+    menu += '</div>';
+
+    // Remover dropdown existente
+    document.querySelectorAll('.var-dropdown').forEach(d => d.remove());
+
+    const dd = document.createElement('div');
+    dd.className = 'var-dropdown';
+    dd.innerHTML = menu;
+    dd.style.position = 'fixed';
+    dd.style.top = '200px';
+    dd.style.right = '320px';
+    document.body.appendChild(dd);
+
+    // Fechar ao clicar fora
+    setTimeout(() => {
+        document.addEventListener('click', function handler(e) {
+            if (!dd.contains(e.target)) { dd.remove(); document.removeEventListener('click', handler); }
+        });
+    }, 100);
+}
+
+function doInsertVar(v) {
+    const textarea = document.querySelector('#blockConfig textarea[data-prop="conteudo"]');
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    textarea.value = textarea.value.substring(0, start) + v + textarea.value.substring(end);
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = start + v.length;
+    textarea.dispatchEvent(new Event('change'));
+    document.querySelectorAll('.var-dropdown').forEach(d => d.remove());
+}
+
+// ============================================================================
+// PREVIEW
+// ============================================================================
+function setPreviewMode(mode, btn) {
+    const canvas = document.getElementById('emailCanvas');
+    document.querySelectorAll('.preview-toggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (mode === 'mobile') {
+        canvas.classList.add('mobile-preview');
+    } else {
+        canvas.classList.remove('mobile-preview');
+    }
+}
+
+function previewEmail() {
+    const csrfToken = getCookie('csrftoken');
+    fetch('{% url "marketing_emails:preview_live" %}', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ config: configGlobal, blocos: blocos })
+    })
+    .then(r => r.json())
+    .then(data => {
+        const win = window.open('', '_blank', 'width=700,height=800');
+        win.document.write(data.html);
+        win.document.close();
+    })
+    .catch(err => showToast('Erro ao gerar preview', 'error'));
+}
+
+// ============================================================================
+// SALVAR
+// ============================================================================
+function salvarTemplate() {
+    const csrfToken = getCookie('csrftoken');
+    const payload = {
+        nome: document.getElementById('cfgNome').value,
+        assunto: document.getElementById('cfgAssunto').value,
+        config: configGlobal,
+        blocos: blocos,
+        status: document.getElementById('cfgStatus').value,
+    };
+
+    fetch('{% url "marketing_emails:salvar" template.pk %}', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            showToast('Template salvo com sucesso!');
+            // Atualizar badge de status
+            const badge = document.getElementById('statusBadge');
+            const st = document.getElementById('cfgStatus').value;
+            badge.textContent = st.charAt(0).toUpperCase() + st.slice(1);
+            badge.className = 'badge badge-' + (st==='ativo'?'success':st==='rascunho'?'warning':'default');
+        } else {
+            showToast(data.error || 'Erro ao salvar', 'error');
+        }
+    })
+    .catch(() => showToast('Erro de conexão', 'error'));
+}
+
+// ============================================================================
+// UTILS
+// ============================================================================
+function getCookie(name) {
+    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
+}
+
+function showToast(msg, type) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `position:fixed; bottom:24px; right:24px; padding:12px 20px; border-radius:8px; font-size:13px; font-weight:600; color:#fff; z-index:9999; animation:fadeIn .3s; background:${type==='error'?'var(--danger)':'var(--success)'};`;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(() => toast.remove(), 300); }, 2500);
+}
+
+// Click fora de um bloco deseleciona
+document.getElementById('emailCanvas').addEventListener('click', function(e) {
+    if (e.target === this || e.target === document.getElementById('dropZone')) {
+        deselectBlock();
+    }
+});
+
+// ============================================================================
+// INIT
+// ============================================================================
+renderCanvas();
+if (!blocos.length) showGlobalConfig();
+</script>
+
+{% endblock %}

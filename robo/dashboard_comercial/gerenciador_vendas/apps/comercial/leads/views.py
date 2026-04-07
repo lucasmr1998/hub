@@ -16,6 +16,7 @@ import traceback
 import logging
 
 from apps.sistema.decorators import api_token_required
+from apps.sistema.utils import auditar
 from apps.sistema.utils import (
     _parse_json_request,
     _model_field_names,
@@ -108,6 +109,7 @@ def campos_custom_view(request):
 
 @login_required(login_url='sistema:login')
 @csrf_exempt
+@auditar('config', 'gerenciar', 'campo_custom')
 def api_campos_custom(request):
     """API para criar e listar campos customizados"""
     if request.method == 'GET':
@@ -159,6 +161,7 @@ def api_campos_custom(request):
 
 @login_required(login_url='sistema:login')
 @csrf_exempt
+@auditar('config', 'gerenciar', 'campo_custom')
 def api_campo_custom_detalhe(request, campo_id):
     """API para editar e deletar um campo customizado"""
     try:
@@ -353,6 +356,7 @@ def registrar_lead_api(request):
 
 @csrf_exempt
 @api_token_required
+@auditar('leads', 'editar', 'lead')
 def atualizar_lead_api(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método não permitido'}, status=405)
@@ -641,6 +645,7 @@ def imagens_por_cliente_api(request):
 
 @csrf_exempt
 @api_token_required
+@auditar('leads', 'validar', 'imagem')
 def validar_imagem_api(request):
     """
     POST /api/leads/imagens/validar/

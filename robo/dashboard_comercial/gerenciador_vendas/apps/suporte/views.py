@@ -7,6 +7,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 
 from .models import Ticket, ComentarioTicket, CategoriaTicket
+from apps.sistema.utils import auditar
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +84,7 @@ def ticket_lista(request):
 
 
 @login_required
+@auditar('suporte', 'criar', 'ticket')
 def ticket_criar(request):
     """Criar novo ticket."""
     if request.method == 'POST':
@@ -129,6 +131,7 @@ def ticket_criar(request):
 
 
 @login_required
+@auditar('suporte', 'atualizar', 'ticket')
 def ticket_detalhe(request, pk):
     """Detalhe do ticket com timeline de comentários."""
     ticket = get_object_or_404(Ticket, pk=pk)
@@ -278,6 +281,7 @@ def api_artigo_feedback(request, pk):
 
 
 @login_required
+@auditar('suporte', 'gerenciar', 'conhecimento')
 def gerenciar_conhecimento(request):
     """CRUD de categorias e artigos da base de conhecimento."""
     from .models import CategoriaConhecimento, ArtigoConhecimento
