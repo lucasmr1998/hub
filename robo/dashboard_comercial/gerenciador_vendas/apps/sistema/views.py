@@ -121,17 +121,17 @@ def login_view(request):
         return redirect('dashboard:dashboard1')
 
     if request.method == 'POST':
-        username = request.POST.get('username')
+        email = request.POST.get('email', '').strip()
         password = request.POST.get('password')
 
-        if username and password:
-            user = authenticate(request, username=username, password=password)
+        if email and password:
+            user = authenticate(request, username=email, password=password)
             if user is not None:
                 login(request, user)
                 messages.success(request, f'Bem-vindo, {user.first_name or user.username}!')
                 return redirect('dashboard:dashboard1')
             else:
-                messages.error(request, 'Usuário ou senha incorretos.')
+                messages.error(request, 'Email ou senha incorretos.')
         else:
             messages.error(request, 'Por favor, preencha todos os campos.')
 
@@ -227,8 +227,7 @@ def api_usuarios_criar(request):
             return JsonResponse({'error': 'Sem permissão'}, status=403)
 
         data = json.loads(request.body)
-        username = data.get('username')
-        email = data.get('email')
+        email = data.get('email', '').strip()
         first_name = data.get('first_name', '')
         last_name = data.get('last_name', '')
         password = data.get('password')
@@ -236,17 +235,22 @@ def api_usuarios_criar(request):
         is_active = data.get('is_active', True)
         is_staff = data.get('is_staff', False)
 
-        # Validações
-        if not username or not email or not password:
-            return JsonResponse({'error': 'Username, email e senha são obrigatórios'}, status=400)
+        # Validacoes
+        if not email or not password:
+            return JsonResponse({'error': 'Email e senha sao obrigatorios'}, status=400)
 
-        if User.objects.filter(username=username).exists():
-            return JsonResponse({'error': 'Username já existe'}, status=400)
+        if User.objects.filter(email__iexact=email).exists():
+            return JsonResponse({'error': 'Email ja existe'}, status=400)
 
-        if User.objects.filter(email=email).exists():
-            return JsonResponse({'error': 'Email já existe'}, status=400)
+        # Gerar username unico a partir do email
+        base_username = email.split('@')[0].lower().replace('.', '_')[:30]
+        username = base_username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f'{base_username}_{counter}'
+            counter += 1
 
-        # Criar usuário
+        # Criar usuario
         user = User.objects.create_user(
             username=username,
             email=email,

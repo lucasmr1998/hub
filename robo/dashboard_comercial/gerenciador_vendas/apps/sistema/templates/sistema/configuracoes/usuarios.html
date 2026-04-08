@@ -54,7 +54,7 @@
                             <div class="user-avatar-sm">{{ user.first_name|first|default:user.username|first|upper }}</div>
                             <div class="user-details">
                                 <h4>{{ user.get_full_name|default:user.username }}</h4>
-                                <p>@{{ user.username }}</p>
+                                <p>{{ user.email }}</p>
                             </div>
                         </div>
                     </td>
@@ -107,7 +107,6 @@
         <div id="alertContainer"></div>
         <form id="userForm">
             <input type="hidden" id="userId" name="user_id">
-            <div class="form-group"><label class="form-label">Username *</label><input type="text" id="username" name="username" class="form-control" required></div>
             <div class="form-group"><label class="form-label">Email *</label><input type="email" id="email" name="email" class="form-control" required></div>
             <div class="form-group"><label class="form-label">Nome</label><input type="text" id="firstName" name="first_name" class="form-control"></div>
             <div class="form-group"><label class="form-label">Sobrenome</label><input type="text" id="lastName" name="last_name" class="form-control"></div>
@@ -171,7 +170,6 @@ function editUser(userId) {
     document.getElementById('passwordRequired').textContent = '';
     const row = document.querySelector(`tr[data-user-id="${userId}"]`);
     document.getElementById('userId').value = userId;
-    document.getElementById('username').value = row.querySelector('.user-details p').textContent.replace('@', '');
     document.getElementById('email').value = row.querySelector('td:nth-child(2)').textContent;
     const parts = row.querySelector('.user-details h4').textContent.split(' ');
     document.getElementById('firstName').value = parts[0] || '';
@@ -191,11 +189,11 @@ function showAlert(msg, type) { document.getElementById('alertContainer').innerH
 
 function saveUser() {
     const fd = new FormData(document.getElementById('userForm'));
-    if (!fd.get('username') || !fd.get('email')) { showAlert('Username e email obrigatorios', 'error'); return; }
+    if (!fd.get('email')) { showAlert('Email obrigatorio', 'error'); return; }
     if (!isEditMode && !fd.get('password')) { showAlert('Senha obrigatoria para novos usuarios', 'error'); return; }
     const perfilVal = document.getElementById('perfilId').value;
     const data = {
-        username:fd.get('username'), email:fd.get('email'), first_name:fd.get('first_name'), last_name:fd.get('last_name'),
+        email:fd.get('email'), first_name:fd.get('first_name'), last_name:fd.get('last_name'),
         password:fd.get('password'), is_active:fd.get('is_active')==='on', is_staff:fd.get('is_staff')==='on',
         groups:[], perfil_id: perfilVal ? parseInt(perfilVal) : null,
     };

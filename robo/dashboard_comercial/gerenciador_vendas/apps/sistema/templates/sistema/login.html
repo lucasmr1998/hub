@@ -353,16 +353,16 @@
             <form method="post" id="loginForm">
                 {% csrf_token %}
                 <div class="form-group">
-                    <label for="username" class="form-label">Usuário</label>
+                    <label for="email" class="form-label">Email</label>
                     <div class="input-group">
-                        <i class="fas fa-user input-icon"></i>
-                        <input type="text" 
-                               id="username" 
-                               name="username" 
-                               class="form-input" 
-                               placeholder="Digite seu usuário"
+                        <i class="fas fa-envelope input-icon"></i>
+                        <input type="email"
+                               id="email"
+                               name="email"
+                               class="form-input"
+                               placeholder="Digite seu email"
                                required
-                               autocomplete="username">
+                               autocomplete="email">
                     </div>
                 </div>
                 
