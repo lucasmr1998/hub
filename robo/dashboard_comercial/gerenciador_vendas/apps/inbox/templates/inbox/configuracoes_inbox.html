@@ -350,13 +350,25 @@
 <div class="config-section" id="tab-canais">
     {% for canal in canais %}
     <div class="cfg-card">
-        <div class="cfg-card-header">{{ canal.nome }} ({{ canal.get_tipo_display }})</div>
+        <div class="cfg-card-header">
+            {{ canal.nome }} ({{ canal.get_tipo_display }})
+            {% if canal.provedor %}<span class="badge badge-success" style="font-size:10px;margin-left:6px;">{{ canal.provedor }}</span>{% endif %}
+        </div>
         <div class="cfg-card-body">
             <form method="post">{% csrf_token %}
                 <input type="hidden" name="action" value="editar_canal">
                 <input type="hidden" name="canal_id" value="{{ canal.id }}">
                 <div class="cfg-form-group" style="margin-bottom:8px;">
-                    <label>Webhook de envio (URL para onde enviar mensagens do agente)</label>
+                    <label>Integracao (provider de envio)</label>
+                    <select name="integracao_id" class="cfg-select">
+                        <option value="">Nenhuma (webhook manual)</option>
+                        {% for integ in integracoes_disponiveis %}
+                        <option value="{{ integ.id }}" {% if canal.integracao_id == integ.id %}selected{% endif %}>{{ integ.nome }} ({{ integ.get_tipo_display }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="cfg-form-group" style="margin-bottom:8px;">
+                    <label>Webhook de envio (URL alternativa, se nao usar integracao)</label>
                     <input type="url" name="webhook_envio_url" class="cfg-input" style="width:100%;"
                            value="{{ canal.configuracao.webhook_envio_url|default:'' }}"
                            placeholder="https://n8n.exemplo.com/webhook/inbox-enviar">
@@ -366,6 +378,41 @@
         </div>
     </div>
     {% endfor %}
+
+    <!-- Criar canal -->
+    <div class="cfg-card">
+        <div class="cfg-card-header">Novo Canal</div>
+        <div class="cfg-card-body">
+            <form method="post">{% csrf_token %}
+                <input type="hidden" name="action" value="criar_canal">
+                <div class="cfg-form-inline">
+                    <div class="cfg-form-group">
+                        <label>Nome</label>
+                        <input type="text" name="nome" class="cfg-input" placeholder="Ex: WhatsApp Principal" required>
+                    </div>
+                    <div class="cfg-form-group">
+                        <label>Tipo</label>
+                        <select name="tipo" class="cfg-select">
+                            <option value="whatsapp">WhatsApp</option>
+                            <option value="widget">Chat Widget</option>
+                            <option value="email">E-mail</option>
+                            <option value="interno">Interno</option>
+                        </select>
+                    </div>
+                    <div class="cfg-form-group">
+                        <label>Integracao</label>
+                        <select name="integracao_id" class="cfg-select">
+                            <option value="">Nenhuma</option>
+                            {% for integ in integracoes_disponiveis %}
+                            <option value="{{ integ.id }}">{{ integ.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-sm btn-primary-sm" style="align-self:flex-end;">Criar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <!-- ═══ TAB: Horário ═══ -->

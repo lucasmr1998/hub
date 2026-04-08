@@ -22,6 +22,7 @@ from .serializers import ConversaOutputSerializer, MensagemOutputSerializer
 from . import services
 from apps.sistema.decorators import user_tem_funcionalidade
 from apps.sistema.utils import auditar
+from apps.integracoes.models import IntegracaoAPI
 
 
 def _check_perm(request, codigo):
@@ -557,7 +558,8 @@ def configuracoes_inbox(request):
         'filas': FilaInbox.objects.select_related('equipe').prefetch_related('regras'),
         'respostas': RespostaRapida.objects.all(),
         'etiquetas_list': EtiquetaConversa.objects.all(),
-        'canais': CanalInbox.objects.all(),
+        'canais': CanalInbox.objects.select_related('integracao').all(),
+        'integracoes_disponiveis': IntegracaoAPI.objects.filter(tipo__in=['uazapi', 'evolution', 'meta_cloud', 'twilio_whatsapp']),
         'horarios_json': json.dumps(horarios_dict),
         'config': ConfiguracaoInbox.get_config(),
         'categorias_faq': CategoriaFAQ.objects.prefetch_related('artigos').filter(ativo=True),
@@ -688,8 +690,34 @@ def _processar_action_config(request, action, django_messages):
             config = canal.configuracao or {}
             config['webhook_envio_url'] = webhook_url
             canal.configuracao = config
-            canal.save(update_fields=['configuracao'])
+
+            # Vincular integracao e provedor
+            integracao_id = request.POST.get('integracao_id', '')
+            if integracao_id:
+                integ = IntegracaoAPI.objects.filter(pk=integracao_id).first()
+                if integ:
+                    canal.integracao = integ
+                    canal.provedor = integ.tipo
+            else:
+                canal.integracao = None
+                canal.provedor = ''
+
+            canal.save(update_fields=['configuracao', 'integracao', 'provedor'])
             django_messages.success(request, f'Canal "{canal.nome}" atualizado.')
+
+    elif action == 'criar_canal':
+        nome = request.POST.get('nome', '').strip()
+        tipo = request.POST.get('tipo', 'whatsapp')
+        integracao_id = request.POST.get('integracao_id', '')
+        if nome:
+            canal = CanalInbox(tenant=request.tenant, nome=nome, tipo=tipo)
+            if integracao_id:
+                integ = IntegracaoAPI.objects.filter(pk=integracao_id).first()
+                if integ:
+                    canal.integracao = integ
+                    canal.provedor = integ.tipo
+            canal.save()
+            django_messages.success(request, f'Canal "{nome}" criado.')
 
     # ── Horário de Atendimento ─────────────────────────────────────
     elif action == 'salvar_horario':

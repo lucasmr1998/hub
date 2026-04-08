@@ -138,44 +138,69 @@ def uazapi_webhook(request, api_token=None):
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({'error': 'JSON inválido'}, status=400)
 
-    event = body.get('event', '')
-    data = body.get('data', body)  # Alguns formatos enviam direto sem wrapper
-
-    # Log do evento para debug
+    # Detectar formato: Uazapi vs Evolution API
+    event = body.get('event', body.get('EventType', ''))
     logger.info(f'[Uazapi Webhook] Evento: {event}')
 
-    # Ignorar eventos que não são mensagem
+    # Ignorar eventos que nao sao mensagem
     eventos_mensagem = ['messages.upsert', 'messages', 'message', 'message.new']
     if event and event not in eventos_mensagem:
-        # Status de mensagem (entregue, lido)
-        if event in ['messages.update', 'message.update']:
-            return _processar_status(data)
         return JsonResponse({'ok': True, 'ignored': event})
 
-    # Extrair dados da mensagem
-    key = data.get('key', {})
-    remote_jid = key.get('remoteJid', '')
-    from_me = key.get('fromMe', False)
-    message_id = key.get('id', '')
+    # === Formato Uazapi (BaseUrl, EventType, chat, message) ===
+    if 'message' in body and 'chatid' in body.get('message', {}):
+        msg = body['message']
+        chat = body.get('chat', {})
 
-    # Ignorar mensagens enviadas por nós (fromMe=true)
-    if from_me:
-        return JsonResponse({'ok': True, 'ignored': 'fromMe'})
+        from_me = msg.get('fromMe', False)
+        if from_me:
+            return JsonResponse({'ok': True, 'ignored': 'fromMe'})
 
-    # Ignorar grupos e broadcasts
-    if '@g.us' in remote_jid or '@broadcast' in remote_jid:
-        return JsonResponse({'ok': True, 'ignored': 'group_or_broadcast'})
+        remote_jid = msg.get('chatid', chat.get('wa_chatid', ''))
+        if '@g.us' in remote_jid or '@broadcast' in remote_jid:
+            return JsonResponse({'ok': True, 'ignored': 'group_or_broadcast'})
 
-    telefone = _extrair_telefone(remote_jid)
-    if not telefone:
-        return JsonResponse({'error': 'Telefone não encontrado no payload'}, status=400)
+        telefone = _extrair_telefone(remote_jid)
+        if not telefone:
+            return JsonResponse({'error': 'Telefone nao encontrado'}, status=400)
 
-    push_name = data.get('pushName', '')
-    message_data = data.get('message', {})
-    timestamp = data.get('messageTimestamp', '')
+        push_name = msg.get('senderName', chat.get('wa_name', chat.get('name', '')))
+        message_id = msg.get('messageid', '')
+        timestamp = msg.get('messageTimestamp', '')
+        conteudo = msg.get('content', msg.get('text', ''))
+        msg_type = msg.get('messageType', 'Conversation')
 
-    # Detectar tipo e conteúdo
-    tipo_conteudo, conteudo, arquivo_url, arquivo_nome = _detectar_tipo_conteudo(message_data)
+        # Mapear tipo
+        tipo_map = {
+            'Conversation': 'texto', 'ExtendedTextMessage': 'texto',
+            'ImageMessage': 'imagem', 'AudioMessage': 'audio',
+            'DocumentMessage': 'arquivo', 'videoMessage': 'video',
+        }
+        tipo_conteudo = tipo_map.get(msg_type, 'texto')
+        arquivo_url = msg.get('mediaUrl', '')
+        arquivo_nome = ''
+
+    # === Formato Evolution API (event, data.key, data.message) ===
+    else:
+        data = body.get('data', body)
+        key = data.get('key', {})
+        remote_jid = key.get('remoteJid', '')
+        from_me = key.get('fromMe', False)
+        message_id = key.get('id', '')
+
+        if from_me:
+            return JsonResponse({'ok': True, 'ignored': 'fromMe'})
+        if '@g.us' in remote_jid or '@broadcast' in remote_jid:
+            return JsonResponse({'ok': True, 'ignored': 'group_or_broadcast'})
+
+        telefone = _extrair_telefone(remote_jid)
+        if not telefone:
+            return JsonResponse({'error': 'Telefone nao encontrado'}, status=400)
+
+        push_name = data.get('pushName', '')
+        message_data = data.get('message', {})
+        timestamp = data.get('messageTimestamp', '')
+        tipo_conteudo, conteudo, arquivo_url, arquivo_nome = _detectar_tipo_conteudo(message_data)
 
     if not conteudo and not arquivo_url:
         return JsonResponse({'ok': True, 'ignored': 'empty_message'})
