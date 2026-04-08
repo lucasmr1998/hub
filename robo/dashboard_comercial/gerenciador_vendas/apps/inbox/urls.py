@@ -12,6 +12,9 @@ urlpatterns = [
     path('api/webhook/<str:provedor>/<int:canal_id>/', provider_webhook, name='provider_webhook'),
     path('api/webhook/<str:provedor>/<int:canal_id>', provider_webhook),
 
+    # Webhook Uazapi por tenant (token na URL identifica o tenant)
+    path('api/webhook/<str:api_token>/', uazapi_webhook, name='uazapi_webhook_token'),
+
     # Webhook Uazapi legacy (backward compat)
     path('api/uazapi/webhook/', uazapi_webhook, name='uazapi_webhook'),
     path('api/uazapi/webhook', uazapi_webhook),

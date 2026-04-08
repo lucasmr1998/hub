@@ -25,36 +25,32 @@ def _extrair_telefone(jid):
 
 
 def _resolver_tenant_por_token(token):
-    """Busca o tenant pela integração Uazapi que tem este token."""
-    integ = IntegracaoAPI.objects.filter(
-        tipo='uazapi', ativa=True,
-    ).first()
-    if not integ:
+    """Busca o tenant pela integracao que tem este api_token."""
+    if not token:
         return None, None
 
-    # Verificar token
-    token_salvo = integ.access_token or integ.configuracoes_extras.get('token', '')
-    webhook_token = integ.configuracoes_extras.get('webhook_token', '')
+    # Buscar por api_token (campo novo, identifica tenant)
+    integ = IntegracaoAPI.all_tenants.filter(
+        api_token=token, ativa=True,
+    ).select_related('tenant').first()
 
-    if token and token_salvo and token == token_salvo:
-        return integ, _get_tenant(integ)
-    if token and webhook_token and token == webhook_token:
-        return integ, _get_tenant(integ)
-    # Se não tem token de webhook configurado, aceitar qualquer request (para facilitar setup)
-    if not webhook_token and not token:
-        return integ, _get_tenant(integ)
+    if integ and integ.tenant:
+        return integ, integ.tenant
 
-    return integ, _get_tenant(integ)
+    # Fallback: buscar por access_token ou config extras
+    integ = IntegracaoAPI.all_tenants.filter(
+        tipo='uazapi', ativa=True,
+    ).select_related('tenant').first()
 
+    if integ and integ.tenant:
+        token_salvo = integ.access_token or ''
+        if token_salvo and token == token_salvo:
+            return integ, integ.tenant
+        config_token = (integ.configuracoes_extras or {}).get('token', '')
+        if config_token and token == config_token:
+            return integ, integ.tenant
 
-def _get_tenant(integ):
-    """Resolve tenant da integração. IntegracaoAPI não tem tenant FK, usa configuracoes_extras."""
-    tenant_slug = integ.configuracoes_extras.get('tenant_slug', '')
-    if tenant_slug:
-        return services.resolver_tenant(tenant_slug)
-    # Fallback: pegar o primeiro tenant ativo
-    from apps.sistema.models import Tenant
-    return Tenant.objects.filter(ativo=True).first()
+    return None, None
 
 
 def _detectar_tipo_conteudo(message_data):
@@ -112,7 +108,7 @@ def _detectar_tipo_conteudo(message_data):
 
 @csrf_exempt
 @require_POST
-def uazapi_webhook(request):
+def uazapi_webhook(request, api_token=None):
     """
     Webhook que recebe eventos do Uazapi.
 
@@ -184,8 +180,8 @@ def uazapi_webhook(request):
     if not conteudo and not arquivo_url:
         return JsonResponse({'ok': True, 'ignored': 'empty_message'})
 
-    # Resolver tenant
-    token = request.headers.get('token', request.GET.get('token', ''))
+    # Resolver tenant (token da URL tem prioridade)
+    token = api_token or request.headers.get('token', request.GET.get('token', ''))
     integ, tenant = _resolver_tenant_por_token(token)
 
     if not tenant:
