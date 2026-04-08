@@ -99,28 +99,44 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
             import requests
             import threading
 
-            # Payload no formato compativel com Uazapi/N8N
-            payload = {
-                'data': {
-                    'remoteJid': conversa.contato_telefone,
-                    'fromMe': False,
-                    'text': instance.conteudo,
-                    'messageType': {'texto': 'Conversation', 'imagem': 'ImageMessage', 'audio': 'AudioMessage', 'video': 'videoMessage', 'arquivo': 'DocumentMessage'}.get(instance.tipo_conteudo, 'Conversation'),
-                    'mediaUrl': instance.arquivo_url or None,
-                    'id': str(instance.pk),
-                    'source': 'aurora',
-                    'caption': None,
-                    'reactionMessage': None,
-                },
-                'session_id': f'sessionid_{conversa.contato_telefone}',
-                'conversa_id': conversa.pk,
-                'tenant': instance.tenant.nome if instance.tenant else '',
-            }
+            # Se a mensagem veio do Uazapi, repassar o payload original completo
+            metadata = instance.metadata or {}
+            uazapi_raw = metadata.get('uazapi_raw', {})
 
-            if conversa.lead:
-                payload['lead_id'] = conversa.lead.pk
-                payload['lead_nome'] = conversa.lead.nome_razaosocial
-                payload['lead_email'] = conversa.lead.email or ''
+            if uazapi_raw:
+                # Repassar o body original do Uazapi + dados extras do nosso sistema
+                payload = uazapi_raw.copy()
+                payload['_aurora'] = {
+                    'conversa_id': conversa.pk,
+                    'mensagem_id': instance.pk,
+                    'tenant': instance.tenant.nome if instance.tenant else '',
+                }
+                if conversa.lead:
+                    payload['_aurora']['lead_id'] = conversa.lead.pk
+                    payload['_aurora']['lead_nome'] = conversa.lead.nome_razaosocial
+                    payload['_aurora']['lead_email'] = conversa.lead.email or ''
+            else:
+                # Payload padrao para mensagens que nao vieram do Uazapi
+                payload = {
+                    'data': {
+                        'remoteJid': conversa.contato_telefone,
+                        'fromMe': False,
+                        'text': instance.conteudo,
+                        'messageType': {'texto': 'Conversation', 'imagem': 'ImageMessage', 'audio': 'AudioMessage', 'video': 'videoMessage', 'arquivo': 'DocumentMessage'}.get(instance.tipo_conteudo, 'Conversation'),
+                        'mediaUrl': instance.arquivo_url or None,
+                        'id': str(instance.pk),
+                        'source': 'aurora',
+                        'caption': None,
+                        'reactionMessage': None,
+                    },
+                    'session_id': f'sessionid_{conversa.contato_telefone}',
+                    'conversa_id': conversa.pk,
+                    'tenant': instance.tenant.nome if instance.tenant else '',
+                }
+                if conversa.lead:
+                    payload['lead_id'] = conversa.lead.pk
+                    payload['lead_nome'] = conversa.lead.nome_razaosocial
+                    payload['lead_email'] = conversa.lead.email or ''
 
             def _enviar():
                 try:

@@ -262,9 +262,10 @@ body.inbox-page .sidebar { display: none; }
     max-width: 90%; text-align: center; padding: 6px 12px;
 }
 .msg-bubble.bot {
-    align-self: flex-start; background: #f0fdf4; border: 1px solid #bbf7d0;
-    border-bottom-left-radius: 4px;
+    align-self: flex-end; background: #f0fdf4; border: 1px solid #bbf7d0;
+    border-bottom-right-radius: 4px;
 }
+.msg-bubble.bot .msg-time { color: #64748b; }
 
 .msg-sender { font-size: 11px; font-weight: 600; margin-bottom: 2px; opacity: .7; }
 .msg-time { font-size: 10px; margin-top: 4px; opacity: .6; }

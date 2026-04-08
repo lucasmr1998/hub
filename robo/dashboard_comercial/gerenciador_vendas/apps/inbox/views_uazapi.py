@@ -213,6 +213,13 @@ def uazapi_webhook(request, api_token=None):
         logger.warning('[Uazapi Webhook] Tenant não encontrado')
         return JsonResponse({'error': 'Tenant não configurado'}, status=400)
 
+    # Guardar body original do Uazapi para repassar ao N8N
+    uazapi_metadata = {
+        'uazapi_event': event,
+        'timestamp': timestamp,
+        'uazapi_raw': body,  # payload completo do Uazapi
+    }
+
     # Usar o service existente para criar conversa + mensagem
     conversa, mensagem, nova = services.receber_mensagem(
         telefone=telefone,
@@ -221,7 +228,7 @@ def uazapi_webhook(request, api_token=None):
         tenant=tenant,
         tipo_conteudo=tipo_conteudo,
         identificador_externo=message_id,
-        metadata={'uazapi_event': event, 'timestamp': timestamp},
+        metadata=uazapi_metadata,
         canal_tipo='whatsapp',
         arquivo_url=arquivo_url,
         arquivo_nome=arquivo_nome,

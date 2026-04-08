@@ -38,11 +38,11 @@ class APITokenAuthentication(BaseAuthentication):
             if integracao and integracao.tenant:
                 # Setar tenant no request para TenantManager funcionar
                 request.tenant = integracao.tenant
-                from apps.sistema.middleware import _thread_local
-                _thread_local.tenant = integracao.tenant
+                from apps.sistema.middleware import _thread_locals
+                _thread_locals.tenant = integracao.tenant
                 return (APIServiceUser('n8n', tenant=integracao.tenant), 'api_token')
         except Exception as e:
-            logger.debug("Erro ao buscar token no banco: %s", e)
+            logger.error("Erro ao buscar token no banco: %s", e, exc_info=True)
 
         # 2. Fallback: token global N8N
         n8n_token = os.environ.get('N8N_API_TOKEN', '')
@@ -66,6 +66,7 @@ class APIServiceUser:
     def __init__(self, service_name, tenant=None):
         self.service_name = service_name
         self.tenant = tenant
+        self.username = f'api:{service_name}'
         self.is_authenticated = True
         self.is_staff = False
         self.is_superuser = False

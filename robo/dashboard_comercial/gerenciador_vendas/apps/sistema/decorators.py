@@ -57,8 +57,8 @@ def api_token_required(view_func):
             ).select_related('tenant').first()
             if integracao and integracao.tenant:
                 request.tenant = integracao.tenant
-                from apps.sistema.middleware import _thread_local
-                _thread_local.tenant = integracao.tenant
+                from apps.sistema.middleware import _thread_locals
+                _thread_locals.tenant = integracao.tenant
                 return view_func(request, *args, **kwargs)
         except Exception:
             pass
