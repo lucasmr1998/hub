@@ -143,6 +143,24 @@ def receber_mensagem(telefone, nome, conteudo, tenant, tipo_conteudo='texto',
     ).order_by('-ultima_mensagem_em').first()
 
     nova_conversa = False
+    if conversa and not conversa.lead:
+        # Conversa existe mas sem lead (foi deletado), vincular ou criar
+        lead = buscar_lead_por_telefone(fone, tenant)
+        if not lead:
+            from apps.comercial.leads.models import LeadProspecto
+            lead = LeadProspecto(
+                tenant=tenant,
+                nome_razaosocial=nome or fone,
+                telefone=fone,
+                origem='whatsapp' if canal_tipo == 'whatsapp' else 'outros',
+                canal_entrada=canal_tipo,
+                status_api='pendente',
+            )
+            lead.save()
+            logger.info("[Inbox] Lead recriado para conversa sem lead: %s", lead.nome_razaosocial)
+        conversa.lead = lead
+        conversa.save(update_fields=['lead'])
+
     if not conversa:
         nova_conversa = True
         lead = buscar_lead_por_telefone(fone, tenant)
