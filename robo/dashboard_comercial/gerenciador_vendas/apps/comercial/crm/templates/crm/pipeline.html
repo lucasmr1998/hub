@@ -295,14 +295,12 @@
 
   /* Context menu */
   .card-context-menu {
-    position: absolute;
-    right: 8px;
-    top: 30px;
+    position: fixed;
     background: var(--bg-white);
     border: 1px solid var(--border);
     border-radius: 10px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-    z-index: 100;
+    z-index: 1000;
     min-width: 160px;
     overflow: hidden;
     display: none;
@@ -912,11 +910,11 @@ function toggleContextMenu(e, opId, estagioAtualId) {
   const menu = document.getElementById('globalContextMenu');
   const itemsEl = document.getElementById('contextMenuItems');
 
-  // Posicionar perto do botão
+  // Posicionar perto do botao (fixed, relativo a viewport)
   const rect = e.currentTarget.getBoundingClientRect();
-  menu.style.top = (rect.bottom + window.scrollY) + 'px';
+  menu.style.top = rect.bottom + 'px';
+  menu.style.left = rect.left + 'px';
   menu.style.right = '';
-  menu.style.left = (rect.left + window.scrollX) + 'px';
 
   if (menu.classList.contains('show') && menu.dataset.opId === String(opId)) {
     fecharContextMenu();
