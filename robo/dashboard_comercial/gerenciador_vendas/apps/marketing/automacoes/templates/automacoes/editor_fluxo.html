@@ -153,6 +153,9 @@
                 <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="notificacao_sistema" data-nome="Notificação">
                     <i class="fas fa-bell" style="color:#f59e0b;"></i> Notificação
                 </div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="criar_oportunidade" data-nome="Criar Oportunidade">
+                    <i class="fas fa-funnel-dollar" style="color:#8b5cf6;"></i> Criar Oportunidade
+                </div>
                 <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="action" data-subtipo="criar_tarefa" data-nome="Criar Tarefa">
                     <i class="fas fa-tasks" style="color:#3b82f6;"></i> Criar Tarefa
                 </div>
@@ -248,6 +251,7 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
     };
     const iconeSubtipos = {
         'enviar_whatsapp': '<i class="fab fa-whatsapp" style="color:#25D366;"></i>',
+        'criar_oportunidade': '<i class="fas fa-funnel-dollar" style="color:#8b5cf6;"></i>',
         'criar_tarefa': '<i class="fas fa-tasks" style="color:#3b82f6;"></i>',
         'mover_estagio': '<i class="fas fa-columns" style="color:#8b5cf6;"></i>',
         'notificacao_sistema': '<i class="fas fa-bell" style="color:#f59e0b;"></i>',
@@ -515,6 +519,18 @@ function abrirConfig(nodeId, data) {
                     <textarea id="cfg_template" rows="3" onchange="salvarConfigNodo()" placeholder="{{lead_nome}} foi qualificado...">${c.template||''}</textarea>
                 </div>
             `;
+        } else if (data.subtipo === 'criar_oportunidade') {
+            html = `
+                <div class="config-group"><label>Titulo da Oportunidade</label>
+                    <input type="text" id="cfg_titulo_oport" value="${c.titulo||'{{lead_nome}}'}" onchange="salvarConfigNodo()" placeholder="{{lead_nome}}">
+                </div>
+                <div class="config-group"><label>Pipeline</label>
+                    <select id="cfg_pipeline_oport" onchange="salvarConfigNodo()">${pipelineOpts(c.pipeline)}</select>
+                </div>
+                <div class="config-group"><label>Estagio Inicial</label>
+                    <select id="cfg_estagio_oport" onchange="salvarConfigNodo()">${estagioOpts(c.estagio, c.pipeline)}</select>
+                </div>
+            `;
         } else if (data.subtipo === 'criar_tarefa') {
             html = `
                 <div class="config-group"><label>Titulo da Tarefa</label>
@@ -646,6 +662,8 @@ function salvarConfigNodo() {
             data.config = { assunto: g('cfg_assunto'), template: g('cfg_template') };
         } else if (data.subtipo === 'notificacao_sistema') {
             data.config = { titulo: g('cfg_titulo'), template: g('cfg_template') };
+        } else if (data.subtipo === 'criar_oportunidade') {
+            data.config = { titulo: g('cfg_titulo_oport'), pipeline: g('cfg_pipeline_oport'), estagio: g('cfg_estagio_oport') };
         } else if (data.subtipo === 'criar_tarefa') {
             data.config = { titulo: g('cfg_titulo'), tipo_tarefa: g('cfg_tipo_tarefa'), prioridade: g('cfg_prioridade') };
         } else if (data.subtipo === 'mover_estagio') {

@@ -344,6 +344,10 @@ class _NodoAcaoAdapter:
         elif subtipo == 'webhook':
             self.configuracao = c.get('url', '')
 
+        elif subtipo == 'criar_oportunidade':
+            self.configuracao = c.get('titulo', '{{lead_nome}}')
+            self._config_json = c
+
         else:
             self.configuracao = c.get('template', '')
             if not self.configuracao:
@@ -458,6 +462,7 @@ def _get_executor(tipo):
         'atribuir_responsavel': _acao_atribuir_responsavel,
         'dar_pontos': _acao_dar_pontos,
         'webhook': _acao_webhook,
+        'criar_oportunidade': _acao_criar_oportunidade,
     }.get(tipo)
 
 
@@ -704,3 +709,56 @@ def _acao_webhook(regra, acao, contexto):
         return f'Webhook {metodo} {url} — status {resp.status_code}'
     except requests.RequestException as e:
         raise Exception(f'Falha no webhook: {e}')
+
+
+def _acao_criar_oportunidade(regra, acao, contexto):
+    """Cria oportunidade no CRM para o lead."""
+    from apps.comercial.crm.models import OportunidadeVenda, Pipeline, PipelineEstagio
+
+    lead = contexto.get('lead')
+    if not lead or not hasattr(lead, 'pk'):
+        return 'Lead nao encontrado no contexto'
+
+    # Se ja existe, nao duplicar
+    if OportunidadeVenda.objects.filter(lead=lead).exists():
+        return f'Oportunidade ja existe para lead {lead.pk}'
+
+    # Buscar pipeline (config ou padrao)
+    config = acao.configuracao if hasattr(acao, 'configuracao') else ''
+    pipeline = None
+    estagio = None
+
+    if hasattr(acao, '_config_json') and acao._config_json:
+        cfg = acao._config_json
+        pipeline_slug = cfg.get('pipeline', '')
+        estagio_slug = cfg.get('estagio', '')
+        if pipeline_slug:
+            pipeline = Pipeline.objects.filter(slug=pipeline_slug).first()
+        if estagio_slug and pipeline:
+            estagio = PipelineEstagio.objects.filter(pipeline=pipeline, slug=estagio_slug).first()
+
+    if not pipeline:
+        pipeline = Pipeline.objects.filter(tenant=regra.tenant, padrao=True).first()
+    if not pipeline:
+        pipeline = Pipeline.objects.filter(tenant=regra.tenant).first()
+    if not estagio and pipeline:
+        estagio = PipelineEstagio.objects.filter(pipeline=pipeline).order_by('ordem').first()
+
+    if not estagio:
+        return 'Nenhum estagio encontrado'
+
+    titulo = _substituir_variaveis(
+        config if isinstance(config, str) and config.strip() else '{{lead_nome}}',
+        contexto
+    )
+
+    oport = OportunidadeVenda.objects.create(
+        tenant=regra.tenant,
+        lead=lead,
+        pipeline=pipeline,
+        estagio=estagio,
+        titulo=titulo,
+        valor_estimado=lead.valor if hasattr(lead, 'valor') else None,
+        origem_crm='automatico',
+    )
+    return f'Oportunidade criada (pk={oport.pk})'
