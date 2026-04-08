@@ -48,6 +48,7 @@ class OportunidadeUpdateSerializer(serializers.Serializer):
     valor_estimado = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     prioridade = serializers.ChoiceField(choices=['baixa', 'normal', 'alta', 'urgente'], required=False)
     motivo_perda = serializers.CharField(required=False)
+    dados_custom = serializers.JSONField(required=False)
 
 
 class OportunidadeOutputSerializer(serializers.ModelSerializer):
@@ -66,6 +67,7 @@ class OportunidadeOutputSerializer(serializers.ModelSerializer):
             'valor_estimado', 'prioridade', 'probabilidade',
             'responsavel_nome', 'origem_crm',
             'data_criacao', 'data_entrada_estagio', 'ativo',
+            'dados_custom',
         ]
 
     def get_responsavel_nome(self, obj):

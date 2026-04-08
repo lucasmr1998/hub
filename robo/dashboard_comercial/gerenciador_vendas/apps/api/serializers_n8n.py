@@ -46,6 +46,8 @@ class LeadInputSerializer(serializers.ModelSerializer):
             'status_api',
             'id_hubsoft',
             'score_qualificacao',
+            'observacoes',
+            'dados_custom',
         ]
         extra_kwargs = {
             'nome_razaosocial': {'required': True},

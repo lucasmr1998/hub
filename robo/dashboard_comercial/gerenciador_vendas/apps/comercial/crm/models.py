@@ -221,6 +221,14 @@ class OportunidadeVenda(TenantMixin):
     contrato_hubsoft_id = models.CharField(max_length=100, null=True, blank=True, verbose_name="ID Contrato Hubsoft")
     churn_risk_score = models.IntegerField(null=True, blank=True, verbose_name="Score de Churn (0-100)")
 
+    # Campos customizaveis por tenant
+    dados_custom = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Dados Customizados",
+        help_text="Campos personalizados definidos pelo tenant",
+    )
+
     data_criacao = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
     data_atualizacao = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
     ativo = models.BooleanField(default=True, verbose_name="Ativo")

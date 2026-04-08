@@ -200,6 +200,13 @@ class OportunidadeAPIView(N8NAPIMixin, APIView):
                 setattr(oport, campo, data[campo])
                 campos_atualizados.append(campo)
 
+        # Dados customizados (merge com existentes)
+        if 'dados_custom' in data and data['dados_custom']:
+            custom = oport.dados_custom or {}
+            custom.update(data['dados_custom'])
+            oport.dados_custom = custom
+            campos_atualizados.append('dados_custom')
+
         if campos_atualizados:
             oport.save(update_fields=campos_atualizados + ['data_atualizacao'])
 

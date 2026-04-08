@@ -1324,6 +1324,20 @@ class CampoCustomizado(TenantMixin):
         ('textarea', 'Texto longo'),
     ]
 
+    ENTIDADE_CHOICES = [
+        ('lead', 'Lead'),
+        ('oportunidade', 'Oportunidade'),
+    ]
+
+    entidade = models.CharField(
+        max_length=20,
+        choices=ENTIDADE_CHOICES,
+        default='lead',
+        verbose_name="Entidade",
+        help_text="A qual entidade este campo pertence",
+        db_index=True,
+    )
+
     nome = models.CharField(
         max_length=100,
         verbose_name="Nome do Campo",
@@ -1360,11 +1374,11 @@ class CampoCustomizado(TenantMixin):
     )
 
     class Meta:
-        db_table = 'campos_customizados_lead'
+        db_table = 'campos_customizados'
         verbose_name = "Campo Customizado"
         verbose_name_plural = "Campos Customizados"
-        ordering = ['ordem', 'nome']
-        unique_together = [('tenant', 'slug')]
+        ordering = ['entidade', 'ordem', 'nome']
+        unique_together = [('tenant', 'slug', 'entidade')]
 
     def __str__(self):
         return f"{self.nome} ({self.get_tipo_display()})"
