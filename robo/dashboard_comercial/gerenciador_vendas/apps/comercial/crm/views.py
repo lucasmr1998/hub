@@ -393,6 +393,16 @@ def oportunidade_detalhe(request, pk):
         tenant=request.tenant, lead=lead,
     ).select_related('regra', 'acao', 'nodo').order_by('-data_execucao')[:20]
 
+    # Conversas e mensagens do Inbox
+    from apps.inbox.models import Conversa, Mensagem
+    conversas_inbox = Conversa.objects.filter(lead=lead).order_by('-ultima_mensagem_em')
+    mensagens_inbox = []
+    if conversas_inbox.exists():
+        conversa_ids = conversas_inbox.values_list('id', flat=True)
+        mensagens_inbox = Mensagem.objects.filter(
+            conversa_id__in=conversa_ids
+        ).order_by('data_envio')[:50]
+
     context = {
         'oportunidade': oportunidade,
         'lead': lead,
@@ -402,6 +412,8 @@ def oportunidade_detalhe(request, pk):
         'logs_automacao': logs_automacao,
         'estagios': estagios,
         'vendedores': vendedores,
+        'conversas_inbox': conversas_inbox,
+        'mensagens_inbox': mensagens_inbox,
         'page_title': f'CRM — {oportunidade.titulo or lead.nome_razaosocial}',
     }
     return render(request, 'crm/oportunidade_detalhe.html', context)

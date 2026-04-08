@@ -713,6 +713,10 @@
             <i class="fas fa-history"></i> Hist. Estágios
             <span class="badge">{{ historico_estagios|length }}</span>
           </button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-conversas')">
+            <i class="fab fa-whatsapp"></i> Conversas
+            <span class="badge">{{ mensagens_inbox|length }}</span>
+          </button>
         </div>
 
         <!-- TAB: TIMELINE MESCLADA -->
@@ -882,6 +886,32 @@
           <div class="empty-state">
             <i class="fas fa-history"></i>
             Nenhuma transição registrada.
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- TAB: CONVERSAS INBOX -->
+        <div id="tab-conversas" class="tab-panel">
+          {% if mensagens_inbox %}
+          <div style="max-height:500px;overflow-y:auto;padding:16px;background:var(--border-light,#f1f5f9);border-radius:8px;display:flex;flex-direction:column;gap:6px;">
+            {% for msg in mensagens_inbox %}
+            <div style="max-width:75%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.5;word-break:break-word;
+              {% if msg.remetente_tipo == 'contato' %}align-self:flex-start;background:#fff;border:1px solid var(--border,#e2e8f0);border-bottom-left-radius:4px;
+              {% elif msg.remetente_tipo == 'bot' %}align-self:flex-end;background:#f0fdf4;border:1px solid #bbf7d0;border-bottom-right-radius:4px;
+              {% elif msg.remetente_tipo == 'agente' %}align-self:flex-end;background:var(--primary,#3b82f6);color:#fff;border-bottom-right-radius:4px;
+              {% else %}align-self:center;background:var(--border-light,#f1f5f9);color:var(--text-muted);font-size:11px;text-align:center;max-width:90%;{% endif %}">
+              {% if msg.remetente_tipo != 'sistema' %}
+              <div style="font-size:11px;font-weight:600;margin-bottom:2px;opacity:.7;">{{ msg.remetente_nome }}</div>
+              {% endif %}
+              {{ msg.conteudo|linebreaksbr }}
+              <div style="font-size:10px;margin-top:4px;text-align:right;opacity:.6;">{{ msg.data_envio|date:"d/m H:i" }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="empty-state">
+            <i class="fab fa-whatsapp"></i>
+            Nenhuma conversa registrada.
           </div>
           {% endif %}
         </div>
