@@ -228,6 +228,12 @@ def salvar_fluxo(request, pk):
                 tipo_saida=conn_data.get('tipo_saida', 'default'),
             )
 
+    # Extrair evento do nodo trigger e salvar na regra
+    trigger = regra.nodos.filter(tipo='trigger').first()
+    if trigger and trigger.subtipo:
+        regra.evento = trigger.subtipo
+        regra.save(update_fields=['evento'])
+
     return JsonResponse({'ok': True, 'nodos': len(id_map)})
 
 
