@@ -60,11 +60,7 @@
                     </td>
                     <td>{{ user.email }}</td>
                     <td>
-                        {% if user.is_superuser %}
-                            <span class="badge badge-warning">Superuser</span>
-                        {% elif user.is_staff %}
-                            <span class="badge badge-info">Staff</span>
-                        {% elif user.is_active %}
+                        {% if user.is_active %}
                             <span class="badge badge-success">Ativo</span>
                         {% else %}
                             <span class="badge badge-danger">Inativo</span>
@@ -124,7 +120,6 @@
             </div>
 
             <div class="form-group"><label style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-secondary);cursor:pointer;"><input type="checkbox" id="isActive" name="is_active" checked> Usuario ativo</label></div>
-            <div class="form-group"><label style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-secondary);cursor:pointer;"><input type="checkbox" id="isStaff" name="is_staff"> Acesso ao admin (Staff)</label></div>
         </form>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
             <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
@@ -178,7 +173,6 @@ function editUser(userId) {
     document.getElementById('perfilId').value = row.dataset.perfilId || '';
     const txt = (row.querySelector('.badge')?.textContent || '').trim();
     document.getElementById('isActive').checked = txt !== 'Inativo';
-    document.getElementById('isStaff').checked = (txt === 'Staff' || txt === 'Superuser');
     document.getElementById('userModal').classList.add('active');
     clearAlerts();
 }
@@ -194,7 +188,7 @@ function saveUser() {
     const perfilVal = document.getElementById('perfilId').value;
     const data = {
         email:fd.get('email'), first_name:fd.get('first_name'), last_name:fd.get('last_name'),
-        password:fd.get('password'), is_active:fd.get('is_active')==='on', is_staff:fd.get('is_staff')==='on',
+        password:fd.get('password'), is_active:fd.get('is_active')==='on',
         groups:[], perfil_id: perfilVal ? parseInt(perfilVal) : null,
     };
     const url = isEditMode ? `/api/configuracoes/usuarios/${currentUser}/` : '/api/configuracoes/usuarios/';

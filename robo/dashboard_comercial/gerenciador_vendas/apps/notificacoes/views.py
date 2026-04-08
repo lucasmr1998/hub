@@ -32,7 +32,8 @@ logger = logging.getLogger(__name__)
 @login_required
 def configuracoes_notificacoes_view(request):
     """View para gerenciar sistema de notificações (temporariamente desativado)"""
-    if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
+    from apps.sistema.decorators import user_tem_funcionalidade
+    if not user_tem_funcionalidade(request, 'config.gerenciar_notificacoes'):
         messages.error(request, 'Você não tem permissão para acessar esta página.')
         return redirect('dashboard:dashboard1')
 
@@ -44,7 +45,8 @@ def configuracoes_notificacoes_view(request):
 def tipo_notificacao_detalhes_view(request, tipo_id):
     """View para detalhes e configuração de um tipo específico de notificação"""
     # Verificar se o usuário tem permissão
-    if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
+    from apps.sistema.decorators import user_tem_funcionalidade
+    if not user_tem_funcionalidade(request, 'config.gerenciar_notificacoes'):
         messages.error(request, 'Você não tem permissão para acessar esta página.')
         return redirect('dashboard:dashboard1')
 
@@ -448,7 +450,8 @@ def api_templates_notificacoes(request, template_id=None):
     """API para gerenciar templates de notificação"""
     try:
         # Verificar permissões
-        if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
+        from apps.sistema.decorators import user_tem_funcionalidade
+        if not user_tem_funcionalidade(request, 'config.gerenciar_notificacoes'):
             return JsonResponse({'error': 'Sem permissão'}, status=403)
 
         if request.method == 'GET':
@@ -576,7 +579,8 @@ def api_tipos_notificacao(request, tipo_id=None):
     """API para gerenciar tipos de notificação"""
     try:
         # Verificar permissões
-        if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
+        from apps.sistema.decorators import user_tem_funcionalidade
+        if not user_tem_funcionalidade(request, 'config.gerenciar_notificacoes'):
             return JsonResponse({'error': 'Sem permissão'}, status=403)
 
         if request.method == 'GET':
@@ -675,7 +679,8 @@ def api_canais_notificacao(request, canal_id=None):
     """API para gerenciar canais de notificação"""
     try:
         # Verificar permissões
-        if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
+        from apps.sistema.decorators import user_tem_funcionalidade
+        if not user_tem_funcionalidade(request, 'config.gerenciar_notificacoes'):
             return JsonResponse({'error': 'Sem permissão'}, status=403)
 
         if request.method == 'GET':
@@ -1219,7 +1224,8 @@ def api_canal_toggle(request, canal_id):
     """API para alternar status de um canal de notificação"""
     try:
         # Verificar se o usuário tem permissão
-        if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
+        from apps.sistema.decorators import user_tem_funcionalidade
+        if not user_tem_funcionalidade(request, 'config.gerenciar_notificacoes'):
             return JsonResponse({
                 'success': False,
                 'error': 'Você não tem permissão para alterar canais'

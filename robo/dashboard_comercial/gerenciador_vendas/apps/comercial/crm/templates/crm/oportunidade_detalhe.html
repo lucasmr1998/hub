@@ -703,7 +703,7 @@
         <div class="tabs-nav">
           <button class="tab-btn active" onclick="switchTab(this,'tab-timeline')">
             <i class="fas fa-stream"></i> Timeline
-            <span class="badge">{{ historico_estagios|length|add:historico_contatos|length }}</span>
+            <span class="badge">{{ timeline_items|length }}</span>
           </button>
           <button class="tab-btn" onclick="switchTab(this,'tab-notas')">
             <i class="fas fa-sticky-note"></i> Notas
@@ -721,75 +721,98 @@
 
         <!-- TAB: TIMELINE MESCLADA -->
         <div id="tab-timeline" class="tab-panel active">
-          {% if historico_contatos or historico_estagios %}
+          {% if timeline_items %}
           <div class="timeline">
-
-            {% comment %}Mescla contatos e estágios, renderiza em ordem decrescente{% endcomment %}
-            {% for hc in historico_contatos %}
+            {% for item in timeline_items %}
             <div class="tl-item">
+
+              {% if item.tipo == 'contato' %}
               <div class="tl-dot
-                {% if hc.converteu_venda %}dot-venda
-                {% elif hc.sucesso %}dot-contato
-                {% elif hc.status == 'chamada_perdida' or hc.status == 'nao_atendeu' %}dot-perdido
+                {% if item.obj.converteu_venda %}dot-venda
+                {% elif item.obj.sucesso %}dot-contato
+                {% elif item.obj.status == 'chamada_perdida' or item.obj.status == 'nao_atendeu' %}dot-perdido
                 {% else %}dot-contato{% endif %}">
               </div>
               <div class="tl-header">
                 <div class="tl-title">
                   <i class="fas fa-phone" style="color:var(--info);font-size:12px"></i>
-                  {% if hc.converteu_venda %}
+                  {% if item.obj.converteu_venda %}
                     <span style="color:var(--success)">Venda confirmada</span>
-                  {% elif hc.status == 'transferido_humano' %}
+                  {% elif item.obj.status == 'transferido_humano' %}
                     Transferido para humano
-                  {% elif hc.status == 'fluxo_finalizado' %}
+                  {% elif item.obj.status == 'fluxo_finalizado' %}
                     Fluxo finalizado
                   {% else %}
-                    {{ hc.get_status_display|default:hc.status }}
+                    {{ item.obj.get_status_display|default:item.obj.status }}
                   {% endif %}
                 </div>
-                <span class="tl-date">{{ hc.data_hora_contato|date:"d/m H:i" }}</span>
+                <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
               </div>
-              {% if hc.observacoes %}
-              <p class="tl-body">{{ hc.observacoes|truncatechars:200 }}</p>
+              {% if item.obj.observacoes %}
+              <p class="tl-body">{{ item.obj.observacoes|truncatechars:200 }}</p>
               {% endif %}
               <div class="tl-meta">
-                {% if hc.duracao_segundos %}
-                  <i class="fas fa-clock"></i> {{ hc.duracao_segundos }}s
+                {% if item.obj.duracao_segundos %}
+                  <i class="fas fa-clock"></i> {{ item.obj.duracao_segundos }}s
                 {% endif %}
-                {% if hc.nome_contato %}· {{ hc.nome_contato }}{% endif %}
+                {% if item.obj.nome_contato %}· {{ item.obj.nome_contato }}{% endif %}
               </div>
-            </div>
-            {% endfor %}
 
-            {% for he in historico_estagios %}
-            <div class="tl-item">
+              {% elif item.tipo == 'estagio' %}
               <div class="tl-dot
-                {% if he.estagio_novo.is_final_ganho %}dot-venda
-                {% elif he.estagio_novo.is_final_perdido %}dot-perdido
+                {% if item.obj.estagio_novo.is_final_ganho %}dot-venda
+                {% elif item.obj.estagio_novo.is_final_perdido %}dot-perdido
                 {% else %}dot-estagio{% endif %}">
               </div>
               <div class="tl-header">
                 <div class="tl-title">
                   <i class="fas fa-arrow-right" style="color:var(--primary);font-size:11px"></i>
-                  {% if he.estagio_anterior %}
-                    {{ he.estagio_anterior.nome }} → <strong>{{ he.estagio_novo.nome }}</strong>
+                  {% if item.obj.estagio_anterior %}
+                    {{ item.obj.estagio_anterior.nome }} → <strong>{{ item.obj.estagio_novo.nome }}</strong>
                   {% else %}
-                    Entrada: <strong>{{ he.estagio_novo.nome }}</strong>
+                    Entrada: <strong>{{ item.obj.estagio_novo.nome }}</strong>
                   {% endif %}
                 </div>
-                <span class="tl-date">{{ he.data_transicao|date:"d/m H:i" }}</span>
+                <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
               </div>
-              {% if he.motivo %}
-              <p class="tl-body">{{ he.motivo }}</p>
+              {% if item.obj.motivo %}
+              <p class="tl-body">{{ item.obj.motivo }}</p>
               {% endif %}
               <div class="tl-meta">
-                {% if he.movido_por %}por {{ he.movido_por.get_full_name|default:he.movido_por.username }}{% endif %}
-                {% if he.tempo_no_estagio_horas %}
-                  &nbsp;· {{ he.tempo_no_estagio_horas|floatformat:1 }}h no estágio anterior
+                {% if item.obj.movido_por %}por {{ item.obj.movido_por.get_full_name|default:item.obj.movido_por.username }}{% endif %}
+                {% if item.obj.tempo_no_estagio_horas %}
+                  &nbsp;· {{ item.obj.tempo_no_estagio_horas|floatformat:1 }}h no estágio anterior
                 {% endif %}
               </div>
+
+              {% elif item.tipo == 'conversa_aberta' %}
+              <div class="tl-dot dot-contato"></div>
+              <div class="tl-header">
+                <div class="tl-title">
+                  <i class="fab fa-whatsapp" style="color:var(--success);font-size:13px"></i>
+                  Conversa iniciada <span style="color:var(--text-muted)">({{ item.canal }})</span>
+                </div>
+                <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
+              </div>
+              <div class="tl-meta">#{{ item.numero }}</div>
+
+              {% elif item.tipo == 'conversa_resolvida' %}
+              <div class="tl-dot dot-venda"></div>
+              <div class="tl-header">
+                <div class="tl-title">
+                  <i class="fas fa-check-circle" style="color:var(--success);font-size:12px"></i>
+                  Conversa finalizada <span style="color:var(--text-muted)">({{ item.canal }})</span>
+                </div>
+                <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
+              </div>
+              <div class="tl-meta">
+                #{{ item.numero }}
+                {% if item.agente %}&nbsp;· por {{ item.agente }}{% endif %}
+              </div>
+
+              {% endif %}
             </div>
             {% endfor %}
-
           </div>
           {% else %}
           <div class="empty-state">

@@ -1,6 +1,6 @@
 # Sistema de Permissões — AuroraISP
 
-**Última atualização:** 05/04/2026
+**Última atualização:** 08/04/2026
 **Status:** ✅ Implementado
 **Localização:** `apps/sistema/`
 
@@ -25,6 +25,8 @@ Camada 3: ATRIBUIÇÃO (usuário → perfil)
 ```
 
 **Retrocompatível:** superusers passam tudo. Usuários sem perfil atribuído também (legado).
+
+**Importante:** todas as views usam `user_tem_funcionalidade()` para verificar permissões. O campo `is_superuser` do Django é reservado apenas para o painel Aurora Admin (`/aurora-admin/`) e proteções internas (ex: impedir exclusao de superusers). Nunca usar `is_superuser` para controle de acesso em views do sistema.
 
 ---
 
@@ -188,8 +190,8 @@ Todas as 35 funcionalidades
 |---------|-------------|
 | `apps/sistema/models.py` | Funcionalidade, PerfilPermissao, PermissaoUsuario |
 | `apps/sistema/middleware.py` | PermissaoMiddleware (verifica por URL) |
-| `apps/sistema/decorators.py` | `@permissao_required` (verifica por módulo + papel) |
-| `apps/sistema/context_processors.py` | `perm` e `is_superuser` em templates |
+| `apps/sistema/decorators.py` | `@permissao_required`, `user_tem_funcionalidade()` |
+| `apps/sistema/context_processors.py` | `perm` e `user_funcs` em templates |
 | `apps/sistema/admin.py` | Admin para Funcionalidade, PerfilPermissao, PermissaoUsuario |
 | `apps/sistema/management/commands/seed_funcionalidades.py` | Seed das 35 funcionalidades |
 | `apps/sistema/templates/sistema/configuracoes/perfis_permissao.html` | Página de gestão de perfis |
@@ -201,12 +203,16 @@ Todas as 35 funcionalidades
 ## O que funciona hoje
 
 1. **Middleware bloqueia acesso por módulo** (URL-based, HTTP 403)
-2. **Topbar esconde módulos** sem acesso
-3. **Sidebar esconde menus de configuração** para não-gerentes
-4. **Perfis reutilizáveis** com checkboxes de funcionalidades por módulo
-5. **Atribuição** via select na edição de usuário
-6. **Retrocompatível** (superuser e sem perfil = acesso total)
-7. **35 funcionalidades seedadas** via management command
+2. **Verificacao granular nas views** via `user_tem_funcionalidade()` em CRM, Sistema e Notificacoes
+3. **Filtro de escopo no CRM** baseado em `comercial.ver_todas_oportunidades` (vendedor ve so suas, supervisor/gerente ve todas)
+4. **Topbar esconde módulos** sem acesso
+5. **Sidebar esconde menus de configuração** para não-gerentes
+6. **Perfis reutilizáveis** com checkboxes de funcionalidades por módulo
+7. **Atribuição** via select na edição de usuário
+8. **Retrocompatível** (superuser e sem perfil = acesso total)
+9. **35 funcionalidades seedadas** via management command
+10. **Tela de usuarios filtrada por tenant** (cada tenant ve apenas seus usuarios)
+11. **Campo Staff removido** da interface (apenas Ativo/Inativo visivel)
 
 ---
 
@@ -214,15 +220,7 @@ Todas as 35 funcionalidades
 
 ### Prioridade alta
 
-1. **Aplicar verificação granular nas views**
-   Hoje o middleware bloqueia por módulo (URL). Mas dentro do módulo, todas as funcionalidades estão liberadas. Exemplo: se o perfil tem `comercial.ver_pipeline` mas não tem `comercial.configurar_pipeline`, o middleware libera ambas porque a URL é `/crm/...`.
-   **Solução:** aplicar `@permissao_required` ou `perm.tem('comercial.configurar_pipeline')` nas views sensíveis (configurações, metas, equipes).
-
-2. **Filtro de escopo nos querysets**
-   Hoje o CRM já filtra por `request.user` para vendedores (não-superuser vê só suas oportunidades). Mas não está integrado com o sistema de permissões.
-   **Solução:** usar `perm.escopo_comercial()` e `perm.escopo_inbox()` para filtrar querysets baseado nas funcionalidades `ver_todas_oportunidades`, `ver_equipe`, etc.
-
-3. **Aplicar permissões no Inbox**
+1. **Aplicar permissões no Inbox**
    O Inbox não filtra conversas por agente/equipe baseado nas permissões. Todos veem tudo.
    **Solução:** na view `api_conversas`, verificar `inbox.ver_minhas` / `inbox.ver_equipe` / `inbox.ver_todas` e filtrar o queryset.
 
@@ -255,8 +253,9 @@ Todas as 35 funcionalidades
 ## Preocupações
 
 ### Segurança
-- **Hoje a verificação é apenas por URL (middleware).** Um usuário com acesso ao módulo comercial pode acessar todas as funcionalidades do módulo, mesmo sem ter as funcionalidades habilitadas. A verificação granular nas views é o próximo passo crítico.
-- **APIs não verificam funcionalidades.** As APIs REST (`/api/v1/...`) só verificam token, não perfil de permissão. Para N8N isso é ok (acesso de serviço), mas se expor APIs para o frontend SPA no futuro, precisa verificar.
+- **Verificacao granular aplicada em CRM, Sistema e Notificacoes.** Todas as views sensíveis (configuracoes, criar/editar/excluir) usam `user_tem_funcionalidade()`. O middleware continua como primeira barreira por módulo (URL).
+- **APIs N8N não verificam funcionalidades.** As APIs REST (`/api/v1/n8n/...`) só verificam token, não perfil de permissão. Para N8N isso é ok (acesso de serviço), mas se expor APIs para o frontend SPA no futuro, precisa verificar.
+- **Inbox ainda não filtra por escopo.** Todos os agentes veem todas as conversas. Pendente aplicar `inbox.ver_minhas` / `inbox.ver_equipe` / `inbox.ver_todas`.
 
 ### Performance
 - **M2M query a cada request.** A verificação `perm.acesso_comercial` faz `perfil.funcionalidades.filter(modulo='comercial').exists()` que é uma query. Com `prefetch_related` no middleware resolve.

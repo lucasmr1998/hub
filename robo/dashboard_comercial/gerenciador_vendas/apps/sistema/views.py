@@ -160,11 +160,10 @@ def configuracoes_view(request):
 @login_required
 def perfis_permissao_view(request):
     """Página dedicada para gerenciar perfis de permissão."""
-    if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
-        perm = getattr(request.user, 'permissoes', None)
-        if not perm or not perm.acesso_configuracoes:
-            messages.error(request, 'Sem permissão.')
-            return redirect('dashboard:dashboard1')
+    from apps.sistema.decorators import user_tem_funcionalidade
+    if not user_tem_funcionalidade(request, 'config.gerenciar_perfis'):
+        messages.error(request, 'Sem permissão.')
+        return redirect('dashboard:dashboard1')
     return render(request, 'sistema/configuracoes/perfis_permissao.html')
 
 
@@ -173,16 +172,20 @@ def configuracoes_usuarios_view(request):
     """View para gerenciar usuários do sistema"""
     from django.contrib.auth.models import User, Group
 
-    # Verificar permissão: superuser, adm_all, ou funcionalidade config.gerenciar_usuarios
     from apps.sistema.decorators import user_tem_funcionalidade
-    if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
-        if not user_tem_funcionalidade(request, 'config.gerenciar_usuarios'):
-            messages.error(request, 'Você não tem permissão para acessar esta página.')
-            return redirect('dashboard:dashboard1')
+    if not user_tem_funcionalidade(request, 'config.gerenciar_usuarios'):
+        messages.error(request, 'Você não tem permissão para acessar esta página.')
+        return redirect('dashboard:dashboard1')
 
     from apps.sistema.models import PermissaoUsuario, PerfilPermissao
 
-    users = User.objects.all().order_by('-date_joined')
+    # Filtrar usuarios pelo tenant atual (via PerfilUsuario)
+    from apps.sistema.models import PerfilUsuario
+    if request.tenant:
+        user_ids = PerfilUsuario.objects.filter(tenant=request.tenant).values_list('user_id', flat=True)
+        users = User.objects.filter(id__in=user_ids).order_by('-date_joined')
+    else:
+        users = User.objects.none()
     groups = Group.objects.all().order_by('name')
 
     # Pré-carregar permissões de cada usuário
@@ -223,7 +226,8 @@ def api_usuarios_criar(request):
 
     try:
         # Verificar permissões
-        if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
+        from apps.sistema.decorators import user_tem_funcionalidade
+        if not user_tem_funcionalidade(request, 'config.gerenciar_usuarios'):
             return JsonResponse({'error': 'Sem permissão'}, status=403)
 
         data = json.loads(request.body)
@@ -318,8 +322,14 @@ def api_usuarios_editar(request, user_id):
 
     try:
         # Verificar permissões
-        if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
+        from apps.sistema.decorators import user_tem_funcionalidade
+        if not user_tem_funcionalidade(request, 'config.gerenciar_usuarios'):
             return JsonResponse({'error': 'Sem permissão'}, status=403)
+
+        # Verificar que o usuario pertence ao tenant atual
+        from apps.sistema.models import PerfilUsuario
+        if not PerfilUsuario.objects.filter(user_id=user_id, tenant=request.tenant).exists():
+            return JsonResponse({'error': 'Usuário não encontrado'}, status=404)
 
         user = User.objects.get(id=user_id)
         data = json.loads(request.body)
@@ -404,8 +414,14 @@ def api_usuarios_deletar(request, user_id):
 
     try:
         # Verificar permissões
-        if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
+        from apps.sistema.decorators import user_tem_funcionalidade
+        if not user_tem_funcionalidade(request, 'config.gerenciar_usuarios'):
             return JsonResponse({'error': 'Sem permissão'}, status=403)
+
+        # Verificar que o usuario pertence ao tenant atual
+        from apps.sistema.models import PerfilUsuario
+        if not PerfilUsuario.objects.filter(user_id=user_id, tenant=request.tenant).exists():
+            return JsonResponse({'error': 'Usuário não encontrado'}, status=404)
 
         user = User.objects.get(id=user_id)
 
@@ -443,10 +459,9 @@ def api_perfis_permissao(request):
     """GET: lista perfis. POST: cria perfil."""
     from apps.sistema.models import PerfilPermissao
 
-    if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
-        perm = getattr(request.user, 'permissoes', None)
-        if not perm or not perm.acesso_configuracoes:
-            return JsonResponse({'error': 'Sem permissão'}, status=403)
+    from apps.sistema.decorators import user_tem_funcionalidade
+    if not user_tem_funcionalidade(request, 'config.gerenciar_perfis'):
+        return JsonResponse({'error': 'Sem permissão'}, status=403)
 
     from apps.sistema.models import Funcionalidade
 
@@ -496,10 +511,9 @@ def api_perfil_permissao_detalhe(request, perfil_id):
     """PUT: edita perfil. DELETE: exclui perfil."""
     from apps.sistema.models import PerfilPermissao
 
-    if not request.user.is_superuser and not request.user.groups.filter(name='adm_all').exists():
-        perm = getattr(request.user, 'permissoes', None)
-        if not perm or not perm.acesso_configuracoes:
-            return JsonResponse({'error': 'Sem permissão'}, status=403)
+    from apps.sistema.decorators import user_tem_funcionalidade
+    if not user_tem_funcionalidade(request, 'config.gerenciar_perfis'):
+        return JsonResponse({'error': 'Sem permissão'}, status=403)
 
     try:
         perfil = PerfilPermissao.objects.get(pk=perfil_id, tenant=request.tenant)

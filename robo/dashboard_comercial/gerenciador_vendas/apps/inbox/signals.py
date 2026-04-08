@@ -115,6 +115,16 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
                     payload['_aurora']['lead_id'] = conversa.lead.pk
                     payload['_aurora']['lead_nome'] = conversa.lead.nome_razaosocial
                     payload['_aurora']['lead_email'] = conversa.lead.email or ''
+                if conversa.oportunidade_id:
+                    payload['_aurora']['oportunidade_id'] = conversa.oportunidade_id
+                elif conversa.lead:
+                    # Buscar oportunidade ativa do lead
+                    from apps.comercial.crm.models import OportunidadeVenda
+                    op = OportunidadeVenda.objects.filter(
+                        lead=conversa.lead, ativo=True
+                    ).order_by('-data_criacao').first()
+                    if op:
+                        payload['_aurora']['oportunidade_id'] = op.pk
             else:
                 # Payload padrao para mensagens que nao vieram do Uazapi
                 payload = {
@@ -137,6 +147,15 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
                     payload['lead_id'] = conversa.lead.pk
                     payload['lead_nome'] = conversa.lead.nome_razaosocial
                     payload['lead_email'] = conversa.lead.email or ''
+                if conversa.oportunidade_id:
+                    payload['oportunidade_id'] = conversa.oportunidade_id
+                elif conversa.lead:
+                    from apps.comercial.crm.models import OportunidadeVenda
+                    op = OportunidadeVenda.objects.filter(
+                        lead=conversa.lead, ativo=True
+                    ).order_by('-data_criacao').first()
+                    if op:
+                        payload['oportunidade_id'] = op.pk
 
             def _enviar():
                 try:

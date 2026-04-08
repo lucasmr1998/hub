@@ -42,13 +42,22 @@ class OportunidadeInputSerializer(serializers.Serializer):
 
 
 class OportunidadeUpdateSerializer(serializers.Serializer):
-    estagio_slug = serializers.CharField(required=False, help_text="Mover para este estagio")
-    responsavel_username = serializers.CharField(required=False, help_text="Atribuir responsavel")
-    titulo = serializers.CharField(required=False)
-    valor_estimado = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
-    prioridade = serializers.ChoiceField(choices=['baixa', 'normal', 'alta', 'urgente'], required=False)
-    motivo_perda = serializers.CharField(required=False)
+    estagio_slug = serializers.CharField(required=False, allow_blank=True, help_text="Mover para este estagio")
+    responsavel_username = serializers.CharField(required=False, allow_blank=True, help_text="Atribuir responsavel")
+    titulo = serializers.CharField(required=False, allow_blank=True)
+    valor_estimado = serializers.CharField(required=False, allow_blank=True)
+    prioridade = serializers.CharField(required=False, allow_blank=True)
+    motivo_perda = serializers.CharField(required=False, allow_blank=True)
     dados_custom = serializers.JSONField(required=False)
+
+    def validate_valor_estimado(self, value):
+        if not value or value == '':
+            return None
+        from decimal import Decimal, InvalidOperation
+        try:
+            return Decimal(value)
+        except (InvalidOperation, ValueError):
+            raise serializers.ValidationError("Um numero valido e necessario.")
 
 
 class OportunidadeOutputSerializer(serializers.ModelSerializer):

@@ -201,9 +201,16 @@ class OportunidadeAPIView(N8NAPIMixin, APIView):
                 campos_atualizados.append(campo)
 
         # Dados customizados (merge com existentes)
+        # Aceita tanto {"dados_custom": {"campo": "valor"}} quanto {"dados_custom.campo": "valor"}
+        custom = oport.dados_custom or {}
         if 'dados_custom' in data and data['dados_custom']:
-            custom = oport.dados_custom or {}
             custom.update(data['dados_custom'])
+        # Campos flat com prefixo "dados_custom." (ex: N8N "Using Fields Below")
+        for key, val in request.data.items():
+            if key.startswith('dados_custom.') and val:
+                campo_custom = key.replace('dados_custom.', '', 1)
+                custom[campo_custom] = val
+        if custom != (oport.dados_custom or {}):
             oport.dados_custom = custom
             campos_atualizados.append('dados_custom')
 

@@ -27,7 +27,7 @@
 ## Documentacao
 
 ### Regra principal
-**Manter a documentacao sempre atualizada.** Ao implementar, modificar ou remover funcionalidades, atualizar os documentos correspondentes em `robo/docs/PRODUTO/`. Se nao existir documento para o modulo alterado, criar.
+**OBRIGATORIO: ao finalizar qualquer implementacao, atualizar o documento do modulo correspondente em `robo/docs/PRODUTO/` antes de concluir a tarefa.** Se nao existir documento para o modulo alterado, criar. Nunca considerar uma tarefa concluida sem a documentacao atualizada.
 
 ### Consultar antes de implementar
 Antes de implementar qualquer funcionalidade, **consultar os documentos existentes** para entender o contexto, decisoes anteriores e estado atual:
@@ -180,7 +180,7 @@ registrar_acao('categoria', 'acao', 'entidade', entidade_id, 'mensagem', request
 
 ## Agentes
 
-O assistente deve adotar a perspectiva do agente mais adequado ao tema da conversa. Identificar na primeira linha:
+O assistente deve adotar a perspectiva do agente mais adequado ao tema da conversa. **SEMPRE iniciar a resposta** identificando o agente na primeira linha:
 
 > `Agente: [Nome]`
 

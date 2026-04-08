@@ -218,7 +218,7 @@ def api_mover_oportunidade(request):
     estagio_novo = get_object_or_404(PipelineEstagio, pk=estagio_novo_id, ativo=True)
 
     # Verificar permissão
-    if not request.user.is_superuser:
+    if not user_tem_funcionalidade(request, 'comercial.ver_todas_oportunidades'):
         if oportunidade.responsavel and oportunidade.responsavel != request.user:
             return JsonResponse({'ok': False, 'erro': 'Sem permissão para mover esta oportunidade'}, status=403)
 
@@ -313,7 +313,7 @@ def oportunidades_lista(request):
         'lead', 'estagio', 'responsavel'
     ).prefetch_related('tags').order_by('estagio__ordem', '-data_criacao')
 
-    if not request.user.is_superuser:
+    if not user_tem_funcionalidade(request, 'comercial.ver_todas_oportunidades'):
         qs = qs.filter(Q(responsavel=request.user) | Q(responsavel__isnull=True))
 
     # Filtros
@@ -403,6 +403,38 @@ def oportunidade_detalhe(request, pk):
             conversa_id__in=conversa_ids
         ).order_by('data_envio')[:50]
 
+    # Timeline mesclada: estágios + contatos + conversas, ordenados por data
+    timeline_items = []
+    for he in historico_estagios:
+        timeline_items.append({
+            'tipo': 'estagio',
+            'data': he.data_transicao,
+            'obj': he,
+        })
+    for hc in historico_contatos:
+        timeline_items.append({
+            'tipo': 'contato',
+            'data': hc.data_hora_contato,
+            'obj': hc,
+        })
+    for c in conversas_inbox:
+        timeline_items.append({
+            'tipo': 'conversa_aberta',
+            'data': c.data_abertura,
+            'canal': c.canal.nome if c.canal else 'Chat',
+            'numero': c.numero,
+            'status': c.status,
+        })
+        if c.data_resolucao:
+            timeline_items.append({
+                'tipo': 'conversa_resolvida',
+                'data': c.data_resolucao,
+                'canal': c.canal.nome if c.canal else 'Chat',
+                'numero': c.numero,
+                'agente': c.agente.get_full_name() or c.agente.username if c.agente else None,
+            })
+    timeline_items.sort(key=lambda x: x['data'], reverse=True)
+
     context = {
         'oportunidade': oportunidade,
         'lead': lead,
@@ -410,6 +442,7 @@ def oportunidade_detalhe(request, pk):
         'cliente_hubsoft': cliente_hubsoft,
         'historico_estagios': historico_estagios,
         'logs_automacao': logs_automacao,
+        'timeline_items': timeline_items,
         'estagios': estagios,
         'vendedores': vendedores,
         'conversas_inbox': conversas_inbox,
@@ -1064,9 +1097,6 @@ def configuracoes_crm(request):
     if denied: return denied
     from django.shortcuts import redirect
 
-    if not request.user.is_superuser:
-        return redirect('crm:pipeline')
-
     from .models import Pipeline
 
     config = ConfiguracaoCRM.get_config()
@@ -1139,7 +1169,7 @@ def configuracoes_crm(request):
 @login_required
 @require_POST
 def api_reordenar_estagios(request):
-    if not request.user.is_superuser:
+    if not user_tem_funcionalidade(request, 'comercial.configurar_pipeline'):
         return JsonResponse({'ok': False, 'erro': 'Sem permissão'}, status=403)
 
     try:
@@ -1158,7 +1188,7 @@ def api_reordenar_estagios(request):
 @require_POST
 @auditar('crm', 'editar', 'configuracao')
 def api_salvar_config(request):
-    if not request.user.is_superuser:
+    if not user_tem_funcionalidade(request, 'comercial.configurar_pipeline'):
         return JsonResponse({'ok': False, 'erro': 'Sem permissão'}, status=403)
 
     config = ConfiguracaoCRM.get_config()
@@ -1183,7 +1213,7 @@ def api_salvar_config(request):
 @require_POST
 @auditar('crm', 'criar', 'estagio')
 def api_criar_estagio(request):
-    if not request.user.is_superuser:
+    if not user_tem_funcionalidade(request, 'comercial.configurar_pipeline'):
         return JsonResponse({'ok': False, 'erro': 'Sem permissão'}, status=403)
 
     estagio_id = request.POST.get('estagio_id')
@@ -1228,7 +1258,7 @@ def api_criar_estagio(request):
 @require_GET
 def api_estagio_detalhe(request, pk):
     """Retorna dados de um estágio para preencher o modal de edição."""
-    if not request.user.is_superuser:
+    if not user_tem_funcionalidade(request, 'comercial.configurar_pipeline'):
         return JsonResponse({'ok': False, 'erro': 'Sem permissão'}, status=403)
     est = get_object_or_404(PipelineEstagio, pk=pk)
     return JsonResponse({
@@ -1251,7 +1281,7 @@ def api_estagio_detalhe(request, pk):
 @require_POST
 @auditar('crm', 'excluir', 'estagio')
 def api_excluir_estagio(request, pk):
-    if not request.user.is_superuser:
+    if not user_tem_funcionalidade(request, 'comercial.configurar_pipeline'):
         return JsonResponse({'ok': False, 'erro': 'Sem permissão'}, status=403)
     est = get_object_or_404(PipelineEstagio, pk=pk)
     # Não excluir se tiver oportunidades
@@ -1266,7 +1296,7 @@ def api_excluir_estagio(request, pk):
 @require_POST
 @auditar('crm', 'criar', 'equipe')
 def api_criar_equipe(request):
-    if not request.user.is_superuser:
+    if not user_tem_funcionalidade(request, 'comercial.configurar_pipeline'):
         return JsonResponse({'ok': False, 'erro': 'Sem permissão'}, status=403)
 
     equipe_id = request.POST.get('equipe_id')
