@@ -31,6 +31,11 @@ def _check_perm(request, codigo):
     return None
 
 
+def _get_fluxos_atendimento():
+    from apps.comercial.atendimento.models import FluxoAtendimento
+    return FluxoAtendimento.objects.filter(ativo=True, status='ativo').order_by('nome')
+
+
 # ── View principal ─────────────────────────────────────────────────────
 
 @login_required
@@ -552,6 +557,7 @@ def configuracoes_inbox(request):
         }
 
     widget_config = WidgetConfig.get_config()
+    canal_widget = CanalInbox.objects.filter(tipo='widget').first()
 
     context = {
         'equipes': EquipeInbox.objects.prefetch_related('membros__user').filter(ativo=True),
@@ -560,10 +566,12 @@ def configuracoes_inbox(request):
         'etiquetas_list': EtiquetaConversa.objects.all(),
         'canais': CanalInbox.objects.select_related('integracao').all(),
         'integracoes_disponiveis': IntegracaoAPI.objects.filter(tipo__in=['uazapi', 'evolution', 'meta_cloud', 'twilio_whatsapp']),
+        'fluxos_atendimento': _get_fluxos_atendimento(),
         'horarios_json': json.dumps(horarios_dict),
         'config': ConfiguracaoInbox.get_config(),
         'categorias_faq': CategoriaFAQ.objects.prefetch_related('artigos').filter(ativo=True),
         'widget_config': widget_config,
+        'canal_widget': canal_widget,
         'usuarios': User.objects.filter(is_active=True).order_by('first_name'),
         'dias_semana': HorarioAtendimento.DIA_CHOICES,
         'modos_distribuicao': FilaInbox.MODO_DISTRIBUICAO_CHOICES,
@@ -702,7 +710,16 @@ def _processar_action_config(request, action, django_messages):
                 canal.integracao = None
                 canal.provedor = ''
 
-            canal.save(update_fields=['configuracao', 'integracao', 'provedor'])
+            # Vincular fluxo de atendimento
+            fluxo_id = request.POST.get('fluxo_id', '')
+            if fluxo_id:
+                from apps.comercial.atendimento.models import FluxoAtendimento
+                fluxo = FluxoAtendimento.objects.filter(pk=fluxo_id, ativo=True).first()
+                canal.fluxo = fluxo
+            else:
+                canal.fluxo = None
+
+            canal.save(update_fields=['configuracao', 'integracao', 'provedor', 'fluxo'])
             django_messages.success(request, f'Canal "{canal.nome}" atualizado.')
 
     elif action == 'criar_canal':
@@ -710,14 +727,19 @@ def _processar_action_config(request, action, django_messages):
         tipo = request.POST.get('tipo', 'whatsapp')
         integracao_id = request.POST.get('integracao_id', '')
         if nome:
-            canal = CanalInbox(tenant=request.tenant, nome=nome, tipo=tipo)
-            if integracao_id:
-                integ = IntegracaoAPI.objects.filter(pk=integracao_id).first()
-                if integ:
-                    canal.integracao = integ
-                    canal.provedor = integ.tipo
-            canal.save()
-            django_messages.success(request, f'Canal "{nome}" criado.')
+            # Verificar se ja existe canal do mesmo tipo para este tenant
+            existente = CanalInbox.objects.filter(tenant=request.tenant, tipo=tipo, identificador_canal='').first()
+            if existente:
+                django_messages.warning(request, f'Ja existe um canal do tipo "{tipo}". Edite o existente.')
+            else:
+                canal = CanalInbox(tenant=request.tenant, nome=nome, tipo=tipo)
+                if integracao_id:
+                    integ = IntegracaoAPI.objects.filter(pk=integracao_id).first()
+                    if integ:
+                        canal.integracao = integ
+                        canal.provedor = integ.tipo
+                canal.save()
+                django_messages.success(request, f'Canal "{nome}" criado.')
 
     # ── Horário de Atendimento ─────────────────────────────────────
     elif action == 'salvar_horario':
@@ -796,6 +818,19 @@ def _processar_action_config(request, action, django_messages):
         wc.dominios_permitidos = [d.strip() for d in dominios_raw.split('\n') if d.strip()]
 
         wc.save()
+
+        # Vincular fluxo ao canal widget
+        widget_fluxo_id = request.POST.get('widget_fluxo_id', '')
+        canal_widget = CanalInbox.objects.filter(tipo='widget').first()
+        if canal_widget:
+            if widget_fluxo_id:
+                from apps.comercial.atendimento.models import FluxoAtendimento
+                fluxo = FluxoAtendimento.objects.filter(pk=widget_fluxo_id, ativo=True).first()
+                canal_widget.fluxo = fluxo
+            else:
+                canal_widget.fluxo = None
+            canal_widget.save(update_fields=['fluxo'])
+
         django_messages.success(request, 'Widget atualizado.')
 
 

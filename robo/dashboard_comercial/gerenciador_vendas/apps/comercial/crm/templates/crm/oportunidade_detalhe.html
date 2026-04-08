@@ -562,6 +562,20 @@
           </div>
           {% endif %}
 
+          {% if oportunidade.dados_custom %}
+          <div class="detail-field">
+            <label>Dados Personalizados</label>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              {% for key, value in oportunidade.dados_custom.items %}
+              <div style="display:flex;justify-content:space-between;font-size:13px;">
+                <span style="color:var(--text-muted);">{{ key }}</span>
+                <span style="font-weight:600;">{{ value }}</span>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
           {% if oportunidade.motivo_perda %}
           <div class="detail-field">
             <label>Motivo da perda</label>

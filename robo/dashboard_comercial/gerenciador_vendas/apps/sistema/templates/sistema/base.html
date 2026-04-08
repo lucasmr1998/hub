@@ -647,6 +647,8 @@
     {% block extra_js %}{% endblock %}
 
     <!-- Aurora Chat Widget -->
-    <script src="{% static 'inbox/widget/aurora-chat.js' %}" data-token="1327cf39-c7d5-42f5-8381-cd1fb5b97cac"></script>
+    {% if widget_token %}
+    <script src="{% static 'inbox/widget/aurora-chat.js' %}" data-token="{{ widget_token }}"></script>
+    {% endif %}
 </body>
 </html>

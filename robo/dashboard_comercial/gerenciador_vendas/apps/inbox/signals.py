@@ -178,6 +178,27 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
         conversa = instance.conversa
         lead = conversa.lead
         canal = conversa.canal.tipo if conversa.canal_id else ''
+
+        # Se conversa nao tem lead (widget sem dados), criar lead minimo
+        if not lead and canal:
+            from apps.comercial.leads.models import LeadProspecto
+            nome = conversa.contato_nome or 'Visitante'
+            lead = LeadProspecto(
+                tenant=instance.tenant,
+                nome_razaosocial=nome,
+                telefone=conversa.contato_telefone or '',
+                email=conversa.contato_email or '',
+                origem='widget' if canal == 'widget' else 'outros',
+                canal_entrada=canal,
+                status_api='pendente',
+            )
+            lead._skip_automacao = True
+            lead._skip_segmento = True
+            lead.save()
+            conversa.lead = lead
+            conversa.save(update_fields=['lead'])
+            logger.info("Lead criado automaticamente para conversa widget: %s", lead.nome_razaosocial)
+
         if lead and canal:
             from apps.comercial.atendimento.engine import iniciar_por_canal, processar_resposta_visual
             from apps.comercial.atendimento.models import AtendimentoFluxo
@@ -186,16 +207,25 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
             ativo = AtendimentoFluxo.objects.filter(
                 lead=lead, fluxo__modo_fluxo=True,
                 status__in=['iniciado', 'em_andamento'],
-                nodo_atual__tipo='questao',
+                nodo_atual__tipo__in=['questao', 'ia_respondedor', 'ia_agente'],
             ).select_related('fluxo', 'nodo_atual').first()
 
             if ativo:
-                # Processar resposta do lead no fluxo ativo
-                resultado = processar_resposta_visual(ativo, instance.conteudo)
-                logger.info("Resposta processada no fluxo: atendimento=%s, resultado=%s", ativo.id, resultado.get('tipo'))
+                # Dispatch para o handler correto baseado no tipo do nodo
+                if ativo.nodo_atual and ativo.nodo_atual.tipo == 'ia_respondedor':
+                    from apps.comercial.atendimento.engine import processar_resposta_ia_respondedor
+                    resultado = processar_resposta_ia_respondedor(ativo, instance.conteudo)
+                elif ativo.nodo_atual and ativo.nodo_atual.tipo == 'ia_agente':
+                    from apps.comercial.atendimento.engine import processar_resposta_ia_agente
+                    resultado = processar_resposta_ia_agente(ativo, instance.conteudo)
+                else:
+                    resultado = processar_resposta_visual(ativo, instance.conteudo)
+                logger.info("Resposta processada no fluxo: atendimento=%s, resultado=%s", ativo.id, resultado.get('tipo') if resultado else 'None')
             else:
-                # Tentar iniciar novo fluxo
-                atendimento, resultado = iniciar_por_canal(lead, canal, tenant=instance.tenant)
+                # Tentar iniciar novo fluxo (prioriza fluxo vinculado ao canal)
+                canal_inbox = conversa.canal if conversa.canal_id else None
+                fluxo_do_canal = canal_inbox.fluxo if canal_inbox and canal_inbox.fluxo_id else None
+                atendimento, resultado = iniciar_por_canal(lead, canal, tenant=instance.tenant, fluxo_forcado=fluxo_do_canal)
                 if atendimento:
                     logger.info("Fluxo atendimento iniciado: atendimento=%s, canal=%s", atendimento.id, canal)
 
@@ -225,6 +255,28 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
                     conversa.save(update_fields=['ultima_mensagem_em', 'ultima_mensagem_preview'])
 
                     # Enviar via webhook externo (WhatsApp)
+                    from apps.inbox.services import _enviar_webhook_async
+                    _enviar_webhook_async(conversa, msg)
+
+            elif resultado and resultado.get('tipo') in ('ia_respondedor', 'ia_agente'):
+                texto = resultado.get('mensagem', '')
+                if texto:
+                    from apps.inbox.models import Mensagem as MensagemInbox
+                    msg = MensagemInbox(
+                        tenant=instance.tenant,
+                        conversa=conversa,
+                        remetente_tipo='bot',
+                        remetente_nome='Aurora IA',
+                        tipo_conteudo='texto',
+                        conteudo=texto,
+                    )
+                    msg._skip_automacao = True
+                    msg.save()
+
+                    conversa.ultima_mensagem_em = msg.data_envio
+                    conversa.ultima_mensagem_preview = texto[:255]
+                    conversa.save(update_fields=['ultima_mensagem_em', 'ultima_mensagem_preview'])
+
                     from apps.inbox.services import _enviar_webhook_async
                     _enviar_webhook_async(conversa, msg)
 

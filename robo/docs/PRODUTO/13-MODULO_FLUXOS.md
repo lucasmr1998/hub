@@ -1,7 +1,7 @@
 # 13. Comercial — Modulo de Fluxos
 
 **Status:** ✅ Em producao
-**Ultima atualizacao:** 06/04/2026
+**Ultima atualizacao:** 08/04/2026
 **App:** `apps/comercial/atendimento/`
 
 ---
@@ -127,7 +127,7 @@ Avalia uma condicao e segue branch true ou false. 1 input, 2 outputs.
 
 | Campo | Descricao |
 |-------|-----------|
-| campo | Campo a verificar (lead.origem, lead.score, lead.cidade, ultima_resposta, etc.) |
+| campo | Campo a verificar (lead.origem, lead.score, lead.cidade, ultima_resposta, var.classificacao, var.custom, etc.) |
 | operador | igual, diferente, contem, maior, menor, maior_igual, menor_igual |
 | valor | Valor para comparacao |
 
@@ -144,6 +144,73 @@ Executa algo e continua. 1 input, 1 output.
 | criar_tarefa | Cria tarefa no CRM |
 | mover_estagio | Move oportunidade de estagio |
 | notificacao_sistema | Cria notificacao no sistema |
+
+### Classificador IA
+
+Analisa a mensagem do usuario e retorna uma categoria como variavel. NAO pausa. 1 input, 1 output.
+
+**Config:**
+
+| Campo | Descricao |
+|-------|-----------|
+| integracao_ia_id | Integracao de IA (OpenAI, Anthropic, Groq, Google AI) |
+| modelo | Modelo a usar (gpt-4o-mini, claude-haiku, etc.) |
+| prompt | Instrucoes para classificacao |
+| categorias | Lista de categorias possiveis (uma por linha) |
+| variavel_saida | Nome da variavel onde salvar (padrao: classificacao) |
+
+**Uso tipico:** Antes de uma condicao, para decidir qual branch seguir baseado na intencao do usuario.
+
+### Extrator IA
+
+Extrai dados estruturados da mensagem do usuario. NAO pausa. 1 input, 1 output.
+
+**Config:**
+
+| Campo | Descricao |
+|-------|-----------|
+| integracao_ia_id | Integracao de IA |
+| modelo | Modelo a usar |
+| prompt | Instrucoes extras para extracao |
+| campos_extrair | Lista de campos: nome, descricao, tipo |
+| salvar_no_lead | Se true, salva campos extraidos diretamente no lead |
+
+**Uso tipico:** Apos o usuario informar dados (nome, curso, cidade), extrair e salvar automaticamente.
+
+### Respondedor IA
+
+Gera resposta conversacional com IA e envia ao usuario. PAUSA apos enviar (espera proxima mensagem). 1 input, 1 output.
+
+**Config:**
+
+| Campo | Descricao |
+|-------|-----------|
+| integracao_ia_id | Integracao de IA |
+| modelo | Modelo a usar |
+| system_prompt | Prompt do sistema (aceita variaveis: {{lead_nome}}, {{classificacao}}, etc.) |
+| incluir_historico | Se true, inclui mensagens anteriores no contexto |
+| max_historico | Maximo de mensagens no historico (padrao: 10) |
+
+**Uso tipico:** Responder perguntas, apresentar valores, interagir naturalmente.
+
+### Agente IA
+
+Conversa livre multi-turno com tools. PAUSA a cada turno. 1 input, 1 output.
+
+**Config:**
+
+| Campo | Descricao |
+|-------|-----------|
+| integracao_ia_id | Integracao de IA |
+| modelo | Modelo a usar |
+| system_prompt | Prompt completo do agente |
+| max_turnos | Maximo de turnos de conversa (padrao: 10) |
+| condicao_saida | Instrucao para o agente sair do loop |
+| mensagem_timeout | Mensagem de fallback |
+| tools_habilitadas | Lista: atualizar_lead, criar_oportunidade, criar_tarefa, mover_estagio, webhook |
+| campos_lead_editaveis | Campos do lead que o agente pode editar |
+
+**Uso tipico:** Atendimento completo onde o agente gerencia a conversa e executa acoes.
 
 ### Delay
 
@@ -172,6 +239,7 @@ Finaliza o atendimento. 1 input, 0 outputs.
 - Interacao (icone WhatsApp): Texto, Selecao, Imagem, Pix
 - Condicoes: Verificar Campo, Verificar Resposta
 - Acoes: Criar Oportunidade, Webhook, Criar Tarefa, Mover Estagio, Notificacao
+- Inteligencia Artificial (icone brain, cor roxa): Classificador, Extrator, Respondedor, Agente
 - Controle: Atraso, Finalizar Fluxo, Finalizar com Score
 
 **Salvar:** POST para `/api/fluxos/<id>/salvar-fluxo/` com `{drawflow_state, nodos[], conexoes[]}`

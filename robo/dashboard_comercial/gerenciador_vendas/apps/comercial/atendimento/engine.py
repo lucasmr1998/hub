@@ -45,8 +45,9 @@ def buscar_fluxo_por_canal(canal, tenant=None):
     return fluxo
 
 
-def iniciar_por_canal(lead, canal, tenant=None):
+def iniciar_por_canal(lead, canal, tenant=None, fluxo_forcado=None):
     """Inicia um atendimento automaticamente baseado no canal do lead.
+    Se fluxo_forcado for passado (vinculado ao CanalInbox), usa esse.
     Retorna (atendimento, resultado) ou (None, erro).
     """
     from .models import FluxoAtendimento, AtendimentoFluxo
@@ -54,7 +55,7 @@ def iniciar_por_canal(lead, canal, tenant=None):
     if tenant is None and hasattr(lead, 'tenant'):
         tenant = lead.tenant
 
-    fluxo = buscar_fluxo_por_canal(canal, tenant)
+    fluxo = fluxo_forcado or buscar_fluxo_por_canal(canal, tenant)
     if not fluxo:
         return None, {'tipo': 'erro', 'mensagem': f'Nenhum fluxo ativo para o canal {canal}'}
 
@@ -336,6 +337,20 @@ def _executar_nodo(atendimento, nodo, contexto):
             'mensagem': config.get('mensagem_final', 'Atendimento finalizado'),
         }
 
+    # Nos IA que NAO pausam (passam direto)
+    elif nodo.tipo == 'ia_classificador':
+        return _executar_ia_classificador(atendimento, nodo, contexto)
+
+    elif nodo.tipo == 'ia_extrator':
+        return _executar_ia_extrator(atendimento, nodo, contexto)
+
+    # Nos IA que PAUSAM (esperam resposta do usuario)
+    elif nodo.tipo == 'ia_respondedor':
+        return _executar_ia_respondedor(atendimento, nodo, contexto)
+
+    elif nodo.tipo == 'ia_agente':
+        return _executar_ia_agente_inicial(atendimento, nodo, contexto)
+
     return None
 
 
@@ -429,9 +444,24 @@ def _acao_criar_oportunidade(config, contexto, atendimento):
         if not lead:
             return
 
-        # Se ja existe oportunidade, nao duplicar
-        if OportunidadeVenda.objects.filter(lead=lead).exists():
-            logger.info(f'Oportunidade ja existe para lead {lead.id}, pulando.')
+        # Se ja existe oportunidade, atualizar dados_custom e nao duplicar
+        oport_existente = OportunidadeVenda.objects.filter(lead=lead).first()
+        if oport_existente:
+            variaveis = (atendimento.dados_respostas or {}).get('variaveis', {})
+            custom = oport_existente.dados_custom or {}
+            atualizado = False
+            for var_nome, var_valor in variaveis.items():
+                if var_nome.startswith('oport_dados_custom_') and var_valor:
+                    campo = var_nome.replace('oport_dados_custom_', '')
+                    custom[campo] = var_valor
+                    atualizado = True
+                elif var_nome in ('curso_interesse', 'forma_ingresso', 'status_matricula') and var_valor:
+                    custom[var_nome] = var_valor
+                    atualizado = True
+            if atualizado:
+                oport_existente.dados_custom = custom
+                oport_existente.save(update_fields=['dados_custom'])
+            logger.info(f'Oportunidade ja existe para lead {lead.id}, dados_custom atualizados.')
             return
 
         tenant = atendimento.fluxo.tenant
@@ -471,6 +501,18 @@ def _acao_criar_oportunidade(config, contexto, atendimento):
             contexto
         )
 
+        # Preencher dados_custom com variaveis do fluxo
+        dados_custom = {}
+        variaveis = (atendimento.dados_respostas or {}).get('variaveis', {})
+        for var_nome, var_valor in variaveis.items():
+            # Variáveis com prefixo oport_dados_custom_ vão para dados_custom
+            if var_nome.startswith('oport_dados_custom_') and var_valor:
+                campo = var_nome.replace('oport_dados_custom_', '')
+                dados_custom[campo] = var_valor
+            # Variáveis explícitas como curso_interesse, forma_ingresso
+            elif var_nome in ('curso_interesse', 'forma_ingresso', 'status_matricula') and var_valor:
+                dados_custom[var_nome] = var_valor
+
         OportunidadeVenda.objects.create(
             tenant=tenant,
             lead=lead,
@@ -480,6 +522,7 @@ def _acao_criar_oportunidade(config, contexto, atendimento):
             titulo=titulo,
             valor_estimado=lead.valor,
             origem_crm='automatico',
+            dados_custom=dados_custom,
         )
     except Exception as e:
         logger.error(f'Criar oportunidade erro: {e}')
@@ -578,13 +621,15 @@ def _acao_criar_tarefa(config, contexto, atendimento):
 def _acao_mover_estagio(config, contexto, atendimento):
     """Move oportunidade de estagio no CRM."""
     try:
-        from apps.comercial.crm.models import OportunidadeVenda
+        from apps.comercial.crm.models import OportunidadeVenda, PipelineEstagio
         estagio_slug = config.get('estagio', '')
         if not estagio_slug or not atendimento.lead:
             return
-        OportunidadeVenda.objects.filter(
-            lead=atendimento.lead
-        ).update(estagio=estagio_slug)
+        estagio = PipelineEstagio.objects.filter(slug=estagio_slug).first()
+        if estagio:
+            OportunidadeVenda.objects.filter(
+                lead=atendimento.lead
+            ).update(estagio=estagio)
     except Exception as e:
         logger.error(f'Mover estagio erro: {e}')
 
@@ -721,7 +766,16 @@ def _construir_contexto(atendimento):
     # Respostas anteriores
     dados = atendimento.dados_respostas or {}
     for nodo_key, resp_data in dados.items():
-        contexto[f'resposta_nodo_{nodo_key}'] = resp_data.get('resposta', '')
+        if nodo_key == 'variaveis':
+            continue  # variaveis IA tratadas separadamente
+        if isinstance(resp_data, dict):
+            contexto[f'resposta_nodo_{nodo_key}'] = resp_data.get('resposta', '')
+
+    # Variaveis IA (classificador, extrator, etc.)
+    variaveis = dados.get('variaveis', {})
+    contexto['var'] = variaveis
+    for var_nome, var_valor in variaveis.items():
+        contexto[var_nome] = var_valor
 
     return contexto
 
@@ -893,3 +947,523 @@ def _registrar_log(atendimento, nodo, status, mensagem, dados=None):
         )
     except Exception as e:
         logger.error(f'Erro ao registrar log fluxo: {e}')
+
+
+# ============================================================================
+# NOS IA — CLASSIFICADOR, EXTRATOR, RESPONDEDOR, AGENTE
+# ============================================================================
+
+def _chamar_llm_simples(integracao, modelo, messages):
+    """Chama LLM e retorna o texto da resposta. Reutiliza padrao de _validar_com_ia."""
+    tipo = integracao.tipo
+    base_url = integracao.base_url
+    extras = integracao.configuracoes_extras or {}
+    api_key = extras.get('api_key', '') or integracao.access_token or integracao.client_secret or ''
+    modelo = modelo or extras.get('modelo', '')
+
+    headers = {'Content-Type': 'application/json'}
+    payload = {}
+
+    if tipo in ('openai', 'groq'):
+        headers['Authorization'] = f'Bearer {api_key}'
+        url = base_url or ('https://api.openai.com/v1/chat/completions' if tipo == 'openai' else 'https://api.groq.com/openai/v1/chat/completions')
+        payload = {
+            'model': modelo or ('gpt-4o-mini' if tipo == 'openai' else 'llama-3.1-8b-instant'),
+            'messages': messages,
+            'max_tokens': 1000,
+        }
+    elif tipo == 'anthropic':
+        headers['x-api-key'] = api_key
+        headers['anthropic-version'] = '2023-06-01'
+        url = base_url or 'https://api.anthropic.com/v1/messages'
+        # Anthropic: system separado dos messages
+        system_msg = ''
+        chat_messages = []
+        for m in messages:
+            if m['role'] == 'system':
+                system_msg += m['content'] + '\n'
+            else:
+                chat_messages.append(m)
+        payload = {
+            'model': modelo or 'claude-haiku-4-5-20251001',
+            'max_tokens': 1000,
+            'messages': chat_messages,
+        }
+        if system_msg:
+            payload['system'] = system_msg.strip()
+    elif tipo == 'google_ai':
+        url = (base_url or f'https://generativelanguage.googleapis.com/v1beta/models/{modelo or "gemini-2.0-flash"}:generateContent') + f'?key={api_key}'
+        # Converter messages para formato Google
+        contents = []
+        for m in messages:
+            role = 'model' if m['role'] == 'assistant' else 'user'
+            if m['role'] == 'system':
+                contents.append({'role': 'user', 'parts': [{'text': f'[System]: {m["content"]}'}]})
+            else:
+                contents.append({'role': role, 'parts': [{'text': m['content']}]})
+        payload = {'contents': contents}
+        headers.pop('Authorization', None)
+    else:
+        headers['Authorization'] = f'Bearer {api_key}'
+        url = base_url
+        payload = {'prompt': messages[-1].get('content', '')}
+
+    try:
+        res = requests.post(url, json=payload, headers=headers, timeout=30)
+        if res.status_code != 200:
+            logger.error(f'LLM {tipo} retornou {res.status_code}: {res.text[:200]}')
+            return None
+
+        data = res.json()
+
+        if tipo in ('openai', 'groq'):
+            return data.get('choices', [{}])[0].get('message', {}).get('content', '')
+        elif tipo == 'anthropic':
+            return data.get('content', [{}])[0].get('text', '')
+        elif tipo == 'google_ai':
+            return data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
+        else:
+            return data.get('content', data.get('text', str(data)))
+    except Exception as e:
+        logger.error(f'Erro ao chamar LLM {tipo}: {e}')
+        return None
+
+
+def _obter_integracao_ia(config, tenant):
+    """Busca a integracao IA configurada no nodo, filtrando por tenant."""
+    from apps.integracoes.models import IntegracaoAPI
+    integracao_id = config.get('integracao_ia_id')
+    if not integracao_id:
+        return None
+    return IntegracaoAPI.all_tenants.filter(
+        id=integracao_id, tenant=tenant, ativa=True
+    ).first()
+
+
+def _salvar_variavel(atendimento, nome, valor):
+    """Salva uma variavel IA no dados_respostas do atendimento."""
+    dados = atendimento.dados_respostas or {}
+    if 'variaveis' not in dados:
+        dados['variaveis'] = {}
+    dados['variaveis'][nome] = valor
+    atendimento.dados_respostas = dados
+    atendimento.save(update_fields=['dados_respostas'])
+
+
+def _get_ultima_mensagem(atendimento):
+    """Pega a ultima mensagem do contato na conversa do atendimento."""
+    # Prioridade 1: dados_respostas._ultima_mensagem (setado pelo handler anterior)
+    atendimento.refresh_from_db(fields=['dados_respostas'])
+    dados = atendimento.dados_respostas or {}
+    ultima = dados.get('_ultima_mensagem', '')
+    if ultima:
+        return ultima
+
+    # Prioridade 2: buscar no Inbox
+    try:
+        from apps.inbox.models import Mensagem
+        conversa = atendimento.lead.conversas.filter(
+            status__in=['aberta', 'pendente']
+        ).order_by('-ultima_mensagem_em').first()
+        if conversa:
+            msg = Mensagem.objects.filter(
+                conversa=conversa, remetente_tipo='contato'
+            ).order_by('-data_envio').first()
+            if msg:
+                return msg.conteudo
+    except Exception:
+        pass
+    return ''
+
+
+# ── CLASSIFICADOR IA ──
+
+def _executar_ia_classificador(atendimento, nodo, contexto):
+    """Classifica a mensagem do usuario em uma categoria. NAO pausa."""
+    config = nodo.configuracao
+    integracao = _obter_integracao_ia(config, atendimento.fluxo.tenant)
+    if not integracao:
+        _registrar_log(atendimento, nodo, 'erro', 'Integracao IA nao configurada')
+        return None  # passa direto
+
+    categorias = config.get('categorias', [])
+    prompt = config.get('prompt', '')
+    mensagem_usuario = _get_ultima_mensagem(atendimento)
+
+    system_content = f"""{prompt}
+
+Categorias disponiveis: {', '.join(categorias)}
+
+Responda APENAS com o nome exato de uma das categorias acima. Nenhum texto adicional."""
+
+    messages = [
+        {'role': 'system', 'content': system_content},
+        {'role': 'user', 'content': mensagem_usuario or '(sem mensagem)'},
+    ]
+
+    resultado = _chamar_llm_simples(integracao, config.get('modelo', ''), messages)
+    if not resultado:
+        _registrar_log(atendimento, nodo, 'erro', 'LLM nao retornou resposta')
+        return None
+
+    # Limpar e validar categoria
+    categoria = resultado.strip().lower().replace('"', '').replace("'", '')
+    categorias_lower = [c.lower() for c in categorias]
+    if categoria not in categorias_lower and categorias:
+        # Tentar match parcial
+        for c in categorias_lower:
+            if c in categoria:
+                categoria = c
+                break
+        else:
+            categoria = categorias[0] if categorias else categoria
+
+    # Recuperar o nome original da categoria (preservar case)
+    for c_original in categorias:
+        if c_original.lower() == categoria:
+            categoria = c_original
+            break
+
+    var_saida = config.get('variavel_saida', 'classificacao')
+    _salvar_variavel(atendimento, var_saida, categoria)
+
+    _registrar_log(atendimento, nodo, 'sucesso',
+                   f'Classificado como: {categoria}',
+                   dados={'variavel': var_saida, 'valor': categoria, 'mensagem': mensagem_usuario})
+
+    # Atualizar contexto para nos seguintes
+    contexto['var'] = (atendimento.dados_respostas or {}).get('variaveis', {})
+    contexto[var_saida] = categoria
+
+    return None  # passa direto para o proximo no
+
+
+# ── EXTRATOR IA ──
+
+def _executar_ia_extrator(atendimento, nodo, contexto):
+    """Extrai dados estruturados da mensagem. NAO pausa."""
+    config = nodo.configuracao
+    integracao = _obter_integracao_ia(config, atendimento.fluxo.tenant)
+    if not integracao:
+        _registrar_log(atendimento, nodo, 'erro', 'Integracao IA nao configurada')
+        return None
+
+    campos = config.get('campos_extrair', [])
+    prompt_extra = config.get('prompt', '')
+    mensagem_usuario = _get_ultima_mensagem(atendimento)
+
+    # Usar nome base (sem prefixo oport.) para a LLM
+    campos_para_llm = []
+    for c in campos:
+        nome_base = c['nome'].split('.')[-1] if '.' in c['nome'] else c['nome']
+        campos_para_llm.append(f'- {nome_base}: {c.get("descricao", "")} (tipo: {c.get("tipo", "string")})')
+    campos_desc = '\n'.join(campos_para_llm)
+
+    system_content = f"""Extraia os seguintes dados da mensagem do usuario:
+
+{campos_desc}
+
+{prompt_extra}
+
+Responda APENAS em JSON com os campos encontrados. Se um campo nao for encontrado, use string vazia.
+Exemplo: {{"nome": "Joao Silva", "curso": "Direito"}}"""
+
+    messages = [
+        {'role': 'system', 'content': system_content},
+        {'role': 'user', 'content': mensagem_usuario or '(sem mensagem)'},
+    ]
+
+    resultado = _chamar_llm_simples(integracao, config.get('modelo', ''), messages)
+    if not resultado:
+        _registrar_log(atendimento, nodo, 'erro', 'LLM nao retornou resposta')
+        return None
+
+    # Parsear JSON
+    import json as json_mod
+    try:
+        texto_limpo = resultado.strip()
+        if texto_limpo.startswith('```'):
+            texto_limpo = texto_limpo.split('\n', 1)[1].rsplit('```', 1)[0].strip()
+        dados_extraidos = json_mod.loads(texto_limpo)
+    except (json_mod.JSONDecodeError, IndexError):
+        _registrar_log(atendimento, nodo, 'erro', f'Resposta IA nao e JSON: {resultado[:100]}')
+        return None
+
+    # Salvar variaveis e dados no lead/oportunidade
+    campos_lead_atualizar = []
+    campos_oport_atualizar = {}
+    for campo in campos:
+        nome = campo['nome']
+        # A LLM recebe o nome sem prefixo, buscar pelo nome base
+        nome_base = nome.split('.')[-1] if '.' in nome else nome
+        valor = dados_extraidos.get(nome_base, '') or dados_extraidos.get(nome, '')
+        if not valor:
+            continue
+
+        # Salvar como variavel do fluxo (sempre)
+        var_nome = nome.replace('.', '_')
+        _salvar_variavel(atendimento, var_nome, valor)
+        contexto[var_nome] = valor
+
+        if config.get('salvar_no_lead'):
+            if nome.startswith('oport.dados_custom.'):
+                # Campo custom da oportunidade
+                campo_custom = nome.replace('oport.dados_custom.', '')
+                campos_oport_atualizar[f'dados_custom.{campo_custom}'] = valor
+            elif nome.startswith('oport.'):
+                # Campo direto da oportunidade
+                campo_oport = nome.replace('oport.', '')
+                campos_oport_atualizar[campo_oport] = valor
+            elif atendimento.lead and hasattr(atendimento.lead, nome):
+                # Campo do lead
+                setattr(atendimento.lead, nome, valor)
+                campos_lead_atualizar.append(nome)
+
+    # Persistir lead
+    if campos_lead_atualizar and atendimento.lead:
+        atendimento.lead.save(update_fields=campos_lead_atualizar)
+
+    # Persistir oportunidade
+    if campos_oport_atualizar and atendimento.lead:
+        from apps.comercial.crm.models import OportunidadeVenda
+        oport = OportunidadeVenda.objects.filter(lead=atendimento.lead).order_by('-data_criacao').first()
+        if oport:
+            oport_fields = []
+            for campo_nome, campo_valor in campos_oport_atualizar.items():
+                if campo_nome.startswith('dados_custom.'):
+                    custom_key = campo_nome.replace('dados_custom.', '')
+                    custom = oport.dados_custom or {}
+                    custom[custom_key] = campo_valor
+                    oport.dados_custom = custom
+                    if 'dados_custom' not in oport_fields:
+                        oport_fields.append('dados_custom')
+                elif hasattr(oport, campo_nome):
+                    setattr(oport, campo_nome, campo_valor)
+                    oport_fields.append(campo_nome)
+            if oport_fields:
+                oport.save(update_fields=oport_fields)
+
+    _registrar_log(atendimento, nodo, 'sucesso',
+                   f'Extraido: {dados_extraidos}',
+                   dados={'campos': dados_extraidos, 'salvo_no_lead': config.get('salvar_no_lead', False)})
+
+    return None  # passa direto
+
+
+# ── RESPONDEDOR IA ──
+
+def _executar_ia_respondedor(atendimento, nodo, contexto):
+    """Gera resposta conversacional com IA. PAUSA apos enviar."""
+    config = nodo.configuracao
+    integracao = _obter_integracao_ia(config, atendimento.fluxo.tenant)
+    if not integracao:
+        _registrar_log(atendimento, nodo, 'erro', 'Integracao IA nao configurada')
+        return {'tipo': 'ia_respondedor', 'mensagem': config.get('mensagem_timeout', 'Erro ao processar.')}
+
+    # Montar system prompt com variaveis substituidas
+    system_prompt = config.get('system_prompt', '')
+    system_prompt = _substituir_variaveis(system_prompt, contexto)
+
+    # Adicionar dados do lead ao system prompt
+    if atendimento.lead:
+        lead = atendimento.lead
+        system_prompt += f"\n\nDados do lead: Nome: {lead.nome_razaosocial}, Telefone: {lead.telefone}, Email: {lead.email or 'N/A'}, Cidade: {lead.cidade or 'N/A'}"
+
+    messages = [{'role': 'system', 'content': system_prompt}]
+
+    # Historico se habilitado
+    if config.get('incluir_historico', True):
+        dados = atendimento.dados_respostas or {}
+        historico = dados.get(f'ia_historico_{nodo.id}', [])
+        max_hist = config.get('max_historico', 10)
+        messages.extend(historico[-max_hist:])
+
+    # Mensagem atual do usuario
+    mensagem_usuario = _get_ultima_mensagem(atendimento)
+    if mensagem_usuario:
+        messages.append({'role': 'user', 'content': mensagem_usuario})
+
+    resultado = _chamar_llm_simples(integracao, config.get('modelo', ''), messages)
+    if not resultado:
+        resultado = config.get('mensagem_timeout', 'Desculpe, nao consegui processar.')
+
+    # Salvar historico
+    dados = atendimento.dados_respostas or {}
+    historico_key = f'ia_historico_{nodo.id}'
+    historico = dados.get(historico_key, [])
+    if mensagem_usuario:
+        historico.append({'role': 'user', 'content': mensagem_usuario})
+    historico.append({'role': 'assistant', 'content': resultado})
+    dados[historico_key] = historico
+    atendimento.dados_respostas = dados
+
+    # PAUSA: setar nodo_atual
+    atendimento.nodo_atual = nodo
+    atendimento.save(update_fields=['dados_respostas', 'nodo_atual'])
+
+    _registrar_log(atendimento, nodo, 'aguardando',
+                   f'IA respondeu: {resultado[:100]}')
+
+    return {
+        'tipo': 'ia_respondedor',
+        'mensagem': resultado,
+    }
+
+
+def processar_resposta_ia_respondedor(atendimento, resposta):
+    """Processa resposta do usuario para um no ia_respondedor. Resume o fluxo."""
+    nodo = atendimento.nodo_atual
+
+    # Salvar mensagem no historico
+    dados = atendimento.dados_respostas or {}
+    historico_key = f'ia_historico_{nodo.id}'
+    historico = dados.get(historico_key, [])
+    historico.append({'role': 'user', 'content': resposta})
+    dados[historico_key] = historico
+    dados['_ultima_mensagem'] = resposta
+    atendimento.dados_respostas = dados
+    atendimento.nodo_atual = None
+    atendimento.save(update_fields=['dados_respostas', 'nodo_atual'])
+
+    # Seguir para o proximo no
+    contexto = _construir_contexto(atendimento)
+    return _seguir_conexoes(atendimento, nodo, contexto)
+
+
+# ── AGENTE IA (multi-turno com tools) ──
+
+def _executar_ia_agente_inicial(atendimento, nodo, contexto):
+    """Inicia o agente IA. Envia primeira mensagem e PAUSA."""
+    config = nodo.configuracao
+    integracao = _obter_integracao_ia(config, atendimento.fluxo.tenant)
+    if not integracao:
+        _registrar_log(atendimento, nodo, 'erro', 'Integracao IA nao configurada')
+        return {'tipo': 'ia_agente', 'mensagem': config.get('mensagem_timeout', 'Erro ao processar.')}
+
+    system_prompt = config.get('system_prompt', '')
+    system_prompt = _substituir_variaveis(system_prompt, contexto)
+    if atendimento.lead:
+        lead = atendimento.lead
+        system_prompt += f"\n\nDados do lead: Nome: {lead.nome_razaosocial}, Telefone: {lead.telefone}, Email: {lead.email or 'N/A'}, Cidade: {lead.cidade or 'N/A'}"
+
+    mensagem_usuario = _get_ultima_mensagem(atendimento)
+
+    messages = [{'role': 'system', 'content': system_prompt}]
+    if mensagem_usuario:
+        messages.append({'role': 'user', 'content': mensagem_usuario})
+
+    # Chamar LLM com tools
+    tools_habilitadas = config.get('tools_habilitadas', [])
+    resultado = _chamar_llm_com_tools(
+        integracao, config.get('modelo', ''), messages,
+        tools_habilitadas, config.get('campos_lead_editaveis', []),
+        atendimento, contexto
+    )
+
+    # Salvar historico
+    dados = atendimento.dados_respostas or {}
+    historico_key = f'ia_agente_{nodo.id}'
+    historico = {'messages': [], 'turnos': 0}
+    if mensagem_usuario:
+        historico['messages'].append({'role': 'user', 'content': mensagem_usuario})
+    historico['messages'].append({'role': 'assistant', 'content': resultado})
+    historico['turnos'] = 1
+    dados[historico_key] = historico
+    dados['_ultima_mensagem'] = mensagem_usuario or ''
+    atendimento.dados_respostas = dados
+
+    # PAUSA
+    atendimento.nodo_atual = nodo
+    atendimento.save(update_fields=['dados_respostas', 'nodo_atual'])
+
+    _registrar_log(atendimento, nodo, 'aguardando', f'Agente IA iniciou: {resultado[:100]}')
+
+    return {'tipo': 'ia_agente', 'mensagem': resultado}
+
+
+def processar_resposta_ia_agente(atendimento, resposta):
+    """Processa resposta do usuario no agente IA multi-turno."""
+    nodo = atendimento.nodo_atual
+    config = nodo.configuracao
+
+    dados = atendimento.dados_respostas or {}
+    historico_key = f'ia_agente_{nodo.id}'
+    historico = dados.get(historico_key, {'messages': [], 'turnos': 0})
+
+    # Verificar max_turnos
+    max_turnos = config.get('max_turnos', 10)
+    if historico['turnos'] >= max_turnos:
+        atendimento.nodo_atual = None
+        atendimento.save(update_fields=['nodo_atual'])
+        contexto = _construir_contexto(atendimento)
+        _registrar_log(atendimento, nodo, 'sucesso', f'Agente IA: max_turnos atingido ({max_turnos})')
+        return _seguir_conexoes(atendimento, nodo, contexto)
+
+    integracao = _obter_integracao_ia(config, atendimento.fluxo.tenant)
+    if not integracao:
+        return {'tipo': 'ia_agente', 'mensagem': config.get('mensagem_timeout', 'Erro ao processar.')}
+
+    # Reconstruir messages
+    system_prompt = config.get('system_prompt', '')
+    contexto = _construir_contexto(atendimento)
+    system_prompt = _substituir_variaveis(system_prompt, contexto)
+    if atendimento.lead:
+        lead = atendimento.lead
+        system_prompt += f"\n\nDados do lead: Nome: {lead.nome_razaosocial}, Telefone: {lead.telefone}, Email: {lead.email or 'N/A'}, Cidade: {lead.cidade or 'N/A'}"
+
+    messages = [{'role': 'system', 'content': system_prompt}]
+    # Historico anterior (somente role + content para simplificar)
+    for m in historico['messages']:
+        if isinstance(m, dict) and 'role' in m and 'content' in m:
+            messages.append({'role': m['role'], 'content': m['content']})
+    # Nova mensagem
+    messages.append({'role': 'user', 'content': resposta})
+
+    # Chamar LLM com tools
+    tools_habilitadas = config.get('tools_habilitadas', [])
+    resultado = _chamar_llm_com_tools(
+        integracao, config.get('modelo', ''), messages,
+        tools_habilitadas, config.get('campos_lead_editaveis', []),
+        atendimento, contexto
+    )
+
+    # Atualizar historico
+    historico['messages'].append({'role': 'user', 'content': resposta})
+    historico['messages'].append({'role': 'assistant', 'content': resultado})
+    historico['turnos'] += 1
+    dados[historico_key] = historico
+    dados['_ultima_mensagem'] = resposta
+    atendimento.dados_respostas = dados
+
+    # Verificar condicao de saida (JSON {sair: true})
+    import json as json_mod
+    try:
+        if '{' in resultado and 'sair' in resultado.lower():
+            texto_limpo = resultado.strip()
+            if texto_limpo.startswith('```'):
+                texto_limpo = texto_limpo.split('\n', 1)[1].rsplit('```', 1)[0].strip()
+            parsed = json_mod.loads(texto_limpo)
+            if parsed.get('sair'):
+                motivo = parsed.get('motivo', '')
+                _salvar_variavel(atendimento, 'motivo_saida', motivo)
+                atendimento.nodo_atual = None
+                atendimento.save(update_fields=['dados_respostas', 'nodo_atual'])
+                _registrar_log(atendimento, nodo, 'sucesso', f'Agente IA finalizou: {motivo}')
+                return _seguir_conexoes(atendimento, nodo, contexto)
+    except (json_mod.JSONDecodeError, AttributeError):
+        pass
+
+    # PAUSA: continua esperando
+    atendimento.save(update_fields=['dados_respostas'])
+    _registrar_log(atendimento, nodo, 'aguardando', f'Agente IA turno {historico["turnos"]}: {resultado[:100]}')
+
+    return {'tipo': 'ia_agente', 'mensagem': resultado}
+
+
+def _chamar_llm_com_tools(integracao, modelo, messages, tools_habilitadas, campos_editaveis, atendimento, contexto):
+    """Chama LLM com tools. Executa tool_calls em loop. Retorna texto final."""
+    # Por enquanto, usar chamada simples (sem tool calling nativo)
+    # TODO: implementar tool calling nativo por provider na Fase 5
+    # Por agora, o system prompt orienta o agente a responder diretamente
+    resultado = _chamar_llm_simples(integracao, modelo, messages)
+    return resultado or 'Desculpe, nao consegui processar.'

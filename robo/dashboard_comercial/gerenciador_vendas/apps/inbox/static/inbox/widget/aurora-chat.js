@@ -552,7 +552,15 @@
         var input = document.getElementById('aw-chat-input');
         if (!input) return;
         var msg = input.value.trim();
-        if (!msg || !state.currentConversa) return;
+        if (!msg) return;
+
+        // Se nao tem conversa ativa, criar uma nova
+        if (!state.currentConversa) {
+            var vd = state.visitorData || {};
+            input.value = '';
+            submitNewConversation(vd.nome || 'Visitante', vd.email || '', vd.telefone || '', msg);
+            return;
+        }
 
         input.value = '';
 
@@ -563,7 +571,18 @@
                 visitor_id: state.visitorId,
                 conteudo: msg,
             }),
-        }).then(function() {
+        }).then(function(data) {
+            if (data.error) {
+                // Conversa invalida, resetar e criar nova
+                state.currentConversa = null;
+                submitNewConversation(
+                    (state.visitorData || {}).nome || 'Visitante',
+                    (state.visitorData || {}).email || '',
+                    (state.visitorData || {}).telefone || '',
+                    msg
+                );
+                return;
+            }
             loadMensagens();
         });
     }

@@ -827,6 +827,7 @@ function criarCard(op, estagio) {
     </div>
     <div class="card-tel"><i class="fas fa-phone"></i>${escapeHtml(op.telefone || '—')}</div>
     ${badgesHtml ? `<div class="card-badges">${badgesHtml}</div>` : ''}
+    ${op.dados_custom && Object.keys(op.dados_custom).length ? `<div class="card-custom" style="font-size:10px;color:var(--text-muted);padding:4px 0;border-top:1px solid var(--border);margin-top:4px;">${Object.entries(op.dados_custom).map(([k,v]) => `<div><strong>${k.replace(/_/g,' ')}:</strong> ${escapeHtml(String(v))}</div>`).join('')}</div>` : ''}
     ${tagsHtml}
     <div class="card-footer">
       <div class="${avatarClass}" title="${escapeHtml(avatarTitle)}">${escapeHtml(avatarText)}</div>

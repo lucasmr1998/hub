@@ -46,6 +46,10 @@
 .drawflow .drawflow-node[data-tipo="acao"] .title-box { background:#ecfdf5; color:#065f46; }
 .drawflow .drawflow-node[data-tipo="delay"] .title-box { background:#f5f3ff; color:#5b21b6; }
 .drawflow .drawflow-node[data-tipo="finalizacao"] .title-box { background:#fff1f2; color:#9f1239; }
+.drawflow .drawflow-node[data-tipo="ia_classificador"] .title-box { background:#f3e8ff; color:#6b21a8; }
+.drawflow .drawflow-node[data-tipo="ia_extrator"] .title-box { background:#f3e8ff; color:#6b21a8; }
+.drawflow .drawflow-node[data-tipo="ia_respondedor"] .title-box { background:#f3e8ff; color:#6b21a8; }
+.drawflow .drawflow-node[data-tipo="ia_agente"] .title-box { background:#f3e8ff; color:#6b21a8; }
 
 .config-group { margin-bottom:14px; }
 .config-group label { display:block; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; letter-spacing:.03em; }
@@ -129,6 +133,20 @@
             </div>
         </div>
 
+        <!-- Inteligencia Artificial -->
+        <div class="node-section collapsed">
+            <div class="node-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
+                <span><i class="fas fa-brain" style="color:#8b5cf6;margin-right:4px;"></i> Inteligencia Artificial</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="node-section-items">
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="ia_classificador" data-subtipo="ia_classificador" data-nome="Classificador IA"><i class="fas fa-tags" style="color:#8b5cf6;"></i> Classificador</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="ia_extrator" data-subtipo="ia_extrator" data-nome="Extrator IA"><i class="fas fa-search" style="color:#8b5cf6;"></i> Extrator</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="ia_respondedor" data-subtipo="ia_respondedor" data-nome="Respondedor IA"><i class="fas fa-comment-dots" style="color:#8b5cf6;"></i> Respondedor</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="ia_agente" data-subtipo="ia_agente" data-nome="Agente IA"><i class="fas fa-robot" style="color:#8b5cf6;"></i> Agente</div>
+            </div>
+        </div>
+
         <!-- Controle -->
         <div class="node-section collapsed">
             <div class="node-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
@@ -173,6 +191,9 @@ let nodeCounter = 0;
 // Integracoes de IA disponiveis
 const integracoesIA = {{ integracoes_ia|safe }};
 const integracoesIAOpts = integracoesIA.map(i => `<option value="${i.id}">${i.nome} (${i.tipo})</option>`).join('');
+function getIAOpts(selectedId) {
+    return integracoesIA.map(i => `<option value="${i.id}" ${String(i.id)===String(selectedId)?'selected':''}>${i.nome} (${i.tipo})</option>`).join('');
+}
 
 // ── Drag & Drop ──
 function dragNode(ev) {
@@ -202,6 +223,8 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
     if (tipo === 'entrada') { inputs = 0; outputs = 1; }
     if (tipo === 'condicao') { inputs = 1; outputs = 2; }
     if (tipo === 'finalizacao') { inputs = 1; outputs = 0; }
+    if (tipo === 'ia_classificador' || tipo === 'ia_extrator') { inputs = 1; outputs = 1; }
+    if (tipo === 'ia_respondedor' || tipo === 'ia_agente') { inputs = 1; outputs = 1; }
 
     const iconMap = {
         'entrada': '<i class="fas fa-play-circle" style="color:#3b82f6;"></i>',
@@ -210,6 +233,10 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
         'acao': '<i class="fas fa-play" style="color:#059669;"></i>',
         'delay': '<i class="fas fa-clock" style="color:#7c3aed;"></i>',
         'finalizacao': '<i class="fas fa-flag-checkered" style="color:#e11d48;"></i>',
+        'ia_classificador': '<i class="fas fa-tags" style="color:#8b5cf6;"></i>',
+        'ia_extrator': '<i class="fas fa-search" style="color:#8b5cf6;"></i>',
+        'ia_respondedor': '<i class="fas fa-comment-dots" style="color:#8b5cf6;"></i>',
+        'ia_agente': '<i class="fas fa-robot" style="color:#8b5cf6;"></i>',
     };
 
     const subtipoIcons = {
@@ -230,6 +257,10 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
     else if (tipo === 'delay') boxContent = '<div class="box">⏱ Configurar tempo</div>';
     else if (tipo === 'acao') boxContent = `<div class="box">${nome}</div>`;
     else if (tipo === 'finalizacao') boxContent = '<div class="box">Fim do fluxo</div>';
+    else if (tipo === 'ia_classificador') boxContent = '<div class="box">Classifica a mensagem em categorias</div>';
+    else if (tipo === 'ia_extrator') boxContent = '<div class="box">Extrai dados da mensagem</div>';
+    else if (tipo === 'ia_respondedor') boxContent = '<div class="box">Gera resposta com IA</div>';
+    else if (tipo === 'ia_agente') boxContent = '<div class="box">Agente conversacional com tools</div>';
     else boxContent = '<div class="box">Ponto de entrada</div>';
 
     const html = `<div class="title-box">${icon} ${nome}</div>${boxContent}`;
@@ -361,7 +392,12 @@ function abrirConfig(nodeId, data) {
                 <optgroup label="Resposta Anterior">
                     <option value="ultima_resposta" ${config.campo==='ultima_resposta'?'selected':''}>Ultima Resposta</option>
                 </optgroup>
+                <optgroup label="Variavel IA">
+                    <option value="var.classificacao" ${config.campo==='var.classificacao'?'selected':''}>classificacao</option>
+                    <option value="var.custom" ${(config.campo||'').startsWith('var.') && config.campo!=='var.classificacao'?'selected':''}>Variavel personalizada...</option>
+                </optgroup>
             </select>
+            ${(config.campo||'').startsWith('var.') && config.campo!=='var.classificacao' ? `<div class="config-group" style="margin-top:4px;"><label>Nome da Variavel</label><input type="text" id="cfg_var_nome" value="${config.campo?.replace('var.','') || ''}" onchange="salvarConfigNodo()" placeholder="nome_da_variavel"></div>` : ''}
         </div>
         <div class="config-group"><label>Operador</label>
             <select id="cfg_operador" onchange="salvarConfigNodo()">
@@ -431,6 +467,74 @@ function abrirConfig(nodeId, data) {
             </select>
         </div>
         `;
+    } else if (data.tipo === 'ia_classificador') {
+        html = `
+        <div class="config-group"><label>Integracao IA</label><select id="cfg_ia_integracao" onchange="salvarConfigNodo()"><option value="">Selecione...</option>${getIAOpts(config.integracao_ia_id)}</select></div>
+        <div class="config-group"><label>Modelo</label><input type="text" id="cfg_ia_modelo" value="${config.modelo||''}" onchange="salvarConfigNodo()" placeholder="gpt-4o-mini, claude-haiku-4-5-20251001..."></div>
+        <div class="config-group"><label>Prompt</label><textarea id="cfg_ia_prompt" rows="4" onchange="salvarConfigNodo()" placeholder="Classifique a mensagem do usuario em uma das categorias...">${config.prompt||''}</textarea></div>
+        <div class="config-group"><label>Categorias (uma por linha)</label><textarea id="cfg_ia_categorias" rows="4" onchange="salvarConfigNodo()" placeholder="interesse_curso&#10;duvida_preco&#10;reclamacao&#10;outro">${(config.categorias||[]).join('\\n')}</textarea></div>
+        <div class="config-group"><label>Variavel de Saida</label><input type="text" id="cfg_ia_var_saida" value="${config.variavel_saida||'classificacao'}" onchange="salvarConfigNodo()" placeholder="classificacao"></div>
+        `;
+    } else if (data.tipo === 'ia_extrator') {
+        const camposExtrair = (config.campos_extrair || []);
+        const camposHtml = camposExtrair.map((c, i) => _renderCampoExtrator(c)).join('');
+        html = `
+        <div class="config-group"><label>Integracao IA</label><select id="cfg_ia_integracao" onchange="salvarConfigNodo()"><option value="">Selecione...</option>${getIAOpts(config.integracao_ia_id)}</select></div>
+        <div class="config-group"><label>Modelo</label><input type="text" id="cfg_ia_modelo" value="${config.modelo||''}" onchange="salvarConfigNodo()" placeholder="gpt-4o-mini"></div>
+        <div class="config-group"><label>Prompt (opcional)</label><textarea id="cfg_ia_prompt" rows="2" onchange="salvarConfigNodo()" placeholder="Instrucoes extras para a extracao...">${config.prompt||''}</textarea></div>
+        <div class="config-group"><label>Campos para Extrair</label>
+            <div id="cfg_ext_campos">${camposHtml}</div>
+            <button onclick="adicionarCampoExtrator()" style="font-size:11px;margin-top:4px;padding:4px 8px;cursor:pointer;" class="btn-secondary"><i class="fas fa-plus"></i> Adicionar campo</button>
+        </div>
+        <div class="config-group"><label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" id="cfg_ia_salvar_lead" ${config.salvar_no_lead?'checked':''} onchange="salvarConfigNodo()"> Salvar automaticamente no lead</label></div>
+        `;
+    } else if (data.tipo === 'ia_respondedor') {
+        html = `
+        <div class="config-group"><label>Integracao IA</label><select id="cfg_ia_integracao" onchange="salvarConfigNodo()"><option value="">Selecione...</option>${getIAOpts(config.integracao_ia_id)}</select></div>
+        <div class="config-group"><label>Modelo</label><input type="text" id="cfg_ia_modelo" value="${config.modelo||''}" onchange="salvarConfigNodo()" placeholder="gpt-4o, claude-sonnet-4-20250514..."></div>
+        <div class="config-group"><label>System Prompt</label><textarea id="cfg_ia_system_prompt" rows="6" onchange="salvarConfigNodo()" placeholder="Voce e o Pedro, consultor da FATEPI...">${config.system_prompt||''}</textarea></div>
+        <p style="font-size:11px;color:var(--text-muted);margin:0 0 8px;">Variaveis: {% verbatim %}{{lead_nome}}, {{lead_telefone}}, {{classificacao}}, {{curso}}{% endverbatim %}, etc.</p>
+        <div class="config-group"><label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" id="cfg_ia_historico" ${config.incluir_historico!==false?'checked':''} onchange="salvarConfigNodo()"> Incluir historico da conversa</label></div>
+        <div class="config-group"><label>Max Mensagens no Historico</label><input type="number" id="cfg_ia_max_hist" value="${config.max_historico||10}" min="1" max="50" onchange="salvarConfigNodo()"></div>
+        `;
+    } else if (data.tipo === 'ia_agente') {
+        const toolsDisponiveis = [
+            {id:'atualizar_lead', label:'Atualizar Lead'},
+            {id:'criar_oportunidade', label:'Criar Oportunidade'},
+            {id:'criar_tarefa', label:'Criar Tarefa'},
+            {id:'mover_estagio', label:'Mover Estagio'},
+            {id:'webhook', label:'Webhook'},
+        ];
+        const camposLead = [
+            {id:'nome_razaosocial', label:'Nome'},
+            {id:'email', label:'Email'},
+            {id:'telefone', label:'Telefone'},
+            {id:'cpf_cnpj', label:'CPF/CNPJ'},
+            {id:'cidade', label:'Cidade'},
+            {id:'estado', label:'Estado'},
+            {id:'cep', label:'CEP'},
+            {id:'empresa', label:'Empresa'},
+        ];
+        const toolsChecks = toolsDisponiveis.map(t => {
+            const checked = (config.tools_habilitadas || []).includes(t.id) ? 'checked' : '';
+            return `<label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:4px;"><input type="checkbox" class="cfg_tool" value="${t.id}" ${checked} onchange="salvarConfigNodo()"> ${t.label}</label>`;
+        }).join('');
+        const camposChecks = camposLead.map(c => {
+            const checked = (config.campos_lead_editaveis || []).includes(c.id) ? 'checked' : '';
+            return `<label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:4px;"><input type="checkbox" class="cfg_campo_lead" value="${c.id}" ${checked} onchange="salvarConfigNodo()"> ${c.label}</label>`;
+        }).join('');
+        html = `
+        <div class="config-group"><label>Integracao IA</label><select id="cfg_ia_integracao" onchange="salvarConfigNodo()"><option value="">Selecione...</option>${getIAOpts(config.integracao_ia_id)}</select></div>
+        <div class="config-group"><label>Modelo</label><input type="text" id="cfg_ia_modelo" value="${config.modelo||''}" onchange="salvarConfigNodo()" placeholder="gpt-4o"></div>
+        <div class="config-group"><label>System Prompt</label><textarea id="cfg_ia_system_prompt" rows="6" onchange="salvarConfigNodo()" placeholder="Voce e um agente de vendas...">${config.system_prompt||''}</textarea></div>
+        <div class="config-group"><label>Max Turnos</label><input type="number" id="cfg_ia_max_turnos" value="${config.max_turnos||10}" min="1" max="50" onchange="salvarConfigNodo()"></div>
+        <div class="config-group"><label>Condicao de Saida</label><textarea id="cfg_ia_condicao_saida" rows="2" onchange="salvarConfigNodo()" placeholder="Quando o usuario confirmar ou desistir...">${config.condicao_saida||''}</textarea></div>
+        <div class="config-group"><label>Mensagem de Timeout</label><input type="text" id="cfg_ia_msg_timeout" value="${config.mensagem_timeout||''}" onchange="salvarConfigNodo()" placeholder="Desculpe, nao consegui processar."></div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
+        <div class="config-group"><label>Tools Habilitadas</label>${toolsChecks}</div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
+        <div class="config-group"><label>Campos do Lead Editaveis</label>${camposChecks}</div>
+        `;
     } else {
         html = `<p style="font-size:13px;color:var(--text-muted);">Conecte ao proximo no.</p>`;
     }
@@ -465,7 +569,12 @@ function salvarConfigNodo() {
         config.prompt_validacao = document.getElementById('cfg_prompt_val')?.value || '';
         config.integracao_ia_id = document.getElementById('cfg_integracao_ia')?.value || '';
     } else if (data.tipo === 'condicao') {
-        config.campo = document.getElementById('cfg_campo')?.value || '';
+        let campo = document.getElementById('cfg_campo')?.value || '';
+        if (campo === 'var.custom') {
+            const varNome = document.getElementById('cfg_var_nome')?.value || '';
+            campo = varNome ? `var.${varNome}` : 'var.classificacao';
+        }
+        config.campo = campo;
         config.operador = document.getElementById('cfg_operador')?.value || 'igual';
         config.valor = document.getElementById('cfg_valor')?.value || '';
     } else if (data.tipo === 'acao') {
@@ -492,6 +601,43 @@ function salvarConfigNodo() {
         if (scoreEl) config.score = parseInt(scoreEl.value) || null;
     } else if (data.tipo === 'entrada') {
         config.canal = document.getElementById('cfg_canal')?.value || 'qualquer';
+    } else if (data.tipo === 'ia_classificador') {
+        config.integracao_ia_id = document.getElementById('cfg_ia_integracao')?.value || '';
+        config.modelo = document.getElementById('cfg_ia_modelo')?.value || '';
+        config.prompt = document.getElementById('cfg_ia_prompt')?.value || '';
+        const catEl = document.getElementById('cfg_ia_categorias');
+        if (catEl) config.categorias = catEl.value.split('\n').map(c => c.trim()).filter(c => c);
+        config.variavel_saida = document.getElementById('cfg_ia_var_saida')?.value || 'classificacao';
+    } else if (data.tipo === 'ia_extrator') {
+        config.integracao_ia_id = document.getElementById('cfg_ia_integracao')?.value || '';
+        config.modelo = document.getElementById('cfg_ia_modelo')?.value || '';
+        config.prompt = document.getElementById('cfg_ia_prompt')?.value || '';
+        config.salvar_no_lead = document.getElementById('cfg_ia_salvar_lead')?.checked || false;
+        const camposRows = document.querySelectorAll('#cfg_ext_campos .cfg_ext_row');
+        config.campos_extrair = [];
+        camposRows.forEach(row => {
+            const select = row.querySelector('.cfg_ext_nome');
+            const customInput = row.querySelector('.cfg_ext_custom');
+            const desc = row.querySelector('.cfg_ext_desc')?.value?.trim() || '';
+            let nome = select?.value || '';
+            if (nome === '_custom' && customInput) nome = customInput.value?.trim() || '';
+            if (nome && nome !== '_custom') config.campos_extrair.push({nome, descricao: desc, tipo: 'string'});
+        });
+    } else if (data.tipo === 'ia_respondedor') {
+        config.integracao_ia_id = document.getElementById('cfg_ia_integracao')?.value || '';
+        config.modelo = document.getElementById('cfg_ia_modelo')?.value || '';
+        config.system_prompt = document.getElementById('cfg_ia_system_prompt')?.value || '';
+        config.incluir_historico = document.getElementById('cfg_ia_historico')?.checked ?? true;
+        config.max_historico = parseInt(document.getElementById('cfg_ia_max_hist')?.value) || 10;
+    } else if (data.tipo === 'ia_agente') {
+        config.integracao_ia_id = document.getElementById('cfg_ia_integracao')?.value || '';
+        config.modelo = document.getElementById('cfg_ia_modelo')?.value || '';
+        config.system_prompt = document.getElementById('cfg_ia_system_prompt')?.value || '';
+        config.max_turnos = parseInt(document.getElementById('cfg_ia_max_turnos')?.value) || 10;
+        config.condicao_saida = document.getElementById('cfg_ia_condicao_saida')?.value || '';
+        config.mensagem_timeout = document.getElementById('cfg_ia_msg_timeout')?.value || '';
+        config.tools_habilitadas = Array.from(document.querySelectorAll('.cfg_tool:checked')).map(el => el.value);
+        config.campos_lead_editaveis = Array.from(document.querySelectorAll('.cfg_campo_lead:checked')).map(el => el.value);
     }
 
     data.config = config;
@@ -511,6 +657,80 @@ function deletarNodo() {
 }
 
 // ── Aplicar modelo pronto ──
+const CAMPOS_LEAD_EXTRATOR = [
+    {id:'_header_lead', label:'── Lead ──', desc:'', disabled:true},
+    {id:'nome_razaosocial', label:'Nome / Razao Social', desc:'Nome completo da pessoa', grupo:'lead'},
+    {id:'email', label:'Email', desc:'Endereco de email', grupo:'lead'},
+    {id:'telefone', label:'Telefone', desc:'Numero de telefone', grupo:'lead'},
+    {id:'cpf_cnpj', label:'CPF/CNPJ', desc:'CPF ou CNPJ', grupo:'lead'},
+    {id:'cidade', label:'Cidade', desc:'Cidade onde mora', grupo:'lead'},
+    {id:'estado', label:'Estado', desc:'Estado (UF)', grupo:'lead'},
+    {id:'cep', label:'CEP', desc:'Codigo postal', grupo:'lead'},
+    {id:'rua', label:'Rua', desc:'Nome da rua', grupo:'lead'},
+    {id:'bairro', label:'Bairro', desc:'Bairro', grupo:'lead'},
+    {id:'empresa', label:'Empresa', desc:'Nome da empresa', grupo:'lead'},
+    {id:'data_nascimento', label:'Data Nascimento', desc:'Data de nascimento', grupo:'lead'},
+    {id:'observacoes', label:'Observacoes', desc:'Informacoes adicionais', grupo:'lead'},
+    {id:'_header_oport', label:'── Oportunidade ──', desc:'', disabled:true},
+    {id:'oport.titulo', label:'Titulo', desc:'Titulo da oportunidade', grupo:'oportunidade'},
+    {id:'oport.valor_estimado', label:'Valor Estimado', desc:'Valor estimado em reais', grupo:'oportunidade'},
+    {id:'oport.prioridade', label:'Prioridade', desc:'Prioridade: baixa, normal, alta, urgente', grupo:'oportunidade'},
+    {id:'oport.dados_custom.curso_interesse', label:'Curso de Interesse', desc:'Curso que o candidato escolheu', grupo:'oportunidade'},
+    {id:'oport.dados_custom.forma_ingresso', label:'Forma de Ingresso', desc:'Forma de ingresso: ENEM, Prova Online, Transferencia', grupo:'oportunidade'},
+    {id:'oport.dados_custom.status_matricula', label:'Status Matricula', desc:'Status: aguardando, pagamento_realizado, desistiu', grupo:'oportunidade'},
+    {id:'_header_var', label:'── Outro ──', desc:'', disabled:true},
+    {id:'_custom', label:'Variavel personalizada...', desc:''},
+];
+
+function _getDescPadrao(nome) {
+    const campo = CAMPOS_LEAD_EXTRATOR.find(c => c.id === nome);
+    return campo ? campo.desc : '';
+}
+
+function _renderCampoExtrator(c) {
+    const isCustom = !CAMPOS_LEAD_EXTRATOR.find(x => x.id === (c.nome||''));
+    const selectVal = isCustom ? '_custom' : (c.nome||'');
+    const opts = CAMPOS_LEAD_EXTRATOR.map(f =>
+        f.disabled
+            ? `<option value="" disabled style="font-weight:bold;color:var(--text-muted);">${f.label}</option>`
+            : `<option value="${f.id}" ${f.id===selectVal?'selected':''}>${f.label}</option>`
+    ).join('');
+    const customInput = isCustom ? `<input type="text" class="cfg_ext_custom" value="${c.nome||''}" placeholder="nome_variavel" style="flex:1;margin-top:4px;" onchange="salvarConfigNodo()">` : '';
+    const descVal = c.descricao || _getDescPadrao(c.nome) || '';
+    return `<div class="cfg_ext_row" style="background:var(--bg-subtle);border-radius:6px;padding:8px;margin-bottom:6px;">
+        <div style="display:flex;gap:4px;align-items:center;">
+            <select class="cfg_ext_nome" style="flex:1;" onchange="onCampoExtratorChange(this)">${opts}</select>
+            <button onclick="this.closest('.cfg_ext_row').remove();salvarConfigNodo()" style="border:none;background:none;color:var(--danger);cursor:pointer;font-size:14px;"><i class="fas fa-times"></i></button>
+        </div>
+        ${customInput ? `<div class="cfg_ext_custom_wrap">${customInput}</div>` : ''}
+        <input type="text" class="cfg_ext_desc" value="${descVal}" placeholder="Descricao para a IA" style="width:100%;margin-top:4px;font-size:11px;" onchange="salvarConfigNodo()">
+    </div>`;
+}
+
+function onCampoExtratorChange(select) {
+    const row = select.closest('.cfg_ext_row');
+    const descInput = row.querySelector('.cfg_ext_desc');
+    const customWrap = row.querySelector('.cfg_ext_custom_wrap');
+    if (select.value === '_custom') {
+        if (!customWrap) {
+            const div = document.createElement('div');
+            div.className = 'cfg_ext_custom_wrap';
+            div.innerHTML = '<input type="text" class="cfg_ext_custom" value="" placeholder="nome_variavel" style="flex:1;margin-top:4px;" onchange="salvarConfigNodo()">';
+            select.parentElement.after(div);
+        }
+        descInput.value = '';
+    } else {
+        if (customWrap) customWrap.remove();
+        descInput.value = _getDescPadrao(select.value);
+    }
+    salvarConfigNodo();
+}
+
+function adicionarCampoExtrator() {
+    const container = document.getElementById('cfg_ext_campos');
+    container.insertAdjacentHTML('beforeend', _renderCampoExtrator({nome:'', descricao:''}));
+}
+
 function aplicarModelo() {
     const modelos = {
         'nome': {titulo:'Qual seu nome completo?', salvar_em:'nome_razaosocial', validacao:'texto'},
@@ -665,6 +885,17 @@ if (fluxoSalvo && fluxoSalvo.drawflow) {
             }
         }
     }, 200);
+
+    // Re-aplicar data-tipo apos tudo carregado
+    setTimeout(() => {
+        for (const nodo of nodosDB) {
+            const drawflowId = idMap[nodo.id];
+            if (drawflowId) {
+                const el = document.querySelector(`#node-${drawflowId}`);
+                if (el) el.setAttribute('data-tipo', nodo.tipo);
+            }
+        }
+    }, 500);
 }
 
 // ── Teclado ──

@@ -40,6 +40,12 @@ class CanalInbox(TenantMixin):
         verbose_name="Identificador",
         help_text="Número de telefone, ID da instância, etc.",
     )
+    fluxo = models.ForeignKey(
+        'atendimento.FluxoAtendimento', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='canais_inbox', verbose_name="Fluxo de Atendimento",
+        help_text="Fluxo que será iniciado ao receber mensagem neste canal",
+    )
 
     criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
 

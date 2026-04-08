@@ -368,6 +368,15 @@
                     </select>
                 </div>
                 <div class="cfg-form-group" style="margin-bottom:8px;">
+                    <label>Fluxo de Atendimento</label>
+                    <select name="fluxo_id" class="cfg-select">
+                        <option value="">Nenhum (sem fluxo automatico)</option>
+                        {% for f in fluxos_atendimento %}
+                        <option value="{{ f.id }}" {% if canal.fluxo_id == f.id %}selected{% endif %}>{{ f.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="cfg-form-group" style="margin-bottom:8px;">
                     <label>Webhook de envio (URL alternativa, se nao usar integracao)</label>
                     <input type="url" name="webhook_envio_url" class="cfg-input" style="width:100%;"
                            value="{{ canal.configuracao.webhook_envio_url|default:'' }}"
@@ -566,6 +575,16 @@
                             <option value="bottom-left" {% if widget_config.posicao == 'bottom-left' %}selected{% endif %}>Inferior Esquerdo</option>
                         </select>
                     </div>
+                </div>
+
+                <div class="cfg-form-group" style="margin-bottom:12px;">
+                    <label>Fluxo de Atendimento</label>
+                    <select name="widget_fluxo_id" class="cfg-select">
+                        <option value="">Nenhum (sem fluxo automatico)</option>
+                        {% for f in fluxos_atendimento %}
+                        <option value="{{ f.id }}" {% if canal_widget.fluxo_id == f.id %}selected{% endif %}>{{ f.nome }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
 
                 <div style="margin-bottom:16px;">

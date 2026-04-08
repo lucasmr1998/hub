@@ -50,6 +50,14 @@ def empresa_context(request):
         ctx['empresa_nome'] = tenant.nome
         ctx['setup_completo'] = False
 
+    # Token do widget para o tenant atual
+    try:
+        from apps.inbox.models import WidgetConfig
+        wc = WidgetConfig.all_tenants.filter(tenant=tenant, ativo=True).first()
+        ctx['widget_token'] = wc.token_publico if wc else ''
+    except Exception:
+        ctx['widget_token'] = ''
+
     # Permissões do usuário para a sidebar
     user = getattr(request, 'user', None)
     if user and user.is_authenticated:

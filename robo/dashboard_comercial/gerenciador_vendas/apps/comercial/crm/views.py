@@ -75,6 +75,7 @@ def _oportunidade_para_dict(op):
         'plano': op.plano_interesse.nome if op.plano_interesse else None,
         'tags': [{'nome': t.nome, 'cor': t.cor_hex} for t in op.tags.all()],
         'churn_risk_score': op.churn_risk_score,
+        'dados_custom': op.dados_custom or {},
     }
 
 

@@ -1890,6 +1890,10 @@ class NodoFluxoAtendimento(TenantMixin):
         ('acao', 'Acao'),
         ('delay', 'Delay'),
         ('finalizacao', 'Finalizacao'),
+        ('ia_classificador', 'Classificador IA'),
+        ('ia_extrator', 'Extrator IA'),
+        ('ia_respondedor', 'Respondedor IA'),
+        ('ia_agente', 'Agente IA'),
     ]
 
     fluxo = models.ForeignKey(
@@ -1899,7 +1903,7 @@ class NodoFluxoAtendimento(TenantMixin):
         verbose_name="Fluxo"
     )
     tipo = models.CharField(
-        max_length=20,
+        max_length=30,
         choices=TIPO_CHOICES,
         verbose_name="Tipo do Nodo"
     )
