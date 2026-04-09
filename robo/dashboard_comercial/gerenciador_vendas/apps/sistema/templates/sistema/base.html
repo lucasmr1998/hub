@@ -212,7 +212,9 @@
         {% elif '/suporte/' in request.path or '/inbox/' in request.path or '/configuracoes/fluxos' in request.path or '/configuracoes/sessoes' in request.path %}
             <!-- ── Sidebar: Suporte ── -->
             {% tem_funcionalidade 'inbox.ver_minhas' as pode_inbox %}
-            <div class="sidebar-section-label">SUPORTE</div>
+            {% tem_funcionalidade 'inbox.configurar' as pode_config_inbox %}
+
+            <div class="sidebar-section-label">CONVERSAS</div>
             <a href="{% url 'inbox:dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' and 'inbox' in request.resolver_match.app_name|default:'' or request.resolver_match.url_name == 'dashboard' and 'suporte' in request.resolver_match.app_name|default:'' %}active{% endif %}">
                 <i class="fas fa-chart-line"></i><span class="nav-text">Dashboard</span>
             </a>
@@ -222,23 +224,22 @@
             <a href="{% url 'suporte:ticket_lista' %}" class="nav-item {% if request.resolver_match.url_name == 'ticket_lista' or request.resolver_match.url_name == 'ticket_criar' or request.resolver_match.url_name == 'ticket_detalhe' %}active{% endif %}">
                 <i class="fas fa-ticket-alt"></i><span class="nav-text">Tickets</span>
             </a>
+
+            {% if pode_config_inbox %}
+            <div class="sidebar-section-label" style="margin-top:12px;">AUTOMACAO</div>
+            <a href="{% url 'comercial_atendimento:fluxos_atendimento' %}" class="nav-item {% if request.resolver_match.url_name == 'fluxos_atendimento' or request.resolver_match.url_name == 'editor_fluxo' %}active{% endif %}">
+                <i class="fas fa-project-diagram"></i><span class="nav-text">Fluxos</span>
+            </a>
+            <a href="{% url 'comercial_atendimento:sessoes_atendimento' %}" class="nav-item {% if request.resolver_match.url_name == 'sessoes_atendimento' or request.resolver_match.url_name == 'sessao_detalhe' %}active{% endif %}">
+                <i class="fas fa-headset"></i><span class="nav-text">Sessoes</span>
+            </a>
             <a href="{% url 'suporte:base_conhecimento' %}" class="nav-item {% if request.resolver_match.url_name == 'base_conhecimento' or request.resolver_match.url_name == 'artigo_conhecimento' or request.resolver_match.url_name == 'gerenciar_conhecimento' %}active{% endif %}">
                 <i class="fas fa-book"></i><span class="nav-text">Conhecimento</span>
             </a>
 
-            {% tem_funcionalidade 'inbox.configurar' as pode_config_inbox %}
-            {% if pode_config_inbox %}
-            <div class="sidebar-section-label" style="margin-top:12px;">ATENDIMENTO</div>
-            <a href="{% url 'comercial_atendimento:fluxos_atendimento' %}" class="nav-item {% if request.resolver_match.url_name == 'fluxos_atendimento' %}active{% endif %}">
-                <i class="fas fa-project-diagram"></i><span class="nav-text">Fluxos</span>
-            </a>
-            <a href="{% url 'comercial_atendimento:sessoes_atendimento' %}" class="nav-item {% if request.resolver_match.url_name == 'sessoes_atendimento' %}active{% endif %}">
-                <i class="fas fa-headset"></i><span class="nav-text">Sessoes</span>
-            </a>
-
             <div class="sidebar-section-label" style="margin-top:12px;">CONFIGURACOES</div>
             <a href="{% url 'inbox:configuracoes' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes' and 'inbox' in request.resolver_match.app_name|default:'' %}active{% endif %}">
-                <i class="fas fa-cog"></i><span class="nav-text">Configuracoes</span>
+                <i class="fas fa-cog"></i><span class="nav-text">Canais e Equipes</span>
             </a>
             {% endif %}
 
