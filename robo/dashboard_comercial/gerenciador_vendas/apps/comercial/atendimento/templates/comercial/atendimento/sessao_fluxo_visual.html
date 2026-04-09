@@ -27,14 +27,6 @@
 .drawflow .drawflow-node[data-tipo="acao"] .title-box { background:#ecfdf5; color:#065f46; }
 .drawflow .drawflow-node[data-tipo="delay"] .title-box { background:#f5f3ff; color:#5b21b6; }
 .drawflow .drawflow-node[data-tipo="finalizacao"] .title-box { background:#fff1f2; color:#9f1239; }
-.drawflow .drawflow-node[data-tipo="ia_classificador"] .title-box { background:#f3e8ff; color:#6b21a8; }
-.drawflow .drawflow-node[data-tipo="ia_extrator"] .title-box { background:#f3e8ff; color:#6b21a8; }
-.drawflow .drawflow-node[data-tipo="ia_respondedor"] .title-box { background:#f3e8ff; color:#6b21a8; }
-.drawflow .drawflow-node[data-tipo="ia_agente"] .title-box { background:#f3e8ff; color:#6b21a8; }
-
-/* Nodo com erro (vermelho) */
-.drawflow .drawflow-node.nodo-erro { border-color:#ef4444; }
-.drawflow .drawflow-node.nodo-erro .output { background:#ef4444; }
 
 /* Nodo executado (verde) */
 .drawflow .drawflow-node.nodo-executado { border-color:#22c55e; }
@@ -156,9 +148,7 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
     const nodeId = `node_${nodeCounter}`;
     let inputs = 1, outputs = 1;
     if (tipo === 'entrada') { inputs = 0; outputs = 1; }
-    if (tipo === 'questao') { inputs = 1; outputs = 2; }
     if (tipo === 'condicao') { inputs = 1; outputs = 2; }
-    if (tipo === 'ia_extrator') { inputs = 1; outputs = 2; }
     if (tipo === 'finalizacao') { inputs = 1; outputs = 0; }
 
     const iconMap = {
@@ -168,10 +158,6 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
         'acao': '<i class="fas fa-play" style="color:#059669;"></i>',
         'delay': '<i class="fas fa-clock" style="color:#7c3aed;"></i>',
         'finalizacao': '<i class="fas fa-flag-checkered" style="color:#e11d48;"></i>',
-        'ia_classificador': '<i class="fas fa-tags" style="color:#8b5cf6;"></i>',
-        'ia_extrator': '<i class="fas fa-search" style="color:#8b5cf6;"></i>',
-        'ia_respondedor': '<i class="fas fa-comment-dots" style="color:#8b5cf6;"></i>',
-        'ia_agente': '<i class="fas fa-robot" style="color:#8b5cf6;"></i>',
     };
     const subtipoIcons = {
         'enviar_whatsapp': '<i class="fab fa-whatsapp" style="color:#25D366;"></i>',
@@ -271,44 +257,5 @@ function aplicarDestaques() {
         }
     }
 }
-
-// Historico de execucao por no (P11) — click no no mostra logs
-const logsPorNodo = {{ logs_por_nodo|safe }};
-
-document.getElementById('drawflow').addEventListener('click', function(e) {
-    const nodeEl = e.target.closest('.drawflow-node');
-    if (!nodeEl) return;
-    const nodeId = nodeEl.id.replace('node-', '');
-
-    // Buscar nodo_id do banco (pode ser diferente do drawflow id)
-    let dbNodoId = null;
-    if (typeof idMap !== 'undefined') {
-        for (const [dbId, dfId] of Object.entries(idMap)) {
-            if (String(dfId) === String(nodeId)) { dbNodoId = dbId; break; }
-        }
-    }
-
-    const logs = logsPorNodo[dbNodoId] || logsPorNodo[nodeId] || [];
-    if (!logs.length) return;
-
-    // Montar modal simples
-    let html = '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;" onclick="if(event.target===this)this.remove()">';
-    html += '<div style="background:#fff;border-radius:12px;width:500px;max-height:70vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);">';
-    html += '<div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;"><h3 style="margin:0;font-size:15px;">Historico do No</h3><button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">&times;</button></div>';
-    html += '<div style="padding:16px 20px;">';
-    logs.forEach(function(l) {
-        const statusColor = l.status === 'sucesso' ? '#22c55e' : l.status === 'erro' ? '#ef4444' : l.status === 'aguardando' ? '#3b82f6' : '#94a3b8';
-        html += '<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">';
-        html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">';
-        html += '<span style="font-size:12px;font-weight:600;color:' + statusColor + ';">' + l.status.toUpperCase() + '</span>';
-        html += '<span style="font-size:11px;color:var(--text-muted);">' + l.data + '</span>';
-        html += '</div>';
-        html += '<div style="font-size:12px;color:var(--text-main);">' + l.mensagem + '</div>';
-        html += '</div>';
-    });
-    html += '</div></div></div>';
-
-    document.body.insertAdjacentHTML('beforeend', html);
-});
 </script>
 {% endblock %}

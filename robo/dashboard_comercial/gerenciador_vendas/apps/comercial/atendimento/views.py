@@ -584,27 +584,12 @@ def sessao_fluxo_visual_view(request, atendimento_id):
     # Nodo atual
     nodo_atual_id = sessao.nodo_atual_id
 
-    # Logs por nodo (para historico por no)
-    logs_por_nodo = {}
-    for log in LogFluxoAtendimento.objects.filter(atendimento=sessao).order_by('data_execucao'):
-        nid = log.nodo_id
-        if nid not in logs_por_nodo:
-            logs_por_nodo[nid] = []
-        logs_por_nodo[nid].append({
-            'tipo_nodo': log.tipo_nodo,
-            'status': log.status,
-            'mensagem': log.mensagem[:200],
-            'data': log.data_execucao.strftime('%d/%m %H:%M:%S') if log.data_execucao else '',
-            'dados': log.dados or {},
-        })
-
     context = {
         'sessao': sessao,
         'fluxo': fluxo,
         'fluxo_json': json.dumps(fluxo.fluxo_json) if fluxo.fluxo_json else '{}',
         'nodos_executados': json.dumps(nodos_executados),
         'nodo_atual_id': nodo_atual_id or 0,
-        'logs_por_nodo': json.dumps({str(k): v for k, v in logs_por_nodo.items()}),
     }
 
     # Se nao tem fluxo_json, montar dos nodos do banco

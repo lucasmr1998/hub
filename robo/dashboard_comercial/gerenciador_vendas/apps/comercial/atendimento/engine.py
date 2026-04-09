@@ -159,9 +159,12 @@ def processar_resposta_visual(atendimento, resposta):
     if tem_ia:
         ia_sucesso = _processar_ia_questao(atendimento, nodo_atual, config, resposta, contexto)
 
-    # Seguir conexoes: true (sucesso) ou false (fallback)
-    branch = 'true' if ia_sucesso else 'false'
-    return _seguir_conexoes(atendimento, nodo_atual, contexto, branch_forcado=branch)
+    # Seguir conexoes: com branch se tem IA, sem branch se nao tem
+    if tem_ia:
+        branch = 'true' if ia_sucesso else 'false'
+        return _seguir_conexoes(atendimento, nodo_atual, contexto, branch_forcado=branch)
+    else:
+        return _seguir_conexoes(atendimento, nodo_atual, contexto)
 
 
 def executar_pendentes_atendimento(tenant=None):
@@ -283,10 +286,8 @@ def _executar_nodo(atendimento, nodo, contexto):
                 contexto['ultima_resposta'] = str(valor_existente)
                 # Processar IA se configurado
                 ia_acao = config.get('ia_acao', 'validar')
-                ia_ok = True
                 if config.get('integracao_ia_id') and ia_acao != 'validar':
-                    ia_ok = _processar_ia_questao(atendimento, nodo, config, str(valor_existente), contexto)
-                atendimento._branch_saida = 'true' if ia_ok else 'false'
+                    _processar_ia_questao(atendimento, nodo, config, str(valor_existente), contexto)
                 return None  # segue para proximo no
 
         if espera:
@@ -305,11 +306,10 @@ def _executar_nodo(atendimento, nodo, contexto):
 
             # Se tem IA classificadora/extratora, processar com _ultima_mensagem
             ia_acao = config.get('ia_acao', 'validar')
-            ia_ok = True
             if config.get('integracao_ia_id') and ia_acao != 'validar':
                 ultima = _get_ultima_mensagem(atendimento)
                 if ultima:
-                    ia_ok = _processar_ia_questao(atendimento, nodo, config, ultima, contexto)
+                    _processar_ia_questao(atendimento, nodo, config, ultima, contexto)
 
             # Retornar dados para o signal enviar no inbox, mas nao pausar
             if titulo:
@@ -318,7 +318,6 @@ def _executar_nodo(atendimento, nodo, contexto):
                     'questao': _montar_dados_questao(nodo),
                     'mensagem': titulo,
                 }
-            atendimento._branch_saida = 'true' if ia_ok else 'false'
             return None  # Continua percorrendo
 
     elif nodo.tipo == 'condicao':

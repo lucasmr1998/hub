@@ -12,23 +12,6 @@
 .zoom-controls button { background:none; border:none; cursor:pointer; padding:6px 8px; border-radius:4px; font-size:12px; color:var(--text-main); transition:background 0.15s; }
 .zoom-controls button:hover { background:var(--bg-subtle); }
 .zoom-controls span { font-size:11px; font-weight:600; color:var(--text-muted); min-width:36px; text-align:center; }
-
-/* Command Palette (Ctrl+K) */
-.cmd-palette-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:9999; backdrop-filter:blur(2px); }
-.cmd-palette-overlay.active { display:flex; justify-content:center; padding-top:15vh; }
-.cmd-palette { background:var(--bg-white); border-radius:12px; width:500px; max-height:400px; box-shadow:0 20px 60px rgba(0,0,0,0.25); display:flex; flex-direction:column; animation:modalIn 0.1s ease-out; }
-.cmd-palette-input { padding:14px 16px; border:none; border-bottom:1px solid var(--border); font-size:14px; font-family:'Inter',sans-serif; outline:none; border-radius:12px 12px 0 0; }
-.cmd-palette-results { overflow-y:auto; flex:1; padding:6px; }
-.cmd-palette-item { padding:8px 12px; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:10px; font-size:13px; }
-.cmd-palette-item:hover, .cmd-palette-item.selected { background:var(--bg-subtle); }
-.cmd-palette-item i { width:20px; text-align:center; font-size:12px; }
-.cmd-palette-item .cmd-type { font-size:10px; color:var(--text-muted); margin-left:auto; }
-.cmd-palette-empty { padding:20px; text-align:center; color:var(--text-muted); font-size:13px; }
-
-/* Minimap */
-.minimap { position:absolute; bottom:16px; left:16px; width:160px; height:100px; background:var(--bg-white); border:1px solid var(--border); border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.08); z-index:10; overflow:hidden; }
-.minimap canvas { width:100%; height:100%; }
-.minimap-viewport { position:absolute; border:2px solid var(--primary); background:rgba(59,130,246,0.08); pointer-events:none; }
 .editor-config { display:none; }
 
 /* Modal de configuracao estilo N8N */
@@ -92,16 +75,13 @@
 .node-draggable.hidden { display:none; }
 
 #drawflow { width:100%; height:100%; }
-.drawflow .drawflow-node { border-radius:12px; border:2px solid var(--border); background:var(--bg-white); min-width:200px; max-width:240px; font-family:'Inter',sans-serif; font-size:12px; box-shadow:0 2px 12px rgba(0,0,0,0.06); transition:box-shadow 0.15s, border-color 0.15s; }
-.drawflow .drawflow-node:hover { box-shadow:0 4px 16px rgba(0,0,0,0.1); }
+.drawflow .drawflow-node { border-radius:10px; border:2px solid var(--border); background:var(--bg-white); min-width:180px; font-family:'Inter',sans-serif; font-size:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
 .drawflow .drawflow-node.selected { border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,.15); }
-.drawflow .drawflow-node .title-box { background:var(--bg-subtle,#f1f5f9); padding:10px 14px; font-weight:700; font-size:12px; border-radius:10px 10px 0 0; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
-.drawflow .drawflow-node .title-box i { font-size:14px; }
-.drawflow .drawflow-node .box { padding:8px 14px; font-size:11px; color:var(--text-muted); }
-.drawflow .connection .main-path { stroke:var(--primary); stroke-width:2; fill:none; }
-.drawflow .drawflow-node .input, .drawflow .drawflow-node .output { width:12px; height:12px; border-radius:50%; }
+.drawflow .drawflow-node .title-box { background:var(--bg-subtle,#f1f5f9); padding:8px 12px; font-weight:700; font-size:12px; border-radius:8px 8px 0 0; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:6px; }
+.drawflow .drawflow-node .box { padding:10px 12px; font-size:11px; color:var(--text-muted); }
+.drawflow .connection .main-path { stroke:var(--primary); stroke-width:2; }
+.drawflow .drawflow-node .input, .drawflow .drawflow-node .output { width:12px; height:12px; }
 .drawflow .drawflow-node .output { background:var(--primary); }
-.drawflow .drawflow-node .input { background:var(--border); }
 
 .drawflow .drawflow-node[data-tipo="entrada"] .title-box { background:#eff6ff; color:#1e40af; }
 .drawflow .drawflow-node[data-tipo="questao"] .title-box { background:#ecfeff; color:#155e75; }
@@ -113,16 +93,6 @@
 .drawflow .drawflow-node[data-tipo="ia_extrator"] .title-box { background:#f3e8ff; color:#6b21a8; }
 .drawflow .drawflow-node[data-tipo="ia_respondedor"] .title-box { background:#f3e8ff; color:#6b21a8; }
 .drawflow .drawflow-node[data-tipo="ia_agente"] .title-box { background:#f3e8ff; color:#6b21a8; }
-
-/* Status badges nos nos */
-.node-status { position:absolute; top:-6px; right:-6px; width:14px; height:14px; border-radius:50%; border:2px solid var(--bg-white); font-size:7px; display:flex; align-items:center; justify-content:center; color:#fff; z-index:5; }
-.node-status.ok { background:#22c55e; }
-.node-status.warn { background:#f59e0b; }
-.node-status.err { background:#ef4444; }
-
-/* Preview do conteudo no no */
-.drawflow .drawflow-node .box { padding:10px 12px; font-size:11px; color:var(--text-muted); max-height:40px; overflow:hidden; text-overflow:ellipsis; }
-.drawflow .drawflow-node .node-preview { font-size:10px; color:var(--text-muted); padding:0 12px 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px; }
 
 .config-group { margin-bottom:14px; }
 .config-group label { display:block; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; letter-spacing:.03em; }
@@ -242,9 +212,6 @@
     <!-- Canvas Drawflow -->
     <div class="editor-canvas">
         <div id="drawflow"></div>
-        <!-- Minimap -->
-        <div class="minimap" id="minimap"><canvas id="minimapCanvas"></canvas></div>
-
         <!-- Zoom Controls -->
         <div class="zoom-controls">
             <button onclick="editor.zoom_in()" title="Zoom In"><i class="fas fa-plus"></i></button>
@@ -256,14 +223,6 @@
 
     <!-- Config Panel (hidden, replaced by modal) -->
     <div class="editor-config" id="configPanel"></div>
-</div>
-
-<!-- Command Palette (Ctrl+K) -->
-<div class="cmd-palette-overlay" id="cmdPalette" onclick="if(event.target===this)fecharCmdPalette()">
-    <div class="cmd-palette">
-        <input type="text" class="cmd-palette-input" id="cmdInput" placeholder="Buscar no, adicionar no, ou navegar..." oninput="filtrarCmdPalette(this.value)">
-        <div class="cmd-palette-results" id="cmdResults"></div>
-    </div>
 </div>
 
 <!-- Modal de Configuracao do No -->
@@ -350,242 +309,6 @@ function updateDirtyIndicator() {
     const indicator = document.getElementById('dirtyIndicator');
     if (indicator) indicator.style.display = isDirty ? 'inline' : 'none';
 }
-
-// Validacao e preview dos nos
-function validarNodo(nodeId) {
-    const node = editor.getNodeFromId(nodeId);
-    if (!node || !node.data) return;
-    const el = document.querySelector('#node-' + nodeId);
-    if (!el) return;
-
-    const tipo = node.data.tipo;
-    const config = node.data.config || {};
-    let status = 'ok'; // ok, warn, err
-
-    // Regras de validacao por tipo
-    if (tipo === 'questao') {
-        if (!config.titulo) status = 'warn';
-    } else if (tipo === 'ia_respondedor') {
-        if (!config.integracao_ia_id) status = 'err';
-        else if (!config.system_prompt) status = 'warn';
-    } else if (tipo === 'ia_classificador') {
-        if (!config.integracao_ia_id) status = 'err';
-        else if (!config.categorias || config.categorias.length === 0) status = 'warn';
-    } else if (tipo === 'ia_extrator') {
-        if (!config.integracao_ia_id) status = 'err';
-        else if (!config.campos_extrair || config.campos_extrair.length === 0) status = 'warn';
-    } else if (tipo === 'ia_agente') {
-        if (!config.integracao_ia_id) status = 'err';
-        else if (!config.system_prompt) status = 'warn';
-    } else if (tipo === 'acao') {
-        if (node.data.subtipo === 'webhook' && !config.url) status = 'warn';
-        if (node.data.subtipo === 'mover_estagio' && !config.estagio) status = 'warn';
-    } else if (tipo === 'condicao') {
-        if (!config.campo || !config.valor) status = 'warn';
-    }
-
-    // Atualizar badge
-    let badge = el.querySelector('.node-status');
-    if (!badge) {
-        badge = document.createElement('div');
-        badge.className = 'node-status';
-        el.style.position = 'relative';
-        el.appendChild(badge);
-    }
-    badge.className = 'node-status ' + status;
-    badge.innerHTML = status === 'ok' ? '<i class="fas fa-check"></i>' : status === 'warn' ? '!' : '<i class="fas fa-times"></i>';
-
-    // Atualizar preview do conteudo
-    atualizarPreview(nodeId, node);
-}
-
-function atualizarPreview(nodeId, node) {
-    const el = document.querySelector('#node-' + nodeId);
-    if (!el) return;
-    const config = node.data.config || {};
-    const tipo = node.data.tipo;
-    let preview = '';
-
-    if (tipo === 'questao') {
-        preview = (config.titulo || '').substring(0, 40);
-    } else if (tipo === 'ia_respondedor' || tipo === 'ia_agente') {
-        preview = (config.system_prompt || '').substring(0, 40);
-    } else if (tipo === 'ia_classificador') {
-        preview = (config.categorias || []).join(', ').substring(0, 40);
-    } else if (tipo === 'acao') {
-        if (node.data.subtipo === 'mover_estagio') preview = config.estagio || '';
-        else if (node.data.subtipo === 'criar_oportunidade') preview = (config.titulo || '').substring(0, 30);
-        else if (node.data.subtipo === 'webhook') preview = (config.url || '').substring(0, 30);
-    } else if (tipo === 'condicao') {
-        preview = (config.campo || '') + ' ' + (config.operador || '') + ' ' + (config.valor || '');
-    } else if (tipo === 'finalizacao') {
-        preview = (config.mensagem_final || '').substring(0, 40);
-    }
-
-    let previewEl = el.querySelector('.node-preview');
-    if (preview) {
-        if (!previewEl) {
-            previewEl = document.createElement('div');
-            previewEl.className = 'node-preview';
-            el.appendChild(previewEl);
-        }
-        previewEl.textContent = preview + (preview.length >= 40 ? '...' : '');
-    } else if (previewEl) {
-        previewEl.remove();
-    }
-}
-
-function validarTodosNodos() {
-    const exported = editor.export();
-    for (const [mk, mv] of Object.entries(exported.drawflow || {})) {
-        for (const nodeId of Object.keys(mv.data || {})) {
-            validarNodo(nodeId);
-        }
-    }
-}
-
-// ── Command Palette (Ctrl+K) ──
-const cmdNodeTypes = [
-    {tipo:'questao', subtipo:'texto', nome:'Texto', icon:'fa-comment-dots', color:'#0891b2'},
-    {tipo:'questao', subtipo:'select', nome:'Selecao', icon:'fa-list', color:'#0891b2'},
-    {tipo:'condicao', subtipo:'campo_check', nome:'Verificar Campo', icon:'fa-code-branch', color:'#d97706'},
-    {tipo:'acao', subtipo:'criar_oportunidade', nome:'Criar Oportunidade', icon:'fa-funnel-dollar', color:'#8b5cf6'},
-    {tipo:'acao', subtipo:'webhook', nome:'Webhook', icon:'fa-plug', color:'#64748b'},
-    {tipo:'acao', subtipo:'criar_tarefa', nome:'Criar Tarefa', icon:'fa-tasks', color:'#3b82f6'},
-    {tipo:'acao', subtipo:'mover_estagio', nome:'Mover Estagio', icon:'fa-columns', color:'#8b5cf6'},
-    {tipo:'ia_classificador', subtipo:'ia_classificador', nome:'Classificador IA', icon:'fa-tags', color:'#8b5cf6'},
-    {tipo:'ia_extrator', subtipo:'ia_extrator', nome:'Extrator IA', icon:'fa-search', color:'#8b5cf6'},
-    {tipo:'ia_respondedor', subtipo:'ia_respondedor', nome:'Respondedor IA', icon:'fa-comment-dots', color:'#8b5cf6'},
-    {tipo:'ia_agente', subtipo:'ia_agente', nome:'Agente IA', icon:'fa-robot', color:'#8b5cf6'},
-    {tipo:'delay', subtipo:'delay', nome:'Atraso', icon:'fa-clock', color:'#7c3aed'},
-    {tipo:'finalizacao', subtipo:'finalizar', nome:'Finalizar Fluxo', icon:'fa-stop-circle', color:'#e11d48'},
-];
-
-function abrirCmdPalette() {
-    document.getElementById('cmdPalette').classList.add('active');
-    const input = document.getElementById('cmdInput');
-    input.value = '';
-    input.focus();
-    filtrarCmdPalette('');
-}
-
-function fecharCmdPalette() {
-    document.getElementById('cmdPalette').classList.remove('active');
-}
-
-function filtrarCmdPalette(query) {
-    const results = document.getElementById('cmdResults');
-    const q = query.toLowerCase().trim();
-    let html = '';
-
-    // Nós existentes no canvas
-    const exported = editor.export();
-    for (const [mk, mv] of Object.entries(exported.drawflow || {})) {
-        for (const [nodeId, node] of Object.entries(mv.data || {})) {
-            const nome = node.data?.nome || node.data?.tipo || '';
-            const titulo = (node.data?.config?.titulo || '').substring(0, 50);
-            const label = nome + (titulo ? ': ' + titulo : '');
-            if (!q || label.toLowerCase().includes(q)) {
-                html += `<div class="cmd-palette-item" onclick="navegarParaNo('${nodeId}')">
-                    <i class="fas fa-circle" style="color:var(--primary);font-size:8px;"></i>
-                    <span>${label}</span>
-                    <span class="cmd-type">Navegar</span>
-                </div>`;
-            }
-        }
-    }
-
-    // Nós para adicionar
-    if (html) html += '<div style="border-top:1px solid var(--border);margin:4px 0;"></div>';
-    for (const nt of cmdNodeTypes) {
-        if (!q || nt.nome.toLowerCase().includes(q)) {
-            html += `<div class="cmd-palette-item" onclick="adicionarNoDaPalette('${nt.tipo}','${nt.subtipo}','${nt.nome}')">
-                <i class="fas ${nt.icon}" style="color:${nt.color};"></i>
-                <span>${nt.nome}</span>
-                <span class="cmd-type">+ Adicionar</span>
-            </div>`;
-        }
-    }
-
-    if (!html) html = '<div class="cmd-palette-empty">Nenhum resultado</div>';
-    results.innerHTML = html;
-}
-
-function navegarParaNo(nodeId) {
-    fecharCmdPalette();
-    const node = editor.getNodeFromId(nodeId);
-    if (!node) return;
-    // Centralizar no canvas
-    const container = document.getElementById('drawflow');
-    const rect = container.getBoundingClientRect();
-    const el = document.querySelector('#node-' + nodeId);
-    if (el) {
-        el.classList.add('selected');
-        el.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});
-        selectedNodeId = nodeId;
-    }
-}
-
-function adicionarNoDaPalette(tipo, subtipo, nome) {
-    fecharCmdPalette();
-    addNodeToEditor(tipo, subtipo, nome, 400, 300);
-    saveSnapshot();
-}
-
-// ── Minimap ──
-function atualizarMinimap() {
-    const canvas = document.getElementById('minimapCanvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    canvas.width = 160;
-    canvas.height = 100;
-    ctx.clearRect(0, 0, 160, 100);
-
-    const nodes = document.querySelectorAll('.drawflow-node');
-    if (!nodes.length) return;
-
-    // Calcular bounds
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    nodes.forEach(n => {
-        const x = parseInt(n.style.left) || 0;
-        const y = parseInt(n.style.top) || 0;
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x + 200);
-        maxY = Math.max(maxY, y + 80);
-    });
-
-    const rangeX = (maxX - minX) || 1;
-    const rangeY = (maxY - minY) || 1;
-    const scaleX = 150 / rangeX;
-    const scaleY = 90 / rangeY;
-    const scale = Math.min(scaleX, scaleY);
-
-    nodes.forEach(n => {
-        const x = ((parseInt(n.style.left) || 0) - minX) * scale + 5;
-        const y = ((parseInt(n.style.top) || 0) - minY) * scale + 5;
-        const tipo = n.getAttribute('data-tipo') || '';
-        const colors = {
-            'entrada':'#3b82f6', 'questao':'#0891b2', 'condicao':'#d97706',
-            'acao':'#059669', 'delay':'#7c3aed', 'finalizacao':'#e11d48',
-            'ia_classificador':'#8b5cf6', 'ia_extrator':'#8b5cf6',
-            'ia_respondedor':'#8b5cf6', 'ia_agente':'#8b5cf6',
-        };
-        ctx.fillStyle = colors[tipo] || '#94a3b8';
-        ctx.fillRect(x, y, Math.max(10, 200 * scale), Math.max(4, 40 * scale));
-    });
-}
-
-// Atualizar minimap periodicamente
-setInterval(atualizarMinimap, 2000);
-setTimeout(atualizarMinimap, 1000);
-
-// Auto-save a cada 30 segundos
-setInterval(() => {
-    if (isDirty) {
-        salvarFluxo();
-    }
-}, 30000);
 
 // Integracoes de IA disponiveis
 const integracoesIA = {{ integracoes_ia|safe }};
@@ -1192,8 +915,6 @@ function salvarConfigNodo() {
 
     data.config = config;
     editor.updateNodeDataFromId(selectedNodeId, data);
-    validarNodo(selectedNodeId);
-    saveSnapshot();
 }
 
 function duplicarNodo() {
@@ -1460,7 +1181,6 @@ if (fluxoSalvo && fluxoSalvo.drawflow) {
                     if (!isNaN(num) && num > nodeCounter) nodeCounter = num;
                 }
             }
-            validarTodosNodos();
         }, 100);
     } catch(e) {
         console.warn('Erro ao importar fluxo:', e);
@@ -1489,8 +1209,6 @@ if (fluxoSalvo && fluxoSalvo.drawflow) {
                 let inputClass = 'input_1';
                 if (conn.tipo_saida === 'false') {
                     outputClass = 'output_2';
-                } else if (conn.tipo_saida === 'true' || conn.tipo_saida === 'default') {
-                    outputClass = 'output_1';
                 }
                 try {
                     editor.addConnection(origemId, destinoId, outputClass, inputClass);
@@ -1501,7 +1219,7 @@ if (fluxoSalvo && fluxoSalvo.drawflow) {
         }
     }, 200);
 
-    // Re-aplicar data-tipo apos tudo carregado + validar
+    // Re-aplicar data-tipo apos tudo carregado
     setTimeout(() => {
         for (const nodo of nodosDB) {
             const drawflowId = idMap[nodo.id];
@@ -1510,7 +1228,6 @@ if (fluxoSalvo && fluxoSalvo.drawflow) {
                 if (el) el.setAttribute('data-tipo', nodo.tipo);
             }
         }
-        validarTodosNodos();
     }, 500);
 }
 
@@ -1535,9 +1252,6 @@ document.addEventListener('keydown', function(e) {
     } else if (e.ctrlKey && e.key === 'd' && selectedNodeId && !modalOpen) {
         e.preventDefault();
         duplicarNodo();
-    } else if (e.ctrlKey && e.key === 'k') {
-        e.preventDefault();
-        abrirCmdPalette();
     }
 });
 
