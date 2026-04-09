@@ -8,7 +8,46 @@
 .editor-layout { display:flex; height:calc(100vh - 160px); }
 .editor-sidebar { width:240px; background:var(--bg-white); border:1px solid var(--border); border-radius:10px 0 0 10px; overflow-y:auto; padding:16px; flex-shrink:0; }
 .editor-canvas { flex:1; position:relative; background:#f8fafc; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
-.editor-config { width:320px; background:var(--bg-white); border:1px solid var(--border); border-radius:0 10px 10px 0; overflow-y:auto; padding:16px; display:none; flex-shrink:0; }
+.editor-config { display:none; }
+
+/* Modal de configuracao estilo N8N */
+.node-modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:9998; backdrop-filter:blur(2px); }
+.node-modal-overlay.active { display:flex; align-items:center; justify-content:center; }
+.node-modal { background:var(--bg-white); border-radius:12px; width:640px; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.25); animation:modalIn 0.15s ease-out; }
+@keyframes modalIn { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+.node-modal-header { display:flex; align-items:center; gap:12px; padding:16px 24px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.node-modal-header .node-modal-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:15px; }
+.node-modal-header h3 { font-size:16px; font-weight:700; margin:0; flex:1; color:var(--text-main); }
+.node-modal-header .node-modal-close { background:none; border:none; cursor:pointer; font-size:22px; color:var(--text-muted); padding:4px 8px; border-radius:6px; line-height:1; }
+.node-modal-header .node-modal-close:hover { background:var(--bg-subtle); color:var(--text-main); }
+
+/* Tabs do modal */
+.node-modal-tabs { display:flex; border-bottom:1px solid var(--border); padding:0 24px; flex-shrink:0; background:var(--bg-subtle,#f8fafc); }
+.node-modal-tab { padding:10px 16px; font-size:12px; font-weight:600; color:var(--text-muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all 0.15s; }
+.node-modal-tab:hover { color:var(--text-main); }
+.node-modal-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+
+/* Corpo do modal */
+.node-modal-body { padding:24px; overflow-y:auto; flex:1; }
+.node-modal-tab-content { display:none; }
+.node-modal-tab-content.active { display:block; }
+.node-modal-body .config-group { margin-bottom:16px; }
+.node-modal-body .config-group label { display:block; font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.4px; }
+.node-modal-body .config-group input,
+.node-modal-body .config-group select,
+.node-modal-body .config-group textarea { width:100%; padding:9px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-family:'Inter',sans-serif; box-sizing:border-box; background:var(--bg-white); transition:border-color 0.15s; }
+.node-modal-body .config-group input:focus,
+.node-modal-body .config-group select:focus,
+.node-modal-body .config-group textarea:focus { border-color:var(--primary); outline:none; box-shadow:0 0 0 3px rgba(59,130,246,0.08); }
+.node-modal-body .config-group textarea { resize:vertical; min-height:60px; }
+.node-modal-body .config-hint { font-size:11px; color:var(--text-muted); margin-top:4px; line-height:1.4; }
+.node-modal-body .config-section { font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; margin:20px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+.node-modal-body .config-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+/* Footer do modal */
+.node-modal-footer { padding:14px 24px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-shrink:0; background:var(--bg-subtle,#f8fafc); border-radius:0 0 12px 12px; }
+.node-modal-footer .btn-delete { background:none; border:1px solid var(--danger); color:var(--danger); padding:7px 16px; border-radius:8px; font-size:12px; cursor:pointer; font-weight:600; transition:all 0.15s; }
+.node-modal-footer .btn-delete:hover { background:var(--danger); color:#fff; }
 
 .editor-toolbar { display:flex; align-items:center; gap:12px; padding:10px 16px; background:var(--bg-white); border:1px solid var(--border); border-radius:10px; margin-bottom:14px; }
 .editor-toolbar h2 { font-size:15px; font-weight:700; color:var(--text-main); flex:1; margin:0; }
@@ -166,13 +205,24 @@
         <div id="drawflow"></div>
     </div>
 
-    <!-- Config Panel -->
-    <div class="editor-config" id="configPanel">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <h3 style="font-size:14px;font-weight:700;margin:0;" id="configTitle">Configuracao</h3>
-            <button onclick="fecharConfig()" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-muted);">&times;</button>
+    <!-- Config Panel (hidden, replaced by modal) -->
+    <div class="editor-config" id="configPanel"></div>
+</div>
+
+<!-- Modal de Configuracao do No -->
+<div class="node-modal-overlay" id="nodeModalOverlay" onclick="if(event.target===this)fecharConfig()">
+    <div class="node-modal">
+        <div class="node-modal-header">
+            <div class="node-modal-icon" id="nodeModalIcon"></div>
+            <h3 id="configTitle">Configuracao</h3>
+            <button class="node-modal-close" onclick="fecharConfig()">&times;</button>
         </div>
-        <div id="configBody"></div>
+        <div class="node-modal-tabs" id="nodeModalTabs"></div>
+        <div class="node-modal-body" id="configBody"></div>
+        <div class="node-modal-footer">
+            <button class="btn-delete" onclick="deletarNodo()"><i class="fas fa-trash"></i> Excluir</button>
+            <button class="btn-primary" style="padding:7px 24px;font-size:12px;border-radius:8px;font-weight:600;" onclick="fecharConfig()">Fechar</button>
+        </div>
     </div>
 </div>
 
@@ -289,20 +339,71 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
 // ── Selecao e Config ──
 editor.on('nodeSelected', function(nodeId) {
     selectedNodeId = nodeId;
+});
+
+// Double-click para abrir modal de config (estilo N8N)
+document.getElementById('drawflow').addEventListener('dblclick', function(e) {
+    const nodeEl = e.target.closest('.drawflow-node');
+    if (!nodeEl) return;
+    const nodeId = nodeEl.id.replace('node-', '');
+    selectedNodeId = nodeId;
     const node = editor.getNodeFromId(nodeId);
-    abrirConfig(nodeId, node.data);
+    if (node) abrirConfig(nodeId, node.data);
 });
 
 editor.on('nodeUnselected', function() {
-    selectedNodeId = null;
+    // Nao limpar selectedNodeId se o modal estiver aberto
+    if (!document.getElementById('nodeModalOverlay').classList.contains('active')) {
+        selectedNodeId = null;
+    }
 });
 
 function abrirConfig(nodeId, data) {
-    const panel = document.getElementById('configPanel');
+    const overlay = document.getElementById('nodeModalOverlay');
     const body = document.getElementById('configBody');
     const title = document.getElementById('configTitle');
-    panel.style.display = 'block';
+    const iconEl = document.getElementById('nodeModalIcon');
+
+    // Cores e icones por tipo
+    const tipoStyles = {
+        'entrada': {bg:'#eff6ff', color:'#1e40af', icon:'fa-play-circle'},
+        'questao': {bg:'#ecfeff', color:'#155e75', icon:'fa-comment-dots'},
+        'condicao': {bg:'#fef3c7', color:'#92400e', icon:'fa-code-branch'},
+        'acao': {bg:'#ecfdf5', color:'#065f46', icon:'fa-play'},
+        'delay': {bg:'#f5f3ff', color:'#5b21b6', icon:'fa-clock'},
+        'finalizacao': {bg:'#fff1f2', color:'#9f1239', icon:'fa-flag-checkered'},
+        'ia_classificador': {bg:'#f3e8ff', color:'#6b21a8', icon:'fa-tags'},
+        'ia_extrator': {bg:'#f3e8ff', color:'#6b21a8', icon:'fa-search'},
+        'ia_respondedor': {bg:'#f3e8ff', color:'#6b21a8', icon:'fa-comment-dots'},
+        'ia_agente': {bg:'#f3e8ff', color:'#6b21a8', icon:'fa-robot'},
+    };
+    const style = tipoStyles[data.tipo] || {bg:'#f1f5f9', color:'#334155', icon:'fa-cog'};
+    iconEl.style.background = style.bg;
+    iconEl.style.color = style.color;
+    iconEl.innerHTML = `<i class="fas ${style.icon}"></i>`;
     title.textContent = data.nome || 'Configuracao';
+
+    // Gerar tabs baseado no tipo
+    const tabsEl = document.getElementById('nodeModalTabs');
+    const tabsConfig = {
+        'questao': ['Mensagem', 'Resposta', 'IA', 'Avancado'],
+        'ia_respondedor': ['Configuracao'],
+        'ia_classificador': ['Configuracao'],
+        'ia_extrator': ['Configuracao'],
+        'ia_agente': ['Configuracao', 'Tools'],
+    };
+    const tabs = tabsConfig[data.tipo] || ['Configuracao'];
+    if (tabs.length > 1) {
+        tabsEl.innerHTML = tabs.map((t, i) =>
+            `<div class="node-modal-tab ${i===0?'active':''}" onclick="switchModalTab(this, 'modal-tab-${i}')">${t}</div>`
+        ).join('');
+        tabsEl.style.display = 'flex';
+    } else {
+        tabsEl.innerHTML = '';
+        tabsEl.style.display = 'none';
+    }
+
+    overlay.classList.add('active');
 
     const config = data.config || {};
     let html = '';
@@ -358,22 +459,68 @@ function abrirConfig(nodeId, data) {
         const isSelect = subtipo === 'select';
 
         html = `
-        <div class="config-group"><label>Modelo Pronto</label><select id="cfg_modelo" onchange="aplicarModelo()">${modeloOpts}</select></div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
-        <div class="config-group"><label>Titulo da Pergunta</label><input type="text" id="cfg_titulo" value="${config.titulo||''}" onchange="salvarConfigNodo()"></div>
-        <div class="config-group"><label>Descricao / Instrucoes</label><textarea id="cfg_descricao" onchange="salvarConfigNodo()">${config.descricao||''}</textarea></div>
-        ${isSelect ? `<div class="config-group"><label>Opcoes (uma por linha)</label><textarea id="cfg_opcoes" rows="4" onchange="salvarConfigNodo()" placeholder="Opcao 1&#10;Opcao 2&#10;Opcao 3">${(config.opcoes_resposta||[]).join('\\n')}</textarea></div>` : ''}
-        <div class="config-group"><label>Validacao</label><select id="cfg_validacao" onchange="salvarConfigNodo()">${validacaoOpts}</select></div>
-        <div class="config-group"><label>Regex (opcional)</label><input type="text" id="cfg_regex" value="${config.regex||''}" onchange="salvarConfigNodo()" placeholder="Ex: ^[A-Za-z ]{3,}$"></div>
-        <div class="config-group"><label>Salvar Resposta Em</label><select id="cfg_salvar_em" onchange="salvarConfigNodo()">${salvarOpts}</select></div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
-        <div class="config-group"><label>Espera Resposta?</label><select id="cfg_espera_resposta" onchange="salvarConfigNodo()"><option value="true" ${config.espera_resposta!==false?'selected':''}>Sim (pausa e aguarda)</option><option value="false" ${config.espera_resposta===false?'selected':''}>Nao (envia e continua)</option></select></div>
-        <div class="config-group"><label>Max Tentativas</label><input type="number" id="cfg_max_tent" value="${config.max_tentativas||3}" min="1" max="10" onchange="salvarConfigNodo()"></div>
-        <div class="config-group"><label>Mensagem de Erro</label><input type="text" id="cfg_msg_erro" value="${config.mensagem_erro||''}" onchange="salvarConfigNodo()" placeholder="Resposta invalida. Tente novamente."></div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
-        <div class="config-group"><label>Webhook de Validacao (URL)</label><input type="url" id="cfg_webhook_val" value="${config.webhook_validacao||''}" onchange="salvarConfigNodo()" placeholder="https://n8n.exemplo.com/webhook/..."></div>
-        <div class="config-group"><label>Prompt de Validacao</label><textarea id="cfg_prompt_val" rows="3" onchange="salvarConfigNodo()" placeholder="Verifique se a resposta contem nome e sobrenome...">${config.prompt_validacao||''}</textarea></div>
-        <div class="config-group"><label>Integracao IA</label><select id="cfg_integracao_ia" onchange="salvarConfigNodo()"><option value="">Nenhuma (usar webhook)</option>${integracoesIAOpts}</select></div>
+        <!-- Tab Mensagem -->
+        <div class="node-modal-tab-content active" id="modal-tab-0">
+            <div class="config-group"><label>Modelo Pronto</label><select id="cfg_modelo" onchange="aplicarModelo()">${modeloOpts}</select></div>
+            <div class="config-group"><label>Titulo da Pergunta</label><input type="text" id="cfg_titulo" value="${config.titulo||''}" onchange="salvarConfigNodo()"></div>
+            <div class="config-group"><label>Descricao / Instrucoes</label><textarea id="cfg_descricao" rows="3" onchange="salvarConfigNodo()" placeholder="Texto adicional ou instrucoes para o usuario...">${config.descricao||''}</textarea></div>
+            ${isSelect ? `<div class="config-group"><label>Opcoes (uma por linha)</label><textarea id="cfg_opcoes" rows="4" onchange="salvarConfigNodo()" placeholder="Opcao 1&#10;Opcao 2&#10;Opcao 3">${(config.opcoes_resposta||[]).join('\\n')}</textarea></div>` : ''}
+        </div>
+
+        <!-- Tab Resposta -->
+        <div class="node-modal-tab-content" id="modal-tab-1">
+            <div class="config-group"><label>Espera Resposta?</label><select id="cfg_espera_resposta" onchange="salvarConfigNodo()"><option value="true" ${config.espera_resposta!==false?'selected':''}>Sim (pausa e aguarda)</option><option value="false" ${config.espera_resposta===false?'selected':''}>Nao (envia e continua)</option></select></div>
+            <div class="config-row">
+                <div class="config-group"><label>Validacao</label><select id="cfg_validacao" onchange="salvarConfigNodo()">${validacaoOpts}</select></div>
+                <div class="config-group"><label>Salvar Resposta Em</label><select id="cfg_salvar_em" onchange="salvarConfigNodo()">${salvarOpts}</select></div>
+            </div>
+            <div class="config-group"><label>Regex (opcional)</label><input type="text" id="cfg_regex" value="${config.regex||''}" onchange="salvarConfigNodo()" placeholder="Ex: ^[A-Za-z ]{3,}$"></div>
+            <div class="config-row">
+                <div class="config-group"><label>Max Tentativas</label><input type="number" id="cfg_max_tent" value="${config.max_tentativas||3}" min="1" max="10" onchange="salvarConfigNodo()"></div>
+                <div class="config-group"><label>Mensagem de Erro</label><input type="text" id="cfg_msg_erro" value="${config.mensagem_erro||''}" onchange="salvarConfigNodo()" placeholder="Resposta invalida."></div>
+            </div>
+        </div>
+
+        <!-- Tab IA -->
+        <div class="node-modal-tab-content" id="modal-tab-2">
+            <div class="config-group"><label>Integracao IA</label><select id="cfg_integracao_ia" onchange="toggleIAFields();salvarConfigNodo()"><option value="">Desativada</option>${getIAOpts(config.integracao_ia_id)}</select></div>
+            <div id="cfg_ia_fields" style="display:${config.integracao_ia_id ? 'block' : 'none'};">
+                <div class="config-row">
+                    <div class="config-group"><label>Modelo</label><input type="text" id="cfg_ia_modelo_q" value="${config.ia_modelo||''}" onchange="salvarConfigNodo()" placeholder="gpt-4o-mini"></div>
+                    <div class="config-group"><label>Acao da IA</label>
+                        <select id="cfg_ia_acao" onchange="toggleIAActionFields();salvarConfigNodo()">
+                            <option value="validar" ${(config.ia_acao||'validar')==='validar'?'selected':''}>Apenas validar</option>
+                            <option value="classificar" ${config.ia_acao==='classificar'?'selected':''}>Classificar resposta</option>
+                            <option value="extrair" ${config.ia_acao==='extrair'?'selected':''}>Extrair dados</option>
+                            <option value="classificar_extrair" ${config.ia_acao==='classificar_extrair'?'selected':''}>Classificar + Extrair</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="config-group"><label>Prompt IA</label><textarea id="cfg_prompt_val" rows="3" onchange="salvarConfigNodo()" placeholder="Analise a resposta do usuario e...">${config.prompt_validacao||''}</textarea></div>
+                <div id="cfg_ia_classificar_fields" style="display:${config.ia_acao==='classificar'||config.ia_acao==='classificar_extrair'?'block':'none'};">
+                    <div class="config-row">
+                        <div class="config-group"><label>Categorias (uma por linha)</label><textarea id="cfg_ia_categorias_q" rows="3" onchange="salvarConfigNodo()" placeholder="interesse&#10;duvida&#10;reclamacao">${(config.ia_categorias||[]).join('\\n')}</textarea></div>
+                        <div class="config-group"><label>Variavel de Saida</label><input type="text" id="cfg_ia_var_saida_q" value="${config.ia_variavel_saida||'classificacao'}" onchange="salvarConfigNodo()" placeholder="classificacao">
+                        <div class="config-hint">Disponivel como condicao: var.classificacao</div></div>
+                    </div>
+                </div>
+                <div id="cfg_ia_extrair_fields" style="display:${config.ia_acao==='extrair'||config.ia_acao==='classificar_extrair'?'block':'none'};">
+                    <div class="config-group"><label>Campos para Extrair</label>
+                        <div id="cfg_ext_campos">${(config.ia_campos_extrair||[]).map(c => _renderCampoExtrator(c)).join('')}</div>
+                        <button onclick="adicionarCampoExtrator()" style="font-size:11px;margin-top:6px;padding:5px 10px;cursor:pointer;" class="btn-secondary"><i class="fas fa-plus"></i> Adicionar campo</button>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;" onclick="var cb=this.querySelector('input');cb.checked=!cb.checked;salvarConfigNodo();">
+                        <input type="checkbox" id="cfg_ia_salvar_lead_q" ${config.ia_salvar_no_lead?'checked':''} onchange="salvarConfigNodo()" onclick="event.stopPropagation()" style="width:auto;margin:0;">
+                        <span style="font-size:13px;color:var(--text-main);text-transform:none;font-weight:500;letter-spacing:0;">Salvar automaticamente no lead/oportunidade</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Avancado -->
+        <div class="node-modal-tab-content" id="modal-tab-3">
+            <div class="config-group"><label>Webhook de Validacao (URL)</label><input type="url" id="cfg_webhook_val" value="${config.webhook_validacao||''}" onchange="salvarConfigNodo()" placeholder="https://n8n.exemplo.com/webhook/..."></div>
+        </div>
         `;
     } else if (data.tipo === 'condicao') {
         html = `
@@ -486,16 +633,28 @@ function abrirConfig(nodeId, data) {
             <div id="cfg_ext_campos">${camposHtml}</div>
             <button onclick="adicionarCampoExtrator()" style="font-size:11px;margin-top:4px;padding:4px 8px;cursor:pointer;" class="btn-secondary"><i class="fas fa-plus"></i> Adicionar campo</button>
         </div>
-        <div class="config-group"><label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" id="cfg_ia_salvar_lead" ${config.salvar_no_lead?'checked':''} onchange="salvarConfigNodo()"> Salvar automaticamente no lead</label></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;" onclick="var cb=this.querySelector('input');cb.checked=!cb.checked;salvarConfigNodo();">
+            <input type="checkbox" id="cfg_ia_salvar_lead" ${config.salvar_no_lead?'checked':''} onchange="salvarConfigNodo()" onclick="event.stopPropagation()" style="width:auto;margin:0;">
+            <span style="font-size:13px;color:var(--text-main);text-transform:none;font-weight:500;">Salvar automaticamente no lead</span>
+        </div>
         `;
     } else if (data.tipo === 'ia_respondedor') {
         html = `
-        <div class="config-group"><label>Integracao IA</label><select id="cfg_ia_integracao" onchange="salvarConfigNodo()"><option value="">Selecione...</option>${getIAOpts(config.integracao_ia_id)}</select></div>
-        <div class="config-group"><label>Modelo</label><input type="text" id="cfg_ia_modelo" value="${config.modelo||''}" onchange="salvarConfigNodo()" placeholder="gpt-4o, claude-sonnet-4-20250514..."></div>
-        <div class="config-group"><label>System Prompt</label><textarea id="cfg_ia_system_prompt" rows="6" onchange="salvarConfigNodo()" placeholder="Voce e o Pedro, consultor da FATEPI...">${config.system_prompt||''}</textarea></div>
-        <p style="font-size:11px;color:var(--text-muted);margin:0 0 8px;">Variaveis: {% verbatim %}{{lead_nome}}, {{lead_telefone}}, {{classificacao}}, {{curso}}{% endverbatim %}, etc.</p>
-        <div class="config-group"><label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" id="cfg_ia_historico" ${config.incluir_historico!==false?'checked':''} onchange="salvarConfigNodo()"> Incluir historico da conversa</label></div>
-        <div class="config-group"><label>Max Mensagens no Historico</label><input type="number" id="cfg_ia_max_hist" value="${config.max_historico||10}" min="1" max="50" onchange="salvarConfigNodo()"></div>
+        <div class="config-row">
+            <div class="config-group"><label>Integracao IA</label><select id="cfg_ia_integracao" onchange="salvarConfigNodo()"><option value="">Selecione...</option>${getIAOpts(config.integracao_ia_id)}</select></div>
+            <div class="config-group"><label>Modelo</label><input type="text" id="cfg_ia_modelo" value="${config.modelo||''}" onchange="salvarConfigNodo()" placeholder="gpt-4o-mini"></div>
+        </div>
+        <div class="config-group"><label>System Prompt</label><textarea id="cfg_ia_system_prompt" rows="8" onchange="salvarConfigNodo()" placeholder="Voce e o Pedro, consultor da FATEPI...">${config.system_prompt||''}</textarea>
+            <div class="config-hint">{% verbatim %}Variaveis disponiveis: {{lead_nome}}, {{lead_telefone}}, {{classificacao}}, {{curso}}, etc.{% endverbatim %}</div>
+        </div>
+        <div class="config-section">Historico</div>
+        <div class="config-row">
+            <div style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="var cb=this.querySelector('input');cb.checked=!cb.checked;salvarConfigNodo();">
+                <input type="checkbox" id="cfg_ia_historico" ${config.incluir_historico!==false?'checked':''} onchange="salvarConfigNodo()" onclick="event.stopPropagation()" style="width:auto;margin:0;">
+                <span style="font-size:13px;color:var(--text-main);text-transform:none;font-weight:500;">Incluir historico</span>
+            </div>
+            <div class="config-group"><label>Max Mensagens</label><input type="number" id="cfg_ia_max_hist" value="${config.max_historico||10}" min="1" max="50" onchange="salvarConfigNodo()"></div>
+        </div>
         `;
     } else if (data.tipo === 'ia_agente') {
         const toolsDisponiveis = [
@@ -539,8 +698,7 @@ function abrirConfig(nodeId, data) {
         html = `<p style="font-size:13px;color:var(--text-muted);">Conecte ao proximo no.</p>`;
     }
 
-    // Botao deletar
-    html += `<div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border);"><button onclick="deletarNodo()" class="btn-danger" style="width:100%;padding:8px;font-size:12px;"><i class="fas fa-trash"></i> Excluir No</button></div>`;
+    // Botao deletar agora esta no footer do modal
 
     body.innerHTML = html;
 }
@@ -568,6 +726,25 @@ function salvarConfigNodo() {
         config.webhook_validacao = document.getElementById('cfg_webhook_val')?.value || '';
         config.prompt_validacao = document.getElementById('cfg_prompt_val')?.value || '';
         config.integracao_ia_id = document.getElementById('cfg_integracao_ia')?.value || '';
+        // Campos IA integrados na questao
+        config.ia_modelo = document.getElementById('cfg_ia_modelo_q')?.value || '';
+        config.ia_acao = document.getElementById('cfg_ia_acao')?.value || 'validar';
+        const catEl = document.getElementById('cfg_ia_categorias_q');
+        if (catEl) config.ia_categorias = catEl.value.split('\n').map(c => c.trim()).filter(c => c);
+        config.ia_variavel_saida = document.getElementById('cfg_ia_var_saida_q')?.value || 'classificacao';
+        config.ia_salvar_no_lead = document.getElementById('cfg_ia_salvar_lead_q')?.checked || false;
+        const camposRows = document.querySelectorAll('#cfg_ext_campos .cfg_ext_row');
+        if (camposRows.length) {
+            config.ia_campos_extrair = [];
+            camposRows.forEach(row => {
+                const select = row.querySelector('.cfg_ext_nome');
+                const customInput = row.querySelector('.cfg_ext_custom');
+                const desc = row.querySelector('.cfg_ext_desc')?.value?.trim() || '';
+                let nome = select?.value || '';
+                if (nome === '_custom' && customInput) nome = customInput.value?.trim() || '';
+                if (nome && nome !== '_custom') config.ia_campos_extrair.push({nome, descricao: desc, tipo: 'string'});
+            });
+        }
     } else if (data.tipo === 'condicao') {
         let campo = document.getElementById('cfg_campo')?.value || '';
         if (campo === 'var.custom') {
@@ -645,7 +822,7 @@ function salvarConfigNodo() {
 }
 
 function fecharConfig() {
-    document.getElementById('configPanel').style.display = 'none';
+    document.getElementById('nodeModalOverlay').classList.remove('active');
     selectedNodeId = null;
 }
 
@@ -724,6 +901,28 @@ function onCampoExtratorChange(select) {
         descInput.value = _getDescPadrao(select.value);
     }
     salvarConfigNodo();
+}
+
+function switchModalTab(tabEl, tabId) {
+    document.querySelectorAll('.node-modal-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.node-modal-tab-content').forEach(t => t.classList.remove('active'));
+    tabEl.classList.add('active');
+    const target = document.getElementById(tabId);
+    if (target) target.classList.add('active');
+}
+
+function toggleIAFields() {
+    const val = document.getElementById('cfg_integracao_ia')?.value;
+    const fields = document.getElementById('cfg_ia_fields');
+    if (fields) fields.style.display = val ? 'block' : 'none';
+}
+
+function toggleIAActionFields() {
+    const acao = document.getElementById('cfg_ia_acao')?.value || 'validar';
+    const classFields = document.getElementById('cfg_ia_classificar_fields');
+    const extrFields = document.getElementById('cfg_ia_extrair_fields');
+    if (classFields) classFields.style.display = (acao === 'classificar' || acao === 'classificar_extrair') ? 'block' : 'none';
+    if (extrFields) extrFields.style.display = (acao === 'extrair' || acao === 'classificar_extrair') ? 'block' : 'none';
 }
 
 function adicionarCampoExtrator() {
@@ -900,7 +1099,9 @@ if (fluxoSalvo && fluxoSalvo.drawflow) {
 
 // ── Teclado ──
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Delete' && selectedNodeId) {
+    if (e.key === 'Escape') {
+        fecharConfig();
+    } else if (e.key === 'Delete' && selectedNodeId && !document.getElementById('nodeModalOverlay').classList.contains('active')) {
         deletarNodo();
     }
 });

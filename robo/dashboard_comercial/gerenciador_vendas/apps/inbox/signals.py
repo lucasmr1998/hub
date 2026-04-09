@@ -15,6 +15,75 @@ from django.dispatch import receiver
 logger = logging.getLogger(__name__)
 
 
+import re
+import time
+
+
+def _dividir_mensagem(texto):
+    """Divide texto longo em multiplas mensagens (paragrafos + links separados).
+    Similar ao code do N8N que quebrava respostas da IA."""
+    if not texto:
+        return []
+
+    # Normalizar \n literais
+    normalized = texto.replace('\\n', '\n')
+
+    # Dividir por paragrafos (2+ quebras de linha)
+    parts = re.split(r'\n{2,}', normalized)
+
+    results = []
+    url_regex = re.compile(r'(https?://\S+)')
+
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+
+        # Extrair links
+        links = url_regex.findall(part)
+
+        # Texto sem links
+        clean = url_regex.sub('', part).strip()
+
+        if clean:
+            results.append(clean)
+
+        for link in links:
+            results.append(link)
+
+    return results if results else [texto]
+
+
+def _enviar_mensagens_bot(tenant, conversa, texto, nome_bot='Aurora IA'):
+    """Envia texto como uma ou mais mensagens do bot, dividindo por paragrafos."""
+    from apps.inbox.models import Mensagem as MensagemInbox
+    from apps.inbox.services import _enviar_webhook_async
+
+    partes = _dividir_mensagem(texto)
+    ultima_msg = None
+
+    for parte in partes:
+        msg = MensagemInbox(
+            tenant=tenant,
+            conversa=conversa,
+            remetente_tipo='bot',
+            remetente_nome=nome_bot,
+            tipo_conteudo='texto',
+            conteudo=parte,
+        )
+        msg._skip_automacao = True
+        msg.save()
+        _enviar_webhook_async(conversa, msg)
+        ultima_msg = msg
+        if len(partes) > 1:
+            time.sleep(0.3)  # pequeno delay entre mensagens
+
+    if ultima_msg:
+        conversa.ultima_mensagem_em = ultima_msg.data_envio
+        conversa.ultima_mensagem_preview = partes[-1][:255]
+        conversa.save(update_fields=['ultima_mensagem_em', 'ultima_mensagem_preview'])
+
+
 @receiver(post_save, sender='inbox.Conversa')
 def on_conversa_criada(sender, instance, created, **kwargs):
     """Dispara evento 'conversa_aberta' quando nova conversa é criada."""
@@ -236,65 +305,17 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
                 opcoes = questao.get('opcoes_resposta', [])
                 if opcoes:
                     texto += '\n\n' + '\n'.join(f'{i+1}. {o}' for i, o in enumerate(opcoes))
-
                 if texto:
-                    from apps.inbox.models import Mensagem as MensagemInbox
-                    msg = MensagemInbox(
-                        tenant=instance.tenant,
-                        conversa=conversa,
-                        remetente_tipo='bot',
-                        remetente_nome='Aurora',
-                        tipo_conteudo='texto',
-                        conteudo=texto,
-                    )
-                    msg._skip_automacao = True
-                    msg.save()
-
-                    conversa.ultima_mensagem_em = msg.data_envio
-                    conversa.ultima_mensagem_preview = texto[:255]
-                    conversa.save(update_fields=['ultima_mensagem_em', 'ultima_mensagem_preview'])
-
-                    # Enviar via webhook externo (WhatsApp)
-                    from apps.inbox.services import _enviar_webhook_async
-                    _enviar_webhook_async(conversa, msg)
+                    _enviar_mensagens_bot(instance.tenant, conversa, texto, 'Aurora')
 
             elif resultado and resultado.get('tipo') in ('ia_respondedor', 'ia_agente'):
                 texto = resultado.get('mensagem', '')
                 if texto:
-                    from apps.inbox.models import Mensagem as MensagemInbox
-                    msg = MensagemInbox(
-                        tenant=instance.tenant,
-                        conversa=conversa,
-                        remetente_tipo='bot',
-                        remetente_nome='Aurora IA',
-                        tipo_conteudo='texto',
-                        conteudo=texto,
-                    )
-                    msg._skip_automacao = True
-                    msg.save()
-
-                    conversa.ultima_mensagem_em = msg.data_envio
-                    conversa.ultima_mensagem_preview = texto[:255]
-                    conversa.save(update_fields=['ultima_mensagem_em', 'ultima_mensagem_preview'])
-
-                    from apps.inbox.services import _enviar_webhook_async
-                    _enviar_webhook_async(conversa, msg)
+                    _enviar_mensagens_bot(instance.tenant, conversa, texto, 'Aurora IA')
 
             elif resultado and resultado.get('tipo') == 'finalizado':
-                from apps.inbox.models import Mensagem as MensagemInbox
                 msg_final = resultado.get('mensagem', 'Atendimento finalizado. Obrigado!')
-                msg = MensagemInbox(
-                    tenant=instance.tenant,
-                    conversa=conversa,
-                    remetente_tipo='bot',
-                    remetente_nome='Aurora',
-                    tipo_conteudo='texto',
-                    conteudo=msg_final,
-                )
-                msg._skip_automacao = True
-                msg.save()
-                from apps.inbox.services import _enviar_webhook_async
-                _enviar_webhook_async(conversa, msg)
+                _enviar_mensagens_bot(instance.tenant, conversa, msg_final, 'Aurora')
 
     except Exception as e:
         logger.error("Erro ao processar fluxo de atendimento por canal: %s", e, exc_info=True)

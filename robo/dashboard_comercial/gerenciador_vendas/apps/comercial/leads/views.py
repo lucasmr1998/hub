@@ -63,12 +63,17 @@ def lead_detail_view(request, lead_id):
     campos_custom = CampoCustomizado.objects.filter(ativo=True).order_by('ordem', 'nome')
     dados_custom = lead.dados_custom or {}
 
+    # Conversas do Inbox
+    from apps.inbox.models import Conversa
+    conversas_inbox = Conversa.objects.filter(lead=lead).select_related('canal').order_by('-ultima_mensagem_em')
+
     context = {
         'lead': lead,
         'imagens': imagens,
         'historicos': historicos,
         'campos_custom': campos_custom,
         'dados_custom': dados_custom,
+        'conversas_inbox': conversas_inbox,
     }
     return render(request, 'comercial/leads/lead_detail.html', context)
 

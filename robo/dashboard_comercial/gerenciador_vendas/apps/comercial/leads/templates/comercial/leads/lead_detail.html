@@ -199,6 +199,33 @@
                 {% endif %}
             </div>
         </div>
+
+        <!-- Conversas do Inbox -->
+        {% if conversas_inbox %}
+        <div class="lead-card" style="margin-top:20px;">
+            <div class="lead-card-header"><i class="fas fa-comments"></i><h2>Conversas</h2></div>
+            <div class="lead-card-body">
+                {% for conv in conversas_inbox %}
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;{% if not forloop.last %}border-bottom:1px solid var(--border);{% endif %}">
+                    <div>
+                        <div style="font-weight:600;font-size:13px;">
+                            <i class="{% if conv.canal.tipo == 'whatsapp' %}fab fa-whatsapp{% elif conv.canal.tipo == 'widget' %}fas fa-comment-dots{% else %}fas fa-envelope{% endif %}" style="color:{% if conv.canal.tipo == 'whatsapp' %}#25D366{% else %}var(--primary){% endif %};margin-right:4px;"></i>
+                            {{ conv.canal.nome }}
+                            <span class="badge {% if conv.status == 'aberta' %}badge-success{% elif conv.status == 'resolvida' %}badge-info{% else %}badge-secondary{% endif %}" style="font-size:10px;margin-left:4px;">{{ conv.get_status_display }}</span>
+                        </div>
+                        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+                            {{ conv.ultima_mensagem_preview|truncatechars:60 }}
+                        </div>
+                    </div>
+                    <div style="font-size:11px;color:var(--text-muted);white-space:nowrap;">
+                        {{ conv.ultima_mensagem_em|date:"d/m H:i" }}
+                        {% if conv.mensagens_nao_lidas %}<span class="badge badge-danger" style="font-size:9px;margin-left:4px;">{{ conv.mensagens_nao_lidas }}</span>{% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Sidebar -->

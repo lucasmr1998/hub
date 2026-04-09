@@ -64,7 +64,7 @@
             {% endif %}
             {% if is_superuser or perm == None or perm.acesso_inbox %}
             <a href="{% url 'suporte:dashboard' %}"
-               class="topbar-module {% if '/suporte/' in request.path or '/inbox/' in request.path %}active{% endif %}">
+               class="topbar-module {% if '/suporte/' in request.path or '/inbox/' in request.path or '/configuracoes/fluxos' in request.path or '/configuracoes/sessoes' in request.path %}active{% endif %}">
                 <i class="fas fa-headset"></i> Suporte
             </a>
             {% endif %}
@@ -209,7 +209,7 @@
             </a>
             {% endif %}
 
-        {% elif '/suporte/' in request.path or '/inbox/' in request.path %}
+        {% elif '/suporte/' in request.path or '/inbox/' in request.path or '/configuracoes/fluxos' in request.path or '/configuracoes/sessoes' in request.path %}
             <!-- ── Sidebar: Suporte ── -->
             {% tem_funcionalidade 'inbox.ver_minhas' as pode_inbox %}
             <div class="sidebar-section-label">SUPORTE</div>
@@ -228,9 +228,17 @@
 
             {% tem_funcionalidade 'inbox.configurar' as pode_config_inbox %}
             {% if pode_config_inbox %}
-            <div class="sidebar-section-label" style="margin-top:12px;">CONFIGURAÇÕES</div>
+            <div class="sidebar-section-label" style="margin-top:12px;">ATENDIMENTO</div>
+            <a href="{% url 'comercial_atendimento:fluxos_atendimento' %}" class="nav-item {% if request.resolver_match.url_name == 'fluxos_atendimento' %}active{% endif %}">
+                <i class="fas fa-project-diagram"></i><span class="nav-text">Fluxos</span>
+            </a>
+            <a href="{% url 'comercial_atendimento:sessoes_atendimento' %}" class="nav-item {% if request.resolver_match.url_name == 'sessoes_atendimento' %}active{% endif %}">
+                <i class="fas fa-headset"></i><span class="nav-text">Sessoes</span>
+            </a>
+
+            <div class="sidebar-section-label" style="margin-top:12px;">CONFIGURACOES</div>
             <a href="{% url 'inbox:configuracoes' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes' and 'inbox' in request.resolver_match.app_name|default:'' %}active{% endif %}">
-                <i class="fas fa-cog"></i><span class="nav-text">Configurações</span>
+                <i class="fas fa-cog"></i><span class="nav-text">Configuracoes</span>
             </a>
             {% endif %}
 
@@ -253,15 +261,9 @@
                 <i class="fas fa-calendar-alt"></i><span class="nav-text">Vencimentos</span>
             </a>
 
-            <div class="sidebar-section-label">ATENDIMENTO</div>
-            <a href="{% url 'comercial_atendimento:fluxos_atendimento' %}" class="nav-item {% if request.resolver_match.url_name == 'fluxos_atendimento' %}active{% endif %}">
-                <i class="fas fa-project-diagram"></i><span class="nav-text">Fluxos</span>
-            </a>
-            <a href="{% url 'comercial_atendimento:questoes_fluxo' %}" class="nav-item {% if request.resolver_match.url_name == 'questoes_fluxo' %}active{% endif %}">
-                <i class="fas fa-list-ol"></i><span class="nav-text">Questoes</span>
-            </a>
-            <a href="{% url 'sistema:configuracoes_recontato' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes_recontato' %}active{% endif %}">
-                <i class="fas fa-redo"></i><span class="nav-text">Recontato</span>
+            <div class="sidebar-section-label">SISTEMA</div>
+            <a href="{% url 'sistema:logs_auditoria' %}" class="nav-item {% if request.resolver_match.url_name == 'logs_auditoria' %}active{% endif %}">
+                <i class="fas fa-clipboard-list"></i><span class="nav-text">Logs</span>
             </a>
 
             <div class="sidebar-section-label">SISTEMA</div>

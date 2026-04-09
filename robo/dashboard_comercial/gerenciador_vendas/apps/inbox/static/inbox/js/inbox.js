@@ -66,6 +66,17 @@
         const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
     }
 
+    function formatWA(s) {
+        if (!s) return '';
+        let t = esc(s);
+        t = t.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
+        t = t.replace(/\b_([^_]+)_\b/g, '<em>$1</em>');
+        t = t.replace(/~([^~]+)~/g, '<del>$1</del>');
+        t = t.replace(/```([^`]+)```/g, '<code>$1</code>');
+        t = t.replace(/\n/g, '<br>');
+        return t;
+    }
+
     // Safe getElementById — returns element or no-op proxy to avoid null crashes
     function $(id) {
         return document.getElementById(id) || { addEventListener: () => {}, style: {}, classList: { toggle: () => {}, add: () => {}, remove: () => {} }, value: '', textContent: '', innerHTML: '', dataset: {} };
@@ -276,7 +287,7 @@
 
             html += `<div class="msg-bubble ${t}">`;
             if (t === 'contato' || t === 'bot') html += `<div class="msg-sender">${esc(m.remetente_nome)}</div>`;
-            html += `<div>${esc(m.conteudo)}</div>`;
+            html += `<div>${formatWA(m.conteudo)}</div>`;
             if (m.arquivo_url) html += `<div style="margin-top:4px;"><a href="${esc(m.arquivo_url)}" target="_blank" style="color:inherit;text-decoration:underline;font-size:12px;"><i class="fas fa-paperclip"></i> ${esc(m.arquivo_nome || 'Arquivo')}</a></div>`;
             html += `<div class="msg-time">${formatFullTime(m.data_envio)} <span class="msg-status">${statusIcon}</span></div>`;
             if (m.erro_envio) html += `<div style="font-size:10px;color:#ef4444;margin-top:2px;"><i class="fas fa-exclamation-triangle"></i> ${esc(m.erro_envio)}</div>`;

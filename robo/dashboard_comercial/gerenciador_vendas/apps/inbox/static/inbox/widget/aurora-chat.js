@@ -521,7 +521,7 @@
             var cls = m.remetente_tipo === 'contato' ? 'contact' : (m.remetente_tipo === 'bot' ? 'bot' : 'agent');
             html += '<div class="aw-msg ' + cls + '">';
             if (cls !== 'contact') html += '<div class="aw-msg-name">' + escapeHtml(m.remetente_nome) + '</div>';
-            html += '<div>' + escapeHtml(m.conteudo) + '</div>';
+            html += '<div>' + formatWhatsApp(m.conteudo) + '</div>';
             html += '<div class="aw-msg-time">' + formatTime(m.data_envio) + '</div></div>';
         });
 
@@ -605,6 +605,23 @@
         var div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
+    }
+
+    function formatWhatsApp(str) {
+        if (!str) return '';
+        // Escapar HTML primeiro
+        var text = escapeHtml(str);
+        // Negrito: *texto*
+        text = text.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
+        // Italico: _texto_
+        text = text.replace(/\b_([^_]+)_\b/g, '<em>$1</em>');
+        // Tachado: ~texto~
+        text = text.replace(/~([^~]+)~/g, '<del>$1</del>');
+        // Monospace: ```texto```
+        text = text.replace(/```([^`]+)```/g, '<code>$1</code>');
+        // Quebras de linha
+        text = text.replace(/\n/g, '<br>');
+        return text;
     }
 
     function formatTime(isoStr) {

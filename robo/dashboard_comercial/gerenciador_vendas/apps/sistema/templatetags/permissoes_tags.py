@@ -1,4 +1,7 @@
+import re
 from django import template
+from django.utils.safestring import mark_safe
+from django.utils.html import escape
 
 register = template.Library()
 
@@ -23,3 +26,17 @@ def tem_funcionalidade(context, codigo):
         return codigo in user_funcs
     except Exception:
         return True
+
+
+@register.filter(name='whatsapp_format')
+def whatsapp_format(value):
+    """Formata texto com marcacoes do WhatsApp: *negrito*, _italico_, ~tachado~, quebras de linha."""
+    if not value:
+        return ''
+    text = escape(str(value))
+    text = re.sub(r'\*([^*]+)\*', r'<strong>\1</strong>', text)
+    text = re.sub(r'\b_([^_]+)_\b', r'<em>\1</em>', text)
+    text = re.sub(r'~([^~]+)~', r'<del>\1</del>', text)
+    text = re.sub(r'```([^`]+)```', r'<code>\1</code>', text)
+    text = text.replace('\n', '<br>')
+    return mark_safe(text)

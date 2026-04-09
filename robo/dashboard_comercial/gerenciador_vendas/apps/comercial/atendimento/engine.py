@@ -71,7 +71,7 @@ def iniciar_por_canal(lead, canal, tenant=None, fluxo_forcado=None):
         return ativo, {'tipo': 'em_andamento', 'mensagem': 'Atendimento ja em andamento', 'atendimento_id': ativo.id}
 
     # Criar atendimento
-    total_q = fluxo.nodos.filter(tipo='questao').count() if fluxo.modo_fluxo else fluxo.get_total_questoes()
+    total_q = fluxo.nodos.filter(tipo='questao').count()
     atendimento = AtendimentoFluxo.objects.create(
         tenant=tenant,
         lead=lead,
@@ -80,18 +80,7 @@ def iniciar_por_canal(lead, canal, tenant=None, fluxo_forcado=None):
         max_tentativas=fluxo.max_tentativas,
     )
 
-    if fluxo.modo_fluxo:
-        resultado = iniciar_fluxo_visual(atendimento)
-    else:
-        primeira = fluxo.get_questao_por_indice(1)
-        resultado = {
-            'tipo': 'questao',
-            'questao': {
-                'indice': 1,
-                'titulo': primeira.titulo if primeira else '',
-            },
-        }
-
+    resultado = iniciar_fluxo_visual(atendimento)
     return atendimento, resultado
 
 
@@ -157,6 +146,16 @@ def processar_resposta_visual(atendimento, resposta):
     # Adicionar resposta ao contexto
     contexto[f'resposta_nodo_{nodo_atual.id}'] = resposta
     contexto['ultima_resposta'] = resposta
+
+    # Salvar ultima mensagem para nos IA downstream
+    dados['_ultima_mensagem'] = resposta
+    atendimento.dados_respostas = dados
+    atendimento.save(update_fields=['dados_respostas', 'questoes_respondidas'])
+
+    # IA integrada na questao: classificar e/ou extrair
+    ia_acao = config.get('ia_acao', 'validar')
+    if config.get('integracao_ia_id') and ia_acao != 'validar':
+        _processar_ia_questao(atendimento, nodo_atual, config, resposta, contexto)
 
     # Seguir conexoes a partir do nodo questao
     return _seguir_conexoes(atendimento, nodo_atual, contexto)
@@ -952,6 +951,136 @@ def _registrar_log(atendimento, nodo, status, mensagem, dados=None):
 # ============================================================================
 # NOS IA — CLASSIFICADOR, EXTRATOR, RESPONDEDOR, AGENTE
 # ============================================================================
+
+def _processar_ia_questao(atendimento, nodo, config, resposta, contexto):
+    """Processa IA integrada na questao: classificar e/ou extrair."""
+    ia_acao = config.get('ia_acao', 'validar')
+    integracao = _obter_integracao_ia(config, atendimento.fluxo.tenant)
+    if not integracao:
+        return
+
+    modelo = config.get('ia_modelo', '')
+    prompt_base = config.get('prompt_validacao', '')
+
+    # Classificar
+    if ia_acao in ('classificar', 'classificar_extrair'):
+        categorias = config.get('ia_categorias', [])
+        var_saida = config.get('ia_variavel_saida', 'classificacao')
+
+        system = f"""{prompt_base}
+
+Categorias disponiveis: {', '.join(categorias)}
+
+Responda APENAS com o nome exato de uma das categorias acima. Nenhum texto adicional."""
+
+        messages = [
+            {'role': 'system', 'content': system},
+            {'role': 'user', 'content': resposta},
+        ]
+        resultado = _chamar_llm_simples(integracao, modelo, messages)
+        if resultado:
+            categoria = resultado.strip().lower().replace('"', '').replace("'", '')
+            # Match com categorias definidas
+            for c in categorias:
+                if c.lower() == categoria or c.lower() in categoria:
+                    categoria = c
+                    break
+            else:
+                if categorias:
+                    categoria = categorias[0]
+            _salvar_variavel(atendimento, var_saida, categoria)
+            contexto['var'] = (atendimento.dados_respostas or {}).get('variaveis', {})
+            contexto[var_saida] = categoria
+            _registrar_log(atendimento, nodo, 'sucesso',
+                           f'IA classificou como: {categoria}',
+                           dados={'variavel': var_saida, 'valor': categoria})
+
+    # Extrair
+    if ia_acao in ('extrair', 'classificar_extrair'):
+        campos = config.get('ia_campos_extrair', [])
+        if campos:
+            campos_para_llm = []
+            for c in campos:
+                nome_base = c['nome'].split('.')[-1] if '.' in c['nome'] else c['nome']
+                campos_para_llm.append(f'- {nome_base}: {c.get("descricao", "")}')
+            campos_desc = '\n'.join(campos_para_llm)
+
+            system = f"""Extraia os seguintes dados da mensagem do usuario:
+
+{campos_desc}
+
+{prompt_base}
+
+Responda APENAS em JSON. Se nao encontrar, use string vazia."""
+
+            messages = [
+                {'role': 'system', 'content': system},
+                {'role': 'user', 'content': resposta},
+            ]
+            resultado = _chamar_llm_simples(integracao, modelo, messages)
+            if resultado:
+                import json as json_mod
+                try:
+                    texto_limpo = resultado.strip()
+                    if texto_limpo.startswith('```'):
+                        texto_limpo = texto_limpo.split('\n', 1)[1].rsplit('```', 1)[0].strip()
+                    dados_extraidos = json_mod.loads(texto_limpo)
+                except (json_mod.JSONDecodeError, IndexError):
+                    dados_extraidos = {}
+
+                # Salvar variaveis e no lead/oportunidade
+                campos_lead = []
+                campos_oport = {}
+                for campo in campos:
+                    nome = campo['nome']
+                    nome_base = nome.split('.')[-1] if '.' in nome else nome
+                    valor = dados_extraidos.get(nome_base, '') or dados_extraidos.get(nome, '')
+                    if not valor:
+                        continue
+                    var_nome = nome.replace('.', '_')
+                    _salvar_variavel(atendimento, var_nome, valor)
+                    contexto[var_nome] = valor
+
+                    if config.get('ia_salvar_no_lead'):
+                        if nome.startswith('oport.dados_custom.'):
+                            campo_custom = nome.replace('oport.dados_custom.', '')
+                            campos_oport[f'dados_custom.{campo_custom}'] = valor
+                        elif nome.startswith('oport.'):
+                            campo_oport = nome.replace('oport.', '')
+                            campos_oport[campo_oport] = valor
+                        elif atendimento.lead and hasattr(atendimento.lead, nome):
+                            setattr(atendimento.lead, nome, valor)
+                            campos_lead.append(nome)
+
+                if campos_lead and atendimento.lead:
+                    atendimento.lead.save(update_fields=campos_lead)
+
+                if campos_oport and atendimento.lead:
+                    from apps.comercial.crm.models import OportunidadeVenda
+                    oport = OportunidadeVenda.objects.filter(lead=atendimento.lead).order_by('-data_criacao').first()
+                    if oport:
+                        oport_fields = []
+                        for cn, cv in campos_oport.items():
+                            if cn.startswith('dados_custom.'):
+                                custom_key = cn.replace('dados_custom.', '')
+                                custom = oport.dados_custom or {}
+                                custom[custom_key] = cv
+                                oport.dados_custom = custom
+                                if 'dados_custom' not in oport_fields:
+                                    oport_fields.append('dados_custom')
+                            elif hasattr(oport, cn):
+                                setattr(oport, cn, cv)
+                                oport_fields.append(cn)
+                        if oport_fields:
+                            oport.save(update_fields=oport_fields)
+
+                _registrar_log(atendimento, nodo, 'sucesso',
+                               f'IA extraiu: {dados_extraidos}',
+                               dados={'campos': dados_extraidos})
+
+    # Atualizar contexto com variaveis
+    contexto['var'] = (atendimento.dados_respostas or {}).get('variaveis', {})
+
 
 def _chamar_llm_simples(integracao, modelo, messages):
     """Chama LLM e retorna o texto da resposta. Reutiliza padrao de _validar_com_ia."""

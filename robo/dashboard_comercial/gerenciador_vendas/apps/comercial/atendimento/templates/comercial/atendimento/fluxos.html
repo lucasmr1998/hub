@@ -55,7 +55,6 @@
     <h1 class="page-title">Fluxos de Atendimento</h1>
     <div style="display:flex;gap:8px;">
         <a href="{% url 'comercial_atendimento:sessoes_atendimento' %}" class="btn-secondary"><i class="fas fa-headset"></i> Sessoes</a>
-        <a href="{% url 'comercial_atendimento:questoes_fluxo' %}" class="btn-secondary"><i class="fas fa-list-ol"></i> Questoes</a>
         <button onclick="openForm()" class="btn-primary"><i class="fas fa-plus"></i> Novo Fluxo</button>
     </div>
 </div>
@@ -150,7 +149,6 @@
             <div class="fluxo-actions">
                 <a href="{% url 'comercial_atendimento:sessoes_atendimento' %}?fluxo={{ fluxo.id }}&status=em_andamento" class="btn-primary btn-sm"><i class="fas fa-headset"></i> Ativos</a>
                 <a href="{% url 'comercial_atendimento:editor_fluxo' fluxo.id %}" class="btn-secondary btn-sm"><i class="fas fa-project-diagram"></i> Editor</a>
-                <a href="{% url 'comercial_atendimento:questoes_fluxo_por_id' fluxo.id %}" class="btn-secondary btn-sm"><i class="fas fa-list-ol"></i> Questoes</a>
                 <button onclick="editFluxo({{ fluxo.id }}, '{{ fluxo.nome|escapejs }}', '{{ fluxo.tipo_fluxo }}', '{{ fluxo.status }}', {{ fluxo.max_tentativas }}, {{ fluxo.tempo_limite_minutos|default:'null' }}, {{ fluxo.permite_pular_questoes|yesno:'true,false' }}, '{{ fluxo.descricao|default:""|escapejs }}', '{{ fluxo.canal }}')" class="btn-secondary btn-sm"><i class="fas fa-edit"></i> Editar</button>
                 <button onclick="deleteFluxo({{ fluxo.id }}, '{{ fluxo.nome|escapejs }}', {{ fluxo.atendimentos.count }})" class="btn-danger btn-sm"><i class="fas fa-trash"></i> Excluir</button>
             </div>
