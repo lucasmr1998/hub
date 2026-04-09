@@ -559,38 +559,46 @@ def dashboard_charts_data(request):
             dados.reverse()
             return dados
 
-        # 1. ATENDIMENTOS dos últimos 7 dias (contatos com fluxo inicializado)
+        from apps.comercial.atendimento.models import AtendimentoFluxo
+
+        # 1. ATENDIMENTOS dos ultimos 7 dias
         def count_atendimentos(data):
-            return HistoricoContato.objects.filter(
-                data_hora_contato__date=data,
-                status__in=['fluxo_inicializado']
-            ).count()
+            count = AtendimentoFluxo.objects.filter(data_inicio__date=data).count()
+            if count == 0:
+                count = HistoricoContato.objects.filter(
+                    data_hora_contato__date=data, status='fluxo_inicializado'
+                ).count()
+            return count
 
         atendimentosUltimos7Dias = gerar_ultimos_7_dias(count_atendimentos)
 
-        # 2. LEADS dos últimos 7 dias
+        # 2. LEADS dos ultimos 7 dias
         def count_leads(data):
-            return LeadProspecto.objects.filter(
-                data_cadastro__date=data,
-                ativo=True
-            ).count()
+            return LeadProspecto.objects.filter(data_cadastro__date=data, ativo=True).count()
 
         leadsUltimos7Dias = gerar_ultimos_7_dias(count_leads)
 
-        # 3. PROSPECTOS dos últimos 7 dias (leads registrados no Hubsoft)
+        # 3. PROSPECTOS dos ultimos 7 dias
         def count_prospectos(data):
-            return LeadProspecto.objects.filter(
-                data_cadastro__date=data,
-                id_hubsoft__isnull=False,
+            count = LeadProspecto.objects.filter(
+                data_cadastro__date=data, id_hubsoft__isnull=False
             ).exclude(id_hubsoft='').count()
+            if count == 0:
+                count = LeadProspecto.objects.filter(
+                    data_cadastro__date=data, status_api='processado'
+                ).count()
+            return count
 
         prospectosUltimos7Dias = gerar_ultimos_7_dias(count_prospectos)
 
-        # 4. CLIENTES dos últimos 7 dias (ClienteHubsoft sincronizados)
+        # 4. CLIENTES dos ultimos 7 dias
         def count_vendas(data):
-            return ClienteHubsoft.objects.filter(
-                data_criacao__date=data
-            ).count()
+            count = ClienteHubsoft.objects.filter(data_criacao__date=data).count()
+            if count == 0:
+                count = HistoricoContato.objects.filter(
+                    data_hora_contato__date=data, converteu_venda=True
+                ).values('lead_id').distinct().count()
+            return count
 
         vendasUltimos7Dias = gerar_ultimos_7_dias(count_vendas)
 
