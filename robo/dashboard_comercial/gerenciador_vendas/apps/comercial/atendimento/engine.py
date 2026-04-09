@@ -154,17 +154,11 @@ def processar_resposta_visual(atendimento, resposta):
 
     # IA integrada na questao: classificar e/ou extrair
     ia_acao = config.get('ia_acao', 'validar')
-    tem_ia = config.get('integracao_ia_id') and ia_acao != 'validar'
-    ia_sucesso = True
-    if tem_ia:
-        ia_sucesso = _processar_ia_questao(atendimento, nodo_atual, config, resposta, contexto)
+    if config.get('integracao_ia_id') and ia_acao != 'validar':
+        _processar_ia_questao(atendimento, nodo_atual, config, resposta, contexto)
 
-    # Seguir conexoes: com branch se tem IA, sem branch se nao tem
-    if tem_ia:
-        branch = 'true' if ia_sucesso else 'false'
-        return _seguir_conexoes(atendimento, nodo_atual, contexto, branch_forcado=branch)
-    else:
-        return _seguir_conexoes(atendimento, nodo_atual, contexto)
+    # Seguir conexoes pela saida default
+    return _seguir_conexoes(atendimento, nodo_atual, contexto)
 
 
 def executar_pendentes_atendimento(tenant=None):
@@ -288,7 +282,7 @@ def _executar_nodo(atendimento, nodo, contexto):
                 ia_acao = config.get('ia_acao', 'validar')
                 if config.get('integracao_ia_id') and ia_acao != 'validar':
                     _processar_ia_questao(atendimento, nodo, config, str(valor_existente), contexto)
-                return None  # segue para proximo no
+                return None  # segue para proximo no via default
 
         if espera:
             # PAUSA: retorna dados da questao para o lead responder
