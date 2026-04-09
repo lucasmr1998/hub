@@ -1559,11 +1559,10 @@ def _executar_ia_agente_inicial(atendimento, nodo, contexto):
         messages.append({'role': 'user', 'content': mensagem_usuario})
 
     # Chamar LLM com tools
-    tools_habilitadas = config.get('tools_habilitadas', [])
+    # Tools do config (sistema + customizadas)
     resultado = _chamar_llm_com_tools(
         integracao, config.get('modelo', ''), messages,
-        tools_habilitadas, config.get('campos_lead_editaveis', []),
-        atendimento, contexto
+        config, atendimento, contexto
     )
 
     # Salvar historico
@@ -1626,11 +1625,10 @@ def processar_resposta_ia_agente(atendimento, resposta):
     messages.append({'role': 'user', 'content': resposta})
 
     # Chamar LLM com tools
-    tools_habilitadas = config.get('tools_habilitadas', [])
+    # Tools do config (sistema + customizadas)
     resultado = _chamar_llm_com_tools(
         integracao, config.get('modelo', ''), messages,
-        tools_habilitadas, config.get('campos_lead_editaveis', []),
-        atendimento, contexto
+        config, atendimento, contexto
     )
 
     # Atualizar historico
@@ -1666,10 +1664,169 @@ def processar_resposta_ia_agente(atendimento, resposta):
     return {'tipo': 'ia_agente', 'mensagem': resultado}
 
 
-def _chamar_llm_com_tools(integracao, modelo, messages, tools_habilitadas, campos_editaveis, atendimento, contexto):
-    """Chama LLM com tools. Executa tool_calls em loop. Retorna texto final."""
-    # Por enquanto, usar chamada simples (sem tool calling nativo)
-    # TODO: implementar tool calling nativo por provider na Fase 5
-    # Por agora, o system prompt orienta o agente a responder diretamente
-    resultado = _chamar_llm_simples(integracao, modelo, messages)
-    return resultado or 'Desculpe, nao consegui processar.'
+def _chamar_llm_com_tools(integracao, modelo, messages, config, atendimento, contexto):
+    """Chama LLM com tools customizadas. Executa tool_calls em loop. Retorna texto final."""
+    import json as json_mod
+
+    tipo = integracao.tipo
+    extras = integracao.configuracoes_extras or {}
+    api_key = extras.get('api_key', '') or integracao.access_token or integracao.client_secret or ''
+    modelo = modelo or extras.get('modelo', '')
+
+    # Montar tools: customizadas + sistema
+    tools_openai = []
+    tools_custom_map = {}  # nome -> prompt
+
+    for tc in config.get('tools_customizadas', []):
+        if not tc.get('nome'):
+            continue
+        tools_openai.append({
+            'type': 'function',
+            'function': {
+                'name': tc['nome'],
+                'description': tc.get('descricao', ''),
+                'parameters': {
+                    'type': 'object',
+                    'properties': {
+                        'mensagem': {'type': 'string', 'description': 'A mensagem do usuario para este especialista'},
+                    },
+                    'required': ['mensagem'],
+                },
+            },
+        })
+        tools_custom_map[tc['nome']] = tc.get('prompt', '')
+
+    # Tools do sistema
+    for tool_id in config.get('tools_habilitadas', []):
+        if tool_id == 'atualizar_lead':
+            tools_openai.append({
+                'type': 'function',
+                'function': {
+                    'name': 'atualizar_lead',
+                    'description': 'Atualiza um campo do lead/prospecto',
+                    'parameters': {
+                        'type': 'object',
+                        'properties': {
+                            'campo': {'type': 'string', 'description': 'Nome do campo'},
+                            'valor': {'type': 'string', 'description': 'Novo valor'},
+                        },
+                        'required': ['campo', 'valor'],
+                    },
+                },
+            })
+
+    if not tools_openai:
+        # Sem tools, chamada simples
+        resultado = _chamar_llm_simples(integracao, modelo, messages)
+        return resultado or config.get('mensagem_timeout', 'Desculpe, nao consegui processar.')
+
+    # Chamada com tools (OpenAI/Groq format)
+    if tipo not in ('openai', 'groq'):
+        # Fallback para providers que nao suportam tool calling
+        resultado = _chamar_llm_simples(integracao, modelo, messages)
+        return resultado or config.get('mensagem_timeout', 'Desculpe, nao consegui processar.')
+
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {api_key}',
+    }
+    url = integracao.base_url or ('https://api.openai.com/v1/chat/completions' if tipo == 'openai' else 'https://api.groq.com/openai/v1/chat/completions')
+
+    max_iterations = 5
+    current_messages = list(messages)
+
+    for _ in range(max_iterations):
+        payload = {
+            'model': modelo or ('gpt-4o-mini' if tipo == 'openai' else 'llama-3.1-8b-instant'),
+            'messages': current_messages,
+            'tools': tools_openai,
+            'max_tokens': 1500,
+        }
+
+        try:
+            res = requests.post(url, json=payload, headers=headers, timeout=30)
+            if res.status_code != 200:
+                logger.error(f'LLM tool calling {tipo} retornou {res.status_code}: {res.text[:200]}')
+                return config.get('mensagem_timeout', 'Desculpe, nao consegui processar.')
+
+            data = res.json()
+            choice = data.get('choices', [{}])[0]
+            message = choice.get('message', {})
+            finish_reason = choice.get('finish_reason', '')
+
+            # Se retornou texto direto (sem tool call)
+            if finish_reason != 'tool_calls' and message.get('content'):
+                return message['content']
+
+            # Se chamou tools
+            tool_calls = message.get('tool_calls', [])
+            if not tool_calls:
+                return message.get('content', '') or config.get('mensagem_timeout', 'Desculpe, nao consegui processar.')
+
+            # Adicionar mensagem do assistant com tool_calls ao historico
+            current_messages.append(message)
+
+            # Executar cada tool
+            for tc in tool_calls:
+                func_name = tc.get('function', {}).get('name', '')
+                func_args_str = tc.get('function', {}).get('arguments', '{}')
+                tc_id = tc.get('id', '')
+
+                try:
+                    func_args = json_mod.loads(func_args_str)
+                except json_mod.JSONDecodeError:
+                    func_args = {}
+
+                tool_result = ''
+
+                # Tool customizada (agente especialista)
+                if func_name in tools_custom_map:
+                    prompt_especialista = tools_custom_map[func_name]
+                    mensagem_usuario = func_args.get('mensagem', '')
+
+                    # Adicionar contexto do lead ao prompt
+                    prompt_completo = _substituir_variaveis(prompt_especialista, contexto)
+                    if atendimento.lead:
+                        lead = atendimento.lead
+                        prompt_completo += f"\n\nDados do lead: Nome: {lead.nome_razaosocial}, Telefone: {lead.telefone}, Email: {lead.email or 'N/A'}"
+
+                    resp_especialista = _chamar_llm_simples(
+                        integracao, modelo,
+                        [
+                            {'role': 'system', 'content': prompt_completo},
+                            {'role': 'user', 'content': mensagem_usuario},
+                        ]
+                    )
+                    tool_result = resp_especialista or 'Sem resposta do especialista.'
+                    _registrar_log(atendimento, atendimento.nodo_atual, 'sucesso',
+                                   f'Tool {func_name}: {tool_result[:100]}')
+
+                # Tool do sistema
+                elif func_name == 'atualizar_lead' and atendimento.lead:
+                    campo = func_args.get('campo', '')
+                    valor = func_args.get('valor', '')
+                    if campo and valor and hasattr(atendimento.lead, campo):
+                        setattr(atendimento.lead, campo, valor)
+                        atendimento.lead.save(update_fields=[campo])
+                        tool_result = f'Campo {campo} atualizado para {valor}'
+                    else:
+                        tool_result = f'Campo {campo} nao encontrado'
+
+                else:
+                    tool_result = f'Tool {func_name} nao encontrada'
+
+                # Adicionar resultado da tool ao historico
+                current_messages.append({
+                    'role': 'tool',
+                    'tool_call_id': tc_id,
+                    'content': tool_result,
+                })
+
+            # Re-chamar LLM com resultados das tools (loop continua)
+
+        except Exception as e:
+            logger.error(f'Erro tool calling: {e}')
+            return config.get('mensagem_timeout', 'Desculpe, nao consegui processar.')
+
+    # Max iterations atingido
+    return config.get('mensagem_timeout', 'Desculpe, nao consegui processar.')

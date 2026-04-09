@@ -8,6 +8,10 @@
 .editor-layout { display:flex; height:calc(100vh - 160px); }
 .editor-sidebar { width:240px; background:var(--bg-white); border:1px solid var(--border); border-radius:10px 0 0 10px; overflow-y:auto; padding:16px; flex-shrink:0; }
 .editor-canvas { flex:1; position:relative; background:#f8fafc; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+.zoom-controls { position:absolute; bottom:16px; right:16px; display:flex; align-items:center; gap:4px; background:var(--bg-white); border:1px solid var(--border); border-radius:8px; padding:4px 6px; box-shadow:0 2px 8px rgba(0,0,0,0.08); z-index:10; }
+.zoom-controls button { background:none; border:none; cursor:pointer; padding:6px 8px; border-radius:4px; font-size:12px; color:var(--text-main); transition:background 0.15s; }
+.zoom-controls button:hover { background:var(--bg-subtle); }
+.zoom-controls span { font-size:11px; font-weight:600; color:var(--text-muted); min-width:36px; text-align:center; }
 .editor-config { display:none; }
 
 /* Modal de configuracao estilo N8N */
@@ -103,6 +107,11 @@
     <a href="{% url 'comercial_atendimento:fluxos_atendimento' %}" style="color:var(--text-muted); font-size:16px;"><i class="fas fa-arrow-left"></i></a>
     <h2><i class="fas fa-project-diagram" style="color:var(--primary);"></i> {{ fluxo.nome }}</h2>
     <span class="badge badge-{% if fluxo.status == 'ativo' %}success{% elif fluxo.status == 'rascunho' %}warning{% else %}muted{% endif %}" style="font-size:11px;">{{ fluxo.get_status_display }}</span>
+    <span id="dirtyIndicator" style="display:none;font-size:11px;color:var(--warning);font-weight:600;"><i class="fas fa-circle" style="font-size:6px;vertical-align:middle;margin-right:3px;"></i>Nao salvo</span>
+    <div style="display:flex;gap:2px;margin-left:auto;">
+        <button onclick="undo()" class="btn-secondary" style="padding:6px 10px;font-size:12px;" title="Desfazer (Ctrl+Z)"><i class="fas fa-undo"></i></button>
+        <button onclick="redo()" class="btn-secondary" style="padding:6px 10px;font-size:12px;" title="Refazer (Ctrl+Y)"><i class="fas fa-redo"></i></button>
+    </div>
     <button onclick="salvarFluxo()" class="btn-primary" id="btnSalvar" style="padding:6px 16px; font-size:12px;">
         <i class="fas fa-save"></i> Salvar
     </button>
@@ -203,6 +212,13 @@
     <!-- Canvas Drawflow -->
     <div class="editor-canvas">
         <div id="drawflow"></div>
+        <!-- Zoom Controls -->
+        <div class="zoom-controls">
+            <button onclick="editor.zoom_in()" title="Zoom In"><i class="fas fa-plus"></i></button>
+            <span id="zoomLevel">100%</span>
+            <button onclick="editor.zoom_out()" title="Zoom Out"><i class="fas fa-minus"></i></button>
+            <button onclick="editor.zoom_reset()" title="Reset Zoom" style="font-size:10px;">Reset</button>
+        </div>
     </div>
 
     <!-- Config Panel (hidden, replaced by modal) -->
@@ -237,6 +253,62 @@ editor.start();
 
 let selectedNodeId = null;
 let nodeCounter = 0;
+
+// Undo/Redo system
+const undoStack = [];
+const redoStack = [];
+let undoTimer = null;
+let isDirty = false;
+
+function saveSnapshot() {
+    clearTimeout(undoTimer);
+    undoTimer = setTimeout(() => {
+        const snapshot = JSON.stringify(editor.export());
+        if (undoStack.length === 0 || undoStack[undoStack.length - 1] !== snapshot) {
+            undoStack.push(snapshot);
+            if (undoStack.length > 50) undoStack.shift();
+            redoStack.length = 0;
+            isDirty = true;
+            updateDirtyIndicator();
+        }
+    }, 300);
+}
+
+function undo() {
+    if (undoStack.length < 2) return;
+    const current = undoStack.pop();
+    redoStack.push(current);
+    const prev = undoStack[undoStack.length - 1];
+    editor.import(JSON.parse(prev));
+    reapplyDataTipos();
+}
+
+function redo() {
+    if (redoStack.length === 0) return;
+    const next = redoStack.pop();
+    undoStack.push(next);
+    editor.import(JSON.parse(next));
+    reapplyDataTipos();
+}
+
+function reapplyDataTipos() {
+    setTimeout(() => {
+        const exported = editor.export();
+        for (const [mk, mv] of Object.entries(exported.drawflow || {})) {
+            for (const [nid, node] of Object.entries(mv.data || {})) {
+                const el = document.querySelector('#node-' + nid);
+                if (el && node.data && node.data.tipo) {
+                    el.setAttribute('data-tipo', node.data.tipo);
+                }
+            }
+        }
+    }, 100);
+}
+
+function updateDirtyIndicator() {
+    const indicator = document.getElementById('dirtyIndicator');
+    if (indicator) indicator.style.display = isDirty ? 'inline' : 'none';
+}
 
 // Integracoes de IA disponiveis
 const integracoesIA = {{ integracoes_ia|safe }};
@@ -351,6 +423,20 @@ document.getElementById('drawflow').addEventListener('dblclick', function(e) {
     selectedNodeId = nodeId;
     const node = editor.getNodeFromId(nodeId);
     if (node) abrirConfig(nodeId, node.data);
+});
+
+// Registrar snapshots para undo/redo
+editor.on('nodeCreated', saveSnapshot);
+editor.on('nodeRemoved', saveSnapshot);
+editor.on('nodeMoved', saveSnapshot);
+editor.on('connectionCreated', saveSnapshot);
+editor.on('connectionRemoved', saveSnapshot);
+
+// Snapshot inicial
+setTimeout(() => { undoStack.push(JSON.stringify(editor.export())); }, 500);
+
+editor.on('zoom', function(zoom) {
+    document.getElementById('zoomLevel').textContent = Math.round(zoom * 100) + '%';
 });
 
 editor.on('nodeUnselected', function() {
@@ -663,42 +749,38 @@ function abrirConfig(nodeId, data) {
         </div>
         `;
     } else if (data.tipo === 'ia_agente') {
-        const toolsDisponiveis = [
+        const toolsCustom = (config.tools_customizadas || []);
+        const toolsHtml = toolsCustom.map((t, i) => _renderToolCustom(t, i)).join('');
+        const toolsSistema = [
             {id:'atualizar_lead', label:'Atualizar Lead'},
             {id:'criar_oportunidade', label:'Criar Oportunidade'},
             {id:'criar_tarefa', label:'Criar Tarefa'},
             {id:'mover_estagio', label:'Mover Estagio'},
-            {id:'webhook', label:'Webhook'},
         ];
-        const camposLead = [
-            {id:'nome_razaosocial', label:'Nome'},
-            {id:'email', label:'Email'},
-            {id:'telefone', label:'Telefone'},
-            {id:'cpf_cnpj', label:'CPF/CNPJ'},
-            {id:'cidade', label:'Cidade'},
-            {id:'estado', label:'Estado'},
-            {id:'cep', label:'CEP'},
-            {id:'empresa', label:'Empresa'},
-        ];
-        const toolsChecks = toolsDisponiveis.map(t => {
+        const toolsSistemaChecks = toolsSistema.map(t => {
             const checked = (config.tools_habilitadas || []).includes(t.id) ? 'checked' : '';
             return `<label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:4px;"><input type="checkbox" class="cfg_tool" value="${t.id}" ${checked} onchange="salvarConfigNodo()"> ${t.label}</label>`;
         }).join('');
-        const camposChecks = camposLead.map(c => {
-            const checked = (config.campos_lead_editaveis || []).includes(c.id) ? 'checked' : '';
-            return `<label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:4px;"><input type="checkbox" class="cfg_campo_lead" value="${c.id}" ${checked} onchange="salvarConfigNodo()"> ${c.label}</label>`;
-        }).join('');
         html = `
-        <div class="config-group"><label>Integracao IA</label><select id="cfg_ia_integracao" onchange="salvarConfigNodo()"><option value="">Selecione...</option>${getIAOpts(config.integracao_ia_id)}</select></div>
-        <div class="config-group"><label>Modelo</label><input type="text" id="cfg_ia_modelo" value="${config.modelo||''}" onchange="salvarConfigNodo()" placeholder="gpt-4o"></div>
-        <div class="config-group"><label>System Prompt</label><textarea id="cfg_ia_system_prompt" rows="6" onchange="salvarConfigNodo()" placeholder="Voce e um agente de vendas...">${config.system_prompt||''}</textarea></div>
-        <div class="config-group"><label>Max Turnos</label><input type="number" id="cfg_ia_max_turnos" value="${config.max_turnos||10}" min="1" max="50" onchange="salvarConfigNodo()"></div>
-        <div class="config-group"><label>Condicao de Saida</label><textarea id="cfg_ia_condicao_saida" rows="2" onchange="salvarConfigNodo()" placeholder="Quando o usuario confirmar ou desistir...">${config.condicao_saida||''}</textarea></div>
-        <div class="config-group"><label>Mensagem de Timeout</label><input type="text" id="cfg_ia_msg_timeout" value="${config.mensagem_timeout||''}" onchange="salvarConfigNodo()" placeholder="Desculpe, nao consegui processar."></div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
-        <div class="config-group"><label>Tools Habilitadas</label>${toolsChecks}</div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
-        <div class="config-group"><label>Campos do Lead Editaveis</label>${camposChecks}</div>
+        <div class="config-row">
+            <div class="config-group"><label>Integracao IA</label><select id="cfg_ia_integracao" onchange="salvarConfigNodo()"><option value="">Selecione...</option>${getIAOpts(config.integracao_ia_id)}</select></div>
+            <div class="config-group"><label>Modelo</label><input type="text" id="cfg_ia_modelo" value="${config.modelo||''}" onchange="salvarConfigNodo()" placeholder="gpt-4o"></div>
+        </div>
+        <div class="config-group"><label>System Prompt</label><textarea id="cfg_ia_system_prompt" rows="6" onchange="salvarConfigNodo()" placeholder="Voce e um agente roteador que analisa mensagens e decide qual especialista chamar...">${config.system_prompt||''}</textarea>
+            <div class="config-hint">O agente decide qual tool chamar baseado na mensagem do usuario.</div>
+        </div>
+        <div class="config-row">
+            <div class="config-group"><label>Max Turnos</label><input type="number" id="cfg_ia_max_turnos" value="${config.max_turnos||10}" min="1" max="50" onchange="salvarConfigNodo()"></div>
+            <div class="config-group"><label>Mensagem de Timeout</label><input type="text" id="cfg_ia_msg_timeout" value="${config.mensagem_timeout||''}" onchange="salvarConfigNodo()" placeholder="Desculpe, nao consegui processar."></div>
+        </div>
+
+        <div class="config-section">Tools Customizadas (Agentes Especialistas)</div>
+        <div class="config-hint" style="margin-bottom:10px;">Cada tool e um agente especialista. O agente principal decide qual chamar baseado na mensagem.</div>
+        <div id="cfg_tools_custom">${toolsHtml}</div>
+        <button onclick="adicionarToolCustom()" style="font-size:11px;margin-top:6px;padding:6px 12px;cursor:pointer;" class="btn-secondary"><i class="fas fa-plus"></i> Adicionar Tool</button>
+
+        <div class="config-section">Tools do Sistema</div>
+        ${toolsSistemaChecks}
         `;
     } else {
         html = `<p style="font-size:13px;color:var(--text-muted);">Conecte ao proximo no.</p>`;
@@ -818,14 +900,36 @@ function salvarConfigNodo() {
         config.modelo = document.getElementById('cfg_ia_modelo')?.value || '';
         config.system_prompt = document.getElementById('cfg_ia_system_prompt')?.value || '';
         config.max_turnos = parseInt(document.getElementById('cfg_ia_max_turnos')?.value) || 10;
-        config.condicao_saida = document.getElementById('cfg_ia_condicao_saida')?.value || '';
         config.mensagem_timeout = document.getElementById('cfg_ia_msg_timeout')?.value || '';
         config.tools_habilitadas = Array.from(document.querySelectorAll('.cfg_tool:checked')).map(el => el.value);
-        config.campos_lead_editaveis = Array.from(document.querySelectorAll('.cfg_campo_lead:checked')).map(el => el.value);
+        // Tools customizadas
+        const toolRows = document.querySelectorAll('#cfg_tools_custom .cfg_tool_row');
+        config.tools_customizadas = [];
+        toolRows.forEach(row => {
+            const nome = row.querySelector('.cfg_tc_nome')?.value?.trim();
+            const descricao = row.querySelector('.cfg_tc_desc')?.value?.trim();
+            const prompt = row.querySelector('.cfg_tc_prompt')?.value?.trim();
+            if (nome) config.tools_customizadas.push({nome, descricao: descricao || '', prompt: prompt || ''});
+        });
     }
 
     data.config = config;
     editor.updateNodeDataFromId(selectedNodeId, data);
+}
+
+function duplicarNodo() {
+    if (!selectedNodeId) return;
+    const node = editor.getNodeFromId(selectedNodeId);
+    if (!node || !node.data) return;
+    const newId = addNodeToEditor(
+        node.data.tipo, node.data.subtipo, node.data.nome,
+        Math.round(node.pos_x + 50), Math.round(node.pos_y + 50)
+    );
+    // Copiar config
+    const newNode = editor.getNodeFromId(newId);
+    newNode.data.config = JSON.parse(JSON.stringify(node.data.config || {}));
+    editor.updateNodeDataFromId(newId, newNode.data);
+    saveSnapshot();
 }
 
 function fecharConfig() {
@@ -932,6 +1036,27 @@ function toggleIAActionFields() {
     if (extrFields) extrFields.style.display = (acao === 'extrair' || acao === 'classificar_extrair') ? 'block' : 'none';
 }
 
+function _renderToolCustom(t, idx) {
+    return `<div class="cfg_tool_row" style="background:var(--bg-subtle);border-radius:8px;padding:12px;margin-bottom:8px;border:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <strong style="font-size:12px;color:var(--primary);"><i class="fas fa-robot"></i> Tool ${(idx||0)+1}</strong>
+            <button onclick="this.closest('.cfg_tool_row').remove();salvarConfigNodo()" style="border:none;background:none;color:var(--danger);cursor:pointer;font-size:14px;" title="Remover"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="config-row" style="margin-bottom:8px;">
+            <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:3px;">NOME</label><input type="text" class="cfg_tc_nome" value="${t.nome||''}" placeholder="consultor_comercial" onchange="salvarConfigNodo()" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+            <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:3px;">DESCRICAO</label><input type="text" class="cfg_tc_desc" value="${t.descricao||''}" placeholder="Responde duvidas sobre valores e bolsas" onchange="salvarConfigNodo()" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+        </div>
+        <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:3px;">PROMPT DO ESPECIALISTA</label>
+        <textarea class="cfg_tc_prompt" rows="3" onchange="salvarConfigNodo()" placeholder="Voce e o consultor comercial da FATEPI..." style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:Inter,sans-serif;resize:vertical;box-sizing:border-box;">${t.prompt||''}</textarea>
+    </div>`;
+}
+
+function adicionarToolCustom() {
+    const container = document.getElementById('cfg_tools_custom');
+    const count = container.querySelectorAll('.cfg_tool_row').length;
+    container.insertAdjacentHTML('beforeend', _renderToolCustom({}, count));
+}
+
 function adicionarCampoExtrator() {
     const container = document.getElementById('cfg_ext_campos');
     container.insertAdjacentHTML('beforeend', _renderCampoExtrator({nome:'', descricao:''}));
@@ -1015,6 +1140,8 @@ function salvarFluxo() {
     .then(d => {
         if (d.ok) {
             btn.innerHTML = '<i class="fas fa-check"></i> Salvo!';
+            isDirty = false;
+            updateDirtyIndicator();
             btn.style.background = 'var(--success)';
             setTimeout(() => {
                 btn.innerHTML = '<i class="fas fa-save"></i> Salvar';
@@ -1106,10 +1233,25 @@ if (fluxoSalvo && fluxoSalvo.drawflow) {
 
 // ── Teclado ──
 document.addEventListener('keydown', function(e) {
+    const modalOpen = document.getElementById('nodeModalOverlay').classList.contains('active');
+    const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+
     if (e.key === 'Escape') {
         fecharConfig();
-    } else if (e.key === 'Delete' && selectedNodeId && !document.getElementById('nodeModalOverlay').classList.contains('active')) {
+    } else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeId && !modalOpen && !isInput) {
         deletarNodo();
+    } else if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        salvarFluxo();
+    } else if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+    } else if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) {
+        e.preventDefault();
+        redo();
+    } else if (e.ctrlKey && e.key === 'd' && selectedNodeId && !modalOpen) {
+        e.preventDefault();
+        duplicarNodo();
     }
 });
 
