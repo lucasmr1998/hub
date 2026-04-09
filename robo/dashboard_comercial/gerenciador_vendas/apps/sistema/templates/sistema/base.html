@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Dashboard - Megalink{% endblock %}</title>
+    <title>{% block title %}Dashboard - {{ empresa_nome|default:"Hubtrix" }}{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'sistema/css/dashboard.css' %}">
@@ -21,12 +21,8 @@
         <div class="topbar-brand">
             {% if empresa_logo %}
                 <img src="{{ empresa_logo.url }}" alt="{{ empresa_nome }}">
-            {% else %}
-                <div class="topbar-brand-icon">
-                    <i class="fas fa-bolt"></i>
-                </div>
             {% endif %}
-            <span>MegaLink</span>
+            <span>{{ empresa_nome|default:"Hubtrix" }}</span>
 
             <!-- Hamburger (mobile) -->
             <button class="mobile-menu-toggle" id="mobileMenuToggle" style="margin-left:8px;">
