@@ -154,11 +154,17 @@ def processar_resposta_visual(atendimento, resposta):
 
     # IA integrada na questao: classificar e/ou extrair
     ia_acao = config.get('ia_acao', 'validar')
-    if config.get('integracao_ia_id') and ia_acao != 'validar':
-        _processar_ia_questao(atendimento, nodo_atual, config, resposta, contexto)
+    tem_ia = config.get('integracao_ia_id') and ia_acao != 'validar'
+    ia_sucesso = True
+    if tem_ia:
+        ia_sucesso = _processar_ia_questao(atendimento, nodo_atual, config, resposta, contexto)
 
-    # Seguir conexoes a partir do nodo questao
-    return _seguir_conexoes(atendimento, nodo_atual, contexto)
+    # Seguir conexoes: com branch se tem IA, sem branch se nao tem
+    if tem_ia:
+        branch = 'true' if ia_sucesso else 'false'
+        return _seguir_conexoes(atendimento, nodo_atual, contexto, branch_forcado=branch)
+    else:
+        return _seguir_conexoes(atendimento, nodo_atual, contexto)
 
 
 def executar_pendentes_atendimento(tenant=None):
@@ -999,14 +1005,17 @@ def _registrar_log(atendimento, nodo, status, mensagem, dados=None):
 # ============================================================================
 
 def _processar_ia_questao(atendimento, nodo, config, resposta, contexto):
-    """Processa IA integrada na questao: classificar e/ou extrair."""
+    """Processa IA integrada na questao: classificar e/ou extrair.
+    Retorna True se processou com sucesso, False se falhou (fallback)."""
     ia_acao = config.get('ia_acao', 'validar')
     integracao = _obter_integracao_ia(config, atendimento.fluxo.tenant)
     if not integracao:
-        return
+        return False
 
     modelo = config.get('ia_modelo', '')
     prompt_base = config.get('prompt_validacao', '')
+    sucesso_classificacao = True
+    sucesso_extracao = True
 
     # Classificar
     if ia_acao in ('classificar', 'classificar_extrair'):
@@ -1026,7 +1035,6 @@ Responda APENAS com o nome exato de uma das categorias acima. Nenhum texto adici
         resultado = _chamar_llm_simples(integracao, modelo, messages)
         if resultado:
             categoria = resultado.strip().lower().replace('"', '').replace("'", '')
-            # Match com categorias definidas
             for c in categorias:
                 if c.lower() == categoria or c.lower() in categoria:
                     categoria = c
@@ -1040,6 +1048,8 @@ Responda APENAS com o nome exato de uma das categorias acima. Nenhum texto adici
             _registrar_log(atendimento, nodo, 'sucesso',
                            f'IA classificou como: {categoria}',
                            dados={'variavel': var_saida, 'valor': categoria})
+        else:
+            sucesso_classificacao = False
 
     # Extrair
     if ia_acao in ('extrair', 'classificar_extrair'):
@@ -1120,12 +1130,23 @@ Responda APENAS em JSON. Se nao encontrar, use string vazia."""
                         if oport_fields:
                             oport.save(update_fields=oport_fields)
 
-                _registrar_log(atendimento, nodo, 'sucesso',
-                               f'IA extraiu: {dados_extraidos}',
-                               dados={'campos': dados_extraidos})
+                campos_com_valor = {k: v for k, v in dados_extraidos.items() if v and str(v).strip()}
+                if campos_com_valor:
+                    _registrar_log(atendimento, nodo, 'sucesso',
+                                   f'IA extraiu: {dados_extraidos}',
+                                   dados={'campos': dados_extraidos})
+                else:
+                    sucesso_extracao = False
+                    _registrar_log(atendimento, nodo, 'erro',
+                                   f'IA nao extraiu dados: {dados_extraidos}',
+                                   dados={'campos': dados_extraidos})
+            else:
+                sucesso_extracao = False
 
     # Atualizar contexto com variaveis
     contexto['var'] = (atendimento.dados_respostas or {}).get('variaveis', {})
+
+    return sucesso_classificacao and sucesso_extracao
 
 
 def _chamar_llm_simples(integracao, modelo, messages):

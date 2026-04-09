@@ -271,6 +271,7 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
 
     let inputs = 1, outputs = 1;
     if (tipo === 'entrada') { inputs = 0; outputs = 1; }
+    if (tipo === 'questao') { inputs = 1; outputs = 2; }
     if (tipo === 'condicao') { inputs = 1; outputs = 2; }
     if (tipo === 'finalizacao') { inputs = 1; outputs = 0; }
     if (tipo === 'ia_classificador') { inputs = 1; outputs = 1; }
@@ -303,7 +304,7 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
     const icon = subtipoIcons[subtipo] || iconMap[tipo] || '';
 
     let boxContent = '';
-    if (tipo === 'questao') boxContent = `<div class="box"><span class="node-subtipo">${subtipo}</span></div>`;
+    if (tipo === 'questao') boxContent = `<div class="box">✅ Sucesso &nbsp;&nbsp; ❌ Fallback</div>`;
     else if (tipo === 'condicao') boxContent = '<div class="box">✅ Sim &nbsp;&nbsp; ❌ Nao</div>';
     else if (tipo === 'delay') boxContent = '<div class="box">⏱ Configurar tempo</div>';
     else if (tipo === 'acao') boxContent = `<div class="box">${nome}</div>`;
@@ -981,7 +982,7 @@ function salvarFluxo() {
             for (const [outputKey, outputConns] of Object.entries(node.outputs)) {
                 for (const conn of outputConns.connections) {
                     let tipoSaida = 'default';
-                    if (node.data.tipo === 'condicao' || node.data.tipo === 'ia_extrator') {
+                    if (node.data.tipo === 'condicao' || node.data.tipo === 'ia_extrator' || node.data.tipo === 'questao') {
                         tipoSaida = outputKey === 'output_1' ? 'true' : 'false';
                     }
                     conexoes.push({
