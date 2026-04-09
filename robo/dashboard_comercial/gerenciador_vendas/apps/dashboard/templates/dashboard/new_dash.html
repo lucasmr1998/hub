@@ -326,8 +326,7 @@
 
             const minVal = Math.min(0, Math.min(...values));
             const maxVal = Math.max(1, Math.max(...values));
-            const p = (maxVal - minVal) * 0.1;
-            const yMin = minVal - p, yMax = maxVal + p, yRange = yMax - yMin || 1;
+            const yMin = Math.floor(minVal), yMax = Math.ceil(maxVal + 1), yRange = yMax - yMin || 1;
             const xStep = values.length > 1 ? innerW / (values.length - 1) : innerW;
             const yToPix = v => pad.top + innerH - ((v - yMin) / yRange) * innerH;
 
@@ -338,7 +337,7 @@
                 const t = i / 5;
                 const yPix = pad.top + t * innerH;
                 ctx.beginPath(); ctx.moveTo(pad.left, yPix); ctx.lineTo(pad.left + innerW, yPix); ctx.stroke();
-                ctx.fillText(String(Math.round((yMin + (1 - t) * yRange) * 100) / 100), pad.left - 6, yPix);
+                ctx.fillText(String(Math.round(yMin + (1 - t) * yRange)), pad.left - 6, yPix);
             }
 
             // Line

@@ -1324,6 +1324,21 @@ def dashboard_ultimas_conversoes(request):
                 'lead_id': lead.id if lead else None,
             })
 
+        # Se nao tem dados HubSoft, mostrar leads recentes
+        if not conversoes:
+            leads_recentes = (
+                LeadProspecto.objects
+                .filter(ativo=True)
+                .order_by('-data_criacao')[:limite]
+            )
+            for lead in leads_recentes:
+                conversoes.append({
+                    'nome': lead.nome_razaosocial,
+                    'servico_nome': lead.get_origem_display() if lead.origem else lead.canal_entrada or '',
+                    'ativo': lead.status_api == 'processado',
+                    'lead_id': lead.id,
+                })
+
         return JsonResponse({'conversoes': conversoes})
 
     except Exception as e:
