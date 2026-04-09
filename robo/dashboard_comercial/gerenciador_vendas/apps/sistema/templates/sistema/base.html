@@ -214,10 +214,11 @@
             {% tem_funcionalidade 'inbox.ver_minhas' as pode_inbox %}
             {% tem_funcionalidade 'inbox.configurar' as pode_config_inbox %}
 
-            <div class="sidebar-section-label">CONVERSAS</div>
             <a href="{% url 'inbox:dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' and 'inbox' in request.resolver_match.app_name|default:'' or request.resolver_match.url_name == 'dashboard' and 'suporte' in request.resolver_match.app_name|default:'' %}active{% endif %}">
                 <i class="fas fa-chart-line"></i><span class="nav-text">Dashboard</span>
             </a>
+
+            <div class="sidebar-section-label" style="margin-top:12px;">ATENDIMENTOS</div>
             {% if pode_inbox %}<a href="{% url 'inbox:inbox' %}" class="nav-item {% if 'inbox' in request.resolver_match.app_name|default:'' and request.resolver_match.url_name == 'inbox' %}active{% endif %}">
                 <i class="fas fa-comments"></i><span class="nav-text">Inbox</span>
             </a>{% endif %}
