@@ -21,8 +21,8 @@
         <div class="topbar-brand">
             {% if empresa_logo %}
                 <img src="{{ empresa_logo.url }}" alt="{{ empresa_nome }}">
+                <span>{{ empresa_nome }}</span>
             {% endif %}
-            <span>{{ empresa_nome|default:"Hubtrix" }}</span>
 
             <!-- Hamburger (mobile) -->
             <button class="mobile-menu-toggle" id="mobileMenuToggle" style="margin-left:8px;">
