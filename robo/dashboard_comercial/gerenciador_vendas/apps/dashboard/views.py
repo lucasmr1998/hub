@@ -435,21 +435,30 @@ def dashboard_data(request):
     """API para dados principais do dashboard"""
     try:
         # Cálculo das métricas conforme especificação:
-        # 1. ATENDIMENTOS = Histórico de contatos com fluxo inicializado
-        atendimentos = HistoricoContato.objects.filter(
-            status='fluxo_inicializado'
-        ).count()
+        # 1. ATENDIMENTOS = Sessoes de fluxo + historico com fluxo inicializado
+        from apps.comercial.atendimento.models import AtendimentoFluxo
+        atendimentos = AtendimentoFluxo.objects.count()
+        if atendimentos == 0:
+            atendimentos = HistoricoContato.objects.filter(status='fluxo_inicializado').count()
 
         # 2. LEADS = Quantidade de LeadProspecto ativos
         leads = LeadProspecto.objects.filter(ativo=True).count()
 
-        # 3. PROSPECTOS = Leads registrados no Hubsoft (com id_hubsoft preenchido)
+        # 3. PROSPECTOS = Leads com status processado OU registrados no Hubsoft
         prospectos = LeadProspecto.objects.filter(
             id_hubsoft__isnull=False
         ).exclude(id_hubsoft='').count()
+        if prospectos == 0:
+            prospectos = LeadProspecto.objects.filter(
+                status_api='processado'
+            ).count()
 
-        # 4. CLIENTES = Clientes reais sincronizados do Hubsoft
+        # 4. CLIENTES = Clientes HubSoft OU leads com venda confirmada
         vendas = ClienteHubsoft.objects.count()
+        if vendas == 0:
+            vendas = HistoricoContato.objects.filter(
+                converteu_venda=True
+            ).values('lead_id').distinct().count()
 
         # Calcular métricas do período anterior para comparação (últimos 30 dias vs 30 dias anteriores)
         hoje = timezone.now()
@@ -458,10 +467,9 @@ def dashboard_data(request):
         fim_periodo_anterior = hoje - timedelta(days=30)
 
         # Métricas do período anterior
-        atendimentos_anterior = HistoricoContato.objects.filter(
-            status='fluxo_inicializado',
-            data_hora_contato__gte=inicio_periodo_anterior,
-            data_hora_contato__lt=fim_periodo_anterior
+        atendimentos_anterior = AtendimentoFluxo.objects.filter(
+            data_inicio__gte=inicio_periodo_anterior,
+            data_inicio__lt=fim_periodo_anterior
         ).count()
 
         leads_anterior = LeadProspecto.objects.filter(
@@ -471,10 +479,10 @@ def dashboard_data(request):
         ).count()
 
         prospectos_anterior = LeadProspecto.objects.filter(
-            id_hubsoft__isnull=False,
+            status_api='processado',
             data_cadastro__gte=inicio_periodo_anterior,
             data_cadastro__lt=fim_periodo_anterior
-        ).exclude(id_hubsoft='').count()
+        ).count()
 
         vendas_anterior = ClienteHubsoft.objects.filter(
             data_criacao__gte=inicio_periodo_anterior,
