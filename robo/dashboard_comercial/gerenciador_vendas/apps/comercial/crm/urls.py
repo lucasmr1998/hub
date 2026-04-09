@@ -14,6 +14,7 @@ urlpatterns = [
     path('oportunidades/', views.oportunidades_lista, name='oportunidades_lista'),
     path('oportunidades/<int:pk>/', views.oportunidade_detalhe, name='oportunidade_detalhe'),
     path('oportunidades/<int:pk>/atribuir/', views.api_atribuir_responsavel, name='api_atribuir_responsavel'),
+    path('oportunidades/<int:pk>/editar/', views.api_editar_oportunidade, name='api_editar_oportunidade'),
     path('oportunidades/<int:pk>/notas/', views.api_notas_oportunidade, name='api_notas_oportunidade'),
     path('oportunidades/<int:pk>/tarefas/', views.api_tarefas_oportunidade, name='api_tarefas_oportunidade'),
 

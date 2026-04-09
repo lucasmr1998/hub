@@ -8,6 +8,7 @@ from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods, require_POST, require_GET
 from django.views.decorators.http import require_POST, require_GET
 
 from apps.sistema.decorators import webhook_token_required, user_tem_funcionalidade
@@ -356,6 +357,62 @@ def oportunidades_lista(request):
         'page_title': 'Oportunidades',
     }
     return render(request, 'crm/oportunidades_lista.html', context)
+
+
+@login_required
+@login_required
+@require_http_methods(["PUT"])
+def api_editar_oportunidade(request, pk):
+    """API para editar campos da oportunidade e do lead inline."""
+    try:
+        oport = OportunidadeVenda.objects.select_related('lead').get(pk=pk)
+    except OportunidadeVenda.DoesNotExist:
+        return JsonResponse({'error': 'Oportunidade nao encontrada'}, status=404)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'JSON invalido'}, status=400)
+
+    campos_oport = ['titulo', 'valor_estimado', 'prioridade', 'motivo_perda']
+    campos_lead = [
+        'nome_razaosocial', 'email', 'telefone', 'cpf_cnpj', 'cidade', 'estado',
+        'cep', 'rua', 'numero_residencia', 'bairro', 'empresa', 'observacoes',
+    ]
+
+    oport_atualizados = []
+    lead_atualizados = []
+
+    for campo, valor in data.items():
+        if campo.startswith('dados_custom.'):
+            # Campo custom da oportunidade
+            custom_key = campo.replace('dados_custom.', '')
+            custom = oport.dados_custom or {}
+            custom[custom_key] = valor
+            oport.dados_custom = custom
+            if 'dados_custom' not in oport_atualizados:
+                oport_atualizados.append('dados_custom')
+        elif campo in campos_oport and hasattr(oport, campo):
+            if campo == 'valor_estimado' and not valor:
+                valor = None
+            setattr(oport, campo, valor)
+            oport_atualizados.append(campo)
+        elif campo in campos_lead and oport.lead and hasattr(oport.lead, campo):
+            setattr(oport.lead, campo, valor)
+            lead_atualizados.append(campo)
+
+    if oport_atualizados:
+        oport.save(update_fields=oport_atualizados)
+    if lead_atualizados and oport.lead:
+        oport.lead.save(update_fields=lead_atualizados)
+
+    from apps.sistema.utils import registrar_acao
+    todos = oport_atualizados + lead_atualizados
+    if todos:
+        registrar_acao('crm', 'editar', 'oportunidade', oport.pk,
+                       f'Campos atualizados: {", ".join(todos)}', request=request)
+
+    return JsonResponse({'success': True, 'campos': todos})
 
 
 @login_required

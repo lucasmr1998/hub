@@ -206,14 +206,25 @@ def _percorrer_a_partir_de(atendimento, nodo, contexto):
     if resultado:
         return resultado
 
+    # Verificar se o nodo sinalizou um branch especifico (ex: extrator IA)
+    branch = getattr(atendimento, '_branch_saida', None)
+    if branch:
+        atendimento._branch_saida = None
+        return _seguir_conexoes(atendimento, nodo, contexto, branch_forcado=branch)
+
     # Nodo foi executado (entrada, acao, condicao), seguir conexoes
     return _seguir_conexoes(atendimento, nodo, contexto)
 
 
-def _seguir_conexoes(atendimento, nodo, contexto):
+def _seguir_conexoes(atendimento, nodo, contexto, branch_forcado=None):
     """Segue as conexoes de saida de um nodo."""
-    # Para condicoes, o branch ja foi tratado em _executar_nodo
-    if nodo.tipo == 'condicao':
+    # Branch forcado (ex: extrator IA com true/false)
+    if branch_forcado:
+        conexoes = nodo.saidas.filter(tipo_saida=branch_forcado).select_related('nodo_destino')
+        if not conexoes.exists():
+            # Fallback para default se nao tem a saida especifica
+            conexoes = nodo.saidas.filter(tipo_saida='default').select_related('nodo_destino')
+    elif nodo.tipo == 'condicao':
         resultado_cond = _avaliar_condicao(nodo, contexto)
         branch = 'true' if resultado_cond else 'false'
         config = nodo.configuracao
@@ -247,6 +258,32 @@ def _executar_nodo(atendimento, nodo, contexto):
         titulo = config.get('titulo', 'Responda:')
         espera = config.get('espera_resposta', True)
 
+        # Skip: se configurado para pular e o campo ja tem valor no lead
+        salvar_em = config.get('salvar_em', '')
+        if salvar_em and espera and config.get('pular_se_preenchido') and atendimento.lead:
+            valor_existente = getattr(atendimento.lead, salvar_em, None)
+            if valor_existente and str(valor_existente).strip():
+                _registrar_log(atendimento, nodo, 'sucesso',
+                               f'Pulou questao: {salvar_em} ja preenchido ({valor_existente})')
+                # Salvar no contexto como se tivesse respondido
+                dados = atendimento.dados_respostas or {}
+                dados[str(nodo.id)] = {
+                    'resposta': str(valor_existente),
+                    'data_resposta': timezone.now().isoformat(),
+                    'valida': True,
+                    'pulada': True,
+                }
+                dados['_ultima_mensagem'] = str(valor_existente)
+                atendimento.dados_respostas = dados
+                atendimento.save(update_fields=['dados_respostas'])
+                contexto[f'resposta_nodo_{nodo.id}'] = str(valor_existente)
+                contexto['ultima_resposta'] = str(valor_existente)
+                # Processar IA se configurado
+                ia_acao = config.get('ia_acao', 'validar')
+                if config.get('integracao_ia_id') and ia_acao != 'validar':
+                    _processar_ia_questao(atendimento, nodo, config, str(valor_existente), contexto)
+                return None  # segue para proximo no
+
         if espera:
             # PAUSA: retorna dados da questao para o lead responder
             atendimento.nodo_atual = nodo
@@ -260,12 +297,21 @@ def _executar_nodo(atendimento, nodo, contexto):
         else:
             # NAO ESPERA: envia mensagem e continua o fluxo
             _registrar_log(atendimento, nodo, 'sucesso', f'Mensagem enviada: {titulo}')
+
+            # Se tem IA classificadora/extratora, processar com _ultima_mensagem
+            ia_acao = config.get('ia_acao', 'validar')
+            if config.get('integracao_ia_id') and ia_acao != 'validar':
+                ultima = _get_ultima_mensagem(atendimento)
+                if ultima:
+                    _processar_ia_questao(atendimento, nodo, config, ultima, contexto)
+
             # Retornar dados para o signal enviar no inbox, mas nao pausar
-            atendimento._mensagem_pendente = {
-                'tipo': 'mensagem',
-                'questao': _montar_dados_questao(nodo),
-                'mensagem': titulo,
-            }
+            if titulo:
+                atendimento._mensagem_pendente = {
+                    'tipo': 'mensagem',
+                    'questao': _montar_dados_questao(nodo),
+                    'mensagem': titulo,
+                }
             return None  # Continua percorrendo
 
     elif nodo.tipo == 'condicao':
@@ -1270,11 +1316,13 @@ Responda APENAS com o nome exato de uma das categorias acima. Nenhum texto adici
 # ── EXTRATOR IA ──
 
 def _executar_ia_extrator(atendimento, nodo, contexto):
-    """Extrai dados estruturados da mensagem. NAO pausa."""
+    """Extrai dados estruturados da mensagem. NAO pausa.
+    Se extraiu pelo menos 1 campo: saida 'true'. Se nao extraiu nada: saida 'false' (fallback)."""
     config = nodo.configuracao
     integracao = _obter_integracao_ia(config, atendimento.fluxo.tenant)
     if not integracao:
         _registrar_log(atendimento, nodo, 'erro', 'Integracao IA nao configurada')
+        atendimento._branch_saida = 'false'
         return None
 
     campos = config.get('campos_extrair', [])
@@ -1305,6 +1353,7 @@ Exemplo: {{"nome": "Joao Silva", "curso": "Direito"}}"""
     resultado = _chamar_llm_simples(integracao, config.get('modelo', ''), messages)
     if not resultado:
         _registrar_log(atendimento, nodo, 'erro', 'LLM nao retornou resposta')
+        atendimento._branch_saida = 'false'
         return None
 
     # Parsear JSON
@@ -1316,6 +1365,7 @@ Exemplo: {{"nome": "Joao Silva", "curso": "Direito"}}"""
         dados_extraidos = json_mod.loads(texto_limpo)
     except (json_mod.JSONDecodeError, IndexError):
         _registrar_log(atendimento, nodo, 'erro', f'Resposta IA nao e JSON: {resultado[:100]}')
+        atendimento._branch_saida = 'false'
         return None
 
     # Salvar variaveis e dados no lead/oportunidade
@@ -1372,10 +1422,16 @@ Exemplo: {{"nome": "Joao Silva", "curso": "Direito"}}"""
             if oport_fields:
                 oport.save(update_fields=oport_fields)
 
-    _registrar_log(atendimento, nodo, 'sucesso',
-                   f'Extraido: {dados_extraidos}',
-                   dados={'campos': dados_extraidos, 'salvo_no_lead': config.get('salvar_no_lead', False)})
+    # Verificar se extraiu pelo menos 1 campo com valor
+    campos_com_valor = {k: v for k, v in dados_extraidos.items() if v and str(v).strip()}
+    extraiu = len(campos_com_valor) > 0
 
+    _registrar_log(atendimento, nodo, 'sucesso' if extraiu else 'erro',
+                   f'Extraido: {dados_extraidos}' if extraiu else f'Nao extraiu dados: {dados_extraidos}',
+                   dados={'campos': dados_extraidos, 'extraiu': extraiu})
+
+    # Sinalizar branch: true se extraiu, false se nao (fallback)
+    atendimento._branch_saida = 'true' if extraiu else 'false'
     return None  # passa direto
 
 

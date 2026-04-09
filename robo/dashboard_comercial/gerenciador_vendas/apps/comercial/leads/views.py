@@ -46,6 +46,42 @@ def leads_view(request):
 
 
 @login_required(login_url='sistema:login')
+@login_required(login_url='sistema:login')
+@require_http_methods(["PUT"])
+def api_lead_editar(request, lead_id):
+    """API para editar campos do lead inline."""
+    try:
+        lead = LeadProspecto.objects.get(id=lead_id)
+    except LeadProspecto.DoesNotExist:
+        return JsonResponse({'error': 'Lead nao encontrado'}, status=404)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'JSON invalido'}, status=400)
+
+    campos_editaveis = [
+        'nome_razaosocial', 'email', 'telefone', 'cpf_cnpj', 'cidade', 'estado',
+        'cep', 'rua', 'numero_residencia', 'bairro', 'ponto_referencia',
+        'empresa', 'data_nascimento', 'observacoes', 'origem', 'status_api',
+    ]
+
+    campos_atualizados = []
+    for campo, valor in data.items():
+        if campo in campos_editaveis and hasattr(lead, campo):
+            setattr(lead, campo, valor)
+            campos_atualizados.append(campo)
+
+    if campos_atualizados:
+        lead.save(update_fields=campos_atualizados)
+        from apps.sistema.utils import registrar_acao
+        registrar_acao('leads', 'editar', 'lead', lead.id,
+                       f'Campos atualizados: {", ".join(campos_atualizados)}', request=request)
+
+    return JsonResponse({'success': True, 'campos': campos_atualizados})
+
+
+@login_required(login_url='sistema:login')
 def lead_detail_view(request, lead_id):
     """View para a página de detalhes de um lead"""
     try:

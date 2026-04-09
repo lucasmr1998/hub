@@ -43,8 +43,8 @@
                 <i class="fas fa-chart-pie"></i> Dashboard
             </a>
             {% if modulo_comercial and is_superuser or modulo_comercial and perm == None or modulo_comercial and perm.acesso_comercial %}
-            <a href="{% url 'dashboard:vendas' %}"
-               class="topbar-module {% if request.resolver_match.url_name == 'vendas' or request.resolver_match.url_name == 'cadastro_cliente' or 'crm' in request.resolver_match.app_name|default:'' %}active{% endif %}">
+            <a href="{% url 'crm:desempenho' %}"
+               class="topbar-module {% if '/crm/' in request.path or request.resolver_match.url_name == 'vendas' or request.resolver_match.url_name == 'cadastro_cliente' %}active{% endif %}">
                 <i class="fas fa-handshake"></i> Comercial
             </a>
             {% endif %}

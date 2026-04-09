@@ -3,6 +3,13 @@
 
 {% block extra_css %}
 <style>
+  /* ---- EDITABLE ---- */
+  .editable { cursor:pointer; padding:2px 6px; border-radius:4px; border:1px solid transparent; min-height:18px; display:inline-block; min-width:50px; transition:all 0.15s; }
+  .editable:hover { background:var(--bg-subtle,#f1f5f9); border-color:var(--border); }
+  .editable:empty::after { content:'Clique para editar'; color:var(--text-muted); font-style:italic; font-size:12px; }
+  .editable-input { padding:4px 8px; border:1px solid var(--primary); border-radius:4px; font-size:13px; font-family:'Inter',sans-serif; width:100%; box-sizing:border-box; outline:none; box-shadow:0 0 0 2px rgba(59,130,246,0.1); }
+  .editable-saving { opacity:0.6; }
+
   /* ---- HEADER ---- */
   .detalhe-header {
     background: var(--bg-white);
@@ -493,13 +500,7 @@
 
           <div class="detail-field">
             <label>Valor estimado</label>
-            <div class="value">
-              {% if oportunidade.valor_estimado %}
-                R$ {{ oportunidade.valor_estimado|floatformat:2 }}
-              {% else %}
-                <span class="value-empty">Não informado</span>
-              {% endif %}
-            </div>
+            <div class="value"><span class="editable" data-field="valor_estimado">{{ oportunidade.valor_estimado|default:"" }}</span></div>
           </div>
 
           <div class="detail-field">
@@ -568,9 +569,9 @@
             <label>Dados Personalizados</label>
             <div style="display:flex;flex-direction:column;gap:4px;">
               {% for key, value in oportunidade.dados_custom.items %}
-              <div style="display:flex;justify-content:space-between;font-size:13px;">
+              <div style="display:flex;justify-content:space-between;font-size:13px;align-items:center;">
                 <span style="color:var(--text-muted);">{{ key }}</span>
-                <span style="font-weight:600;">{{ value }}</span>
+                <span class="editable" data-field="dados_custom.{{ key }}" style="font-weight:600;">{{ value }}</span>
               </div>
               {% endfor %}
             </div>
@@ -594,35 +595,30 @@
         </div>
         <div class="card-body">
 
-          {% if lead.cpf_cnpj %}
+          <div class="detail-field">
+            <label>Email</label>
+            <div class="value"><span class="editable" data-field="email">{{ lead.email|default:"" }}</span></div>
+          </div>
+          <div class="detail-field">
+            <label>Telefone</label>
+            <div class="value"><span class="editable" data-field="telefone">{{ lead.telefone|default:"" }}</span></div>
+          </div>
           <div class="detail-field">
             <label>CPF/CNPJ</label>
-            <div class="value">{{ lead.cpf_cnpj }}</div>
+            <div class="value"><span class="editable" data-field="cpf_cnpj">{{ lead.cpf_cnpj|default:"" }}</span></div>
           </div>
-          {% endif %}
-
-          {% if lead.data_nascimento %}
           <div class="detail-field">
-            <label>Nascimento</label>
-            <div class="value">{{ lead.data_nascimento|date:"d/m/Y" }}</div>
+            <label>Cidade</label>
+            <div class="value"><span class="editable" data-field="cidade">{{ lead.cidade|default:"" }}</span></div>
           </div>
-          {% endif %}
-
-          {% if lead.rua or lead.endereco %}
           <div class="detail-field">
-            <label>Endereço</label>
-            <div class="value" style="font-size:13px">
-              {% if lead.rua %}
-                {{ lead.rua }}{% if lead.numero_residencia %}, {{ lead.numero_residencia }}{% endif %}
-                {% if lead.bairro %} — {{ lead.bairro }}{% endif %}<br>
-                {% if lead.cidade %}{{ lead.cidade }}{% if lead.estado %}/{{ lead.estado }}{% endif %}{% endif %}
-                {% if lead.cep %} — CEP {{ lead.cep }}{% endif %}
-              {% else %}
-                {{ lead.endereco }}
-              {% endif %}
-            </div>
+            <label>Estado</label>
+            <div class="value"><span class="editable" data-field="estado">{{ lead.estado|default:"" }}</span></div>
           </div>
-          {% endif %}
+          <div class="detail-field">
+            <label>Empresa</label>
+            <div class="value"><span class="editable" data-field="empresa">{{ lead.empresa|default:"" }}</span></div>
+          </div>
 
           <div class="detail-field">
             <label>Status API</label>
@@ -1136,5 +1132,44 @@ async function carregarNotas() {
     `).join('');
   } catch { /* silently fail */ }
 }
+
+// Edicao inline
+document.querySelectorAll('.editable').forEach(function(el) {
+    el.addEventListener('click', function() {
+        if (el.querySelector('input')) return;
+        const field = el.dataset.field;
+        const currentValue = el.textContent.trim();
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'editable-input';
+        input.value = currentValue;
+        el.textContent = '';
+        el.appendChild(input);
+        input.focus();
+        input.select();
+
+        function save() {
+            const newValue = input.value.trim();
+            el.classList.add('editable-saving');
+            fetch('/crm/oportunidades/{{ oportunidade.pk }}/editar/', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+                body: JSON.stringify({[field]: newValue})
+            })
+            .then(r => r.json())
+            .then(data => {
+                el.classList.remove('editable-saving');
+                el.textContent = data.success ? newValue : currentValue;
+            })
+            .catch(() => { el.classList.remove('editable-saving'); el.textContent = currentValue; });
+        }
+
+        input.addEventListener('blur', save);
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+            if (e.key === 'Escape') { el.textContent = currentValue; }
+        });
+    });
+});
 </script>
 {% endblock %}

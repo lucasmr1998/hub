@@ -273,7 +273,8 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
     if (tipo === 'entrada') { inputs = 0; outputs = 1; }
     if (tipo === 'condicao') { inputs = 1; outputs = 2; }
     if (tipo === 'finalizacao') { inputs = 1; outputs = 0; }
-    if (tipo === 'ia_classificador' || tipo === 'ia_extrator') { inputs = 1; outputs = 1; }
+    if (tipo === 'ia_classificador') { inputs = 1; outputs = 1; }
+    if (tipo === 'ia_extrator') { inputs = 1; outputs = 2; }
     if (tipo === 'ia_respondedor' || tipo === 'ia_agente') { inputs = 1; outputs = 1; }
 
     const iconMap = {
@@ -308,7 +309,7 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
     else if (tipo === 'acao') boxContent = `<div class="box">${nome}</div>`;
     else if (tipo === 'finalizacao') boxContent = '<div class="box">Fim do fluxo</div>';
     else if (tipo === 'ia_classificador') boxContent = '<div class="box">Classifica a mensagem em categorias</div>';
-    else if (tipo === 'ia_extrator') boxContent = '<div class="box">Extrai dados da mensagem</div>';
+    else if (tipo === 'ia_extrator') boxContent = '<div class="box">✅ Extraiu &nbsp;&nbsp; ❌ Fallback</div>';
     else if (tipo === 'ia_respondedor') boxContent = '<div class="box">Gera resposta com IA</div>';
     else if (tipo === 'ia_agente') boxContent = '<div class="box">Agente conversacional com tools</div>';
     else boxContent = '<div class="box">Ponto de entrada</div>';
@@ -473,6 +474,10 @@ function abrirConfig(nodeId, data) {
             <div class="config-row">
                 <div class="config-group"><label>Validacao</label><select id="cfg_validacao" onchange="salvarConfigNodo()">${validacaoOpts}</select></div>
                 <div class="config-group"><label>Salvar Resposta Em</label><select id="cfg_salvar_em" onchange="salvarConfigNodo()">${salvarOpts}</select></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;cursor:pointer;" onclick="var cb=this.querySelector('input');cb.checked=!cb.checked;salvarConfigNodo();">
+                <input type="checkbox" id="cfg_pular_preenchido" ${config.pular_se_preenchido?'checked':''} onchange="salvarConfigNodo()" onclick="event.stopPropagation()" style="width:auto;margin:0;">
+                <span style="font-size:13px;color:var(--text-main);font-weight:500;">Pular se ja preenchido no lead</span>
             </div>
             <div class="config-group"><label>Regex (opcional)</label><input type="text" id="cfg_regex" value="${config.regex||''}" onchange="salvarConfigNodo()" placeholder="Ex: ^[A-Za-z ]{3,}$"></div>
             <div class="config-row">
@@ -720,6 +725,7 @@ function salvarConfigNodo() {
         config.validacao = document.getElementById('cfg_validacao')?.value || 'texto';
         config.regex = document.getElementById('cfg_regex')?.value || '';
         config.salvar_em = document.getElementById('cfg_salvar_em')?.value || '';
+        config.pular_se_preenchido = document.getElementById('cfg_pular_preenchido')?.checked || false;
         config.espera_resposta = document.getElementById('cfg_espera_resposta')?.value === 'true';
         config.max_tentativas = parseInt(document.getElementById('cfg_max_tent')?.value) || 3;
         config.mensagem_erro = document.getElementById('cfg_msg_erro')?.value || '';
@@ -975,7 +981,7 @@ function salvarFluxo() {
             for (const [outputKey, outputConns] of Object.entries(node.outputs)) {
                 for (const conn of outputConns.connections) {
                     let tipoSaida = 'default';
-                    if (node.data.tipo === 'condicao') {
+                    if (node.data.tipo === 'condicao' || node.data.tipo === 'ia_extrator') {
                         tipoSaida = outputKey === 'output_1' ? 'true' : 'false';
                     }
                     conexoes.push({
