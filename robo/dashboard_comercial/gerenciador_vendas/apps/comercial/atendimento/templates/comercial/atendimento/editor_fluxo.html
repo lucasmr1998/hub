@@ -75,13 +75,16 @@
 .node-draggable.hidden { display:none; }
 
 #drawflow { width:100%; height:100%; }
-.drawflow .drawflow-node { border-radius:10px; border:2px solid var(--border); background:var(--bg-white); min-width:180px; font-family:'Inter',sans-serif; font-size:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+.drawflow .drawflow-node { border-radius:12px; border:2px solid var(--border); background:var(--bg-white); min-width:200px; max-width:240px; font-family:'Inter',sans-serif; font-size:12px; box-shadow:0 2px 12px rgba(0,0,0,0.06); transition:box-shadow 0.15s, border-color 0.15s; }
+.drawflow .drawflow-node:hover { box-shadow:0 4px 16px rgba(0,0,0,0.1); }
 .drawflow .drawflow-node.selected { border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,.15); }
-.drawflow .drawflow-node .title-box { background:var(--bg-subtle,#f1f5f9); padding:8px 12px; font-weight:700; font-size:12px; border-radius:8px 8px 0 0; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:6px; }
-.drawflow .drawflow-node .box { padding:10px 12px; font-size:11px; color:var(--text-muted); }
-.drawflow .connection .main-path { stroke:var(--primary); stroke-width:2; }
-.drawflow .drawflow-node .input, .drawflow .drawflow-node .output { width:12px; height:12px; }
+.drawflow .drawflow-node .title-box { background:var(--bg-subtle,#f1f5f9); padding:10px 14px; font-weight:700; font-size:12px; border-radius:10px 10px 0 0; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+.drawflow .drawflow-node .title-box i { font-size:14px; }
+.drawflow .drawflow-node .box { padding:8px 14px; font-size:11px; color:var(--text-muted); }
+.drawflow .connection .main-path { stroke:var(--primary); stroke-width:2; fill:none; }
+.drawflow .drawflow-node .input, .drawflow .drawflow-node .output { width:12px; height:12px; border-radius:50%; }
 .drawflow .drawflow-node .output { background:var(--primary); }
+.drawflow .drawflow-node .input { background:var(--border); }
 
 .drawflow .drawflow-node[data-tipo="entrada"] .title-box { background:#eff6ff; color:#1e40af; }
 .drawflow .drawflow-node[data-tipo="questao"] .title-box { background:#ecfeff; color:#155e75; }
@@ -93,6 +96,16 @@
 .drawflow .drawflow-node[data-tipo="ia_extrator"] .title-box { background:#f3e8ff; color:#6b21a8; }
 .drawflow .drawflow-node[data-tipo="ia_respondedor"] .title-box { background:#f3e8ff; color:#6b21a8; }
 .drawflow .drawflow-node[data-tipo="ia_agente"] .title-box { background:#f3e8ff; color:#6b21a8; }
+
+/* Status badges nos nos */
+.node-status { position:absolute; top:-6px; right:-6px; width:14px; height:14px; border-radius:50%; border:2px solid var(--bg-white); font-size:7px; display:flex; align-items:center; justify-content:center; color:#fff; z-index:5; }
+.node-status.ok { background:#22c55e; }
+.node-status.warn { background:#f59e0b; }
+.node-status.err { background:#ef4444; }
+
+/* Preview do conteudo no no */
+.drawflow .drawflow-node .box { padding:10px 12px; font-size:11px; color:var(--text-muted); max-height:40px; overflow:hidden; text-overflow:ellipsis; }
+.drawflow .drawflow-node .node-preview { font-size:10px; color:var(--text-muted); padding:0 12px 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px; }
 
 .config-group { margin-bottom:14px; }
 .config-group label { display:block; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; letter-spacing:.03em; }
@@ -309,6 +322,106 @@ function updateDirtyIndicator() {
     const indicator = document.getElementById('dirtyIndicator');
     if (indicator) indicator.style.display = isDirty ? 'inline' : 'none';
 }
+
+// Validacao e preview dos nos
+function validarNodo(nodeId) {
+    const node = editor.getNodeFromId(nodeId);
+    if (!node || !node.data) return;
+    const el = document.querySelector('#node-' + nodeId);
+    if (!el) return;
+
+    const tipo = node.data.tipo;
+    const config = node.data.config || {};
+    let status = 'ok'; // ok, warn, err
+
+    // Regras de validacao por tipo
+    if (tipo === 'questao') {
+        if (!config.titulo) status = 'warn';
+    } else if (tipo === 'ia_respondedor') {
+        if (!config.integracao_ia_id) status = 'err';
+        else if (!config.system_prompt) status = 'warn';
+    } else if (tipo === 'ia_classificador') {
+        if (!config.integracao_ia_id) status = 'err';
+        else if (!config.categorias || config.categorias.length === 0) status = 'warn';
+    } else if (tipo === 'ia_extrator') {
+        if (!config.integracao_ia_id) status = 'err';
+        else if (!config.campos_extrair || config.campos_extrair.length === 0) status = 'warn';
+    } else if (tipo === 'ia_agente') {
+        if (!config.integracao_ia_id) status = 'err';
+        else if (!config.system_prompt) status = 'warn';
+    } else if (tipo === 'acao') {
+        if (node.data.subtipo === 'webhook' && !config.url) status = 'warn';
+        if (node.data.subtipo === 'mover_estagio' && !config.estagio) status = 'warn';
+    } else if (tipo === 'condicao') {
+        if (!config.campo || !config.valor) status = 'warn';
+    }
+
+    // Atualizar badge
+    let badge = el.querySelector('.node-status');
+    if (!badge) {
+        badge = document.createElement('div');
+        badge.className = 'node-status';
+        el.style.position = 'relative';
+        el.appendChild(badge);
+    }
+    badge.className = 'node-status ' + status;
+    badge.innerHTML = status === 'ok' ? '<i class="fas fa-check"></i>' : status === 'warn' ? '!' : '<i class="fas fa-times"></i>';
+
+    // Atualizar preview do conteudo
+    atualizarPreview(nodeId, node);
+}
+
+function atualizarPreview(nodeId, node) {
+    const el = document.querySelector('#node-' + nodeId);
+    if (!el) return;
+    const config = node.data.config || {};
+    const tipo = node.data.tipo;
+    let preview = '';
+
+    if (tipo === 'questao') {
+        preview = (config.titulo || '').substring(0, 40);
+    } else if (tipo === 'ia_respondedor' || tipo === 'ia_agente') {
+        preview = (config.system_prompt || '').substring(0, 40);
+    } else if (tipo === 'ia_classificador') {
+        preview = (config.categorias || []).join(', ').substring(0, 40);
+    } else if (tipo === 'acao') {
+        if (node.data.subtipo === 'mover_estagio') preview = config.estagio || '';
+        else if (node.data.subtipo === 'criar_oportunidade') preview = (config.titulo || '').substring(0, 30);
+        else if (node.data.subtipo === 'webhook') preview = (config.url || '').substring(0, 30);
+    } else if (tipo === 'condicao') {
+        preview = (config.campo || '') + ' ' + (config.operador || '') + ' ' + (config.valor || '');
+    } else if (tipo === 'finalizacao') {
+        preview = (config.mensagem_final || '').substring(0, 40);
+    }
+
+    let previewEl = el.querySelector('.node-preview');
+    if (preview) {
+        if (!previewEl) {
+            previewEl = document.createElement('div');
+            previewEl.className = 'node-preview';
+            el.appendChild(previewEl);
+        }
+        previewEl.textContent = preview + (preview.length >= 40 ? '...' : '');
+    } else if (previewEl) {
+        previewEl.remove();
+    }
+}
+
+function validarTodosNodos() {
+    const exported = editor.export();
+    for (const [mk, mv] of Object.entries(exported.drawflow || {})) {
+        for (const nodeId of Object.keys(mv.data || {})) {
+            validarNodo(nodeId);
+        }
+    }
+}
+
+// Auto-save a cada 30 segundos
+setInterval(() => {
+    if (isDirty) {
+        salvarFluxo();
+    }
+}, 30000);
 
 // Integracoes de IA disponiveis
 const integracoesIA = {{ integracoes_ia|safe }};
@@ -915,6 +1028,8 @@ function salvarConfigNodo() {
 
     data.config = config;
     editor.updateNodeDataFromId(selectedNodeId, data);
+    validarNodo(selectedNodeId);
+    saveSnapshot();
 }
 
 function duplicarNodo() {
@@ -1181,6 +1296,7 @@ if (fluxoSalvo && fluxoSalvo.drawflow) {
                     if (!isNaN(num) && num > nodeCounter) nodeCounter = num;
                 }
             }
+            validarTodosNodos();
         }, 100);
     } catch(e) {
         console.warn('Erro ao importar fluxo:', e);
@@ -1219,7 +1335,7 @@ if (fluxoSalvo && fluxoSalvo.drawflow) {
         }
     }, 200);
 
-    // Re-aplicar data-tipo apos tudo carregado
+    // Re-aplicar data-tipo apos tudo carregado + validar
     setTimeout(() => {
         for (const nodo of nodosDB) {
             const drawflowId = idMap[nodo.id];
@@ -1228,6 +1344,7 @@ if (fluxoSalvo && fluxoSalvo.drawflow) {
                 if (el) el.setAttribute('data-tipo', nodo.tipo);
             }
         }
+        validarTodosNodos();
     }, 500);
 }
 
