@@ -40,12 +40,12 @@
 
 {% block content %}
 
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; background:var(--bg-white); border:1px solid var(--border); border-radius:12px; padding:14px 20px; margin-bottom:20px;">
     <div>
-        <h1 class="page-title"><i class="fas fa-book" style="color:var(--primary);margin-right:8px;"></i> Base de Conhecimento</h1>
-        <p style="font-size:13px;color:var(--text-muted);margin:4px 0 0;">{{ total_artigos }} artigo{{ total_artigos|pluralize:"s" }} disponíve{{ total_artigos|pluralize:"l,is" }}</p>
+        <h1 class="page-title" style="margin:0;"><i class="fas fa-book" style="color:var(--primary);margin-right:8px;"></i> Base de Conhecimento</h1>
+        <p style="font-size:12px;color:var(--text-muted);margin:4px 0 0;">{{ total_artigos }} artigo{{ total_artigos|pluralize:"s" }} disponive{{ total_artigos|pluralize:"l,is" }}</p>
     </div>
-    <a href="{% url 'suporte:gerenciar_conhecimento' %}" class="btn-secondary"><i class="fas fa-cog"></i> Gerenciar</a>
+    <a href="{% url 'suporte:gerenciar_conhecimento' %}" class="btn-secondary" style="text-decoration:none;"><i class="fas fa-cog"></i> Gerenciar</a>
 </div>
 
 <!-- Busca -->

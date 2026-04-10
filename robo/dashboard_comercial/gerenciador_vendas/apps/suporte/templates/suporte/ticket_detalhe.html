@@ -408,13 +408,28 @@
 
         <!-- Comment form -->
         <div class="comment-form">
-            <div class="comment-form-title">Adicionar Comentario</div>
+            <div class="comment-form-title" style="display:flex;align-items:center;justify-content:space-between;">
+                Adicionar Comentario
+                {% if respostas_rapidas %}
+                <div style="position:relative;">
+                    <button type="button" onclick="toggleRespostasDropdown()" class="btn-secondary" style="padding:4px 10px;font-size:11px;"><i class="fas fa-bolt"></i> Respostas rapidas</button>
+                    <div id="respostasDropdown" style="display:none;position:absolute;right:0;top:100%;margin-top:4px;background:var(--bg-white);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.1);width:280px;max-height:250px;overflow-y:auto;z-index:100;">
+                        {% for r in respostas_rapidas %}
+                        <div onclick="usarRespostaRapida('{{ r.conteudo|escapejs }}')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:12px;transition:background 0.1s;" onmouseover="this.style.background='var(--bg-subtle)'" onmouseout="this.style.background=''">
+                            <div style="font-weight:600;color:var(--text-main);">{{ r.titulo }}</div>
+                            {% if r.atalho %}<span style="font-size:10px;color:var(--text-muted);">{{ r.atalho }}</span>{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
             <form method="post">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="comentar">
-                <textarea name="mensagem" placeholder="Escreva seu comentario..." required></textarea>
+                <textarea id="comentarioTextarea" name="mensagem" placeholder="Escreva seu comentario... (digite / para respostas rapidas)" required></textarea>
                 <div class="comment-form-actions">
-                    {% if user.is_staff %}
+                    {% if pode_gerenciar %}
                     <label class="checkbox-label">
                         <input type="checkbox" name="interno">
                         Comentario interno (visivel apenas para equipe)
@@ -428,6 +443,33 @@
                 </div>
             </form>
         </div>
+        <!-- CSAT -->
+        {% if ticket.status == 'resolvido' or ticket.status == 'fechado' %}
+        <div style="background:var(--bg-subtle);border-radius:10px;padding:16px;margin-top:16px;border:1px solid var(--border);">
+            {% if ticket.csat_nota %}
+            <div style="text-align:center;">
+                <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;">Avaliacao do solicitante</div>
+                <div style="font-size:24px;margin-bottom:4px;">
+                    {% for i in "12345" %}
+                    <i class="fas fa-star" style="color:{% if forloop.counter <= ticket.csat_nota %}#f59e0b{% else %}#e2e8f0{% endif %};"></i>
+                    {% endfor %}
+                </div>
+                {% if ticket.csat_comentario %}<div style="font-size:12px;color:var(--text-muted);font-style:italic;">"{{ ticket.csat_comentario }}"</div>{% endif %}
+            </div>
+            {% else %}
+            <div style="text-align:center;">
+                <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">Como foi o atendimento?</div>
+                <div id="csatStars" style="font-size:28px;margin-bottom:8px;cursor:pointer;">
+                    {% for i in "12345" %}
+                    <i class="far fa-star csat-star" data-nota="{{ forloop.counter }}" style="color:#e2e8f0;transition:color 0.15s;" onmouseover="csatHover({{ forloop.counter }})" onmouseout="csatHover(0)" onclick="csatSelect({{ forloop.counter }})"></i>
+                    {% endfor %}
+                </div>
+                <textarea id="csatComentario" placeholder="Comentario (opcional)" rows="2" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;resize:none;box-sizing:border-box;margin-bottom:6px;"></textarea>
+                <button id="csatBtn" onclick="enviarCSAT()" class="btn-primary" style="padding:5px 16px;font-size:12px;width:100%;" disabled>Enviar Avaliacao</button>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
 
     <!-- Sidebar -->
@@ -547,6 +589,80 @@
             </div>
         </div>
         {% endif %}
+
+        <!-- Historico -->
+        {% if historico %}
+        <div class="info-panel" style="margin-top:16px;">
+            <div class="info-panel-title"><i class="fas fa-clock-rotate-left" style="margin-right:4px;"></i> Historico</div>
+            <div style="max-height:300px;overflow-y:auto;">
+                {% for h in historico %}
+                <div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+                        {% if h.tipo == 'status' %}
+                        <i class="fas fa-exchange-alt" style="color:var(--info);font-size:10px;"></i>
+                        {% elif h.tipo == 'atribuicao' %}
+                        <i class="fas fa-user-check" style="color:var(--success);font-size:10px;"></i>
+                        {% elif h.tipo == 'comentario' %}
+                        <i class="fas fa-comment" style="color:var(--primary);font-size:10px;"></i>
+                        {% elif h.tipo == 'criacao' %}
+                        <i class="fas fa-plus-circle" style="color:var(--success);font-size:10px;"></i>
+                        {% elif h.tipo == 'escalacao' %}
+                        <i class="fas fa-arrow-up" style="color:var(--danger);font-size:10px;"></i>
+                        {% else %}
+                        <i class="fas fa-circle" style="color:var(--text-muted);font-size:8px;"></i>
+                        {% endif %}
+                        <span style="color:var(--text-main);font-weight:600;">{{ h.usuario.get_full_name|default:h.usuario.username|default:"Sistema" }}</span>
+                        <span style="color:var(--text-light);font-size:11px;">{{ h.data|timesince }} atras</span>
+                    </div>
+                    <div style="color:var(--text-muted);padding-left:16px;">{{ h.descricao }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleRespostasDropdown() {
+    var dd = document.getElementById('respostasDropdown');
+    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+function usarRespostaRapida(conteudo) {
+    document.getElementById('comentarioTextarea').value = conteudo;
+    document.getElementById('respostasDropdown').style.display = 'none';
+    document.getElementById('comentarioTextarea').focus();
+}
+document.addEventListener('click', function(e) {
+    var dd = document.getElementById('respostasDropdown');
+    if (dd && !e.target.closest('#respostasDropdown') && !e.target.closest('[onclick*="toggleRespostasDropdown"]')) {
+        dd.style.display = 'none';
+    }
+});
+
+// CSAT
+let csatNota = 0;
+function csatHover(n) {
+    document.querySelectorAll('.csat-star').forEach((s, i) => {
+        s.style.color = i < (n || csatNota) ? '#f59e0b' : '#e2e8f0';
+        s.className = i < (n || csatNota) ? 'fas fa-star csat-star' : 'far fa-star csat-star';
+    });
+}
+function csatSelect(n) {
+    csatNota = n;
+    csatHover(n);
+    document.getElementById('csatBtn').disabled = false;
+}
+function enviarCSAT() {
+    if (!csatNota) return;
+    fetch('{% url "suporte:api_avaliar_ticket" pk=ticket.pk %}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+        body: JSON.stringify({nota: csatNota, comentario: document.getElementById('csatComentario').value})
+    }).then(r => r.json()).then(d => { if (d.ok) location.reload(); });
+}
+</script>
 {% endblock %}

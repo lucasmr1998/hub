@@ -68,11 +68,19 @@ def empresa_context(request):
         else:
             ctx['perm'] = PermissaoUsuario.get_for_user(user)
             ctx['is_superuser'] = False
-            # Cachear funcionalidades como set (do middleware ou direto)
             ctx['user_funcs'] = getattr(request, 'user_funcionalidades', None)
+
+        # Status do agente (online/ausente/offline)
+        try:
+            from apps.inbox.models import PerfilAgenteInbox
+            perfil_agente = PerfilAgenteInbox.objects.filter(user=user).first()
+            ctx['agente_status'] = perfil_agente.status if perfil_agente else None
+        except Exception:
+            ctx['agente_status'] = None
     else:
         ctx['perm'] = None
         ctx['is_superuser'] = False
         ctx['user_funcs'] = set()
+        ctx['agente_status'] = None
 
     return ctx

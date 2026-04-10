@@ -37,11 +37,19 @@
                     <button class="ib-icon-btn" id="sortBtn" title="Ordenar"><i class="fas fa-arrow-down-short-wide"></i></button>
                 </div>
             </div>
+            {% if user_is_admin %}
+            <!-- Filtros por modo de atendimento (bot/humano) — admin -->
+            <div class="inbox-assign-tabs" style="margin-bottom:4px;">
+                <button class="inbox-modo-tab inbox-assign-tab active" data-modo="humano"><i class="fas fa-headset" style="margin-right:3px;font-size:10px;"></i> Humano</button>
+                <button class="inbox-modo-tab inbox-assign-tab" data-modo="bot"><i class="fas fa-robot" style="margin-right:3px;font-size:10px;"></i> Bot</button>
+                <button class="inbox-modo-tab inbox-assign-tab" data-modo=""><i class="fas fa-layer-group" style="margin-right:3px;font-size:10px;"></i> Todas</button>
+            </div>
+            {% endif %}
             <!-- Filtros por atribuição -->
             <div class="inbox-assign-tabs">
-                <button class="inbox-assign-tab" data-agente="me">Minhas <span class="ib-count" id="countMine">0</span></button>
-                <button class="inbox-assign-tab" data-agente="unassigned">Não atribuídas <span class="ib-count" id="countUnassigned">0</span></button>
-                <button class="inbox-assign-tab active" data-agente="">Todas <span class="ib-count" id="countAll">0</span></button>
+                <button class="inbox-assign-tab inbox-atrib-tab" data-agente="me">Minhas <span class="ib-count" id="countMine">0</span></button>
+                <button class="inbox-assign-tab inbox-atrib-tab" data-agente="unassigned">Não atribuídas <span class="ib-count" id="countUnassigned">0</span></button>
+                <button class="inbox-assign-tab inbox-atrib-tab active" data-agente="">Todas <span class="ib-count" id="countAll">0</span></button>
             </div>
             <!-- Busca -->
             <div class="inbox-search">
@@ -332,5 +340,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'inbox/js/inbox.js' %}?v=8"></script>
+<script>window.AGENTES_STATUS = {{ agentes_status_json|safe }};</script>
+<script src="{% static 'inbox/js/inbox.js' %}?v=9"></script>
 {% endblock %}

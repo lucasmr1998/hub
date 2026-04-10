@@ -92,6 +92,11 @@ class Conversa(TenantMixin):
         ('alta', 'Alta'),
         ('urgente', 'Urgente'),
     ]
+    MODO_ATENDIMENTO_CHOICES = [
+        ('bot', 'Bot'),
+        ('humano', 'Humano'),
+        ('finalizado_bot', 'Finalizado pelo Bot'),
+    ]
 
     numero = models.PositiveIntegerField(verbose_name="Número", editable=False)
     canal = models.ForeignKey(
@@ -146,6 +151,12 @@ class Conversa(TenantMixin):
     mensagens_nao_lidas = models.PositiveIntegerField(default=0, verbose_name="Não lidas")
     tempo_primeira_resposta_seg = models.PositiveIntegerField(
         null=True, blank=True, verbose_name="Tempo 1ª resposta (seg)"
+    )
+
+    modo_atendimento = models.CharField(
+        max_length=20, choices=MODO_ATENDIMENTO_CHOICES,
+        default='humano', verbose_name="Modo de Atendimento",
+        help_text="bot = fluxo ativo, humano = transferido para atendente, finalizado_bot = bot encerrou"
     )
 
     data_abertura = models.DateTimeField(auto_now_add=True, verbose_name="Data de Abertura")
@@ -411,6 +422,11 @@ class FilaInbox(TenantMixin):
         null=True, blank=True,
         help_text="Último agente atribuído (para round-robin)"
     )
+    mensagem_fora_horario = models.TextField(
+        blank=True, default='',
+        verbose_name="Mensagem fora do horário",
+        help_text="Mensagem enviada automaticamente quando fora do horário da fila"
+    )
     criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
 
     class Meta:
@@ -511,6 +527,12 @@ class HorarioAtendimento(TenantMixin):
         (3, 'Quinta'), (4, 'Sexta'), (5, 'Sábado'), (6, 'Domingo'),
     ]
 
+    fila = models.ForeignKey(
+        FilaInbox, on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name='horarios', verbose_name="Fila",
+        help_text="Se vazio, aplica como horario global (fallback)"
+    )
     dia_semana = models.IntegerField(choices=DIA_CHOICES, verbose_name="Dia da Semana")
     hora_inicio = models.TimeField(verbose_name="Hora Início")
     hora_fim = models.TimeField(verbose_name="Hora Fim")
@@ -520,11 +542,12 @@ class HorarioAtendimento(TenantMixin):
         db_table = 'inbox_horario_atendimento'
         verbose_name = "Horário de Atendimento"
         verbose_name_plural = "Horários de Atendimento"
-        unique_together = [['tenant', 'dia_semana']]
+        unique_together = [['tenant', 'fila', 'dia_semana']]
         ordering = ['dia_semana']
 
     def __str__(self):
-        return f"{self.get_dia_semana_display()}: {self.hora_inicio} - {self.hora_fim}"
+        fila_nome = self.fila.nome if self.fila else 'Global'
+        return f"[{fila_nome}] {self.get_dia_semana_display()}: {self.hora_inicio} - {self.hora_fim}"
 
 
 class ConfiguracaoInbox(TenantMixin):

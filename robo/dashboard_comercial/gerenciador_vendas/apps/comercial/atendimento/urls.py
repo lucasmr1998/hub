@@ -76,6 +76,8 @@ urlpatterns = [
     path('configuracoes/sessoes/<int:atendimento_id>/fluxo/', views.sessao_fluxo_visual_view, name='sessao_fluxo_visual'),
     path('configuracoes/fluxos/<int:fluxo_id>/editor/', views.editor_fluxo_view, name='editor_fluxo'),
     path('api/fluxos/<int:fluxo_id>/salvar-fluxo/', views.salvar_fluxo_api, name='salvar_fluxo'),
+    path('api/fluxos/<int:fluxo_id>/simular/', views.simular_fluxo_api, name='simular_fluxo'),
+    path('api/fluxos/<int:fluxo_id>/recontato/', views.salvar_recontato_api, name='salvar_recontato'),
     path('configuracoes/questoes/', views.questoes_fluxo_view, name='questoes_fluxo'),
     path('configuracoes/questoes/<int:fluxo_id>/', views.questoes_fluxo_view, name='questoes_fluxo_por_id'),
 

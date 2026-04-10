@@ -186,4 +186,22 @@ class PermissaoMiddleware:
                     )
                 break
 
+        # Atualizar atividade do agente (para auto-offline)
+        try:
+            from apps.inbox.models import PerfilAgenteInbox
+            from django.utils import timezone
+            from datetime import timedelta
+            perfil_agente = PerfilAgenteInbox.objects.filter(user=request.user).first()
+            if perfil_agente:
+                agora = timezone.now()
+                if perfil_agente.status == 'online' and perfil_agente.ultimo_status_em:
+                    if agora - perfil_agente.ultimo_status_em > timedelta(minutes=30):
+                        perfil_agente.status = 'offline'
+                        perfil_agente.save(update_fields=['status', 'ultimo_status_em'])
+                elif perfil_agente.status in ('online', 'ausente'):
+                    if not perfil_agente.ultimo_status_em or agora - perfil_agente.ultimo_status_em > timedelta(minutes=1):
+                        perfil_agente.save(update_fields=['ultimo_status_em'])
+        except Exception:
+            pass
+
         return self.get_response(request)

@@ -1,7 +1,7 @@
 # 08. Precificação
 
 **Status:** ✅ Aprovado
-**Última atualização:** 26/03/2026
+**Última atualização:** 09/04/2026
 
 ---
 
@@ -11,7 +11,7 @@
 
 Inspirado no modelo HubSpot: o cliente entra pelo plano que cabe no bolso e expande conforme cresce. Três níveis de profundidade por módulo. O transacional alinha o sucesso da Aurora com o sucesso do provedor.
 
-Escada de preço: **1:2:3,5** por módulo.
+Escada de preço: **1:2:3** por módulo. Valores padronizados para todos os módulos.
 
 ---
 
@@ -42,34 +42,49 @@ Escada de preço: **1:2:3,5** por módulo.
 
 ## Estrutura por módulo
 
+> **Valores padronizados:** todos os módulos possuem a mesma mensalidade por tier. Setup de R$697 por módulo contratado.
+
+### Mensalidade (igual para todos os módulos)
+
+| | Starter | Start | Pro |
+|-|---------|-------|-----|
+| **Mensalidade** | **R$497/mês** | **R$997/mês** | **R$1.497/mês** |
+| **Setup** | **R$697** | **R$697** | **R$697** |
+| Usuários | 1 a 2 | Até 5 | Ilimitado |
+| Funcionalidades | Essenciais | Completas | Completas + avançadas com IA |
+| Suporte | Standard | Standard | Prioritário |
+
 ### Comercial
 
 | | Starter | Start | Pro |
 |-|---------|-------|-----|
-| Mensalidade | R$397/mês | R$797/mês | R$1.397/mês |
-| Usuários | 1 a 2 | Até 5 | Ilimitado |
+| Mensalidade | R$497/mês | R$997/mês | R$1.497/mês |
 | Funcionalidades | Bot de qualificação, coleta de docs, contrato, ativação HubSoft | Tudo do Starter + automações de follow-up, relatórios básicos | Tudo do Start + CRM Kanban, automações avançadas, validação IA, relatórios completos |
-| Suporte | Standard | Standard | Prioritário |
-| **Transacional** | R$7 por venda finalizada no ERP | R$7 por venda finalizada no ERP | R$7 por venda finalizada no ERP |
+| **Transacional** | Variável por venda (tabela abaixo) | Variável por venda (tabela abaixo) | Variável por venda (tabela abaixo) |
+
+**Variável Comercial (decrescente por faixa):**
+
+| Faixa de vendas/mês | Valor por venda |
+|----------------------|-----------------|
+| 1 a 100 | R$10,00 |
+| 101 a 300 | R$8,00 |
+| 301 a 600 | R$7,00 |
+| 601+ | R$6,00 |
 
 ### Marketing
 
 | | Starter | Start | Pro |
 |-|---------|-------|-----|
-| Mensalidade | R$297/mês | R$597/mês | R$997/mês |
-| Usuários | 1 a 2 | Até 5 | Ilimitado |
+| Mensalidade | R$497/mês | R$997/mês | R$1.497/mês |
 | Funcionalidades | Disparos de WhatsApp e e-mail, réguas padrão prontas | Tudo do Starter + fluxos personalizados, rastreamento de campanhas | Tudo do Start + nutrição avançada, upsell de SVA, otimização de tráfego com IA, relatórios de atribuição |
-| Suporte | Standard | Standard | Prioritário |
 | **Transacional** | R$0,05 por contato na base/mês | R$0,05 por contato na base/mês | R$0,05 por contato na base/mês |
 
 ### CS (Customer Success)
 
 | | Starter | Start | Pro |
 |-|---------|-------|-----|
-| Mensalidade | R$247/mês | R$497/mês | R$897/mês |
-| Usuários | 1 a 2 | Até 5 | Ilimitado |
+| Mensalidade | R$497/mês | R$997/mês | R$1.497/mês |
 | Funcionalidades | Clube de Benefícios, réguas básicas de retenção via Marketing | Tudo do Starter + NPS, relatórios de saúde da base | Tudo do Start + prevenção de churn com IA, upsell automatizado, relatórios avançados |
-| Suporte | Standard | Standard | Prioritário |
 | **Transacional** | R$0,15 por cliente ativo no clube/mês | R$0,15 por cliente ativo no clube/mês | R$0,15 por cliente ativo no clube/mês |
 
 ---
@@ -78,12 +93,12 @@ Escada de preço: **1:2:3,5** por módulo.
 
 | Módulo | Evento | Valor | Natureza |
 |--------|--------|-------|---------|
-| Comercial | Venda finalizada e validada no ERP | R$7 por venda | Variável mensal — escala com volume de vendas |
+| Comercial | Venda finalizada e validada no ERP | R$10 a R$6 por venda (decrescente) | Variável mensal — escala com volume de vendas |
 | Marketing | Contato na base de leads | R$0,05 por contato/mês | Variável mensal — escala com crescimento da base |
 | CS | Cliente ativo no clube | R$0,15 por cliente/mês | Variável mensal — escala com retenção da base |
 | CRM Kanban | Incluso no Comercial Pro | Sem transacional próprio | — |
 
-> Os três transacionais escalam com métricas diferentes do provedor: volume de vendas, base de leads e base de clientes ativos. Quanto mais o provedor cresce, mais a Aurora cresce junto.
+> Os três transacionais escalam com métricas diferentes do provedor: volume de vendas, base de leads e base de clientes ativos. Quanto mais o provedor cresce, mais paga, mas o custo unitário diminui. O modelo decrescente no Comercial premia volume.
 
 ---
 
@@ -101,34 +116,37 @@ Escada de preço: **1:2:3,5** por módulo.
 
 | | Starter | Start | Pro |
 |-|---------|-------|-----|
-| Mensalidade | R$397 | R$797 | R$1.397 |
-| Transacional | 30 × R$7 = R$210 | 150 × R$7 = R$1.050 | 400 × R$7 = R$2.800 |
-| **Total/mês** | **R$607** | **R$1.847** | **R$4.197** |
+| Mensalidade | R$497 | R$997 | R$1.497 |
+| Transacional | 30 × R$10 = R$300 | 150 × R$8 = R$1.200 | 400 × R$7 = R$2.800 |
+| **Total/mês** | **R$797** | **R$2.197** | **R$4.297** |
+
+> Nota: a simulação usa o valor da faixa predominante. Na prática o cálculo é escalonado (primeiras 100 vendas a R$10, próximas 200 a R$8, etc).
 
 ### Marketing
 
 | | Starter | Start | Pro |
 |-|---------|-------|-----|
-| Mensalidade | R$297 | R$597 | R$997 |
+| Mensalidade | R$497 | R$997 | R$1.497 |
 | Transacional | 300 × R$0,05 = R$15 | 2.000 × R$0,05 = R$100 | 6.000 × R$0,05 = R$300 |
-| **Total/mês** | **R$312** | **R$697** | **R$1.297** |
+| **Total/mês** | **R$512** | **R$1.097** | **R$1.797** |
 
 ### CS
 
 | | Starter | Start | Pro |
 |-|---------|-------|-----|
-| Mensalidade | R$247 | R$497 | R$897 |
+| Mensalidade | R$497 | R$997 | R$1.497 |
 | Transacional | 500 × R$0,15 = R$75 | 3.000 × R$0,15 = R$450 | 10.000 × R$0,15 = R$1.500 |
-| **Total/mês** | **R$322** | **R$947** | **R$2.397** |
+| **Total/mês** | **R$572** | **R$1.447** | **R$2.997** |
 
 ### Stack completo
 
 | | Starter | Start | Pro |
 |-|---------|-------|-----|
-| Comercial | R$607 | R$1.847 | R$4.197 |
-| Marketing | R$312 | R$697 | R$1.297 |
-| CS | R$322 | R$947 | R$2.397 |
-| **Total/mês** | **R$1.241** | **R$3.491** | **R$7.891** |
+| Comercial | R$797 | R$2.197 | R$4.297 |
+| Marketing | R$512 | R$1.097 | R$1.797 |
+| CS | R$572 | R$1.447 | R$2.997 |
+| **Total/mês** | **R$1.881** | **R$4.741** | **R$9.091** |
+| **Setup (3 módulos)** | **R$2.091** | **R$2.091** | **R$2.091** |
 
 ---
 
@@ -137,10 +155,10 @@ Escada de preço: **1:2:3,5** por módulo.
 | | Starter | Start | Pro |
 |-|---------|-------|-----|
 | Receita digital gerada/mês | R$2.997 | R$14.985 | R$39.960 |
-| Custo stack completo/mês | R$1.241 | R$3.491 | R$7.891 |
-| **ROI** | **2,4x** | **4,3x** | **5x** |
+| Custo stack completo/mês | R$1.881 | R$4.741 | R$9.091 |
+| **ROI** | **1,6x** | **3,2x** | **4,4x** |
 
-> O stack completo custa menos de 20% da receita digital gerada em todos os portes.
+> O stack completo custa menos de 25% da receita digital gerada em todos os portes.
 
 ---
 

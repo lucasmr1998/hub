@@ -1,6 +1,6 @@
 # Módulo Suporte & Inbox — AuroraISP
 
-**Última atualização:** 06/04/2026
+**Ultima atualizacao:** 10/04/2026
 **Status:** ✅ Em produção
 **Localização:** `apps/inbox/` + `apps/suporte/`
 

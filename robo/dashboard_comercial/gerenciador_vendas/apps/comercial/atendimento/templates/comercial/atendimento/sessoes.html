@@ -30,8 +30,8 @@
 
 {% block content %}
 
-<div class="sessoes-header">
-    <h1><i class="fas fa-headset" style="color:var(--text-muted);margin-right:8px;"></i>Sessoes de Atendimento</h1>
+<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; background:var(--bg-white); border:1px solid var(--border); border-radius:12px; padding:14px 20px; margin-bottom:20px;">
+    <h1 class="page-title" style="margin:0;"><i class="fas fa-headset" style="color:var(--primary);margin-right:8px;"></i> Sessoes de Atendimento</h1>
     <div class="sessoes-filters">
         <select onchange="location.href='?status='+this.value+'&fluxo={{ fluxo_filter }}'">
             <option value="">Todos os status</option>
@@ -47,7 +47,7 @@
             <option value="{{ f.id }}" {% if fluxo_filter == f.id|stringformat:"d" %}selected{% endif %}>{{ f.nome }}</option>
             {% endfor %}
         </select>
-        <a href="{% url 'comercial_atendimento:fluxos_atendimento' %}" class="btn-secondary btn-sm"><i class="fas fa-project-diagram"></i> Fluxos</a>
+        <a href="{% url 'comercial_atendimento:fluxos_atendimento' %}" class="btn-secondary btn-sm" style="text-decoration:none;"><i class="fas fa-project-diagram"></i> Fluxos</a>
     </div>
 </div>
 

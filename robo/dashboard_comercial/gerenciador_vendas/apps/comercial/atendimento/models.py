@@ -136,6 +136,17 @@ class FluxoAtendimento(TenantMixin):
         help_text="Estado do Drawflow para re-import do editor visual"
     )
 
+    # Recontato automatico
+    recontato_ativo = models.BooleanField(
+        default=False, verbose_name="Recontato Ativo",
+        help_text="Ativar recontato automatico para atendimentos parados"
+    )
+    recontato_config = models.JSONField(
+        default=dict, blank=True,
+        verbose_name="Config Recontato",
+        help_text='{"tentativas": [{"tempo_minutos": 60, "mensagem": "..."}], "usar_ia": false, "acao_final": "abandonar"}'
+    )
+
     class Meta:
         db_table = 'fluxos_atendimento'
         verbose_name = "Fluxo de Atendimento"
@@ -1329,6 +1340,29 @@ class AtendimentoFluxo(TenantMixin):
         help_text="ID em sistema externo (ex: Hubsoft)"
     )
 
+    MOTIVO_FINALIZACAO_CHOICES = [
+        ('completado', 'Fluxo completado'),
+        ('sem_resposta', 'Sem resposta'),
+        ('abandonado_usuario', 'Abandonado pelo usuario'),
+        ('transferido', 'Transferido para humano'),
+        ('cancelado_atendente', 'Cancelado pelo atendente'),
+        ('cancelado_sistema', 'Cancelado pelo sistema'),
+        ('tempo_limite', 'Tempo limite excedido'),
+    ]
+
+    motivo_finalizacao = models.CharField(
+        max_length=30, choices=MOTIVO_FINALIZACAO_CHOICES,
+        blank=True, default='',
+        verbose_name="Motivo da Finalizacao"
+    )
+
+    recontato_tentativas = models.PositiveIntegerField(
+        default=0, verbose_name="Tentativas de Recontato"
+    )
+    recontato_proximo_em = models.DateTimeField(
+        null=True, blank=True, verbose_name="Proximo Recontato Em"
+    )
+
     resultado_final = models.JSONField(
         null=True,
         blank=True,
@@ -1890,6 +1924,7 @@ class NodoFluxoAtendimento(TenantMixin):
         ('acao', 'Acao'),
         ('delay', 'Delay'),
         ('finalizacao', 'Finalizacao'),
+        ('transferir_humano', 'Transferir para Humano'),
         ('ia_classificador', 'Classificador IA'),
         ('ia_extrator', 'Extrator IA'),
         ('ia_respondedor', 'Respondedor IA'),

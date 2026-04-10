@@ -70,9 +70,9 @@ def relatorios_view(request):
 
         taxa_conversao = (total_prospectos / total_leads * 100) if total_leads > 0 else 0
 
-        data_30_dias_atras = datetime.now() - timedelta(days=30)
-        data_7_dias_atras = datetime.now() - timedelta(days=7)
-        hoje = datetime.now().date()
+        data_30_dias_atras = timezone.now() - timedelta(days=30)
+        data_7_dias_atras = timezone.now() - timedelta(days=7)
+        hoje = timezone.now().date()
 
         # Leads por período
         leads_hoje    = LeadProspecto.objects.filter(data_cadastro__date=hoje).count()
@@ -249,9 +249,9 @@ def relatorio_leads_view(request):
     from datetime import datetime, timedelta
     import json
 
-    hoje = datetime.now().date()
-    data_30 = datetime.now() - timedelta(days=30)
-    data_7 = datetime.now() - timedelta(days=7)
+    hoje = timezone.now().date()
+    data_30 = timezone.now() - timedelta(days=30)
+    data_7 = timezone.now() - timedelta(days=7)
 
     total = LeadProspecto.objects.count()
     leads_hoje = LeadProspecto.objects.filter(data_cadastro__date=hoje).count()
@@ -284,9 +284,9 @@ def relatorio_clientes_view(request):
     from datetime import datetime, timedelta
     import json
 
-    hoje = datetime.now().date()
-    data_30 = datetime.now() - timedelta(days=30)
-    data_7 = datetime.now() - timedelta(days=7)
+    hoje = timezone.now().date()
+    data_30 = timezone.now() - timedelta(days=30)
+    data_7 = timezone.now() - timedelta(days=7)
 
     total_clientes = ClienteHubsoft.objects.count()
     ativos = ClienteHubsoft.objects.filter(ativo=True).count()
@@ -332,9 +332,9 @@ def relatorio_atendimentos_view(request):
     from datetime import datetime, timedelta
     import json
 
-    hoje = datetime.now().date()
-    data_30 = datetime.now() - timedelta(days=30)
-    data_7 = datetime.now() - timedelta(days=7)
+    hoje = timezone.now().date()
+    data_30 = timezone.now() - timedelta(days=30)
+    data_7 = timezone.now() - timedelta(days=7)
 
     total = HistoricoContato.objects.filter(status='fluxo_inicializado').count()
     atend_hoje = HistoricoContato.objects.filter(data_hora_contato__date=hoje, status='fluxo_inicializado').count()
@@ -444,12 +444,14 @@ def dashboard_data(request):
         # 2. LEADS = Quantidade de LeadProspecto ativos
         leads = LeadProspecto.objects.filter(ativo=True).count()
 
-        # 3. PROSPECTOS = Leads com status processado OU registrados no Hubsoft
-        prospectos = LeadProspecto.objects.filter(
-            id_hubsoft__isnull=False
-        ).exclude(id_hubsoft='').count()
+        # 3. OPORTUNIDADES = Oportunidades ativas no CRM
+        from apps.comercial.crm.models import OportunidadeVenda
+        prospectos = OportunidadeVenda.objects.filter(ativo=True).count()
         if prospectos == 0:
+            # Fallback: leads processados ou registrados no Hubsoft
             prospectos = LeadProspecto.objects.filter(
+                id_hubsoft__isnull=False
+            ).exclude(id_hubsoft='').count() or LeadProspecto.objects.filter(
                 status_api='processado'
             ).count()
 
@@ -478,10 +480,10 @@ def dashboard_data(request):
             data_cadastro__lt=fim_periodo_anterior
         ).count()
 
-        prospectos_anterior = LeadProspecto.objects.filter(
-            status_api='processado',
-            data_cadastro__gte=inicio_periodo_anterior,
-            data_cadastro__lt=fim_periodo_anterior
+        prospectos_anterior = OportunidadeVenda.objects.filter(
+            ativo=True,
+            data_criacao__gte=inicio_periodo_anterior,
+            data_criacao__lt=fim_periodo_anterior
         ).count()
 
         vendas_anterior = ClienteHubsoft.objects.filter(
@@ -578,16 +580,12 @@ def dashboard_charts_data(request):
 
         leadsUltimos7Dias = gerar_ultimos_7_dias(count_leads)
 
-        # 3. PROSPECTOS dos ultimos 7 dias
+        # 3. OPORTUNIDADES dos ultimos 7 dias
+        from apps.comercial.crm.models import OportunidadeVenda
         def count_prospectos(data):
-            count = LeadProspecto.objects.filter(
-                data_cadastro__date=data, id_hubsoft__isnull=False
-            ).exclude(id_hubsoft='').count()
-            if count == 0:
-                count = LeadProspecto.objects.filter(
-                    data_cadastro__date=data, status_api='processado'
-                ).count()
-            return count
+            return OportunidadeVenda.objects.filter(
+                data_criacao__date=data, ativo=True
+            ).count()
 
         prospectosUltimos7Dias = gerar_ultimos_7_dias(count_prospectos)
 
@@ -1337,7 +1335,7 @@ def dashboard_ultimas_conversoes(request):
             leads_recentes = (
                 LeadProspecto.objects
                 .filter(ativo=True)
-                .order_by('-data_criacao')[:limite]
+                .order_by('-data_cadastro')[:limite]
             )
             for lead in leads_recentes:
                 conversoes.append({
@@ -1439,7 +1437,7 @@ def api_analise_atendimentos_data(request):
             tempo_medio_formatado = "0s"
 
         # Dados para gráficos - últimos 7 dias
-        data_fim_chart = datetime.now().date()
+        data_fim_chart = timezone.now().date()
         data_inicio_chart = data_fim_chart - timedelta(days=6)
 
         chart_data = []

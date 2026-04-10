@@ -413,7 +413,11 @@
       </div>
     </div>
 
-    <button onclick="carregarPipeline()" class="btn-primary">
+    <button onclick="abrirModalNovaOportunidade()" class="btn-primary">
+      <i class="fas fa-plus"></i> Nova Oportunidade
+    </button>
+
+    <button onclick="carregarPipeline()" class="btn-secondary">
       <i class="fas fa-sync-alt"></i> Atualizar
     </button>
 
@@ -508,6 +512,43 @@
       </table>
     </div>
   </div>
+
+<!-- Modal Nova Oportunidade -->
+<div class="modal-overlay" id="modalNovaOport" style="display:none">
+  <div class="modal-content" style="max-width:480px;">
+    <button class="modal-close" onclick="fecharModalOport()"><i class="fas fa-times"></i></button>
+    <h3 style="font-size:16px;font-weight:700;color:var(--text-main);margin-bottom:20px;"><i class="fas fa-plus-circle" style="color:var(--primary);margin-right:6px;"></i> Nova Oportunidade</h3>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Nome do Contato *</label>
+      <input type="text" id="novaOportNome" class="form-control" placeholder="Nome completo">
+    </div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Telefone *</label>
+      <input type="text" id="novaOportTelefone" class="form-control" placeholder="DDD + numero">
+    </div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Titulo da Oportunidade</label>
+      <input type="text" id="novaOportTitulo" class="form-control" placeholder="Ex: Maria - Direito">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+      <div class="form-group">
+        <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Valor Estimado</label>
+        <input type="number" id="novaOportValor" class="form-control" placeholder="0.00" step="0.01">
+      </div>
+      <div class="form-group">
+        <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Responsavel</label>
+        <select id="novaOportResponsavel" class="form-control">
+          <option value="">Nenhum</option>
+          {% for v in vendedores %}<option value="{{ v.id }}">{{ v.nome }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn-secondary" onclick="fecharModalOport()">Cancelar</button>
+      <button class="btn-primary" onclick="criarOportunidade()"><i class="fas fa-save"></i> Criar</button>
+    </div>
+  </div>
+</div>
 
 <!-- Context menu global (reusado) -->
 <div class="card-context-menu" id="globalContextMenu">
@@ -989,5 +1030,45 @@ function mostrarNotificacao(mensagem, tipo) {
     console.log(`[${tipo}] ${mensagem}`);
   }
 }
+
+// Nova Oportunidade
+function abrirModalNovaOportunidade() {
+  document.getElementById('modalNovaOport').style.display = 'flex';
+  document.getElementById('novaOportNome').focus();
+}
+function fecharModalOport() {
+  document.getElementById('modalNovaOport').style.display = 'none';
+}
+function criarOportunidade() {
+  const nome = document.getElementById('novaOportNome').value.trim();
+  const telefone = document.getElementById('novaOportTelefone').value.trim();
+  const titulo = document.getElementById('novaOportTitulo').value.trim();
+  const valor = document.getElementById('novaOportValor').value;
+  const responsavel_id = document.getElementById('novaOportResponsavel').value;
+
+  if (!nome || !telefone) {
+    notificar('error', 'Nome e telefone sao obrigatorios');
+    return;
+  }
+
+  fetch('{% url "crm:api_criar_oportunidade" %}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRF()},
+    body: JSON.stringify({nome, telefone, titulo, valor: valor || null, responsavel_id: responsavel_id || null})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      notificar('success', 'Oportunidade criada!');
+      fecharModalOport();
+      carregarPipeline();
+    } else {
+      notificar('error', d.erro || 'Erro ao criar');
+    }
+  });
+}
+document.getElementById('modalNovaOport')?.addEventListener('click', function(e) {
+  if (e.target === this) fecharModalOport();
+});
 </script>
 {% endblock %}

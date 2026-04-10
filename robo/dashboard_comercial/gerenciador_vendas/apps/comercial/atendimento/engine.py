@@ -118,6 +118,17 @@ def processar_resposta_visual(atendimento, resposta):
     valida, msg_erro = _validar_resposta_questao(config, resposta)
 
     if not valida:
+        # Se tem fallback (false branch) conectado, enviar para la (ex: Agente IA)
+        tem_fallback = nodo_atual.saidas.filter(tipo_saida='false').exists()
+        if tem_fallback:
+            _registrar_log(atendimento, nodo_atual, 'fallback',
+                           f'Validacao falhou, redirecionando para fallback: {msg_erro}')
+            # Salvar a mensagem para o agente poder usar
+            dados = atendimento.dados_respostas or {}
+            dados['_ultima_mensagem'] = resposta
+            atendimento.dados_respostas = dados
+            atendimento.save(update_fields=['dados_respostas'])
+            return _seguir_conexoes(atendimento, nodo_atual, contexto, branch_forcado='false')
         return {
             'tipo': 'questao',
             'questao': _montar_dados_questao(nodo_atual),
@@ -159,12 +170,12 @@ def processar_resposta_visual(atendimento, resposta):
     if tem_ia:
         ia_sucesso = _processar_ia_questao(atendimento, nodo_atual, config, resposta, contexto)
 
-    # Seguir conexoes: com branch se tem IA, sem branch se nao tem
+    # Seguir conexoes: questoes em modo visual sempre usam true/false
     if tem_ia:
         branch = 'true' if ia_sucesso else 'false'
-        return _seguir_conexoes(atendimento, nodo_atual, contexto, branch_forcado=branch)
     else:
-        return _seguir_conexoes(atendimento, nodo_atual, contexto)
+        branch = 'true'
+    return _seguir_conexoes(atendimento, nodo_atual, contexto, branch_forcado=branch)
 
 
 def executar_pendentes_atendimento(tenant=None):
@@ -287,7 +298,10 @@ def _executar_nodo(atendimento, nodo, contexto):
                 # Processar IA se configurado
                 ia_acao = config.get('ia_acao', 'validar')
                 if config.get('integracao_ia_id') and ia_acao != 'validar':
-                    _processar_ia_questao(atendimento, nodo, config, str(valor_existente), contexto)
+                    ia_sucesso = _processar_ia_questao(atendimento, nodo, config, str(valor_existente), contexto)
+                    atendimento._branch_saida = 'true' if ia_sucesso else 'false'
+                else:
+                    atendimento._branch_saida = 'true'
                 return None  # segue para proximo no
 
         if espera:
@@ -295,10 +309,16 @@ def _executar_nodo(atendimento, nodo, contexto):
             atendimento.nodo_atual = nodo
             atendimento.save(update_fields=['nodo_atual', 'dados_respostas', 'questoes_respondidas'])
             _registrar_log(atendimento, nodo, 'aguardando', f'Pergunta: {titulo}')
+            # Incluir mensagens pendentes de nodos anteriores (espera_resposta=False)
+            pendentes = getattr(atendimento, '_mensagens_pendentes', [])
+            mensagem_final = titulo
+            if pendentes:
+                mensagem_final = '\n\n'.join(pendentes) + '\n\n' + titulo
+                atendimento._mensagens_pendentes = []
             return {
                 'tipo': 'questao',
                 'questao': _montar_dados_questao(nodo),
-                'mensagem': titulo,
+                'mensagem': mensagem_final,
             }
         else:
             # NAO ESPERA: envia mensagem e continua o fluxo
@@ -309,10 +329,17 @@ def _executar_nodo(atendimento, nodo, contexto):
             if config.get('integracao_ia_id') and ia_acao != 'validar':
                 ultima = _get_ultima_mensagem(atendimento)
                 if ultima:
-                    _processar_ia_questao(atendimento, nodo, config, ultima, contexto)
+                    ia_sucesso = _processar_ia_questao(atendimento, nodo, config, ultima, contexto)
+                    atendimento._branch_saida = 'true' if ia_sucesso else 'false'
+            else:
+                # Questoes sem IA em modo visual usam branch 'true'
+                atendimento._branch_saida = 'true'
 
-            # Retornar dados para o signal enviar no inbox, mas nao pausar
+            # Acumular mensagens pendentes (nao pausa, mas precisa enviar)
             if titulo:
+                if not hasattr(atendimento, '_mensagens_pendentes'):
+                    atendimento._mensagens_pendentes = []
+                atendimento._mensagens_pendentes.append(titulo)
                 atendimento._mensagem_pendente = {
                     'tipo': 'mensagem',
                     'questao': _montar_dados_questao(nodo),
@@ -361,6 +388,7 @@ def _executar_nodo(atendimento, nodo, contexto):
         score = config.get('score', None)
 
         atendimento.status = 'completado'
+        atendimento.motivo_finalizacao = 'completado'
         atendimento.data_conclusao = timezone.now()
         if atendimento.data_inicio:
             atendimento.tempo_total = int((timezone.now() - atendimento.data_inicio).total_seconds())
@@ -387,6 +415,9 @@ def _executar_nodo(atendimento, nodo, contexto):
             },
             'mensagem': config.get('mensagem_final', 'Atendimento finalizado'),
         }
+
+    elif nodo.tipo == 'transferir_humano':
+        return _executar_transferir_humano(atendimento, nodo, contexto)
 
     # Nos IA que NAO pausam (passam direto)
     elif nodo.tipo == 'ia_classificador':
@@ -846,8 +877,9 @@ def _validar_com_ia(integracao_id, resposta, config):
 
     tipo = integracao.tipo
     base_url = integracao.base_url
-    api_key = integracao.access_token or integracao.client_secret or ''
-    modelo = (integracao.configuracoes_extras or {}).get('modelo', '')
+    extras = integracao.configuracoes_extras or {}
+    api_key = extras.get('api_key', '') or integracao.access_token or integracao.client_secret or ''
+    modelo = extras.get('modelo', '')
 
     headers = {'Content-Type': 'application/json'}
     payload = {}
@@ -1006,7 +1038,8 @@ def _registrar_log(atendimento, nodo, status, mensagem, dados=None):
 
 def _processar_ia_questao(atendimento, nodo, config, resposta, contexto):
     """Processa IA integrada na questao: classificar e/ou extrair.
-    Retorna True se processou com sucesso, False se falhou (fallback)."""
+    Retorna True se processou com sucesso, False se falhou (fallback).
+    Para classificar_extrair: extrai primeiro. Se extraiu dados, classificacao e positiva."""
     ia_acao = config.get('ia_acao', 'validar')
     integracao = _obter_integracao_ia(config, atendimento.fluxo.tenant)
     if not integracao:
@@ -1017,8 +1050,9 @@ def _processar_ia_questao(atendimento, nodo, config, resposta, contexto):
     sucesso_classificacao = True
     sucesso_extracao = True
 
-    # Classificar
-    if ia_acao in ('classificar', 'classificar_extrair'):
+    # Para classificar_extrair: extrair PRIMEIRO, classificar baseado no resultado
+    # Para classificar sozinho: classificar normalmente
+    if ia_acao == 'classificar':
         categorias = config.get('ia_categorias', [])
         var_saida = config.get('ia_variavel_saida', 'classificacao')
 
@@ -1142,6 +1176,45 @@ Responda APENAS em JSON. Se nao encontrar, use string vazia."""
                                    dados={'campos': dados_extraidos})
             else:
                 sucesso_extracao = False
+
+    # Para classificar_extrair: usar uma unica chamada que classifica E extrai juntas
+    if ia_acao == 'classificar_extrair':
+        categorias = config.get('ia_categorias', [])
+        var_saida = config.get('ia_variavel_saida', 'classificacao')
+
+        # Chamar IA para classificar baseado no prompt completo (mais preciso que separar)
+        system_class = f"""{prompt_base}
+
+Categorias disponiveis: {', '.join(categorias)}
+
+IMPORTANTE: Considere os dados extraidos acima. Se a extracao encontrou um valor valido, classifique como {categorias[0] if categorias else 'sucesso'}.
+Se nao encontrou ou o valor nao e valido conforme as regras, classifique como {categorias[1] if len(categorias) > 1 else 'falha'}.
+
+Responda APENAS com o nome exato de uma das categorias."""
+
+        messages_class = [
+            {'role': 'system', 'content': system_class},
+            {'role': 'user', 'content': resposta},
+        ]
+        resultado_class = _chamar_llm_simples(integracao, modelo, messages_class)
+        if resultado_class:
+            categoria = resultado_class.strip().lower().replace('"', '').replace("'", '')
+            for c in categorias:
+                if c.lower() == categoria or c.lower() in categoria:
+                    categoria = c
+                    break
+            else:
+                categoria = categorias[1] if len(categorias) > 1 else categorias[0]
+        elif sucesso_extracao:
+            categoria = categorias[0] if categorias else 'sucesso'
+        else:
+            categoria = categorias[1] if len(categorias) > 1 else (categorias[0] if categorias else 'falha')
+        _salvar_variavel(atendimento, var_saida, categoria)
+        contexto[var_saida] = categoria
+        sucesso_classificacao = sucesso_extracao
+        _registrar_log(atendimento, nodo, 'sucesso',
+                       f'IA classificou (via extracao): {categoria}',
+                       dados={'variavel': var_saida, 'valor': categoria})
 
     # Atualizar contexto com variaveis
     contexto['var'] = (atendimento.dados_respostas or {}).get('variaveis', {})
@@ -1270,6 +1343,55 @@ def _get_ultima_mensagem(atendimento):
     except Exception:
         pass
     return ''
+
+
+# ── TRANSFERIR PARA HUMANO ──
+
+def _executar_transferir_humano(atendimento, nodo, contexto):
+    """Transfere a conversa para fila humana e finaliza o fluxo do bot."""
+    config = nodo.configuracao
+    fila_id = config.get('fila_id')
+    mensagem = config.get('mensagem', 'Transferindo para um atendente. Aguarde um momento.')
+
+    # Buscar conversa aberta do lead
+    conversa = None
+    if atendimento.lead:
+        from apps.inbox.models import Conversa
+        conversa = Conversa.objects.filter(
+            lead=atendimento.lead,
+            status__in=['aberta', 'pendente'],
+        ).order_by('-ultima_mensagem_em').first()
+
+    if conversa:
+        conversa.modo_atendimento = 'humano'
+        update_fields = ['modo_atendimento']
+        if fila_id:
+            from apps.inbox.models import FilaInbox
+            fila = FilaInbox.objects.filter(pk=fila_id).select_related('equipe').first()
+            if fila:
+                conversa.fila = fila
+                conversa.equipe = fila.equipe
+                update_fields.extend(['fila', 'equipe'])
+        conversa.save(update_fields=update_fields)
+
+        # Distribuir para agente da fila
+        from apps.inbox.distribution import distribuir_conversa
+        distribuir_conversa(conversa, atendimento.fluxo.tenant)
+
+    # Finalizar o atendimento do bot
+    atendimento.status = 'transferido'
+    atendimento.motivo_finalizacao = 'transferido'
+    atendimento.nodo_atual = None
+    atendimento.save(update_fields=['status', 'motivo_finalizacao', 'nodo_atual'])
+
+    _registrar_log(atendimento, nodo, 'sucesso',
+                   f'Transferido para humano. Fila: {fila_id or "padrao"}',
+                   dados={'fila_id': fila_id, 'conversa_id': conversa.pk if conversa else None})
+
+    return {
+        'tipo': 'transferido',
+        'mensagem': mensagem,
+    }
 
 
 # ── CLASSIFICADOR IA ──
@@ -1478,16 +1600,19 @@ def _executar_ia_respondedor(atendimento, nodo, contexto):
     messages = [{'role': 'system', 'content': system_prompt}]
 
     # Historico se habilitado
-    if config.get('incluir_historico', True):
-        dados = atendimento.dados_respostas or {}
-        historico = dados.get(f'ia_historico_{nodo.id}', [])
+    dados = atendimento.dados_respostas or {}
+    historico = dados.get(f'ia_historico_{nodo.id}', [])
+    mensagem_usuario = None
+    if config.get('incluir_historico', True) and historico:
         max_hist = config.get('max_historico', 10)
         messages.extend(historico[-max_hist:])
-
-    # Mensagem atual do usuario
-    mensagem_usuario = _get_ultima_mensagem(atendimento)
-    if mensagem_usuario:
-        messages.append({'role': 'user', 'content': mensagem_usuario})
+        # Mensagem do usuario (so se ja tem historico, ou seja, multi-turno)
+        mensagem_usuario = _get_ultima_mensagem(atendimento)
+        if mensagem_usuario:
+            messages.append({'role': 'user', 'content': mensagem_usuario})
+    else:
+        # Primeira execucao: enviar instrucao para iniciar a conversa
+        messages.append({'role': 'user', 'content': 'Apresente as informacoes conforme instruido.'})
 
     resultado = _chamar_llm_simples(integracao, config.get('modelo', ''), messages)
     if not resultado:
@@ -1517,23 +1642,54 @@ def _executar_ia_respondedor(atendimento, nodo, contexto):
 
 
 def processar_resposta_ia_respondedor(atendimento, resposta):
-    """Processa resposta do usuario para um no ia_respondedor. Resume o fluxo."""
+    """Processa resposta do usuario para um no ia_respondedor.
+    Re-responde com IA (multi-turno) e segue o fluxo, passando a resposta para os proximos nos."""
     nodo = atendimento.nodo_atual
+    config = nodo.configuracao
 
     # Salvar mensagem no historico
     dados = atendimento.dados_respostas or {}
     historico_key = f'ia_historico_{nodo.id}'
     historico = dados.get(historico_key, [])
     historico.append({'role': 'user', 'content': resposta})
+
+    # Re-responder com IA (multi-turno conversacional)
+    integracao = _obter_integracao_ia(config, atendimento.fluxo.tenant)
+    if integracao:
+        system_prompt = config.get('system_prompt', '')
+        contexto = _construir_contexto(atendimento)
+        system_prompt = _substituir_variaveis(system_prompt, contexto)
+        if atendimento.lead:
+            lead = atendimento.lead
+            system_prompt += f"\n\nDados do lead: Nome: {lead.nome_razaosocial}, Telefone: {lead.telefone}, Email: {lead.email or 'N/A'}"
+
+        messages = [{'role': 'system', 'content': system_prompt}]
+        for m in historico:
+            if isinstance(m, dict) and 'role' in m and 'content' in m:
+                messages.append({'role': m['role'], 'content': m['content']})
+
+        resposta_ia = _chamar_llm_simples(integracao, config.get('modelo', ''), messages)
+        if resposta_ia:
+            historico.append({'role': 'assistant', 'content': resposta_ia})
+
     dados[historico_key] = historico
     dados['_ultima_mensagem'] = resposta
     atendimento.dados_respostas = dados
     atendimento.nodo_atual = None
     atendimento.save(update_fields=['dados_respostas', 'nodo_atual'])
 
-    # Seguir para o proximo no
+    # Seguir para o proximo no (passa a resposta do usuario para classificadores etc)
     contexto = _construir_contexto(atendimento)
-    return _seguir_conexoes(atendimento, nodo, contexto)
+    resultado = _seguir_conexoes(atendimento, nodo, contexto)
+
+    # Se a IA respondeu, incluir a resposta antes do resultado do proximo no
+    if integracao and resposta_ia:
+        if resultado and resultado.get('mensagem'):
+            resultado['mensagem'] = f"{resposta_ia}\n\n{resultado['mensagem']}"
+        elif resultado:
+            resultado['mensagem'] = resposta_ia
+
+    return resultado
 
 
 # ── AGENTE IA (multi-turno com tools) ──
@@ -1546,11 +1702,27 @@ def _executar_ia_agente_inicial(atendimento, nodo, contexto):
         _registrar_log(atendimento, nodo, 'erro', 'Integracao IA nao configurada')
         return {'tipo': 'ia_agente', 'mensagem': config.get('mensagem_timeout', 'Erro ao processar.')}
 
+    # Detectar se chegou via fallback de uma questao
+    nodo_retorno = None
+    if atendimento.nodo_atual and atendimento.nodo_atual.tipo == 'questao' and atendimento.nodo_atual.pk != nodo.pk:
+        nodo_retorno = atendimento.nodo_atual
+
     system_prompt = config.get('system_prompt', '')
     system_prompt = _substituir_variaveis(system_prompt, contexto)
     if atendimento.lead:
         lead = atendimento.lead
         system_prompt += f"\n\nDados do lead: Nome: {lead.nome_razaosocial}, Telefone: {lead.telefone}, Email: {lead.email or 'N/A'}, Cidade: {lead.cidade or 'N/A'}"
+
+    # Se veio de fallback, instruir o agente a retomar a pergunta naturalmente
+    if nodo_retorno:
+        titulo_questao = nodo_retorno.configuracao.get('titulo', '')
+        if titulo_questao:
+            system_prompt += (
+                f"\n\nIMPORTANTE: O candidato estava respondendo a seguinte pergunta: \"{titulo_questao}\"\n"
+                "Ele enviou uma mensagem que nao responde diretamente a essa pergunta. "
+                "Responda a duvida dele de forma breve e educada, e no final retome a pergunta de forma natural e conversacional. "
+                "NAO repita a pergunta exatamente como esta, reformule de forma resumida e amigavel."
+            )
 
     mensagem_usuario = _get_ultima_mensagem(atendimento)
 
@@ -1559,7 +1731,6 @@ def _executar_ia_agente_inicial(atendimento, nodo, contexto):
         messages.append({'role': 'user', 'content': mensagem_usuario})
 
     # Chamar LLM com tools
-    # Tools do config (sistema + customizadas)
     resultado = _chamar_llm_com_tools(
         integracao, config.get('modelo', ''), messages,
         config, atendimento, contexto
@@ -1575,10 +1746,19 @@ def _executar_ia_agente_inicial(atendimento, nodo, contexto):
     historico['turnos'] = 1
     dados[historico_key] = historico
     dados['_ultima_mensagem'] = mensagem_usuario or ''
-    atendimento.dados_respostas = dados
 
-    # PAUSA
+    # Se veio de fallback de questao, retornar para a questao apos responder
+    if nodo_retorno:
+        atendimento.nodo_atual = nodo_retorno
+        atendimento.dados_respostas = dados
+        atendimento.save(update_fields=['dados_respostas', 'nodo_atual'])
+        _registrar_log(atendimento, nodo, 'sucesso',
+                       f'Agente IA (fallback): {resultado[:100]}. Retornando para questao {nodo_retorno.pk}')
+        return {'tipo': 'ia_agente', 'mensagem': resultado}
+
+    # PAUSA normal (agente conversacional standalone)
     atendimento.nodo_atual = nodo
+    atendimento.dados_respostas = dados
     atendimento.save(update_fields=['dados_respostas', 'nodo_atual'])
 
     _registrar_log(atendimento, nodo, 'aguardando', f'Agente IA iniciou: {resultado[:100]}')

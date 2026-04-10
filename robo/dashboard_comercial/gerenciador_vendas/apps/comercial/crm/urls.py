@@ -11,6 +11,7 @@ urlpatterns = [
     path('pipeline/mover/', views.api_mover_oportunidade, name='api_mover_oportunidade'),
 
     # Oportunidades
+    path('oportunidades/criar/', views.api_criar_oportunidade, name='api_criar_oportunidade'),
     path('oportunidades/', views.oportunidades_lista, name='oportunidades_lista'),
     path('oportunidades/<int:pk>/', views.oportunidade_detalhe, name='oportunidade_detalhe'),
     path('oportunidades/<int:pk>/atribuir/', views.api_atribuir_responsavel, name='api_atribuir_responsavel'),

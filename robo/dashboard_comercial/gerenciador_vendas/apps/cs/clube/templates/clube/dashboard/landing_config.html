@@ -3,13 +3,10 @@
 {% block title %}Landing Page{% endblock %}
 
 {% block content %}
-<div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
-    <div>
-        <h1 class="page-title">Configura&ccedil;&atilde;o da Landing Page</h1>
-        <p class="page-subtitle">Edite o conte&uacute;do da p&aacute;gina p&uacute;blica do Clube</p>
-    </div>
-    <a href="{% url 'clube:landing_clube' %}" target="_blank" class="btn-secondary">
-        <i class="fas fa-external-link-alt"></i> Ver P&aacute;gina
+<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; background:var(--bg-white); border:1px solid var(--border); border-radius:12px; padding:14px 20px; margin-bottom:20px;">
+    <h1 class="page-title" style="margin:0;"><i class="fas fa-file-alt" style="color:var(--primary);margin-right:8px;"></i> Landing Page</h1>
+    <a href="{% url 'clube:landing_clube' %}" target="_blank" class="btn-secondary" style="text-decoration:none;">
+        <i class="fas fa-external-link-alt"></i> Ver Pagina
     </a>
 </div>
 

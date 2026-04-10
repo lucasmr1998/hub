@@ -23,6 +23,8 @@ urlpatterns = [
     path('api/configuracoes/usuarios/', views.api_usuarios_criar, name='api_usuarios_criar'),
     path('api/configuracoes/usuarios/<int:user_id>/', views.api_usuarios_editar, name='api_usuarios_editar'),
     path('api/configuracoes/usuarios/<int:user_id>/deletar/', views.api_usuarios_deletar, name='api_usuarios_deletar'),
+    path('configuracoes/empresa/', views.configuracoes_empresa_view, name='configuracoes_empresa'),
+    path('api/agente/status/', views.api_agente_status, name='api_agente_status'),
 
     # Perfis de permissão
     path('configuracoes/perfis/', views.perfis_permissao_view, name='perfis_permissao'),

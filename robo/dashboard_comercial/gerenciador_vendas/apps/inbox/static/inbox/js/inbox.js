@@ -13,6 +13,7 @@
         currentConversaId: null,
         agenteFilter: '',
         statusFilter: '',
+        modoFilter: 'humano', // 'bot', 'humano', '' (todas)
         sortOrder: 'desc', // 'desc' = mais recente, 'asc' = mais antiga
         searchQuery: '',
         inputMode: 'reply', // 'reply' ou 'note'
@@ -22,6 +23,15 @@
         ws: null,
         wsConnected: false,
     };
+
+    // Status dos agentes (injetado pelo template)
+    const AGENTES_STATUS = window.AGENTES_STATUS || {};
+    function _agenteStatusDot(agenteId) {
+        const s = AGENTES_STATUS[agenteId];
+        if (!s) return '<i class="fas fa-user" style="font-size:9px;margin-right:2px;"></i>';
+        const cor = s === 'online' ? '#22c55e' : s === 'ausente' ? '#f59e0b' : '#94a3b8';
+        return `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${cor};margin-right:3px;"></span>`;
+    }
 
     // ── Utilidades ────────────────────────────────────────────────────
 
@@ -88,6 +98,7 @@
         let url = '/inbox/api/conversas/?';
         if (state.agenteFilter) url += 'agente=' + state.agenteFilter + '&';
         if (state.statusFilter) url += 'status=' + state.statusFilter + '&';
+        if (state.modoFilter) url += 'modo=' + state.modoFilter + '&';
         if (state.sortOrder) url += 'ordem=' + state.sortOrder + '&';
         if (state.searchQuery) url += 'q=' + encodeURIComponent(state.searchQuery) + '&';
 
@@ -125,7 +136,8 @@
                 <div class="conv-body">
                     <div class="conv-top">
                         <span class="conv-inbox-label">${esc(canalLabel)}</span>
-                        ${c.agente_nome ? `<span class="conv-agent-name"><i class="fas fa-user" style="font-size:9px;margin-right:2px;"></i>${esc(c.agente_nome)}</span>` : ''}
+                        ${c.modo_atendimento === 'bot' ? '<span class="conv-inbox-label" style="background:#f3e8ff;color:#6b21a8;"><i class="fas fa-robot" style="font-size:9px;margin-right:2px;"></i>Bot</span>' : ''}
+                        ${c.agente_nome ? `<span class="conv-agent-name">${_agenteStatusDot(c.agente_id)}${esc(c.agente_nome)}</span>` : ''}
                     </div>
                     <div class="conv-name">${esc(c.contato_nome || c.contato_telefone || '#' + c.numero)}</div>
                     <div class="conv-preview">
@@ -423,10 +435,20 @@
     // ── Event Bindings ────────────────────────────────────────────────
 
     function init() {
-        // Assign tabs (Minhas / Não atribuídas / Todas)
-        document.querySelectorAll('.inbox-assign-tab').forEach(btn => {
+        // Modo tabs (Bot / Humano / Todas) — admin only
+        document.querySelectorAll('.inbox-modo-tab').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.querySelectorAll('.inbox-assign-tab').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.inbox-modo-tab').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.modoFilter = btn.dataset.modo;
+                loadConversas();
+            });
+        });
+
+        // Assign tabs (Minhas / Não atribuídas / Todas)
+        document.querySelectorAll('.inbox-atrib-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.inbox-atrib-tab').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 state.agenteFilter = btn.dataset.agente;
                 loadConversas();

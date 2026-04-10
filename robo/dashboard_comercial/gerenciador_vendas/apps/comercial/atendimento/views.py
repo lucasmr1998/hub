@@ -445,12 +445,19 @@ def editor_fluxo_view(request, fluxo_id):
     ).values_list('id', 'nome', 'tipo')
     integracoes_ia_list = [{'id': i[0], 'nome': i[1], 'tipo': i[2]} for i in integracoes_ia]
 
+    # Filas disponiveis para transferencia
+    from apps.inbox.models import FilaInbox
+    filas = FilaInbox.objects.filter(ativo=True).values_list('id', 'nome')
+    filas_list = [{'id': f[0], 'nome': f[1]} for f in filas]
+
     context = {
         'fluxo': fluxo,
         'fluxo_json': json.dumps(fluxo.fluxo_json) if fluxo.fluxo_json else '{}',
         'nodos_db': json.dumps(nodos_db),
         'conexoes_db': json.dumps(conexoes_db),
         'integracoes_ia': json.dumps(integracoes_ia_list),
+        'filas_inbox': json.dumps(filas_list),
+        'recontato_config_json': json.dumps(fluxo.recontato_config or {}),
     }
     return render(request, 'comercial/atendimento/editor_fluxo.html', context)
 
@@ -511,6 +518,118 @@ def salvar_fluxo_api(request, fluxo_id):
     except Exception as e:
         logger.error(f"Erro ao salvar fluxo visual: {e}")
         return JsonResponse({'ok': False, 'erro': str(e)}, status=400)
+
+
+# ============================================================================
+# SIMULADOR DE TESTE
+# ============================================================================
+
+@login_required(login_url='sistema:login')
+@require_http_methods(["POST"])
+def salvar_recontato_api(request, fluxo_id):
+    """Salva configuracao de recontato do fluxo."""
+    from django.shortcuts import get_object_or_404
+    fluxo = get_object_or_404(FluxoAtendimento, pk=fluxo_id)
+    try:
+        body = json.loads(request.body)
+        fluxo.recontato_ativo = body.get('ativo', False)
+        fluxo.recontato_config = body.get('config', {})
+        fluxo.save(update_fields=['recontato_ativo', 'recontato_config'])
+        return JsonResponse({'ok': True})
+    except Exception as e:
+        return JsonResponse({'ok': False, 'erro': str(e)}, status=400)
+
+
+@login_required(login_url='sistema:login')
+@require_http_methods(["POST"])
+def simular_fluxo_api(request, fluxo_id):
+    """API para o simulador de teste do editor de fluxos."""
+    from django.shortcuts import get_object_or_404
+    fluxo = get_object_or_404(FluxoAtendimento, pk=fluxo_id)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'erro': 'JSON invalido'}, status=400)
+
+    action = body.get('action', '')
+
+    if action == 'iniciar':
+        nome = body.get('nome', '').strip()
+        telefone = body.get('telefone', '00000000000')
+
+        # Criar ou buscar lead de teste
+        from apps.comercial.leads.models import LeadProspecto
+        lead, _ = LeadProspecto.objects.get_or_create(
+            telefone=telefone,
+            defaults={'nome_razaosocial': nome, 'origem': 'simulador'}
+        )
+        # Limpar dados do lead para simular do zero
+        lead.nome_razaosocial = nome
+        lead.save(update_fields=['nome_razaosocial'])
+
+        # Cancelar atendimentos anteriores desse lead nesse fluxo
+        AtendimentoFluxo.objects.filter(
+            lead=lead, fluxo=fluxo, status__in=['iniciado', 'em_andamento']
+        ).update(status='cancelado')
+
+        # Criar novo atendimento
+        atend = AtendimentoFluxo.objects.create(
+            lead=lead, fluxo=fluxo,
+            status='em_andamento', total_questoes=0, dados_respostas={},
+        )
+
+        from .engine import iniciar_fluxo_visual
+        resultado = iniciar_fluxo_visual(atend)
+
+        return JsonResponse({
+            'ok': True,
+            'atendimento_id': atend.pk,
+            'resultado': _serializar_resultado(resultado),
+        })
+
+    elif action == 'responder':
+        atendimento_id = body.get('atendimento_id')
+        mensagem = body.get('mensagem', '')
+
+        atend = AtendimentoFluxo.objects.filter(pk=atendimento_id).select_related('nodo_atual').first()
+        if not atend or not atend.nodo_atual:
+            return JsonResponse({'ok': False, 'erro': 'Atendimento nao encontrado ou finalizado'})
+
+        nodo = atend.nodo_atual
+        from .engine import processar_resposta_visual, processar_resposta_ia_respondedor, processar_resposta_ia_agente
+
+        if nodo.tipo == 'ia_respondedor':
+            resultado = processar_resposta_ia_respondedor(atend, mensagem)
+        elif nodo.tipo == 'ia_agente':
+            resultado = processar_resposta_ia_agente(atend, mensagem)
+        elif nodo.tipo == 'questao':
+            resultado = processar_resposta_visual(atend, mensagem)
+        else:
+            resultado = {'tipo': 'erro', 'mensagem': f'Tipo de nodo inesperado: {nodo.tipo}'}
+
+        atend.refresh_from_db()
+        return JsonResponse({
+            'ok': True,
+            'atendimento_id': atend.pk,
+            'resultado': _serializar_resultado(resultado),
+            'status': atend.status,
+        })
+
+    return JsonResponse({'ok': False, 'erro': 'Action invalida'}, status=400)
+
+
+def _serializar_resultado(resultado):
+    """Serializa resultado do engine para JSON."""
+    if not resultado:
+        return {'tipo': 'erro', 'mensagem': 'Sem resultado'}
+    r = {'tipo': resultado.get('tipo', ''), 'mensagem': resultado.get('mensagem', '')}
+    if resultado.get('questao'):
+        q = resultado['questao']
+        r['opcoes'] = q.get('opcoes_resposta', [])
+    if resultado.get('erro'):
+        r['erro'] = resultado['erro']
+    return r
 
 
 # ============================================================================

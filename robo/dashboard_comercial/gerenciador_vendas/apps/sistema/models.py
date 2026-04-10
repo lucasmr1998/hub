@@ -433,6 +433,19 @@ class ConfiguracaoEmpresa(models.Model):
         max_length=7, verbose_name="Cor Secundária", default="#2c5aa0",
         validators=[RegexValidator(regex='^#[0-9A-Fa-f]{6}$', message='Formato inválido. Use #RRGGBB')]
     )
+    # Integracoes de leads
+    enviar_leads_integracao = models.BooleanField(
+        default=False, verbose_name="Enviar leads para integração",
+        help_text="Envia leads automaticamente para a integração selecionada ao cadastrar"
+    )
+    integracao_leads = models.ForeignKey(
+        'integracoes.IntegracaoAPI', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='config_empresa_leads',
+        verbose_name="Integração para leads",
+        help_text="Integração que recebe os leads (ex: HubSoft)"
+    )
+
     ativo = models.BooleanField(default=True, verbose_name="Configuração Ativa")
     data_criacao = models.DateTimeField(auto_now_add=True)
     data_atualizacao = models.DateTimeField(auto_now=True)

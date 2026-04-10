@@ -1,8 +1,8 @@
 """
-Engine de distribuição automática do Inbox.
+Engine de distribuicao automatica do Inbox.
 
 Determina fila, seleciona agente e atribui conversas automaticamente.
-Chamado por services.receber_mensagem() quando nova conversa é criada.
+Chamado por services.receber_mensagem() quando nova conversa e criada.
 """
 
 import logging
@@ -21,15 +21,16 @@ logger = logging.getLogger(__name__)
 
 def verificar_horario_atendimento(tenant):
     """
-    Verifica se o momento atual está dentro do horário de atendimento.
-    Se não há horários cadastrados, assume sempre aberto (backward compatible).
+    Verifica se o momento atual esta dentro do horario de atendimento GLOBAL.
+    Se nao ha horarios cadastrados, assume sempre aberto (backward compatible).
+    Usado como fallback quando a fila nao tem horarios proprios.
     """
-    horarios = HorarioAtendimento.all_tenants.filter(tenant=tenant, ativo=True)
+    horarios = HorarioAtendimento.all_tenants.filter(tenant=tenant, fila__isnull=True, ativo=True)
     if not horarios.exists():
         return True
 
     agora = timezone.localtime()
-    dia_semana = agora.weekday()  # 0=Monday
+    dia_semana = agora.weekday()
     hora_atual = agora.time()
 
     horario = horarios.filter(dia_semana=dia_semana).first()
@@ -39,11 +40,28 @@ def verificar_horario_atendimento(tenant):
     return horario.hora_inicio <= hora_atual <= horario.hora_fim
 
 
+def verificar_horario_fila(fila):
+    """
+    Verifica se a fila esta dentro do horario de atendimento.
+    Se a fila nao tem horarios proprios, retorna True (sempre aberta).
+    """
+    horarios = fila.horarios.filter(ativo=True)
+    if not horarios.exists():
+        return True
+
+    agora = timezone.localtime()
+    horario = horarios.filter(dia_semana=agora.weekday()).first()
+    if not horario:
+        return False
+
+    return horario.hora_inicio <= agora.time() <= horario.hora_fim
+
+
 def determinar_fila(conversa, tenant):
     """
     Determina a fila para uma conversa baseado nas regras de roteamento.
     Itera regras por prioridade (maior primeiro), retorna a fila da primeira match.
-    Retorna None se nenhuma regra bate (conversa fica na fila "Geral" virtual).
+    Retorna None se nenhuma regra bate.
     """
     regras = RegraRoteamento.all_tenants.filter(
         tenant=tenant, ativo=True, fila__ativo=True
@@ -74,19 +92,19 @@ def determinar_fila(conversa, tenant):
 
 def selecionar_agente(fila, tenant):
     """
-    Seleciona o próximo agente disponível para a fila.
+    Seleciona o proximo agente disponivel para a fila.
 
     Modos:
-    - manual: retorna None (conversa fica sem agente, espera atribuição manual)
-    - round_robin: próximo agente em ciclo circular
+    - manual: retorna None (conversa fica sem agente, espera atribuicao manual)
+    - round_robin: proximo agente em ciclo circular
     - menor_carga: agente com menos conversas abertas
 
-    Verifica: status=online e capacidade disponível.
+    Verifica: status=online e capacidade disponivel.
     """
     if fila.modo_distribuicao == 'manual':
         return None
 
-    # Buscar membros da equipe da fila que estão online e com capacidade
+    # Buscar membros da equipe da fila que estao online e com capacidade
     membros = MembroEquipeInbox.all_tenants.filter(
         tenant=tenant,
         equipe=fila.equipe,
@@ -95,7 +113,7 @@ def selecionar_agente(fila, tenant):
     if not membros:
         return None
 
-    # Filtrar agentes disponíveis (online + com capacidade)
+    # Filtrar agentes disponiveis (online + com capacidade)
     perfis = PerfilAgenteInbox.all_tenants.filter(
         tenant=tenant,
         user_id__in=membros,
@@ -119,7 +137,7 @@ def selecionar_agente(fila, tenant):
 
 
 def _round_robin(fila, disponiveis):
-    """Seleciona próximo agente em ciclo circular."""
+    """Seleciona proximo agente em ciclo circular."""
     user_ids = [p.user_id for p in disponiveis]
 
     ultimo_id = fila.ultimo_agente_id
@@ -148,14 +166,29 @@ def distribuir_conversa(conversa, tenant):
     """
     Orquestrador principal: determina fila e seleciona agente.
 
-    1. Determina fila via regras de roteamento
-    2. Atribui equipe e fila à conversa
-    3. Seleciona agente disponível
-    4. Cria mensagem de sistema se atribuiu
+    1. Determina fila via regras de roteamento (se nao tem fila definida)
+    2. Verifica horario da fila
+    3. Atribui equipe e fila a conversa
+    4. Seleciona agente disponivel
+    5. Cria mensagem de sistema se atribuiu
     """
-    fila = determinar_fila(conversa, tenant)
+    from .signals import _enviar_mensagens_bot
+
+    fila = conversa.fila or determinar_fila(conversa, tenant)
 
     if fila:
+        # Verificar horario da fila
+        if not verificar_horario_fila(fila):
+            msg = fila.mensagem_fora_horario or 'Estamos fora do horario de atendimento. Responderemos assim que possivel.'
+            _enviar_mensagens_bot(tenant, conversa, msg, 'Aurora')
+            conversa.fila = fila
+            conversa.equipe = fila.equipe
+            conversa.status = 'pendente'
+            conversa.save(update_fields=['fila', 'equipe', 'status'])
+            logger.info("Distribuicao: conversa #%s → fila %s (fora do horario)",
+                        conversa.numero, fila.nome)
+            return conversa
+
         conversa.fila = fila
         conversa.equipe = fila.equipe
 
@@ -164,6 +197,10 @@ def distribuir_conversa(conversa, tenant):
             conversa.agente = agente
             conversa.save(update_fields=['fila', 'equipe', 'agente'])
 
+            # Vincular agente como responsavel da oportunidade do lead
+            from .services import _vincular_agente_oportunidade
+            _vincular_agente_oportunidade(conversa, agente)
+
             nome = agente.get_full_name() or agente.username
             Mensagem(
                 tenant=tenant,
@@ -171,16 +208,17 @@ def distribuir_conversa(conversa, tenant):
                 remetente_tipo='sistema',
                 remetente_nome='Sistema',
                 tipo_conteudo='sistema',
-                conteudo=f"Conversa atribuída automaticamente a {nome} ({fila.equipe.nome})",
+                conteudo=f"Conversa atribuida automaticamente a {nome} ({fila.equipe.nome})",
             ).save()
 
-            logger.info("Distribuição: conversa #%s → %s (fila: %s, modo: %s)",
+            logger.info("Distribuicao: conversa #%s → %s (fila: %s, modo: %s)",
                         conversa.numero, nome, fila.nome, fila.modo_distribuicao)
         else:
             conversa.save(update_fields=['fila', 'equipe'])
-            logger.info("Distribuição: conversa #%s → fila %s (sem agente disponível)",
+            logger.info("Distribuicao: conversa #%s → fila %s (sem agente disponivel)",
                         conversa.numero, fila.nome)
     else:
-        logger.debug("Distribuição: conversa #%s sem fila correspondente", conversa.numero)
+        # Sem fila = sem distribuicao automatica
+        logger.debug("Distribuicao: conversa #%s sem fila correspondente", conversa.numero)
 
     return conversa

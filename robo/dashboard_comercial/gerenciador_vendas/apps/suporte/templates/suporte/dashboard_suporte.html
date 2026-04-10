@@ -1,237 +1,179 @@
 {% extends 'sistema/base.html' %}
-
 {% block title %}Suporte — Dashboard{% endblock %}
 
 {% block extra_css %}
 <style>
-    .suporte-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 24px;
-    }
-    .suporte-header h1 {
-        font-size: 1.3rem;
-        font-weight: 800;
-        color: var(--text-main);
-    }
-    .suporte-stats {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 16px;
-        margin-bottom: 28px;
-    }
-    .suporte-stat {
-        background: var(--bg-white);
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        padding: 20px;
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        transition: box-shadow .2s;
-    }
-    .suporte-stat:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,.06);
-    }
-    .suporte-stat-icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.1rem;
-        flex-shrink: 0;
-    }
-    .suporte-stat-num {
-        font-size: 1.5rem;
-        font-weight: 800;
-        line-height: 1;
-        color: var(--text-main);
-    }
-    .suporte-stat-label {
-        font-size: .72rem;
-        color: var(--text-muted);
-        margin-top: 2px;
-    }
-    .suporte-section {
-        background: var(--bg-white);
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        overflow: hidden;
-        margin-bottom: 20px;
-    }
-    .suporte-section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 16px 20px;
-        border-bottom: 1px solid var(--border);
-    }
-    .suporte-section-title {
-        font-size: .9rem;
-        font-weight: 700;
-        color: var(--text-main);
-    }
-    .suporte-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: .82rem;
-    }
-    .suporte-table th {
-        text-align: left;
-        padding: 12px 16px;
-        background: #f8fafc;
-        font-weight: 700;
-        font-size: .72rem;
-        text-transform: uppercase;
-        letter-spacing: .05em;
-        color: var(--text-muted);
-        border-bottom: 1px solid var(--border);
-    }
-    .suporte-table td {
-        padding: 12px 16px;
-        border-bottom: 1px solid #f1f5f9;
-        vertical-align: middle;
-    }
-    .suporte-table tr:last-child td { border-bottom: none; }
-    .suporte-table tr:hover td { background: #f8fafc; }
-    .suporte-table a {
-        color: var(--primary);
-        text-decoration: none;
-        font-weight: 600;
-    }
-    .suporte-table a:hover { text-decoration: underline; }
+    .suporte-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+    .suporte-header h1 { font-size:1.3rem; font-weight:800; color:var(--text-main); }
+    .suporte-stats { display:grid; grid-template-columns:repeat(5, 1fr); gap:12px; margin-bottom:20px; }
+    .suporte-stat { background:var(--bg-white); border-radius:12px; border:1px solid var(--border); padding:16px; display:flex; align-items:center; gap:12px; transition:box-shadow .2s; }
+    .suporte-stat:hover { box-shadow:0 4px 12px rgba(0,0,0,.06); }
+    .suporte-stat-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+    .suporte-stat-num { font-size:1.4rem; font-weight:800; line-height:1; color:var(--text-main); }
+    .suporte-stat-label { font-size:.7rem; color:var(--text-muted); margin-top:2px; }
 
-    .badge-status-aberto { background: #dbeafe; color: #1e40af; }
-    .badge-status-em_andamento { background: #fef3c7; color: #92400e; }
-    .badge-status-aguardando_cliente { background: #ffedd5; color: #9a3412; }
-    .badge-status-resolvido { background: #dcfce7; color: #166534; }
-    .badge-status-fechado { background: #f1f5f9; color: #475569; }
+    .report-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:12px; margin-bottom:20px; }
+    .report-card { background:var(--bg-white); border-radius:12px; border:1px solid var(--border); padding:16px; text-align:center; }
+    .report-value { font-size:22px; font-weight:800; color:var(--text-main); }
+    .report-label { font-size:11px; color:var(--text-muted); margin-top:2px; }
 
-    .badge-prio-baixa { background: #f1f5f9; color: #475569; }
-    .badge-prio-normal { background: #dbeafe; color: #1e40af; }
-    .badge-prio-alta { background: #ffedd5; color: #9a3412; }
-    .badge-prio-urgente { background: #fee2e2; color: #991b1b; }
+    .suporte-section { background:var(--bg-white); border-radius:12px; border:1px solid var(--border); overflow:hidden; margin-bottom:16px; }
+    .suporte-section-header { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border-bottom:1px solid var(--border); }
+    .suporte-section-title { font-size:.85rem; font-weight:700; color:var(--text-main); }
+    .suporte-table { width:100%; border-collapse:collapse; font-size:.8rem; }
+    .suporte-table th { text-align:left; padding:10px 14px; background:#f8fafc; font-weight:700; font-size:.7rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); border-bottom:1px solid var(--border); }
+    .suporte-table td { padding:10px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+    .suporte-table tr:last-child td { border-bottom:none; }
+    .suporte-table tr:hover td { background:#f8fafc; }
+    .suporte-table a { color:var(--primary); text-decoration:none; font-weight:600; }
+    .suporte-table a:hover { text-decoration:underline; }
 
-    .pill {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 99px;
-        font-size: .7rem;
-        font-weight: 600;
-    }
+    .badge-status-aberto { background:#dbeafe; color:#1e40af; }
+    .badge-status-em_andamento { background:#fef3c7; color:#92400e; }
+    .badge-status-aguardando_cliente { background:#ffedd5; color:#9a3412; }
+    .badge-status-resolvido { background:#dcfce7; color:#166534; }
+    .badge-status-fechado { background:#f1f5f9; color:#475569; }
+    .badge-prio-baixa { background:#f1f5f9; color:#475569; }
+    .badge-prio-normal { background:#dbeafe; color:#1e40af; }
+    .badge-prio-alta { background:#ffedd5; color:#9a3412; }
+    .badge-prio-urgente { background:#fee2e2; color:#991b1b; }
+    .pill { display:inline-block; padding:2px 10px; border-radius:99px; font-size:.7rem; font-weight:600; }
 
-    .cat-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 12px;
-        padding: 20px;
-    }
-    .cat-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 16px;
-        background: #f8fafc;
-        border-radius: 8px;
-        font-size: .82rem;
-    }
-    .cat-item-name {
-        font-weight: 600;
-        color: var(--text-main);
-    }
-    .cat-item-count {
-        font-weight: 800;
-        color: var(--primary);
-        font-size: .9rem;
-    }
+    .agent-row { display:flex; align-items:center; gap:12px; padding:8px 14px; border-bottom:1px solid #f1f5f9; font-size:13px; }
+    .agent-row:last-child { border-bottom:none; }
+    .agent-name { font-weight:600; flex:1; }
+    .agent-stat { min-width:50px; text-align:center; }
+    .agent-stat strong { display:block; font-size:15px; color:var(--text-main); }
+    .agent-stat small { font-size:10px; color:var(--text-muted); }
 
-    @media (max-width: 900px) {
-        .suporte-stats { grid-template-columns: repeat(2, 1fr); }
-    }
-    @media (max-width: 600px) {
-        .suporte-stats { grid-template-columns: 1fr; }
-    }
+    .bar-item { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+    .bar-label { font-size:12px; min-width:100px; color:var(--text-secondary); }
+    .bar-fill { height:18px; border-radius:4px; background:var(--primary); min-width:2px; display:flex; align-items:center; padding:0 6px; }
+    .bar-fill span { font-size:10px; color:#fff; font-weight:600; }
+
+    .periodo-tabs { display:flex; gap:6px; }
+    .periodo-tabs a { padding:4px 12px; border-radius:6px; font-size:12px; text-decoration:none; color:var(--text-muted); border:1px solid var(--border); font-weight:600; }
+    .periodo-tabs a.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+
+    @media (max-width: 900px) { .suporte-stats { grid-template-columns:repeat(2, 1fr); } .report-grid { grid-template-columns:repeat(2, 1fr); } }
+    @media (max-width: 600px) { .suporte-stats { grid-template-columns:1fr; } }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="suporte-header">
     <h1><i class="fas fa-headset" style="color:var(--primary);margin-right:8px;"></i> Suporte</h1>
-    <a href="{% url 'suporte:ticket_criar' %}" class="btn-primary" style="text-decoration:none;">
-        <i class="fas fa-plus"></i> Novo Ticket
-    </a>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <div class="periodo-tabs">
+            <a href="?periodo=7" class="{% if periodo == 7 %}active{% endif %}">7d</a>
+            <a href="?periodo=30" class="{% if periodo == 30 %}active{% endif %}">30d</a>
+            <a href="?periodo=90" class="{% if periodo == 90 %}active{% endif %}">90d</a>
+        </div>
+        <a href="{% url 'suporte:ticket_criar' %}" class="btn-primary" style="text-decoration:none;">
+            <i class="fas fa-plus"></i> Novo Ticket
+        </a>
+    </div>
 </div>
 
-<!-- Stats -->
+<!-- Stats atuais -->
 <div class="suporte-stats">
     <div class="suporte-stat">
-        <div class="suporte-stat-icon" style="background:#dbeafe;">
-            <i class="fas fa-envelope-open" style="color:#1e40af;"></i>
-        </div>
-        <div>
-            <div class="suporte-stat-num">{{ abertos }}</div>
-            <div class="suporte-stat-label">Abertos</div>
-        </div>
+        <div class="suporte-stat-icon" style="background:#dbeafe;"><i class="fas fa-envelope-open" style="color:#1e40af;"></i></div>
+        <div><div class="suporte-stat-num">{{ abertos }}</div><div class="suporte-stat-label">Abertos</div></div>
     </div>
     <div class="suporte-stat">
-        <div class="suporte-stat-icon" style="background:#fef3c7;">
-            <i class="fas fa-spinner" style="color:#d97706;"></i>
-        </div>
-        <div>
-            <div class="suporte-stat-num">{{ em_andamento }}</div>
-            <div class="suporte-stat-label">Em Andamento</div>
-        </div>
+        <div class="suporte-stat-icon" style="background:#fef3c7;"><i class="fas fa-spinner" style="color:#d97706;"></i></div>
+        <div><div class="suporte-stat-num">{{ em_andamento }}</div><div class="suporte-stat-label">Em Andamento</div></div>
     </div>
     <div class="suporte-stat">
-        <div class="suporte-stat-icon" style="background:#ffedd5;">
-            <i class="fas fa-clock" style="color:#ea580c;"></i>
-        </div>
-        <div>
-            <div class="suporte-stat-num">{{ aguardando }}</div>
-            <div class="suporte-stat-label">Aguardando</div>
-        </div>
+        <div class="suporte-stat-icon" style="background:#ffedd5;"><i class="fas fa-clock" style="color:#ea580c;"></i></div>
+        <div><div class="suporte-stat-num">{{ aguardando }}</div><div class="suporte-stat-label">Aguardando</div></div>
     </div>
     <div class="suporte-stat">
-        <div class="suporte-stat-icon" style="background:#dcfce7;">
-            <i class="fas fa-check-circle" style="color:#16a34a;"></i>
-        </div>
-        <div>
-            <div class="suporte-stat-num">{{ resolvidos_hoje }}</div>
-            <div class="suporte-stat-label">Resolvidos Hoje</div>
-        </div>
+        <div class="suporte-stat-icon" style="background:#dcfce7;"><i class="fas fa-check-circle" style="color:#16a34a;"></i></div>
+        <div><div class="suporte-stat-num">{{ resolvidos_hoje }}</div><div class="suporte-stat-label">Resolvidos Hoje</div></div>
     </div>
     <div class="suporte-stat">
-        <div class="suporte-stat-icon" style="background:{% if sla_breach > 0 %}#fee2e2{% else %}#f0fdf4{% endif %};">
-            <i class="fas fa-exclamation-triangle" style="color:{% if sla_breach > 0 %}#dc2626{% else %}#16a34a{% endif %};"></i>
-        </div>
-        <div>
-            <div class="suporte-stat-num">{{ sla_breach }}</div>
-            <div class="suporte-stat-label">SLA Estourado</div>
-        </div>
+        <div class="suporte-stat-icon" style="background:{% if sla_breach > 0 %}#fee2e2{% else %}#f0fdf4{% endif %};"><i class="fas fa-exclamation-triangle" style="color:{% if sla_breach > 0 %}#dc2626{% else %}#16a34a{% endif %};"></i></div>
+        <div><div class="suporte-stat-num">{{ sla_breach }}</div><div class="suporte-stat-label">SLA Estourado</div></div>
     </div>
 </div>
 
-<!-- Por categoria -->
-{% if por_categoria %}
-<div class="suporte-section" style="margin-bottom:20px;">
-    <div class="suporte-section-header">
-        <span class="suporte-section-title">Tickets por Categoria</span>
+<!-- Metricas do periodo -->
+<div class="report-grid">
+    <div class="report-card">
+        <div class="report-value">{{ total_periodo }}</div>
+        <div class="report-label">Tickets ({{ periodo }}d)</div>
     </div>
-    <div class="cat-grid">
-        {% for cat in por_categoria %}
-        <div class="cat-item">
-            <span class="cat-item-name">{{ cat.categoria__nome|default:"Sem categoria" }}</span>
-            <span class="cat-item-count">{{ cat.total }}</span>
+    <div class="report-card">
+        <div class="report-value">{{ taxa_resolucao|floatformat:0 }}%</div>
+        <div class="report-label">Taxa resolucao</div>
+    </div>
+    <div class="report-card">
+        <div class="report-value">{% if tempo_medio %}{{ tempo_medio|floatformat:1 }}h{% else %}—{% endif %}</div>
+        <div class="report-label">Tempo medio resolucao</div>
+    </div>
+    <div class="report-card">
+        <div class="report-value">{% if tempo_primeira_resp %}{{ tempo_primeira_resp|floatformat:1 }}h{% else %}—{% endif %}</div>
+        <div class="report-label">Tempo 1a resposta</div>
+    </div>
+    <div class="report-card">
+        <div class="report-value" style="color:{% if sla_compliance and sla_compliance >= 80 %}var(--success){% elif sla_compliance %}var(--danger){% else %}var(--text-muted){% endif %};">{% if sla_compliance %}{{ sla_compliance|floatformat:0 }}%{% else %}—{% endif %}</div>
+        <div class="report-label">SLA compliance</div>
+    </div>
+    <div class="report-card">
+        <div class="report-value" style="color:#f59e0b;">{% if csat_medio %}{{ csat_medio|floatformat:1 }}/5{% else %}—{% endif %}</div>
+        <div class="report-label">CSAT ({{ csat_total }})</div>
+    </div>
+</div>
+
+<!-- Grids: agentes + categorias -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+    {% if por_agente %}
+    <div class="suporte-section">
+        <div class="suporte-section-header"><span class="suporte-section-title"><i class="fas fa-users" style="color:var(--primary);margin-right:6px;"></i> Por Agente</span></div>
+        {% for a in por_agente %}
+        <div class="agent-row">
+            <div class="agent-name">{{ a.atendente__first_name }} {{ a.atendente__last_name|default:a.atendente__username }}</div>
+            <div class="agent-stat"><strong>{{ a.total }}</strong><small>tickets</small></div>
+            <div class="agent-stat"><strong>{{ a.resolvidos }}</strong><small>resolvidos</small></div>
         </div>
         {% endfor %}
     </div>
-</div>
-{% endif %}
+    {% endif %}
 
-<!-- Últimos tickets -->
+    <div>
+        {% if por_categoria %}
+        <div class="suporte-section">
+            <div class="suporte-section-header"><span class="suporte-section-title"><i class="fas fa-tags" style="color:var(--info);margin-right:6px;"></i> Por Categoria</span></div>
+            <div style="padding:14px;">
+                {% for c in por_categoria %}
+                <div class="bar-item">
+                    <div class="bar-label">{{ c.categoria__nome|default:"Sem categoria" }}</div>
+                    <div class="bar-fill" style="width:{% widthratio c.total total_periodo 180 %}px;"><span>{{ c.total }}</span></div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if por_prioridade %}
+        <div class="suporte-section">
+            <div class="suporte-section-header"><span class="suporte-section-title"><i class="fas fa-flag" style="color:var(--warning);margin-right:6px;"></i> Por Prioridade</span></div>
+            <div style="padding:14px;">
+                {% for p in por_prioridade %}
+                <div class="bar-item">
+                    <div class="bar-label">{{ p.prioridade|title }}</div>
+                    <div class="bar-fill" style="width:{% widthratio p.total total_periodo 180 %}px;background:{% if p.prioridade == 'urgente' %}var(--danger){% elif p.prioridade == 'alta' %}var(--warning){% elif p.prioridade == 'normal' %}var(--info){% else %}var(--text-light){% endif %};"><span>{{ p.total }}</span></div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Ultimos tickets -->
 <div class="suporte-section">
     <div class="suporte-section-header">
         <span class="suporte-section-title">Ultimos Tickets</span>
@@ -247,7 +189,7 @@
                 <th>Status</th>
                 <th>Prioridade</th>
                 <th>Categoria</th>
-                <th>Solicitante</th>
+                <th>Atendente</th>
                 <th>Data</th>
             </tr>
         </thead>
@@ -255,13 +197,11 @@
             {% for ticket in ultimos %}
             <tr>
                 <td style="font-weight:700;color:var(--text-muted);">{{ ticket.numero }}</td>
-                <td>
-                    <a href="{% url 'suporte:ticket_detalhe' pk=ticket.pk %}">{{ ticket.titulo }}</a>
-                </td>
+                <td><a href="{% url 'suporte:ticket_detalhe' pk=ticket.pk %}">{{ ticket.titulo }}</a></td>
                 <td><span class="pill badge-status-{{ ticket.status }}">{{ ticket.get_status_display }}</span></td>
                 <td><span class="pill badge-prio-{{ ticket.prioridade }}">{{ ticket.get_prioridade_display }}</span></td>
                 <td style="color:var(--text-muted);">{{ ticket.categoria.nome|default:"—" }}</td>
-                <td style="color:var(--text-secondary);">{{ ticket.solicitante.get_full_name|default:ticket.solicitante.username }}</td>
+                <td style="color:var(--text-secondary);">{% if ticket.atendente %}{{ ticket.atendente.get_full_name|default:ticket.atendente.username }}{% else %}—{% endif %}</td>
                 <td style="color:var(--text-muted);font-size:.75rem;">{{ ticket.data_abertura|date:"d/m/Y H:i" }}</td>
             </tr>
             {% empty %}

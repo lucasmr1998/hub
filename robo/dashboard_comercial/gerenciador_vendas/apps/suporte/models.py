@@ -12,6 +12,13 @@ class CategoriaTicket(TenantMixin):
     icone = models.CharField(max_length=50, default='fa-tag', verbose_name="Ícone FontAwesome")
     ordem = models.PositiveIntegerField(default=0, verbose_name="Ordem")
     ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    fila_padrao = models.ForeignKey(
+        'inbox.FilaInbox', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='categorias_ticket',
+        verbose_name="Fila Padrao",
+        help_text="Tickets desta categoria serao atribuidos automaticamente a esta fila"
+    )
 
     class Meta:
         db_table = 'suporte_categorias'
@@ -86,6 +93,15 @@ class Ticket(TenantMixin):
     )
 
     sla_horas = models.PositiveIntegerField(null=True, blank=True, verbose_name="SLA (horas)")
+
+    # CSAT (Customer Satisfaction)
+    csat_nota = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name="Nota CSAT",
+        help_text="1 a 5 estrelas"
+    )
+    csat_comentario = models.TextField(blank=True, default='', verbose_name="Comentario CSAT")
+    csat_data = models.DateTimeField(null=True, blank=True, verbose_name="Data CSAT")
+
     data_abertura = models.DateTimeField(auto_now_add=True, verbose_name="Data de Abertura")
     data_primeira_resposta = models.DateTimeField(null=True, blank=True, verbose_name="Primeira Resposta")
     data_resolucao = models.DateTimeField(null=True, blank=True, verbose_name="Data de Resolução")
@@ -150,6 +166,43 @@ class ComentarioTicket(TenantMixin):
 
     def __str__(self):
         return f"#{self.ticket.numero} — {self.autor.username}"
+
+
+class HistoricoTicket(TenantMixin):
+    """Registra mudancas no ticket (status, atribuicao, prioridade, etc)."""
+    TIPO_CHOICES = [
+        ('status', 'Mudanca de Status'),
+        ('atribuicao', 'Atribuicao'),
+        ('prioridade', 'Mudanca de Prioridade'),
+        ('categoria', 'Mudanca de Categoria'),
+        ('comentario', 'Comentario'),
+        ('criacao', 'Criacao'),
+        ('sla', 'SLA'),
+        ('escalacao', 'Escalacao'),
+    ]
+
+    ticket = models.ForeignKey(
+        Ticket, on_delete=models.CASCADE,
+        related_name='historico', verbose_name="Ticket"
+    )
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, verbose_name="Tipo")
+    usuario = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Usuario"
+    )
+    campo = models.CharField(max_length=50, blank=True, verbose_name="Campo alterado")
+    valor_anterior = models.CharField(max_length=200, blank=True, verbose_name="Valor anterior")
+    valor_novo = models.CharField(max_length=200, blank=True, verbose_name="Valor novo")
+    descricao = models.CharField(max_length=255, blank=True, verbose_name="Descricao")
+    data = models.DateTimeField(auto_now_add=True, verbose_name="Data")
+
+    class Meta:
+        db_table = 'suporte_historico_ticket'
+        verbose_name = "Historico do Ticket"
+        verbose_name_plural = "Historico de Tickets"
+        ordering = ['-data']
+
+    def __str__(self):
+        return f"#{self.ticket.numero} — {self.get_tipo_display()} ({self.data})"
 
 
 # ============================================================================

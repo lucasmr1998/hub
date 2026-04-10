@@ -8,12 +8,9 @@
 
 {% block content %}
 
-<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
-    <div>
-        <h1 class="page-title"><i class="fas fa-robot" style="color:var(--primary);"></i> Dashboard de Automações</h1>
-        <p class="page-subtitle">Visão geral das execuções, métricas e logs.</p>
-    </div>
-    <a href="{% url 'marketing_automacoes:lista' %}" class="btn-secondary"><i class="fas fa-list"></i> Ver Regras</a>
+<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; background:var(--bg-white); border:1px solid var(--border); border-radius:12px; padding:14px 20px; margin-bottom:20px;">
+    <h1 class="page-title" style="margin:0;"><i class="fas fa-chart-line" style="color:var(--primary);margin-right:8px;"></i> Dashboard de Automacoes</h1>
+    <a href="{% url 'marketing_automacoes:lista' %}" class="btn-secondary" style="text-decoration:none;"><i class="fas fa-list"></i> Ver Regras</a>
 </div>
 
 <!-- KPIs -->

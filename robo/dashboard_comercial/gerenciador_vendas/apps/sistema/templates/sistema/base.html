@@ -35,7 +35,7 @@
         <!-- Modules (filtrado por permissões) -->
         <div class="topbar-modules">
             <a href="{% url 'dashboard:dashboard1' %}"
-               class="topbar-module {% if request.resolver_match.url_name == 'dashboard1' or request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+               class="topbar-module {% if request.resolver_match.url_name == 'dashboard1' or request.resolver_match.url_name == 'dashboard' and 'dashboard' in request.resolver_match.app_name|default:'' %}active{% endif %}">
                 <i class="fas fa-chart-pie"></i> Dashboard
             </a>
             {% if modulo_comercial and is_superuser or modulo_comercial and perm == None or modulo_comercial and perm.acesso_comercial %}
@@ -44,7 +44,7 @@
                 <i class="fas fa-handshake"></i> Comercial
             </a>
             {% endif %}
-            {% if is_superuser or perm == None or perm.acesso_marketing or perm.acesso_comercial %}
+            {% if is_superuser or perm == None or perm.acesso_marketing %}
             {% if modulo_marketing or modulo_comercial %}
             <a href="{% url 'comercial_leads:leads' %}"
                class="topbar-module {% if request.resolver_match.url_name == 'leads' or request.resolver_match.url_name == 'campanhas_trafego' or request.resolver_match.url_name == 'configuracoes_cadastro' %}active{% endif %}">
@@ -59,7 +59,7 @@
             </a>
             {% endif %}
             {% if is_superuser or perm == None or perm.acesso_inbox %}
-            <a href="{% url 'suporte:dashboard' %}"
+            <a href="{% url 'inbox:dashboard' %}"
                class="topbar-module {% if '/suporte/' in request.path or '/inbox/' in request.path or '/configuracoes/fluxos' in request.path or '/configuracoes/sessoes' in request.path %}active{% endif %}">
                 <i class="fas fa-headset"></i> Suporte
             </a>
@@ -73,10 +73,29 @@
         <!-- Actions -->
         <div class="topbar-actions">
             <div class="topbar-user-group">
-                <div class="topbar-user" id="configBtn">
-                    <div class="topbar-avatar">{% if user and user.is_authenticated %}{{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|upper|default:"" }}{% else %}?{% endif %}</div>
+                <div class="topbar-user agente-status-toggle" id="configBtn" style="position:relative;">
+                    <div style="position:relative;">
+                        <div class="topbar-avatar">{% if user and user.is_authenticated %}{{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|upper|default:"" }}{% else %}?{% endif %}</div>
+                        {% if agente_status != None %}
+                        <span class="status-dot" style="position:absolute;bottom:-2px;right:-2px;width:10px;height:10px;border-radius:50%;border:2px solid var(--bg-dark,#1e293b);background:{% if agente_status == 'online' %}#22c55e{% elif agente_status == 'ausente' %}#f59e0b{% else %}#94a3b8{% endif %};"></span>
+                        {% endif %}
+                    </div>
                     <span class="topbar-user-name">{% if user and user.is_authenticated %}{{ user.first_name|default:user.username }}{% endif %}</span>
                     <i class="fas fa-chevron-down" style="font-size:10px;color:var(--text-light);"></i>
+                    {% if agente_status != None %}
+                    <div id="statusDropdown" style="display:none;position:absolute;right:0;top:100%;margin-top:8px;background:var(--bg-white);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:1000;min-width:160px;overflow:hidden;">
+                        <div style="padding:10px 14px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);">Status</div>
+                        <div onclick="event.stopPropagation();setAgenteStatus('online')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;" onmouseover="this.style.background='var(--bg-subtle,#f8fafc)'" onmouseout="this.style.background=''">
+                            <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span> Online
+                        </div>
+                        <div onclick="event.stopPropagation();setAgenteStatus('ausente')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;" onmouseover="this.style.background='var(--bg-subtle,#f8fafc)'" onmouseout="this.style.background=''">
+                            <span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;flex-shrink:0;"></span> Ausente
+                        </div>
+                        <div onclick="event.stopPropagation();setAgenteStatus('offline')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;" onmouseover="this.style.background='var(--bg-subtle,#f8fafc)'" onmouseout="this.style.background=''">
+                            <span style="width:8px;height:8px;border-radius:50%;background:#94a3b8;flex-shrink:0;"></span> Offline
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
                 <button class="topbar-action" title="Notificacoes" id="notificationBtn" style="position:relative;">
                     <i class="fas fa-bell"></i>
@@ -441,7 +460,15 @@
             document.body.style.overflow = '';
         }
 
-        if (configBtn) configBtn.addEventListener('click', (e) => { e.stopPropagation(); openConfigSidebar(); });
+        if (configBtn) configBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            var dd = document.getElementById('statusDropdown');
+            if (dd) {
+                dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+            } else {
+                openConfigSidebar();
+            }
+        });
         if (configClose) configClose.addEventListener('click', closeConfigSidebar);
         if (configOverlay) configOverlay.addEventListener('click', closeConfigSidebar);
 
@@ -640,6 +667,34 @@
         // SPA desabilitado — navegacao normal (full page reload)
         // TODO: reimplementar SPA com cleanup adequado de scripts
     })();
+    </script>
+
+    <!-- Status do agente -->
+    <script>
+    function toggleStatusDropdown(e) {
+        e.stopPropagation();
+        var dd = document.getElementById('statusDropdown');
+        if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+    }
+    function setAgenteStatus(status) {
+        var colors = {online:'#22c55e', ausente:'#f59e0b', offline:'#94a3b8'};
+        var labels = {online:'Online', ausente:'Ausente', offline:'Offline'};
+        fetch('{% url "sistema:api_agente_status" %}', {
+            method:'POST',
+            headers:{'Content-Type':'application/json','X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''},
+            body:JSON.stringify({status:status})
+        }).then(function(r){return r.json()}).then(function(d){
+            if(d.ok){
+                document.querySelector('.status-dot').style.background=colors[status];
+                document.getElementById('statusLabel').textContent=labels[status];
+                document.getElementById('statusDropdown').style.display='none';
+            }
+        });
+    }
+    document.addEventListener('click',function(e){
+        var dd=document.getElementById('statusDropdown');
+        if(dd && !e.target.closest('.agente-status-toggle')) dd.style.display='none';
+    });
     </script>
 
     <!-- Chart.js carregado sob demanda nas paginas que precisam -->

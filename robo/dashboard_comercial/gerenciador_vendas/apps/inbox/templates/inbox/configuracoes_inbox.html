@@ -242,6 +242,42 @@
                 </div>
                 <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-plus"></i> Regra</button>
             </form>
+
+            <!-- Horários da fila -->
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+                <div style="font-size:12px;color:var(--text-light);margin-bottom:6px;"><i class="fas fa-clock" style="margin-right:4px;"></i>Horário de atendimento da fila</div>
+                <form method="post">{% csrf_token %}
+                    <input type="hidden" name="action" value="salvar_horario_fila">
+                    <input type="hidden" name="fila_id" value="{{ fila.id }}">
+                    <div class="horario-grid" id="horarioFila{{ fila.id }}"></div>
+                    <script>
+                    (function(){
+                        var hfData = ({{ horarios_fila_json|safe }})[String({{ fila.id }})] || {};
+                        var dias = ['Seg','Ter','Qua','Qui','Sex','Sab','Dom'];
+                        var el = document.getElementById('horarioFila{{ fila.id }}');
+                        var h = '';
+                        for (var i = 0; i < 7; i++) {
+                            var d = hfData[i] || {};
+                            var ck = d.ativo !== undefined ? d.ativo : false;
+                            var ini = d.hora_inicio || '';
+                            var fim = d.hora_fim || '';
+                            h += '<label style="font-size:12px;"><input type="checkbox" name="fila_dia_'+i+'_ativo" '+(ck?'checked':'')+' style="margin-right:4px;"> '+dias[i]+'</label>';
+                            h += '<input type="time" name="fila_dia_'+i+'_inicio" class="cfg-input" value="'+ini+'" style="padding:4px 6px;font-size:11px;">';
+                            h += '<input type="time" name="fila_dia_'+i+'_fim" class="cfg-input" value="'+fim+'" style="padding:4px 6px;font-size:11px;">';
+                            h += '<span></span>';
+                        }
+                        el.innerHTML = h;
+                    })();
+                    </script>
+                    <div style="margin-top:8px;">
+                        <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Mensagem fora do horário</label>
+                        <textarea name="mensagem_fora_horario_fila" class="cfg-textarea" rows="2" style="font-size:12px;">{{ fila.mensagem_fora_horario }}</textarea>
+                    </div>
+                    <div style="margin-top:8px;">
+                        <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-save"></i> Salvar Horários</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
     {% endfor %}

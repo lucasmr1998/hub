@@ -1,6 +1,6 @@
 # Módulo Inbox (Atendimento/Suporte) — AuroraISP
 
-**Última atualização:** 03/04/2026
+**Última atualização:** 09/04/2026
 **Status:** ✅ Implementado (3 sessões de desenvolvimento)
 **Localização:** `apps/inbox/`
 
@@ -119,20 +119,51 @@ Todos os models herdam de `TenantMixin` (multi-tenancy automático).
 
 ---
 
-## Engine de Distribuição
+## Modo de Atendimento (Bot vs Humano)
+
+### Campo `Conversa.modo_atendimento`
+
+| Valor | Descricao |
+|-------|-----------|
+| `bot` | Fluxo de atendimento ativo. Bot esta respondendo automaticamente |
+| `humano` | Conversa transferida para atendente humano (via nodo "Transferir para Humano") |
+| `finalizado_bot` | Bot finalizou o fluxo sem transferencia para humano |
+
+### Visibilidade no Inbox
+
+| Perfil | O que ve |
+|--------|----------|
+| **Admin** (inbox.ver_todas) | Tudo. Abas Bot/Humano/Todas para filtrar |
+| **Supervisor** (inbox.ver_equipe) | Conversas da equipe + nao atribuidas. Exclui bot |
+| **Agente** | Suas conversas + nao atribuidas da fila da sua equipe |
+
+### Nodo "Transferir para Humano" (editor de fluxos)
+
+Tipo: `transferir_humano`. Icone: headset laranja. 1 input, 0 outputs.
+Configuracao: fila de destino (select) + mensagem de transferencia.
+Ao executar: muda `conversa.modo_atendimento` para 'humano', atribui fila/equipe, distribui agente, finaliza o fluxo do bot.
+
+---
+
+## Engine de Distribuicao
 
 ### Arquivo: `apps/inbox/distribution.py`
 
-| Função | O que faz |
+| Funcao | O que faz |
 |--------|-----------|
-| `verificar_horario_atendimento(tenant)` | Checa HorarioAtendimento para dia/hora atual. Sem registros = sempre aberto |
-| `determinar_fila(conversa, tenant)` | Itera RegraRoteamento por prioridade. Match por canal, etiqueta ou horário |
-| `selecionar_agente(fila, tenant)` | Round-robin (circular via ultimo_agente_id) ou menor carga (menos conversas abertas). Verifica status=online e capacidade |
-| `distribuir_conversa(conversa, tenant)` | Orquestrador: fila → agente → atribui → mensagem de sistema |
+| `verificar_horario_atendimento(tenant)` | Checa HorarioAtendimento global (fila=None) para dia/hora atual |
+| `verificar_horario_fila(fila)` | Checa horarios especificos da fila. Sem registros = sempre aberta |
+| `determinar_fila(conversa, tenant)` | Itera RegraRoteamento por prioridade. Match por canal, etiqueta ou horario |
+| `selecionar_agente(fila, tenant)` | Round-robin ou menor carga. Verifica status=online e capacidade |
+| `distribuir_conversa(conversa, tenant)` | Orquestrador: fila, horario, agente, mensagem de sistema. Fora do horario envia mensagem automatica |
 
-### Integração
+### Horarios por Fila
 
-Chamado automaticamente em `receber_mensagem()` e `receber_mensagem_widget()` quando nova conversa é criada. Também chamado em `transferir_conversa()` quando destino é equipe/fila.
+Cada fila pode ter seus proprios horarios de atendimento (`HorarioAtendimento.fila`). Se a fila nao tem horarios, esta sempre aberta. Se tem e esta fora do horario, envia `fila.mensagem_fora_horario` e coloca conversa como pendente.
+
+### Integracao
+
+Chamado automaticamente em `receber_mensagem()` e `receber_mensagem_widget()` quando nova conversa e criada. Tambem chamado em `transferir_conversa()` e no nodo `transferir_humano` do engine de fluxos.
 
 ---
 

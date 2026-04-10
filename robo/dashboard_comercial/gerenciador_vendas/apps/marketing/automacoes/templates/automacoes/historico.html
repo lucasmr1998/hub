@@ -5,23 +5,20 @@
 {% block content %}
 
 <!-- Header -->
-<div style="display:flex; align-items:center; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
+<div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:var(--bg-white); border:1px solid var(--border); border-radius:12px; padding:14px 20px; margin-bottom:20px;">
     <a href="{% url 'marketing_automacoes:lista' %}" style="color:var(--text-muted); font-size:18px;"><i class="fas fa-arrow-left"></i></a>
-    <div style="flex:1;">
-        <h1 class="page-title">{{ regra.nome }}</h1>
-        <p class="page-subtitle">Historico de execucoes desta automacao.</p>
-    </div>
+    <h1 class="page-title" style="margin:0;flex:1;"><i class="fas fa-history" style="color:var(--primary);margin-right:8px;"></i> {{ regra.nome }}</h1>
     <div style="display:flex; gap:16px; text-align:center; font-size:12px; color:var(--text-muted);">
         <div>
-            <div style="font-weight:700; font-size:20px; color:var(--text-main);">{{ regra.total_execucoes }}</div>
+            <div style="font-weight:700; font-size:18px; color:var(--text-main);">{{ regra.total_execucoes }}</div>
             <div>Total</div>
         </div>
         <div>
-            <div style="font-weight:700; font-size:20px; color:var(--success);">{{ regra.total_sucesso }}</div>
+            <div style="font-weight:700; font-size:18px; color:var(--success);">{{ regra.total_sucesso }}</div>
             <div>Sucesso</div>
         </div>
         <div>
-            <div style="font-weight:700; font-size:20px; color:var(--danger);">{{ regra.total_erro }}</div>
+            <div style="font-weight:700; font-size:18px; color:var(--danger);">{{ regra.total_erro }}</div>
             <div>Erro</div>
         </div>
     </div>

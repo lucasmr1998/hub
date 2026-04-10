@@ -46,11 +46,19 @@ def inbox_view(request):
     etiquetas = EtiquetaConversa.objects.all()
     equipes = EquipeInbox.objects.filter(ativo=True)
     filas = FilaInbox.objects.filter(ativo=True).select_related('equipe')
+    # Status dos agentes
+    from .models import PerfilAgenteInbox
+    agentes_status = {}
+    for p in PerfilAgenteInbox.objects.filter(user__in=agentes):
+        agentes_status[p.user_id] = p.status
+
     return render(request, 'inbox/inbox.html', {
         'agentes': agentes,
         'etiquetas': etiquetas,
         'equipes': equipes,
         'filas': filas,
+        'user_is_admin': user_tem_funcionalidade(request, 'inbox.ver_todas'),
+        'agentes_status_json': json.dumps(agentes_status),
     })
 
 
@@ -65,25 +73,50 @@ def _get_conversa(pk, request):
 @login_required
 def api_conversas(request):
     """GET: Lista conversas com filtros."""
-    qs = Conversa.objects.select_related('canal', 'agente', 'lead').prefetch_related('etiquetas')
+    from django.db.models import Q
+    from .models import MembroEquipeInbox, FilaInbox
+
+    qs = Conversa.objects.select_related('canal', 'agente', 'lead', 'fila').prefetch_related('etiquetas')
+
+    # Filtro por modo de atendimento (bot/humano)
+    modo_filter = request.GET.get('modo', '')
+    if modo_filter == 'bot':
+        qs = qs.filter(modo_atendimento='bot')
+    elif modo_filter == 'humano':
+        qs = qs.filter(modo_atendimento='humano')
+    elif modo_filter == 'finalizado_bot':
+        qs = qs.filter(modo_atendimento='finalizado_bot')
+    # Se vazio, nao filtra por modo (ve tudo que a permissao permite)
 
     # Escopo de visibilidade baseado em funcionalidade
-    if not user_tem_funcionalidade(request, 'inbox.ver_todas'):
-        if user_tem_funcionalidade(request, 'inbox.ver_equipe'):
-            # Supervisor: vê conversas de agentes da sua equipe + não atribuídas
-            from .models import MembroEquipeInbox
+    is_admin = user_tem_funcionalidade(request, 'inbox.ver_todas')
+    is_supervisor = user_tem_funcionalidade(request, 'inbox.ver_equipe')
+
+    if not is_admin:
+        # Nao-admins nao veem conversas do bot (exceto se filtro explicito)
+        if modo_filter != 'bot':
+            qs = qs.exclude(modo_atendimento='bot')
+
+        if is_supervisor:
+            # Supervisor: ve conversas de agentes da sua equipe + nao atribuidas da equipe
             membro = MembroEquipeInbox.objects.filter(user=request.user).first()
             if membro:
                 equipe_users = MembroEquipeInbox.objects.filter(equipe=membro.equipe).values_list('user_id', flat=True)
-                from django.db.models import Q
-                qs = qs.filter(Q(agente_id__in=equipe_users) | Q(agente__isnull=True))
+                filas_equipe = FilaInbox.objects.filter(equipe=membro.equipe).values_list('id', flat=True)
+                qs = qs.filter(
+                    Q(agente_id__in=equipe_users) |
+                    Q(agente__isnull=True, fila_id__in=filas_equipe)
+                )
             else:
-                from django.db.models import Q
                 qs = qs.filter(Q(agente=request.user) | Q(agente__isnull=True))
         else:
-            # Agente: só as suas + não atribuídas
-            from django.db.models import Q
-            qs = qs.filter(Q(agente=request.user) | Q(agente__isnull=True))
+            # Agente: so as suas + nao atribuidas da fila da sua equipe (se manual)
+            equipes_ids = MembroEquipeInbox.objects.filter(user=request.user).values_list('equipe_id', flat=True)
+            filas_do_user = FilaInbox.objects.filter(equipe_id__in=equipes_ids).values_list('id', flat=True)
+            qs = qs.filter(
+                Q(agente=request.user) |
+                Q(agente__isnull=True, fila_id__in=filas_do_user)
+            )
 
     status_filter = request.GET.get('status')
     if status_filter:
@@ -103,9 +136,12 @@ def api_conversas(request):
     if canal_filter:
         qs = qs.filter(canal__tipo=canal_filter)
 
+    fila_filter = request.GET.get('fila')
+    if fila_filter:
+        qs = qs.filter(fila_id=fila_filter)
+
     busca = request.GET.get('q', '').strip()
     if busca:
-        from django.db.models import Q
         qs = qs.filter(
             Q(contato_nome__icontains=busca) |
             Q(contato_telefone__icontains=busca) |
@@ -547,10 +583,22 @@ def configuracoes_inbox(request):
         action = request.POST.get('action', '')
         _processar_action_config(request, action, django_messages)
 
-    # Horários como JSON para o template
+    # Horários globais como JSON para o template
     horarios_dict = {}
-    for h in HorarioAtendimento.objects.all():
+    for h in HorarioAtendimento.objects.filter(fila__isnull=True):
         horarios_dict[h.dia_semana] = {
+            'ativo': h.ativo,
+            'hora_inicio': h.hora_inicio.strftime('%H:%M') if h.hora_inicio else '',
+            'hora_fim': h.hora_fim.strftime('%H:%M') if h.hora_fim else '',
+        }
+
+    # Horários por fila como JSON
+    horarios_fila_dict = {}
+    for h in HorarioAtendimento.objects.filter(fila__isnull=False):
+        fila_id = str(h.fila_id)
+        if fila_id not in horarios_fila_dict:
+            horarios_fila_dict[fila_id] = {}
+        horarios_fila_dict[fila_id][h.dia_semana] = {
             'ativo': h.ativo,
             'hora_inicio': h.hora_inicio.strftime('%H:%M') if h.hora_inicio else '',
             'hora_fim': h.hora_fim.strftime('%H:%M') if h.hora_fim else '',
@@ -568,6 +616,7 @@ def configuracoes_inbox(request):
         'integracoes_disponiveis': IntegracaoAPI.objects.filter(tipo__in=['uazapi', 'evolution', 'meta_cloud', 'twilio_whatsapp']),
         'fluxos_atendimento': _get_fluxos_atendimento(),
         'horarios_json': json.dumps(horarios_dict),
+        'horarios_fila_json': json.dumps(horarios_fila_dict),
         'config': ConfiguracaoInbox.get_config(),
         'categorias_faq': CategoriaFAQ.objects.prefetch_related('artigos').filter(ativo=True),
         'widget_config': widget_config,
@@ -587,12 +636,15 @@ def _processar_action_config(request, action, django_messages):
     if action == 'criar_equipe':
         nome = request.POST.get('nome', '').strip()
         if nome:
-            EquipeInbox(
-                nome=nome,
-                descricao=request.POST.get('descricao', ''),
-                cor_hex=request.POST.get('cor_hex', '#667eea'),
-            ).save()
-            django_messages.success(request, f'Equipe "{nome}" criada.')
+            if EquipeInbox.objects.filter(nome=nome).exists():
+                django_messages.warning(request, f'Equipe "{nome}" ja existe.')
+            else:
+                EquipeInbox(
+                    nome=nome,
+                    descricao=request.POST.get('descricao', ''),
+                    cor_hex=request.POST.get('cor_hex', '#667eea'),
+                ).save()
+                django_messages.success(request, f'Equipe "{nome}" criada.')
 
     elif action == 'excluir_equipe':
         pk = request.POST.get('equipe_id')
@@ -741,7 +793,7 @@ def _processar_action_config(request, action, django_messages):
                 canal.save()
                 django_messages.success(request, f'Canal "{nome}" criado.')
 
-    # ── Horário de Atendimento ─────────────────────────────────────
+    # ── Horário de Atendimento (global) ──────────────────────────
     elif action == 'salvar_horario':
         for dia in range(7):
             ativo = request.POST.get(f'dia_{dia}_ativo') == 'on'
@@ -749,14 +801,41 @@ def _processar_action_config(request, action, django_messages):
             fim = request.POST.get(f'dia_{dia}_fim', '')
             if inicio and fim:
                 obj, _ = HorarioAtendimento.objects.get_or_create(
-                    dia_semana=dia,
+                    dia_semana=dia, fila__isnull=True,
                     defaults={'hora_inicio': inicio, 'hora_fim': fim, 'ativo': ativo}
                 )
                 obj.hora_inicio = inicio
                 obj.hora_fim = fim
                 obj.ativo = ativo
+                obj.fila = None
                 obj.save()
-        django_messages.success(request, 'Horários salvos.')
+        django_messages.success(request, 'Horarios globais salvos.')
+
+    # ── Horário por Fila ──────────────────────────────────────────
+    elif action == 'salvar_horario_fila':
+        fila_id = request.POST.get('fila_id')
+        fila = FilaInbox.objects.filter(pk=fila_id).first()
+        if fila:
+            for dia in range(7):
+                ativo = request.POST.get(f'fila_dia_{dia}_ativo') == 'on'
+                inicio = request.POST.get(f'fila_dia_{dia}_inicio', '')
+                fim = request.POST.get(f'fila_dia_{dia}_fim', '')
+                if inicio and fim:
+                    obj, _ = HorarioAtendimento.objects.get_or_create(
+                        fila=fila, dia_semana=dia,
+                        defaults={'hora_inicio': inicio, 'hora_fim': fim, 'ativo': ativo}
+                    )
+                    obj.hora_inicio = inicio
+                    obj.hora_fim = fim
+                    obj.ativo = ativo
+                    obj.save()
+                else:
+                    HorarioAtendimento.objects.filter(fila=fila, dia_semana=dia).delete()
+            # Mensagem fora do horario da fila
+            msg = request.POST.get('mensagem_fora_horario_fila', '')
+            fila.mensagem_fora_horario = msg
+            fila.save(update_fields=['mensagem_fora_horario'])
+            django_messages.success(request, f'Horarios da fila "{fila.nome}" salvos.')
 
     # ── Config Geral ───────────────────────────────────────────────
     elif action == 'salvar_config':
@@ -838,68 +917,115 @@ def _processar_action_config(request, action, django_messages):
 
 @login_required
 def dashboard_inbox(request):
-    """Dashboard com KPIs e métricas do inbox."""
+    """Dashboard com visao em tempo real do inbox."""
     from datetime import timedelta
-    from django.db.models import Count, Avg
+    from django.db.models import Count, Avg, Q
+    from django.db.models.functions import TruncDate
 
     hoje = timezone.now().date()
     conversas = Conversa.objects.all()
+    ativas = conversas.filter(status__in=['aberta', 'pendente'])
 
-    # KPIs
-    abertas = conversas.filter(status='aberta').count()
-    pendentes = conversas.filter(status='pendente').count()
-    resolvidas_hoje = conversas.filter(
-        status='resolvida', data_resolucao__date=hoje
-    ).count()
+    # === TEMPO REAL ===
+    no_bot = ativas.filter(modo_atendimento='bot').count()
+    na_fila = ativas.filter(modo_atendimento='humano', agente__isnull=True).count()
+    em_atendimento = ativas.filter(modo_atendimento='humano', agente__isnull=False).count()
+    pendentes = ativas.filter(status='pendente').count()
+    resolvidas_hoje = conversas.filter(status='resolvida', data_resolucao__date=hoje).count()
+    total_hoje = conversas.filter(data_abertura__date=hoje).count()
 
-    avg_primeira_resposta = conversas.filter(
-        tempo_primeira_resposta_seg__isnull=False
-    ).aggregate(avg=Avg('tempo_primeira_resposta_seg'))['avg']
+    # Tempo medio de espera na fila (conversas sem agente)
+    from django.utils import timezone as tz
+    agora = tz.now()
+    sem_agente = ativas.filter(modo_atendimento='humano', agente__isnull=True)
+    if sem_agente.exists():
+        tempos_espera = [(agora - c.data_abertura).total_seconds() / 60 for c in sem_agente]
+        tempo_medio_fila = sum(tempos_espera) / len(tempos_espera)
+    else:
+        tempo_medio_fila = 0
 
-    total_conversas = conversas.exclude(status='arquivada').count()
+    # === AGENTES ===
+    agentes_data = []
+    # Filtrar agentes que pertencem a equipes do tenant
+    equipes_tenant = EquipeInbox.objects.filter(ativo=True).values_list('id', flat=True)
+    membros_ids = MembroEquipeInbox.objects.filter(equipe_id__in=equipes_tenant).values_list('user_id', flat=True)
+    for perfil in PerfilAgenteInbox.objects.select_related('user').filter(user_id__in=membros_ids):
+        conversas_ativas = ativas.filter(agente=perfil.user).count()
+        agentes_data.append({
+            'nome': perfil.user.get_full_name() or perfil.user.username,
+            'status': perfil.status,
+            'conversas_ativas': conversas_ativas,
+            'capacidade': perfil.capacidade_maxima,
+        })
+    agentes_data.sort(key=lambda a: (0 if a['status'] == 'online' else 1 if a['status'] == 'ausente' else 2, a['nome']))
 
-    # Volume por canal
+    # === FILAS ===
+    filas_data = []
+    for fila in FilaInbox.objects.select_related('equipe').filter(ativo=True):
+        aguardando = ativas.filter(fila=fila, agente__isnull=True).count()
+        em_atend_fila = ativas.filter(fila=fila, agente__isnull=False).count()
+        agentes_online = PerfilAgenteInbox.objects.filter(
+            user__in=fila.equipe.membros.values_list('user', flat=True),
+            status='online',
+        ).count()
+        from .distribution import verificar_horario_fila
+        dentro_horario = verificar_horario_fila(fila)
+        filas_data.append({
+            'nome': fila.nome,
+            'equipe': fila.equipe.nome,
+            'aguardando': aguardando,
+            'em_atendimento': em_atend_fila,
+            'agentes_online': agentes_online,
+            'dentro_horario': dentro_horario,
+            'modo': fila.get_modo_distribuicao_display(),
+        })
+
+    # === HISTORICO ===
+    trinta_dias = hoje - timedelta(days=30)
     por_canal = conversas.exclude(status='arquivada').values(
-        'canal__tipo', 'canal__nome'
+        'canal__nome'
     ).annotate(total=Count('id')).order_by('-total')
 
-    # Volume por equipe
-    por_equipe = conversas.exclude(status='arquivada').filter(
-        equipe__isnull=False
-    ).values('equipe__nome', 'equipe__cor_hex').annotate(
-        total=Count('id')
-    ).order_by('-total')
-
-    # Ranking agentes (últimos 30 dias)
-    trinta_dias = hoje - timedelta(days=30)
     por_agente = conversas.filter(
-        agente__isnull=False,
-        status='resolvida',
+        agente__isnull=False, status='resolvida',
         data_resolucao__date__gte=trinta_dias,
     ).values(
-        'agente__first_name', 'agente__last_name', 'agente__username'
+        'agente__first_name', 'agente__last_name'
     ).annotate(
         total_resolvidas=Count('id'),
         avg_tempo=Avg('tempo_primeira_resposta_seg'),
-    ).order_by('-total_resolvidas')[:15]
+    ).order_by('-total_resolvidas')[:10]
 
-    # Volume últimos 30 dias (para gráfico)
+    # Volume 30 dias
+    volume_por_dia = dict(
+        conversas.filter(
+            data_abertura__date__gte=trinta_dias
+        ).annotate(dia=TruncDate('data_abertura')).values('dia').annotate(
+            total=Count('id')
+        ).values_list('dia', 'total')
+    )
     ultimos_30 = []
     for i in range(29, -1, -1):
         dia = hoje - timedelta(days=i)
-        count = conversas.filter(data_abertura__date=dia).count()
-        ultimos_30.append({'dia': dia.strftime('%d/%m'), 'count': count})
+        ultimos_30.append({'dia': dia.strftime('%d/%m'), 'count': volume_por_dia.get(dia, 0)})
 
     context = {
-        'abertas': abertas,
+        # Tempo real
+        'no_bot': no_bot,
+        'na_fila': na_fila,
+        'em_atendimento': em_atendimento,
         'pendentes': pendentes,
         'resolvidas_hoje': resolvidas_hoje,
-        'avg_primeira_resposta': avg_primeira_resposta,
-        'total_conversas': total_conversas,
+        'total_hoje': total_hoje,
+        'tempo_medio_fila': tempo_medio_fila,
+        # Agentes
+        'agentes_data': agentes_data,
+        # Filas
+        'filas_data': filas_data,
+        # Historico
         'por_canal': por_canal,
-        'por_equipe': por_equipe,
         'por_agente': por_agente,
         'ultimos_30_json': json.dumps(ultimos_30),
-        'page_title': 'Dashboard do Inbox',
+        'page_title': 'Central de Atendimento',
     }
     return render(request, 'inbox/dashboard_inbox.html', context)

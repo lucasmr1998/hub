@@ -1,7 +1,7 @@
 # 14. Comercial — Modulo de Atendimento
 
 **Status:** ✅ Em producao
-**Ultima atualizacao:** 06/04/2026
+**Ultima atualizacao:** 10/04/2026
 **App:** `apps/comercial/atendimento/`
 
 ---
@@ -194,6 +194,33 @@ O signal `on_mensagem_recebida` em `apps/inbox/signals.py`:
 3. Se nao, tenta iniciar novo fluxo pelo canal
 4. Envia pergunta/mensagem do bot de volta no Inbox como remetente "Aurora" (tipo bot)
 5. Envia via webhook externo (WhatsApp) se configurado no canal
+
+---
+
+## Recontato Automatico
+
+Quando o lead para de responder no meio do fluxo, o sistema envia mensagens automaticas para retomar o contato.
+
+### Configuracao (por fluxo)
+
+Cada fluxo tem `recontato_ativo` e `recontato_config` (JSON):
+- **tentativas**: lista com `tempo_minutos` e `mensagem` para cada tentativa
+- **usar_ia**: se true, gera mensagem com IA baseada no contexto
+- **acao_final**: `abandonar` (finaliza) ou `transferir_humano` (envia para fila)
+
+### Campos no AtendimentoFluxo
+
+- `motivo_finalizacao`: completado, sem_resposta, abandonado_usuario, transferido, cancelado_atendente, cancelado_sistema, tempo_limite
+- `recontato_tentativas`: contador de tentativas enviadas
+- `recontato_proximo_em`: datetime do proximo recontato agendado
+
+### Cron
+
+`python manage.py executar_recontato` — roda a cada 5 minutos. Detecta atendimentos parados, envia mensagem, incrementa tentativa, ou finaliza se esgotou.
+
+### Retomada
+
+Quando o lead responde apos recontato, o signal reseta `recontato_tentativas` e retoma o fluxo automaticamente de onde parou.
 
 ---
 

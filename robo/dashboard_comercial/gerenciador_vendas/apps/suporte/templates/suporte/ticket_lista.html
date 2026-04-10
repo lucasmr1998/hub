@@ -182,12 +182,25 @@
 
 <!-- Tabela -->
 <div class="suporte-section">
-    <div class="results-info">
-        {{ tickets|length }} ticket{{ tickets|length|pluralize }} encontrado{{ tickets|length|pluralize }}
+    <div class="results-info" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>{{ total|default:tickets|length }} ticket{{ total|default:tickets|length|pluralize }} encontrado{{ total|default:tickets|length|pluralize }}</span>
+        <div id="bulkBar" style="display:none;gap:8px;align-items:center;">
+            <span id="bulkCount" style="font-size:12px;font-weight:600;color:var(--primary);"></span>
+            <select id="bulkAcao" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+                <option value="">Acao...</option>
+                <option value="status:resolvido">Marcar Resolvido</option>
+                <option value="status:fechado">Marcar Fechado</option>
+                <option value="status:em_andamento">Marcar Em Andamento</option>
+                <option value="prioridade:alta">Prioridade Alta</option>
+                <option value="prioridade:urgente">Prioridade Urgente</option>
+            </select>
+            <button onclick="executarAcaoMassa()" class="btn-primary" style="padding:4px 12px;font-size:12px;"><i class="fas fa-check"></i> Aplicar</button>
+        </div>
     </div>
     <table class="suporte-table">
         <thead>
             <tr>
+                <th style="width:30px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>
                 <th>#</th>
                 <th>Titulo</th>
                 <th>Status</th>
@@ -202,6 +215,7 @@
         <tbody>
             {% for ticket in tickets %}
             <tr>
+                <td><input type="checkbox" class="ticket-check" value="{{ ticket.pk }}" onchange="updateBulkBar()"></td>
                 <td style="font-weight:700;color:var(--text-muted);">{{ ticket.numero }}</td>
                 <td>
                     <a href="{% url 'suporte:ticket_detalhe' pk=ticket.pk %}">{{ ticket.titulo }}</a>
@@ -226,7 +240,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);">
+                <td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted);">
                     <i class="fas fa-inbox" style="font-size:2rem;margin-bottom:8px;display:block;opacity:.4;"></i>
                     Nenhum ticket encontrado.
                 </td>
@@ -235,4 +249,44 @@
         </tbody>
     </table>
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleSelectAll(el) {
+    document.querySelectorAll('.ticket-check').forEach(cb => cb.checked = el.checked);
+    updateBulkBar();
+}
+function updateBulkBar() {
+    const checked = document.querySelectorAll('.ticket-check:checked');
+    const bar = document.getElementById('bulkBar');
+    if (checked.length > 0) {
+        bar.style.display = 'flex';
+        document.getElementById('bulkCount').textContent = checked.length + ' selecionado' + (checked.length > 1 ? 's' : '');
+    } else {
+        bar.style.display = 'none';
+    }
+}
+function executarAcaoMassa() {
+    const checked = document.querySelectorAll('.ticket-check:checked');
+    const ids = Array.from(checked).map(cb => parseInt(cb.value));
+    const acaoVal = document.getElementById('bulkAcao').value;
+    if (!acaoVal || !ids.length) return;
+
+    const [acao, valor] = acaoVal.split(':');
+    if (!confirm('Aplicar "' + acaoVal + '" em ' + ids.length + ' ticket(s)?')) return;
+
+    fetch('{% url "suporte:api_acoes_massa" %}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+        body: JSON.stringify({tickets: ids, acao: acao, valor: valor})
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.ok) location.reload();
+        else alert(d.error || 'Erro');
+    });
+}
+</script>
 {% endblock %}

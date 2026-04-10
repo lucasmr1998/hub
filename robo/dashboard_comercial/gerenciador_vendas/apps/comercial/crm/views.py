@@ -360,8 +360,61 @@ def oportunidades_lista(request):
 
 
 @login_required
+@require_http_methods(["POST"])
+@auditar('crm', 'criar', 'oportunidade')
+def api_criar_oportunidade(request):
+    """Cria oportunidade manualmente com lead novo ou existente."""
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'erro': 'JSON invalido'}, status=400)
+
+    nome = body.get('nome', '').strip()
+    telefone = body.get('telefone', '').strip()
+    titulo = body.get('titulo', '').strip()
+    valor = body.get('valor')
+    responsavel_id = body.get('responsavel_id')
+
+    if not nome or not telefone:
+        return JsonResponse({'ok': False, 'erro': 'Nome e telefone sao obrigatorios'}, status=400)
+
+    from apps.comercial.leads.models import LeadProspecto
+    # Buscar ou criar lead
+    lead, created = LeadProspecto.objects.get_or_create(
+        telefone=telefone,
+        defaults={'nome_razaosocial': nome, 'origem': 'manual'}
+    )
+    if not created and not lead.nome_razaosocial:
+        lead.nome_razaosocial = nome
+        lead.save(update_fields=['nome_razaosocial'])
+
+    # Verificar se lead ja tem oportunidade
+    if OportunidadeVenda.objects.filter(lead=lead).exists():
+        return JsonResponse({'ok': False, 'erro': 'Este lead ja possui uma oportunidade'}, status=400)
+
+    # Primeiro estagio do pipeline padrao
+    pipeline = Pipeline.objects.filter(padrao=True).first() or Pipeline.objects.first()
+    estagio = PipelineEstagio.objects.filter(pipeline=pipeline, ativo=True).order_by('ordem').first()
+    if not estagio:
+        return JsonResponse({'ok': False, 'erro': 'Nenhum estagio disponivel'}, status=400)
+
+    oport = OportunidadeVenda.objects.create(
+        pipeline=pipeline,
+        lead=lead,
+        estagio=estagio,
+        titulo=titulo or nome,
+        valor_estimado=valor if valor else None,
+        responsavel_id=responsavel_id if responsavel_id else None,
+        criado_por=request.user,
+        origem_crm='manual',
+    )
+
+    return JsonResponse({'ok': True, 'id': oport.pk})
+
+
 @login_required
 @require_http_methods(["PUT"])
+@auditar('crm', 'editar', 'oportunidade')
 def api_editar_oportunidade(request, pk):
     """API para editar campos da oportunidade e do lead inline."""
     try:
@@ -860,7 +913,14 @@ def desempenho_view(request):
     hoje = timezone.now().date()
     mes_inicio = hoje.replace(day=1)
 
-    vendedores = User.objects.filter(is_active=True, perfil__tenant=request.tenant).order_by('first_name')
+    # Filtrar apenas vendedores/supervisores (exclui admins)
+    from apps.sistema.models import PermissaoUsuario
+    perfis_vendedor = ['Vendedor', 'Supervisor Comercial', 'Gerente Comercial']
+    users_comercial = PermissaoUsuario.objects.filter(
+        tenant=request.tenant,
+        perfil__nome__in=perfis_vendedor,
+    ).values_list('user_id', flat=True).distinct()
+    vendedores = User.objects.filter(pk__in=users_comercial, is_active=True).order_by('first_name')
     estagios = PipelineEstagio.objects.filter(ativo=True).order_by('ordem')
 
     context = {
@@ -901,7 +961,13 @@ def api_desempenho_dados(request):
     por_vendedor = {item['responsavel']: item for item in ops_ganhas}
 
     resultado = []
-    for u in User.objects.filter(is_active=True, perfil__tenant=request.tenant):
+    from apps.sistema.models import PermissaoUsuario
+    perfis_vendedor = ['Vendedor', 'Supervisor Comercial', 'Gerente Comercial']
+    users_comercial = PermissaoUsuario.objects.filter(
+        tenant=request.tenant,
+        perfil__nome__in=perfis_vendedor,
+    ).values_list('user_id', flat=True).distinct()
+    for u in User.objects.filter(pk__in=users_comercial, is_active=True):
         dados = por_vendedor.get(u.pk, {'total': 0, 'valor': 0})
         ativas = OportunidadeVenda.objects.filter(responsavel=u, ativo=True).exclude(
             estagio__is_final_ganho=True

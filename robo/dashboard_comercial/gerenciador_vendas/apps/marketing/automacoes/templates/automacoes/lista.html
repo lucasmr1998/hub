@@ -5,13 +5,10 @@
 {% block content %}
 
 <!-- Header -->
-<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
-    <div>
-        <h1 class="page-title">Automações</h1>
-        <p class="page-subtitle">Crie regras para automatizar ações do sistema quando eventos acontecem.</p>
-    </div>
-    <a href="{% url 'marketing_automacoes:criar' %}" class="btn-primary" style="display:flex; align-items:center; gap:8px;">
-        <i class="fas fa-plus"></i> Nova Automação
+<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; background:var(--bg-white); border:1px solid var(--border); border-radius:12px; padding:14px 20px; margin-bottom:20px;">
+    <h1 class="page-title" style="margin:0;"><i class="fas fa-robot" style="color:var(--primary);margin-right:8px;"></i> Automacoes</h1>
+    <a href="{% url 'marketing_automacoes:criar' %}" class="btn-primary" style="display:flex; align-items:center; gap:8px; text-decoration:none;">
+        <i class="fas fa-plus"></i> Nova Automacao
     </a>
 </div>
 

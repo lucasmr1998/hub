@@ -670,3 +670,62 @@ def logs_auditoria_view(request):
         'categorias': LogSistema.CATEGORIA_CHOICES,
     }
     return render(request, 'sistema/logs_auditoria.html', context)
+
+
+@login_required
+def configuracoes_empresa_view(request):
+    """Configuracoes da empresa: nome, logo, cores, integracoes."""
+    from apps.sistema.models import ConfiguracaoEmpresa
+    from apps.integracoes.models import IntegracaoAPI
+
+    config = ConfiguracaoEmpresa.objects.filter(ativo=True).first()
+    if not config:
+        config = ConfiguracaoEmpresa.objects.create(ativo=True)
+
+    if request.method == 'POST':
+        config.nome_empresa = request.POST.get('nome_empresa', config.nome_empresa)
+        config.cor_primaria = request.POST.get('cor_primaria', config.cor_primaria)
+        config.cor_secundaria = request.POST.get('cor_secundaria', config.cor_secundaria)
+        config.enviar_leads_integracao = request.POST.get('enviar_leads_integracao') == 'on'
+        integ_id = request.POST.get('integracao_leads')
+        config.integracao_leads_id = integ_id if integ_id else None
+
+        if request.FILES.get('logo_empresa'):
+            config.logo_empresa = request.FILES['logo_empresa']
+
+        config.save()
+        messages.success(request, 'Configuracoes salvas.')
+        return redirect('sistema:configuracoes_empresa')
+
+    integracoes = IntegracaoAPI.objects.filter(ativa=True)
+
+    return render(request, 'sistema/configuracoes/empresa.html', {
+        'config': config,
+        'integracoes': integracoes,
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_agente_status(request):
+    """Muda o status do agente (online/ausente/offline)."""
+    import json
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'JSON invalido'}, status=400)
+
+    novo_status = body.get('status', '')
+    if novo_status not in ('online', 'ausente', 'offline'):
+        return JsonResponse({'error': 'Status invalido'}, status=400)
+
+    from apps.inbox.models import PerfilAgenteInbox
+    perfil, created = PerfilAgenteInbox.objects.get_or_create(
+        user=request.user,
+        defaults={'status': novo_status}
+    )
+    if not created:
+        perfil.status = novo_status
+        perfil.save(update_fields=['status', 'ultimo_status_em'])
+
+    return JsonResponse({'ok': True, 'status': novo_status})

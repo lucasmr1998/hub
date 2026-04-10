@@ -93,6 +93,7 @@
 .drawflow .drawflow-node[data-tipo="ia_extrator"] .title-box { background:#f3e8ff; color:#6b21a8; }
 .drawflow .drawflow-node[data-tipo="ia_respondedor"] .title-box { background:#f3e8ff; color:#6b21a8; }
 .drawflow .drawflow-node[data-tipo="ia_agente"] .title-box { background:#f3e8ff; color:#6b21a8; }
+.drawflow .drawflow-node[data-tipo="transferir_humano"] .title-box { background:#fff7ed; color:#9a3412; }
 
 .config-group { margin-bottom:14px; }
 .config-group label { display:block; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; letter-spacing:.03em; }
@@ -112,8 +113,14 @@
         <button onclick="undo()" class="btn-secondary" style="padding:6px 10px;font-size:12px;" title="Desfazer (Ctrl+Z)"><i class="fas fa-undo"></i></button>
         <button onclick="redo()" class="btn-secondary" style="padding:6px 10px;font-size:12px;" title="Refazer (Ctrl+Y)"><i class="fas fa-redo"></i></button>
     </div>
+    <button onclick="abrirRecontatoConfig()" class="btn-secondary" style="padding:6px 12px; font-size:12px;" title="Configurar recontato automatico">
+        <i class="fas fa-clock-rotate-left"></i> Recontato
+    </button>
     <button onclick="salvarFluxo()" class="btn-primary" id="btnSalvar" style="padding:6px 16px; font-size:12px;">
         <i class="fas fa-save"></i> Salvar
+    </button>
+    <button onclick="abrirSimulador()" class="btn-secondary" style="padding:6px 16px; font-size:12px; background:var(--success); color:#fff; border-color:var(--success);">
+        <i class="fas fa-play"></i> Testar
     </button>
 </div>
 
@@ -205,6 +212,7 @@
                 <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="delay" data-subtipo="delay" data-nome="Atraso"><i class="fas fa-clock" style="color:#7c3aed;"></i> Atraso</div>
                 <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="finalizacao" data-subtipo="finalizar" data-nome="Finalizar Fluxo"><i class="fas fa-stop-circle" style="color:#e11d48;"></i> Finalizar Fluxo</div>
                 <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="finalizacao" data-subtipo="calcular_score" data-nome="Finalizar com Score"><i class="fas fa-flag-checkered" style="color:#e11d48;"></i> Finalizar com Score</div>
+                <div class="node-draggable" draggable="true" ondragstart="dragNode(event)" data-tipo="transferir_humano" data-subtipo="transferir_humano" data-nome="Transferir p/ Humano"><i class="fas fa-headset" style="color:#ea580c;"></i> Transferir p/ Humano</div>
             </div>
         </div>
     </div>
@@ -238,6 +246,103 @@
         <div class="node-modal-footer">
             <button class="btn-delete" onclick="deletarNodo()"><i class="fas fa-trash"></i> Excluir</button>
             <button class="btn-primary" style="padding:7px 24px;font-size:12px;border-radius:8px;font-weight:600;" onclick="fecharConfig()">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Recontato -->
+<div class="node-modal-overlay" id="recontatoOverlay" onclick="if(event.target===this)fecharRecontatoConfig()">
+    <div class="node-modal" style="width:540px;">
+        <div class="node-modal-header">
+            <div class="node-modal-icon" style="background:#fff7ed;color:#ea580c;"><i class="fas fa-clock-rotate-left"></i></div>
+            <h3>Recontato Automatico</h3>
+            <button class="node-modal-close" onclick="fecharRecontatoConfig()">&times;</button>
+        </div>
+        <div class="node-modal-body" style="padding:20px 24px;">
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Quando o lead para de responder, o sistema envia mensagens automaticas para retomar o contato.</p>
+
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;cursor:pointer;" onclick="var cb=document.getElementById('rcAtivo');cb.checked=!cb.checked;toggleRecontatoFields();">
+                <input type="checkbox" id="rcAtivo" {{ fluxo.recontato_ativo|yesno:"checked," }} onclick="event.stopPropagation();toggleRecontatoFields();" style="width:auto;margin:0;">
+                <span style="font-size:14px;font-weight:600;color:var(--text-main);">Ativar recontato automatico</span>
+            </div>
+
+            <div id="rcFields" style="display:{{ fluxo.recontato_ativo|yesno:'block,none' }};">
+                <div class="config-section" style="margin-top:0;">Tentativas</div>
+                <div id="rcTentativas"></div>
+                <button onclick="adicionarTentativa()" class="btn-secondary" style="font-size:11px;padding:5px 10px;margin-top:8px;">
+                    <i class="fas fa-plus"></i> Adicionar Tentativa
+                </button>
+
+                <div class="config-section">Opcoes</div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;" onclick="var cb=document.getElementById('rcUsarIA');cb.checked=!cb.checked;">
+                    <input type="checkbox" id="rcUsarIA" onclick="event.stopPropagation();" style="width:auto;margin:0;">
+                    <span style="font-size:13px;color:var(--text-main);">Gerar mensagem com IA (baseada no contexto)</span>
+                </div>
+                <div class="config-group">
+                    <label>Acao apos esgotar tentativas</label>
+                    <select id="rcAcaoFinal" class="form-control" style="font-size:13px;">
+                        <option value="abandonar">Abandonar atendimento</option>
+                        <option value="transferir_humano">Transferir para humano</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="node-modal-footer">
+            <span></span>
+            <button class="btn-primary" style="padding:7px 24px;font-size:12px;border-radius:8px;font-weight:600;" onclick="salvarRecontatoConfig()">
+                <i class="fas fa-save"></i> Salvar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Simulador de Teste -->
+<div id="simOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:9999;backdrop-filter:blur(2px);" onclick="if(event.target===this)fecharSimulador()">
+    <div style="position:absolute;right:24px;top:24px;bottom:24px;width:380px;background:var(--bg-white);border-radius:16px;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.25);overflow:hidden;">
+        <!-- Header -->
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--success);color:#fff;border-radius:16px 16px 0 0;">
+            <i class="fas fa-play-circle" style="font-size:18px;"></i>
+            <div style="flex:1;">
+                <div style="font-size:14px;font-weight:700;">Simulador de Teste</div>
+                <div id="simStatus" style="font-size:11px;opacity:0.8;">Configure e inicie</div>
+            </div>
+            <button onclick="fecharSimulador()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:4px;">&times;</button>
+        </div>
+
+        <!-- Setup (nome/telefone) -->
+        <div id="simSetup" style="padding:18px;">
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">Configure os dados do lead de teste para iniciar a simulacao.</div>
+            <div class="config-group">
+                <label>Nome do Lead</label>
+                <input type="text" id="simNome" value="" placeholder="Deixe vazio para testar coleta de nome" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+            </div>
+            <div class="config-group">
+                <label>Telefone</label>
+                <input type="text" id="simTelefone" value="86999990000" placeholder="DDD + numero" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+            </div>
+            <button onclick="iniciarSimulacao()" class="btn-primary" style="width:100%;padding:10px;font-size:13px;border-radius:8px;margin-top:8px;">
+                <i class="fas fa-play"></i> Iniciar Simulacao
+            </button>
+        </div>
+
+        <!-- Chat -->
+        <div id="simChat" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
+            <div id="simMessages" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;"></div>
+            <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;">
+                <input type="text" id="simInput" placeholder="Digite sua mensagem..." onkeydown="if(event.key==='Enter')enviarSimMsg()"
+                    style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;">
+                <button onclick="enviarSimMsg()" style="padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            <div style="padding:8px 14px;border-top:1px solid var(--border);display:flex;gap:8px;">
+                <button onclick="reiniciarSimulacao()" class="btn-secondary" style="flex:1;padding:6px;font-size:11px;">
+                    <i class="fas fa-redo"></i> Reiniciar
+                </button>
+                <button onclick="fecharSimulador()" class="btn-secondary" style="flex:1;padding:6px;font-size:11px;">
+                    <i class="fas fa-times"></i> Fechar
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -317,6 +422,14 @@ function getIAOpts(selectedId) {
     return integracoesIA.map(i => `<option value="${i.id}" ${String(i.id)===String(selectedId)?'selected':''}>${i.nome} (${i.tipo})</option>`).join('');
 }
 
+// Filas disponiveis para transferencia
+const filasInbox = {{ filas_inbox|safe }};
+function getFilasOpts(selectedId) {
+    let opts = '<option value="">Fila padrao (regras de roteamento)</option>';
+    opts += filasInbox.map(f => `<option value="${f.id}" ${String(f.id)===String(selectedId)?'selected':''}>${f.nome}</option>`).join('');
+    return opts;
+}
+
 // ── Drag & Drop ──
 function dragNode(ev) {
     ev.dataTransfer.setData('tipo', ev.target.getAttribute('data-tipo'));
@@ -346,6 +459,7 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
     if (tipo === 'questao') { inputs = 1; outputs = 2; }
     if (tipo === 'condicao') { inputs = 1; outputs = 2; }
     if (tipo === 'finalizacao') { inputs = 1; outputs = 0; }
+    if (tipo === 'transferir_humano') { inputs = 1; outputs = 0; }
     if (tipo === 'ia_classificador') { inputs = 1; outputs = 1; }
     if (tipo === 'ia_extrator') { inputs = 1; outputs = 2; }
     if (tipo === 'ia_respondedor' || tipo === 'ia_agente') { inputs = 1; outputs = 1; }
@@ -357,6 +471,7 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
         'acao': '<i class="fas fa-play" style="color:#059669;"></i>',
         'delay': '<i class="fas fa-clock" style="color:#7c3aed;"></i>',
         'finalizacao': '<i class="fas fa-flag-checkered" style="color:#e11d48;"></i>',
+        'transferir_humano': '<i class="fas fa-headset" style="color:#ea580c;"></i>',
         'ia_classificador': '<i class="fas fa-tags" style="color:#8b5cf6;"></i>',
         'ia_extrator': '<i class="fas fa-search" style="color:#8b5cf6;"></i>',
         'ia_respondedor': '<i class="fas fa-comment-dots" style="color:#8b5cf6;"></i>',
@@ -385,6 +500,7 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
     else if (tipo === 'ia_extrator') boxContent = '<div class="box">✅ Extraiu &nbsp;&nbsp; ❌ Fallback</div>';
     else if (tipo === 'ia_respondedor') boxContent = '<div class="box">Gera resposta com IA</div>';
     else if (tipo === 'ia_agente') boxContent = '<div class="box">Agente conversacional com tools</div>';
+    else if (tipo === 'transferir_humano') boxContent = '<div class="box">Transfere para fila humana</div>';
     else boxContent = '<div class="box">Ponto de entrada</div>';
 
     const html = `<div class="title-box">${icon} ${nome}</div>${boxContent}`;
@@ -464,6 +580,7 @@ function abrirConfig(nodeId, data) {
         'ia_extrator': {bg:'#f3e8ff', color:'#6b21a8', icon:'fa-search'},
         'ia_respondedor': {bg:'#f3e8ff', color:'#6b21a8', icon:'fa-comment-dots'},
         'ia_agente': {bg:'#f3e8ff', color:'#6b21a8', icon:'fa-robot'},
+        'transferir_humano': {bg:'#fff7ed', color:'#9a3412', icon:'fa-headset'},
     };
     const style = tipoStyles[data.tipo] || {bg:'#f1f5f9', color:'#334155', icon:'fa-cog'};
     iconEl.style.background = style.bg;
@@ -706,6 +823,16 @@ function abrirConfig(nodeId, data) {
             </select>
         </div>
         `;
+    } else if (data.tipo === 'transferir_humano') {
+        html = `
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">Transfere a conversa para a fila de atendimento humano. O fluxo do bot e finalizado e a conversa entra na distribuicao da fila.</p>
+        <div class="config-group"><label>Fila de Destino</label><select id="cfg_fila_id" onchange="salvarConfigNodo()">${getFilasOpts(config.fila_id)}</select>
+            <div class="config-hint">Se vazio, usa as regras de roteamento do canal.</div>
+        </div>
+        <div class="config-group"><label>Mensagem de Transferencia</label><textarea id="cfg_msg_transferencia" rows="2" onchange="salvarConfigNodo()" placeholder="Transferindo para um atendente. Aguarde um momento.">${config.mensagem||''}</textarea>
+            <div class="config-hint">Mensagem enviada ao contato no momento da transferencia.</div>
+        </div>
+        `;
     } else if (data.tipo === 'ia_classificador') {
         html = `
         <div class="config-group"><label>Integracao IA</label><select id="cfg_ia_integracao" onchange="salvarConfigNodo()"><option value="">Selecione...</option>${getIAOpts(config.integracao_ia_id)}</select></div>
@@ -867,6 +994,9 @@ function salvarConfigNodo() {
         if (scoreEl) config.score = parseInt(scoreEl.value) || null;
     } else if (data.tipo === 'entrada') {
         config.canal = document.getElementById('cfg_canal')?.value || 'qualquer';
+    } else if (data.tipo === 'transferir_humano') {
+        config.fila_id = document.getElementById('cfg_fila_id')?.value || '';
+        config.mensagem = document.getElementById('cfg_msg_transferencia')?.value || '';
     } else if (data.tipo === 'ia_classificador') {
         config.integracao_ia_id = document.getElementById('cfg_ia_integracao')?.value || '';
         config.modelo = document.getElementById('cfg_ia_modelo')?.value || '';
@@ -1268,5 +1398,228 @@ document.getElementById('nodeSearch').addEventListener('input', function(e) {
         else if (!s.querySelector('.node-draggable:not(.hidden)')) s.classList.add('collapsed');
     });
 });
+
+// ══════════════════════════════════════════════════════════════════
+// RECONTATO CONFIG
+// ══════════════════════════════════════════════════════════════════
+
+let recontatoConfig = {{ recontato_config_json|safe }} || {};
+const RECONTATO_URL = '{% url "comercial_atendimento:salvar_recontato" fluxo.pk %}';
+
+function abrirRecontatoConfig() {
+    document.getElementById('recontatoOverlay').classList.add('active');
+    // Carregar config existente
+    const tentativas = recontatoConfig.tentativas || [];
+    document.getElementById('rcUsarIA').checked = recontatoConfig.usar_ia || false;
+    document.getElementById('rcAcaoFinal').value = recontatoConfig.acao_final || 'abandonar';
+
+    const container = document.getElementById('rcTentativas');
+    container.innerHTML = '';
+    if (tentativas.length === 0) {
+        adicionarTentativa(60, 'Oi {{lead_nome}}, notei que voce parou de responder. Posso te ajudar?');
+        adicionarTentativa(1440, '{{lead_nome}}, ainda tem interesse? Estou aqui para ajudar!');
+        adicionarTentativa(4320, 'Ultima tentativa: {{lead_nome}}, se precisar estamos a disposicao.');
+    } else {
+        tentativas.forEach(t => adicionarTentativa(t.tempo_minutos, t.mensagem));
+    }
+    toggleRecontatoFields();
+}
+
+function fecharRecontatoConfig() {
+    document.getElementById('recontatoOverlay').classList.remove('active');
+}
+
+function toggleRecontatoFields() {
+    document.getElementById('rcFields').style.display =
+        document.getElementById('rcAtivo').checked ? 'block' : 'none';
+}
+
+function adicionarTentativa(tempo, msg) {
+    tempo = tempo || 60;
+    msg = msg || '';
+    const container = document.getElementById('rcTentativas');
+    const idx = container.children.length + 1;
+    const html = `<div class="rc-tentativa" style="background:var(--bg-subtle);border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <strong style="font-size:12px;color:var(--primary);">Tentativa ${idx}</strong>
+            <button onclick="this.closest('.rc-tentativa').remove()" style="border:none;background:none;color:var(--danger);cursor:pointer;font-size:14px;"><i class="fas fa-times"></i></button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:6px;">
+            <div style="flex:0 0 120px;">
+                <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:2px;">TEMPO (minutos)</label>
+                <input type="number" class="rc-tempo" value="${tempo}" min="1" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+            </div>
+            <div style="flex:1;">
+                <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:2px;">EQUIVALE A</label>
+                <span style="font-size:12px;color:var(--text-main);">${_formatarTempo(tempo)}</span>
+            </div>
+        </div>
+        <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:2px;">MENSAGEM</label>
+        <textarea class="rc-msg" rows="2" placeholder="Oi {{lead_nome}}, ..." style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box;">${msg}</textarea>
+    </div>`;
+    container.insertAdjacentHTML('beforeend', html);
+}
+
+function _formatarTempo(min) {
+    if (min < 60) return min + ' min';
+    if (min < 1440) return Math.round(min / 60) + 'h';
+    return Math.round(min / 1440) + ' dia(s)';
+}
+
+function salvarRecontatoConfig() {
+    const ativo = document.getElementById('rcAtivo').checked;
+    const tentativas = [];
+    document.querySelectorAll('.rc-tentativa').forEach(el => {
+        tentativas.push({
+            tempo_minutos: parseInt(el.querySelector('.rc-tempo').value) || 60,
+            mensagem: el.querySelector('.rc-msg').value || '',
+        });
+    });
+    const config = {
+        tentativas,
+        usar_ia: document.getElementById('rcUsarIA').checked,
+        acao_final: document.getElementById('rcAcaoFinal').value,
+    };
+
+    fetch(RECONTATO_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ ativo, config })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.ok) {
+            recontatoConfig = config;
+            window.showNotification('Recontato salvo!', 'success');
+            fecharRecontatoConfig();
+        } else {
+            window.showNotification(d.erro || 'Erro ao salvar', 'error');
+        }
+    });
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+// SIMULADOR DE TESTE
+// ══════════════════════════════════════════════════════════════════
+
+let simAtendimentoId = null;
+let simFinalizado = false;
+const SIM_URL = '{% url "comercial_atendimento:simular_fluxo" fluxo.pk %}';
+
+function abrirSimulador() {
+    document.getElementById('simOverlay').style.display = 'block';
+    document.getElementById('simSetup').style.display = 'block';
+    document.getElementById('simChat').style.display = 'none';
+    document.getElementById('simStatus').textContent = 'Configure e inicie';
+    simAtendimentoId = null;
+    simFinalizado = false;
+}
+
+function fecharSimulador() {
+    document.getElementById('simOverlay').style.display = 'none';
+}
+
+function reiniciarSimulacao() {
+    document.getElementById('simSetup').style.display = 'block';
+    document.getElementById('simChat').style.display = 'none';
+    document.getElementById('simMessages').innerHTML = '';
+    document.getElementById('simStatus').textContent = 'Configure e inicie';
+    simAtendimentoId = null;
+    simFinalizado = false;
+}
+
+function iniciarSimulacao() {
+    const nome = document.getElementById('simNome').value.trim();
+    const telefone = document.getElementById('simTelefone').value.trim() || '00000000000';
+
+    document.getElementById('simSetup').style.display = 'none';
+    document.getElementById('simChat').style.display = 'flex';
+    document.getElementById('simMessages').innerHTML = '';
+    document.getElementById('simStatus').textContent = 'Iniciando...';
+    simFinalizado = false;
+
+    fetch(SIM_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ action: 'iniciar', nome, telefone })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (!d.ok) { _simAddMsg('sistema', d.erro || 'Erro ao iniciar'); return; }
+        simAtendimentoId = d.atendimento_id;
+        document.getElementById('simStatus').textContent = `Lead: ${nome}`;
+        _simProcessarResultado(d.resultado);
+    })
+    .catch(e => _simAddMsg('sistema', 'Erro: ' + e.message));
+}
+
+function enviarSimMsg() {
+    const input = document.getElementById('simInput');
+    const msg = input.value.trim();
+    if (!msg || !simAtendimentoId || simFinalizado) return;
+    input.value = '';
+
+    _simAddMsg('user', msg);
+
+    fetch(SIM_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ action: 'responder', atendimento_id: simAtendimentoId, mensagem: msg })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (!d.ok) { _simAddMsg('sistema', d.erro || 'Erro'); return; }
+        _simProcessarResultado(d.resultado);
+        if (d.status === 'completado' || d.status === 'transferido' || d.status === 'cancelado') {
+            simFinalizado = true;
+        }
+    })
+    .catch(e => _simAddMsg('sistema', 'Erro: ' + e.message));
+}
+
+function _simProcessarResultado(r) {
+    if (!r) return;
+    if (r.mensagem) {
+        // Quebrar por paragrafos
+        const partes = r.mensagem.split(/\n\n+/).filter(p => p.trim());
+        partes.forEach(p => _simAddMsg('bot', p.trim()));
+    }
+    if (r.opcoes && r.opcoes.length) {
+        const opcoesText = r.opcoes.map((o, i) => `${i + 1}. ${o}`).join('\n');
+        _simAddMsg('bot', opcoesText);
+    }
+    if (r.tipo === 'finalizado') {
+        _simAddMsg('sistema', 'Fluxo finalizado.');
+        simFinalizado = true;
+        document.getElementById('simStatus').textContent = 'Finalizado';
+    }
+    if (r.tipo === 'transferido') {
+        _simAddMsg('sistema', 'Transferido para atendente humano.');
+        simFinalizado = true;
+        document.getElementById('simStatus').textContent = 'Transferido';
+    }
+    if (r.erro) {
+        _simAddMsg('sistema', 'Erro: ' + r.erro);
+    }
+}
+
+function _simAddMsg(tipo, texto) {
+    const container = document.getElementById('simMessages');
+    const div = document.createElement('div');
+    div.style.cssText = 'max-width:85%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word;';
+
+    if (tipo === 'user') {
+        div.style.cssText += 'align-self:flex-end;background:var(--primary);color:#fff;border-bottom-right-radius:4px;';
+    } else if (tipo === 'bot') {
+        div.style.cssText += 'align-self:flex-start;background:var(--bg-subtle,#f1f5f9);color:var(--text-main);border-bottom-left-radius:4px;';
+    } else {
+        div.style.cssText += 'align-self:center;background:none;color:var(--text-muted);font-size:11px;font-style:italic;padding:4px 8px;';
+    }
+
+    div.textContent = texto;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
 </script>
 {% endblock %}

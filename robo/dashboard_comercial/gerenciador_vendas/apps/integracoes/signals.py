@@ -14,28 +14,33 @@ def _obter_integracao_hubsoft():
 
 
 @receiver(post_save, sender=LeadProspecto)
-def enviar_lead_pendente_para_hubsoft(sender, instance, **kwargs):
+def enviar_lead_para_integracao(sender, instance, **kwargs):
     """
-    Sempre que um LeadProspecto ficar com status_api='pendente' e ainda
-    não possuir id_hubsoft, envia-o automaticamente para o Hubsoft como
-    prospecto via API.
+    Envia lead para integracao configurada nas configuracoes da empresa.
+    So envia se a config estiver ativa e a integracao selecionada.
     """
-    if instance.status_api != 'pendente':
-        return
-
     if instance.id_hubsoft:
         return
 
-    from apps.integracoes.services.hubsoft import HubsoftService, HubsoftServiceError
-
-    integracao = _obter_integracao_hubsoft()
-    if not integracao:
-        logger.warning(
-            "Nenhuma integração Hubsoft ativa encontrada. "
-            "Lead %s (pk=%s) não foi enviado.",
-            instance.nome_razaosocial, instance.pk,
-        )
+    # Verificar config da empresa
+    from apps.sistema.models import ConfiguracaoEmpresa
+    config = ConfiguracaoEmpresa.objects.filter(ativo=True).first()
+    if not config or not config.enviar_leads_integracao or not config.integracao_leads:
         return
+
+    integracao = config.integracao_leads
+    if not integracao.ativa:
+        return
+
+    # Somente HubSoft por enquanto
+    if integracao.tipo != 'hubsoft':
+        logger.debug("Integracao %s nao suportada para envio de leads.", integracao.tipo)
+        return
+
+    if instance.status_api != 'pendente':
+        return
+
+    from apps.integracoes.services.hubsoft import HubsoftService, HubsoftServiceError
 
     try:
         service = HubsoftService(integracao)
@@ -82,7 +87,7 @@ def _sincronizar_cliente_hubsoft(lead, service=None):
     if service is None:
         integracao = _obter_integracao_hubsoft()
         if not integracao:
-            logger.warning("Nenhuma integração Hubsoft ativa para sincronizar cliente do lead pk=%s.", lead.pk)
+            logger.debug("Sem integração Hubsoft ativa. Lead pk=%s ignorado.", lead.pk)
             return None
         service = HubsoftService(integracao)
 

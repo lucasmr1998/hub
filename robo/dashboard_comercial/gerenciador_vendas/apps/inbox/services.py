@@ -303,6 +303,7 @@ def enviar_mensagem(conversa, conteudo, user, tipo_conteudo='texto',
     # Se estava aberta sem agente, atribuir automaticamente
     if not conversa.agente:
         conversa.agente = user
+        _vincular_agente_oportunidade(conversa, user)
 
     conversa.save(update_fields=[
         'ultima_mensagem_em', 'ultima_mensagem_preview',
@@ -384,12 +385,36 @@ def _enviar_via_webhook_legado(conversa, mensagem):
         Mensagem.all_tenants.filter(pk=mensagem.pk).update(erro_envio=str(e)[:500])
 
 
+# ── Vincular agente a oportunidade ────────────────────────────────────
+
+def _vincular_agente_oportunidade(conversa, agente):
+    """Quando um agente e atribuido a uma conversa, atribui como responsavel
+    da oportunidade mais recente sem responsavel do lead."""
+    if not conversa.lead or not agente:
+        return
+    try:
+        from apps.comercial.crm.models import OportunidadeVenda
+        oport = OportunidadeVenda.objects.filter(
+            lead=conversa.lead,
+            responsavel__isnull=True,
+            ativo=True,
+        ).order_by('-data_criacao').first()
+        if oport:
+            oport.responsavel = agente
+            oport.save(update_fields=['responsavel'])
+            logger.info("Oportunidade #%s atribuida a %s (via conversa #%s)",
+                        oport.pk, agente.username, conversa.numero)
+    except Exception as e:
+        logger.error("Erro ao vincular agente a oportunidade: %s", e)
+
+
 # ── Ações de conversa ──────────────────────────────────────────────────
 
 def atribuir_conversa(conversa, agente, atribuido_por=None):
     """Atribui conversa a um agente e cria mensagem de sistema."""
     conversa.agente = agente
     conversa.save(update_fields=['agente'])
+    _vincular_agente_oportunidade(conversa, agente)
 
     nome_atribuidor = ''
     if atribuido_por:
@@ -534,6 +559,7 @@ def transferir_conversa(conversa, transferido_por, para_agente=None,
         nome_destino = para_agente.get_full_name() or para_agente.username
         msg_parts.append(f"para {nome_destino}")
         conversa.save(update_fields=['agente'])
+        _vincular_agente_oportunidade(conversa, para_agente)
 
     elif para_fila:
         fila = FilaInbox.objects.filter(pk=para_fila.pk if hasattr(para_fila, 'pk') else para_fila).first()

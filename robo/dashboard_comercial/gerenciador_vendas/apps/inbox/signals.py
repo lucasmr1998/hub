@@ -280,6 +280,12 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
             ).select_related('fluxo', 'nodo_atual').first()
 
             if ativo:
+                # Resetar recontato se lead respondeu
+                if ativo.recontato_tentativas > 0:
+                    ativo.recontato_tentativas = 0
+                    ativo.recontato_proximo_em = None
+                    ativo.save(update_fields=['recontato_tentativas', 'recontato_proximo_em'])
+
                 # Dispatch para o handler correto baseado no tipo do nodo
                 if ativo.nodo_atual and ativo.nodo_atual.tipo == 'ia_respondedor':
                     from apps.comercial.atendimento.engine import processar_resposta_ia_respondedor
@@ -297,6 +303,9 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
                 atendimento, resultado = iniciar_por_canal(lead, canal, tenant=instance.tenant, fluxo_forcado=fluxo_do_canal)
                 if atendimento:
                     logger.info("Fluxo atendimento iniciado: atendimento=%s, canal=%s", atendimento.id, canal)
+                    # Marcar conversa como atendida pelo bot
+                    conversa.modo_atendimento = 'bot'
+                    conversa.save(update_fields=['modo_atendimento'])
 
             # Enviar resposta do bot de volta no inbox
             if resultado and resultado.get('tipo') == 'questao':
@@ -316,6 +325,15 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
             elif resultado and resultado.get('tipo') == 'finalizado':
                 msg_final = resultado.get('mensagem', 'Atendimento finalizado. Obrigado!')
                 _enviar_mensagens_bot(instance.tenant, conversa, msg_final, 'Aurora')
+                # Marcar conversa como finalizada pelo bot
+                conversa.modo_atendimento = 'finalizado_bot'
+                conversa.save(update_fields=['modo_atendimento'])
+
+            elif resultado and resultado.get('tipo') == 'transferido':
+                texto = resultado.get('mensagem', '')
+                if texto:
+                    _enviar_mensagens_bot(instance.tenant, conversa, texto, 'Aurora')
+                # modo_atendimento ja foi setado no engine como 'humano'
 
     except Exception as e:
         logger.error("Erro ao processar fluxo de atendimento por canal: %s", e, exc_info=True)

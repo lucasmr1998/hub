@@ -55,6 +55,7 @@ class ConversaOutputSerializer(serializers.Serializer):
     tempo_primeira_resposta_seg = serializers.IntegerField()
     data_abertura = serializers.DateTimeField()
     data_resolucao = serializers.DateTimeField()
+    modo_atendimento = serializers.CharField()
     etiquetas = serializers.SerializerMethodField()
 
     def get_agente_nome(self, obj):
