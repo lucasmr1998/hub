@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+## Abordagem de Trabalho
+
+**OBRIGATORIO:** Antes de implementar qualquer funcionalidade, correcao ou alteracao:
+1. **Discutir antes de fazer.** Apresentar o problema/tarefa, sugerir abordagens e perguntar como o usuario quer proceder.
+2. **Trazer opcoes.** Sempre que houver mais de uma forma de resolver, apresentar as opcoes com pros e contras.
+3. **Nunca implementar sem alinhamento.** Mesmo que a solucao pareca obvia, perguntar antes. O usuario decide a direcao.
+4. **Confirmar escopo.** Antes de comecar, resumir o que vai ser feito e pedir confirmacao.
+
+---
+
 ## Regras Fundamentais
 
 ### Banco de Dados
