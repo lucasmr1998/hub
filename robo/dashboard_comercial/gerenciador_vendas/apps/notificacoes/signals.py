@@ -51,6 +51,53 @@ def notificar_lead_novo(sender, instance, created, **kwargs):
 
 
 # ============================================================================
+# LEAD CONVERTIDO (cadastro finalizado)
+# ============================================================================
+
+@receiver(post_save, sender='cadastro.CadastroCliente')
+def notificar_lead_convertido(sender, instance, created, **kwargs):
+    """Notifica quando um cadastro é finalizado (venda aprovada)."""
+    if created:
+        return
+
+    if getattr(instance, '_skip_notificacao', False):
+        return
+
+    if instance.status != 'finalizado':
+        return
+
+    try:
+        from apps.notificacoes.services import criar_notificacao
+        from django.contrib.auth.models import User
+
+        tenant = instance.tenant
+        nome = instance.nome_completo or 'Cliente'
+        lead = instance.lead_gerado
+
+        usuarios = User.objects.filter(
+            perfil__tenant=tenant,
+            is_active=True,
+        ).exclude(perfil__cargo__in=['', None])
+
+        for user in usuarios:
+            criar_notificacao(
+                tenant=tenant,
+                codigo_tipo='venda_aprovada',
+                titulo=f'Venda aprovada: {nome}',
+                mensagem=f'Cadastro de {nome} foi finalizado com sucesso.',
+                destinatario=user,
+                url_acao=f'/comercial/leads/{lead.pk}/' if lead else '',
+                dados_contexto={
+                    'cadastro_id': instance.pk,
+                    'cliente_nome': nome,
+                    'lead_id': lead.pk if lead else None,
+                },
+            )
+    except Exception as e:
+        logger.error(f'Erro ao notificar lead convertido: {e}')
+
+
+# ============================================================================
 # CONVERSA RECEBIDA (Inbox)
 # ============================================================================
 
@@ -133,6 +180,143 @@ def notificar_conversa_transferida(sender, instance, created, **kwargs):
 
 
 # ============================================================================
+# MENSAGEM RECEBIDA (Inbox — mensagem de contato)
+# ============================================================================
+
+@receiver(post_save, sender='inbox.Mensagem')
+def notificar_mensagem_recebida(sender, instance, created, **kwargs):
+    """Notifica o agente quando recebe mensagem de um contato."""
+    if not created:
+        return
+
+    if instance.remetente_tipo != 'contato':
+        return
+
+    if getattr(instance, '_skip_notificacao', False):
+        return
+
+    try:
+        from apps.notificacoes.services import criar_notificacao
+
+        conversa = instance.conversa
+        tenant = instance.tenant
+        agente = conversa.agente
+
+        if not agente:
+            return
+
+        nome = conversa.contato_nome or conversa.contato_telefone or 'Contato'
+        preview = (instance.conteudo or '')[:100]
+
+        criar_notificacao(
+            tenant=tenant,
+            codigo_tipo='mensagem_recebida',
+            titulo=f'Nova mensagem: {nome}',
+            mensagem=preview or 'Mensagem recebida.',
+            destinatario=agente,
+            url_acao=f'/inbox/{conversa.pk}/',
+            dados_contexto={
+                'conversa_id': conversa.pk,
+                'mensagem_id': instance.pk,
+                'contato_nome': nome,
+            },
+        )
+    except Exception as e:
+        logger.error(f'Erro ao notificar mensagem recebida: {e}')
+
+
+# ============================================================================
+# TAREFA ATRIBUÍDA (CRM)
+# ============================================================================
+
+@receiver(post_save, sender='crm.TarefaCRM')
+def notificar_tarefa_atribuida(sender, instance, created, **kwargs):
+    """Notifica o responsável quando uma tarefa é criada para ele."""
+    if not created:
+        return
+
+    if getattr(instance, '_skip_notificacao', False):
+        return
+
+    try:
+        from apps.notificacoes.services import criar_notificacao
+
+        responsavel = instance.responsavel
+        criado_por = instance.criado_por
+
+        # Só notifica se foi criada por outra pessoa
+        if not responsavel or responsavel == criado_por:
+            return
+
+        tenant = instance.tenant
+
+        criar_notificacao(
+            tenant=tenant,
+            codigo_tipo='tarefa_atribuida',
+            titulo=f'Nova tarefa: {instance.titulo}',
+            mensagem=f'Tarefa "{instance.titulo}" foi atribuída a você.',
+            destinatario=responsavel,
+            url_acao=f'/comercial/crm/tarefas/',
+            prioridade=instance.prioridade,
+            dados_contexto={
+                'tarefa_id': instance.pk,
+                'tarefa_titulo': instance.titulo,
+                'criado_por': criado_por.username if criado_por else '',
+            },
+        )
+    except Exception as e:
+        logger.error(f'Erro ao notificar tarefa atribuída: {e}')
+
+
+# ============================================================================
+# OPORTUNIDADE MOVIDA DE ESTÁGIO (CRM)
+# ============================================================================
+
+@receiver(post_save, sender='crm.HistoricoPipelineEstagio')
+def notificar_oportunidade_movida(sender, instance, created, **kwargs):
+    """Notifica o responsável quando oportunidade muda de estágio."""
+    if not created:
+        return
+
+    if getattr(instance, '_skip_notificacao', False):
+        return
+
+    try:
+        from apps.notificacoes.services import criar_notificacao
+
+        oportunidade = instance.oportunidade
+        responsavel = oportunidade.responsavel
+
+        if not responsavel:
+            return
+
+        # Não notificar quem moveu
+        if instance.movido_por and instance.movido_por == responsavel:
+            return
+
+        tenant = instance.tenant
+        titulo_op = oportunidade.titulo or f'Oportunidade #{oportunidade.pk}'
+        estagio_novo = instance.estagio_novo.nome if instance.estagio_novo else 'Desconhecido'
+
+        criar_notificacao(
+            tenant=tenant,
+            codigo_tipo='oportunidade_movida',
+            titulo=f'Oportunidade movida: {titulo_op}',
+            mensagem=f'{titulo_op} foi movida para o estágio "{estagio_novo}".',
+            destinatario=responsavel,
+            url_acao=f'/comercial/crm/',
+            dados_contexto={
+                'oportunidade_id': oportunidade.pk,
+                'estagio_novo': estagio_novo,
+                'estagio_anterior': instance.estagio_anterior.nome if instance.estagio_anterior else '',
+                'movido_por': instance.movido_por.username if instance.movido_por else '',
+            },
+        )
+    except Exception as e:
+        logger.error(f'Erro ao notificar oportunidade movida: {e}')
+
+
+# ============================================================================
 # TICKET CRIADO (Suporte)
 # ============================================================================
 
@@ -150,18 +334,77 @@ def notificar_ticket_criado(sender, instance, created, **kwargs):
 
         tenant = instance.tenant
 
-        if instance.atribuido_a:
+        if instance.atendente:
             criar_notificacao(
                 tenant=tenant,
                 codigo_tipo='ticket_criado',
                 titulo=f'Novo ticket: {instance.titulo}',
-                mensagem=f'Ticket #{instance.pk} foi aberto.',
-                destinatario=instance.atribuido_a,
+                mensagem=f'Ticket #{instance.numero} foi aberto.',
+                destinatario=instance.atendente,
                 url_acao=f'/suporte/tickets/{instance.pk}/',
                 dados_contexto={
                     'ticket_id': instance.pk,
                     'ticket_titulo': instance.titulo,
+                    'ticket_numero': instance.numero,
                 },
             )
     except Exception as e:
         logger.error(f'Erro ao notificar ticket criado: {e}')
+
+
+# ============================================================================
+# TICKET RESPONDIDO (Suporte — novo comentário)
+# ============================================================================
+
+@receiver(post_save, sender='suporte.ComentarioTicket')
+def notificar_ticket_respondido(sender, instance, created, **kwargs):
+    """Notifica quando um comentário é adicionado ao ticket."""
+    if not created:
+        return
+
+    if getattr(instance, '_skip_notificacao', False):
+        return
+
+    if instance.interno:
+        return
+
+    try:
+        from apps.notificacoes.services import criar_notificacao
+
+        ticket = instance.ticket
+        autor = instance.autor
+        tenant = instance.tenant
+
+        # Notificar o solicitante (se não foi ele quem comentou)
+        if ticket.solicitante and ticket.solicitante != autor:
+            criar_notificacao(
+                tenant=tenant,
+                codigo_tipo='ticket_respondido',
+                titulo=f'Ticket #{ticket.numero} respondido',
+                mensagem=f'Novo comentário no ticket "{ticket.titulo}".',
+                destinatario=ticket.solicitante,
+                url_acao=f'/suporte/tickets/{ticket.pk}/',
+                dados_contexto={
+                    'ticket_id': ticket.pk,
+                    'ticket_numero': ticket.numero,
+                    'autor': autor.username if autor else '',
+                },
+            )
+
+        # Notificar o atendente (se não foi ele quem comentou)
+        if ticket.atendente and ticket.atendente != autor and ticket.atendente != ticket.solicitante:
+            criar_notificacao(
+                tenant=tenant,
+                codigo_tipo='ticket_respondido',
+                titulo=f'Ticket #{ticket.numero} respondido',
+                mensagem=f'Novo comentário no ticket "{ticket.titulo}".',
+                destinatario=ticket.atendente,
+                url_acao=f'/suporte/tickets/{ticket.pk}/',
+                dados_contexto={
+                    'ticket_id': ticket.pk,
+                    'ticket_numero': ticket.numero,
+                    'autor': autor.username if autor else '',
+                },
+            )
+    except Exception as e:
+        logger.error(f'Erro ao notificar ticket respondido: {e}')

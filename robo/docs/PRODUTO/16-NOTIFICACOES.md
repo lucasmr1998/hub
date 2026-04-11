@@ -190,14 +190,24 @@ criar_notificacao(
 
 Arquivo: `signals.py` — registrados via `apps.py` (ready)
 
-| Signal | Evento | Tipo |
-|--------|--------|------|
-| `notificar_lead_novo` | LeadProspecto criado | lead_novo |
-| `notificar_conversa_recebida` | Conversa criada (com agente) | conversa_recebida |
-| `notificar_conversa_transferida` | Conversa muda de agente | conversa_transferida |
-| `notificar_ticket_criado` | Ticket criado (com atribuido) | ticket_criado |
+| Signal | Evento | Tipo | Quem recebe |
+|--------|--------|------|-------------|
+| `notificar_lead_novo` | LeadProspecto criado | lead_novo | Todos os usuarios ativos |
+| `notificar_lead_convertido` | CadastroCliente status=finalizado | venda_aprovada | Todos os usuarios ativos |
+| `notificar_conversa_recebida` | Conversa criada (com agente) | conversa_recebida | Agente atribuido |
+| `notificar_conversa_transferida` | Conversa muda de agente | conversa_transferida | Novo agente |
+| `notificar_mensagem_recebida` | Mensagem de contato | mensagem_recebida | Agente da conversa |
+| `notificar_tarefa_atribuida` | TarefaCRM criada por outro | tarefa_atribuida | Responsavel da tarefa |
+| `notificar_oportunidade_movida` | HistoricoPipelineEstagio criado | oportunidade_movida | Responsavel da oportunidade |
+| `notificar_ticket_criado` | Ticket criado (com atendente) | ticket_criado | Atendente do ticket |
+| `notificar_ticket_respondido` | ComentarioTicket criado | ticket_respondido | Solicitante + atendente |
 
 Para pular notificacao em operacoes em massa: `instance._skip_notificacao = True`
+
+**Tipos sem signal (precisam de cron job):**
+- `tarefa_vencendo` — verificar TarefaCRM com data_vencimento proxima
+- `sla_estourando` — verificar Tickets com SLA proximo do limite
+- `mencao_nota` — detectar @mencao em notas (logica de parsing)
 
 ---
 
