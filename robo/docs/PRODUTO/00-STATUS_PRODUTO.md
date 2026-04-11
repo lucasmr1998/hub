@@ -201,13 +201,14 @@ Este documento é a fonte da verdade sobre o que está pronto, em desenvolviment
 
 | Funcionalidade | Status | Observação |
 |----------------|--------|------------|
-| Models completos (tipos, canais, templates, preferências) | ✅ Pronto | |
+| Models completos (tipos, canais, templates, preferências) | ✅ Pronto | 5 models, 16 tipos, 4 canais |
 | Admin completo | ✅ Pronto | |
-| APIs de CRUD | ✅ Pronto | 26 endpoints |
+| APIs de CRUD + leitura | ✅ Pronto | 30+ endpoints |
 | Config WhatsApp/N8N | ✅ Pronto | |
-| Envio de notificações | ❌ Desativado | Service não implementado |
-| Página de configurações | ❌ Desativado | Redireciona com msg manutenção |
-| Signals automáticos | ❌ Desativado | Nenhum signal cria notificações |
+| Service centralizado (criar, marcar lida, contar) | ✅ Pronto | services/notificacao_service.py |
+| Signals automáticos (lead, conversa, ticket) | ✅ Pronto | 4 signals |
+| Frontend (sino, badge, toasts, som, marcar lida) | ✅ Pronto | Polling 15s, Web Audio API |
+| Página de configurações | ✅ Pronto | |
 
 ### Integrações (apps/integracoes/)
 
