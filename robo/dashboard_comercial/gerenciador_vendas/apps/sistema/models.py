@@ -669,3 +669,91 @@ class LogSistema(models.Model):
 
     def __str__(self):
         return f"{self.nivel} - {self.modulo} - {self.data_criacao.strftime('%d/%m/%Y %H:%M')}"
+
+
+# ============================================================================
+# RECUPERACAO DE SENHA
+# ============================================================================
+
+class ConfiguracaoRecuperacaoSenha(models.Model):
+    """Configuracao global de recuperacao de senha (aurora-admin)."""
+    # Email
+    email_ativo = models.BooleanField(default=False, verbose_name="Recuperacao por Email")
+    smtp_host = models.CharField(max_length=200, blank=True, default='', verbose_name="SMTP Host")
+    smtp_porta = models.PositiveIntegerField(default=587, verbose_name="SMTP Porta")
+    smtp_usuario = models.CharField(max_length=200, blank=True, default='', verbose_name="SMTP Usuario")
+    smtp_senha = models.CharField(max_length=200, blank=True, default='', verbose_name="SMTP Senha")
+    smtp_tls = models.BooleanField(default=True, verbose_name="Usar TLS")
+    email_remetente = models.EmailField(blank=True, default='', verbose_name="Email Remetente")
+
+    # WhatsApp
+    whatsapp_ativo = models.BooleanField(default=False, verbose_name="Recuperacao por WhatsApp")
+    whatsapp_integracao = models.ForeignKey(
+        'integracoes.IntegracaoAPI', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        verbose_name="Integracao WhatsApp (Uazapi)",
+        help_text="Integracao usada para enviar codigo via WhatsApp"
+    )
+
+    # Config
+    codigo_expiracao_minutos = models.PositiveIntegerField(default=5, verbose_name="Expiracao do codigo (min)")
+    max_tentativas = models.PositiveIntegerField(default=3, verbose_name="Max tentativas por codigo")
+
+    data_atualizacao = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'sistema'
+        db_table = 'sistema_config_recuperacao_senha'
+        verbose_name = "Config Recuperacao de Senha"
+        verbose_name_plural = "Config Recuperacao de Senha"
+
+    def __str__(self):
+        metodos = []
+        if self.email_ativo:
+            metodos.append('Email')
+        if self.whatsapp_ativo:
+            metodos.append('WhatsApp')
+        return f"Recuperacao: {', '.join(metodos) or 'Desativada'}"
+
+    @classmethod
+    def get_config(cls):
+        obj = cls.objects.first()
+        if not obj:
+            obj = cls.objects.create()
+        return obj
+
+
+class CodigoRecuperacaoSenha(models.Model):
+    """Codigo temporario para recuperacao de senha."""
+    METODO_CHOICES = [
+        ('email', 'Email'),
+        ('whatsapp', 'WhatsApp'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='codigos_recuperacao')
+    codigo = models.CharField(max_length=6, verbose_name="Codigo")
+    token = models.CharField(max_length=64, blank=True, default='', verbose_name="Token (para email)")
+    metodo = models.CharField(max_length=10, choices=METODO_CHOICES, verbose_name="Metodo")
+    tentativas = models.PositiveIntegerField(default=0, verbose_name="Tentativas")
+    usado = models.BooleanField(default=False, verbose_name="Usado")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    expira_em = models.DateTimeField(verbose_name="Expira em")
+
+    class Meta:
+        app_label = 'sistema'
+        db_table = 'sistema_codigo_recuperacao_senha'
+        verbose_name = "Codigo de Recuperacao"
+        verbose_name_plural = "Codigos de Recuperacao"
+        ordering = ['-criado_em']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.metodo} - {'Usado' if self.usado else 'Ativo'}"
+
+    @property
+    def expirado(self):
+        return timezone.now() > self.expira_em
+
+    @property
+    def bloqueado(self):
+        config = ConfiguracaoRecuperacaoSenha.get_config()
+        return self.tentativas >= config.max_tentativas

@@ -535,3 +535,42 @@ def backlog_view(request):
         'total_pendentes': len(pendentes),
         'total_finalizadas': len(finalizadas),
     })
+
+
+@login_required
+def config_recuperacao_senha_view(request):
+    """Configuracao de recuperacao de senha (aurora-admin)."""
+    from apps.sistema.models import ConfiguracaoRecuperacaoSenha
+    from apps.integracoes.models import IntegracaoAPI
+
+    config = ConfiguracaoRecuperacaoSenha.get_config()
+
+    if request.method == 'POST':
+        config.email_ativo = request.POST.get('email_ativo') == 'on'
+        config.smtp_host = request.POST.get('smtp_host', '')
+        config.smtp_porta = int(request.POST.get('smtp_porta', 587) or 587)
+        config.smtp_usuario = request.POST.get('smtp_usuario', '')
+        smtp_senha = request.POST.get('smtp_senha', '')
+        if smtp_senha:
+            config.smtp_senha = smtp_senha
+        config.smtp_tls = request.POST.get('smtp_tls') == 'on'
+        config.email_remetente = request.POST.get('email_remetente', '')
+
+        config.whatsapp_ativo = request.POST.get('whatsapp_ativo') == 'on'
+        integ_id = request.POST.get('whatsapp_integracao')
+        config.whatsapp_integracao_id = integ_id if integ_id else None
+
+        config.codigo_expiracao_minutos = int(request.POST.get('codigo_expiracao_minutos', 5) or 5)
+        config.max_tentativas = int(request.POST.get('max_tentativas', 3) or 3)
+
+        config.save()
+        from django.contrib import messages
+        messages.success(request, 'Configuracoes de recuperacao de senha salvas.')
+        return redirect('admin_aurora:config_recuperacao_senha')
+
+    integracoes = IntegracaoAPI.all_tenants.filter(tipo__in=['uazapi', 'evolution'], ativa=True)
+
+    return render(request, 'admin_aurora/config_recuperacao_senha.html', {
+        'config': config,
+        'integracoes': integracoes,
+    })

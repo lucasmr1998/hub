@@ -1,0 +1,46 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificar Codigo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); }
+        .card { background:#fff; border-radius:16px; padding:40px; width:100%; max-width:420px; box-shadow:0 20px 60px rgba(0,0,0,0.15); text-align:center; }
+        .card h1 { font-size:22px; font-weight:700; color:#1e293b; margin-bottom:8px; }
+        .card p { font-size:13px; color:#64748b; margin-bottom:24px; }
+        .codigo-input { width:200px; padding:14px; font-size:24px; text-align:center; letter-spacing:8px; border:2px solid #e2e8f0; border-radius:12px; font-family:inherit; font-weight:700; }
+        .codigo-input:focus { border-color:#667eea; outline:none; box-shadow:0 0 0 3px rgba(102,126,234,0.1); }
+        .btn { width:100%; padding:12px; background:#667eea; color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; margin-top:20px; }
+        .btn:hover { background:#5a6fd6; }
+        .alert { padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px; }
+        .alert-error { background:#fee2e2; color:#991b1b; }
+        .back-link { display:block; text-align:center; margin-top:16px; font-size:13px; color:#667eea; text-decoration:none; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div style="font-size:48px;margin-bottom:16px;"><i class="fab fa-whatsapp" style="color:#25D366;"></i></div>
+        <h1>Digite o Codigo</h1>
+        <p>Enviamos um codigo de 6 digitos para o seu WhatsApp.</p>
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <input type="text" name="codigo" class="codigo-input" maxlength="6" placeholder="000000" required autofocus autocomplete="off">
+            <button type="submit" class="btn">Verificar</button>
+        </form>
+
+        <a href="{% url 'sistema:esqueci_senha' %}" class="back-link"><i class="fas fa-arrow-left" style="margin-right:4px;"></i> Solicitar novo codigo</a>
+    </div>
+</body>
+</html>

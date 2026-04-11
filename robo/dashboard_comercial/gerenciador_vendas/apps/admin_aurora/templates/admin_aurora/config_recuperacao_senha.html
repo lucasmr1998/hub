@@ -1,0 +1,104 @@
+{% extends 'admin_aurora/base_aurora.html' %}
+{% block title %}Recuperacao de Senha — Config{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; background:var(--bg-white); border:1px solid var(--border); border-radius:12px; padding:14px 20px; margin-bottom:20px;">
+    <h1 class="page-title" style="margin:0;"><i class="fas fa-key" style="color:var(--primary);margin-right:8px;"></i> Recuperacao de Senha</h1>
+    <a href="{% url 'admin_aurora:dashboard' %}" class="btn-secondary" style="text-decoration:none;"><i class="fas fa-arrow-left"></i> Voltar</a>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}" style="padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;{% if message.tags == 'success' %}background:#dcfce7;color:#166534;{% else %}background:#fee2e2;color:#991b1b;{% endif %}">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Email -->
+    <div class="card" style="padding:24px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;cursor:pointer;" onclick="var cb=document.getElementById('emailAtivo');cb.checked=!cb.checked;document.getElementById('emailFields').style.display=cb.checked?'block':'none';">
+            <input type="checkbox" name="email_ativo" id="emailAtivo" {% if config.email_ativo %}checked{% endif %} onclick="event.stopPropagation();document.getElementById('emailFields').style.display=this.checked?'block':'none';" style="width:auto;margin:0;">
+            <i class="fas fa-envelope" style="color:#3b82f6;font-size:18px;"></i>
+            <span style="font-size:15px;font-weight:700;color:var(--text-main);">Recuperacao por Email</span>
+        </div>
+
+        <div id="emailFields" style="display:{% if config.email_ativo %}block{% else %}none{% endif %};">
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                    <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">SMTP Host</label>
+                    <input type="text" name="smtp_host" value="{{ config.smtp_host }}" class="form-control" placeholder="smtp.gmail.com">
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Porta</label>
+                    <input type="number" name="smtp_porta" value="{{ config.smtp_porta }}" class="form-control" placeholder="587">
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                    <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Usuario SMTP</label>
+                    <input type="text" name="smtp_usuario" value="{{ config.smtp_usuario }}" class="form-control" placeholder="seu@email.com">
+                </div>
+                <div>
+                    <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Senha SMTP</label>
+                    <input type="password" name="smtp_senha" class="form-control" placeholder="{% if config.smtp_senha %}(salva){% else %}Senha{% endif %}">
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:12px;margin-bottom:12px;">
+                <div>
+                    <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Email Remetente</label>
+                    <input type="email" name="email_remetente" value="{{ config.email_remetente }}" class="form-control" placeholder="noreply@hubtrix.com.br">
+                </div>
+                <div style="display:flex;align-items:end;padding-bottom:4px;">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+                        <input type="checkbox" name="smtp_tls" {% if config.smtp_tls %}checked{% endif %} style="width:auto;">
+                        Usar TLS
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WhatsApp -->
+    <div class="card" style="padding:24px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;cursor:pointer;" onclick="var cb=document.getElementById('whatsappAtivo');cb.checked=!cb.checked;document.getElementById('whatsappFields').style.display=cb.checked?'block':'none';">
+            <input type="checkbox" name="whatsapp_ativo" id="whatsappAtivo" {% if config.whatsapp_ativo %}checked{% endif %} onclick="event.stopPropagation();document.getElementById('whatsappFields').style.display=this.checked?'block':'none';" style="width:auto;margin:0;">
+            <i class="fab fa-whatsapp" style="color:#25D366;font-size:18px;"></i>
+            <span style="font-size:15px;font-weight:700;color:var(--text-main);">Recuperacao por WhatsApp</span>
+        </div>
+
+        <div id="whatsappFields" style="display:{% if config.whatsapp_ativo %}block{% else %}none{% endif %};">
+            <div>
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Integracao WhatsApp (Uazapi)</label>
+                <select name="whatsapp_integracao" class="form-control" style="max-width:400px;">
+                    <option value="">Nenhuma</option>
+                    {% for i in integracoes %}
+                    <option value="{{ i.pk }}" {% if config.whatsapp_integracao_id == i.pk %}selected{% endif %}>{{ i.nome }} ({{ i.tipo }})</option>
+                    {% endfor %}
+                </select>
+                <p style="font-size:11px;color:var(--text-muted);margin-top:4px;">O codigo sera enviado via WhatsApp para o telefone cadastrado no perfil do usuario.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Config geral -->
+    <div class="card" style="padding:24px;margin-bottom:16px;">
+        <h3 style="font-size:14px;font-weight:700;color:var(--text-main);margin-bottom:16px;"><i class="fas fa-cog" style="color:var(--text-muted);margin-right:6px;"></i> Configuracoes Gerais</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Expiracao do codigo (minutos)</label>
+                <input type="number" name="codigo_expiracao_minutos" value="{{ config.codigo_expiracao_minutos }}" class="form-control" min="1" max="60">
+            </div>
+            <div>
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Max tentativas por codigo</label>
+                <input type="number" name="max_tentativas" value="{{ config.max_tentativas }}" class="form-control" min="1" max="10">
+            </div>
+        </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;">
+        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar</button>
+    </div>
+</form>
+{% endblock %}

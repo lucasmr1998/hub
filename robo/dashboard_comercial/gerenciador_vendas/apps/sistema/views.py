@@ -148,6 +148,198 @@ def logout_view(request):
 
 
 # ============================================================================
+# RECUPERACAO DE SENHA
+# ============================================================================
+
+def esqueci_senha_view(request):
+    """Tela para solicitar recuperacao de senha."""
+    from apps.sistema.models import ConfiguracaoRecuperacaoSenha
+    config = ConfiguracaoRecuperacaoSenha.get_config()
+
+    if not config.email_ativo and not config.whatsapp_ativo:
+        messages.error(request, 'Recuperacao de senha nao esta configurada. Contate o administrador.')
+        return redirect('sistema:login')
+
+    if request.method == 'POST':
+        identificador = request.POST.get('identificador', '').strip()
+        metodo = request.POST.get('metodo', '')
+
+        if not identificador:
+            messages.error(request, 'Informe seu email ou nome de usuario.')
+            return render(request, 'sistema/esqueci_senha.html', {'config': config})
+
+        # Buscar usuario
+        from django.contrib.auth.models import User
+        user = User.objects.filter(email=identificador).first() or User.objects.filter(username=identificador).first()
+
+        if not user:
+            messages.error(request, 'Usuario nao encontrado.')
+            return render(request, 'sistema/esqueci_senha.html', {'config': config})
+
+        # Gerar codigo
+        import random, secrets
+        from datetime import timedelta
+        from apps.sistema.models import CodigoRecuperacaoSenha
+
+        # Invalidar codigos anteriores
+        CodigoRecuperacaoSenha.objects.filter(user=user, usado=False).update(usado=True)
+
+        codigo = f'{random.randint(100000, 999999)}'
+        token = secrets.token_urlsafe(48)
+        expira_em = timezone.now() + timedelta(minutes=config.codigo_expiracao_minutos)
+
+        registro = CodigoRecuperacaoSenha.objects.create(
+            user=user, codigo=codigo, token=token,
+            metodo=metodo, expira_em=expira_em,
+        )
+
+        if metodo == 'email' and config.email_ativo:
+            _enviar_email_recuperacao(user, token, config, request)
+            messages.success(request, f'Link de recuperacao enviado para {user.email}.')
+            return redirect('sistema:login')
+
+        elif metodo == 'whatsapp' and config.whatsapp_ativo:
+            _enviar_whatsapp_codigo(user, codigo, config)
+            request.session['recuperacao_user_id'] = user.pk
+            request.session['recuperacao_codigo_id'] = registro.pk
+            return redirect('sistema:verificar_codigo')
+
+        messages.error(request, 'Metodo de recuperacao invalido.')
+
+    return render(request, 'sistema/esqueci_senha.html', {'config': config})
+
+
+def verificar_codigo_view(request):
+    """Tela para digitar o codigo recebido por WhatsApp."""
+    from apps.sistema.models import CodigoRecuperacaoSenha, ConfiguracaoRecuperacaoSenha
+
+    codigo_id = request.session.get('recuperacao_codigo_id')
+    if not codigo_id:
+        return redirect('sistema:esqueci_senha')
+
+    registro = CodigoRecuperacaoSenha.objects.filter(pk=codigo_id, usado=False).first()
+    if not registro or registro.expirado:
+        messages.error(request, 'Codigo expirado. Solicite um novo.')
+        return redirect('sistema:esqueci_senha')
+
+    if registro.bloqueado:
+        messages.error(request, 'Numero maximo de tentativas excedido. Solicite um novo codigo.')
+        return redirect('sistema:esqueci_senha')
+
+    if request.method == 'POST':
+        codigo_digitado = request.POST.get('codigo', '').strip()
+
+        if codigo_digitado == registro.codigo:
+            # Codigo correto — redirecionar para nova senha
+            registro.usado = True
+            registro.save(update_fields=['usado'])
+            request.session['recuperacao_token'] = registro.token
+            return redirect('sistema:nova_senha')
+        else:
+            registro.tentativas += 1
+            registro.save(update_fields=['tentativas'])
+            restantes = ConfiguracaoRecuperacaoSenha.get_config().max_tentativas - registro.tentativas
+            if restantes <= 0:
+                messages.error(request, 'Numero maximo de tentativas excedido.')
+                return redirect('sistema:esqueci_senha')
+            messages.error(request, f'Codigo incorreto. {restantes} tentativa(s) restante(s).')
+
+    return render(request, 'sistema/verificar_codigo.html')
+
+
+def nova_senha_view(request):
+    """Tela para definir nova senha."""
+    from apps.sistema.models import CodigoRecuperacaoSenha
+
+    token = request.session.get('recuperacao_token') or request.GET.get('token', '')
+    if not token:
+        return redirect('sistema:esqueci_senha')
+
+    registro = CodigoRecuperacaoSenha.objects.filter(token=token, usado=True).order_by('-criado_em').first()
+    if not registro:
+        messages.error(request, 'Link invalido ou expirado.')
+        return redirect('sistema:esqueci_senha')
+
+    if request.method == 'POST':
+        senha1 = request.POST.get('senha1', '')
+        senha2 = request.POST.get('senha2', '')
+
+        if not senha1 or len(senha1) < 6:
+            messages.error(request, 'A senha deve ter pelo menos 6 caracteres.')
+        elif senha1 != senha2:
+            messages.error(request, 'As senhas nao conferem.')
+        else:
+            user = registro.user
+            user.set_password(senha1)
+            user.save()
+            # Limpar sessao
+            request.session.pop('recuperacao_token', None)
+            request.session.pop('recuperacao_user_id', None)
+            request.session.pop('recuperacao_codigo_id', None)
+            messages.success(request, 'Senha alterada com sucesso! Faca login.')
+            return redirect('sistema:login')
+
+    return render(request, 'sistema/nova_senha.html')
+
+
+def _enviar_email_recuperacao(user, token, config, request):
+    """Envia email com link de recuperacao."""
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+
+    link = request.build_absolute_uri(f'/sistema/nova-senha/?token={token}')
+    nome = user.get_full_name() or user.username
+
+    html = f"""
+    <h2>Recuperacao de Senha</h2>
+    <p>Ola {nome},</p>
+    <p>Voce solicitou a recuperacao de senha. Clique no link abaixo para definir uma nova senha:</p>
+    <p><a href="{link}" style="background:#3b82f6;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Redefinir Senha</a></p>
+    <p>Este link expira em {config.codigo_expiracao_minutos} minutos.</p>
+    <p>Se voce nao solicitou, ignore este email.</p>
+    """
+
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = 'Recuperacao de Senha'
+    msg['From'] = config.email_remetente or config.smtp_usuario
+    msg['To'] = user.email
+    msg.attach(MIMEText(html, 'html'))
+
+    try:
+        server = smtplib.SMTP(config.smtp_host, config.smtp_porta)
+        if config.smtp_tls:
+            server.starttls()
+        server.login(config.smtp_usuario, config.smtp_senha)
+        server.sendmail(msg['From'], [user.email], msg.as_string())
+        server.quit()
+    except Exception as e:
+        logger.error(f'Erro ao enviar email de recuperacao: {e}')
+
+
+def _enviar_whatsapp_codigo(user, codigo, config):
+    """Envia codigo de recuperacao via WhatsApp (Uazapi)."""
+    try:
+        perfil = user.perfil
+        telefone = perfil.telefone
+        if not telefone:
+            logger.error(f'Usuario {user.username} nao tem telefone cadastrado.')
+            return
+
+        integracao = config.whatsapp_integracao
+        if not integracao:
+            logger.error('Integracao WhatsApp nao configurada para recuperacao de senha.')
+            return
+
+        from apps.integracoes.services.uazapi import UazapiService
+        service = UazapiService(integracao)
+        mensagem = f'Seu codigo de recuperacao de senha e: *{codigo}*\n\nEste codigo expira em {config.codigo_expiracao_minutos} minutos. Nao compartilhe com ninguem.'
+        service.enviar_texto(telefone, mensagem)
+    except Exception as e:
+        logger.error(f'Erro ao enviar WhatsApp de recuperacao: {e}')
+
+
+# ============================================================================
 # VIEWS DE CONFIGURAÇÕES — migradas de vendas_web/views.py (Sub-phase 3G)
 # ============================================================================
 

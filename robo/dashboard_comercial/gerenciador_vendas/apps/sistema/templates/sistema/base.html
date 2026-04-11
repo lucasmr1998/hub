@@ -73,7 +73,7 @@
         <!-- Actions -->
         <div class="topbar-actions">
             <div class="topbar-user-group">
-                <div class="topbar-user agente-status-toggle" id="configBtn" style="position:relative;">
+                <div class="topbar-user" id="configBtn" style="position:relative;">
                     <div style="position:relative;">
                         <div class="topbar-avatar">{% if user and user.is_authenticated %}{{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|upper|default:"" }}{% else %}?{% endif %}</div>
                         {% if agente_status != None %}
@@ -82,20 +82,34 @@
                     </div>
                     <span class="topbar-user-name">{% if user and user.is_authenticated %}{{ user.first_name|default:user.username }}{% endif %}</span>
                     <i class="fas fa-chevron-down" style="font-size:10px;color:var(--text-light);"></i>
-                    {% if agente_status != None %}
-                    <div id="statusDropdown" style="display:none;position:absolute;right:0;top:100%;margin-top:8px;background:var(--bg-white);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:1000;min-width:160px;overflow:hidden;">
-                        <div style="padding:10px 14px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);">Status</div>
-                        <div onclick="event.stopPropagation();setAgenteStatus('online')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;" onmouseover="this.style.background='var(--bg-subtle,#f8fafc)'" onmouseout="this.style.background=''">
+                    <!-- Dropdown unificado -->
+                    <div id="userDropdown" style="display:none;position:absolute;right:0;top:100%;margin-top:8px;background:var(--bg-white);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:1000;min-width:200px;overflow:hidden;">
+                        <!-- Info do usuario -->
+                        <div style="padding:12px 14px;border-bottom:1px solid var(--border);">
+                            <div style="font-size:13px;font-weight:600;color:var(--text-main);">{% if user.is_authenticated %}{{ user.get_full_name|default:user.username }}{% endif %}</div>
+                            <div style="font-size:11px;color:var(--text-muted);">{% if user.is_authenticated %}{{ user.email }}{% endif %}</div>
+                        </div>
+                        {% if agente_status != None %}
+                        <!-- Status -->
+                        <div style="padding:8px 14px;font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">Status</div>
+                        <div onclick="event.stopPropagation();setAgenteStatus('online')" class="user-dd-item" style="padding:8px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;" onmouseover="this.style.background='var(--bg-subtle,#f8fafc)'" onmouseout="this.style.background=''">
                             <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span> Online
                         </div>
-                        <div onclick="event.stopPropagation();setAgenteStatus('ausente')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;" onmouseover="this.style.background='var(--bg-subtle,#f8fafc)'" onmouseout="this.style.background=''">
+                        <div onclick="event.stopPropagation();setAgenteStatus('ausente')" class="user-dd-item" style="padding:8px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;" onmouseover="this.style.background='var(--bg-subtle,#f8fafc)'" onmouseout="this.style.background=''">
                             <span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;flex-shrink:0;"></span> Ausente
                         </div>
-                        <div onclick="event.stopPropagation();setAgenteStatus('offline')" style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;" onmouseover="this.style.background='var(--bg-subtle,#f8fafc)'" onmouseout="this.style.background=''">
+                        <div onclick="event.stopPropagation();setAgenteStatus('offline')" class="user-dd-item" style="padding:8px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-subtle,#f8fafc)'" onmouseout="this.style.background=''">
                             <span style="width:8px;height:8px;border-radius:50%;background:#94a3b8;flex-shrink:0;"></span> Offline
                         </div>
+                        {% endif %}
+                        <!-- Navegacao -->
+                        <a href="{% url 'sistema:configuracoes' %}" style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:var(--text-main);text-decoration:none;" onmouseover="this.style.background='var(--bg-subtle,#f8fafc)'" onmouseout="this.style.background=''">
+                            <i class="fas fa-cog" style="width:16px;text-align:center;color:var(--text-muted);"></i> Configuracoes
+                        </a>
+                        <a href="{% url 'sistema:logout' %}" style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:var(--danger);text-decoration:none;border-top:1px solid var(--border);" onmouseover="this.style.background='var(--bg-subtle,#f8fafc)'" onmouseout="this.style.background=''">
+                            <i class="fas fa-sign-out-alt" style="width:16px;text-align:center;"></i> Sair da Conta
+                        </a>
                     </div>
-                    {% endif %}
                 </div>
                 <button class="topbar-action" title="Notificacoes" id="notificationBtn" style="position:relative;">
                     <i class="fas fa-bell"></i>
@@ -462,11 +476,9 @@
 
         if (configBtn) configBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            var dd = document.getElementById('statusDropdown');
+            var dd = document.getElementById('userDropdown');
             if (dd) {
                 dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
-            } else {
-                openConfigSidebar();
             }
         });
         if (configClose) configClose.addEventListener('click', closeConfigSidebar);
@@ -686,14 +698,13 @@
         }).then(function(r){return r.json()}).then(function(d){
             if(d.ok){
                 document.querySelector('.status-dot').style.background=colors[status];
-                document.getElementById('statusLabel').textContent=labels[status];
-                document.getElementById('statusDropdown').style.display='none';
+                document.getElementById('userDropdown').style.display='none';
             }
         });
     }
     document.addEventListener('click',function(e){
-        var dd=document.getElementById('statusDropdown');
-        if(dd && !e.target.closest('.agente-status-toggle')) dd.style.display='none';
+        var dd=document.getElementById('userDropdown');
+        if(dd && !e.target.closest('#configBtn')) dd.style.display='none';
     });
     </script>
 

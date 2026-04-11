@@ -15,6 +15,9 @@ urlpatterns = [
     path('planos/', views.planos_view, name='planos'),
     path('planos/<int:plano_id>/', views.plano_detalhe_view, name='plano_detalhe'),
 
+    # Configuracoes
+    path('configuracoes/recuperacao-senha/', views.config_recuperacao_senha_view, name='config_recuperacao_senha'),
+
     # Documentação e Produto
     path('produto/', views.produto_view, name='produto'),
     path('docs/', views.docs_view, name='docs'),
