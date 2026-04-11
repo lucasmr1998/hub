@@ -356,8 +356,9 @@ class NotificacaoAdmin(admin.ModelAdmin):
     readonly_fields = [
         'data_criacao',
         'data_envio',
+        'data_lida',
         'tentativas',
-        'n8n_response_formatado',
+        'resposta_externa_formatada',
         'erro_detalhes',
         'dados_contexto_formatado'
     ]
@@ -367,7 +368,8 @@ class NotificacaoAdmin(admin.ModelAdmin):
                 'tipo',
                 'canal',
                 'titulo',
-                'mensagem'
+                'mensagem',
+                'url_acao'
             ),
             'description': 'Informações básicas da notificação'
         }),
@@ -383,6 +385,7 @@ class NotificacaoAdmin(admin.ModelAdmin):
             'fields': (
                 'status',
                 'prioridade',
+                'lida',
                 'tentativas',
                 'max_tentativas',
                 'data_agendamento'
@@ -397,15 +400,13 @@ class NotificacaoAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
             'description': 'Dados para personalização da mensagem'
         }),
-        ('🔗 Integração N8N', {
+        ('🔗 Integração Externa', {
             'fields': (
-                'n8n_webhook_id',
-                'n8n_execution_id',
-                'n8n_response',
-                'n8n_response_formatado'
+                'resposta_externa',
+                'resposta_externa_formatada'
             ),
             'classes': ('collapse',),
-            'description': 'Informações da integração com N8N'
+            'description': 'Resposta da integração externa (N8N, webhook, etc.)'
         }),
         ('❌ Erros', {
             'fields': (
@@ -417,7 +418,8 @@ class NotificacaoAdmin(admin.ModelAdmin):
         ('📅 Timestamps', {
             'fields': (
                 'data_criacao',
-                'data_envio'
+                'data_envio',
+                'data_lida'
             ),
             'classes': ('collapse',),
             'description': 'Informações de data e hora'
@@ -502,19 +504,19 @@ class NotificacaoAdmin(admin.ModelAdmin):
         return "Nenhum contexto"
     dados_contexto_formatado.short_description = 'Contexto (Formatado)'
 
-    def n8n_response_formatado(self, obj):
-        if obj.n8n_response:
+    def resposta_externa_formatada(self, obj):
+        if obj.resposta_externa:
             try:
                 import json
-                response_json = json.dumps(obj.n8n_response, indent=2, ensure_ascii=False)
+                response_json = json.dumps(obj.resposta_externa, indent=2, ensure_ascii=False)
                 return format_html(
                     '<pre style="background:#e8f5e8;padding:10px;border-radius:4px;border:1px solid #c3e6c3;font-size:12px;">{}</pre>',
                     response_json
                 )
             except:
-                return str(obj.n8n_response)
+                return str(obj.resposta_externa)
         return "Nenhuma resposta"
-    n8n_response_formatado.short_description = 'Resposta N8N (Formatada)'
+    resposta_externa_formatada.short_description = 'Resposta Externa (Formatada)'
 
     def reprocessar_notificacoes(self, request, queryset):
         count = 0

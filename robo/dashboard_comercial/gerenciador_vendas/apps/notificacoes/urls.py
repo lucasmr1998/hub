@@ -44,4 +44,9 @@ urlpatterns = [
 
     # API para alternar status de canais
     path('api/notificacoes/canais/<int:canal_id>/toggle/', views.api_canal_toggle, name='api_canal_toggle'),
+
+    # APIs de leitura
+    path('api/notificacoes/<int:notificacao_id>/lida/', views.api_notificacao_marcar_lida, name='api_notificacao_marcar_lida'),
+    path('api/notificacoes/marcar-todas-lidas/', views.api_notificacoes_marcar_todas_lidas, name='api_notificacoes_marcar_todas_lidas'),
+    path('api/notificacoes/nao-lidas/', views.api_notificacoes_nao_lidas, name='api_notificacoes_nao_lidas'),
 ]

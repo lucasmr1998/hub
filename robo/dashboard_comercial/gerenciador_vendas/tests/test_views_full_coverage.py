@@ -304,11 +304,11 @@ class TestApiTemplatesNotificacoes:
 
 class TestApiNotificacaoEnviar:
 
-    def test_enviar_disabled(self, logged_client, notif_data):
+    def test_enviar_sucesso(self, logged_client, notif_data):
         payload = {
             'tipo': 'lead_novo',
             'destinatarios': [],
-            'dados_contexto': {},
+            'dados_contexto': {'titulo': 'Teste', 'mensagem': 'Msg teste'},
         }
         resp = logged_client.post(
             reverse('notificacoes:api_notificacao_enviar'),
@@ -317,8 +317,7 @@ class TestApiNotificacaoEnviar:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data['success'] is False
-        assert 'desativado' in data['message'].lower()
+        assert data['success'] is True
 
     def test_enviar_missing_tipo(self, logged_client, notif_data):
         payload = {'destinatarios': []}
@@ -333,8 +332,8 @@ class TestApiNotificacaoEnviar:
 
 class TestApiNotificacoesTeste:
 
-    def test_teste_disabled(self, logged_client, notif_data):
-        payload = {'tipo': 'lead_novo', 'canal': 'email'}
+    def test_teste_sucesso(self, logged_client, notif_data):
+        payload = {'tipo': 'lead_novo', 'canal': 'sistema'}
         resp = logged_client.post(
             reverse('notificacoes:api_notificacoes_teste'),
             data=json.dumps(payload),
@@ -342,8 +341,7 @@ class TestApiNotificacoesTeste:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data['success'] is False
-        assert 'desativado' in data['message'].lower()
+        assert data['success'] is True
 
     def test_teste_missing_tipo_400(self, logged_client, notif_data):
         payload = {'canal': 'email'}

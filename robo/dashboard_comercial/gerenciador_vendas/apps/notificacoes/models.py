@@ -10,11 +10,27 @@ from apps.sistema.mixins import TenantMixin
 class TipoNotificacao(TenantMixin):
     """Tipos de notificações disponíveis no sistema"""
     TIPOS = [
+        # Comercial
         ('lead_novo', 'Novo Lead'),
         ('lead_convertido', 'Lead Convertido'),
         ('venda_aprovada', 'Venda Aprovada'),
         ('venda_rejeitada', 'Venda Rejeitada'),
         ('prospecto_aguardando', 'Prospecto Aguardando Validação'),
+        # Inbox
+        ('conversa_recebida', 'Nova Conversa Recebida'),
+        ('conversa_transferida', 'Conversa Transferida'),
+        ('mensagem_recebida', 'Nova Mensagem'),
+        # CRM
+        ('tarefa_vencendo', 'Tarefa Próxima do Vencimento'),
+        ('tarefa_atribuida', 'Tarefa Atribuída'),
+        ('oportunidade_movida', 'Oportunidade Mudou de Estágio'),
+        # Suporte
+        ('ticket_criado', 'Novo Ticket'),
+        ('ticket_respondido', 'Ticket Respondido'),
+        ('sla_estourando', 'SLA Próximo do Limite'),
+        # Sistema
+        ('mencao_nota', 'Menção em Nota'),
+        ('sistema_geral', 'Notificação do Sistema'),
     ]
 
     codigo = models.CharField(
@@ -48,6 +64,12 @@ class TipoNotificacao(TenantMixin):
         default='normal',
         verbose_name="Prioridade Padrão"
     )
+    icone = models.CharField(
+        max_length=50,
+        default='fas fa-bell',
+        verbose_name="Ícone",
+        help_text="Classe FontAwesome (ex: fas fa-bell)"
+    )
     whatsapp_config = models.JSONField(
         default=dict,
         blank=True,
@@ -68,6 +90,8 @@ class TipoNotificacao(TenantMixin):
 class CanalNotificacao(TenantMixin):
     """Canais de notificação disponíveis"""
     CANAIS = [
+        ('sistema', 'Sistema (in-app)'),
+        ('email', 'Email'),
         ('whatsapp', 'WhatsApp'),
         ('webhook', 'Webhook'),
     ]
@@ -143,7 +167,7 @@ class PreferenciaNotificacao(TenantMixin):
     )
 
     class Meta:
-        unique_together = ['usuario', 'tipo_notificacao', 'canal_preferido']
+        unique_together = ('tenant', 'usuario', 'tipo_notificacao', 'canal_preferido')
         verbose_name = "Preferência de Notificação"
         verbose_name_plural = "⚙️ 03. Preferências de Notificação"
         ordering = ['usuario__username', 'tipo_notificacao__nome']
@@ -153,7 +177,7 @@ class PreferenciaNotificacao(TenantMixin):
 
 
 class Notificacao(TenantMixin):
-    """Registro de notificações enviadas"""
+    """Registro de notificações do sistema"""
     STATUS_CHOICES = [
         ('pendente', 'Pendente'),
         ('enviando', 'Enviando'),
@@ -207,6 +231,13 @@ class Notificacao(TenantMixin):
         verbose_name="Dados de Contexto",
         help_text="Dados para personalização"
     )
+    url_acao = models.CharField(
+        max_length=500,
+        blank=True,
+        default='',
+        verbose_name="URL de Ação",
+        help_text="Link ao clicar na notificação (ex: /comercial/leads/123/)"
+    )
 
     # Controle
     status = models.CharField(
@@ -218,6 +249,15 @@ class Notificacao(TenantMixin):
         max_length=20,
         choices=PRIORIDADE_CHOICES,
         default='normal'
+    )
+    lida = models.BooleanField(
+        default=False,
+        verbose_name="Lida"
+    )
+    data_lida = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Data de Leitura"
     )
     tentativas = models.PositiveIntegerField(
         default=0
@@ -240,20 +280,12 @@ class Notificacao(TenantMixin):
         help_text="Para envio agendado"
     )
 
-    # N8N Integration
-    n8n_webhook_id = models.CharField(
-        max_length=100,
+    # Integração externa (N8N, webhook, etc.)
+    resposta_externa = models.JSONField(
         null=True,
-        blank=True
-    )
-    n8n_execution_id = models.CharField(
-        max_length=100,
-        null=True,
-        blank=True
-    )
-    n8n_response = models.JSONField(
-        null=True,
-        blank=True
+        blank=True,
+        verbose_name="Resposta Externa",
+        help_text="Resposta da integração (N8N, webhook, etc.)"
     )
 
     # Logs
@@ -271,10 +303,17 @@ class Notificacao(TenantMixin):
             models.Index(fields=['data_criacao']),
             models.Index(fields=['tipo']),
             models.Index(fields=['canal']),
+            models.Index(fields=['destinatario', 'lida']),
         ]
 
     def __str__(self):
         return f"{self.tipo.nome} - {self.destinatario or self.destinatario_email}"
+
+    def marcar_lida(self):
+        if not self.lida:
+            self.lida = True
+            self.data_lida = timezone.now()
+            self.save(update_fields=['lida', 'data_lida'])
 
 
 class TemplateNotificacao(TenantMixin):
@@ -315,7 +354,7 @@ class TemplateNotificacao(TenantMixin):
     )
 
     class Meta:
-        unique_together = ['tipo_notificacao', 'canal']
+        unique_together = ('tenant', 'tipo_notificacao', 'canal')
         verbose_name = "Template de Notificação"
         verbose_name_plural = "📝 05. Templates de Notificação"
         ordering = ['tipo_notificacao__nome', 'canal__nome']

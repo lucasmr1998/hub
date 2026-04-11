@@ -344,7 +344,7 @@ from apps.notificacoes.models import (
 class TipoNotificacaoFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = TipoNotificacao
-        django_get_or_create = ('codigo',)
+        django_get_or_create = ('tenant', 'codigo')
 
     codigo = factory.Sequence(lambda n: ['lead_novo', 'lead_convertido', 'venda_aprovada',
                                           'venda_rejeitada', 'prospecto_aguardando'][n % 5])
@@ -357,9 +357,9 @@ class TipoNotificacaoFactory(factory.django.DjangoModelFactory):
 class CanalNotificacaoFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = CanalNotificacao
-        django_get_or_create = ('codigo',)
+        django_get_or_create = ('tenant', 'codigo')
 
-    codigo = factory.Sequence(lambda n: ['whatsapp', 'webhook'][n % 2])
+    codigo = factory.Sequence(lambda n: ['sistema', 'email', 'whatsapp', 'webhook'][n % 4])
     nome = factory.LazyAttribute(lambda o: o.codigo.title())
     ativo = True
     tenant = factory.SubFactory(TenantFactory)

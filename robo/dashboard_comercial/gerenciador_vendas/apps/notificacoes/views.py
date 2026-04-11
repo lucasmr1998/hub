@@ -31,14 +31,28 @@ logger = logging.getLogger(__name__)
 
 @login_required
 def configuracoes_notificacoes_view(request):
-    """View para gerenciar sistema de notificações (temporariamente desativado)"""
+    """View para gerenciar sistema de notificações"""
     from apps.sistema.decorators import user_tem_funcionalidade
     if not user_tem_funcionalidade(request, 'config.gerenciar_notificacoes'):
         messages.error(request, 'Você não tem permissão para acessar esta página.')
         return redirect('dashboard:dashboard1')
 
-    messages.info(request, 'Sistema de notificações em manutenção. Em breve será reimplementado.')
-    return redirect('dashboard:dashboard1')
+    tenant = request.tenant
+    tipos = TipoNotificacao.objects.filter(tenant=tenant).order_by('nome')
+    canais = CanalNotificacao.objects.filter(tenant=tenant).order_by('nome')
+
+    total_enviadas = Notificacao.objects.filter(tenant=tenant, status='enviada').count()
+    total_pendentes = Notificacao.objects.filter(tenant=tenant, status='pendente').count()
+    total_falhas = Notificacao.objects.filter(tenant=tenant, status='falhou').count()
+
+    context = {
+        'tipos': tipos,
+        'canais': canais,
+        'total_enviadas': total_enviadas,
+        'total_pendentes': total_pendentes,
+        'total_falhas': total_falhas,
+    }
+    return render(request, 'notificacoes/notificacoes.html', context)
 
 
 @login_required
@@ -208,10 +222,23 @@ def api_notificacao_enviar(request):
             # Enviar para todos os usuários ativos
             usuarios = User.objects.filter(is_active=True)
 
+        from apps.notificacoes.services import notificar_usuarios
+
+        tenant = request.tenant
+        notificacoes = notificar_usuarios(
+            tenant=tenant,
+            codigo_tipo=tipo_codigo,
+            titulo=dados_contexto.get('titulo', f'Notificação: {tipo_codigo}'),
+            mensagem=dados_contexto.get('mensagem', ''),
+            usuarios=usuarios,
+            prioridade=prioridade,
+            dados_contexto=dados_contexto,
+        )
+
         return JsonResponse({
-            'success': False,
-            'message': 'Sistema de notificações temporariamente desativado.',
-            'notificacoes_criadas': 0
+            'success': True,
+            'message': f'{len(notificacoes)} notificação(ões) criada(s).',
+            'notificacoes_criadas': len(notificacoes)
         })
 
     except Exception as e:
@@ -241,19 +268,27 @@ def api_notificacoes_listar(request):
             data.append({
                 'id': notif.id,
                 'tipo': notif.tipo.nome,
+                'tipo_codigo': notif.tipo.codigo,
+                'icone': notif.tipo.icone,
                 'canal': notif.canal.nome,
                 'titulo': notif.titulo,
                 'mensagem': notif.mensagem,
                 'status': notif.status,
                 'prioridade': notif.prioridade,
+                'lida': notif.lida,
+                'url_acao': notif.url_acao,
                 'data_criacao': notif.data_criacao.isoformat(),
-                'data_envio': notif.data_envio.isoformat() if notif.data_envio else None
+                'data_envio': notif.data_envio.isoformat() if notif.data_envio else None,
             })
+
+        from apps.notificacoes.services import contar_nao_lidas
+        nao_lidas = contar_nao_lidas(request.tenant, usuario)
 
         return JsonResponse({
             'success': True,
             'notificacoes': data,
             'total': notificacoes.count(),
+            'nao_lidas': nao_lidas,
             'page': page,
             'per_page': per_page
         })
@@ -279,7 +314,7 @@ def api_notificacao_detalhes(request, notificacao_id):
                 'id': notificacao.tipo.id,
                 'nome': notificacao.tipo.nome,
                 'codigo': notificacao.tipo.codigo,
-                'icone': 'fa-bell'  # TipoNotificacao não tem campo icone
+                'icone': notificacao.tipo.icone,
             },
             'canal': {
                 'id': notificacao.canal.id,
@@ -298,9 +333,12 @@ def api_notificacao_detalhes(request, notificacao_id):
             'data_envio': notificacao.data_envio.isoformat() if notificacao.data_envio else None,
             'destinatario_email': notificacao.destinatario_email,
             'destinatario_telefone': notificacao.destinatario_telefone,
+            'lida': notificacao.lida,
+            'data_lida': notificacao.data_lida.isoformat() if notificacao.data_lida else None,
+            'url_acao': notificacao.url_acao,
             'dados_contexto': notificacao.dados_contexto if notificacao.dados_contexto else {},
             'erro_detalhes': notificacao.erro_detalhes,
-            'n8n_execution_id': notificacao.n8n_execution_id,
+            'resposta_externa': notificacao.resposta_externa,
         }
 
         # Adicionar info do destinatário se existir
@@ -414,9 +452,27 @@ def api_notificacoes_teste(request):
         if not tipo_codigo:
             return JsonResponse({'error': 'Tipo de notificação é obrigatório'}, status=400)
 
+        from apps.notificacoes.services import criar_notificacao
+
+        notificacao = criar_notificacao(
+            tenant=request.tenant,
+            codigo_tipo=tipo_codigo,
+            titulo=f'[TESTE] Notificação de teste',
+            mensagem=f'Esta é uma notificação de teste do tipo "{tipo_codigo}".',
+            destinatario=request.user,
+            dados_contexto=dados_contexto,
+        )
+
+        if notificacao:
+            return JsonResponse({
+                'success': True,
+                'message': 'Notificação de teste criada com sucesso.',
+                'notificacao_id': notificacao.pk,
+            })
+
         return JsonResponse({
             'success': False,
-            'message': 'Sistema de notificações temporariamente desativado.'
+            'message': 'Não foi possível criar a notificação. Verifique se o tipo está configurado.'
         })
 
     except Exception as e:
@@ -428,15 +484,28 @@ def api_notificacoes_teste(request):
 def api_notificacoes_estatisticas(request):
     """API para obter estatísticas do sistema de notificações"""
     try:
+        tenant = request.tenant
+        qs = Notificacao.objects.filter(tenant=tenant)
+
+        estatisticas = {
+            'total': qs.count(),
+            'enviadas': qs.filter(status='enviada').count(),
+            'pendentes': qs.filter(status='pendente').count(),
+            'falhas': qs.filter(status='falhou').count(),
+            'canceladas': qs.filter(status='cancelada').count(),
+            'lidas': qs.filter(lida=True).count(),
+            'nao_lidas': qs.filter(lida=False).count(),
+            'tipos_ativos': TipoNotificacao.objects.filter(tenant=tenant, ativo=True).count(),
+            'canais_ativos': CanalNotificacao.objects.filter(tenant=tenant, ativo=True).count(),
+        }
+
         return JsonResponse({
-            'success': False,
-            'message': 'Sistema de notificações temporariamente desativado.',
-            'estatisticas': {}
+            'success': True,
+            'estatisticas': estatisticas
         })
 
     except Exception as e:
         logger.error(f'Erro ao obter estatísticas: {str(e)}')
-        logger.error(f'Traceback: {traceback.format_exc()}')
         return JsonResponse({'error': f'Erro interno: {str(e)}'}, status=500)
 
 
@@ -1264,3 +1333,44 @@ def api_canal_toggle(request, canal_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# ============================================================================
+# APIs DE LEITURA (marcar lida / não lidas)
+# ============================================================================
+
+@login_required
+@require_http_methods(["POST"])
+def api_notificacao_marcar_lida(request, notificacao_id):
+    """Marca uma notificação como lida."""
+    try:
+        from apps.notificacoes.services import marcar_lida
+        ok = marcar_lida(notificacao_id, request.user)
+        if ok:
+            return JsonResponse({'success': True})
+        return JsonResponse({'success': False, 'error': 'Notificação não encontrada'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_notificacoes_marcar_todas_lidas(request):
+    """Marca todas as notificações do usuário como lidas."""
+    try:
+        from apps.notificacoes.services import marcar_todas_lidas
+        total = marcar_todas_lidas(request.tenant, request.user)
+        return JsonResponse({'success': True, 'total_marcadas': total})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def api_notificacoes_nao_lidas(request):
+    """Retorna contagem de notificações não lidas."""
+    try:
+        from apps.notificacoes.services import contar_nao_lidas
+        total = contar_nao_lidas(request.tenant, request.user)
+        return JsonResponse({'success': True, 'nao_lidas': total})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
