@@ -1,6 +1,6 @@
 # Status do Produto — AuroraISP
 
-**Última atualização:** 01/04/2026
+**Última atualização:** 11/04/2026
 
 Este documento é a fonte da verdade sobre o que está pronto, em desenvolvimento e planejado em cada módulo da AuroraISP. Atualizar sempre que uma funcionalidade mudar de status.
 
@@ -26,7 +26,7 @@ Este documento é a fonte da verdade sobre o que está pronto, em desenvolviment
 | **Marketing** | Start / Pro | 🟡 Inicial | 3 | 2 | 4 |
 | **CS** | Start / Pro | 🟡 Em desenvolvimento | 12 | 3 | 4 |
 | **Suporte** | Interno | 🟡 Inicial | 4 | 0 | 2 |
-| **Sistema** | Base | 🟢 Produção | 10 | 2 | 1 |
+| **Sistema** | Base | 🟢 Produção | 11 | 2 | 1 |
 
 ---
 
@@ -194,6 +194,7 @@ Este documento é a fonte da verdade sobre o que está pronto, em desenvolviment
 | Gestão de usuários e permissões | ✅ Pronto | |
 | Configurações da empresa | ✅ Pronto | |
 | Logs do sistema | ✅ Pronto | |
+| Recuperação de senha (email + WhatsApp) | ✅ Pronto | Config pelo aurora-admin |
 | Status customizáveis | ✅ Pronto | |
 
 ### Notificações (apps/notificacoes/)
@@ -233,6 +234,7 @@ Este documento é a fonte da verdade sobre o que está pronto, em desenvolviment
 |----------------|--------|------------|
 | Gestão de tenants | ✅ Pronto | |
 | Gestão de planos (9 planos, 115 features) | ✅ Pronto | |
+| Config recuperação de senha | ✅ Pronto | SMTP + WhatsApp/Uazapi |
 | Monitoramento | 🔧 Parcial | Logs e status básicos |
 
 ---
