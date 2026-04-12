@@ -64,7 +64,7 @@
         <p>Clique ou arraste um arquivo CSV</p>
         <small>Maximo 10MB. Separador: ponto e virgula (;) ou virgula (,)</small>
     </div>
-    <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="uploadCSV(this)">
+    <input type="file" id="csvFile" accept=".csv" style="display:none">
 </div>
 
 <!-- STEP 2: Mapeamento -->
@@ -107,7 +107,7 @@
 
 {% block extra_js %}
 <script>
-const CAMPOS = {{ campos|safe }};
+const CAMPOS = {{ campos_json|safe }};
 let csvColunas = [];
 
 function getCsrf() { const c = document.cookie.match(/csrftoken=([^;]+)/); return c ? c[1] : ''; }
@@ -120,12 +120,14 @@ function voltarStep1() { showStep(1); }
 
 // Upload
 const uploadArea = document.getElementById('uploadArea');
+const csvFileInput = document.getElementById('csvFile');
 uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
 uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
 uploadArea.addEventListener('drop', e => {
     e.preventDefault(); uploadArea.classList.remove('dragover');
-    if (e.dataTransfer.files.length) { document.getElementById('csvFile').files = e.dataTransfer.files; uploadCSV(document.getElementById('csvFile')); }
+    if (e.dataTransfer.files.length) { csvFileInput.files = e.dataTransfer.files; uploadCSV(csvFileInput); }
 });
+csvFileInput.addEventListener('change', function() { uploadCSV(this); });
 
 function uploadCSV(input) {
     const file = input.files[0];

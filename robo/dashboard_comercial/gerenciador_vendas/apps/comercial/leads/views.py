@@ -1819,7 +1819,8 @@ CAMPOS_IMPORTAVEIS = [
 def importar_csv_view(request):
     """Página de importação de leads via CSV."""
     campos = [{'id': c[0], 'label': c[1], 'obrigatorio': c[2]} for c in CAMPOS_IMPORTAVEIS]
-    return render(request, 'comercial/leads/importar_csv.html', {'campos': campos})
+    import json as json_mod
+    return render(request, 'comercial/leads/importar_csv.html', {'campos_json': json_mod.dumps(campos)})
 
 
 @login_required
