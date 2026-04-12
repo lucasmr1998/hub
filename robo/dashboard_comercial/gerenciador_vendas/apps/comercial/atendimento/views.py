@@ -513,11 +513,102 @@ def salvar_fluxo_api(request, fluxo_id):
                     tipo_saida=conn_data.get('tipo_saida', 'default'),
                 )
 
-        return JsonResponse({'ok': True, 'nodos': len(id_map)})
+        # Validar após salvar (retorna avisos mas não bloqueia o save)
+        avisos = _validar_fluxo(fluxo)
+
+        return JsonResponse({'ok': True, 'nodos': len(id_map), 'avisos': avisos})
 
     except Exception as e:
         logger.error(f"Erro ao salvar fluxo visual: {e}")
         return JsonResponse({'ok': False, 'erro': str(e)}, status=400)
+
+
+def _validar_fluxo(fluxo):
+    """Valida integridade de um fluxo visual. Retorna lista de erros/avisos."""
+    erros = []
+
+    nodos = list(fluxo.nodos.all())
+    conexoes = list(fluxo.conexoes.all())
+
+    if not nodos:
+        erros.append({'tipo': 'erro', 'msg': 'Fluxo vazio: nenhum nodo encontrado.'})
+        return erros
+
+    # Tem nodo de entrada?
+    entradas = [n for n in nodos if n.tipo == 'entrada']
+    if not entradas:
+        erros.append({'tipo': 'erro', 'msg': 'Falta nodo de Entrada.', 'nodo_tipo': 'entrada'})
+
+    # Tem finalizacao?
+    finalizacoes = [n for n in nodos if n.tipo == 'finalizacao']
+    if not finalizacoes:
+        erros.append({'tipo': 'aviso', 'msg': 'Nenhum nodo de Finalizacao. O fluxo pode nao ter um fim definido.'})
+
+    # Nodos sem conexao de saida (exceto finalizacao)
+    nodos_com_saida = {c.nodo_origem_id for c in conexoes}
+    for n in nodos:
+        if n.tipo not in ('finalizacao',) and n.pk not in nodos_com_saida:
+            erros.append({
+                'tipo': 'aviso',
+                'msg': f'Nodo "{n.get_tipo_display()}" (#{n.pk}) sem conexao de saida.',
+                'nodo_id': n.pk,
+            })
+
+    # Nodos sem conexao de entrada (exceto entrada)
+    nodos_com_entrada = {c.nodo_destino_id for c in conexoes}
+    for n in nodos:
+        if n.tipo != 'entrada' and n.pk not in nodos_com_entrada:
+            erros.append({
+                'tipo': 'aviso',
+                'msg': f'Nodo "{n.get_tipo_display()}" (#{n.pk}) sem conexao de entrada (orfao).',
+                'nodo_id': n.pk,
+            })
+
+    # IAs sem integracao configurada
+    for n in nodos:
+        if n.tipo.startswith('ia_'):
+            config = n.configuracao or {}
+            if not config.get('integracao_ia_id'):
+                erros.append({
+                    'tipo': 'erro',
+                    'msg': f'Nodo IA "{n.get_tipo_display()}" sem integracao configurada.',
+                    'nodo_id': n.pk,
+                })
+
+    return erros
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_toggle_fluxo(request, fluxo_id):
+    """Ativa ou desativa um fluxo com validação."""
+    from django.shortcuts import get_object_or_404
+    fluxo = get_object_or_404(FluxoAtendimento, pk=fluxo_id)
+
+    data = json.loads(request.body) if request.body else {}
+    novo_status = data.get('status', 'ativo')
+
+    if novo_status == 'ativo':
+        avisos = _validar_fluxo(fluxo)
+        erros_criticos = [a for a in avisos if a['tipo'] == 'erro']
+
+        if erros_criticos:
+            return JsonResponse({
+                'ok': False,
+                'erro': 'Fluxo com erros criticos. Corrija antes de ativar.',
+                'avisos': avisos,
+            }, status=400)
+
+    fluxo.status = novo_status
+    fluxo.ativo = (novo_status == 'ativo')
+    fluxo.save(update_fields=['status', 'ativo'])
+
+    return JsonResponse({
+        'ok': True,
+        'status': fluxo.status,
+        'ativo': fluxo.ativo,
+        'message': f'Fluxo {"ativado" if fluxo.ativo else "desativado"} com sucesso.',
+    })
 
 
 # ============================================================================

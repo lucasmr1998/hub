@@ -119,6 +119,9 @@
     <button onclick="salvarFluxo()" class="btn-primary" id="btnSalvar" style="padding:6px 16px; font-size:12px;">
         <i class="fas fa-save"></i> Salvar
     </button>
+    <button onclick="toggleFluxoStatus()" id="btnToggle" class="btn-secondary" style="padding:6px 14px; font-size:12px; {% if fluxo.status == 'ativo' %}background:var(--success);color:#fff;border-color:var(--success);{% else %}background:var(--warning);color:#fff;border-color:var(--warning);{% endif %}">
+        <i class="fas fa-{% if fluxo.status == 'ativo' %}pause{% else %}power-off{% endif %}"></i> {% if fluxo.status == 'ativo' %}Desativar{% else %}Ativar{% endif %}
+    </button>
     <button onclick="abrirSimulador()" class="btn-secondary" style="padding:6px 16px; font-size:12px; background:var(--success); color:#fff; border-color:var(--success);">
         <i class="fas fa-play"></i> Testar
     </button>
@@ -1279,6 +1282,12 @@ function salvarFluxo() {
                 btn.style.background = '';
                 btn.disabled = false;
             }, 2000);
+            // Mostrar avisos de validacao
+            if (d.avisos && d.avisos.length > 0) {
+                d.avisos.forEach(a => {
+                    window.showNotification(a.msg, a.tipo === 'erro' ? 'error' : 'warning', {duration: 6000});
+                });
+            }
         } else {
             window.showNotification(d.erro || 'Erro ao salvar', 'error');
             btn.innerHTML = '<i class="fas fa-save"></i> Salvar';
@@ -1290,6 +1299,45 @@ function salvarFluxo() {
         btn.innerHTML = '<i class="fas fa-save"></i> Salvar';
         btn.disabled = false;
     });
+}
+
+let _fluxoAtivo = {{ fluxo.ativo|yesno:"true,false" }};
+
+function toggleFluxoStatus() {
+    const novoStatus = _fluxoAtivo ? 'inativo' : 'ativo';
+    const btn = document.getElementById('btnToggle');
+    btn.disabled = true;
+
+    fetch('{% url "comercial_atendimento:api_toggle_fluxo" fluxo.pk %}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+        body: JSON.stringify({status: novoStatus})
+    })
+    .then(r => r.json().then(d => ({status: r.status, data: d})))
+    .then(({status, data}) => {
+        btn.disabled = false;
+        if (data.ok) {
+            _fluxoAtivo = data.ativo;
+            window.showNotification(data.message, 'success');
+            // Atualizar botao
+            if (_fluxoAtivo) {
+                btn.innerHTML = '<i class="fas fa-pause"></i> Desativar';
+                btn.style.background = 'var(--success)'; btn.style.borderColor = 'var(--success)'; btn.style.color = '#fff';
+            } else {
+                btn.innerHTML = '<i class="fas fa-power-off"></i> Ativar';
+                btn.style.background = 'var(--warning)'; btn.style.borderColor = 'var(--warning)'; btn.style.color = '#fff';
+            }
+            // Atualizar badge de status
+            const badge = document.querySelector('.editor-toolbar .badge');
+            if (badge) { badge.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1); badge.className = 'badge badge-' + (_fluxoAtivo ? 'success' : 'warning'); }
+        } else {
+            window.showNotification(data.erro || 'Erro ao alterar status', 'error');
+            if (data.avisos) {
+                data.avisos.forEach(a => window.showNotification(a.msg, a.tipo === 'erro' ? 'error' : 'warning', {duration: 8000}));
+            }
+        }
+    })
+    .catch(() => { btn.disabled = false; window.showNotification('Erro de conexao', 'error'); });
 }
 
 // ── Carregar fluxo salvo ──
