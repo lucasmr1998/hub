@@ -991,13 +991,34 @@ def api_desempenho_dados(request):
 
     resultado.sort(key=lambda x: x['vendas_quantidade'], reverse=True)
 
-    # Funil por estágio
+    # Funil por estágio (filtrado por pipeline)
+    pipeline_id = request.GET.get('pipeline_id')
+    if pipeline_id:
+        from .models import Pipeline
+        pipeline_filtro = Pipeline.objects.filter(pk=pipeline_id).first()
+    else:
+        pipeline_filtro = Pipeline.objects.filter(padrao=True).first()
+        if not pipeline_filtro:
+            pipeline_filtro = Pipeline.objects.filter(ativo=True).first()
+
     funil = []
-    for e in PipelineEstagio.objects.filter(ativo=True).order_by('ordem'):
+    estagios_qs = PipelineEstagio.objects.filter(ativo=True).order_by('ordem')
+    if pipeline_filtro:
+        estagios_qs = estagios_qs.filter(pipeline=pipeline_filtro)
+
+    for e in estagios_qs:
         total = OportunidadeVenda.objects.filter(estagio=e, ativo=True).count()
         funil.append({'estagio': e.nome, 'cor': e.cor_hex, 'total': total})
 
-    return JsonResponse({'vendedores': resultado, 'funil': funil, 'ok': True})
+    pipelines = list(Pipeline.objects.filter(ativo=True).values('id', 'nome'))
+
+    return JsonResponse({
+        'vendedores': resultado,
+        'funil': funil,
+        'pipeline_atual': pipeline_filtro.pk if pipeline_filtro else None,
+        'pipelines': pipelines,
+        'ok': True,
+    })
 
 
 @login_required
