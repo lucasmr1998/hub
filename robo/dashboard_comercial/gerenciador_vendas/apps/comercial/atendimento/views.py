@@ -631,6 +631,51 @@ def salvar_recontato_api(request, fluxo_id):
         return JsonResponse({'ok': False, 'erro': str(e)}, status=400)
 
 
+# ============================================================================
+# LOGS DE EXECUÇÃO (para o editor visual)
+# ============================================================================
+
+@login_required(login_url='sistema:login')
+def api_atendimentos_fluxo(request, fluxo_id):
+    """Lista atendimentos recentes de um fluxo (para sidebar de logs no editor)."""
+    from django.shortcuts import get_object_or_404
+    fluxo = get_object_or_404(FluxoAtendimento, pk=fluxo_id)
+
+    atendimentos = AtendimentoFluxo.objects.filter(
+        fluxo=fluxo
+    ).select_related('lead').order_by('-data_inicio')[:20]
+
+    data = [{
+        'id': a.pk,
+        'lead_nome': a.lead.nome_razaosocial if a.lead else 'Sem lead',
+        'lead_telefone': a.lead.telefone if a.lead else '',
+        'status': a.status,
+        'data_inicio': a.data_inicio.strftime('%d/%m %H:%M') if a.data_inicio else '',
+        'nodo_atual_id': a.nodo_atual_id,
+    } for a in atendimentos]
+
+    return JsonResponse({'success': True, 'atendimentos': data})
+
+
+@login_required(login_url='sistema:login')
+def api_logs_atendimento(request, atendimento_id):
+    """Retorna logs de execução de um atendimento (nodos visitados)."""
+    logs = LogFluxoAtendimento.objects.filter(
+        atendimento_id=atendimento_id
+    ).order_by('data_execucao')
+
+    data = [{
+        'nodo_id': log.nodo_id,
+        'tipo_nodo': log.tipo_nodo,
+        'subtipo_nodo': log.subtipo_nodo,
+        'status': log.status,
+        'mensagem': log.mensagem[:200],
+        'data': log.data_execucao.strftime('%H:%M:%S'),
+    } for log in logs]
+
+    return JsonResponse({'success': True, 'logs': data})
+
+
 @login_required(login_url='sistema:login')
 @require_http_methods(["POST"])
 def simular_fluxo_api(request, fluxo_id):
