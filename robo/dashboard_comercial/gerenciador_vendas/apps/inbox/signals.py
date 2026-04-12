@@ -84,6 +84,72 @@ def _enviar_mensagens_bot(tenant, conversa, texto, nome_bot='Aurora IA'):
         conversa.save(update_fields=['ultima_mensagem_em', 'ultima_mensagem_preview'])
 
 
+def _canal_suporta_botoes(conversa):
+    """Verifica se o canal da conversa suporta mensagens interativas (botões)."""
+    canal = conversa.canal
+    return canal and canal.provedor == 'uazapi' and canal.integracao_id
+
+
+def _enviar_mensagem_interativa_bot(tenant, conversa, texto, opcoes, nome_bot='Aurora'):
+    """Envia mensagem com botões nativos do WhatsApp via Uazapi."""
+    from apps.inbox.models import Mensagem as MensagemInbox
+
+    # Salvar mensagem no inbox (texto com opções para histórico)
+    texto_completo = texto + '\n\n' + '\n'.join(f'{i+1}. {o}' for i, o in enumerate(opcoes))
+    msg = MensagemInbox(
+        tenant=tenant,
+        conversa=conversa,
+        remetente_tipo='bot',
+        remetente_nome=nome_bot,
+        tipo_conteudo='texto',
+        conteudo=texto_completo,
+    )
+    msg._skip_automacao = True
+    msg.save()
+
+    # Enviar via provider com botões nativos
+    canal = conversa.canal
+    telefone = conversa.contato_telefone
+
+    def _send_interativo():
+        try:
+            from apps.inbox.providers import get_provider
+            provider = get_provider(canal)
+            service = provider._service
+
+            if len(opcoes) <= 3:
+                # Botões de resposta rápida (máximo 3)
+                choices = [f'{o}|{o}' for o in opcoes]
+                result = service.enviar_botoes(telefone, texto, choices)
+            else:
+                # Lista para 4+ opções
+                choices = [f'{o}|{o}|' for o in opcoes]
+                result = service.enviar_lista(telefone, texto, choices, texto_botao='Ver opcoes')
+
+            msg_id = provider.extrair_msg_id(result)
+            if msg_id:
+                MensagemInbox.all_tenants.filter(pk=msg.pk).update(
+                    identificador_externo=msg_id
+                )
+        except Exception as e:
+            logger.error("Erro ao enviar mensagem interativa: %s", e)
+            # Fallback: envia como texto normal
+            try:
+                from apps.inbox.providers import get_provider
+                provider = get_provider(canal)
+                provider.enviar_texto(telefone, texto_completo)
+            except Exception:
+                pass
+
+    import threading
+    thread = threading.Thread(target=_send_interativo, daemon=True)
+    thread.start()
+
+    conversa.ultima_mensagem_em = msg.data_envio
+    conversa.ultima_mensagem_preview = texto_completo[:255]
+    conversa.save(update_fields=['ultima_mensagem_em', 'ultima_mensagem_preview'])
+
+
 @receiver(post_save, sender='inbox.Conversa')
 def on_conversa_criada(sender, instance, created, **kwargs):
     """Dispara evento 'conversa_aberta' quando nova conversa é criada."""
@@ -312,9 +378,13 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
                 questao = resultado.get('questao', {})
                 texto = questao.get('titulo', '')
                 opcoes = questao.get('opcoes_resposta', [])
-                if opcoes:
+                if opcoes and _canal_suporta_botoes(conversa):
+                    _enviar_mensagem_interativa_bot(instance.tenant, conversa, texto, opcoes)
+                elif opcoes:
                     texto += '\n\n' + '\n'.join(f'{i+1}. {o}' for i, o in enumerate(opcoes))
-                if texto:
+                    if texto:
+                        _enviar_mensagens_bot(instance.tenant, conversa, texto, 'Aurora')
+                elif texto:
                     _enviar_mensagens_bot(instance.tenant, conversa, texto, 'Aurora')
 
             elif resultado and resultado.get('tipo') in ('ia_respondedor', 'ia_agente'):
