@@ -1844,6 +1844,16 @@ def processar_resposta_ia_agente(atendimento, resposta):
     return {'tipo': 'ia_agente', 'mensagem': resultado}
 
 
+_STOP_WORDS_PT = {
+    'a', 'o', 'e', 'de', 'do', 'da', 'dos', 'das', 'em', 'no', 'na', 'nos', 'nas',
+    'um', 'uma', 'uns', 'umas', 'para', 'por', 'com', 'sem', 'que', 'se', 'como',
+    'mais', 'ou', 'ao', 'aos', 'as', 'os', 'eu', 'ele', 'ela', 'nos', 'eles', 'elas',
+    'meu', 'seu', 'sua', 'ter', 'ser', 'esta', 'este', 'isso', 'esse', 'essa',
+    'tem', 'sao', 'foi', 'quais', 'qual', 'quando', 'onde', 'quem', 'pode',
+    'ja', 'nao', 'sim', 'muito', 'bem', 'vai', 'vou', 'ta', 'to', 'me',
+}
+
+
 def _executar_consulta_base_conhecimento(pergunta, atendimento):
     """Busca artigos na base de conhecimento e registra perguntas sem resposta."""
     from django.db.models import Q
@@ -1853,19 +1863,33 @@ def _executar_consulta_base_conhecimento(pergunta, atendimento):
         return 'Pergunta muito curta para buscar na base.'
 
     tenant = atendimento.tenant
-    termos = pergunta.strip().split()
 
-    # Busca por titulo, conteudo e tags
-    filtro = Q()
-    for termo in termos[:5]:  # Limitar a 5 termos
-        filtro |= Q(titulo__icontains=termo) | Q(conteudo__icontains=termo) | Q(tags__icontains=termo)
+    # Filtrar stop words e termos curtos
+    termos = [
+        t.lower() for t in pergunta.strip().split()
+        if len(t) >= 3 and t.lower() not in _STOP_WORDS_PT
+    ]
 
-    artigos = ArtigoConhecimento.objects.filter(
-        tenant=tenant,
-        publicado=True,
-    ).filter(filtro).distinct()[:3]
+    if not termos:
+        return 'Nenhuma informacao encontrada na base de conhecimento sobre esse assunto.'
 
-    if artigos.exists():
+    base_qs = ArtigoConhecimento.objects.filter(tenant=tenant, publicado=True)
+
+    # 1) Buscar por titulo e tags (OR — qualquer termo relevante)
+    filtro_titulo = Q()
+    for termo in termos[:5]:
+        filtro_titulo |= Q(titulo__icontains=termo) | Q(tags__icontains=termo)
+
+    artigos = list(base_qs.filter(filtro_titulo).distinct()[:3])
+
+    # 2) Se não encontrou em titulo/tags, buscar no conteudo (AND — todos os termos)
+    if not artigos:
+        filtro_conteudo = Q()
+        for termo in termos[:5]:
+            filtro_conteudo &= Q(conteudo__icontains=termo)
+        artigos = list(base_qs.filter(filtro_conteudo).distinct()[:3])
+
+    if artigos:
         resultado = 'Artigos encontrados na base de conhecimento:\n\n'
         for art in artigos:
             resultado += f'### {art.titulo}\n{art.conteudo[:500]}\n\n'
@@ -1873,11 +1897,11 @@ def _executar_consulta_base_conhecimento(pergunta, atendimento):
 
     # Nenhum artigo encontrado — registrar pergunta
     try:
-        # Evitar duplicatas: buscar pergunta similar recente
+        primeiro_termo = termos[0] if termos else pergunta[:30]
         existente = PerguntaSemResposta.objects.filter(
             tenant=tenant,
             status='pendente',
-            pergunta__icontains=termos[0] if termos else pergunta[:30],
+            pergunta__icontains=primeiro_termo,
         ).first()
 
         if existente:
