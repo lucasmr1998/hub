@@ -992,9 +992,9 @@ def api_desempenho_dados(request):
     resultado.sort(key=lambda x: x['vendas_quantidade'], reverse=True)
 
     # Funil por estágio (filtrado por pipeline)
-    pipeline_id = request.GET.get('pipeline_id')
-    if pipeline_id:
-        from .models import Pipeline
+    from .models import Pipeline
+    pipeline_id = request.GET.get('pipeline_id', '').strip()
+    if pipeline_id and pipeline_id.isdigit():
         pipeline_filtro = Pipeline.objects.filter(pk=pipeline_id).first()
     else:
         pipeline_filtro = Pipeline.objects.filter(padrao=True).first()
