@@ -157,7 +157,7 @@ class Command(BaseCommand):
         ).order_by('-ultima_mensagem_em').first()
 
         if conversa:
-            _enviar_mensagens_bot(tenant, conversa, mensagem, 'Aurora')
+            _enviar_mensagens_bot(tenant, conversa, mensagem, 'Hubtrix')
 
     def _transferir_para_humano(self, atend, tenant):
         """Transfere para fila humana quando recontato esgota."""

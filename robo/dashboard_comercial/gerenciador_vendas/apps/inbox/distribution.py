@@ -180,7 +180,7 @@ def distribuir_conversa(conversa, tenant):
         # Verificar horario da fila
         if not verificar_horario_fila(fila):
             msg = fila.mensagem_fora_horario or 'Estamos fora do horario de atendimento. Responderemos assim que possivel.'
-            _enviar_mensagens_bot(tenant, conversa, msg, 'Aurora')
+            _enviar_mensagens_bot(tenant, conversa, msg, 'Hubtrix')
             conversa.fila = fila
             conversa.equipe = fila.equipe
             conversa.status = 'pendente'

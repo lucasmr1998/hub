@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Admin{% endblock %} — Aurora Admin</title>
+    <title>{% block title %}Admin{% endblock %} — Hubtrix Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -108,7 +108,7 @@
 <body>
 
 <div class="admin-topbar">
-    <div class="admin-brand"><i class="fas fa-crown"></i> Aurora Admin</div>
+    <div class="admin-brand"><i class="fas fa-crown"></i> Hubtrix Admin</div>
     <div class="admin-nav">
         <a href="{% url 'admin_aurora:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
             <i class="fas fa-chart-pie"></i> Dashboard

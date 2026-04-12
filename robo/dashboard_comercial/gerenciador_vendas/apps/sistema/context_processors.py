@@ -9,7 +9,7 @@ def empresa_context(request):
     tenant = getattr(request, 'tenant', None)
 
     ctx = {
-        'empresa_nome': 'AuroraISP',
+        'empresa_nome': 'Hubtrix',
         'empresa_logo': None,
         'empresa_cor_primaria': '#1F3D59',
         'empresa_cor_secundaria': '#2c5aa0',

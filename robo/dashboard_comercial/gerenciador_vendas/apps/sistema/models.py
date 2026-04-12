@@ -12,7 +12,7 @@ from apps.sistema.validators import tenant_upload_path
 
 class Plano(models.Model):
     """
-    Define os planos vendidos pela AuroraISP.
+    Define os planos vendidos pela Hubtrix.
     Cada plano pertence a um módulo e libera features específicas.
     """
     MODULO_CHOICES = [
@@ -98,7 +98,7 @@ class FeaturePlano(models.Model):
 
 class Tenant(models.Model):
     """
-    Cada tenant é um provedor de internet cliente da AuroraISP.
+    Cada tenant é um provedor de internet cliente da Hubtrix.
     Todos os models de domínio herdam TenantMixin e recebem FK para cá.
     """
     PLANO_CHOICES = [
@@ -624,7 +624,7 @@ class LogSistema(models.Model):
         ('cs', 'Customer Success'),
         ('marketing', 'Marketing'),
         ('config', 'Configuracoes'),
-        ('admin', 'Admin Aurora'),
+        ('admin', 'Admin Hubtrix'),
         ('integracao', 'Integracoes'),
         ('sistema', 'Sistema'),
     ]

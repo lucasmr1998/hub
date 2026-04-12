@@ -54,7 +54,7 @@ def _dividir_mensagem(texto):
     return results if results else [texto]
 
 
-def _enviar_mensagens_bot(tenant, conversa, texto, nome_bot='Aurora IA'):
+def _enviar_mensagens_bot(tenant, conversa, texto, nome_bot='Hubtrix IA'):
     """Envia texto como uma ou mais mensagens do bot, dividindo por paragrafos."""
     from apps.inbox.models import Mensagem as MensagemInbox
     from apps.inbox.services import _enviar_webhook_async
@@ -90,7 +90,7 @@ def _canal_suporta_botoes(conversa):
     return canal and canal.provedor == 'uazapi' and canal.integracao_id
 
 
-def _enviar_mensagem_interativa_bot(tenant, conversa, texto, opcoes, nome_bot='Aurora'):
+def _enviar_mensagem_interativa_bot(tenant, conversa, texto, opcoes, nome_bot='Hubtrix'):
     """Envia mensagem com botões nativos do WhatsApp via Uazapi."""
     from apps.inbox.models import Mensagem as MensagemInbox
 
@@ -383,18 +383,18 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
                 elif opcoes:
                     texto += '\n\n' + '\n'.join(f'{i+1}. {o}' for i, o in enumerate(opcoes))
                     if texto:
-                        _enviar_mensagens_bot(instance.tenant, conversa, texto, 'Aurora')
+                        _enviar_mensagens_bot(instance.tenant, conversa, texto, 'Hubtrix')
                 elif texto:
-                    _enviar_mensagens_bot(instance.tenant, conversa, texto, 'Aurora')
+                    _enviar_mensagens_bot(instance.tenant, conversa, texto, 'Hubtrix')
 
             elif resultado and resultado.get('tipo') in ('ia_respondedor', 'ia_agente'):
                 texto = resultado.get('mensagem', '')
                 if texto:
-                    _enviar_mensagens_bot(instance.tenant, conversa, texto, 'Aurora IA')
+                    _enviar_mensagens_bot(instance.tenant, conversa, texto, 'Hubtrix IA')
 
             elif resultado and resultado.get('tipo') == 'finalizado':
                 msg_final = resultado.get('mensagem', 'Atendimento finalizado. Obrigado!')
-                _enviar_mensagens_bot(instance.tenant, conversa, msg_final, 'Aurora')
+                _enviar_mensagens_bot(instance.tenant, conversa, msg_final, 'Hubtrix')
                 # Marcar conversa como finalizada pelo bot
                 conversa.modo_atendimento = 'finalizado_bot'
                 conversa.save(update_fields=['modo_atendimento'])
@@ -402,7 +402,7 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
             elif resultado and resultado.get('tipo') == 'transferido':
                 texto = resultado.get('mensagem', '')
                 if texto:
-                    _enviar_mensagens_bot(instance.tenant, conversa, texto, 'Aurora')
+                    _enviar_mensagens_bot(instance.tenant, conversa, texto, 'Hubtrix')
                 # modo_atendimento ja foi setado no engine como 'humano'
 
     except Exception as e:
