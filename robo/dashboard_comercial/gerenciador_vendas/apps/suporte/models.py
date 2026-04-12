@@ -276,3 +276,53 @@ class ArtigoConhecimento(TenantMixin):
         if not self.tags:
             return []
         return [t.strip() for t in self.tags.split(',') if t.strip()]
+
+
+# ============================================================================
+# PERGUNTAS SEM RESPOSTA (Base de Conhecimento IA)
+# ============================================================================
+
+class PerguntaSemResposta(TenantMixin):
+    """Pergunta feita ao Agente IA que não encontrou resposta na base de conhecimento."""
+    STATUS_CHOICES = [
+        ('pendente', 'Pendente'),
+        ('respondida', 'Respondida'),
+        ('ignorada', 'Ignorada'),
+    ]
+
+    pergunta = models.TextField(verbose_name="Pergunta")
+    lead = models.ForeignKey(
+        'leads.LeadProspecto', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='perguntas_sem_resposta',
+        verbose_name="Lead"
+    )
+    conversa = models.ForeignKey(
+        'inbox.Conversa', on_delete=models.SET_NULL,
+        null=True, blank=True, verbose_name="Conversa"
+    )
+    status = models.CharField(
+        max_length=15, choices=STATUS_CHOICES, default='pendente',
+        verbose_name="Status"
+    )
+    ocorrencias = models.PositiveIntegerField(
+        default=1, verbose_name="Ocorrências",
+        help_text="Quantas vezes essa pergunta (ou similar) foi feita"
+    )
+    artigo_criado = models.ForeignKey(
+        ArtigoConhecimento, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='perguntas_origem',
+        verbose_name="Artigo Criado"
+    )
+    data_criacao = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    data_resposta = models.DateTimeField(
+        null=True, blank=True, verbose_name="Respondido em"
+    )
+
+    class Meta:
+        db_table = 'suporte_perguntas_sem_resposta'
+        verbose_name = "Pergunta sem Resposta"
+        verbose_name_plural = "❓ Perguntas sem Resposta"
+        ordering = ['-ocorrencias', '-data_criacao']
+
+    def __str__(self):
+        return f"{self.pergunta[:80]}... ({self.get_status_display()})"

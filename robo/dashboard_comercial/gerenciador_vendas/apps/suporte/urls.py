@@ -18,4 +18,9 @@ urlpatterns = [
     path('conhecimento/artigo/<slug:slug>/', views.artigo_conhecimento, name='artigo_conhecimento'),
     path('conhecimento/api/feedback/<int:pk>/', views.api_artigo_feedback, name='api_artigo_feedback'),
     path('conhecimento/api/buscar/', views.api_buscar_conhecimento, name='api_buscar_conhecimento'),
+
+    # Perguntas sem resposta (IA)
+    path('conhecimento/perguntas/', views.perguntas_sem_resposta, name='perguntas_sem_resposta'),
+    path('conhecimento/perguntas/<int:pk>/resolver/', views.api_pergunta_resolver, name='api_pergunta_resolver'),
+    path('conhecimento/perguntas/<int:pk>/ignorar/', views.api_pergunta_ignorar, name='api_pergunta_ignorar'),
 ]

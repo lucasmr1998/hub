@@ -1844,6 +1844,58 @@ def processar_resposta_ia_agente(atendimento, resposta):
     return {'tipo': 'ia_agente', 'mensagem': resultado}
 
 
+def _executar_consulta_base_conhecimento(pergunta, atendimento):
+    """Busca artigos na base de conhecimento e registra perguntas sem resposta."""
+    from django.db.models import Q
+    from apps.suporte.models import ArtigoConhecimento, PerguntaSemResposta
+
+    if not pergunta or len(pergunta.strip()) < 3:
+        return 'Pergunta muito curta para buscar na base.'
+
+    tenant = atendimento.tenant
+    termos = pergunta.strip().split()
+
+    # Busca por titulo, conteudo e tags
+    filtro = Q()
+    for termo in termos[:5]:  # Limitar a 5 termos
+        filtro |= Q(titulo__icontains=termo) | Q(conteudo__icontains=termo) | Q(tags__icontains=termo)
+
+    artigos = ArtigoConhecimento.objects.filter(
+        tenant=tenant,
+        publicado=True,
+    ).filter(filtro).distinct()[:3]
+
+    if artigos.exists():
+        resultado = 'Artigos encontrados na base de conhecimento:\n\n'
+        for art in artigos:
+            resultado += f'### {art.titulo}\n{art.conteudo[:500]}\n\n'
+        return resultado
+
+    # Nenhum artigo encontrado — registrar pergunta
+    try:
+        # Evitar duplicatas: buscar pergunta similar recente
+        existente = PerguntaSemResposta.objects.filter(
+            tenant=tenant,
+            status='pendente',
+            pergunta__icontains=termos[0] if termos else pergunta[:30],
+        ).first()
+
+        if existente:
+            existente.ocorrencias += 1
+            existente.save(update_fields=['ocorrencias'])
+        else:
+            PerguntaSemResposta.objects.create(
+                tenant=tenant,
+                pergunta=pergunta,
+                lead=atendimento.lead,
+                conversa=atendimento.conversa if hasattr(atendimento, 'conversa') else None,
+            )
+    except Exception as e:
+        logger.warning(f'Erro ao registrar pergunta sem resposta: {e}')
+
+    return 'Nenhuma informacao encontrada na base de conhecimento sobre esse assunto.'
+
+
 def _chamar_llm_com_tools(integracao, modelo, messages, config, atendimento, contexto):
     """Chama LLM com tools customizadas. Executa tool_calls em loop. Retorna texto final."""
     import json as json_mod
@@ -1891,6 +1943,21 @@ def _chamar_llm_com_tools(integracao, modelo, messages, config, atendimento, con
                             'valor': {'type': 'string', 'description': 'Novo valor'},
                         },
                         'required': ['campo', 'valor'],
+                    },
+                },
+            })
+        elif tool_id == 'consultar_base_conhecimento':
+            tools_openai.append({
+                'type': 'function',
+                'function': {
+                    'name': 'consultar_base_conhecimento',
+                    'description': 'Consulta a base de conhecimento da empresa para buscar informacoes sobre produtos, servicos, procedimentos e duvidas frequentes. Use sempre que o usuario fizer uma pergunta que pode ter resposta na base.',
+                    'parameters': {
+                        'type': 'object',
+                        'properties': {
+                            'pergunta': {'type': 'string', 'description': 'A pergunta ou tema a buscar na base de conhecimento'},
+                        },
+                        'required': ['pergunta'],
                     },
                 },
             })
@@ -1991,6 +2058,14 @@ def _chamar_llm_com_tools(integracao, modelo, messages, config, atendimento, con
                         tool_result = f'Campo {campo} atualizado para {valor}'
                     else:
                         tool_result = f'Campo {campo} nao encontrado'
+
+                elif func_name == 'consultar_base_conhecimento':
+                    tool_result = _executar_consulta_base_conhecimento(
+                        func_args.get('pergunta', ''),
+                        atendimento,
+                    )
+                    _registrar_log(atendimento, atendimento.nodo_atual, 'sucesso',
+                                   f'Tool base_conhecimento: {tool_result[:100]}')
 
                 else:
                     tool_result = f'Tool {func_name} nao encontrada'

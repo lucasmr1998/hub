@@ -269,6 +269,9 @@
             <a href="{% url 'suporte:base_conhecimento' %}" class="nav-item {% if request.resolver_match.url_name == 'base_conhecimento' or request.resolver_match.url_name == 'artigo_conhecimento' or request.resolver_match.url_name == 'gerenciar_conhecimento' %}active{% endif %}">
                 <i class="fas fa-book"></i><span class="nav-text">Conhecimento</span>
             </a>
+            <a href="{% url 'suporte:perguntas_sem_resposta' %}" class="nav-item {% if request.resolver_match.url_name == 'perguntas_sem_resposta' %}active{% endif %}">
+                <i class="fas fa-question-circle"></i><span class="nav-text">Perguntas IA</span>
+            </a>
 
             <div class="sidebar-section-label" style="margin-top:12px;">CONFIGURACOES</div>
             <a href="{% url 'inbox:configuracoes' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes' and 'inbox' in request.resolver_match.app_name|default:'' %}active{% endif %}">

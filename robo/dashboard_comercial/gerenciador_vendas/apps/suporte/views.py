@@ -714,3 +714,69 @@ def api_buscar_conhecimento(request):
     ).values('id', 'titulo', 'resumo', 'categoria__nome', 'slug')[:10]
 
     return JsonResponse({'artigos': list(artigos)})
+
+
+# ============================================================================
+# PERGUNTAS SEM RESPOSTA (IA)
+# ============================================================================
+
+@login_required
+def perguntas_sem_resposta(request):
+    """Tela de gestão de perguntas sem resposta da IA."""
+    from .models import PerguntaSemResposta
+
+    status_filtro = request.GET.get('status', 'pendente')
+    busca = request.GET.get('q', '').strip()
+
+    qs = PerguntaSemResposta.objects.all()
+    if status_filtro and status_filtro != 'todas':
+        qs = qs.filter(status=status_filtro)
+    if busca:
+        qs = qs.filter(pergunta__icontains=busca)
+
+    total_pendentes = PerguntaSemResposta.objects.filter(status='pendente').count()
+    total_respondidas = PerguntaSemResposta.objects.filter(status='respondida').count()
+
+    context = {
+        'perguntas': qs[:100],
+        'status_filtro': status_filtro,
+        'busca': busca,
+        'total_pendentes': total_pendentes,
+        'total_respondidas': total_respondidas,
+    }
+    return render(request, 'suporte/perguntas_sem_resposta.html', context)
+
+
+@login_required
+def api_pergunta_resolver(request, pk):
+    """Marca pergunta como respondida e vincula artigo (opcional)."""
+    from .models import PerguntaSemResposta
+    import json
+
+    pergunta = get_object_or_404(PerguntaSemResposta, pk=pk)
+
+    if request.method == 'POST':
+        data = json.loads(request.body) if request.body else {}
+        artigo_id = data.get('artigo_id')
+
+        pergunta.status = 'respondida'
+        pergunta.data_resposta = timezone.now()
+        if artigo_id:
+            pergunta.artigo_criado_id = artigo_id
+        pergunta.save(update_fields=['status', 'data_resposta', 'artigo_criado_id'])
+
+        return JsonResponse({'success': True, 'message': 'Pergunta marcada como respondida.'})
+
+    return JsonResponse({'error': 'Método não permitido'}, status=405)
+
+
+@login_required
+def api_pergunta_ignorar(request, pk):
+    """Marca pergunta como ignorada."""
+    from .models import PerguntaSemResposta
+
+    pergunta = get_object_or_404(PerguntaSemResposta, pk=pk)
+    pergunta.status = 'ignorada'
+    pergunta.save(update_fields=['status'])
+
+    return JsonResponse({'success': True, 'message': 'Pergunta ignorada.'})
