@@ -1790,3 +1790,201 @@ def historico_contatos_api(request):
 
     except Exception as e:
         return JsonResponse({'error': f'Erro interno: {str(e)}'}, status=500)
+
+
+# ============================================================================
+# IMPORTAÇÃO DE LEADS VIA CSV
+# ============================================================================
+
+CAMPOS_IMPORTAVEIS = [
+    ('nome_razaosocial', 'Nome / Razão Social', True),
+    ('telefone', 'Telefone', True),
+    ('email', 'Email', False),
+    ('cpf_cnpj', 'CPF/CNPJ', False),
+    ('empresa', 'Empresa', False),
+    ('valor', 'Valor (R$)', False),
+    ('origem', 'Origem', False),
+    ('cidade', 'Cidade', False),
+    ('estado', 'Estado (UF)', False),
+    ('bairro', 'Bairro', False),
+    ('cep', 'CEP', False),
+    ('rua', 'Rua', False),
+    ('numero_residencia', 'Número', False),
+    ('observacoes', 'Observações', False),
+    ('data_nascimento', 'Data de Nascimento', False),
+]
+
+
+@login_required
+def importar_csv_view(request):
+    """Página de importação de leads via CSV."""
+    campos = [{'id': c[0], 'label': c[1], 'obrigatorio': c[2]} for c in CAMPOS_IMPORTAVEIS]
+    return render(request, 'comercial/leads/importar_csv.html', {'campos': campos})
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_importar_csv_preview(request):
+    """Faz parse do CSV e retorna preview das primeiras linhas + colunas."""
+    import csv
+    import io
+
+    arquivo = request.FILES.get('arquivo')
+    if not arquivo:
+        return JsonResponse({'error': 'Nenhum arquivo enviado'}, status=400)
+
+    if not arquivo.name.endswith('.csv'):
+        return JsonResponse({'error': 'Formato inválido. Envie um arquivo .csv'}, status=400)
+
+    if arquivo.size > 10 * 1024 * 1024:
+        return JsonResponse({'error': 'Arquivo muito grande (máximo 10MB)'}, status=400)
+
+    try:
+        conteudo = arquivo.read().decode('utf-8-sig')
+    except UnicodeDecodeError:
+        try:
+            arquivo.seek(0)
+            conteudo = arquivo.read().decode('latin-1')
+        except Exception:
+            return JsonResponse({'error': 'Não foi possível ler o arquivo.'}, status=400)
+
+    # Auto-detectar delimitador
+    primeira_linha = conteudo.split('\n')[0] if conteudo else ''
+    delimiter = ';' if primeira_linha.count(';') > primeira_linha.count(',') else ','
+
+    reader = csv.reader(io.StringIO(conteudo), delimiter=delimiter)
+    linhas = list(reader)
+
+    if len(linhas) < 2:
+        return JsonResponse({'error': 'Arquivo vazio ou com apenas cabeçalho'}, status=400)
+
+    colunas = linhas[0]
+    preview = linhas[1:6]
+    total_linhas = len(linhas) - 1
+
+    request.session['csv_import_data'] = conteudo
+    request.session['csv_import_delimiter'] = delimiter
+
+    return JsonResponse({
+        'success': True,
+        'colunas': colunas,
+        'preview': preview,
+        'total_linhas': total_linhas,
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_importar_csv_executar(request):
+    """Executa a importação com o mapeamento definido."""
+    import csv
+    import io
+
+    data = json.loads(request.body)
+    mapeamento = data.get('mapeamento', {})
+    criar_oportunidades = data.get('criar_oportunidades', False)
+
+    if 'nome_razaosocial' not in mapeamento or 'telefone' not in mapeamento:
+        return JsonResponse({'error': 'Mapeamento de Nome e Telefone é obrigatório'}, status=400)
+
+    conteudo = request.session.get('csv_import_data')
+    if not conteudo:
+        return JsonResponse({'error': 'Dados do CSV expirados. Faça upload novamente.'}, status=400)
+
+    delimiter = request.session.get('csv_import_delimiter', ';')
+    reader = csv.reader(io.StringIO(conteudo), delimiter=delimiter)
+    linhas = list(reader)
+
+    if len(linhas) < 2:
+        return JsonResponse({'error': 'Arquivo vazio'}, status=400)
+
+    dados = linhas[1:]
+    from .models import LeadProspecto
+
+    tenant = request.tenant
+    importados = 0
+    duplicados = 0
+    erros = []
+
+    for i, linha in enumerate(dados, start=2):
+        try:
+            valores = {}
+            for campo, idx in mapeamento.items():
+                idx = int(idx)
+                if idx < len(linha):
+                    val = linha[idx].strip()
+                    if val:
+                        valores[campo] = val
+
+            nome = valores.get('nome_razaosocial', '').strip()
+            telefone = valores.get('telefone', '').strip()
+
+            if not nome or not telefone:
+                erros.append(f'Linha {i}: nome ou telefone vazio')
+                continue
+
+            if LeadProspecto.objects.filter(tenant=tenant, telefone=telefone).exists():
+                duplicados += 1
+                continue
+
+            lead_data = {
+                'tenant': tenant,
+                'nome_razaosocial': nome,
+                'telefone': telefone,
+                'tipo_entrada': 'importacao',
+                'canal_entrada': 'importacao',
+                'origem': valores.get('origem', 'outros'),
+                'status_api': 'processado',
+            }
+
+            for campo in ['email', 'cpf_cnpj', 'empresa', 'cidade', 'estado', 'bairro',
+                          'cep', 'rua', 'numero_residencia', 'observacoes']:
+                if campo in valores:
+                    lead_data[campo] = valores[campo]
+
+            if 'valor' in valores:
+                try:
+                    lead_data['valor'] = float(valores['valor'].replace(',', '.').replace('R$', '').strip())
+                except (ValueError, AttributeError):
+                    pass
+
+            if 'data_nascimento' in valores:
+                from datetime import datetime as dt
+                for fmt in ('%d/%m/%Y', '%Y-%m-%d', '%d-%m-%Y'):
+                    try:
+                        lead_data['data_nascimento'] = dt.strptime(valores['data_nascimento'], fmt).date()
+                        break
+                    except ValueError:
+                        continue
+
+            lead = LeadProspecto(**lead_data)
+            lead._skip_notificacao = True
+            lead.save()
+            importados += 1
+
+            if criar_oportunidades:
+                try:
+                    from apps.comercial.crm.models import OportunidadeVenda, PipelineEstagio
+                    estagio = PipelineEstagio.objects.filter(tenant=tenant, ativo=True).order_by('ordem').first()
+                    if estagio and not hasattr(lead, 'oportunidade_crm'):
+                        OportunidadeVenda.objects.create(
+                            tenant=tenant, lead=lead, estagio=estagio,
+                            titulo=nome, origem_crm='importacao',
+                            valor_estimado=lead_data.get('valor'),
+                        )
+                except Exception:
+                    pass
+
+        except Exception as e:
+            erros.append(f'Linha {i}: {str(e)[:80]}')
+
+    request.session.pop('csv_import_data', None)
+    request.session.pop('csv_import_delimiter', None)
+
+    return JsonResponse({
+        'success': True,
+        'importados': importados,
+        'duplicados': duplicados,
+        'erros': erros[:50],
+        'total_processado': len(dados),
+    })

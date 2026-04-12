@@ -1,0 +1,232 @@
+{% extends 'sistema/base.html' %}
+{% block extra_css %}
+<style>
+  .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+  .page-title { font-size:20px; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:10px; }
+  .page-title i { color:var(--primary); }
+
+  .step { display:none; }
+  .step.active { display:block; }
+
+  .upload-area {
+    border:2px dashed var(--border); border-radius:16px; padding:60px 40px; text-align:center;
+    background:var(--bg-white); cursor:pointer; transition:all .2s;
+  }
+  .upload-area:hover, .upload-area.dragover { border-color:var(--primary); background:var(--primary-light); }
+  .upload-area i { font-size:48px; color:var(--primary); opacity:.5; margin-bottom:12px; }
+  .upload-area p { font-size:14px; color:var(--text-muted); margin-bottom:4px; }
+  .upload-area small { font-size:12px; color:var(--text-light); }
+
+  .card { background:var(--bg-white); border-radius:12px; border:1px solid var(--border); padding:20px; margin-bottom:16px; }
+  .card-title { font-size:15px; font-weight:700; color:var(--text-main); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  .card-title i { color:var(--primary); }
+
+  .preview-table { width:100%; border-collapse:collapse; font-size:12px; overflow-x:auto; display:block; }
+  .preview-table th { background:var(--bg-subtle,#f1f5f9); padding:8px 10px; text-align:left; font-weight:600; color:var(--text-muted); white-space:nowrap; }
+  .preview-table td { padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; max-width:200px; overflow:hidden; text-overflow:ellipsis; }
+
+  .mapping-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); }
+  .mapping-row:last-child { border-bottom:none; }
+  .mapping-label { font-size:13px; font-weight:600; min-width:180px; color:var(--text-main); }
+  .mapping-label .required { color:var(--danger); }
+  .mapping-select { flex:1; padding:8px 10px; border-radius:8px; border:1px solid var(--border); font-size:13px; }
+
+  .result-card { padding:20px; border-radius:12px; text-align:center; }
+  .result-card.success { background:#d1fae5; border:1px solid #6ee7b7; }
+  .result-card.partial { background:#fef3c7; border:1px solid #fcd34d; }
+  .result-number { font-size:36px; font-weight:800; }
+  .result-label { font-size:13px; color:var(--text-muted); }
+  .results-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:16px; }
+
+  .error-list { max-height:200px; overflow-y:auto; font-size:12px; color:var(--danger); background:#fef2f2; padding:12px; border-radius:8px; }
+  .error-list div { padding:2px 0; }
+
+  .btn-primary { background:var(--primary); color:#fff; border:none; padding:10px 20px; border-radius:10px; font-weight:600; font-size:13px; cursor:pointer; }
+  .btn-primary:hover { opacity:.9; }
+  .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+  .btn-secondary { background:var(--bg-subtle,#f1f5f9); color:var(--text-main); border:none; padding:10px 20px; border-radius:10px; font-weight:600; font-size:13px; cursor:pointer; }
+
+  .step-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+  .checkbox-label { display:flex; align-items:center; gap:8px; font-size:13px; margin-top:12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title"><i class="fas fa-file-csv"></i> Importar Leads (CSV)</div>
+    <a href="{% url 'comercial_leads:leads' %}" class="btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a>
+</div>
+
+<!-- STEP 1: Upload -->
+<div class="step active" id="step1">
+    <div class="upload-area" id="uploadArea" onclick="document.getElementById('csvFile').click()">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <p>Clique ou arraste um arquivo CSV</p>
+        <small>Maximo 10MB. Separador: ponto e virgula (;) ou virgula (,)</small>
+    </div>
+    <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="uploadCSV(this)">
+</div>
+
+<!-- STEP 2: Mapeamento -->
+<div class="step" id="step2">
+    <div class="card">
+        <div class="card-title"><i class="fas fa-eye"></i> Preview do Arquivo (<span id="totalLinhas">0</span> linhas)</div>
+        <div style="overflow-x:auto;">
+            <table class="preview-table" id="previewTable"></table>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><i class="fas fa-arrows-alt-h"></i> Mapeamento de Campos</div>
+        <div id="mappingContainer"></div>
+
+        <label class="checkbox-label">
+            <input type="checkbox" id="criarOportunidades"> Criar oportunidades automaticamente no CRM
+        </label>
+    </div>
+
+    <div class="step-footer">
+        <button class="btn-secondary" onclick="voltarStep1()">Voltar</button>
+        <button class="btn-primary" id="btnImportar" onclick="executarImportacao()"><i class="fas fa-upload"></i> Importar Leads</button>
+    </div>
+</div>
+
+<!-- STEP 3: Resultado -->
+<div class="step" id="step3">
+    <div class="card">
+        <div class="card-title"><i class="fas fa-chart-bar"></i> Resultado da Importacao</div>
+        <div class="results-grid" id="resultsGrid"></div>
+        <div id="errorsList"></div>
+    </div>
+    <div class="step-footer">
+        <a href="{% url 'comercial_leads:leads' %}" class="btn-primary"><i class="fas fa-list"></i> Ver Leads</a>
+        <button class="btn-secondary" onclick="voltarStep1()"><i class="fas fa-redo"></i> Nova Importacao</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CAMPOS = {{ campos|safe }};
+let csvColunas = [];
+
+function getCsrf() { const c = document.cookie.match(/csrftoken=([^;]+)/); return c ? c[1] : ''; }
+
+function showStep(n) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById('step' + n).classList.add('active');
+}
+function voltarStep1() { showStep(1); }
+
+// Upload
+const uploadArea = document.getElementById('uploadArea');
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop', e => {
+    e.preventDefault(); uploadArea.classList.remove('dragover');
+    if (e.dataTransfer.files.length) { document.getElementById('csvFile').files = e.dataTransfer.files; uploadCSV(document.getElementById('csvFile')); }
+});
+
+function uploadCSV(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const fd = new FormData();
+    fd.append('arquivo', file);
+
+    uploadArea.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:48px;color:var(--primary);opacity:.5;"></i><p>Processando...</p>';
+
+    fetch('{% url "comercial_leads:api_importar_csv_preview" %}', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCsrf()},
+        body: fd
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.error) { showNotification(d.error, 'error'); voltarStep1(); resetUploadArea(); return; }
+        csvColunas = d.colunas;
+        renderPreview(d.colunas, d.preview);
+        renderMapping(d.colunas);
+        document.getElementById('totalLinhas').textContent = d.total_linhas;
+        showStep(2);
+    })
+    .catch(() => { showNotification('Erro ao processar arquivo', 'error'); resetUploadArea(); });
+}
+
+function resetUploadArea() {
+    uploadArea.innerHTML = '<i class="fas fa-cloud-upload-alt"></i><p>Clique ou arraste um arquivo CSV</p><small>Maximo 10MB. Separador: ponto e virgula (;) ou virgula (,)</small>';
+}
+
+function renderPreview(colunas, linhas) {
+    let html = '<tr>' + colunas.map(c => `<th>${c}</th>`).join('') + '</tr>';
+    linhas.forEach(l => { html += '<tr>' + l.map(v => `<td>${v}</td>`).join('') + '</tr>'; });
+    document.getElementById('previewTable').innerHTML = html;
+}
+
+function renderMapping(colunas) {
+    const opts = '<option value="">-- Ignorar --</option>' + colunas.map((c, i) => `<option value="${i}">${c}</option>`).join('');
+    let html = '';
+    CAMPOS.forEach(campo => {
+        const req = campo.obrigatorio ? ' <span class="required">*</span>' : '';
+        // Auto-match
+        let autoIdx = '';
+        colunas.forEach((col, i) => {
+            if (col.toLowerCase().includes(campo.id.replace('_', ' ')) || col.toLowerCase().includes(campo.label.toLowerCase().split(' ')[0].toLowerCase())) autoIdx = i;
+        });
+        html += `<div class="mapping-row">
+            <div class="mapping-label">${campo.label}${req}</div>
+            <select class="mapping-select" data-campo="${campo.id}">
+                ${opts.replace(`value="${autoIdx}"`, `value="${autoIdx}" selected`)}
+            </select>
+        </div>`;
+    });
+    document.getElementById('mappingContainer').innerHTML = html;
+}
+
+function executarImportacao() {
+    const mapeamento = {};
+    document.querySelectorAll('.mapping-select').forEach(sel => {
+        if (sel.value !== '') mapeamento[sel.dataset.campo] = parseInt(sel.value);
+    });
+
+    if (!('nome_razaosocial' in mapeamento) || !('telefone' in mapeamento)) {
+        showNotification('Mapeie pelo menos Nome e Telefone', 'warning');
+        return;
+    }
+
+    const btn = document.getElementById('btnImportar');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
+
+    fetch('{% url "comercial_leads:api_importar_csv_executar" %}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+        body: JSON.stringify({
+            mapeamento: mapeamento,
+            criar_oportunidades: document.getElementById('criarOportunidades').checked,
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-upload"></i> Importar Leads';
+        if (d.error) { showNotification(d.error, 'error'); return; }
+        renderResultado(d);
+        showStep(3);
+    })
+    .catch(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-upload"></i> Importar Leads'; showNotification('Erro ao importar', 'error'); });
+}
+
+function renderResultado(d) {
+    document.getElementById('resultsGrid').innerHTML = `
+        <div class="result-card success"><div class="result-number" style="color:#059669;">${d.importados}</div><div class="result-label">Importados</div></div>
+        <div class="result-card partial"><div class="result-number" style="color:#d97706;">${d.duplicados}</div><div class="result-label">Duplicados</div></div>
+        <div class="result-card" style="background:#fef2f2;border:1px solid #fca5a5;"><div class="result-number" style="color:#dc2626;">${d.erros.length}</div><div class="result-label">Erros</div></div>
+        <div class="result-card" style="background:var(--bg-subtle);border:1px solid var(--border);"><div class="result-number">${d.total_processado}</div><div class="result-label">Total Processado</div></div>
+    `;
+    if (d.erros.length > 0) {
+        document.getElementById('errorsList').innerHTML = '<div class="error-list">' + d.erros.map(e => `<div>${e}</div>`).join('') + '</div>';
+    }
+}
+</script>
+{% endblock %}

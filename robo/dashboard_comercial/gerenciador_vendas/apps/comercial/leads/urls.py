@@ -47,4 +47,9 @@ urlpatterns = [
 
     # API para historico de contatos
     path('api/historico-contatos/', views.historico_contatos_api, name='historico_contatos'),
+
+    # Importação CSV
+    path('leads/importar/', views.importar_csv_view, name='importar_csv'),
+    path('api/leads/importar/preview/', views.api_importar_csv_preview, name='api_importar_csv_preview'),
+    path('api/leads/importar/executar/', views.api_importar_csv_executar, name='api_importar_csv_executar'),
 ]
