@@ -100,6 +100,7 @@
         <div class="leads-table-title"><i class="fas fa-table"></i> Leads <span class="leads-count" id="totalCount">0</span></div>
         <div style="display:flex;gap:8px;">
             <button class="btn-primary btn-sm" onclick="window.showNotification('Em desenvolvimento','info')"><i class="fas fa-plus"></i> Novo Lead</button>
+            <a href="{% url 'comercial_leads:importar_csv' %}" class="btn-secondary btn-sm" style="text-decoration:none;display:flex;align-items:center;gap:4px;"><i class="fas fa-file-csv"></i> Importar CSV</a>
             <button class="btn-secondary btn-sm" onclick="window.showNotification('Exportando...','info')"><i class="fas fa-download"></i> Exportar</button>
         </div>
     </div>
