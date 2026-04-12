@@ -5,6 +5,7 @@ from .models import (
     OportunidadeVenda, HistoricoPipelineEstagio,
     TarefaCRM, NotaInterna, MetaVendas,
     SegmentoCRM, MembroSegmento, AlertaRetencao, ConfiguracaoCRM,
+    ProdutoServico, ItemOportunidade,
 )
 
 
@@ -71,6 +72,13 @@ class NotaInternaInline(admin.TabularInline):
     readonly_fields = ['data_criacao']
 
 
+class ItemOportunidadeInline(admin.TabularInline):
+    model = ItemOportunidade
+    extra = 0
+    fields = ['produto', 'quantidade', 'valor_unitario', 'desconto', 'observacao']
+    autocomplete_fields = ['produto']
+
+
 @admin.register(OportunidadeVenda)
 class OportunidadeVendaAdmin(admin.ModelAdmin):
     list_display = [
@@ -83,7 +91,7 @@ class OportunidadeVendaAdmin(admin.ModelAdmin):
     raw_id_fields = ['lead', 'responsavel']
     filter_horizontal = ['tags']
     readonly_fields = ['data_criacao', 'data_atualizacao', 'data_entrada_estagio']
-    inlines = [HistoricoPipelineInline, TarefaCRMInline, NotaInternaInline]
+    inlines = [ItemOportunidadeInline, HistoricoPipelineInline, TarefaCRMInline, NotaInternaInline]
 
     fieldsets = [
         ('Identificação', {'fields': ['lead', 'titulo', 'estagio', 'responsavel', 'criado_por', 'tags']}),
@@ -166,6 +174,22 @@ class AlertaRetencaoAdmin(admin.ModelAdmin):
     list_filter = ['tipo_alerta', 'nivel_risco', 'status', 'responsavel']
     search_fields = ['cliente_hubsoft__nome_razaosocial']
     raw_id_fields = ['cliente_hubsoft', 'lead', 'oportunidade']
+
+
+@admin.register(ProdutoServico)
+class ProdutoServicoAdmin(admin.ModelAdmin):
+    list_display = ['nome', 'categoria', 'preco', 'recorrencia', 'ativo', 'ordem']
+    list_filter = ['categoria', 'recorrencia', 'ativo']
+    list_editable = ['ativo', 'ordem']
+    search_fields = ['nome', 'codigo', 'descricao']
+    ordering = ['ordem', 'nome']
+
+
+@admin.register(ItemOportunidade)
+class ItemOportunidadeAdmin(admin.ModelAdmin):
+    list_display = ['oportunidade', 'produto', 'quantidade', 'valor_unitario', 'desconto']
+    list_filter = ['produto']
+    autocomplete_fields = ['oportunidade', 'produto']
 
 
 @admin.register(ConfiguracaoCRM)

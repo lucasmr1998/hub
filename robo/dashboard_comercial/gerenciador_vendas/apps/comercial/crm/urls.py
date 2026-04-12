@@ -64,6 +64,16 @@ urlpatterns = [
     path('configuracoes/equipes/criar/', views.api_criar_equipe, name='api_criar_equipe'),
     path('equipes/', views.equipes_view, name='equipes'),
 
+    # Produtos e Serviços
+    path('produtos/', views.produtos_lista, name='produtos'),
+    path('produtos/salvar/', views.api_produto_salvar, name='api_produto_salvar'),
+    path('produtos/<int:pk>/excluir/', views.api_produto_excluir, name='api_produto_excluir'),
+    path('api/produtos/', views.api_produtos_listar, name='api_produtos_listar'),
+
+    # Itens da Oportunidade
+    path('oportunidades/<int:pk>/itens/', views.api_itens_oportunidade, name='api_itens_oportunidade'),
+    path('itens/<int:pk>/remover/', views.api_item_oportunidade_remover, name='api_item_remover'),
+
     # Webhooks inbound
     path('webhook/hubsoft/contrato/', views.webhook_hubsoft_contrato, name='webhook_hubsoft_contrato'),
 ]

@@ -261,6 +261,28 @@ class OportunidadeVenda(TenantMixin):
             return horas > self.estagio.sla_horas
         return False
 
+    @property
+    def valor_total_itens(self):
+        """Soma dos itens vinculados (quantidade * valor_unitario - desconto)."""
+        from django.db.models import Sum, F, DecimalField
+        from django.db.models.functions import Coalesce
+        resultado = self.itens.aggregate(
+            total=Coalesce(
+                Sum(F('quantidade') * F('valor_unitario') - F('desconto'),
+                    output_field=DecimalField(max_digits=12, decimal_places=2)),
+                0,
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            )
+        )
+        return resultado['total']
+
+    def recalcular_valor(self):
+        """Atualiza valor_estimado com base nos itens, se houver."""
+        total = self.valor_total_itens
+        if total > 0:
+            self.valor_estimado = total
+            self.save(update_fields=['valor_estimado'])
+
 
 class HistoricoPipelineEstagio(TenantMixin):
     oportunidade = models.ForeignKey(
@@ -596,6 +618,98 @@ class AlertaRetencao(TenantMixin):
 
 # ============================================================================
 # CONFIGURACAO (singleton)
+# ============================================================================
+
+# ============================================================================
+# PRODUTOS / SERVIÇOS
+# ============================================================================
+
+class ProdutoServico(TenantMixin):
+    """Catálogo de produtos e serviços do CRM."""
+    RECORRENCIA_CHOICES = [
+        ('mensal', 'Mensal'),
+        ('trimestral', 'Trimestral'),
+        ('semestral', 'Semestral'),
+        ('anual', 'Anual'),
+        ('avulso', 'Avulso (único)'),
+    ]
+    CATEGORIA_CHOICES = [
+        ('plano', 'Plano'),
+        ('servico', 'Serviço'),
+        ('equipamento', 'Equipamento'),
+        ('addon', 'Adicional'),
+        ('outro', 'Outro'),
+    ]
+
+    nome = models.CharField(max_length=150, verbose_name="Nome")
+    descricao = models.TextField(blank=True, verbose_name="Descrição")
+    codigo = models.CharField(max_length=50, blank=True, default='', verbose_name="Código/SKU")
+    categoria = models.CharField(max_length=20, choices=CATEGORIA_CHOICES, default='servico', verbose_name="Categoria")
+    preco = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Preço (R$)")
+    recorrencia = models.CharField(max_length=15, choices=RECORRENCIA_CHOICES, default='mensal', verbose_name="Recorrência")
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    ordem = models.PositiveIntegerField(default=0, verbose_name="Ordem de Exibição")
+
+    # Mapeamento opcional com sistema externo (HubSoft, etc.)
+    plano_internet = models.ForeignKey(
+        'cadastro.PlanoInternet', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='produtos_crm',
+        verbose_name="Plano de Internet (HubSoft)",
+        help_text="Vincular a um plano para integração com HubSoft"
+    )
+    id_externo = models.CharField(
+        max_length=100, blank=True, default='',
+        verbose_name="ID no Sistema Externo",
+        help_text="ID do produto no sistema integrado"
+    )
+
+    data_criacao = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    data_atualizacao = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+
+    class Meta:
+        db_table = 'crm_produtos'
+        verbose_name = "Produto/Serviço"
+        verbose_name_plural = "📦 13. Produtos e Serviços"
+        ordering = ['ordem', 'nome']
+        unique_together = ('tenant', 'codigo')
+
+    def __str__(self):
+        return f"{self.nome} — R$ {self.preco}"
+
+
+class ItemOportunidade(TenantMixin):
+    """Item vinculado a uma oportunidade (produto + quantidade + valor)."""
+    oportunidade = models.ForeignKey(
+        OportunidadeVenda, on_delete=models.CASCADE,
+        related_name='itens', verbose_name="Oportunidade"
+    )
+    produto = models.ForeignKey(
+        ProdutoServico, on_delete=models.PROTECT,
+        related_name='itens_oportunidade', verbose_name="Produto/Serviço"
+    )
+    quantidade = models.PositiveIntegerField(default=1, verbose_name="Quantidade")
+    valor_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Valor Unitário (R$)")
+    desconto = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Desconto (R$)")
+    observacao = models.CharField(max_length=255, blank=True, default='', verbose_name="Observação")
+    data_criacao = models.DateTimeField(auto_now_add=True, verbose_name="Adicionado em")
+
+    class Meta:
+        db_table = 'crm_itens_oportunidade'
+        verbose_name = "Item da Oportunidade"
+        verbose_name_plural = "Item da Oportunidade"
+        ordering = ['data_criacao']
+
+    def __str__(self):
+        return f"{self.produto.nome} x{self.quantidade}"
+
+    @property
+    def subtotal(self):
+        return (self.quantidade * self.valor_unitario) - self.desconto
+
+
+# ============================================================================
+# CONFIGURAÇÃO
 # ============================================================================
 
 class ConfiguracaoCRM(TenantMixin):

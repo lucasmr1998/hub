@@ -398,19 +398,55 @@ CRM Kanban completo para gestão do funil de vendas. Pipeline visual com drag-an
 | `probabilidade` | Integer(50) | % de probabilidade |
 | `prioridade` | CharField | baixa/normal/alta/urgente |
 | `tags` | M2M TagCRM | Tags visuais |
-| `plano_interesse` | FK PlanoInternet | Plano de interesse |
+| `plano_interesse` | FK PlanoInternet | Plano de interesse (legado, usar itens) |
 | `origem_crm` | CharField | automatico/manual/importacao |
 | `data_entrada_estagio` | DateTime | Para cálculo de SLA |
 | `motivo_perda` / `concorrente_perdido` | Text/Char | Se perdeu |
 | `contrato_hubsoft_id` | CharField(100) | ID do contrato no HubSoft |
 | `churn_risk_score` | Integer(0-100) | Score de risco de churn |
 
-**Propriedades:** `dias_no_estagio`, `sla_vencido`
+**Propriedades:** `dias_no_estagio`, `sla_vencido`, `valor_total_itens`
+**Métodos:** `recalcular_valor()` — atualiza valor_estimado com soma dos itens
 **Índices:** (estagio, ativo), (responsavel, estagio), (data_fechamento_previsto), (churn_risk_score)
 
 **HistoricoPipelineEstagio** — Tabela: `crm_historico_estagio`
 
 Log de cada movimentação de estágio: oportunidade, estágio anterior/novo, movido_por, motivo, tempo_no_estagio_horas.
+
+#### Produtos e Serviços
+
+**ProdutoServico** — Tabela: `crm_produtos`
+
+Catálogo genérico de produtos/serviços. Funciona para qualquer tipo de empresa (não apenas ISPs).
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `nome` | CharField(150) | Nome do produto |
+| `descricao` | TextField | Descrição |
+| `codigo` | CharField(50) | Código/SKU |
+| `categoria` | CharField | plano/servico/equipamento/addon/outro |
+| `preco` | Decimal(10,2) | Preço (R$) |
+| `recorrencia` | CharField | mensal/trimestral/semestral/anual/avulso |
+| `ativo` | BooleanField | Se está ativo |
+| `plano_internet` | FK PlanoInternet | Mapeamento opcional para HubSoft |
+| `id_externo` | CharField(100) | ID no sistema integrado |
+
+**unique_together:** (tenant, codigo)
+
+**ItemOportunidade** — Tabela: `crm_itens_oportunidade`
+
+Vincula produtos a oportunidades (N:N com quantidade e valor).
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `oportunidade` | FK OportunidadeVenda | Oportunidade |
+| `produto` | FK ProdutoServico | Produto/Serviço |
+| `quantidade` | PositiveInteger | Quantidade |
+| `valor_unitario` | Decimal(10,2) | Valor unitário |
+| `desconto` | Decimal(10,2) | Desconto |
+| `observacao` | CharField(255) | Observação |
+
+**Propriedade:** `subtotal` = (quantidade * valor_unitario) - desconto
 
 #### Tarefas e Notas
 

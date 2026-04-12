@@ -1,0 +1,245 @@
+{% extends 'sistema/base.html' %}
+{% block extra_css %}
+<style>
+  .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+  .page-title { font-size:20px; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:10px; }
+  .page-title i { color:var(--primary); }
+
+  .produtos-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:14px; }
+  .produto-card {
+    background:var(--bg-white); border-radius:12px; border:1px solid var(--border);
+    padding:18px; transition:all .2s; position:relative;
+  }
+  .produto-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.06); }
+  .produto-card.inativo { opacity:0.55; }
+
+  .produto-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+  .produto-nome { font-size:15px; font-weight:700; color:var(--text-main); }
+  .produto-codigo { font-size:11px; color:var(--text-light); margin-top:2px; }
+  .produto-actions { display:flex; gap:6px; }
+  .produto-actions button { background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:14px; padding:4px; border-radius:6px; }
+  .produto-actions button:hover { color:var(--primary); background:var(--primary-light); }
+
+  .produto-body { margin-bottom:12px; }
+  .produto-desc { font-size:12px; color:var(--text-light); margin-bottom:8px; line-height:1.4; max-height:36px; overflow:hidden; }
+  .produto-preco { font-size:22px; font-weight:800; color:var(--primary); }
+  .produto-preco small { font-size:12px; font-weight:500; color:var(--text-light); }
+
+  .produto-footer { display:flex; gap:8px; flex-wrap:wrap; }
+  .produto-badge { font-size:11px; padding:3px 10px; border-radius:20px; font-weight:600; }
+  .badge-categoria { background:var(--primary-light); color:var(--primary); }
+  .badge-recorrencia { background:#f0fdf4; color:#16a34a; }
+  .badge-inativo { background:#fef2f2; color:#dc2626; }
+
+  /* Modal */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:1000; display:none; align-items:center; justify-content:center; }
+  .modal-overlay.show { display:flex; }
+  .modal-box { background:var(--bg-white); border-radius:16px; padding:24px; width:90%; max-width:520px; max-height:85vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+  .modal-title { font-size:17px; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+  .modal-title i { color:var(--primary); }
+
+  .form-row { margin-bottom:14px; }
+  .form-row label { display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:5px; }
+  .form-row input, .form-row select, .form-row textarea { width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); font-size:13px; background:var(--bg-white); color:var(--text-main); }
+  .form-row textarea { resize:vertical; min-height:60px; }
+  .form-row-inline { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+  .btn-primary { background:var(--primary); color:#fff; border:none; padding:10px 20px; border-radius:10px; font-weight:600; font-size:13px; cursor:pointer; }
+  .btn-primary:hover { opacity:.9; }
+  .btn-secondary { background:var(--bg-subtle,#f1f5f9); color:var(--text-main); border:none; padding:10px 20px; border-radius:10px; font-weight:600; font-size:13px; cursor:pointer; }
+  .modal-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+
+  .empty-state { text-align:center; padding:60px 20px; color:var(--text-muted); }
+  .empty-state i { font-size:48px; margin-bottom:12px; opacity:.3; }
+  .empty-state p { font-size:14px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title"><i class="fas fa-box"></i> Produtos e Servicos</div>
+    <button class="btn-primary" onclick="abrirModal()"><i class="fas fa-plus"></i> Novo Produto</button>
+</div>
+
+{% if produtos %}
+<div class="produtos-grid">
+    {% for p in produtos %}
+    <div class="produto-card {% if not p.ativo %}inativo{% endif %}" id="card-{{ p.pk }}">
+        <div class="produto-header">
+            <div>
+                <div class="produto-nome">{{ p.nome }}</div>
+                {% if p.codigo %}<div class="produto-codigo">{{ p.codigo }}</div>{% endif %}
+            </div>
+            <div class="produto-actions">
+                <button onclick="editarProduto({{ p.pk }})" title="Editar"><i class="fas fa-pen"></i></button>
+                <button onclick="excluirProduto({{ p.pk }}, '{{ p.nome|escapejs }}')" title="Excluir"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
+        <div class="produto-body">
+            {% if p.descricao %}<div class="produto-desc">{{ p.descricao }}</div>{% endif %}
+            <div class="produto-preco">R$ {{ p.preco|floatformat:2 }} <small>/{{ p.get_recorrencia_display }}</small></div>
+        </div>
+        <div class="produto-footer">
+            <span class="produto-badge badge-categoria">{{ p.get_categoria_display }}</span>
+            <span class="produto-badge badge-recorrencia">{{ p.get_recorrencia_display }}</span>
+            {% if not p.ativo %}<span class="produto-badge badge-inativo">Inativo</span>{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <i class="fas fa-box-open"></i>
+    <p>Nenhum produto cadastrado ainda.</p>
+    <button class="btn-primary" onclick="abrirModal()" style="margin-top:12px;"><i class="fas fa-plus"></i> Criar primeiro produto</button>
+</div>
+{% endif %}
+
+<!-- Modal Criar/Editar -->
+<div class="modal-overlay" id="modalProduto">
+    <div class="modal-box">
+        <div class="modal-title"><i class="fas fa-box"></i> <span id="modalTitulo">Novo Produto</span></div>
+        <input type="hidden" id="produtoId">
+
+        <div class="form-row">
+            <label>Nome *</label>
+            <input type="text" id="prodNome" placeholder="Nome do produto ou servico">
+        </div>
+
+        <div class="form-row-inline">
+            <div class="form-row">
+                <label>Preco (R$) *</label>
+                <input type="number" id="prodPreco" step="0.01" min="0" placeholder="0.00">
+            </div>
+            <div class="form-row">
+                <label>Codigo/SKU</label>
+                <input type="text" id="prodCodigo" placeholder="Opcional">
+            </div>
+        </div>
+
+        <div class="form-row-inline">
+            <div class="form-row">
+                <label>Categoria</label>
+                <select id="prodCategoria">
+                    {% for code, label in categorias %}
+                    <option value="{{ code }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-row">
+                <label>Recorrencia</label>
+                <select id="prodRecorrencia">
+                    {% for code, label in recorrencias %}
+                    <option value="{{ code }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <label>Descricao</label>
+            <textarea id="prodDescricao" placeholder="Descricao do produto (opcional)"></textarea>
+        </div>
+
+        <div class="form-row">
+            <label>
+                <input type="checkbox" id="prodAtivo" checked> Ativo
+            </label>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="fecharModal()">Cancelar</button>
+            <button class="btn-primary" onclick="salvarProduto()"><i class="fas fa-save"></i> Salvar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getCsrf() { const c = document.cookie.match(/csrftoken=([^;]+)/); return c ? c[1] : ''; }
+
+function abrirModal(dados) {
+    document.getElementById('produtoId').value = dados ? dados.id : '';
+    document.getElementById('prodNome').value = dados ? dados.nome : '';
+    document.getElementById('prodPreco').value = dados ? dados.preco : '';
+    document.getElementById('prodCodigo').value = dados ? dados.codigo : '';
+    document.getElementById('prodCategoria').value = dados ? dados.categoria : 'servico';
+    document.getElementById('prodRecorrencia').value = dados ? dados.recorrencia : 'mensal';
+    document.getElementById('prodDescricao').value = dados ? dados.descricao : '';
+    document.getElementById('prodAtivo').checked = dados ? dados.ativo : true;
+    document.getElementById('modalTitulo').textContent = dados ? 'Editar Produto' : 'Novo Produto';
+    document.getElementById('modalProduto').classList.add('show');
+}
+
+function fecharModal() { document.getElementById('modalProduto').classList.remove('show'); }
+
+document.getElementById('modalProduto').addEventListener('click', function(e) {
+    if (e.target === this) fecharModal();
+});
+
+function salvarProduto() {
+    const payload = {
+        id: document.getElementById('produtoId').value || null,
+        nome: document.getElementById('prodNome').value,
+        preco: document.getElementById('prodPreco').value,
+        codigo: document.getElementById('prodCodigo').value,
+        categoria: document.getElementById('prodCategoria').value,
+        recorrencia: document.getElementById('prodRecorrencia').value,
+        descricao: document.getElementById('prodDescricao').value,
+        ativo: document.getElementById('prodAtivo').checked,
+    };
+
+    if (!payload.nome) { showNotification('Informe o nome do produto.', 'warning'); return; }
+    if (!payload.preco || parseFloat(payload.preco) < 0) { showNotification('Informe um preco valido.', 'warning'); return; }
+
+    fetch('{% url "crm:api_produto_salvar" %}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            showNotification(d.message, 'success');
+            fecharModal();
+            location.reload();
+        } else {
+            showNotification(d.error || 'Erro ao salvar.', 'error');
+        }
+    })
+    .catch(() => showNotification('Erro de conexao.', 'error'));
+}
+
+function editarProduto(id) {
+    fetch('{% url "crm:api_produtos_listar" %}?ativos=0')
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                const p = d.produtos.find(x => x.id === id);
+                if (p) abrirModal(p);
+            }
+        });
+}
+
+function excluirProduto(id, nome) {
+    if (!confirm('Excluir "' + nome + '"? Esta acao nao pode ser desfeita.')) return;
+
+    fetch('/comercial/crm/produtos/' + id + '/excluir/', {
+        method: 'DELETE',
+        headers: {'X-CSRFToken': getCsrf()}
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            showNotification(d.message, 'success');
+            const card = document.getElementById('card-' + id);
+            if (card) card.remove();
+        } else {
+            showNotification(d.error || 'Erro ao excluir.', 'error');
+        }
+    })
+    .catch(() => showNotification('Erro de conexao.', 'error'));
+}
+</script>
+{% endblock %}

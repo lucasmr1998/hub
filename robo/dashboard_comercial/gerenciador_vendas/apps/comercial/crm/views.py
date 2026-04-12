@@ -19,6 +19,7 @@ from .models import (
     PipelineEstagio, OportunidadeVenda, HistoricoPipelineEstagio,
     TarefaCRM, NotaInterna, MetaVendas, SegmentoCRM, AlertaRetencao,
     ConfiguracaoCRM, EquipeVendas, PerfilVendedor,
+    ProdutoServico, ItemOportunidade,
 )
 
 logger = logging.getLogger(__name__)
@@ -1858,3 +1859,196 @@ def webhook_hubsoft_contrato(request):
         oportunidade.save(update_fields=['estagio', 'data_entrada_estagio', 'data_fechamento_real', 'data_atualizacao'])
 
     return JsonResponse({'ok': True})
+
+
+# ============================================================================
+# PRODUTOS E SERVIÇOS
+# ============================================================================
+
+@login_required
+def produtos_lista(request):
+    """Página de gestão de produtos/serviços."""
+    produtos = ProdutoServico.objects.all().order_by('ordem', 'nome')
+    context = {
+        'produtos': produtos,
+        'categorias': ProdutoServico.CATEGORIA_CHOICES,
+        'recorrencias': ProdutoServico.RECORRENCIA_CHOICES,
+    }
+    return render(request, 'crm/produtos.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_produto_salvar(request):
+    """Criar ou editar produto/serviço."""
+    try:
+        data = json.loads(request.body)
+        produto_id = data.get('id')
+
+        campos = {
+            'nome': data.get('nome', '').strip(),
+            'descricao': data.get('descricao', '').strip(),
+            'codigo': data.get('codigo', '').strip(),
+            'categoria': data.get('categoria', 'servico'),
+            'preco': Decimal(str(data.get('preco', 0))),
+            'recorrencia': data.get('recorrencia', 'mensal'),
+            'ativo': data.get('ativo', True),
+            'ordem': int(data.get('ordem', 0)),
+        }
+
+        if not campos['nome']:
+            return JsonResponse({'error': 'Nome é obrigatório'}, status=400)
+
+        plano_id = data.get('plano_internet_id')
+        if plano_id:
+            campos['plano_internet_id'] = plano_id
+
+        id_externo = data.get('id_externo', '').strip()
+        if id_externo:
+            campos['id_externo'] = id_externo
+
+        if produto_id:
+            produto = get_object_or_404(ProdutoServico, pk=produto_id)
+            for k, v in campos.items():
+                setattr(produto, k, v)
+            produto.save()
+            msg = 'Produto atualizado com sucesso.'
+        else:
+            campos['tenant'] = request.tenant
+            produto = ProdutoServico.objects.create(**campos)
+            msg = 'Produto criado com sucesso.'
+
+        return JsonResponse({
+            'success': True,
+            'message': msg,
+            'produto': {
+                'id': produto.pk,
+                'nome': produto.nome,
+                'preco': str(produto.preco),
+                'categoria': produto.categoria,
+                'recorrencia': produto.recorrencia,
+            }
+        })
+    except Exception as e:
+        logger.error(f'Erro ao salvar produto: {e}')
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["DELETE"])
+def api_produto_excluir(request, pk):
+    """Excluir produto (se não estiver vinculado a oportunidades)."""
+    try:
+        produto = get_object_or_404(ProdutoServico, pk=pk)
+        if produto.itens_oportunidade.exists():
+            return JsonResponse({
+                'error': 'Produto vinculado a oportunidades. Desative-o em vez de excluir.'
+            }, status=400)
+        produto.delete()
+        return JsonResponse({'success': True, 'message': 'Produto excluído.'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def api_produtos_listar(request):
+    """API para listar produtos (usado em selectors)."""
+    apenas_ativos = request.GET.get('ativos', '1') == '1'
+    qs = ProdutoServico.objects.all().order_by('ordem', 'nome')
+    if apenas_ativos:
+        qs = qs.filter(ativo=True)
+
+    produtos = [{
+        'id': p.pk,
+        'nome': p.nome,
+        'codigo': p.codigo,
+        'categoria': p.categoria,
+        'categoria_display': p.get_categoria_display(),
+        'preco': str(p.preco),
+        'recorrencia': p.recorrencia,
+        'recorrencia_display': p.get_recorrencia_display(),
+        'ativo': p.ativo,
+    } for p in qs]
+
+    return JsonResponse({'success': True, 'produtos': produtos})
+
+
+# ============================================================================
+# ITENS DA OPORTUNIDADE
+# ============================================================================
+
+@login_required
+def api_itens_oportunidade(request, pk):
+    """GET: listar itens / POST: adicionar item."""
+    oportunidade = get_object_or_404(OportunidadeVenda, pk=pk)
+
+    if request.method == 'GET':
+        itens = oportunidade.itens.select_related('produto').all()
+        data = [{
+            'id': item.pk,
+            'produto_id': item.produto_id,
+            'produto_nome': item.produto.nome,
+            'produto_categoria': item.produto.get_categoria_display(),
+            'quantidade': item.quantidade,
+            'valor_unitario': str(item.valor_unitario),
+            'desconto': str(item.desconto),
+            'subtotal': str(item.subtotal),
+            'observacao': item.observacao,
+        } for item in itens]
+
+        return JsonResponse({
+            'success': True,
+            'itens': data,
+            'valor_total': str(oportunidade.valor_total_itens),
+        })
+
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            produto = get_object_or_404(ProdutoServico, pk=data.get('produto_id'))
+
+            item = ItemOportunidade.objects.create(
+                tenant=request.tenant,
+                oportunidade=oportunidade,
+                produto=produto,
+                quantidade=int(data.get('quantidade', 1)),
+                valor_unitario=Decimal(str(data.get('valor_unitario', produto.preco))),
+                desconto=Decimal(str(data.get('desconto', 0))),
+                observacao=data.get('observacao', ''),
+            )
+
+            oportunidade.recalcular_valor()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'{produto.nome} adicionado.',
+                'item': {
+                    'id': item.pk,
+                    'produto_nome': produto.nome,
+                    'subtotal': str(item.subtotal),
+                },
+                'valor_total': str(oportunidade.valor_total_itens),
+            })
+        except Exception as e:
+            logger.error(f'Erro ao adicionar item: {e}')
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Método não permitido'}, status=405)
+
+
+@login_required
+@require_http_methods(["DELETE"])
+def api_item_oportunidade_remover(request, pk):
+    """Remove um item da oportunidade."""
+    try:
+        item = get_object_or_404(ItemOportunidade, pk=pk)
+        oportunidade = item.oportunidade
+        item.delete()
+        oportunidade.recalcular_valor()
+        return JsonResponse({
+            'success': True,
+            'message': 'Item removido.',
+            'valor_total': str(oportunidade.valor_total_itens),
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

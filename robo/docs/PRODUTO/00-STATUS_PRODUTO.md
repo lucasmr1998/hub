@@ -75,6 +75,8 @@ Este documento é a fonte da verdade sobre o que está pronto, em desenvolviment
 | Metas individuais e por equipe | ✅ Pronto | |
 | Dashboard de desempenho | ✅ Pronto | |
 | Auto-criação de oportunidade por score | ✅ Pronto | Signal automático |
+| Catálogo de produtos/serviços (CRUD) | ✅ Pronto | Genérico, com mapeamento HubSoft opcional |
+| Itens vinculados a oportunidades | ✅ Pronto | N produtos por oportunidade, recalcula valor |
 | Webhooks N8N por evento CRM | 🔧 Parcial | Configurado mas não testado em produção |
 
 ### Viabilidade (apps/comercial/viabilidade/)

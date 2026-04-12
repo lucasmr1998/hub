@@ -147,6 +147,9 @@
             {% if pode_tarefas %}<a href="{% url 'crm:tarefas_lista' %}" class="nav-item {% if request.resolver_match.url_name == 'tarefas_lista' %}active{% endif %}">
                 <i class="fas fa-tasks"></i><span class="nav-text">Tarefas</span>
             </a>{% endif %}
+            {% if pode_pipeline %}<a href="{% url 'crm:produtos' %}" class="nav-item {% if request.resolver_match.url_name == 'produtos' %}active{% endif %}">
+                <i class="fas fa-box"></i><span class="nav-text">Produtos</span>
+            </a>{% endif %}
             {% tem_funcionalidade 'comercial.configurar_pipeline' as pode_config_crm %}
             {% tem_funcionalidade 'comercial.gerenciar_equipes' as pode_equipes %}
             {% tem_funcionalidade 'comercial.gerenciar_metas' as pode_metas %}

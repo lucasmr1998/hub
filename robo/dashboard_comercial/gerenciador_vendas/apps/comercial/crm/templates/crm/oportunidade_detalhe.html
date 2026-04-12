@@ -588,6 +588,21 @@
         </div>
       </div>
 
+      <!-- PRODUTOS / ITENS -->
+      <div class="card">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+          <h3><i class="fas fa-box" style="color:var(--primary)"></i> Produtos</h3>
+          <button class="btn-secondary btn-sm" onclick="abrirModalItem()" style="font-size:11px;padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-white);cursor:pointer;">
+            <i class="fas fa-plus"></i> Adicionar
+          </button>
+        </div>
+        <div class="card-body" id="itensContainer">
+          <div style="text-align:center;color:var(--text-muted);font-size:12px;padding:10px 0;">
+            <i class="fas fa-spinner fa-spin"></i> Carregando...
+          </div>
+        </div>
+      </div>
+
       <!-- DADOS DO LEAD -->
       <div class="card">
         <div class="card-header">
@@ -1013,6 +1028,8 @@ const URLS = {
   atribuir:    "{% url 'crm:api_atribuir_responsavel' oportunidade.pk %}",
   notas_get:   "{% url 'crm:api_notas_oportunidade' oportunidade.pk %}",
   notas_post:  "{% url 'crm:api_notas_oportunidade' oportunidade.pk %}",
+  itens:       "{% url 'crm:api_itens_oportunidade' oportunidade.pk %}",
+  produtos:    "{% url 'crm:api_produtos_listar' %}",
 };
 const CSRF = "{{ csrf_token }}";
 
@@ -1171,5 +1188,125 @@ document.querySelectorAll('.editable').forEach(function(el) {
         });
     });
 });
+
+// ---- ITENS / PRODUTOS ----
+let _produtosCache = [];
+
+function carregarItens() {
+    const container = document.getElementById('itensContainer');
+    fetch(URLS.itens)
+        .then(r => r.json())
+        .then(d => {
+            if (!d.success) { container.innerHTML = '<p style="color:var(--danger);font-size:12px;">Erro ao carregar</p>'; return; }
+            if (d.itens.length === 0) {
+                container.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:10px 0;"><i class="fas fa-box-open" style="font-size:20px;opacity:.3;display:block;margin-bottom:6px;"></i>Nenhum produto vinculado</div>';
+                return;
+            }
+            let html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+            d.itens.forEach(item => {
+                html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:12px;">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:600;color:var(--text-main);">${item.produto_nome}</div>
+                        <div style="color:var(--text-light);">${item.produto_categoria} · ${item.quantidade}x R$ ${parseFloat(item.valor_unitario).toFixed(2)}${parseFloat(item.desconto) > 0 ? ' (-R$'+parseFloat(item.desconto).toFixed(2)+')' : ''}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span style="font-weight:700;color:var(--primary);white-space:nowrap;">R$ ${parseFloat(item.subtotal).toFixed(2)}</span>
+                        <button onclick="removerItem(${item.id})" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:13px;" title="Remover"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>`;
+            });
+            html += `<div style="display:flex;justify-content:flex-end;padding-top:6px;border-top:1px solid var(--border);margin-top:4px;">
+                <span style="font-size:13px;font-weight:700;color:var(--text-main);">Total: R$ ${parseFloat(d.valor_total).toFixed(2)}</span>
+            </div></div>`;
+            container.innerHTML = html;
+        })
+        .catch(() => { container.innerHTML = '<p style="color:var(--danger);font-size:12px;">Erro ao carregar</p>'; });
+}
+
+function abrirModalItem() {
+    if (_produtosCache.length === 0) {
+        fetch(URLS.produtos)
+            .then(r => r.json())
+            .then(d => { if (d.success) { _produtosCache = d.produtos; mostrarModalItem(); } });
+    } else {
+        mostrarModalItem();
+    }
+}
+
+function mostrarModalItem() {
+    if (_produtosCache.length === 0) { showNotification('Nenhum produto cadastrado. Crie um produto primeiro.', 'warning'); return; }
+    const opts = _produtosCache.map(p => `<option value="${p.id}" data-preco="${p.preco}">${p.nome} (R$ ${parseFloat(p.preco).toFixed(2)} / ${p.recorrencia_display})</option>`).join('');
+    const html = `<div class="modal-overlay show" id="modalItem" onclick="if(event.target===this)this.remove()" style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;display:flex;align-items:center;justify-content:center;">
+        <div style="background:var(--bg-white);border-radius:16px;padding:24px;width:90%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.15);">
+            <div style="font-size:16px;font-weight:700;margin-bottom:16px;"><i class="fas fa-plus" style="color:var(--primary);"></i> Adicionar Produto</div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">Produto *</label>
+                <select id="itemProduto" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;" onchange="document.getElementById('itemValor').value=this.options[this.selectedIndex].dataset.preco">${opts}</select>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
+                <div>
+                    <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">Qtd</label>
+                    <input type="number" id="itemQtd" value="1" min="1" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">Valor (R$)</label>
+                    <input type="number" id="itemValor" step="0.01" value="${_produtosCache[0].preco}" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">Desconto</label>
+                    <input type="number" id="itemDesconto" step="0.01" value="0" min="0" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;">
+                </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button onclick="document.getElementById('modalItem').remove()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg-white);cursor:pointer;font-size:13px;">Cancelar</button>
+                <button onclick="adicionarItem()" style="padding:8px 16px;border-radius:8px;border:none;background:var(--primary);color:#fff;cursor:pointer;font-weight:600;font-size:13px;">Adicionar</button>
+            </div>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function adicionarItem() {
+    const payload = {
+        produto_id: document.getElementById('itemProduto').value,
+        quantidade: document.getElementById('itemQtd').value,
+        valor_unitario: document.getElementById('itemValor').value,
+        desconto: document.getElementById('itemDesconto').value || '0',
+    };
+    fetch(URLS.itens, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF},
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            showNotification(d.message, 'success');
+            const modal = document.getElementById('modalItem');
+            if (modal) modal.remove();
+            carregarItens();
+        } else {
+            showNotification(d.error || 'Erro ao adicionar.', 'error');
+        }
+    })
+    .catch(() => showNotification('Erro de conexao.', 'error'));
+}
+
+function removerItem(id) {
+    if (!confirm('Remover este item?')) return;
+    fetch('/comercial/crm/itens/' + id + '/remover/', {
+        method: 'DELETE',
+        headers: {'X-CSRFToken': CSRF}
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) { showNotification(d.message, 'success'); carregarItens(); }
+        else { showNotification(d.error || 'Erro.', 'error'); }
+    })
+    .catch(() => showNotification('Erro de conexao.', 'error'));
+}
+
+// Carregar itens ao abrir a pagina
+carregarItens();
 </script>
 {% endblock %}
