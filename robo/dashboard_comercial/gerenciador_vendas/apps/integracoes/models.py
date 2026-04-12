@@ -130,6 +130,44 @@ class IntegracaoAPI(TenantMixin):
             return False
         return timezone.now() < self.token_expira_em
 
+    # --- Modos de sincronização -------------------------------------------
+
+    SYNC_MODOS = ['automatico', 'manual', 'desativado']
+
+    SYNC_FEATURES = {
+        'enviar_lead': 'Enviar lead ao criar',
+        'sincronizar_cliente': 'Sincronizar dados do cliente',
+        'sincronizar_servicos': 'Sincronizar servicos contratados',
+    }
+
+    def get_modo_sync(self, feature):
+        """Retorna o modo de sync de uma feature: automatico|manual|desativado."""
+        modos = self.configuracoes_extras.get('modos_sync', {})
+        return modos.get(feature, 'automatico')
+
+    def set_modo_sync(self, feature, modo):
+        """Define o modo de sync de uma feature."""
+        if modo not in self.SYNC_MODOS:
+            return
+        if 'modos_sync' not in self.configuracoes_extras:
+            self.configuracoes_extras['modos_sync'] = {}
+        self.configuracoes_extras['modos_sync'][feature] = modo
+        self.save(update_fields=['configuracoes_extras'])
+
+    def sync_habilitado(self, feature):
+        """Retorna True se a feature está em modo automatico."""
+        return self.get_modo_sync(feature) == 'automatico'
+
+    def sync_permitido(self, feature):
+        """Retorna True se a feature não está desativada (automatico ou manual)."""
+        return self.get_modo_sync(feature) != 'desativado'
+
+    @property
+    def modos_sync_dict(self):
+        """Retorna dict com todos os modos de sync."""
+        modos = self.configuracoes_extras.get('modos_sync', {})
+        return {f: modos.get(f, 'automatico') for f in self.SYNC_FEATURES}
+
 
 class LogIntegracao(TenantMixin):
     """

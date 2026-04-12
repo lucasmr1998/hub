@@ -37,6 +37,11 @@ def enviar_lead_para_integracao(sender, instance, **kwargs):
         logger.debug("Integracao %s nao suportada para envio de leads.", integracao.tipo)
         return
 
+    # Checar modo de sync: só executa se automatico
+    if not integracao.sync_habilitado('enviar_lead'):
+        logger.debug("Envio de lead desativado/manual para integracao %s.", integracao.nome)
+        return
+
     if instance.status_api != 'pendente':
         return
 
@@ -88,6 +93,9 @@ def _sincronizar_cliente_hubsoft(lead, service=None):
         integracao = _obter_integracao_hubsoft()
         if not integracao:
             logger.debug("Sem integração Hubsoft ativa. Lead pk=%s ignorado.", lead.pk)
+            return None
+        if not integracao.sync_permitido('sincronizar_cliente'):
+            logger.debug("Sincronizacao de cliente desativada para integracao %s.", integracao.nome)
             return None
         service = HubsoftService(integracao)
 

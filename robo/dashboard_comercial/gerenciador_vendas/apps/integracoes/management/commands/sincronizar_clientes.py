@@ -41,6 +41,14 @@ class Command(BaseCommand):
             ))
             return
 
+        # Checar modo de sync (cron só roda se automatico)
+        if not options.get('lead_id') and not integracao.sync_habilitado('sincronizar_cliente'):
+            self.stdout.write(self.style.WARNING(
+                f'Sincronizacao de clientes em modo "{integracao.get_modo_sync("sincronizar_cliente")}". '
+                f'Use --lead-id para sync manual.'
+            ))
+            return
+
         qs = LeadProspecto.objects.filter(status_api='processado')
 
         if options['lead_id']:

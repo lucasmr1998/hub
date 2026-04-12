@@ -100,6 +100,37 @@
             <span>{% if integ.erros_24h %}<span style="color:var(--danger);"><strong>{{ integ.erros_24h }}</strong> erros</span>{% else %}<span style="color:var(--success);">Sem erros</span>{% endif %}</span>
             {% if integ.token_valido %}<span style="color:var(--success);"><i class="fas fa-check-circle"></i> Token válido</span>{% endif %}
         </div>
+        {% if integ.tipo == 'hubsoft' %}
+        <div class="integ-sync-modes" id="sync-modes-{{ integ.pk }}" style="margin-bottom:10px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-subtle,#f8fafc);">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;letter-spacing:.03em;"><i class="fas fa-sync-alt"></i> Modos de Sincronizacao</div>
+            <div style="display:flex;flex-direction:column;gap:6px;" id="sync-fields-{{ integ.pk }}">
+                <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+                    <span>Enviar lead ao criar</span>
+                    <select onchange="salvarModoSync({{ integ.pk }})" class="sync-mode-select" data-feature="enviar_lead" style="padding:3px 8px;border-radius:6px;border:1px solid var(--border);font-size:11px;">
+                        <option value="automatico">Automatico</option>
+                        <option value="manual">Manual (API)</option>
+                        <option value="desativado">Desativado</option>
+                    </select>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+                    <span>Sincronizar dados do cliente</span>
+                    <select onchange="salvarModoSync({{ integ.pk }})" class="sync-mode-select" data-feature="sincronizar_cliente" style="padding:3px 8px;border-radius:6px;border:1px solid var(--border);font-size:11px;">
+                        <option value="automatico">Automatico</option>
+                        <option value="manual">Manual (API)</option>
+                        <option value="desativado">Desativado</option>
+                    </select>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+                    <span>Sincronizar servicos contratados</span>
+                    <select onchange="salvarModoSync({{ integ.pk }})" class="sync-mode-select" data-feature="sincronizar_servicos" style="padding:3px 8px;border-radius:6px;border:1px solid var(--border);font-size:11px;">
+                        <option value="automatico">Automatico</option>
+                        <option value="manual">Manual (API)</option>
+                        <option value="desativado">Desativado</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        {% endif %}
         <div class="integ-actions">
             <button class="integ-btn primary" onclick="testarConexao({{ integ.pk }})"><i class="fas fa-plug"></i> Testar</button>
             <button class="integ-btn" onclick="editarIntegracao({{ integ.pk }})"><i class="fas fa-edit"></i> Editar</button>
@@ -309,5 +340,44 @@ function excluirIntegracao(pk, nome) {
 }
 
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') fecharModal(); });
+
+// ── Modos de Sync ──
+function carregarModosSync(pk) {
+    fetch(`/integracoes/api/${pk}/modos-sync/get/`)
+    .then(r=>r.json())
+    .then(d=>{
+        if(!d.success) return;
+        const container = document.getElementById('sync-fields-'+pk);
+        if(!container) return;
+        container.querySelectorAll('.sync-mode-select').forEach(sel=>{
+            const f = sel.dataset.feature;
+            if(d.modos_sync[f]) sel.value = d.modos_sync[f];
+        });
+    });
+}
+
+function salvarModoSync(pk) {
+    const container = document.getElementById('sync-fields-'+pk);
+    const modos = {};
+    container.querySelectorAll('.sync-mode-select').forEach(sel=>{
+        modos[sel.dataset.feature] = sel.value;
+    });
+    fetch(`/integracoes/api/${pk}/modos-sync/`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-CSRFToken':H['X-CSRFToken']},
+        body: JSON.stringify({modos_sync: modos})
+    })
+    .then(r=>r.json())
+    .then(d=>{
+        if(d.success) showNotification(d.message, 'success');
+        else showNotification(d.error||'Erro', 'error');
+    });
+}
+
+// Carregar modos ao abrir a pagina
+document.querySelectorAll('[id^="sync-modes-"]').forEach(el=>{
+    const pk = el.id.replace('sync-modes-','');
+    carregarModosSync(pk);
+});
 </script>
 {% endblock %}

@@ -408,6 +408,45 @@ def api_integracao_toggle(request, pk):
 
 @login_required
 @require_http_methods(["POST"])
+def api_integracao_modos_sync(request, pk):
+    """Salvar modos de sincronização de uma integração."""
+    try:
+        integ = IntegracaoAPI.objects.get(pk=pk)
+        data = json.loads(request.body)
+        modos = data.get('modos_sync', {})
+
+        for feature, modo in modos.items():
+            if feature in IntegracaoAPI.SYNC_FEATURES and modo in IntegracaoAPI.SYNC_MODOS:
+                integ.set_modo_sync(feature, modo)
+
+        return JsonResponse({
+            'success': True,
+            'modos_sync': integ.modos_sync_dict,
+            'message': 'Modos de sincronização atualizados.',
+        })
+    except IntegracaoAPI.DoesNotExist:
+        return JsonResponse({'error': 'Integração não encontrada'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def api_integracao_modos_sync_get(request, pk):
+    """Retorna os modos de sincronização de uma integração."""
+    try:
+        integ = IntegracaoAPI.objects.get(pk=pk)
+        return JsonResponse({
+            'success': True,
+            'modos_sync': integ.modos_sync_dict,
+            'features': {k: v for k, v in IntegracaoAPI.SYNC_FEATURES.items()},
+            'modos_disponiveis': IntegracaoAPI.SYNC_MODOS,
+        })
+    except IntegracaoAPI.DoesNotExist:
+        return JsonResponse({'error': 'Integração não encontrada'}, status=404)
+
+
+@login_required
+@require_http_methods(["POST"])
 def api_integracao_testar(request, pk):
     """Testar conexão com a integração."""
     import requests as http_requests
