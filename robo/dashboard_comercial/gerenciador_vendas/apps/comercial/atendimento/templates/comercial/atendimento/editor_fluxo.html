@@ -100,6 +100,13 @@
 .config-group input, .config-group select, .config-group textarea { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:12px; font-family:'Inter',sans-serif; box-sizing:border-box; }
 .config-group textarea { resize:vertical; min-height:60px; }
 @keyframes pulse-node { 0%,100% { box-shadow:0 0 0 3px #059669; } 50% { box-shadow:0 0 0 6px rgba(5,150,105,0.4); } }
+.node-preview { font-size:10px; color:var(--text-light); padding:2px 8px 4px; max-height:28px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; opacity:.7; }
+.node-preview:empty { display:none; }
+.node-status-dot { width:8px; height:8px; border-radius:50%; position:absolute; top:6px; right:6px; }
+.node-status-dot.configured { background:#059669; }
+.node-status-dot.partial { background:#d97706; }
+.node-status-dot.empty { background:#dc2626; }
+.autosave-indicator { font-size:11px; color:var(--text-light); margin-left:8px; transition:opacity .3s; }
 </style>
 {% endblock %}
 
@@ -525,7 +532,7 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
     else if (tipo === 'transferir_humano') boxContent = '<div class="box">Transfere para fila humana</div>';
     else boxContent = '<div class="box">Ponto de entrada</div>';
 
-    const html = `<div class="title-box">${icon} ${nome}</div>${boxContent}`;
+    const html = `<div class="title-box">${icon} ${nome}</div>${boxContent}<div class="node-preview" data-nid="${nodeId}"></div>`;
 
     // Config padrao por subtipo
     let defaultConfig = {};
@@ -1480,6 +1487,85 @@ function toggleFluxoStatus() {
     })
     .catch(() => { btn.disabled = false; window.showNotification('Erro de conexao', 'error'); });
 }
+
+// ── Auto-save (30s) ──
+let _autoSaveTimer = null;
+function iniciarAutoSave() {
+    if (_autoSaveTimer) clearInterval(_autoSaveTimer);
+    _autoSaveTimer = setInterval(() => {
+        if (isDirty) {
+            salvarFluxo();
+        }
+    }, 30000);
+}
+iniciarAutoSave();
+
+// ── Preview/status nos nodos ──
+function atualizarPreviewNodos() {
+    const drawflowData = editor.export();
+    for (const [moduleKey, moduleData] of Object.entries(drawflowData.drawflow)) {
+        for (const [nodeId, node] of Object.entries(moduleData.data)) {
+            const config = node.data.config || {};
+            const tipo = node.data.tipo;
+            let preview = '';
+            let statusClass = 'empty';
+
+            if (tipo === 'questao') {
+                preview = config.titulo || '';
+                statusClass = config.titulo ? 'configured' : 'empty';
+            } else if (tipo === 'condicao') {
+                preview = config.campo || config.expressao || '';
+                statusClass = (config.campo || config.expressao) ? 'configured' : 'empty';
+            } else if (tipo === 'acao') {
+                preview = config.mensagem ? config.mensagem.substring(0, 40) : '';
+                statusClass = 'configured';
+            } else if (tipo === 'delay') {
+                const mins = config.delay_minutos || config.delay_segundos;
+                preview = mins ? `${mins} min` : '';
+                statusClass = mins ? 'configured' : 'empty';
+            } else if (tipo.startsWith('ia_')) {
+                preview = config.modelo || '';
+                statusClass = config.integracao_ia_id ? 'configured' : 'empty';
+            } else if (tipo === 'transferir_humano') {
+                preview = config.fila_nome || '';
+                statusClass = config.fila_id ? 'configured' : 'partial';
+            } else if (tipo === 'entrada') {
+                statusClass = 'configured';
+            } else if (tipo === 'finalizacao') {
+                statusClass = 'configured';
+            }
+
+            // Atualizar preview text (via data attribute + CSS content, sem modificar innerHTML)
+            const previewEl = document.querySelector(`#node-${nodeId} .node-preview`);
+            if (previewEl) previewEl.textContent = preview;
+
+            // Status dot
+            const nodeEl = document.querySelector(`#node-${nodeId}`);
+            if (nodeEl) {
+                let dot = nodeEl.querySelector('.node-status-dot');
+                if (!dot) {
+                    dot = document.createElement('div');
+                    dot.className = 'node-status-dot';
+                    nodeEl.appendChild(dot);
+                }
+                dot.className = `node-status-dot ${statusClass}`;
+            }
+        }
+    }
+}
+
+// Atualizar previews quando config muda
+const _origSalvarConfig = window.salvarConfigNodo;
+if (typeof salvarConfigNodo === 'function') {
+    const _orig = salvarConfigNodo;
+    window.salvarConfigNodo = function() {
+        _orig.apply(this, arguments);
+        setTimeout(atualizarPreviewNodos, 100);
+    };
+}
+
+// Atualizar previews apos carregar o fluxo
+setTimeout(atualizarPreviewNodos, 500);
 
 // ── Carregar fluxo salvo ──
 const fluxoSalvo = {{ fluxo_json|safe }};
