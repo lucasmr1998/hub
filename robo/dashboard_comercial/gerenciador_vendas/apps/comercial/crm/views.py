@@ -74,7 +74,8 @@ def _oportunidade_para_dict(op):
         'estagio_id': op.estagio_id,
         'data_criacao': op.data_criacao.strftime('%d/%m/%Y'),
         'data_prevista': op.data_fechamento_previsto.strftime('%d/%m/%Y') if op.data_fechamento_previsto else None,
-        'plano': op.plano_interesse.nome if op.plano_interesse else None,
+        'plano': op.plano_interesse.nome if op.plano_interesse else None,  # legado
+        'itens_count': sum(1 for _ in op.itens.all()),
         'tags': [{'nome': t.nome, 'cor': t.cor_hex} for t in op.tags.all()],
         'churn_risk_score': op.churn_risk_score,
         'dados_custom': op.dados_custom or {},

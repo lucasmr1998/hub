@@ -471,7 +471,47 @@ class HubsoftService:
             })
         removidos.delete()
 
+        # Sincronizar ProdutoServico (catálogo unificado) para cada serviço
+        self._sincronizar_produtos_crm(cliente, servicos_data)
+
         return todas_alteracoes
+
+    def _sincronizar_produtos_crm(self, cliente, servicos_data):
+        """Garante que cada serviço do HubSoft tenha um ProdutoServico no catálogo."""
+        try:
+            from apps.comercial.crm.models import ProdutoServico
+
+            if not self.integracao.sync_permitido('sincronizar_servicos'):
+                return
+
+            tenant = cliente.tenant
+            for svc in servicos_data:
+                id_servico = str(svc.get('id_servico') or '')
+                nome = svc.get('nome') or ''
+                if not id_servico or not nome:
+                    continue
+
+                dados_erp = {
+                    'velocidade_download': svc.get('velocidade_download') or '',
+                    'velocidade_upload': svc.get('velocidade_upload') or '',
+                    'tecnologia': svc.get('tecnologia') or '',
+                    'numero_plano': svc.get('numero_plano'),
+                    'id_servico_hubsoft': svc.get('id_servico'),
+                }
+
+                ProdutoServico.objects.update_or_create(
+                    tenant=tenant,
+                    id_externo=id_servico,
+                    defaults={
+                        'nome': nome,
+                        'preco': svc.get('valor') or 0,
+                        'categoria': 'plano',
+                        'recorrencia': 'mensal',
+                        'dados_erp': dados_erp,
+                    }
+                )
+        except Exception as e:
+            logger.warning(f'Erro ao sincronizar ProdutoServico: {e}')
 
     @staticmethod
     def _valores_iguais(valor_atual, novo_valor):

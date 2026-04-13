@@ -668,13 +668,23 @@ class CadastroCliente(TenantMixin):
         verbose_name="Estado"
     )
 
-    # Plano e vencimento
+    # Produto selecionado (fonte de verdade — catálogo unificado do CRM)
+    produto = models.ForeignKey(
+        'crm.ProdutoServico',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='cadastros',
+        verbose_name="Produto Selecionado"
+    )
+
+    # Legado (mantidos para retrocompatibilidade de migrations)
     plano_selecionado = models.ForeignKey(
         PlanoInternet,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        verbose_name="Plano Selecionado"
+        verbose_name="Plano Selecionado (legado)"
     )
 
     vencimento_selecionado = models.ForeignKey(
@@ -682,7 +692,7 @@ class CadastroCliente(TenantMixin):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        verbose_name="Vencimento Selecionado"
+        verbose_name="Vencimento Selecionado (legado)"
     )
 
     # Status do cadastro
@@ -844,11 +854,29 @@ class CadastroCliente(TenantMixin):
         from apps.comercial.leads.models import LeadProspecto
         try:
             # Criar lead
+            # Resolver produto/plano (prioriza catálogo unificado)
+            _nome_produto = 'Nao selecionado'
+            _valor = None
+            _id_plano_rp = None
+            _id_dia_vencimento = None
+
+            if self.produto:
+                _nome_produto = self.produto.nome
+                _valor = self.produto.preco
+                _id_plano_rp = self.produto.id_externo or (self.produto.dados_erp or {}).get('id_sistema_externo')
+            elif self.plano_selecionado:
+                _nome_produto = self.plano_selecionado.nome
+                _valor = self.plano_selecionado.valor_mensal
+                _id_plano_rp = self.plano_selecionado.id_sistema_externo
+
+            if self.vencimento_selecionado:
+                _id_dia_vencimento = self.vencimento_selecionado.descricao
+
             lead = LeadProspecto.objects.create(
                 nome_razaosocial=self.nome_completo,
                 email=self.email,
                 telefone=self.telefone,
-                valor=self.plano_selecionado.valor_mensal if self.plano_selecionado else None,
+                valor=_valor,
                 origem=self.origem_cadastro,
                 status_api='pendente',
                 cpf_cnpj=self.cpf,
@@ -857,12 +885,10 @@ class CadastroCliente(TenantMixin):
                 cidade=self.cidade,
                 estado=self.estado,
                 cep=self.cep,
-                observacoes=f"Cadastro via site - Plano: {self.plano_selecionado.nome if self.plano_selecionado else 'Não selecionado'}",
-                # Definir vendedor padrão para cadastros do site (ID 538)
+                observacoes=f"Cadastro via site - Produto: {_nome_produto}",
                 id_vendedor_rp=150,
-                # Definir plano e vencimento
-                id_plano_rp=self.plano_selecionado.id_sistema_externo if self.plano_selecionado else None,
-                id_dia_vencimento=self.vencimento_selecionado.descricao if self.vencimento_selecionado else None,
+                id_plano_rp=_id_plano_rp,
+                id_dia_vencimento=_id_dia_vencimento,
             )
 
             # Atualizar referência
@@ -888,7 +914,7 @@ class CadastroCliente(TenantMixin):
                 nome_contato=self.nome_completo,
                 telefone=self.telefone,
                 status='fluxo_finalizado',
-                observacoes=f"Cadastro finalizado via site - Plano: {self.plano_selecionado.nome if self.plano_selecionado else 'Não selecionado'}",
+                observacoes=f"Cadastro finalizado via site - Produto: {self.produto.nome if self.produto else (self.plano_selecionado.nome if self.plano_selecionado else 'Nao selecionado')}",
                 data_hora_contato=self.data_finalizacao or timezone.now(),
                 duracao=self.tempo_total_cadastro or timedelta(seconds=0),
                 convertido_lead=True,

@@ -183,8 +183,19 @@ def api_cadastro_cliente(request):
             origem_cadastro=data.get('origem_cadastro', 'site')
         )
 
-        # Definir plano se selecionado
-        if data.get('plano_id'):
+        # Definir produto se selecionado (catálogo unificado)
+        if data.get('produto_id'):
+            try:
+                from apps.comercial.crm.models import ProdutoServico
+                produto = ProdutoServico.objects.get(id=data['produto_id'], ativo=True)
+                cadastro.produto = produto
+                # Manter legado populado para retrocompatibilidade
+                if produto.plano_internet_id:
+                    cadastro.plano_selecionado = produto.plano_internet
+            except Exception:
+                pass
+        elif data.get('plano_id'):
+            # Fallback legado: PlanoInternet direto
             try:
                 plano = PlanoInternet.objects.get(id=data['plano_id'], ativo=True)
                 cadastro.plano_selecionado = plano

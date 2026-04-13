@@ -649,19 +649,31 @@ class ProdutoServico(TenantMixin):
     recorrencia = models.CharField(max_length=15, choices=RECORRENCIA_CHOICES, default='mensal', verbose_name="Recorrência")
     ativo = models.BooleanField(default=True, verbose_name="Ativo")
     ordem = models.PositiveIntegerField(default=0, verbose_name="Ordem de Exibição")
+    destaque = models.CharField(
+        max_length=50, blank=True, default='',
+        choices=[('', 'Sem Destaque'), ('popular', 'Mais Popular'), ('premium', 'Premium'),
+                 ('economico', 'Mais Econômico'), ('recomendado', 'Recomendado')],
+        verbose_name="Destaque"
+    )
 
-    # Mapeamento opcional com sistema externo (HubSoft, etc.)
+    # Integração com ERP (HubSoft, etc.)
+    id_externo = models.CharField(
+        max_length=100, blank=True, default='',
+        verbose_name="ID no Sistema Externo",
+        help_text="ID do produto no ERP integrado"
+    )
+    dados_erp = models.JSONField(
+        default=dict, blank=True,
+        verbose_name="Dados do ERP",
+        help_text="Campos específicos do ERP (velocidade, tecnologia, etc.)"
+    )
+
+    # Legado: FK para PlanoInternet (será removido após migração completa)
     plano_internet = models.ForeignKey(
         'cadastro.PlanoInternet', on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='produtos_crm',
-        verbose_name="Plano de Internet (HubSoft)",
-        help_text="Vincular a um plano para integração com HubSoft"
-    )
-    id_externo = models.CharField(
-        max_length=100, blank=True, default='',
-        verbose_name="ID no Sistema Externo",
-        help_text="ID do produto no sistema integrado"
+        verbose_name="Plano de Internet (legado)",
     )
 
     data_criacao = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")

@@ -561,29 +561,52 @@ class QuestaoFluxo(TenantMixin):
         return []
 
     def _get_opcoes_dinamicas(self, contexto=None):
-        """Busca opções dinâmicas baseadas na fonte configurada"""
+        """Busca opções dinâmicas baseadas na fonte configurada."""
         if self.opcoes_dinamicas_fonte == 'planos_internet':
-            planos = PlanoInternet.objects.filter(ativo=True).order_by('ordem_exibicao', 'valor_mensal')
+            # Usa ProdutoServico (catálogo unificado) com categoria 'plano'
+            from apps.comercial.crm.models import ProdutoServico
+            produtos = ProdutoServico.objects.filter(
+                ativo=True, categoria='plano'
+            ).order_by('ordem', 'preco')
+
+            # Fallback: se não tem ProdutoServico, tenta PlanoInternet legado
+            if not produtos.exists():
+                from apps.comercial.cadastro.models import PlanoInternet
+                produtos_legado = PlanoInternet.objects.filter(ativo=True).order_by('ordem_exibicao', 'valor_mensal')
+                opcoes = []
+                for plano in produtos_legado:
+                    opcoes.append({
+                        'valor': str(plano.id),
+                        'texto': f"{plano.nome} - {plano.get_velocidade_formatada()} - {plano.get_valor_formatado()}",
+                        'dados_extras': {
+                            'id_sistema_externo': plano.id_sistema_externo,
+                            'valor_mensal': float(plano.valor_mensal),
+                            'velocidade': plano.velocidade_download
+                        }
+                    })
+                return opcoes
+
             opcoes = []
-            for plano in planos:
+            for prod in produtos:
+                dados_erp = prod.dados_erp or {}
+                velocidade = dados_erp.get('velocidade_download', '')
+                texto = prod.nome
+                if velocidade:
+                    texto += f" - {velocidade}MB"
+                texto += f" - R$ {prod.preco}"
                 opcoes.append({
-                    'valor': str(plano.id),
-                    'texto': f"{plano.nome} - {plano.get_velocidade_formatada()} - {plano.get_valor_formatado()}",
+                    'valor': str(prod.id),
+                    'texto': texto,
                     'dados_extras': {
-                        'id_sistema_externo': plano.id_sistema_externo,
-                        'valor_mensal': float(plano.valor_mensal),
-                        'velocidade': plano.velocidade_download
+                        'id_externo': prod.id_externo,
+                        'valor': float(prod.preco),
+                        **dados_erp,
                     }
                 })
-            # Adicionar opção "Ver mais"
-            opcoes.append({
-                'valor': 'ver_mais_planos',
-                'texto': '📋 Ver mais opções de planos',
-                'tipo': 'acao_especial'
-            })
             return opcoes
 
         elif self.opcoes_dinamicas_fonte == 'opcoes_vencimento':
+            from apps.comercial.cadastro.models import OpcaoVencimento
             vencimentos = OpcaoVencimento.objects.filter(ativo=True).order_by('ordem_exibicao')
             opcoes = []
             for venc in vencimentos:
@@ -594,12 +617,6 @@ class QuestaoFluxo(TenantMixin):
                         'dia_vencimento': venc.dia_vencimento
                     }
                 })
-            # Adicionar opção "Ver mais"
-            opcoes.append({
-                'valor': 'ver_mais_vencimentos',
-                'texto': '📅 Ver mais opções de vencimento',
-                'tipo': 'acao_especial'
-            })
             return opcoes
 
         elif self.opcoes_dinamicas_fonte == 'query_customizada' and self.query_opcoes_dinamicas:
