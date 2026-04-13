@@ -5,7 +5,7 @@ from .models import (
     OportunidadeVenda, HistoricoPipelineEstagio,
     TarefaCRM, NotaInterna, MetaVendas,
     SegmentoCRM, MembroSegmento, AlertaRetencao, ConfiguracaoCRM,
-    ProdutoServico, ItemOportunidade,
+    ProdutoServico, ItemOportunidade, OpcaoVencimentoCRM,
 )
 
 
@@ -190,6 +190,15 @@ class ItemOportunidadeAdmin(admin.ModelAdmin):
     list_display = ['oportunidade', 'produto', 'quantidade', 'valor_unitario', 'desconto']
     list_filter = ['produto']
     autocomplete_fields = ['oportunidade', 'produto']
+
+
+@admin.register(OpcaoVencimentoCRM)
+class OpcaoVencimentoCRMAdmin(admin.ModelAdmin):
+    list_display = ['dia', 'descricao', 'id_externo', 'ativo', 'ordem']
+    list_filter = ['ativo']
+    list_editable = ['ativo', 'ordem']
+    search_fields = ['descricao']
+    ordering = ['ordem', 'dia']
 
 
 @admin.register(ConfiguracaoCRM)

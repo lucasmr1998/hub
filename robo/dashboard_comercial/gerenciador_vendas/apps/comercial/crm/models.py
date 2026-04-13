@@ -690,6 +690,34 @@ class ProdutoServico(TenantMixin):
         return f"{self.nome} — R$ {self.preco}"
 
 
+class OpcaoVencimentoCRM(TenantMixin):
+    """Opções de dia de vencimento configuráveis por tenant, com mapeamento para ERP."""
+    dia = models.PositiveIntegerField(verbose_name="Dia do Vencimento")
+    descricao = models.CharField(max_length=100, blank=True, default='', verbose_name="Descrição")
+    id_externo = models.CharField(
+        max_length=100, blank=True, default='',
+        verbose_name="ID no ERP",
+        help_text="ID desta opção no sistema integrado (HubSoft, etc.)"
+    )
+    dados_erp = models.JSONField(
+        default=dict, blank=True,
+        verbose_name="Dados do ERP",
+        help_text="Campos extras do ERP para este vencimento"
+    )
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    ordem = models.PositiveIntegerField(default=0, verbose_name="Ordem")
+
+    class Meta:
+        db_table = 'crm_opcoes_vencimento'
+        verbose_name = "Opção de Vencimento"
+        verbose_name_plural = "📅 14. Opções de Vencimento"
+        ordering = ['ordem', 'dia']
+        unique_together = ('tenant', 'dia')
+
+    def __str__(self):
+        return f"Dia {self.dia}" + (f" — {self.descricao}" if self.descricao else '')
+
+
 class ItemOportunidade(TenantMixin):
     """Item vinculado a uma oportunidade (produto + quantidade + valor)."""
     oportunidade = models.ForeignKey(

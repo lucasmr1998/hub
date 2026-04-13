@@ -19,7 +19,7 @@ from .models import (
     PipelineEstagio, OportunidadeVenda, HistoricoPipelineEstagio,
     TarefaCRM, NotaInterna, MetaVendas, SegmentoCRM, AlertaRetencao,
     ConfiguracaoCRM, EquipeVendas, PerfilVendedor,
-    ProdutoServico, ItemOportunidade,
+    ProdutoServico, ItemOportunidade, OpcaoVencimentoCRM,
 )
 
 logger = logging.getLogger(__name__)
@@ -1889,10 +1889,12 @@ def webhook_hubsoft_contrato(request):
 
 @login_required
 def produtos_lista(request):
-    """Página de gestão de produtos/serviços."""
+    """Página de gestão de produtos/serviços e opções de vencimento."""
     produtos = ProdutoServico.objects.all().order_by('ordem', 'nome')
+    vencimentos = OpcaoVencimentoCRM.objects.all().order_by('ordem', 'dia')
     context = {
         'produtos': produtos,
+        'vencimentos': vencimentos,
         'categorias': ProdutoServico.CATEGORIA_CHOICES,
         'recorrencias': ProdutoServico.RECORRENCIA_CHOICES,
     }
@@ -2074,3 +2076,70 @@ def api_item_oportunidade_remover(request, pk):
         })
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+# ============================================================================
+# OPÇÕES DE VENCIMENTO
+# ============================================================================
+
+@login_required
+@require_http_methods(["POST"])
+def api_vencimento_salvar(request):
+    """Criar ou editar opção de vencimento."""
+    try:
+        data = json.loads(request.body)
+        venc_id = data.get('id')
+        dia = int(data.get('dia', 0))
+
+        if not dia or dia < 1 or dia > 31:
+            return JsonResponse({'error': 'Dia inválido (1-31)'}, status=400)
+
+        campos = {
+            'dia': dia,
+            'descricao': data.get('descricao', '').strip(),
+            'id_externo': data.get('id_externo', '').strip(),
+            'dados_erp': data.get('dados_erp', {}),
+            'ativo': data.get('ativo', True),
+            'ordem': int(data.get('ordem', 0)),
+        }
+
+        if venc_id:
+            venc = get_object_or_404(OpcaoVencimentoCRM, pk=venc_id)
+            for k, v in campos.items():
+                setattr(venc, k, v)
+            venc.save()
+            msg = 'Opcao de vencimento atualizada.'
+        else:
+            campos['tenant'] = request.tenant
+            venc = OpcaoVencimentoCRM.objects.create(**campos)
+            msg = 'Opcao de vencimento criada.'
+
+        return JsonResponse({'success': True, 'message': msg, 'id': venc.pk})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["DELETE"])
+def api_vencimento_excluir(request, pk):
+    """Excluir opção de vencimento."""
+    try:
+        venc = get_object_or_404(OpcaoVencimentoCRM, pk=pk)
+        venc.delete()
+        return JsonResponse({'success': True, 'message': 'Opcao excluida.'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def api_vencimentos_listar(request):
+    """API para listar opções de vencimento."""
+    qs = OpcaoVencimentoCRM.objects.filter(ativo=True).order_by('ordem', 'dia')
+    data = [{
+        'id': v.pk,
+        'dia': v.dia,
+        'descricao': v.descricao,
+        'id_externo': v.id_externo,
+        'ativo': v.ativo,
+    } for v in qs]
+    return JsonResponse({'success': True, 'vencimentos': data})

@@ -95,6 +95,65 @@
 </div>
 {% endif %}
 
+<!-- OPÇÕES DE VENCIMENTO -->
+<div style="margin-top:32px;">
+    <div class="page-header">
+        <div class="page-title" style="font-size:17px;"><i class="fas fa-calendar-alt"></i> Opcoes de Vencimento</div>
+        <button class="btn-primary" onclick="abrirModalVencimento()" style="font-size:12px;padding:8px 14px;"><i class="fas fa-plus"></i> Nova Opcao</button>
+    </div>
+
+    {% if vencimentos %}
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+        {% for v in vencimentos %}
+        <div class="produto-card {% if not v.ativo %}inativo{% endif %}" style="min-width:180px;max-width:240px;" id="venc-{{ v.pk }}">
+            <div class="produto-header">
+                <div>
+                    <div class="produto-nome">Dia {{ v.dia }}</div>
+                    {% if v.descricao %}<div class="produto-codigo">{{ v.descricao }}</div>{% endif %}
+                    {% if v.id_externo %}<div class="produto-codigo">ERP: {{ v.id_externo }}</div>{% endif %}
+                </div>
+                <div class="produto-actions">
+                    <button onclick="editarVencimento({{ v.pk }}, {{ v.dia }}, '{{ v.descricao|escapejs }}', '{{ v.id_externo|escapejs }}')" title="Editar"><i class="fas fa-pen"></i></button>
+                    <button onclick="excluirVencimento({{ v.pk }})" title="Excluir"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding:30px;">
+        <i class="fas fa-calendar-alt" style="font-size:32px;"></i>
+        <p>Nenhuma opcao de vencimento cadastrada.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Vencimento -->
+<div class="modal-overlay" id="modalVencimento">
+    <div class="modal-box" style="max-width:400px;">
+        <div class="modal-title"><i class="fas fa-calendar-alt"></i> <span id="modalVencTitulo">Nova Opcao</span></div>
+        <input type="hidden" id="vencId">
+        <div class="form-row-inline">
+            <div class="form-row">
+                <label>Dia do Vencimento *</label>
+                <input type="number" id="vencDia" min="1" max="31" placeholder="Ex: 10">
+            </div>
+            <div class="form-row">
+                <label>ID no ERP</label>
+                <input type="text" id="vencIdExterno" placeholder="Opcional">
+            </div>
+        </div>
+        <div class="form-row">
+            <label>Descricao</label>
+            <input type="text" id="vencDescricao" placeholder="Ex: Todo dia 10">
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="fecharModalVencimento()">Cancelar</button>
+            <button class="btn-primary" onclick="salvarVencimento()"><i class="fas fa-save"></i> Salvar</button>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Criar/Editar -->
 <div class="modal-overlay" id="modalProduto">
     <div class="modal-box">
@@ -240,6 +299,53 @@ function excluirProduto(id, nome) {
         }
     })
     .catch(() => showNotification('Erro de conexao.', 'error'));
+}
+
+// ── Vencimentos ──
+function abrirModalVencimento(dados) {
+    document.getElementById('vencId').value = dados ? dados.id : '';
+    document.getElementById('vencDia').value = dados ? dados.dia : '';
+    document.getElementById('vencDescricao').value = dados ? dados.descricao : '';
+    document.getElementById('vencIdExterno').value = dados ? dados.id_externo : '';
+    document.getElementById('modalVencTitulo').textContent = dados ? 'Editar Opcao' : 'Nova Opcao';
+    document.getElementById('modalVencimento').classList.add('show');
+}
+function fecharModalVencimento() { document.getElementById('modalVencimento').classList.remove('show'); }
+document.getElementById('modalVencimento').addEventListener('click', function(e) { if (e.target === this) fecharModalVencimento(); });
+
+function editarVencimento(id, dia, descricao, id_externo) {
+    abrirModalVencimento({id, dia, descricao, id_externo});
+}
+
+function salvarVencimento() {
+    const payload = {
+        id: document.getElementById('vencId').value || null,
+        dia: document.getElementById('vencDia').value,
+        descricao: document.getElementById('vencDescricao').value,
+        id_externo: document.getElementById('vencIdExterno').value,
+    };
+    if (!payload.dia) { showNotification('Informe o dia.', 'warning'); return; }
+
+    fetch('{% url "crm:api_vencimento_salvar" %}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) { showNotification(d.message, 'success'); fecharModalVencimento(); location.reload(); }
+        else { showNotification(d.error || 'Erro.', 'error'); }
+    });
+}
+
+function excluirVencimento(id) {
+    if (!confirm('Excluir esta opcao de vencimento?')) return;
+    fetch('/comercial/crm/vencimentos/' + id + '/excluir/', {method:'DELETE', headers:{'X-CSRFToken':getCsrf()}})
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) { showNotification(d.message, 'success'); document.getElementById('venc-'+id)?.remove(); }
+        else { showNotification(d.error, 'error'); }
+    });
 }
 </script>
 {% endblock %}

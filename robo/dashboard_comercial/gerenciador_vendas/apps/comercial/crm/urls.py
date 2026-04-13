@@ -70,6 +70,11 @@ urlpatterns = [
     path('produtos/<int:pk>/excluir/', views.api_produto_excluir, name='api_produto_excluir'),
     path('api/produtos/', views.api_produtos_listar, name='api_produtos_listar'),
 
+    # Opções de Vencimento
+    path('vencimentos/salvar/', views.api_vencimento_salvar, name='api_vencimento_salvar'),
+    path('vencimentos/<int:pk>/excluir/', views.api_vencimento_excluir, name='api_vencimento_excluir'),
+    path('api/vencimentos/', views.api_vencimentos_listar, name='api_vencimentos_listar'),
+
     # Itens da Oportunidade
     path('oportunidades/<int:pk>/itens/', views.api_itens_oportunidade, name='api_itens_oportunidade'),
     path('itens/<int:pk>/remover/', views.api_item_oportunidade_remover, name='api_item_remover'),
