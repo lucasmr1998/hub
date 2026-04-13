@@ -1,170 +1,189 @@
 {% extends 'sistema/base.html' %}
 {% block extra_css %}
 <style>
-  .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
-  .page-title { font-size:20px; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:10px; }
-  .page-title i { color:var(--primary); }
+  .section { background:var(--bg-white); border-radius:14px; border:1px solid var(--border); margin-bottom:20px; overflow:hidden; }
+  .section-header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); }
+  .section-title { font-size:15px; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:8px; }
+  .section-title i { font-size:16px; }
+  .section-count { background:var(--primary-light); color:var(--primary); font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; margin-left:6px; }
 
-  .produtos-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:14px; }
-  .produto-card {
-    background:var(--bg-white); border-radius:12px; border:1px solid var(--border);
-    padding:18px; transition:all .2s; position:relative;
+  /* Tabela de produtos */
+  .prod-table { width:100%; border-collapse:collapse; }
+  .prod-table th { padding:10px 16px; text-align:left; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); background:var(--bg-subtle,#f8fafc); }
+  .prod-table td { padding:12px 16px; border-top:1px solid var(--border); font-size:13px; vertical-align:middle; }
+  .prod-table tr:hover td { background:rgba(59,130,246,0.02); }
+  .prod-table .nome-cell { font-weight:600; color:var(--text-main); }
+  .prod-table .nome-cell small { font-weight:400; color:var(--text-light); display:block; font-size:11px; margin-top:1px; }
+  .prod-table .preco-cell { font-weight:700; color:var(--primary); font-size:14px; white-space:nowrap; }
+  .prod-table .preco-cell small { font-weight:500; color:var(--text-light); font-size:11px; }
+
+  .badge-sm { font-size:10px; padding:2px 8px; border-radius:10px; font-weight:600; white-space:nowrap; }
+  .badge-plano { background:#ede9fe; color:#7c3aed; }
+  .badge-servico { background:#dbeafe; color:#2563eb; }
+  .badge-equipamento { background:#fef3c7; color:#d97706; }
+  .badge-addon { background:#d1fae5; color:#059669; }
+  .badge-outro { background:#f1f5f9; color:#64748b; }
+  .badge-mensal { background:#ecfdf5; color:#059669; }
+  .badge-off { background:#fef2f2; color:#dc2626; }
+
+  .actions-cell { display:flex; gap:2px; }
+  .actions-cell button { background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:13px; padding:6px 8px; border-radius:6px; transition:all .15s; }
+  .actions-cell button:hover { color:var(--primary); background:var(--primary-light); }
+  .actions-cell button.danger:hover { color:#dc2626; background:#fef2f2; }
+
+  /* Chips de vencimento */
+  .venc-grid { display:flex; flex-wrap:wrap; gap:8px; padding:16px 20px; }
+  .venc-chip {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 16px; border-radius:10px; border:1px solid var(--border);
+    background:var(--bg-white); transition:all .15s; cursor:default;
   }
-  .produto-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.06); }
-  .produto-card.inativo { opacity:0.55; }
+  .venc-chip:hover { border-color:var(--primary); box-shadow:0 2px 8px rgba(59,130,246,0.08); }
+  .venc-dia { font-size:20px; font-weight:800; color:var(--primary); line-height:1; min-width:32px; text-align:center; }
+  .venc-info { font-size:12px; color:var(--text-muted); line-height:1.3; }
+  .venc-info strong { color:var(--text-main); font-weight:600; }
+  .venc-actions { display:flex; gap:2px; margin-left:auto; }
+  .venc-actions button { background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:12px; padding:4px 6px; border-radius:4px; }
+  .venc-actions button:hover { color:var(--primary); background:var(--primary-light); }
 
-  .produto-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
-  .produto-nome { font-size:15px; font-weight:700; color:var(--text-main); }
-  .produto-codigo { font-size:11px; color:var(--text-light); margin-top:2px; }
-  .produto-actions { display:flex; gap:6px; }
-  .produto-actions button { background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:14px; padding:4px; border-radius:6px; }
-  .produto-actions button:hover { color:var(--primary); background:var(--primary-light); }
+  .btn-add { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:10px; font-size:12px; font-weight:600; cursor:pointer; border:none; color:#fff; background:var(--primary); transition:all .15s; }
+  .btn-add:hover { opacity:.9; }
+  .btn-add-outline { background:none; border:1px dashed var(--border); color:var(--text-muted); }
+  .btn-add-outline:hover { border-color:var(--primary); color:var(--primary); background:var(--primary-light); }
 
-  .produto-body { margin-bottom:12px; }
-  .produto-desc { font-size:12px; color:var(--text-light); margin-bottom:8px; line-height:1.4; max-height:36px; overflow:hidden; }
-  .produto-preco { font-size:22px; font-weight:800; color:var(--primary); }
-  .produto-preco small { font-size:12px; font-weight:500; color:var(--text-light); }
-
-  .produto-footer { display:flex; gap:8px; flex-wrap:wrap; }
-  .produto-badge { font-size:11px; padding:3px 10px; border-radius:20px; font-weight:600; }
-  .badge-categoria { background:var(--primary-light); color:var(--primary); }
-  .badge-recorrencia { background:#f0fdf4; color:#16a34a; }
-  .badge-inativo { background:#fef2f2; color:#dc2626; }
+  .empty-section { text-align:center; padding:40px 20px; color:var(--text-muted); }
+  .empty-section i { font-size:28px; opacity:.2; margin-bottom:8px; display:block; }
+  .empty-section p { font-size:13px; margin-bottom:12px; }
 
   /* Modal */
   .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:1000; display:none; align-items:center; justify-content:center; }
   .modal-overlay.show { display:flex; }
   .modal-box { background:var(--bg-white); border-radius:16px; padding:24px; width:90%; max-width:520px; max-height:85vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.15); }
-  .modal-title { font-size:17px; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+  .modal-title { font-size:16px; font-weight:700; margin-bottom:18px; display:flex; align-items:center; gap:8px; color:var(--text-main); }
   .modal-title i { color:var(--primary); }
-
   .form-row { margin-bottom:14px; }
-  .form-row label { display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:5px; }
-  .form-row input, .form-row select, .form-row textarea { width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); font-size:13px; background:var(--bg-white); color:var(--text-main); }
+  .form-row label { display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.03em; color:var(--text-muted); margin-bottom:5px; }
+  .form-row input, .form-row select, .form-row textarea { width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); font-size:13px; background:var(--bg-white); color:var(--text-main); box-sizing:border-box; }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color:var(--primary); outline:none; box-shadow:0 0 0 3px rgba(59,130,246,0.1); }
   .form-row textarea { resize:vertical; min-height:60px; }
   .form-row-inline { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-
-  .btn-primary { background:var(--primary); color:#fff; border:none; padding:10px 20px; border-radius:10px; font-weight:600; font-size:13px; cursor:pointer; }
-  .btn-primary:hover { opacity:.9; }
-  .btn-secondary { background:var(--bg-subtle,#f1f5f9); color:var(--text-main); border:none; padding:10px 20px; border-radius:10px; font-weight:600; font-size:13px; cursor:pointer; }
-  .modal-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
-
-  .empty-state { text-align:center; padding:60px 20px; color:var(--text-muted); }
-  .empty-state i { font-size:48px; margin-bottom:12px; opacity:.3; }
-  .empty-state p { font-size:14px; }
+  .modal-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; padding-top:16px; border-top:1px solid var(--border); }
+  .btn-modal { padding:9px 20px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all .15s; }
+  .btn-modal.primary { background:var(--primary); color:#fff; }
+  .btn-modal.primary:hover { opacity:.9; }
+  .btn-modal.cancel { background:var(--bg-subtle,#f1f5f9); color:var(--text-main); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div class="page-title"><i class="fas fa-box"></i> Produtos e Servicos</div>
-    <button class="btn-primary" onclick="abrirModal()"><i class="fas fa-plus"></i> Novo Produto</button>
-</div>
-
-{% if produtos %}
-<div class="produtos-grid">
-    {% for p in produtos %}
-    <div class="produto-card {% if not p.ativo %}inativo{% endif %}" id="card-{{ p.pk }}">
-        <div class="produto-header">
-            <div>
-                <div class="produto-nome">{{ p.nome }}</div>
-                {% if p.codigo %}<div class="produto-codigo">{{ p.codigo }}</div>{% endif %}
-            </div>
-            <div class="produto-actions">
-                <button onclick="editarProduto({{ p.pk }})" title="Editar"><i class="fas fa-pen"></i></button>
-                <button onclick="excluirProduto({{ p.pk }}, '{{ p.nome|escapejs }}')" title="Excluir"><i class="fas fa-trash"></i></button>
-            </div>
+<!-- PRODUTOS -->
+<div class="section">
+    <div class="section-header">
+        <div class="section-title">
+            <i class="fas fa-box" style="color:var(--primary);"></i> Produtos e Servicos
+            <span class="section-count">{{ produtos|length }}</span>
         </div>
-        <div class="produto-body">
-            {% if p.descricao %}<div class="produto-desc">{{ p.descricao }}</div>{% endif %}
-            <div class="produto-preco">R$ {{ p.preco|floatformat:2 }} <small>/{{ p.get_recorrencia_display }}</small></div>
-        </div>
-        <div class="produto-footer">
-            <span class="produto-badge badge-categoria">{{ p.get_categoria_display }}</span>
-            <span class="produto-badge badge-recorrencia">{{ p.get_recorrencia_display }}</span>
-            {% if not p.ativo %}<span class="produto-badge badge-inativo">Inativo</span>{% endif %}
-        </div>
-    </div>
-    {% endfor %}
-</div>
-{% else %}
-<div class="empty-state">
-    <i class="fas fa-box-open"></i>
-    <p>Nenhum produto cadastrado ainda.</p>
-    <button class="btn-primary" onclick="abrirModal()" style="margin-top:12px;"><i class="fas fa-plus"></i> Criar primeiro produto</button>
-</div>
-{% endif %}
-
-<!-- OPÇÕES DE VENCIMENTO -->
-<div style="margin-top:32px;">
-    <div class="page-header">
-        <div class="page-title" style="font-size:17px;"><i class="fas fa-calendar-alt"></i> Opcoes de Vencimento</div>
-        <button class="btn-primary" onclick="abrirModalVencimento()" style="font-size:12px;padding:8px 14px;"><i class="fas fa-plus"></i> Nova Opcao</button>
+        <button class="btn-add" onclick="abrirModal()"><i class="fas fa-plus"></i> Novo Produto</button>
     </div>
 
-    {% if vencimentos %}
-    <div style="display:flex;flex-wrap:wrap;gap:10px;">
-        {% for v in vencimentos %}
-        <div class="produto-card {% if not v.ativo %}inativo{% endif %}" style="min-width:180px;max-width:240px;" id="venc-{{ v.pk }}">
-            <div class="produto-header">
-                <div>
-                    <div class="produto-nome">Dia {{ v.dia }}</div>
-                    {% if v.descricao %}<div class="produto-codigo">{{ v.descricao }}</div>{% endif %}
-                    {% if v.id_externo %}<div class="produto-codigo">ERP: {{ v.id_externo }}</div>{% endif %}
-                </div>
-                <div class="produto-actions">
-                    <button onclick="editarVencimento({{ v.pk }}, {{ v.dia }}, '{{ v.descricao|escapejs }}', '{{ v.id_externo|escapejs }}')" title="Editar"><i class="fas fa-pen"></i></button>
-                    <button onclick="excluirVencimento({{ v.pk }})" title="Excluir"><i class="fas fa-trash"></i></button>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
+    {% if produtos %}
+    <table class="prod-table">
+        <thead>
+            <tr>
+                <th>Produto</th>
+                <th>Categoria</th>
+                <th>Preco</th>
+                <th>Recorrencia</th>
+                <th>Status</th>
+                <th style="width:80px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in produtos %}
+            <tr id="card-{{ p.pk }}" {% if not p.ativo %}style="opacity:.5;"{% endif %}>
+                <td class="nome-cell">
+                    {{ p.nome }}
+                    {% if p.codigo %}<small>{{ p.codigo }}</small>{% endif %}
+                </td>
+                <td><span class="badge-sm badge-{{ p.categoria }}">{{ p.get_categoria_display }}</span></td>
+                <td class="preco-cell">R$ {{ p.preco|floatformat:2 }} <small>/{{ p.get_recorrencia_display }}</small></td>
+                <td style="font-size:12px;color:var(--text-muted);">{{ p.get_recorrencia_display }}</td>
+                <td>
+                    {% if p.ativo %}
+                    <span class="badge-sm badge-mensal">Ativo</span>
+                    {% else %}
+                    <span class="badge-sm badge-off">Inativo</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="actions-cell">
+                        <button onclick="editarProduto({{ p.pk }})" title="Editar"><i class="fas fa-pen"></i></button>
+                        <button class="danger" onclick="excluirProduto({{ p.pk }}, '{{ p.nome|escapejs }}')" title="Excluir"><i class="fas fa-trash"></i></button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
     {% else %}
-    <div class="empty-state" style="padding:30px;">
-        <i class="fas fa-calendar-alt" style="font-size:32px;"></i>
-        <p>Nenhuma opcao de vencimento cadastrada.</p>
+    <div class="empty-section">
+        <i class="fas fa-box-open"></i>
+        <p>Nenhum produto cadastrado ainda</p>
+        <button class="btn-add" onclick="abrirModal()"><i class="fas fa-plus"></i> Criar primeiro produto</button>
     </div>
     {% endif %}
 </div>
 
-<!-- Modal Vencimento -->
-<div class="modal-overlay" id="modalVencimento">
-    <div class="modal-box" style="max-width:400px;">
-        <div class="modal-title"><i class="fas fa-calendar-alt"></i> <span id="modalVencTitulo">Nova Opcao</span></div>
-        <input type="hidden" id="vencId">
-        <div class="form-row-inline">
-            <div class="form-row">
-                <label>Dia do Vencimento *</label>
-                <input type="number" id="vencDia" min="1" max="31" placeholder="Ex: 10">
-            </div>
-            <div class="form-row">
-                <label>ID no ERP</label>
-                <input type="text" id="vencIdExterno" placeholder="Opcional">
-            </div>
+<!-- VENCIMENTOS -->
+<div class="section">
+    <div class="section-header">
+        <div class="section-title">
+            <i class="fas fa-calendar-alt" style="color:#7c3aed;"></i> Opcoes de Vencimento
+            <span class="section-count">{{ vencimentos|length }}</span>
         </div>
-        <div class="form-row">
-            <label>Descricao</label>
-            <input type="text" id="vencDescricao" placeholder="Ex: Todo dia 10">
-        </div>
-        <div class="modal-footer">
-            <button class="btn-secondary" onclick="fecharModalVencimento()">Cancelar</button>
-            <button class="btn-primary" onclick="salvarVencimento()"><i class="fas fa-save"></i> Salvar</button>
-        </div>
+        <button class="btn-add" onclick="abrirModalVencimento()" style="background:#7c3aed;"><i class="fas fa-plus"></i> Nova Opcao</button>
     </div>
+
+    {% if vencimentos %}
+    <div class="venc-grid">
+        {% for v in vencimentos %}
+        <div class="venc-chip" id="venc-{{ v.pk }}" {% if not v.ativo %}style="opacity:.5;"{% endif %}>
+            <div class="venc-dia">{{ v.dia }}</div>
+            <div class="venc-info">
+                <strong>Dia {{ v.dia }}</strong>
+                {% if v.descricao %}<br>{{ v.descricao }}{% endif %}
+                {% if v.id_externo %}<br><span style="font-size:10px;">ERP: {{ v.id_externo }}</span>{% endif %}
+            </div>
+            <div class="venc-actions">
+                <button onclick="editarVencimento({{ v.pk }}, {{ v.dia }}, '{{ v.descricao|escapejs }}', '{{ v.id_externo|escapejs }}')" title="Editar"><i class="fas fa-pen"></i></button>
+                <button onclick="excluirVencimento({{ v.pk }})" title="Excluir"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        {% endfor %}
+
+        <button class="venc-chip btn-add-outline" onclick="abrirModalVencimento()" style="border-style:dashed;cursor:pointer;">
+            <i class="fas fa-plus" style="font-size:14px;"></i>
+            <span style="font-size:12px;">Adicionar</span>
+        </button>
+    </div>
+    {% else %}
+    <div class="empty-section">
+        <i class="fas fa-calendar-alt"></i>
+        <p>Nenhuma opcao de vencimento cadastrada</p>
+        <button class="btn-add" onclick="abrirModalVencimento()" style="background:#7c3aed;"><i class="fas fa-plus"></i> Criar primeira opcao</button>
+    </div>
+    {% endif %}
 </div>
 
-<!-- Modal Criar/Editar -->
+<!-- Modal Produto -->
 <div class="modal-overlay" id="modalProduto">
     <div class="modal-box">
         <div class="modal-title"><i class="fas fa-box"></i> <span id="modalTitulo">Novo Produto</span></div>
         <input type="hidden" id="produtoId">
-
         <div class="form-row">
             <label>Nome *</label>
             <input type="text" id="prodNome" placeholder="Nome do produto ou servico">
         </div>
-
         <div class="form-row-inline">
             <div class="form-row">
                 <label>Preco (R$) *</label>
@@ -175,7 +194,6 @@
                 <input type="text" id="prodCodigo" placeholder="Opcional">
             </div>
         </div>
-
         <div class="form-row-inline">
             <div class="form-row">
                 <label>Categoria</label>
@@ -194,21 +212,44 @@
                 </select>
             </div>
         </div>
-
         <div class="form-row">
             <label>Descricao</label>
             <textarea id="prodDescricao" placeholder="Descricao do produto (opcional)"></textarea>
         </div>
-
         <div class="form-row">
-            <label>
-                <input type="checkbox" id="prodAtivo" checked> Ativo
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;letter-spacing:0;">
+                <input type="checkbox" id="prodAtivo" checked style="width:auto;"> Ativo
             </label>
         </div>
-
         <div class="modal-footer">
-            <button class="btn-secondary" onclick="fecharModal()">Cancelar</button>
-            <button class="btn-primary" onclick="salvarProduto()"><i class="fas fa-save"></i> Salvar</button>
+            <button class="btn-modal cancel" onclick="fecharModal()">Cancelar</button>
+            <button class="btn-modal primary" onclick="salvarProduto()"><i class="fas fa-check"></i> Salvar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Vencimento -->
+<div class="modal-overlay" id="modalVencimento">
+    <div class="modal-box" style="max-width:420px;">
+        <div class="modal-title"><i class="fas fa-calendar-alt" style="color:#7c3aed;"></i> <span id="modalVencTitulo">Nova Opcao</span></div>
+        <input type="hidden" id="vencId">
+        <div class="form-row-inline">
+            <div class="form-row">
+                <label>Dia do Vencimento *</label>
+                <input type="number" id="vencDia" min="1" max="31" placeholder="Ex: 10">
+            </div>
+            <div class="form-row">
+                <label>ID no ERP</label>
+                <input type="text" id="vencIdExterno" placeholder="Opcional">
+            </div>
+        </div>
+        <div class="form-row">
+            <label>Descricao</label>
+            <input type="text" id="vencDescricao" placeholder="Ex: Todo dia 10">
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal cancel" onclick="fecharModalVencimento()">Cancelar</button>
+            <button class="btn-modal primary" onclick="salvarVencimento()" style="background:#7c3aed;"><i class="fas fa-check"></i> Salvar</button>
         </div>
     </div>
 </div>
@@ -218,6 +259,7 @@
 <script>
 function getCsrf() { const c = document.cookie.match(/csrftoken=([^;]+)/); return c ? c[1] : ''; }
 
+// ── Produtos ──
 function abrirModal(dados) {
     document.getElementById('produtoId').value = dados ? dados.id : '';
     document.getElementById('prodNome').value = dados ? dados.nome : '';
@@ -230,12 +272,8 @@ function abrirModal(dados) {
     document.getElementById('modalTitulo').textContent = dados ? 'Editar Produto' : 'Novo Produto';
     document.getElementById('modalProduto').classList.add('show');
 }
-
 function fecharModal() { document.getElementById('modalProduto').classList.remove('show'); }
-
-document.getElementById('modalProduto').addEventListener('click', function(e) {
-    if (e.target === this) fecharModal();
-});
+document.getElementById('modalProduto').addEventListener('click', function(e) { if (e.target === this) fecharModal(); });
 
 function salvarProduto() {
     const payload = {
@@ -248,24 +286,17 @@ function salvarProduto() {
         descricao: document.getElementById('prodDescricao').value,
         ativo: document.getElementById('prodAtivo').checked,
     };
-
     if (!payload.nome) { showNotification('Informe o nome do produto.', 'warning'); return; }
     if (!payload.preco || parseFloat(payload.preco) < 0) { showNotification('Informe um preco valido.', 'warning'); return; }
 
     fetch('{% url "crm:api_produto_salvar" %}', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+        method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
         body: JSON.stringify(payload)
     })
     .then(r => r.json())
     .then(d => {
-        if (d.success) {
-            showNotification(d.message, 'success');
-            fecharModal();
-            location.reload();
-        } else {
-            showNotification(d.error || 'Erro ao salvar.', 'error');
-        }
+        if (d.success) { showNotification(d.message, 'success'); fecharModal(); location.reload(); }
+        else { showNotification(d.error || 'Erro ao salvar.', 'error'); }
     })
     .catch(() => showNotification('Erro de conexao.', 'error'));
 }
@@ -273,32 +304,17 @@ function salvarProduto() {
 function editarProduto(id) {
     fetch('{% url "crm:api_produtos_listar" %}?ativos=0')
         .then(r => r.json())
-        .then(d => {
-            if (d.success) {
-                const p = d.produtos.find(x => x.id === id);
-                if (p) abrirModal(p);
-            }
-        });
+        .then(d => { if (d.success) { const p = d.produtos.find(x => x.id === id); if (p) abrirModal(p); } });
 }
 
 function excluirProduto(id, nome) {
-    if (!confirm('Excluir "' + nome + '"? Esta acao nao pode ser desfeita.')) return;
-
-    fetch('/comercial/crm/produtos/' + id + '/excluir/', {
-        method: 'DELETE',
-        headers: {'X-CSRFToken': getCsrf()}
-    })
+    if (!confirm('Excluir "' + nome + '"?')) return;
+    fetch('/comercial/crm/produtos/' + id + '/excluir/', {method: 'DELETE', headers: {'X-CSRFToken': getCsrf()}})
     .then(r => r.json())
     .then(d => {
-        if (d.success) {
-            showNotification(d.message, 'success');
-            const card = document.getElementById('card-' + id);
-            if (card) card.remove();
-        } else {
-            showNotification(d.error || 'Erro ao excluir.', 'error');
-        }
-    })
-    .catch(() => showNotification('Erro de conexao.', 'error'));
+        if (d.success) { showNotification(d.message, 'success'); document.getElementById('card-' + id)?.remove(); }
+        else { showNotification(d.error || 'Erro ao excluir.', 'error'); }
+    });
 }
 
 // ── Vencimentos ──
@@ -313,9 +329,7 @@ function abrirModalVencimento(dados) {
 function fecharModalVencimento() { document.getElementById('modalVencimento').classList.remove('show'); }
 document.getElementById('modalVencimento').addEventListener('click', function(e) { if (e.target === this) fecharModalVencimento(); });
 
-function editarVencimento(id, dia, descricao, id_externo) {
-    abrirModalVencimento({id, dia, descricao, id_externo});
-}
+function editarVencimento(id, dia, descricao, id_externo) { abrirModalVencimento({id, dia, descricao, id_externo}); }
 
 function salvarVencimento() {
     const payload = {
@@ -325,10 +339,8 @@ function salvarVencimento() {
         id_externo: document.getElementById('vencIdExterno').value,
     };
     if (!payload.dia) { showNotification('Informe o dia.', 'warning'); return; }
-
     fetch('{% url "crm:api_vencimento_salvar" %}', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+        method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
         body: JSON.stringify(payload)
     })
     .then(r => r.json())
