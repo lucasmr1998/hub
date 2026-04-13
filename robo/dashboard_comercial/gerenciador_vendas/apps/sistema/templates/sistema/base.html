@@ -571,7 +571,7 @@
             else { notifBadge.style.display = 'none'; }
         }
 
-        function playNotifSound() {
+        window.playNotifSound = function() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = ctx.createOscillator();
@@ -584,7 +584,7 @@
                 osc.start(ctx.currentTime);
                 osc.stop(ctx.currentTime + 0.3);
             } catch(e) {}
-        }
+        };
 
         // ── Unified notification polling (badge + toasts) ────
         function pollNotifications() {
