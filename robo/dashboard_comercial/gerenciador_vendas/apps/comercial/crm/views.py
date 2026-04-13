@@ -411,6 +411,11 @@ def api_criar_oportunidade(request):
         origem_crm='manual',
     )
 
+    # Distribuir automaticamente se não tem responsável
+    if not responsavel_id:
+        from apps.comercial.crm.distribution import distribuir_oportunidade
+        distribuir_oportunidade(oport)
+
     return JsonResponse({'ok': True, 'id': oport.pk})
 
 
@@ -1352,6 +1357,12 @@ def api_salvar_config(request):
     config.webhook_n8n_nova_oportunidade = w1 or None
     config.webhook_n8n_mudanca_estagio = w2 or None
     config.webhook_n8n_tarefa_vencida = w3 or None
+
+    # Distribuição de oportunidades
+    config.distribuicao_modo = request.POST.get('distribuicao_modo', 'desativado')
+    equipe_id = request.POST.get('distribuicao_equipe_id', '').strip()
+    config.distribuicao_equipe = EquipeVendas.objects.filter(pk=equipe_id).first() if equipe_id else None
+
     config.save()
     return JsonResponse({'ok': True})
 

@@ -595,7 +595,7 @@ def _acao_criar_oportunidade(config, contexto, atendimento):
             elif var_nome in ('curso_interesse', 'forma_ingresso', 'status_matricula') and var_valor:
                 dados_custom[var_nome] = var_valor
 
-        OportunidadeVenda.objects.create(
+        oportunidade = OportunidadeVenda.objects.create(
             tenant=tenant,
             lead=lead,
             pipeline=pipeline,
@@ -606,6 +606,12 @@ def _acao_criar_oportunidade(config, contexto, atendimento):
             origem_crm='automatico',
             dados_custom=dados_custom,
         )
+
+        # Distribuir automaticamente se não tem responsável
+        if not responsavel:
+            from apps.comercial.crm.distribution import distribuir_oportunidade
+            distribuir_oportunidade(oportunidade)
+
     except Exception as e:
         logger.error(f'Criar oportunidade erro: {e}')
         raise

@@ -769,6 +769,26 @@ class ConfiguracaoCRM(TenantMixin):
     webhook_n8n_nova_oportunidade = models.URLField(null=True, blank=True, verbose_name="Webhook N8N: Nova Oportunidade")
     webhook_n8n_mudanca_estagio = models.URLField(null=True, blank=True, verbose_name="Webhook N8N: Mudança de Estágio")
     webhook_n8n_tarefa_vencida = models.URLField(null=True, blank=True, verbose_name="Webhook N8N: Tarefa Vencida")
+
+    # Distribuição automática de oportunidades
+    MODO_DISTRIBUICAO_CHOICES = [
+        ('desativado', 'Desativado (sem atribuição)'),
+        ('round_robin', 'Round Robin (rodízio)'),
+    ]
+    distribuicao_modo = models.CharField(
+        max_length=15, choices=MODO_DISTRIBUICAO_CHOICES, default='desativado',
+        verbose_name="Distribuição de Oportunidades"
+    )
+    distribuicao_equipe = models.ForeignKey(
+        EquipeVendas, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='+', verbose_name="Equipe para Distribuição",
+        help_text="Equipe cujos membros receberão oportunidades automaticamente"
+    )
+    distribuicao_ultimo_vendedor_id = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name="Último vendedor atribuído (round robin)"
+    )
+
     data_atualizacao = models.DateTimeField(auto_now=True)
 
     class Meta:

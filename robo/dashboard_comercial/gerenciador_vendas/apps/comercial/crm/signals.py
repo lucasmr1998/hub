@@ -25,7 +25,7 @@ def criar_oportunidade_automatica(sender, instance, created, **kwargs):
         return
 
     try:
-        config = ConfiguracaoCRM.all_tenants.filter(pk=1).first()
+        config = ConfiguracaoCRM.all_tenants.filter(tenant=instance.tenant).first()
         if not config:
             return
     except Exception:
@@ -50,7 +50,7 @@ def criar_oportunidade_automatica(sender, instance, created, **kwargs):
         return
 
     try:
-        OportunidadeVenda.objects.create(
+        oportunidade = OportunidadeVenda.objects.create(
             lead=instance,
             pipeline=getattr(config, 'pipeline_padrao', None),
             estagio=config.estagio_inicial_padrao,
@@ -59,6 +59,11 @@ def criar_oportunidade_automatica(sender, instance, created, **kwargs):
             probabilidade=config.estagio_inicial_padrao.probabilidade_padrao,
         )
         logger.info(f"[CRM] OportunidadeVenda criada para LeadProspecto id={instance.pk}")
+
+        # Distribuir automaticamente (round robin)
+        from apps.comercial.crm.distribution import distribuir_oportunidade
+        distribuir_oportunidade(oportunidade)
+
     except Exception as e:
         logger.error(f"[CRM] Erro ao criar OportunidadeVenda para lead {instance.pk}: {e}")
 
