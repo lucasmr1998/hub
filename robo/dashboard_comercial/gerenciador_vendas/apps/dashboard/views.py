@@ -14,6 +14,8 @@ import json
 import logging
 import os
 
+from apps.sistema.decorators import user_tem_funcionalidade
+
 logger = logging.getLogger(__name__)
 
 # Models
@@ -55,6 +57,10 @@ def vendas_view(request):
 @login_required(login_url='sistema:login')
 def relatorios_view(request):
     """View para a página principal de relatórios"""
+    if not user_tem_funcionalidade(request, 'comercial.ver_relatorios'):
+        from django.contrib import messages
+        messages.error(request, 'Voce nao tem permissao para acessar relatorios.')
+        return render(request, 'dashboard/new_dash.html', {'user': request.user})
     from apps.comercial.leads.models import LeadProspecto, Prospecto, HistoricoContato
     from apps.integracoes.models import ClienteHubsoft, ServicoClienteHubsoft
     from django.db.models import Count, Q, Avg, Sum
@@ -242,8 +248,11 @@ def relatorios_view(request):
     return render(request, 'dashboard/relatorios.html', context)
 
 
+@login_required(login_url='sistema:login')
 def relatorio_leads_view(request):
     """Relatorio focado em Leads — reutiliza dados da view principal"""
+    if not user_tem_funcionalidade(request, 'comercial.ver_relatorios'):
+        return JsonResponse({'error': 'Sem permissao'}, status=403)
     from apps.comercial.leads.models import LeadProspecto
     from django.db.models import Count
     from datetime import datetime, timedelta
@@ -277,7 +286,10 @@ def relatorio_leads_view(request):
     })
 
 
+@login_required(login_url='sistema:login')
 def relatorio_clientes_view(request):
+    if not user_tem_funcionalidade(request, 'comercial.ver_relatorios'):
+        return JsonResponse({'error': 'Sem permissao'}, status=403)
     """Relatorio focado em Clientes HubSoft — somente leitura"""
     from apps.integracoes.models import ClienteHubsoft, ServicoClienteHubsoft
     from django.db.models import Count, Sum
@@ -325,7 +337,10 @@ def relatorio_clientes_view(request):
     })
 
 
+@login_required(login_url='sistema:login')
 def relatorio_atendimentos_view(request):
+    if not user_tem_funcionalidade(request, 'comercial.ver_relatorios'):
+        return JsonResponse({'error': 'Sem permissao'}, status=403)
     """Relatorio focado em Atendimentos — somente leitura"""
     from apps.comercial.leads.models import HistoricoContato
     from django.db.models import Count
@@ -368,7 +383,10 @@ def analise_atendimentos_view(request):
     return render(request, 'dashboard/analise_atendimentos.html', context)
 
 
+@login_required(login_url='sistema:login')
 def relatorio_conversoes_view(request):
+    if not user_tem_funcionalidade(request, 'comercial.ver_relatorios'):
+        return JsonResponse({'error': 'Sem permissao'}, status=403)
     """View para relatório de conversões"""
     context = {
         'user': request.user if request.user.is_authenticated else None
