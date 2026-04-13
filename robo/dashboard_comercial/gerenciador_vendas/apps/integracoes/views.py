@@ -501,6 +501,41 @@ def api_integracao_testar(request, pk):
             except Exception as e:
                 return JsonResponse({'success': False, 'message': f'Erro de conexão: {e}'})
 
+        elif integ.tipo in ('openai', 'anthropic', 'groq', 'google_ai'):
+            api_key = integ.api_key or integ.configuracoes_extras.get('api_key', '') or ''
+            if not api_key:
+                return JsonResponse({'success': False, 'message': 'API Key nao configurada.'})
+
+            try:
+                if integ.tipo == 'openai':
+                    resp = http_requests.get(
+                        'https://api.openai.com/v1/models',
+                        headers={'Authorization': f'Bearer {api_key}'},
+                        timeout=10,
+                    )
+                elif integ.tipo == 'anthropic':
+                    resp = http_requests.post(
+                        'https://api.anthropic.com/v1/messages',
+                        headers={'x-api-key': api_key, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json'},
+                        json={'model': 'claude-haiku-4-5-20251001', 'max_tokens': 1, 'messages': [{'role': 'user', 'content': 'hi'}]},
+                        timeout=10,
+                    )
+                elif integ.tipo == 'groq':
+                    resp = http_requests.get(
+                        'https://api.groq.com/openai/v1/models',
+                        headers={'Authorization': f'Bearer {api_key}'},
+                        timeout=10,
+                    )
+                else:
+                    resp = http_requests.get(integ.base_url, timeout=10)
+
+                if resp.status_code in (200, 201):
+                    return JsonResponse({'success': True, 'message': f'{integ.get_tipo_display()} conectado. API Key valida.'})
+                else:
+                    return JsonResponse({'success': False, 'message': f'{integ.get_tipo_display()} retornou HTTP {resp.status_code}. Verifique a API Key.'})
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': f'Erro de conexao: {e}'})
+
         else:
             try:
                 resp = http_requests.get(integ.base_url, timeout=10)
