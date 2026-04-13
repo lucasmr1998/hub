@@ -878,7 +878,7 @@ def _validar_com_ia(integracao_id, resposta, config):
     tipo = integracao.tipo
     base_url = integracao.base_url
     extras = integracao.configuracoes_extras or {}
-    api_key = extras.get('api_key', '') or integracao.access_token or integracao.client_secret or ''
+    api_key = integracao.api_key or extras.get('api_key', '') or integracao.access_token or integracao.client_secret or ''
     modelo = extras.get('modelo', '')
 
     headers = {'Content-Type': 'application/json'}
@@ -1227,7 +1227,7 @@ def _chamar_llm_simples(integracao, modelo, messages):
     tipo = integracao.tipo
     base_url = integracao.base_url
     extras = integracao.configuracoes_extras or {}
-    api_key = extras.get('api_key', '') or integracao.access_token or integracao.client_secret or ''
+    api_key = integracao.api_key or extras.get('api_key', '') or integracao.access_token or integracao.client_secret or ''
     modelo = modelo or extras.get('modelo', '')
 
     headers = {'Content-Type': 'application/json'}
@@ -1926,7 +1926,7 @@ def _chamar_llm_com_tools(integracao, modelo, messages, config, atendimento, con
 
     tipo = integracao.tipo
     extras = integracao.configuracoes_extras or {}
-    api_key = extras.get('api_key', '') or integracao.access_token or integracao.client_secret or ''
+    api_key = integracao.api_key or extras.get('api_key', '') or integracao.access_token or integracao.client_secret or ''
     modelo = modelo or extras.get('modelo', '')
 
     # Montar tools: customizadas + sistema

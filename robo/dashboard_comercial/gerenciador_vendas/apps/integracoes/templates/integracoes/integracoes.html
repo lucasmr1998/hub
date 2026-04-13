@@ -67,6 +67,7 @@
          data-client-id="{{ integ.client_id }}"
          data-username="{{ integ.username }}"
          data-token="{{ integ.access_token }}"
+         data-api-key="{{ integ.api_key }}"
          data-extras='{{ integ.configuracoes_extras|safe }}'>
         <div class="integ-header">
             <div class="integ-icon" style="background:{{ integ.cor }}"><i class="{{ integ.icon }}"></i></div>
@@ -207,9 +208,18 @@
             <!-- Campo Token (Uazapi/N8N) -->
             <div id="camposToken" style="display:none;">
                 <div class="form-group-sm">
-                    <label>Token / API Key</label>
-                    <input type="password" id="integToken" placeholder="Token da instância">
-                    <div class="form-hint">Token de autenticação da API</div>
+                    <label>Token</label>
+                    <input type="password" id="integToken" placeholder="Token da instancia">
+                    <div class="form-hint">Token de autenticacao da API</div>
+                </div>
+            </div>
+
+            <!-- Campo API Key (OpenAI/Anthropic/Groq) -->
+            <div id="camposApiKey" style="display:none;">
+                <div class="form-group-sm">
+                    <label>API Key</label>
+                    <input type="password" id="integApiKey" placeholder="sk-... ou chave do provider">
+                    <div class="form-hint">Chave de API do provider de IA</div>
                 </div>
             </div>
 
@@ -233,10 +243,16 @@ const CSRF=getCookie('csrftoken'), H={'Content-Type':'application/json','X-CSRFT
 let editId = null;
 
 // Toggle campos baseado no tipo
+const TIPOS_IA = ['openai', 'anthropic', 'groq', 'google_ai'];
+const TIPOS_OAUTH = ['hubsoft'];
+
 document.getElementById('integTipo').addEventListener('change', function() {
-    const isOAuth = this.value === 'hubsoft';
+    const tipo = this.value;
+    const isOAuth = TIPOS_OAUTH.includes(tipo);
+    const isIA = TIPOS_IA.includes(tipo);
     document.getElementById('camposOAuth').style.display = isOAuth ? 'block' : 'none';
-    document.getElementById('camposToken').style.display = isOAuth ? 'none' : 'block';
+    document.getElementById('camposToken').style.display = (!isOAuth && !isIA) ? 'block' : 'none';
+    document.getElementById('camposApiKey').style.display = isIA ? 'block' : 'none';
 });
 
 function abrirModal() {
@@ -265,6 +281,7 @@ function editarIntegracao(pk) {
     document.getElementById('integUsername').value = card.dataset.username || '';
     document.getElementById('integClientSecret').value = '';
     document.getElementById('integPassword').value = '';
+    document.getElementById('integApiKey').value = card.dataset.apiKey || '';
     document.getElementById('integToken').value = '';
 
     try {
@@ -285,11 +302,13 @@ function salvarIntegracao() {
 
     const data = { nome, tipo, base_url, configuracoes_extras: {} };
 
-    if (tipo === 'hubsoft') {
+    if (TIPOS_OAUTH.includes(tipo)) {
         data.client_id = document.getElementById('integClientId').value;
         data.client_secret = document.getElementById('integClientSecret').value;
         data.username = document.getElementById('integUsername').value;
         data.password = document.getElementById('integPassword').value;
+    } else if (TIPOS_IA.includes(tipo)) {
+        data.api_key = document.getElementById('integApiKey').value;
     } else {
         data.access_token = document.getElementById('integToken').value;
     }

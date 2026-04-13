@@ -335,6 +335,7 @@ def api_integracao_criar(request):
             username=data.get('username', ''),
             password=data.get('password', ''),
             access_token=data.get('access_token', ''),
+            api_key=data.get('api_key', ''),
             ativa=data.get('ativa', True),
             configuracoes_extras=data.get('configuracoes_extras', {}),
         )
@@ -367,6 +368,8 @@ def api_integracao_editar(request, pk):
             integ.password = data['password']
         if 'access_token' in data and data['access_token']:
             integ.access_token = data['access_token']
+        if 'api_key' in data:
+            integ.api_key = data['api_key']
         if 'ativa' in data:
             integ.ativa = data['ativa']
         if 'configuracoes_extras' in data:

@@ -96,6 +96,15 @@ class IntegracaoAPI(TenantMixin):
         verbose_name="Token Expira Em",
     )
 
+    # --- API Key (para providers de IA: OpenAI, Anthropic, Groq, etc.) ----
+    api_key = models.CharField(
+        max_length=500,
+        blank=True,
+        default='',
+        verbose_name="API Key",
+        help_text="Chave de API do provider (OpenAI, Anthropic, Groq, etc.)"
+    )
+
     # --- Controle ---------------------------------------------------------
     ativa = models.BooleanField(
         default=True,
