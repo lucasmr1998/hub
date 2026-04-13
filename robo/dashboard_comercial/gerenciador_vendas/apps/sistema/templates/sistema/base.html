@@ -152,11 +152,11 @@
             {% tem_funcionalidade 'comercial.gerenciar_metas' as pode_metas %}
             {% if pode_config_crm or pode_equipes or pode_metas or pode_pipeline %}
             <div class="sidebar-section-label" style="margin-top:12px;">CONFIGURACOES CRM</div>
-            {% if pode_pipeline %}<a href="{% url 'crm:produtos' %}" class="nav-item {% if request.resolver_match.url_name == 'produtos' %}active{% endif %}">
-                <i class="fas fa-box"></i><span class="nav-text">Produtos</span>
-            </a>{% endif %}
             {% if pode_config_crm %}<a href="{% url 'crm:configuracoes' %}" class="nav-item {% if request.resolver_match.url_name == 'configuracoes' and 'crm' in request.resolver_match.app_name|default:'' %}active{% endif %}">
                 <i class="fas fa-cog"></i><span class="nav-text">Configuracoes</span>
+            </a>{% endif %}
+            {% if pode_pipeline %}<a href="{% url 'crm:produtos' %}" class="nav-item {% if request.resolver_match.url_name == 'produtos' %}active{% endif %}">
+                <i class="fas fa-box"></i><span class="nav-text">Produtos</span>
             </a>{% endif %}
             {% if pode_equipes %}<a href="{% url 'crm:equipes' %}" class="nav-item {% if request.resolver_match.url_name == 'equipes' %}active{% endif %}">
                 <i class="fas fa-users"></i><span class="nav-text">Equipes</span>
