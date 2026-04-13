@@ -30,7 +30,7 @@ def notificar_lead_novo(sender, instance, created, **kwargs):
         usuarios = User.objects.filter(
             perfil__tenant=tenant,
             is_active=True,
-        ).exclude(perfil__cargo__in=['', None])
+        )
 
         for user in usuarios:
             criar_notificacao(
@@ -77,7 +77,7 @@ def notificar_lead_convertido(sender, instance, created, **kwargs):
         usuarios = User.objects.filter(
             perfil__tenant=tenant,
             is_active=True,
-        ).exclude(perfil__cargo__in=['', None])
+        )
 
         for user in usuarios:
             criar_notificacao(
