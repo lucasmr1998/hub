@@ -17,6 +17,7 @@ urlpatterns = [
 
     # Configuracoes
     path('configuracoes/recuperacao-senha/', views.config_recuperacao_senha_view, name='config_recuperacao_senha'),
+    path('configuracoes/assistente/', views.config_assistente_view, name='config_assistente'),
 
     # Documentação e Produto
     path('produto/', views.produto_view, name='produto'),

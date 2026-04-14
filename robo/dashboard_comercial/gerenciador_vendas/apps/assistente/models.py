@@ -5,6 +5,62 @@ from django.utils import timezone
 from apps.sistema.mixins import TenantMixin
 
 
+class ConfiguracaoAssistente(models.Model):
+    """Configuracao do assistente CRM por tenant. Gerenciado pelo aurora-admin."""
+    tenant = models.OneToOneField(
+        'sistema.Tenant', on_delete=models.CASCADE,
+        related_name='config_assistente', verbose_name="Tenant"
+    )
+    ativo = models.BooleanField(default=False, verbose_name="Assistente ativo")
+    integracao_whatsapp = models.ForeignKey(
+        'integracoes.IntegracaoAPI', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='assistente_whatsapp',
+        verbose_name="Integracao WhatsApp (Uazapi)",
+        help_text="Numero dedicado do assistente"
+    )
+    integracao_ia = models.ForeignKey(
+        'integracoes.IntegracaoAPI', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='assistente_ia',
+        verbose_name="Integracao IA (OpenAI, etc.)"
+    )
+    modelo_ia = models.CharField(
+        max_length=50, default='gpt-4o-mini',
+        verbose_name="Modelo IA"
+    )
+    mensagem_boas_vindas = models.TextField(
+        blank=True, default='Ola {nome}! Sou o assistente Hubtrix. Como posso ajudar?',
+        verbose_name="Mensagem de boas-vindas",
+        help_text="Use {nome} para o nome do usuario"
+    )
+    mensagem_acesso_restrito = models.TextField(
+        blank=True, default='Este numero e de uso exclusivo para usuarios do sistema Hubtrix.',
+        verbose_name="Mensagem de acesso restrito"
+    )
+    data_atualizacao = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'assistente_configuracao'
+        verbose_name = "Configuracao do Assistente"
+        verbose_name_plural = "Configuracoes do Assistente"
+
+    def __str__(self):
+        status = "Ativo" if self.ativo else "Inativo"
+        return f"Assistente {self.tenant.nome} ({status})"
+
+    @property
+    def webhook_url(self):
+        if self.integracao_whatsapp and self.integracao_whatsapp.api_token:
+            return f"/assistente/webhook/{self.integracao_whatsapp.api_token}/"
+        return None
+
+    @classmethod
+    def get_config(cls, tenant):
+        obj, _ = cls.objects.get_or_create(tenant=tenant)
+        return obj
+
+
 class ConversaAssistente(TenantMixin):
     """Sessao de conversa entre um usuario e o assistente IA."""
     usuario = models.ForeignKey(

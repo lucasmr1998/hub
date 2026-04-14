@@ -23,6 +23,7 @@ def webhook_assistente(request, api_token):
     Identifica o usuario pelo telefone e processa via engine.
     """
     from apps.integracoes.models import IntegracaoAPI
+    from .models import ConfiguracaoAssistente
 
     # Identificar integracao pelo token
     integracao_whatsapp = IntegracaoAPI.all_tenants.filter(
@@ -31,6 +32,14 @@ def webhook_assistente(request, api_token):
 
     if not integracao_whatsapp:
         return JsonResponse({'error': 'Token invalido'}, status=401)
+
+    # Verificar se assistente esta ativo para algum tenant
+    config_assistente = ConfiguracaoAssistente.objects.filter(
+        integracao_whatsapp=integracao_whatsapp, ativo=True,
+    ).first()
+
+    if not config_assistente:
+        return JsonResponse({'error': 'Assistente nao configurado'}, status=403)
 
     try:
         body = json.loads(request.body)
@@ -61,7 +70,8 @@ def webhook_assistente(request, api_token):
         ).first()
 
     if not perfil:
-        _responder_acesso_restrito(integracao_whatsapp, telefone)
+        msg = config_assistente.mensagem_acesso_restrito if config_assistente else 'Acesso restrito.'
+        _enviar_resposta(integracao_whatsapp, telefone, msg)
         return JsonResponse({'ok': True, 'access': 'denied'})
 
     usuario = perfil.user
@@ -70,7 +80,7 @@ def webhook_assistente(request, api_token):
     # Processar em background para nao travar o webhook
     thread = threading.Thread(
         target=_processar_e_responder,
-        args=(usuario, tenant, mensagem_texto, telefone, integracao_whatsapp),
+        args=(usuario, tenant, mensagem_texto, telefone, integracao_whatsapp, config_assistente),
         daemon=True,
     )
     thread.start()
@@ -101,7 +111,7 @@ def _extrair_telefone(body):
     return telefone
 
 
-def _processar_e_responder(usuario, tenant, mensagem_texto, telefone, integracao_whatsapp):
+def _processar_e_responder(usuario, tenant, mensagem_texto, telefone, integracao_whatsapp, config_assistente=None):
     """Processa a mensagem e envia resposta (roda em thread)."""
     from apps.sistema.middleware import set_current_tenant
     set_current_tenant(tenant)
@@ -109,14 +119,16 @@ def _processar_e_responder(usuario, tenant, mensagem_texto, telefone, integracao
     try:
         from .engine import processar_mensagem
 
-        # Buscar integracao de IA
-        integracao_ia = None
-        from apps.integracoes.models import IntegracaoAPI
-        integracao_ia = IntegracaoAPI.all_tenants.filter(
-            tenant=tenant,
-            tipo__in=['openai', 'anthropic', 'groq'],
-            ativa=True,
-        ).first()
+        # Usar integracao IA da config do assistente
+        integracao_ia = config_assistente.integracao_ia if config_assistente else None
+
+        if not integracao_ia:
+            from apps.integracoes.models import IntegracaoAPI
+            integracao_ia = IntegracaoAPI.all_tenants.filter(
+                tenant=tenant,
+                tipo__in=['openai', 'anthropic', 'groq'],
+                ativa=True,
+            ).first()
 
         resposta = processar_mensagem(usuario, tenant, mensagem_texto, integracao_ia)
 

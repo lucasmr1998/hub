@@ -574,3 +574,59 @@ def config_recuperacao_senha_view(request):
         'config': config,
         'integracoes': integracoes,
     })
+
+
+@login_required(login_url='sistema:login')
+def config_assistente_view(request):
+    """Configuracao do Assistente CRM por tenant (aurora-admin)."""
+    from apps.assistente.models import ConfiguracaoAssistente, MensagemAssistente
+    from apps.integracoes.models import IntegracaoAPI
+
+    tenants = Tenant.objects.filter(ativo=True)
+
+    # Configuracoes por tenant
+    configs = []
+    for tenant in tenants:
+        config = ConfiguracaoAssistente.get_config(tenant)
+        total_msgs = MensagemAssistente.all_tenants.filter(tenant=tenant).count()
+        configs.append({
+            'tenant': tenant,
+            'config': config,
+            'total_msgs': total_msgs,
+            'webhook_url': config.webhook_url,
+        })
+
+    integracoes_whatsapp = IntegracaoAPI.all_tenants.filter(
+        tipo__in=['uazapi', 'evolution'], ativa=True
+    ).select_related('tenant')
+
+    integracoes_ia = IntegracaoAPI.all_tenants.filter(
+        tipo__in=['openai', 'anthropic', 'groq'], ativa=True
+    ).select_related('tenant')
+
+    if request.method == 'POST':
+        import json
+        data = json.loads(request.body)
+        tenant_id = data.get('tenant_id')
+        tenant = get_object_or_404(Tenant, pk=tenant_id)
+        config = ConfiguracaoAssistente.get_config(tenant)
+
+        config.ativo = data.get('ativo', False)
+        config.modelo_ia = data.get('modelo_ia', 'gpt-4o-mini')
+        config.mensagem_boas_vindas = data.get('mensagem_boas_vindas', '')
+        config.mensagem_acesso_restrito = data.get('mensagem_acesso_restrito', '')
+
+        whatsapp_id = data.get('integracao_whatsapp_id')
+        config.integracao_whatsapp = IntegracaoAPI.all_tenants.filter(pk=whatsapp_id).first() if whatsapp_id else None
+
+        ia_id = data.get('integracao_ia_id')
+        config.integracao_ia = IntegracaoAPI.all_tenants.filter(pk=ia_id).first() if ia_id else None
+
+        config.save()
+        return JsonResponse({'success': True, 'message': f'Assistente do {tenant.nome} atualizado.'})
+
+    return render(request, 'admin_aurora/config_assistente.html', {
+        'configs': configs,
+        'integracoes_whatsapp': integracoes_whatsapp,
+        'integracoes_ia': integracoes_ia,
+    })
