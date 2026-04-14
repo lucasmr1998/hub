@@ -91,8 +91,14 @@ def tenant_detalhe_view(request, tenant_id):
 
     from apps.comercial.leads.models import LeadProspecto
     from apps.integracoes.models import IntegracaoAPI
+    from apps.sistema.models import PermissaoUsuario
     leads_count = LeadProspecto.all_tenants.filter(tenant=tenant).count()
     integracao = IntegracaoAPI.all_tenants.filter(tenant=tenant, tipo='hubsoft').first()
+
+    # Carregar permissoes dos usuarios
+    permissoes = {p.user_id: p for p in PermissaoUsuario.objects.select_related('perfil').filter(tenant=tenant)}
+    for u_perfil in users:
+        u_perfil.user.perm = permissoes.get(u_perfil.user_id)
 
     if request.method == 'POST':
         action = request.POST.get('action')
