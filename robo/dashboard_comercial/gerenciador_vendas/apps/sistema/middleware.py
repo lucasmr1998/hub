@@ -18,6 +18,7 @@ _EXEMPT_PATTERNS = [
     re.compile(r"^integracoes/api/"),
     re.compile(r"^inbox/api/uazapi/webhook/"),
     re.compile(r"^inbox/api/webhook/"),
+    re.compile(r"^assistente/webhook/"),
     re.compile(r"^cadastro/?$"),
     re.compile(r"^login/?$"),
     re.compile(r"^logout/?$"),
