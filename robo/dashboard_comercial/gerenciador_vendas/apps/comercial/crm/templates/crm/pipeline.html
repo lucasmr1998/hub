@@ -1053,7 +1053,7 @@ function criarOportunidade() {
 
   fetch('{% url "crm:api_criar_oportunidade" %}', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRF()},
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
     body: JSON.stringify({nome, telefone, titulo, valor: valor || null, responsavel_id: responsavel_id || null})
   })
   .then(r => r.json())

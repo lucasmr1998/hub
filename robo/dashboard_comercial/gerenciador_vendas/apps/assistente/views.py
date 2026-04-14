@@ -103,11 +103,10 @@ def _processar_via_inbox(usuario, tenant, mensagem_texto, telefone, integracao_w
     4. Envia resposta via WhatsApp
     """
     from apps.sistema.middleware import set_current_tenant
-    from apps.sistema.models import Tenant
     from apps.inbox.models import Conversa, Mensagem, CanalInbox
     from apps.comercial.atendimento.models import AtendimentoFluxo, FluxoAtendimento
 
-    tenant_aurora = Tenant.objects.get(pk=3)
+    tenant_aurora = integracao_whatsapp.tenant
     set_current_tenant(tenant_aurora)
 
     try:
