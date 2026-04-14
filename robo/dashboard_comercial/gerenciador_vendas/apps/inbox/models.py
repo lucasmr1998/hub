@@ -96,6 +96,7 @@ class Conversa(TenantMixin):
         ('bot', 'Bot'),
         ('humano', 'Humano'),
         ('finalizado_bot', 'Finalizado pelo Bot'),
+        ('assistente', 'Assistente CRM'),
     ]
 
     numero = models.PositiveIntegerField(verbose_name="Número", editable=False)

@@ -913,6 +913,19 @@ function abrirConfig(nodeId, data) {
             {id:'criar_tarefa', label:'Criar Tarefa'},
             {id:'mover_estagio', label:'Mover Estagio'},
             {id:'consultar_base_conhecimento', label:'Consultar Base de Conhecimento'},
+            {id:'consultar_lead', label:'[CRM] Consultar Lead'},
+            {id:'listar_oportunidades', label:'[CRM] Listar Oportunidades'},
+            {id:'mover_oportunidade', label:'[CRM] Mover Oportunidade'},
+            {id:'criar_nota', label:'[CRM] Criar Nota'},
+            {id:'resumo_pipeline', label:'[CRM] Resumo Pipeline'},
+            {id:'listar_tarefas', label:'[CRM] Listar Tarefas'},
+            {id:'proxima_tarefa', label:'[CRM] Proxima Tarefa'},
+            {id:'agendar_followup', label:'[CRM] Agendar Follow-up'},
+            {id:'buscar_historico', label:'[CRM] Historico do Lead'},
+            {id:'marcar_perda', label:'[CRM] Marcar Perda'},
+            {id:'marcar_ganho', label:'[CRM] Marcar Ganho'},
+            {id:'agenda_do_dia', label:'[CRM] Agenda do Dia'},
+            {id:'ver_comandos', label:'[CRM] Ver Comandos'},
         ];
         const toolsSistemaChecks = toolsSistema.map(t => {
             const checked = (config.tools_habilitadas || []).includes(t.id) ? 'checked' : '';

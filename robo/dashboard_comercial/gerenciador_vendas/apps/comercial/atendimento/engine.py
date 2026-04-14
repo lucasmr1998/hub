@@ -1991,6 +1991,19 @@ def _chamar_llm_com_tools(integracao, modelo, messages, config, atendimento, con
                     },
                 },
             })
+        else:
+            # Tools do Assistente CRM (importadas dinamicamente)
+            from apps.assistente.tools import TOOLS_ASSISTENTE
+            if tool_id in TOOLS_ASSISTENTE:
+                tool_def = TOOLS_ASSISTENTE[tool_id]
+                tools_openai.append({
+                    'type': 'function',
+                    'function': {
+                        'name': tool_id,
+                        'description': tool_def['description'],
+                        'parameters': tool_def['parameters'],
+                    },
+                })
 
     if not tools_openai:
         # Sem tools, chamada simples
@@ -2098,7 +2111,24 @@ def _chamar_llm_com_tools(integracao, modelo, messages, config, atendimento, con
                                    f'Tool base_conhecimento: {tool_result[:100]}')
 
                 else:
-                    tool_result = f'Tool {func_name} nao encontrada'
+                    # Tentar tools do Assistente CRM
+                    from apps.assistente.tools import TOOLS_ASSISTENTE
+                    if func_name in TOOLS_ASSISTENTE:
+                        tool_func = TOOLS_ASSISTENTE[func_name]['func']
+                        tenant = atendimento.fluxo.tenant if atendimento.fluxo else atendimento.tenant
+                        # Para o assistente, o usuario e o responsavel da conversa (nao o lead)
+                        usuario = None
+                        if hasattr(atendimento, '_assistente_usuario'):
+                            usuario = atendimento._assistente_usuario
+                        try:
+                            tool_result = tool_func(tenant, usuario, func_args)
+                            _registrar_log(atendimento, atendimento.nodo_atual, 'sucesso',
+                                           f'Tool {func_name}: {tool_result[:100]}')
+                        except Exception as e:
+                            tool_result = f'Erro ao executar {func_name}: {str(e)}'
+                            logger.error(f'Tool {func_name} erro: {e}')
+                    else:
+                        tool_result = f'Tool {func_name} nao encontrada'
 
                 # Adicionar resultado da tool ao historico
                 current_messages.append({
