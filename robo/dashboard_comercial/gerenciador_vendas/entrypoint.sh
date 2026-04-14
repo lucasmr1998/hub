@@ -8,13 +8,14 @@ echo "[1/3] Aplicando migrations..."
 python manage.py migrate --noinput
 
 # 2. Rodar seeds (idempotentes — só cria o que não existe)
-echo "[2/3] Verificando seeds..."
+echo "[2/4] Verificando seeds..."
 python manage.py seed_funcionalidades
 python manage.py seed_perfis_padrao
 python manage.py seed_tipos_notificacao
+python manage.py seed_fluxo_assistente
 
 # 3. Coletar arquivos estáticos
-echo "[3/3] Coletando static files..."
+echo "[3/4] Coletando static files..."
 python manage.py collectstatic --noinput || true
 
 echo "=== Deploy concluido ==="
