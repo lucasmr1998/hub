@@ -176,9 +176,9 @@
                 </div>
             </div>
 
-            <div class="form-group-sm">
-                <label>URL Base *</label>
-                <input type="url" id="integUrl" required placeholder="https://api.exemplo.com">
+            <div class="form-group-sm" id="campoUrl">
+                <label>URL Base</label>
+                <input type="url" id="integUrl" placeholder="Opcional para OpenAI/Anthropic/Groq">
             </div>
 
             <!-- Campos OAuth (HubSoft) -->
@@ -253,6 +253,7 @@ document.getElementById('integTipo').addEventListener('change', function() {
     document.getElementById('camposOAuth').style.display = isOAuth ? 'block' : 'none';
     document.getElementById('camposToken').style.display = (!isOAuth && !isIA) ? 'block' : 'none';
     document.getElementById('camposApiKey').style.display = isIA ? 'block' : 'none';
+    document.getElementById('campoUrl').style.display = isIA ? 'none' : 'block';
 });
 
 function abrirModal() {
@@ -298,7 +299,8 @@ function salvarIntegracao() {
     const tipo = document.getElementById('integTipo').value;
     const base_url = document.getElementById('integUrl').value.trim();
 
-    if (!nome || !base_url) { alert('Nome e URL são obrigatórios'); return; }
+    if (!nome) { alert('Nome e obrigatorio'); return; }
+    if (!base_url && !TIPOS_IA.includes(tipo)) { alert('URL e obrigatoria'); return; }
 
     const data = { nome, tipo, base_url, configuracoes_extras: {} };
 
