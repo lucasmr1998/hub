@@ -324,6 +324,277 @@ def proxima_tarefa(tenant, usuario, args):
     return f'Proxima tarefa: "{tarefa.titulo}"\nLead: {nome_lead}\nVencimento: {venc}{atrasada}\nPrioridade: {tarefa.prioridade}'
 
 
+def agendar_followup(tenant, usuario, args):
+    """Cria tarefa de follow-up com lembrete."""
+    from apps.comercial.crm.models import OportunidadeVenda, TarefaCRM
+    from django.db.models import Q
+    from datetime import datetime
+
+    lead_busca = args.get('lead', '').strip()
+    quando = args.get('quando', '').strip()
+    observacao = args.get('observacao', '').strip()
+
+    if not lead_busca:
+        return 'Informe o nome do lead para o follow-up.'
+
+    oport = OportunidadeVenda.objects.filter(
+        ativo=True
+    ).filter(
+        Q(lead__nome_razaosocial__icontains=lead_busca) | Q(titulo__icontains=lead_busca)
+    ).select_related('lead').first()
+
+    lead = oport.lead if oport else None
+
+    # Calcular data
+    data_vencimento = timezone.now() + timedelta(days=1)
+    quando_lower = quando.lower()
+    if 'hoje' in quando_lower:
+        data_vencimento = timezone.now() + timedelta(hours=2)
+    elif 'amanha' in quando_lower or 'amanhã' in quando_lower:
+        data_vencimento = timezone.now() + timedelta(days=1)
+    elif 'sexta' in quando_lower:
+        dias_ate_sexta = (4 - timezone.now().weekday()) % 7 or 7
+        data_vencimento = timezone.now() + timedelta(days=dias_ate_sexta)
+    elif 'segunda' in quando_lower:
+        dias_ate_segunda = (0 - timezone.now().weekday()) % 7 or 7
+        data_vencimento = timezone.now() + timedelta(days=dias_ate_segunda)
+    elif 'semana' in quando_lower:
+        data_vencimento = timezone.now() + timedelta(days=7)
+
+    # Extrair horario se mencionado
+    import re
+    hora_match = re.search(r'(\d{1,2})[h:](\d{0,2})', quando)
+    if hora_match:
+        hora = int(hora_match.group(1))
+        minuto = int(hora_match.group(2)) if hora_match.group(2) else 0
+        data_vencimento = data_vencimento.replace(hour=hora, minute=minuto, second=0)
+
+    titulo = f'Follow-up: {lead.nome_razaosocial if lead else lead_busca}'
+    if observacao:
+        titulo += f' - {observacao}'
+
+    TarefaCRM.objects.create(
+        tenant=tenant,
+        oportunidade=oport,
+        lead=lead,
+        responsavel=usuario,
+        criado_por=usuario,
+        titulo=titulo,
+        tipo='followup',
+        status='pendente',
+        prioridade='normal',
+        data_vencimento=data_vencimento,
+    )
+
+    nome = lead.nome_razaosocial if lead else lead_busca
+    return f'Follow-up agendado: {nome} em {data_vencimento.strftime("%d/%m/%Y %H:%M")}.'
+
+
+def buscar_historico(tenant, usuario, args):
+    """Ultimas interacoes e notas de um lead."""
+    from apps.comercial.crm.models import OportunidadeVenda, NotaInterna, TarefaCRM
+    from django.db.models import Q
+
+    lead_busca = args.get('lead', '').strip()
+    if not lead_busca:
+        return 'Informe o nome do lead.'
+
+    oport = OportunidadeVenda.objects.filter(
+        ativo=True
+    ).filter(
+        Q(lead__nome_razaosocial__icontains=lead_busca) | Q(titulo__icontains=lead_busca)
+    ).select_related('lead', 'estagio').first()
+
+    if not oport:
+        return f'Nenhuma oportunidade encontrada para "{lead_busca}".'
+
+    nome = oport.titulo or oport.lead.nome_razaosocial
+    resultado = f'Historico de {nome}:\n'
+    resultado += f'Estagio atual: {oport.estagio.nome}\n'
+    resultado += f'Valor: R$ {oport.valor_estimado or 0}\n\n'
+
+    # Ultimas notas
+    notas = NotaInterna.objects.filter(oportunidade=oport).order_by('-data_criacao')[:5]
+    if notas:
+        resultado += 'Ultimas notas:\n'
+        for n in notas:
+            data = n.data_criacao.strftime('%d/%m %H:%M')
+            autor = n.autor.get_full_name() if n.autor else 'Sistema'
+            resultado += f'- [{data}] {autor}: {n.conteudo[:80]}\n'
+    else:
+        resultado += 'Sem notas.\n'
+
+    # Ultimas tarefas
+    tarefas = TarefaCRM.objects.filter(oportunidade=oport).order_by('-data_criacao')[:5]
+    if tarefas:
+        resultado += '\nUltimas tarefas:\n'
+        for t in tarefas:
+            status_icon = 'V' if t.status == 'concluida' else 'O'
+            resultado += f'- [{status_icon}] {t.titulo} ({t.status})\n'
+
+    return resultado
+
+
+def marcar_perda(tenant, usuario, args):
+    """Move oportunidade para estagio final Perdido com motivo."""
+    from apps.comercial.crm.models import OportunidadeVenda, PipelineEstagio, HistoricoPipelineEstagio
+    from django.db.models import Q
+
+    lead_busca = args.get('lead', '').strip()
+    motivo = args.get('motivo', '').strip()
+
+    if not lead_busca:
+        return 'Informe o nome do lead.'
+
+    oport = OportunidadeVenda.objects.filter(
+        ativo=True
+    ).filter(
+        Q(lead__nome_razaosocial__icontains=lead_busca) | Q(titulo__icontains=lead_busca)
+    ).select_related('estagio', 'lead').first()
+
+    if not oport:
+        return f'Nenhuma oportunidade encontrada para "{lead_busca}".'
+
+    estagio_perdido = PipelineEstagio.objects.filter(
+        is_final_perdido=True, ativo=True
+    ).first()
+
+    if not estagio_perdido:
+        return 'Nenhum estagio de perda configurado no pipeline.'
+
+    estagio_anterior = oport.estagio
+    horas = (timezone.now() - oport.data_entrada_estagio).total_seconds() / 3600
+
+    HistoricoPipelineEstagio.objects.create(
+        tenant=tenant,
+        oportunidade=oport,
+        estagio_anterior=estagio_anterior,
+        estagio_novo=estagio_perdido,
+        movido_por=usuario,
+        motivo=motivo or 'Perda registrada via Assistente CRM',
+        tempo_no_estagio_horas=round(horas, 2),
+    )
+
+    oport.estagio = estagio_perdido
+    oport.data_entrada_estagio = timezone.now()
+    oport.motivo_perda = motivo
+    oport.data_fechamento_real = timezone.now()
+    oport.save(update_fields=['estagio', 'data_entrada_estagio', 'motivo_perda', 'data_fechamento_real'])
+
+    nome = oport.titulo or oport.lead.nome_razaosocial
+    return f'Oportunidade "{nome}" marcada como perdida. Motivo: {motivo or "nao informado"}.'
+
+
+def marcar_ganho(tenant, usuario, args):
+    """Move oportunidade para estagio final Ganho."""
+    from apps.comercial.crm.models import OportunidadeVenda, PipelineEstagio, HistoricoPipelineEstagio
+    from django.db.models import Q
+
+    lead_busca = args.get('lead', '').strip()
+
+    if not lead_busca:
+        return 'Informe o nome do lead.'
+
+    oport = OportunidadeVenda.objects.filter(
+        ativo=True
+    ).filter(
+        Q(lead__nome_razaosocial__icontains=lead_busca) | Q(titulo__icontains=lead_busca)
+    ).select_related('estagio', 'lead').first()
+
+    if not oport:
+        return f'Nenhuma oportunidade encontrada para "{lead_busca}".'
+
+    estagio_ganho = PipelineEstagio.objects.filter(
+        is_final_ganho=True, ativo=True
+    ).first()
+
+    if not estagio_ganho:
+        return 'Nenhum estagio de ganho configurado no pipeline.'
+
+    estagio_anterior = oport.estagio
+    horas = (timezone.now() - oport.data_entrada_estagio).total_seconds() / 3600
+
+    HistoricoPipelineEstagio.objects.create(
+        tenant=tenant,
+        oportunidade=oport,
+        estagio_anterior=estagio_anterior,
+        estagio_novo=estagio_ganho,
+        movido_por=usuario,
+        motivo='Venda fechada via Assistente CRM',
+        tempo_no_estagio_horas=round(horas, 2),
+    )
+
+    oport.estagio = estagio_ganho
+    oport.data_entrada_estagio = timezone.now()
+    oport.data_fechamento_real = timezone.now()
+    oport.save(update_fields=['estagio', 'data_entrada_estagio', 'data_fechamento_real'])
+
+    nome = oport.titulo or oport.lead.nome_razaosocial
+    return f'Parabens! Oportunidade "{nome}" marcada como GANHA!'
+
+
+def agenda_do_dia(tenant, usuario, args):
+    """Resumo completo do dia: tarefas + oportunidades paradas."""
+    from apps.comercial.crm.models import TarefaCRM, OportunidadeVenda
+
+    hoje = timezone.now().date()
+    resultado = ''
+
+    # Tarefas de hoje
+    tarefas_hoje = TarefaCRM.objects.filter(
+        responsavel=usuario,
+        status__in=['pendente', 'em_andamento'],
+        data_vencimento__date=hoje,
+    ).select_related('lead').order_by('data_vencimento')[:10]
+
+    if tarefas_hoje:
+        resultado += f'Tarefas para hoje ({tarefas_hoje.count()}):\n'
+        for t in tarefas_hoje:
+            nome = t.lead.nome_razaosocial if t.lead else ''
+            hora = t.data_vencimento.strftime('%H:%M') if t.data_vencimento else ''
+            resultado += f'  - {t.titulo} {nome} ({hora})\n'
+    else:
+        resultado += 'Nenhuma tarefa para hoje.\n'
+
+    # Tarefas atrasadas
+    atrasadas = TarefaCRM.objects.filter(
+        responsavel=usuario,
+        status__in=['pendente', 'em_andamento'],
+        data_vencimento__lt=timezone.now(),
+    ).exclude(data_vencimento__date=hoje).select_related('lead').order_by('data_vencimento')[:5]
+
+    if atrasadas:
+        resultado += f'\nTarefas atrasadas ({atrasadas.count()}):\n'
+        for t in atrasadas:
+            nome = t.lead.nome_razaosocial if t.lead else ''
+            dias = (hoje - t.data_vencimento.date()).days
+            resultado += f'  - {t.titulo} {nome} ({dias} dia(s) de atraso)\n'
+
+    # Oportunidades paradas (sem acao ha 3+ dias)
+    limite = timezone.now() - timedelta(days=3)
+    paradas = OportunidadeVenda.objects.filter(
+        responsavel=usuario,
+        ativo=True,
+        data_entrada_estagio__lt=limite,
+    ).exclude(
+        estagio__is_final_ganho=True
+    ).exclude(
+        estagio__is_final_perdido=True
+    ).select_related('estagio', 'lead').order_by('data_entrada_estagio')[:5]
+
+    if paradas:
+        resultado += f'\nOportunidades paradas (3+ dias sem acao):\n'
+        for o in paradas:
+            nome = o.titulo or o.lead.nome_razaosocial
+            dias = (timezone.now() - o.data_entrada_estagio).days
+            resultado += f'  - {nome} ({o.estagio.nome}, {dias} dias)\n'
+
+    if not resultado.strip():
+        resultado = 'Dia tranquilo! Nenhuma tarefa, atraso ou oportunidade parada.'
+
+    return resultado
+
+
 # Registro de todas as tools
 TOOLS_ASSISTENTE = {
     'consultar_lead': {
@@ -422,6 +693,62 @@ TOOLS_ASSISTENTE = {
     'proxima_tarefa': {
         'func': proxima_tarefa,
         'description': 'Retorna a proxima tarefa pendente a vencer do vendedor',
+        'parameters': {
+            'type': 'object',
+            'properties': {},
+            'required': [],
+        },
+    },
+    'agendar_followup': {
+        'func': agendar_followup,
+        'description': 'Agenda um follow-up (tarefa de retorno) para um lead com data e horario',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'lead': {'type': 'string', 'description': 'Nome do lead'},
+                'quando': {'type': 'string', 'description': 'Quando: hoje, amanha, sexta, segunda, semana. Pode incluir horario (ex: sexta 14h)'},
+                'observacao': {'type': 'string', 'description': 'Observacao sobre o follow-up (opcional)'},
+            },
+            'required': ['lead', 'quando'],
+        },
+    },
+    'buscar_historico': {
+        'func': buscar_historico,
+        'description': 'Mostra o historico de um lead: estagio atual, ultimas notas e tarefas',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'lead': {'type': 'string', 'description': 'Nome do lead'},
+            },
+            'required': ['lead'],
+        },
+    },
+    'marcar_perda': {
+        'func': marcar_perda,
+        'description': 'Marca uma oportunidade como perdida com motivo',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'lead': {'type': 'string', 'description': 'Nome do lead'},
+                'motivo': {'type': 'string', 'description': 'Motivo da perda (ex: foi pro concorrente, sem budget)'},
+            },
+            'required': ['lead'],
+        },
+    },
+    'marcar_ganho': {
+        'func': marcar_ganho,
+        'description': 'Marca uma oportunidade como ganha (venda fechada)',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'lead': {'type': 'string', 'description': 'Nome do lead'},
+            },
+            'required': ['lead'],
+        },
+    },
+    'agenda_do_dia': {
+        'func': agenda_do_dia,
+        'description': 'Resumo completo do dia do vendedor: tarefas de hoje, tarefas atrasadas e oportunidades paradas ha mais de 3 dias',
         'parameters': {
             'type': 'object',
             'properties': {},
