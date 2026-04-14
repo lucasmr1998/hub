@@ -595,6 +595,29 @@ def agenda_do_dia(tenant, usuario, args):
     return resultado
 
 
+def ver_comandos(tenant, usuario, args):
+    """Lista todos os comandos disponiveis do assistente."""
+    return """Comandos disponiveis:
+
+1. Consultar lead - "Busca o lead Maria"
+2. Listar oportunidades - "Minhas oportunidades" ou "Oportunidades em negociacao"
+3. Mover oportunidade - "Move Maria para Proposta Enviada"
+4. Criar nota - "Anota no Joao: cliente pediu desconto"
+5. Criar tarefa - "Cria tarefa: ligar pro Joao amanha"
+6. Atualizar lead - "Atualiza email do Joao para joao@email.com"
+7. Resumo pipeline - "Como esta meu pipeline?"
+8. Listar tarefas - "Minhas tarefas de hoje" ou "Tarefas da semana"
+9. Proxima tarefa - "Qual minha proxima tarefa?"
+10. Agendar follow-up - "Me lembra de ligar pro Joao sexta 14h"
+11. Ver historico - "O que rolou com a Maria?"
+12. Marcar perda - "Perdi o Joao, foi pro concorrente"
+13. Marcar ganho - "Fechei a Maria!"
+14. Agenda do dia - "Como esta meu dia?"
+15. Ver comandos - "Quais comandos tenho?"
+
+Dica: voce pode falar naturalmente, nao precisa usar os comandos exatos."""
+
+
 # Registro de todas as tools
 TOOLS_ASSISTENTE = {
     'consultar_lead': {
@@ -749,6 +772,15 @@ TOOLS_ASSISTENTE = {
     'agenda_do_dia': {
         'func': agenda_do_dia,
         'description': 'Resumo completo do dia do vendedor: tarefas de hoje, tarefas atrasadas e oportunidades paradas ha mais de 3 dias',
+        'parameters': {
+            'type': 'object',
+            'properties': {},
+            'required': [],
+        },
+    },
+    'ver_comandos': {
+        'func': ver_comandos,
+        'description': 'Lista todos os comandos e exemplos disponiveis do assistente. Use quando o usuario pedir ajuda ou quiser saber o que pode fazer.',
         'parameters': {
             'type': 'object',
             'properties': {},
