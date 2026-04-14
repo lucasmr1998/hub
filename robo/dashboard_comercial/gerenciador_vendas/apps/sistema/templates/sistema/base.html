@@ -516,7 +516,7 @@
         }
 
         // ── Notification API helpers ──────────────────────────────────────
-        let _lastNaoLidas = 0;
+        let _lastNaoLidas = parseInt(localStorage.getItem('_notif_last_count') || '0');
 
         function loadNotifications() {
             const content = document.getElementById('notificationSidebarContent');
@@ -608,6 +608,7 @@
                             }).catch(()=>{});
                     }
                     _lastNaoLidas = count;
+                    localStorage.setItem('_notif_last_count', count);
                 }).catch(()=>{});
         }
         if (!window._notifInitialized) {
