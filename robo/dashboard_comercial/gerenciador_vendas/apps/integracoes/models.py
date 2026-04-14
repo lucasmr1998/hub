@@ -51,8 +51,9 @@ class IntegracaoAPI(TenantMixin):
 
     base_url = models.URLField(
         max_length=500,
+        blank=True, default='',
         verbose_name="URL Base da API",
-        help_text="Ex: https://api.megalinktelecom.hubsoft.com.br"
+        help_text="Opcional para OpenAI/Anthropic/Groq (usa URL padrao)"
     )
 
     # --- Credenciais OAuth ------------------------------------------------

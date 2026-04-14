@@ -322,8 +322,11 @@ def api_integracao_criar(request):
         tipo = data.get('tipo', 'outro')
         base_url = data.get('base_url', '').strip()
 
-        if not nome or not base_url:
-            return JsonResponse({'error': 'Nome e URL são obrigatórios'}, status=400)
+        tipos_ia = ['openai', 'anthropic', 'groq', 'google_ai']
+        if not nome:
+            return JsonResponse({'error': 'Nome e obrigatorio'}, status=400)
+        if not base_url and tipo not in tipos_ia:
+            return JsonResponse({'error': 'URL e obrigatoria'}, status=400)
 
         integ = IntegracaoAPI.objects.create(
             tenant=request.tenant,
