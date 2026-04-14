@@ -851,6 +851,14 @@ def _construir_contexto(atendimento):
             'lead_valor': float(lead.valor) if lead.valor else 0,
         })
 
+    # Contexto do assistente CRM (sem lead, com usuario)
+    dados_resp = atendimento.dados_respostas or {}
+    if dados_resp.get('_assistente_usuario_id'):
+        contexto['assistente_modo'] = True
+        contexto['assistente_usuario_id'] = dados_resp['_assistente_usuario_id']
+        contexto['assistente_tenant_id'] = dados_resp.get('_assistente_tenant_id')
+        contexto['assistente_telefone'] = dados_resp.get('_telefone', '')
+
     # Respostas anteriores
     dados = atendimento.dados_respostas or {}
     for nodo_key, resp_data in dados.items():
@@ -1305,14 +1313,21 @@ def _chamar_llm_simples(integracao, modelo, messages):
 
 
 def _obter_integracao_ia(config, tenant):
-    """Busca a integracao IA configurada no nodo, filtrando por tenant."""
+    """Busca a integracao IA configurada no nodo, filtrando por tenant.
+    Se nao achar no tenant do fluxo, tenta sem filtro (para assistente cross-tenant)."""
     from apps.integracoes.models import IntegracaoAPI
     integracao_id = config.get('integracao_ia_id')
     if not integracao_id:
         return None
-    return IntegracaoAPI.all_tenants.filter(
+    integracao = IntegracaoAPI.all_tenants.filter(
         id=integracao_id, tenant=tenant, ativa=True
     ).first()
+    if not integracao:
+        # Fallback: buscar sem filtro de tenant (assistente cross-tenant)
+        integracao = IntegracaoAPI.all_tenants.filter(
+            id=integracao_id, ativa=True
+        ).first()
+    return integracao
 
 
 def _salvar_variavel(atendimento, nome, valor):
@@ -1334,18 +1349,28 @@ def _get_ultima_mensagem(atendimento):
     if ultima:
         return ultima
 
-    # Prioridade 2: buscar no Inbox
+    # Prioridade 2: buscar no Inbox via conversa_id salva (assistente sem lead)
     try:
-        from apps.inbox.models import Mensagem
-        conversa = atendimento.lead.conversas.filter(
-            status__in=['aberta', 'pendente']
-        ).order_by('-ultima_mensagem_em').first()
-        if conversa:
-            msg = Mensagem.objects.filter(
-                conversa=conversa, remetente_tipo='contato'
+        from apps.inbox.models import Mensagem, Conversa
+        conversa_id = dados.get('_conversa_id')
+        if conversa_id:
+            msg = Mensagem.all_tenants.filter(
+                conversa_id=conversa_id, remetente_tipo='contato'
             ).order_by('-data_envio').first()
             if msg:
                 return msg.conteudo
+
+        # Prioridade 3: buscar via lead (fluxos tradicionais)
+        if atendimento.lead:
+            conversa = atendimento.lead.conversas.filter(
+                status__in=['aberta', 'pendente']
+            ).order_by('-ultima_mensagem_em').first()
+            if conversa:
+                msg = Mensagem.objects.filter(
+                    conversa=conversa, remetente_tipo='contato'
+                ).order_by('-data_envio').first()
+                if msg:
+                    return msg.conteudo
     except Exception:
         pass
     return ''
@@ -1718,6 +1743,16 @@ def _executar_ia_agente_inicial(atendimento, nodo, contexto):
     if atendimento.lead:
         lead = atendimento.lead
         system_prompt += f"\n\nDados do lead: Nome: {lead.nome_razaosocial}, Telefone: {lead.telefone}, Email: {lead.email or 'N/A'}, Cidade: {lead.cidade or 'N/A'}"
+    elif contexto.get('assistente_modo'):
+        # Assistente CRM: injetar dados do usuario vendedor
+        _dados = atendimento.dados_respostas or {}
+        usuario = getattr(atendimento, '_assistente_usuario', None)
+        if not usuario and _dados.get('_assistente_usuario_id'):
+            from django.contrib.auth.models import User
+            usuario = User.objects.filter(pk=_dados['_assistente_usuario_id']).first()
+        if usuario:
+            nome = usuario.get_full_name() or usuario.username
+            system_prompt += f"\n\nVoce esta atendendo o vendedor: {nome}"
 
     # Se veio de fallback, instruir o agente a retomar a pergunta naturalmente
     if nodo_retorno:
@@ -1752,6 +1787,26 @@ def _executar_ia_agente_inicial(atendimento, nodo, contexto):
     historico['turnos'] = 1
     dados[historico_key] = historico
     dados['_ultima_mensagem'] = mensagem_usuario or ''
+
+    # Verificar saida imediata (one-shot: agente classifica e sai na primeira mensagem)
+    import json as json_mod
+    try:
+        if '{' in resultado and 'sair' in resultado.lower():
+            texto_limpo = resultado.strip()
+            if texto_limpo.startswith('```'):
+                texto_limpo = texto_limpo.split('\n', 1)[1].rsplit('```', 1)[0].strip()
+            parsed = json_mod.loads(texto_limpo)
+            if parsed.get('sair'):
+                motivo = parsed.get('motivo', '')
+                _salvar_variavel(atendimento, 'motivo_saida', motivo)
+                atendimento.dados_respostas = dados
+                atendimento.nodo_atual = None
+                atendimento.save(update_fields=['dados_respostas', 'nodo_atual'])
+                _registrar_log(atendimento, nodo, 'sucesso', f'Agente IA (one-shot): {motivo}')
+                contexto = _construir_contexto(atendimento)
+                return _seguir_conexoes(atendimento, nodo, contexto)
+    except (json_mod.JSONDecodeError, AttributeError):
+        pass
 
     # Se veio de fallback de questao, retornar para a questao apos responder
     if nodo_retorno:
@@ -1801,6 +1856,15 @@ def processar_resposta_ia_agente(atendimento, resposta):
     if atendimento.lead:
         lead = atendimento.lead
         system_prompt += f"\n\nDados do lead: Nome: {lead.nome_razaosocial}, Telefone: {lead.telefone}, Email: {lead.email or 'N/A'}, Cidade: {lead.cidade or 'N/A'}"
+    elif contexto.get('assistente_modo'):
+        _dados = atendimento.dados_respostas or {}
+        usuario = getattr(atendimento, '_assistente_usuario', None)
+        if not usuario and _dados.get('_assistente_usuario_id'):
+            from django.contrib.auth.models import User
+            usuario = User.objects.filter(pk=_dados['_assistente_usuario_id']).first()
+        if usuario:
+            nome = usuario.get_full_name() or usuario.username
+            system_prompt += f"\n\nVoce esta atendendo o vendedor: {nome}"
 
     messages = [{'role': 'system', 'content': system_prompt}]
     # Historico anterior (somente role + content para simplificar)
@@ -2115,11 +2179,18 @@ def _chamar_llm_com_tools(integracao, modelo, messages, config, atendimento, con
                     from apps.assistente.tools import TOOLS_ASSISTENTE
                     if func_name in TOOLS_ASSISTENTE:
                         tool_func = TOOLS_ASSISTENTE[func_name]['func']
-                        tenant = atendimento.fluxo.tenant if atendimento.fluxo else atendimento.tenant
-                        # Para o assistente, o usuario e o responsavel da conversa (nao o lead)
-                        usuario = None
-                        if hasattr(atendimento, '_assistente_usuario'):
-                            usuario = atendimento._assistente_usuario
+                        # Recuperar usuario e tenant do assistente (runtime ou dados_respostas)
+                        _dados = atendimento.dados_respostas or {}
+                        usuario = getattr(atendimento, '_assistente_usuario', None)
+                        tenant = getattr(atendimento, '_assistente_tenant', None)
+                        if not usuario and _dados.get('_assistente_usuario_id'):
+                            from django.contrib.auth.models import User
+                            usuario = User.objects.filter(pk=_dados['_assistente_usuario_id']).first()
+                        if not tenant and _dados.get('_assistente_tenant_id'):
+                            from apps.sistema.models import Tenant
+                            tenant = Tenant.objects.filter(pk=_dados['_assistente_tenant_id']).first()
+                        if not tenant:
+                            tenant = atendimento.fluxo.tenant if atendimento.fluxo else atendimento.tenant
                         try:
                             tool_result = tool_func(tenant, usuario, func_args)
                             _registrar_log(atendimento, atendimento.nodo_atual, 'sucesso',

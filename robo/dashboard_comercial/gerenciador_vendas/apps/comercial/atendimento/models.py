@@ -1218,6 +1218,8 @@ class AtendimentoFluxo(TenantMixin):
     lead = models.ForeignKey(
         'leads.LeadProspecto',
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name='atendimentos_fluxo',
         verbose_name="Lead/Prospecto"
     )

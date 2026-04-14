@@ -96,10 +96,16 @@ def _identificar_usuario(telefone):
 
 
 def _processar_via_inbox(usuario, tenant, mensagem_texto, telefone, integracao_whatsapp, config_tenant):
-    """Processa via Inbox: cria conversa, salva mensagens, chama engine, responde."""
+    """Processa via Inbox + engine de fluxo de atendimento.
+    1. Salva mensagem no Inbox
+    2. Busca/cria AtendimentoFluxo (sem lead)
+    3. Chama engine de fluxo (classificador, agente, respondedor)
+    4. Envia resposta via WhatsApp
+    """
     from apps.sistema.middleware import set_current_tenant
     from apps.sistema.models import Tenant
     from apps.inbox.models import Conversa, Mensagem, CanalInbox
+    from apps.comercial.atendimento.models import AtendimentoFluxo, FluxoAtendimento
 
     tenant_aurora = Tenant.objects.get(pk=3)
     set_current_tenant(tenant_aurora)
@@ -107,7 +113,7 @@ def _processar_via_inbox(usuario, tenant, mensagem_texto, telefone, integracao_w
     try:
         logger.info(f'[Assistente] user={usuario.username}, tenant={tenant.nome}, msg="{mensagem_texto[:50]}"')
 
-        # Buscar/criar conversa
+        # ── 1. Buscar/criar conversa no Inbox ──
         conversa = Conversa.all_tenants.filter(
             tenant=tenant_aurora, contato_telefone=telefone,
             modo_atendimento='assistente', status__in=['aberta', 'pendente'],
@@ -116,12 +122,21 @@ def _processar_via_inbox(usuario, tenant, mensagem_texto, telefone, integracao_w
         if not conversa:
             canal = CanalInbox.all_tenants.filter(
                 tenant=tenant_aurora, tipo='whatsapp',
+                provedor='uazapi', identificador_canal='assistente',
             ).first()
+
+            if not canal:
+                # Tentar canal existente sem identificador
+                canal = CanalInbox.all_tenants.filter(
+                    tenant=tenant_aurora, tipo='whatsapp',
+                    integracao=integracao_whatsapp,
+                ).first()
 
             if not canal:
                 canal = CanalInbox.all_tenants.create(
                     tenant=tenant_aurora, nome='Assistente CRM',
                     tipo='whatsapp', provedor='uazapi',
+                    identificador_canal='assistente',
                     integracao=integracao_whatsapp, ativo=True,
                 )
 
@@ -135,7 +150,7 @@ def _processar_via_inbox(usuario, tenant, mensagem_texto, telefone, integracao_w
             conversa._skip_automacao = True
             conversa.save()
 
-        # Salvar mensagem do usuario
+        # ── 2. Salvar mensagem do usuario ──
         msg_user = Mensagem(
             tenant=tenant_aurora, conversa=conversa,
             remetente_tipo='contato',
@@ -145,20 +160,43 @@ def _processar_via_inbox(usuario, tenant, mensagem_texto, telefone, integracao_w
         msg_user._skip_automacao = True
         msg_user.save()
 
-        # Chamar engine do assistente (com tenant do vendedor para as tools)
-        set_current_tenant(tenant)
-        from .engine import processar_mensagem
-        integracao_ia = config_tenant.integracao_ia
-        if not integracao_ia:
-            from apps.integracoes.models import IntegracaoAPI
-            integracao_ia = IntegracaoAPI.all_tenants.filter(
-                tenant=tenant, tipo__in=['openai', 'anthropic', 'groq'], ativa=True,
+        # ── 3. Buscar fluxo de atendimento ──
+        canal = conversa.canal
+        fluxo = canal.fluxo if canal and canal.fluxo_id else None
+        if not fluxo:
+            fluxo = FluxoAtendimento.all_tenants.filter(
+                tenant=tenant_aurora, ativo=True, status='ativo',
+                nome__icontains='assistente',
             ).first()
 
-        resposta = processar_mensagem(usuario, tenant, mensagem_texto, integracao_ia)
-        set_current_tenant(tenant_aurora)
+        # ── 4. Processar via engine de fluxo ──
+        resposta = None
 
-        # Salvar resposta no Inbox
+        if fluxo:
+            set_current_tenant(tenant)
+            resposta = _processar_via_fluxo(
+                usuario, tenant, tenant_aurora, mensagem_texto,
+                telefone, conversa, fluxo,
+            )
+            set_current_tenant(tenant_aurora)
+
+        # Fallback: engine standalone (se nao tem fluxo configurado)
+        if not resposta:
+            set_current_tenant(tenant)
+            from .engine import processar_mensagem
+            integracao_ia = config_tenant.integracao_ia
+            if not integracao_ia:
+                from apps.integracoes.models import IntegracaoAPI
+                integracao_ia = IntegracaoAPI.all_tenants.filter(
+                    tenant=tenant, tipo__in=['openai', 'anthropic', 'groq'], ativa=True,
+                ).first()
+            resposta = processar_mensagem(usuario, tenant, mensagem_texto, integracao_ia)
+            set_current_tenant(tenant_aurora)
+
+        if not resposta:
+            resposta = 'Desculpe, nao consegui processar sua mensagem.'
+
+        # ── 5. Salvar resposta no Inbox ──
         msg_resp = Mensagem(
             tenant=tenant_aurora, conversa=conversa,
             remetente_tipo='bot', remetente_nome='Hubtrix IA',
@@ -171,13 +209,95 @@ def _processar_via_inbox(usuario, tenant, mensagem_texto, telefone, integracao_w
         conversa.ultima_mensagem_preview = resposta[:255]
         conversa.save(update_fields=['ultima_mensagem_em', 'ultima_mensagem_preview'])
 
-        # Enviar via WhatsApp
+        # ── 6. Enviar via WhatsApp ──
         _enviar_resposta(integracao_whatsapp, telefone, resposta)
         logger.info(f'[Assistente] Enviado para {telefone}')
 
     except Exception as e:
         logger.error(f'[Assistente] Erro: {e}', exc_info=True)
         _enviar_resposta(integracao_whatsapp, telefone, 'Desculpe, ocorreu um erro. Tente novamente.')
+
+
+def _processar_via_fluxo(usuario, tenant, tenant_aurora, mensagem_texto, telefone, conversa, fluxo):
+    """Processa mensagem usando o engine de fluxo de atendimento.
+    Retorna texto da resposta ou None se falhar."""
+    from apps.comercial.atendimento.models import AtendimentoFluxo
+    from apps.comercial.atendimento.engine import (
+        iniciar_fluxo_visual, processar_resposta_ia_agente,
+        processar_resposta_ia_respondedor, processar_resposta_visual,
+    )
+
+    try:
+        # Buscar atendimento ativo para esta conversa
+        ativo = AtendimentoFluxo.all_tenants.filter(
+            tenant=tenant_aurora, fluxo=fluxo,
+            status__in=['iniciado', 'em_andamento'],
+            dados_respostas__contains={'_conversa_id': conversa.id},
+        ).select_related('nodo_atual').first()
+
+        resultado = None
+
+        if ativo:
+            # ── Continuar atendimento existente ──
+            ativo._assistente_usuario = usuario
+            ativo._assistente_tenant = tenant
+
+            dados = ativo.dados_respostas or {}
+            dados['_ultima_mensagem'] = mensagem_texto
+            ativo.dados_respostas = dados
+            ativo.save(update_fields=['dados_respostas'])
+
+            if ativo.nodo_atual and ativo.nodo_atual.tipo == 'ia_respondedor':
+                resultado = processar_resposta_ia_respondedor(ativo, mensagem_texto)
+            elif ativo.nodo_atual and ativo.nodo_atual.tipo == 'ia_agente':
+                resultado = processar_resposta_ia_agente(ativo, mensagem_texto)
+            elif ativo.nodo_atual and ativo.nodo_atual.tipo == 'questao':
+                resultado = processar_resposta_visual(ativo, mensagem_texto)
+            else:
+                logger.warning(f'[Assistente] Atendimento {ativo.id} em nodo inesperado: {ativo.nodo_atual}')
+                return None
+        else:
+            # ── Iniciar novo atendimento ──
+            total_q = fluxo.nodos.filter(tipo='questao').count()
+            atendimento = AtendimentoFluxo(
+                tenant=tenant_aurora,
+                fluxo=fluxo,
+                total_questoes=total_q,
+                max_tentativas=fluxo.max_tentativas,
+                dados_respostas={
+                    '_ultima_mensagem': mensagem_texto,
+                    '_telefone': telefone,
+                    '_assistente_usuario_id': usuario.id,
+                    '_assistente_tenant_id': tenant.id,
+                    '_conversa_id': conversa.id,
+                },
+            )
+            atendimento._assistente_usuario = usuario
+            atendimento._assistente_tenant = tenant
+            atendimento.save()
+
+            resultado = iniciar_fluxo_visual(atendimento)
+
+        # ── Extrair texto da resposta ──
+        if not resultado:
+            return None
+
+        tipo = resultado.get('tipo', '')
+        if tipo in ('ia_agente', 'ia_respondedor'):
+            return resultado.get('mensagem', '')
+        elif tipo == 'questao':
+            questao = resultado.get('questao', {})
+            return questao.get('titulo', '') or resultado.get('mensagem', '')
+        elif tipo == 'finalizado':
+            return resultado.get('mensagem', 'Atendimento finalizado.')
+        elif tipo == 'transferido':
+            return resultado.get('mensagem', '')
+        else:
+            return resultado.get('mensagem', '')
+
+    except Exception as e:
+        logger.error(f'[Assistente] Erro no fluxo: {e}', exc_info=True)
+        return None
 
 
 def _extrair_mensagem(body):

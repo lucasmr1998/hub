@@ -59,7 +59,7 @@ Sessao ativa de um lead em um fluxo.
 
 | Campo | Tipo | Descricao |
 |-------|------|-----------|
-| lead | FK → LeadProspecto | Lead sendo atendido |
+| lead | FK → LeadProspecto | Lead sendo atendido (nullable — assistente CRM nao tem lead) |
 | fluxo | FK → FluxoAtendimento | Fluxo utilizado |
 | historico_contato | FK → HistoricoContato | Historico vinculado (opcional) |
 | nodo_atual | FK → NodoFluxoAtendimento | Posicao no modo visual (nullable) |
