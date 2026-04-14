@@ -9,59 +9,105 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
+        :root {
+            --admin-sidebar-w: 240px;
+            --admin-topbar-h: 52px;
+            --bg-dark: #0f172a;
+            --bg-sidebar: #111827;
+            --bg-body: #f1f5f9;
+            --bg-white: #fff;
+            --bg-subtle: #f8fafc;
+            --primary: #6366f1;
+            --primary-light: #eef2ff;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --text-light: #94a3b8;
+            --border: #e2e8f0;
+        }
+
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background: #f1f5f9; color: #1e293b; min-height: 100vh; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-body); color: var(--text-main); min-height: 100vh; }
+
+        /* ── Sidebar ── */
+        .admin-sidebar {
+            position: fixed; top: 0; left: 0; bottom: 0; width: var(--admin-sidebar-w);
+            background: var(--bg-sidebar); z-index: 200; overflow-y: auto;
+            display: flex; flex-direction: column; transition: transform .25s;
+        }
+        .admin-sidebar-brand {
+            padding: 16px 20px; display: flex; align-items: center; gap: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .admin-sidebar-brand-icon {
+            width: 32px; height: 32px; border-radius: 8px;
+            background: linear-gradient(135deg, #6366f1, #818cf8);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .admin-sidebar-brand-icon i { color: #fff; font-size: 14px; }
+        .admin-sidebar-brand-text { font-size: 14px; font-weight: 800; color: #fff; }
+        .admin-sidebar-brand-sub { font-size: 10px; color: var(--text-light); }
+
+        .admin-sidebar-section { padding: 16px 12px 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #475569; }
+        .admin-sidebar-nav { display: flex; flex-direction: column; gap: 2px; padding: 0 8px; }
+        .admin-sidebar-nav a {
+            display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+            border-radius: 8px; font-size: 13px; font-weight: 500; color: #94a3b8;
+            text-decoration: none; transition: all .15s;
+        }
+        .admin-sidebar-nav a:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
+        .admin-sidebar-nav a.active { background: var(--primary); color: #fff; }
+        .admin-sidebar-nav a i { width: 18px; text-align: center; font-size: 13px; }
+
+        .admin-sidebar-footer { margin-top: auto; padding: 12px; border-top: 1px solid rgba(255,255,255,0.06); }
+        .admin-sidebar-footer a {
+            display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+            border-radius: 8px; font-size: 12px; color: #94a3b8; text-decoration: none; transition: all .15s;
+        }
+        .admin-sidebar-footer a:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
 
         /* ── Topbar ── */
         .admin-topbar {
-            background: #0f172a; height: 52px; display: flex; align-items: center;
-            padding: 0 24px; gap: 16px; position: sticky; top: 0; z-index: 100;
+            position: fixed; top: 0; left: var(--admin-sidebar-w); right: 0; height: var(--admin-topbar-h);
+            background: var(--bg-white); border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 24px; z-index: 100;
         }
-        .admin-brand { font-weight: 800; font-size: .9rem; color: #fff; display: flex; align-items: center; gap: 8px; }
-        .admin-brand i { color: #818cf8; }
-        .admin-nav { display: flex; gap: 4px; margin-left: 24px; }
-        .admin-nav a {
-            font-size: .78rem; padding: 6px 14px; border-radius: 99px;
-            color: #94a3b8; text-decoration: none; transition: all .15s;
-        }
-        .admin-nav a:hover { background: #1e293b; color: #e2e8f0; }
-        .admin-nav a.active { background: #818cf8; color: #fff; }
+        .admin-topbar-title { font-size: 14px; font-weight: 700; color: var(--text-main); }
         .admin-topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
-        .admin-topbar-right a { color: #94a3b8; font-size: .78rem; text-decoration: none; }
-        .admin-topbar-right a:hover { color: #e2e8f0; }
+        .admin-mobile-toggle { display: none; background: none; border: none; font-size: 18px; color: var(--text-main); cursor: pointer; padding: 4px; }
 
         /* ── Content ── */
-        .admin-content { max-width: 1200px; margin: 0 auto; padding: 28px 24px; }
-        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-        .admin-header h1 { font-size: 1.3rem; font-weight: 800; color: #0f172a; }
+        .admin-content { margin-left: var(--admin-sidebar-w); margin-top: var(--admin-topbar-h); padding: 24px; min-height: calc(100vh - var(--admin-topbar-h)); }
 
         /* ── Stats ── */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px; }
         .stat-card {
-            background: #fff; border-radius: 12px; padding: 20px;
-            border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 16px;
+            background: var(--bg-white); border-radius: 12px; padding: 18px;
+            border: 1px solid var(--border); display: flex; align-items: center; gap: 14px;
         }
         .stat-icon {
-            width: 44px; height: 44px; border-radius: 10px;
-            display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;
+            width: 42px; height: 42px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;
         }
-        .stat-num { font-size: 1.5rem; font-weight: 800; line-height: 1; color: #0f172a; }
-        .stat-label { font-size: .72rem; color: #64748b; margin-top: 2px; }
+        .stat-num { font-size: 22px; font-weight: 800; line-height: 1; color: var(--text-main); }
+        .stat-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
         /* ── Table ── */
-        .admin-table-wrap { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; }
-        .admin-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+        .admin-table-wrap { background: var(--bg-white); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+        .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .admin-table th {
-            text-align: left; padding: 12px 16px; background: #f8fafc;
-            font-weight: 700; font-size: .72rem; text-transform: uppercase;
-            letter-spacing: .05em; color: #64748b; border-bottom: 1px solid #e2e8f0;
+            text-align: left; padding: 10px 16px; background: var(--bg-subtle);
+            font-weight: 700; font-size: 11px; text-transform: uppercase;
+            letter-spacing: .04em; color: var(--text-muted); border-bottom: 1px solid var(--border);
         }
-        .admin-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .admin-table td { padding: 12px 16px; border-bottom: 1px solid var(--bg-subtle); vertical-align: middle; }
         .admin-table tr:last-child td { border-bottom: none; }
-        .admin-table tr:hover td { background: #f8fafc; }
+        .admin-table tr:hover td { background: rgba(99,102,241,0.02); }
 
         /* ── Badges ── */
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: .68rem; font-weight: 600; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 600; }
         .badge-green { background: #dcfce7; color: #166534; }
         .badge-yellow { background: #fef3c7; color: #92400e; }
         .badge-red { background: #fee2e2; color: #991b1b; }
@@ -70,82 +116,169 @@
         .badge-purple { background: #ede9fe; color: #5b21b6; }
 
         /* ── Buttons ── */
-        .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: .8rem; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; text-decoration: none; border: none; transition: all .15s; }
-        .btn-primary { background: #818cf8; color: #fff; }
-        .btn-primary:hover { background: #6366f1; }
-        .btn-outline { background: transparent; color: #64748b; border: 1px solid #e2e8f0; }
-        .btn-outline:hover { background: #f8fafc; border-color: #cbd5e1; }
-        .btn-danger { background: #fee2e2; color: #dc2626; }
+        .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; text-decoration: none; border: none; transition: all .15s; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { opacity: .9; }
+        .btn-outline { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+        .btn-outline:hover { background: var(--bg-subtle); }
+        .btn-danger { background: #fee2e2; color: var(--danger); }
         .btn-danger:hover { background: #fecaca; }
-        .btn-success { background: #dcfce7; color: #166534; }
+        .btn-success { background: #dcfce7; color: var(--success); }
         .btn-success:hover { background: #bbf7d0; }
-        .btn-sm { padding: 4px 10px; font-size: .72rem; }
+        .btn-sm { padding: 4px 10px; font-size: 11px; }
 
         /* ── Forms ── */
-        .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; font-size: .78rem; font-weight: 600; color: #334155; margin-bottom: 6px; }
-        .form-group input, .form-group select { width: 100%; padding: 9px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: .82rem; font-family: 'Inter', sans-serif; }
-        .form-group input:focus, .form-group select:focus { outline: none; border-color: #818cf8; box-shadow: 0 0 0 3px rgba(129,140,248,.12); }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--text-muted); margin-bottom: 5px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: 'Inter', sans-serif; background: var(--bg-white); color: var(--text-main); }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .form-hint { font-size: .7rem; color: #94a3b8; margin-top: 4px; }
+        .form-hint { font-size: 10px; color: var(--text-light); margin-top: 4px; }
 
         /* ── Cards ── */
-        .card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 24px; margin-bottom: 20px; }
-        .card-title { font-size: .9rem; font-weight: 700; color: #0f172a; margin-bottom: 16px; }
+        .card { background: var(--bg-white); border-radius: 12px; border: 1px solid var(--border); padding: 20px; margin-bottom: 16px; }
+        .card-title { font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+        .card-title i { color: var(--primary); }
+
+        /* ── Section Header ── */
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .section-title { font-size: 18px; font-weight: 800; color: var(--text-main); }
+        .section-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
 
         /* ── Alert ── */
-        .alert { padding: 12px 16px; border-radius: 8px; font-size: .82rem; margin-bottom: 16px; }
-        .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
-        .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+        .alert { padding: 12px 16px; border-radius: 8px; font-size: 12px; margin-bottom: 16px; }
+        .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: var(--danger); }
+        .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: var(--success); }
+        .alert-warning { background: #fef3c7; border: 1px solid #fcd34d; color: var(--warning); }
 
-        /* ── Misc ── */
-        .text-muted { color: #94a3b8; }
-        .text-sm { font-size: .75rem; }
-        .mt-2 { margin-top: 8px; }
-        .mb-3 { margin-bottom: 16px; }
+        /* ── Tabs ── */
+        .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 0; }
+        .tab-btn { padding: 8px 16px; font-size: 12px; font-weight: 600; border: none; background: none; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; transition: all .15s; }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .tab-btn:hover { color: var(--text-main); }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* ── Responsive ── */
+        .admin-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 150; }
+        .admin-overlay.show { display: block; }
+
+        @media (max-width: 768px) {
+            .admin-sidebar { transform: translateX(-100%); }
+            .admin-sidebar.show { transform: translateX(0); }
+            .admin-topbar { left: 0; }
+            .admin-content { margin-left: 0; }
+            .admin-mobile-toggle { display: block; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .form-row { grid-template-columns: 1fr; }
+        }
+
+        /* ── Extra CSS from child templates ── */
+        {% block extra_css %}{% endblock %}
     </style>
 </head>
 <body>
 
-<div class="admin-topbar">
-    <div class="admin-brand"><i class="fas fa-crown"></i> Hubtrix Admin</div>
-    <div class="admin-nav">
+<!-- Sidebar -->
+<div class="admin-sidebar" id="adminSidebar">
+    <div class="admin-sidebar-brand">
+        <div class="admin-sidebar-brand-icon"><i class="fas fa-bolt"></i></div>
+        <div>
+            <div class="admin-sidebar-brand-text">Hubtrix</div>
+            <div class="admin-sidebar-brand-sub">Admin Panel</div>
+        </div>
+    </div>
+
+    <div class="admin-sidebar-section">Geral</div>
+    <div class="admin-sidebar-nav">
         <a href="{% url 'admin_aurora:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
             <i class="fas fa-chart-pie"></i> Dashboard
-        </a>
-        <a href="{% url 'admin_aurora:criar_tenant' %}" class="{% if request.resolver_match.url_name == 'criar_tenant' %}active{% endif %}">
-            <i class="fas fa-plus"></i> Novo Tenant
-        </a>
-        <a href="{% url 'admin_aurora:planos' %}" class="{% if request.resolver_match.url_name == 'planos' or request.resolver_match.url_name == 'plano_detalhe' %}active{% endif %}">
-            <i class="fas fa-tags"></i> Planos
-        </a>
-        <a href="{% url 'admin_aurora:produto' %}" class="{% if request.resolver_match.url_name == 'produto' %}active{% endif %}">
-            <i class="fas fa-cube"></i> Produto
-        </a>
-        <a href="{% url 'admin_aurora:docs' %}" class="{% if request.resolver_match.url_name == 'docs' %}active{% endif %}">
-            <i class="fas fa-book"></i> Docs
-        </a>
-        <a href="{% url 'admin_aurora:backlog' %}" class="{% if request.resolver_match.url_name == 'backlog' %}active{% endif %}">
-            <i class="fas fa-tasks"></i> Backlog
-        </a>
-        <a href="{% url 'admin_aurora:logs' %}" class="{% if request.resolver_match.url_name == 'logs' %}active{% endif %}">
-            <i class="fas fa-file-alt"></i> Logs
         </a>
         <a href="{% url 'admin_aurora:monitoramento' %}" class="{% if request.resolver_match.url_name == 'monitoramento' %}active{% endif %}">
             <i class="fas fa-heartbeat"></i> Monitoramento
         </a>
-        <a href="{% url 'admin_aurora:config_assistente' %}" class="{% if request.resolver_match.url_name == 'config_assistente' %}active{% endif %}">
-            <i class="fas fa-robot"></i> Assistente
+    </div>
+
+    <div class="admin-sidebar-section">Tenants</div>
+    <div class="admin-sidebar-nav">
+        <a href="{% url 'admin_aurora:dashboard' %}#tenants" class="{% if request.resolver_match.url_name == 'tenant_detalhe' %}active{% endif %}">
+            <i class="fas fa-building"></i> Lista de Tenants
+        </a>
+        <a href="{% url 'admin_aurora:criar_tenant' %}" class="{% if request.resolver_match.url_name == 'criar_tenant' %}active{% endif %}">
+            <i class="fas fa-plus-circle"></i> Novo Tenant
         </a>
     </div>
-    <div class="admin-topbar-right">
-        <a href="{% url 'dashboard:dashboard1' %}"><i class="fas fa-arrow-left"></i> Voltar ao sistema</a>
+
+    <div class="admin-sidebar-section">Produto</div>
+    <div class="admin-sidebar-nav">
+        <a href="{% url 'admin_aurora:planos' %}" class="{% if request.resolver_match.url_name == 'planos' or request.resolver_match.url_name == 'plano_detalhe' %}active{% endif %}">
+            <i class="fas fa-tags"></i> Planos
+        </a>
+        <a href="{% url 'admin_aurora:config_assistente' %}" class="{% if request.resolver_match.url_name == 'config_assistente' %}active{% endif %}">
+            <i class="fas fa-robot"></i> Assistente CRM
+        </a>
+        <a href="{% url 'admin_aurora:config_recuperacao_senha' %}" class="{% if request.resolver_match.url_name == 'config_recuperacao_senha' %}active{% endif %}">
+            <i class="fas fa-key"></i> Recuperacao Senha
+        </a>
+    </div>
+
+    <div class="admin-sidebar-section">Conteudo</div>
+    <div class="admin-sidebar-nav">
+        <a href="{% url 'admin_aurora:produto' %}" class="{% if request.resolver_match.url_name == 'produto' %}active{% endif %}">
+            <i class="fas fa-cube"></i> Status Produto
+        </a>
+        <a href="{% url 'admin_aurora:docs' %}" class="{% if request.resolver_match.url_name == 'docs' %}active{% endif %}">
+            <i class="fas fa-book"></i> Documentacao
+        </a>
+        <a href="{% url 'admin_aurora:backlog' %}" class="{% if request.resolver_match.url_name == 'backlog' %}active{% endif %}">
+            <i class="fas fa-tasks"></i> Backlog
+        </a>
+    </div>
+
+    <div class="admin-sidebar-section">Sistema</div>
+    <div class="admin-sidebar-nav">
+        <a href="{% url 'admin_aurora:logs' %}" class="{% if request.resolver_match.url_name == 'logs' %}active{% endif %}">
+            <i class="fas fa-file-alt"></i> Logs
+        </a>
+    </div>
+
+    <div class="admin-sidebar-footer">
+        <a href="{% url 'dashboard:dashboard1' %}">
+            <i class="fas fa-arrow-left"></i> Voltar ao sistema
+        </a>
     </div>
 </div>
 
+<!-- Overlay (mobile) -->
+<div class="admin-overlay" id="adminOverlay" onclick="toggleSidebar()"></div>
+
+<!-- Topbar -->
+<div class="admin-topbar">
+    <button class="admin-mobile-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <div class="admin-topbar-title">{% block topbar_title %}Hubtrix Admin{% endblock %}</div>
+    <div class="admin-topbar-right">
+        {% block topbar_actions %}{% endblock %}
+    </div>
+</div>
+
+<!-- Content -->
 <div class="admin-content">
     {% block content %}{% endblock %}
 </div>
 
+<script>
+function toggleSidebar() {
+    document.getElementById('adminSidebar').classList.toggle('show');
+    document.getElementById('adminOverlay').classList.toggle('show');
+}
+// Close on resize to desktop
+window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+        document.getElementById('adminSidebar').classList.remove('show');
+        document.getElementById('adminOverlay').classList.remove('show');
+    }
+});
+</script>
+{% block extra_js %}{% endblock %}
 </body>
 </html>
