@@ -10,6 +10,9 @@ urlpatterns = [
     path('logs/', views.logs_view, name='logs'),
     path('monitoramento/', views.monitoramento_view, name='monitoramento'),
     path('api/toggle-tenant/', views.api_toggle_tenant, name='api_toggle_tenant'),
+    path('api/criar-usuario/', views.api_criar_usuario_tenant, name='api_criar_usuario'),
+    path('api/resetar-senha/', views.api_resetar_senha_usuario, name='api_resetar_senha'),
+    path('api/toggle-usuario/', views.api_toggle_usuario, name='api_toggle_usuario'),
 
     # Planos
     path('planos/', views.planos_view, name='planos'),

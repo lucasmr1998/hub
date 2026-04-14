@@ -667,3 +667,78 @@ def auditoria_view(request):
         'filtro_categoria': categoria,
         'filtro_busca': busca,
     })
+
+
+@superuser_required
+@require_POST
+def api_criar_usuario_tenant(request):
+    """Cria usuario para um tenant via admin."""
+    import json
+    data = json.loads(request.body)
+
+    tenant_id = data.get('tenant_id')
+    username = data.get('username', '').strip()
+    email = data.get('email', '').strip()
+    nome = data.get('nome', '').strip()
+    senha = data.get('senha', '').strip()
+    perfil_id = data.get('perfil_id')
+
+    if not username or not email or not senha or not tenant_id:
+        return JsonResponse({'error': 'Username, email, senha e tenant sao obrigatorios'}, status=400)
+
+    if User.objects.filter(username=username).exists():
+        return JsonResponse({'error': f'Username "{username}" ja existe'}, status=400)
+
+    tenant = get_object_or_404(Tenant, pk=tenant_id)
+
+    user = User.objects.create_user(username=username, email=email, password=senha)
+    if nome:
+        partes = nome.split(' ', 1)
+        user.first_name = partes[0]
+        user.last_name = partes[1] if len(partes) > 1 else ''
+        user.save(update_fields=['first_name', 'last_name'])
+
+    PerfilUsuario.objects.create(user=user, tenant=tenant)
+
+    if perfil_id:
+        from apps.sistema.models import PerfilPermissao, PermissaoUsuario
+        perfil = PerfilPermissao.objects.filter(pk=perfil_id, tenant=tenant).first()
+        if perfil:
+            PermissaoUsuario.objects.create(user=user, perfil=perfil, tenant=tenant)
+
+    return JsonResponse({'success': True, 'message': f'Usuario {username} criado.', 'user_id': user.pk})
+
+
+@superuser_required
+@require_POST
+def api_resetar_senha_usuario(request):
+    """Reseta senha de um usuario."""
+    import json
+    data = json.loads(request.body)
+    user_id = data.get('user_id')
+    nova_senha = data.get('senha', '').strip()
+
+    if not user_id or not nova_senha:
+        return JsonResponse({'error': 'user_id e senha sao obrigatorios'}, status=400)
+
+    user = get_object_or_404(User, pk=user_id)
+    user.set_password(nova_senha)
+    user.save()
+
+    return JsonResponse({'success': True, 'message': f'Senha de {user.username} resetada.'})
+
+
+@superuser_required
+@require_POST
+def api_toggle_usuario(request):
+    """Ativa/desativa usuario."""
+    import json
+    data = json.loads(request.body)
+    user_id = data.get('user_id')
+
+    user = get_object_or_404(User, pk=user_id)
+    user.is_active = not user.is_active
+    user.save(update_fields=['is_active'])
+
+    status = 'ativado' if user.is_active else 'desativado'
+    return JsonResponse({'success': True, 'message': f'Usuario {user.username} {status}.'})
