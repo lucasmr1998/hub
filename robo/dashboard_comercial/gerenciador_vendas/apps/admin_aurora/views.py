@@ -17,8 +17,8 @@ from apps.sistema.models import (
 )
 from apps.sistema.utils import auditar
 
-# Caminho base dos docs (relativo ao manage.py -> sobe até hub/)
-DOCS_BASE = Path(__file__).resolve().parent.parent.parent.parent.parent.parent / 'docs'
+# Caminho base dos docs (views.py → admin_aurora → apps → gerenciador_vendas → dashboard_comercial → robo → /docs)
+DOCS_BASE = Path(__file__).resolve().parent.parent.parent.parent.parent / 'docs'
 TAREFAS_PATH = DOCS_BASE / 'context' / 'tarefas'
 
 
