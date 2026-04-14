@@ -88,6 +88,9 @@ INSTALLED_APPS = [
 
     # === Inbox ===
     'apps.inbox',
+
+    # === Assistente CRM ===
+    'apps.assistente',
 ]
 
 MIDDLEWARE = [

@@ -56,4 +56,7 @@ urlpatterns = [
     # === Widget público (sem login) ===
     path('api/public/widget/', include('apps.inbox.urls_public')),
 
+    # === Assistente CRM (webhook WhatsApp) ===
+    path('assistente/', include('apps.assistente.urls')),
+
 ]
