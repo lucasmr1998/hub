@@ -101,6 +101,20 @@
             <span>{% if integ.erros_24h %}<span style="color:var(--danger);"><strong>{{ integ.erros_24h }}</strong> erros</span>{% else %}<span style="color:var(--success);">Sem erros</span>{% endif %}</span>
             {% if integ.token_valido %}<span style="color:var(--success);"><i class="fas fa-check-circle"></i> Token válido</span>{% endif %}
         </div>
+        {% if integ.tipo == 'uazapi' or integ.tipo == 'evolution' %}
+        {% if integ.api_token %}
+        <div style="padding:8px 20px;background:#f0fdf4;border-top:1px solid #bbf7d0;font-size:11px;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <i class="fas fa-link" style="color:var(--success);"></i>
+                <strong style="color:#059669;">Webhook URL</strong>
+                <button onclick="copiarWebhook(this, '{{ integ.api_token }}')" style="background:none;border:none;cursor:pointer;color:var(--primary);font-size:11px;padding:2px 6px;border-radius:4px;" title="Copiar">
+                    <i class="fas fa-copy"></i> Copiar
+                </button>
+            </div>
+            <code style="color:#1e293b;word-break:break-all;font-size:10px;" id="webhook-{{ integ.pk }}">{{ request.scheme }}://{{ request.get_host }}/inbox/api/webhook/{{ integ.api_token }}/</code>
+        </div>
+        {% endif %}
+        {% endif %}
         {% if integ.tipo == 'hubsoft' %}
         <div class="integ-sync-modes" id="sync-modes-{{ integ.pk }}" style="margin-bottom:10px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-subtle,#f8fafc);">
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;letter-spacing:.03em;"><i class="fas fa-sync-alt"></i> Modos de Sincronizacao</div>
@@ -352,6 +366,14 @@ function testarConexao(pk) {
 function toggleIntegracao(pk) {
     fetch(`/integracoes/api/${pk}/toggle/`, {method:'POST', headers:H})
     .then(r=>r.json()).then(d=>{ if(d.success) location.reload(); });
+}
+
+function copiarWebhook(btn, token) {
+    const url = window.location.origin + '/inbox/api/webhook/' + token + '/';
+    navigator.clipboard.writeText(url).then(() => {
+        btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+        setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copiar'; }, 2000);
+    });
 }
 
 function excluirIntegracao(pk, nome) {
