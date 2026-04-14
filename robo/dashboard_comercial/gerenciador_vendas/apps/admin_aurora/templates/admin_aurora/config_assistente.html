@@ -1,131 +1,138 @@
 {% extends 'admin_aurora/base_admin.html' %}
 
 {% block title %}Assistente CRM{% endblock %}
+{% block topbar_title %}Assistente CRM{% endblock %}
 
 {% block content %}
-<div style="max-width:900px;margin:0 auto;">
-    <h1 style="font-size:22px;font-weight:700;margin-bottom:6px;"><i class="fas fa-robot" style="color:#6366f1;"></i> Assistente CRM via WhatsApp</h1>
-    <p style="color:#64748b;font-size:13px;margin-bottom:24px;">Configure o assistente IA para cada tenant. Os vendedores podem operar o CRM direto pelo WhatsApp.</p>
-
-    {% for item in configs %}
-    <div style="background:#fff;border-radius:14px;border:1px solid #e2e8f0;padding:20px;margin-bottom:16px;" id="config-{{ item.tenant.pk }}">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <div>
-                <div style="font-size:16px;font-weight:700;color:#1e293b;">{{ item.tenant.nome }}</div>
-                <div style="font-size:12px;color:#94a3b8;">{{ item.total_msgs }} mensagens processadas</div>
-            </div>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                <input type="checkbox" class="cfg-ativo" data-tenant="{{ item.tenant.pk }}" {% if item.config.ativo %}checked{% endif %}
-                    onchange="salvarConfig({{ item.tenant.pk }})"
-                    style="width:18px;height:18px;accent-color:#6366f1;">
-                <span style="font-size:13px;font-weight:600;color:{% if item.config.ativo %}#059669{% else %}#94a3b8{% endif %};">
-                    {% if item.config.ativo %}Ativo{% else %}Inativo{% endif %}
-                </span>
-            </label>
+<!-- CONFIG GLOBAL -->
+<div class="card" style="border-left:3px solid var(--primary);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div>
+            <div class="card-title" style="margin:0;"><i class="fas fa-globe"></i> Configuracao Global</div>
+            <div style="font-size:11px;color:var(--text-light);">Numero WhatsApp da Hubtrix (compartilhado por todos os tenants)</div>
         </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-            <div>
-                <label style="display:block;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;margin-bottom:4px;">WhatsApp (Uazapi)</label>
-                <select class="cfg-whatsapp" data-tenant="{{ item.tenant.pk }}" onchange="salvarConfig({{ item.tenant.pk }})"
-                    style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:12px;">
-                    <option value="">-- Nenhuma --</option>
-                    {% for integ in integracoes_whatsapp %}
-                    <option value="{{ integ.pk }}" {% if item.config.integracao_whatsapp_id == integ.pk %}selected{% endif %}>
-                        {{ integ.nome }} ({{ integ.tenant.nome }})
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div>
-                <label style="display:block;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Provider IA</label>
-                <select class="cfg-ia" data-tenant="{{ item.tenant.pk }}" onchange="salvarConfig({{ item.tenant.pk }})"
-                    style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:12px;">
-                    <option value="">-- Nenhuma --</option>
-                    {% for integ in integracoes_ia %}
-                    <option value="{{ integ.pk }}" {% if item.config.integracao_ia_id == integ.pk %}selected{% endif %}>
-                        {{ integ.nome }} ({{ integ.tenant.nome }})
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-
-        <div style="margin-bottom:14px;">
-            <label style="display:block;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Modelo IA</label>
-            <input type="text" class="cfg-modelo" data-tenant="{{ item.tenant.pk }}" value="{{ item.config.modelo_ia }}"
-                onchange="salvarConfig({{ item.tenant.pk }})"
-                style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:12px;"
-                placeholder="gpt-4o-mini">
-        </div>
-
-        {% if item.webhook_url %}
-        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:14px;">
-            <div style="font-weight:600;color:#059669;margin-bottom:4px;">Webhook URL</div>
-            <code style="font-size:11px;color:#1e293b;word-break:break-all;">{{ item.webhook_url }}</code>
-            <div style="font-size:10px;color:#64748b;margin-top:4px;">Configure este URL no webhook da Uazapi para receber mensagens.</div>
-        </div>
-        {% else %}
-        <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:14px;">
-            <div style="font-weight:600;color:#d97706;">Webhook nao disponivel</div>
-            <div style="font-size:10px;color:#92400e;">Selecione uma integracao WhatsApp com api_token configurado.</div>
-        </div>
-        {% endif %}
-
-        <details style="margin-top:8px;">
-            <summary style="font-size:12px;color:#64748b;cursor:pointer;font-weight:600;">Mensagens personalizadas</summary>
-            <div style="margin-top:10px;display:flex;flex-direction:column;gap:10px;">
-                <div>
-                    <label style="display:block;font-size:11px;font-weight:600;color:#64748b;margin-bottom:4px;">Boas-vindas (use {nome})</label>
-                    <input type="text" class="cfg-boas-vindas" data-tenant="{{ item.tenant.pk }}" value="{{ item.config.mensagem_boas_vindas }}"
-                        onchange="salvarConfig({{ item.tenant.pk }})"
-                        style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:12px;">
-                </div>
-                <div>
-                    <label style="display:block;font-size:11px;font-weight:600;color:#64748b;margin-bottom:4px;">Acesso restrito</label>
-                    <input type="text" class="cfg-acesso-restrito" data-tenant="{{ item.tenant.pk }}" value="{{ item.config.mensagem_acesso_restrito }}"
-                        onchange="salvarConfig({{ item.tenant.pk }})"
-                        style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:12px;">
-                </div>
-            </div>
-        </details>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="globalAtivo" {% if config_global.ativo %}checked{% endif %}
+                onchange="salvarGlobal()" style="width:18px;height:18px;accent-color:var(--primary);">
+            <span style="font-size:13px;font-weight:600;color:{% if config_global.ativo %}var(--success){% else %}var(--text-light){% endif %};">
+                {% if config_global.ativo %}Ativo{% else %}Inativo{% endif %}
+            </span>
+        </label>
     </div>
-    {% endfor %}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div class="form-group" style="margin:0;">
+            <label>Numero WhatsApp (Uazapi)</label>
+            <select id="globalWhatsapp" onchange="salvarGlobal()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;">
+                <option value="">-- Nenhum --</option>
+                {% for integ in integracoes_whatsapp %}
+                <option value="{{ integ.pk }}" {% if config_global.integracao_whatsapp_id == integ.pk %}selected{% endif %}>
+                    {{ integ.nome }} ({{ integ.tenant.nome }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            {% if config_global.webhook_url %}
+            <label style="display:block;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:5px;">Webhook URL</label>
+            <code style="font-size:11px;background:var(--bg-subtle);padding:8px 10px;border-radius:8px;display:block;word-break:break-all;border:1px solid var(--border);">{{ config_global.webhook_url }}</code>
+            {% else %}
+            <label style="display:block;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:5px;">Webhook</label>
+            <div style="font-size:12px;color:var(--warning);">Selecione uma integracao WhatsApp</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <details>
+        <summary style="font-size:12px;color:var(--text-muted);cursor:pointer;font-weight:600;">Mensagens personalizadas</summary>
+        <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group" style="margin:0;">
+                <label>Boas-vindas (use {nome})</label>
+                <input type="text" id="globalBoasVindas" value="{{ config_global.mensagem_boas_vindas }}" onchange="salvarGlobal()"
+                    style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;">
+            </div>
+            <div class="form-group" style="margin:0;">
+                <label>Acesso restrito</label>
+                <input type="text" id="globalAcessoRestrito" value="{{ config_global.mensagem_acesso_restrito }}" onchange="salvarGlobal()"
+                    style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;">
+            </div>
+        </div>
+    </details>
 </div>
 
+<!-- CONFIGS POR TENANT -->
+<div class="section-header" style="margin-top:24px;">
+    <div class="section-title">Configuracao por Tenant</div>
+</div>
+
+{% for item in configs_tenant %}
+<div class="card" id="tenant-{{ item.tenant.pk }}">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+            <div style="font-size:14px;font-weight:700;color:var(--text-main);">{{ item.tenant.nome }}</div>
+            <div style="font-size:11px;color:var(--text-light);">{{ item.total_msgs }} mensagens processadas</div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" class="tenantAtivo" data-tenant="{{ item.tenant.pk }}" {% if item.config.ativo %}checked{% endif %}
+                onchange="salvarTenant({{ item.tenant.pk }})" style="width:16px;height:16px;accent-color:var(--primary);">
+            <span style="font-size:12px;font-weight:600;">{% if item.config.ativo %}Ativo{% else %}Inativo{% endif %}</span>
+        </label>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+        <div class="form-group" style="margin:0;">
+            <label>Provider IA</label>
+            <select class="tenantIA" data-tenant="{{ item.tenant.pk }}" onchange="salvarTenant({{ item.tenant.pk }})"
+                style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;">
+                <option value="">-- Nenhum --</option>
+                {% for integ in integracoes_ia %}
+                <option value="{{ integ.pk }}" {% if item.config.integracao_ia_id == integ.pk %}selected{% endif %}>
+                    {{ integ.nome }} ({{ integ.tenant.nome }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+            <label>Modelo IA</label>
+            <input type="text" class="tenantModelo" data-tenant="{{ item.tenant.pk }}" value="{{ item.config.modelo_ia }}"
+                onchange="salvarTenant({{ item.tenant.pk }})"
+                style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;">
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block extra_js %}
 <script>
 function getCsrf() { const c = document.cookie.match(/csrftoken=([^;]+)/); return c ? c[1] : ''; }
 
-function salvarConfig(tenantId) {
-    const card = document.getElementById('config-' + tenantId);
-    const payload = {
-        tenant_id: tenantId,
-        ativo: card.querySelector('.cfg-ativo').checked,
-        integracao_whatsapp_id: card.querySelector('.cfg-whatsapp').value || null,
-        integracao_ia_id: card.querySelector('.cfg-ia').value || null,
-        modelo_ia: card.querySelector('.cfg-modelo').value,
-        mensagem_boas_vindas: card.querySelector('.cfg-boas-vindas')?.value || '',
-        mensagem_acesso_restrito: card.querySelector('.cfg-acesso-restrito')?.value || '',
-    };
-
+function salvarGlobal() {
     fetch('{% url "admin_aurora:config_assistente" %}', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
-        body: JSON.stringify(payload)
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (d.success) {
-            const label = card.querySelector('.cfg-ativo').nextElementSibling;
-            if (payload.ativo) {
-                label.textContent = 'Ativo';
-                label.style.color = '#059669';
-            } else {
-                label.textContent = 'Inativo';
-                label.style.color = '#94a3b8';
-            }
-        }
-    });
+        headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+        body: JSON.stringify({
+            action: 'global',
+            ativo: document.getElementById('globalAtivo').checked,
+            integracao_whatsapp_id: document.getElementById('globalWhatsapp').value || null,
+            mensagem_boas_vindas: document.getElementById('globalBoasVindas')?.value || '',
+            mensagem_acesso_restrito: document.getElementById('globalAcessoRestrito')?.value || '',
+        })
+    }).then(r=>r.json()).then(d=>{ if(!d.success) alert(d.error||'Erro'); });
+}
+
+function salvarTenant(tenantId) {
+    const card = document.getElementById('tenant-' + tenantId);
+    fetch('{% url "admin_aurora:config_assistente" %}', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+        body: JSON.stringify({
+            action: 'tenant',
+            tenant_id: tenantId,
+            ativo: card.querySelector('.tenantAtivo').checked,
+            integracao_ia_id: card.querySelector('.tenantIA').value || null,
+            modelo_ia: card.querySelector('.tenantModelo').value,
+        })
+    }).then(r=>r.json()).then(d=>{ if(!d.success) alert(d.error||'Erro'); });
 }
 </script>
 {% endblock %}

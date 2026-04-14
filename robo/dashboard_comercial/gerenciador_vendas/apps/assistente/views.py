@@ -23,7 +23,12 @@ def webhook_assistente(request, api_token):
     Identifica o usuario pelo telefone e processa via engine.
     """
     from apps.integracoes.models import IntegracaoAPI
-    from .models import ConfiguracaoAssistente
+    from .models import ConfiguracaoAssistenteGlobal, ConfiguracaoAssistenteTenant
+
+    # Verificar config global
+    config_global = ConfiguracaoAssistenteGlobal.get_config()
+    if not config_global.ativo:
+        return JsonResponse({'error': 'Assistente desativado'}, status=403)
 
     # Identificar integracao pelo token
     integracao_whatsapp = IntegracaoAPI.all_tenants.filter(
@@ -32,14 +37,6 @@ def webhook_assistente(request, api_token):
 
     if not integracao_whatsapp:
         return JsonResponse({'error': 'Token invalido'}, status=401)
-
-    # Verificar se assistente esta ativo para algum tenant
-    config_assistente = ConfiguracaoAssistente.objects.filter(
-        integracao_whatsapp=integracao_whatsapp, ativo=True,
-    ).first()
-
-    if not config_assistente:
-        return JsonResponse({'error': 'Assistente nao configurado'}, status=403)
 
     try:
         body = json.loads(request.body)
@@ -70,17 +67,22 @@ def webhook_assistente(request, api_token):
         ).first()
 
     if not perfil:
-        msg = config_assistente.mensagem_acesso_restrito if config_assistente else 'Acesso restrito.'
-        _enviar_resposta(integracao_whatsapp, telefone, msg)
+        _enviar_resposta(integracao_whatsapp, telefone, config_global.mensagem_acesso_restrito)
         return JsonResponse({'ok': True, 'access': 'denied'})
 
     usuario = perfil.user
     tenant = perfil.tenant
 
+    # Verificar se assistente esta ativo para o tenant do usuario
+    config_tenant = ConfiguracaoAssistenteTenant.get_config(tenant)
+    if not config_tenant.ativo:
+        _enviar_resposta(integracao_whatsapp, telefone, 'Assistente nao ativado para sua empresa.')
+        return JsonResponse({'ok': True, 'access': 'tenant_disabled'})
+
     # Processar em background para nao travar o webhook
     thread = threading.Thread(
         target=_processar_e_responder,
-        args=(usuario, tenant, mensagem_texto, telefone, integracao_whatsapp, config_assistente),
+        args=(usuario, tenant, mensagem_texto, telefone, integracao_whatsapp, config_tenant),
         daemon=True,
     )
     thread.start()
@@ -111,7 +113,7 @@ def _extrair_telefone(body):
     return telefone
 
 
-def _processar_e_responder(usuario, tenant, mensagem_texto, telefone, integracao_whatsapp, config_assistente=None):
+def _processar_e_responder(usuario, tenant, mensagem_texto, telefone, integracao_whatsapp, config_tenant=None):
     """Processa a mensagem e envia resposta (roda em thread)."""
     from apps.sistema.middleware import set_current_tenant
     set_current_tenant(tenant)
@@ -119,8 +121,8 @@ def _processar_e_responder(usuario, tenant, mensagem_texto, telefone, integracao
     try:
         from .engine import processar_mensagem
 
-        # Usar integracao IA da config do assistente
-        integracao_ia = config_assistente.integracao_ia if config_assistente else None
+        # Usar integracao IA da config do tenant
+        integracao_ia = config_tenant.integracao_ia if config_tenant else None
 
         if not integracao_ia:
             from apps.integracoes.models import IntegracaoAPI

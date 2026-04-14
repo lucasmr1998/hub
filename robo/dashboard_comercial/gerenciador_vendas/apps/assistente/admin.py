@@ -1,5 +1,22 @@
 from django.contrib import admin
-from .models import ConversaAssistente, MensagemAssistente
+from .models import ConfiguracaoAssistenteGlobal, ConfiguracaoAssistenteTenant, ConversaAssistente, MensagemAssistente
+
+
+@admin.register(ConfiguracaoAssistenteGlobal)
+class ConfiguracaoAssistenteGlobalAdmin(admin.ModelAdmin):
+    list_display = ['ativo', 'integracao_whatsapp', 'data_atualizacao']
+
+    def has_add_permission(self, request):
+        return not ConfiguracaoAssistenteGlobal.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ConfiguracaoAssistenteTenant)
+class ConfiguracaoAssistenteTenantAdmin(admin.ModelAdmin):
+    list_display = ['tenant', 'ativo', 'integracao_ia', 'modelo_ia']
+    list_filter = ['ativo']
 
 
 class MensagemInline(admin.TabularInline):
