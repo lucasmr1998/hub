@@ -121,6 +121,8 @@ def _processar_e_responder(usuario, tenant, mensagem_texto, telefone, integracao
     try:
         from .engine import processar_mensagem
 
+        logger.info(f'[Assistente] Processando: user={usuario.username}, tenant={tenant.nome}, msg="{mensagem_texto[:50]}"')
+
         # Usar integracao IA da config do tenant
         integracao_ia = config_tenant.integracao_ia if config_tenant else None
 
@@ -132,10 +134,18 @@ def _processar_e_responder(usuario, tenant, mensagem_texto, telefone, integracao
                 ativa=True,
             ).first()
 
+        if not integracao_ia:
+            logger.error(f'[Assistente] Sem integracao IA para tenant {tenant.nome}')
+            _enviar_resposta(integracao_whatsapp, telefone, 'Assistente sem IA configurada. Avise o administrador.')
+            return
+
+        logger.info(f'[Assistente] Chamando LLM: {integracao_ia.nome} ({integracao_ia.tipo})')
         resposta = processar_mensagem(usuario, tenant, mensagem_texto, integracao_ia)
+        logger.info(f'[Assistente] Resposta: "{resposta[:80]}"')
 
         # Enviar resposta via WhatsApp
         _enviar_resposta(integracao_whatsapp, telefone, resposta)
+        logger.info(f'[Assistente] Enviado para {telefone}')
 
     except Exception as e:
         logger.error(f'[Assistente] Erro ao processar: {e}', exc_info=True)

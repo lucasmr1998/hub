@@ -29,7 +29,7 @@ Regras:
 O vendedor logado e: {nome_usuario}
 """
 
-MAX_HISTORICO = 20  # mensagens no contexto
+MAX_HISTORICO = 10  # mensagens no contexto (menos = mais rapido)
 
 
 def processar_mensagem(usuario, tenant, mensagem_texto, integracao=None):
