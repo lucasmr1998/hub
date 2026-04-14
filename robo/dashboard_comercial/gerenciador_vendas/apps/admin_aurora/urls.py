@@ -19,6 +19,9 @@ urlpatterns = [
     path('configuracoes/recuperacao-senha/', views.config_recuperacao_senha_view, name='config_recuperacao_senha'),
     path('configuracoes/assistente/', views.config_assistente_view, name='config_assistente'),
 
+    # Auditoria
+    path('auditoria/', views.auditoria_view, name='auditoria'),
+
     # Documentação e Produto
     path('produto/', views.produto_view, name='produto'),
     path('docs/', views.docs_view, name='docs'),

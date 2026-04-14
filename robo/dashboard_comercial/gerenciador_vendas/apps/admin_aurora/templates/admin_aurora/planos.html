@@ -1,6 +1,7 @@
 {% extends "admin_aurora/base_admin.html" %}
 
 {% block title %}Planos{% endblock %}
+{% block topbar_title %}Planos{% endblock %}
 
 {% block content %}
 <style>
@@ -86,8 +87,8 @@
     }
 </style>
 
-<div class="admin-header">
-    <h1><i class="fas fa-tags"></i> Planos Hubtrix</h1>
+<div class="section-header">
+    <div class="section-title"><i class="fas fa-tags" style="color:var(--primary);"></i> Planos Hubtrix</div>
 </div>
 
 {% if messages %}

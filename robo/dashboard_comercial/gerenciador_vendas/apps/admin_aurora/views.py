@@ -636,3 +636,34 @@ def config_assistente_view(request):
         'integracoes_whatsapp': integracoes_whatsapp,
         'integracoes_ia': integracoes_ia,
     })
+
+
+@login_required(login_url='sistema:login')
+def auditoria_view(request):
+    """Dashboard de auditoria — quem fez o que, quando."""
+    tenant_id = request.GET.get('tenant', '')
+    categoria = request.GET.get('categoria', '')
+    busca = request.GET.get('q', '').strip()
+
+    qs = LogSistema.all_tenants.select_related('tenant').order_by('-data_criacao')
+
+    if tenant_id:
+        qs = qs.filter(tenant_id=tenant_id)
+    if categoria:
+        qs = qs.filter(categoria=categoria)
+    if busca:
+        qs = qs.filter(mensagem__icontains=busca)
+
+    logs = qs[:200]
+    tenants = Tenant.objects.filter(ativo=True)
+
+    categorias = LogSistema.CATEGORIA_CHOICES if hasattr(LogSistema, 'CATEGORIA_CHOICES') else []
+
+    return render(request, 'admin_aurora/auditoria.html', {
+        'logs': logs,
+        'tenants': tenants,
+        'categorias': categorias,
+        'filtro_tenant': tenant_id,
+        'filtro_categoria': categoria,
+        'filtro_busca': busca,
+    })

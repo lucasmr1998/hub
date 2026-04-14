@@ -240,6 +240,9 @@
         <a href="{% url 'admin_aurora:logs' %}" class="{% if request.resolver_match.url_name == 'logs' %}active{% endif %}">
             <i class="fas fa-file-alt"></i> Logs
         </a>
+        <a href="{% url 'admin_aurora:auditoria' %}" class="{% if request.resolver_match.url_name == 'auditoria' %}active{% endif %}">
+            <i class="fas fa-clipboard-check"></i> Auditoria
+        </a>
     </div>
 
     <div class="admin-sidebar-footer">

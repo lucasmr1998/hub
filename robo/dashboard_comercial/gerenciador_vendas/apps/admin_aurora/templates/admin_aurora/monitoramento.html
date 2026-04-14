@@ -1,11 +1,12 @@
 {% extends "admin_aurora/base_admin.html" %}
 
 {% block title %}Monitoramento{% endblock %}
+{% block topbar_title %}Monitoramento{% endblock %}
 
 {% block content %}
-<div class="admin-header">
-    <h1>Monitoramento do Sistema</h1>
-    <span class="text-sm text-muted">Atualizado em {% now "d/m/Y H:i:s" %}</span>
+<div class="section-header">
+    <div class="section-title">Monitoramento do Sistema</div>
+    <span style="font-size:11px;color:var(--text-light);">Atualizado em {% now "d/m/Y H:i:s" %}</span>
 </div>
 
 <!-- ── Status do Sistema ── -->
