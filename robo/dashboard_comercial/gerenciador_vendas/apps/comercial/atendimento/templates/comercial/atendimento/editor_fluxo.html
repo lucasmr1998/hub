@@ -532,7 +532,7 @@ function addNodeToEditor(tipo, subtipo, nome, x, y) {
     else if (tipo === 'transferir_humano') boxContent = '<div class="box">Transfere para fila humana</div>';
     else boxContent = '<div class="box">Ponto de entrada</div>';
 
-    const html = `<div class="title-box">${icon} ${nome}</div>${boxContent}<div class="node-preview" data-nid="${nodeId}"></div>`;
+    const html = `<div class="title-box">${icon} ${nome}<span class="node-db-id" style="margin-left:auto;font-size:9px;opacity:0.5;font-weight:400;"></span></div>${boxContent}<div class="node-preview" data-nid="${nodeId}"></div>`;
 
     // Config padrao por subtipo
     let defaultConfig = {};
@@ -1364,6 +1364,9 @@ function _construirNodosIdMap() {
         for (const [nodeId, node] of Object.entries(moduleData.data)) {
             if (node.data && node.data.db_id) {
                 _nodosIdMap[node.data.db_id] = nodeId;
+                // Exibir db_id no card
+                const el = document.querySelector(`#node-${nodeId} .node-db-id`);
+                if (el) el.textContent = `#${node.data.db_id}`;
             }
         }
     }
@@ -1638,13 +1641,17 @@ if (fluxoSalvo && fluxoSalvo.drawflow) {
         }
     }, 200);
 
-    // Re-aplicar data-tipo apos tudo carregado
+    // Re-aplicar data-tipo e exibir db_id apos tudo carregado
     setTimeout(() => {
         for (const nodo of nodosDB) {
             const drawflowId = idMap[nodo.id];
             if (drawflowId) {
                 const el = document.querySelector(`#node-${drawflowId}`);
-                if (el) el.setAttribute('data-tipo', nodo.tipo);
+                if (el) {
+                    el.setAttribute('data-tipo', nodo.tipo);
+                    const dbIdEl = el.querySelector('.node-db-id');
+                    if (dbIdEl) dbIdEl.textContent = `#${nodo.id}`;
+                }
             }
         }
     }, 500);
