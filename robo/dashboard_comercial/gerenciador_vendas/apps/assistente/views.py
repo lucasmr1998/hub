@@ -166,6 +166,7 @@ def _processar_via_inbox(usuario, tenant, mensagem_texto, telefone, integracao_w
             fluxo = FluxoAtendimento.all_tenants.filter(
                 tenant=tenant_aurora, ativo=True, status='ativo',
                 nome__icontains='assistente',
+                nodos__tipo='entrada',  # garante que tem pelo menos nodo de entrada
             ).first()
 
         # ── 4. Processar via engine de fluxo ──

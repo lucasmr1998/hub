@@ -47,14 +47,19 @@ class Command(BaseCommand):
 
         set_current_tenant(tenant_aurora)
 
-        # Verificar se fluxo ja existe
-        existe = FluxoAtendimento.objects.filter(
+        # Verificar se fluxo ja existe e esta completo
+        existente = FluxoAtendimento.objects.filter(
             tenant=tenant_aurora, nome=NOME_FLUXO,
-        ).exists()
+        ).first()
 
-        if existe:
-            self.stdout.write(f'  Fluxo "{NOME_FLUXO}" ja existe. Pulando.')
-            return
+        if existente:
+            if existente.nodos.filter(tipo='entrada').exists():
+                self.stdout.write(f'  Fluxo "{NOME_FLUXO}" ja existe. Pulando.')
+                return
+            else:
+                # Fluxo vazio/incompleto, remover e recriar
+                self.stdout.write(f'  Fluxo "{NOME_FLUXO}" (pk={existente.pk}) incompleto. Removendo...')
+                existente.delete()
 
         # Desativar fluxo antigo
         antigos = FluxoAtendimento.objects.filter(
