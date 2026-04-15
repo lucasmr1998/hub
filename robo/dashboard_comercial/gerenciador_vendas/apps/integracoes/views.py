@@ -382,7 +382,12 @@ def api_integracao_editar(request, pk):
         if 'ativa' in data:
             integ.ativa = data['ativa']
         if 'configuracoes_extras' in data:
-            integ.configuracoes_extras = data['configuracoes_extras']
+            novas_extras = data['configuracoes_extras'] or {}
+            # Preservar token do Uazapi (salvo acima) se nao veio no JSON
+            extras_atuais = integ.configuracoes_extras or {}
+            if 'token' in extras_atuais and 'token' not in novas_extras:
+                novas_extras['token'] = extras_atuais['token']
+            integ.configuracoes_extras = novas_extras
 
         integ.save()
         return JsonResponse({'success': True, 'message': f'Integração "{integ.nome}" atualizada'})
