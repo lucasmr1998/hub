@@ -42,17 +42,10 @@ def webhook_assistente(request, api_token):
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({'error': 'JSON invalido'}, status=400)
 
-    # Debug: logar body recebido
-    import sys
-    print(f'[Assistente] WEBHOOK keys={list(body.keys())}', flush=True)
-    msg_raw = body.get('message', {})
-    chat_raw = body.get('chat', {})
-    print(f'[Assistente] message={json.dumps(msg_raw, default=str)[:800]}', flush=True)
-    print(f'[Assistente] chat_id={chat_raw.get("id","")} chat_name={chat_raw.get("name","")} chat_phone={chat_raw.get("phone","")}', flush=True)
-
     # Ignorar mensagens enviadas por nos
     key = body.get('key', {})
-    if key.get('fromMe', False):
+    msg_obj = body.get('message', {}) if isinstance(body.get('message'), dict) else {}
+    if key.get('fromMe', False) or msg_obj.get('fromMe', False):
         return JsonResponse({'ok': True, 'ignored': 'fromMe'})
 
     mensagem_texto = _extrair_mensagem(body)
@@ -323,12 +316,25 @@ def _extrair_mensagem(body):
     if 'message' in body:
         msg = body['message']
         if isinstance(msg, dict):
-            return msg.get('conversation') or msg.get('extendedTextMessage', {}).get('text', '')
+            # Formato Uazapi v2: message.text ou message.content
+            return (
+                msg.get('text', '')
+                or msg.get('content', '')
+                or msg.get('conversation', '')
+                or msg.get('extendedTextMessage', {}).get('text', '')
+            )
         return str(msg) if msg else ''
     return body.get('text', '') or body.get('body', '')
 
 
 def _extrair_telefone(body):
+    # Formato Uazapi v2: message.chatid (ex: 555381521653@s.whatsapp.net)
+    msg = body.get('message', {})
+    if isinstance(msg, dict):
+        chatid = msg.get('chatid', '') or msg.get('sender_pn', '')
+        if chatid:
+            return chatid.split('@')[0]
+    # Formato antigo: key.remoteJid
     key = body.get('key', {})
     remote = key.get('remoteJid', '') or body.get('from', '') or body.get('number', '')
     return remote.split('@')[0]
