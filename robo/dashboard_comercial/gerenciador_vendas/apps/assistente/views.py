@@ -42,6 +42,11 @@ def webhook_assistente(request, api_token):
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({'error': 'JSON invalido'}, status=400)
 
+    # Debug: logar body recebido
+    import sys
+    print(f'[Assistente] WEBHOOK body keys={list(body.keys())}', flush=True)
+    print(f'[Assistente] WEBHOOK body={json.dumps(body, default=str)[:500]}', flush=True)
+
     # Ignorar mensagens enviadas por nos
     key = body.get('key', {})
     if key.get('fromMe', False):
@@ -49,6 +54,8 @@ def webhook_assistente(request, api_token):
 
     mensagem_texto = _extrair_mensagem(body)
     telefone = _extrair_telefone(body)
+
+    print(f'[Assistente] msg="{mensagem_texto}" tel="{telefone}"', flush=True)
 
     if not mensagem_texto or not telefone:
         return JsonResponse({'ok': True, 'ignored': True})
