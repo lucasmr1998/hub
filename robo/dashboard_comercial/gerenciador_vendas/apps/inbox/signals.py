@@ -60,6 +60,9 @@ def _enviar_mensagens_bot(tenant, conversa, texto, nome_bot='Hubtrix IA'):
     from apps.inbox.services import _enviar_webhook_async
 
     partes = _dividir_mensagem(texto)
+    # Limitar a 3 mensagens para evitar spam (reagrupar excedentes na ultima)
+    if len(partes) > 3:
+        partes = partes[:2] + ['\n\n'.join(partes[2:])]
     ultima_msg = None
 
     for parte in partes:
