@@ -110,6 +110,8 @@ def _processar_via_inbox(usuario, tenant, mensagem_texto, telefone, integracao_w
     set_current_tenant(tenant_aurora)
 
     try:
+        import sys
+        print(f'[Assistente] INICIO user={usuario.username}, tenant={tenant.nome}, msg="{mensagem_texto[:50]}"', flush=True)
         logger.info(f'[Assistente] user={usuario.username}, tenant={tenant.nome}, msg="{mensagem_texto[:50]}"')
 
         # ── 1. Buscar/criar conversa no Inbox ──
@@ -162,12 +164,14 @@ def _processar_via_inbox(usuario, tenant, mensagem_texto, telefone, integracao_w
         # ── 3. Buscar fluxo de atendimento ──
         canal = conversa.canal
         fluxo = canal.fluxo if canal and canal.fluxo_id else None
+        print(f'[Assistente] canal={canal} canal.fluxo_id={canal.fluxo_id if canal else None}', flush=True)
         if not fluxo:
             fluxo = FluxoAtendimento.all_tenants.filter(
                 tenant=tenant_aurora, ativo=True, status='ativo',
                 nome__icontains='assistente',
-                nodos__tipo='entrada',  # garante que tem pelo menos nodo de entrada
+                nodos__tipo='entrada',
             ).first()
+        print(f'[Assistente] fluxo={fluxo} (pk={fluxo.pk if fluxo else None})', flush=True)
 
         # ── 4. Processar via engine de fluxo ──
         resposta = None
@@ -178,10 +182,12 @@ def _processar_via_inbox(usuario, tenant, mensagem_texto, telefone, integracao_w
                 usuario, tenant, tenant_aurora, mensagem_texto,
                 telefone, conversa, fluxo,
             )
+            print(f'[Assistente] resposta_fluxo={resposta[:80] if resposta else None}', flush=True)
             set_current_tenant(tenant_aurora)
 
         # Fallback: engine standalone (se nao tem fluxo configurado)
         if not resposta:
+            print(f'[Assistente] FALLBACK para engine standalone', flush=True)
             set_current_tenant(tenant)
             from .engine import processar_mensagem
             integracao_ia = config_tenant.integracao_ia
@@ -214,6 +220,9 @@ def _processar_via_inbox(usuario, tenant, mensagem_texto, telefone, integracao_w
         logger.info(f'[Assistente] Enviado para {telefone}')
 
     except Exception as e:
+        import traceback
+        print(f'[Assistente] ERRO: {e}', flush=True)
+        traceback.print_exc()
         logger.error(f'[Assistente] Erro: {e}', exc_info=True)
         _enviar_resposta(integracao_whatsapp, telefone, 'Desculpe, ocorreu um erro. Tente novamente.')
 
