@@ -167,7 +167,12 @@ def uazapi_webhook(request, api_token=None):
         push_name = msg.get('senderName', chat.get('wa_name', chat.get('name', '')))
         message_id = msg.get('messageid', '')
         timestamp = msg.get('messageTimestamp', '')
-        conteudo = msg.get('content', msg.get('text', ''))
+        conteudo_raw = msg.get('content', msg.get('text', ''))
+        # Se content veio como dict (mensagem com contextInfo/reply), extrair texto
+        if isinstance(conteudo_raw, dict):
+            conteudo = conteudo_raw.get('text', '') or conteudo_raw.get('conversation', '') or str(conteudo_raw)
+        else:
+            conteudo = conteudo_raw or ''
         msg_type = msg.get('messageType', 'Conversation')
 
         # Mapear tipo
