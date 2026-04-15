@@ -142,9 +142,9 @@ class IntegracaoAPI(TenantMixin):
 
     @property
     def token_uazapi(self):
-        """Token limpo do Uazapi (para exibir no modal de edição)."""
+        """Token limpo do Uazapi (de configuracoes_extras, sem encriptacao)."""
         extras = self.configuracoes_extras or {}
-        return extras.get('token', '') or self.access_token or ''
+        return extras.get('token', '')
 
     # --- Modos de sincronização -------------------------------------------
 

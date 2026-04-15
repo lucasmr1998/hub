@@ -28,7 +28,7 @@ class UazapiService:
 
         self.integracao = integracao
         self.base_url = integracao.base_url.rstrip('/')
-        self.token = integracao.configuracoes_extras.get('token', '') or integracao.access_token or ''
+        self.token = (integracao.configuracoes_extras or {}).get('token', '')
 
     def _headers(self):
         return {
