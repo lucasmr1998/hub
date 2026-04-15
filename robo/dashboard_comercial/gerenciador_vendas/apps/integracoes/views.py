@@ -371,6 +371,11 @@ def api_integracao_editar(request, pk):
             integ.password = data['password']
         if 'access_token' in data and data['access_token']:
             integ.access_token = data['access_token']
+            # Sincronizar com configuracoes_extras.token (UazapiService usa este campo)
+            if integ.tipo == 'uazapi':
+                extras = integ.configuracoes_extras or {}
+                extras['token'] = data['access_token']
+                integ.configuracoes_extras = extras
         if 'api_key' in data:
             integ.api_key = data['api_key']
         if 'ativa' in data:

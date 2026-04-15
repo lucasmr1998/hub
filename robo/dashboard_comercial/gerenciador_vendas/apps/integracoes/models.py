@@ -140,6 +140,12 @@ class IntegracaoAPI(TenantMixin):
             return False
         return timezone.now() < self.token_expira_em
 
+    @property
+    def token_uazapi(self):
+        """Token limpo do Uazapi (para exibir no modal de edição)."""
+        extras = self.configuracoes_extras or {}
+        return extras.get('token', '') or self.access_token or ''
+
     # --- Modos de sincronização -------------------------------------------
 
     SYNC_MODOS = ['automatico', 'manual', 'desativado']

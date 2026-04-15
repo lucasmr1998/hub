@@ -66,7 +66,7 @@
          data-url="{{ integ.base_url }}"
          data-client-id="{{ integ.client_id }}"
          data-username="{{ integ.username }}"
-         data-token="{{ integ.access_token }}"
+         data-token="{{ integ.token_uazapi }}"
          data-api-key="{{ integ.api_key }}"
          data-extras='{{ integ.configuracoes_extras|safe }}'>
         <div class="integ-header">
@@ -297,7 +297,7 @@ function editarIntegracao(pk) {
     document.getElementById('integClientSecret').value = '';
     document.getElementById('integPassword').value = '';
     document.getElementById('integApiKey').value = card.dataset.apiKey || '';
-    document.getElementById('integToken').value = '';
+    document.getElementById('integToken').value = card.dataset.token || '';
 
     try {
         const extras = card.dataset.extras;
