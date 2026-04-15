@@ -13,6 +13,7 @@ python manage.py seed_funcionalidades
 python manage.py seed_perfis_padrao
 python manage.py seed_tipos_notificacao
 python manage.py seed_fluxo_assistente
+python manage.py seed_demo_vendas
 
 # 3. Coletar arquivos estáticos
 echo "[3/4] Coletando static files..."
