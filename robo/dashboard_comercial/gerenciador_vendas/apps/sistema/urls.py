@@ -17,6 +17,7 @@ urlpatterns = [
     path('esqueci-senha/', views.esqueci_senha_view, name='esqueci_senha'),
     path('verificar-codigo/', views.verificar_codigo_view, name='verificar_codigo'),
     path('nova-senha/', views.nova_senha_view, name='nova_senha'),
+    path('trocar-senha/', views.trocar_senha_obrigatoria, name='trocar_senha_obrigatoria'),
 
     # Pagina principal de configuracoes
     path('configuracoes/', views.configuracoes_view, name='configuracoes'),

@@ -261,6 +261,13 @@ Todas as 35 funcionalidades
 - **M2M query a cada request.** A verificação `perm.acesso_comercial` faz `perfil.funcionalidades.filter(modulo='comercial').exists()` que é uma query. Com `prefetch_related` no middleware resolve.
 - **35 funcionalidades é gerenciável.** Se crescer para 100+, a página de perfis precisa de busca/filtro.
 
+### Senha Temporaria (Primeiro Acesso)
+- **PerfilUsuario.senha_temporaria** (BooleanField, default=False)
+- Ao criar usuario ou resetar senha: `senha_temporaria=True`
+- Middleware `LoginRequiredMiddleware` redireciona para `/trocar-senha/` enquanto flag for True
+- Apos trocar: flag vira False, sessao mantida via `update_session_auth_hash`
+- Template: `sistema/trocar_senha_obrigatoria.html` (visual alinhado ao login)
+
 ### Operacional
 - **Seed obrigatório.** Em cada deploy, rodar `python manage.py seed_funcionalidades`. Se esquecer, a página de perfis fica sem funcionalidades para marcar.
 - **Migration de perfis existentes.** Se já existem perfis criados com o modelo antigo (campos booleanos), eles perdem as permissões ao migrar. Precisa reconfigurar manualmente.

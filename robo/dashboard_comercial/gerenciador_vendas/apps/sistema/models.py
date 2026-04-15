@@ -207,6 +207,10 @@ class PerfilUsuario(models.Model):
         related_name='usuarios', verbose_name="Tenant"
     )
     telefone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Telefone")
+    senha_temporaria = models.BooleanField(
+        default=False, verbose_name="Senha temporária",
+        help_text="Se True, o usuário será forçado a trocar a senha no próximo login"
+    )
 
     class Meta:
         app_label = 'sistema'

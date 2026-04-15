@@ -702,7 +702,7 @@ def api_criar_usuario_tenant(request):
         user.last_name = partes[1] if len(partes) > 1 else ''
         user.save(update_fields=['first_name', 'last_name'])
 
-    PerfilUsuario.objects.create(user=user, tenant=tenant)
+    PerfilUsuario.objects.create(user=user, tenant=tenant, senha_temporaria=True)
 
     if perfil_id:
         from apps.sistema.models import PerfilPermissao, PermissaoUsuario
@@ -728,6 +728,12 @@ def api_resetar_senha_usuario(request):
     user = get_object_or_404(User, pk=user_id)
     user.set_password(nova_senha)
     user.save()
+
+    # Marcar como temporaria para forcar troca no proximo login
+    perfil = getattr(user, 'perfil', None)
+    if perfil:
+        perfil.senha_temporaria = True
+        perfil.save(update_fields=['senha_temporaria'])
 
     return JsonResponse({'success': True, 'message': f'Senha de {user.username} resetada.'})
 

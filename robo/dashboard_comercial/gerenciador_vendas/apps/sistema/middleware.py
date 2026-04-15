@@ -45,6 +45,10 @@ class LoginRequiredMiddleware:
                 return self.get_response(request)
 
         if request.user.is_authenticated:
+            # Forçar troca de senha temporária
+            perfil = getattr(request.user, 'perfil', None)
+            if perfil and perfil.senha_temporaria and path_no_slash != 'trocar-senha/':
+                return redirect('/trocar-senha/')
             return self.get_response(request)
 
         login_url = getattr(settings, 'LOGIN_URL', '/login/')

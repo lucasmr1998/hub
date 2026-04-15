@@ -139,6 +139,35 @@ def login_view(request):
     return render(request, 'sistema/login.html', {'config_empresa': config})
 
 
+@login_required
+def trocar_senha_obrigatoria(request):
+    """Forca troca de senha quando senha_temporaria=True."""
+    perfil = getattr(request.user, 'perfil', None)
+    if not perfil or not perfil.senha_temporaria:
+        return redirect('dashboard:dashboard1')
+
+    if request.method == 'POST':
+        senha1 = request.POST.get('senha1', '')
+        senha2 = request.POST.get('senha2', '')
+
+        if not senha1 or len(senha1) < 6:
+            messages.error(request, 'A senha deve ter pelo menos 6 caracteres.')
+        elif senha1 != senha2:
+            messages.error(request, 'As senhas nao conferem.')
+        else:
+            request.user.set_password(senha1)
+            request.user.save()
+            perfil.senha_temporaria = False
+            perfil.save(update_fields=['senha_temporaria'])
+            # Re-autenticar para manter a sessao
+            from django.contrib.auth import update_session_auth_hash
+            update_session_auth_hash(request, request.user)
+            messages.success(request, 'Senha alterada com sucesso!')
+            return redirect('dashboard:dashboard1')
+
+    return render(request, 'sistema/trocar_senha_obrigatoria.html')
+
+
 def logout_view(request):
     """View personalizada para logout"""
     if request.user.is_authenticated:
@@ -468,7 +497,7 @@ def api_usuarios_criar(request):
         # Criar PerfilUsuario se não existir
         from apps.sistema.models import PerfilUsuario, PermissaoUsuario, PerfilPermissao
         if not hasattr(user, 'perfil'):
-            PerfilUsuario.objects.create(user=user, tenant=request.tenant)
+            PerfilUsuario.objects.create(user=user, tenant=request.tenant, senha_temporaria=True)
 
         # Atribuir perfil de permissão
         perfil_id = data.get('perfil_id')
@@ -551,6 +580,11 @@ def api_usuarios_editar(request, user_id):
 
         if 'password' in data and data['password']:
             user.set_password(data['password'])
+            # Marcar como temporaria para forcar troca no proximo login
+            perfil = getattr(user, 'perfil', None)
+            if perfil:
+                perfil.senha_temporaria = True
+                perfil.save(update_fields=['senha_temporaria'])
 
         user.save()
 
