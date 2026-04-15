@@ -172,29 +172,7 @@ def processar_resposta_visual(atendimento, resposta):
 
     # Seguir conexoes: questoes em modo visual sempre usam true/false
     if tem_ia:
-        if ia_sucesso:
-            branch = 'true'
-        else:
-            # Tentar reperguntar antes de cair no fallback
-            nodo_key_resp = str(nodo_atual.id)
-            tentativas_key = f'_tentativas_{nodo_key_resp}'
-            tentativas = dados.get(tentativas_key, 0) + 1
-            max_tent = atendimento.max_tentativas or 3
-
-            if tentativas < max_tent:
-                # Reperguntar de forma natural
-                dados[tentativas_key] = tentativas
-                atendimento.dados_respostas = dados
-                atendimento.save(update_fields=['dados_respostas'])
-                titulo = config.get('titulo', '')
-                _registrar_log(atendimento, nodo_atual, 'aguardando',
-                               f'Reperguntando (tentativa {tentativas}/{max_tent})')
-                return {
-                    'tipo': 'questao',
-                    'questao': _montar_dados_questao(nodo_atual),
-                    'mensagem': f'Desculpe, nao entendi. {titulo}',
-                }
-            branch = 'false'
+        branch = 'true' if ia_sucesso else 'false'
     else:
         branch = 'true'
     return _seguir_conexoes(atendimento, nodo_atual, contexto, branch_forcado=branch)
