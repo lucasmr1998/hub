@@ -44,8 +44,11 @@ def webhook_assistente(request, api_token):
 
     # Debug: logar body recebido
     import sys
-    print(f'[Assistente] WEBHOOK body keys={list(body.keys())}', flush=True)
-    print(f'[Assistente] WEBHOOK body={json.dumps(body, default=str)[:500]}', flush=True)
+    print(f'[Assistente] WEBHOOK keys={list(body.keys())}', flush=True)
+    msg_raw = body.get('message', {})
+    chat_raw = body.get('chat', {})
+    print(f'[Assistente] message={json.dumps(msg_raw, default=str)[:800]}', flush=True)
+    print(f'[Assistente] chat_id={chat_raw.get("id","")} chat_name={chat_raw.get("name","")} chat_phone={chat_raw.get("phone","")}', flush=True)
 
     # Ignorar mensagens enviadas por nos
     key = body.get('key', {})
