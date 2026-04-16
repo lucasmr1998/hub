@@ -128,6 +128,11 @@ def processar_resposta_visual(atendimento, resposta):
             dados['_ultima_mensagem'] = resposta
             atendimento.dados_respostas = dados
             atendimento.save(update_fields=['dados_respostas'])
+            # Base de conhecimento no fallback de validacao
+            if atendimento.fluxo.base_conhecimento_ativa:
+                contexto_kb = _consultar_base_para_fallback(resposta, atendimento)
+                if contexto_kb:
+                    contexto['_base_conhecimento'] = contexto_kb
             return _seguir_conexoes(atendimento, nodo_atual, contexto, branch_forcado='false')
         return {
             'tipo': 'questao',
@@ -172,7 +177,15 @@ def processar_resposta_visual(atendimento, resposta):
 
     # Seguir conexoes: questoes em modo visual sempre usam true/false
     if tem_ia:
-        branch = 'true' if ia_sucesso else 'false'
+        if ia_sucesso:
+            branch = 'true'
+        else:
+            branch = 'false'
+            # Base de conhecimento: injetar artigos no contexto do fallback
+            if atendimento.fluxo.base_conhecimento_ativa:
+                contexto_kb = _consultar_base_para_fallback(resposta, atendimento)
+                if contexto_kb:
+                    contexto['_base_conhecimento'] = contexto_kb
     else:
         branch = 'true'
     return _seguir_conexoes(atendimento, nodo_atual, contexto, branch_forcado=branch)
@@ -1628,6 +1641,11 @@ def _executar_ia_respondedor(atendimento, nodo, contexto):
         lead = atendimento.lead
         system_prompt += f"\n\nDados do lead: Nome: {lead.nome_razaosocial}, Telefone: {lead.telefone}, Email: {lead.email or 'N/A'}, Cidade: {lead.cidade or 'N/A'}"
 
+    # Injetar artigos da base de conhecimento (se disponivel no contexto)
+    kb_contexto = contexto.get('_base_conhecimento')
+    if kb_contexto:
+        system_prompt += f"\n\nINFORMACOES DA BASE DE CONHECIMENTO (use para responder a duvida do candidato):\n{kb_contexto}"
+
     messages = [{'role': 'system', 'content': system_prompt}]
 
     # Historico se habilitado
@@ -1764,6 +1782,11 @@ def _executar_ia_agente_inicial(atendimento, nodo, contexto):
                 "Responda a duvida dele de forma breve e educada, e no final retome a pergunta de forma natural e conversacional. "
                 "NAO repita a pergunta exatamente como esta, reformule de forma resumida e amigavel."
             )
+
+    # Injetar artigos da base de conhecimento (se disponivel)
+    kb_contexto = contexto.get('_base_conhecimento')
+    if kb_contexto:
+        system_prompt += f"\n\nINFORMACOES DA BASE DE CONHECIMENTO (use para responder a duvida):\n{kb_contexto}"
 
     mensagem_usuario = _get_ultima_mensagem(atendimento)
 
@@ -1912,6 +1935,71 @@ def processar_resposta_ia_agente(atendimento, resposta):
     _registrar_log(atendimento, nodo, 'aguardando', f'Agente IA turno {historico["turnos"]}: {resultado[:100]}')
 
     return {'tipo': 'ia_agente', 'mensagem': resultado}
+
+
+def _consultar_base_para_fallback(mensagem, atendimento):
+    """Consulta base de conhecimento para enriquecer o fallback.
+    Retorna texto com artigos encontrados ou None.
+    Registra PerguntaSemResposta se nao encontrou."""
+    from django.db.models import Q
+    from apps.suporte.models import ArtigoConhecimento, PerguntaSemResposta
+
+    if not mensagem or len(mensagem.strip()) < 3:
+        return None
+
+    tenant = atendimento.fluxo.tenant
+
+    # Extrair termos relevantes (limpar pontuacao)
+    import re as _re
+    palavras = _re.findall(r'[a-zA-ZÀ-ÿ]+', mensagem.lower())
+    termos = [t for t in palavras if len(t) >= 3 and t not in _STOP_WORDS_PT]
+    if not termos:
+        return None
+
+    base_qs = ArtigoConhecimento.all_tenants.filter(tenant=tenant, publicado=True)
+
+    # Buscar por titulo/tags
+    filtro = Q()
+    for termo in termos[:5]:
+        filtro |= Q(titulo__icontains=termo) | Q(tags__icontains=termo)
+    artigos = list(base_qs.filter(filtro).distinct()[:3])
+
+    # Fallback: buscar no conteudo
+    if not artigos:
+        filtro_conteudo = Q()
+        for termo in termos[:3]:
+            filtro_conteudo &= Q(conteudo__icontains=termo)
+        artigos = list(base_qs.filter(filtro_conteudo).distinct()[:3])
+
+    if artigos:
+        resultado = '\n\n'.join(
+            f'{art.titulo}: {art.conteudo[:300]}' for art in artigos
+        )
+        _registrar_log(atendimento, atendimento.nodo_atual, 'sucesso',
+                       f'Base conhecimento: {len(artigos)} artigo(s) encontrado(s)')
+        return resultado
+
+    # Nao encontrou — registrar pergunta
+    try:
+        primeiro_termo = termos[0] if termos else mensagem[:30]
+        existente = PerguntaSemResposta.all_tenants.filter(
+            tenant=tenant, status='pendente',
+            pergunta__icontains=primeiro_termo,
+        ).first()
+        if existente:
+            existente.ocorrencias += 1
+            existente.save(update_fields=['ocorrencias'])
+        else:
+            PerguntaSemResposta.objects.create(
+                tenant=tenant, pergunta=mensagem,
+                lead=atendimento.lead,
+            )
+        _registrar_log(atendimento, atendimento.nodo_atual, 'sucesso',
+                       f'Base conhecimento: pergunta registrada "{mensagem[:50]}"')
+    except Exception as e:
+        logger.warning(f'Erro ao registrar pergunta sem resposta: {e}')
+
+    return None
 
 
 _STOP_WORDS_PT = {

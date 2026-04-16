@@ -124,6 +124,9 @@
     <button onclick="abrirRecontatoConfig()" class="btn-secondary" style="padding:6px 12px; font-size:12px;" title="Configurar recontato automatico">
         <i class="fas fa-clock-rotate-left"></i> Recontato
     </button>
+    <button onclick="toggleBaseConhecimento()" id="btnBaseConhecimento" class="btn-secondary" style="padding:6px 12px; font-size:12px; {% if fluxo.base_conhecimento_ativa %}background:var(--primary);color:#fff;border-color:var(--primary);{% endif %}" title="Quando ativo, fallbacks consultam a base de conhecimento para responder duvidas">
+        <i class="fas fa-book"></i> Base Conhecimento {% if fluxo.base_conhecimento_ativa %}<i class="fas fa-check" style="margin-left:4px;font-size:10px;"></i>{% endif %}
+    </button>
     <button onclick="salvarFluxo()" class="btn-primary" id="btnSalvar" style="padding:6px 16px; font-size:12px;">
         <i class="fas fa-save"></i> Salvar
     </button>
@@ -1502,6 +1505,34 @@ function toggleFluxoStatus() {
         }
     })
     .catch(() => { btn.disabled = false; window.showNotification('Erro de conexao', 'error'); });
+}
+
+function toggleBaseConhecimento() {
+    const btn = document.getElementById('btnBaseConhecimento');
+    btn.disabled = true;
+    fetch('{% url "comercial_atendimento:api_toggle_fluxo" fluxo.pk %}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+        body: JSON.stringify({base_conhecimento: true})
+    })
+    .then(r => r.json())
+    .then(d => {
+        btn.disabled = false;
+        if (d.ok) {
+            const ativo = d.base_conhecimento_ativa;
+            window.showNotification(ativo ? 'Base de conhecimento ativada' : 'Base de conhecimento desativada', 'success');
+            if (ativo) {
+                btn.style.background = 'var(--primary)'; btn.style.borderColor = 'var(--primary)'; btn.style.color = '#fff';
+                btn.innerHTML = '<i class="fas fa-book"></i> Base Conhecimento <i class="fas fa-check" style="margin-left:4px;font-size:10px;"></i>';
+            } else {
+                btn.style.background = ''; btn.style.borderColor = ''; btn.style.color = '';
+                btn.innerHTML = '<i class="fas fa-book"></i> Base Conhecimento';
+            }
+        } else {
+            window.showNotification(d.erro || 'Erro', 'error');
+        }
+    })
+    .catch(() => { btn.disabled = false; });
 }
 
 // ── Auto-save (30s) ──

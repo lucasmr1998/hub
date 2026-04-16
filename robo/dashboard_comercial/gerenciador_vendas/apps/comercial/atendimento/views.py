@@ -586,6 +586,16 @@ def api_toggle_fluxo(request, fluxo_id):
     fluxo = get_object_or_404(FluxoAtendimento, pk=fluxo_id)
 
     data = json.loads(request.body) if request.body else {}
+
+    # Toggle base de conhecimento
+    if data.get('base_conhecimento'):
+        fluxo.base_conhecimento_ativa = not fluxo.base_conhecimento_ativa
+        fluxo.save(update_fields=['base_conhecimento_ativa'])
+        return JsonResponse({
+            'ok': True,
+            'base_conhecimento_ativa': fluxo.base_conhecimento_ativa,
+        })
+
     novo_status = data.get('status', 'ativo')
 
     if novo_status == 'ativo':

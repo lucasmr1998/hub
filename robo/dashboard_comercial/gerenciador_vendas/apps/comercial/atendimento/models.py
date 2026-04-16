@@ -136,6 +136,12 @@ class FluxoAtendimento(TenantMixin):
         help_text="Estado do Drawflow para re-import do editor visual"
     )
 
+    # Base de conhecimento nos fallbacks
+    base_conhecimento_ativa = models.BooleanField(
+        default=False, verbose_name="Base de Conhecimento",
+        help_text="Quando ativo, fallbacks de questoes consultam a base de conhecimento antes de responder"
+    )
+
     # Recontato automatico
     recontato_ativo = models.BooleanField(
         default=False, verbose_name="Recontato Ativo",
