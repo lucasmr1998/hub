@@ -58,7 +58,7 @@
         if (!iso) return '';
         const d = new Date(iso);
         return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) + ', ' +
-               d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + ' PM';
+               d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     }
 
     function formatDate(iso) {
