@@ -133,6 +133,26 @@
 .md-content code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: .8rem; color: #6366f1; }
 .md-content pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; overflow-x: auto; margin: 12px 0; }
 .md-content pre code { background: none; color: inherit; padding: 0; }
+
+/* Accordions (H2 e H3 colapsaveis) */
+.acc-section { margin-bottom: 10px; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: #fff; }
+.acc-section.level-h3 { border-color: #eef2ff; margin-bottom: 6px; }
+.acc-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; background: #f8fafc; user-select: none; transition: background .1s; font-weight: 700; }
+.acc-section.level-h3 .acc-header { padding: 9px 14px; background: #fafbff; font-size: .88rem; }
+.acc-header:hover { background: #f1f5f9; }
+.acc-section.open > .acc-header { background: #fff; border-bottom: 1px solid #f1f5f9; }
+.acc-section.level-h3.open > .acc-header { background: #fff; }
+.acc-header-title { flex: 1; color: #1e293b; font-size: .95rem; }
+.acc-section.level-h3 .acc-header-title { font-size: .88rem; color: #334155; }
+.acc-header-arrow { font-size: .65rem; color: #94a3b8; transition: transform .2s; }
+.acc-section.open > .acc-header .acc-header-arrow { transform: rotate(90deg); }
+.acc-body { display: none; padding: 14px 18px; }
+.acc-section.level-h3 .acc-body { padding: 10px 14px; background: #fff; }
+.acc-section.open > .acc-body { display: block; }
+.acc-body > :first-child { margin-top: 0; }
+.acc-body > :last-child { margin-bottom: 0; }
+/* Headings dentro do accordion nao precisam de borda extra */
+.md-content .acc-section h2, .md-content .acc-section h3 { border: none; padding: 0; margin: 0; }
 </style>
 
 <script>
@@ -159,5 +179,41 @@ document.querySelectorAll('.dt-file.active').forEach(el => {
         parent = parent.parentElement;
     }
 });
+
+// Converte H2/H3 em accordions. H2 e pai, H3 vira accordion aninhado.
+(function(){
+    const content = document.querySelector('.md-content');
+    if (!content) return;
+    buildAccordions(content, 'H2', 'level-h2', true);
+    function buildAccordions(container, tag, className, firstOpen) {
+        const kids = Array.from(container.children);
+        const headings = kids.filter(el => el.tagName === tag);
+        if (headings.length < 1) return;
+        // nada antes do primeiro heading? ok. so comecamos a partir dele.
+        headings.forEach((h, idx) => {
+            const section = document.createElement('div');
+            section.className = 'acc-section ' + className;
+            if (firstOpen && idx === 0) section.classList.add('open');
+            const header = document.createElement('div');
+            header.className = 'acc-header';
+            header.innerHTML = '<span class="acc-header-title">' + h.innerHTML + '</span><i class="fas fa-chevron-right acc-header-arrow"></i>';
+            header.onclick = () => section.classList.toggle('open');
+            const body = document.createElement('div');
+            body.className = 'acc-body';
+            // Mover elementos ate o proximo heading do mesmo tag
+            let next = h.nextElementSibling;
+            while (next && next.tagName !== tag) {
+                const following = next.nextElementSibling;
+                body.appendChild(next);
+                next = following;
+            }
+            section.appendChild(header);
+            section.appendChild(body);
+            h.replaceWith(section);
+            // Nested: converte H3 dentro desse body
+            if (tag === 'H2') buildAccordions(body, 'H3', 'level-h3', false);
+        });
+    }
+})();
 </script>
 {% endblock %}
