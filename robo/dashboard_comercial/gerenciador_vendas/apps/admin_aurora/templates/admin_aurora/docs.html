@@ -154,16 +154,16 @@
 /* Headings dentro do accordion nao precisam de borda extra */
 .md-content .acc-section h2, .md-content .acc-section h3 { border: none; padding: 0; margin: 0; }
 
-/* Journey flow horizontal (visao A2) */
-.jrn-flow { display: flex; gap: 8px; align-items: stretch; padding: 16px 4px; overflow-x: auto; margin: 16px 0 24px; }
-.jrn-group { flex: 0 0 auto; border-radius: 12px; padding: 12px 10px 10px; color: #fff; min-width: 0; }
+/* Journey flow horizontal (visao A2) — fases em colunas, cards empilhados */
+.jrn-flow { display: flex; gap: 8px; align-items: stretch; padding: 16px 4px; margin: 16px 0 24px; }
+.jrn-group { flex: 1 1 0; border-radius: 12px; padding: 12px 10px 10px; color: #fff; min-width: 0; display: flex; flex-direction: column; }
 .jrn-aquisicao    { background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%); }
 .jrn-conversao    { background: linear-gradient(135deg, #059669 0%, #34d399 100%); }
 .jrn-fidelizacao  { background: linear-gradient(135deg, #7c3aed 0%, #c084fc 100%); }
 .jrn-expansao     { background: linear-gradient(135deg, #ea580c 0%, #fb923c 100%); }
 .jrn-group-name { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; padding: 0 4px; opacity: .92; }
-.jrn-cards { display: flex; gap: 6px; }
-.jrn-card { background: rgba(255,255,255,.14); backdrop-filter: blur(8px); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.2); min-width: 140px; max-width: 170px; display: flex; flex-direction: column; gap: 4px; }
+.jrn-cards { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.jrn-card { background: rgba(255,255,255,.14); backdrop-filter: blur(8px); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.2); display: flex; flex-direction: column; gap: 4px; }
 .jrn-head { display: flex; align-items: center; gap: 6px; }
 .jrn-n { width: 20px; height: 20px; background: rgba(255,255,255,.28); border-radius: 50%; text-align: center; line-height: 20px; font-size: .68rem; font-weight: 800; flex-shrink: 0; }
 .jrn-t { font-size: .78rem; font-weight: 700; line-height: 1.15; }
@@ -171,8 +171,7 @@
 .jrn-arrow { display: flex; align-items: center; color: #cbd5e1; font-size: 1.1rem; padding: 0 2px; flex-shrink: 0; }
 @media (max-width: 900px) {
   .jrn-flow { flex-direction: column; gap: 14px; }
-  .jrn-arrow { justify-content: center; padding: 2px 0; }
-  .jrn-cards { flex-wrap: wrap; }
+  .jrn-arrow { justify-content: center; padding: 2px 0; transform: rotate(90deg); }
 }
 </style>
 
