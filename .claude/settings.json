@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'LEMBRETE OBRIGATORIO: classifique o tema da mensagem do usuario contra a tabela em CLAUDE.md (secao Agentes). Inicie SEMPRE a resposta com \"Agente: [Nome]\". Tech Lead soh para codigo/arquitetura/stack/scripts/migrations. Para organizacao de conteudo, materiais, processo, escopo, use PM. Para entregas ao mercado/posicionamento, PMM. Para vendas/objecoes, Head de Vendas. Para texto comercial, Copywriter. Nao padronize em Tech Lead por preguica.'"
+          }
+        ]
+      }
+    ]
+  }
+}
