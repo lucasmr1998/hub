@@ -2151,3 +2151,48 @@ class LogFluxoAtendimento(TenantMixin):
 
     def __str__(self):
         return f"[{self.status}] {self.tipo_nodo}/{self.subtipo_nodo} - {self.data_execucao}"
+
+
+class ToolCustomizada(TenantMixin):
+    """Tool customizada que pode ser habilitada em nodos ia_agente.
+    Quando a LLM chama a tool, o engine faz POST no webhook configurado.
+    """
+    nome = models.CharField(
+        max_length=100,
+        verbose_name="Nome da Tool",
+        help_text="Nome usado pela LLM (ex: 'consultar_cliente_hubsoft'). Sem espacos, snake_case."
+    )
+    descricao = models.TextField(
+        verbose_name="Descricao",
+        help_text="Explica para a LLM o que a tool faz e quando usar"
+    )
+    parametros = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Parametros (JSON Schema)",
+        help_text='Schema dos parametros. Ex: {"pergunta": {"type": "string", "description": "..."}}'
+    )
+    webhook_url = models.URLField(
+        max_length=500,
+        verbose_name="Webhook URL",
+        help_text="URL chamada via POST quando a LLM invoca a tool. Recebe {tool, args, contexto}."
+    )
+    webhook_token = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        verbose_name="Token Webhook",
+        help_text="Token enviado no header Authorization (opcional)"
+    )
+    ativa = models.BooleanField(default=True, verbose_name="Ativa")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'atendimento_tool_customizada'
+        verbose_name = "Tool Customizada"
+        verbose_name_plural = "Tools Customizadas"
+        unique_together = [['tenant', 'nome']]
+        ordering = ['nome']
+
+    def __str__(self):
+        return f"{self.nome} ({self.tenant})"

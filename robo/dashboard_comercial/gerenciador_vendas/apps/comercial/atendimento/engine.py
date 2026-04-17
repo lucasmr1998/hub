@@ -466,17 +466,33 @@ def _executar_nodo(atendimento, nodo, contexto):
 # CONDICAO
 # ============================================================================
 
-def _avaliar_condicao(nodo, contexto):
-    """Avalia condicao de um nodo. Mesma logica das automacoes."""
-    config = nodo.configuracao
-    campo = config.get('campo', '')
-    operador = config.get('operador', 'igual')
-    valor = config.get('valor', '')
+_COMPARADORES_CONDICAO = {
+    'igual': lambda a, b: a == b,
+    'diferente': lambda a, b: a != b,
+    'contem': lambda a, b: str(b) in str(a),
+    'nao_contem': lambda a, b: str(b) not in str(a),
+    'inicia_com': lambda a, b: str(a).startswith(str(b)),
+    'termina_com': lambda a, b: str(a).endswith(str(b)),
+    'maior': lambda a, b: a > b,
+    'menor': lambda a, b: a < b,
+    'maior_igual': lambda a, b: a >= b,
+    'menor_igual': lambda a, b: a <= b,
+    'vazio': lambda a, b: not a or not str(a).strip(),
+    'nao_vazio': lambda a, b: bool(a) and bool(str(a).strip()),
+}
 
+
+def _avaliar_condicao_simples(campo, operador, valor, contexto):
+    """Avalia uma condicao atomica."""
     if not campo:
         return True
 
     valor_campo = _resolver_campo_contexto(campo, contexto)
+
+    # Operadores que nao precisam de valor de comparacao
+    if operador in ('vazio', 'nao_vazio'):
+        return _COMPARADORES_CONDICAO[operador](valor_campo, None)
+
     if valor_campo is None:
         return False
 
@@ -487,16 +503,39 @@ def _avaliar_condicao(nodo, contexto):
         vc = str(valor_campo).lower()
         ve = str(valor).lower()
 
-    comparadores = {
-        'igual': lambda a, b: a == b,
-        'diferente': lambda a, b: a != b,
-        'contem': lambda a, b: str(b) in str(a),
-        'maior': lambda a, b: a > b,
-        'menor': lambda a, b: a < b,
-        'maior_igual': lambda a, b: a >= b,
-        'menor_igual': lambda a, b: a <= b,
-    }
-    return comparadores.get(operador, lambda a, b: False)(vc, ve)
+    return _COMPARADORES_CONDICAO.get(operador, lambda a, b: False)(vc, ve)
+
+
+def _avaliar_condicao(nodo, contexto):
+    """Avalia condicao de um nodo. Suporta modo simples e composto (AND/OR)."""
+    config = nodo.configuracao
+
+    # Modo composto: lista de condicoes com operador logico
+    condicoes = config.get('condicoes', [])
+    operador_logico = config.get('operador_logico', '').lower()
+
+    if condicoes and operador_logico in ('and', 'or'):
+        resultados = [
+            _avaliar_condicao_simples(
+                c.get('campo', ''),
+                c.get('operador', 'igual'),
+                c.get('valor', ''),
+                contexto,
+            )
+            for c in condicoes
+        ]
+        if operador_logico == 'and':
+            return all(resultados)
+        else:  # or
+            return any(resultados)
+
+    # Modo simples (compat)
+    return _avaliar_condicao_simples(
+        config.get('campo', ''),
+        config.get('operador', 'igual'),
+        config.get('valor', ''),
+        contexto,
+    )
 
 
 def _resolver_campo_contexto(campo, contexto):
@@ -1750,18 +1789,27 @@ def _executar_ia_respondedor(atendimento, nodo, contexto):
 
 def processar_resposta_ia_respondedor(atendimento, resposta):
     """Processa resposta do usuario para um no ia_respondedor.
-    Re-responde com IA (multi-turno) e segue o fluxo, passando a resposta para os proximos nos."""
+    Re-responde com IA e segue o fluxo (default) OU continua conversando (modo_conversacional).
+
+    Config relevantes:
+    - continuar_conversa (bool): se True, pausa novamente ate max_turnos atingido
+    - max_turnos (int, default 10): quantidade maxima de turnos antes de sair
+    - max_historico (int, default 10): quantidade de mensagens mantidas no contexto
+    """
     nodo = atendimento.nodo_atual
     config = nodo.configuracao
 
     # Salvar mensagem no historico
     dados = atendimento.dados_respostas or {}
     historico_key = f'ia_historico_{nodo.id}'
+    turnos_key = f'ia_turnos_{nodo.id}'
     historico = dados.get(historico_key, [])
+    turnos = dados.get(turnos_key, 1) + 1
     historico.append({'role': 'user', 'content': resposta})
 
-    # Re-responder com IA (multi-turno conversacional)
+    # Re-responder com IA
     integracao = _obter_integracao_ia(config, atendimento.fluxo.tenant)
+    resposta_ia = None
     if integracao:
         system_prompt = config.get('system_prompt', '')
         contexto = _construir_contexto(atendimento)
@@ -1770,8 +1818,12 @@ def processar_resposta_ia_respondedor(atendimento, resposta):
             lead = atendimento.lead
             system_prompt += f"\n\nDados do lead: Nome: {lead.nome_razaosocial}, Telefone: {lead.telefone}, Email: {lead.email or 'N/A'}"
 
+        # Respeitar max_historico (limita tamanho do prompt)
+        max_hist = config.get('max_historico', 10)
+        hist_limitado = historico[-max_hist:]
+
         messages = [{'role': 'system', 'content': system_prompt}]
-        for m in historico:
+        for m in hist_limitado:
             if isinstance(m, dict) and 'role' in m and 'content' in m:
                 messages.append({'role': m['role'], 'content': m['content']})
 
@@ -1781,16 +1833,36 @@ def processar_resposta_ia_respondedor(atendimento, resposta):
             historico.append({'role': 'assistant', 'content': resposta_ia})
 
     dados[historico_key] = historico
+    dados[turnos_key] = turnos
     dados['_ultima_mensagem'] = resposta
+
+    # Modo conversacional: pausar novamente se nao atingiu max_turnos
+    continuar = config.get('continuar_conversa', False)
+    max_turnos = config.get('max_turnos', 10)
+
+    if continuar and turnos < max_turnos and resposta_ia:
+        # Continua em loop — nao segue conexoes, pausa de novo
+        atendimento.dados_respostas = dados
+        atendimento.save(update_fields=['dados_respostas'])
+        _registrar_log(atendimento, nodo, 'aguardando',
+                       f'IA respondeu (turno {turnos}/{max_turnos}): {resposta_ia[:80]}')
+        return {
+            'tipo': 'ia_respondedor',
+            'mensagem': resposta_ia,
+        }
+
+    # Default: sai do nodo e segue conexoes
+    if turnos >= max_turnos and continuar:
+        _registrar_log(atendimento, nodo, 'sucesso',
+                       f'ia_respondedor: max_turnos atingido ({max_turnos})')
+
     atendimento.dados_respostas = dados
     atendimento.nodo_atual = None
     atendimento.save(update_fields=['dados_respostas', 'nodo_atual'])
 
-    # Seguir para o proximo no (passa a resposta do usuario para classificadores etc)
     contexto = _construir_contexto(atendimento)
     resultado = _seguir_conexoes(atendimento, nodo, contexto)
 
-    # Se a IA respondeu, incluir a resposta antes do resultado do proximo no
     if integracao and resposta_ia:
         if resultado and resultado.get('mensagem'):
             resultado['mensagem'] = f"{resposta_ia}\n\n{resultado['mensagem']}"
@@ -2218,6 +2290,32 @@ def _chamar_llm_com_tools(integracao, modelo, messages, config, atendimento, con
                     },
                 })
 
+    # Tools customizadas por tenant (via ToolCustomizada) habilitadas no nodo
+    try:
+        from .models import ToolCustomizada
+        tools_tenant_nomes = config.get('tools_tenant', [])  # lista de nomes
+        if tools_tenant_nomes:
+            tools_tenant_qs = ToolCustomizada.all_tenants.filter(
+                tenant=atendimento.fluxo.tenant,
+                nome__in=tools_tenant_nomes,
+                ativa=True,
+            )
+            for tt in tools_tenant_qs:
+                tools_openai.append({
+                    'type': 'function',
+                    'function': {
+                        'name': tt.nome,
+                        'description': tt.descricao,
+                        'parameters': {
+                            'type': 'object',
+                            'properties': tt.parametros or {},
+                            'required': list((tt.parametros or {}).keys()),
+                        },
+                    },
+                })
+    except Exception as e:
+        logger.error(f'Erro ao carregar tools customizadas: {e}')
+
     if not tools_openai:
         # Sem tools, chamada simples
         resultado = _chamar_llm_simples(integracao, modelo, messages)
@@ -2324,6 +2422,60 @@ def _chamar_llm_com_tools(integracao, modelo, messages, config, atendimento, con
                                    f'Tool base_conhecimento: {tool_result[:100]}')
 
                 else:
+                    # Tentar tool customizada por tenant (ToolCustomizada)
+                    tool_custom_tenant = None
+                    try:
+                        from .models import ToolCustomizada
+                        tool_custom_tenant = ToolCustomizada.all_tenants.filter(
+                            tenant=atendimento.fluxo.tenant,
+                            nome=func_name,
+                            ativa=True,
+                        ).first()
+                    except Exception:
+                        pass
+
+                    if tool_custom_tenant:
+                        try:
+                            payload = {
+                                'tool': func_name,
+                                'args': func_args,
+                                'atendimento_id': atendimento.pk,
+                                'lead_id': atendimento.lead_id,
+                                'contexto': {
+                                    k: v for k, v in contexto.items()
+                                    if isinstance(v, (str, int, float, bool, type(None)))
+                                },
+                            }
+                            hdrs = {'Content-Type': 'application/json'}
+                            if tool_custom_tenant.webhook_token:
+                                hdrs['Authorization'] = f'Bearer {tool_custom_tenant.webhook_token}'
+                            resp = requests.post(
+                                tool_custom_tenant.webhook_url,
+                                json=payload, headers=hdrs, timeout=15,
+                            )
+                            if resp.status_code == 200:
+                                try:
+                                    data = resp.json()
+                                    tool_result = data.get('result', str(data))
+                                except Exception:
+                                    tool_result = resp.text[:500]
+                            else:
+                                tool_result = f'Tool {func_name}: HTTP {resp.status_code}'
+                            _registrar_log(
+                                atendimento, atendimento.nodo_atual, 'sucesso',
+                                f'Tool tenant {func_name}: {str(tool_result)[:100]}',
+                            )
+                        except Exception as e:
+                            tool_result = f'Erro na tool {func_name}: {e}'
+                            logger.error(f'Tool customizada tenant {func_name} erro: {e}')
+                        # Pular o elif de TOOLS_ASSISTENTE
+                        current_messages.append({
+                            'role': 'tool',
+                            'tool_call_id': tc_id,
+                            'content': str(tool_result),
+                        })
+                        continue
+
                     # Tentar tools do Assistente CRM
                     from apps.assistente.tools import TOOLS_ASSISTENTE
                     if func_name in TOOLS_ASSISTENTE:
