@@ -23,8 +23,77 @@ Cada secao e conversada, validada com o time e atualizada conforme o produto evo
 > **Nota:** estagios 5-6 (Fechamento e Ativacao) usam a arquitetura de integracao
 > com ERP definida em [secao C](#c-como-os-modulos-se-conectam) e [secao D](#d-principios-do-produto).
 
-A jornada do consumidor atravessa **4 macro-fases**. Cada macro agrupa estagios
-detalhados (ver secao de micro-estagios abaixo).
+A jornada do consumidor atravessa **4 macro-fases** com 10 micro-estagios:
+
+<div class="jrn-flow">
+  <div class="jrn-group jrn-aquisicao">
+    <div class="jrn-group-name">Aquisicao</div>
+    <div class="jrn-cards">
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">1</div><div class="jrn-t">Descoberta</div></div>
+        <div class="jrn-m">Campanhas &middot; Indicacao</div>
+      </div>
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">2</div><div class="jrn-t">Primeiro contato</div></div>
+        <div class="jrn-m">Inbox &middot; Widget &middot; Cadastro</div>
+      </div>
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">3</div><div class="jrn-t">Qualificacao</div></div>
+        <div class="jrn-m">Atendimento &middot; Fluxos &middot; IA &middot; Viabilidade</div>
+      </div>
+    </div>
+  </div>
+  <div class="jrn-arrow">&rarr;</div>
+  <div class="jrn-group jrn-conversao">
+    <div class="jrn-group-name">Conversao</div>
+    <div class="jrn-cards">
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">4</div><div class="jrn-t">Atend. comercial</div></div>
+        <div class="jrn-m">Inbox &middot; CRM &middot; Assistente</div>
+      </div>
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">5</div><div class="jrn-t">Fechamento</div></div>
+        <div class="jrn-m">CRM &middot; ERP (HubSoft / SGP / IXC / MK)</div>
+      </div>
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">6</div><div class="jrn-t">Ativacao</div></div>
+        <div class="jrn-m">Cliente &middot; Espelho do ERP</div>
+      </div>
+    </div>
+  </div>
+  <div class="jrn-arrow">&rarr;</div>
+  <div class="jrn-group jrn-fidelizacao">
+    <div class="jrn-group-name">Fidelizacao</div>
+    <div class="jrn-cards">
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">7</div><div class="jrn-t">Onboarding</div></div>
+        <div class="jrn-m">Clube &middot; Automacoes &middot; Indicacao</div>
+      </div>
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">8</div><div class="jrn-t">Relac. continuo</div></div>
+        <div class="jrn-m">Inbox &middot; Suporte &middot; NPS &middot; Clube</div>
+      </div>
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">9</div><div class="jrn-t">Retencao</div></div>
+        <div class="jrn-m">CRM/Retencao &middot; Automacoes</div>
+      </div>
+    </div>
+  </div>
+  <div class="jrn-arrow">&rarr;</div>
+  <div class="jrn-group jrn-expansao">
+    <div class="jrn-group-name">Expansao</div>
+    <div class="jrn-cards">
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">10</div><div class="jrn-t">Indicacao / Upsell</div></div>
+        <div class="jrn-m">Indicacao &middot; CRM &middot; Segmentos</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+Cada macro agrupa estagios detalhados. Os micro-estagios com os 5 campos (o que
+acontece, como entra/sai, papel do Hubtrix, estado atual, metrica) estao mais
+abaixo nesta secao.
 
 #### Aquisicao
 
