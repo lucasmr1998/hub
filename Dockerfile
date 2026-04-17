@@ -21,6 +21,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar o projeto
 COPY robo/dashboard_comercial/gerenciador_vendas/ .
 
+# Copiar docs do repo (servidos em /aurora-admin/docs/)
+COPY robo/docs /app/docs_repo
+ENV AURORA_DOCS_PATH=/app/docs_repo
+
 # Coletar arquivos estaticos
 RUN python manage.py collectstatic --noinput --settings=gerenciador_vendas.settings || true
 

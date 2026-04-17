@@ -1,3 +1,5 @@
+import logging
+import os
 import re
 from datetime import date, timedelta
 from pathlib import Path
@@ -17,8 +19,20 @@ from apps.sistema.models import (
 )
 from apps.sistema.utils import auditar
 
-# Caminho base dos docs (views.py → admin_aurora → apps → gerenciador_vendas → dashboard_comercial → robo → /docs)
-DOCS_BASE = Path(__file__).resolve().parent.parent.parent.parent.parent / 'docs'
+logger = logging.getLogger(__name__)
+
+# Caminho base dos docs. Prioridade: env var AURORA_DOCS_PATH > layout do repo em dev.
+# Em prod (Docker), o Dockerfile copia robo/docs para /app/docs_repo e define a env var.
+_env_docs = os.environ.get('AURORA_DOCS_PATH')
+if _env_docs:
+    DOCS_BASE = Path(_env_docs)
+else:
+    # Dev: views.py → admin_aurora → apps → gerenciador_vendas → dashboard_comercial → robo → docs
+    DOCS_BASE = Path(__file__).resolve().parent.parent.parent.parent.parent / 'docs'
+
+if not DOCS_BASE.exists():
+    logger.warning('DOCS_BASE nao existe: %s (defina AURORA_DOCS_PATH ou garanta o caminho no container)', DOCS_BASE)
+
 TAREFAS_PATH = DOCS_BASE / 'context' / 'tarefas'
 
 
@@ -458,8 +472,8 @@ def _build_doc_tree(base_path, prefix=''):
 
 @staff_required
 def produto_view(request):
-    """Status do Produto — renderiza 00-STATUS_PRODUTO.md"""
-    status_path = DOCS_BASE / 'PRODUTO' / '00-STATUS_PRODUTO.md'
+    """Status do Produto — renderiza core/00-STATUS.md (apos reorg 17/04/2026)"""
+    status_path = DOCS_BASE / 'PRODUTO' / 'core' / '00-STATUS.md'
     md_content = _read_md(status_path)
     html_content = _md_to_html(md_content)
 
