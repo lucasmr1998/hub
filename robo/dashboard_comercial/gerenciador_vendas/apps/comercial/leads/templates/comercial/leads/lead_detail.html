@@ -86,6 +86,11 @@
             <i class="fas fa-comments"></i> Conversa
         </a>
         {% endif %}
+        {% if user_funcs is None or 'comercial.excluir_lead' in user_funcs %}
+        <button class="btn-secondary btn-sm" onclick="excluirLead()" style="color:var(--danger);" title="Excluir lead">
+            <i class="fas fa-trash"></i> Excluir
+        </button>
+        {% endif %}
     </div>
 </div>
 
@@ -462,6 +467,27 @@ document.querySelectorAll('.editable').forEach(function(el) {
         });
     });
 });
+
+function excluirLead() {
+    const nome = "{{ lead.nome_razaosocial|escapejs }}";
+    if (!confirm(`Excluir o lead "${nome}" permanentemente?\n\nIsso tambem vai apagar: oportunidade, tarefas, notas, conversas, historicos e documentos vinculados.\n\nEssa acao nao pode ser desfeita.`)) {
+        return;
+    }
+    fetch("{% url 'comercial_leads:api_lead_excluir' lead.id %}", {
+        method: 'DELETE',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            alert(d.message || 'Lead excluido.');
+            window.location.href = "{% url 'comercial_leads:leads' %}";
+        } else {
+            alert(d.error || 'Erro ao excluir');
+        }
+    })
+    .catch(() => alert('Erro de conexao'));
+}
 </script>
 
 {% endblock %}

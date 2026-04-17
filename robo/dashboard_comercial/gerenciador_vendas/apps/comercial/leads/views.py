@@ -15,7 +15,7 @@ import json
 import traceback
 import logging
 
-from apps.sistema.decorators import api_token_required
+from apps.sistema.decorators import api_token_required, user_tem_funcionalidade
 from apps.sistema.utils import auditar
 from apps.sistema.utils import (
     _parse_json_request,
@@ -46,6 +46,28 @@ def leads_view(request):
 
 
 @login_required(login_url='sistema:login')
+@login_required(login_url='sistema:login')
+@require_http_methods(["DELETE"])
+@auditar('leads', 'excluir', 'lead')
+def api_lead_excluir(request, lead_id):
+    """Exclui permanentemente um lead (CASCADE em oportunidade, tarefas, notas, conversas, etc.)."""
+    if not user_tem_funcionalidade(request, 'comercial.excluir_lead'):
+        return JsonResponse({'error': 'Sem permissao para excluir leads'}, status=403)
+
+    try:
+        lead = LeadProspecto.objects.get(id=lead_id)
+    except LeadProspecto.DoesNotExist:
+        return JsonResponse({'error': 'Lead nao encontrado'}, status=404)
+
+    nome = lead.nome_razaosocial or f'Lead #{lead.id}'
+    lead.delete()
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Lead "{nome}" excluido com sucesso.',
+    })
+
+
 @login_required(login_url='sistema:login')
 @require_http_methods(["PUT"])
 def api_lead_editar(request, lead_id):

@@ -18,6 +18,8 @@ FUNCIONALIDADES = [
     ('comercial', 'comercial.gerenciar_equipes', 'Gerenciar Equipes', 'Criar equipes e atribuir membros', 8),
     ('comercial', 'comercial.configurar_pipeline', 'Configurar Pipelines', 'Criar/editar pipelines, estagios, webhooks e configuracoes do CRM', 9),
     ('comercial', 'comercial.ver_relatorios', 'Ver Relatorios Gerais', 'Acessar dashboard principal e relatorios', 10),
+    ('comercial', 'comercial.excluir_lead', 'Excluir Leads', 'Excluir permanentemente um lead (remove tambem oportunidade, tarefas, notas e conversas vinculadas)', 11),
+    ('comercial', 'comercial.excluir_oportunidade', 'Excluir Oportunidades', 'Excluir permanentemente uma oportunidade (remove tambem tarefas, notas e itens vinculados)', 12),
     # Configuracoes
     ('configuracoes', 'config.gerenciar_usuarios', 'Gerenciar Usuarios', 'Criar, editar e excluir usuarios do sistema', 1),
     ('configuracoes', 'config.gerenciar_perfis', 'Gerenciar Perfis de Permissao', 'Criar e editar perfis de permissao', 2),

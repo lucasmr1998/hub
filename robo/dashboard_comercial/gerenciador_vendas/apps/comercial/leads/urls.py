@@ -8,6 +8,7 @@ urlpatterns = [
     path('leads/', views.leads_view, name='leads'),
     path('leads/<int:lead_id>/', views.lead_detail_view, name='lead_detail'),
     path('api/leads/<int:lead_id>/editar/', views.api_lead_editar, name='api_lead_editar'),
+    path('api/leads/<int:lead_id>/excluir/', views.api_lead_excluir, name='api_lead_excluir'),
     path('historico/<int:historico_id>/', views.historico_detail_view, name='historico_detail'),
     path('configuracoes/campos-leads/', views.campos_custom_view, name='campos_custom'),
     path('api/campos-custom/', views.api_campos_custom, name='api_campos_custom'),

@@ -482,6 +482,13 @@
         <i class="fab fa-whatsapp" style="color:var(--success)"></i>
       </a>
       {% endif %}
+
+      <!-- Excluir oportunidade (requer permissao) -->
+      {% if user_funcs is None or 'comercial.excluir_oportunidade' in user_funcs %}
+      <button class="btn-secondary" onclick="excluirOportunidade()" style="color:var(--danger);" title="Excluir oportunidade">
+        <i class="fas fa-trash"></i>
+      </button>
+      {% endif %}
     </div>
   </div>
 
@@ -1039,6 +1046,28 @@ function switchTab(btn, panelId) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById(panelId).classList.add('active');
+}
+
+// ---- EXCLUIR OPORTUNIDADE ----
+function excluirOportunidade() {
+  const titulo = "{{ oportunidade.titulo|default:lead.nome_razaosocial|escapejs }}";
+  if (!confirm(`Excluir a oportunidade "${titulo}" permanentemente?\n\nIsso tambem vai apagar: tarefas, notas, itens e historico de estagios vinculados.\n\nEssa acao nao pode ser desfeita.`)) {
+    return;
+  }
+  fetch("{% url 'crm:api_excluir_oportunidade' oportunidade.pk %}", {
+    method: 'DELETE',
+    headers: {'X-CSRFToken': CSRF},
+  })
+  .then(r => r.json().then(d => ({status: r.status, data: d})))
+  .then(({status, data}) => {
+    if (data.success) {
+      alert(data.message || 'Oportunidade excluida.');
+      window.location.href = "{% url 'crm:pipeline' %}";
+    } else {
+      alert(data.error || 'Erro ao excluir');
+    }
+  })
+  .catch(() => alert('Erro de conexao'));
 }
 
 // ---- MODAIS ----

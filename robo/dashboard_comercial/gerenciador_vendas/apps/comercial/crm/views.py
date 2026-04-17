@@ -476,6 +476,30 @@ def api_editar_oportunidade(request, pk):
 
 
 @login_required
+@require_http_methods(["DELETE"])
+@auditar('crm', 'excluir', 'oportunidade')
+def api_excluir_oportunidade(request, pk):
+    """Exclui permanentemente uma oportunidade (CASCADE em tarefas, notas, itens, historico)."""
+    denied = _check_perm(request, 'comercial.excluir_oportunidade')
+    if denied:
+        return denied
+
+    try:
+        oport = OportunidadeVenda.objects.get(pk=pk)
+    except OportunidadeVenda.DoesNotExist:
+        return JsonResponse({'error': 'Oportunidade nao encontrada'}, status=404)
+
+    titulo = oport.titulo or f'Oportunidade #{oport.pk}'
+    lead_nome = oport.lead.nome_razaosocial if oport.lead else '-'
+    oport.delete()
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Oportunidade "{titulo}" (lead: {lead_nome}) excluida com sucesso.',
+    })
+
+
+@login_required
 def oportunidade_detalhe(request, pk):
     oportunidade = get_object_or_404(
         OportunidadeVenda.objects.select_related(
