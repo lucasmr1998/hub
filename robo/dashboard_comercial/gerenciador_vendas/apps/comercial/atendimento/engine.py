@@ -232,7 +232,24 @@ def executar_pendentes_atendimento(tenant=None):
 
 def _percorrer_a_partir_de(atendimento, nodo, contexto):
     """Percorre o grafo a partir de um nodo. Retorna quando encontra questao, delay ou fim."""
+    # Se contexto eh ContextoLogado, atribui o nodo atual para as proximas mutacoes
+    eh_logado = hasattr(contexto, 'set_nodo_atual')
+    eventos_antes = len(contexto.historico()) if eh_logado else 0
+    if eh_logado:
+        contexto.set_nodo_atual(nodo.pk)
+
     resultado = _executar_nodo(atendimento, nodo, contexto)
+
+    # Se houve mudancas no contexto durante a execucao, persistir os novos eventos como log
+    if eh_logado:
+        novos_eventos = contexto.historico()[eventos_antes:]
+        if novos_eventos:
+            _registrar_log(
+                atendimento, nodo, 'contexto',
+                f'Contexto: {len(novos_eventos)} mudanca(s) em {nodo.tipo} #{nodo.pk}',
+                dados={'eventos_contexto': novos_eventos},
+            )
+
     if resultado:
         return resultado
 
@@ -696,11 +713,15 @@ def _acao_webhook(config, contexto):
 
     try:
         if metodo == 'GET':
-            requests.get(url, params=payload, timeout=10)
+            resp = requests.get(url, params=payload, timeout=10)
         else:
-            requests.post(url, json=payload, timeout=10)
+            resp = requests.post(url, json=payload, timeout=10)
+        # Considerar HTTP >= 400 como erro (propaga para branch 'erro')
+        if resp.status_code >= 400:
+            raise Exception(f'Webhook HTTP {resp.status_code}')
     except Exception as e:
         logger.error(f'Webhook erro: {e}')
+        raise
 
 
 def _acao_enviar_whatsapp(config, contexto, atendimento):
@@ -893,8 +914,14 @@ def _validar_resposta_questao(config, resposta):
 # ============================================================================
 
 def _construir_contexto(atendimento):
-    """Constroi contexto com dados do lead e atendimento."""
-    contexto = {
+    """Constroi contexto com dados do lead e atendimento.
+
+    Retorna ContextoLogado (dict wrapper com log de mutacoes).
+    Transparente para quem consome — API identica a dict.
+    """
+    from .engine_contexto import ContextoLogado
+
+    base = {
         'atendimento_id': atendimento.id,
         'fluxo_id': atendimento.fluxo_id,
         'fluxo_nome': atendimento.fluxo.nome,
@@ -902,7 +929,7 @@ def _construir_contexto(atendimento):
 
     if atendimento.lead:
         lead = atendimento.lead
-        contexto.update({
+        base.update({
             'lead': lead,
             'lead_id': lead.id,
             'lead_nome': lead.nome_razaosocial,
@@ -919,26 +946,26 @@ def _construir_contexto(atendimento):
     # Contexto do assistente CRM (sem lead, com usuario)
     dados_resp = atendimento.dados_respostas or {}
     if dados_resp.get('_assistente_usuario_id'):
-        contexto['assistente_modo'] = True
-        contexto['assistente_usuario_id'] = dados_resp['_assistente_usuario_id']
-        contexto['assistente_tenant_id'] = dados_resp.get('_assistente_tenant_id')
-        contexto['assistente_telefone'] = dados_resp.get('_telefone', '')
+        base['assistente_modo'] = True
+        base['assistente_usuario_id'] = dados_resp['_assistente_usuario_id']
+        base['assistente_tenant_id'] = dados_resp.get('_assistente_tenant_id')
+        base['assistente_telefone'] = dados_resp.get('_telefone', '')
 
     # Respostas anteriores
-    dados = atendimento.dados_respostas or {}
-    for nodo_key, resp_data in dados.items():
+    for nodo_key, resp_data in dados_resp.items():
         if nodo_key == 'variaveis':
             continue  # variaveis IA tratadas separadamente
         if isinstance(resp_data, dict):
-            contexto[f'resposta_nodo_{nodo_key}'] = resp_data.get('resposta', '')
+            base[f'resposta_nodo_{nodo_key}'] = resp_data.get('resposta', '')
 
     # Variaveis IA (classificador, extrator, etc.)
-    variaveis = dados.get('variaveis', {})
-    contexto['var'] = variaveis
+    variaveis = dados_resp.get('variaveis', {})
+    base['var'] = variaveis
     for var_nome, var_valor in variaveis.items():
-        contexto[var_nome] = var_valor
+        base[var_nome] = var_valor
 
-    return contexto
+    # Envolver em ContextoLogado (registra mutacoes a partir daqui)
+    return ContextoLogado(base)
 
 
 def _validar_com_ia(integracao_id, resposta, config):

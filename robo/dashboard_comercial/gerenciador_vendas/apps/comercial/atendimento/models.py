@@ -2027,10 +2027,10 @@ class ConexaoNodoAtendimento(TenantMixin):
         verbose_name="Nodo Destino"
     )
     tipo_saida = models.CharField(
-        max_length=10,
-        choices=TIPO_SAIDA_CHOICES,
+        max_length=50,
         default='default',
-        verbose_name="Tipo de Saida"
+        verbose_name="Tipo de Saida",
+        help_text="default, true, false, erro, ou nome de categoria (ia_classificador)"
     )
 
     class Meta:
