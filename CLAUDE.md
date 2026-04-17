@@ -69,6 +69,19 @@ O arquivo `robo/exports/hub.html` e o gestor visual unificado. **Rodar automatic
 python scripts/gerar_hub.py
 ```
 
+### Pre-commit hook de documentacao
+
+Ao mexer em `apps/comercial/atendimento/`, `apps/inbox/`, `apps/comercial/crm/`, `apps/suporte/`, `apps/marketing/`, `apps/cs/`, `apps/integracoes/` ou `apps/assistente/`, atualizar tambem a doc correspondente em `robo/docs/PRODUTO/`.
+
+O hook pre-commit em `.git/hooks/pre-commit` avisa quando detecta mudanca em modulo sem mudanca correspondente na doc. Nao bloqueia o commit, so avisa.
+
+**Instalar hook apos clonar o repo:**
+```
+python scripts/instalar_hooks.py
+```
+
+Script de verificacao manual: `python scripts/verificar_docs.py` (mudancas nao commitadas) ou `--staged` (mudancas staged).
+
 ### Reunioes
 Ao final de conversas relevantes, salvar resumo em:
 ```
