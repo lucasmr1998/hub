@@ -8,15 +8,15 @@ Uso:
 - Com --staged: compara HEAD com index (mudancas staged, usado pelo pre-commit)
 
 Regras (modulo → doc esperado):
-    apps/comercial/atendimento/  → robo/docs/PRODUTO/13-MODULO_FLUXOS.md ou 14-MODULO_ATENDIMENTO.md
-    apps/inbox/                  → robo/docs/PRODUTO/06-INBOX.md
-    apps/comercial/crm/          → robo/docs/PRODUTO/07-MODULO_COMERCIAL.md
-    apps/comercial/leads/        → robo/docs/PRODUTO/07-MODULO_COMERCIAL.md
-    apps/suporte/                → robo/docs/PRODUTO/12-MODULO_SUPORTE.md
-    apps/marketing/              → robo/docs/PRODUTO/08-MODULO_MARKETING.md
-    apps/cs/                     → robo/docs/PRODUTO/09-MODULO_CS.md
-    apps/integracoes/            → robo/docs/PRODUTO/10-INTEGRACOES.md ou 03-INTEGRACOES_HUBSOFT.md
-    apps/assistente/             → robo/docs/PRODUTO/17-ASSISTENTE_CRM.md
+    apps/comercial/atendimento/  → robo/docs/PRODUTO/modulos/atendimento/ ou modulos/fluxos/
+    apps/inbox/                  → robo/docs/PRODUTO/modulos/inbox/
+    apps/comercial/crm/          → robo/docs/PRODUTO/modulos/comercial/
+    apps/comercial/leads/        → robo/docs/PRODUTO/modulos/comercial/
+    apps/suporte/                → robo/docs/PRODUTO/modulos/suporte/
+    apps/marketing/              → robo/docs/PRODUTO/modulos/marketing/
+    apps/cs/                     → robo/docs/PRODUTO/modulos/cs/
+    apps/integracoes/            → robo/docs/PRODUTO/integracoes/
+    apps/assistente/             → robo/docs/PRODUTO/modulos/assistente-crm/
 
 Exit code:
     0 - tudo ok ou aviso apenas
@@ -27,15 +27,17 @@ import sys
 
 
 REGRAS = [
-    ('apps/comercial/atendimento/', ['robo/docs/PRODUTO/13-MODULO_FLUXOS.md', 'robo/docs/PRODUTO/14-MODULO_ATENDIMENTO.md']),
-    ('apps/inbox/', ['robo/docs/PRODUTO/06-INBOX.md']),
-    ('apps/comercial/crm/', ['robo/docs/PRODUTO/07-MODULO_COMERCIAL.md']),
-    ('apps/comercial/leads/', ['robo/docs/PRODUTO/07-MODULO_COMERCIAL.md']),
-    ('apps/suporte/', ['robo/docs/PRODUTO/12-MODULO_SUPORTE.md']),
-    ('apps/marketing/', ['robo/docs/PRODUTO/08-MODULO_MARKETING.md']),
-    ('apps/cs/', ['robo/docs/PRODUTO/09-MODULO_CS.md']),
-    ('apps/integracoes/', ['robo/docs/PRODUTO/10-INTEGRACOES.md', 'robo/docs/PRODUTO/03-INTEGRACOES_HUBSOFT.md']),
-    ('apps/assistente/', ['robo/docs/PRODUTO/17-ASSISTENTE_CRM.md']),
+    ('apps/comercial/atendimento/', ['robo/docs/PRODUTO/modulos/atendimento/', 'robo/docs/PRODUTO/modulos/fluxos/']),
+    ('apps/inbox/', ['robo/docs/PRODUTO/modulos/inbox/']),
+    ('apps/comercial/crm/', ['robo/docs/PRODUTO/modulos/comercial/']),
+    ('apps/comercial/leads/', ['robo/docs/PRODUTO/modulos/comercial/']),
+    ('apps/comercial/cadastro/', ['robo/docs/PRODUTO/modulos/comercial/']),
+    ('apps/comercial/viabilidade/', ['robo/docs/PRODUTO/modulos/comercial/']),
+    ('apps/suporte/', ['robo/docs/PRODUTO/modulos/suporte/']),
+    ('apps/marketing/', ['robo/docs/PRODUTO/modulos/marketing/']),
+    ('apps/cs/', ['robo/docs/PRODUTO/modulos/cs/']),
+    ('apps/integracoes/', ['robo/docs/PRODUTO/integracoes/']),
+    ('apps/assistente/', ['robo/docs/PRODUTO/modulos/assistente-crm/']),
 ]
 
 

@@ -71,7 +71,7 @@ python scripts/gerar_hub.py
 
 ### Pre-commit hook de documentacao
 
-Ao mexer em `apps/comercial/atendimento/`, `apps/inbox/`, `apps/comercial/crm/`, `apps/suporte/`, `apps/marketing/`, `apps/cs/`, `apps/integracoes/` ou `apps/assistente/`, atualizar tambem a doc correspondente em `robo/docs/PRODUTO/`.
+Ao mexer em `apps/comercial/atendimento/`, `apps/inbox/`, `apps/comercial/crm/`, `apps/suporte/`, `apps/marketing/`, `apps/cs/`, `apps/integracoes/` ou `apps/assistente/`, atualizar tambem a doc correspondente em `robo/docs/PRODUTO/modulos/<modulo>/`.
 
 O hook pre-commit em `.git/hooks/pre-commit` avisa quando detecta mudanca em modulo sem mudanca correspondente na doc. Nao bloqueia o commit, so avisa.
 
@@ -101,23 +101,35 @@ robo/docs/context/tarefas/assunto_DD-MM-AAAA.md
 
 ### Documentos de produto existentes
 
-| Doc | Modulo |
-|-----|--------|
-| `01-REGUAS_PADRAO.md` | Reguas de automacao |
-| `02-ROADMAP_PRODUTO.md` | Roadmap |
-| `03-INTEGRACOES_HUBSOFT.md` | HubSoft |
-| `04-TESTES.md` | Testes |
-| `05-AUTOMACOES.md` | Motor de automacoes (detalhado) |
-| `06-INBOX.md` | Inbox / Chat |
-| `07-MODULO_COMERCIAL.md` | Comercial |
-| `08-MODULO_MARKETING.md` | Marketing (campanhas + segmentos + automacoes) |
-| `09-MODULO_CS.md` | Customer Success |
-| `10-INTEGRACOES.md` | Integracoes |
-| `11-PERMISSOES.md` | Permissoes granulares |
-| `12-MODULO_SUPORTE.md` | Suporte |
-| `13-MODULO_FLUXOS.md` | Fluxos visuais (node-based) |
-| `14-MODULO_ATENDIMENTO.md` | Atendimento (engine, sessoes, N8N) |
-| `15-SERVICOS_CRON.md` | Cron jobs e servicos periodicos |
+Estrutura hierarquica em `robo/docs/PRODUTO/`:
+
+**core/** — transversais
+- `core/00-STATUS.md` — Estado atual de cada modulo
+- `core/01-ROADMAP.md` — Roadmap
+- `core/02-TESTES.md` — Estrategia de testes
+- `core/03-PERMISSOES.md` — Permissoes granulares
+
+**integracoes/**
+- `integracoes/01-HUBSOFT.md` — HubSoft
+- `integracoes/02-INTEGRACOES.md` — Demais integracoes
+- `integracoes/03-APIS_N8N.md` — APIs consumidas pelo N8N
+
+**ops/**
+- `ops/01-DEPLOY.md` — Deploy
+- `ops/02-CRON.md` — Cron jobs
+- `ops/03-NOTIFICACOES.md` — Motor de notificacoes
+
+**modulos/** — um diretorio por modulo funcional, cada um com `README.md` + arquivos por funcionalidade
+- `modulos/atendimento/` — Engine, sessoes, recontato
+- `modulos/comercial/` — Leads, cadastro, viabilidade, CRM (pipeline/oportunidades/metas)
+- `modulos/inbox/` — Chat multicanal, distribuicao, widget, websocket
+- `modulos/fluxos/` — Editor visual, nodos, integracao IA
+- `modulos/assistente-crm/` — Assistente via WhatsApp cross-tenant
+- `modulos/marketing/` — Campanhas, segmentos, automacoes (regras e motor)
+- `modulos/suporte/` — Tickets e SLA
+- `modulos/cs/` — Clube, parceiros, indicacoes, carteirinha, NPS, retencao
+
+Indice completo em `robo/docs/PRODUTO/README.md`.
 
 ---
 
