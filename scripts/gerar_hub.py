@@ -17,7 +17,6 @@ OUTPUT_PATH = WORKSPACE / "robo" / "exports" / "hub.html"
 
 INCLUDE_ROOTS = [
     (WORKSPACE / "robo" / "docs",                "Documentacao"),
-    (WORKSPACE / "robo" / "exports" / "drafts",  "Drafts"),
 ]
 ROOT_FILES   = [WORKSPACE / "CLAUDE.md"]
 IGNORE_FILES = {"TEMPLATE.MD"}
