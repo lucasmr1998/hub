@@ -764,41 +764,88 @@ function abrirConfig(nodeId, data) {
         </div>
         `;
     } else if (data.tipo === 'condicao') {
+        // Normalizar: se veio do formato simples antigo, converter pra condicoes[]
+        let condicoes = Array.isArray(config.condicoes) ? config.condicoes.slice() : [];
+        if (condicoes.length === 0 && config.campo) {
+            condicoes.push({campo: config.campo, operador: config.operador || 'igual', valor: config.valor || ''});
+        }
+        if (condicoes.length === 0) {
+            condicoes.push({campo: '', operador: 'igual', valor: ''});
+        }
+        config.condicoes = condicoes;
+        const opLogico = config.operador_logico || 'and';
+
         html = `
-        <div class="config-group"><label>Campo</label>
-            <select id="cfg_campo" onchange="salvarConfigNodo()">
-                <optgroup label="Lead">
-                    <option value="lead.origem" ${config.campo==='lead.origem'?'selected':''}>Origem</option>
-                    <option value="lead.score_qualificacao" ${config.campo==='lead.score_qualificacao'?'selected':''}>Score</option>
-                    <option value="lead.cidade" ${config.campo==='lead.cidade'?'selected':''}>Cidade</option>
-                    <option value="lead.estado" ${config.campo==='lead.estado'?'selected':''}>Estado</option>
-                    <option value="lead.valor" ${config.campo==='lead.valor'?'selected':''}>Valor</option>
-                    <option value="lead.status_api" ${config.campo==='lead.status_api'?'selected':''}>Status</option>
-                    <option value="lead.cpf_cnpj" ${config.campo==='lead.cpf_cnpj'?'selected':''}>CPF/CNPJ</option>
-                    <option value="lead.email" ${config.campo==='lead.email'?'selected':''}>Email</option>
-                </optgroup>
-                <optgroup label="Resposta Anterior">
-                    <option value="ultima_resposta" ${config.campo==='ultima_resposta'?'selected':''}>Ultima Resposta</option>
-                </optgroup>
-                <optgroup label="Variavel IA">
-                    <option value="var.classificacao" ${config.campo==='var.classificacao'?'selected':''}>classificacao</option>
-                    <option value="var.custom" ${(config.campo||'').startsWith('var.') && config.campo!=='var.classificacao'?'selected':''}>Variavel personalizada...</option>
-                </optgroup>
-            </select>
-            ${(config.campo||'').startsWith('var.') && config.campo!=='var.classificacao' ? `<div class="config-group" style="margin-top:4px;"><label>Nome da Variavel</label><input type="text" id="cfg_var_nome" value="${config.campo?.replace('var.','') || ''}" onchange="salvarConfigNodo()" placeholder="nome_da_variavel"></div>` : ''}
+        <div id="condicoes_container">
+        ${condicoes.map((c, idx) => `
+            <div class="config-group" style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;background:var(--bg-subtle,#f8fafc);" data-cond-idx="${idx}">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <strong style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">Condicao ${idx + 1}</strong>
+                    ${condicoes.length > 1 ? `<button type="button" onclick="removerCondicao(${idx})" style="border:none;background:none;color:var(--danger);cursor:pointer;font-size:11px;padding:0;"><i class="fas fa-times"></i> remover</button>` : ''}
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
+                    <div>
+                        <label style="font-size:10px;">Campo</label>
+                        <select class="cond-campo" data-idx="${idx}" onchange="atualizarCondicoes()" style="width:100%;">
+                            <optgroup label="Lead">
+                                <option value="lead.origem" ${c.campo==='lead.origem'?'selected':''}>Origem</option>
+                                <option value="lead.score_qualificacao" ${c.campo==='lead.score_qualificacao'?'selected':''}>Score</option>
+                                <option value="lead.cidade" ${c.campo==='lead.cidade'?'selected':''}>Cidade</option>
+                                <option value="lead.estado" ${c.campo==='lead.estado'?'selected':''}>Estado</option>
+                                <option value="lead.valor" ${c.campo==='lead.valor'?'selected':''}>Valor</option>
+                                <option value="lead.status_api" ${c.campo==='lead.status_api'?'selected':''}>Status</option>
+                                <option value="lead.cpf_cnpj" ${c.campo==='lead.cpf_cnpj'?'selected':''}>CPF/CNPJ</option>
+                                <option value="lead.email" ${c.campo==='lead.email'?'selected':''}>Email</option>
+                            </optgroup>
+                            <optgroup label="Resposta Anterior">
+                                <option value="ultima_resposta" ${c.campo==='ultima_resposta'?'selected':''}>Ultima Resposta</option>
+                            </optgroup>
+                            <optgroup label="Variavel IA">
+                                <option value="var.classificacao" ${c.campo==='var.classificacao'?'selected':''}>classificacao</option>
+                                <option value="_custom" ${(c.campo||'').startsWith('var.') && c.campo!=='var.classificacao'?'selected':''}>Variavel personalizada...</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:10px;">Operador</label>
+                        <select class="cond-operador" data-idx="${idx}" onchange="atualizarCondicoes()" style="width:100%;">
+                            <option value="igual" ${c.operador==='igual'?'selected':''}>Igual</option>
+                            <option value="diferente" ${c.operador==='diferente'?'selected':''}>Diferente</option>
+                            <option value="contem" ${c.operador==='contem'?'selected':''}>Contem</option>
+                            <option value="nao_contem" ${c.operador==='nao_contem'?'selected':''}>Nao contem</option>
+                            <option value="inicia_com" ${c.operador==='inicia_com'?'selected':''}>Inicia com</option>
+                            <option value="termina_com" ${c.operador==='termina_com'?'selected':''}>Termina com</option>
+                            <option value="maior" ${c.operador==='maior'?'selected':''}>Maior que</option>
+                            <option value="menor" ${c.operador==='menor'?'selected':''}>Menor que</option>
+                            <option value="maior_igual" ${c.operador==='maior_igual'?'selected':''}>Maior ou igual</option>
+                            <option value="menor_igual" ${c.operador==='menor_igual'?'selected':''}>Menor ou igual</option>
+                            <option value="vazio" ${c.operador==='vazio'?'selected':''}>Vazio</option>
+                            <option value="nao_vazio" ${c.operador==='nao_vazio'?'selected':''}>Nao vazio</option>
+                        </select>
+                    </div>
+                </div>
+                ${(c.campo||'').startsWith('var.') && c.campo!=='var.classificacao' ? `<div style="margin-bottom:6px;"><label style="font-size:10px;">Nome da Variavel</label><input type="text" class="cond-varnome" data-idx="${idx}" value="${(c.campo||'').replace('var.','')}" onchange="atualizarCondicoes()" placeholder="nome_da_variavel" style="width:100%;"></div>` : ''}
+                ${['vazio', 'nao_vazio'].includes(c.operador) ? '' : `<div><label style="font-size:10px;">Valor</label><input type="text" class="cond-valor" data-idx="${idx}" value="${c.valor||''}" onchange="atualizarCondicoes()" style="width:100%;"></div>`}
+            </div>
+            ${idx < condicoes.length - 1 ? `<div style="text-align:center;margin:6px 0;color:var(--primary);font-weight:700;font-size:11px;letter-spacing:0.1em;">${opLogico.toUpperCase()}</div>` : ''}
+        `).join('')}
         </div>
-        <div class="config-group"><label>Operador</label>
-            <select id="cfg_operador" onchange="salvarConfigNodo()">
-                <option value="igual" ${config.operador==='igual'?'selected':''}>Igual</option>
-                <option value="diferente" ${config.operador==='diferente'?'selected':''}>Diferente</option>
-                <option value="contem" ${config.operador==='contem'?'selected':''}>Contem</option>
-                <option value="maior" ${config.operador==='maior'?'selected':''}>Maior que</option>
-                <option value="menor" ${config.operador==='menor'?'selected':''}>Menor que</option>
-                <option value="maior_igual" ${config.operador==='maior_igual'?'selected':''}>Maior ou igual</option>
-                <option value="menor_igual" ${config.operador==='menor_igual'?'selected':''}>Menor ou igual</option>
+
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+            <button type="button" onclick="adicionarCondicao()" class="btn-secondary" style="padding:6px 10px;font-size:11px;flex:1;">
+                <i class="fas fa-plus"></i> Adicionar condicao
+            </button>
+        </div>
+
+        ${condicoes.length > 1 ? `
+        <div class="config-group">
+            <label>Operador Logico</label>
+            <select id="cfg_op_logico" onchange="atualizarCondicoes()">
+                <option value="and" ${opLogico==='and'?'selected':''}>E (todas as condicoes)</option>
+                <option value="or" ${opLogico==='or'?'selected':''}>OU (qualquer condicao)</option>
             </select>
         </div>
-        <div class="config-group"><label>Valor</label><input type="text" id="cfg_valor" value="${config.valor||''}" onchange="salvarConfigNodo()"></div>
+        ` : ''}
         `;
     } else if (data.tipo === 'acao') {
         let extra = '';
@@ -978,6 +1025,69 @@ function abrirConfig(nodeId, data) {
     body.innerHTML = html;
 }
 
+// ── Condicao composta (AND/OR) ──
+function atualizarCondicoes() {
+    if (!selectedNodeId) return;
+    const data = editor.getNodeFromId(selectedNodeId).data;
+    const config = data.config || {};
+    const condicoes = [];
+    document.querySelectorAll('#condicoes_container [data-cond-idx]').forEach(el => {
+        const idx = parseInt(el.dataset.condIdx);
+        let campo = el.querySelector('.cond-campo')?.value || '';
+        if (campo === '_custom') {
+            const varNome = el.querySelector('.cond-varnome')?.value?.trim() || '';
+            campo = varNome ? `var.${varNome}` : 'var.classificacao';
+        }
+        const operador = el.querySelector('.cond-operador')?.value || 'igual';
+        const valor = el.querySelector('.cond-valor')?.value || '';
+        condicoes[idx] = {campo, operador, valor};
+    });
+    config.condicoes = condicoes.filter(c => c);
+    config.operador_logico = document.getElementById('cfg_op_logico')?.value || 'and';
+
+    // Manter compat com formato antigo (1a condicao)
+    if (config.condicoes.length >= 1) {
+        config.campo = config.condicoes[0].campo;
+        config.operador = config.condicoes[0].operador;
+        config.valor = config.condicoes[0].valor;
+    }
+
+    data.config = config;
+    editor.updateNodeDataFromId(selectedNodeId, data);
+    _snapshot();
+    // Re-renderizar modal para refletir mudancas no campo "var.custom"
+    const n = editor.getNodeFromId(selectedNodeId);
+    if (n) abrirConfig(selectedNodeId, n.data);
+}
+
+function adicionarCondicao() {
+    if (!selectedNodeId) return;
+    const data = editor.getNodeFromId(selectedNodeId).data;
+    const config = data.config || {};
+    if (!Array.isArray(config.condicoes)) {
+        config.condicoes = [];
+    }
+    config.condicoes.push({campo: '', operador: 'igual', valor: ''});
+    data.config = config;
+    editor.updateNodeDataFromId(selectedNodeId, data);
+    _snapshot();
+    const n = editor.getNodeFromId(selectedNodeId);
+    if (n) abrirConfig(selectedNodeId, n.data);
+}
+
+function removerCondicao(idx) {
+    if (!selectedNodeId) return;
+    const data = editor.getNodeFromId(selectedNodeId).data;
+    const config = data.config || {};
+    if (!Array.isArray(config.condicoes)) return;
+    config.condicoes.splice(idx, 1);
+    data.config = config;
+    editor.updateNodeDataFromId(selectedNodeId, data);
+    _snapshot();
+    const n = editor.getNodeFromId(selectedNodeId);
+    if (n) abrirConfig(selectedNodeId, n.data);
+}
+
 function salvarConfigNodo() {
     if (!selectedNodeId) return;
     const node = editor.getNodeFromId(selectedNodeId);
@@ -1022,14 +1132,8 @@ function salvarConfigNodo() {
             });
         }
     } else if (data.tipo === 'condicao') {
-        let campo = document.getElementById('cfg_campo')?.value || '';
-        if (campo === 'var.custom') {
-            const varNome = document.getElementById('cfg_var_nome')?.value || '';
-            campo = varNome ? `var.${varNome}` : 'var.classificacao';
-        }
-        config.campo = campo;
-        config.operador = document.getElementById('cfg_operador')?.value || 'igual';
-        config.valor = document.getElementById('cfg_valor')?.value || '';
+        // Delegado para atualizarCondicoes() que e chamado pelos onchange dos inputs de condicao
+        // Mantido vazio aqui porque o proprio atualizarCondicoes ja sincroniza o config
     } else if (data.tipo === 'acao') {
         config.template = document.getElementById('cfg_template')?.value || '';
         if (data.subtipo === 'webhook') {
