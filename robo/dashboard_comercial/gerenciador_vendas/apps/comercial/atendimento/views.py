@@ -575,6 +575,90 @@ def _validar_fluxo(fluxo):
                     'nodo_id': n.pk,
                 })
 
+    # Validacao de schema por subtipo
+    ACAO_SUBTIPOS_VALIDOS = {
+        'criar_oportunidade', 'mover_estagio', 'criar_tarefa', 'webhook',
+        'enviar_whatsapp', 'enviar_email', 'notificacao_sistema',
+    }
+    QUESTAO_IA_ACOES_VALIDAS = {'validar', 'classificar', 'extrair', 'classificar_extrair'}
+    FINALIZACAO_MOTIVOS_VALIDOS = {
+        'completado', 'ganho', 'perdido', 'sem_interesse', 'sem_viabilidade',
+        'duplicado', 'cancelado', 'sem_resposta', 'abandonado_usuario',
+        'transferido', 'cancelado_atendente', 'cancelado_sistema', 'tempo_limite',
+    }
+
+    for n in nodos:
+        config = n.configuracao or {}
+
+        if n.tipo == 'acao':
+            if n.subtipo and n.subtipo not in ACAO_SUBTIPOS_VALIDOS:
+                erros.append({
+                    'tipo': 'erro',
+                    'msg': f'Nodo Acao #{n.pk}: subtipo "{n.subtipo}" invalido. Validos: {", ".join(sorted(ACAO_SUBTIPOS_VALIDOS))}',
+                    'nodo_id': n.pk,
+                })
+            # criar_oportunidade: titulo obrigatorio
+            if n.subtipo == 'criar_oportunidade' and not config.get('titulo'):
+                erros.append({
+                    'tipo': 'aviso',
+                    'msg': f'Nodo Criar Oportunidade #{n.pk}: sem titulo configurado (usara "{{{{lead_nome}}}}" como padrao).',
+                    'nodo_id': n.pk,
+                })
+            # mover_estagio: estagio obrigatorio
+            if n.subtipo == 'mover_estagio' and not config.get('estagio'):
+                erros.append({
+                    'tipo': 'erro',
+                    'msg': f'Nodo Mover Estagio #{n.pk}: campo "estagio" vazio.',
+                    'nodo_id': n.pk,
+                })
+            # webhook: url obrigatoria
+            if n.subtipo == 'webhook' and not config.get('url'):
+                erros.append({
+                    'tipo': 'erro',
+                    'msg': f'Nodo Webhook #{n.pk}: campo "url" vazio.',
+                    'nodo_id': n.pk,
+                })
+
+        if n.tipo == 'questao':
+            ia_acao = config.get('ia_acao', 'validar')
+            if ia_acao and ia_acao not in QUESTAO_IA_ACOES_VALIDAS:
+                erros.append({
+                    'tipo': 'erro',
+                    'msg': f'Nodo Questao #{n.pk}: ia_acao "{ia_acao}" invalida. Validas: {", ".join(sorted(QUESTAO_IA_ACOES_VALIDAS))}',
+                    'nodo_id': n.pk,
+                })
+            # Se tem ia_acao != validar, precisa de integracao_ia_id
+            if ia_acao != 'validar' and not config.get('integracao_ia_id'):
+                erros.append({
+                    'tipo': 'erro',
+                    'msg': f'Nodo Questao #{n.pk}: ia_acao="{ia_acao}" mas sem integracao IA configurada.',
+                    'nodo_id': n.pk,
+                })
+            # Classificar sem categorias
+            if ia_acao in ('classificar', 'classificar_extrair') and not config.get('ia_categorias'):
+                erros.append({
+                    'tipo': 'aviso',
+                    'msg': f'Nodo Questao #{n.pk}: ia_acao="{ia_acao}" mas sem categorias definidas.',
+                    'nodo_id': n.pk,
+                })
+
+        if n.tipo == 'finalizacao':
+            motivo = config.get('motivo_finalizacao', '')
+            if motivo and motivo not in FINALIZACAO_MOTIVOS_VALIDOS:
+                erros.append({
+                    'tipo': 'erro',
+                    'msg': f'Nodo Finalizacao #{n.pk}: motivo "{motivo}" invalido.',
+                    'nodo_id': n.pk,
+                })
+
+        if n.tipo == 'condicao':
+            if not config.get('campo'):
+                erros.append({
+                    'tipo': 'aviso',
+                    'msg': f'Nodo Condicao #{n.pk}: campo vazio (vai sempre retornar true).',
+                    'nodo_id': n.pk,
+                })
+
     return erros
 
 

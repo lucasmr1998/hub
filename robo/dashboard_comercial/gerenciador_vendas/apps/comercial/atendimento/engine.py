@@ -368,8 +368,12 @@ def _executar_nodo(atendimento, nodo, contexto):
             _executar_acao(nodo, contexto, atendimento)
             _registrar_log(atendimento, nodo, 'sucesso', f'Acao executada: {nodo.subtipo}')
         except Exception as e:
-            _registrar_log(atendimento, nodo, 'erro', f'Erro na acao {nodo.subtipo}: {e}')
+            _registrar_log(atendimento, nodo, 'erro', f'Erro na acao {nodo.subtipo}: {e}',
+                           dados={'erro': str(e)[:500]})
             logger.error(f'Erro acao nodo {nodo.pk}: {e}')
+            # Se existe conexao com tipo_saida='erro', rotear pra la
+            if nodo.saidas.filter(tipo_saida='erro').exists():
+                atendimento._branch_saida = 'erro'
         return None  # Continua
 
     elif nodo.tipo == 'delay':
@@ -1536,9 +1540,14 @@ Responda APENAS com o nome exato de uma das categorias acima. Nenhum texto adici
     var_saida = config.get('variavel_saida', 'classificacao')
     _salvar_variavel(atendimento, var_saida, categoria)
 
+    # Se existe conexao com tipo_saida = nome da categoria, usa esse branch
+    # Senao, continua pelo default (comportamento antigo)
+    if nodo.saidas.filter(tipo_saida=categoria).exists():
+        atendimento._branch_saida = categoria
+
     _registrar_log(atendimento, nodo, 'sucesso',
                    f'Classificado como: {categoria}',
-                   dados={'variavel': var_saida, 'valor': categoria, 'mensagem': mensagem_usuario})
+                   dados={'variavel': var_saida, 'valor': categoria, 'mensagem': mensagem_usuario, 'branch': getattr(atendimento, '_branch_saida', 'default')})
 
     # Atualizar contexto para nos seguintes
     contexto['var'] = (atendimento.dados_respostas or {}).get('variaveis', {})
