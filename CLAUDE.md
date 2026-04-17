@@ -145,8 +145,9 @@ hub/
 ├── CLAUDE.md                    ← este arquivo
 ├── scripts/gerar_hub.py         ← gerador do hub
 ├── robo/                        ← projeto principal
-│   ├── docs/                    ← documentacao (GTM, PRODUTO, BRAND, AGENTES, context)
-│   ├── exports/                 ← hub.html, drafts, deck
+│   ├── docs/                    ← documentacao (GTM, PRODUTO, BRAND, AGENTES, OPERACIONAL, context)
+│   │   └── OPERACIONAL/         ← contratos + implementacao + materiais (templates, propostas, deck)
+│   ├── exports/                 ← saidas geradas (hub.html, backlog.html)
 │   └── dashboard_comercial/gerenciador_vendas/   ← projeto Django
 │       ├── apps/                ← 18 apps modulares
 │       │   ├── sistema/         ← Tenant, auth, configs, logging, permissoes
