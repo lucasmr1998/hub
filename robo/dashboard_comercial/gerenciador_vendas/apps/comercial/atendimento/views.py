@@ -830,6 +830,68 @@ def sessao_detalhe_view(request, atendimento_id):
 
 
 @login_required(login_url='sistema:login')
+def sessao_debug_view(request, atendimento_id):
+    """Tela de debug detalhada com timeline, logs LLM (prompt+resposta), contexto e variaveis."""
+    from django.shortcuts import get_object_or_404
+    import json as _json
+
+    sessao = get_object_or_404(
+        AtendimentoFluxo.objects.select_related('lead', 'fluxo', 'nodo_atual'),
+        pk=atendimento_id
+    )
+    logs = list(
+        LogFluxoAtendimento.objects.filter(atendimento=sessao)
+        .select_related('nodo').order_by('data_execucao')
+    )
+
+    # Separar logs LLM dos demais
+    timeline = []
+    for log in logs:
+        dados = log.dados or {}
+        is_llm = dados.get('llm_call', False) or log.status == 'llm'
+        timeline.append({
+            'log': log,
+            'is_llm': is_llm,
+            'dados_json': _json.dumps(dados, ensure_ascii=False, indent=2, default=str) if dados else '',
+            'llm_info': {
+                'contexto_chamada': dados.get('contexto_chamada', ''),
+                'modelo': dados.get('modelo', ''),
+                'system_prompt': dados.get('system_prompt', ''),
+                'conversation': dados.get('conversation', []),
+                'resultado_raw': dados.get('resultado_raw', ''),
+            } if is_llm else None,
+        })
+
+    # Resumo do contexto
+    dados_respostas = sessao.dados_respostas or {}
+    variaveis = dados_respostas.get('variaveis', {})
+    respostas = {
+        k: v for k, v in dados_respostas.items()
+        if k not in ('variaveis',) and not k.startswith('_') and not k.startswith('ia_')
+    }
+    historicos_ia = {
+        k: v for k, v in dados_respostas.items()
+        if k.startswith('ia_agente_') or k.startswith('ia_historico_')
+    }
+    metadados = {
+        k: v for k, v in dados_respostas.items() if k.startswith('_')
+    }
+
+    context = {
+        'sessao': sessao,
+        'timeline': timeline,
+        'total_logs': len(logs),
+        'total_llm_calls': sum(1 for t in timeline if t['is_llm']),
+        'variaveis': variaveis,
+        'respostas': respostas,
+        'historicos_ia': historicos_ia,
+        'metadados': metadados,
+        'dados_respostas_json': _json.dumps(dados_respostas, ensure_ascii=False, indent=2, default=str),
+    }
+    return render(request, 'comercial/atendimento/sessao_debug.html', context)
+
+
+@login_required(login_url='sistema:login')
 def sessao_fluxo_visual_view(request, atendimento_id):
     """Visualizacao do fluxo com destaque do nodo atual da sessao."""
     from django.shortcuts import get_object_or_404

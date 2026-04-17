@@ -834,7 +834,21 @@ function abrirConfig(nodeId, data) {
         `;
     } else if (data.tipo === 'finalizacao') {
         html = `
-        <div class="config-group"><label>Mensagem Final</label><input type="text" id="cfg_msg_final" value="${config.mensagem_final||'Atendimento finalizado'}" onchange="salvarConfigNodo()"></div>
+        <div class="config-group"><label>Mensagem Final</label>
+            <textarea id="cfg_msg_final" rows="3" onchange="salvarConfigNodo()">${config.mensagem_final||'Atendimento finalizado'}</textarea>
+            <div class="form-hint">Aceita variaveis: {{lead_nome}}, {{var.curso_interesse}}, etc.</div>
+        </div>
+        <div class="config-group"><label>Motivo de Finalizacao</label>
+            <select id="cfg_motivo" onchange="salvarConfigNodo()">
+                <option value="completado" ${(config.motivo_finalizacao||'completado')==='completado'?'selected':''}>Completado com sucesso</option>
+                <option value="ganho" ${config.motivo_finalizacao==='ganho'?'selected':''}>Ganho (conversao)</option>
+                <option value="perdido" ${config.motivo_finalizacao==='perdido'?'selected':''}>Perdido (nao converteu)</option>
+                <option value="sem_interesse" ${config.motivo_finalizacao==='sem_interesse'?'selected':''}>Sem interesse</option>
+                <option value="sem_viabilidade" ${config.motivo_finalizacao==='sem_viabilidade'?'selected':''}>Sem viabilidade</option>
+                <option value="duplicado" ${config.motivo_finalizacao==='duplicado'?'selected':''}>Duplicado</option>
+                <option value="cancelado" ${config.motivo_finalizacao==='cancelado'?'selected':''}>Cancelado</option>
+            </select>
+        </div>
         ${data.subtipo==='calcular_score'?`<div class="config-group"><label>Score (1-10)</label><input type="number" id="cfg_score" value="${config.score||''}" min="1" max="10" onchange="salvarConfigNodo()"></div>`:''}
         `;
     } else if (data.tipo === 'entrada') {
@@ -1036,6 +1050,7 @@ function salvarConfigNodo() {
         config.unidade = document.getElementById('cfg_delay_unidade')?.value || 'minutos';
     } else if (data.tipo === 'finalizacao') {
         config.mensagem_final = document.getElementById('cfg_msg_final')?.value || '';
+        config.motivo_finalizacao = document.getElementById('cfg_motivo')?.value || 'completado';
         const scoreEl = document.getElementById('cfg_score');
         if (scoreEl) config.score = parseInt(scoreEl.value) || null;
     } else if (data.tipo === 'entrada') {

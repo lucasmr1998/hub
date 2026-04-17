@@ -1367,6 +1367,12 @@ class AtendimentoFluxo(TenantMixin):
 
     MOTIVO_FINALIZACAO_CHOICES = [
         ('completado', 'Fluxo completado'),
+        ('ganho', 'Ganho (conversao)'),
+        ('perdido', 'Perdido (nao converteu)'),
+        ('sem_interesse', 'Sem interesse'),
+        ('sem_viabilidade', 'Sem viabilidade'),
+        ('duplicado', 'Duplicado'),
+        ('cancelado', 'Cancelado'),
         ('sem_resposta', 'Sem resposta'),
         ('abandonado_usuario', 'Abandonado pelo usuario'),
         ('transferido', 'Transferido para humano'),

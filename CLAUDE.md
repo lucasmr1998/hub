@@ -8,6 +8,23 @@
 3. **Nunca implementar sem alinhamento.** Mesmo que a solucao pareca obvia, perguntar antes. O usuario decide a direcao.
 4. **Confirmar escopo.** Antes de comecar, resumir o que vai ser feito e pedir confirmacao.
 
+### Checklist de "feature completa"
+
+Uma feature so e considerada **pronta** quando TODOS os itens abaixo foram cumpridos:
+
+- [ ] Codigo funcional com teste manual/automatizado passando
+- [ ] Documentacao em `robo/docs/PRODUTO/` atualizada (modulo correspondente)
+- [ ] Nenhum `print`, `console.log` ou comentario de debug deixado no codigo
+- [ ] Imports/variaveis nao utilizados removidos
+- [ ] Deploy validado com teste real em producao (se aplicavel)
+- [ ] Nenhum bug critico aberto no escopo da feature
+- [ ] `python manage.py check` sem erros
+- [ ] Migration aplicada nos ambientes de dev e prod (se houver)
+
+### Regra anti-paralelismo
+
+Nao comecar feature nova enquanto houver bug critico aberto no produto em producao. Fechar bugs primeiro, feature depois. Ritmo cai no curto prazo mas acelera no medio (menos retrabalho, menos surpresas no deploy).
+
 ---
 
 ## Regras Fundamentais

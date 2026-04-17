@@ -73,6 +73,7 @@ urlpatterns = [
     path('configuracoes/fluxos/', views.fluxos_atendimento_view, name='fluxos_atendimento'),
     path('configuracoes/sessoes/', views.sessoes_atendimento_view, name='sessoes_atendimento'),
     path('configuracoes/sessoes/<int:atendimento_id>/', views.sessao_detalhe_view, name='sessao_detalhe'),
+    path('configuracoes/sessoes/<int:atendimento_id>/debug/', views.sessao_debug_view, name='sessao_debug'),
     path('configuracoes/sessoes/<int:atendimento_id>/fluxo/', views.sessao_fluxo_visual_view, name='sessao_fluxo_visual'),
     path('configuracoes/fluxos/<int:fluxo_id>/editor/', views.editor_fluxo_view, name='editor_fluxo'),
     path('api/fluxos/<int:fluxo_id>/salvar-fluxo/', views.salvar_fluxo_api, name='salvar_fluxo'),

@@ -399,9 +399,11 @@ def _executar_nodo(atendimento, nodo, contexto):
         # PAUSA: finaliza o atendimento
         config = nodo.configuracao
         score = config.get('score', None)
+        motivo = config.get('motivo_finalizacao', 'completado')
+        status_final = config.get('status', 'completado')
 
-        atendimento.status = 'completado'
-        atendimento.motivo_finalizacao = 'completado'
+        atendimento.status = status_final
+        atendimento.motivo_finalizacao = motivo
         atendimento.data_conclusao = timezone.now()
         if atendimento.data_inicio:
             atendimento.tempo_total = int((timezone.now() - atendimento.data_inicio).total_seconds())
@@ -415,18 +417,25 @@ def _executar_nodo(atendimento, nodo, contexto):
             atendimento.lead.score_qualificacao = int(score)
             atendimento.lead.save(update_fields=['score_qualificacao'])
 
+        # Interpolar variaveis na mensagem final
+        mensagem_final = _substituir_variaveis(
+            config.get('mensagem_final', 'Atendimento finalizado'),
+            contexto,
+        )
+
         _registrar_log(atendimento, nodo, 'sucesso',
-                       f'Fluxo finalizado. Score: {score or "N/A"}',
-                       dados={'score': score, 'tempo_total': atendimento.tempo_total})
+                       f'Fluxo finalizado. Motivo: {motivo}. Score: {score or "N/A"}',
+                       dados={'score': score, 'motivo': motivo, 'tempo_total': atendimento.tempo_total})
 
         return {
             'tipo': 'finalizado',
             'resultado': {
                 'score': score,
+                'motivo': motivo,
                 'dados_respostas': atendimento.dados_respostas,
                 'tempo_total': atendimento.tempo_total,
             },
-            'mensagem': config.get('mensagem_final', 'Atendimento finalizado'),
+            'mensagem': mensagem_final,
         }
 
     elif nodo.tipo == 'transferir_humano':
@@ -1059,6 +1068,40 @@ def _registrar_log(atendimento, nodo, status, mensagem, dados=None):
         logger.error(f'Erro ao registrar log fluxo: {e}')
 
 
+def _log_llm_call(atendimento, nodo, contexto_chamada, messages, resultado_raw, modelo=None):
+    """Registra uma chamada LLM com prompt completo e resposta raw.
+    `contexto_chamada` e uma string descritiva (ex: 'classificar', 'extrair', 'respondedor').
+    """
+    try:
+        # Extrair system prompt e conversation de forma separada
+        system_prompt = ''
+        conversation = []
+        for m in messages:
+            if m.get('role') == 'system':
+                system_prompt += (m.get('content') or '') + '\n'
+            else:
+                conversation.append({
+                    'role': m.get('role'),
+                    'content': (m.get('content') or '')[:2000],  # truncar mensagens enormes
+                })
+
+        dados = {
+            'llm_call': True,
+            'contexto_chamada': contexto_chamada,
+            'modelo': modelo or '',
+            'system_prompt': system_prompt.strip()[:4000],
+            'conversation': conversation[-10:],  # ultimas 10 mensagens
+            'resultado_raw': (resultado_raw or '')[:4000],
+        }
+        _registrar_log(
+            atendimento, nodo, 'llm',
+            f'LLM ({contexto_chamada}): {(resultado_raw or "")[:100]}',
+            dados=dados,
+        )
+    except Exception as e:
+        logger.error(f'Erro ao logar LLM call: {e}')
+
+
 # ============================================================================
 # NOS IA — CLASSIFICADOR, EXTRATOR, RESPONDEDOR, AGENTE
 # ============================================================================
@@ -1094,6 +1137,7 @@ Responda APENAS com o nome exato de uma das categorias acima. Nenhum texto adici
             {'role': 'user', 'content': resposta},
         ]
         resultado = _chamar_llm_simples(integracao, modelo, messages)
+        _log_llm_call(atendimento, nodo, 'questao_classificar', messages, resultado, modelo)
         if resultado:
             categoria = resultado.strip().lower().replace('"', '').replace("'", '')
             for c in categorias:
@@ -1135,6 +1179,7 @@ Responda APENAS em JSON. Se nao encontrar, use string vazia."""
                 {'role': 'user', 'content': resposta},
             ]
             resultado = _chamar_llm_simples(integracao, modelo, messages)
+            _log_llm_call(atendimento, nodo, 'questao_extrair', messages, resultado, modelo)
             if resultado:
                 import json as json_mod
                 try:
@@ -1224,6 +1269,7 @@ Responda APENAS com o nome exato de uma das categorias."""
             {'role': 'user', 'content': resposta},
         ]
         resultado_class = _chamar_llm_simples(integracao, modelo, messages_class)
+        _log_llm_call(atendimento, nodo, 'questao_classificar_extrair', messages_class, resultado_class, modelo)
         if resultado_class:
             categoria = resultado_class.strip().lower().replace('"', '').replace("'", '')
             for c in categorias:
@@ -1464,6 +1510,7 @@ Responda APENAS com o nome exato de uma das categorias acima. Nenhum texto adici
     ]
 
     resultado = _chamar_llm_simples(integracao, config.get('modelo', ''), messages)
+    _log_llm_call(atendimento, nodo, 'ia_classificador', messages, resultado, config.get('modelo', ''))
     if not resultado:
         _registrar_log(atendimento, nodo, 'erro', 'LLM nao retornou resposta')
         return None
@@ -1538,6 +1585,7 @@ Exemplo: {{"nome": "Joao Silva", "curso": "Direito"}}"""
     ]
 
     resultado = _chamar_llm_simples(integracao, config.get('modelo', ''), messages)
+    _log_llm_call(atendimento, nodo, 'ia_extrator', messages, resultado, config.get('modelo', ''))
     if not resultado:
         _registrar_log(atendimento, nodo, 'erro', 'LLM nao retornou resposta')
         atendimento._branch_saida = 'false'
@@ -1664,6 +1712,7 @@ def _executar_ia_respondedor(atendimento, nodo, contexto):
         messages.append({'role': 'user', 'content': 'Apresente as informacoes conforme instruido.'})
 
     resultado = _chamar_llm_simples(integracao, config.get('modelo', ''), messages)
+    _log_llm_call(atendimento, nodo, 'ia_respondedor', messages, resultado, config.get('modelo', ''))
     if not resultado:
         resultado = config.get('mensagem_timeout', 'Desculpe, nao consegui processar.')
 
@@ -1718,6 +1767,7 @@ def processar_resposta_ia_respondedor(atendimento, resposta):
                 messages.append({'role': m['role'], 'content': m['content']})
 
         resposta_ia = _chamar_llm_simples(integracao, config.get('modelo', ''), messages)
+        _log_llm_call(atendimento, nodo, 'ia_respondedor_turno', messages, resposta_ia, config.get('modelo', ''))
         if resposta_ia:
             historico.append({'role': 'assistant', 'content': resposta_ia})
 
@@ -1799,6 +1849,7 @@ def _executar_ia_agente_inicial(atendimento, nodo, contexto):
         integracao, config.get('modelo', ''), messages,
         config, atendimento, contexto
     )
+    _log_llm_call(atendimento, nodo, 'ia_agente_inicial', messages, resultado, config.get('modelo', ''))
 
     # Salvar historico
     dados = atendimento.dados_respostas or {}
@@ -1903,6 +1954,7 @@ def processar_resposta_ia_agente(atendimento, resposta):
         integracao, config.get('modelo', ''), messages,
         config, atendimento, contexto
     )
+    _log_llm_call(atendimento, nodo, 'ia_agente_turno', messages, resultado, config.get('modelo', ''))
 
     # Atualizar historico
     historico['messages'].append({'role': 'user', 'content': resposta})

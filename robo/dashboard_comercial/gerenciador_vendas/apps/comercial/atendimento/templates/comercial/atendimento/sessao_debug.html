@@ -1,0 +1,217 @@
+{% extends 'sistema/base.html' %}
+
+{% block title %}Debug #{{ sessao.id }} — Hubtrix{% endblock %}
+
+{% block custom_css %}
+<style>
+.debug-container { max-width: 1400px; margin: 0 auto; padding: 16px; }
+.debug-header { background: var(--bg-white); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; }
+.debug-header h1 { font-size: 18px; font-weight: 700; color: var(--text-main); margin: 0 0 4px; }
+.debug-header .meta { font-size: 12px; color: var(--text-muted); }
+.debug-header .meta strong { color: var(--text-secondary); }
+
+.debug-grid { display: grid; grid-template-columns: 1fr 400px; gap: 16px; }
+@media (max-width: 1100px) { .debug-grid { grid-template-columns: 1fr; } }
+
+.card { background: var(--bg-white); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 16px; overflow: hidden; }
+.card-header { padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--border-light); font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; display: flex; justify-content: space-between; align-items: center; }
+.card-header .badge { background: var(--primary-light); color: var(--primary-dark); padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+.card-body { padding: 12px 16px; }
+
+/* Timeline */
+.timeline-item { border-left: 2px solid var(--border); padding: 8px 0 12px 16px; margin-left: 6px; position: relative; }
+.timeline-item::before { content: ''; position: absolute; left: -6px; top: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+.timeline-item.status-sucesso::before { background: var(--success); }
+.timeline-item.status-erro::before { background: var(--danger); }
+.timeline-item.status-aguardando::before { background: var(--warning); }
+.timeline-item.status-llm::before { background: #8b5cf6; }
+.timeline-item.status-fallback::before { background: #f97316; }
+.timeline-header { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+.timeline-header .tipo-nodo { background: var(--border-light); padding: 1px 6px; border-radius: 3px; font-weight: 600; color: var(--text-secondary); }
+.timeline-msg { font-size: 13px; color: var(--text-main); line-height: 1.4; }
+
+.toggle-dados { font-size: 11px; color: var(--primary); cursor: pointer; margin-top: 4px; display: inline-block; }
+.dados-box { background: #0f172a; color: #e2e8f0; padding: 10px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 11px; line-height: 1.5; margin-top: 6px; white-space: pre-wrap; word-break: break-word; max-height: 400px; overflow-y: auto; display: none; }
+.dados-box.open { display: block; }
+
+/* LLM card */
+.llm-item { background: #fafaff; border: 1px solid #c7d2fe; border-radius: 6px; padding: 10px 12px; margin-top: 6px; }
+.llm-meta { font-size: 10px; color: #5b21b6; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+.llm-section { margin-top: 8px; }
+.llm-section label { font-size: 10px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 4px; }
+.llm-section pre { background: #fff; border: 1px solid #e2e8f0; padding: 8px; border-radius: 4px; font-size: 11px; line-height: 1.4; margin: 0; max-height: 240px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
+.llm-conversation .msg-role { font-weight: 700; color: #1e40af; font-size: 10px; text-transform: uppercase; }
+.llm-conversation .msg-role.user { color: #15803d; }
+.llm-conversation .msg-role.assistant { color: #be185d; }
+.llm-conversation .msg-role.tool { color: #ea580c; }
+.llm-conversation .msg-content { font-size: 11px; color: #334155; padding: 2px 0 8px; border-bottom: 1px dashed #e2e8f0; margin-bottom: 6px; white-space: pre-wrap; word-break: break-word; }
+
+/* Sidebar */
+.kv-list { margin: 0; padding: 0; list-style: none; }
+.kv-list li { padding: 6px 0; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; gap: 10px; font-size: 12px; }
+.kv-list li:last-child { border-bottom: none; }
+.kv-list .k { font-weight: 600; color: var(--text-secondary); word-break: break-word; max-width: 50%; }
+.kv-list .v { color: var(--text-main); text-align: right; word-break: break-word; max-width: 50%; }
+.kv-list .v code { background: var(--border-light); padding: 1px 6px; border-radius: 3px; font-size: 11px; }
+
+.actions { display: flex; gap: 8px; margin-bottom: 16px; }
+.actions a { text-decoration: none; }
+
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 13px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="debug-container">
+
+    <div class="debug-header">
+        <h1>Debug da Sessao #{{ sessao.id }}</h1>
+        <div class="meta">
+            <strong>Lead:</strong> {{ sessao.lead.nome_razaosocial|default:"-" }} ({{ sessao.lead.telefone|default:"-" }}) |
+            <strong>Fluxo:</strong> {{ sessao.fluxo.nome }} |
+            <strong>Status:</strong> {{ sessao.get_status_display }} |
+            <strong>Motivo:</strong> {{ sessao.motivo_finalizacao|default:"-" }} |
+            <strong>Nodo atual:</strong> {% if sessao.nodo_atual %}{{ sessao.nodo_atual.get_tipo_display }} #{{ sessao.nodo_atual.pk }}{% else %}-{% endif %}
+        </div>
+    </div>
+
+    <div class="actions">
+        <a href="{% url 'comercial_atendimento:sessao_detalhe' sessao.id %}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+            <i class="fas fa-arrow-left"></i> Detalhe Simples
+        </a>
+        <a href="{% url 'comercial_atendimento:sessao_fluxo_visual' sessao.id %}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+            <i class="fas fa-project-diagram"></i> Fluxo Visual
+        </a>
+    </div>
+
+    <div class="debug-grid">
+
+        <!-- Timeline -->
+        <div>
+            <div class="card">
+                <div class="card-header">
+                    Timeline de Execucao
+                    <span class="badge">{{ total_logs }} eventos · {{ total_llm_calls }} LLM calls</span>
+                </div>
+                <div class="card-body">
+                    {% if timeline %}
+                        {% for item in timeline %}
+                        <div class="timeline-item status-{{ item.log.status }}">
+                            <div class="timeline-header">
+                                <div>
+                                    <span class="tipo-nodo">{{ item.log.tipo_nodo }}{% if item.log.nodo %} #{{ item.log.nodo.pk }}{% endif %}</span>
+                                    <span style="margin-left:6px;color:{% if item.log.status == 'erro' %}var(--danger){% elif item.log.status == 'sucesso' %}var(--success){% elif item.log.status == 'llm' %}#8b5cf6{% else %}var(--text-muted){% endif %};font-weight:600;">{{ item.log.status }}</span>
+                                </div>
+                                <span>{{ item.log.data_execucao|date:"d/m H:i:s" }}</span>
+                            </div>
+                            <div class="timeline-msg">{{ item.log.mensagem }}</div>
+
+                            {% if item.is_llm and item.llm_info %}
+                            <div class="llm-item">
+                                <div class="llm-meta">
+                                    <i class="fas fa-brain"></i> {{ item.llm_info.contexto_chamada }} · {{ item.llm_info.modelo|default:"modelo nao definido" }}
+                                </div>
+
+                                {% if item.llm_info.system_prompt %}
+                                <div class="llm-section">
+                                    <label>System Prompt</label>
+                                    <pre>{{ item.llm_info.system_prompt }}</pre>
+                                </div>
+                                {% endif %}
+
+                                {% if item.llm_info.conversation %}
+                                <div class="llm-section llm-conversation">
+                                    <label>Conversation</label>
+                                    {% for m in item.llm_info.conversation %}
+                                    <div class="msg-role {{ m.role }}">{{ m.role }}</div>
+                                    <div class="msg-content">{{ m.content }}</div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+
+                                <div class="llm-section">
+                                    <label>Resultado Raw</label>
+                                    <pre>{{ item.llm_info.resultado_raw|default:"(vazio)" }}</pre>
+                                </div>
+                            </div>
+                            {% elif item.dados_json and item.dados_json != '{}' %}
+                            <span class="toggle-dados" onclick="this.nextElementSibling.classList.toggle('open');">
+                                <i class="fas fa-code"></i> Ver dados
+                            </span>
+                            <pre class="dados-box">{{ item.dados_json }}</pre>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">Nenhum log registrado ainda.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div>
+
+            <div class="card">
+                <div class="card-header">Variaveis IA <span class="badge">{{ variaveis|length }}</span></div>
+                <div class="card-body">
+                    {% if variaveis %}
+                    <ul class="kv-list">
+                        {% for k, v in variaveis.items %}
+                        <li><span class="k">{{ k }}</span><span class="v"><code>{{ v }}</code></span></li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                        <div class="empty-state" style="padding:16px;">Sem variaveis definidas.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Respostas do Lead <span class="badge">{{ respostas|length }}</span></div>
+                <div class="card-body">
+                    {% if respostas %}
+                    <ul class="kv-list">
+                        {% for k, v in respostas.items %}
+                        <li><span class="k">Nodo {{ k }}</span><span class="v">{{ v.resposta|default:v|truncatechars:50 }}</span></li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                        <div class="empty-state" style="padding:16px;">Sem respostas ainda.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Metadados <span class="badge">{{ metadados|length }}</span></div>
+                <div class="card-body">
+                    {% if metadados %}
+                    <ul class="kv-list">
+                        {% for k, v in metadados.items %}
+                        <li><span class="k">{{ k }}</span><span class="v">{{ v|truncatechars:60 }}</span></li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                        <div class="empty-state" style="padding:16px;">Sem metadados.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    Dados Respostas (raw)
+                    <span class="toggle-dados" onclick="this.parentElement.nextElementSibling.querySelector('.dados-box').classList.toggle('open');" style="margin-top:0;">
+                        <i class="fas fa-eye"></i> Mostrar
+                    </span>
+                </div>
+                <div class="card-body">
+                    <pre class="dados-box">{{ dados_respostas_json }}</pre>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
