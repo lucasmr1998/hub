@@ -43,7 +43,7 @@
 </div>
 
 <!-- Pendentes -->
-<div id="tab-pendentes" class="tab-panel">
+<div id="tab-pendentes" class="tab-panel active">
     <div class="admin-table-wrap">
         <table class="admin-table">
             <thead>
@@ -88,7 +88,7 @@
 </div>
 
 <!-- Finalizadas -->
-<div id="tab-finalizadas" class="tab-panel" style="display:none;">
+<div id="tab-finalizadas" class="tab-panel">
     <div class="admin-table-wrap">
         <table class="admin-table">
             <thead>
@@ -140,8 +140,8 @@ function switchTab(btn, tab) {
     document.querySelectorAll('.btn-tab').forEach(b => { b.classList.remove('active'); b.classList.add('btn-outline'); b.classList.remove('btn-primary'); });
     btn.classList.add('active', 'btn-primary');
     btn.classList.remove('btn-outline');
-    document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
-    document.getElementById('tab-' + tab).style.display = '';
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
 }
 </script>
 {% endblock %}
