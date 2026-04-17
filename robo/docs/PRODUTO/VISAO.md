@@ -279,11 +279,152 @@ o que acontece, como entra e sai, papel do Hubtrix, estado atual, metrica.
 
 ## FIDELIZACAO
 
-> Pendente. Estagios 7 (Onboarding), 8 (Relacionamento continuo), 9 (Retencao).
+### 7. Onboarding
+
+**O que acontece:** Primeiros 30 dias do cliente. Recebe mensagem de boas-vindas, aprende a pagar, entra no Clube (cadastro + OTP + primeiro giro da roleta), descobre parceiros e cupons, recebe codigo pra indicar amigos. Objetivo: experiencia inicial positiva reduz churn nos primeiros 90 dias.
+
+**Entra:** `Cliente` criado no espelho do ERP (estagio 6 completo), evento `cliente_criado` (ou `venda_aprovada`) dispara automacao de onboarding.
+**Sai:** cliente operando normal, passado o periodo de adaptacao → estagio 8.
+
+**Papel do Hubtrix:**
+- Automacao dispara regua de boas-vindas (mensagens sequenciadas com delay): [marketing/automacoes/](modulos/marketing/automacoes/)
+- Clube completo com gamificacao, roleta, missoes: [cs/clube/](modulos/cs/clube/)
+- Cadastro de membro com OTP WhatsApp: [cs/clube/area-membro.md](modulos/cs/clube/area-membro.md)
+- Parceiros + cupons com regras de resgate (pontos/nivel): [cs/parceiros.md](modulos/cs/parceiros.md)
+- Indicacao com codigo automatico e pagina publica: [cs/indicacoes.md](modulos/cs/indicacoes.md)
+- Carteirinha digital com regras de atribuicao: [cs/carteirinha.md](modulos/cs/carteirinha.md)
+
+**Estado atual:**
+- ✅ Clube completo: 10 models, RegraPontuacao, ExtratoPontuacao (ledger imutavel), niveis dinamicos, roleta com restricao geografica
+- ✅ OTP WhatsApp via N8N (gerar codigo + enviar + validar + atribuir pontos)
+- ✅ Parceiros + cupons com aprovacao, estoque, modalidade (gratuito/pontos/nivel)
+- ✅ Programa de indicacao: codigo automatico, pagina publica personalizada, pontos ao converter
+- ✅ Carteirinha digital com regras (por nivel/XP/cidade/todos)
+- ⚠️ Evento `venda_aprovada` existe no model de automacao mas signal nao esta implementado — regua de boas-vindas precisa ser disparada manualmente hoje
+- ⚠️ Nao tem evento `cliente_criado` ou `cliente_ativado` — depende do model `Cliente` ainda pendente (ver D.4)
+- ❌ Dashboard de "saude do onboarding" (% que fez cadastro no Clube, primeiro giro, leu a regua) nao existe
+
+**Metrica:**
+- % de clientes novos que cadastraram no Clube em 7 dias
+- % que fizeram primeiro giro na roleta
+- % que completaram a regua de boas-vindas (respondeu ou interagiu com pelo menos N mensagens)
+
+---
+
+### 8. Relacionamento continuo
+
+**O que acontece:** Cliente usa o servico. Abre ticket quando tem problema tecnico, responde pesquisa NPS, interage via WhatsApp, resgata cupons, acumula pontos. ISP envia comunicados pontuais (manutencao, novidades, campanhas). Estado estavel entre onboarding e ou retencao, ou recompra.
+
+**Entra:** cliente operacional pos-onboarding.
+**Sai:**
+- Engajado e feliz → continua no estagio, alimenta estagio 10 com indicacoes/upsell
+- Sinais de churn detectados → estagio 9 (Retencao)
+- Cliente cancela direto → saida do funil
+
+**Papel do Hubtrix:**
+- Inbox recebe mensagens do cliente ativo (mesmos canais, vinculado a `Cliente` pos-venda): [inbox/](modulos/inbox/)
+- Suporte: tickets com SLA por plano, timeline com comentarios, integracao com Inbox: [suporte/](modulos/suporte/)
+- NPS: pesquisa de satisfacao (stub — models prontos, execucao pendente): [cs/nps.md](modulos/cs/nps.md)
+- Clube: engajamento continuo (giros, missoes, indicacoes, resgates)
+- Automacoes por evento (`mensagem_recebida`, `conversa_aberta`, `conversa_resolvida`, `cliente_aniversario`): [marketing/automacoes/](modulos/marketing/automacoes/)
+
+**Estado atual:**
+- ✅ Inbox multi-canal com fila, distribuicao, respostas rapidas, etiquetas, notas internas
+- ✅ Suporte com 4 models, dashboard com KPIs, SLA breach destacado, integracao 1:1 com Inbox
+- ✅ Clube engajamento continuo (roleta, missoes configuraveis, resgates, extrato)
+- ✅ Automacoes com 14 eventos gatilho (signals + cron) e 8 tipos de acao
+- ⚠️ NPS em stub: models ConfiguracaoNPS/PesquisaNPS existem; falta service de envio, cron periodico, views de dashboard
+- ⚠️ Evento `cliente_aniversario` esta definido no model mas sem cron implementado
+- ❌ Tracking de "ultimo uso" do servico (indicador de engajamento) — depende de dado do ERP via espelho
+- ❌ Dashboard de saude por cliente consolidado (NPS + tickets + inadimplencia + uso) nao existe
+
+**Metrica:**
+- NPS medio do tenant (quando feature NPS rodar)
+- Tickets abertos por cliente por mes
+- % de clientes que resgatam cupons
+- Engagement rate no Clube (giros/mes, missoes concluidas)
+
+---
+
+### 9. Retencao
+
+**O que acontece:** Sistema detecta sinais de que cliente pode cancelar (contrato expirando, inadimplencia, downgrade, reclamacao recorrente, queda no uso). Cria AlertaRetencao classificado por nivel de risco. Time de CS age: liga, oferece beneficio, resolve o problema. Alvo: evitar churn antes que o cliente formalize o cancelamento.
+
+**Entra:**
+- Scanner automatico detecta sinal (contratos expirando no ERP, HistoricoContato com reclamacao, outros sinais do espelho)
+- OU CS marca cliente como "em risco" manualmente
+
+**Sai:**
+- **Retido:** problema tratado → volta pro estagio 8
+- **Churn confirmado:** cliente cancelou → saida do funil
+
+**Papel do Hubtrix:**
+- `AlertaRetencao` no CRM com 7 tipos e 4 niveis de risco: [comercial/crm/retencao.md](modulos/comercial/crm/retencao.md)
+- Scanner automatico via `api_scanner_retencao`: [comercial/crm/retencao.md](modulos/comercial/crm/retencao.md)
+- Fluxo de tratamento do alerta (novo → em_tratamento → resolvido/perdido)
+- apps/cs/retencao/ como modulo dedicado de CS (stub): [cs/retencao.md](modulos/cs/retencao.md)
+- Automacao pode disparar regua de reengajamento (evento `cliente_aniversario`, `lead_sem_contato` adaptavel)
+
+**Estado atual:**
+- ✅ `AlertaRetencao` com 7 tipos (contrato_expirando, inadimplencia, plano_downgradado, sem_uso, reclamacao, upgrade_disponivel, aniversario_contrato), 4 niveis de risco, score 0-100
+- ✅ Scanner de contratos expirando (≤30d critico/90, ≤60 alto/70, ≤90 medio/50)
+- ✅ Tela de gestao agrupada por nivel, acoes tratar/resolver
+- ⚠️ apps/cs/retencao/ em stub (ScoreCliente, AlertaChurn, AcaoRetencao) — models criados, views/services pendentes
+- ❌ Scanner so olha contratos expirando; outros sinais (inadimplencia ativa, uso baixo) dependem do espelho completo (estagio 6 pendente)
+- ❌ Score de churn holistico combinando multiplos fatores (NPS + inadimplencia + uso + tickets) nao existe
+- ❌ Jornada automatizada de retencao (regua de reengajamento por nivel de risco) nao configurada
+
+**Metrica:**
+- Taxa de retencao (% de alertas que viram resolvido vs perdido)
+- Tempo medio ate tratar alerta critico (alvo: < 24h)
+- Churn mensal por tenant
 
 ## EXPANSAO
 
-> Pendente. Estagio 10 (Indicacao / Upsell / Expansao).
+### 10. Indicacao / Upsell / Expansao
+
+**O que acontece:** Cliente satisfeito vira vetor de crescimento do ISP. Tres caminhos:
+
+- **Indicacao** — cliente compartilha codigo pessoal com amigo/familiar; se converter, indicador ganha pontos no Clube
+- **Upsell** — Hubtrix detecta oportunidade de upgrade de plano ou venda de SVA (servico adicional); vendedor ou automacao aborda
+- **Expansao geografica** — cliente se muda pra outra cidade/endereco; se estiver na area de cobertura, gera novo contrato
+
+**Entra:** cliente engajado no estagio 8, ou retido com sucesso no 9. Gatilho varia por caminho:
+
+- Indicacao: iniciativa do cliente (entra na pagina publica, preenche dados do indicado)
+- Upsell: alerta do CRM (`AlertaRetencao` tipo `upgrade_disponivel`) ou campanha segmentada
+- Expansao: mudanca detectada no ERP (endereco) ou cliente avisa ativamente
+
+**Sai:**
+- **Indicacao convertida:** cria novo Lead → alimenta estagio 1/2 do ciclo (Aquisicao)
+- **Upsell aceito:** nova `OportunidadeVenda` no CRM → estagio 4 (Atendimento comercial)
+- **Expansao aceita:** novo contrato no ERP → estagio 5 (Fechamento)
+
+**Papel do Hubtrix:**
+- Indicacao: pagina publica por `codigo_indicacao`, `IndicacaoService.confirmar_conversao` credita pontos automaticamente: [cs/indicacoes.md](modulos/cs/indicacoes.md)
+- Signal `indicacao_convertida` disponivel pra automacoes: [marketing/automacoes/signals.md](modulos/marketing/automacoes/signals.md)
+- Alerta `upgrade_disponivel` no scanner de retencao: [comercial/crm/retencao.md](modulos/comercial/crm/retencao.md)
+- Segmentos dinamicos do CRM pra campanhas de upsell segmentadas: [comercial/crm/segmentos.md](modulos/comercial/crm/segmentos.md)
+- Disparo em massa por segmento como campanha de upsell/cross-sell: [marketing/segmentos.md](modulos/marketing/segmentos.md)
+
+**Estado atual:**
+- ✅ Indicacao: modelo completo, pagina publica personalizada, auto-credito de pontos via `GamificationService`
+- ✅ Signal `indicacao_convertida` dispara evento pras automacoes
+- ✅ Alerta `upgrade_disponivel` no scanner de retencao (identifica clientes com plano abaixo do disponivel)
+- ✅ Segmentos dinamicos com rule builder + disparo em massa
+- ✅ Automacoes com evento `disparo_segmento` (cron) — base pra campanhas recorrentes
+- ⚠️ Upsell automatizado: infra existe, mas nao ha template pronto (cliente precisa configurar a regra)
+- ❌ Dashboard de "top embaixadores" existe em CS/Indicacoes, mas sem alerta proativo pro time de CS premiar
+- ❌ Cross-sell de SVAs: lista de produtos no CRM ok, mas sugestao automatica por perfil/uso do cliente nao existe
+- ❌ Fluxo "cliente mudou de endereco" — nao detectado automaticamente, depende do espelho completo (estagio 6 pendente)
+- ❌ ROI do programa de indicacao (valor gerado vs pontos distribuidos) nao e calculado
+
+**Metrica:**
+- Taxa de indicacao (indicacoes por cliente ativo por mes)
+- Taxa de conversao de indicacao (% de indicacoes que viram venda)
+- Upsell rate (% de clientes que aumentam ticket no ano)
+- ROI do programa de indicacao (receita incremental / pontos distribuidos)
+- % de recompra apos mudanca de endereco
 
 ### A1. Jornada do ISP usando o Hubtrix
 
