@@ -497,7 +497,289 @@ o que acontece, como entra e sai, papel do Hubtrix, estado atual, metrica.
 
 ### A1. Jornada do ISP usando o Hubtrix
 
-> Pendente. Depois de A2.
+Enquanto A2 e a jornada do **consumidor passando pelo funil do ISP**, A1 e a
+jornada do **proprio ISP operando o Hubtrix** — do dia que descobre o produto
+ate renovar ou cancelar. 4 macro-fases com 10 micro-estagios:
+
+<div class="jrn-flow">
+  <div class="jrn-group jrn-aquisicao">
+    <div class="jrn-group-name">Contratacao</div>
+    <div class="jrn-cards">
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">1</div><div class="jrn-t">Descoberta e avaliacao</div></div>
+        <div class="jrn-m">Site &middot; Materiais &middot; Indicacao</div>
+      </div>
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">2</div><div class="jrn-t">Demo / trial</div></div>
+        <div class="jrn-m">Tenant demo &middot; Discovery</div>
+      </div>
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">3</div><div class="jrn-t">Fechamento</div></div>
+        <div class="jrn-m">Contrato &middot; Pagamento &middot; Provisionamento</div>
+      </div>
+    </div>
+  </div>
+  <div class="jrn-arrow">&rarr;</div>
+  <div class="jrn-group jrn-conversao">
+    <div class="jrn-group-name">Ativacao</div>
+    <div class="jrn-cards">
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">4</div><div class="jrn-t">Provisionamento + config</div></div>
+        <div class="jrn-m">Tenant &middot; Admin &middot; Branding</div>
+      </div>
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">5</div><div class="jrn-t">Integracoes</div></div>
+        <div class="jrn-m">ERP &middot; WhatsApp &middot; IA</div>
+      </div>
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">6</div><div class="jrn-t">Onboarding do time</div></div>
+        <div class="jrn-m">Treinamento &middot; Primeiros fluxos</div>
+      </div>
+    </div>
+  </div>
+  <div class="jrn-arrow">&rarr;</div>
+  <div class="jrn-group jrn-fidelizacao">
+    <div class="jrn-group-name">Operacao</div>
+    <div class="jrn-cards">
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">7</div><div class="jrn-t">Uso diario</div></div>
+        <div class="jrn-m">Vendas &middot; CS &middot; Suporte</div>
+      </div>
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">8</div><div class="jrn-t">Monitoramento</div></div>
+        <div class="jrn-m">Dashboards &middot; Auditoria &middot; Alertas</div>
+      </div>
+    </div>
+  </div>
+  <div class="jrn-arrow">&rarr;</div>
+  <div class="jrn-group jrn-expansao">
+    <div class="jrn-group-name">Evolucao</div>
+    <div class="jrn-cards">
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">9</div><div class="jrn-t">Expansao</div></div>
+        <div class="jrn-m">Novos modulos &middot; Seats &middot; Canais</div>
+      </div>
+      <div class="jrn-card">
+        <div class="jrn-head"><div class="jrn-n">10</div><div class="jrn-t">Renovacao ou churn</div></div>
+        <div class="jrn-m">Recontratacao &middot; Saida</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+---
+
+#### Micro-estagios da jornada do ISP
+
+## CONTRATACAO
+
+### 1. Descoberta e avaliacao
+
+**O que acontece:** Dono ou diretor do ISP descobre o Hubtrix — via indicacao de outro provedor (o canal mais forte no mercado brasileiro de ISPs), conteudo em redes sociais, busca organica, participacao em feira do setor, ou abordagem direta do time comercial. Visita o site, baixa material (one-pager, deck), consome cases de outros ISPs similares.
+
+**Entra:** iniciativa de marketing do Hubtrix, indicacao de cliente, saida ativa do time de vendas, SEO.
+**Sai:** ISP demonstra interesse genuino — agenda demo, pede trial, solicita proposta → estagio 2.
+
+**Papel do Hubtrix:**
+- Site comercial com apresentacao do produto, pricing, cases, request-a-demo
+- Materiais de enablement (one-pager, deck, battle card): [OPERACIONAL/materiais/apresentacao/](OPERACIONAL/materiais/apresentacao/)
+- Hubtrix operando o proprio funil (dogfooding): CRM interno, Inbox, automacoes pra nutricao de leads comerciais
+
+**Estado atual:**
+- ✅ Domínio `hubtrix.com.br` reservado
+- ✅ Materiais comerciais (one-pager, deck, battle card, case anonimo, scripts de venda) em [OPERACIONAL/materiais/](OPERACIONAL/materiais/)
+- ⚠️ Site comercial publico ainda nao lancado
+- ❌ Tenant do proprio Hubtrix operando o funil comercial interno — provavelmente nao configurado com rigor
+- ❌ Sem SEO estruturado, sem conteudo de topo de funil (blog, Youtube)
+- ❌ Nenhum case publico divulgavel ate o momento
+
+**Metrica:**
+- MQLs (marketing qualified leads) por mes, por canal
+- Custo por MQL
+- % de MQLs que chegam no estagio 2
+
+---
+
+### 2. Demo / trial
+
+**O que acontece:** ISP interessado entra em conversa de discovery com o time comercial. Assiste demo guiada dos modulos que importam pra ele (atendimento + CRM + clube geralmente), em ambiente com dados populados. Faz perguntas sobre: integracao com o ERP que ele usa hoje, customizacao, preco, prazo de implementacao, treinamento do time. Time comercial qualifica se e ICP.
+
+**Entra:** MQL agendou conversa no estagio 1.
+**Sai:**
+- **Qualificado:** pronto pra contratar → envio de proposta → estagio 3
+- **Nao-ICP:** tenant muito pequeno, fora do perfil; perde ou entra em nutricao
+- **Timing errado:** quer mas nao agora; cadastrado em regua de followup de medio prazo
+- **Perda ativa:** escolheu concorrente ou decidiu nao investir agora
+
+**Papel do Hubtrix:**
+- Tenant demo pre-populado com dados ficticios mostrando o produto em uso
+- Management commands pra gerar dados de teste: `seed_inbox`, seeders do CS
+- Documentacao publica no `/aurora-admin/docs/` pra ISPs tecnicos que querem validar arquitetura
+- Scripts de discovery e demo: [OPERACIONAL/materiais/scripts_vendas/](OPERACIONAL/materiais/scripts_vendas/)
+
+**Estado atual:**
+- ✅ Multi-tenant permite tenant demo isolado
+- ✅ Management commands populam dados realistas (seed_inbox, seed de CS/clube, etc.)
+- ✅ Docs tecnicas publicas navegaveis em `/aurora-admin/docs/`
+- ⚠️ Processo de demo e manual e depende de presenca do time comercial
+- ❌ Trial self-service (ISP cria conta e testa sozinho) nao existe
+- ❌ Sandbox publico isolado (sem precisar criar tenant) nao existe
+- ❌ Demo guiada interativa (tour passo a passo dentro do produto) nao existe
+
+**Metrica:**
+- Taxa de conversao MQL → proposta (estagio 2 → 3)
+- Duracao media do ciclo de demo (dias entre primeiro contato e proposta)
+- Motivos de perda categorizados (preco, feature, timing, concorrente)
+
+---
+
+### 3. Fechamento
+
+**O que acontece:** ISP aceita a proposta, assina contrato (digital ou fisico), faz primeiro pagamento (primeiro mes ou sinal de setup). Hubtrix provisiona o tenant, cria usuario admin inicial com senha temporaria, envia e-mail de boas-vindas com credenciais e link pro dashboard.
+
+**Entra:** proposta aprovada pelo ISP no estagio 2.
+**Sai:** tenant provisionado e admin com acesso → estagio 4 (Ativacao).
+
+**Papel do Hubtrix:**
+- Template de contrato SaaS em [OPERACIONAL/materiais/juridico/contrato_saas.md](OPERACIONAL/materiais/juridico/contrato_saas.md)
+- Cobranca / gestao de assinatura (hoje externo — Stripe/ASAAS/similar)
+- Criacao do tenant via painel `/aurora-admin/tenants/novo/`
+- Criacao de `PerfilUsuario` admin do tenant com `senha_temporaria=True` (forca troca no 1o login)
+- E-mail de boas-vindas com credenciais
+
+**Estado atual:**
+- ✅ Admin cria tenant via `/aurora-admin/`
+- ✅ `PerfilUsuario.senha_temporaria` + middleware forcam troca de senha no primeiro login
+- ✅ Templates de contrato (SaaS, politica de privacidade, termos) em [OPERACIONAL/materiais/juridico/](OPERACIONAL/materiais/juridico/)
+- ❌ Integracao com gateway de pagamento nao existe
+- ❌ Geracao automatica de contrato preenchido (CNPJ, plano escolhido, recorrencia, data) nao existe
+- ❌ E-mail automatico de boas-vindas apos criacao do tenant nao dispara
+- ❌ Gestao de assinatura dentro do Hubtrix (upgrade, downgrade, suspensao, cancelamento) nao existe — tudo manual no banco ou por pagamento externo
+- ❌ Painel do cliente Hubtrix ver/gerenciar a propria assinatura nao existe
+
+**Metrica:**
+- Taxa de fechamento (propostas → contratos assinados)
+- Ticket medio inicial
+- Tempo medio entre proposta e pagamento (em dias)
+
+---
+
+## ATIVACAO
+
+### 4. Provisionamento + configuracao inicial
+
+**O que acontece:** Admin do ISP recebe credenciais, faz primeiro login no Hubtrix, e **troca a senha temporaria obrigatoriamente** (middleware bloqueia qualquer outra pagina ate trocar). Depois configura o tenant: dados da empresa, branding (cores, logo), nome comercial, cria as primeiras equipes internas (vendas, suporte, CS), convida os colaboradores, atribui permissoes por perfil.
+
+**Entra:** tenant criado + admin com `senha_temporaria=True` no estagio 3.
+**Sai:** tenant com dados basicos + equipe cadastrada + permissoes distribuidas → estagio 5.
+
+**Papel do Hubtrix:**
+- Middleware que forca troca de senha temporaria no primeiro acesso
+- Painel `/configuracoes/empresa/` com dados da empresa e branding
+- Gestao de usuarios: criar, editar, convidar, atribuir perfil
+- Criacao de equipes (CRM + Inbox)
+- Sistema de permissoes granulares
+- Trilha de auditoria: [core/03-PERMISSOES.md](core/03-PERMISSOES.md)
+
+**Estado atual:**
+- ✅ Middleware de senha temporaria ativo
+- ✅ Painel de empresa com branding (cores, logo, nome)
+- ✅ Gestao de usuarios com perfil e permissoes granulares
+- ✅ Equipes com lideres, cor, membros
+- ✅ Auditoria de acoes em `LogSistema` (quem fez o que, quando)
+- ⚠️ Wizard de onboarding do admin ("proximos passos", checklist) nao existe
+- ❌ E-mail de convite pra novos usuarios (com link de primeiro acesso) nao dispara automatico
+- ❌ Import em massa de colaboradores via CSV nao existe
+- ❌ Copia de configuracao de outro tenant (template) nao existe
+
+**Metrica:**
+- Tempo entre provisionamento e primeira configuracao completa (alvo: < 24h)
+- % de admins que completam branding + equipe no primeiro dia
+- % de tenants que ficam > 7 dias sem nenhum usuario alem do admin inicial (sinal de churn precoce)
+
+---
+
+### 5. Integracoes
+
+**O que acontece:** Admin configura as integracoes externas que o Hubtrix precisa pra operar na pratica:
+
+- **ERP** (HubSoft agora; SGP/IXC/MK futuros) — pra envio de contratos fechados e espelho de clientes ativos
+- **WhatsApp** (Uazapi ou Evolution) — pro bot e Inbox receberem/enviarem mensagens
+- **IA** (OpenAI / Anthropic / Groq / Google AI) — pros nodos IA nos fluxos de atendimento
+- **N8N** (opcional) — workflows customizados
+
+Testa cada uma, valida que esta funcionando. Configura webhooks do lado dos providers apontando pras URLs do tenant.
+
+**Entra:** tenant configurado no estagio 4.
+**Sai:** integracoes ativas e testadas → estagio 6.
+
+**Papel do Hubtrix:**
+- Painel de integracoes `/configuracoes/integracoes/`
+- Encriptacao de API keys com Fernet (chave em env var)
+- Providers WhatsApp com interface comum: [integracoes/02-INTEGRACOES.md](integracoes/02-INTEGRACOES.md)
+- Providers IA via `apps/integracoes/providers/`
+- Integracao HubSoft especifica: [integracoes/01-HUBSOFT.md](integracoes/01-HUBSOFT.md)
+- Webhook URLs fornecidas pra cada integracao configurar no lado do provider
+
+**Estado atual:**
+- ✅ Painel CRUD de integracoes
+- ✅ Encriptacao de API keys / tokens via Fernet
+- ✅ Providers WhatsApp (Uazapi, Evolution)
+- ✅ Providers IA (4 providers) com fallback cross-tenant para Assistente CRM
+- ✅ HubSoft com cliente HTTP + webhook inbound `/webhook/hubsoft/contrato/`
+- ⚠️ Teste de conexao por integracao (botao "Testar") inconsistente entre providers
+- ⚠️ Erros de integracao sao opacos (token errado → atendimento nao dispara, mas diagnostico e manual via logs)
+- ❌ SGP / IXC / MK ainda nao implementados (ver [secao C](#c-como-os-modulos-se-conectam))
+- ❌ Wizard guiado "primeira integracao" passo a passo nao existe
+- ❌ Health check consolidado (painel mostrando status de todas as integracoes do tenant) nao existe
+
+**Metrica:**
+- % de tenants com ERP + WhatsApp + IA configurados no primeiro dia
+- Taxa de falha nos testes de conexao iniciais
+- Tempo medio pra primeira integracao funcional
+
+---
+
+### 6. Onboarding do time
+
+**O que acontece:** Admin chama os colaboradores do ISP pra comecar a usar o Hubtrix no dia a dia. Pode acontecer via treinamento ao vivo conduzido pelo time comercial/CS do Hubtrix, videos, documentacao, ou o ISP se vira sozinho. Criam os primeiros fluxos de atendimento (aproveitando templates ou do zero), testam o simulador, configuram o primeiro canal de Inbox, fazem o primeiro atendimento real.
+
+**Entra:** tenant com integracoes ativas no estagio 5.
+**Sai:** equipe operacional, primeiros atendimentos reais acontecendo → estagio 7 (Uso diario).
+
+**Papel do Hubtrix:**
+- Editor visual de fluxos com simulador embutido: [modulos/fluxos/editor-visual.md](modulos/fluxos/editor-visual.md)
+- Materiais de treinamento de parceiro (5 modulos): [OPERACIONAL/materiais/treinamento_parceiro/](OPERACIONAL/materiais/treinamento_parceiro/)
+- Docs publicas por modulo em `/aurora-admin/docs/`
+- Simulador de atendimento pra testar fluxo sem WhatsApp real: [modulos/atendimento/simulador.md](modulos/atendimento/simulador.md)
+- Management commands de seed de dados pra explorar produto com exemplos realistas
+
+**Estado atual:**
+- ✅ Editor visual de fluxos (11 tipos de nodos, Drawflow) com simulador embutido
+- ✅ Materiais de treinamento completos (5 modulos: visao geral, comercial, marketing/CS, precificacao/ROI, objecoes/fechamento)
+- ✅ Docs publicas navegaveis com accordion e busca
+- ✅ Seeders de dados (seed_inbox e equivalentes)
+- ⚠️ Fluxos-template pre-configurados existem como seeder, mas UX pra "clonar template" dentro do painel nao esta claro
+- ❌ Tour interativo guiado dentro do produto ("seu primeiro fluxo em 5 min") nao existe
+- ❌ Videos de treinamento embutidos no painel do admin nao existem
+- ❌ Checklist visual de onboarding ("seu tenant esta 80% pronto, faltam X passos") nao existe
+- ❌ Certificacao do time (comprovacao de que colaboradores concluiram treinamento) nao existe
+
+**Metrica:**
+- Tempo entre integracao ativa e primeiro atendimento real (alvo: < 7 dias)
+- % de tenants que completam onboarding em < 30 dias
+- % de tenants que abandonam na ativacao (contratou mas nunca comecou a usar — metrica de churn precoce)
+- Numero de fluxos criados no primeiro mes
+
+---
+
+## OPERACAO
+
+> Pendente. Estagios 7 (Uso diario), 8 (Monitoramento).
+
+## EVOLUCAO
+
+> Pendente. Estagios 9 (Expansao), 10 (Renovacao ou churn).
 
 ---
 
@@ -557,6 +839,27 @@ Depois que a venda vira contrato no ERP, Hubtrix **mantem um espelho completo** 
 ### Modelo `Cliente` no Hubtrix
 
 Novo model que surge dessa decisao: `Cliente` (distinto de `LeadProspecto`). Lead vira Cliente quando a venda fecha e o ERP confirma o contrato. Lead e "pre-venda"; Cliente e "pos-venda" espelhado do ERP.
+
+---
+
+## Insights e lacunas estrategicas
+
+> Observacoes que surgem durante o detalhamento das jornadas e que merecem
+> virar acao. Cada item com link pra tarefa no backlog (se aplicavel).
+
+### De A1 — Contratacao
+
+**Contratacao e a fase mais imatura do Hubtrix** — 9 `❌` entre os 3 estagios iniciais. Foco historico foi o produto pro cliente final (A2), nao a operacao comercial do proprio Hubtrix. As lacunas especificas ja estao listadas no "Estado atual" de cada estagio. As 3 acoes derivadas:
+
+| Insight | Acao | Backlog |
+|---------|------|---------|
+| Site comercial publico nao existe | Criar site Hubtrix com SEO e request-a-demo | [site_comercial_hubtrix_17-04-2026.md](../context/tarefas/backlog/site_comercial_hubtrix_17-04-2026.md) |
+| Hubtrix nao usa o proprio produto pra gerenciar seu funil B2B | Dogfooding do funil interno | [dogfooding_funil_interno_17-04-2026.md](../context/tarefas/backlog/dogfooding_funil_interno_17-04-2026.md) |
+| Gestao de assinatura (cobranca, upgrade, suspensao) fora do Hubtrix | Modulo proprio de assinatura | [gestao_assinatura_interna_17-04-2026.md](../context/tarefas/backlog/gestao_assinatura_interna_17-04-2026.md) |
+
+### De A2
+
+Pendente — revisar A2 e extrair insights agregados depois.
 
 ---
 
