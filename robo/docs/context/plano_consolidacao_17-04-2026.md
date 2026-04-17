@@ -127,7 +127,8 @@ Nao comecar feature nova enquanto houver bug critico aberto.
 
 - **Quebrar `engine.py`** em modulos por tipo de nodo (`engine/nodes/questao.py`, etc.) — hoje sao 2200 linhas num arquivo so
 - **Testes unitarios por tipo de nodo** — hoje so tem integracao via simulador
-- **Contexto imutavel ou com eventos** — hoje e dict mutavel passado por referencia, dificil debugar
+- **Contexto com log de eventos (Opcao B)** — wrapper que loga cada mudanca no dict contexto. Mantem performance e API atual, adiciona observabilidade.
+  - **Futuro:** migrar para contexto imutavel (Opcao A) quando o produto escalar. E mais correto (funcoes puras, previsibilidade total) mas exige reescrever traversal e todas as funcoes que mutam contexto. Deixar para quando houver 3+ clientes pagantes ou necessidade explicita.
 
 **Referencia completa:** `diagnostico_nodos_fluxo_17-04-2026.md`
 
