@@ -1,88 +1,239 @@
-{% extends "layouts/layout_app.html" %}
+{% extends "layouts/base.html" %}
 
 {% block title %}Design System Preview — Hubtrix{% endblock %}
 
-{% block content %}
+{% block body %}
+  {% include "partials/topbar.html" %}
+  {% include "partials/sidebar.html" %}
 
-<div style="max-width: 960px;">
-  <div style="margin-bottom: var(--sp-6);">
-    <h1 style="font-size: var(--fs-2xl); font-weight: var(--fw-extrabold); margin: 0 0 var(--sp-2); letter-spacing: -0.02em;">
-      Design System — Preview do esqueleto
-    </h1>
-    <p style="color: var(--color-text-secondary); margin: 0; font-size: var(--fs-md);">
-      Essa é a página base do produto. Topbar (estilo HubSpot) + sidebar de ícones (estilo Intercom) + área de conteúdo.
-    </p>
-  </div>
-
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-8);">
-
-    <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--sp-4);">
-      <div style="display: inline-flex; width: 40px; height: 40px; border-radius: var(--radius); background: var(--color-primary-soft); align-items: center; justify-content: center; color: var(--color-primary); font-size: 1.1rem; margin-bottom: var(--sp-3);">
-        <i class="bi bi-palette"></i>
+  {# Subnav — segundo painel lateral estilo Intercom (colapsavel) #}
+  <aside class="app-subnav" aria-label="Submenu">
+    <div class="app-subnav-inner">
+      <div class="app-subnav-header">
+        <h2 class="app-subnav-title">Inbox</h2>
       </div>
-      <h3 style="margin: 0 0 var(--sp-1); font-size: var(--fs-md); font-weight: var(--fw-semibold);">Tokens prontos</h3>
-      <p style="margin: 0; font-size: var(--fs-sm); color: var(--color-text-secondary);">Cores, tipografia, espaçamentos, radii e sombras definidos em <code>base.html</code>.</p>
+      <nav class="app-subnav-list">
+        <a href="#" class="app-subnav-item is-active">
+          <i class="bi bi-inbox"></i>
+          <span>Todas</span>
+          <span class="app-subnav-badge">42</span>
+        </a>
+        <a href="#" class="app-subnav-item">
+          <i class="bi bi-at"></i>
+          <span>Menções</span>
+          <span class="app-subnav-badge">3</span>
+        </a>
+        <a href="#" class="app-subnav-item">
+          <i class="bi bi-person-check"></i>
+          <span>Atribuídas a mim</span>
+        </a>
+        <a href="#" class="app-subnav-item">
+          <i class="bi bi-clock-history"></i>
+          <span>Pendentes</span>
+        </a>
+        <a href="#" class="app-subnav-item">
+          <i class="bi bi-check2-circle"></i>
+          <span>Resolvidas</span>
+        </a>
+      </nav>
+
+      <div class="app-subnav-section">Equipes</div>
+      <nav class="app-subnav-list">
+        <a href="#" class="app-subnav-item">
+          <i class="bi bi-people"></i>
+          <span>Vendas</span>
+        </a>
+        <a href="#" class="app-subnav-item">
+          <i class="bi bi-people"></i>
+          <span>Suporte</span>
+        </a>
+        <a href="#" class="app-subnav-item">
+          <i class="bi bi-people"></i>
+          <span>CS</span>
+        </a>
+      </nav>
     </div>
+  </aside>
 
-    <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--sp-4);">
-      <div style="display: inline-flex; width: 40px; height: 40px; border-radius: var(--radius); background: var(--color-success-soft); align-items: center; justify-content: center; color: var(--color-success); font-size: 1.1rem; margin-bottom: var(--sp-3);">
-        <i class="bi bi-layers"></i>
+  <main class="app-main has-subnav">
+    <div class="app-main-inner">
+
+      <div style="max-width: 960px;">
+        <div style="margin-bottom: var(--sp-6);">
+          <h1 style="font-size: var(--fs-2xl); font-weight: var(--fw-extrabold); margin: 0 0 var(--sp-2); letter-spacing: -0.02em;">
+            Design System — Preview do esqueleto
+          </h1>
+          <p style="color: var(--color-text-secondary); margin: 0; font-size: var(--fs-md);">
+            Topbar (HubSpot) · Sidebar de ícones (Intercom) · Subnav colapsável (Intercom) · Área de conteúdo.
+          </p>
+          <p style="color: var(--color-text-muted); margin: var(--sp-2) 0 0; font-size: var(--fs-sm);">
+            <i class="bi bi-arrow-up-left"></i> Clica no <strong>botão ☰</strong> da topbar pra colapsar o subnav.
+          </p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-8);">
+
+          <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--sp-4);">
+            <div style="display: inline-flex; width: 40px; height: 40px; border-radius: var(--radius); background: var(--color-primary-soft); align-items: center; justify-content: center; color: var(--color-primary); font-size: 1.1rem; margin-bottom: var(--sp-3);">
+              <i class="bi bi-palette"></i>
+            </div>
+            <h3 style="margin: 0 0 var(--sp-1); font-size: var(--fs-md); font-weight: var(--fw-semibold);">Tokens prontos</h3>
+            <p style="margin: 0; font-size: var(--fs-sm); color: var(--color-text-secondary);">Cores, tipografia, espaçamentos, radii e sombras definidos em <code>base.html</code>.</p>
+          </div>
+
+          <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--sp-4);">
+            <div style="display: inline-flex; width: 40px; height: 40px; border-radius: var(--radius); background: var(--color-success-soft); align-items: center; justify-content: center; color: var(--color-success); font-size: 1.1rem; margin-bottom: var(--sp-3);">
+              <i class="bi bi-layers"></i>
+            </div>
+            <h3 style="margin: 0 0 var(--sp-1); font-size: var(--fs-md); font-weight: var(--fw-semibold);">Layout base</h3>
+            <p style="margin: 0; font-size: var(--fs-sm); color: var(--color-text-secondary);">Topbar fixa, sidebar colapsável, subnav opcional. Qualquer tela nova herda essa base.</p>
+          </div>
+
+          <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--sp-4);">
+            <div style="display: inline-flex; width: 40px; height: 40px; border-radius: var(--radius); background: var(--color-warning-soft); align-items: center; justify-content: center; color: var(--color-warning); font-size: 1.1rem; margin-bottom: var(--sp-3);">
+              <i class="bi bi-box-seam"></i>
+            </div>
+            <h3 style="margin: 0 0 var(--sp-1); font-size: var(--fs-md); font-weight: var(--fw-semibold);">Componentes</h3>
+            <p style="margin: 0; font-size: var(--fs-sm); color: var(--color-text-secondary);">Pasta <code>components/</code> vazia por enquanto — botões, cards, inputs virão conforme a demanda.</p>
+          </div>
+
+        </div>
+
+        <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--sp-6); margin-bottom: var(--sp-6);">
+          <h2 style="margin: 0 0 var(--sp-4); font-size: var(--fs-lg); font-weight: var(--fw-bold);">Exemplos de cores do sistema</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--sp-3);">
+            <div>
+              <div style="height: 64px; background: var(--color-primary); border-radius: var(--radius);"></div>
+              <div style="font-size: var(--fs-xs); color: var(--color-text-secondary); margin-top: var(--sp-1);">--color-primary</div>
+              <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">#4f46e5</div>
+            </div>
+            <div>
+              <div style="height: 64px; background: var(--color-success); border-radius: var(--radius);"></div>
+              <div style="font-size: var(--fs-xs); color: var(--color-text-secondary); margin-top: var(--sp-1);">--color-success</div>
+              <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">#16a34a</div>
+            </div>
+            <div>
+              <div style="height: 64px; background: var(--color-warning); border-radius: var(--radius);"></div>
+              <div style="font-size: var(--fs-xs); color: var(--color-text-secondary); margin-top: var(--sp-1);">--color-warning</div>
+              <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">#d97706</div>
+            </div>
+            <div>
+              <div style="height: 64px; background: var(--color-danger); border-radius: var(--radius);"></div>
+              <div style="font-size: var(--fs-xs); color: var(--color-text-secondary); margin-top: var(--sp-1);">--color-danger</div>
+              <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">#dc2626</div>
+            </div>
+            <div>
+              <div style="height: 64px; background: var(--sidebar-bg); border-radius: var(--radius);"></div>
+              <div style="font-size: var(--fs-xs); color: var(--color-text-secondary); margin-top: var(--sp-1);">--sidebar-bg</div>
+              <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">#1e293b</div>
+            </div>
+          </div>
+        </div>
+
       </div>
-      <h3 style="margin: 0 0 var(--sp-1); font-size: var(--fs-md); font-weight: var(--fw-semibold);">Layout base</h3>
-      <p style="margin: 0; font-size: var(--fs-sm); color: var(--color-text-secondary);">Topbar fixa, sidebar colapsável, subnav opcional. Qualquer tela nova herda essa base.</p>
+
     </div>
+  </main>
 
-    <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--sp-4);">
-      <div style="display: inline-flex; width: 40px; height: 40px; border-radius: var(--radius); background: var(--color-warning-soft); align-items: center; justify-content: center; color: var(--color-warning); font-size: 1.1rem; margin-bottom: var(--sp-3);">
-        <i class="bi bi-box-seam"></i>
-      </div>
-      <h3 style="margin: 0 0 var(--sp-1); font-size: var(--fs-md); font-weight: var(--fw-semibold);">Componentes</h3>
-      <p style="margin: 0; font-size: var(--fs-sm); color: var(--color-text-secondary);">Pasta <code>components/</code> vazia por enquanto — botões, cards, inputs virão conforme a demanda.</p>
-    </div>
+  {# CSS do subnav e layout com subnav #}
+  <style>
+    .app-subnav {
+      position: fixed;
+      top: var(--topbar-h);
+      left: var(--sidebar-w);
+      bottom: 0;
+      width: var(--subnav-w);
+      background: var(--subnav-bg);
+      border-right: 1px solid var(--subnav-border);
+      z-index: 80;
+      overflow-y: auto;
+      transition: transform var(--transition), opacity var(--transition);
+    }
+    .app-subnav-inner { padding: var(--sp-4) 0; }
 
-  </div>
+    .app-subnav-header {
+      padding: 0 var(--sp-4) var(--sp-3);
+      border-bottom: 1px solid var(--subnav-border);
+      margin-bottom: var(--sp-3);
+    }
+    .app-subnav-title {
+      margin: 0;
+      font-size: var(--fs-md);
+      font-weight: var(--fw-semibold);
+      color: var(--color-text);
+    }
 
-  <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--sp-6); margin-bottom: var(--sp-6);">
-    <h2 style="margin: 0 0 var(--sp-4); font-size: var(--fs-lg); font-weight: var(--fw-bold);">Exemplos de cores do sistema</h2>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--sp-3);">
-      <div>
-        <div style="height: 64px; background: var(--color-primary); border-radius: var(--radius);"></div>
-        <div style="font-size: var(--fs-xs); color: var(--color-text-secondary); margin-top: var(--sp-1);">--color-primary</div>
-        <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">#4f46e5</div>
-      </div>
-      <div>
-        <div style="height: 64px; background: var(--color-success); border-radius: var(--radius);"></div>
-        <div style="font-size: var(--fs-xs); color: var(--color-text-secondary); margin-top: var(--sp-1);">--color-success</div>
-        <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">#16a34a</div>
-      </div>
-      <div>
-        <div style="height: 64px; background: var(--color-warning); border-radius: var(--radius);"></div>
-        <div style="font-size: var(--fs-xs); color: var(--color-text-secondary); margin-top: var(--sp-1);">--color-warning</div>
-        <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">#d97706</div>
-      </div>
-      <div>
-        <div style="height: 64px; background: var(--color-danger); border-radius: var(--radius);"></div>
-        <div style="font-size: var(--fs-xs); color: var(--color-text-secondary); margin-top: var(--sp-1);">--color-danger</div>
-        <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">#dc2626</div>
-      </div>
-      <div>
-        <div style="height: 64px; background: var(--sidebar-bg); border-radius: var(--radius);"></div>
-        <div style="font-size: var(--fs-xs); color: var(--color-text-secondary); margin-top: var(--sp-1);">--sidebar-bg</div>
-        <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">#1e293b</div>
-      </div>
-    </div>
-  </div>
+    .app-subnav-list {
+      display: flex;
+      flex-direction: column;
+      padding: 0 var(--sp-2);
+      margin-bottom: var(--sp-4);
+    }
+    .app-subnav-item {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+      padding: var(--sp-2) var(--sp-3);
+      border-radius: var(--radius);
+      color: var(--subnav-text);
+      font-size: var(--fs-sm);
+      font-weight: var(--fw-medium);
+      text-decoration: none;
+      transition: background var(--transition), color var(--transition);
+    }
+    .app-subnav-item > span:first-of-type { flex: 1; }
+    .app-subnav-item:hover {
+      background: var(--color-surface);
+      color: var(--subnav-text-active);
+    }
+    .app-subnav-item.is-active {
+      background: var(--subnav-item-active-bg);
+      color: var(--color-primary-text);
+    }
+    .app-subnav-item i { color: var(--color-text-muted); font-size: 0.85rem; flex-shrink: 0; }
+    .app-subnav-item.is-active i { color: var(--color-primary); }
+    .app-subnav-badge {
+      background: var(--color-surface-2);
+      color: var(--color-text-secondary);
+      font-size: 0.68rem;
+      font-weight: var(--fw-semibold);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+    }
+    .app-subnav-item.is-active .app-subnav-badge {
+      background: var(--color-primary);
+      color: var(--color-text-inverse);
+    }
+    .app-subnav-section {
+      padding: var(--sp-2) var(--sp-5);
+      font-size: var(--fs-xs);
+      font-weight: var(--fw-semibold);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
 
-  <div style="background: var(--color-primary-soft); border: 1px solid var(--color-primary); border-radius: var(--radius-lg); padding: var(--sp-4); display: flex; gap: var(--sp-3); align-items: start;">
-    <i class="bi bi-info-circle" style="color: var(--color-primary); font-size: 1.2rem; flex-shrink: 0;"></i>
-    <div>
-      <div style="font-weight: var(--fw-semibold); color: var(--color-primary-text); margin-bottom: var(--sp-1);">Próximos passos</div>
-      <div style="font-size: var(--fs-sm); color: var(--color-text-secondary);">
-        Esta é apenas a base esqueleto. Conforme cada tela do produto for sendo migrada, vamos adicionando componentes reutilizáveis em <code>templates/components/</code>: <code>button.html</code>, <code>card.html</code>, <code>input.html</code>, <code>table.html</code>, <code>modal.html</code>, <code>badge.html</code>.
-      </div>
-    </div>
-  </div>
+    .app-main {
+      margin-top: var(--topbar-h);
+      margin-left: var(--sidebar-w);
+      min-height: calc(100vh - var(--topbar-h));
+      background: var(--color-surface);
+      transition: margin-left var(--transition);
+    }
+    .app-main.has-subnav {
+      margin-left: calc(var(--sidebar-w) + var(--subnav-w));
+    }
+    .app-main-inner { padding: var(--sp-6); }
 
-</div>
+    /* COLAPSADO: esconde subnav, main ocupa todo o espaço */
+    body.sidebar-collapsed .app-subnav {
+      transform: translateX(-100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    body.sidebar-collapsed .app-main.has-subnav {
+      margin-left: var(--sidebar-w);
+    }
+  </style>
 
 {% endblock %}
