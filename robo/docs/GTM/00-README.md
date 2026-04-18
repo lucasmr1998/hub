@@ -1,4 +1,4 @@
-# GTM — AuroraISP
+# GTM — Hubtrix
 
 **Tagline:** Vende mais. Perde menos. Fideliza sempre.
 **Subtítulo:** Do lead ao cliente fidelizado com inteligência.

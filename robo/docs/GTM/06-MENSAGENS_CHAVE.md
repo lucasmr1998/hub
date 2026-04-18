@@ -28,7 +28,7 @@ Tagline
 
 ## Proposta central
 
-> "A AuroraISP automatiza o processo comercial do provedor de internet com IA. Do WhatsApp ao HubSoft, sem retrabalho."
+> "A Hubtrix automatiza o processo comercial do provedor de internet com IA. Do WhatsApp ao HubSoft, sem retrabalho."
 
 ---
 
@@ -36,7 +36,7 @@ Tagline
 
 ### Comercial
 - "Do WhatsApp ao HubSoft, sem um clique manual."
-- "Seu time vende. A Aurora cuida do resto."
+- "Seu time vende. A Hubtrix cuida do resto."
 - "Lead entra no WhatsApp. Contrato chega no HubSoft. Automático."
 
 **Comercial Pro (CRM Kanban)**
@@ -59,12 +59,12 @@ Tagline
 
 ### Para o Dono
 - "Você sabia que seu time perdeu leads essa semana sem saber?"
-- "Com a Aurora, você vê o funil de vendas em tempo real."
+- "Com a Hubtrix, você vê o funil de vendas em tempo real."
 - "Um contrato a mais por mês já paga o plano. O resto é lucro."
 
 **Ângulo custo:** "Um provedor reduziu o time de atendimento de 8 para 2 pessoas. O processo ficou mais eficiente, não mais lento."
 
-**Ângulo crescimento:** "Com a Aurora, seu time atual consegue atender o dobro de leads. Você cresce sem precisar contratar."
+**Ângulo crescimento:** "Com a Hubtrix, seu time atual consegue atender o dobro de leads. Você cresce sem precisar contratar."
 
 ### Para o Gerente Comercial
 - "Seu time tem meta. Agora você tem dado para cobrar."
@@ -72,7 +72,7 @@ Tagline
 
 ### Para o Vendedor
 - "Sem fila de prioridade, o lead mais quente fica esperando."
-- "A Aurora avisa qual lead ligar agora. Você só fecha."
+- "A Hubtrix avisa qual lead ligar agora. Você só fecha."
 
 ---
 
@@ -89,7 +89,7 @@ Tagline
 | "Já uso WhatsApp Business" | WhatsApp Business não qualifica lead, não coleta documento, não manda contrato pro HubSoft. São ferramentas diferentes. |
 | "Minha equipe não vai aprender" | Interface feita para vendedor sem conhecimento técnico. Treinamento em 30 minutos. |
 | "E se o bot errar?" | Modo manual sempre disponível. O bot é auxiliar, não decisor. |
-| "Não tenho técnico para configurar" | A implementação é responsabilidade da Aurora. Você paga o setup, a gente configura. |
+| "Não tenho técnico para configurar" | A implementação é responsabilidade da Hubtrix. Você paga o setup, a gente configura. |
 | "HubSoft já faz isso" | HubSoft é ERP e faturamento. Não qualifica lead, não coleta documento, não fideliza cliente. |
 | "Quanto vou economizar?" | Depende do seu volume. Um provedor com perfil similar economizou R$ 284.400 por ano só em pessoal. |
 

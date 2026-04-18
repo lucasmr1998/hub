@@ -7,13 +7,13 @@
 
 ## Objetivo
 
-Definir o que a AuroraISP entrega para cada persona, de forma clara e verificável.
+Definir o que a Hubtrix entrega para cada persona, de forma clara e verificável.
 
 ---
 
 ## Proposta central
 
-> A AuroraISP automatiza o fluxo comercial do provedor de internet com inteligência artificial — do primeiro contato no WhatsApp até a ativação no HubSoft — eliminando retrabalho, reduzindo perda de leads e dando visibilidade real ao processo de vendas.
+> A Hubtrix automatiza o fluxo comercial do provedor de internet com inteligência artificial — do primeiro contato no WhatsApp até a ativação no HubSoft — eliminando retrabalho, reduzindo perda de leads e dando visibilidade real ao processo de vendas.
 
 ---
 
@@ -61,11 +61,11 @@ Definir o que a AuroraISP entrega para cada persona, de forma clara e verificáv
 ### Para o TI do Provedor
 
 **Antes:** "Não quero manutenção em coisa que não é meu core."
-**Depois:** SaaS pronto, com onboarding pela AuroraISP e suporte contínuo.
+**Depois:** SaaS pronto, com onboarding pela Hubtrix e suporte contínuo.
 
 | Entrega | Resultado esperado |
 |---------|--------------------|
-| Implementação pela Aurora | Configura, testa e entrega funcionando |
+| Implementação pela Hubtrix | Configura, testa e entrega funcionando |
 | Integração HubSoft documentada | Não precisa desenvolver nada |
 | Atualizações sem intervenção | O sistema evolui sem exigir trabalho interno |
 
@@ -74,18 +74,27 @@ Definir o que a AuroraISP entrega para cada persona, de forma clara e verificáv
 ## Proposta de valor por produto
 
 ### Comercial
-> "Seu vendedor atende. A Aurora qualifica, coleta documento, gera contrato e ativa no HubSoft."
+> "Seu vendedor atende. A Hubtrix qualifica, coleta documento, gera contrato e ativa no HubSoft."
 
-### CRM Kanban *(em desenvolvimento)*
+### CRM Kanban (incluso no Comercial Pro)
 > "Veja onde cada lead está, quanto tempo está parado e quem precisa de atenção agora."
 
-### Clube de Benefícios *(em desenvolvimento)*
+### Clube de Benefícios
 > "Seu cliente fica porque vale a pena ficar."
+
+### Marketing (Automações, Réguas, Segmentos)
+> "Toda origem rastreada, toda régua automática. Sua base para de ser um lago parado."
+
+### CS (Retenção, NPS, Indicação)
+> "Churn deixa de ser surpresa. Cliente satisfeito vira vetor de crescimento."
+
+### Assistente CRM via WhatsApp (Advanced)
+> "Seu vendedor fala com a Hubtrix pelo celular, sem precisar abrir laptop na visita."
 
 ---
 
-## Perguntas em aberto
+## Respostas das perguntas antigas
 
-- [ ] Qual o ganho financeiro médio esperado por provedor ao usar o Comercial?
-- [ ] Qual a redução de tempo médio do ciclo de vendas com a plataforma?
-- [ ] A proposta de valor do Clube de Benefícios precisa ser validada com provedores
+- **Ganho financeiro médio:** case validado com provedor de 30k assinantes — R$ 284.400/ano em redução de folha + manutenção do volume de 400 vendas/mês (ver [case](cases/case_provedor_regional_30k.md)).
+- **Redução do ciclo de vendas:** ~70% de redução no trabalho manual do comercial (combinação Comercial + integração HubSoft). Tempo exato do ciclo em medição contínua.
+- **Clube validado?** Sim, Megalink (30k) usa em produção. Próxima validação: Nuvyon (28k) quando ativar.

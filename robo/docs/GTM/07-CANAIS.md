@@ -7,7 +7,7 @@
 
 ## Objetivo
 
-Definir como a AuroraISP chega até o ICP — quais canais usar, em que ordem e com qual abordagem.
+Definir como a Hubtrix chega até o ICP — quais canais usar, em que ordem e com qual abordagem.
 
 ---
 
@@ -17,7 +17,7 @@ Definir como a AuroraISP chega até o ICP — quais canais usar, em que ordem e 
 **Prioridade:** Alta
 **Status:** Ativo
 
-O sócio comercial detém 30% do lucro da AuroraISP e é responsável pela prospecção e fechamento de novos clientes. A Aurora fornece material de enablement, pitch e suporte técnico para demos.
+O sócio comercial detém 30% do lucro da Hubtrix e é responsável pela prospecção e fechamento de novos clientes. A Hubtrix fornece material de enablement, pitch e suporte técnico para demos.
 
 | Item | Detalhe |
 |------|---------|
@@ -48,13 +48,13 @@ Grupos de WhatsApp e Telegram de provedores regionais são o principal ponto de 
 **Prioridade:** Baixa (longo prazo)
 **Custo:** Baixo após acordo
 
-HubSoft tem 3.000 a 5.000 ISPs na base. Uma parceria dá acesso direto ao ICP perfeito — provedores que já usam o ERP com o qual a AuroraISP integra nativamente. Pode ser desde indicação informal até presença em marketplace oficial.
+HubSoft tem 3.000 a 5.000 ISPs na base. Uma parceria dá acesso direto ao ICP perfeito — provedores que já usam o ERP com o qual a Hubtrix integra nativamente. Pode ser desde indicação informal até presença em marketplace oficial.
 
 | Item | Detalhe |
 |------|---------|
 | Tipo | Indicação, co-marketing ou marketplace |
 | Vantagem | Acesso direto à base de ISPs HubSoft sem custo de prospecção |
-| Diferencial para HubSoft | AuroraISP aumenta o valor percebido do HubSoft para o cliente final |
+| Diferencial para HubSoft | Hubtrix aumenta o valor percebido do HubSoft para o cliente final |
 | Status | Contato a iniciar |
 | Resultado esperado | A definir após primeiro contato |
 

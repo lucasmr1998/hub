@@ -12,7 +12,7 @@ Entender as dores, a operação e o momento do provedor antes da demo. O diagnó
 - Qualificar o lead (entra ou não no funil de demo)
 - Personalizar a demo com os números reais do prospect
 - Gerar a simulação de ROI específica para aquele provedor
-- Posicionar a Aurora como consultiva, não apenas como vendedora
+- Posicionar a Hubtrix como consultiva, não apenas como vendedora
 
 ---
 
@@ -20,7 +20,7 @@ Entender as dores, a operação e o momento do provedor antes da demo. O diagnó
 
 | Formato | Quando usar | Responsável |
 |---------|-------------|-------------|
-| Typeform | Leads inbound (landing page) | Aurora — preenchido pelo prospect antes de agendar |
+| Typeform | Leads inbound (landing page) | Hubtrix — preenchido pelo prospect antes de agendar |
 | Script WhatsApp | Leads outbound e comunidades | Parceiro — conduzido em conversa |
 | Conversa na abertura da demo | Leads que pularam a etapa | Parceiro — primeiros 5 minutos da reunião |
 
@@ -84,7 +84,7 @@ Critérios que definem se o lead avança para a demo.
 | Onde você perde mais leads no processo? | Mapear o maior gargalo |
 | Qual etapa mais trava o processo de vendas? | Priorizar o que mostrar na demo |
 | Já perdeu um bom cliente por demora no atendimento? | Validar dor emocional |
-| Quanto tempo leva do lead até a ativação no ERP hoje? | Mostrar o contraste com a Aurora |
+| Quanto tempo leva do lead até a ativação no ERP hoje? | Mostrar o contraste com a Hubtrix |
 | Tem problema com churn ou cancelamento? | Abrir conversa sobre CS |
 
 ### Bloco 5 — Objetivos
@@ -118,9 +118,9 @@ Após o preenchimento, gerar um resumo com:
 ```
 Receita digital atual = vendas digitais/mês × ticket médio
 Custo do time = pessoas no comercial × R$3.950/mês (referência)
-Custo Aurora (estimado) = mensalidade + (vendas × R$7)
-ROI = receita digital / custo Aurora
-Economia potencial = custo do time atual − custo mínimo com Aurora
+Custo Hubtrix (estimado) = mensalidade + (vendas × R$7)
+ROI = receita digital / custo Hubtrix
+Economia potencial = custo do time atual − custo mínimo com Hubtrix
 ```
 
 ---
@@ -130,4 +130,4 @@ Economia potencial = custo do time atual − custo mínimo com Aurora
 - [ ] Criar formulário no Typeform com base nesse diagnóstico
 - [ ] Criar script de conversa para WhatsApp (em exports/drafts/scripts_vendas/)
 - [ ] Definir ferramenta para gerar o resumo automático do diagnóstico
-- [ ] Definir quem recebe o resumo (parceiro, Aurora ou ambos)
+- [ ] Definir quem recebe o resumo (parceiro, Hubtrix ou ambos)

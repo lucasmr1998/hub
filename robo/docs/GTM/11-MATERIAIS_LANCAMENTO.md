@@ -7,7 +7,7 @@
 
 ## Objetivo
 
-Centralizar todos os materiais necessários para lançar a AuroraISP no mercado. Cada item tem responsável, status e dependências — para que nada seja esquecido antes de ir ao ar.
+Centralizar todos os materiais necessários para lançar a Hubtrix no mercado. Cada item tem responsável, status e dependências — para que nada seja esquecido antes de ir ao ar.
 
 ---
 
@@ -15,7 +15,7 @@ Centralizar todos os materiais necessários para lançar a AuroraISP no mercado.
 
 | Material | Responsável | Depende de | Status |
 |----------|-------------|------------|--------|
-| Logo da AuroraISP | CEO | — | ⏳ Pendente |
+| Logo da Hubtrix | CEO | — | ⏳ Pendente |
 | Brandbook completo | PMM | Logo | 🟡 Em andamento (aguarda logo) |
 | Paleta de cores | PMM | — | ✅ Definida |
 | Tipografia (Inter) | PMM | — | ✅ Definida |
@@ -52,7 +52,7 @@ Centralizar todos os materiais necessários para lançar a AuroraISP no mercado.
 
 | Material | Responsável | Depende de | Status |
 |----------|-------------|------------|--------|
-| Módulo 1 — Visão geral da AuroraISP | PMM | — | 🔧 A criar |
+| Módulo 1 — Visão geral da Hubtrix | PMM | — | 🔧 A criar |
 | Módulo 2 — Comercial a fundo | PMM | — | 🔧 A criar |
 | Módulo 3 — Marketing e CS | PMM | — | 🔧 A criar |
 | Módulo 4 — Precificação e transacional | PMM | — | 🔧 A criar |

@@ -53,7 +53,7 @@ Entender o tamanho, o contexto e a oportunidade do mercado de provedores de inte
 
 ## Validação em produção
 
-Resultado real de um provedor regional em operação com a AuroraISP:
+Resultado real de um provedor regional em operação com a Hubtrix:
 
 | Métrica | Resultado |
 |---------|-----------|
@@ -70,7 +70,7 @@ Resultado real de um provedor regional em operação com a AuroraISP:
 
 ## Benchmark de volume (provedor de referência)
 
-Dados reais de um provedor regional de médio porte em operação com a AuroraISP:
+Dados reais de um provedor regional de médio porte em operação com a Hubtrix:
 
 | Métrica | Antes | Depois |
 |---------|-------|--------|

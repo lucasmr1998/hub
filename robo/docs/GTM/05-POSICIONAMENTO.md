@@ -1,4 +1,4 @@
-# Posicionamento — AuroraISP
+# Posicionamento — Hubtrix
 
 **Versão:** 2.0
 **Status:** ✅ Aprovado
@@ -6,9 +6,9 @@
 
 ---
 
-## O que é a AuroraISP
+## O que é a Hubtrix
 
-A AuroraISP é um hub de tecnologia com inteligência artificial para provedores de internet.
+A Hubtrix é um hub de tecnologia com inteligência artificial para provedores de internet.
 
 Reunimos em um só lugar os módulos que o ISP precisa para crescer: do primeiro contato com o lead até a fidelização do cliente. Tudo automatizado, tudo integrado, tudo com IA.
 
@@ -79,9 +79,9 @@ Somos o hub de IA construído para o provedor crescer, com módulos que se conec
 
 | Módulo | Planos | Status |
 |--------|--------|--------|
-| **Comercial** | Start / Pro (Pro inclui CRM Kanban) | ✅ Validado em produção |
-| **Marketing** | Start / Pro | 🔧 Em desenvolvimento |
-| **CS** | Start / Pro (inclui Clube de Benefícios) | 🔧 Em desenvolvimento |
+| **Comercial** | Starter / Pro (Pro inclui CRM Kanban) / Advanced (+ Assistente WhatsApp) | ✅ Validado em produção (Megalink, 30k assinantes) |
+| **Marketing** | Starter / Pro / Advanced | ✅ Em produção (Automações, Réguas, Segmentos, Campanhas UTM) |
+| **CS** | Starter / Pro / Advanced (inclui Clube de Benefícios, Indicação, Retenção) | ✅ Em produção (Clube validado com Megalink) |
 
 ---
 
@@ -127,3 +127,18 @@ Números reais de um provedor em operação. Não projeção, não demo, não pr
 - Não somos suporte técnico automatizado
 
 Nosso foco é crescimento: atrair mais leads, converter mais vendas, reter mais clientes.
+
+---
+
+## Material de enablement relacionado
+
+Posicionamento detalhado por **Job to be Done** (JTBD) com pitch 30s, pitch 2min, objeções e prova:
+
+- [JTBD-01 Marketing](posicionamento/jtbd_01_marketing.md) — atrair e nutrir
+- [JTBD-02 Comercial](posicionamento/jtbd_02_comercial.md) — converter sem re-digitar
+- [JTBD-03 CS](posicionamento/jtbd_03_cs.md) — reter e virar vetor de crescimento
+- [Índice do posicionamento](posicionamento/README.md)
+
+Case âncora:
+
+- [Provedor regional com 30k assinantes](cases/case_provedor_regional_30k.md) — números anonimizados da Megalink

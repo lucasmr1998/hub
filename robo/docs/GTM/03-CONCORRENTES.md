@@ -7,7 +7,7 @@
 
 ## Objetivo
 
-Entender quem compete pelo mesmo cliente, o que oferecem, onde falham e onde a AuroraISP se diferencia.
+Entender quem compete pelo mesmo cliente, o que oferecem, onde falham e onde a Hubtrix se diferencia.
 
 ---
 
@@ -37,14 +37,14 @@ Entender quem compete pelo mesmo cliente, o que oferecem, onde falham e onde a A
 | CTA | Apenas WhatsApp |
 | Estilo | Genérico, não mostra profundidade no fluxo de vendas |
 
-**Onde a AuroraISP ganha:**
+**Onde a Hubtrix ganha:**
 - Integração HubSoft nativa e profunda (contrato vai direto para o ERP)
 - Resultado comprovado em operação real com números verificáveis
 - Foco no fluxo de vendas completo: lead, documento, contrato, ativação
 - Hub com produtos complementares (CRM + Clube de Benefícios)
 
 **Onde o ISPRO AI ganha:**
-- Módulos de cobrança e suporte (fora do escopo atual da AuroraISP)
+- Módulos de cobrança e suporte (fora do escopo atual da Hubtrix)
 - Possivelmente mais recursos de campanha ativa
 
 ---
@@ -55,7 +55,7 @@ Entender quem compete pelo mesmo cliente, o que oferecem, onde falham e onde a A
 
 Provedores mais sofisticados já usam ou tentaram usar essas ferramentas. A barreira é a falta de integração com HubSoft e o custo elevado para o porte do ISP regional.
 
-**Onde a AuroraISP ganha:**
+**Onde a Hubtrix ganha:**
 - Feito para ISP, não adaptado
 - Integração HubSoft nativa
 - Preço acessível para o mercado regional
@@ -75,7 +75,7 @@ Provedores mais sofisticados já usam ou tentaram usar essas ferramentas. A barr
 
 ## Matriz de diferenciação
 
-| Capacidade | AuroraISP | ISPRO AI | Pipedrive | Planilha |
+| Capacidade | Hubtrix | ISPRO AI | Pipedrive | Planilha |
 |------------|-----------|----------|-----------|---------|
 | Integração HubSoft nativa | ✅ | ⚠️ Genérica | ❌ | ❌ |
 | Fluxo lead → contrato → ERP | ✅ | ❌ | ❌ | ❌ |

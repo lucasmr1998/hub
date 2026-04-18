@@ -11,7 +11,7 @@
 Geração de demanda → Abordagem → Diagnóstico → Demo → Fechamento → Ativação
 ```
 
-A Aurora gera demanda por múltiplos canais. O parceiro executa o processo comercial. A Aurora apoia na demo quando necessário e conduz o onboarding.
+A Hubtrix gera demanda por múltiplos canais. O parceiro executa o processo comercial. A Hubtrix apoia na demo quando necessário e conduz o onboarding.
 
 ---
 
@@ -20,10 +20,10 @@ A Aurora gera demanda por múltiplos canais. O parceiro executa o processo comer
 | Fonte | Quem gera | Canal |
 |-------|-----------|-------|
 | Rede do parceiro | Parceiro | Contato direto, indicações |
-| Comunidades de provedores | Aurora + Parceiro | WhatsApp, Telegram, ABRINT, ABRI |
-| Outbound direto | Aurora define, parceiro executa | WhatsApp direto para donos de ISP |
-| Eventos do setor | Aurora + Parceiro | ISP Summit, MeetISP, feiras regionais |
-| Inbound (futuro) | Aurora | Blog, YouTube, LinkedIn |
+| Comunidades de provedores | Hubtrix + Parceiro | WhatsApp, Telegram, ABRINT, ABRI |
+| Outbound direto | Hubtrix define, parceiro executa | WhatsApp direto para donos de ISP |
+| Eventos do setor | Hubtrix + Parceiro | ISP Summit, MeetISP, feiras regionais |
+| Inbound (futuro) | Hubtrix | Blog, YouTube, LinkedIn |
 
 ---
 
@@ -31,7 +31,7 @@ A Aurora gera demanda por múltiplos canais. O parceiro executa o processo comer
 
 ### 1. Identificação do lead
 
-**Responsável:** Aurora ou Parceiro
+**Responsável:** Hubtrix ou Parceiro
 **Critério de entrada:** ISP regional com HubSoft, 500 a 50.000 clientes, 2 a 20 vendedores.
 
 **Ações:**
@@ -82,7 +82,7 @@ A Aurora gera demanda por múltiplos canais. O parceiro executa o processo comer
 
 ### 4. Demo ao vivo
 
-**Responsável:** Parceiro (Aurora apoia nas primeiras demos)
+**Responsável:** Parceiro (Hubtrix apoia nas primeiras demos)
 **Duração:** 30 a 45 minutos
 **Material:** Deck do parceiro + sistema ao vivo
 
@@ -111,7 +111,7 @@ A Aurora gera demanda por múltiplos canais. O parceiro executa o processo comer
 **Cenário 2 — Não fecha na hora:**
 - Enviar deck de apoio logo após a reunião
 - Definir data para retorno antes de encerrar
-- Executar processo de follow-up definido pela Aurora
+- Executar processo de follow-up definido pela Hubtrix
 
 **Cenário 3 — Precisa de outros decisores:**
 - Marcar segunda reunião incluindo o sócio ou diretor
@@ -123,7 +123,7 @@ A Aurora gera demanda por múltiplos canais. O parceiro executa o processo comer
 
 ### 6. Follow-up (quando não fecha na hora)
 
-**Responsável:** Parceiro (processo definido pela Aurora)
+**Responsável:** Parceiro (processo definido pela Hubtrix)
 **Material:** Deck de apoio, case anônimo, simulação de ROI personalizada
 
 | Dia | Ação |
@@ -139,7 +139,7 @@ A Aurora gera demanda por múltiplos canais. O parceiro executa o processo comer
 
 ### 7. Ativação e onboarding
 
-**Responsável:** Time da Aurora
+**Responsável:** Time da Hubtrix
 **Duração:** Aproximadamente 1 hora
 **Gatilho:** Contrato assinado ou trial iniciado
 
@@ -164,13 +164,13 @@ A Aurora gera demanda por múltiplos canais. O parceiro executa o processo comer
 | Demo | Deck do parceiro, sistema ao vivo, simulação de ROI com dados do diagnóstico |
 | Fechamento | Proposta com dados do próprio ISP |
 | Follow-up | Deck de apoio, case anônimo, simulação personalizada |
-| Ativação | Checklist interno da Aurora |
+| Ativação | Checklist interno da Hubtrix |
 
 ---
 
 ## Responsabilidades
 
-| Etapa | Parceiro | Aurora |
+| Etapa | Parceiro | Hubtrix |
 |-------|----------|--------|
 | Geração de demanda | Rede própria, executa outbound | Define estratégia, gera leads via canais digitais |
 | Abordagem e qualificação | Executa | Fornece script e materiais |

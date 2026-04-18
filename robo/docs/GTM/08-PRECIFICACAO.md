@@ -9,7 +9,7 @@
 
 **Por módulo** (Starter, Start e Pro) **+ valor transacional mensal.**
 
-Inspirado no modelo HubSpot: o cliente entra pelo plano que cabe no bolso e expande conforme cresce. Três níveis de profundidade por módulo. O transacional alinha o sucesso da Aurora com o sucesso do provedor.
+Inspirado no modelo HubSpot: o cliente entra pelo plano que cabe no bolso e expande conforme cresce. Três níveis de profundidade por módulo. O transacional alinha o sucesso da Hubtrix com o sucesso do provedor.
 
 Escada de preço: **1:2:3** por módulo. Valores padronizados para todos os módulos.
 
@@ -191,7 +191,7 @@ Stack completo
 
 14 dias gratuitos para provedores que utilizam HubSoft como ERP. Sem trial para demais ERPs.
 
-> O HubSoft é o ICP perfeito. O trial é um argumento direto para quem já usa o sistema com o qual a Aurora integra nativamente.
+> O HubSoft é o ICP perfeito. O trial é um argumento direto para quem já usa o sistema com o qual a Hubtrix integra nativamente.
 
 ---
 

@@ -7,7 +7,7 @@
 
 ## Objetivo
 
-Definir com precisão quem é o cliente ideal da AuroraISP: o perfil da empresa, os decisores e as personas que interagem com o produto.
+Definir com precisão quem é o cliente ideal da Hubtrix: o perfil da empresa, os decisores e as personas que interagem com o produto.
 
 ---
 

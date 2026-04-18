@@ -7,7 +7,7 @@
 
 ## Objetivo
 
-Garantir que o parceiro comercial tenha tudo que precisa para prospectar, apresentar e fechar — sem depender da equipe da Aurora para cada conversa.
+Garantir que o parceiro comercial tenha tudo que precisa para prospectar, apresentar e fechar — sem depender da equipe da Hubtrix para cada conversa.
 
 ---
 
@@ -16,8 +16,8 @@ Garantir que o parceiro comercial tenha tudo que precisa para prospectar, aprese
 | Item | Detalhe |
 |------|---------|
 | Modelo | Sócio comercial — 30% do lucro líquido |
-| Processo próprio | Sim. A Aurora apoia e complementa com estratégias e materiais |
-| Demo | Ao vivo, conduzida pelo parceiro com suporte da Aurora quando necessário |
+| Processo próprio | Sim. A Hubtrix apoia e complementa com estratégias e materiais |
+| Demo | Ao vivo, conduzida pelo parceiro com suporte da Hubtrix quando necessário |
 | Treinamento técnico | Necessário. O parceiro precisa entender o produto para conduzir a demo com autonomia |
 
 ---
@@ -39,7 +39,7 @@ Garantir que o parceiro comercial tenha tudo que precisa para prospectar, aprese
 
 ## Pitch de 2 minutos
 
-> "Você já perdeu lead essa semana por falta de acompanhamento no WhatsApp? A AuroraISP resolve isso.
+> "Você já perdeu lead essa semana por falta de acompanhamento no WhatsApp? A Hubtrix resolve isso.
 >
 > A gente automatiza o fluxo de vendas do provedor do começo ao fim: o lead entra no WhatsApp, o bot qualifica, coleta os documentos, gera o contrato e manda direto pro HubSoft. Sem planilha, sem retrabalho, sem lead perdido.
 >
@@ -65,7 +65,7 @@ Garantir que o parceiro comercial tenha tudo que precisa para prospectar, aprese
 | Números e ROI | 5 min | Case anônimo, simulação com os números do prospect |
 | Próximos passos | 5 min | Trial 14 dias (HubSoft), condições, fechamento |
 
-> O parceiro conduz. A Aurora entra como suporte técnico quando necessário nas primeiras demos.
+> O parceiro conduz. A Hubtrix entra como suporte técnico quando necessário nas primeiras demos.
 
 ---
 
@@ -75,10 +75,10 @@ Garantir que o parceiro comercial tenha tudo que precisa para prospectar, aprese
 
 | Módulo | Conteúdo | Status |
 |--------|----------|--------|
-| 1. Visão geral da AuroraISP | Hub, módulos, posicionamento, ICP | 🔧 A criar |
+| 1. Visão geral da Hubtrix | Hub, módulos, posicionamento, ICP | 🔧 A criar |
 | 2. Comercial a fundo | Fluxo completo: lead → HubSoft, bot, docs, contrato, CRM | 🔧 A criar |
 | 3. Marketing e CS | Visão geral dos módulos em desenvolvimento | 🔧 A criar |
-| 4. Precificação e transacional | Starter/Start/Pro, simulações, ROI | 🔧 A criar |
+| 4. Precificação e transacional | Starter/Pro/Advanced, simulações, ROI | 🔧 A criar |
 | 5. Objeções comuns | Respostas prontas para as principais objeções | 🔧 A criar |
 | 6. Demo hands-on | Prática guiada do roteiro de demo ao vivo | 🔧 A criar |
 
@@ -86,13 +86,13 @@ Garantir que o parceiro comercial tenha tudo que precisa para prospectar, aprese
 
 ## Estratégias de prospecção conjuntas
 
-O parceiro tem processo próprio. A Aurora complementa com:
+O parceiro tem processo próprio. A Hubtrix complementa com:
 
 | Estratégia | Responsável | Status |
 |------------|-------------|--------|
-| Mapeamento de grupos WhatsApp/Telegram de ISPs | Parceiro + Aurora | ⏳ Pendente |
-| Abordagem para comunidades ABRINT/ABRI | Aurora define, parceiro executa | 🔧 A criar |
-| Outbound direto via WhatsApp para donos de ISP | Aurora define script, parceiro executa | 🔧 A criar |
+| Mapeamento de grupos WhatsApp/Telegram de ISPs | Parceiro + Hubtrix | ⏳ Pendente |
+| Abordagem para comunidades ABRINT/ABRI | Hubtrix define, parceiro executa | 🔧 A criar |
+| Outbound direto via WhatsApp para donos de ISP | Hubtrix define script, parceiro executa | 🔧 A criar |
 | Participação em eventos do setor | Conjunto | 🔧 A planejar |
 
 ---

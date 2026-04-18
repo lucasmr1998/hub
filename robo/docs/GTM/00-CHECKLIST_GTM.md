@@ -1,4 +1,4 @@
-# Checklist Completo GTM — AuroraISP
+# Checklist Completo GTM — Hubtrix
 
 **Última atualização:** 31/03/2026
 
@@ -27,7 +27,7 @@ Legenda: ✅ Feito — 🟡 Parcial/Rascunho — 🔧 Em andamento — ⏳ Não 
 | Item | Status | Referência |
 |------|--------|------------|
 | Definição dos módulos (Comercial, Marketing, CS) | ✅ | CLAUDE.md |
-| Funcionalidades por plano (Starter/Start/Pro) | ✅ | 08-PRECIFICACAO.md |
+| Funcionalidades por plano (Starter/Pro/Advanced) | ✅ | 08-PRECIFICACAO.md |
 | Precificação aprovada | ✅ | 08-PRECIFICACAO.md |
 | Modelo transacional definido | ✅ | 08-PRECIFICACAO.md |
 | Simulações de ROI por porte | ✅ | 08-PRECIFICACAO.md |
@@ -79,16 +79,18 @@ Legenda: ✅ Feito — 🟡 Parcial/Rascunho — 🔧 Em andamento — ⏳ Não 
 
 | Item | Status | Referência |
 |------|--------|------------|
-| Script de pitch 2 minutos | 🟡 | 09-ENABLEMENT.md |
-| Estrutura do one-pager | ✅ | exports/drafts/apresentacao/ |
-| Estrutura do pre-demo deck (6 slides) | ✅ | exports/drafts/apresentacao/ |
-| Estrutura do deck de apoio (10 slides) | ✅ | exports/drafts/apresentacao/ |
-| Estrutura do deck do parceiro (10 slides) | ✅ | exports/drafts/apresentacao/ |
+| Script de pitch 2 minutos | ✅ | posicionamento/jtbd_01_marketing.md, jtbd_02_comercial.md, jtbd_03_cs.md (3 pitches de 2min + 3 de 30s) |
+| Posicionamento por JTBD (3 jobs) | ✅ | posicionamento/ (Marketing, Comercial, CS) |
+| Estrutura do one-pager | ✅ | OPERACIONAL/materiais/apresentacao/one_pager_estrutura.md |
+| Estrutura do pre-demo deck (6 slides) | ✅ | OPERACIONAL/materiais/apresentacao/pre_demo_deck_estrutura.md |
+| Estrutura do deck de apoio (10 slides) | ✅ | OPERACIONAL/materiais/apresentacao/demo_deck_apoio_estrutura.md |
+| Estrutura do deck do parceiro (10 slides) | ✅ | OPERACIONAL/materiais/apresentacao/demo_deck_parceiro_estrutura.md |
 | One-pager visual (PPT/PDF) | ⏳ | Aguarda logo |
 | Decks visuais (PPT/PDF) | ⏳ | Aguarda logo |
-| Case anônimo em PDF | ✅ | exports/drafts/apresentacao/case_anonimo.md |
+| Case anônimo com números | ✅ | GTM/cases/case_provedor_regional_30k.md (detalhado, anonimizado) |
 | Tabela de preços (PDF) | ⏳ | Aguarda logo |
-| Battle card de concorrentes | ✅ | exports/drafts/apresentacao/battle_card_concorrentes.md |
+| Battle card geral de concorrentes | ✅ | OPERACIONAL/materiais/apresentacao/battle_card_concorrentes.md |
+| Battle card detalhado vs ISPRO AI | ⏳ | A criar (concorrente #1 direto) |
 
 ---
 
@@ -113,7 +115,7 @@ Legenda: ✅ Feito — 🟡 Parcial/Rascunho — 🔧 Em andamento — ⏳ Não 
 
 | Item | Status | Referência |
 |------|--------|------------|
-| Módulo 1 — Visão geral da AuroraISP | ✅ | exports/drafts/treinamento_parceiro/ |
+| Módulo 1 — Visão geral da Hubtrix | ✅ | exports/drafts/treinamento_parceiro/ |
 | Módulo 2 — Comercial a fundo | ✅ | exports/drafts/treinamento_parceiro/ |
 | Módulo 3 — Marketing e CS | ✅ | exports/drafts/treinamento_parceiro/ |
 | Módulo 4 — Precificação e ROI | ✅ | exports/drafts/treinamento_parceiro/ |
