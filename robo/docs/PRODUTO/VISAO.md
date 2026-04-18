@@ -1008,9 +1008,17 @@ Novo model que surge dessa decisao: `Cliente` (distinto de `LeadProspecto`). Lea
 |---------|------|---------|
 | Time Hubtrix nao tem ferramentas pra operar a propria base de tenants com maturidade (health score / NPS / self-service de upgrade / offboarding LGPD) | Modulo de operacao interna do Hubtrix — 4 capacidades agrupadas | [operacao_interna_hubtrix_17-04-2026.md](../context/tarefas/backlog/operacao_interna_hubtrix_17-04-2026.md) |
 
-### De A2
+### De A2 — Jornada do consumidor
 
-Pendente — revisar A2 e extrair insights agregados depois.
+A2 mostrou 5 padroes transversais que aparecem em multiplos estagios:
+
+| Insight | Acao | Backlog |
+|---------|------|---------|
+| Analytics/dashboards faltantes em quase todo estagio (funil do bot, integracoes ERP, saude do onboarding, ROI de indicacao, saude por cliente) | Projeto de dashboards e observabilidade da jornada | [dashboards_jornada_consumidor_17-04-2026.md](../context/tarefas/backlog/dashboards_jornada_consumidor_17-04-2026.md) |
+| Canais de captura limitados — so WhatsApp e widget nativamente; Instagram DM, Messenger, Telegram, telefonia sao gaps | Expansao de canais inbound | [expansao_canais_inbound_17-04-2026.md](../context/tarefas/backlog/expansao_canais_inbound_17-04-2026.md) |
+| Infra de fluxo/regua/segmento pronta, mas cliente sempre comeca do zero — onboarding lento e muito trabalho manual | Biblioteca de templates prontos (fluxos + reguas + segmentos) | [biblioteca_templates_17-04-2026.md](../context/tarefas/backlog/biblioteca_templates_17-04-2026.md) |
+| Integracao ERP sem retry, fila ou monitoramento — falha fica invisivel ate cliente reclamar | Resiliencia em integracoes ERP (retry, fila, dashboard) | [resiliencia_integracoes_erp_17-04-2026.md](../context/tarefas/backlog/resiliencia_integracoes_erp_17-04-2026.md) |
+| Model `Cliente` pendente bloqueia varios estagios pos-venda (6-10) | Ja documentado na secao C/D (arquitetura batida, falta implementacao) | — |
 
 ---
 
