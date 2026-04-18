@@ -6,57 +6,20 @@
   {% include "partials/topbar.html" %}
   {% include "partials/sidebar.html" %}
 
-  {# Subnav — segundo painel lateral estilo Intercom (colapsavel) #}
+  {# Subnav — conteudo trocado via JS conforme o modulo selecionado na sidebar #}
   <aside class="app-subnav" aria-label="Submenu">
     <div class="app-subnav-inner">
       <div class="app-subnav-header">
-        <h2 class="app-subnav-title">Inbox</h2>
+        <h2 class="app-subnav-title" id="subnav-title">Comercial</h2>
         <button class="app-subnav-collapse" type="button" aria-label="Fechar menu lateral"
                 onclick="document.body.classList.add('sidebar-collapsed')"
                 title="Fechar menu lateral">
           <i class="bi bi-chevron-left"></i>
         </button>
       </div>
-      <nav class="app-subnav-list">
-        <a href="#" class="app-subnav-item is-active">
-          <i class="bi bi-inbox"></i>
-          <span>Todas</span>
-          <span class="app-subnav-badge">42</span>
-        </a>
-        <a href="#" class="app-subnav-item">
-          <i class="bi bi-at"></i>
-          <span>Menções</span>
-          <span class="app-subnav-badge">3</span>
-        </a>
-        <a href="#" class="app-subnav-item">
-          <i class="bi bi-person-check"></i>
-          <span>Atribuídas a mim</span>
-        </a>
-        <a href="#" class="app-subnav-item">
-          <i class="bi bi-clock-history"></i>
-          <span>Pendentes</span>
-        </a>
-        <a href="#" class="app-subnav-item">
-          <i class="bi bi-check2-circle"></i>
-          <span>Resolvidas</span>
-        </a>
-      </nav>
-
-      <div class="app-subnav-section">Equipes</div>
-      <nav class="app-subnav-list">
-        <a href="#" class="app-subnav-item">
-          <i class="bi bi-people"></i>
-          <span>Vendas</span>
-        </a>
-        <a href="#" class="app-subnav-item">
-          <i class="bi bi-people"></i>
-          <span>Suporte</span>
-        </a>
-        <a href="#" class="app-subnav-item">
-          <i class="bi bi-people"></i>
-          <span>CS</span>
-        </a>
-      </nav>
+      <div id="subnav-body">
+        {# Conteudo inicial: modulo Comercial. JS troca conforme clique nos icones. #}
+      </div>
     </div>
   </aside>
 
@@ -66,73 +29,24 @@
       <div style="max-width: 960px;">
         <div style="margin-bottom: var(--sp-6);">
           <h1 style="font-size: var(--fs-2xl); font-weight: var(--fw-extrabold); margin: 0 0 var(--sp-2); letter-spacing: -0.02em;">
-            Design System — Preview do esqueleto
+            Design System — Preview
           </h1>
           <p style="color: var(--color-text-secondary); margin: 0; font-size: var(--fs-md);">
-            Topbar (HubSpot) · Sidebar de ícones (Intercom) · Subnav colapsável (Intercom) · Área de conteúdo.
-          </p>
-          <p style="color: var(--color-text-muted); margin: var(--sp-2) 0 0; font-size: var(--fs-sm);">
-            <i class="bi bi-arrow-left"></i> Clica na <strong>seta <i class="bi bi-chevron-left"></i></strong> ao lado de "Inbox" pra colapsar o subnav. Pra abrir de novo, seta <i class="bi bi-chevron-right"></i> aparece na topbar.
+            Clique nos ícones da sidebar pra trocar o subnav (módulos reais do Hubtrix).
           </p>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-8);">
-
-          <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--sp-4);">
-            <div style="display: inline-flex; width: 40px; height: 40px; border-radius: var(--radius); background: var(--color-primary-soft); align-items: center; justify-content: center; color: var(--color-primary); font-size: 1.1rem; margin-bottom: var(--sp-3);">
-              <i class="bi bi-palette"></i>
-            </div>
-            <h3 style="margin: 0 0 var(--sp-1); font-size: var(--fs-md); font-weight: var(--fw-semibold);">Tokens prontos</h3>
-            <p style="margin: 0; font-size: var(--fs-sm); color: var(--color-text-secondary);">Cores, tipografia, espaçamentos, radii e sombras definidos em <code>base.html</code>.</p>
-          </div>
-
-          <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--sp-4);">
-            <div style="display: inline-flex; width: 40px; height: 40px; border-radius: var(--radius); background: var(--color-success-soft); align-items: center; justify-content: center; color: var(--color-success); font-size: 1.1rem; margin-bottom: var(--sp-3);">
-              <i class="bi bi-layers"></i>
-            </div>
-            <h3 style="margin: 0 0 var(--sp-1); font-size: var(--fs-md); font-weight: var(--fw-semibold);">Layout base</h3>
-            <p style="margin: 0; font-size: var(--fs-sm); color: var(--color-text-secondary);">Topbar fixa, sidebar colapsável, subnav opcional. Qualquer tela nova herda essa base.</p>
-          </div>
-
-          <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--sp-4);">
-            <div style="display: inline-flex; width: 40px; height: 40px; border-radius: var(--radius); background: var(--color-warning-soft); align-items: center; justify-content: center; color: var(--color-warning); font-size: 1.1rem; margin-bottom: var(--sp-3);">
-              <i class="bi bi-box-seam"></i>
-            </div>
-            <h3 style="margin: 0 0 var(--sp-1); font-size: var(--fs-md); font-weight: var(--fw-semibold);">Componentes</h3>
-            <p style="margin: 0; font-size: var(--fs-sm); color: var(--color-text-secondary);">Pasta <code>components/</code> vazia por enquanto — botões, cards, inputs virão conforme a demanda.</p>
-          </div>
-
-        </div>
-
-        <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--sp-6); margin-bottom: var(--sp-6);">
-          <h2 style="margin: 0 0 var(--sp-4); font-size: var(--fs-lg); font-weight: var(--fw-bold);">Exemplos de cores do sistema</h2>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--sp-3);">
-            <div>
-              <div style="height: 64px; background: var(--color-primary); border-radius: var(--radius);"></div>
-              <div style="font-size: var(--fs-xs); color: var(--color-text-secondary); margin-top: var(--sp-1);">--color-primary</div>
-              <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">#4f46e5</div>
-            </div>
-            <div>
-              <div style="height: 64px; background: var(--color-success); border-radius: var(--radius);"></div>
-              <div style="font-size: var(--fs-xs); color: var(--color-text-secondary); margin-top: var(--sp-1);">--color-success</div>
-              <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">#16a34a</div>
-            </div>
-            <div>
-              <div style="height: 64px; background: var(--color-warning); border-radius: var(--radius);"></div>
-              <div style="font-size: var(--fs-xs); color: var(--color-text-secondary); margin-top: var(--sp-1);">--color-warning</div>
-              <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">#d97706</div>
-            </div>
-            <div>
-              <div style="height: 64px; background: var(--color-danger); border-radius: var(--radius);"></div>
-              <div style="font-size: var(--fs-xs); color: var(--color-text-secondary); margin-top: var(--sp-1);">--color-danger</div>
-              <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">#dc2626</div>
-            </div>
-            <div>
-              <div style="height: 64px; background: var(--sidebar-bg); border-radius: var(--radius);"></div>
-              <div style="font-size: var(--fs-xs); color: var(--color-text-secondary); margin-top: var(--sp-1);">--sidebar-bg</div>
-              <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">#1e293b</div>
-            </div>
-          </div>
+        <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--sp-6);">
+          <h2 style="margin: 0 0 var(--sp-3); font-size: var(--fs-lg); font-weight: var(--fw-bold);">Módulos do Hubtrix</h2>
+          <ul style="margin: 0; padding-left: var(--sp-5); font-size: var(--fs-sm); color: var(--color-text-secondary); line-height: 1.8;">
+            <li><strong>Dashboard</strong> — visão geral do tenant</li>
+            <li><strong>Comercial</strong> — CRM Kanban, Pipeline, Vendas, Tarefas, Configurações</li>
+            <li><strong>Marketing</strong> — Leads, Campanhas, Automações, Segmentos, Landing Page</li>
+            <li><strong>Atendimento</strong> — Inbox, Tickets, Fluxos, Sessões, Base de Conhecimento</li>
+            <li><strong>Customer Success</strong> — Clube, Clientes, Indicações, Parceiros, Cupons, Roleta, Carteirinhas</li>
+            <li><strong>Relatórios</strong> — Leads, Clientes, Atendimentos, Conversões</li>
+            <li><strong>Configurações</strong> — Empresa, Usuários, Produtos, Integrações, Notificações, Logs</li>
+          </ul>
         </div>
 
       </div>
@@ -140,7 +54,6 @@
     </div>
   </main>
 
-  {# CSS do subnav e layout com subnav #}
   <style>
     .app-subnav {
       position: fixed;
@@ -207,7 +120,7 @@
       text-decoration: none;
       transition: background var(--transition), color var(--transition);
     }
-    .app-subnav-item > span:first-of-type { flex: 1; }
+    .app-subnav-item > span { flex: 1; }
     .app-subnav-item:hover {
       background: var(--color-surface);
       color: var(--subnav-text-active);
@@ -216,20 +129,8 @@
       background: var(--subnav-item-active-bg);
       color: var(--color-primary-text);
     }
-    .app-subnav-item i { color: var(--color-text-muted); font-size: 0.85rem; flex-shrink: 0; }
+    .app-subnav-item i { color: var(--color-text-muted); font-size: 0.95rem; flex-shrink: 0; width: 16px; text-align: center; }
     .app-subnav-item.is-active i { color: var(--color-primary); }
-    .app-subnav-badge {
-      background: var(--color-surface-2);
-      color: var(--color-text-secondary);
-      font-size: 0.68rem;
-      font-weight: var(--fw-semibold);
-      padding: 2px 8px;
-      border-radius: var(--radius-full);
-    }
-    .app-subnav-item.is-active .app-subnav-badge {
-      background: var(--color-primary);
-      color: var(--color-text-inverse);
-    }
     .app-subnav-section {
       padding: var(--sp-2) var(--sp-5);
       font-size: var(--fs-xs);
@@ -241,25 +142,172 @@
 
     .app-main {
       margin-top: var(--topbar-h);
-      margin-left: var(--sidebar-w);
+      margin-left: calc(var(--sidebar-w) + var(--subnav-w));
       min-height: calc(100vh - var(--topbar-h));
       background: var(--color-surface);
       transition: margin-left var(--transition);
     }
-    .app-main.has-subnav {
-      margin-left: calc(var(--sidebar-w) + var(--subnav-w));
-    }
     .app-main-inner { padding: var(--sp-6); }
 
-    /* COLAPSADO: esconde subnav, main ocupa todo o espaço */
     body.sidebar-collapsed .app-subnav {
       transform: translateX(-100%);
       opacity: 0;
       pointer-events: none;
     }
-    body.sidebar-collapsed .app-main.has-subnav {
+    body.sidebar-collapsed .app-main {
       margin-left: var(--sidebar-w);
     }
   </style>
+
+  <script>
+    // Menu de subpaginas por modulo (espelha a sidebar real em producao)
+    const MODULOS = {
+      dashboard: {
+        title: 'Dashboard',
+        groups: [
+          { section: null, items: [
+            { icon: 'bi-graph-up', label: 'Visao Geral', active: true },
+          ]}
+        ]
+      },
+      comercial: {
+        title: 'Comercial',
+        groups: [
+          { section: null, items: [
+            { icon: 'bi-graph-up-arrow', label: 'Dashboard', active: true },
+          ]},
+          { section: 'CRM', items: [
+            { icon: 'bi-kanban', label: 'Pipeline' },
+            { icon: 'bi-cart-check', label: 'Vendas' },
+            { icon: 'bi-check2-square', label: 'Tarefas' },
+          ]},
+          { section: 'Configuracoes CRM', items: [
+            { icon: 'bi-sliders', label: 'Configuracoes' },
+            { icon: 'bi-box-seam', label: 'Produtos' },
+            { icon: 'bi-people', label: 'Equipes' },
+            { icon: 'bi-bullseye', label: 'Metas' },
+          ]},
+        ]
+      },
+      marketing: {
+        title: 'Marketing',
+        groups: [
+          { section: null, items: [
+            { icon: 'bi-person-plus', label: 'Leads', active: true },
+            { icon: 'bi-megaphone', label: 'Campanhas' },
+            { icon: 'bi-robot', label: 'Automacoes' },
+            { icon: 'bi-funnel', label: 'Segmentos' },
+            { icon: 'bi-globe', label: 'Landing Page' },
+          ]},
+        ]
+      },
+      atendimento: {
+        title: 'Atendimento',
+        groups: [
+          { section: null, items: [
+            { icon: 'bi-graph-up-arrow', label: 'Dashboard', active: true },
+          ]},
+          { section: 'Atendimentos', items: [
+            { icon: 'bi-chat-dots', label: 'Inbox' },
+            { icon: 'bi-ticket-detailed', label: 'Tickets' },
+          ]},
+          { section: 'Automacao', items: [
+            { icon: 'bi-diagram-3', label: 'Fluxos' },
+            { icon: 'bi-headset', label: 'Sessoes' },
+            { icon: 'bi-journal-text', label: 'Conhecimento' },
+            { icon: 'bi-question-circle', label: 'Perguntas IA' },
+          ]},
+          { section: 'Configuracoes', items: [
+            { icon: 'bi-sliders', label: 'Canais e Equipes' },
+          ]},
+        ]
+      },
+      cs: {
+        title: 'Customer Success',
+        groups: [
+          { section: null, items: [
+            { icon: 'bi-speedometer2', label: 'Dashboard', active: true },
+            { icon: 'bi-people', label: 'Clientes' },
+          ]},
+          { section: 'Fidelizacao', items: [
+            { icon: 'bi-share', label: 'Indicacoes' },
+            { icon: 'bi-shop', label: 'Parceiros' },
+            { icon: 'bi-ticket-perforated', label: 'Cupons' },
+            { icon: 'bi-bullseye', label: 'Roleta' },
+          ]},
+          { section: 'Configuracoes', items: [
+            { icon: 'bi-image', label: 'Banners' },
+            { icon: 'bi-person-vcard', label: 'Carteirinhas' },
+            { icon: 'bi-layers', label: 'Niveis e XP' },
+          ]},
+        ]
+      },
+      relatorios: {
+        title: 'Relatorios',
+        groups: [
+          { section: null, items: [
+            { icon: 'bi-person-plus', label: 'Leads', active: true },
+            { icon: 'bi-people', label: 'Clientes' },
+            { icon: 'bi-headset', label: 'Atendimentos' },
+            { icon: 'bi-arrow-repeat', label: 'Conversoes' },
+            { icon: 'bi-activity', label: 'Analise de Atendimentos' },
+          ]},
+        ]
+      },
+      configuracoes: {
+        title: 'Configuracoes',
+        groups: [
+          { section: 'Geral', items: [
+            { icon: 'bi-sliders', label: 'Painel', active: true },
+            { icon: 'bi-people', label: 'Usuarios' },
+          ]},
+          { section: 'Produtos', items: [
+            { icon: 'bi-wifi', label: 'Planos' },
+            { icon: 'bi-calendar-event', label: 'Vencimentos' },
+          ]},
+          { section: 'Sistema', items: [
+            { icon: 'bi-plug', label: 'Integracoes' },
+            { icon: 'bi-bell', label: 'Notificacoes' },
+            { icon: 'bi-list-ul', label: 'Logs' },
+          ]},
+        ]
+      },
+    };
+
+    function renderSubnav(moduleKey) {
+      const mod = MODULOS[moduleKey];
+      if (!mod) return;
+      document.getElementById('subnav-title').textContent = mod.title;
+      const body = document.getElementById('subnav-body');
+      body.innerHTML = mod.groups.map(g => {
+        const section = g.section ? `<div class="app-subnav-section">${g.section}</div>` : '';
+        const items = g.items.map(it => `
+          <a href="#" class="app-subnav-item${it.active ? ' is-active' : ''}">
+            <i class="bi ${it.icon}"></i>
+            <span>${it.label}</span>
+          </a>
+        `).join('');
+        return `${section}<nav class="app-subnav-list">${items}</nav>`;
+      }).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSubnav('comercial');
+
+      document.querySelectorAll('.app-sidebar-item[data-module]').forEach(item => {
+        item.addEventListener('click', (e) => {
+          e.preventDefault();
+          const modKey = item.dataset.module;
+          if (!MODULOS[modKey]) return;
+
+          document.querySelectorAll('.app-sidebar-item').forEach(i => i.classList.remove('is-active'));
+          item.classList.add('is-active');
+
+          renderSubnav(modKey);
+          document.body.classList.remove('sidebar-collapsed');
+        });
+      });
+    });
+  </script>
 
 {% endblock %}

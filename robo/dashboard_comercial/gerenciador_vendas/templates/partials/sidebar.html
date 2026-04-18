@@ -1,38 +1,32 @@
-{# Sidebar — estilo Intercom: coluna estreita com icones. #}
-{# Itens dummy — apenas pra visualizar o esqueleto. Substituir por menu dinamico depois. #}
+{# Sidebar — ícones dos módulos do Hubtrix. #}
+{# Clique troca o subnav via JS (data-module). #}
 <nav class="app-sidebar" aria-label="Menu principal">
   <div class="app-sidebar-inner">
 
     <div class="app-sidebar-group">
-      <a href="#" class="app-sidebar-item is-active" title="Dashboard">
+      <a href="#" class="app-sidebar-item" data-module="dashboard" title="Dashboard">
         <i class="bi bi-grid-1x2-fill"></i>
       </a>
-      <a href="#" class="app-sidebar-item" title="Inbox">
-        <i class="bi bi-chat-dots"></i>
+      <a href="#" class="app-sidebar-item is-active" data-module="comercial" title="Comercial">
+        <i class="bi bi-briefcase"></i>
       </a>
-      <a href="#" class="app-sidebar-item" title="CRM">
-        <i class="bi bi-kanban"></i>
-      </a>
-      <a href="#" class="app-sidebar-item" title="Marketing">
+      <a href="#" class="app-sidebar-item" data-module="marketing" title="Marketing">
         <i class="bi bi-megaphone"></i>
       </a>
-      <a href="#" class="app-sidebar-item" title="Clube">
+      <a href="#" class="app-sidebar-item" data-module="atendimento" title="Atendimento">
+        <i class="bi bi-chat-dots"></i>
+      </a>
+      <a href="#" class="app-sidebar-item" data-module="cs" title="Customer Success">
         <i class="bi bi-gift"></i>
       </a>
-      <a href="#" class="app-sidebar-item" title="Suporte">
-        <i class="bi bi-headset"></i>
-      </a>
-      <a href="#" class="app-sidebar-item" title="Relatorios">
+      <a href="#" class="app-sidebar-item" data-module="relatorios" title="Relatórios">
         <i class="bi bi-bar-chart"></i>
       </a>
     </div>
 
     <div class="app-sidebar-group app-sidebar-group-bottom">
-      <a href="#" class="app-sidebar-item" title="Configuracoes">
+      <a href="#" class="app-sidebar-item" data-module="configuracoes" title="Configurações">
         <i class="bi bi-gear"></i>
-      </a>
-      <a href="#" class="app-sidebar-item" title="Ajuda">
-        <i class="bi bi-question-circle"></i>
       </a>
     </div>
 
@@ -48,7 +42,6 @@
     width: var(--sidebar-w);
     background: var(--sidebar-bg);
     z-index: 90;
-    transition: width var(--transition);
   }
   .app-sidebar-inner {
     height: 100%;
@@ -84,13 +77,5 @@
   .app-sidebar-item.is-active {
     background: var(--sidebar-bg-active);
     color: var(--sidebar-icon-active);
-  }
-
-  /* Colapsado — no momento a largura e a mesma, mas ja deixo o hook pronto pro futuro */
-  body.sidebar-collapsed .app-sidebar {
-    width: var(--sidebar-w-collapsed);
-  }
-  body.sidebar-collapsed .app-subnav {
-    display: none;
   }
 </style>
