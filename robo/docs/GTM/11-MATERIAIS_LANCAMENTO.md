@@ -29,12 +29,14 @@ Centralizar todos os materiais necessários para lançar a Hubtrix no mercado. C
 |----------|-------------|------------|--------|
 | One-pager | PMM | Logo | ⏳ Aguardando logo |
 | Pitch deck | PMM | Logo | ⏳ Aguardando logo |
-| Case anônimo em PDF | PMM | — | 🔧 A criar |
+| Case anônimo em texto | PMM | — | ✅ [cases/case_provedor_regional_30k.md](cases/case_provedor_regional_30k.md) |
+| Case anônimo em PDF visual | PMM | Logo | ⏳ Aguarda logo |
 | Tabela de preços | PMM | — | ✅ Aprovada |
-| Respostas para objeções | PMM | — | 🟡 Rascunho em 06-MENSAGENS_CHAVE.md |
-| Script do pitch de 2 minutos | PMM | — | 🟡 Rascunho em 09-ENABLEMENT.md |
+| Respostas para objeções | PMM | — | ✅ 20 objeções nos 3 JTBDs em posicionamento/ |
+| Script do pitch de 2 minutos | PMM | — | ✅ 3 pitches (1 por JTBD) em posicionamento/ |
+| Posicionamento por JTBD | PMM | — | ✅ [posicionamento/](posicionamento/) — 3 docs |
 | Diagnóstico — Typeform | PMM + Dev | — | 🔧 A criar (ver 13-DIAGNOSTICO.md) |
-| Diagnóstico — Script WhatsApp | PMM | — | ✅ Rascunho em exports/drafts/scripts_vendas/ |
+| Diagnóstico — Script WhatsApp | PMM | — | ✅ [OPERACIONAL/materiais/scripts_vendas/diagnostico_whatsapp.md](../OPERACIONAL/materiais/scripts_vendas/diagnostico_whatsapp.md) |
 
 ---
 

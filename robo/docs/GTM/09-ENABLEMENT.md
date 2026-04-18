@@ -26,14 +26,17 @@ Garantir que o parceiro comercial tenha tudo que precisa para prospectar, aprese
 
 | Material | Formato | Status |
 |----------|---------|--------|
-| Pitch de 2 minutos (script) | Texto | ✅ Rascunho pronto |
-| One-pager | PDF | 🔧 A criar |
-| Deck de apresentação | Slides | 🔧 A criar |
-| Case anônimo com números | PDF/Texto | 🔧 A criar |
-| Respostas para objeções | Texto | 🟡 Rascunho em 06-MENSAGENS_CHAVE.md |
-| Roteiro de demo ao vivo | Texto | 🔧 A criar |
-| Tabela de preços | PDF | ✅ Precificação aprovada |
-| Trilha de treinamento técnico | Texto/Vídeo | 🔧 A criar |
+| Pitch de 2 minutos (script) | Texto | ✅ 3 pitches prontos (1 por JTBD em posicionamento/) |
+| Pitch de 30 segundos | Texto | ✅ 3 pitches prontos (1 por JTBD) |
+| One-pager | PDF | 🔧 Estrutura pronta, aguarda logo |
+| Deck de apresentação | Slides | 🔧 Estrutura pronta, aguarda logo |
+| Case anônimo com números | Texto | ✅ Pronto em [cases/case_provedor_regional_30k.md](cases/case_provedor_regional_30k.md) |
+| Respostas para objeções | Texto | ✅ 20 objeções respondidas (6+7+7 nos 3 JTBDs) + mensagens-chave |
+| Roteiro de demo ao vivo | Texto | ✅ Pitch de 2min de cada JTBD serve de roteiro |
+| Tabela de preços | PDF | ✅ Precificação aprovada (08-PRECIFICACAO.md) |
+| Trilha de treinamento técnico | Texto | ✅ 5 módulos em [OPERACIONAL/materiais/treinamento_parceiro/](../OPERACIONAL/materiais/treinamento_parceiro/) |
+| Battle card concorrentes (geral) | Texto | ✅ [OPERACIONAL/materiais/apresentacao/battle_card_concorrentes.md](../OPERACIONAL/materiais/apresentacao/battle_card_concorrentes.md) |
+| Battle card detalhado vs ISPRO AI | Texto | ⏳ Pendente (concorrente #1 direto) |
 
 ---
 
@@ -75,12 +78,12 @@ Garantir que o parceiro comercial tenha tudo que precisa para prospectar, aprese
 
 | Módulo | Conteúdo | Status |
 |--------|----------|--------|
-| 1. Visão geral da Hubtrix | Hub, módulos, posicionamento, ICP | 🔧 A criar |
-| 2. Comercial a fundo | Fluxo completo: lead → HubSoft, bot, docs, contrato, CRM | 🔧 A criar |
-| 3. Marketing e CS | Visão geral dos módulos em desenvolvimento | 🔧 A criar |
-| 4. Precificação e transacional | Starter/Pro/Advanced, simulações, ROI | 🔧 A criar |
-| 5. Objeções comuns | Respostas prontas para as principais objeções | 🔧 A criar |
-| 6. Demo hands-on | Prática guiada do roteiro de demo ao vivo | 🔧 A criar |
+| 1. Visão geral da Hubtrix | Hub, módulos, posicionamento, ICP | ✅ [modulo_01_visao_geral.md](../OPERACIONAL/materiais/treinamento_parceiro/modulo_01_visao_geral.md) |
+| 2. Comercial a fundo | Fluxo completo: lead → HubSoft, bot, docs, contrato, CRM | ✅ [modulo_02_comercial.md](../OPERACIONAL/materiais/treinamento_parceiro/modulo_02_comercial.md) |
+| 3. Marketing e CS | Visão geral dos módulos em produção | ✅ [modulo_03_marketing_cs.md](../OPERACIONAL/materiais/treinamento_parceiro/modulo_03_marketing_cs.md) |
+| 4. Precificação e transacional | Starter/Pro/Advanced, simulações, ROI | ✅ [modulo_04_precificacao_roi.md](../OPERACIONAL/materiais/treinamento_parceiro/modulo_04_precificacao_roi.md) |
+| 5. Objeções comuns | Respostas prontas para as principais objeções | ✅ [modulo_05_objecoes_fechamento.md](../OPERACIONAL/materiais/treinamento_parceiro/modulo_05_objecoes_fechamento.md) + 20 respostas nos JTBDs |
+| 6. Demo hands-on | Prática guiada do roteiro de demo ao vivo | ⏳ Aguarda ambiente de demo em produção |
 
 ---
 
@@ -99,9 +102,8 @@ O parceiro tem processo próprio. A Hubtrix complementa com:
 
 ## Pendências
 
-- [ ] Criar one-pager (aguarda logo)
-- [ ] Criar deck de apresentação (aguarda logo)
-- [ ] Criar case anônimo em PDF
-- [ ] Criar roteiro detalhado de demo ao vivo
-- [ ] Criar trilha de treinamento técnico (módulos 1 a 6)
+- [ ] Criar one-pager em PDF/PPT (aguarda logo)
+- [ ] Criar deck de apresentação em PPT (aguarda logo)
+- [ ] Criar battle card detalhado vs ISPRO AI (concorrente direto #1)
+- [ ] Demo hands-on (aguarda ambiente de demo em produção)
 - [ ] Definir estratégias de prospecção conjuntas com o parceiro

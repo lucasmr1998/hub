@@ -95,8 +95,14 @@ Tagline
 
 ---
 
-## Perguntas em aberto
+## Materiais derivados desta base
+
+- **Pitch 30s e 2min por JTBD:** [posicionamento/](posicionamento/) — 3 docs (Marketing, Comercial, CS)
+- **Case âncora com números:** [cases/case_provedor_regional_30k.md](cases/case_provedor_regional_30k.md)
+- **20 objeções detalhadas:** nos JTBDs (complementam as 6 desta página)
+
+## Pendências
 
 - [ ] Validar mensagens com o parceiro comercial antes de usar em campo
-- [ ] Criar versões curtas para WhatsApp (máximo 3 linhas)
-- [ ] Criar versão para pitch de 2 minutos
+- [ ] Criar versões curtas para WhatsApp (máximo 3 linhas) pra cold message
+- [ ] Battle card detalhado vs ISPRO AI
