@@ -30,9 +30,13 @@
     {# Direita: acoes rapidas #}
     <div class="app-topbar-right">
       <div class="app-topbar-avatar-wrap">
-        <button class="app-topbar-avatar" type="button" title="Minha conta"
+        <button class="app-topbar-avatar-trigger" type="button" title="Minha conta"
                 onclick="this.parentElement.classList.toggle('is-open')">
-          <span class="app-topbar-avatar-initial">{{ request.user.first_name|first|default:"U"|upper }}</span>
+          <span class="app-topbar-avatar">
+            <span class="app-topbar-avatar-initial">{{ request.user.first_name|first|default:"U"|upper }}{{ request.user.last_name|first|default:""|upper }}</span>
+          </span>
+          <span class="app-topbar-avatar-name">{{ request.user.first_name|default:request.user.username|default:"Usuario" }}</span>
+          <i class="bi bi-chevron-down app-topbar-avatar-chevron"></i>
         </button>
 
         <div class="app-topbar-avatar-menu">
@@ -41,29 +45,19 @@
             <div class="app-topbar-avatar-header-email">{{ request.user.email|default:"" }}</div>
           </div>
           <a href="#" class="app-topbar-avatar-menu-item">
-            <i class="bi bi-person"></i>
-            <span>Meu perfil</span>
+            <i class="bi bi-gear"></i>
+            <span>Configuracoes</span>
           </a>
-          <a href="#" class="app-topbar-avatar-menu-item">
-            <i class="bi bi-shield-lock"></i>
-            <span>Trocar senha</span>
-          </a>
-          <a href="#" class="app-topbar-avatar-menu-item">
-            <i class="bi bi-sliders"></i>
-            <span>Preferencias</span>
-          </a>
-          <div class="app-topbar-avatar-menu-divider"></div>
           <a href="#" class="app-topbar-avatar-menu-item app-topbar-avatar-menu-item-danger">
             <i class="bi bi-box-arrow-right"></i>
-            <span>Sair</span>
+            <span>Sair da conta</span>
           </a>
         </div>
       </div>
 
-      <div class="app-topbar-divider"></div>
-
-      <button class="app-topbar-action" type="button" title="Notificacoes" aria-label="Notificacoes">
+      <button class="app-topbar-action app-topbar-action-bell" type="button" title="Notificacoes" aria-label="Notificacoes">
         <i class="bi bi-bell"></i>
+        <span class="app-topbar-bell-dot"></span>
       </button>
     </div>
 
@@ -195,19 +189,56 @@
   }
 
   .app-topbar-avatar-wrap { position: relative; }
+  .app-topbar-avatar-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    background: transparent;
+    border: none;
+    padding: 4px 10px 4px 4px;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  .app-topbar-avatar-trigger:hover {
+    background: var(--color-surface-2);
+  }
   .app-topbar-avatar {
-    width: 32px; height: 32px;
+    width: 30px; height: 30px;
     background: var(--color-primary);
     color: var(--color-text-inverse);
-    border: none;
     border-radius: 50%;
     font-weight: var(--fw-semibold);
-    font-size: 0.8rem;
-    cursor: pointer;
+    font-size: 0.72rem;
     display: inline-flex; align-items: center; justify-content: center;
-    transition: opacity var(--transition);
+    flex-shrink: 0;
   }
-  .app-topbar-avatar:hover { opacity: 0.9; }
+  .app-topbar-avatar-name {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    color: var(--color-text);
+    line-height: 1;
+  }
+  .app-topbar-avatar-chevron {
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+    transition: transform var(--transition);
+  }
+  .app-topbar-avatar-wrap.is-open .app-topbar-avatar-chevron {
+    transform: rotate(180deg);
+  }
+
+  .app-topbar-action-bell { position: relative; }
+  .app-topbar-bell-dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    background: var(--color-danger);
+    border: 2px solid var(--color-bg);
+    border-radius: 50%;
+  }
 
   .app-topbar-avatar-menu {
     position: absolute;
