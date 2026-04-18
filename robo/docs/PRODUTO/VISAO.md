@@ -924,7 +924,153 @@ Testa cada uma, valida que esta funcionando. Configura webhooks do lado dos prov
 
 ## B. Modelo mental do usuario
 
-> Pendente.
+Esta secao responde **como pensar sobre o Hubtrix** quando se opera ele. Tem duas camadas: (B1) conceitos e vocabulario que todo usuario precisa entender, e (B2) mapa mental por perfil (como cada funcao vive o produto no dia a dia).
+
+### B1. Conceitos fundamentais
+
+#### A mesma pessoa passa por 3 estados
+
+```
+LEAD ──────▶ CLIENTE ──────▶ MEMBRO (do Clube)
+(pré-venda)   (pós-venda)    (engajamento)
+```
+
+- **`LeadProspecto`** — quem ainda nao comprou. Tem dados de qualificacao, score, origem, historico de contatos. Vive no modulo Comercial.
+- **`Cliente`** (pendente de implementacao) — espelho do cliente ativo do ERP. Quando o contrato fecha (A2 estagio 6), o Lead se transforma em Cliente. Vive no proprio Hubtrix mas a fonte da verdade e o ERP. Ver [secao D](#d-principios-do-produto).
+- **`MembroClube`** — quando o cliente se cadastra no Clube de Beneficios (opt-in). Ganha pontos, participa da roleta, indica amigos. Vive no modulo CS.
+
+Nem todo Lead vira Cliente. Nem todo Cliente vira Membro. Mas o caminho mais valioso e Lead → Cliente → Membro → (indica novos Leads, fecha o ciclo).
+
+#### Uma interacao pode virar 3 fluxos diferentes
+
+```
+CONVERSA  ───(abre)──▶ OPORTUNIDADE  (se tem intencao de compra)
+  (Inbox)   ───(vira)──▶ TICKET       (se tem problema tecnico)
+            ───(so)───▶ ... so conversa mesmo (sem backend)
+```
+
+- **`Conversa`** — fluxo de mensagens entre cliente e agente no Inbox. Sempre existe. Agrupa tudo que rolou entre as partes.
+- **`OportunidadeVenda`** — quando a conversa tem intencao comercial, o vendedor abre uma oportunidade no CRM. A conversa continua; a oportunidade rastreia o avanco no funil.
+- **`Ticket`** — quando a conversa tem demanda de suporte tecnico, vira ticket com SLA. A conversa continua; o ticket rastreia o atendimento ate resolucao.
+
+Uma conversa pode ter mais de uma oportunidade/ticket ao longo do tempo. O Inbox e sempre o "contexto mestre".
+
+#### Dois motores automatizados com propositos diferentes
+
+- **Fluxo de atendimento** (`apps/comercial/atendimento`, [fluxos/](modulos/fluxos/)) — **conversacional**. Bot que troca mensagens com o lead em tempo real. Pausa aguardando resposta. Usado na qualificacao (A2 estagio 3).
+- **Automacao** (`apps/marketing/automacoes/`) — **stateless, fire-and-forget**. Regras que reagem a eventos do sistema (lead_criado, oportunidade_movida, cliente_aniversario) e disparam acoes (enviar whatsapp, criar tarefa, dar pontos). Sem pausar, sem conversar.
+
+Ambos usam editor visual Drawflow mas sao **coisas diferentes**. Nao sao intercambiaveis:
+
+| | Fluxo | Automacao |
+|---|-------|-----------|
+| Gatilho | Mensagem do lead | Evento do sistema |
+| Modo | Conversacional (pausa/espera) | Reativo (trigger → acoes) |
+| Estado | Sessao ativa por lead | Execucao unica |
+| Uso | Pre-venda, atendimento | Pos-evento, reguas, campanhas |
+
+#### Como mensagens sao roteadas
+
+```
+CANAL  ─define─▶  FILA  ─distribui─▶  EQUIPE  ─atribui─▶  AGENTE
+(where)            (how)                (who)              (to)
+```
+
+- **`CanalInbox`** — WhatsApp, widget, email, interno. Ponto de entrada fisico.
+- **`FilaInbox`** — define modo de distribuicao (round-robin / menor carga / manual) + horario de atendimento. Uma fila pode atender varios canais.
+- **`EquipeInbox`** — agrupamento de agentes (vendas, suporte, CS). Uma fila aponta pra uma equipe.
+- **`RegraRoteamento`** — decide qual fila recebe quando tem multipla opcao (por canal, etiqueta, horario).
+
+O agente e o final da cadeia. Ele nao escolhe conversa — recebe conforme a fila distribui.
+
+#### Isolamento por tenant
+
+**Tenant** e o ISP cliente do Hubtrix. Todo dado do sistema e do tenant. Nada vaza entre tenants — isso e invariante, nao feature (ver [secao D principio 5](#d-principios-do-produto)).
+
+Na pratica: toda query filtra automaticamente pelo tenant da requisicao via `TenantMixin` e `TenantManager`. O operador NUNCA deve pensar "e se eu esquecer o filtro?" — a arquitetura garante por default.
+
+#### Perfil vs Permissao
+
+- **Perfil** (`PerfilUsuario.cargo`) — papel do usuario no ISP: vendedor, supervisor, gerente, atendente, admin, CS.
+- **Permissao** (ver [core/03-PERMISSOES.md](core/03-PERMISSOES.md)) — controles granulares do que ele pode fazer: `crm.ver_oportunidades`, `comercial.excluir_lead`, `inbox.transferir_conversa`, etc.
+
+Perfil e categoria social. Permissao e capacidade tecnica. Admin atribui permissoes ao perfil; cada usuario herda do seu perfil.
+
+---
+
+### B2. Modelo mental por perfil
+
+Cada perfil abre o Hubtrix com uma pergunta diferente na cabeca. O sistema deveria responder essa pergunta em 2 segundos. Se o usuario tem que "caçar" a informacao, a UX falhou.
+
+#### Vendedor
+
+**Pergunta principal:** "Qual e minha proxima acao agora?"
+
+- Tarefas vencidas ou pra hoje (CRM > Tarefas)
+- Oportunidades paradas em estagio ha muito tempo (CRM > Pipeline)
+- Conversas na fila dele sem resposta (Inbox)
+- Meta do mes (CRM > Desempenho)
+
+Nao quer ver: dashboards do tenant inteiro, tickets de suporte, alertas de churn do CS. Se ve, distrai.
+
+#### Atendente (Inbox)
+
+**Pergunta principal:** "Quais conversas minhas estao esperando resposta?"
+
+- Fila de conversas abertas do agente
+- Conversas com SLA breach destacadas
+- Etiquetas e prioridades pra priorizar
+
+Nao quer ver: pipeline de vendas, clube, retencao. Opera num universo proprio.
+
+#### CS
+
+**Pergunta principal:** "Quais clientes precisam de atencao hoje?"
+
+- Alertas de retencao (contrato expirando, inadimplencia, reclamacao)
+- NPS detratores sem acao
+- Tickets que escalaram
+- Saude dos membros no Clube (engajamento, churn precoce)
+
+Nao quer ver: pipeline comercial, demos, propostas.
+
+#### Admin / Diretor
+
+**Pergunta principal:** "O negocio esta saudavel? Onde tem problema?"
+
+- Dashboard unificado com KPIs de todos os modulos agregados
+- Insights proativos ("12 conversas sem resposta ha >2h", "meta do mes: 34/100")
+- Acesso a tudo, mas curado pra decisao — nao operacao
+- Configuracao do sistema (pipelines, permissoes, integracoes)
+
+Detalhe importante: **hoje todos os perfis veem todos os dashboards** — isso e um gap de UX e de seguranca ja registrado em [home_personalizada_por_perfil](../context/tarefas/backlog/home_personalizada_por_perfil_17-04-2026.md).
+
+#### Marketing (quando existe um time dedicado)
+
+**Pergunta principal:** "Minhas campanhas estao gerando resultado? Onde otimizar?"
+
+- Deteccao de campanha (quais leads vieram de qual canal)
+- ROI por campanha
+- Segmentos (quem esta em cada segmento dinamico)
+- Regras de automacao (taxa de sucesso, execucoes)
+
+#### Parceiro comercial do ISP (quando aplicavel)
+
+**Pergunta principal:** "Como estao os clientes que eu indiquei / trouxe?"
+
+Perfil nao implementado ainda. Potencial feature pra marketplace de parceiros.
+
+---
+
+### Implicacoes pro roadmap
+
+Este modelo mental **contradiz** em varios pontos como o Hubtrix esta hoje:
+
+1. Perfis veem dashboards errados pra eles → [home personalizada por perfil](../context/tarefas/backlog/home_personalizada_por_perfil_17-04-2026.md)
+2. Sem insights proativos, admin precisa cacar problemas → mesmo projeto
+3. "Proxima acao" do vendedor nao existe — ele abre o CRM e ve tudo sem priorizacao → subproduto de "home por perfil"
+
+Alinhar a UX com o modelo mental declarado aqui e principal entrega da tarefa acima.
 
 ---
 
