@@ -1,0 +1,84 @@
+{# Subnav — segundo painel lateral com as subsecoes do modulo selecionado (estilo Intercom) #}
+{# Quando a pagina nao precisar, e so nao incluir. #}
+<aside class="app-subnav" aria-label="Submenu">
+  <div class="app-subnav-inner">
+
+    <div class="app-subnav-header">
+      <h2 class="app-subnav-title">{{ subnav_title|default:"Seção" }}</h2>
+    </div>
+
+    <nav class="app-subnav-list">
+      {% block subnav_items %}
+        {# Exemplo — cada pagina sobrescreve este bloco #}
+        <a href="#" class="app-subnav-item is-active">
+          <i class="bi bi-dot"></i>
+          <span>Item 1</span>
+        </a>
+        <a href="#" class="app-subnav-item">
+          <i class="bi bi-dot"></i>
+          <span>Item 2</span>
+        </a>
+        <a href="#" class="app-subnav-item">
+          <i class="bi bi-dot"></i>
+          <span>Item 3</span>
+        </a>
+      {% endblock %}
+    </nav>
+
+  </div>
+</aside>
+
+<style>
+  .app-subnav {
+    position: fixed;
+    top: var(--topbar-h);
+    left: var(--sidebar-w);
+    bottom: 0;
+    width: var(--subnav-w);
+    background: var(--subnav-bg);
+    border-right: 1px solid var(--subnav-border);
+    z-index: 80;
+    overflow-y: auto;
+  }
+  .app-subnav-inner { padding: var(--sp-4) 0; }
+
+  .app-subnav-header {
+    padding: 0 var(--sp-4) var(--sp-3);
+    border-bottom: 1px solid var(--subnav-border);
+    margin-bottom: var(--sp-3);
+  }
+  .app-subnav-title {
+    margin: 0;
+    font-size: var(--fs-md);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text);
+  }
+
+  .app-subnav-list {
+    display: flex;
+    flex-direction: column;
+    padding: 0 var(--sp-2);
+  }
+  .app-subnav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    border-radius: var(--radius);
+    color: var(--subnav-text);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    text-decoration: none;
+    transition: background var(--transition), color var(--transition);
+  }
+  .app-subnav-item:hover {
+    background: var(--color-surface);
+    color: var(--subnav-text-active);
+  }
+  .app-subnav-item.is-active {
+    background: var(--subnav-item-active-bg);
+    color: var(--color-primary-text);
+  }
+  .app-subnav-item i { color: var(--color-text-muted); font-size: 0.6rem; }
+  .app-subnav-item.is-active i { color: var(--color-primary); }
+</style>

@@ -1,0 +1,47 @@
+{# Layout App — base de qualquer pagina logada do Hubtrix. #}
+{# Estrutura: topbar fixa + sidebar de icones + conteudo principal.        #}
+{# Uso:                                                                    #}
+{#   {% extends "layouts/layout_app.html" %}                               #}
+{#   {% block title %}Minha pagina — Hubtrix{% endblock %}                 #}
+{#   {% block content %}... HTML da pagina ...{% endblock %}               #}
+{#                                                                         #}
+{# Para usar subnav (segundo painel lateral estilo Intercom):              #}
+{#   {% block content %}                                                   #}
+{#     {% include "partials/sidebar_subnav.html" %}                        #}
+{#     <main class="app-content has-subnav">                               #}
+{#       ...                                                               #}
+{#     </main>                                                             #}
+{#   {% endblock %}                                                        #}
+
+{% extends "layouts/base.html" %}
+
+{% block body %}
+  {% include "partials/topbar.html" %}
+  {% include "partials/sidebar.html" %}
+
+  <main class="app-main">
+    <div class="app-main-inner">
+      {% block content %}
+        {# Conteudo da pagina — sobrescrever em cada template. #}
+      {% endblock %}
+    </div>
+  </main>
+
+  <style>
+    .app-main {
+      margin-top: var(--topbar-h);
+      margin-left: var(--sidebar-w);
+      min-height: calc(100vh - var(--topbar-h));
+      background: var(--color-surface);
+    }
+    .app-main.has-subnav {
+      margin-left: calc(var(--sidebar-w) + var(--subnav-w));
+    }
+    .app-main-inner {
+      padding: var(--sp-6);
+    }
+    body.sidebar-collapsed .app-main.has-subnav {
+      margin-left: var(--sidebar-w);
+    }
+  </style>
+{% endblock %}

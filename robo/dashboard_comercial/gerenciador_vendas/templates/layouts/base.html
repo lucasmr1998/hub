@@ -1,0 +1,152 @@
+{% load static %}<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>{% block title %}Hubtrix{% endblock %}</title>
+
+  {# Fonts — Inter é a base do design system #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  {# Icons #}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  {# Design tokens do sistema — cores, tipografia, espacamentos #}
+  <style>
+    :root {
+      /* Cores neutras */
+      --color-bg:              #ffffff;
+      --color-surface:         #f7f8fa;
+      --color-surface-2:       #eef0f4;
+      --color-border:          #e5e7eb;
+      --color-border-strong:   #d1d5db;
+
+      /* Texto */
+      --color-text:            #0f172a;
+      --color-text-secondary:  #475569;
+      --color-text-muted:      #94a3b8;
+      --color-text-inverse:    #ffffff;
+
+      /* Brand primaria */
+      --color-primary:         #4f46e5;  /* indigo 600 */
+      --color-primary-hover:   #4338ca;
+      --color-primary-soft:    #eef2ff;
+      --color-primary-text:    #4338ca;
+
+      /* Semanticas */
+      --color-success:         #16a34a;
+      --color-success-soft:    #dcfce7;
+      --color-warning:         #d97706;
+      --color-warning-soft:    #fef3c7;
+      --color-danger:          #dc2626;
+      --color-danger-soft:     #fee2e2;
+      --color-info:            #0284c7;
+      --color-info-soft:       #e0f2fe;
+
+      /* Sidebar (tema escuro mesmo com layout claro, como HubSpot) */
+      --sidebar-bg:            #1e293b;
+      --sidebar-bg-hover:      #2d3f55;
+      --sidebar-bg-active:     #3b4f6b;
+      --sidebar-text:          #cbd5e1;
+      --sidebar-text-muted:    #64748b;
+      --sidebar-text-active:   #ffffff;
+      --sidebar-icon:          #94a3b8;
+      --sidebar-icon-active:   #818cf8;
+
+      /* Subnav (Intercom — segundo painel ao lado da sidebar) */
+      --subnav-bg:             #ffffff;
+      --subnav-border:         #e5e7eb;
+      --subnav-text:           #334155;
+      --subnav-text-active:    #0f172a;
+      --subnav-item-active-bg: #eef2ff;
+
+      /* Tipografia */
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+      --fs-xs:    0.72rem;
+      --fs-sm:    0.82rem;
+      --fs-base:  0.9rem;
+      --fs-md:    1rem;
+      --fs-lg:    1.125rem;
+      --fs-xl:    1.3rem;
+      --fs-2xl:   1.6rem;
+      --fs-3xl:   2rem;
+
+      --fw-regular:  400;
+      --fw-medium:   500;
+      --fw-semibold: 600;
+      --fw-bold:     700;
+      --fw-extrabold: 800;
+
+      /* Espacamentos */
+      --sp-0:  0;
+      --sp-1:  4px;
+      --sp-2:  8px;
+      --sp-3:  12px;
+      --sp-4:  16px;
+      --sp-5:  20px;
+      --sp-6:  24px;
+      --sp-8:  32px;
+      --sp-10: 40px;
+      --sp-12: 48px;
+
+      /* Radii */
+      --radius-sm: 4px;
+      --radius:    8px;
+      --radius-md: 10px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      --radius-full: 999px;
+
+      /* Sombras */
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow:    0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+
+      /* Layout sizes */
+      --topbar-h:          56px;
+      --sidebar-w:         60px;   /* só ícones, Intercom */
+      --sidebar-w-collapsed: 60px; /* igual — HubSpot mode é sempre assim */
+      --subnav-w:          240px;  /* segundo painel */
+
+      /* Transitions */
+      --transition:        150ms ease;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      font-size: var(--fs-base);
+      color: var(--color-text);
+      background: var(--color-surface);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: var(--color-primary); text-decoration: none; }
+    a:hover { color: var(--color-primary-hover); }
+
+    /* Utilitarios basicos — nao e o catalogo completo, so o minimo */
+    .u-flex { display: flex; }
+    .u-flex-col { display: flex; flex-direction: column; }
+    .u-items-center { align-items: center; }
+    .u-justify-between { justify-content: space-between; }
+    .u-gap-1 { gap: var(--sp-1); }
+    .u-gap-2 { gap: var(--sp-2); }
+    .u-gap-3 { gap: var(--sp-3); }
+    .u-gap-4 { gap: var(--sp-4); }
+    .u-flex-1 { flex: 1 1 auto; min-width: 0; }
+  </style>
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  {% block body %}{% endblock %}
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,194 @@
+{# Topbar — estilo HubSpot #}
+<header class="app-topbar">
+  <div class="app-topbar-inner">
+
+    {# Esquerda: logo + botao sidebar collapse #}
+    <div class="app-topbar-left">
+      <button class="app-topbar-sidebar-toggle" type="button" aria-label="Alternar menu"
+              onclick="document.body.classList.toggle('sidebar-collapsed')">
+        <i class="bi bi-list"></i>
+      </button>
+      <a href="/" class="app-topbar-brand">
+        <span class="app-topbar-brand-icon">◆</span>
+        <span class="app-topbar-brand-text">Hubtrix</span>
+      </a>
+    </div>
+
+    {# Centro: search com atalho Ctrl+K #}
+    <div class="app-topbar-center">
+      <div class="app-topbar-search">
+        <i class="bi bi-search app-topbar-search-icon"></i>
+        <input type="text" placeholder="Encontrar ou perguntar" class="app-topbar-search-input">
+        <span class="app-topbar-search-shortcut">
+          <kbd>Ctrl</kbd>
+          <kbd>K</kbd>
+        </span>
+      </div>
+    </div>
+
+    {# Direita: acoes rapidas #}
+    <div class="app-topbar-right">
+      <button class="app-topbar-action" type="button" title="Novo" aria-label="Novo">
+        <i class="bi bi-plus-lg"></i>
+      </button>
+      <button class="app-topbar-action" type="button" title="Assistente" aria-label="Assistente">
+        <i class="bi bi-stars"></i>
+      </button>
+      <button class="app-topbar-action" type="button" title="Notificacoes" aria-label="Notificacoes">
+        <i class="bi bi-bell"></i>
+      </button>
+      <button class="app-topbar-action" type="button" title="Configuracoes" aria-label="Configuracoes">
+        <i class="bi bi-gear"></i>
+      </button>
+
+      <div class="app-topbar-divider"></div>
+
+      <button class="app-topbar-avatar" type="button" title="Minha conta">
+        <span class="app-topbar-avatar-initial">{{ request.user.first_name|first|default:"U"|upper }}</span>
+      </button>
+    </div>
+
+  </div>
+</header>
+
+<style>
+  .app-topbar {
+    height: var(--topbar-h);
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+  }
+  .app-topbar-inner {
+    height: 100%;
+    padding: 0 var(--sp-4);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--sp-4);
+  }
+
+  .app-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+  }
+  .app-topbar-sidebar-toggle {
+    width: 36px; height: 36px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    transition: background var(--transition);
+  }
+  .app-topbar-sidebar-toggle:hover { background: var(--color-surface-2); }
+
+  .app-topbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    color: var(--color-text);
+    font-weight: var(--fw-extrabold);
+    font-size: var(--fs-md);
+    letter-spacing: -0.02em;
+    text-decoration: none;
+  }
+  .app-topbar-brand-icon {
+    color: var(--color-primary);
+    font-size: 1rem;
+  }
+
+  .app-topbar-center { max-width: 480px; }
+  .app-topbar-search {
+    position: relative;
+    display: flex; align-items: center;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0 var(--sp-3);
+    height: 36px;
+    transition: border-color var(--transition), background var(--transition);
+  }
+  .app-topbar-search:focus-within {
+    border-color: var(--color-primary);
+    background: var(--color-bg);
+  }
+  .app-topbar-search-icon {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    margin-right: var(--sp-2);
+  }
+  .app-topbar-search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: var(--font-sans);
+    font-size: var(--fs-sm);
+    color: var(--color-text);
+  }
+  .app-topbar-search-input::placeholder { color: var(--color-text-muted); }
+  .app-topbar-search-shortcut {
+    display: inline-flex;
+    gap: 2px;
+    color: var(--color-text-muted);
+  }
+  .app-topbar-search-shortcut kbd {
+    font-family: var(--font-sans);
+    font-size: 0.65rem;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    padding: 1px 4px;
+    color: var(--color-text-secondary);
+  }
+
+  .app-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+  }
+  .app-topbar-action {
+    width: 36px; height: 36px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    transition: background var(--transition);
+  }
+  .app-topbar-action:hover { background: var(--color-surface-2); color: var(--color-text); }
+
+  .app-topbar-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--color-border);
+    margin: 0 var(--sp-2);
+  }
+
+  .app-topbar-avatar {
+    width: 32px; height: 32px;
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    border: none;
+    border-radius: 50%;
+    font-weight: var(--fw-semibold);
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: opacity var(--transition);
+  }
+  .app-topbar-avatar:hover { opacity: 0.9; }
+
+  /* Responsive — mobile oculta search */
+  @media (max-width: 768px) {
+    .app-topbar-center { display: none; }
+    .app-topbar-brand-text { display: none; }
+  }
+</style>
