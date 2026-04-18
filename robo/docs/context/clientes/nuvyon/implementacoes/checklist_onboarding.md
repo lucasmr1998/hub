@@ -26,6 +26,9 @@ A Nuvyon usa o Matrix como front de atendimento. Hubtrix é o backend de dados e
 ## Bloco 1 — Acessos críticos (bloqueantes)
 
 ### HubSoft
+- [ ] **Criar usuário dedicado Hubtrix no HubSoft** (não usar usuário pessoal de alguém da Nuvyon)
+- [ ] **Habilitar acesso à API para esse usuário** (flag no perfil do HubSoft)
+- [ ] **Cadastrar esse usuário como Vendedor no HubSoft** (necessário pra atribuição de contratos criados pela API)
 - [ ] Credenciais de API (client_id, client_secret ou usuário/senha)
 - [ ] URL do servidor HubSoft (instância deles)
 - [ ] Endpoints liberados (consulta de cliente, criação de contrato, consulta de fatura, etc.)
@@ -34,6 +37,9 @@ A Nuvyon usa o Matrix como front de atendimento. Hubtrix é o backend de dados e
 - [ ] **Ponto focal técnico do HubSoft na Nuvyon** (quem sabe mexer)
 
 ### Matrix (sistema deles)
+- [ ] **Criar usuário Hubtrix no Matrix** com acesso de edição
+- [ ] **Habilitar acesso ao editor de fluxos** (pro time Hubtrix configurar/ajustar os fluxos de atendimento)
+- [ ] **Habilitar acesso ao emulador** (pra testar fluxos antes de publicar)
 - [ ] Confirmar versão/variante do Matrix em uso
 - [ ] Ponto focal técnico do Matrix na Nuvyon (quem vai consumir as APIs do Hubtrix)
 - [ ] Lista preliminar de casos de uso Matrix → Hubtrix (o que eles vão integrar)
