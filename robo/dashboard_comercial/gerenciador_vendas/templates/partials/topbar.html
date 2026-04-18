@@ -2,11 +2,12 @@
 <header class="app-topbar">
   <div class="app-topbar-inner">
 
-    {# Esquerda: logo + botao sidebar collapse #}
+    {# Esquerda: logo + botao pra expandir subnav (aparece so quando colapsado) #}
     <div class="app-topbar-left">
-      <button class="app-topbar-sidebar-toggle" type="button" aria-label="Alternar menu"
-              onclick="document.body.classList.toggle('sidebar-collapsed')">
-        <i class="bi bi-list"></i>
+      <button class="app-topbar-sidebar-toggle" type="button" aria-label="Abrir menu lateral"
+              onclick="document.body.classList.remove('sidebar-collapsed')"
+              title="Abrir menu lateral">
+        <i class="bi bi-chevron-right"></i>
       </button>
       <a href="/" class="app-topbar-brand">
         <span class="app-topbar-brand-icon">◆</span>
@@ -81,11 +82,14 @@
     border-radius: var(--radius);
     color: var(--color-text-secondary);
     cursor: pointer;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 1.1rem;
+    display: none; /* so aparece quando subnav esta colapsado */
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
     transition: background var(--transition);
   }
   .app-topbar-sidebar-toggle:hover { background: var(--color-surface-2); }
+  body.sidebar-collapsed .app-topbar-sidebar-toggle { display: inline-flex; }
 
   .app-topbar-brand {
     display: inline-flex;

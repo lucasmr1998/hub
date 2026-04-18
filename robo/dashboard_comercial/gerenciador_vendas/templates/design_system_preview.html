@@ -11,6 +11,11 @@
     <div class="app-subnav-inner">
       <div class="app-subnav-header">
         <h2 class="app-subnav-title">Inbox</h2>
+        <button class="app-subnav-collapse" type="button" aria-label="Fechar menu lateral"
+                onclick="document.body.classList.add('sidebar-collapsed')"
+                title="Fechar menu lateral">
+          <i class="bi bi-chevron-left"></i>
+        </button>
       </div>
       <nav class="app-subnav-list">
         <a href="#" class="app-subnav-item is-active">
@@ -67,7 +72,7 @@
             Topbar (HubSpot) · Sidebar de ícones (Intercom) · Subnav colapsável (Intercom) · Área de conteúdo.
           </p>
           <p style="color: var(--color-text-muted); margin: var(--sp-2) 0 0; font-size: var(--fs-sm);">
-            <i class="bi bi-arrow-up-left"></i> Clica no <strong>botão ☰</strong> da topbar pra colapsar o subnav.
+            <i class="bi bi-arrow-left"></i> Clica na <strong>seta <i class="bi bi-chevron-left"></i></strong> ao lado de "Inbox" pra colapsar o subnav. Pra abrir de novo, seta <i class="bi bi-chevron-right"></i> aparece na topbar.
           </p>
         </div>
 
@@ -152,14 +157,35 @@
     .app-subnav-inner { padding: var(--sp-4) 0; }
 
     .app-subnav-header {
-      padding: 0 var(--sp-4) var(--sp-3);
+      padding: 0 var(--sp-3) var(--sp-3);
       border-bottom: 1px solid var(--subnav-border);
       margin-bottom: var(--sp-3);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-2);
     }
     .app-subnav-title {
       margin: 0;
       font-size: var(--fs-md);
       font-weight: var(--fw-semibold);
+      color: var(--color-text);
+    }
+    .app-subnav-collapse {
+      width: 28px; height: 28px;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--color-text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      transition: background var(--transition), color var(--transition);
+    }
+    .app-subnav-collapse:hover {
+      background: var(--color-surface-2);
       color: var(--color-text);
     }
 
