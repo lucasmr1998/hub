@@ -43,17 +43,19 @@
 
 ### Módulos contratados
 
-- **Comercial:** plano **PRO**
-- **Marketing:** plano **Advanced**
+- **Comercial:** plano **Advanced** (topo de linha)
+- **Marketing:** plano **Pro** (tier intermediário)
 
-### Valores negociados
+### Valores negociados (desconto por upgrade de tier)
 
-| Item | Tabela | Nuvyon | Desconto |
-|------|--------|--------|----------|
-| Comercial PRO (mensalidade) | R$ 1.497 | **R$ 997** | R$ 500 |
-| Marketing Advanced (mensalidade) | R$ 994 | **R$ 497** | R$ 497 |
-| **Total mensalidade fixa** | R$ 2.491 | **R$ 1.494** | R$ 997 |
-| Setup (único) | R$ 1.200 | **Gratuito** | R$ 1.200 |
+| Módulo | Plano real | Tabela do plano | Nuvyon paga | Desconto |
+|--------|------------|------------------|--------------|----------|
+| Comercial Advanced | Advanced | R$ 1.497 | **R$ 997** (preço Pro) | R$ 500 |
+| Marketing Pro | Pro | R$ 997 | **R$ 497** (preço Starter) | R$ 500 |
+| **Total mensalidade fixa** | | R$ 2.494 | **R$ 1.494** | R$ 1.000 |
+| Setup (único) | | R$ 1.200 | **Gratuito** | R$ 1.200 |
+
+> **Modelo de desconto:** cada módulo recebe o **tier acima** pagando o **preço do tier abaixo**. Comercial pega Advanced por preço de Pro, Marketing pega Pro por preço de Starter. Total de R$ 1.000/mês em desconto permanente enquanto vigente o contrato.
 
 ### Variáveis
 
@@ -96,8 +98,22 @@
 
 ## Observações
 
-- Proposta contempla os 2 módulos comerciais principais do Hubtrix (Comercial + Marketing) em planos avançados.
-- Descontos aplicados: -33% no Comercial PRO, -50% no Marketing Advanced, setup gratuito.
+- Proposta contempla os 2 módulos comerciais principais do Hubtrix (Comercial + Marketing), com cada módulo recebendo **o tier superior ao que paga** (Comercial Advanced pelo valor Pro; Marketing Pro pelo valor Starter).
+- Setup gratuito. Desconto permanente de R$ 1.000/mês na mensalidade fixa enquanto vigente.
 - Modelo híbrido (fixo + variável) significa que **o faturamento cresce conforme o uso real do cliente**: quanto mais vendas a IA fecha e mais leads cadastrados, maior a receita do Hubtrix.
 - **Contrato sem fidelidade.** Rescisão por qualquer parte com aviso prévio de 30 dias.
 - **Variável Marketing:** a base de cobrança são **leads cadastrados na plataforma** (não contatos em WhatsApp genérico ou assinantes ativos).
+
+---
+
+## 🚨 Correção pendente no contrato
+
+O contrato gerado pelo Jurídico AI descreveu os planos **invertidos**:
+
+- ❌ Cláusula 2.2.1 diz "Comercial — plano **PRO**" → deveria ser "plano **Advanced**"
+- ❌ Cláusula 2.2.2 diz "Marketing — plano **Advanced**" → deveria ser "plano **Pro**"
+
+Antes de assinar, corrigir essas cláusulas + adicionar cláusula de desconto promocional deixando claro:
+- Comercial Advanced pago como Pro (R$ 500 de desconto)
+- Marketing Pro pago como Starter (R$ 500 de desconto)
+- Descontos mantidos enquanto vigente; em renovação/alteração retornam à tabela cheia.

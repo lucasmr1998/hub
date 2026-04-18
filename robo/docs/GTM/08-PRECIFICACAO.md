@@ -27,11 +27,12 @@ Escada de preço: **1:2:3** por módulo. Valores padronizados para todos os mód
 
 ---
 
-## O que diferencia Starter, Start e Pro
+## O que diferencia Starter, Pro e Advanced
 
-| Critério | Starter | Start | Pro |
-|----------|---------|-------|-----|
-| Público-alvo | ISP pequeno, até ~2.000 clientes | ISP médio, 2.000 a 10.000 clientes | ISP grande, acima de 10.000 clientes |
+| Critério | Starter | Pro | Advanced |
+|----------|---------|-----|----------|
+| Público-alvo | ISP **pequeno**, até 10.000 assinantes | ISP **médio**, 10.000 a 30.000 assinantes | ISP **grande**, acima de 30.000 assinantes |
+| Decisor típico | Dono/proprietário | Gerente/diretor influencia, dono decide | Múltiplos stakeholders (dono, diretor, TI) |
 | Funcionalidades | Essenciais | Completas | Completas + avançadas com IA |
 | Número de usuários | 1 a 2 | Até 5 | Ilimitado |
 | Nível de suporte | Standard | Standard | Prioritário |
@@ -46,8 +47,8 @@ Escada de preço: **1:2:3** por módulo. Valores padronizados para todos os mód
 
 ### Mensalidade (igual para todos os módulos)
 
-| | Starter | Start | Pro |
-|-|---------|-------|-----|
+| | Starter | Pro | Advanced |
+|-|---------|-----|----------|
 | **Mensalidade** | **R$497/mês** | **R$997/mês** | **R$1.497/mês** |
 | **Setup** | **R$697** | **R$697** | **R$697** |
 | Usuários | 1 a 2 | Até 5 | Ilimitado |
@@ -56,10 +57,10 @@ Escada de preço: **1:2:3** por módulo. Valores padronizados para todos os mód
 
 ### Comercial
 
-| | Starter | Start | Pro |
-|-|---------|-------|-----|
+| | Starter | Pro | Advanced |
+|-|---------|-----|----------|
 | Mensalidade | R$497/mês | R$997/mês | R$1.497/mês |
-| Funcionalidades | Bot de qualificação, coleta de docs, contrato, ativação HubSoft | Tudo do Starter + automações de follow-up, relatórios básicos | Tudo do Start + CRM Kanban, automações avançadas, validação IA, relatórios completos |
+| Funcionalidades | Bot de qualificação, coleta de docs, contrato, ativação HubSoft | Tudo do Starter + CRM Kanban + automações de follow-up + relatórios básicos | Tudo do Pro + automações avançadas + validação IA + relatórios completos + Assistente CRM via WhatsApp |
 | **Transacional** | Variável por venda (tabela abaixo) | Variável por venda (tabela abaixo) | Variável por venda (tabela abaixo) |
 
 **Variável Comercial (decrescente por faixa):**
@@ -73,18 +74,18 @@ Escada de preço: **1:2:3** por módulo. Valores padronizados para todos os mód
 
 ### Marketing
 
-| | Starter | Start | Pro |
-|-|---------|-------|-----|
+| | Starter | Pro | Advanced |
+|-|---------|-----|----------|
 | Mensalidade | R$497/mês | R$997/mês | R$1.497/mês |
-| Funcionalidades | Disparos de WhatsApp e e-mail, réguas padrão prontas | Tudo do Starter + fluxos personalizados, rastreamento de campanhas | Tudo do Start + nutrição avançada, upsell de SVA, otimização de tráfego com IA, relatórios de atribuição |
-| **Transacional** | R$0,05 por contato na base/mês | R$0,05 por contato na base/mês | R$0,05 por contato na base/mês |
+| Funcionalidades | Disparos de WhatsApp e e-mail, réguas padrão prontas | Tudo do Starter + fluxos personalizados, rastreamento de campanhas, segmentos dinâmicos | Tudo do Pro + nutrição avançada, upsell de SVA, otimização de tráfego com IA, relatórios de atribuição |
+| **Transacional** | R$0,05 por lead cadastrado na plataforma/mês | R$0,05 por lead cadastrado na plataforma/mês | R$0,05 por lead cadastrado na plataforma/mês |
 
 ### CS (Customer Success)
 
-| | Starter | Start | Pro |
-|-|---------|-------|-----|
+| | Starter | Pro | Advanced |
+|-|---------|-----|----------|
 | Mensalidade | R$497/mês | R$997/mês | R$1.497/mês |
-| Funcionalidades | Clube de Benefícios, réguas básicas de retenção via Marketing | Tudo do Starter + NPS, relatórios de saúde da base | Tudo do Start + prevenção de churn com IA, upsell automatizado, relatórios avançados |
+| Funcionalidades | Clube de Benefícios, réguas básicas de retenção via Marketing | Tudo do Starter + NPS + relatórios de saúde da base + programa de indicações | Tudo do Pro + prevenção de churn com IA, upsell automatizado, relatórios avançados, carteirinha digital |
 | **Transacional** | R$0,15 por cliente ativo no clube/mês | R$0,15 por cliente ativo no clube/mês | R$0,15 por cliente ativo no clube/mês |
 
 ---
@@ -106,16 +107,17 @@ Escada de preço: **1:2:3** por módulo. Valores padronizados para todos os mód
 
 ### Perfis de referência
 
-| | Starter (pequeno) | Start (médio) | Pro (grande) |
-|-|-------------------|---------------|--------------|
+| | Starter (pequeno) | Pro (médio) | Advanced (grande) |
+|-|--------------------|---------------|---------------------|
+| Base de assinantes | até 10.000 | 10.000 a 30.000 | acima de 30.000 |
 | Vendas digitais/mês | 30 | 150 | 400 |
 | Leads na base | 300 | 2.000 | 6.000 |
 | Clientes no clube | 500 | 3.000 | 10.000 |
 
 ### Comercial
 
-| | Starter | Start | Pro |
-|-|---------|-------|-----|
+| | Starter | Pro | Advanced |
+|-|---------|-----|----------|
 | Mensalidade | R$497 | R$997 | R$1.497 |
 | Transacional | 30 × R$10 = R$300 | 150 × R$8 = R$1.200 | 400 × R$7 = R$2.800 |
 | **Total/mês** | **R$797** | **R$2.197** | **R$4.297** |
@@ -124,24 +126,24 @@ Escada de preço: **1:2:3** por módulo. Valores padronizados para todos os mód
 
 ### Marketing
 
-| | Starter | Start | Pro |
-|-|---------|-------|-----|
+| | Starter | Pro | Advanced |
+|-|---------|-----|----------|
 | Mensalidade | R$497 | R$997 | R$1.497 |
 | Transacional | 300 × R$0,05 = R$15 | 2.000 × R$0,05 = R$100 | 6.000 × R$0,05 = R$300 |
 | **Total/mês** | **R$512** | **R$1.097** | **R$1.797** |
 
 ### CS
 
-| | Starter | Start | Pro |
-|-|---------|-------|-----|
+| | Starter | Pro | Advanced |
+|-|---------|-----|----------|
 | Mensalidade | R$497 | R$997 | R$1.497 |
 | Transacional | 500 × R$0,15 = R$75 | 3.000 × R$0,15 = R$450 | 10.000 × R$0,15 = R$1.500 |
 | **Total/mês** | **R$572** | **R$1.447** | **R$2.997** |
 
 ### Stack completo
 
-| | Starter | Start | Pro |
-|-|---------|-------|-----|
+| | Starter (pequeno) | Pro (médio) | Advanced (grande) |
+|-|--------------------|---------------|---------------------|
 | Comercial | R$797 | R$2.197 | R$4.297 |
 | Marketing | R$512 | R$1.097 | R$1.797 |
 | CS | R$572 | R$1.447 | R$2.997 |
@@ -150,13 +152,14 @@ Escada de preço: **1:2:3** por módulo. Valores padronizados para todos os mód
 
 ---
 
-## ROI por porte (ticket médio R$99,90)
+## ROI por porte (ticket médio R$99/mês por assinante)
 
-| | Starter | Start | Pro |
-|-|---------|-------|-----|
-| Receita digital gerada/mês | R$2.997 | R$14.985 | R$39.960 |
+| | Starter (até 10k) | Pro (10–30k) | Advanced (+30k) |
+|-|--------------------|---------------|--------------------|
+| Receita digital gerada/mês (novos assinantes) | R$2.997 | R$14.985 | R$39.960 |
 | Custo stack completo/mês | R$1.881 | R$4.741 | R$9.091 |
-| **ROI** | **1,6x** | **3,2x** | **4,4x** |
+| **ROI sobre receita digital** | **1,6x** | **3,2x** | **4,4x** |
+| **Custo Hubtrix vs faturamento total do ISP** | ~0,5% | ~0,2% | ~0,1% |
 
 > O stack completo custa menos de 25% da receita digital gerada em todos os portes.
 
@@ -165,19 +168,19 @@ Escada de preço: **1:2:3** por módulo. Valores padronizados para todos os mód
 ## Jornada natural de expansão
 
 ```
-Comercial Starter        ← entrada para ISPs pequenos
+Comercial Starter        ← entrada para ISPs pequenos (até 10k)
       ↓
-Comercial Start          ← time crescendo, precisa de mais usuários
+Comercial Pro            ← time crescendo (10–30k), precisa de mais usuários + CRM Kanban
       ↓
-Comercial Pro            ← CRM Kanban + IA + relatórios completos
+Comercial Advanced       ← ISP grande (+30k), IA + relatórios completos + Assistente WhatsApp
       ↓
 + Marketing Starter      ← automação básica de leads
       ↓
-+ Marketing Start/Pro    ← campanhas, tráfego pago, IA
++ Marketing Pro/Advanced ← campanhas, tráfego pago, IA
       ↓
 + CS Starter             ← clube de benefícios ativo
       ↓
-+ CS Start/Pro           ← retenção avançada, churn prevention
++ CS Pro/Advanced        ← retenção avançada, churn prevention
       ↓
 Stack completo
 ```
