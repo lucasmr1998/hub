@@ -775,11 +775,150 @@ Testa cada uma, valida que esta funcionando. Configura webhooks do lado dos prov
 
 ## OPERACAO
 
-> Pendente. Estagios 7 (Uso diario), 8 (Monitoramento).
+### 7. Uso diario
+
+**O que acontece:** Dia a dia da equipe do ISP dentro do Hubtrix. Vendedor abre o painel pela manha, ve tarefas pendentes no CRM, pega conversas novas no Inbox (transferidas pelo bot ou redirecionadas da fila), faz follow-ups, move oportunidades no pipeline, fecha contratos. Time de CS atende tickets de suporte, monitora NPS, gerencia o Clube (roleta, pontos, cupons, indicacoes). Marketing configura automacoes e segmentos. Em paralelo, o bot esta rodando atendendo novos leads no WhatsApp (A2).
+
+**Entra:** tenant operacional pos-onboarding (estagio 6).
+**Sai:** operacao estavel; cicla em paralelo com Monitoramento (estagio 8) e eventualmente dispara Evolucao (estagio 9).
+
+**Papel do Hubtrix:**
+- CRM com pipeline kanban, oportunidades, tarefas, notas: [comercial/crm/](modulos/comercial/crm/)
+- Inbox three-panel multi-canal: [inbox/](modulos/inbox/)
+- Assistente CRM via WhatsApp pra operar pelo celular: [assistente-crm/](modulos/assistente-crm/)
+- Engine de atendimento rodando em background: [atendimento/](modulos/atendimento/)
+- Automacoes processando signals e cron: [marketing/automacoes/](modulos/marketing/automacoes/)
+- Clube operando (giros, resgates, indicacoes): [cs/clube/](modulos/cs/clube/)
+- Suporte recebendo tickets: [suporte/](modulos/suporte/)
+- Integracao com ERP sincronizando cliente ativo (apos implementacao do espelho em C)
+
+**Estado atual:**
+- ✅ Todos os modulos funcionais e em uso (comercial, inbox, atendimento, automacoes, cs, suporte)
+- ✅ Assistente CRM via WhatsApp com 15 tools
+- ✅ Auditoria completa (LogSistema) de quem fez o que
+- ✅ Permissoes granulares garantindo que cada funcao ve o que deve
+- ⚠️ Espelho do cliente ativo pos-venda ainda pendente (secao C)
+- ⚠️ Mobile experience limitada fora do Assistente (painel web nao foi otimizado pra mobile)
+- ❌ Dashboard "home do tenant" unificado (KPIs de todos os modulos numa tela) nao existe
+- ❌ "Modo foco" do vendedor (abrir e ja ter tudo pra trabalhar — proxima tarefa, proxima conversa, proxima oportunidade a avancar) nao existe — o vendedor precisa navegar modulo por modulo
+
+**Metrica:**
+- DAU / MAU por tenant
+- Tempo medio de sessao por tipo de usuario (vendedor / CS / admin)
+- Acoes por usuario por dia (conversas, oportunidades, tarefas concluidas)
+- Taxa de uso por modulo (% de tenants que usam Inbox / CRM / Clube / automacoes)
+- Numero de tenants com "atividade zero" em 7 dias (sinal de churn iminente)
+
+---
+
+### 8. Monitoramento e administracao
+
+**O que acontece:** Admin do ISP monitora a saude geral da operacao — funil de vendas, NPS, tickets abertos, SLA, uso do Clube, qualidade do atendimento pelo bot. Ajusta configuracoes (pipelines, estagios, SLAs, regras de automacao, equipes, permissoes). Audita acoes do time. Adiciona/remove colaboradores. Decide mudancas que eventualmente viram Evolucao (estagio 9).
+
+**Entra:** operacao diaria em curso (estagio 7).
+**Sai:** ajustes configurados voltam pra operacao OU dispara um pedido de expansao/mudanca → estagio 9.
+
+**Papel do Hubtrix:**
+- Dashboards por modulo: [comercial/crm/](modulos/comercial/crm/) (pipeline, desempenho, metas, retencao), [inbox/interface.md](modulos/inbox/interface.md), [suporte/](modulos/suporte/), [cs/clube/](modulos/cs/clube/)
+- Configuracoes por area (CRM, Inbox, cadastro, cs/clube, automacoes, integracoes)
+- Auditoria `LogSistema` por categoria: [core/03-PERMISSOES.md](core/03-PERMISSOES.md)
+- Gestao de usuarios, equipes e permissoes granulares
+- Relatorios exportaveis (CSV em varios modulos)
+
+**Estado atual:**
+- ✅ Dashboards por modulo (pipeline, desempenho, metas, retencao, inbox, suporte, clube)
+- ✅ LogSistema por categoria (auth, crm, inbox, suporte, cs, marketing, config, admin, integracao, sistema)
+- ✅ Gestao de usuarios + equipes + permissoes granulares
+- ✅ Exportacao CSV em varios modulos
+- ⚠️ Dashboard unificado do tenant (KPIs agregados de todos os modulos) nao existe
+- ⚠️ Alertas automaticos pro admin (SLA sistemico em breach, falha em integracao, lead parado ha > N dias) limitados ou inexistentes
+- ❌ Insights acionaveis ("30% dos seus leads ficaram sem resposta nos ultimos 7 dias — abra essa conversa") nao existem
+- ❌ Exportacao consolidada em PDF pra stakeholders (diretor, socio) nao existe
+- ❌ Benchmarking contra outros tenants (de forma anonima) nao existe
+- ❌ Health score do tenant ("voce esta usando 60% do potencial — eis onde ganhar os 40%") nao existe
+
+**Metrica:**
+- Frequencia com que admin acessa dashboards por semana
+- Numero de configuracoes ajustadas por mes (sinal de operacao ativa vs passiva)
+- Tempo medio entre alerta critico e acao tomada
+- % de admins que visualizam dashboard semanalmente (engajamento de nivel executivo)
+
+---
 
 ## EVOLUCAO
 
-> Pendente. Estagios 9 (Expansao), 10 (Renovacao ou churn).
+### 9. Expansao
+
+**O que acontece:** Apos alguns meses operando, o ISP quer crescer o uso do Hubtrix. Quatro vetores possiveis:
+
+- **Novos modulos:** comecou no starter com Inbox+CRM, agora quer CS (Clube), Marketing (automacoes) ou Suporte
+- **Mais seats:** time cresceu, precisa de mais usuarios
+- **Novos canais:** comecou so WhatsApp, agora quer widget no site, Instagram, Telegram
+- **Upgrade de plano:** sobe de Starter → Pro pra liberar features bloqueadas (automacoes, assistente IA, clube completo)
+
+**Entra:** operacao diaria estavel (estagios 7-8), ISP identifica oportunidade ou necessidade de crescer.
+**Sai:**
+- Novo modulo ou feature ativado → volta pra operacao (estagio 7)
+- Contrato ampliado → pode precisar de ativacao de integracao extra (estagio 5)
+
+**Papel do Hubtrix:**
+- Sistema de planos + `FeaturePlano` (gate por plano): [core/03-PERMISSOES.md](core/03-PERMISSOES.md)
+- Aurora Admin habilita/desabilita modulos por tenant: `/aurora-admin/tenants/<id>/`
+- Gateway de pagamento pra upgrade self-service (pendente — ver insight D)
+- CS do Hubtrix consultivo pra planejar expansao
+- Dados de uso apontando oportunidades ("voce atendeu 500 conversas mes passado — plano Pro libera automacao que economizaria N horas")
+
+**Estado atual:**
+- ✅ Sistema de planos + `FeaturePlano` funcional
+- ✅ Aurora Admin libera/bloqueia modulos por tenant
+- ⚠️ Ativacao de novo modulo e manual (operador Hubtrix libera — nao e self-service)
+- ❌ Self-service de upgrade de plano nao existe (precisa contactar o time)
+- ❌ Upsell proativo baseado em uso nao existe
+- ❌ Dashboard "o que voce esta deixando de usar no seu plano" (features disponiveis mas subutilizadas) nao existe
+- ❌ Billing / cobranca do novo modulo integrada (ver [gestao_assinatura_interna](../context/tarefas/backlog/gestao_assinatura_interna_17-04-2026.md))
+
+**Metrica:**
+- Taxa de expansao (% de tenants que expandem no primeiro ano)
+- Ticket medio por tenant (crescimento)
+- **Net Revenue Retention (NRR)** — receita que cresce no mesmo cliente; alvo > 110% pra SaaS saudavel
+- Tempo medio entre contratacao e primeira expansao
+
+---
+
+### 10. Renovacao ou churn
+
+**O que acontece:** Fim do ciclo contratual (anual ou mensal conforme plano). ISP decide renovar ou cancelar. Sinais de churn idealmente foram detectados cedo (baixa adocao, tickets nao resolvidos, NPS baixo) pra que CS do Hubtrix agisse antes. Se renova, ciclo reinicia com possivel expansao; se cancela, executa offboarding (export de dados, encerra tenant).
+
+**Entra:** aproximacao do fim do periodo contratual OU sinais precoces de churn.
+**Sai:**
+- **Renovacao:** ciclo reinicia (pode combinar com expansao)
+- **Churn:** offboarding, tenant encerrado, dados exportados
+
+**Papel do Hubtrix:**
+- Health score de tenants (para time Hubtrix identificar risco)
+- CS do Hubtrix monitora e age preventivamente
+- Processo de offboarding com export LGPD-compliant
+- NPS do proprio Hubtrix com tenants (feedback dos ISPs)
+- Regua automatizada de retencao pro tenant ativo quando sinal de churn
+
+**Estado atual:**
+- ⚠️ Monitoramento de health dos tenants e manual — nao existe dashboard automatico pro time Hubtrix
+- ❌ Health score automatizado dos tenants (combinando uso, NPS, tickets, adesao) nao existe
+- ❌ NPS dos tenants (pesquisa do Hubtrix com os ISPs) nao existe
+- ❌ Regua automatizada de reengajamento de tenant em risco nao existe
+- ❌ Offboarding formalizado: export de dados do tenant, encerramento tecnico, retencao legal de contratos, LGPD — nao formalizado
+- ❌ Benchmarking interno ("tenant X usa 40% do que tenants de mesmo porte usam") nao existe
+- ❌ Saida do usuario (admin Hubtrix cancelando um tenant) nao tem fluxo claro no sistema
+
+**Metrica:**
+- **Taxa de renovacao** (alvo: > 90% no B2B SaaS nicho)
+- **Churn rate mensal / anual**
+- **Net Revenue Retention** (já citado no 9)
+- Motivos de churn categorizados (preco / produto / operacional / concorrente / fim de negocio)
+- Tempo medio entre primeiro sinal de churn e acao do CS do Hubtrix
+- % de tenants cujo offboarding e concluido corretamente (dados exportados, docs mantidos)
+
+---
 
 ---
 
@@ -856,6 +995,18 @@ Novo model que surge dessa decisao: `Cliente` (distinto de `LeadProspecto`). Lea
 | Site comercial publico nao existe | Criar site Hubtrix com SEO e request-a-demo | [site_comercial_hubtrix_17-04-2026.md](../context/tarefas/backlog/site_comercial_hubtrix_17-04-2026.md) |
 | Hubtrix nao usa o proprio produto pra gerenciar seu funil B2B | Dogfooding do funil interno | [dogfooding_funil_interno_17-04-2026.md](../context/tarefas/backlog/dogfooding_funil_interno_17-04-2026.md) |
 | Gestao de assinatura (cobranca, upgrade, suspensao) fora do Hubtrix | Modulo proprio de assinatura | [gestao_assinatura_interna_17-04-2026.md](../context/tarefas/backlog/gestao_assinatura_interna_17-04-2026.md) |
+
+### De A1 — Operacao
+
+| Insight | Acao | Backlog |
+|---------|------|---------|
+| Todos os perfis veem todos os dashboards (UX ruim + problema de permissao). Admin precisa percorrer 5+ modulos pra avaliar saude do tenant. Sem insights proativos | Home personalizada por perfil + dashboard unificado do admin + insights acionaveis | [home_personalizada_por_perfil_17-04-2026.md](../context/tarefas/backlog/home_personalizada_por_perfil_17-04-2026.md) |
+
+### De A1 — Evolucao
+
+| Insight | Acao | Backlog |
+|---------|------|---------|
+| Time Hubtrix nao tem ferramentas pra operar a propria base de tenants com maturidade (health score / NPS / self-service de upgrade / offboarding LGPD) | Modulo de operacao interna do Hubtrix — 4 capacidades agrupadas | [operacao_interna_hubtrix_17-04-2026.md](../context/tarefas/backlog/operacao_interna_hubtrix_17-04-2026.md) |
 
 ### De A2
 
