@@ -1,84 +1,191 @@
-{# Subnav — segundo painel lateral com as subsecoes do modulo selecionado (estilo Intercom) #}
-{# Quando a pagina nao precisar, e so nao incluir. #}
+{% load permissoes_tags %}
+{% comment %}
+Subnav server-side — renderiza o submenu do modulo atual baseado em `modulo_atual`
+(do context processor empresa_context).
+
+Cada item ja vem filtrado por permissao. O item ativo e decidido pelo
+request.resolver_match.url_name.
+
+Uso em template que extende layout_app:
+  {% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+  {% block main_mod %} has-subnav{% endblock %}
+{% endcomment %}
 <aside class="app-subnav" aria-label="Submenu">
   <div class="app-subnav-inner">
 
-    <div class="app-subnav-header">
-      <h2 class="app-subnav-title">{{ subnav_title|default:"Seção" }}</h2>
-    </div>
+    {% if modulo_atual == 'comercial' %}
+      <div class="app-subnav-header">
+        <h2 class="app-subnav-title">Comercial</h2>
+      </div>
+      <nav class="app-subnav-list">
+        <a href="/crm/" class="app-subnav-item {% if request.resolver_match.url_name == 'crm_dashboard' %}is-active{% endif %}">
+          <i class="bi bi-graph-up-arrow"></i><span>Dashboard</span>
+        </a>
+      </nav>
+      <div class="app-subnav-section">CRM</div>
+      <nav class="app-subnav-list">
+        <a href="/crm/pipeline/" class="app-subnav-item {% if request.resolver_match.url_name == 'pipeline' %}is-active{% endif %}">
+          <i class="bi bi-kanban"></i><span>Pipeline</span>
+        </a>
+        <a href="/crm/vendas/" class="app-subnav-item {% if request.resolver_match.url_name == 'vendas' %}is-active{% endif %}">
+          <i class="bi bi-cart-check"></i><span>Vendas</span>
+        </a>
+        <a href="/crm/tarefas/" class="app-subnav-item {% if request.resolver_match.url_name == 'tarefas' %}is-active{% endif %}">
+          <i class="bi bi-check2-square"></i><span>Tarefas</span>
+        </a>
+      </nav>
+      {% if is_superuser or perm.acesso_configuracoes %}
+        <div class="app-subnav-section">Configuracoes CRM</div>
+        <nav class="app-subnav-list">
+          <a href="/crm/configuracoes/" class="app-subnav-item {% if request.resolver_match.url_name == 'configuracoes_crm' %}is-active{% endif %}">
+            <i class="bi bi-sliders"></i><span>Configuracoes</span>
+          </a>
+          <a href="/crm/produtos/" class="app-subnav-item {% if request.resolver_match.url_name == 'produtos' %}is-active{% endif %}">
+            <i class="bi bi-box-seam"></i><span>Produtos</span>
+          </a>
+          <a href="/crm/equipes/" class="app-subnav-item {% if request.resolver_match.url_name == 'equipes' %}is-active{% endif %}">
+            <i class="bi bi-people"></i><span>Equipes</span>
+          </a>
+          <a href="/crm/metas/" class="app-subnav-item {% if request.resolver_match.url_name == 'metas' %}is-active{% endif %}">
+            <i class="bi bi-bullseye"></i><span>Metas</span>
+          </a>
+        </nav>
+      {% endif %}
 
-    <nav class="app-subnav-list">
-      {% block subnav_items %}
-        {# Exemplo — cada pagina sobrescreve este bloco #}
-        <a href="#" class="app-subnav-item is-active">
-          <i class="bi bi-dot"></i>
-          <span>Item 1</span>
+    {% elif modulo_atual == 'marketing' %}
+      <div class="app-subnav-header">
+        <h2 class="app-subnav-title">Marketing</h2>
+      </div>
+      <div class="app-subnav-section">Aquisicao</div>
+      <nav class="app-subnav-list">
+        <a href="/leads/" class="app-subnav-item {% if request.resolver_match.url_name == 'leads' %}is-active{% endif %}">
+          <i class="bi bi-person-plus"></i><span>Leads</span>
         </a>
-        <a href="#" class="app-subnav-item">
-          <i class="bi bi-dot"></i>
-          <span>Item 2</span>
+      </nav>
+      <div class="app-subnav-section">Campanhas</div>
+      <nav class="app-subnav-list">
+        <a href="/marketing/campanhas/" class="app-subnav-item {% if request.resolver_match.url_name == 'campanhas' %}is-active{% endif %}">
+          <i class="bi bi-megaphone"></i><span>Campanhas</span>
         </a>
-        <a href="#" class="app-subnav-item">
-          <i class="bi bi-dot"></i>
-          <span>Item 3</span>
+        <a href="/marketing/segmentos/" class="app-subnav-item {% if 'segmento' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-funnel"></i><span>Segmentos</span>
         </a>
-      {% endblock %}
-    </nav>
+        <a href="/marketing/emails/" class="app-subnav-item {% if 'email' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-envelope"></i><span>E-mails</span>
+        </a>
+      </nav>
+      <div class="app-subnav-section">Automacao</div>
+      <nav class="app-subnav-list">
+        <a href="/marketing/automacoes/" class="app-subnav-item {% if 'automacao' in request.resolver_match.url_name or 'automacoes' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-robot"></i><span>Automacoes</span>
+        </a>
+      </nav>
+
+    {% elif modulo_atual == 'atendimento' %}
+      <div class="app-subnav-header">
+        <h2 class="app-subnav-title">Atendimento</h2>
+      </div>
+      <nav class="app-subnav-list">
+        <a href="/inbox/" class="app-subnav-item {% if request.resolver_match.url_name == 'inbox' %}is-active{% endif %}">
+          <i class="bi bi-chat-dots"></i><span>Inbox</span>
+        </a>
+        <a href="/suporte/" class="app-subnav-item {% if 'suporte' in request.resolver_match.url_name or 'ticket' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-ticket-detailed"></i><span>Tickets</span>
+        </a>
+      </nav>
+      <div class="app-subnav-section">Automacao</div>
+      <nav class="app-subnav-list">
+        <a href="/configuracoes/fluxos/" class="app-subnav-item {% if 'fluxo' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-diagram-3"></i><span>Fluxos</span>
+        </a>
+        <a href="/suporte/conhecimento/" class="app-subnav-item {% if 'conhecimento' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-journal-text"></i><span>Conhecimento</span>
+        </a>
+      </nav>
+
+    {% elif modulo_atual == 'cs' %}
+      <div class="app-subnav-header">
+        <h2 class="app-subnav-title">Customer Success</h2>
+      </div>
+      <nav class="app-subnav-list">
+        <a href="/cs/clube/" class="app-subnav-item {% if 'clube' in request.resolver_match.url_name and 'dashboard' in request.resolver_match.url_name or request.resolver_match.url_name == 'clube_home' %}is-active{% endif %}">
+          <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+        </a>
+        <a href="/cs/clube/clientes/" class="app-subnav-item {% if 'cliente' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-people"></i><span>Clientes</span>
+        </a>
+      </nav>
+      <div class="app-subnav-section">Fidelizacao</div>
+      <nav class="app-subnav-list">
+        <a href="/cs/indicacoes/" class="app-subnav-item {% if 'indica' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-share"></i><span>Indicacoes</span>
+        </a>
+        <a href="/cs/parceiros/" class="app-subnav-item {% if 'parceiro' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-shop"></i><span>Parceiros</span>
+        </a>
+        <a href="/cs/clube/cupons/" class="app-subnav-item {% if 'cupom' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-ticket-perforated"></i><span>Cupons</span>
+        </a>
+      </nav>
+      <div class="app-subnav-section">Configuracoes</div>
+      <nav class="app-subnav-list">
+        <a href="/cs/carteirinha/" class="app-subnav-item {% if 'carteirinha' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-person-vcard"></i><span>Carteirinhas</span>
+        </a>
+      </nav>
+
+    {% elif modulo_atual == 'relatorios' %}
+      <div class="app-subnav-header">
+        <h2 class="app-subnav-title">Relatorios</h2>
+      </div>
+      <div class="app-subnav-section">Funil comercial</div>
+      <nav class="app-subnav-list">
+        <a href="/relatorios/leads/" class="app-subnav-item {% if request.resolver_match.url_name == 'relatorio_leads' %}is-active{% endif %}">
+          <i class="bi bi-person-plus"></i><span>Leads</span>
+        </a>
+        <a href="/relatorios/clientes/" class="app-subnav-item {% if request.resolver_match.url_name == 'relatorio_clientes' %}is-active{% endif %}">
+          <i class="bi bi-people"></i><span>Clientes</span>
+        </a>
+        <a href="/relatorios/conversoes/" class="app-subnav-item {% if request.resolver_match.url_name == 'relatorio_conversoes' %}is-active{% endif %}">
+          <i class="bi bi-arrow-repeat"></i><span>Conversoes</span>
+        </a>
+      </nav>
+      <div class="app-subnav-section">Atendimento</div>
+      <nav class="app-subnav-list">
+        <a href="/relatorios/atendimentos/" class="app-subnav-item {% if request.resolver_match.url_name == 'relatorio_atendimentos' %}is-active{% endif %}">
+          <i class="bi bi-headset"></i><span>Atendimentos</span>
+        </a>
+      </nav>
+
+    {% elif modulo_atual == 'configuracoes' %}
+      <div class="app-subnav-header">
+        <h2 class="app-subnav-title">Configuracoes</h2>
+      </div>
+      <div class="app-subnav-section">Geral</div>
+      <nav class="app-subnav-list">
+        <a href="/configuracoes/" class="app-subnav-item {% if request.resolver_match.url_name == 'configuracoes' %}is-active{% endif %}">
+          <i class="bi bi-sliders"></i><span>Painel</span>
+        </a>
+        <a href="/configuracoes/usuarios/" class="app-subnav-item {% if 'usuarios' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-people"></i><span>Usuarios</span>
+        </a>
+      </nav>
+      <div class="app-subnav-section">Sistema</div>
+      <nav class="app-subnav-list">
+        <a href="/integracoes/" class="app-subnav-item {% if 'integracao' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-plug"></i><span>Integracoes</span>
+        </a>
+        <a href="/configuracoes/notificacoes/" class="app-subnav-item {% if 'notifica' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-bell"></i><span>Notificacoes</span>
+        </a>
+      </nav>
+
+    {% else %}
+      {# Dashboard ou modulo desconhecido — subnav vazio (layout so mostra sidebar + content) #}
+      <div class="app-subnav-header">
+        <h2 class="app-subnav-title">{{ modulo_atual|default:"Dashboard"|capfirst }}</h2>
+      </div>
+    {% endif %}
 
   </div>
 </aside>
-
-<style>
-  .app-subnav {
-    position: fixed;
-    top: var(--topbar-h);
-    left: var(--sidebar-w);
-    bottom: 0;
-    width: var(--subnav-w);
-    background: var(--subnav-bg);
-    border-right: 1px solid var(--subnav-border);
-    z-index: 80;
-    overflow-y: auto;
-  }
-  .app-subnav-inner { padding: var(--sp-4) 0; }
-
-  .app-subnav-header {
-    padding: 0 var(--sp-4) var(--sp-3);
-    border-bottom: 1px solid var(--subnav-border);
-    margin-bottom: var(--sp-3);
-  }
-  .app-subnav-title {
-    margin: 0;
-    font-size: var(--fs-md);
-    font-weight: var(--fw-semibold);
-    color: var(--color-text);
-  }
-
-  .app-subnav-list {
-    display: flex;
-    flex-direction: column;
-    padding: 0 var(--sp-2);
-  }
-  .app-subnav-item {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-    padding: var(--sp-2) var(--sp-3);
-    border-radius: var(--radius);
-    color: var(--subnav-text);
-    font-size: var(--fs-sm);
-    font-weight: var(--fw-medium);
-    text-decoration: none;
-    transition: background var(--transition), color var(--transition);
-  }
-  .app-subnav-item:hover {
-    background: var(--color-surface);
-    color: var(--subnav-text-active);
-  }
-  .app-subnav-item.is-active {
-    background: var(--subnav-item-active-bg);
-    color: var(--color-primary-text);
-  }
-  .app-subnav-item i { color: var(--color-text-muted); font-size: 0.6rem; }
-  .app-subnav-item.is-active i { color: var(--color-primary); }
-</style>

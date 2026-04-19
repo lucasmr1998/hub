@@ -83,4 +83,39 @@ def empresa_context(request):
         ctx['user_funcs'] = set()
         ctx['agente_status'] = None
 
+    ctx['modulo_atual'] = _detectar_modulo_atual(request)
+
     return ctx
+
+
+def _detectar_modulo_atual(request):
+    """
+    Deduz o modulo ativo pela URL pra que a sidebar (layout_app) marque o item correto.
+    Retorna uma das chaves: dashboard | comercial | marketing | atendimento | cs |
+    relatorios | configuracoes | admin | None.
+    """
+    path = getattr(request, 'path', '') or ''
+    url_name = ''
+    app_name = ''
+    try:
+        if request.resolver_match:
+            url_name = request.resolver_match.url_name or ''
+            app_name = request.resolver_match.app_name or ''
+    except Exception:
+        pass
+
+    if path.startswith('/aurora-admin/'):
+        return 'admin'
+    if path.startswith('/cs/'):
+        return 'cs'
+    if path.startswith('/crm/') or 'crm' in app_name:
+        return 'comercial'
+    if path.startswith('/inbox/') or path.startswith('/suporte/') or 'atendimento' in app_name:
+        return 'atendimento'
+    if path.startswith('/marketing/') or url_name in ('leads', 'campanhas_trafego', 'configuracoes_cadastro'):
+        return 'marketing'
+    if url_name.startswith('relatorio'):
+        return 'relatorios'
+    if '/configuracoes' in path:
+        return 'configuracoes'
+    return 'dashboard'

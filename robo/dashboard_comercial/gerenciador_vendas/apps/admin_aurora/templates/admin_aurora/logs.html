@@ -42,8 +42,6 @@
        class="tabs-item{% if not nivel %} is-active{% endif %}" style="text-decoration:none;">
       <span>Todos</span>
     </a>
-    {% for n in "DEBUG,INFO,WARNING,ERROR,CRITICAL"|split:"," %}{% endfor %}
-    {% for n_item in nivel_list|default:"DEBUG,INFO,WARNING,ERROR,CRITICAL" %}{% endfor %}
     <a href="{% url 'admin_aurora:logs' %}?nivel=DEBUG{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
        class="tabs-item{% if nivel == 'DEBUG' %} is-active{% endif %}" style="text-decoration:none;">
       <span>DEBUG</span>{% if level_counts.DEBUG %}<span class="tabs-item-badge">{{ level_counts.DEBUG }}</span>{% endif %}

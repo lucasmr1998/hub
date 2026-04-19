@@ -1,33 +1,59 @@
-{# Sidebar — ícones dos módulos do Hubtrix. #}
-{# Clique troca o subnav via JS (data-module). #}
+{% comment %}
+Sidebar principal do sistema (estreita, so icones).
+Decide item ativo via `modulo_atual` (context processor empresa_context).
+Filtra itens por permissao e modulo contratado.
+
+Visibilidade:
+- Dashboard / Configuracoes: sempre visiveis pra autenticados (o proprio modulo filtra submenus)
+- Comercial: exige `modulo_comercial` AND (is_superuser OR perm.acesso_comercial)
+- Marketing: exige `modulo_marketing` AND (is_superuser OR perm.acesso_marketing)
+- Atendimento: exige (is_superuser OR perm.acesso_inbox)
+- CS: exige `modulo_cs` AND (is_superuser OR perm.acesso_cs)
+- Relatorios: sempre visivel (cada relatorio filtra internamente)
+{% endcomment %}
 <nav class="app-sidebar" aria-label="Menu principal">
   <div class="app-sidebar-inner">
 
     <div class="app-sidebar-group">
-      <a href="#" class="app-sidebar-item" data-module="dashboard" title="Dashboard">
+      <a href="/" class="app-sidebar-item {% if modulo_atual == 'dashboard' %}is-active{% endif %}" data-module="dashboard" title="Dashboard">
         <i class="bi bi-grid-1x2-fill"></i>
       </a>
-      <a href="#" class="app-sidebar-item is-active" data-module="comercial" title="Comercial">
-        <i class="bi bi-briefcase"></i>
-      </a>
-      <a href="#" class="app-sidebar-item" data-module="marketing" title="Marketing">
-        <i class="bi bi-megaphone"></i>
-      </a>
-      <a href="#" class="app-sidebar-item" data-module="atendimento" title="Atendimento">
-        <i class="bi bi-chat-dots"></i>
-      </a>
-      <a href="#" class="app-sidebar-item" data-module="cs" title="Customer Success">
-        <i class="bi bi-gift"></i>
-      </a>
-      <a href="#" class="app-sidebar-item" data-module="relatorios" title="Relatórios">
+
+      {% if modulo_comercial and is_superuser or modulo_comercial and perm.acesso_comercial %}
+        <a href="/crm/" class="app-sidebar-item {% if modulo_atual == 'comercial' %}is-active{% endif %}" data-module="comercial" title="Comercial">
+          <i class="bi bi-briefcase"></i>
+        </a>
+      {% endif %}
+
+      {% if modulo_marketing and is_superuser or modulo_marketing and perm.acesso_marketing %}
+        <a href="/marketing/campanhas/" class="app-sidebar-item {% if modulo_atual == 'marketing' %}is-active{% endif %}" data-module="marketing" title="Marketing">
+          <i class="bi bi-megaphone"></i>
+        </a>
+      {% endif %}
+
+      {% if is_superuser or perm.acesso_inbox %}
+        <a href="/inbox/" class="app-sidebar-item {% if modulo_atual == 'atendimento' %}is-active{% endif %}" data-module="atendimento" title="Atendimento">
+          <i class="bi bi-chat-dots"></i>
+        </a>
+      {% endif %}
+
+      {% if modulo_cs and is_superuser or modulo_cs and perm.acesso_cs %}
+        <a href="/cs/clube/" class="app-sidebar-item {% if modulo_atual == 'cs' %}is-active{% endif %}" data-module="cs" title="Customer Success">
+          <i class="bi bi-gift"></i>
+        </a>
+      {% endif %}
+
+      <a href="/relatorios/" class="app-sidebar-item {% if modulo_atual == 'relatorios' %}is-active{% endif %}" data-module="relatorios" title="Relatorios">
         <i class="bi bi-bar-chart"></i>
       </a>
     </div>
 
     <div class="app-sidebar-group app-sidebar-group-bottom">
-      <a href="#" class="app-sidebar-item" data-module="configuracoes" title="Configurações">
-        <i class="bi bi-gear"></i>
-      </a>
+      {% if is_superuser or perm.acesso_configuracoes %}
+        <a href="/configuracoes/" class="app-sidebar-item {% if modulo_atual == 'configuracoes' %}is-active{% endif %}" data-module="configuracoes" title="Configuracoes">
+          <i class="bi bi-gear"></i>
+        </a>
+      {% endif %}
     </div>
 
   </div>

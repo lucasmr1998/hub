@@ -1,4 +1,5 @@
 {% extends "layouts/base.html" %}
+{% load permissoes_tags %}
 {% comment %}
 Layout App — base de qualquer pagina logada do Hubtrix.
 
@@ -44,6 +45,17 @@ Com subnav:
 
   {# Container global de toasts — chamar toast(titulo, msg, variant) no JS #}
   <div class="toast-container" id="toast-container"></div>
+
+  {# Mensagens Django (messages framework) — serao convertidas em toast via JS #}
+  {% if messages %}
+    <script>
+      window.HUB_MESSAGES = [
+        {% for m in messages %}
+          { tags: "{{ m.tags|escapejs }}", message: "{{ m.message|escapejs }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+      ];
+    </script>
+  {% endif %}
 
   {# Estilos base de layout — subnav, main, flyout #}
   <style>
@@ -499,6 +511,56 @@ Com subnav:
     });
 
     // ============================================
+    // POLLING DE NOTIFICACOES — atualiza badge do sino a cada 15s
+    // ============================================
+    (function() {
+      const badge = document.getElementById('notificationBadge');
+      if (!badge) return;
+      let lastCount = parseInt(localStorage.getItem('_notif_last_count') || '0', 10);
+
+      function atualizarBadge(count) {
+        if (count > 0) {
+          badge.hidden = false;
+        } else {
+          badge.hidden = true;
+        }
+      }
+
+      function pollNotificacoes() {
+        fetch('/api/notificacoes/nao-lidas/', { credentials: 'same-origin' })
+          .then(r => r.ok ? r.json() : null)
+          .then(d => {
+            if (!d || !d.success) return;
+            atualizarBadge(d.nao_lidas);
+            if (d.nao_lidas > lastCount && lastCount > 0) {
+              toast('Nova notificacao', 'Voce tem ' + d.nao_lidas + ' nao lidas', 'info');
+            }
+            lastCount = d.nao_lidas;
+            localStorage.setItem('_notif_last_count', String(d.nao_lidas));
+          })
+          .catch(() => { /* silencia erro de rede */ });
+      }
+
+      atualizarBadge(lastCount);
+      pollNotificacoes();
+      setInterval(pollNotificacoes, 15000);
+    })();
+
+    // ============================================
+    // MESSAGES FRAMEWORK — converte {% messages %} em toast automaticamente
+    // ============================================
+    (function() {
+      const data = window.HUB_MESSAGES || [];
+      data.forEach(m => {
+        let variant = 'info';
+        if (m.tags.indexOf('success') !== -1) variant = 'success';
+        else if (m.tags.indexOf('error') !== -1) variant = 'danger';
+        else if (m.tags.indexOf('warning') !== -1) variant = 'warning';
+        toast(null, m.message, variant);
+      });
+    })();
+
+    // ============================================
     // TABS — troca paineis via data-tab
     // ============================================
     document.querySelectorAll('.tabs').forEach(group => {
@@ -519,6 +581,12 @@ Com subnav:
       });
     });
   </script>
+
+  {# Hubtrix Chat Widget (atendimento interno) — so carrega se o tenant tem token #}
+  {% if widget_token %}
+    {% load static %}
+    <script src="{% static 'inbox/widget/aurora-chat.js' %}" data-token="{{ widget_token }}"></script>
+  {% endif %}
 
   {% block extra_js %}{% endblock %}
 {% endblock %}

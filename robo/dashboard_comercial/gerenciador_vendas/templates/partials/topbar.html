@@ -1,3 +1,4 @@
+{% load permissoes_tags %}
 {# Topbar — estilo HubSpot #}
 <header class="app-topbar">
   <div class="app-topbar-inner">
@@ -34,7 +35,7 @@
                 onclick="this.parentElement.classList.toggle('is-open')">
           <span class="app-topbar-avatar app-topbar-avatar-bell">
             <i class="bi bi-bell"></i>
-            <span class="app-topbar-bell-dot"></span>
+            <span class="app-topbar-bell-dot" id="notificationBadge" hidden></span>
           </span>
           <span class="app-topbar-avatar-name">{{ request.user.first_name|default:request.user.username|default:"Usuario" }}</span>
         </button>
@@ -44,14 +45,19 @@
             <div class="app-topbar-avatar-header-name">{{ request.user.get_full_name|default:request.user.username|default:"Usuario" }}</div>
             <div class="app-topbar-avatar-header-email">{{ request.user.email|default:"" }}</div>
           </div>
-          <a href="#" class="app-topbar-avatar-menu-item">
-            <i class="bi bi-gear"></i>
-            <span>Configuracoes</span>
-          </a>
-          <a href="#" class="app-topbar-avatar-menu-item app-topbar-avatar-menu-item-danger">
-            <i class="bi bi-box-arrow-right"></i>
-            <span>Sair da conta</span>
-          </a>
+          {% if is_superuser or perm.acesso_configuracoes %}
+            <a href="/configuracoes/" class="app-topbar-avatar-menu-item">
+              <i class="bi bi-gear"></i>
+              <span>Configuracoes</span>
+            </a>
+          {% endif %}
+          <form method="post" action="{% url 'sistema:logout' %}" style="margin:0;">
+            {% csrf_token %}
+            <button type="submit" class="app-topbar-avatar-menu-item app-topbar-avatar-menu-item-danger" style="width:100%; background:transparent; border:none; text-align:left; cursor:pointer; font-family:inherit;">
+              <i class="bi bi-box-arrow-right"></i>
+              <span>Sair da conta</span>
+            </button>
+          </form>
         </div>
       </div>
     </div>
