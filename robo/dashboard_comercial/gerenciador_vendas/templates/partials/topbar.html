@@ -32,11 +32,11 @@
       <div class="app-topbar-avatar-wrap">
         <button class="app-topbar-avatar-trigger" type="button" title="Minha conta"
                 onclick="this.parentElement.classList.toggle('is-open')">
-          <span class="app-topbar-avatar">
-            <span class="app-topbar-avatar-initial">{{ request.user.first_name|first|default:"U"|upper }}{{ request.user.last_name|first|default:""|upper }}</span>
+          <span class="app-topbar-avatar app-topbar-avatar-bell">
+            <i class="bi bi-bell"></i>
+            <span class="app-topbar-bell-dot"></span>
           </span>
           <span class="app-topbar-avatar-name">{{ request.user.first_name|default:request.user.username|default:"Usuario" }}</span>
-          <i class="bi bi-chevron-down app-topbar-avatar-chevron"></i>
         </button>
 
         <div class="app-topbar-avatar-menu">
@@ -54,11 +54,6 @@
           </a>
         </div>
       </div>
-
-      <button class="app-topbar-action app-topbar-action-bell" type="button" title="Notificacoes" aria-label="Notificacoes">
-        <i class="bi bi-bell"></i>
-        <span class="app-topbar-bell-dot"></span>
-      </button>
     </div>
 
   </div>
@@ -193,15 +188,15 @@
     display: inline-flex;
     align-items: center;
     gap: var(--sp-2);
-    background: transparent;
+    background: var(--color-surface-2);
     border: none;
-    padding: 4px 10px 4px 4px;
+    padding: 4px 12px 4px 4px;
     border-radius: var(--radius-full);
     cursor: pointer;
     transition: background var(--transition);
   }
   .app-topbar-avatar-trigger:hover {
-    background: var(--color-surface-2);
+    background: var(--color-border);
   }
   .app-topbar-avatar {
     width: 30px; height: 30px;
@@ -212,6 +207,12 @@
     font-size: 0.72rem;
     display: inline-flex; align-items: center; justify-content: center;
     flex-shrink: 0;
+  }
+  .app-topbar-avatar-bell {
+    position: relative;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    font-size: 0.95rem;
   }
   .app-topbar-avatar-name {
     font-size: var(--fs-sm);

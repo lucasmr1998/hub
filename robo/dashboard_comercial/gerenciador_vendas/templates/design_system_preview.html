@@ -6,6 +6,14 @@
   {% include "partials/topbar.html" %}
   {% include "partials/sidebar.html" %}
 
+  {# Flyout — aparece no hover dos icones da sidebar quando colapsada (estilo HubSpot) #}
+  <div id="sidebar-flyout" class="app-sidebar-flyout" aria-hidden="true">
+    <div class="app-sidebar-flyout-header">
+      <h3 class="app-sidebar-flyout-title" id="flyout-title"></h3>
+    </div>
+    <div class="app-sidebar-flyout-body" id="flyout-body"></div>
+  </div>
+
   {# Subnav — conteudo trocado via JS conforme o modulo selecionado na sidebar #}
   <aside class="app-subnav" aria-label="Submenu">
     <div class="app-subnav-inner">
@@ -157,6 +165,49 @@
     body.sidebar-collapsed .app-main {
       margin-left: var(--sidebar-w);
     }
+
+    /* Flyout — hover na sidebar colapsada abre painel com submenu (estilo HubSpot) */
+    .app-sidebar-flyout {
+      position: fixed;
+      left: var(--sidebar-w);
+      top: var(--topbar-h);
+      width: var(--subnav-w);
+      max-height: calc(100vh - var(--topbar-h) - 16px);
+      overflow-y: auto;
+      background: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-left: none;
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      box-shadow: var(--shadow-lg);
+      padding: var(--sp-3) 0;
+      z-index: 95;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-4px);
+      transition: opacity var(--transition), transform var(--transition);
+    }
+    .app-sidebar-flyout.is-open {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(0);
+    }
+    .app-sidebar-flyout-header {
+      padding: 0 var(--sp-4) var(--sp-3);
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: var(--sp-2);
+    }
+    .app-sidebar-flyout-title {
+      margin: 0;
+      font-size: var(--fs-md);
+      font-weight: var(--fw-semibold);
+      color: var(--color-text);
+    }
+    .app-sidebar-flyout-body { padding: 0 var(--sp-2); }
+    .app-sidebar-flyout-body .app-subnav-section { padding: var(--sp-2) var(--sp-3) var(--sp-1); }
+    .app-sidebar-flyout-body .app-subnav-list { padding: 0; margin-bottom: var(--sp-2); }
+
+    /* Flyout so aparece quando colapsado */
+    body:not(.sidebar-collapsed) .app-sidebar-flyout { display: none; }
   </style>
 
   <script>
@@ -297,8 +348,49 @@
       }).join('');
     }
 
+    function renderFlyout(moduleKey, anchorTop) {
+      const mod = MODULOS[moduleKey];
+      if (!mod) return;
+      const flyout = document.getElementById('sidebar-flyout');
+      document.getElementById('flyout-title').textContent = mod.title;
+      const body = document.getElementById('flyout-body');
+      body.innerHTML = mod.groups.map(g => {
+        const section = g.section ? `<div class="app-subnav-section">${g.section}</div>` : '';
+        const items = g.items.map(it => `
+          <a href="#" class="app-subnav-item${it.active ? ' is-active' : ''}">
+            <i class="bi ${it.icon}"></i>
+            <span>${it.label}</span>
+          </a>
+        `).join('');
+        return `${section}<nav class="app-subnav-list">${items}</nav>`;
+      }).join('');
+
+      // Posicionamento vertical: comeca no icone, mas desloca pra cima se estourar a viewport
+      const topbarH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 56;
+      const margin = 8;
+      flyout.style.top = Math.max(topbarH, anchorTop) + 'px';
+      flyout.classList.add('is-open');
+
+      // Apos render, mede altura real e ajusta se nao couber
+      requestAnimationFrame(() => {
+        const rect = flyout.getBoundingClientRect();
+        const overflow = rect.bottom - (window.innerHeight - margin);
+        if (overflow > 0) {
+          const newTop = Math.max(topbarH, anchorTop - overflow);
+          flyout.style.top = newTop + 'px';
+        }
+      });
+    }
+
+    function hideFlyout() {
+      document.getElementById('sidebar-flyout').classList.remove('is-open');
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       renderSubnav('comercial');
+
+      const flyout = document.getElementById('sidebar-flyout');
+      let closeTimer = null;
 
       document.querySelectorAll('.app-sidebar-item[data-module]').forEach(item => {
         item.addEventListener('click', (e) => {
@@ -311,7 +403,25 @@
 
           renderSubnav(modKey);
           document.body.classList.remove('sidebar-collapsed');
+          hideFlyout();
         });
+
+        item.addEventListener('mouseenter', () => {
+          if (!document.body.classList.contains('sidebar-collapsed')) return;
+          clearTimeout(closeTimer);
+          const rect = item.getBoundingClientRect();
+          renderFlyout(item.dataset.module, rect.top);
+        });
+
+        item.addEventListener('mouseleave', () => {
+          if (!document.body.classList.contains('sidebar-collapsed')) return;
+          closeTimer = setTimeout(hideFlyout, 150);
+        });
+      });
+
+      flyout.addEventListener('mouseenter', () => clearTimeout(closeTimer));
+      flyout.addEventListener('mouseleave', () => {
+        closeTimer = setTimeout(hideFlyout, 150);
       });
     });
   </script>
