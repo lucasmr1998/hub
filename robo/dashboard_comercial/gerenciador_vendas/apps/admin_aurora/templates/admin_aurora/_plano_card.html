@@ -1,0 +1,33 @@
+{% comment %}
+Card de plano — usado em planos.html.
+Espera receber `plano` com: nome, tier, destaque, preco_mensal, preco_transacional,
+unidade_transacional, features (queryset), ativo, pk.
+{% endcomment %}
+<div class="plano-card{% if not plano.ativo %} plano-card-inactive{% endif %}">
+  <div class="plano-card-head">
+    <span class="plano-card-nome">
+      {{ plano.nome }}
+      {% if plano.destaque %}<span class="plano-card-destaque"><i class="bi bi-star-fill"></i></span>{% endif %}
+    </span>
+    {% if plano.tier == 'starter' %}
+      {% include "components/badge.html" with variant="neutral" style="outline" label="Starter" %}
+    {% elif plano.tier == 'pro' %}
+      {% include "components/badge.html" with variant="primary" label="Pro" %}
+    {% elif plano.tier == 'advanced' %}
+      {% include "components/badge.html" with variant="primary" style="solid" label="Advanced" %}
+    {% elif plano.tier == 'start' %}
+      {% include "components/badge.html" with variant="info" label="Start" %}
+    {% endif %}
+  </div>
+  <div>
+    <div class="plano-card-preco">R$ {{ plano.preco_mensal }} <span>/mes</span></div>
+    <div class="plano-card-sub">R$ {{ plano.preco_transacional }} {{ plano.unidade_transacional }}</div>
+  </div>
+  <div class="plano-card-features"><i class="bi bi-list-check"></i> {{ plano.features.count }} features</div>
+  {% if not plano.ativo %}
+    <div>{% include "components/badge.html" with variant="danger" label="Inativo" %}</div>
+  {% endif %}
+  <a href="{% url 'admin_aurora:plano_detalhe' plano.pk %}" class="btn btn-secondary btn-sm" style="width:100%; justify-content:center;">
+    <i class="bi bi-gear"></i> Gerenciar
+  </a>
+</div>

@@ -3,185 +3,141 @@
 {% block title %}Monitoramento{% endblock %}
 {% block topbar_title %}Monitoramento{% endblock %}
 
+{% block topbar_actions %}
+  <span style="font-size: var(--fs-xs); color: var(--color-text-muted);">Atualizado {% now "d/m/Y H:i:s" %}</span>
+{% endblock %}
+
 {% block content %}
-<div class="section-header">
-    <div class="section-title">Monitoramento do Sistema</div>
-    <span style="font-size:11px;color:var(--text-light);">Atualizado em {% now "d/m/Y H:i:s" %}</span>
-</div>
+  <div class="admin-section-label">Status do sistema</div>
+  <div class="admin-stats-grid">
+    <div class="stat-card">
+      <div class="stat-card-head">
+        <span class="stat-card-label">Database</span>
+        <span class="stat-card-icon stat-card-icon-{% if db_status == 'online' %}success{% else %}danger{% endif %}"><i class="bi bi-database"></i></span>
+      </div>
+      <div>
+        {% if db_status == 'online' %}
+          {% include "components/badge.html" with variant="success" label="ONLINE" dot=True %}
+        {% else %}
+          {% include "components/badge.html" with variant="danger" label="OFFLINE" dot=True %}
+        {% endif %}
+      </div>
+    </div>
+    {% if erros_24h > 0 %}
+      {% include "components/stat_card.html" with label="Erros (24h)" value=erros_24h icon="bi-exclamation-triangle" icon_variant="danger" %}
+    {% else %}
+      {% include "components/stat_card.html" with label="Erros (24h)" value=erros_24h icon="bi-shield-check" icon_variant="success" %}
+    {% endif %}
+    {% if warnings_24h > 0 %}
+      {% include "components/stat_card.html" with label="Warnings (24h)" value=warnings_24h icon="bi-exclamation-circle" icon_variant="warning" %}
+    {% else %}
+      {% include "components/stat_card.html" with label="Warnings (24h)" value=warnings_24h icon="bi-check2-circle" icon_variant="success" %}
+    {% endif %}
+    <div class="stat-card">
+      <div class="stat-card-head">
+        <span class="stat-card-label">Tenants ativos</span>
+        <span class="stat-card-icon stat-card-icon-primary"><i class="bi bi-building"></i></span>
+      </div>
+      <div class="stat-card-value">{{ tenants_ativos }} <span style="font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--color-text-muted);">/ {{ tenants_trial }} trial</span></div>
+    </div>
+  </div>
 
-<!-- ── Status do Sistema ── -->
-<div style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">
-    Status do Sistema
-</div>
-<div class="stats-grid">
+  <div class="admin-section-label" style="margin-top: var(--sp-6);">Metricas operacionais</div>
+  <div class="admin-stats-grid">
+    {% include "components/stat_card.html" with label="Leads hoje" value=leads_hoje icon="bi-person-plus" icon_variant="info" %}
+    {% include "components/stat_card.html" with label="Leads semana" value=leads_semana icon="bi-people" icon_variant="info" %}
+    {% include "components/stat_card.html" with label="Atendimentos hoje" value=atendimentos_hoje icon="bi-headset" icon_variant="warning" %}
     <div class="stat-card">
-        <div class="stat-icon" style="background:{% if db_status == 'online' %}#dcfce7;color:#166534{% else %}#fee2e2;color:#991b1b{% endif %};">
-            <i class="fas fa-database"></i>
-        </div>
-        <div>
-            <div class="stat-num">
-                <span class="badge {% if db_status == 'online' %}badge-green{% else %}badge-red{% endif %}">{{ db_status|upper }}</span>
-            </div>
-            <div class="stat-label">Database</div>
-        </div>
+      <div class="stat-card-head">
+        <span class="stat-card-label">Integracoes 24h (ok / erro)</span>
+        <span class="stat-card-icon stat-card-icon-{% if erros_integracao_24h > 0 %}danger{% else %}success{% endif %}"><i class="bi bi-plug"></i></span>
+      </div>
+      <div class="stat-card-value">
+        <span style="color: var(--color-success);">{{ sucesso_integracao_24h }}</span>
+        <span style="font-size: var(--fs-sm); color: var(--color-text-muted);">/</span>
+        <span style="color: var(--color-{% if erros_integracao_24h > 0 %}danger{% else %}success{% endif %});">{{ erros_integracao_24h }}</span>
+      </div>
     </div>
-    <div class="stat-card">
-        <div class="stat-icon" style="background:{% if erros_24h > 0 %}#fee2e2;color:#991b1b{% else %}#dcfce7;color:#166534{% endif %};">
-            <i class="fas fa-exclamation-triangle"></i>
-        </div>
-        <div>
-            <div class="stat-num" style="{% if erros_24h > 0 %}color:#dc2626{% endif %}">{{ erros_24h }}</div>
-            <div class="stat-label">Erros (24h)</div>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon" style="background:{% if warnings_24h > 0 %}#fef3c7;color:#92400e{% else %}#dcfce7;color:#166534{% endif %};">
-            <i class="fas fa-exclamation-circle"></i>
-        </div>
-        <div>
-            <div class="stat-num" style="{% if warnings_24h > 0 %}color:#d97706{% endif %}">{{ warnings_24h }}</div>
-            <div class="stat-label">Warnings (24h)</div>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon" style="background:#ede9fe;color:#5b21b6;">
-            <i class="fas fa-building"></i>
-        </div>
-        <div>
-            <div class="stat-num">{{ tenants_ativos }} <span style="font-size:.75rem;font-weight:500;color:#64748b;">/ {{ tenants_trial }} trial</span></div>
-            <div class="stat-label">Tenants Ativos</div>
-        </div>
-    </div>
-</div>
+  </div>
 
-<!-- ── Métricas Operacionais ── -->
-<div style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">
-    Métricas Operacionais
-</div>
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-icon" style="background:#dbeafe;color:#1e40af;">
-            <i class="fas fa-user-plus"></i>
-        </div>
-        <div>
-            <div class="stat-num">{{ leads_hoje }}</div>
-            <div class="stat-label">Leads Hoje</div>
-        </div>
+  {# Integracoes HubSoft #}
+  <div class="card" style="margin-top: var(--sp-6);">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-plug"></i> Integracoes HubSoft (ultimas 20)</h3>
     </div>
-    <div class="stat-card">
-        <div class="stat-icon" style="background:#dbeafe;color:#1e40af;">
-            <i class="fas fa-users"></i>
-        </div>
-        <div>
-            <div class="stat-num">{{ leads_semana }}</div>
-            <div class="stat-label">Leads Esta Semana</div>
-        </div>
+    <div class="table-wrap" style="border:none; border-radius:0;">
+      <table class="table">
+        <thead>
+          <tr><th>Data</th><th>Status</th><th>Metodo</th><th>Endpoint</th><th>HTTP</th><th>Tempo</th></tr>
+        </thead>
+        <tbody>
+          {% for log in logs_integracao %}
+            <tr>
+              <td>{{ log.data_criacao|date:"d/m/Y H:i:s" }}</td>
+              <td>
+                {% if log.sucesso %}
+                  {% include "components/badge.html" with variant="success" label="OK" %}
+                {% else %}
+                  {% include "components/badge.html" with variant="danger" label="ERRO" %}
+                {% endif %}
+              </td>
+              <td>{% include "components/badge.html" with variant="neutral" label=log.metodo %}</td>
+              <td style="max-width: 320px; word-break: break-all; font-size: var(--fs-xs);">{{ log.endpoint }}</td>
+              <td>{{ log.status_code|default:"—" }}</td>
+              <td>{{ log.tempo_resposta_ms|default:"—" }} ms</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6"><div class="table-empty"><i class="bi bi-inbox"></i>Nenhum log de integracao.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-    <div class="stat-card">
-        <div class="stat-icon" style="background:#fef3c7;color:#92400e;">
-            <i class="fas fa-headset"></i>
-        </div>
-        <div>
-            <div class="stat-num">{{ atendimentos_hoje }}</div>
-            <div class="stat-label">Atendimentos Hoje</div>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon" style="background:{% if erros_integracao_24h > 0 %}#fee2e2;color:#991b1b{% else %}#dcfce7;color:#166534{% endif %};">
-            <i class="fas fa-plug"></i>
-        </div>
-        <div>
-            <div class="stat-num">
-                <span style="color:#166534">{{ sucesso_integracao_24h }}</span>
-                <span style="font-size:.75rem;color:#94a3b8;">/</span>
-                <span style="{% if erros_integracao_24h > 0 %}color:#dc2626{% else %}color:#166534{% endif %}">{{ erros_integracao_24h }}</span>
-            </div>
-            <div class="stat-label">Integrações 24h (ok / erro)</div>
-        </div>
-    </div>
-</div>
+  </div>
 
-<!-- ── Integrações HubSoft ── -->
-<div class="card">
-    <div class="card-title"><i class="fas fa-plug" style="color:#818cf8;margin-right:6px;"></i> Integrações HubSoft (últimas 20)</div>
-    <div class="admin-table-wrap">
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>Data</th>
-                    <th>Status</th>
-                    <th>Método</th>
-                    <th>Endpoint</th>
-                    <th>HTTP</th>
-                    <th>Tempo</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for log in logs_integracao %}
-                <tr>
-                    <td class="text-sm">{{ log.data_criacao|date:"d/m/Y H:i:s" }}</td>
-                    <td>
-                        {% if log.sucesso %}
-                            <span class="badge badge-green">OK</span>
-                        {% else %}
-                            <span class="badge badge-red">ERRO</span>
-                        {% endif %}
-                    </td>
-                    <td><span class="badge badge-gray">{{ log.metodo }}</span></td>
-                    <td class="text-sm" style="max-width:300px;word-break:break-all;">{{ log.endpoint }}</td>
-                    <td class="text-sm">{{ log.status_code|default:"--" }}</td>
-                    <td class="text-sm">{{ log.tempo_resposta_ms|default:"--" }} ms</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">
-                        Nenhum log de integração encontrado.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+  {# Ultimos erros #}
+  <div class="card" style="margin-top: var(--sp-6);">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-exclamation-triangle" style="color: var(--color-danger);"></i> Ultimos erros (ERROR / CRITICAL)</h3>
     </div>
-</div>
+    <div class="table-wrap" style="border:none; border-radius:0;">
+      <table class="table">
+        <thead>
+          <tr><th>Data</th><th>Nivel</th><th>Modulo</th><th>Tenant</th><th>Mensagem</th></tr>
+        </thead>
+        <tbody>
+          {% for log in ultimos_erros %}
+            <tr>
+              <td>{{ log.data_criacao|date:"d/m/Y H:i:s" }}</td>
+              <td>
+                {% include "components/badge.html" with variant="danger" style="solid" label=log.nivel %}
+              </td>
+              <td>{{ log.modulo|default:"—" }}</td>
+              <td>{{ log.tenant|default:"—" }}</td>
+              <td style="max-width: 400px; word-break: break-word; font-size: var(--fs-xs);">{{ log.mensagem }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5"><div class="table-empty"><i class="bi bi-shield-check"></i>Nenhum erro. Sistema saudavel.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}
 
-<!-- ── Últimos Erros ── -->
-<div class="card">
-    <div class="card-title"><i class="fas fa-exclamation-triangle" style="color:#dc2626;margin-right:6px;"></i> Últimos Erros (ERROR / CRITICAL)</div>
-    <div class="admin-table-wrap">
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>Data</th>
-                    <th>Nível</th>
-                    <th>Módulo</th>
-                    <th>Tenant</th>
-                    <th>Mensagem</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for log in ultimos_erros %}
-                <tr>
-                    <td class="text-sm">{{ log.data_criacao|date:"d/m/Y H:i:s" }}</td>
-                    <td>
-                        {% if log.nivel == 'CRITICAL' %}
-                            <span class="badge badge-red">CRITICAL</span>
-                        {% else %}
-                            <span class="badge badge-red">ERROR</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-sm">{{ log.modulo|default:"-" }}</td>
-                    <td class="text-sm">{{ log.tenant|default:"-" }}</td>
-                    <td style="max-width:400px;word-break:break-word;font-size:.8rem;">{{ log.mensagem }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5" style="text-align:center;padding:32px;color:#94a3b8;">
-                        Nenhum erro nas últimas entradas. Sistema saudável.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+{% block extra_css %}
+<style>
+  .admin-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--sp-4);
+  }
+  .admin-section-label {
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: var(--sp-3);
+  }
+</style>
 {% endblock %}

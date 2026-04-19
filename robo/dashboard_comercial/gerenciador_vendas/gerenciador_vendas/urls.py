@@ -42,6 +42,15 @@ class DesignSystemComponentsView(TemplateView):
             {'label': 'Tenants', 'href': '/aurora-admin/tenants/'},
             {'label': 'Megalink'},
         ]
+        ctx['accordion_items'] = [
+            {'id': 'sec-1', 'title': 'O que esta no escopo', 'icon': 'bi-check-circle',
+             'body': '<p style="margin:0;">Conteudo expansivel. Clica pra abrir, clica de novo pra fechar.</p>',
+             'open': True},
+            {'id': 'sec-2', 'title': 'Requisitos tecnicos', 'icon': 'bi-gear',
+             'body': '<p style="margin:0;">Django 5.2, PostgreSQL, Redis. <strong>Obrigatorio.</strong></p>'},
+            {'id': 'sec-3', 'title': 'Perguntas frequentes', 'icon': 'bi-question-circle',
+             'body': '<p style="margin:0;">Body pode conter HTML arbitrario — listas, tabelas, botoes, etc.</p>'},
+        ]
         return ctx
 
 urlpatterns = [

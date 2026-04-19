@@ -1,239 +1,356 @@
-{% extends 'admin_aurora/base_admin.html' %}
+{% extends "admin_aurora/base_admin.html" %}
 
-{% block title %}Documentação{% endblock %}
+{% block title %}Documentacao{% endblock %}
+{% block topbar_title %}Documentacao{% endblock %}
 
 {% block content %}
-<div class="admin-header">
-    <h1><i class="fas fa-book" style="color:#818cf8;"></i> Documentação</h1>
-</div>
-
-<div class="docs-layout">
-    <!-- Sidebar de navegação -->
-    <div class="docs-sidebar">
-        <div class="docs-search">
-            <i class="fas fa-search"></i>
-            <input type="text" id="docs-search" placeholder="Buscar documento..." oninput="filterDocs(this.value)">
-        </div>
-
-        <div class="docs-tree" id="docs-tree">
-            {% for item in tree %}
-                {% if item.type == 'dir' %}
-                <div class="dt-folder" data-name="{{ item.name|lower }}">
-                    <div class="dt-folder-header" onclick="this.parentElement.classList.toggle('open')">
-                        <i class="fas fa-chevron-right dt-arrow"></i>
-                        <i class="fas fa-folder dt-folder-icon"></i>
-                        <span>{{ item.name }}</span>
-                        <span class="dt-count">{{ item.count }}</span>
-                    </div>
-                    <div class="dt-folder-body">
-                        {% for child in item.children %}
-                            {% if child.type == 'dir' %}
-                            <div class="dt-folder dt-nested" data-name="{{ child.name|lower }}">
-                                <div class="dt-folder-header" onclick="this.parentElement.classList.toggle('open')">
-                                    <i class="fas fa-chevron-right dt-arrow"></i>
-                                    <i class="fas fa-folder dt-folder-icon"></i>
-                                    <span>{{ child.name }}</span>
-                                    <span class="dt-count">{{ child.count }}</span>
-                                </div>
-                                <div class="dt-folder-body">
-                                    {% for f in child.children %}
-                                        {% if f.type == 'file' %}
-                                        <a href="?file={{ f.path }}" class="dt-file {% if current_file == f.path %}active{% endif %}" data-name="{{ f.name|lower }}">
-                                            <i class="fas fa-file-alt"></i> {{ f.name }}
-                                        </a>
-                                        {% endif %}
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            {% elif child.type == 'file' %}
-                            <a href="?file={{ child.path }}" class="dt-file {% if current_file == child.path %}active{% endif %}" data-name="{{ child.name|lower }}">
-                                <i class="fas fa-file-alt"></i> {{ child.name }}
+  <div class="docs-layout">
+    {# Sidebar de navegacao #}
+    <aside class="docs-sidebar">
+      <div class="docs-search">
+        <i class="bi bi-search"></i>
+        <input type="text" id="docs-search" placeholder="Buscar documento..." oninput="filterDocs(this.value)">
+      </div>
+      <div class="docs-tree" id="docs-tree">
+        {% for item in tree %}
+          {% if item.type == 'dir' %}
+            <div class="dt-folder" data-name="{{ item.name|lower }}">
+              <div class="dt-folder-header" onclick="this.parentElement.classList.toggle('open')">
+                <i class="bi bi-chevron-right dt-arrow"></i>
+                <i class="bi bi-folder dt-folder-icon"></i>
+                <span>{{ item.name }}</span>
+                <span class="dt-count">{{ item.count }}</span>
+              </div>
+              <div class="dt-folder-body">
+                {% for child in item.children %}
+                  {% if child.type == 'dir' %}
+                    <div class="dt-folder dt-nested" data-name="{{ child.name|lower }}">
+                      <div class="dt-folder-header" onclick="this.parentElement.classList.toggle('open')">
+                        <i class="bi bi-chevron-right dt-arrow"></i>
+                        <i class="bi bi-folder dt-folder-icon"></i>
+                        <span>{{ child.name }}</span>
+                        <span class="dt-count">{{ child.count }}</span>
+                      </div>
+                      <div class="dt-folder-body">
+                        {% for f in child.children %}
+                          {% if f.type == 'file' %}
+                            <a href="?file={{ f.path }}" class="dt-file {% if current_file == f.path %}active{% endif %}" data-name="{{ f.name|lower }}">
+                              <i class="bi bi-file-earmark-text"></i> {{ f.name }}
                             </a>
-                            {% endif %}
+                          {% endif %}
                         {% endfor %}
+                      </div>
                     </div>
-                </div>
-                {% elif item.type == 'file' %}
-                <a href="?file={{ item.path }}" class="dt-file dt-root {% if current_file == item.path %}active{% endif %}" data-name="{{ item.name|lower }}">
-                    <i class="fas fa-file-alt"></i> {{ item.name }}
-                </a>
-                {% endif %}
-            {% endfor %}
-        </div>
-    </div>
+                  {% elif child.type == 'file' %}
+                    <a href="?file={{ child.path }}" class="dt-file {% if current_file == child.path %}active{% endif %}" data-name="{{ child.name|lower }}">
+                      <i class="bi bi-file-earmark-text"></i> {{ child.name }}
+                    </a>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </div>
+          {% elif item.type == 'file' %}
+            <a href="?file={{ item.path }}" class="dt-file dt-root {% if current_file == item.path %}active{% endif %}" data-name="{{ item.name|lower }}">
+              <i class="bi bi-file-earmark-text"></i> {{ item.name }}
+            </a>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </aside>
 
-    <!-- Conteúdo -->
-    <div class="docs-content">
-        {% if html_content %}
+    {# Conteudo #}
+    <main class="docs-content">
+      {% if html_content %}
         <div class="card">
-            <div class="docs-breadcrumb">
-                <a href="{% url 'admin_aurora:docs' %}"><i class="fas fa-book"></i> Docs</a>
-                <span>/</span>
-                <span>{{ current_file }}</span>
-            </div>
-            <div class="md-content">
-                {{ html_content|safe }}
-            </div>
+          <div class="card-body">
+            <nav class="breadcrumbs" style="margin-bottom: var(--sp-4); padding-bottom: var(--sp-3); border-bottom: 1px solid var(--color-border);">
+              <ol>
+                <li class="breadcrumbs-item"><a href="{% url 'admin_aurora:docs' %}"><i class="bi bi-book"></i> Docs</a><i class="bi bi-chevron-right breadcrumbs-separator"></i></li>
+                <li class="breadcrumbs-item"><span class="breadcrumbs-current">{{ current_file }}</span></li>
+              </ol>
+            </nav>
+            <div class="md-content">{{ html_content|safe }}</div>
+          </div>
         </div>
-        {% else %}
-        <div class="card" style="text-align:center; padding:60px 24px;">
-            <i class="fas fa-book-open" style="font-size:3rem; color:#cbd5e1; margin-bottom:16px;"></i>
-            <h3 style="font-size:1rem; color:#64748b; margin-bottom:8px;">Selecione um documento</h3>
-            <p style="font-size:.82rem; color:#94a3b8;">Navegue pela árvore de documentos na lateral esquerda.</p>
+      {% else %}
+        <div class="card">
+          <div class="card-body" style="text-align: center; padding: var(--sp-12) var(--sp-6);">
+            <i class="bi bi-book" style="font-size: 3rem; color: var(--color-text-muted); margin-bottom: var(--sp-3); display: block;"></i>
+            <h3 style="font-size: var(--fs-md); color: var(--color-text-secondary); margin: 0 0 var(--sp-2);">Selecione um documento</h3>
+            <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0;">Navegue pela arvore de documentos na lateral.</p>
+          </div>
         </div>
-        {% endif %}
-    </div>
-</div>
+      {% endif %}
+    </main>
+  </div>
+{% endblock %}
 
+{% block extra_css %}
 <style>
-.docs-layout { display: grid; grid-template-columns: 280px 1fr; gap: 20px; min-height: calc(100vh - 140px); }
+  .docs-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: var(--sp-5);
+    min-height: calc(100vh - 140px);
+  }
 
-/* Sidebar */
-.docs-sidebar { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; position: sticky; top: 72px; max-height: calc(100vh - 100px); display: flex; flex-direction: column; }
-.docs-search { padding: 12px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px; }
-.docs-search i { color: #94a3b8; font-size: .8rem; }
-.docs-search input { border: none; outline: none; font-size: .8rem; font-family: 'Inter', sans-serif; flex: 1; color: #334155; }
-.docs-tree { overflow-y: auto; padding: 8px; flex: 1; }
+  .docs-sidebar {
+    background: var(--color-bg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+    position: sticky;
+    top: calc(var(--topbar-h) + var(--sp-4));
+    max-height: calc(100vh - var(--topbar-h) - var(--sp-6));
+    display: flex;
+    flex-direction: column;
+  }
+  .docs-search {
+    padding: var(--sp-3);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+  }
+  .docs-search i { color: var(--color-text-muted); font-size: 0.8rem; }
+  .docs-search input {
+    border: none;
+    outline: none;
+    font-size: var(--fs-sm);
+    font-family: var(--font-sans);
+    flex: 1;
+    color: var(--color-text);
+    background: transparent;
+  }
+  .docs-tree { overflow-y: auto; padding: var(--sp-2); flex: 1; }
 
-/* Tree items */
-.dt-folder { margin-bottom: 2px; }
-.dt-folder-header { display: flex; align-items: center; gap: 6px; padding: 6px 10px; cursor: pointer; font-size: .78rem; font-weight: 600; color: #334155; border-radius: 6px; user-select: none; }
-.dt-folder-header:hover { background: #f8fafc; }
-.dt-arrow { font-size: .55rem; color: #94a3b8; transition: transform .2s; width: 10px; }
-.dt-folder.open > .dt-folder-header .dt-arrow { transform: rotate(90deg); }
-.dt-folder-icon { color: #f59e0b; font-size: .75rem; }
-.dt-count { font-size: .62rem; color: #94a3b8; margin-left: auto; }
-.dt-folder-body { display: none; padding-left: 12px; }
-.dt-folder.open > .dt-folder-body { display: block; }
-.dt-file { display: flex; align-items: center; gap: 6px; padding: 5px 10px; font-size: .75rem; color: #64748b; text-decoration: none; border-radius: 6px; margin: 1px 0; }
-.dt-file:hover { background: #f8fafc; color: #334155; }
-.dt-file.active { background: #ede9fe; color: #6366f1; font-weight: 600; }
-.dt-file i { font-size: .65rem; flex-shrink: 0; }
+  .dt-folder { margin-bottom: 2px; }
+  .dt-folder-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text-secondary);
+    border-radius: var(--radius-sm);
+    user-select: none;
+  }
+  .dt-folder-header:hover { background: var(--color-surface); }
+  .dt-arrow { font-size: 0.55rem; color: var(--color-text-muted); transition: transform 0.2s; width: 10px; }
+  .dt-folder.open > .dt-folder-header .dt-arrow { transform: rotate(90deg); }
+  .dt-folder-icon { color: #f59e0b; font-size: 0.75rem; }
+  .dt-count {
+    font-size: 0.62rem;
+    color: var(--color-text-muted);
+    margin-left: auto;
+  }
+  .dt-folder-body { display: none; padding-left: 12px; }
+  .dt-folder.open > .dt-folder-body { display: block; }
+  .dt-file {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    margin: 1px 0;
+  }
+  .dt-file:hover { background: var(--color-surface); color: var(--color-text); }
+  .dt-file.active {
+    background: var(--color-primary-soft);
+    color: var(--color-primary-text);
+    font-weight: var(--fw-semibold);
+  }
+  .dt-file i { font-size: 0.65rem; flex-shrink: 0; }
 
-/* Breadcrumb */
-.docs-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: .75rem; color: #94a3b8; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; }
-.docs-breadcrumb a { color: #818cf8; text-decoration: none; }
-.docs-breadcrumb a:hover { text-decoration: underline; }
+  /* Markdown content */
+  .md-content { font-size: var(--fs-sm); line-height: 1.7; color: var(--color-text-secondary); }
+  .md-content h1 {
+    font-size: var(--fs-xl);
+    font-weight: var(--fw-extrabold);
+    color: var(--color-text);
+    border-bottom: 2px solid var(--color-primary);
+    padding-bottom: var(--sp-2);
+    margin: var(--sp-6) 0 var(--sp-4);
+  }
+  .md-content h1:first-child { margin-top: 0; }
+  .md-content h2 {
+    font-size: var(--fs-lg);
+    font-weight: var(--fw-bold);
+    color: var(--color-text);
+    margin: var(--sp-6) 0 var(--sp-3);
+    padding-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .md-content h3 {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-bold);
+    color: var(--color-text);
+    margin: var(--sp-5) 0 var(--sp-2);
+  }
+  .md-content p { margin-bottom: var(--sp-3); }
+  .md-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: var(--sp-3) 0 var(--sp-5);
+    font-size: var(--fs-xs);
+  }
+  .md-content th {
+    background: var(--color-surface);
+    padding: var(--sp-2) var(--sp-3);
+    text-align: left;
+    font-weight: var(--fw-bold);
+    font-size: var(--fs-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+  }
+  .md-content td { padding: var(--sp-2) var(--sp-3); border: 1px solid var(--color-border); }
+  .md-content tr:hover td { background: var(--color-surface); }
+  .md-content hr { border: none; border-top: 1px solid var(--color-border); margin: var(--sp-5) 0; }
+  .md-content ul, .md-content ol { margin-bottom: var(--sp-3); padding-left: var(--sp-5); }
+  .md-content li { margin-bottom: 4px; }
+  .md-content strong { color: var(--color-text); }
+  .md-content code {
+    background: var(--color-surface-2);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-xs);
+    color: var(--color-primary-text);
+  }
+  .md-content pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: var(--sp-4);
+    border-radius: var(--radius);
+    overflow-x: auto;
+    margin: var(--sp-3) 0;
+  }
+  .md-content pre code { background: none; color: inherit; padding: 0; }
 
-/* Markdown content */
-.md-content { font-size: .85rem; line-height: 1.7; color: #334155; }
-.md-content h1 { font-size: 1.3rem; font-weight: 800; color: #0f172a; border-bottom: 2px solid #818cf8; padding-bottom: 8px; margin: 24px 0 16px; }
-.md-content h1:first-child { margin-top: 0; }
-.md-content h2 { font-size: 1.05rem; font-weight: 700; color: #1e293b; margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; }
-.md-content h3 { font-size: .92rem; font-weight: 700; color: #334155; margin: 20px 0 8px; }
-.md-content p { margin-bottom: 10px; }
-.md-content table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: .8rem; }
-.md-content th { background: #f8fafc; padding: 8px 12px; text-align: left; font-weight: 700; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: #64748b; border: 1px solid #e2e8f0; }
-.md-content td { padding: 8px 12px; border: 1px solid #e2e8f0; }
-.md-content tr:hover td { background: #f8fafc; }
-.md-content hr { border: none; border-top: 1px solid #e2e8f0; margin: 20px 0; }
-.md-content ul, .md-content ol { margin-bottom: 12px; padding-left: 20px; }
-.md-content li { margin-bottom: 4px; }
-.md-content strong { color: #0f172a; }
-.md-content code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: .8rem; color: #6366f1; }
-.md-content pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; overflow-x: auto; margin: 12px 0; }
-.md-content pre code { background: none; color: inherit; padding: 0; }
+  /* Accordions (H2 e H3 colapsaveis) */
+  .acc-section {
+    margin-bottom: 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--color-bg);
+  }
+  .acc-section.level-h3 { border-color: var(--color-primary-soft); margin-bottom: 6px; }
+  .acc-header {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    cursor: pointer;
+    background: var(--color-surface);
+    user-select: none;
+    transition: background 0.1s;
+    font-weight: var(--fw-bold);
+  }
+  .acc-section.level-h3 .acc-header { padding: 9px 14px; background: #fafbff; font-size: var(--fs-sm); }
+  .acc-header:hover { background: var(--color-surface-2); }
+  .acc-section.open > .acc-header { background: var(--color-bg); border-bottom: 1px solid var(--color-border); }
+  .acc-section.level-h3.open > .acc-header { background: var(--color-bg); }
+  .acc-header-title { flex: 1; color: var(--color-text); font-size: var(--fs-md); }
+  .acc-section.level-h3 .acc-header-title { font-size: var(--fs-sm); }
+  .acc-header-arrow {
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+    transition: transform 0.2s;
+  }
+  .acc-section.open > .acc-header .acc-header-arrow { transform: rotate(90deg); }
+  .acc-body { display: none; padding: var(--sp-4); }
+  .acc-section.level-h3 .acc-body { padding: 10px 14px; }
+  .acc-section.open > .acc-body { display: block; }
+  .acc-body > :first-child { margin-top: 0; }
+  .acc-body > :last-child { margin-bottom: 0; }
+  .md-content .acc-section h2, .md-content .acc-section h3 { border: none; padding: 0; margin: 0; }
 
-/* Accordions (H2 e H3 colapsaveis) */
-.acc-section { margin-bottom: 10px; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: #fff; }
-.acc-section.level-h3 { border-color: #eef2ff; margin-bottom: 6px; }
-.acc-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; background: #f8fafc; user-select: none; transition: background .1s; font-weight: 700; }
-.acc-section.level-h3 .acc-header { padding: 9px 14px; background: #fafbff; font-size: .88rem; }
-.acc-header:hover { background: #f1f5f9; }
-.acc-section.open > .acc-header { background: #fff; border-bottom: 1px solid #f1f5f9; }
-.acc-section.level-h3.open > .acc-header { background: #fff; }
-.acc-header-title { flex: 1; color: #1e293b; font-size: .95rem; }
-.acc-section.level-h3 .acc-header-title { font-size: .88rem; color: #334155; }
-.acc-header-arrow { font-size: .65rem; color: #94a3b8; transition: transform .2s; }
-.acc-section.open > .acc-header .acc-header-arrow { transform: rotate(90deg); }
-.acc-body { display: none; padding: 14px 18px; }
-.acc-section.level-h3 .acc-body { padding: 10px 14px; background: #fff; }
-.acc-section.open > .acc-body { display: block; }
-.acc-body > :first-child { margin-top: 0; }
-.acc-body > :last-child { margin-bottom: 0; }
-/* Headings dentro do accordion nao precisam de borda extra */
-.md-content .acc-section h2, .md-content .acc-section h3 { border: none; padding: 0; margin: 0; }
-
-/* Journey flow horizontal (visao A2) — fases em colunas, cards empilhados */
-.jrn-flow { display: flex; gap: 8px; align-items: stretch; padding: 16px 4px; margin: 16px 0 24px; }
-.jrn-group { flex: 1 1 0; border-radius: 12px; padding: 12px 10px 10px; color: #fff; min-width: 0; display: flex; flex-direction: column; }
-.jrn-aquisicao    { background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%); }
-.jrn-conversao    { background: linear-gradient(135deg, #059669 0%, #34d399 100%); }
-.jrn-fidelizacao  { background: linear-gradient(135deg, #7c3aed 0%, #c084fc 100%); }
-.jrn-expansao     { background: linear-gradient(135deg, #ea580c 0%, #fb923c 100%); }
-.jrn-group-name { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; padding: 0 4px; opacity: .92; }
-.jrn-cards { display: flex; flex-direction: column; gap: 6px; flex: 1; }
-.jrn-card { background: rgba(255,255,255,.14); backdrop-filter: blur(8px); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.2); display: flex; flex-direction: column; gap: 4px; }
-.jrn-head { display: flex; align-items: center; gap: 6px; }
-.jrn-n { width: 20px; height: 20px; background: rgba(255,255,255,.28); border-radius: 50%; text-align: center; line-height: 20px; font-size: .68rem; font-weight: 800; flex-shrink: 0; }
-.jrn-t { font-size: .78rem; font-weight: 700; line-height: 1.15; }
-.jrn-m { font-size: .62rem; opacity: .92; line-height: 1.35; word-break: break-word; }
-.jrn-arrow { display: flex; align-items: center; color: #cbd5e1; font-size: 1.1rem; padding: 0 2px; flex-shrink: 0; }
-@media (max-width: 900px) {
-  .jrn-flow { flex-direction: column; gap: 14px; }
-  .jrn-arrow { justify-content: center; padding: 2px 0; transform: rotate(90deg); }
-}
+  /* Journey flow horizontal (visao A2) */
+  .jrn-flow { display: flex; gap: 8px; align-items: stretch; padding: var(--sp-4) 4px; margin: var(--sp-4) 0 var(--sp-6); }
+  .jrn-group { flex: 1 1 0; border-radius: var(--radius-lg); padding: 12px 10px 10px; color: #fff; min-width: 0; display: flex; flex-direction: column; }
+  .jrn-aquisicao   { background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%); }
+  .jrn-conversao   { background: linear-gradient(135deg, #059669 0%, #34d399 100%); }
+  .jrn-fidelizacao { background: linear-gradient(135deg, #7c3aed 0%, #c084fc 100%); }
+  .jrn-expansao    { background: linear-gradient(135deg, #ea580c 0%, #fb923c 100%); }
+  .jrn-group-name { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; padding: 0 4px; opacity: 0.92; }
+  .jrn-cards { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .jrn-card { background: rgba(255,255,255,0.14); backdrop-filter: blur(8px); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); display: flex; flex-direction: column; gap: 4px; }
+  .jrn-head { display: flex; align-items: center; gap: 6px; }
+  .jrn-n { width: 20px; height: 20px; background: rgba(255,255,255,0.28); border-radius: 50%; text-align: center; line-height: 20px; font-size: 0.68rem; font-weight: 800; flex-shrink: 0; }
+  .jrn-t { font-size: 0.78rem; font-weight: 700; line-height: 1.15; }
+  .jrn-m { font-size: 0.62rem; opacity: 0.92; line-height: 1.35; word-break: break-word; }
+  .jrn-arrow { display: flex; align-items: center; color: #cbd5e1; font-size: 1.1rem; padding: 0 2px; flex-shrink: 0; }
+  @media (max-width: 900px) {
+    .docs-layout { grid-template-columns: 1fr; }
+    .docs-sidebar { position: static; max-height: 320px; }
+    .jrn-flow { flex-direction: column; gap: 14px; }
+    .jrn-arrow { justify-content: center; padding: 2px 0; transform: rotate(90deg); }
+  }
 </style>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-function filterDocs(q) {
+  function filterDocs(q) {
     q = q.toLowerCase();
     document.querySelectorAll('.dt-file').forEach(el => {
-        const match = el.dataset.name.includes(q);
-        el.style.display = match ? '' : 'none';
+      const match = el.dataset.name.includes(q);
+      el.style.display = match ? '' : 'none';
     });
     document.querySelectorAll('.dt-folder').forEach(el => {
-        const hasVisible = el.querySelector('.dt-file:not([style*="display: none"])');
-        el.style.display = hasVisible ? '' : 'none';
-        if (q && hasVisible) el.classList.add('open');
+      const hasVisible = el.querySelector('.dt-file:not([style*="display: none"])');
+      el.style.display = hasVisible ? '' : 'none';
+      if (q && hasVisible) el.classList.add('open');
     });
-}
+  }
 
-// Auto-open folder containing active file
-document.querySelectorAll('.dt-file.active').forEach(el => {
+  // Auto-open folder contendo o arquivo ativo
+  document.querySelectorAll('.dt-file.active').forEach(el => {
     let parent = el.parentElement;
     while (parent) {
-        if (parent.classList && parent.classList.contains('dt-folder')) {
-            parent.classList.add('open');
-        }
-        parent = parent.parentElement;
+      if (parent.classList && parent.classList.contains('dt-folder')) parent.classList.add('open');
+      parent = parent.parentElement;
     }
-});
+  });
 
-// Converte H2/H3 em accordions. H2 e pai, H3 vira accordion aninhado.
-(function(){
+  // Converte H2/H3 em accordions
+  (function(){
     const content = document.querySelector('.md-content');
     if (!content) return;
     buildAccordions(content, 'H2', 'level-h2', true);
     function buildAccordions(container, tag, className, firstOpen) {
-        const kids = Array.from(container.children);
-        const headings = kids.filter(el => el.tagName === tag);
-        if (headings.length < 1) return;
-        // nada antes do primeiro heading? ok. so comecamos a partir dele.
-        headings.forEach((h, idx) => {
-            const section = document.createElement('div');
-            section.className = 'acc-section ' + className;
-            if (firstOpen && idx === 0) section.classList.add('open');
-            const header = document.createElement('div');
-            header.className = 'acc-header';
-            header.innerHTML = '<span class="acc-header-title">' + h.innerHTML + '</span><i class="fas fa-chevron-right acc-header-arrow"></i>';
-            header.onclick = () => section.classList.toggle('open');
-            const body = document.createElement('div');
-            body.className = 'acc-body';
-            // Mover elementos ate o proximo heading do mesmo tag
-            let next = h.nextElementSibling;
-            while (next && next.tagName !== tag) {
-                const following = next.nextElementSibling;
-                body.appendChild(next);
-                next = following;
-            }
-            section.appendChild(header);
-            section.appendChild(body);
-            h.replaceWith(section);
-            // Nested: converte H3 dentro desse body
-            if (tag === 'H2') buildAccordions(body, 'H3', 'level-h3', false);
-        });
+      const kids = Array.from(container.children);
+      const headings = kids.filter(el => el.tagName === tag);
+      if (headings.length < 1) return;
+      headings.forEach((h, idx) => {
+        const section = document.createElement('div');
+        section.className = 'acc-section ' + className;
+        if (firstOpen && idx === 0) section.classList.add('open');
+        const header = document.createElement('div');
+        header.className = 'acc-header';
+        header.innerHTML = '<span class="acc-header-title">' + h.innerHTML + '</span><i class="bi bi-chevron-right acc-header-arrow"></i>';
+        header.onclick = () => section.classList.toggle('open');
+        const body = document.createElement('div');
+        body.className = 'acc-body';
+        let next = h.nextElementSibling;
+        while (next && next.tagName !== tag) {
+          const following = next.nextElementSibling;
+          body.appendChild(next);
+          next = following;
+        }
+        section.appendChild(header);
+        section.appendChild(body);
+        h.replaceWith(section);
+        if (tag === 'H2') buildAccordions(body, 'H3', 'level-h3', false);
+      });
     }
-})();
+  })();
 </script>
 {% endblock %}

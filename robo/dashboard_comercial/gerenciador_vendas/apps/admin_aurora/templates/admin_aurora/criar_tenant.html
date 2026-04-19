@@ -1,87 +1,114 @@
 {% extends "admin_aurora/base_admin.html" %}
 
-{% block title %}Novo Provedor{% endblock %}
+{% block title %}Novo tenant{% endblock %}
+{% block topbar_title %}Novo tenant{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'admin_aurora:dashboard' %}" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+{% endblock %}
 
 {% block content %}
-<div class="admin-header">
-    <h1>Novo Provedor</h1>
-    <a href="{% url 'admin_aurora:dashboard' %}" class="btn btn-outline btn-sm">
-        <i class="fas fa-arrow-left"></i> Cancelar
-    </a>
-</div>
-
-{% if erros %}
-    <div class="alert alert-error">
-        <i class="fas fa-exclamation-circle"></i>
-        <ul style="margin:4px 0 0 16px;list-style:disc;">
-            {% for erro in erros %}
-                <li>{{ erro }}</li>
-            {% endfor %}
+  {% if erros %}
+    <div class="admin-alert admin-alert-danger">
+      <i class="bi bi-exclamation-triangle"></i>
+      <div>
+        <strong>Corrija os erros abaixo:</strong>
+        <ul style="margin: 4px 0 0 20px;">
+          {% for erro in erros %}<li>{{ erro }}</li>{% endfor %}
         </ul>
+      </div>
     </div>
-{% endif %}
+  {% endif %}
 
-<div class="card">
-    <div class="card-title"><i class="fas fa-building"></i> Dados do Provedor</div>
-    <form method="post" action="">
+  <div class="card" style="max-width: 720px;">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-building"></i> Dados do provedor</h3>
+    </div>
+    <div class="card-body">
+      <form method="post" action="">
         {% csrf_token %}
-
-        <div class="form-row">
-            <div class="form-group">
-                <label for="nome">Nome do provedor *</label>
-                <input type="text" id="nome" name="nome" value="{{ form.nome|default:'' }}" required placeholder="Ex: Megalink Telecom">
-            </div>
-            <div class="form-group">
-                <label for="cnpj">CNPJ</label>
-                <input type="text" id="cnpj" name="cnpj" value="{{ form.cnpj|default:'' }}" placeholder="00.000.000/0000-00">
-                <div class="form-hint">Opcional</div>
-            </div>
+        <div class="admin-form-grid" style="margin-bottom: var(--sp-4);">
+          <div class="field">
+            <label class="field-label" for="nome">Nome do provedor <span class="field-required">*</span></label>
+            <div class="field-input-wrap"><input id="nome" name="nome" class="field-input" type="text" value="{{ form.nome|default:'' }}" placeholder="Ex: Megalink Telecom" required></div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="cnpj">CNPJ</label>
+            <div class="field-input-wrap"><input id="cnpj" name="cnpj" class="field-input" type="text" value="{{ form.cnpj|default:'' }}" placeholder="00.000.000/0000-00"></div>
+            <p class="field-helper">Opcional</p>
+          </div>
         </div>
 
-        <div class="form-group">
-            <label for="plano">Plano</label>
-            <select id="plano" name="plano">
-                <option value="comercial_starter" {% if form.plano == 'comercial_starter' %}selected{% endif %}>Comercial Starter</option>
-                <option value="comercial_start" {% if form.plano == 'comercial_start' %}selected{% endif %}>Comercial Start</option>
-                <option value="comercial_pro" {% if form.plano == 'comercial_pro' %}selected{% endif %}>Comercial Pro</option>
+        <div class="field" style="margin-bottom: var(--sp-4);">
+          <label class="field-label" for="plano">Plano</label>
+          <div class="field-input-wrap">
+            <select id="plano" name="plano" class="field-input">
+              <option value="comercial_starter" {% if form.plano == 'comercial_starter' %}selected{% endif %}>Comercial Starter</option>
+              <option value="comercial_pro" {% if form.plano == 'comercial_pro' %}selected{% endif %}>Comercial Pro</option>
+              <option value="comercial_advanced" {% if form.plano == 'comercial_advanced' %}selected{% endif %}>Comercial Advanced</option>
             </select>
+          </div>
         </div>
 
-        <div class="card-title" style="margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0;">
-            <i class="fas fa-user-shield"></i> Administrador do Provedor
+        <h4 style="font-size: var(--fs-md); font-weight: var(--fw-semibold); margin: var(--sp-6) 0 var(--sp-4); padding-top: var(--sp-4); border-top: 1px solid var(--color-border);">
+          <i class="bi bi-person-badge"></i> Administrador do provedor
+        </h4>
+
+        <div class="admin-form-grid" style="margin-bottom: var(--sp-4);">
+          <div class="field">
+            <label class="field-label" for="username">Username <span class="field-required">*</span></label>
+            <div class="field-input-wrap"><input id="username" name="username" class="field-input" type="text" value="{{ form.username|default:'' }}" placeholder="admin" required></div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="email">Email <span class="field-required">*</span></label>
+            <div class="field-input-wrap"><input id="email" name="email" class="field-input" type="email" value="{{ form.email|default:'' }}" placeholder="admin@provedor.com.br" required></div>
+          </div>
         </div>
 
-        <div class="form-row">
-            <div class="form-group">
-                <label for="username">Username *</label>
-                <input type="text" id="username" name="username" value="{{ form.username|default:'' }}" required placeholder="admin">
-            </div>
-            <div class="form-group">
-                <label for="email">Email *</label>
-                <input type="email" id="email" name="email" value="{{ form.email|default:'' }}" required placeholder="admin@provedor.com.br">
-            </div>
+        <div class="field" style="margin-bottom: var(--sp-4);">
+          <label class="field-label" for="senha">Senha <span class="field-required">*</span></label>
+          <div class="field-input-wrap"><input id="senha" name="senha" class="field-input" type="password" placeholder="Minimo 8 caracteres" required></div>
         </div>
 
-        <div class="form-group">
-            <label for="senha">Senha *</label>
-            <input type="password" id="senha" name="senha" required placeholder="Mínimo 8 caracteres">
-        </div>
+        <label class="admin-checkbox-label" style="margin-bottom: var(--sp-5);">
+          <input type="checkbox" name="trial" {% if form.trial %}checked{% endif %}>
+          Iniciar com trial de 14 dias
+        </label>
 
-        <div class="form-group" style="margin-top:20px;">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                <input type="checkbox" name="trial" {% if form.trial %}checked{% endif %}>
-                Iniciar com trial de 14 dias
-            </label>
+        <div style="display:flex; gap: var(--sp-2); padding-top: var(--sp-4); border-top: 1px solid var(--color-border);">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Criar provedor</button>
+          <a href="{% url 'admin_aurora:dashboard' %}" class="btn btn-secondary">Cancelar</a>
         </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
 
-        <div style="display:flex;gap:8px;margin-top:24px;">
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Criar Provedor
-            </button>
-            <a href="{% url 'admin_aurora:dashboard' %}" class="btn btn-outline">
-                Cancelar
-            </a>
-        </div>
-    </form>
-</div>
+{% block extra_css %}
+<style>
+  .admin-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+  .admin-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-2);
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--radius);
+    font-size: var(--fs-sm);
+    margin-bottom: var(--sp-4);
+  }
+  .admin-alert-success { background: var(--color-success-soft); color: #166534; }
+  .admin-alert-danger  { background: var(--color-danger-soft);  color: #991b1b; }
+  .admin-alert i { font-size: 1rem; margin-top: 2px; }
+  .admin-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+  }
+  .admin-checkbox-label input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--color-primary);
+  }
+</style>
 {% endblock %}

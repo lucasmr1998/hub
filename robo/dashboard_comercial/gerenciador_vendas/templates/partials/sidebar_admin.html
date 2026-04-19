@@ -1,0 +1,162 @@
+{% comment %}
+Sidebar do Hubtrix Admin (aurora-admin).
+Diferente da sidebar principal do sistema (que e estreita, de icones + subnav):
+aqui e uma sidebar unica larga (240px) com menu completo agrupado.
+
+Uso em template que extende layout_app.html:
+  {% block sidebar %}{% include "partials/sidebar_admin.html" %}{% endblock %}
+
+O {% block sidebar %} redefinido tambem deve cuidar do item ativo via request.resolver_match.url_name.
+{% endcomment %}
+<nav class="app-sidebar-admin" aria-label="Menu do painel admin">
+  <div class="app-sidebar-admin-inner">
+
+    <div class="app-sidebar-admin-brand">
+      <span class="app-sidebar-admin-brand-icon">◆</span>
+      <span>Hubtrix <strong>Admin</strong></span>
+    </div>
+
+    <div class="app-sidebar-admin-section">Geral</div>
+    <a href="{% url 'admin_aurora:dashboard' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}">
+      <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+    </a>
+    <a href="{% url 'admin_aurora:monitoramento' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'monitoramento' %}is-active{% endif %}">
+      <i class="bi bi-heart-pulse"></i><span>Monitoramento</span>
+    </a>
+
+    <div class="app-sidebar-admin-section">Tenants</div>
+    <a href="{% url 'admin_aurora:dashboard' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'tenant_detalhe' %}is-active{% endif %}">
+      <i class="bi bi-building"></i><span>Lista de tenants</span>
+    </a>
+    <a href="{% url 'admin_aurora:criar_tenant' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'criar_tenant' %}is-active{% endif %}">
+      <i class="bi bi-plus-circle"></i><span>Novo tenant</span>
+    </a>
+
+    <div class="app-sidebar-admin-section">Produto</div>
+    <a href="{% url 'admin_aurora:planos' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'planos' or request.resolver_match.url_name == 'plano_detalhe' %}is-active{% endif %}">
+      <i class="bi bi-tags"></i><span>Planos</span>
+    </a>
+    <a href="{% url 'admin_aurora:config_assistente' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'config_assistente' %}is-active{% endif %}">
+      <i class="bi bi-robot"></i><span>Assistente CRM</span>
+    </a>
+
+    <div class="app-sidebar-admin-section">Conteudo</div>
+    <a href="{% url 'admin_aurora:produto' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'produto' %}is-active{% endif %}">
+      <i class="bi bi-clipboard-check"></i><span>Status do produto</span>
+    </a>
+    <a href="{% url 'admin_aurora:docs' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'docs' %}is-active{% endif %}">
+      <i class="bi bi-book"></i><span>Docs</span>
+    </a>
+    <a href="{% url 'admin_aurora:backlog' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'backlog' %}is-active{% endif %}">
+      <i class="bi bi-list-task"></i><span>Backlog</span>
+    </a>
+
+    <div class="app-sidebar-admin-section">Sistema</div>
+    <a href="{% url 'admin_aurora:logs' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'logs' %}is-active{% endif %}">
+      <i class="bi bi-file-earmark-text"></i><span>Logs</span>
+    </a>
+    <a href="{% url 'admin_aurora:auditoria' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'auditoria' %}is-active{% endif %}">
+      <i class="bi bi-shield-check"></i><span>Auditoria</span>
+    </a>
+    <a href="{% url 'admin_aurora:config_recuperacao_senha' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'config_recuperacao_senha' %}is-active{% endif %}">
+      <i class="bi bi-key"></i><span>Recuperacao de senha</span>
+    </a>
+
+    <div class="app-sidebar-admin-footer">
+      <a href="/" class="app-sidebar-admin-back">
+        <i class="bi bi-arrow-left"></i><span>Voltar ao sistema</span>
+      </a>
+    </div>
+
+  </div>
+</nav>
+
+<style>
+  /* Sobrescreve --sidebar-w pro admin (240px em vez de 60px) */
+  body.layout-admin { --sidebar-w: 240px; }
+
+  .app-sidebar-admin {
+    position: fixed;
+    top: var(--topbar-h);
+    left: 0;
+    bottom: 0;
+    width: 240px;
+    background: var(--sidebar-bg);
+    z-index: 90;
+    overflow-y: auto;
+  }
+  .app-sidebar-admin-inner {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding: var(--sp-3) 0 var(--sp-3);
+  }
+  .app-sidebar-admin-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-4) var(--sp-4);
+    color: #fff;
+    font-size: var(--fs-sm);
+    letter-spacing: -0.01em;
+  }
+  .app-sidebar-admin-brand strong { font-weight: var(--fw-bold); }
+  .app-sidebar-admin-brand-icon { color: var(--color-primary); }
+
+  .app-sidebar-admin-section {
+    padding: var(--sp-3) var(--sp-4) var(--sp-1);
+    font-size: 0.65rem;
+    font-weight: var(--fw-semibold);
+    color: var(--sidebar-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .app-sidebar-admin-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-4);
+    color: var(--sidebar-text);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    text-decoration: none;
+    transition: background var(--transition), color var(--transition);
+  }
+  .app-sidebar-admin-item i {
+    font-size: 0.95rem;
+    color: var(--sidebar-icon);
+    width: 18px;
+    text-align: center;
+  }
+  .app-sidebar-admin-item:hover {
+    background: var(--sidebar-bg-hover);
+    color: var(--sidebar-text-active);
+  }
+  .app-sidebar-admin-item:hover i { color: var(--sidebar-text-active); }
+  .app-sidebar-admin-item.is-active {
+    background: var(--sidebar-bg-active);
+    color: var(--sidebar-text-active);
+  }
+  .app-sidebar-admin-item.is-active i { color: var(--sidebar-text-active); }
+
+  .app-sidebar-admin-footer {
+    margin-top: auto;
+    padding: var(--sp-3) var(--sp-3) 0;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .app-sidebar-admin-back {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    color: var(--sidebar-text-muted);
+    font-size: var(--fs-xs);
+    text-decoration: none;
+    border-radius: var(--radius);
+    transition: background var(--transition), color var(--transition);
+  }
+  .app-sidebar-admin-back:hover {
+    background: var(--sidebar-bg-hover);
+    color: var(--sidebar-text-active);
+  }
+</style>

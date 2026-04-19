@@ -4,81 +4,68 @@
 {% block topbar_title %}Auditoria{% endblock %}
 
 {% block content %}
-<div class="section-header">
-    <div>
-        <div class="section-title">Auditoria do Sistema</div>
-        <div class="section-subtitle">Quem fez o que, quando</div>
+  <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0 0 var(--sp-4);">Quem fez o que, quando.</p>
+
+  {# Filtros #}
+  <div class="card" style="margin-bottom: var(--sp-4);">
+    <div class="card-body">
+      <form method="get" style="display:flex; gap: var(--sp-3); align-items:flex-end; flex-wrap:wrap;">
+        <div class="field" style="margin:0; flex:1; min-width:160px;">
+          <label class="field-label" for="f-tenant">Tenant</label>
+          <div class="field-input-wrap">
+            <select id="f-tenant" class="field-input" name="tenant">
+              <option value="">Todos</option>
+              {% for t in tenants %}<option value="{{ t.pk }}" {% if filtro_tenant == t.pk|stringformat:"d" %}selected{% endif %}>{{ t.nome }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="field" style="margin:0; flex:1; min-width:160px;">
+          <label class="field-label" for="f-categoria">Categoria</label>
+          <div class="field-input-wrap">
+            <select id="f-categoria" class="field-input" name="categoria">
+              <option value="">Todas</option>
+              {% for code, label in categorias %}<option value="{{ code }}" {% if filtro_categoria == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="field" style="margin:0; flex:2; min-width:220px;">
+          <label class="field-label" for="f-busca">Busca</label>
+          <div class="field-input-wrap">
+            <i class="bi bi-search field-icon field-icon-left"></i>
+            <input id="f-busca" class="field-input has-icon-left" type="text" name="q" value="{{ filtro_busca }}" placeholder="Buscar na mensagem...">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Filtrar</button>
+      </form>
     </div>
-</div>
+  </div>
 
-<!-- Filtros -->
-<div class="card" style="padding:14px 18px;margin-bottom:16px;">
-    <form method="get" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
-        <div class="form-group" style="margin:0;flex:1;min-width:150px;">
-            <label>Tenant</label>
-            <select name="tenant" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;width:100%;">
-                <option value="">Todos</option>
-                {% for t in tenants %}
-                <option value="{{ t.pk }}" {% if filtro_tenant == t.pk|stringformat:"d" %}selected{% endif %}>{{ t.nome }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="form-group" style="margin:0;flex:1;min-width:150px;">
-            <label>Categoria</label>
-            <select name="categoria" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;width:100%;">
-                <option value="">Todas</option>
-                {% for code, label in categorias %}
-                <option value="{{ code }}" {% if filtro_categoria == code %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="form-group" style="margin:0;flex:2;min-width:200px;">
-            <label>Busca</label>
-            <input type="text" name="q" value="{{ filtro_busca }}" placeholder="Buscar na mensagem..."
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;width:100%;">
-        </div>
-        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Filtrar</button>
-    </form>
-</div>
-
-<!-- Tabela -->
-<div class="card" style="padding:0;">
-    <table class="admin-table">
-        <thead>
-            <tr>
-                <th>Data</th>
-                <th>Tenant</th>
-                <th>Categoria</th>
-                <th>Acao</th>
-                <th>Usuario</th>
-                <th>Mensagem</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for log in logs %}
-            <tr>
-                <td style="font-size:11px;white-space:nowrap;">{{ log.data_criacao|date:"d/m/Y H:i" }}</td>
-                <td>
-                    {% if log.tenant %}
-                    <span class="badge badge-blue">{{ log.tenant.nome }}</span>
-                    {% else %}
-                    <span class="badge badge-gray">Sistema</span>
-                    {% endif %}
-                </td>
-                <td><span class="badge badge-purple">{{ log.categoria }}</span></td>
-                <td style="font-size:12px;font-weight:600;">{{ log.acao }}</td>
-                <td style="font-size:12px;">{{ log.usuario|default:"—" }}</td>
-                <td style="font-size:12px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ log.mensagem }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="6" style="text-align:center;padding:40px;color:var(--text-light);">
-                    <i class="fas fa-clipboard-check" style="font-size:24px;opacity:.3;display:block;margin-bottom:8px;"></i>
-                    Nenhum log encontrado.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
+  {# Tabela #}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Data</th><th>Tenant</th><th>Categoria</th><th>Acao</th><th>Usuario</th><th>Mensagem</th></tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+          <tr>
+            <td style="white-space: nowrap; font-size: var(--fs-xs);">{{ log.data_criacao|date:"d/m/Y H:i" }}</td>
+            <td>
+              {% if log.tenant %}
+                {% include "components/badge.html" with variant="info" label=log.tenant.nome %}
+              {% else %}
+                {% include "components/badge.html" with variant="neutral" label="Sistema" %}
+              {% endif %}
+            </td>
+            <td>{% include "components/badge.html" with variant="primary" label=log.categoria %}</td>
+            <td style="font-weight: var(--fw-semibold);">{{ log.acao }}</td>
+            <td>{{ log.usuario|default:"—" }}</td>
+            <td style="max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ log.mensagem }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6"><div class="table-empty"><i class="bi bi-shield-check"></i>Nenhum log de auditoria.</div></td></tr>
+        {% endfor %}
+      </tbody>
     </table>
-</div>
+  </div>
 {% endblock %}

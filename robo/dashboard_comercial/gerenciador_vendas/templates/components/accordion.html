@@ -1,0 +1,27 @@
+{% comment %}
+Accordion component.
+Params:
+  items: lista de dicts [{"id": "sec1", "title": "...", "icon": "bi-folder", "body": "html...", "open": False}]
+  variant: default | bordered
+  allow_multiple: bool — permite multiplos abertos ao mesmo tempo (default: False)
+
+Cada item pode conter HTML no campo 'body'. JS global controla abrir/fechar (no layout_app).
+
+Uso:
+  {% include "components/accordion.html" with items=accordion_sections %}
+{% endcomment %}
+<div class="accordion{% if variant == 'bordered' %} accordion-bordered{% endif %}"
+     data-accordion{% if allow_multiple %} data-multiple="1"{% endif %}>
+  {% for item in items %}
+    <div class="accordion-item{% if item.open %} is-open{% endif %}">
+      <button type="button" class="accordion-trigger" aria-expanded="{% if item.open %}true{% else %}false{% endif %}">
+        {% if item.icon %}<i class="bi {{ item.icon }}"></i>{% endif %}
+        <span class="accordion-title">{{ item.title }}</span>
+        <i class="bi bi-chevron-down accordion-chevron"></i>
+      </button>
+      <div class="accordion-body" id="{{ item.id|default:forloop.counter|stringformat:'s' }}">
+        {{ item.body|safe }}
+      </div>
+    </div>
+  {% endfor %}
+</div>

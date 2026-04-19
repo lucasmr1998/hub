@@ -1,138 +1,155 @@
-{% extends 'admin_aurora/base_admin.html' %}
+{% extends "admin_aurora/base_admin.html" %}
 
 {% block title %}Assistente CRM{% endblock %}
 {% block topbar_title %}Assistente CRM{% endblock %}
 
 {% block content %}
-<!-- CONFIG GLOBAL -->
-<div class="card" style="border-left:3px solid var(--primary);">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <div>
-            <div class="card-title" style="margin:0;"><i class="fas fa-globe"></i> Configuracao Global</div>
-            <div style="font-size:11px;color:var(--text-light);">Numero WhatsApp da Hubtrix (compartilhado por todos os tenants)</div>
-        </div>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-            <input type="checkbox" id="globalAtivo" {% if config_global.ativo %}checked{% endif %}
-                onchange="salvarGlobal()" style="width:18px;height:18px;accent-color:var(--primary);">
-            <span style="font-size:13px;font-weight:600;color:{% if config_global.ativo %}var(--success){% else %}var(--text-light){% endif %};">
-                {% if config_global.ativo %}Ativo{% else %}Inativo{% endif %}
-            </span>
-        </label>
+  {# Config global #}
+  <div class="card" style="border-left: 3px solid var(--color-primary); margin-bottom: var(--sp-5);">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title"><i class="bi bi-globe"></i> Configuracao global</h3>
+        <p class="card-subtitle">Numero WhatsApp da Hubtrix (compartilhado por todos os tenants)</p>
+      </div>
+      <label class="admin-checkbox-label" style="margin:0;">
+        <input type="checkbox" id="globalAtivo" {% if config_global.ativo %}checked{% endif %} onchange="salvarGlobal()">
+        <span id="globalAtivoLabel">{% if config_global.ativo %}Ativo{% else %}Inativo{% endif %}</span>
+      </label>
     </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-        <div class="form-group" style="margin:0;">
-            <label>Numero WhatsApp (Uazapi)</label>
-            <select id="globalWhatsapp" onchange="salvarGlobal()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;">
-                <option value="">-- Nenhum --</option>
-                {% for integ in integracoes_whatsapp %}
-                <option value="{{ integ.pk }}" {% if config_global.integracao_whatsapp_id == integ.pk %}selected{% endif %}>
-                    {{ integ.nome }} ({{ integ.tenant.nome }})
-                </option>
-                {% endfor %}
+    <div class="card-body">
+      <div class="admin-form-grid" style="margin-bottom: var(--sp-3);">
+        <div class="field">
+          <label class="field-label">Numero WhatsApp (Uazapi)</label>
+          <div class="field-input-wrap">
+            <select id="globalWhatsapp" class="field-input" onchange="salvarGlobal()">
+              <option value="">— Nenhum —</option>
+              {% for integ in integracoes_whatsapp %}
+                <option value="{{ integ.pk }}" {% if config_global.integracao_whatsapp_id == integ.pk %}selected{% endif %}>{{ integ.nome }} ({{ integ.tenant.nome }})</option>
+              {% endfor %}
             </select>
+          </div>
         </div>
-        <div>
-            {% if config_global.webhook_url %}
-            <label style="display:block;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:5px;">Webhook URL</label>
-            <code style="font-size:11px;background:var(--bg-subtle);padding:8px 10px;border-radius:8px;display:block;word-break:break-all;border:1px solid var(--border);">{{ config_global.webhook_url }}</code>
-            {% else %}
-            <label style="display:block;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:5px;">Webhook</label>
-            <div style="font-size:12px;color:var(--warning);">Selecione uma integracao WhatsApp</div>
-            {% endif %}
+        <div class="field">
+          {% if config_global.webhook_url %}
+            <label class="field-label">Webhook URL</label>
+            <code style="font-size: var(--fs-xs); background: var(--color-surface-2); padding: var(--sp-2) var(--sp-3); border-radius: var(--radius); display: block; word-break: break-all;">{{ config_global.webhook_url }}</code>
+          {% else %}
+            <label class="field-label">Webhook</label>
+            <p style="color: var(--color-warning); font-size: var(--fs-xs); margin: 0;">Selecione uma integracao WhatsApp.</p>
+          {% endif %}
         </div>
+      </div>
+
+      <details>
+        <summary style="font-size: var(--fs-xs); color: var(--color-text-muted); cursor: pointer; font-weight: var(--fw-semibold);">Mensagens personalizadas</summary>
+        <div class="admin-form-grid" style="margin-top: var(--sp-3);">
+          <div class="field">
+            <label class="field-label">Boas-vindas (use {nome})</label>
+            <div class="field-input-wrap"><input id="globalBoasVindas" class="field-input" type="text" value="{{ config_global.mensagem_boas_vindas }}" onchange="salvarGlobal()"></div>
+          </div>
+          <div class="field">
+            <label class="field-label">Acesso restrito</label>
+            <div class="field-input-wrap"><input id="globalAcessoRestrito" class="field-input" type="text" value="{{ config_global.mensagem_acesso_restrito }}" onchange="salvarGlobal()"></div>
+          </div>
+        </div>
+      </details>
     </div>
+  </div>
 
-    <details>
-        <summary style="font-size:12px;color:var(--text-muted);cursor:pointer;font-weight:600;">Mensagens personalizadas</summary>
-        <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div class="form-group" style="margin:0;">
-                <label>Boas-vindas (use {nome})</label>
-                <input type="text" id="globalBoasVindas" value="{{ config_global.mensagem_boas_vindas }}" onchange="salvarGlobal()"
-                    style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;">
-            </div>
-            <div class="form-group" style="margin:0;">
-                <label>Acesso restrito</label>
-                <input type="text" id="globalAcessoRestrito" value="{{ config_global.mensagem_acesso_restrito }}" onchange="salvarGlobal()"
-                    style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;">
-            </div>
-        </div>
-    </details>
-</div>
+  {# Por tenant #}
+  <h2 style="font-size: var(--fs-lg); font-weight: var(--fw-bold); margin: var(--sp-6) 0 var(--sp-3);">Configuracao por tenant</h2>
 
-<!-- CONFIGS POR TENANT -->
-<div class="section-header" style="margin-top:24px;">
-    <div class="section-title">Configuracao por Tenant</div>
-</div>
-
-{% for item in configs_tenant %}
-<div class="card" id="tenant-{{ item.tenant.pk }}">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
+  {% for item in configs_tenant %}
+    <div class="card" id="tenant-{{ item.tenant.pk }}" style="margin-bottom: var(--sp-3);">
+      <div class="card-header">
         <div>
-            <div style="font-size:14px;font-weight:700;color:var(--text-main);">{{ item.tenant.nome }}</div>
-            <div style="font-size:11px;color:var(--text-light);">{{ item.total_msgs }} mensagens processadas</div>
+          <h3 class="card-title">{{ item.tenant.nome }}</h3>
+          <p class="card-subtitle">{{ item.total_msgs }} mensagens processadas</p>
         </div>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-            <input type="checkbox" class="tenantAtivo" data-tenant="{{ item.tenant.pk }}" {% if item.config.ativo %}checked{% endif %}
-                onchange="salvarTenant({{ item.tenant.pk }})" style="width:16px;height:16px;accent-color:var(--primary);">
-            <span style="font-size:12px;font-weight:600;">{% if item.config.ativo %}Ativo{% else %}Inativo{% endif %}</span>
+        <label class="admin-checkbox-label" style="margin:0;">
+          <input type="checkbox" class="tenantAtivo" data-tenant="{{ item.tenant.pk }}" {% if item.config.ativo %}checked{% endif %} onchange="salvarTenant({{ item.tenant.pk }})">
+          <span>{% if item.config.ativo %}Ativo{% else %}Inativo{% endif %}</span>
         </label>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
-        <div class="form-group" style="margin:0;">
-            <label>Provider IA</label>
-            <select class="tenantIA" data-tenant="{{ item.tenant.pk }}" onchange="salvarTenant({{ item.tenant.pk }})"
-                style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;">
-                <option value="">-- Nenhum --</option>
+      </div>
+      <div class="card-body">
+        <div class="admin-form-grid">
+          <div class="field">
+            <label class="field-label">Provider IA</label>
+            <div class="field-input-wrap">
+              <select class="tenantIA field-input" data-tenant="{{ item.tenant.pk }}" onchange="salvarTenant({{ item.tenant.pk }})">
+                <option value="">— Nenhum —</option>
                 {% for integ in integracoes_ia %}
-                <option value="{{ integ.pk }}" {% if item.config.integracao_ia_id == integ.pk %}selected{% endif %}>
-                    {{ integ.nome }} ({{ integ.tenant.nome }})
-                </option>
+                  <option value="{{ integ.pk }}" {% if item.config.integracao_ia_id == integ.pk %}selected{% endif %}>{{ integ.nome }} ({{ integ.tenant.nome }})</option>
                 {% endfor %}
-            </select>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Modelo IA</label>
+            <div class="field-input-wrap"><input class="tenantModelo field-input" type="text" data-tenant="{{ item.tenant.pk }}" value="{{ item.config.modelo_ia }}" onchange="salvarTenant({{ item.tenant.pk }})"></div>
+          </div>
         </div>
-        <div class="form-group" style="margin:0;">
-            <label>Modelo IA</label>
-            <input type="text" class="tenantModelo" data-tenant="{{ item.tenant.pk }}" value="{{ item.config.modelo_ia }}"
-                onchange="salvarTenant({{ item.tenant.pk }})"
-                style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;">
-        </div>
+      </div>
     </div>
-</div>
-{% endfor %}
+  {% empty %}
+    <p style="color: var(--color-text-muted); font-size: var(--fs-sm);">Nenhum tenant cadastrado.</p>
+  {% endfor %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .admin-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+  .admin-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+  }
+  .admin-checkbox-label input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--color-primary);
+  }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function getCsrf() { const c = document.cookie.match(/csrftoken=([^;]+)/); return c ? c[1] : ''; }
+  function getCsrf() { const c = document.cookie.match(/csrftoken=([^;]+)/); return c ? c[1] : ''; }
 
-function salvarGlobal() {
+  function salvarGlobal() {
     fetch('{% url "admin_aurora:config_assistente" %}', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()},
-        body: JSON.stringify({
-            action: 'global',
-            ativo: document.getElementById('globalAtivo').checked,
-            integracao_whatsapp_id: document.getElementById('globalWhatsapp').value || null,
-            mensagem_boas_vindas: document.getElementById('globalBoasVindas')?.value || '',
-            mensagem_acesso_restrito: document.getElementById('globalAcessoRestrito')?.value || '',
-        })
-    }).then(r=>r.json()).then(d=>{ if(!d.success) alert(d.error||'Erro'); });
-}
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body: JSON.stringify({
+        action: 'global',
+        ativo: document.getElementById('globalAtivo').checked,
+        integracao_whatsapp_id: document.getElementById('globalWhatsapp').value || null,
+        mensagem_boas_vindas: document.getElementById('globalBoasVindas')?.value || '',
+        mensagem_acesso_restrito: document.getElementById('globalAcessoRestrito')?.value || '',
+      })
+    }).then(r=>r.json()).then(d=>{
+      if (d.success) toast('Salvo', 'Configuracao global atualizada', 'success');
+      else toast('Erro', d.error || 'Erro ao salvar', 'danger');
+    });
+  }
 
-function salvarTenant(tenantId) {
+  function salvarTenant(tenantId) {
     const card = document.getElementById('tenant-' + tenantId);
     fetch('{% url "admin_aurora:config_assistente" %}', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()},
-        body: JSON.stringify({
-            action: 'tenant',
-            tenant_id: tenantId,
-            ativo: card.querySelector('.tenantAtivo').checked,
-            integracao_ia_id: card.querySelector('.tenantIA').value || null,
-            modelo_ia: card.querySelector('.tenantModelo').value,
-        })
-    }).then(r=>r.json()).then(d=>{ if(!d.success) alert(d.error||'Erro'); });
-}
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body: JSON.stringify({
+        action: 'tenant',
+        tenant_id: tenantId,
+        ativo: card.querySelector('.tenantAtivo').checked,
+        integracao_ia_id: card.querySelector('.tenantIA').value || null,
+        modelo_ia: card.querySelector('.tenantModelo').value,
+      })
+    }).then(r=>r.json()).then(d=>{
+      if (d.success) toast('Salvo', 'Configuracao do tenant atualizada', 'success');
+      else toast('Erro', d.error || 'Erro ao salvar', 'danger');
+    });
+  }
 </script>
 {% endblock %}

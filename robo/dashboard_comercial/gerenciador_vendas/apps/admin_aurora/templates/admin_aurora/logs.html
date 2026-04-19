@@ -1,136 +1,151 @@
 {% extends "admin_aurora/base_admin.html" %}
 
 {% block title %}Logs{% endblock %}
-{% block topbar_title %}Logs do Sistema{% endblock %}
+{% block topbar_title %}Logs do sistema{% endblock %}
+
+{% block topbar_actions %}
+  <label class="admin-checkbox-label" style="font-size: var(--fs-xs); margin: 0;">
+    <input type="checkbox" id="auto-refresh"> Auto-refresh (30s)
+  </label>
+{% endblock %}
 
 {% block content %}
-<div class="section-header">
-    <div class="section-title">Logs do Sistema</div>
-    <div style="display:flex;align-items:center;gap:12px;">
-        <label style="font-size:.75rem;color:#64748b;display:flex;align-items:center;gap:6px;cursor:pointer;">
-            <input type="checkbox" id="auto-refresh" style="cursor:pointer;">
-            Auto-refresh (30s)
-        </label>
-    </div>
-</div>
-
-<!-- Filtros de busca -->
-<div class="card" style="padding:16px;margin-bottom:20px;">
-    <form method="get" action="{% url 'admin_aurora:logs' %}" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-        <div>
-            <label style="display:block;font-size:.72rem;font-weight:600;color:#334155;margin-bottom:4px;">Busca</label>
-            <input type="text" name="q" value="{{ busca }}" placeholder="Buscar na mensagem..." style="padding:7px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:.82rem;font-family:'Inter',sans-serif;width:220px;">
+  {# Filtros #}
+  <div class="card" style="margin-bottom: var(--sp-4);">
+    <div class="card-body">
+      <form method="get" action="{% url 'admin_aurora:logs' %}" style="display:flex; gap: var(--sp-3); align-items:flex-end; flex-wrap:wrap;">
+        <div class="field" style="margin:0; width: 240px;">
+          <label class="field-label" for="q-busca">Busca</label>
+          <div class="field-input-wrap">
+            <i class="bi bi-search field-icon field-icon-left"></i>
+            <input id="q-busca" class="field-input has-icon-left" type="text" name="q" value="{{ busca }}" placeholder="Buscar na mensagem...">
+          </div>
         </div>
-        <div>
-            <label style="display:block;font-size:.72rem;font-weight:600;color:#334155;margin-bottom:4px;">Módulo</label>
-            <input type="text" name="modulo" value="{{ modulo }}" placeholder="Ex: comercial, sistema..." style="padding:7px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:.82rem;font-family:'Inter',sans-serif;width:180px;">
+        <div class="field" style="margin:0; width: 200px;">
+          <label class="field-label" for="q-modulo">Modulo</label>
+          <div class="field-input-wrap">
+            <input id="q-modulo" class="field-input" type="text" name="modulo" value="{{ modulo }}" placeholder="Ex: comercial, sistema...">
+          </div>
         </div>
         {% if nivel %}<input type="hidden" name="nivel" value="{{ nivel }}">{% endif %}
-        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Filtrar</button>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Filtrar</button>
         {% if busca or modulo or nivel %}
-            <a href="{% url 'admin_aurora:logs' %}" class="btn btn-outline btn-sm"><i class="fas fa-times"></i> Limpar</a>
+          <a href="{% url 'admin_aurora:logs' %}" class="btn btn-secondary btn-sm"><i class="bi bi-x-lg"></i> Limpar</a>
         {% endif %}
-    </form>
-</div>
+      </form>
+    </div>
+  </div>
 
-<!-- Filtros por nivel -->
-<div style="display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap;">
+  {# Filtros por nivel (pills) #}
+  <div class="tabs tabs-pills" style="margin-bottom: var(--sp-4);">
     <a href="{% url 'admin_aurora:logs' %}{% if busca %}?q={{ busca }}{% endif %}{% if modulo %}{% if busca %}&{% else %}?{% endif %}modulo={{ modulo }}{% endif %}"
-       class="btn btn-sm {% if not nivel %}btn-primary{% else %}btn-outline{% endif %}">
-        Todos
+       class="tabs-item{% if not nivel %} is-active{% endif %}" style="text-decoration:none;">
+      <span>Todos</span>
     </a>
+    {% for n in "DEBUG,INFO,WARNING,ERROR,CRITICAL"|split:"," %}{% endfor %}
+    {% for n_item in nivel_list|default:"DEBUG,INFO,WARNING,ERROR,CRITICAL" %}{% endfor %}
     <a href="{% url 'admin_aurora:logs' %}?nivel=DEBUG{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
-       class="btn btn-sm {% if nivel == 'DEBUG' %}btn-primary{% else %}btn-outline{% endif %}">
-        DEBUG {% if level_counts.DEBUG %}<span class="badge badge-gray" style="margin-left:4px;">{{ level_counts.DEBUG }}</span>{% endif %}
+       class="tabs-item{% if nivel == 'DEBUG' %} is-active{% endif %}" style="text-decoration:none;">
+      <span>DEBUG</span>{% if level_counts.DEBUG %}<span class="tabs-item-badge">{{ level_counts.DEBUG }}</span>{% endif %}
     </a>
     <a href="{% url 'admin_aurora:logs' %}?nivel=INFO{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
-       class="btn btn-sm {% if nivel == 'INFO' %}btn-primary{% else %}btn-outline{% endif %}">
-        INFO {% if level_counts.INFO %}<span class="badge badge-blue" style="margin-left:4px;">{{ level_counts.INFO }}</span>{% endif %}
+       class="tabs-item{% if nivel == 'INFO' %} is-active{% endif %}" style="text-decoration:none;">
+      <span>INFO</span>{% if level_counts.INFO %}<span class="tabs-item-badge">{{ level_counts.INFO }}</span>{% endif %}
     </a>
     <a href="{% url 'admin_aurora:logs' %}?nivel=WARNING{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
-       class="btn btn-sm {% if nivel == 'WARNING' %}btn-primary{% else %}btn-outline{% endif %}">
-        WARNING {% if level_counts.WARNING %}<span class="badge badge-yellow" style="margin-left:4px;">{{ level_counts.WARNING }}</span>{% endif %}
+       class="tabs-item{% if nivel == 'WARNING' %} is-active{% endif %}" style="text-decoration:none;">
+      <span>WARNING</span>{% if level_counts.WARNING %}<span class="tabs-item-badge">{{ level_counts.WARNING }}</span>{% endif %}
     </a>
     <a href="{% url 'admin_aurora:logs' %}?nivel=ERROR{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
-       class="btn btn-sm {% if nivel == 'ERROR' %}btn-primary{% else %}btn-outline{% endif %}">
-        ERROR {% if level_counts.ERROR %}<span class="badge badge-red" style="margin-left:4px;">{{ level_counts.ERROR }}</span>{% endif %}
+       class="tabs-item{% if nivel == 'ERROR' %} is-active{% endif %}" style="text-decoration:none;">
+      <span>ERROR</span>{% if level_counts.ERROR %}<span class="tabs-item-badge">{{ level_counts.ERROR }}</span>{% endif %}
     </a>
     <a href="{% url 'admin_aurora:logs' %}?nivel=CRITICAL{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
-       class="btn btn-sm {% if nivel == 'CRITICAL' %}btn-primary{% else %}btn-outline{% endif %}">
-        CRITICAL {% if level_counts.CRITICAL %}<span class="badge badge-red" style="margin-left:4px;">{{ level_counts.CRITICAL }}</span>{% endif %}
+       class="tabs-item{% if nivel == 'CRITICAL' %} is-active{% endif %}" style="text-decoration:none;">
+      <span>CRITICAL</span>{% if level_counts.CRITICAL %}<span class="tabs-item-badge">{{ level_counts.CRITICAL }}</span>{% endif %}
     </a>
-</div>
+  </div>
 
-<!-- Tabela de logs -->
-<div class="admin-table-wrap">
-    <table class="admin-table">
-        <thead>
-            <tr>
-                <th>Data</th>
-                <th>Nível</th>
-                <th>Módulo</th>
-                <th>Tenant</th>
-                <th>Usuário</th>
-                <th>Mensagem</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for log in logs %}
-            <tr>
-                <td class="text-sm">{{ log.data_criacao|date:"d/m/Y H:i:s" }}</td>
-                <td>
-                    {% if log.nivel == 'CRITICAL' %}
-                        <span class="badge badge-red">{{ log.nivel }}</span>
-                    {% elif log.nivel == 'ERROR' %}
-                        <span class="badge badge-red">{{ log.nivel }}</span>
-                    {% elif log.nivel == 'WARNING' %}
-                        <span class="badge badge-yellow">{{ log.nivel }}</span>
-                    {% elif log.nivel == 'INFO' %}
-                        <span class="badge badge-blue">{{ log.nivel }}</span>
-                    {% else %}
-                        <span class="badge badge-gray">{{ log.nivel }}</span>
-                    {% endif %}
-                </td>
-                <td class="text-sm">{{ log.modulo|default:"—" }}</td>
-                <td class="text-sm">{{ log.tenant|default:"—" }}</td>
-                <td class="text-sm">{{ log.usuario|default:"—" }}</td>
-                <td style="max-width:400px;word-break:break-word;font-size:.8rem;">{{ log.mensagem }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">
-                    Nenhum log encontrado{% if nivel %} para o nível {{ nivel }}{% endif %}{% if busca %} com "{{ busca }}"{% endif %}.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
+  {# Tabela #}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Data</th><th>Nivel</th><th>Modulo</th><th>Tenant</th><th>Usuario</th><th>Mensagem</th></tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+          <tr>
+            <td>{{ log.data_criacao|date:"d/m/Y H:i:s" }}</td>
+            <td>
+              {% if log.nivel == 'CRITICAL' or log.nivel == 'ERROR' %}
+                {% include "components/badge.html" with variant="danger" style="solid" label=log.nivel %}
+              {% elif log.nivel == 'WARNING' %}
+                {% include "components/badge.html" with variant="warning" label=log.nivel %}
+              {% elif log.nivel == 'INFO' %}
+                {% include "components/badge.html" with variant="info" label=log.nivel %}
+              {% else %}
+                {% include "components/badge.html" with variant="neutral" label=log.nivel %}
+              {% endif %}
+            </td>
+            <td>{{ log.modulo|default:"—" }}</td>
+            <td>{{ log.tenant|default:"—" }}</td>
+            <td>{{ log.usuario|default:"—" }}</td>
+            <td style="max-width: 400px; word-break: break-word; font-size: var(--fs-xs);">{{ log.mensagem }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6">
+              <div class="table-empty">
+                <i class="bi bi-inbox"></i>
+                Nenhum log encontrado{% if nivel %} para o nivel {{ nivel }}{% endif %}{% if busca %} com "{{ busca }}"{% endif %}.
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
     </table>
-</div>
+  </div>
 
-<div style="margin-top:12px;font-size:.72rem;color:#94a3b8;text-align:right;">
-    Exibindo até 200 registros mais recentes.
-</div>
+  <p style="margin-top: var(--sp-3); font-size: var(--fs-xs); color: var(--color-text-muted); text-align: right;">
+    Exibindo ate 200 registros mais recentes.
+  </p>
+{% endblock %}
 
+{% block extra_css %}
+<style>
+  .admin-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+  }
+  .admin-checkbox-label input[type="checkbox"] {
+    width: 14px; height: 14px;
+    accent-color: var(--color-primary);
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-(function() {
+  (function() {
     const checkbox = document.getElementById('auto-refresh');
     let timer = null;
     const KEY = 'aurora_logs_autorefresh';
-
     if (localStorage.getItem(KEY) === 'true') {
-        checkbox.checked = true;
-        timer = setTimeout(function() { location.reload(); }, 30000);
+      checkbox.checked = true;
+      timer = setTimeout(() => location.reload(), 30000);
     }
-
     checkbox.addEventListener('change', function() {
-        if (this.checked) {
-            localStorage.setItem(KEY, 'true');
-            timer = setTimeout(function() { location.reload(); }, 30000);
-        } else {
-            localStorage.removeItem(KEY);
-            if (timer) clearTimeout(timer);
-        }
+      if (this.checked) {
+        localStorage.setItem(KEY, 'true');
+        timer = setTimeout(() => location.reload(), 30000);
+      } else {
+        localStorage.removeItem(KEY);
+        if (timer) clearTimeout(timer);
+      }
     });
-})();
+  })();
 </script>
 {% endblock %}

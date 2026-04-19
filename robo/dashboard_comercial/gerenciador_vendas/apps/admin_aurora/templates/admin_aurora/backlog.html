@@ -1,147 +1,117 @@
-{% extends 'admin_aurora/base_admin.html' %}
+{% extends "admin_aurora/base_admin.html" %}
 
 {% block title %}Backlog{% endblock %}
+{% block topbar_title %}Backlog{% endblock %}
 
 {% block content %}
-<div class="admin-header">
-    <h1><i class="fas fa-tasks" style="color:#818cf8;"></i> Backlog</h1>
-</div>
+  <div class="admin-stats-grid">
+    {% include "components/stat_card.html" with label="Pendentes" value=total_pendentes icon="bi-clock" icon_variant="warning" %}
+    {% include "components/stat_card.html" with label="Finalizadas" value=total_finalizadas icon="bi-check-circle" icon_variant="success" %}
+    {% include "components/stat_card.html" with label="Total" value=total_pendentes|add:total_finalizadas icon="bi-bar-chart" icon_variant="info" %}
+  </div>
 
-<!-- KPIs -->
-<div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
-    <div class="stat-card">
-        <div class="stat-icon" style="background:#fef3c7;"><i class="fas fa-clock" style="color:#f59e0b;"></i></div>
-        <div>
-            <div class="stat-num">{{ total_pendentes }}</div>
-            <div class="stat-label">Pendentes</div>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon" style="background:#dcfce7;"><i class="fas fa-check" style="color:#16a34a;"></i></div>
-        <div>
-            <div class="stat-num">{{ total_finalizadas }}</div>
-            <div class="stat-label">Finalizadas</div>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon" style="background:#dbeafe;"><i class="fas fa-chart-bar" style="color:#3b82f6;"></i></div>
-        <div>
-            <div class="stat-num">{% widthratio total_finalizadas 1 1 as fin %}{% widthratio total_pendentes 1 1 as pen %}{{ total_finalizadas|add:total_pendentes }}</div>
-            <div class="stat-label">Total</div>
-        </div>
-    </div>
-</div>
-
-<!-- Tabs -->
-<div style="display:flex; gap:8px; margin-bottom:16px;">
-    <button class="btn btn-primary btn-tab active" onclick="switchTab(this, 'pendentes')">
-        <i class="fas fa-clock"></i> Pendentes ({{ total_pendentes }})
+  <div class="tabs tabs-line" style="margin-top: var(--sp-6);">
+    <button type="button" class="tabs-item is-active" data-tab="tab-pendentes">
+      <i class="bi bi-clock"></i><span>Pendentes</span><span class="tabs-item-badge">{{ total_pendentes }}</span>
     </button>
-    <button class="btn btn-outline btn-tab" onclick="switchTab(this, 'finalizadas')">
-        <i class="fas fa-check"></i> Finalizadas ({{ total_finalizadas }})
+    <button type="button" class="tabs-item" data-tab="tab-finalizadas">
+      <i class="bi bi-check2-circle"></i><span>Finalizadas</span><span class="tabs-item-badge">{{ total_finalizadas }}</span>
     </button>
-</div>
+  </div>
 
-<!-- Pendentes -->
-<div id="tab-pendentes" class="tab-panel active">
-    <div class="admin-table-wrap">
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th style="width:40%;">Tarefa</th>
-                    <th>Prioridade</th>
-                    <th>Responsável</th>
-                    <th style="text-align:center;">Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for t in pendentes %}
-                <tr>
-                    <td>
-                        <div style="font-weight:600; color:#0f172a;">{{ t.titulo }}</div>
-                        <div style="font-size:.7rem; color:#94a3b8;">{{ t.filename }}</div>
-                    </td>
-                    <td>
-                        {% if '🔴' in t.prioridade or 'Alta' in t.prioridade %}
-                            <span class="badge badge-red">{{ t.prioridade }}</span>
-                        {% elif '🟡' in t.prioridade or 'Média' in t.prioridade %}
-                            <span class="badge badge-yellow">{{ t.prioridade }}</span>
-                        {% elif '🟢' in t.prioridade or 'Baixa' in t.prioridade %}
-                            <span class="badge badge-green">{{ t.prioridade }}</span>
-                        {% else %}
-                            <span class="badge badge-gray">{{ t.prioridade|default:"—" }}</span>
-                        {% endif %}
-                    </td>
-                    <td style="font-size:.8rem; color:#64748b;">{{ t.responsavel|default:"—" }}</td>
-                    <td style="text-align:center;">
-                        <a href="{% url 'admin_aurora:docs' %}?file={{ t.path }}" class="btn btn-outline btn-sm">
-                            <i class="fas fa-eye"></i> Ver
-                        </a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="4" style="text-align:center; padding:24px; color:#94a3b8;">Nenhuma tarefa pendente.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+  {# Pendentes #}
+  <div class="tabs-panel is-active" id="tab-pendentes">
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width: 40%;">Tarefa</th>
+            <th>Prioridade</th>
+            <th>Responsavel</th>
+            <th class="table-col-actions">Acoes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in pendentes %}
+            <tr>
+              <td>
+                <div style="font-weight: var(--fw-semibold);">{{ t.titulo }}</div>
+                <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">{{ t.filename }}</div>
+              </td>
+              <td>
+                {% if '🔴' in t.prioridade or 'Alta' in t.prioridade %}
+                  {% include "components/badge.html" with variant="danger" label=t.prioridade %}
+                {% elif '🟡' in t.prioridade or 'Média' in t.prioridade or 'Media' in t.prioridade %}
+                  {% include "components/badge.html" with variant="warning" label=t.prioridade %}
+                {% elif '🟢' in t.prioridade or 'Baixa' in t.prioridade %}
+                  {% include "components/badge.html" with variant="success" label=t.prioridade %}
+                {% else %}
+                  {% include "components/badge.html" with variant="neutral" label=t.prioridade|default:"—" %}
+                {% endif %}
+              </td>
+              <td>{{ t.responsavel|default:"—" }}</td>
+              <td class="table-col-actions">
+                <a href="{% url 'admin_aurora:docs' %}?file={{ t.path }}" class="btn btn-secondary btn-sm"><i class="bi bi-eye"></i> Ver</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4"><div class="table-empty"><i class="bi bi-inbox"></i>Nenhuma tarefa pendente.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-</div>
+  </div>
 
-<!-- Finalizadas -->
-<div id="tab-finalizadas" class="tab-panel">
-    <div class="admin-table-wrap">
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th style="width:40%;">Tarefa</th>
-                    <th>Prioridade</th>
-                    <th>Responsável</th>
-                    <th style="text-align:center;">Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for t in finalizadas %}
-                <tr style="opacity:.7;">
-                    <td>
-                        <div style="font-weight:600; color:#0f172a;"><i class="fas fa-check-circle" style="color:#16a34a; margin-right:4px;"></i>{{ t.titulo }}</div>
-                        <div style="font-size:.7rem; color:#94a3b8;">{{ t.filename }}</div>
-                    </td>
-                    <td>
-                        {% if '🔴' in t.prioridade or 'Alta' in t.prioridade %}
-                            <span class="badge badge-red">{{ t.prioridade }}</span>
-                        {% elif '🟡' in t.prioridade or 'Média' in t.prioridade %}
-                            <span class="badge badge-yellow">{{ t.prioridade }}</span>
-                        {% else %}
-                            <span class="badge badge-gray">{{ t.prioridade|default:"—" }}</span>
-                        {% endif %}
-                    </td>
-                    <td style="font-size:.8rem; color:#64748b;">{{ t.responsavel|default:"—" }}</td>
-                    <td style="text-align:center;">
-                        <a href="{% url 'admin_aurora:docs' %}?file={{ t.path }}" class="btn btn-outline btn-sm">
-                            <i class="fas fa-eye"></i> Ver
-                        </a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="4" style="text-align:center; padding:24px; color:#94a3b8;">Nenhuma tarefa finalizada.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+  {# Finalizadas #}
+  <div class="tabs-panel" id="tab-finalizadas">
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width: 40%;">Tarefa</th>
+            <th>Prioridade</th>
+            <th>Responsavel</th>
+            <th class="table-col-actions">Acoes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in finalizadas %}
+            <tr style="opacity: 0.7;">
+              <td>
+                <div style="font-weight: var(--fw-semibold);">
+                  <i class="bi bi-check-circle-fill" style="color: var(--color-success); margin-right: 4px;"></i>{{ t.titulo }}
+                </div>
+                <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">{{ t.filename }}</div>
+              </td>
+              <td>
+                {% if '🔴' in t.prioridade or 'Alta' in t.prioridade %}
+                  {% include "components/badge.html" with variant="danger" label=t.prioridade %}
+                {% elif '🟡' in t.prioridade or 'Média' in t.prioridade or 'Media' in t.prioridade %}
+                  {% include "components/badge.html" with variant="warning" label=t.prioridade %}
+                {% else %}
+                  {% include "components/badge.html" with variant="neutral" label=t.prioridade|default:"—" %}
+                {% endif %}
+              </td>
+              <td>{{ t.responsavel|default:"—" }}</td>
+              <td class="table-col-actions">
+                <a href="{% url 'admin_aurora:docs' %}?file={{ t.path }}" class="btn btn-secondary btn-sm"><i class="bi bi-eye"></i> Ver</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4"><div class="table-empty"><i class="bi bi-check2-all"></i>Nenhuma tarefa finalizada.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-</div>
+  </div>
+{% endblock %}
 
+{% block extra_css %}
 <style>
-.btn-tab { transition: all .15s; }
-.btn-tab.active { background: #818cf8; color: #fff; border-color: #818cf8; }
+  .admin-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--sp-4);
+  }
 </style>
-
-<script>
-function switchTab(btn, tab) {
-    document.querySelectorAll('.btn-tab').forEach(b => { b.classList.remove('active'); b.classList.add('btn-outline'); b.classList.remove('btn-primary'); });
-    btn.classList.add('active', 'btn-primary');
-    btn.classList.remove('btn-outline');
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    document.getElementById('tab-' + tab).classList.add('active');
-}
-</script>
 {% endblock %}

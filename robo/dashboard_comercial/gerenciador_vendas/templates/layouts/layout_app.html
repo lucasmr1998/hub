@@ -1,3 +1,4 @@
+{% extends "layouts/base.html" %}
 {% comment %}
 Layout App — base de qualquer pagina logada do Hubtrix.
 
@@ -16,11 +17,13 @@ Com subnav:
   {% block content %}...{% endblock %}
 {% endcomment %}
 
-{% extends "layouts/base.html" %}
-
 {% block body %}
-  {% include "partials/topbar.html" %}
-  {% include "partials/sidebar.html" %}
+  {# CSS global dos componentes do DS — carregado em todas as paginas que extendem o layout #}
+  {% include "partials/_components_styles.html" %}
+
+  {# Topbar e sidebar sao sobrescritiveis — util pra paineis com menu proprio (ex: aurora-admin) #}
+  {% block topbar %}{% include "partials/topbar.html" %}{% endblock %}
+  {% block sidebar %}{% include "partials/sidebar.html" %}{% endblock %}
 
   {# Subnav opcional — pagina sobrescreve pra injetar seu submenu #}
   {% block subnav %}{% endblock %}
@@ -44,6 +47,24 @@ Com subnav:
 
   {# Estilos base de layout — subnav, main, flyout #}
   <style>
+    /* Topbar estrutural — independe de qual partial de topbar a pagina use */
+    .app-topbar {
+      height: var(--topbar-h);
+      background: var(--color-bg);
+      border-bottom: 1px solid var(--color-border);
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+    }
+    .app-topbar-inner {
+      height: 100%;
+      padding: 0 var(--sp-4);
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: var(--sp-4);
+    }
+
     .app-subnav {
       position: fixed;
       top: var(--topbar-h);
@@ -202,6 +223,53 @@ Com subnav:
       gap: var(--sp-2);
       pointer-events: none;
     }
+
+    /* Accordion (componente global) */
+    .accordion {
+      display: flex;
+      flex-direction: column;
+    }
+    .accordion-bordered {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .accordion-bordered .accordion-item + .accordion-item {
+      border-top: 1px solid var(--color-border);
+    }
+    .accordion-trigger {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+      width: 100%;
+      padding: var(--sp-3) var(--sp-4);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      font-size: var(--fs-sm);
+      font-weight: var(--fw-medium);
+      color: var(--color-text);
+      text-align: left;
+      transition: background var(--transition);
+    }
+    .accordion-trigger:hover { background: var(--color-surface-2); }
+    .accordion-trigger i:first-child { color: var(--color-text-muted); font-size: 0.95rem; }
+    .accordion-title { flex: 1; min-width: 0; }
+    .accordion-chevron {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      transition: transform var(--transition);
+    }
+    .accordion-item.is-open .accordion-chevron { transform: rotate(180deg); }
+
+    .accordion-body {
+      display: none;
+      padding: 0 var(--sp-4) var(--sp-4);
+      font-size: var(--fs-sm);
+      color: var(--color-text-secondary);
+    }
+    .accordion-item.is-open .accordion-body { display: block; }
   </style>
 
   {# Mapa de modulos usado pelo flyout no hover da sidebar colapsada #}
@@ -402,6 +470,33 @@ Com subnav:
       el.querySelector('.toast-close').addEventListener('click', dismiss);
       setTimeout(dismiss, 4000);
     }
+
+    // ============================================
+    // ACCORDION — toggle via .accordion-trigger
+    // ============================================
+    document.querySelectorAll('[data-accordion]').forEach(group => {
+      const allowMultiple = group.dataset.multiple === '1';
+      group.querySelectorAll('.accordion-trigger').forEach(trigger => {
+        trigger.addEventListener('click', () => {
+          const item = trigger.closest('.accordion-item');
+          const isOpen = item.classList.contains('is-open');
+          if (!allowMultiple) {
+            group.querySelectorAll('.accordion-item.is-open').forEach(i => {
+              i.classList.remove('is-open');
+              const t = i.querySelector('.accordion-trigger');
+              if (t) t.setAttribute('aria-expanded', 'false');
+            });
+          }
+          if (!isOpen) {
+            item.classList.add('is-open');
+            trigger.setAttribute('aria-expanded', 'true');
+          } else {
+            item.classList.remove('is-open');
+            trigger.setAttribute('aria-expanded', 'false');
+          }
+        });
+      });
+    });
 
     // ============================================
     // TABS — troca paineis via data-tab
