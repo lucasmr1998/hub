@@ -1,0 +1,33 @@
+{% comment %}
+Button component.
+Params:
+  variant: primary | secondary | ghost | danger | link  (default: primary)
+  size: sm | md | lg  (default: md)
+  label: texto do botao
+  icon: classe bi-* do Bootstrap Icons
+  icon_pos: left (default) | right
+  disabled: bool
+  loading: bool
+  type: button | submit | reset  (default: button)
+  href: se setado, renderiza como <a>
+  full_width: bool
+{% endcomment %}
+{% if href %}
+<a href="{{ href }}"
+   class="btn btn-{{ variant|default:'primary' }}{% if size %} btn-{{ size }}{% endif %}{% if full_width %} btn-block{% endif %}{% if loading %} is-loading{% endif %}{% if disabled %} is-disabled{% endif %}"
+   {% if disabled %}aria-disabled="true" tabindex="-1"{% endif %}>
+  {% if loading %}<i class="bi bi-arrow-repeat btn-spinner"></i>{% endif %}
+  {% if icon and not loading and icon_pos != 'right' %}<i class="bi {{ icon }}"></i>{% endif %}
+  {% if label %}<span>{{ label }}</span>{% endif %}
+  {% if icon and not loading and icon_pos == 'right' %}<i class="bi {{ icon }}"></i>{% endif %}
+</a>
+{% else %}
+<button type="{{ type|default:'button' }}"
+        class="btn btn-{{ variant|default:'primary' }}{% if size %} btn-{{ size }}{% endif %}{% if full_width %} btn-block{% endif %}{% if loading %} is-loading{% endif %}"
+        {% if disabled or loading %}disabled{% endif %}>
+  {% if loading %}<i class="bi bi-arrow-repeat btn-spinner"></i>{% endif %}
+  {% if icon and not loading and icon_pos != 'right' %}<i class="bi {{ icon }}"></i>{% endif %}
+  {% if label %}<span>{{ label }}</span>{% endif %}
+  {% if icon and not loading and icon_pos == 'right' %}<i class="bi {{ icon }}"></i>{% endif %}
+</button>
+{% endif %}

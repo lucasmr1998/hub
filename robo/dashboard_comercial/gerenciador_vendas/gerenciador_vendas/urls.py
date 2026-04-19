@@ -23,6 +23,7 @@ urlpatterns = [
 
     # === Design system preview (temporario — remover quando o DS estiver adotado) ===
     path('design-system/preview/', TemplateView.as_view(template_name='design_system_preview.html'), name='design_system_preview'),
+    path('design-system/componentes/', TemplateView.as_view(template_name='design_system_components.html'), name='design_system_components'),
 
     # === API REST (DRF + OpenAPI) ===
     path('api/', include('apps.api.urls')),

@@ -1,0 +1,45 @@
+{% comment %}
+Input component.
+Params:
+  name: identificador do field
+  id: id do elemento (default: name)
+  label: texto do label
+  type: text (default) | email | password | search | tel | number | url
+  value
+  placeholder
+  helper: texto auxiliar abaixo do input
+  error: mensagem de erro (ativa estado de erro)
+  required: bool
+  disabled: bool
+  readonly: bool
+  icon_left: classe bi-* de icone a esquerda
+  icon_right: classe bi-* de icone a direita
+  size: sm | md | lg (default: md)
+{% endcomment %}
+<div class="field{% if error %} has-error{% endif %}{% if disabled %} is-disabled{% endif %}{% if size %} field-{{ size }}{% endif %}">
+  {% if label %}
+    <label for="{{ id|default:name }}" class="field-label">
+      {{ label }}{% if required %} <span class="field-required">*</span>{% endif %}
+    </label>
+  {% endif %}
+  <div class="field-input-wrap">
+    {% if icon_left %}<i class="bi {{ icon_left }} field-icon field-icon-left"></i>{% endif %}
+    <input
+      type="{{ type|default:'text' }}"
+      name="{{ name }}"
+      id="{{ id|default:name }}"
+      class="field-input{% if icon_left %} has-icon-left{% endif %}{% if icon_right %} has-icon-right{% endif %}"
+      value="{{ value|default:'' }}"
+      placeholder="{{ placeholder|default:'' }}"
+      {% if required %}required{% endif %}
+      {% if disabled %}disabled{% endif %}
+      {% if readonly %}readonly{% endif %}
+    >
+    {% if icon_right %}<i class="bi {{ icon_right }} field-icon field-icon-right"></i>{% endif %}
+  </div>
+  {% if error %}
+    <p class="field-error"><i class="bi bi-exclamation-circle"></i> {{ error }}</p>
+  {% elif helper %}
+    <p class="field-helper">{{ helper }}</p>
+  {% endif %}
+</div>

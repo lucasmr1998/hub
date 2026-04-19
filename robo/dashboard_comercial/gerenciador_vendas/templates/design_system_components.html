@@ -1,0 +1,327 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Componentes — Design System — Hubtrix{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ============================================
+     BUTTON
+     ============================================ */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    padding: 0 var(--sp-4);
+    height: 36px;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    font-family: var(--font-sans);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--transition), border-color var(--transition), color var(--transition), box-shadow var(--transition);
+    user-select: none;
+  }
+  .btn:disabled,
+  .btn.is-disabled { opacity: 0.55; cursor: not-allowed; pointer-events: none; }
+  .btn i { font-size: 0.95rem; }
+
+  /* Sizes */
+  .btn-sm { height: 30px; padding: 0 var(--sp-3); font-size: var(--fs-xs); }
+  .btn-lg { height: 44px; padding: 0 var(--sp-5); font-size: var(--fs-base); }
+  .btn-block { width: 100%; }
+
+  /* Variants */
+  .btn-primary {
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    border-color: var(--color-primary);
+  }
+  .btn-primary:hover { background: var(--color-primary-hover); border-color: var(--color-primary-hover); }
+
+  .btn-secondary {
+    background: var(--color-bg);
+    color: var(--color-text);
+    border-color: var(--color-border-strong);
+  }
+  .btn-secondary:hover { background: var(--color-surface-2); border-color: var(--color-text-muted); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-text-secondary);
+    border-color: transparent;
+  }
+  .btn-ghost:hover { background: var(--color-surface-2); color: var(--color-text); }
+
+  .btn-danger {
+    background: var(--color-danger);
+    color: var(--color-text-inverse);
+    border-color: var(--color-danger);
+  }
+  .btn-danger:hover { background: #b91c1c; border-color: #b91c1c; }
+
+  .btn-link {
+    background: transparent;
+    color: var(--color-primary);
+    border-color: transparent;
+    padding: 0;
+    height: auto;
+  }
+  .btn-link:hover { color: var(--color-primary-hover); text-decoration: underline; }
+
+  /* Loading spinner */
+  .btn.is-loading { pointer-events: none; }
+  .btn-spinner {
+    display: inline-block;
+    animation: btn-spin 0.8s linear infinite;
+  }
+  @keyframes btn-spin { to { transform: rotate(360deg); } }
+
+  /* ============================================
+     INPUT (field)
+     ============================================ */
+  .field { display: flex; flex-direction: column; gap: var(--sp-2); }
+  .field-label {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    color: var(--color-text);
+    line-height: 1.2;
+  }
+  .field-required { color: var(--color-danger); }
+
+  .field-input-wrap { position: relative; display: flex; align-items: center; }
+  .field-input {
+    width: 100%;
+    height: 38px;
+    padding: 0 var(--sp-3);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius);
+    background: var(--color-bg);
+    font-family: var(--font-sans);
+    font-size: var(--fs-sm);
+    color: var(--color-text);
+    transition: border-color var(--transition), box-shadow var(--transition);
+    outline: none;
+  }
+  .field-input::placeholder { color: var(--color-text-muted); }
+  .field-input:hover { border-color: var(--color-text-muted); }
+  .field-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  }
+  .field-input:disabled {
+    background: var(--color-surface-2);
+    color: var(--color-text-muted);
+    cursor: not-allowed;
+  }
+  .field-input[readonly] { background: var(--color-surface); }
+
+  .field-input.has-icon-left { padding-left: 34px; }
+  .field-input.has-icon-right { padding-right: 34px; }
+  .field-icon {
+    position: absolute;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    pointer-events: none;
+  }
+  .field-icon-left { left: var(--sp-3); }
+  .field-icon-right { right: var(--sp-3); }
+
+  .field-sm .field-input { height: 32px; font-size: var(--fs-xs); }
+  .field-lg .field-input { height: 44px; font-size: var(--fs-base); }
+
+  .field-helper {
+    margin: 0;
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+  }
+  .field-error {
+    margin: 0;
+    font-size: var(--fs-xs);
+    color: var(--color-danger);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .field.has-error .field-input {
+    border-color: var(--color-danger);
+  }
+  .field.has-error .field-input:focus {
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+  }
+
+  /* ============================================
+     PAGINA SHOWCASE
+     ============================================ */
+  .showcase-wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: var(--sp-8) var(--sp-6);
+  }
+  .showcase-header { margin-bottom: var(--sp-8); }
+  .showcase-title {
+    font-size: var(--fs-2xl);
+    font-weight: var(--fw-extrabold);
+    margin: 0 0 var(--sp-2);
+    letter-spacing: -0.02em;
+  }
+  .showcase-subtitle {
+    color: var(--color-text-secondary);
+    margin: 0;
+    font-size: var(--fs-md);
+  }
+  .showcase-section {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-6);
+    margin-bottom: var(--sp-6);
+  }
+  .showcase-section-title {
+    margin: 0 0 var(--sp-2);
+    font-size: var(--fs-lg);
+    font-weight: var(--fw-bold);
+  }
+  .showcase-section-desc {
+    margin: 0 0 var(--sp-5);
+    font-size: var(--fs-sm);
+    color: var(--color-text-secondary);
+  }
+  .showcase-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+    padding: var(--sp-4);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    margin-bottom: var(--sp-3);
+  }
+  .showcase-row:last-child { margin-bottom: 0; }
+  .showcase-label {
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: var(--fw-semibold);
+    margin-bottom: var(--sp-2);
+    display: block;
+  }
+  .showcase-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-4);
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="showcase-wrap">
+
+  <header class="showcase-header">
+    <h1 class="showcase-title">Componentes</h1>
+    <p class="showcase-subtitle">Biblioteca de componentes do design system Hubtrix. Cada componente e um partial reutilizavel.</p>
+  </header>
+
+  {# ========== BOTOES ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">Botoes</h2>
+    <p class="showcase-section-desc">
+      Uso: <code>{% verbatim %}{% include "components/button.html" with variant="primary" label="Salvar" %}{% endverbatim %}</code>
+    </p>
+
+    <span class="showcase-label">Variantes</span>
+    <div class="showcase-row">
+      {% include "components/button.html" with variant="primary" label="Primary" %}
+      {% include "components/button.html" with variant="secondary" label="Secondary" %}
+      {% include "components/button.html" with variant="ghost" label="Ghost" %}
+      {% include "components/button.html" with variant="danger" label="Danger" %}
+      {% include "components/button.html" with variant="link" label="Link" %}
+    </div>
+
+    <span class="showcase-label">Tamanhos</span>
+    <div class="showcase-row">
+      {% include "components/button.html" with variant="primary" size="sm" label="Small" %}
+      {% include "components/button.html" with variant="primary" label="Medium" %}
+      {% include "components/button.html" with variant="primary" size="lg" label="Large" %}
+    </div>
+
+    <span class="showcase-label">Com icone</span>
+    <div class="showcase-row">
+      {% include "components/button.html" with variant="primary" label="Adicionar" icon="bi-plus-lg" %}
+      {% include "components/button.html" with variant="secondary" label="Exportar" icon="bi-download" %}
+      {% include "components/button.html" with variant="secondary" label="Proximo" icon="bi-arrow-right" icon_pos="right" %}
+      {% include "components/button.html" with variant="ghost" icon="bi-three-dots" %}
+    </div>
+
+    <span class="showcase-label">Estados</span>
+    <div class="showcase-row">
+      {% include "components/button.html" with variant="primary" label="Salvando..." loading=True %}
+      {% include "components/button.html" with variant="primary" label="Desabilitado" disabled=True %}
+      {% include "components/button.html" with variant="secondary" label="Desabilitado" disabled=True %}
+    </div>
+
+    <span class="showcase-label">Full width</span>
+    <div class="showcase-row" style="flex-direction: column; align-items: stretch;">
+      {% include "components/button.html" with variant="primary" label="Botao largura total" full_width=True %}
+    </div>
+  </section>
+
+  {# ========== INPUTS ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">Inputs</h2>
+    <p class="showcase-section-desc">
+      Uso: <code>{% verbatim %}{% include "components/input.html" with name="email" label="Email" type="email" %}{% endverbatim %}</code>
+    </p>
+
+    <span class="showcase-label">Basico</span>
+    <div class="showcase-row" style="display:block;">
+      <div class="showcase-grid-2">
+        {% include "components/input.html" with name="nome" label="Nome completo" placeholder="Ex: Lucas Rodrigues" %}
+        {% include "components/input.html" with name="email" label="Email" type="email" placeholder="voce@empresa.com" required=True %}
+      </div>
+    </div>
+
+    <span class="showcase-label">Com helper e erro</span>
+    <div class="showcase-row" style="display:block;">
+      <div class="showcase-grid-2">
+        {% include "components/input.html" with name="cnpj" label="CNPJ" placeholder="00.000.000/0000-00" helper="Apenas numeros tambem funciona" %}
+        {% include "components/input.html" with name="senha" label="Senha" type="password" error="Senha precisa ter no minimo 8 caracteres" %}
+      </div>
+    </div>
+
+    <span class="showcase-label">Com icone</span>
+    <div class="showcase-row" style="display:block;">
+      <div class="showcase-grid-2">
+        {% include "components/input.html" with name="busca" type="search" placeholder="Buscar..." icon_left="bi-search" %}
+        {% include "components/input.html" with name="telefone" label="Telefone" placeholder="(00) 00000-0000" icon_right="bi-telephone" %}
+      </div>
+    </div>
+
+    <span class="showcase-label">Estados</span>
+    <div class="showcase-row" style="display:block;">
+      <div class="showcase-grid-2">
+        {% include "components/input.html" with name="d1" label="Desabilitado" value="Nao editavel" disabled=True %}
+        {% include "components/input.html" with name="r1" label="Readonly" value="Apenas leitura" readonly=True %}
+      </div>
+    </div>
+
+    <span class="showcase-label">Tamanhos</span>
+    <div class="showcase-row" style="display:block;">
+      <div class="showcase-grid-2" style="grid-template-columns: 1fr 1fr 1fr;">
+        {% include "components/input.html" with name="s1" size="sm" placeholder="Small" %}
+        {% include "components/input.html" with name="m1" placeholder="Medium (default)" %}
+        {% include "components/input.html" with name="l1" size="lg" placeholder="Large" %}
+      </div>
+    </div>
+  </section>
+
+  <p style="text-align:center; margin-top: var(--sp-8); color: var(--color-text-muted); font-size: var(--fs-sm);">
+    Proximos: badges, cards, tabelas, modais, toasts.
+  </p>
+
+</div>
+{% endblock %}
