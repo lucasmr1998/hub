@@ -1,0 +1,15 @@
+{% comment %}
+Badge component.
+Params:
+  variant: neutral (default) | primary | success | warning | danger | info
+  style: solid | soft (default) | outline
+  label: texto do badge
+  icon: classe bi-* (opcional)
+  dot: bool — mostra bolinha colorida antes do texto
+  size: sm | md (default: md)
+{% endcomment %}
+<span class="badge badge-{{ variant|default:'neutral' }} badge-{{ style|default:'soft' }}{% if size %} badge-{{ size }}{% endif %}">
+  {% if dot %}<span class="badge-dot"></span>{% endif %}
+  {% if icon %}<i class="bi {{ icon }}"></i>{% endif %}
+  {% if label %}{{ label }}{% endif %}
+</span>

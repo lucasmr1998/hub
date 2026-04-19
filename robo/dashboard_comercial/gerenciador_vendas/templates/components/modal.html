@@ -1,0 +1,41 @@
+{% comment %}
+Modal component.
+Params:
+  id: id do modal (obrigatorio — usado pra abrir/fechar via JS)
+  title: titulo do modal
+  size: sm | md (default) | lg
+  variant: default | drawer  (drawer = desliza da direita, full-height)
+  content: HTML/texto do corpo (opcional — tambem pode usar slot)
+  confirm_label: label do botao primario (default: "Confirmar")
+  confirm_variant: primary (default) | danger
+  cancel_label: label do botao secundario (default: "Cancelar")
+  show_footer: bool (default: True)
+  icon: classe bi-* (opcional — icone grande no topo, estilo confirmacao)
+
+Uso: chamar abrirModal('id-do-modal') no JS para abrir.
+{% endcomment %}
+<div id="{{ id }}" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="{{ id }}-title" hidden>
+  <div class="modal modal-{{ size|default:'md' }}{% if variant == 'drawer' %} modal-drawer{% endif %}">
+    <div class="modal-header">
+      {% if icon %}
+        <span class="modal-icon modal-icon-{{ confirm_variant|default:'primary' }}">
+          <i class="bi {{ icon }}"></i>
+        </span>
+      {% endif %}
+      <h3 id="{{ id }}-title" class="modal-title">{{ title }}</h3>
+      <button type="button" class="modal-close" aria-label="Fechar" onclick="fecharModal('{{ id }}')">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      {% if content %}{{ content|safe }}{% endif %}
+      {% block modal_body %}{% endblock %}
+    </div>
+    {% if show_footer|default:True %}
+      <div class="modal-footer">
+        {% include "components/button.html" with variant="secondary" label=cancel_label|default:"Cancelar" %}
+        {% include "components/button.html" with variant=confirm_variant|default:"primary" label=confirm_label|default:"Confirmar" %}
+      </div>
+    {% endif %}
+  </div>
+</div>

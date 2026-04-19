@@ -1,4 +1,4 @@
-{% extends "layouts/base.html" %}
+{% extends "layouts/layout_app.html" %}
 
 {% block title %}Componentes — Design System — Hubtrix{% endblock %}
 
@@ -153,6 +153,563 @@
   }
 
   /* ============================================
+     BADGE
+     ============================================ */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    height: 22px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-full);
+    font-family: var(--font-sans);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    line-height: 1;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+  .badge-sm { height: 18px; font-size: 0.65rem; padding: 2px 6px; }
+  .badge i { font-size: 0.7rem; }
+  .badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  /* Soft — fundo claro, texto na cor */
+  .badge-soft.badge-neutral { background: var(--color-surface-2); color: var(--color-text-secondary); }
+  .badge-soft.badge-primary { background: var(--color-primary-soft); color: var(--color-primary-text); }
+  .badge-soft.badge-success { background: var(--color-success-soft); color: #166534; }
+  .badge-soft.badge-warning { background: var(--color-warning-soft); color: #92400e; }
+  .badge-soft.badge-danger  { background: var(--color-danger-soft);  color: #991b1b; }
+  .badge-soft.badge-info    { background: var(--color-info-soft);    color: #075985; }
+
+  /* Solid — fundo forte, texto claro */
+  .badge-solid.badge-neutral { background: var(--color-text-secondary); color: #fff; }
+  .badge-solid.badge-primary { background: var(--color-primary); color: #fff; }
+  .badge-solid.badge-success { background: var(--color-success); color: #fff; }
+  .badge-solid.badge-warning { background: var(--color-warning); color: #fff; }
+  .badge-solid.badge-danger  { background: var(--color-danger);  color: #fff; }
+  .badge-solid.badge-info    { background: var(--color-info);    color: #fff; }
+
+  /* Outline — borda + texto na cor, fundo branco */
+  .badge-outline { background: var(--color-bg); }
+  .badge-outline.badge-neutral { border-color: var(--color-border-strong); color: var(--color-text-secondary); }
+  .badge-outline.badge-primary { border-color: var(--color-primary); color: var(--color-primary-text); }
+  .badge-outline.badge-success { border-color: var(--color-success); color: #166534; }
+  .badge-outline.badge-warning { border-color: var(--color-warning); color: #92400e; }
+  .badge-outline.badge-danger  { border-color: var(--color-danger);  color: #991b1b; }
+  .badge-outline.badge-info    { border-color: var(--color-info);    color: #075985; }
+
+  /* ============================================
+     CARD
+     ============================================ */
+  .card {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    padding: var(--sp-4) var(--sp-5);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .card-title {
+    margin: 0;
+    font-size: var(--fs-md);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text);
+  }
+  .card-subtitle {
+    margin: 2px 0 0;
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+  }
+  .card-actions { display: inline-flex; gap: var(--sp-2); }
+  .card-body { padding: var(--sp-5); }
+  .card-footer {
+    padding: var(--sp-3) var(--sp-5);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--sp-2);
+  }
+
+  /* Stat card (derivado do card, pra metricas) */
+  .stat-card {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+  }
+  .stat-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-2);
+  }
+  .stat-card-label {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    color: var(--color-text-secondary);
+  }
+  .stat-card-icon {
+    width: 32px; height: 32px;
+    border-radius: var(--radius);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+  }
+  .stat-card-icon-primary { background: var(--color-primary-soft); color: var(--color-primary); }
+  .stat-card-icon-success { background: var(--color-success-soft); color: var(--color-success); }
+  .stat-card-icon-warning { background: var(--color-warning-soft); color: var(--color-warning); }
+  .stat-card-icon-danger  { background: var(--color-danger-soft);  color: var(--color-danger); }
+  .stat-card-icon-info    { background: var(--color-info-soft);    color: var(--color-info); }
+
+  .stat-card-value {
+    font-size: var(--fs-2xl);
+    font-weight: var(--fw-extrabold);
+    color: var(--color-text);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .stat-card-foot {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--fs-xs);
+  }
+  .stat-card-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-weight: var(--fw-semibold);
+  }
+  .stat-card-delta-up   { color: var(--color-success); }
+  .stat-card-delta-down { color: var(--color-danger); }
+  .stat-card-delta-flat { color: var(--color-text-muted); }
+  .stat-card-footnote { color: var(--color-text-muted); }
+
+  /* ============================================
+     TABLE
+     ============================================ */
+  .table-wrap {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-sm);
+  }
+  .table thead th {
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+    font-weight: var(--fw-semibold);
+    font-size: var(--fs-xs);
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .table thead th.is-sortable {
+    cursor: pointer;
+    user-select: none;
+  }
+  .table thead th.is-sortable:hover { color: var(--color-text); }
+  .table thead th .table-sort-icon {
+    font-size: 0.7rem;
+    margin-left: 4px;
+    color: var(--color-text-muted);
+  }
+  .table tbody td {
+    padding: var(--sp-3) var(--sp-4);
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text);
+    vertical-align: middle;
+  }
+  .table tbody tr:last-child td { border-bottom: none; }
+  .table tbody tr:hover { background: var(--color-surface); }
+  .table-col-actions { text-align: right; width: 1%; white-space: nowrap; }
+  .table-empty {
+    padding: var(--sp-10) var(--sp-5);
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: var(--fs-sm);
+  }
+  .table-empty i {
+    display: block;
+    font-size: 2rem;
+    margin-bottom: var(--sp-3);
+    color: var(--color-text-muted);
+  }
+
+  /* Table pagination */
+  .table-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-3) var(--sp-4);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface);
+    font-size: var(--fs-sm);
+    color: var(--color-text-secondary);
+  }
+  .table-pagination-controls { display: inline-flex; gap: var(--sp-1); }
+
+  /* ============================================
+     MODAL
+     ============================================ */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: var(--sp-4);
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+  .modal-overlay:not([hidden]) { opacity: 1; }
+  .modal-overlay[hidden] { display: none; }
+
+  .modal {
+    background: var(--color-bg);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-height: calc(100vh - var(--sp-8));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: modal-in 180ms ease;
+  }
+  @keyframes modal-in {
+    from { transform: translateY(12px); opacity: 0; }
+    to   { transform: translateY(0);   opacity: 1; }
+  }
+  .modal-sm { max-width: 400px; }
+  .modal-md { max-width: 560px; }
+  .modal-lg { max-width: 800px; }
+
+  .modal-drawer {
+    max-width: 480px;
+    max-height: 100vh;
+    height: 100vh;
+    margin-left: auto;
+    border-radius: 0;
+    animation: drawer-in 220ms ease;
+  }
+  @keyframes drawer-in {
+    from { transform: translateX(40px); opacity: 0; }
+    to   { transform: translateX(0);   opacity: 1; }
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-4) var(--sp-5);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .modal-icon {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+  }
+  .modal-icon-primary { background: var(--color-primary-soft); color: var(--color-primary); }
+  .modal-icon-danger  { background: var(--color-danger-soft);  color: var(--color-danger); }
+  .modal-title {
+    margin: 0;
+    font-size: var(--fs-md);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text);
+    flex: 1;
+    min-width: 0;
+  }
+  .modal-close {
+    width: 30px; height: 30px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background var(--transition), color var(--transition);
+    flex-shrink: 0;
+  }
+  .modal-close:hover { background: var(--color-surface-2); color: var(--color-text); }
+
+  .modal-body {
+    padding: var(--sp-5);
+    overflow-y: auto;
+    flex: 1;
+  }
+  .modal-footer {
+    padding: var(--sp-3) var(--sp-5);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface);
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--sp-2);
+  }
+
+  /* ============================================
+     TOAST (posicionamento do container esta em layouts/layout_app.html)
+     ============================================ */
+  .toast {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--color-text-secondary);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    min-width: 280px;
+    max-width: 420px;
+    pointer-events: auto;
+    animation: toast-in 200ms ease;
+  }
+  @keyframes toast-in {
+    from { transform: translateX(20px); opacity: 0; }
+    to   { transform: translateX(0);   opacity: 1; }
+  }
+  .toast.is-leaving { animation: toast-out 160ms ease forwards; }
+  @keyframes toast-out {
+    to { transform: translateX(20px); opacity: 0; }
+  }
+
+  .toast-success { border-left-color: var(--color-success); }
+  .toast-warning { border-left-color: var(--color-warning); }
+  .toast-danger  { border-left-color: var(--color-danger); }
+  .toast-info    { border-left-color: var(--color-info); }
+
+  .toast-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .toast-success .toast-icon { color: var(--color-success); }
+  .toast-warning .toast-icon { color: var(--color-warning); }
+  .toast-danger .toast-icon  { color: var(--color-danger); }
+  .toast-info .toast-icon    { color: var(--color-info); }
+
+  .toast-body { flex: 1; min-width: 0; }
+  .toast-title {
+    margin: 0 0 2px;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text);
+  }
+  .toast-message {
+    margin: 0;
+    font-size: var(--fs-xs);
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+  }
+  .toast-close {
+    width: 22px; height: 22px;
+    background: transparent;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 0.75rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    margin-top: -2px;
+  }
+  .toast-close:hover { background: var(--color-surface-2); color: var(--color-text); }
+
+  /* ============================================
+     TABS
+     ============================================ */
+  .tabs {
+    display: inline-flex;
+    gap: var(--sp-1);
+  }
+  .tabs-line {
+    border-bottom: 1px solid var(--color-border);
+    width: 100%;
+    gap: 0;
+  }
+
+  .tabs-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-4);
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    font-family: var(--font-sans);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition);
+    position: relative;
+  }
+  .tabs-item i { font-size: 0.9rem; }
+  .tabs-item:hover { color: var(--color-text); }
+
+  /* Line variant (padrao) */
+  .tabs-line .tabs-item {
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: 0;
+  }
+  .tabs-line .tabs-item.is-active {
+    color: var(--color-primary);
+  }
+  .tabs-line .tabs-item.is-active::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--color-primary);
+    border-radius: 2px 2px 0 0;
+  }
+
+  /* Pills variant */
+  .tabs-pills .tabs-item {
+    border-radius: var(--radius);
+  }
+  .tabs-pills .tabs-item:hover { background: var(--color-surface-2); }
+  .tabs-pills .tabs-item.is-active {
+    background: var(--color-primary-soft);
+    color: var(--color-primary-text);
+  }
+
+  .tabs-item-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    background: var(--color-surface-2);
+    border-radius: var(--radius-full);
+    font-size: 0.65rem;
+    font-weight: var(--fw-semibold);
+    color: var(--color-text-secondary);
+  }
+  .tabs-item.is-active .tabs-item-badge {
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  /* Painel de conteudo das tabs */
+  .tabs-panel { display: none; padding: var(--sp-4) 0; }
+  .tabs-panel.is-active { display: block; }
+
+  /* ============================================
+     BREADCRUMBS
+     ============================================ */
+  .breadcrumbs ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .breadcrumbs-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+  }
+  .breadcrumbs-item a {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    padding: 2px 4px;
+    border-radius: var(--radius-sm);
+    transition: background var(--transition), color var(--transition);
+  }
+  .breadcrumbs-item a:hover {
+    background: var(--color-surface-2);
+    color: var(--color-text);
+  }
+  .breadcrumbs-separator {
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+  }
+  .breadcrumbs-current {
+    color: var(--color-text);
+    font-weight: var(--fw-medium);
+  }
+
+  /* ============================================
+     TOOLTIP (CSS-only, baseado em data-tooltip)
+     ============================================ */
+  [data-tooltip] {
+    position: relative;
+  }
+  [data-tooltip]::before,
+  [data-tooltip]::after {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease, transform 120ms ease;
+    z-index: 500;
+  }
+  [data-tooltip]::before {
+    content: attr(data-tooltip);
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translate(-50%, 4px);
+    padding: 4px 8px;
+    background: var(--color-text);
+    color: var(--color-bg);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-medium);
+    white-space: nowrap;
+    max-width: 240px;
+  }
+  [data-tooltip]::after {
+    content: '';
+    bottom: calc(100% + 3px);
+    left: 50%;
+    transform: translate(-50%, 4px);
+    border: 5px solid transparent;
+    border-top-color: var(--color-text);
+  }
+  [data-tooltip]:hover::before,
+  [data-tooltip]:hover::after,
+  [data-tooltip]:focus::before,
+  [data-tooltip]:focus::after {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  /* ============================================
      PAGINA SHOWCASE
      ============================================ */
   .showcase-wrap {
@@ -218,7 +775,8 @@
 </style>
 {% endblock %}
 
-{% block body %}
+{% block content %}
+
 <div class="showcase-wrap">
 
   <header class="showcase-header">
@@ -319,9 +877,305 @@
     </div>
   </section>
 
+  {# ========== BADGES ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">Badges</h2>
+    <p class="showcase-section-desc">
+      Uso: <code>{% verbatim %}{% include "components/badge.html" with variant="success" label="Ativo" %}{% endverbatim %}</code>
+    </p>
+
+    <span class="showcase-label">Soft (padrao)</span>
+    <div class="showcase-row">
+      {% include "components/badge.html" with variant="neutral" label="Neutral" %}
+      {% include "components/badge.html" with variant="primary" label="Primary" %}
+      {% include "components/badge.html" with variant="success" label="Success" %}
+      {% include "components/badge.html" with variant="warning" label="Warning" %}
+      {% include "components/badge.html" with variant="danger" label="Danger" %}
+      {% include "components/badge.html" with variant="info" label="Info" %}
+    </div>
+
+    <span class="showcase-label">Solid</span>
+    <div class="showcase-row">
+      {% include "components/badge.html" with variant="neutral" style="solid" label="Neutral" %}
+      {% include "components/badge.html" with variant="primary" style="solid" label="Primary" %}
+      {% include "components/badge.html" with variant="success" style="solid" label="Success" %}
+      {% include "components/badge.html" with variant="warning" style="solid" label="Warning" %}
+      {% include "components/badge.html" with variant="danger" style="solid" label="Danger" %}
+      {% include "components/badge.html" with variant="info" style="solid" label="Info" %}
+    </div>
+
+    <span class="showcase-label">Outline</span>
+    <div class="showcase-row">
+      {% include "components/badge.html" with variant="neutral" style="outline" label="Neutral" %}
+      {% include "components/badge.html" with variant="primary" style="outline" label="Primary" %}
+      {% include "components/badge.html" with variant="success" style="outline" label="Success" %}
+      {% include "components/badge.html" with variant="warning" style="outline" label="Warning" %}
+      {% include "components/badge.html" with variant="danger" style="outline" label="Danger" %}
+      {% include "components/badge.html" with variant="info" style="outline" label="Info" %}
+    </div>
+
+    <span class="showcase-label">Com dot e icone</span>
+    <div class="showcase-row">
+      {% include "components/badge.html" with variant="success" label="Ativo" dot=True %}
+      {% include "components/badge.html" with variant="warning" label="Pendente" dot=True %}
+      {% include "components/badge.html" with variant="danger" label="Inadimplente" dot=True %}
+      {% include "components/badge.html" with variant="primary" label="Pro" icon="bi-star-fill" %}
+      {% include "components/badge.html" with variant="info" label="Novo" icon="bi-sparkles" %}
+    </div>
+
+    <span class="showcase-label">Exemplos reais</span>
+    <div class="showcase-row">
+      {% include "components/badge.html" with variant="neutral" label="Starter" style="outline" %}
+      {% include "components/badge.html" with variant="primary" label="Pro" %}
+      {% include "components/badge.html" with variant="primary" label="Advanced" style="solid" %}
+      {% include "components/badge.html" with variant="success" label="Tenant ativo" dot=True %}
+      {% include "components/badge.html" with variant="danger" label="Beta" size="sm" %}
+    </div>
+  </section>
+
+  {# ========== STAT CARDS ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">Stat Cards</h2>
+    <p class="showcase-section-desc">
+      Uso: <code>{% verbatim %}{% include "components/stat_card.html" with label="Leads" value="248" delta="+12%" delta_trend="up" %}{% endverbatim %}</code>
+    </p>
+
+    <div class="showcase-row" style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; padding: 0; border: none; background: transparent; gap: var(--sp-4);">
+      {% include "components/stat_card.html" with label="Leads esta semana" value="248" delta="+12%" delta_trend="up" footnote="vs semana passada" icon="bi-person-plus" icon_variant="primary" %}
+      {% include "components/stat_card.html" with label="Vendas fechadas" value="R$ 84.230" delta="+8.3%" delta_trend="up" footnote="vs mes passado" icon="bi-cart-check" icon_variant="success" %}
+      {% include "components/stat_card.html" with label="Tickets abertos" value="37" delta="-5" delta_trend="down" footnote="vs ontem" icon="bi-ticket-detailed" icon_variant="warning" %}
+      {% include "components/stat_card.html" with label="Churn 30d" value="2.1%" delta="+0.3pp" delta_trend="down" footnote="acima do alvo" icon="bi-arrow-down-right" icon_variant="danger" %}
+    </div>
+  </section>
+
+  {# ========== CARDS (sem include, so classes CSS) ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">Cards</h2>
+    <p class="showcase-section-desc">
+      Use as classes CSS direto: <code>.card</code>, <code>.card-header</code>, <code>.card-title</code>, <code>.card-body</code>, <code>.card-footer</code>, <code>.card-actions</code>.
+    </p>
+
+    <span class="showcase-label">Card simples</span>
+    <div class="showcase-row" style="display:block; padding: var(--sp-4); background: var(--color-surface);">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">Dados do tenant</h3>
+            <p class="card-subtitle">Informacoes cadastrais da empresa</p>
+          </div>
+          <div class="card-actions">
+            {% include "components/button.html" with variant="ghost" size="sm" icon="bi-pencil" label="Editar" %}
+          </div>
+        </div>
+        <div class="card-body">
+          <p style="margin: 0; font-size: var(--fs-sm); color: var(--color-text-secondary);">
+            Conteudo do card. Pode ser texto, formulario, tabela, grafico, qualquer coisa.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <span class="showcase-label">Card com footer</span>
+    <div class="showcase-row" style="display:block; padding: var(--sp-4); background: var(--color-surface);">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Confirmar acao</h3>
+        </div>
+        <div class="card-body">
+          <p style="margin: 0; font-size: var(--fs-sm);">Tem certeza que deseja excluir este lead? Essa acao nao pode ser desfeita.</p>
+        </div>
+        <div class="card-footer">
+          {% include "components/button.html" with variant="secondary" label="Cancelar" %}
+          {% include "components/button.html" with variant="danger" label="Excluir" icon="bi-trash" %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# ========== TABELAS ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">Tabelas</h2>
+    <p class="showcase-section-desc">
+      Use classes CSS: <code>.table-wrap</code>, <code>.table</code>, <code>.is-sortable</code>, <code>.table-col-actions</code>, <code>.table-pagination</code>.
+    </p>
+
+    <span class="showcase-label">Tabela padrao com sort, badges e acoes</span>
+    <div class="showcase-row" style="display:block; padding: var(--sp-4); background: var(--color-surface);">
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="is-sortable">Empresa <i class="bi bi-chevron-down table-sort-icon"></i></th>
+              <th>Plano</th>
+              <th class="is-sortable">Status</th>
+              <th class="is-sortable">Criado em</th>
+              <th class="table-col-actions">Acoes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Megalink</strong><br><span style="color:var(--color-text-muted); font-size:var(--fs-xs);">CNPJ 12.345.678/0001-90</span></td>
+              <td>{% include "components/badge.html" with variant="primary" label="Advanced" style="solid" %}</td>
+              <td>{% include "components/badge.html" with variant="success" label="Ativo" dot=True %}</td>
+              <td>12/03/2025</td>
+              <td class="table-col-actions">
+                {% include "components/button.html" with variant="ghost" size="sm" icon="bi-pencil" %}
+                {% include "components/button.html" with variant="ghost" size="sm" icon="bi-three-dots" %}
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Fatepi</strong><br><span style="color:var(--color-text-muted); font-size:var(--fs-xs);">CNPJ 98.765.432/0001-00</span></td>
+              <td>{% include "components/badge.html" with variant="primary" label="Pro" %}</td>
+              <td>{% include "components/badge.html" with variant="success" label="Ativo" dot=True %}</td>
+              <td>05/01/2026</td>
+              <td class="table-col-actions">
+                {% include "components/button.html" with variant="ghost" size="sm" icon="bi-pencil" %}
+                {% include "components/button.html" with variant="ghost" size="sm" icon="bi-three-dots" %}
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Nuvyon</strong><br><span style="color:var(--color-text-muted); font-size:var(--fs-xs);">CNPJ 11.222.333/0001-44</span></td>
+              <td>{% include "components/badge.html" with variant="primary" label="Advanced" style="solid" %}</td>
+              <td>{% include "components/badge.html" with variant="warning" label="Onboarding" dot=True %}</td>
+              <td>18/04/2026</td>
+              <td class="table-col-actions">
+                {% include "components/button.html" with variant="ghost" size="sm" icon="bi-pencil" %}
+                {% include "components/button.html" with variant="ghost" size="sm" icon="bi-three-dots" %}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="table-pagination">
+          <span>Mostrando <strong>1–3</strong> de <strong>3</strong> resultados</span>
+          <div class="table-pagination-controls">
+            {% include "components/button.html" with variant="ghost" size="sm" icon="bi-chevron-left" disabled=True %}
+            {% include "components/button.html" with variant="ghost" size="sm" icon="bi-chevron-right" disabled=True %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <span class="showcase-label">Estado vazio</span>
+    <div class="showcase-row" style="display:block; padding: var(--sp-4); background: var(--color-surface);">
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr><th>Empresa</th><th>Plano</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="3">
+                <div class="table-empty">
+                  <i class="bi bi-inbox"></i>
+                  Nenhum tenant cadastrado ainda.<br>
+                  <span style="font-size: var(--fs-xs);">Clique em "Novo tenant" pra comecar.</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  {# ========== MODAIS ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">Modais</h2>
+    <p class="showcase-section-desc">
+      Uso: <code>{% verbatim %}{% include "components/modal.html" with id="meu-modal" title="..." %}{% endverbatim %}</code> + chamar <code>abrirModal('meu-modal')</code> no click.
+    </p>
+
+    <div class="showcase-row">
+      <button class="btn btn-primary" onclick="abrirModal('modal-simples')">Abrir modal simples</button>
+      <button class="btn btn-danger" onclick="abrirModal('modal-confirmar')">Abrir confirmacao (danger)</button>
+      <button class="btn btn-secondary" onclick="abrirModal('modal-drawer')">Abrir drawer lateral</button>
+    </div>
+  </section>
+
+  {# Modais (renderizados fora das sections pra evitar aninhamento) #}
+  {% include "components/modal.html" with id="modal-simples" title="Editar tenant" content="<p style='margin:0; font-size:var(--fs-sm); color:var(--color-text-secondary);'>Corpo do modal. Pode conter formularios, detalhes, qualquer conteudo.</p>" confirm_label="Salvar" %}
+
+  {% include "components/modal.html" with id="modal-confirmar" title="Excluir lead?" icon="bi-exclamation-triangle-fill" confirm_variant="danger" confirm_label="Sim, excluir" content="<p style='margin:0; font-size:var(--fs-sm);'>Essa acao nao pode ser desfeita. Todos os dados deste lead serao removidos permanentemente.</p>" %}
+
+  {% include "components/modal.html" with id="modal-drawer" title="Detalhes do tenant" variant="drawer" size="lg" content="<p style='margin:0 0 var(--sp-3); font-size:var(--fs-sm);'><strong>Megalink</strong></p><p style='margin:0; font-size:var(--fs-sm); color:var(--color-text-secondary);'>Drawer lateral — bom pra mostrar detalhes sem tirar o usuario da lista. Pode conter tabs, timeline, formularios.</p>" %}
+
+  {# ========== TOASTS ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">Toasts</h2>
+    <p class="showcase-section-desc">
+      Uso: chame <code>toast('Titulo', 'Mensagem', 'success')</code> no JS. Aparece no topo direito, auto-dismiss em 4s.
+    </p>
+    <div class="showcase-row">
+      <button class="btn btn-primary" onclick="toast('Salvo', 'Tenant atualizado com sucesso', 'success')">Success</button>
+      <button class="btn btn-secondary" onclick="toast('Atencao', 'Plano expira em 3 dias', 'warning')">Warning</button>
+      <button class="btn btn-danger" onclick="toast('Erro', 'Nao foi possivel conectar ao servidor', 'danger')">Danger</button>
+      <button class="btn btn-ghost" onclick="toast('Dica', 'Use Ctrl+K pra buscar', 'info')">Info</button>
+    </div>
+  </section>
+
+  {# ========== TABS ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">Tabs</h2>
+    <p class="showcase-section-desc">
+      Uso: <code>{% verbatim %}{% include "components/tabs.html" with items=tabs %}{% endverbatim %}</code> + paineis com <code>.tabs-panel</code> e <code>id</code> matching.
+    </p>
+
+    <span class="showcase-label">Line (padrao)</span>
+    <div class="showcase-row" style="display:block; padding: var(--sp-4); background: var(--color-bg);">
+      {% include "components/tabs.html" with items=tabs_line %}
+      <div class="tabs-panel is-active" id="aba-dados">
+        <p style="margin:0; font-size:var(--fs-sm); color: var(--color-text-secondary);">Conteudo de <strong>Dados</strong>.</p>
+      </div>
+      <div class="tabs-panel" id="aba-modulos">
+        <p style="margin:0; font-size:var(--fs-sm); color: var(--color-text-secondary);">Conteudo de <strong>Modulos</strong>.</p>
+      </div>
+      <div class="tabs-panel" id="aba-usuarios">
+        <p style="margin:0; font-size:var(--fs-sm); color: var(--color-text-secondary);">Conteudo de <strong>Usuarios</strong>.</p>
+      </div>
+      <div class="tabs-panel" id="aba-integracoes">
+        <p style="margin:0; font-size:var(--fs-sm); color: var(--color-text-secondary);">Conteudo de <strong>Integracoes</strong>.</p>
+      </div>
+    </div>
+
+    <span class="showcase-label">Pills</span>
+    <div class="showcase-row">
+      {% include "components/tabs.html" with items=tabs_pills variant="pills" %}
+    </div>
+  </section>
+
+  {# ========== BREADCRUMBS ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">Breadcrumbs</h2>
+    <p class="showcase-section-desc">
+      Uso: <code>{% verbatim %}{% include "components/breadcrumbs.html" with items=crumbs %}{% endverbatim %}</code>
+    </p>
+    <div class="showcase-row" style="display:block;">
+      {% include "components/breadcrumbs.html" with items=crumbs %}
+    </div>
+  </section>
+
+  {# ========== TOOLTIPS ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">Tooltips</h2>
+    <p class="showcase-section-desc">
+      CSS-only: adicione <code>data-tooltip="texto"</code> em qualquer elemento.
+    </p>
+    <div class="showcase-row">
+      <button class="btn btn-secondary" data-tooltip="Exporta lista em CSV">Passa o mouse aqui</button>
+      <button class="btn btn-ghost" data-tooltip="Atalho: Ctrl+K" icon="bi-search">
+        <i class="bi bi-search"></i>
+      </button>
+      <span data-tooltip="Esta acao e irreversivel" style="color: var(--color-danger); font-size: var(--fs-sm); cursor: help; text-decoration: underline dotted;">
+        Excluir permanentemente
+      </span>
+    </div>
+  </section>
+
   <p style="text-align:center; margin-top: var(--sp-8); color: var(--color-text-muted); font-size: var(--fs-sm);">
-    Proximos: badges, cards, tabelas, modais, toasts.
+    Biblioteca base completa. Proximos passos: aplicar em paginas reais (aurora-admin).
   </p>
 
 </div>
+
+{# Modal/toast/tabs JS e toast-container ja vem do layouts/layout_app.html #}
 {% endblock %}

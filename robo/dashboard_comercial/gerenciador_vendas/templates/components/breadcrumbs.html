@@ -1,0 +1,27 @@
+{% comment %}
+Breadcrumbs component.
+Params:
+  items: lista de dicts [{"label": "...", "href": "..."}] — ultimo item e renderizado como texto (pagina atual).
+
+Exemplo:
+  {% include "components/breadcrumbs.html" with items=breadcrumbs %}
+  # onde breadcrumbs = [
+  #   {"label": "Home", "href": "/"},
+  #   {"label": "Tenants", "href": "/aurora-admin/tenants/"},
+  #   {"label": "Megalink"},
+  # ]
+{% endcomment %}
+<nav class="breadcrumbs" aria-label="Trilha de navegacao">
+  <ol>
+    {% for item in items %}
+      <li class="breadcrumbs-item">
+        {% if item.href and not forloop.last %}
+          <a href="{{ item.href }}">{{ item.label }}</a>
+          <i class="bi bi-chevron-right breadcrumbs-separator"></i>
+        {% else %}
+          <span class="breadcrumbs-current" aria-current="page">{{ item.label }}</span>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+</nav>

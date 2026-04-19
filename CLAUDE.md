@@ -210,6 +210,59 @@ python scripts/gerar_hub.py
 
 ---
 
+## Design System e Templates
+
+Estrutura unificada de templates em `robo/dashboard_comercial/gerenciador_vendas/templates/`. Pagina de showcase em `/design-system/preview/` (layout) e `/design-system/componentes/` (biblioteca).
+
+### Onde fica o que
+
+- **Tokens CSS:** `templates/layouts/base.html` — cores, tipografia, espacamentos, radii, sombras, layout sizes. Fonte unica de variaveis.
+- **Layout base pra paginas logadas:** `templates/layouts/layout_app.html` — ja traz topbar + sidebar + flyout + toast container + JS base (modal/toast/tabs/flyout de hover). **Toda pagina logada deve extender este layout.**
+- **Partials reutilizaveis:** `templates/partials/{topbar,sidebar,sidebar_subnav}.html` — mexer aqui propaga pra todas as paginas.
+- **Biblioteca de componentes:** `templates/components/*.html` — botao, input, badge, stat_card, modal, breadcrumbs, tabs. Cada arquivo e um partial reutilizavel documentado no inicio do proprio arquivo.
+
+### Regra de ouro
+
+- Toda pagina logada **deve extender** `layouts/layout_app.html`. **Nunca duplicar** topbar/sidebar no template da pagina.
+- Mudancas visuais globais vao nos partials/tokens, nunca em CSS inline da pagina.
+- Ao criar elemento de UI que ja exista como componente, **usar o componente**. Nao reinventar botao/input/badge inline.
+- **Se o elemento nao existe ainda no DS, criar o componente primeiro** em `templates/components/` e adicionar ao showcase (`/design-system/componentes/`). So depois usar. Isso evita o DS voltar a drift de inline CSS/one-offs durante a migracao.
+
+### Como criar pagina nova
+
+```django
+{% extends "layouts/layout_app.html" %}
+{% block title %}Minha pagina — Hubtrix{% endblock %}
+
+{% block subnav %}{# opcional — incluir partial de subnav ou HTML custom #}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}{# so se tiver subnav #}
+
+{% block content %}
+  <h1>Minha pagina</h1>
+  {% include "components/button.html" with variant="primary" label="Salvar" icon="bi-check" %}
+{% endblock %}
+```
+
+### Como usar componentes
+
+```django
+{% include "components/button.html" with variant="primary" label="Salvar" %}
+{% include "components/input.html" with name="email" label="Email" type="email" required=True %}
+{% include "components/badge.html" with variant="success" label="Ativo" dot=True %}
+{% include "components/stat_card.html" with label="Leads" value="248" delta="+12%" delta_trend="up" icon="bi-person-plus" %}
+{% include "components/modal.html" with id="meu-modal" title="..." confirm_label="Salvar" %}
+{% include "components/tabs.html" with items=tabs_list %}
+{% include "components/breadcrumbs.html" with items=crumbs %}
+```
+
+JS globais disponiveis em qualquer pagina que use o layout: `abrirModal(id)`, `fecharModal(id)`, `toast(titulo, msg, 'success'|'warning'|'danger'|'info')`.
+
+### Backlog de migracao
+
+Paginas legadas (CRM, Inbox, aurora-admin, etc.) ainda NAO usam o design system. A migracao e gradual — cada vez que uma pagina for tocada por outro motivo, migrar tambem pro DS.
+
+---
+
 ## Logging e Auditoria
 
 Toda acao de usuario no sistema deve gerar log de auditoria. Usar:

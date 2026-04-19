@@ -1,0 +1,21 @@
+{% comment %}
+Tabs component (so visual — troca de conteudo via JS a cargo da pagina).
+Params:
+  items: lista de dicts [{"id": "aba1", "label": "Dados", "icon": "bi-info-circle", "badge": "3", "active": True}]
+  variant: line (default) | pills
+
+JS esperado: clicar numa aba adiciona .is-active nela e mostra o painel com id correspondente.
+{% endcomment %}
+<div class="tabs tabs-{{ variant|default:'line' }}" role="tablist">
+  {% for item in items %}
+    <button type="button"
+            class="tabs-item{% if item.active %} is-active{% endif %}"
+            role="tab"
+            data-tab="{{ item.id }}"
+            aria-selected="{% if item.active %}true{% else %}false{% endif %}">
+      {% if item.icon %}<i class="bi {{ item.icon }}"></i>{% endif %}
+      <span>{{ item.label }}</span>
+      {% if item.badge %}<span class="tabs-item-badge">{{ item.badge }}</span>{% endif %}
+    </button>
+  {% endfor %}
+</div>

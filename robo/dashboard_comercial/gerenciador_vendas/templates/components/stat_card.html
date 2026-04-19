@@ -1,0 +1,34 @@
+{% comment %}
+Stat card component.
+Params:
+  label: rotulo da metrica (ex: "Leads esta semana")
+  value: numero/valor principal
+  delta: variacao (ex: "+12%")
+  delta_trend: up | down | flat  — controla cor do delta
+  icon: classe bi-* (opcional, icone no canto superior direito)
+  icon_variant: primary (default) | success | warning | danger | info
+  footnote: texto auxiliar embaixo (ex: "vs semana passada")
+{% endcomment %}
+<div class="stat-card">
+  <div class="stat-card-head">
+    <span class="stat-card-label">{{ label }}</span>
+    {% if icon %}
+      <span class="stat-card-icon stat-card-icon-{{ icon_variant|default:'primary' }}">
+        <i class="bi {{ icon }}"></i>
+      </span>
+    {% endif %}
+  </div>
+  <div class="stat-card-value">{{ value }}</div>
+  {% if delta or footnote %}
+    <div class="stat-card-foot">
+      {% if delta %}
+        <span class="stat-card-delta stat-card-delta-{{ delta_trend|default:'flat' }}">
+          {% if delta_trend == 'up' %}<i class="bi bi-arrow-up"></i>{% endif %}
+          {% if delta_trend == 'down' %}<i class="bi bi-arrow-down"></i>{% endif %}
+          {{ delta }}
+        </span>
+      {% endif %}
+      {% if footnote %}<span class="stat-card-footnote">{{ footnote }}</span>{% endif %}
+    </div>
+  {% endif %}
+</div>

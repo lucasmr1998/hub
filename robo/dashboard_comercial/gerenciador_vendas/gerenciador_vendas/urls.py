@@ -18,12 +18,38 @@ from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import TemplateView
 
+
+class DesignSystemComponentsView(TemplateView):
+    """Showcase dos componentes do DS. Context com dados dummy pros exemplos."""
+    template_name = 'design_system_components.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['tabs_line'] = [
+            {'id': 'aba-dados', 'label': 'Dados', 'icon': 'bi-info-circle', 'active': True},
+            {'id': 'aba-modulos', 'label': 'Modulos', 'icon': 'bi-grid', 'badge': '4'},
+            {'id': 'aba-usuarios', 'label': 'Usuarios', 'icon': 'bi-people', 'badge': '12'},
+            {'id': 'aba-integracoes', 'label': 'Integracoes', 'icon': 'bi-plug'},
+        ]
+        ctx['tabs_pills'] = [
+            {'id': 'p1', 'label': 'Todos', 'active': True},
+            {'id': 'p2', 'label': 'Ativos', 'badge': '8'},
+            {'id': 'p3', 'label': 'Inativos', 'badge': '2'},
+            {'id': 'p4', 'label': 'Arquivados'},
+        ]
+        ctx['crumbs'] = [
+            {'label': 'Hubtrix Admin', 'href': '/aurora-admin/'},
+            {'label': 'Tenants', 'href': '/aurora-admin/tenants/'},
+            {'label': 'Megalink'},
+        ]
+        return ctx
+
 urlpatterns = [
     path('admin/', admin.site.urls),
 
     # === Design system preview (temporario — remover quando o DS estiver adotado) ===
     path('design-system/preview/', TemplateView.as_view(template_name='design_system_preview.html'), name='design_system_preview'),
-    path('design-system/componentes/', TemplateView.as_view(template_name='design_system_components.html'), name='design_system_components'),
+    path('design-system/componentes/', DesignSystemComponentsView.as_view(), name='design_system_components'),
 
     # === API REST (DRF + OpenAPI) ===
     path('api/', include('apps.api.urls')),

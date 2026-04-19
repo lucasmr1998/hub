@@ -1,20 +1,8 @@
-{% extends "layouts/base.html" %}
+{% extends "layouts/layout_app.html" %}
 
 {% block title %}Design System Preview — Hubtrix{% endblock %}
 
-{% block body %}
-  {% include "partials/topbar.html" %}
-  {% include "partials/sidebar.html" %}
-
-  {# Flyout — aparece no hover dos icones da sidebar quando colapsada (estilo HubSpot) #}
-  <div id="sidebar-flyout" class="app-sidebar-flyout" aria-hidden="true">
-    <div class="app-sidebar-flyout-header">
-      <h3 class="app-sidebar-flyout-title" id="flyout-title"></h3>
-    </div>
-    <div class="app-sidebar-flyout-body" id="flyout-body"></div>
-  </div>
-
-  {# Subnav — conteudo trocado via JS conforme o modulo selecionado na sidebar #}
+{% block subnav %}
   <aside class="app-subnav" aria-label="Submenu">
     <div class="app-subnav-inner">
       <div class="app-subnav-header">
@@ -30,400 +18,76 @@
       </div>
     </div>
   </aside>
+{% endblock %}
 
-  <main class="app-main has-subnav">
-    <div class="app-main-inner">
+{% block main_mod %} has-subnav{% endblock %}
 
-      <div style="max-width: 960px;">
-        <div style="margin-bottom: var(--sp-6);">
-          <h1 style="font-size: var(--fs-2xl); font-weight: var(--fw-extrabold); margin: 0 0 var(--sp-2); letter-spacing: -0.02em;">
-            Design System — Preview
-          </h1>
-          <p style="color: var(--color-text-secondary); margin: 0; font-size: var(--fs-md);">
-            Clique nos ícones da sidebar pra trocar o subnav (módulos reais do Hubtrix).
-          </p>
-        </div>
-
-        <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--sp-6);">
-          <h2 style="margin: 0 0 var(--sp-3); font-size: var(--fs-lg); font-weight: var(--fw-bold);">Módulos do Hubtrix</h2>
-          <ul style="margin: 0; padding-left: var(--sp-5); font-size: var(--fs-sm); color: var(--color-text-secondary); line-height: 1.8;">
-            <li><strong>Dashboard</strong> — visão geral do tenant</li>
-            <li><strong>Comercial</strong> — CRM Kanban, Pipeline, Vendas, Tarefas, Configurações</li>
-            <li><strong>Marketing</strong> — Leads, Campanhas, Automações, Segmentos, Landing Page</li>
-            <li><strong>Atendimento</strong> — Inbox, Tickets, Fluxos, Sessões, Base de Conhecimento</li>
-            <li><strong>Customer Success</strong> — Clube, Clientes, Indicações, Parceiros, Cupons, Roleta, Carteirinhas</li>
-            <li><strong>Relatórios</strong> — Leads, Clientes, Atendimentos, Conversões</li>
-            <li><strong>Configurações</strong> — Empresa, Usuários, Produtos, Integrações, Notificações, Logs</li>
-          </ul>
-        </div>
-
-      </div>
-
+{% block content %}
+  <div style="max-width: 960px;">
+    <div style="margin-bottom: var(--sp-6);">
+      <h1 style="font-size: var(--fs-2xl); font-weight: var(--fw-extrabold); margin: 0 0 var(--sp-2); letter-spacing: -0.02em;">
+        Design System — Preview
+      </h1>
+      <p style="color: var(--color-text-secondary); margin: 0; font-size: var(--fs-md);">
+        Clique nos icones da sidebar pra trocar o subnav (modulos reais do Hubtrix).
+      </p>
     </div>
-  </main>
 
-  <style>
-    .app-subnav {
-      position: fixed;
-      top: var(--topbar-h);
-      left: var(--sidebar-w);
-      bottom: 0;
-      width: var(--subnav-w);
-      background: var(--subnav-bg);
-      border-right: 1px solid var(--subnav-border);
-      z-index: 80;
-      overflow-y: auto;
-      transition: transform var(--transition), opacity var(--transition);
+    <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--sp-6);">
+      <h2 style="margin: 0 0 var(--sp-3); font-size: var(--fs-lg); font-weight: var(--fw-bold);">Modulos do Hubtrix</h2>
+      <ul style="margin: 0; padding-left: var(--sp-5); font-size: var(--fs-sm); color: var(--color-text-secondary); line-height: 1.8;">
+        <li><strong>Dashboard</strong> — visao geral do tenant</li>
+        <li><strong>Comercial</strong> — CRM Kanban, Pipeline, Vendas, Tarefas, Configuracoes</li>
+        <li><strong>Marketing</strong> — Leads, Campanhas, Automacoes, Segmentos, Landing Page</li>
+        <li><strong>Atendimento</strong> — Inbox, Tickets, Fluxos, Sessoes, Base de Conhecimento</li>
+        <li><strong>Customer Success</strong> — Clube, Clientes, Indicacoes, Parceiros, Cupons, Roleta, Carteirinhas</li>
+        <li><strong>Relatorios</strong> — Leads, Clientes, Atendimentos, Conversoes</li>
+        <li><strong>Configuracoes</strong> — Empresa, Usuarios, Produtos, Integracoes, Notificacoes, Logs</li>
+      </ul>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  {# Preview-only: clicar nos icones da sidebar troca o subnav fixo (dentro desta pagina). #}
+  {# Em producao isso vai virar navegacao real (cada modulo tem sua rota). #}
+  function renderSubnav(moduleKey) {
+    const mod = (window.HUB_SIDEBAR_MODULES || {})[moduleKey];
+    if (!mod) return;
+    document.getElementById('subnav-title').textContent = mod.title;
+    const body = document.getElementById('subnav-body');
+    body.innerHTML = mod.groups.map(g => {
+      const section = g.section ? `<div class="app-subnav-section">${g.section}</div>` : '';
+      const items = g.items.map(it => `
+        <a href="#" class="app-subnav-item${it.active ? ' is-active' : ''}">
+          <i class="bi ${it.icon}"></i><span>${it.label}</span>
+        </a>
+      `).join('');
+      return `${section}<nav class="app-subnav-list">${items}</nav>`;
+    }).join('');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Marca o primeiro item do modulo Comercial como active (so nesta demo)
+    if (window.HUB_SIDEBAR_MODULES && window.HUB_SIDEBAR_MODULES.comercial) {
+      const g = window.HUB_SIDEBAR_MODULES.comercial.groups[0];
+      if (g && g.items[0]) g.items[0].active = true;
     }
-    .app-subnav-inner { padding: var(--sp-4) 0; }
+    renderSubnav('comercial');
 
-    .app-subnav-header {
-      padding: 0 var(--sp-3) var(--sp-3);
-      border-bottom: 1px solid var(--subnav-border);
-      margin-bottom: var(--sp-3);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--sp-2);
-    }
-    .app-subnav-title {
-      margin: 0;
-      font-size: var(--fs-md);
-      font-weight: var(--fw-semibold);
-      color: var(--color-text);
-    }
-    .app-subnav-collapse {
-      width: 28px; height: 28px;
-      background: transparent;
-      border: none;
-      border-radius: var(--radius-sm);
-      color: var(--color-text-muted);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.85rem;
-      transition: background var(--transition), color var(--transition);
-    }
-    .app-subnav-collapse:hover {
-      background: var(--color-surface-2);
-      color: var(--color-text);
-    }
+    document.querySelectorAll('.app-sidebar-item[data-module]').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        const modKey = item.dataset.module;
+        if (!window.HUB_SIDEBAR_MODULES || !window.HUB_SIDEBAR_MODULES[modKey]) return;
 
-    .app-subnav-list {
-      display: flex;
-      flex-direction: column;
-      padding: 0 var(--sp-2);
-      margin-bottom: var(--sp-4);
-    }
-    .app-subnav-item {
-      display: flex;
-      align-items: center;
-      gap: var(--sp-2);
-      padding: var(--sp-2) var(--sp-3);
-      border-radius: var(--radius);
-      color: var(--subnav-text);
-      font-size: var(--fs-sm);
-      font-weight: var(--fw-medium);
-      text-decoration: none;
-      transition: background var(--transition), color var(--transition);
-    }
-    .app-subnav-item > span { flex: 1; }
-    .app-subnav-item:hover {
-      background: var(--color-surface);
-      color: var(--subnav-text-active);
-    }
-    .app-subnav-item.is-active {
-      background: var(--subnav-item-active-bg);
-      color: var(--color-primary-text);
-    }
-    .app-subnav-item i { color: var(--color-text-muted); font-size: 0.95rem; flex-shrink: 0; width: 16px; text-align: center; }
-    .app-subnav-item.is-active i { color: var(--color-primary); }
-    .app-subnav-section {
-      padding: var(--sp-2) var(--sp-5);
-      font-size: var(--fs-xs);
-      font-weight: var(--fw-semibold);
-      color: var(--color-text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .app-main {
-      margin-top: var(--topbar-h);
-      margin-left: calc(var(--sidebar-w) + var(--subnav-w));
-      min-height: calc(100vh - var(--topbar-h));
-      background: var(--color-surface);
-      transition: margin-left var(--transition);
-    }
-    .app-main-inner { padding: var(--sp-6); }
-
-    body.sidebar-collapsed .app-subnav {
-      transform: translateX(-100%);
-      opacity: 0;
-      pointer-events: none;
-    }
-    body.sidebar-collapsed .app-main {
-      margin-left: var(--sidebar-w);
-    }
-
-    /* Flyout — hover na sidebar colapsada abre painel com submenu (estilo HubSpot) */
-    .app-sidebar-flyout {
-      position: fixed;
-      left: var(--sidebar-w);
-      top: var(--topbar-h);
-      width: var(--subnav-w);
-      max-height: calc(100vh - var(--topbar-h) - 16px);
-      overflow-y: auto;
-      background: var(--color-bg);
-      border: 1px solid var(--color-border);
-      border-left: none;
-      border-radius: 0 var(--radius-md) var(--radius-md) 0;
-      box-shadow: var(--shadow-lg);
-      padding: var(--sp-3) 0;
-      z-index: 95;
-      opacity: 0;
-      pointer-events: none;
-      transform: translateX(-4px);
-      transition: opacity var(--transition), transform var(--transition);
-    }
-    .app-sidebar-flyout.is-open {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateX(0);
-    }
-    .app-sidebar-flyout-header {
-      padding: 0 var(--sp-4) var(--sp-3);
-      border-bottom: 1px solid var(--color-border);
-      margin-bottom: var(--sp-2);
-    }
-    .app-sidebar-flyout-title {
-      margin: 0;
-      font-size: var(--fs-md);
-      font-weight: var(--fw-semibold);
-      color: var(--color-text);
-    }
-    .app-sidebar-flyout-body { padding: 0 var(--sp-2); }
-    .app-sidebar-flyout-body .app-subnav-section { padding: var(--sp-2) var(--sp-3) var(--sp-1); }
-    .app-sidebar-flyout-body .app-subnav-list { padding: 0; margin-bottom: var(--sp-2); }
-
-    /* Flyout so aparece quando colapsado */
-    body:not(.sidebar-collapsed) .app-sidebar-flyout { display: none; }
-  </style>
-
-  <script>
-    // Menu de subpaginas por modulo (espelha a sidebar real em producao)
-    const MODULOS = {
-      dashboard: {
-        title: 'Dashboard',
-        groups: [
-          { section: null, items: [
-            { icon: 'bi-graph-up', label: 'Visao Geral', active: true },
-          ]}
-        ]
-      },
-      comercial: {
-        title: 'Comercial',
-        groups: [
-          { section: null, items: [
-            { icon: 'bi-graph-up-arrow', label: 'Dashboard', active: true },
-          ]},
-          { section: 'CRM', items: [
-            { icon: 'bi-kanban', label: 'Pipeline' },
-            { icon: 'bi-cart-check', label: 'Vendas' },
-            { icon: 'bi-check2-square', label: 'Tarefas' },
-          ]},
-          { section: 'Configuracoes CRM', items: [
-            { icon: 'bi-sliders', label: 'Configuracoes' },
-            { icon: 'bi-box-seam', label: 'Produtos' },
-            { icon: 'bi-people', label: 'Equipes' },
-            { icon: 'bi-bullseye', label: 'Metas' },
-          ]},
-        ]
-      },
-      marketing: {
-        title: 'Marketing',
-        groups: [
-          { section: 'Aquisicao', items: [
-            { icon: 'bi-person-plus', label: 'Leads', active: true },
-            { icon: 'bi-globe', label: 'Landing Page' },
-          ]},
-          { section: 'Campanhas', items: [
-            { icon: 'bi-megaphone', label: 'Campanhas' },
-            { icon: 'bi-funnel', label: 'Segmentos' },
-          ]},
-          { section: 'Automacao', items: [
-            { icon: 'bi-robot', label: 'Automacoes' },
-          ]},
-        ]
-      },
-      atendimento: {
-        title: 'Atendimento',
-        groups: [
-          { section: null, items: [
-            { icon: 'bi-graph-up-arrow', label: 'Dashboard', active: true },
-          ]},
-          { section: 'Atendimentos', items: [
-            { icon: 'bi-chat-dots', label: 'Inbox' },
-            { icon: 'bi-ticket-detailed', label: 'Tickets' },
-          ]},
-          { section: 'Automacao', items: [
-            { icon: 'bi-diagram-3', label: 'Fluxos' },
-            { icon: 'bi-headset', label: 'Sessoes' },
-            { icon: 'bi-journal-text', label: 'Conhecimento' },
-            { icon: 'bi-question-circle', label: 'Perguntas IA' },
-          ]},
-          { section: 'Configuracoes', items: [
-            { icon: 'bi-sliders', label: 'Canais e Equipes' },
-          ]},
-        ]
-      },
-      cs: {
-        title: 'Customer Success',
-        groups: [
-          { section: null, items: [
-            { icon: 'bi-speedometer2', label: 'Dashboard', active: true },
-            { icon: 'bi-people', label: 'Clientes' },
-          ]},
-          { section: 'Fidelizacao', items: [
-            { icon: 'bi-share', label: 'Indicacoes' },
-            { icon: 'bi-shop', label: 'Parceiros' },
-            { icon: 'bi-ticket-perforated', label: 'Cupons' },
-            { icon: 'bi-bullseye', label: 'Roleta' },
-          ]},
-          { section: 'Configuracoes', items: [
-            { icon: 'bi-image', label: 'Banners' },
-            { icon: 'bi-person-vcard', label: 'Carteirinhas' },
-            { icon: 'bi-layers', label: 'Niveis e XP' },
-          ]},
-        ]
-      },
-      relatorios: {
-        title: 'Relatorios',
-        groups: [
-          { section: 'Funil comercial', items: [
-            { icon: 'bi-person-plus', label: 'Leads', active: true },
-            { icon: 'bi-people', label: 'Clientes' },
-            { icon: 'bi-arrow-repeat', label: 'Conversoes' },
-          ]},
-          { section: 'Atendimento', items: [
-            { icon: 'bi-headset', label: 'Atendimentos' },
-            { icon: 'bi-activity', label: 'Analise de Atendimentos' },
-          ]},
-        ]
-      },
-      configuracoes: {
-        title: 'Configuracoes',
-        groups: [
-          { section: 'Geral', items: [
-            { icon: 'bi-sliders', label: 'Painel', active: true },
-            { icon: 'bi-people', label: 'Usuarios' },
-          ]},
-          { section: 'Produtos', items: [
-            { icon: 'bi-wifi', label: 'Planos' },
-            { icon: 'bi-calendar-event', label: 'Vencimentos' },
-          ]},
-          { section: 'Sistema', items: [
-            { icon: 'bi-plug', label: 'Integracoes' },
-            { icon: 'bi-bell', label: 'Notificacoes' },
-            { icon: 'bi-list-ul', label: 'Logs' },
-          ]},
-        ]
-      },
-    };
-
-    function renderSubnav(moduleKey) {
-      const mod = MODULOS[moduleKey];
-      if (!mod) return;
-      document.getElementById('subnav-title').textContent = mod.title;
-      const body = document.getElementById('subnav-body');
-      body.innerHTML = mod.groups.map(g => {
-        const section = g.section ? `<div class="app-subnav-section">${g.section}</div>` : '';
-        const items = g.items.map(it => `
-          <a href="#" class="app-subnav-item${it.active ? ' is-active' : ''}">
-            <i class="bi ${it.icon}"></i>
-            <span>${it.label}</span>
-          </a>
-        `).join('');
-        return `${section}<nav class="app-subnav-list">${items}</nav>`;
-      }).join('');
-    }
-
-    function renderFlyout(moduleKey, anchorTop) {
-      const mod = MODULOS[moduleKey];
-      if (!mod) return;
-      const flyout = document.getElementById('sidebar-flyout');
-      document.getElementById('flyout-title').textContent = mod.title;
-      const body = document.getElementById('flyout-body');
-      body.innerHTML = mod.groups.map(g => {
-        const section = g.section ? `<div class="app-subnav-section">${g.section}</div>` : '';
-        const items = g.items.map(it => `
-          <a href="#" class="app-subnav-item${it.active ? ' is-active' : ''}">
-            <i class="bi ${it.icon}"></i>
-            <span>${it.label}</span>
-          </a>
-        `).join('');
-        return `${section}<nav class="app-subnav-list">${items}</nav>`;
-      }).join('');
-
-      // Posicionamento vertical: comeca no icone, mas desloca pra cima se estourar a viewport
-      const topbarH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 56;
-      const margin = 8;
-      flyout.style.top = Math.max(topbarH, anchorTop) + 'px';
-      flyout.classList.add('is-open');
-
-      // Apos render, mede altura real e ajusta se nao couber
-      requestAnimationFrame(() => {
-        const rect = flyout.getBoundingClientRect();
-        const overflow = rect.bottom - (window.innerHeight - margin);
-        if (overflow > 0) {
-          const newTop = Math.max(topbarH, anchorTop - overflow);
-          flyout.style.top = newTop + 'px';
-        }
-      });
-    }
-
-    function hideFlyout() {
-      document.getElementById('sidebar-flyout').classList.remove('is-open');
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      renderSubnav('comercial');
-
-      const flyout = document.getElementById('sidebar-flyout');
-      let closeTimer = null;
-
-      document.querySelectorAll('.app-sidebar-item[data-module]').forEach(item => {
-        item.addEventListener('click', (e) => {
-          e.preventDefault();
-          const modKey = item.dataset.module;
-          if (!MODULOS[modKey]) return;
-
-          document.querySelectorAll('.app-sidebar-item').forEach(i => i.classList.remove('is-active'));
-          item.classList.add('is-active');
-
-          renderSubnav(modKey);
-          document.body.classList.remove('sidebar-collapsed');
-          hideFlyout();
-        });
-
-        item.addEventListener('mouseenter', () => {
-          if (!document.body.classList.contains('sidebar-collapsed')) return;
-          clearTimeout(closeTimer);
-          const rect = item.getBoundingClientRect();
-          renderFlyout(item.dataset.module, rect.top);
-        });
-
-        item.addEventListener('mouseleave', () => {
-          if (!document.body.classList.contains('sidebar-collapsed')) return;
-          closeTimer = setTimeout(hideFlyout, 150);
-        });
-      });
-
-      flyout.addEventListener('mouseenter', () => clearTimeout(closeTimer));
-      flyout.addEventListener('mouseleave', () => {
-        closeTimer = setTimeout(hideFlyout, 150);
+        document.querySelectorAll('.app-sidebar-item').forEach(i => i.classList.remove('is-active'));
+        item.classList.add('is-active');
+        renderSubnav(modKey);
+        document.body.classList.remove('sidebar-collapsed');
       });
     });
-  </script>
-
+  });
+</script>
 {% endblock %}

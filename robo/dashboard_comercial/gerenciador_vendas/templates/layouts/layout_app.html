@@ -1,17 +1,20 @@
-{# Layout App — base de qualquer pagina logada do Hubtrix. #}
-{# Estrutura: topbar fixa + sidebar de icones + conteudo principal.        #}
-{# Uso:                                                                    #}
-{#   {% extends "layouts/layout_app.html" %}                               #}
-{#   {% block title %}Minha pagina — Hubtrix{% endblock %}                 #}
-{#   {% block content %}... HTML da pagina ...{% endblock %}               #}
-{#                                                                         #}
-{# Para usar subnav (segundo painel lateral estilo Intercom):              #}
-{#   {% block content %}                                                   #}
-{#     {% include "partials/sidebar_subnav.html" %}                        #}
-{#     <main class="app-content has-subnav">                               #}
-{#       ...                                                               #}
-{#     </main>                                                             #}
-{#   {% endblock %}                                                        #}
+{% comment %}
+Layout App — base de qualquer pagina logada do Hubtrix.
+
+Estrutura: topbar fixa + sidebar de icones + (opcional) subnav + conteudo principal.
+Inclui tambem: flyout no hover da sidebar colapsada, container de toasts, JS base de modais/tabs.
+
+Uso minimo:
+  {% extends "layouts/layout_app.html" %}
+  {% block title %}Minha pagina — Hubtrix{% endblock %}
+  {% block content %}...{% endblock %}
+
+Com subnav:
+  {% extends "layouts/layout_app.html" %}
+  {% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+  {% block main_mod %} has-subnav{% endblock %}
+  {% block content %}...{% endblock %}
+{% endcomment %}
 
 {% extends "layouts/base.html" %}
 
@@ -19,29 +22,408 @@
   {% include "partials/topbar.html" %}
   {% include "partials/sidebar.html" %}
 
-  <main class="app-main">
+  {# Subnav opcional — pagina sobrescreve pra injetar seu submenu #}
+  {% block subnav %}{% endblock %}
+
+  <main class="app-main{% block main_mod %}{% endblock %}">
     <div class="app-main-inner">
-      {% block content %}
-        {# Conteudo da pagina — sobrescrever em cada template. #}
-      {% endblock %}
+      {% block content %}{% endblock %}
     </div>
   </main>
 
+  {# Flyout global — aparece no hover de um icone da sidebar quando colapsada #}
+  <div id="sidebar-flyout" class="app-sidebar-flyout" aria-hidden="true">
+    <div class="app-sidebar-flyout-header">
+      <h3 class="app-sidebar-flyout-title" id="flyout-title"></h3>
+    </div>
+    <div class="app-sidebar-flyout-body" id="flyout-body"></div>
+  </div>
+
+  {# Container global de toasts — chamar toast(titulo, msg, variant) no JS #}
+  <div class="toast-container" id="toast-container"></div>
+
+  {# Estilos base de layout — subnav, main, flyout #}
   <style>
+    .app-subnav {
+      position: fixed;
+      top: var(--topbar-h);
+      left: var(--sidebar-w);
+      bottom: 0;
+      width: var(--subnav-w);
+      background: var(--subnav-bg);
+      border-right: 1px solid var(--subnav-border);
+      z-index: 80;
+      overflow-y: auto;
+      transition: transform var(--transition), opacity var(--transition);
+    }
+    .app-subnav-inner { padding: var(--sp-4) 0; }
+    .app-subnav-header {
+      padding: 0 var(--sp-3) var(--sp-3);
+      border-bottom: 1px solid var(--subnav-border);
+      margin-bottom: var(--sp-3);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-2);
+    }
+    .app-subnav-title {
+      margin: 0;
+      font-size: var(--fs-md);
+      font-weight: var(--fw-semibold);
+      color: var(--color-text);
+    }
+    .app-subnav-collapse {
+      width: 28px; height: 28px;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--color-text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      transition: background var(--transition), color var(--transition);
+    }
+    .app-subnav-collapse:hover {
+      background: var(--color-surface-2);
+      color: var(--color-text);
+    }
+
+    .app-subnav-list {
+      display: flex;
+      flex-direction: column;
+      padding: 0 var(--sp-2);
+      margin-bottom: var(--sp-4);
+    }
+    .app-subnav-item {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+      padding: var(--sp-2) var(--sp-3);
+      border-radius: var(--radius);
+      color: var(--subnav-text);
+      font-size: var(--fs-sm);
+      font-weight: var(--fw-medium);
+      text-decoration: none;
+      transition: background var(--transition), color var(--transition);
+    }
+    .app-subnav-item > span { flex: 1; }
+    .app-subnav-item:hover {
+      background: var(--color-surface);
+      color: var(--subnav-text-active);
+    }
+    .app-subnav-item.is-active {
+      background: var(--subnav-item-active-bg);
+      color: var(--color-primary-text);
+    }
+    .app-subnav-item i { color: var(--color-text-muted); font-size: 0.95rem; flex-shrink: 0; width: 16px; text-align: center; }
+    .app-subnav-item.is-active i { color: var(--color-primary); }
+    .app-subnav-section {
+      padding: var(--sp-2) var(--sp-5);
+      font-size: var(--fs-xs);
+      font-weight: var(--fw-semibold);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
     .app-main {
       margin-top: var(--topbar-h);
       margin-left: var(--sidebar-w);
       min-height: calc(100vh - var(--topbar-h));
       background: var(--color-surface);
+      transition: margin-left var(--transition);
     }
     .app-main.has-subnav {
       margin-left: calc(var(--sidebar-w) + var(--subnav-w));
     }
-    .app-main-inner {
-      padding: var(--sp-6);
+    .app-main-inner { padding: var(--sp-6); }
+
+    body.sidebar-collapsed .app-subnav {
+      transform: translateX(-100%);
+      opacity: 0;
+      pointer-events: none;
     }
     body.sidebar-collapsed .app-main.has-subnav {
       margin-left: var(--sidebar-w);
     }
+
+    /* Flyout — hover na sidebar colapsada abre painel com submenu */
+    .app-sidebar-flyout {
+      position: fixed;
+      left: var(--sidebar-w);
+      top: var(--topbar-h);
+      width: var(--subnav-w);
+      max-height: calc(100vh - var(--topbar-h) - 16px);
+      overflow-y: auto;
+      background: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-left: none;
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      box-shadow: var(--shadow-lg);
+      padding: var(--sp-3) 0;
+      z-index: 95;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-4px);
+      transition: opacity var(--transition), transform var(--transition);
+    }
+    .app-sidebar-flyout.is-open {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(0);
+    }
+    .app-sidebar-flyout-header {
+      padding: 0 var(--sp-4) var(--sp-3);
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: var(--sp-2);
+    }
+    .app-sidebar-flyout-title {
+      margin: 0;
+      font-size: var(--fs-md);
+      font-weight: var(--fw-semibold);
+      color: var(--color-text);
+    }
+    .app-sidebar-flyout-body { padding: 0 var(--sp-2); }
+    .app-sidebar-flyout-body .app-subnav-section { padding: var(--sp-2) var(--sp-3) var(--sp-1); }
+    .app-sidebar-flyout-body .app-subnav-list { padding: 0; margin-bottom: var(--sp-2); }
+
+    body:not(.sidebar-collapsed) .app-sidebar-flyout { display: none; }
+
+    /* Toast container (posicionamento global) */
+    .toast-container {
+      position: fixed;
+      top: calc(var(--topbar-h) + var(--sp-3));
+      right: var(--sp-4);
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-2);
+      pointer-events: none;
+    }
   </style>
+
+  {# Mapa de modulos usado pelo flyout no hover da sidebar colapsada #}
+  {# Em producao, cada pagina pode sobrescrever este bloco com seus proprios dados #}
+  {% block sidebar_modules_js %}
+    <script>
+      window.HUB_SIDEBAR_MODULES = {
+        dashboard: { title: 'Dashboard', groups: [
+          { section: null, items: [{ icon: 'bi-graph-up', label: 'Visao Geral' }] }
+        ]},
+        comercial: { title: 'Comercial', groups: [
+          { section: null, items: [{ icon: 'bi-graph-up-arrow', label: 'Dashboard' }] },
+          { section: 'CRM', items: [
+            { icon: 'bi-kanban', label: 'Pipeline' },
+            { icon: 'bi-cart-check', label: 'Vendas' },
+            { icon: 'bi-check2-square', label: 'Tarefas' },
+          ]},
+          { section: 'Configuracoes CRM', items: [
+            { icon: 'bi-sliders', label: 'Configuracoes' },
+            { icon: 'bi-box-seam', label: 'Produtos' },
+            { icon: 'bi-people', label: 'Equipes' },
+            { icon: 'bi-bullseye', label: 'Metas' },
+          ]},
+        ]},
+        marketing: { title: 'Marketing', groups: [
+          { section: 'Aquisicao', items: [
+            { icon: 'bi-person-plus', label: 'Leads' },
+            { icon: 'bi-globe', label: 'Landing Page' },
+          ]},
+          { section: 'Campanhas', items: [
+            { icon: 'bi-megaphone', label: 'Campanhas' },
+            { icon: 'bi-funnel', label: 'Segmentos' },
+          ]},
+          { section: 'Automacao', items: [{ icon: 'bi-robot', label: 'Automacoes' }] },
+        ]},
+        atendimento: { title: 'Atendimento', groups: [
+          { section: null, items: [{ icon: 'bi-graph-up-arrow', label: 'Dashboard' }] },
+          { section: 'Atendimentos', items: [
+            { icon: 'bi-chat-dots', label: 'Inbox' },
+            { icon: 'bi-ticket-detailed', label: 'Tickets' },
+          ]},
+          { section: 'Automacao', items: [
+            { icon: 'bi-diagram-3', label: 'Fluxos' },
+            { icon: 'bi-headset', label: 'Sessoes' },
+            { icon: 'bi-journal-text', label: 'Conhecimento' },
+            { icon: 'bi-question-circle', label: 'Perguntas IA' },
+          ]},
+          { section: 'Configuracoes', items: [{ icon: 'bi-sliders', label: 'Canais e Equipes' }] },
+        ]},
+        cs: { title: 'Customer Success', groups: [
+          { section: null, items: [
+            { icon: 'bi-speedometer2', label: 'Dashboard' },
+            { icon: 'bi-people', label: 'Clientes' },
+          ]},
+          { section: 'Fidelizacao', items: [
+            { icon: 'bi-share', label: 'Indicacoes' },
+            { icon: 'bi-shop', label: 'Parceiros' },
+            { icon: 'bi-ticket-perforated', label: 'Cupons' },
+            { icon: 'bi-bullseye', label: 'Roleta' },
+          ]},
+          { section: 'Configuracoes', items: [
+            { icon: 'bi-image', label: 'Banners' },
+            { icon: 'bi-person-vcard', label: 'Carteirinhas' },
+            { icon: 'bi-layers', label: 'Niveis e XP' },
+          ]},
+        ]},
+        relatorios: { title: 'Relatorios', groups: [
+          { section: 'Funil comercial', items: [
+            { icon: 'bi-person-plus', label: 'Leads' },
+            { icon: 'bi-people', label: 'Clientes' },
+            { icon: 'bi-arrow-repeat', label: 'Conversoes' },
+          ]},
+          { section: 'Atendimento', items: [
+            { icon: 'bi-headset', label: 'Atendimentos' },
+            { icon: 'bi-activity', label: 'Analise de Atendimentos' },
+          ]},
+        ]},
+        configuracoes: { title: 'Configuracoes', groups: [
+          { section: 'Geral', items: [
+            { icon: 'bi-sliders', label: 'Painel' },
+            { icon: 'bi-people', label: 'Usuarios' },
+          ]},
+          { section: 'Produtos', items: [
+            { icon: 'bi-wifi', label: 'Planos' },
+            { icon: 'bi-calendar-event', label: 'Vencimentos' },
+          ]},
+          { section: 'Sistema', items: [
+            { icon: 'bi-plug', label: 'Integracoes' },
+            { icon: 'bi-bell', label: 'Notificacoes' },
+            { icon: 'bi-list-ul', label: 'Logs' },
+          ]},
+        ]},
+      };
+    </script>
+  {% endblock %}
+
+  {# JS base — flyout, modal, toast, tabs (disponiveis em qualquer pagina) #}
+  <script>
+    // ============================================
+    // FLYOUT — hover em icone da sidebar colapsada abre painel
+    // ============================================
+    (function() {
+      const MODULOS = window.HUB_SIDEBAR_MODULES || {};
+      const flyout = document.getElementById('sidebar-flyout');
+      if (!flyout) return;
+      let closeTimer = null;
+
+      function renderFlyout(moduleKey, anchorTop) {
+        const mod = MODULOS[moduleKey];
+        if (!mod) return;
+        document.getElementById('flyout-title').textContent = mod.title;
+        const body = document.getElementById('flyout-body');
+        body.innerHTML = mod.groups.map(g => {
+          const section = g.section ? `<div class="app-subnav-section">${g.section}</div>` : '';
+          const items = g.items.map(it => `
+            <a href="#" class="app-subnav-item${it.active ? ' is-active' : ''}">
+              <i class="bi ${it.icon}"></i><span>${it.label}</span>
+            </a>
+          `).join('');
+          return `${section}<nav class="app-subnav-list">${items}</nav>`;
+        }).join('');
+
+        const topbarH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 56;
+        flyout.style.top = Math.max(topbarH, anchorTop) + 'px';
+        flyout.classList.add('is-open');
+
+        requestAnimationFrame(() => {
+          const rect = flyout.getBoundingClientRect();
+          const overflow = rect.bottom - (window.innerHeight - 8);
+          if (overflow > 0) {
+            const newTop = Math.max(topbarH, anchorTop - overflow);
+            flyout.style.top = newTop + 'px';
+          }
+        });
+      }
+      function hideFlyout() { flyout.classList.remove('is-open'); }
+
+      document.querySelectorAll('.app-sidebar-item[data-module]').forEach(item => {
+        item.addEventListener('mouseenter', () => {
+          if (!document.body.classList.contains('sidebar-collapsed')) return;
+          clearTimeout(closeTimer);
+          renderFlyout(item.dataset.module, item.getBoundingClientRect().top);
+        });
+        item.addEventListener('mouseleave', () => {
+          if (!document.body.classList.contains('sidebar-collapsed')) return;
+          closeTimer = setTimeout(hideFlyout, 150);
+        });
+      });
+      flyout.addEventListener('mouseenter', () => clearTimeout(closeTimer));
+      flyout.addEventListener('mouseleave', () => { closeTimer = setTimeout(hideFlyout, 150); });
+    })();
+
+    // ============================================
+    // MODAL — abrirModal(id) / fecharModal(id)
+    // ============================================
+    function abrirModal(id) {
+      const m = document.getElementById(id);
+      if (m) { m.hidden = false; document.body.style.overflow = 'hidden'; }
+    }
+    function fecharModal(id) {
+      const m = document.getElementById(id);
+      if (m) { m.hidden = true; document.body.style.overflow = ''; }
+    }
+    document.querySelectorAll('.modal-overlay').forEach(o => {
+      o.addEventListener('click', (e) => { if (e.target === o) fecharModal(o.id); });
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay:not([hidden])').forEach(m => fecharModal(m.id));
+      }
+    });
+
+    // ============================================
+    // TOAST — toast(titulo, mensagem, variant)
+    // ============================================
+    function toast(title, message, variant) {
+      variant = variant || 'info';
+      const icons = {
+        success: 'bi-check-circle-fill',
+        warning: 'bi-exclamation-triangle-fill',
+        danger:  'bi-x-circle-fill',
+        info:    'bi-info-circle-fill',
+      };
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const el = document.createElement('div');
+      el.className = `toast toast-${variant}`;
+      el.innerHTML = `
+        <i class="bi ${icons[variant]} toast-icon"></i>
+        <div class="toast-body">
+          ${title ? `<p class="toast-title">${title}</p>` : ''}
+          ${message ? `<p class="toast-message">${message}</p>` : ''}
+        </div>
+        <button class="toast-close" aria-label="Fechar"><i class="bi bi-x"></i></button>
+      `;
+      container.appendChild(el);
+      const dismiss = () => { el.classList.add('is-leaving'); setTimeout(() => el.remove(), 160); };
+      el.querySelector('.toast-close').addEventListener('click', dismiss);
+      setTimeout(dismiss, 4000);
+    }
+
+    // ============================================
+    // TABS — troca paineis via data-tab
+    // ============================================
+    document.querySelectorAll('.tabs').forEach(group => {
+      group.querySelectorAll('.tabs-item').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const targetId = tab.dataset.tab;
+          group.querySelectorAll('.tabs-item').forEach(t => {
+            t.classList.remove('is-active'); t.setAttribute('aria-selected', 'false');
+          });
+          tab.classList.add('is-active'); tab.setAttribute('aria-selected', 'true');
+          const panels = document.querySelectorAll('.tabs-panel');
+          if (panels.length) {
+            panels.forEach(p => p.classList.remove('is-active'));
+            const target = document.getElementById(targetId);
+            if (target) target.classList.add('is-active');
+          }
+        });
+      });
+    });
+  </script>
+
+  {% block extra_js %}{% endblock %}
 {% endblock %}
