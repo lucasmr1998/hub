@@ -1,7 +1,7 @@
-# Sistema de Permissões — AuroraISP
+# Sistema de Permissões — Hubtrix
 
-**Última atualização:** 08/04/2026
-**Status:** ✅ Implementado
+**Última atualização:** 19/04/2026
+**Status:** ✅ Implementado (42 funcionalidades, 11 perfis padrão)
 **Localização:** `apps/sistema/`
 
 ---
@@ -16,7 +16,7 @@ Camada 1: PERFIL DE PERMISSÃO (role reutilizável)
     Cada perfil tem uma lista de funcionalidades habilitadas
 
 Camada 2: FUNCIONALIDADE (granular)
-    35 funcionalidades fixas agrupadas por módulo
+    42 funcionalidades fixas agrupadas por módulo
     Cada funcionalidade = 1 checkbox no perfil
 
 Camada 3: ATRIBUIÇÃO (usuário → perfil)
@@ -35,7 +35,7 @@ Camada 3: ATRIBUIÇÃO (usuário → perfil)
 ### Models
 
 ```
-Funcionalidade (35 registros fixos, seed)
+Funcionalidade (42 registros fixos, seed)
     ├── modulo: comercial | marketing | cs | inbox | configuracoes
     ├── codigo: "comercial.ver_pipeline" (unique)
     ├── nome: "Ver Pipeline"
@@ -75,9 +75,9 @@ A sidebar e topbar filtram os menus via context processor (`perm` e `is_superuse
 
 ---
 
-## 35 Funcionalidades
+## 42 Funcionalidades
 
-### Comercial (9)
+### Comercial (12)
 
 | Código | Nome | Escopo |
 |--------|------|--------|
@@ -90,6 +90,9 @@ A sidebar e topbar filtram os menus via context processor (`perm` e `is_superuse
 | `comercial.gerenciar_metas` | Gerenciar Metas | CRUD de metas de vendas |
 | `comercial.gerenciar_equipes` | Gerenciar Equipes | Criar equipes e atribuir membros |
 | `comercial.configurar_pipeline` | Configurar Pipelines | Pipelines, estágios, webhooks, config CRM |
+| `comercial.ver_relatorios` | Ver Relatórios Gerais | Acessar dashboard principal e relatórios |
+| `comercial.excluir_lead` | Excluir Leads | Exclusão permanente (leads, oportunidades, tarefas, notas, conversas vinculadas) |
+| `comercial.excluir_oportunidade` | Excluir Oportunidades | Exclusão permanente (oportunidades, tarefas, notas, itens vinculados) |
 
 ### Marketing (7)
 
@@ -114,7 +117,7 @@ A sidebar e topbar filtram os menus via context processor (`perm` e `is_superuse
 | `cs.gerenciar_indicacoes` | Gerenciar Indicações | Status e conversão de indicações |
 | `cs.configurar` | Configurar CS | Regras, níveis, banners, carteirinhas |
 
-### Inbox / Suporte (8)
+### Inbox (8)
 
 | Código | Nome | Escopo |
 |--------|------|--------|
@@ -127,6 +130,15 @@ A sidebar e topbar filtram os menus via context processor (`perm` e `is_superuse
 | `inbox.resolver` | Resolver e Reabrir | Mudar status da conversa |
 | `inbox.configurar` | Configurar Inbox | Equipes, filas, horários, canais, widget |
 
+### Suporte (4, módulo `inbox`)
+
+| Código | Nome | Escopo |
+|--------|------|--------|
+| `suporte.ver_tickets` | Ver Tickets de Suporte | Lista de tickets |
+| `suporte.gerenciar_tickets` | Gerenciar Tickets | Criar, editar, atribuir, fechar |
+| `suporte.ver_conhecimento` | Ver Base de Conhecimento | Acessar artigos |
+| `suporte.gerenciar_conhecimento` | Gerenciar Base de Conhecimento | Criar/editar artigos |
+
 ### Configurações (5)
 
 | Código | Nome | Escopo |
@@ -136,6 +148,89 @@ A sidebar e topbar filtram os menus via context processor (`perm` e `is_superuse
 | `config.gerenciar_planos` | Gerenciar Planos e Vencimentos | CRUD planos de internet |
 | `config.gerenciar_fluxos` | Gerenciar Fluxos de Atendimento | Configurar bot |
 | `config.gerenciar_notificacoes` | Gerenciar Notificações | Tipos e canais |
+
+---
+
+## Matriz de permissões (perfis padrão × funcionalidades)
+
+Fonte da verdade: `apps/sistema/management/commands/seed_perfis_padrao.py`. Rodar `python manage.py seed_perfis_padrao` (idempotente) pra criar/atualizar os perfis em cada tenant.
+
+### Comercial
+
+| Funcionalidade | Vendedor | Supervisor Com. | Gerente Com. | Admin |
+|---|:-:|:-:|:-:|:-:|
+| ver_dashboard | ✅ | ✅ | ✅ | ✅ |
+| ver_pipeline | ✅ | ✅ | ✅ | ✅ |
+| mover_oportunidade | ✅ | ✅ | ✅ | ✅ |
+| ver_todas_oportunidades | ❌ | ✅ | ✅ | ✅ |
+| criar_tarefa | ✅ | ✅ | ✅ | ✅ |
+| ver_desempenho | ✅ | ✅ | ✅ | ✅ |
+| gerenciar_metas | ❌ | ✅ | ✅ | ✅ |
+| gerenciar_equipes | ❌ | ❌ | ✅ | ✅ |
+| configurar_pipeline | ❌ | ❌ | ✅ | ✅ |
+| ver_relatorios | ❌ | ❌ | ❌ | ✅ |
+| excluir_lead | ❌ | ❌ | ❌ | ✅ |
+| excluir_oportunidade | ❌ | ❌ | ❌ | ✅ |
+
+### Marketing
+
+| Funcionalidade | Analista Mkt | Gerente Mkt | Admin |
+|---|:-:|:-:|:-:|
+| ver_leads | ✅ | ✅ | ✅ |
+| gerenciar_campanhas | ✅ | ✅ | ✅ |
+| ver_segmentos | ✅ | ✅ | ✅ |
+| gerenciar_segmentos | ✅ | ✅ | ✅ |
+| ver_automacoes | ✅ | ✅ | ✅ |
+| gerenciar_automacoes | ❌ | ✅ | ✅ |
+| configurar | ❌ | ✅ | ✅ |
+
+### Customer Success
+
+| Funcionalidade | Operador CS | Gerente CS | Admin |
+|---|:-:|:-:|:-:|
+| ver_dashboard | ✅ | ✅ | ✅ |
+| gerenciar_membros | ✅ | ✅ | ✅ |
+| gerenciar_cupons | ✅ | ✅ | ✅ |
+| aprovar_cupons | ❌ | ✅ | ✅ |
+| gerenciar_indicacoes | ✅ | ✅ | ✅ |
+| configurar | ❌ | ✅ | ✅ |
+
+### Inbox (Atendimento)
+
+| Funcionalidade | Agente Sup. | Supervisor Sup. | Gerente Sup. | Admin |
+|---|:-:|:-:|:-:|:-:|
+| ver_minhas | ✅ | ✅ | ✅ | ✅ |
+| ver_equipe | ❌ | ✅ | ✅ | ✅ |
+| ver_todas | ❌ | ❌ | ✅ | ✅ |
+| responder | ✅ | ✅ | ✅ | ✅ |
+| transferir_agente | ✅ | ✅ | ✅ | ✅ |
+| transferir_equipe | ❌ | ✅ | ✅ | ✅ |
+| resolver | ✅ | ✅ | ✅ | ✅ |
+| configurar | ❌ | ❌ | ✅ | ✅ |
+
+### Suporte (tickets + conhecimento)
+
+Não estão nos perfis padrão atuais. Só **Admin** tem por padrão (via `__all__`). Adicionar a outros perfis via UI de "Gerenciar perfis" conforme a operação do tenant.
+
+### Configurações
+
+Só **Admin** tem por padrão (via `__all__`). Outros perfis não gerenciam usuários/perfis/planos/fluxos/notificações — típico de SaaS multi-tenant onde só o operador do tenant faz isso.
+
+### Resumo por perfil (contagem)
+
+| Perfil | Funcionalidades | Escopo principal |
+|---|---|---|
+| Vendedor | 9 | CRM básico + Inbox próprio |
+| Supervisor Comercial | 13 | CRM time + Inbox equipe |
+| Gerente Comercial | 16 | CRM completo + Inbox total |
+| Analista Marketing | 5 | Marketing leitura/criação |
+| Gerente Marketing | 7 | Marketing completo |
+| Operador CS | 4 | CS membros + cupons + indicações |
+| Gerente CS | 6 | CS completo |
+| Agente Suporte | 4 | Inbox próprio básico |
+| Supervisor Suporte | 6 | Inbox equipe + transferência |
+| Gerente Suporte | 8 | Inbox total + configuração |
+| **Admin** | **42 (todas)** | Tudo — seed via `__all__` |
 
 ---
 

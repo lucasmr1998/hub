@@ -18,10 +18,10 @@ Com subnav:
   {% block content %}...{% endblock %}
 {% endcomment %}
 
-{% block body %}
-  {# CSS global dos componentes do DS — carregado em todas as paginas que extendem o layout #}
-  {% include "partials/_components_styles.html" %}
+{# DS component styles no head (via block ds_styles da base.html) — carregados antes de extra_head pra que CSS das paginas migradas ainda nao sobrescrevam #}
+{% block ds_styles %}{% include "partials/_components_styles.html" %}{% endblock %}
 
+{% block body %}
   {# Topbar e sidebar sao sobrescritiveis — util pra paineis com menu proprio (ex: aurora-admin) #}
   {% block topbar %}{% include "partials/topbar.html" %}{% endblock %}
   {% block sidebar %}{% include "partials/sidebar.html" %}{% endblock %}
@@ -547,7 +547,7 @@ Com subnav:
     })();
 
     // ============================================
-    // MESSAGES FRAMEWORK — converte {% messages %} em toast automaticamente
+    // MESSAGES FRAMEWORK — converte mensagens do Django em toast automaticamente
     // ============================================
     (function() {
       const data = window.HUB_MESSAGES || [];
@@ -587,6 +587,4 @@ Com subnav:
     {% load static %}
     <script src="{% static 'inbox/widget/aurora-chat.js' %}" data-token="{{ widget_token }}"></script>
   {% endif %}
-
-  {% block extra_js %}{% endblock %}
 {% endblock %}

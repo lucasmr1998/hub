@@ -1,133 +1,145 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Categorias{% endblock %}
+{% block title %}Categorias — Clube{% endblock %}
 
 {% block content %}
-<!-- Modal Criar/Editar -->
-<div id="modal-cat" class="modal-overlay" style="display:none">
-    <div class="modal-content" style="max-width:450px;">
-        <button onclick="document.getElementById('modal-cat').style.display='none'" class="modal-close">&times;</button>
-        <h3 id="modal-titulo" style="margin-bottom:20px;"><i class="fas fa-tag" style="color:var(--primary); margin-right:8px;"></i>Nova Categoria</h3>
-        <form method="post">
-            {% csrf_token %}
-            <input type="hidden" name="action" id="form-action" value="criar">
-            <input type="hidden" name="categoria_id" id="form-cat-id" value="">
-            <div class="form-group">
-                <label class="form-label">Nome *</label>
-                <input type="text" name="nome" id="form-nome" class="form-control" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Slug *</label>
-                <input type="text" name="slug" id="form-slug" class="form-control" required pattern="[a-z0-9-]+" title="Apenas letras, numeros e hifen">
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                <div class="form-group">
-                    <label class="form-label">&Iacute;cone (FontAwesome)</label>
-                    <input type="text" name="icone" id="form-icone" class="form-control" value="fas fa-tag">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Ordem</label>
-                    <input type="number" name="ordem" id="form-ordem" class="form-control" value="0">
-                </div>
-            </div>
-            <div class="form-group">
-                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                    <input type="checkbox" name="ativo" id="form-ativo" checked style="width:18px; height:18px;">
-                    <span style="font-size:14px; font-weight:600;">Ativa</span>
-                </label>
-            </div>
-            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px;">
-                <button type="button" class="btn-secondary" onclick="document.getElementById('modal-cat').style.display='none'">Cancelar</button>
-                <button type="submit" class="btn-primary">Salvar</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
+<div class="page-header">
+  <div class="page-header-top">
     <div>
-        <h1 class="page-title">Categorias de Parceiros</h1>
-        <p class="page-subtitle">Organize seus parceiros por categoria</p>
+      <h1 class="page-title">Categorias de parceiros</h1>
+      <p class="page-subtitle">Organize seus parceiros por categoria.</p>
     </div>
-    <button class="btn-primary" onclick="abrirModal()"><i class="fas fa-plus"></i> Nova Categoria</button>
+    <div class="page-actions">
+      <button class="btn btn-primary btn-sm" onclick="abrirModal()"><i class="bi bi-plus-lg"></i> Nova categoria</button>
+    </div>
+  </div>
 </div>
 
-<div class="data-table-container">
-    <div style="overflow-x:auto;">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Categoria</th>
-                    <th>&Iacute;cone</th>
-                    <th>Slug</th>
-                    <th style="text-align:center;">Ordem</th>
-                    <th style="text-align:center;">Status</th>
-                    <th style="text-align:center;">Parceiros</th>
-                    <th>A&ccedil;&otilde;es</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for cat in categorias %}
-                <tr>
-                    <td><strong>{{ cat.nome }}</strong></td>
-                    <td><i class="{{ cat.icone }}" style="font-size:18px; color:var(--primary);"></i> <span class="text-xs text-muted">{{ cat.icone }}</span></td>
-                    <td class="text-sm text-muted">{{ cat.slug }}</td>
-                    <td style="text-align:center;">{{ cat.ordem }}</td>
-                    <td style="text-align:center;">
-                        {% if cat.ativo %}
-                            <span class="badge badge-success">Ativa</span>
-                        {% else %}
-                            <span class="badge badge-danger">Inativa</span>
-                        {% endif %}
-                    </td>
-                    <td style="text-align:center; font-weight:700;">{{ cat.parceiros.count }}</td>
-                    <td style="white-space:nowrap;">
-                        <button class="btn-secondary btn-sm" onclick="editarCat({{ cat.id }}, '{{ cat.nome|escapejs }}', '{{ cat.slug|escapejs }}', '{{ cat.icone|escapejs }}', {{ cat.ordem }}, {{ cat.ativo|yesno:'true,false' }})">
-                            <i class="fas fa-pen"></i>
-                        </button>
-                        <form method="post" style="display:inline;" onsubmit="return confirm('Excluir categoria?')">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="excluir">
-                            <input type="hidden" name="categoria_id" value="{{ cat.id }}">
-                            <button type="submit" class="btn-danger btn-sm">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7" class="text-center" style="padding:40px; color:var(--text-muted);">Nenhuma categoria cadastrada</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Categoria</th>
+          <th>Icone</th>
+          <th>Slug</th>
+          <th style="text-align: center;">Ordem</th>
+          <th style="text-align: center;">Status</th>
+          <th style="text-align: center;">Parceiros</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cat in categorias %}
+          <tr>
+            <td><strong>{{ cat.nome }}</strong></td>
+            <td><span style="font-size: 11px; color: var(--color-text-muted);">{{ cat.icone }}</span></td>
+            <td style="font-size: var(--fs-xs); color: var(--color-text-muted);">{{ cat.slug }}</td>
+            <td style="text-align: center;">{{ cat.ordem }}</td>
+            <td style="text-align: center;">
+              {% if cat.ativo %}
+                {% include "components/badge.html" with variant="success" label="Ativa" size="sm" %}
+              {% else %}
+                {% include "components/badge.html" with variant="danger" label="Inativa" size="sm" %}
+              {% endif %}
+            </td>
+            <td style="text-align: center; font-weight: var(--fw-bold);">{{ cat.parceiros.count }}</td>
+            <td style="white-space: nowrap;">
+              <button class="btn btn-ghost btn-sm" onclick="editarCat({{ cat.id }}, '{{ cat.nome|escapejs }}', '{{ cat.slug|escapejs }}', '{{ cat.icone|escapejs }}', {{ cat.ordem }}, {{ cat.ativo|yesno:'true,false' }})" title="Editar"><i class="bi bi-pencil"></i></button>
+              <form method="post" style="display: inline;" onsubmit="return confirm('Excluir categoria?')">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="excluir">
+                <input type="hidden" name="categoria_id" value="{{ cat.id }}">
+                <button type="submit" class="btn btn-ghost btn-sm btn-ghost-danger" title="Excluir"><i class="bi bi-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" style="text-align: center; padding: var(--sp-10); color: var(--color-text-muted);">Nenhuma categoria cadastrada.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
+{# Modal #}
+<div class="modal-overlay" id="modal-cat" style="display: none;">
+  <div class="modal-content" style="max-width: 460px;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modal-titulo"><i class="bi bi-tag" style="color: var(--color-primary);"></i> Nova categoria</h3>
+      <button class="modal-close" onclick="document.getElementById('modal-cat').style.display='none'"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" id="form-action" value="criar">
+      <input type="hidden" name="categoria_id" id="form-cat-id" value="">
+      <div class="modal-body">
+        <div class="field">
+          <label class="field-label">Nome <span class="field-required">*</span></label>
+          <div class="field-input-wrap"><input type="text" name="nome" id="form-nome" class="field-input" required></div>
+        </div>
+        <div class="field" style="margin-top: var(--sp-3);">
+          <label class="field-label">Slug <span class="field-required">*</span></label>
+          <div class="field-input-wrap"><input type="text" name="slug" id="form-slug" class="field-input" required pattern="[a-z0-9-]+" title="Apenas letras, numeros e hifen"></div>
+        </div>
+        <div class="form-row-2" style="margin-top: var(--sp-3);">
+          <div class="field">
+            <label class="field-label">Icone</label>
+            <div class="field-input-wrap"><input type="text" name="icone" id="form-icone" class="field-input" value="bi-tag"></div>
+          </div>
+          <div class="field">
+            <label class="field-label">Ordem</label>
+            <div class="field-input-wrap"><input type="number" name="ordem" id="form-ordem" class="field-input" value="0"></div>
+          </div>
+        </div>
+        <label class="chk-inline" style="margin-top: var(--sp-3);">
+          <input type="checkbox" name="ativo" id="form-ativo" checked> Ativa
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('modal-cat').style.display='none'">Cancelar</button>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg"></i> Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .table-wrap { overflow-x: auto; }
+  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+  .chk-inline { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); cursor: pointer; color: var(--color-text); }
+  .chk-inline input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--color-primary); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
 <script>
 function abrirModal() {
-    document.getElementById('modal-titulo').innerHTML = '<i class="fas fa-tag" style="color:var(--primary); margin-right:8px;"></i>Nova Categoria';
-    document.getElementById('form-action').value = 'criar';
-    document.getElementById('form-cat-id').value = '';
-    document.getElementById('form-nome').value = '';
-    document.getElementById('form-slug').value = '';
-    document.getElementById('form-icone').value = 'fas fa-tag';
-    document.getElementById('form-ordem').value = '0';
-    document.getElementById('form-ativo').checked = true;
-    document.getElementById('modal-cat').style.display = 'flex';
+  document.getElementById('modal-titulo').innerHTML = '<i class="bi bi-tag" style="color: var(--color-primary);"></i> Nova categoria';
+  document.getElementById('form-action').value = 'criar';
+  document.getElementById('form-cat-id').value = '';
+  document.getElementById('form-nome').value = '';
+  document.getElementById('form-slug').value = '';
+  document.getElementById('form-icone').value = 'bi-tag';
+  document.getElementById('form-ordem').value = '0';
+  document.getElementById('form-ativo').checked = true;
+  document.getElementById('modal-cat').style.display = 'flex';
 }
 
 function editarCat(id, nome, slug, icone, ordem, ativo) {
-    document.getElementById('modal-titulo').innerHTML = '<i class="fas fa-pen" style="color:var(--primary); margin-right:8px;"></i>Editar Categoria';
-    document.getElementById('form-action').value = 'editar';
-    document.getElementById('form-cat-id').value = id;
-    document.getElementById('form-nome').value = nome;
-    document.getElementById('form-slug').value = slug;
-    document.getElementById('form-icone').value = icone;
-    document.getElementById('form-ordem').value = ordem;
-    document.getElementById('form-ativo').checked = ativo;
-    document.getElementById('modal-cat').style.display = 'flex';
+  document.getElementById('modal-titulo').innerHTML = '<i class="bi bi-pencil" style="color: var(--color-primary);"></i> Editar categoria';
+  document.getElementById('form-action').value = 'editar';
+  document.getElementById('form-cat-id').value = id;
+  document.getElementById('form-nome').value = nome;
+  document.getElementById('form-slug').value = slug;
+  document.getElementById('form-icone').value = icone;
+  document.getElementById('form-ordem').value = ordem;
+  document.getElementById('form-ativo').checked = ativo;
+  document.getElementById('modal-cat').style.display = 'flex';
 }
 </script>
 {% endblock %}

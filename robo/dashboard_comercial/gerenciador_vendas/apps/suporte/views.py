@@ -165,9 +165,34 @@ def ticket_lista(request):
 
     categorias = CategoriaTicket.objects.filter(ativo=True)
 
+    filter_fields = [
+        {'type': 'select', 'label': 'Status', 'name': 'status', 'value': status,
+         'options': [
+             ('', 'Todos'),
+             ('aberto', 'Aberto'),
+             ('em_andamento', 'Em andamento'),
+             ('aguardando_cliente', 'Aguardando cliente'),
+             ('resolvido', 'Resolvido'),
+             ('fechado', 'Fechado'),
+         ]},
+        {'type': 'select', 'label': 'Prioridade', 'name': 'prioridade', 'value': prioridade,
+         'options': [
+             ('', 'Todas'),
+             ('baixa', 'Baixa'),
+             ('normal', 'Normal'),
+             ('alta', 'Alta'),
+             ('urgente', 'Urgente'),
+         ]},
+        {'type': 'select', 'label': 'Categoria', 'name': 'categoria', 'value': categoria,
+         'options': [('', 'Todas')] + [(str(c.pk), c.nome) for c in categorias]},
+    ]
+    active_filters_count = sum(1 for v in [status, prioridade, categoria] if v) + (1 if busca else 0)
+
     return render(request, 'suporte/ticket_lista.html', {
         'tickets': tickets_page,
         'categorias': categorias,
+        'filter_fields': filter_fields,
+        'active_filters_count': active_filters_count,
         'filtro_status': status,
         'filtro_prioridade': prioridade,
         'filtro_categoria': categoria,

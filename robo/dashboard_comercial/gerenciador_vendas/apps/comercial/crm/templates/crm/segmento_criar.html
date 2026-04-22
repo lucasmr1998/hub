@@ -1,255 +1,411 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}{% if segmento %}Editar{% else %}Novo{% endif %} Segmento{% endblock %}
+{% block title %}{% if segmento %}Editar{% else %}Novo{% endif %} segmento — Hubtrix{% endblock %}
 
 {% block content %}
-
-<!-- Header -->
-<div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
-    <a href="{% url 'marketing_segmentos:segmentos_lista' %}" style="color:var(--text-muted); font-size:18px;"><i class="fas fa-arrow-left"></i></a>
-    <div>
-        <h1 class="page-title">{% if segmento %}Editar Segmento{% else %}Novo Segmento{% endif %}</h1>
-        <p class="page-subtitle">Defina as regras para agrupar leads automaticamente.</p>
+<div class="page-header">
+  <div class="page-header-top">
+    <div class="seg-header-lead">
+      <a href="{% url 'marketing_segmentos:segmentos_lista' %}" class="btn btn-ghost btn-sm" title="Voltar"><i class="bi bi-arrow-left"></i></a>
+      <div>
+        <h1 class="page-title">{% if segmento %}Editar segmento{% else %}Novo segmento{% endif %}</h1>
+        <p class="page-subtitle">Defina as regras pra agrupar leads automaticamente.</p>
+      </div>
     </div>
+  </div>
 </div>
 
 <form id="formSegmento">
-{% csrf_token %}
-{% if segmento %}<input type="hidden" name="seg_id" value="{{ segmento.pk }}">{% endif %}
+  {% csrf_token %}
+  {% if segmento %}<input type="hidden" name="seg_id" value="{{ segmento.pk }}">{% endif %}
 
-<div style="display:grid; grid-template-columns:1fr 340px; gap:20px;">
-
-    <!-- Coluna principal -->
-    <div>
-        <!-- Identificação -->
-        <div class="card" style="padding:20px; margin-bottom:16px;">
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
-                <div style="width:28px; height:28px; background:var(--primary); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">1</div>
-                <h3 style="font-size:15px; font-weight:700; color:var(--text-main); margin:0;">Identificação</h3>
+  <div class="seg-layout">
+    <div class="seg-main">
+      {# Identificacao #}
+      <div class="card">
+        <div class="card-header">
+          <div class="seg-step">
+            <span class="seg-step-num">1</span>
+            <h3 class="card-title" style="margin:0;">Identificacao</h3>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="seg-form-grid">
+            <div class="field">
+              <label class="field-label" for="segNome">Nome do segmento</label>
+              <div class="field-input-wrap">
+                <input id="segNome" type="text" name="nome" class="field-input" value="{{ segmento.nome|default:'' }}" placeholder="Ex: Leads quentes de Teresina" required>
+              </div>
             </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                <div>
-                    <label class="form-label">Nome do segmento</label>
-                    <input type="text" name="nome" class="form-control" value="{{ segmento.nome|default:'' }}" placeholder="Ex: Leads quentes de Teresina" required>
+            <div class="field">
+              <label class="field-label" for="tipoSegmento">Tipo</label>
+              <div class="field-input-wrap">
+                <select name="tipo" id="tipoSegmento" class="field-input" onchange="toggleTipo()">
+                  <option value="dinamico" {% if segmento.tipo == 'dinamico' %}selected{% endif %}>Dinamico (atualiza automaticamente)</option>
+                  <option value="manual" {% if segmento.tipo == 'manual' or not segmento %}selected{% endif %}>Manual (adicionar leads manualmente)</option>
+                  <option value="hibrido" {% if segmento.tipo == 'hibrido' %}selected{% endif %}>Hibrido (regras + manual)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="field" style="margin-top: var(--sp-3);">
+            <label class="field-label" for="segDesc">Descricao (opcional)</label>
+            <div class="field-input-wrap">
+              <input id="segDesc" type="text" name="descricao" class="field-input" value="{{ segmento.descricao|default:'' }}" placeholder="Pra que serve esse segmento?">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# Regras dinamicas #}
+      <div class="card" id="secaoRegras">
+        <div class="card-header">
+          <div class="seg-step">
+            <span class="seg-step-num">2</span>
+            <h3 class="card-title" style="margin:0;"><i class="bi bi-funnel"></i> Regras de filtro</h3>
+          </div>
+          <span class="seg-step-hint">Leads que atendem TODAS as condicoes entram no segmento</span>
+        </div>
+        <div class="card-body">
+          <div id="regrasContainer">
+            {% if segmento and segmento.regras_filtro.regras %}
+              {% for regra in segmento.regras_filtro.regras %}
+              <div class="regra-row">
+                <div class="field-input-wrap" style="max-width: 200px;">
+                  <select name="regra_campo[]" class="field-input" onchange="previewSegmento()">
+                    <option value="">Selecione...</option>
+                    <optgroup label="Lead">
+                      <option value="origem" {% if regra.campo == 'origem' %}selected{% endif %}>Origem</option>
+                      <option value="score_qualificacao" {% if regra.campo == 'score_qualificacao' %}selected{% endif %}>Score</option>
+                      <option value="cidade" {% if regra.campo == 'cidade' %}selected{% endif %}>Cidade</option>
+                      <option value="estado" {% if regra.campo == 'estado' %}selected{% endif %}>Estado</option>
+                      <option value="bairro" {% if regra.campo == 'bairro' %}selected{% endif %}>Bairro</option>
+                      <option value="valor" {% if regra.campo == 'valor' %}selected{% endif %}>Valor do plano</option>
+                      <option value="status_api" {% if regra.campo == 'status_api' %}selected{% endif %}>Status</option>
+                    </optgroup>
+                    <optgroup label="Tempo">
+                      <option value="dias_cadastro" {% if regra.campo == 'dias_cadastro' %}selected{% endif %}>Dias desde cadastro</option>
+                    </optgroup>
+                  </select>
                 </div>
-                <div>
-                    <label class="form-label">Tipo</label>
-                    <select name="tipo" id="tipoSegmento" class="form-control" onchange="toggleTipo()">
-                        <option value="dinamico" {% if segmento.tipo == 'dinamico' %}selected{% endif %}>Dinâmico (atualiza automaticamente)</option>
-                        <option value="manual" {% if segmento.tipo == 'manual' or not segmento %}selected{% endif %}>Manual (adicionar leads manualmente)</option>
-                        <option value="hibrido" {% if segmento.tipo == 'hibrido' %}selected{% endif %}>Híbrido (regras + manual)</option>
-                    </select>
+                <div class="field-input-wrap" style="max-width: 160px;">
+                  <select name="regra_operador[]" class="field-input" onchange="previewSegmento()">
+                    <option value="igual" {% if regra.operador == 'igual' %}selected{% endif %}>e igual a</option>
+                    <option value="diferente" {% if regra.operador == 'diferente' %}selected{% endif %}>e diferente de</option>
+                    <option value="contem" {% if regra.operador == 'contem' %}selected{% endif %}>contem</option>
+                    <option value="maior" {% if regra.operador == 'maior' %}selected{% endif %}>maior que</option>
+                    <option value="menor" {% if regra.operador == 'menor' %}selected{% endif %}>menor que</option>
+                    <option value="maior_igual" {% if regra.operador == 'maior_igual' %}selected{% endif %}>maior ou igual</option>
+                    <option value="menor_igual" {% if regra.operador == 'menor_igual' %}selected{% endif %}>menor ou igual</option>
+                  </select>
                 </div>
-            </div>
-            <div style="margin-top:12px;">
-                <label class="form-label">Descrição (opcional)</label>
-                <input type="text" name="descricao" class="form-control" value="{{ segmento.descricao|default:'' }}" placeholder="Para que serve esse segmento?">
-            </div>
+                <div class="field-input-wrap" style="flex: 1;">
+                  <input type="text" name="regra_valor[]" class="field-input" value="{{ regra.valor }}" placeholder="Valor" onchange="previewSegmento()">
+                </div>
+                <button type="button" class="btn btn-ghost btn-sm regra-remover" onclick="this.closest('.regra-row').remove(); previewSegmento();" title="Remover"><i class="bi bi-x-lg"></i></button>
+              </div>
+              {% endfor %}
+            {% endif %}
+          </div>
+
+          <button type="button" class="seg-add-regra" onclick="adicionarRegra()">
+            <i class="bi bi-plus-lg"></i> Adicionar condicao
+          </button>
         </div>
+      </div>
 
-        <!-- Regras dinâmicas -->
-        <div class="card" style="padding:20px; margin-bottom:16px;" id="secaoRegras">
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
-                <div style="width:28px; height:28px; background:var(--info); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">2</div>
-                <h3 style="font-size:15px; font-weight:700; color:var(--text-main); margin:0;"><i class="fas fa-filter" style="color:var(--info);"></i> Regras de filtro</h3>
-                <span style="font-size:12px; color:var(--text-muted);">Leads que atendem TODAS as condições entram no segmento</span>
-            </div>
-
-            <div id="regrasContainer">
-                {% if segmento and segmento.regras_filtro.regras %}
-                    {% for regra in segmento.regras_filtro.regras %}
-                    <div class="regra-row" style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                        <select name="regra_campo[]" class="form-control" style="max-width:200px;" onchange="previewSegmento()">
-                            <option value="">Selecione...</option>
-                            <optgroup label="Lead">
-                                <option value="origem" {% if regra.campo == 'origem' %}selected{% endif %}>Origem</option>
-                                <option value="score_qualificacao" {% if regra.campo == 'score_qualificacao' %}selected{% endif %}>Score</option>
-                                <option value="cidade" {% if regra.campo == 'cidade' %}selected{% endif %}>Cidade</option>
-                                <option value="estado" {% if regra.campo == 'estado' %}selected{% endif %}>Estado</option>
-                                <option value="bairro" {% if regra.campo == 'bairro' %}selected{% endif %}>Bairro</option>
-                                <option value="valor" {% if regra.campo == 'valor' %}selected{% endif %}>Valor do plano</option>
-                                <option value="status_api" {% if regra.campo == 'status_api' %}selected{% endif %}>Status</option>
-                            </optgroup>
-                            <optgroup label="Tempo">
-                                <option value="dias_cadastro" {% if regra.campo == 'dias_cadastro' %}selected{% endif %}>Dias desde cadastro</option>
-                            </optgroup>
-                        </select>
-                        <select name="regra_operador[]" class="form-control" style="max-width:160px;" onchange="previewSegmento()">
-                            <option value="igual" {% if regra.operador == 'igual' %}selected{% endif %}>é igual a</option>
-                            <option value="diferente" {% if regra.operador == 'diferente' %}selected{% endif %}>é diferente de</option>
-                            <option value="contem" {% if regra.operador == 'contem' %}selected{% endif %}>contém</option>
-                            <option value="maior" {% if regra.operador == 'maior' %}selected{% endif %}>maior que</option>
-                            <option value="menor" {% if regra.operador == 'menor' %}selected{% endif %}>menor que</option>
-                            <option value="maior_igual" {% if regra.operador == 'maior_igual' %}selected{% endif %}>maior ou igual</option>
-                            <option value="menor_igual" {% if regra.operador == 'menor_igual' %}selected{% endif %}>menor ou igual</option>
-                        </select>
-                        <input type="text" name="regra_valor[]" class="form-control" value="{{ regra.valor }}" placeholder="Valor" style="flex:1;" onchange="previewSegmento()">
-                        <button type="button" onclick="this.closest('.regra-row').remove(); previewSegmento();" style="color:var(--danger); background:none; border:none; cursor:pointer; padding:6px; font-size:14px;"><i class="fas fa-times"></i></button>
-                    </div>
-                    {% endfor %}
-                {% endif %}
-            </div>
-
-            <button type="button" onclick="adicionarRegra()" style="background:none; border:1px dashed var(--border); border-radius:8px; padding:8px 16px; font-size:12px; color:var(--primary); cursor:pointer; font-weight:600; display:flex; align-items:center; gap:6px;">
-                <i class="fas fa-plus"></i> Adicionar condição
-            </button>
-        </div>
-
-        <!-- Botões -->
-        <div style="display:flex; gap:12px;">
-            <a href="{% url 'marketing_segmentos:segmentos_lista' %}" class="btn-secondary" style="padding:10px 24px;">Cancelar</a>
-            <button type="button" onclick="salvarSegmento()" class="btn-primary" style="padding:10px 24px;">
-                <i class="fas fa-save"></i> Salvar Segmento
-            </button>
-        </div>
+      <div class="seg-actions">
+        <a href="{% url 'marketing_segmentos:segmentos_lista' %}" class="btn btn-secondary btn-sm">Cancelar</a>
+        <button type="button" class="btn btn-primary btn-sm" onclick="salvarSegmento()">
+          <i class="bi bi-check-lg"></i> Salvar segmento
+        </button>
+      </div>
     </div>
 
-    <!-- Sidebar: Preview -->
-    <div>
-        <div class="card" style="padding:20px; position:sticky; top:72px;">
-            <h3 style="font-size:14px; font-weight:700; color:var(--text-main); margin-bottom:16px; display:flex; align-items:center; gap:8px;">
-                <i class="fas fa-eye" style="color:var(--primary);"></i> Preview
-            </h3>
-
-            <div id="previewStats" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
-                <div style="background:var(--bg-subtle); border-radius:8px; padding:12px; text-align:center;">
-                    <div style="font-size:24px; font-weight:800; color:var(--primary);" id="previewTotal">0</div>
-                    <div style="font-size:11px; color:var(--text-muted);">leads encontrados</div>
-                </div>
-                <div style="background:var(--bg-subtle); border-radius:8px; padding:12px; text-align:center;">
-                    <div style="font-size:24px; font-weight:800; color:var(--success);" id="previewNovos">0</div>
-                    <div style="font-size:11px; color:var(--text-muted);">novos (7 dias)</div>
-                </div>
-            </div>
-
-            <div style="font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:8px;">AMOSTRA DE LEADS</div>
-            <div id="previewLeads" style="max-height:400px; overflow-y:auto;">
-                <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">
-                    Adicione regras para ver o preview
-                </div>
-            </div>
+    {# Sidebar: Preview #}
+    <aside class="seg-sidebar">
+      <div class="card seg-preview-card">
+        <div class="card-header">
+          <h3 class="card-title"><i class="bi bi-eye"></i> Preview</h3>
         </div>
-    </div>
+        <div class="card-body">
+          <div id="previewStats" class="seg-preview-stats">
+            <div class="seg-preview-stat">
+              <div class="seg-preview-num" id="previewTotal">0</div>
+              <div class="seg-preview-lbl">leads encontrados</div>
+            </div>
+            <div class="seg-preview-stat">
+              <div class="seg-preview-num seg-preview-num-success" id="previewNovos">0</div>
+              <div class="seg-preview-lbl">novos (7 dias)</div>
+            </div>
+          </div>
 
-</div>
+          <div class="seg-preview-title">AMOSTRA DE LEADS</div>
+          <div id="previewLeads" class="seg-preview-leads">
+            <div class="seg-preview-empty">Adicione regras pra ver o preview</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
 </form>
+{% endblock %}
 
+{% block extra_css %}
+<style>
+  .seg-header-lead { display: flex; align-items: center; gap: var(--sp-3); }
+  .seg-layout { display: grid; grid-template-columns: 1fr 340px; gap: var(--sp-4); }
+  .seg-main { display: flex; flex-direction: column; gap: var(--sp-4); }
+
+  .seg-step { display: flex; align-items: center; gap: var(--sp-3); }
+  .seg-step-num {
+    width: 26px; height: 26px;
+    background: var(--color-primary);
+    color: #fff;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
+  }
+  .seg-step-hint {
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+    margin-left: auto;
+  }
+
+  .seg-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+
+  .regra-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-2);
+  }
+  .regra-remover { color: var(--color-danger); }
+  .regra-remover:hover { background: rgba(220, 38, 38, 0.08); }
+
+  .seg-add-regra {
+    background: none;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--sp-2) var(--sp-4);
+    font-size: var(--fs-xs);
+    color: var(--color-primary);
+    cursor: pointer;
+    font-weight: var(--fw-semibold);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background var(--transition);
+  }
+  .seg-add-regra:hover { background: var(--color-surface); }
+
+  .seg-actions { display: flex; gap: var(--sp-2); }
+
+  .seg-sidebar { min-width: 0; }
+  .seg-preview-card { position: sticky; top: var(--sp-5); }
+  .seg-preview-stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+  .seg-preview-stat {
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    padding: var(--sp-3);
+    text-align: center;
+  }
+  .seg-preview-num {
+    font-size: var(--fs-xl);
+    font-weight: var(--fw-bold);
+    color: var(--color-primary);
+    letter-spacing: -0.02em;
+  }
+  .seg-preview-num-success { color: var(--color-success); }
+  .seg-preview-lbl {
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+    margin-top: 2px;
+  }
+  .seg-preview-title {
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text-muted);
+    letter-spacing: 0.04em;
+    margin-bottom: var(--sp-2);
+  }
+  .seg-preview-leads { max-height: 400px; overflow-y: auto; }
+  .seg-preview-empty {
+    text-align: center;
+    padding: var(--sp-5) var(--sp-3);
+    color: var(--color-text-muted);
+    font-size: var(--fs-xs);
+  }
+  .seg-preview-lead {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .seg-preview-lead:last-child { border-bottom: none; }
+  .seg-preview-lead-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
+    flex-shrink: 0;
+  }
+  .seg-preview-lead-info { flex: 1; min-width: 0; }
+  .seg-preview-lead-nome {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .seg-preview-lead-meta { font-size: var(--fs-xs); color: var(--color-text-muted); }
+  .seg-preview-lead-score {
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 900px) {
+    .seg-layout { grid-template-columns: 1fr; }
+    .seg-form-grid { grid-template-columns: 1fr; }
+    .seg-preview-card { position: static; }
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-const REGRA_TEMPLATE = `
-<div class="regra-row" style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-    <select name="regra_campo[]" class="form-control" style="max-width:200px;" onchange="previewSegmento()">
+  const REGRA_TEMPLATE = `
+  <div class="regra-row">
+    <div class="field-input-wrap" style="max-width: 200px;">
+      <select name="regra_campo[]" class="field-input" onchange="previewSegmento()">
         <option value="">Selecione...</option>
         <optgroup label="Lead">
-            <option value="origem">Origem</option>
-            <option value="score_qualificacao">Score</option>
-            <option value="cidade">Cidade</option>
-            <option value="estado">Estado</option>
-            <option value="bairro">Bairro</option>
-            <option value="valor">Valor do plano</option>
-            <option value="status_api">Status</option>
+          <option value="origem">Origem</option>
+          <option value="score_qualificacao">Score</option>
+          <option value="cidade">Cidade</option>
+          <option value="estado">Estado</option>
+          <option value="bairro">Bairro</option>
+          <option value="valor">Valor do plano</option>
+          <option value="status_api">Status</option>
         </optgroup>
         <optgroup label="Tempo">
-            <option value="dias_cadastro">Dias desde cadastro</option>
+          <option value="dias_cadastro">Dias desde cadastro</option>
         </optgroup>
-    </select>
-    <select name="regra_operador[]" class="form-control" style="max-width:160px;" onchange="previewSegmento()">
-        <option value="igual">é igual a</option>
-        <option value="diferente">é diferente de</option>
-        <option value="contem">contém</option>
+      </select>
+    </div>
+    <div class="field-input-wrap" style="max-width: 160px;">
+      <select name="regra_operador[]" class="field-input" onchange="previewSegmento()">
+        <option value="igual">e igual a</option>
+        <option value="diferente">e diferente de</option>
+        <option value="contem">contem</option>
         <option value="maior">maior que</option>
         <option value="menor">menor que</option>
         <option value="maior_igual">maior ou igual</option>
         <option value="menor_igual">menor ou igual</option>
-    </select>
-    <input type="text" name="regra_valor[]" class="form-control" placeholder="Valor" style="flex:1;" onchange="previewSegmento()">
-    <button type="button" onclick="this.closest('.regra-row').remove(); previewSegmento();" style="color:var(--danger); background:none; border:none; cursor:pointer; padding:6px; font-size:14px;"><i class="fas fa-times"></i></button>
-</div>`;
+      </select>
+    </div>
+    <div class="field-input-wrap" style="flex: 1;">
+      <input type="text" name="regra_valor[]" class="field-input" placeholder="Valor" onchange="previewSegmento()">
+    </div>
+    <button type="button" class="btn btn-ghost btn-sm regra-remover" onclick="this.closest('.regra-row').remove(); previewSegmento();" title="Remover"><i class="bi bi-x-lg"></i></button>
+  </div>`;
 
-function adicionarRegra() {
+  function adicionarRegra() {
     document.getElementById('regrasContainer').insertAdjacentHTML('beforeend', REGRA_TEMPLATE);
-}
+  }
 
-function toggleTipo() {
+  function toggleTipo() {
     const tipo = document.getElementById('tipoSegmento').value;
     document.getElementById('secaoRegras').style.display = (tipo === 'manual') ? 'none' : '';
-}
+  }
 
-function getRegras() {
+  function getRegras() {
     const campos = document.querySelectorAll('[name="regra_campo[]"]');
     const operadores = document.querySelectorAll('[name="regra_operador[]"]');
     const valores = document.querySelectorAll('[name="regra_valor[]"]');
     const regras = [];
     campos.forEach((c, i) => {
-        if (c.value && valores[i].value) {
-            regras.push({ campo: c.value, operador: operadores[i].value, valor: valores[i].value });
-        }
+      if (c.value && valores[i].value) {
+        regras.push({ campo: c.value, operador: operadores[i].value, valor: valores[i].value });
+      }
     });
     return regras;
-}
+  }
 
-let previewTimer;
-function previewSegmento() {
+  let previewTimer;
+  function previewSegmento() {
     clearTimeout(previewTimer);
     previewTimer = setTimeout(() => {
-        const regras = getRegras();
-        if (regras.length === 0) {
-            document.getElementById('previewTotal').textContent = '0';
-            document.getElementById('previewNovos').textContent = '0';
-            document.getElementById('previewLeads').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">Adicione regras para ver o preview</div>';
-            return;
+      const regras = getRegras();
+      if (regras.length === 0) {
+        document.getElementById('previewTotal').textContent = '0';
+        document.getElementById('previewNovos').textContent = '0';
+        document.getElementById('previewLeads').innerHTML = '<div class="seg-preview-empty">Adicione regras pra ver o preview</div>';
+        return;
+      }
+      fetch('{% url "marketing_segmentos:api_preview_regras" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+        body: JSON.stringify({ regras }),
+      })
+      .then(r => r.json())
+      .then(data => {
+        document.getElementById('previewTotal').textContent = data.total;
+        document.getElementById('previewNovos').textContent = data.novos || 0;
+        const container = document.getElementById('previewLeads');
+        if (data.leads && data.leads.length > 0) {
+          container.innerHTML = data.leads.map(l => `
+            <div class="seg-preview-lead">
+              <div class="seg-preview-lead-avatar">${l.nome.charAt(0)}</div>
+              <div class="seg-preview-lead-info">
+                <div class="seg-preview-lead-nome">${l.nome}</div>
+                <div class="seg-preview-lead-meta">${l.telefone || ''} · ${l.origem || ''}</div>
+              </div>
+              <div class="seg-preview-lead-score">Score ${l.score}</div>
+            </div>
+          `).join('');
+        } else {
+          container.innerHTML = '<div class="seg-preview-empty">Nenhum lead encontrado</div>';
         }
-        fetch('{% url "marketing_segmentos:api_preview_regras" %}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
-            body: JSON.stringify({ regras }),
-        })
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById('previewTotal').textContent = data.total;
-            document.getElementById('previewNovos').textContent = data.novos || 0;
-            const container = document.getElementById('previewLeads');
-            if (data.leads && data.leads.length > 0) {
-                container.innerHTML = data.leads.map(l => `
-                    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
-                        <div style="width:32px;height:32px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${l.nome.charAt(0)}</div>
-                        <div style="flex:1;min-width:0;">
-                            <div style="font-size:13px;font-weight:600;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.nome}</div>
-                            <div style="font-size:11px;color:var(--text-muted);">${l.telefone || ''} · ${l.origem || ''}</div>
-                        </div>
-                        <div style="font-size:11px;color:var(--text-muted);">Score ${l.score}</div>
-                    </div>
-                `).join('');
-            } else {
-                container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">Nenhum lead encontrado</div>';
-            }
-        });
+      });
     }, 500);
-}
+  }
 
-function salvarSegmento() {
+  function salvarSegmento() {
     const form = document.getElementById('formSegmento');
     const data = new FormData(form);
     const regras = getRegras();
     data.append('regras_json', JSON.stringify(regras));
 
     fetch('{% url "marketing_segmentos:api_segmento_salvar" %}', {
-        method: 'POST',
-        headers: { 'X-CSRFToken': data.get('csrfmiddlewaretoken') },
-        body: data,
+      method: 'POST',
+      headers: { 'X-CSRFToken': data.get('csrfmiddlewaretoken') },
+      body: data,
     })
     .then(r => r.json())
     .then(d => {
-        if (d.ok) {
-            window.location.href = '{% url "marketing_segmentos:segmentos_lista" %}';
-        } else {
-            alert(d.erro || 'Erro ao salvar');
-        }
-    });
-}
+      if (d.ok) {
+        toast('Salvo', 'Segmento salvo com sucesso', 'success');
+        setTimeout(() => { window.location.href = '{% url "marketing_segmentos:segmentos_lista" %}'; }, 600);
+      } else {
+        toast('Erro', d.erro || 'Erro ao salvar', 'danger');
+      }
+    })
+    .catch(() => toast('Erro', 'Falha na comunicacao', 'danger'));
+  }
 
-// Init
-toggleTipo();
-{% if segmento and segmento.regras_filtro.regras %}previewSegmento();{% endif %}
+  toggleTipo();
+  {% if segmento and segmento.regras_filtro.regras %}previewSegmento();{% endif %}
 </script>
-
 {% endblock %}

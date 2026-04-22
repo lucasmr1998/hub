@@ -1,0 +1,66 @@
+{% comment %}
+Entity table — visualizacao lista/linha equivalente ao entity_card.
+Mesmos params — escolha via view_toggle na pagina.
+
+Params (iguais ao entity_card):
+  icon, icon_variant
+  title, title_url
+  subtitle (opcional, truncado em 1 linha)
+  metric_value, metric_label
+  tag_variant, tag_label
+  footer_meta
+  primary_action_url | primary_action_onclick, primary_action_label, primary_action_icon
+  secondary_action_url | secondary_action_onclick, secondary_action_icon, secondary_action_title, secondary_action_danger
+
+Uso: envolver o loop em <div class="entity-list">.
+
+Exemplo:
+  <div class="entity-list view-list">
+    {% for item in items %}
+      {% include "components/entity_table.html" with title=item.nome ... %}
+    {% endfor %}
+  </div>
+{% endcomment %}
+<div class="entity-row">
+  {% if icon %}
+    <span class="entity-row-icon entity-card-icon-{{ icon_variant|default:'primary' }}">
+      <i class="bi {{ icon }}"></i>
+    </span>
+  {% endif %}
+  <div class="entity-row-main">
+    {% if title_url %}
+      <a href="{{ title_url }}" class="entity-row-title">{{ title }}</a>
+    {% else %}
+      <span class="entity-row-title">{{ title }}</span>
+    {% endif %}
+    {% if subtitle %}<span class="entity-row-subtitle">{{ subtitle }}</span>{% endif %}
+  </div>
+  {% if metric_value is not None %}
+    <div class="entity-row-metric">
+      <span class="entity-row-metric-value">{{ metric_value }}</span>
+      {% if metric_label %}<span class="entity-row-metric-label">{{ metric_label }}</span>{% endif %}
+    </div>
+  {% endif %}
+  {% if tag_label %}
+    <div class="entity-row-tag">
+      {% include "components/badge.html" with variant=tag_variant|default:"neutral" label=tag_label %}
+    </div>
+  {% endif %}
+  {% if footer_meta %}
+    <span class="entity-row-meta">{{ footer_meta }}</span>
+  {% endif %}
+  {% if primary_action_url or primary_action_onclick or secondary_action_url or secondary_action_onclick %}
+    <div class="entity-row-actions">
+      {% if secondary_action_url %}
+        <a href="{{ secondary_action_url }}" class="btn btn-ghost btn-sm{% if secondary_action_danger %} btn-ghost-danger{% endif %}" title="{{ secondary_action_title|default:'' }}"><i class="bi {{ secondary_action_icon }}"></i></a>
+      {% elif secondary_action_onclick %}
+        <button type="button" onclick="{{ secondary_action_onclick }}" class="btn btn-ghost btn-sm{% if secondary_action_danger %} btn-ghost-danger{% endif %}" title="{{ secondary_action_title|default:'' }}"><i class="bi {{ secondary_action_icon }}"></i></button>
+      {% endif %}
+      {% if primary_action_url %}
+        <a href="{{ primary_action_url }}" class="btn btn-secondary btn-sm">{% if primary_action_icon %}<i class="bi {{ primary_action_icon }}"></i> {% endif %}{{ primary_action_label|default:"Abrir" }}</a>
+      {% elif primary_action_onclick %}
+        <button type="button" onclick="{{ primary_action_onclick }}" class="btn btn-secondary btn-sm">{% if primary_action_icon %}<i class="bi {{ primary_action_icon }}"></i> {% endif %}{{ primary_action_label|default:"Abrir" }}</button>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>

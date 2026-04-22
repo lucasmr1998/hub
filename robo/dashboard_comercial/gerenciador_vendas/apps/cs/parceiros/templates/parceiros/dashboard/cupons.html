@@ -1,399 +1,352 @@
 {% extends 'sistema/base.html' %}
 
-{% block title %}Cupons - Admin{% endblock %}
+{% block title %}Cupons{% endblock %}
 
 {% block content %}
-
-<!-- Modal Criar/Editar -->
-<div id="modal-cupom" class="modal-overlay" style="display:none">
-    <div class="modal-content" style="max-width:620px; max-height:90vh; overflow-y:auto;">
-        <button onclick="document.getElementById('modal-cupom').style.display='none'" class="modal-close">&times;</button>
-        <h3 id="modal-titulo" style="margin-bottom:20px; color:var(--text-main);">
-            <i class="fas fa-ticket-alt" style="color:var(--primary); margin-right:8px;"></i>Novo Cupom
-        </h3>
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <input type="hidden" name="action" id="modal-action" value="criar">
-            <input type="hidden" name="cupom_id" id="modal-cupom-id" value="">
-
-            <div class="form-group">
-                <label class="form-label">T&iacute;tulo *</label>
-                <input type="text" name="titulo" id="m-titulo" class="form-control" required placeholder="Ex: 20% off no Restaurante X">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Imagem do Cupom</label>
-                <input type="file" name="imagem" id="m-imagem-input" class="form-control" accept="image/*" onchange="previewImagem(this)">
-                <div id="m-imagem-preview" style="margin-top:8px;"></div>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                <div class="form-group">
-                    <label class="form-label">Parceiro *</label>
-                    <select name="parceiro_id" id="m-parceiro" class="form-control" required>
-                        <option value="">Selecione...</option>
-                        {% for p in parceiros %}
-                        <option value="{{ p.id }}">{{ p.nome }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">C&oacute;digo *</label>
-                    <input type="text" name="codigo" id="m-codigo" class="form-control" required placeholder="CUPOM20OFF">
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Descri&ccedil;&atilde;o</label>
-                <textarea name="descricao" id="m-descricao" class="form-control" rows="2"></textarea>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
-                <div class="form-group">
-                    <label class="form-label">Tipo Desconto</label>
-                    <select name="tipo_desconto" id="m-tipo" class="form-control">
-                        <option value="percentual">Percentual (%)</option>
-                        <option value="fixo">Valor Fixo (R$)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Valor Desconto *</label>
-                    <input type="number" name="valor_desconto" id="m-valor" class="form-control" step="0.01" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Modalidade</label>
-                    <select name="modalidade" id="m-modalidade" class="form-control" onchange="toggleModalidade()">
-                        <option value="gratuito">Gratuito</option>
-                        <option value="pontos">Custo em Pontos</option>
-                        <option value="nivel">B&ocirc;nus de N&iacute;vel</option>
-                    </select>
-                </div>
-            </div>
-
-            <div id="campo-pontos" style="display:none;">
-                <div class="form-group">
-                    <label class="form-label">Custo em Pontos</label>
-                    <input type="number" name="custo_pontos" id="m-custo" class="form-control" value="0">
-                </div>
-            </div>
-
-            <div id="campo-nivel" style="display:none;">
-                <div class="form-group">
-                    <label class="form-label">N&iacute;vel M&iacute;nimo</label>
-                    <select name="nivel_minimo" id="m-nivel" class="form-control">
-                        <option value="">Nenhum</option>
-                        {% for n in niveis %}
-                        <option value="{{ n.id }}">{{ n.nome }} ({{ n.xp_necessario }} XP)</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
-                <div class="form-group">
-                    <label class="form-label">Estoque (0=ilimitado)</label>
-                    <input type="number" name="quantidade_total" id="m-qtd" class="form-control" value="0" min="0">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Limite/Membro</label>
-                    <input type="number" name="limite_por_membro" id="m-limite" class="form-control" value="1" min="1">
-                </div>
-                <div class="form-group">
-                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:28px;">
-                        <input type="checkbox" name="ativo" id="m-ativo" checked> Ativo
-                    </label>
-                </div>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                <div class="form-group">
-                    <label class="form-label">In&iacute;cio *</label>
-                    <input type="datetime-local" name="data_inicio" id="m-inicio" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Fim *</label>
-                    <input type="datetime-local" name="data_fim" id="m-fim" class="form-control" required>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Cidades (vazio = todas)</label>
-                <div style="display:flex; flex-wrap:wrap; gap:8px; max-height:100px; overflow-y:auto; padding:8px; border:1px solid var(--border); border-radius:8px;">
-                    {% for c in cidades %}
-                    <label style="display:flex; align-items:center; gap:4px; font-size:13px; cursor:pointer;">
-                        <input type="checkbox" name="cidades_permitidas" value="{{ c.id }}" class="m-cidade-cb"> {{ c.nome }}
-                    </label>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
-                <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-cupom').style.display='none'">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Salvar</button>
-            </div>
-        </form>
+<div id="modal-cupom" class="modal-overlay" style="display: none;">
+  <div class="modal-content" style="max-width: 620px; max-height: 90vh; overflow-y: auto;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modal-titulo"><i class="bi bi-ticket-perforated" style="color: var(--color-primary);"></i> Novo cupom</h3>
+      <button type="button" class="modal-close" onclick="fecharModal('modal-cupom')">&times;</button>
     </div>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="action" id="modal-action" value="criar">
+      <input type="hidden" name="cupom_id" id="modal-cupom-id" value="">
+      <div class="modal-body">
+        <div class="field">
+          <label class="field-label">Titulo *</label>
+          <div class="field-input-wrap"><input type="text" name="titulo" id="m-titulo" class="field-input" required placeholder="Ex: 20% off no Restaurante X"></div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Imagem do cupom</label>
+          <div class="field-input-wrap"><input type="file" name="imagem" id="m-imagem-input" class="field-input" accept="image/*" onchange="previewImagem(this)"></div>
+          <div id="m-imagem-preview" style="margin-top: 8px;"></div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label class="field-label">Parceiro *</label>
+            <div class="field-input-wrap">
+              <select name="parceiro_id" id="m-parceiro" class="field-input" required>
+                <option value="">Selecione...</option>
+                {% for p in parceiros %}<option value="{{ p.id }}">{{ p.nome }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Codigo *</label>
+            <div class="field-input-wrap"><input type="text" name="codigo" id="m-codigo" class="field-input" required placeholder="CUPOM20OFF"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Descricao</label>
+          <div class="field-input-wrap"><textarea name="descricao" id="m-descricao" class="field-input" rows="2"></textarea></div>
+        </div>
+
+        <div class="grid-3">
+          <div class="field">
+            <label class="field-label">Tipo desconto</label>
+            <div class="field-input-wrap">
+              <select name="tipo_desconto" id="m-tipo" class="field-input">
+                <option value="percentual">Percentual (%)</option>
+                <option value="fixo">Valor fixo (R$)</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Valor *</label>
+            <div class="field-input-wrap"><input type="number" name="valor_desconto" id="m-valor" class="field-input" step="0.01" required></div>
+          </div>
+          <div class="field">
+            <label class="field-label">Modalidade</label>
+            <div class="field-input-wrap">
+              <select name="modalidade" id="m-modalidade" class="field-input" onchange="toggleModalidade()">
+                <option value="gratuito">Gratuito</option>
+                <option value="pontos">Custo em pontos</option>
+                <option value="nivel">Bonus de nivel</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="campo-pontos" class="field" style="display: none;">
+          <label class="field-label">Custo em pontos</label>
+          <div class="field-input-wrap"><input type="number" name="custo_pontos" id="m-custo" class="field-input" value="0"></div>
+        </div>
+
+        <div id="campo-nivel" class="field" style="display: none;">
+          <label class="field-label">Nivel minimo</label>
+          <div class="field-input-wrap">
+            <select name="nivel_minimo" id="m-nivel" class="field-input">
+              <option value="">Nenhum</option>
+              {% for n in niveis %}<option value="{{ n.id }}">{{ n.nome }} ({{ n.xp_necessario }} XP)</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="field">
+            <label class="field-label">Estoque (0=ilimitado)</label>
+            <div class="field-input-wrap"><input type="number" name="quantidade_total" id="m-qtd" class="field-input" value="0" min="0"></div>
+          </div>
+          <div class="field">
+            <label class="field-label">Limite/membro</label>
+            <div class="field-input-wrap"><input type="number" name="limite_por_membro" id="m-limite" class="field-input" value="1" min="1"></div>
+          </div>
+          <div class="field">
+            <label class="field-label">&nbsp;</label>
+            <label style="display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm); padding-top: 10px;">
+              <input type="checkbox" name="ativo" id="m-ativo" checked> Ativo
+            </label>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label class="field-label">Inicio *</label>
+            <div class="field-input-wrap"><input type="datetime-local" name="data_inicio" id="m-inicio" class="field-input" required></div>
+          </div>
+          <div class="field">
+            <label class="field-label">Fim *</label>
+            <div class="field-input-wrap"><input type="datetime-local" name="data_fim" id="m-fim" class="field-input" required></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Cidades (vazio = todas)</label>
+          <div class="cidades-wrap">
+            {% for c in cidades %}<label class="cidade-chk"><input type="checkbox" name="cidades_permitidas" value="{{ c.id }}" class="m-cidade-cb"> {{ c.nome }}</label>{% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="fecharModal('modal-cupom')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <div class="page-header">
+  <div class="page-header-top">
     <div>
-        <h1 class="page-title">Cupons de Desconto</h1>
-        <p class="page-subtitle">Gerencie os cupons dos parceiros.</p>
+      <h1 class="page-title">Cupons de desconto</h1>
+      <p class="page-subtitle">Gerencie os cupons dos parceiros.</p>
     </div>
-    <div style="display:flex; gap:10px;">
-        <a href="{% url 'parceiros:dashboard_cupons_resgates' %}" class="btn btn-secondary">
-            <i class="fas fa-history"></i> Resgates
-        </a>
-        <button class="btn btn-primary" onclick="abrirModalCriar()">
-            <i class="fas fa-plus"></i> Novo Cupom
-        </button>
+    <div class="page-actions">
+      <a href="{% url 'parceiros:dashboard_cupons_resgates' %}" class="btn btn-ghost btn-sm"><i class="bi bi-clock-history"></i> Resgates</a>
+      <button class="btn btn-primary" onclick="abrirModalCriar()"><i class="bi bi-plus-lg"></i> Novo cupom</button>
     </div>
+  </div>
 </div>
 
-<!-- Filtros -->
-<div class="card" style="margin-bottom:20px; padding:16px;">
-    <form method="get" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        <input type="text" name="busca" value="{{ busca }}" class="form-control" placeholder="Buscar t&iacute;tulo ou c&oacute;digo..." style="max-width:250px;">
-        <select name="parceiro" class="form-control" style="max-width:180px;">
-            <option value="">Todos parceiros</option>
-            {% for p in parceiros %}
-            <option value="{{ p.id }}" {% if parceiro_filtro == p.id|stringformat:"d" %}selected{% endif %}>{{ p.nome }}</option>
-            {% endfor %}
+<div class="card" style="margin-bottom: var(--sp-4);">
+  <div class="card-body">
+    <form method="get" style="display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap;">
+      <div class="field-input-wrap" style="max-width: 260px; flex: 1;">
+        <input type="text" name="busca" value="{{ busca }}" class="field-input" placeholder="Buscar titulo ou codigo...">
+      </div>
+      <div class="field-input-wrap" style="max-width: 200px;">
+        <select name="parceiro" class="field-input">
+          <option value="">Todos parceiros</option>
+          {% for p in parceiros %}<option value="{{ p.id }}" {% if parceiro_filtro == p.id|stringformat:"d" %}selected{% endif %}>{{ p.nome }}</option>{% endfor %}
         </select>
-        <select name="modalidade" class="form-control" style="max-width:160px;">
-            <option value="">Todas modalidades</option>
-            <option value="gratuito" {% if modalidade_filtro == "gratuito" %}selected{% endif %}>Gratuito</option>
-            <option value="pontos" {% if modalidade_filtro == "pontos" %}selected{% endif %}>Pontos</option>
-            <option value="nivel" {% if modalidade_filtro == "nivel" %}selected{% endif %}>N&iacute;vel</option>
+      </div>
+      <div class="field-input-wrap" style="max-width: 180px;">
+        <select name="modalidade" class="field-input">
+          <option value="">Todas modalidades</option>
+          <option value="gratuito" {% if modalidade_filtro == "gratuito" %}selected{% endif %}>Gratuito</option>
+          <option value="pontos" {% if modalidade_filtro == "pontos" %}selected{% endif %}>Pontos</option>
+          <option value="nivel" {% if modalidade_filtro == "nivel" %}selected{% endif %}>Nivel</option>
         </select>
-        <select name="aprovacao" class="form-control" style="max-width:160px;">
-            <option value="">Todas aprova&ccedil;&otilde;es</option>
-            <option value="pendente" {% if aprovacao_filtro == "pendente" %}selected{% endif %}>Pendentes</option>
-            <option value="aprovado" {% if aprovacao_filtro == "aprovado" %}selected{% endif %}>Aprovados</option>
-            <option value="rejeitado" {% if aprovacao_filtro == "rejeitado" %}selected{% endif %}>Rejeitados</option>
+      </div>
+      <div class="field-input-wrap" style="max-width: 180px;">
+        <select name="aprovacao" class="field-input">
+          <option value="">Todas aprovacoes</option>
+          <option value="pendente" {% if aprovacao_filtro == "pendente" %}selected{% endif %}>Pendentes</option>
+          <option value="aprovado" {% if aprovacao_filtro == "aprovado" %}selected{% endif %}>Aprovados</option>
+          <option value="rejeitado" {% if aprovacao_filtro == "rejeitado" %}selected{% endif %}>Rejeitados</option>
         </select>
-        <button type="submit" class="btn btn-primary">Filtrar</button>
-        {% if busca or parceiro_filtro or modalidade_filtro %}
-        <a href="{% url 'parceiros:dashboard_cupons' %}" class="btn btn-secondary">Limpar</a>
-        {% endif %}
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+      {% if busca or parceiro_filtro or modalidade_filtro or aprovacao_filtro %}<a href="{% url 'parceiros:dashboard_cupons' %}" class="btn btn-ghost btn-sm">Limpar</a>{% endif %}
     </form>
+  </div>
 </div>
 
-<!-- Tabela -->
-<div class="card">
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-wrap">
     <table class="data-table">
-        <thead>
-            <tr>
-                <th>Cupom</th>
-                <th>Parceiro</th>
-                <th style="text-align:center;">Desconto</th>
-                <th style="text-align:center;">Modalidade</th>
-                <th style="text-align:center;">Estoque</th>
-                <th style="text-align:center;">Resgates</th>
-                <th style="text-align:center;">Aprova&ccedil;&atilde;o</th>
-                <th style="text-align:center;">Status</th>
-                <th style="text-align:center;">A&ccedil;&otilde;es</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for c in cupons %}
-            <tr>
-                <td>
-                    <a href="{% url 'parceiros:dashboard_cupom_detalhe' c.id %}" style="text-decoration:none; color:inherit;">
-                        <strong>{{ c.titulo }}</strong>
-                        <br><small class="text-muted"><code>{{ c.codigo }}</code></small>
-                    </a>
-                </td>
-                <td>{{ c.parceiro.nome }}</td>
-                <td style="text-align:center;">
-                    <span class="font-bold">
-                        {% if c.tipo_desconto == 'percentual' %}{{ c.valor_desconto }}%{% else %}R$ {{ c.valor_desconto }}{% endif %}
-                    </span>
-                </td>
-                <td style="text-align:center;">
-                    {% if c.modalidade == 'gratuito' %}
-                    <span class="badge badge-success">Gratuito</span>
-                    {% elif c.modalidade == 'pontos' %}
-                    <span class="badge badge-warning">{{ c.custo_pontos }} pts</span>
-                    {% else %}
-                    <span class="badge badge-info">{{ c.nivel_minimo.nome|default:"N/A" }}</span>
-                    {% endif %}
-                </td>
-                <td style="text-align:center;">{{ c.estoque_restante }}</td>
-                <td style="text-align:center;">{{ c.total_resgates }}</td>
-                <td style="text-align:center;">
-                    {% if c.status_aprovacao == 'pendente' %}
-                    <span class="badge badge-warning">Pendente</span>
-                    <div style="margin-top:6px; display:flex; gap:4px; justify-content:center;">
-                        <form method="post" style="display:inline;">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="aprovar">
-                            <input type="hidden" name="cupom_id" value="{{ c.id }}">
-                            <button type="submit" class="btn btn-primary" style="padding:4px 10px; font-size:11px;" title="Aprovar">
-                                <i class="fas fa-check"></i>
-                            </button>
-                        </form>
-                        <form method="post" style="display:inline;" onsubmit="var m=prompt('Motivo da rejei\u00e7\u00e3o:'); if(!m)return false; this.querySelector('[name=motivo_rejeicao]').value=m;">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="rejeitar">
-                            <input type="hidden" name="cupom_id" value="{{ c.id }}">
-                            <input type="hidden" name="motivo_rejeicao" value="">
-                            <button type="submit" class="btn btn-secondary" style="padding:4px 10px; font-size:11px; color:var(--danger);" title="Rejeitar">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </form>
-                    </div>
-                    {% elif c.status_aprovacao == 'aprovado' %}
-                    <span class="badge badge-success">Aprovado</span>
-                    {% else %}
-                    <span class="badge badge-danger" title="{{ c.motivo_rejeicao }}">Rejeitado</span>
-                    {% endif %}
-                </td>
-                <td style="text-align:center;">
-                    {% if c.ativo %}<span class="badge badge-success">Ativo</span>
-                    {% else %}<span class="badge badge-danger">Inativo</span>{% endif %}
-                </td>
-                <td style="text-align:center;">
-                    <a href="{% url 'parceiros:dashboard_cupom_detalhe' c.id %}" class="btn btn-secondary" style="padding:6px 12px; font-size:12px;" title="Ver detalhes">
-                        <i class="fas fa-eye"></i>
-                    </a>
-                    <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px;"
-                        data-cupom-id="{{ c.id }}"
-                        data-titulo="{{ c.titulo }}"
-                        data-descricao="{{ c.descricao }}"
-                        data-codigo="{{ c.codigo }}"
-                        data-parceiro="{{ c.parceiro_id }}"
-                        data-tipo="{{ c.tipo_desconto }}"
-                        data-valor="{{ c.valor_desconto }}"
-                        data-modalidade="{{ c.modalidade }}"
-                        data-custo="{{ c.custo_pontos }}"
-                        data-nivel="{{ c.nivel_minimo_id|default:'' }}"
-                        data-qtd="{{ c.quantidade_total }}"
-                        data-limite="{{ c.limite_por_membro }}"
-                        data-ativo="{{ c.ativo }}"
-                        data-inicio="{{ c.data_inicio|date:'Y-m-d\TH:i' }}"
-                        data-fim="{{ c.data_fim|date:'Y-m-d\TH:i' }}"
-                        data-cidades="{% for ci in c.cidades_permitidas.all %}{{ ci.id }}{% if not forloop.last %},{% endif %}{% endfor %}"
-                        data-imagem="{% if c.imagem %}{{ c.imagem.url }}{% endif %}"
-                        onclick="editarCupom(this)">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <form method="post" style="display:inline;" onsubmit="return confirm('Excluir cupom?')">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="excluir">
-                        <input type="hidden" name="cupom_id" value="{{ c.id }}">
-                        <button type="submit" class="btn btn-secondary" style="padding:6px 12px; font-size:12px; color:var(--danger);">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="9" class="text-center text-muted" style="padding:40px;">Nenhum cupom cadastrado.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
+      <thead>
+        <tr>
+          <th>Cupom</th>
+          <th>Parceiro</th>
+          <th style="text-align: center;">Desconto</th>
+          <th style="text-align: center;">Modalidade</th>
+          <th style="text-align: center;">Estoque</th>
+          <th style="text-align: center;">Resgates</th>
+          <th style="text-align: center;">Aprovacao</th>
+          <th style="text-align: center;">Status</th>
+          <th style="text-align: center;">Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in cupons %}
+          <tr>
+            <td>
+              <a href="{% url 'parceiros:dashboard_cupom_detalhe' c.id %}" style="text-decoration: none; color: inherit;">
+                <strong>{{ c.titulo }}</strong>
+                <div style="font-size: 11px; color: var(--color-text-muted);"><code>{{ c.codigo }}</code></div>
+              </a>
+            </td>
+            <td>{{ c.parceiro.nome }}</td>
+            <td style="text-align: center; font-weight: var(--fw-bold);">
+              {% if c.tipo_desconto == 'percentual' %}{{ c.valor_desconto }}%{% else %}R$ {{ c.valor_desconto }}{% endif %}
+            </td>
+            <td style="text-align: center;">
+              {% if c.modalidade == 'gratuito' %}{% include "components/badge.html" with variant="success" label="Gratuito" size="sm" %}
+              {% elif c.modalidade == 'pontos' %}{% include "components/badge.html" with variant="warning" label=c.custo_pontos|stringformat:"s"|add:" pts" size="sm" %}
+              {% else %}{% include "components/badge.html" with variant="info" label=c.nivel_minimo.nome|default:"N/A" size="sm" %}{% endif %}
+            </td>
+            <td style="text-align: center;">{{ c.estoque_restante }}</td>
+            <td style="text-align: center;">{{ c.total_resgates }}</td>
+            <td style="text-align: center;">
+              {% if c.status_aprovacao == 'pendente' %}
+                {% include "components/badge.html" with variant="warning" label="Pendente" size="sm" %}
+                <div style="margin-top: 6px; display: flex; gap: 4px; justify-content: center;">
+                  <form method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="aprovar">
+                    <input type="hidden" name="cupom_id" value="{{ c.id }}">
+                    <button type="submit" class="btn btn-ghost-success btn-sm" title="Aprovar"><i class="bi bi-check-lg"></i></button>
+                  </form>
+                  <form method="post" style="display: inline;" onsubmit="var m=prompt('Motivo da rejeicao:'); if(!m)return false; this.querySelector('[name=motivo_rejeicao]').value=m;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="rejeitar">
+                    <input type="hidden" name="cupom_id" value="{{ c.id }}">
+                    <input type="hidden" name="motivo_rejeicao" value="">
+                    <button type="submit" class="btn btn-ghost-danger btn-sm" title="Rejeitar"><i class="bi bi-x-lg"></i></button>
+                  </form>
+                </div>
+              {% elif c.status_aprovacao == 'aprovado' %}{% include "components/badge.html" with variant="success" label="Aprovado" size="sm" %}
+              {% else %}{% include "components/badge.html" with variant="danger" label="Rejeitado" size="sm" %}{% endif %}
+            </td>
+            <td style="text-align: center;">
+              {% if c.ativo %}{% include "components/badge.html" with variant="success" label="Ativo" size="sm" %}{% else %}{% include "components/badge.html" with variant="danger" label="Inativo" size="sm" %}{% endif %}
+            </td>
+            <td style="text-align: center; white-space: nowrap;">
+              <a href="{% url 'parceiros:dashboard_cupom_detalhe' c.id %}" class="btn btn-ghost btn-sm" title="Ver detalhes"><i class="bi bi-eye"></i></a>
+              <button class="btn btn-ghost btn-sm" title="Editar"
+                data-cupom-id="{{ c.id }}" data-titulo="{{ c.titulo }}" data-descricao="{{ c.descricao }}"
+                data-codigo="{{ c.codigo }}" data-parceiro="{{ c.parceiro_id }}" data-tipo="{{ c.tipo_desconto }}"
+                data-valor="{{ c.valor_desconto }}" data-modalidade="{{ c.modalidade }}" data-custo="{{ c.custo_pontos }}"
+                data-nivel="{{ c.nivel_minimo_id|default:'' }}" data-qtd="{{ c.quantidade_total }}" data-limite="{{ c.limite_por_membro }}"
+                data-ativo="{{ c.ativo }}" data-inicio="{{ c.data_inicio|date:'Y-m-d\TH:i' }}" data-fim="{{ c.data_fim|date:'Y-m-d\TH:i' }}"
+                data-cidades="{% for ci in c.cidades_permitidas.all %}{{ ci.id }}{% if not forloop.last %},{% endif %}{% endfor %}"
+                data-imagem="{% if c.imagem %}{{ c.imagem.url }}{% endif %}"
+                onclick="editarCupom(this)"><i class="bi bi-pencil"></i></button>
+              <form method="post" style="display: inline;" onsubmit="return confirm('Excluir cupom?')">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="excluir">
+                <input type="hidden" name="cupom_id" value="{{ c.id }}">
+                <button type="submit" class="btn btn-ghost-danger btn-sm" title="Excluir"><i class="bi bi-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="9" style="text-align: center; padding: var(--sp-8); color: var(--color-text-muted);">Nenhum cupom cadastrado.</td></tr>
+        {% endfor %}
+      </tbody>
     </table>
+  </div>
 
-    {% if cupons.has_other_pages %}
-    <div class="pagination">
-        {% if cupons.has_previous %}
-        <a href="?page={{ cupons.previous_page_number }}&busca={{ busca }}&parceiro={{ parceiro_filtro }}&modalidade={{ modalidade_filtro }}" class="btn btn-secondary">&laquo; Anterior</a>
-        {% endif %}
-        <span class="text-muted" style="padding:8px;">P&aacute;gina {{ cupons.number }} de {{ cupons.paginator.num_pages }}</span>
-        {% if cupons.has_next %}
-        <a href="?page={{ cupons.next_page_number }}&busca={{ busca }}&parceiro={{ parceiro_filtro }}&modalidade={{ modalidade_filtro }}" class="btn btn-secondary">Pr&oacute;xima &raquo;</a>
-        {% endif %}
-    </div>
-    {% endif %}
+  {% if cupons.has_other_pages %}
+    {% include "components/pagination.html" with page_obj=cupons extra_params="busca="|add:busca|add:"&parceiro="|add:parceiro_filtro|add:"&modalidade="|add:modalidade_filtro %}
+  {% endif %}
 </div>
+{% endblock %}
 
+{% block extra_css %}
+<style>
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3); }
+  .cidades-wrap { display: flex; flex-wrap: wrap; gap: 8px; max-height: 100px; overflow-y: auto; padding: 8px; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+  .cidade-chk { display: flex; align-items: center; gap: 4px; font-size: var(--fs-sm); cursor: pointer; }
+  .table-wrap { overflow-x: auto; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
 <script>
 function toggleModalidade() {
-    var m = document.getElementById('m-modalidade').value;
-    document.getElementById('campo-pontos').style.display = m === 'pontos' ? 'block' : 'none';
-    document.getElementById('campo-nivel').style.display = m === 'nivel' ? 'block' : 'none';
+  var m = document.getElementById('m-modalidade').value;
+  document.getElementById('campo-pontos').style.display = m === 'pontos' ? 'block' : 'none';
+  document.getElementById('campo-nivel').style.display = m === 'nivel' ? 'block' : 'none';
 }
 
 function previewImagem(input) {
-    var preview = document.getElementById('m-imagem-preview');
-    if (input.files && input.files[0]) {
-        var reader = new FileReader();
-        reader.onload = function(e) {
-            preview.innerHTML = '<img src="' + e.target.result + '" style="max-width:200px; max-height:120px; border-radius:8px; border:1px solid var(--border); object-fit:cover;">';
-        };
-        reader.readAsDataURL(input.files[0]);
-    } else {
-        preview.innerHTML = '';
-    }
-}
-
-function limparPreview() {
-    document.getElementById('m-imagem-preview').innerHTML = '';
-    document.getElementById('m-imagem-input').value = '';
+  var preview = document.getElementById('m-imagem-preview');
+  if (input.files && input.files[0]) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      preview.innerHTML = '<img src="' + e.target.result + '" style="max-width: 200px; max-height: 120px; border-radius: var(--radius-md); border: 1px solid var(--color-border); object-fit: cover;">';
+    };
+    reader.readAsDataURL(input.files[0]);
+  } else { preview.innerHTML = ''; }
 }
 
 function abrirModalCriar() {
-    document.getElementById('modal-titulo').innerHTML = '<i class="fas fa-ticket-alt" style="color:var(--primary); margin-right:8px;"></i>Novo Cupom';
-    document.getElementById('modal-action').value = 'criar';
-    document.getElementById('modal-cupom-id').value = '';
-    document.getElementById('m-titulo').value = '';
-    document.getElementById('m-parceiro').value = '';
-    document.getElementById('m-codigo').value = '';
-    document.getElementById('m-descricao').value = '';
-    document.getElementById('m-tipo').value = 'percentual';
-    document.getElementById('m-valor').value = '';
-    document.getElementById('m-modalidade').value = 'gratuito';
-    document.getElementById('m-custo').value = '0';
-    document.getElementById('m-nivel').value = '';
-    document.getElementById('m-qtd').value = '0';
-    document.getElementById('m-limite').value = '1';
-    document.getElementById('m-ativo').checked = true;
-    document.getElementById('m-inicio').value = '';
-    document.getElementById('m-fim').value = '';
-    document.querySelectorAll('.m-cidade-cb').forEach(cb => cb.checked = false);
-    limparPreview();
-    toggleModalidade();
-    document.getElementById('modal-cupom').style.display = 'flex';
+  document.getElementById('modal-titulo').innerHTML = '<i class="bi bi-ticket-perforated" style="color: var(--color-primary);"></i> Novo cupom';
+  document.getElementById('modal-action').value = 'criar';
+  document.getElementById('modal-cupom-id').value = '';
+  ['m-titulo','m-parceiro','m-codigo','m-descricao','m-valor','m-inicio','m-fim'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('m-tipo').value = 'percentual';
+  document.getElementById('m-modalidade').value = 'gratuito';
+  document.getElementById('m-custo').value = '0';
+  document.getElementById('m-nivel').value = '';
+  document.getElementById('m-qtd').value = '0';
+  document.getElementById('m-limite').value = '1';
+  document.getElementById('m-ativo').checked = true;
+  document.querySelectorAll('.m-cidade-cb').forEach(cb => cb.checked = false);
+  document.getElementById('m-imagem-preview').innerHTML = '';
+  document.getElementById('m-imagem-input').value = '';
+  toggleModalidade();
+  abrirModal('modal-cupom');
 }
 
 function editarCupom(btn) {
-    var cidadesStr = btn.dataset.cidades;
-    var cidadesIds = cidadesStr ? cidadesStr.split(',').map(Number) : [];
-    document.getElementById('modal-titulo').innerHTML = '<i class="fas fa-edit" style="color:var(--primary); margin-right:8px;"></i>Editar Cupom';
-    document.getElementById('modal-action').value = 'editar';
-    document.getElementById('modal-cupom-id').value = btn.dataset.cupomId;
-    document.getElementById('m-titulo').value = btn.dataset.titulo;
-    document.getElementById('m-parceiro').value = btn.dataset.parceiro;
-    document.getElementById('m-codigo').value = btn.dataset.codigo;
-    document.getElementById('m-descricao').value = btn.dataset.descricao;
-    document.getElementById('m-tipo').value = btn.dataset.tipo;
-    document.getElementById('m-valor').value = btn.dataset.valor;
-    document.getElementById('m-modalidade').value = btn.dataset.modalidade;
-    document.getElementById('m-custo').value = btn.dataset.custo;
-    document.getElementById('m-nivel').value = btn.dataset.nivel;
-    document.getElementById('m-qtd').value = btn.dataset.qtd;
-    document.getElementById('m-limite').value = btn.dataset.limite;
-    document.getElementById('m-ativo').checked = btn.dataset.ativo === 'True';
-    document.getElementById('m-inicio').value = btn.dataset.inicio;
-    document.getElementById('m-fim').value = btn.dataset.fim;
-    document.querySelectorAll('.m-cidade-cb').forEach(cb => {
-        cb.checked = cidadesIds.includes(parseInt(cb.value));
-    });
+  var cidadesStr = btn.dataset.cidades;
+  var cidadesIds = cidadesStr ? cidadesStr.split(',').map(Number) : [];
+  document.getElementById('modal-titulo').innerHTML = '<i class="bi bi-pencil" style="color: var(--color-primary);"></i> Editar cupom';
+  document.getElementById('modal-action').value = 'editar';
+  document.getElementById('modal-cupom-id').value = btn.dataset.cupomId;
+  document.getElementById('m-titulo').value = btn.dataset.titulo;
+  document.getElementById('m-parceiro').value = btn.dataset.parceiro;
+  document.getElementById('m-codigo').value = btn.dataset.codigo;
+  document.getElementById('m-descricao').value = btn.dataset.descricao;
+  document.getElementById('m-tipo').value = btn.dataset.tipo;
+  document.getElementById('m-valor').value = btn.dataset.valor;
+  document.getElementById('m-modalidade').value = btn.dataset.modalidade;
+  document.getElementById('m-custo').value = btn.dataset.custo;
+  document.getElementById('m-nivel').value = btn.dataset.nivel;
+  document.getElementById('m-qtd').value = btn.dataset.qtd;
+  document.getElementById('m-limite').value = btn.dataset.limite;
+  document.getElementById('m-ativo').checked = btn.dataset.ativo === 'True';
+  document.getElementById('m-inicio').value = btn.dataset.inicio;
+  document.getElementById('m-fim').value = btn.dataset.fim;
+  document.querySelectorAll('.m-cidade-cb').forEach(cb => { cb.checked = cidadesIds.includes(parseInt(cb.value)); });
 
-    // Preview da imagem existente
-    var preview = document.getElementById('m-imagem-preview');
-    if (btn.dataset.imagem) {
-        preview.innerHTML = '<div style="display:flex; align-items:center; gap:10px;"><img src="' + btn.dataset.imagem + '" style="max-width:200px; max-height:120px; border-radius:8px; border:1px solid var(--border); object-fit:cover;"><small class="text-muted">Imagem atual (selecione outra para substituir)</small></div>';
-    } else {
-        preview.innerHTML = '';
-    }
-    document.getElementById('m-imagem-input').value = '';
+  var preview = document.getElementById('m-imagem-preview');
+  if (btn.dataset.imagem) {
+    preview.innerHTML = '<div style="display: flex; align-items: center; gap: 10px;"><img src="' + btn.dataset.imagem + '" style="max-width: 200px; max-height: 120px; border-radius: var(--radius-md); border: 1px solid var(--color-border); object-fit: cover;"><small style="color: var(--color-text-muted);">Imagem atual (selecione outra para substituir)</small></div>';
+  } else { preview.innerHTML = ''; }
+  document.getElementById('m-imagem-input').value = '';
 
-    toggleModalidade();
-    document.getElementById('modal-cupom').style.display = 'flex';
+  toggleModalidade();
+  abrirModal('modal-cupom');
 }
 </script>
-
 {% endblock %}

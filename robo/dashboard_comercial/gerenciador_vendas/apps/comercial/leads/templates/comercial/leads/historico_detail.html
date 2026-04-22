@@ -1,294 +1,256 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Historico #{{ h.id }} - {{ h.nome_contato|default:h.telefone }}{% endblock %}
-
-{% block custom_css %}
-<style>
-    .hist-back { display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--text-muted); text-decoration:none; margin-bottom:16px; transition:color 0.15s; }
-    .hist-back:hover { color:var(--primary); }
-
-    .hist-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
-    .hist-header-left { display:flex; align-items:center; gap:16px; }
-    .hist-header-left h1 { font-size:22px; font-weight:700; color:var(--text-main); margin:0; }
-    .hist-header-left .hist-id { font-size:13px; color:var(--text-muted); font-weight:400; }
-
-    .hist-grid { display:grid; grid-template-columns:2fr 1fr; gap:20px; }
-
-    .hist-card { background:var(--bg-white); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
-    .hist-card + .hist-card { margin-top:20px; }
-    .hist-card-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
-    .hist-card-header h2 { font-size:15px; font-weight:600; color:var(--text-main); margin:0; }
-    .hist-card-header i { color:var(--text-muted); font-size:14px; }
-    .hist-card-body { padding:20px; }
-
-    .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-    .detail-item label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-light); display:block; margin-bottom:4px; }
-    .detail-item span { font-size:14px; color:var(--text-main); word-break:break-word; }
-    .detail-empty { color:var(--text-light); font-style:italic; }
-
-    .transcricao-box { font-size:14px; color:var(--text-secondary); background:var(--border-light); padding:16px; border-radius:8px; line-height:1.6; white-space:pre-wrap; max-height:500px; overflow-y:auto; }
-    .obs-box { font-size:14px; color:var(--text-secondary); background:var(--border-light); padding:14px; border-radius:8px; line-height:1.5; }
-
-    .chat-container { max-height:600px; overflow-y:auto; padding:16px; background:var(--border-light); border-radius:8px; display:flex; flex-direction:column; gap:8px; }
-    .chat-msg { max-width:75%; padding:10px 14px; border-radius:12px; font-size:13px; line-height:1.5; position:relative; word-break:break-word; }
-    .chat-msg.incoming { align-self:flex-start; background:#fff; border:1px solid var(--border); border-bottom-left-radius:4px; }
-    .chat-msg.outgoing { align-self:flex-end; background:var(--primary); color:#fff; border-bottom-right-radius:4px; }
-    .chat-msg.system { align-self:center; background:var(--border); color:var(--text-muted); font-size:11px; padding:4px 12px; border-radius:20px; max-width:90%; text-align:center; }
-    .chat-sender { font-size:11px; font-weight:700; margin-bottom:2px; }
-    .chat-msg.incoming .chat-sender { color:var(--primary); }
-    .chat-msg.outgoing .chat-sender { color:rgba(255,255,255,0.8); }
-    .chat-time { font-size:10px; margin-top:4px; text-align:right; }
-    .chat-msg.incoming .chat-time { color:var(--text-light); }
-    .chat-msg.outgoing .chat-time { color:rgba(255,255,255,0.7); }
-    .chat-msg .chat-file { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; background:rgba(0,0,0,0.05); border-radius:6px; font-size:12px; margin-top:4px; }
-    .chat-msg.outgoing .chat-file { background:rgba(255,255,255,0.15); }
-    .chat-date-separator { text-align:center; font-size:11px; color:var(--text-light); padding:8px 0; }
-    .chat-date-separator span { background:var(--border); padding:3px 12px; border-radius:10px; }
-
-    @media (max-width:900px) {
-        .hist-grid { grid-template-columns:1fr; }
-        .detail-grid { grid-template-columns:1fr; }
-    }
-</style>
-{% endblock %}
+{% block title %}Historico #{{ h.id }} — {{ h.nome_contato|default:h.telefone }}{% endblock %}
 
 {% block content %}
-
-{% if lead %}
-<a href="{% url 'comercial_leads:lead_detail' lead.id %}" class="hist-back">
-    <i class="fas fa-arrow-left"></i> Voltar para {{ lead.nome_razaosocial }}
-</a>
-{% else %}
-<a href="{% url 'comercial_leads:leads' %}" class="hist-back">
-    <i class="fas fa-arrow-left"></i> Voltar para Leads
-</a>
-{% endif %}
-
-<div class="hist-header">
-    <div class="hist-header-left">
-        <h1>{{ h.nome_contato|default:h.telefone }} <span class="hist-id">#{{ h.id }}</span></h1>
-        {% if h.status == 'venda_confirmada' %}<span class="badge badge-success">{{ h.get_status_display }}</span>
-        {% elif h.status == 'erro_sistema' or h.status == 'venda_rejeitada' %}<span class="badge badge-danger">{{ h.get_status_display }}</span>
-        {% elif h.status == 'transferido_humano' or h.status == 'aguardando_validacao' %}<span class="badge badge-warning">{{ h.get_status_display }}</span>
-        {% else %}<span class="badge badge-info">{{ h.get_status_display|default:h.status }}</span>
-        {% endif %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">
+        {{ h.nome_contato|default:h.telefone }}
+        <span style="font-size: var(--fs-sm); color: var(--color-text-muted); font-weight: var(--fw-regular); margin-left: var(--sp-2);">#{{ h.id }}</span>
+      </h1>
+      <p class="page-subtitle">
+        {% if h.status == 'venda_confirmada' %}{% include "components/badge.html" with variant="success" label=h.get_status_display dot=True %}
+        {% elif h.status == 'erro_sistema' or h.status == 'venda_rejeitada' %}{% include "components/badge.html" with variant="danger" label=h.get_status_display dot=True %}
+        {% elif h.status == 'transferido_humano' or h.status == 'aguardando_validacao' %}{% include "components/badge.html" with variant="warning" label=h.get_status_display dot=True %}
+        {% else %}{% include "components/badge.html" with variant="info" label=h.get_status_display|default:h.status dot=True %}{% endif %}
+      </p>
     </div>
-    <div style="display:flex;gap:8px;">
-        {% if h.telefone %}
-        <a href="https://wa.me/{{ h.telefone }}" target="_blank" class="btn-secondary btn-sm" style="text-decoration:none;">
-            <i class="fab fa-whatsapp"></i> WhatsApp
-        </a>
-        {% endif %}
+    <div class="page-actions">
+      {% if lead %}
+        <a href="{% url 'comercial_leads:lead_detail' lead.id %}" class="btn btn-ghost btn-sm"><i class="bi bi-arrow-left"></i> Voltar ao lead</a>
+      {% else %}
+        <a href="{% url 'comercial_leads:leads' %}" class="btn btn-ghost btn-sm"><i class="bi bi-arrow-left"></i> Voltar pra leads</a>
+      {% endif %}
+      {% if h.telefone %}
+        <a href="https://wa.me/{{ h.telefone }}" target="_blank" class="btn btn-secondary btn-sm" style="color: #25D366;"><i class="bi bi-whatsapp"></i> WhatsApp</a>
+      {% endif %}
     </div>
+  </div>
 </div>
 
 <div class="hist-grid">
-    <!-- Coluna principal -->
-    <div>
-        <!-- Informacoes do contato -->
-        <div class="hist-card">
-            <div class="hist-card-header"><i class="fas fa-phone-alt"></i><h2>Informacoes do Contato</h2></div>
-            <div class="hist-card-body">
-                <div class="detail-grid">
-                    <div class="detail-item">
-                        <label>Nome</label>
-                        <span>{{ h.nome_contato|default:"" }}{% if not h.nome_contato %}<em class="detail-empty">Nao identificado</em>{% endif %}</span>
-                    </div>
-                    <div class="detail-item">
-                        <label>Telefone</label>
-                        <span>{{ h.telefone }}</span>
-                    </div>
-                    <div class="detail-item">
-                        <label>Data / Hora</label>
-                        <span>{{ h.data_hora_contato|date:"d/m/Y H:i:s" }}</span>
-                    </div>
-                    <div class="detail-item">
-                        <label>Origem</label>
-                        <span>{% if h.origem_contato %}{{ h.get_origem_contato_display }}{% else %}<em class="detail-empty">Nao informada</em>{% endif %}</span>
-                    </div>
-                    <div class="detail-item">
-                        <label>Duracao</label>
-                        <span>{% if h.duracao_segundos %}{{ h.duracao_segundos }}s{% else %}<em class="detail-empty">Nao registrada</em>{% endif %}</span>
-                    </div>
-                    <div class="detail-item">
-                        <label>Sucesso</label>
-                        <span>{% if h.sucesso %}<span class="badge badge-success">Sim</span>{% else %}<span class="badge badge-muted">Nao</span>{% endif %}</span>
-                    </div>
-                </div>
-            </div>
+  {# Coluna principal #}
+  <div class="hist-main">
+    <div class="card">
+      <div class="card-header"><h3 class="card-title"><i class="bi bi-telephone"></i> Informacoes do contato</h3></div>
+      <div class="card-body">
+        <div class="hist-detail-grid">
+          <div class="hist-detail-item"><label class="hist-detail-label">Nome</label><span>{{ h.nome_contato|default:"" }}{% if not h.nome_contato %}<em class="hist-detail-empty">Nao identificado</em>{% endif %}</span></div>
+          <div class="hist-detail-item"><label class="hist-detail-label">Telefone</label><span>{{ h.telefone }}</span></div>
+          <div class="hist-detail-item"><label class="hist-detail-label">Data / Hora</label><span>{{ h.data_hora_contato|date:"d/m/Y H:i:s" }}</span></div>
+          <div class="hist-detail-item"><label class="hist-detail-label">Origem</label><span>{% if h.origem_contato %}{{ h.get_origem_contato_display }}{% else %}<em class="hist-detail-empty">Nao informada</em>{% endif %}</span></div>
+          <div class="hist-detail-item"><label class="hist-detail-label">Duracao</label><span>{% if h.duracao_segundos %}{{ h.duracao_segundos }}s{% else %}<em class="hist-detail-empty">Nao registrada</em>{% endif %}</span></div>
+          <div class="hist-detail-item"><label class="hist-detail-label">Sucesso</label><span>{% if h.sucesso %}{% include "components/badge.html" with variant="success" label="Sim" %}{% else %}{% include "components/badge.html" with variant="neutral" label="Nao" %}{% endif %}</span></div>
         </div>
-
-        <!-- Mensagens do Inbox -->
-        {% if mensagens %}
-        <div class="hist-card">
-            <div class="hist-card-header"><i class="fas fa-comments"></i><h2>Mensagens ({{ mensagens|length }})</h2></div>
-            <div class="hist-card-body">
-                <div class="chat-container">
-                    {% for msg in mensagens %}
-                    <div class="chat-msg {% if msg.remetente_tipo == 'contato' %}incoming{% elif msg.remetente_tipo == 'sistema' %}system{% else %}outgoing{% endif %}">
-                        {% if msg.remetente_tipo != 'sistema' %}
-                        <div class="chat-sender">{{ msg.remetente_nome|default:msg.get_remetente_tipo_display }}</div>
-                        {% endif %}
-                        {{ msg.conteudo|linebreaksbr }}
-                        {% if msg.arquivo_url %}
-                        <a href="{{ msg.arquivo_url }}" target="_blank" class="chat-file" style="text-decoration:none;color:inherit;">
-                            <i class="fas {% if msg.tipo_conteudo == 'imagem' %}fa-image{% elif msg.tipo_conteudo == 'audio' %}fa-microphone{% elif msg.tipo_conteudo == 'video' %}fa-video{% else %}fa-paperclip{% endif %}"></i>
-                            {{ msg.arquivo_nome|default:"Arquivo" }}
-                        </a>
-                        {% endif %}
-                        {% if msg.remetente_tipo != 'sistema' %}
-                        <div class="chat-time">{{ msg.data_envio|date:"d/m H:i" }}</div>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-        {% elif h.transcricao %}
-        <!-- Fallback: transcricao quando nao ha mensagens do inbox -->
-        <div class="hist-card">
-            <div class="hist-card-header"><i class="fas fa-comments"></i><h2>Transcricao da Conversa</h2></div>
-            <div class="hist-card-body">
-                <div class="transcricao-box">{{ h.transcricao }}</div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Observacoes -->
-        {% if h.observacoes %}
-        <div class="hist-card">
-            <div class="hist-card-header"><i class="fas fa-sticky-note"></i><h2>Observacoes</h2></div>
-            <div class="hist-card-body">
-                <div class="obs-box">{{ h.observacoes|linebreaksbr }}</div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Ultima mensagem -->
-        {% if h.ultima_mensagem %}
-        <div class="hist-card">
-            <div class="hist-card-header"><i class="fas fa-comment-dots"></i><h2>Ultima Mensagem</h2></div>
-            <div class="hist-card-body">
-                <div class="obs-box">{{ h.ultima_mensagem|linebreaksbr }}</div>
-            </div>
-        </div>
-        {% endif %}
+      </div>
     </div>
 
-    <!-- Sidebar -->
-    <div>
-        <!-- Atendimento -->
-        <div class="hist-card">
-            <div class="hist-card-header"><i class="fas fa-ticket-alt"></i><h2>Atendimento</h2></div>
-            <div class="hist-card-body">
-                <div style="display:flex; flex-direction:column; gap:14px;">
-                    <div class="detail-item">
-                        <label>Codigo</label>
-                        <span>{{ h.codigo_atendimento|default:"" }}{% if not h.codigo_atendimento %}<em class="detail-empty">N/A</em>{% endif %}</span>
-                    </div>
-                    <div class="detail-item">
-                        <label>Protocolo</label>
-                        <span>{{ h.protocolo_atendimento|default:"" }}{% if not h.protocolo_atendimento %}<em class="detail-empty">N/A</em>{% endif %}</span>
-                    </div>
-                    {% if h.id_conta %}
-                    <div class="detail-item">
-                        <label>ID Conta</label>
-                        <span>{{ h.id_conta }}</span>
-                    </div>
-                    {% endif %}
-                    {% if h.numero_conta %}
-                    <div class="detail-item">
-                        <label>Numero Conta</label>
-                        <span>{{ h.numero_conta }}</span>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
+    {% if mensagens %}
+      <div class="card">
+        <div class="card-header"><h3 class="card-title"><i class="bi bi-chat-dots"></i> Mensagens ({{ mensagens|length }})</h3></div>
+        <div class="card-body">
+          <div class="chat-container">
+            {% for msg in mensagens %}
+              <div class="chat-msg {% if msg.remetente_tipo == 'contato' %}incoming{% elif msg.remetente_tipo == 'sistema' %}system{% else %}outgoing{% endif %}">
+                {% if msg.remetente_tipo != 'sistema' %}
+                  <div class="chat-sender">{{ msg.remetente_nome|default:msg.get_remetente_tipo_display }}</div>
+                {% endif %}
+                {{ msg.conteudo|linebreaksbr }}
+                {% if msg.arquivo_url %}
+                  <a href="{{ msg.arquivo_url }}" target="_blank" class="chat-file">
+                    <i class="bi {% if msg.tipo_conteudo == 'imagem' %}bi-image{% elif msg.tipo_conteudo == 'audio' %}bi-mic{% elif msg.tipo_conteudo == 'video' %}bi-camera-video{% else %}bi-paperclip{% endif %}"></i>
+                    {{ msg.arquivo_nome|default:"Arquivo" }}
+                  </a>
+                {% endif %}
+                {% if msg.remetente_tipo != 'sistema' %}
+                  <div class="chat-time">{{ msg.data_envio|date:"d/m H:i" }}</div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
         </div>
+      </div>
+    {% elif h.transcricao %}
+      <div class="card">
+        <div class="card-header"><h3 class="card-title"><i class="bi bi-chat-dots"></i> Transcricao da conversa</h3></div>
+        <div class="card-body"><div class="hist-transcricao-box">{{ h.transcricao }}</div></div>
+      </div>
+    {% endif %}
 
-        <!-- Conversao -->
-        <div class="hist-card">
-            <div class="hist-card-header"><i class="fas fa-chart-line"></i><h2>Conversao</h2></div>
-            <div class="hist-card-body">
-                <div style="display:flex; flex-direction:column; gap:14px;">
-                    <div class="detail-item">
-                        <label>Converteu Lead</label>
-                        <span>{% if h.converteu_lead %}<span class="badge badge-success">Sim</span>{% else %}<span class="badge badge-muted">Nao</span>{% endif %}</span>
-                    </div>
-                    {% if h.data_conversao_lead %}
-                    <div class="detail-item">
-                        <label>Data Conversao Lead</label>
-                        <span>{{ h.data_conversao_lead|date:"d/m/Y H:i" }}</span>
-                    </div>
-                    {% endif %}
-                    <div class="detail-item">
-                        <label>Converteu Venda</label>
-                        <span>{% if h.converteu_venda %}<span class="badge badge-success">Sim</span>{% else %}<span class="badge badge-muted">Nao</span>{% endif %}</span>
-                    </div>
-                    {% if h.data_conversao_venda %}
-                    <div class="detail-item">
-                        <label>Data Conversao Venda</label>
-                        <span>{{ h.data_conversao_venda|date:"d/m/Y H:i" }}</span>
-                    </div>
-                    {% endif %}
-                    {% if h.valor_venda %}
-                    <div class="detail-item">
-                        <label>Valor da Venda</label>
-                        <span style="font-weight:700;">R$ {{ h.valor_venda }}</span>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+    {% if h.observacoes %}
+      <div class="card">
+        <div class="card-header"><h3 class="card-title"><i class="bi bi-sticky"></i> Observacoes</h3></div>
+        <div class="card-body"><div class="hist-obs-box">{{ h.observacoes|linebreaksbr }}</div></div>
+      </div>
+    {% endif %}
 
-        <!-- Lead vinculado -->
-        {% if lead %}
-        <div class="hist-card">
-            <div class="hist-card-header"><i class="fas fa-user"></i><h2>Lead Vinculado</h2></div>
-            <div class="hist-card-body">
-                <div style="display:flex; flex-direction:column; gap:14px;">
-                    <div class="detail-item">
-                        <label>Nome</label>
-                        <span><a href="{% url 'comercial_leads:lead_detail' lead.id %}" style="color:var(--primary);text-decoration:none;font-weight:600;">{{ lead.nome_razaosocial }}</a></span>
-                    </div>
-                    <div class="detail-item">
-                        <label>Status</label>
-                        <span>
-                            {% if lead.status_api == 'pendente' %}<span class="badge badge-warning">Pendente</span>
-                            {% elif lead.status_api == 'sucesso' or lead.status_api == 'processado' or lead.status_api == 'cliente' %}<span class="badge badge-success">{{ lead.get_status_api_display }}</span>
-                            {% elif lead.status_api == 'erro' or lead.status_api == 'rejeitado' %}<span class="badge badge-danger">{{ lead.get_status_api_display }}</span>
-                            {% else %}<span class="badge badge-muted">{{ lead.get_status_api_display }}</span>
-                            {% endif %}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
+    {% if h.ultima_mensagem %}
+      <div class="card">
+        <div class="card-header"><h3 class="card-title"><i class="bi bi-chat-left-quote"></i> Ultima mensagem</h3></div>
+        <div class="card-body"><div class="hist-obs-box">{{ h.ultima_mensagem|linebreaksbr }}</div></div>
+      </div>
+    {% endif %}
+  </div>
 
-        <!-- Info tecnica -->
-        {% if h.ip_origem or h.user_agent %}
-        <div class="hist-card">
-            <div class="hist-card-header"><i class="fas fa-server"></i><h2>Info Tecnica</h2></div>
-            <div class="hist-card-body">
-                <div style="display:flex; flex-direction:column; gap:14px;">
-                    {% if h.ip_origem %}
-                    <div class="detail-item">
-                        <label>IP Origem</label>
-                        <span>{{ h.ip_origem }}</span>
-                    </div>
-                    {% endif %}
-                    {% if h.user_agent %}
-                    <div class="detail-item">
-                        <label>User Agent</label>
-                        <span style="font-size:12px;word-break:break-all;">{{ h.user_agent }}</span>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        {% endif %}
+  {# Sidebar #}
+  <div class="hist-sidebar">
+    <div class="card">
+      <div class="card-header"><h3 class="card-title"><i class="bi bi-ticket-detailed"></i> Atendimento</h3></div>
+      <div class="card-body hist-sidebar-body">
+        <div class="hist-detail-item"><label class="hist-detail-label">Codigo</label><span>{{ h.codigo_atendimento|default:"" }}{% if not h.codigo_atendimento %}<em class="hist-detail-empty">N/A</em>{% endif %}</span></div>
+        <div class="hist-detail-item"><label class="hist-detail-label">Protocolo</label><span>{{ h.protocolo_atendimento|default:"" }}{% if not h.protocolo_atendimento %}<em class="hist-detail-empty">N/A</em>{% endif %}</span></div>
+        {% if h.id_conta %}<div class="hist-detail-item"><label class="hist-detail-label">ID conta</label><span>{{ h.id_conta }}</span></div>{% endif %}
+        {% if h.numero_conta %}<div class="hist-detail-item"><label class="hist-detail-label">Numero conta</label><span>{{ h.numero_conta }}</span></div>{% endif %}
+      </div>
     </div>
+
+    <div class="card">
+      <div class="card-header"><h3 class="card-title"><i class="bi bi-graph-up"></i> Conversao</h3></div>
+      <div class="card-body hist-sidebar-body">
+        <div class="hist-detail-item"><label class="hist-detail-label">Converteu lead</label><span>{% if h.converteu_lead %}{% include "components/badge.html" with variant="success" label="Sim" %}{% else %}{% include "components/badge.html" with variant="neutral" label="Nao" %}{% endif %}</span></div>
+        {% if h.data_conversao_lead %}<div class="hist-detail-item"><label class="hist-detail-label">Data conversao lead</label><span>{{ h.data_conversao_lead|date:"d/m/Y H:i" }}</span></div>{% endif %}
+        <div class="hist-detail-item"><label class="hist-detail-label">Converteu venda</label><span>{% if h.converteu_venda %}{% include "components/badge.html" with variant="success" label="Sim" %}{% else %}{% include "components/badge.html" with variant="neutral" label="Nao" %}{% endif %}</span></div>
+        {% if h.data_conversao_venda %}<div class="hist-detail-item"><label class="hist-detail-label">Data conversao venda</label><span>{{ h.data_conversao_venda|date:"d/m/Y H:i" }}</span></div>{% endif %}
+        {% if h.valor_venda %}<div class="hist-detail-item"><label class="hist-detail-label">Valor da venda</label><span style="font-weight: var(--fw-bold);">R$ {{ h.valor_venda }}</span></div>{% endif %}
+      </div>
+    </div>
+
+    {% if lead %}
+      <div class="card">
+        <div class="card-header"><h3 class="card-title"><i class="bi bi-person"></i> Lead vinculado</h3></div>
+        <div class="card-body hist-sidebar-body">
+          <div class="hist-detail-item">
+            <label class="hist-detail-label">Nome</label>
+            <span><a href="{% url 'comercial_leads:lead_detail' lead.id %}" style="color: var(--color-primary); text-decoration: none; font-weight: var(--fw-semibold);">{{ lead.nome_razaosocial }}</a></span>
+          </div>
+          <div class="hist-detail-item">
+            <label class="hist-detail-label">Status</label>
+            <span>
+              {% if lead.status_api == 'pendente' %}{% include "components/badge.html" with variant="warning" label="Pendente" dot=True %}
+              {% elif lead.status_api == 'sucesso' or lead.status_api == 'processado' or lead.status_api == 'cliente' %}{% include "components/badge.html" with variant="success" label=lead.get_status_api_display dot=True %}
+              {% elif lead.status_api == 'erro' or lead.status_api == 'rejeitado' %}{% include "components/badge.html" with variant="danger" label=lead.get_status_api_display dot=True %}
+              {% else %}{% include "components/badge.html" with variant="neutral" label=lead.get_status_api_display %}{% endif %}
+            </span>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if h.ip_origem or h.user_agent %}
+      <div class="card">
+        <div class="card-header"><h3 class="card-title"><i class="bi bi-hdd-network"></i> Info tecnica</h3></div>
+        <div class="card-body hist-sidebar-body">
+          {% if h.ip_origem %}<div class="hist-detail-item"><label class="hist-detail-label">IP origem</label><span>{{ h.ip_origem }}</span></div>{% endif %}
+          {% if h.user_agent %}<div class="hist-detail-item"><label class="hist-detail-label">User agent</label><span style="font-size: var(--fs-xs); word-break: break-all;">{{ h.user_agent }}</span></div>{% endif %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
 </div>
+{% endblock %}
 
+{% block extra_css %}
+<style>
+  .hist-grid { display: grid; grid-template-columns: 2fr 1fr; gap: var(--sp-5); }
+  .hist-main { display: flex; flex-direction: column; gap: var(--sp-4); }
+  .hist-sidebar { display: flex; flex-direction: column; gap: var(--sp-4); }
+  .hist-sidebar-body { display: flex; flex-direction: column; gap: var(--sp-3); }
+
+  .hist-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+  .hist-detail-item { display: flex; flex-direction: column; gap: 4px; }
+  .hist-detail-label {
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+  }
+  .hist-detail-item > span { font-size: var(--fs-sm); color: var(--color-text); word-break: break-word; }
+  .hist-detail-empty { color: var(--color-text-muted); font-style: italic; }
+
+  .hist-obs-box, .hist-transcricao-box {
+    font-size: var(--fs-sm);
+    color: var(--color-text-secondary);
+    background: var(--color-surface);
+    padding: var(--sp-3);
+    border-radius: var(--radius);
+    line-height: 1.5;
+  }
+  .hist-transcricao-box {
+    padding: var(--sp-4);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    max-height: 500px;
+    overflow-y: auto;
+  }
+
+  /* Chat container */
+  .chat-container {
+    max-height: 600px;
+    overflow-y: auto;
+    padding: var(--sp-4);
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+  .chat-msg {
+    max-width: 75%;
+    padding: var(--sp-2) var(--sp-3);
+    border-radius: var(--radius-md);
+    font-size: var(--fs-sm);
+    line-height: 1.5;
+    position: relative;
+    word-break: break-word;
+  }
+  .chat-msg.incoming {
+    align-self: flex-start;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-bottom-left-radius: var(--radius-sm);
+  }
+  .chat-msg.outgoing {
+    align-self: flex-end;
+    background: var(--color-primary);
+    color: #fff;
+    border-bottom-right-radius: var(--radius-sm);
+  }
+  .chat-msg.system {
+    align-self: center;
+    background: var(--color-border);
+    color: var(--color-text-muted);
+    font-size: var(--fs-xs);
+    padding: 4px var(--sp-3);
+    border-radius: var(--radius-full);
+    max-width: 90%;
+    text-align: center;
+  }
+  .chat-sender { font-size: var(--fs-xs); font-weight: var(--fw-bold); margin-bottom: 2px; }
+  .chat-msg.incoming .chat-sender { color: var(--color-primary); }
+  .chat-msg.outgoing .chat-sender { color: rgba(255,255,255,0.8); }
+  .chat-time { font-size: 0.65rem; margin-top: 4px; text-align: right; }
+  .chat-msg.incoming .chat-time { color: var(--color-text-muted); }
+  .chat-msg.outgoing .chat-time { color: rgba(255,255,255,0.7); }
+  .chat-file {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px var(--sp-3);
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-xs);
+    margin-top: 4px;
+    text-decoration: none;
+    color: inherit;
+  }
+  .chat-msg.outgoing .chat-file { background: rgba(255,255,255,0.15); }
+
+  @media (max-width: 900px) {
+    .hist-grid { grid-template-columns: 1fr; }
+    .hist-detail-grid { grid-template-columns: 1fr; }
+  }
+</style>
 {% endblock %}

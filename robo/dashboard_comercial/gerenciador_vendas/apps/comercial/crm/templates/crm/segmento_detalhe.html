@@ -1,101 +1,93 @@
-{% extends 'sistema/base.html' %}
-{% block extra_css %}
-<style>
-  .grid-layout { display:grid; grid-template-columns:300px 1fr; gap:16px; }
-  @media(max-width:900px) { .grid-layout { grid-template-columns:1fr; } }
+{% extends "sistema/base.html" %}
 
-  .seg-banner { height:6px; }
-  .seg-info-content { padding:20px; }
-  .seg-icon-big { width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.4rem; margin-bottom:14px; }
-  .seg-nome { font-size:18px; font-weight:700; color:var(--text-main); margin-bottom:4px; }
-  .seg-tipo-badge { display:inline-flex; padding:3px 10px; border-radius:6px; font-size:12px; font-weight:600; text-transform:uppercase; margin-bottom:10px; }
-  .seg-tipo-dinamico { background:var(--primary-light); color:var(--primary-dark); }
-  .seg-tipo-manual { background:var(--success-light); color:var(--success-dark); }
-  .seg-tipo-hibrido { background:var(--warning-light); color:var(--warning-dark); }
-  .seg-desc { font-size:13px; color:var(--text-muted); line-height:1.5; margin-bottom:16px; }
-  .seg-stat { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border-light); font-size:13px; }
-  .seg-stat:last-child { border-bottom:none; }
-  .seg-stat-lbl { color:var(--text-light); font-weight:600; }
-  .seg-stat-val { font-weight:700; color:var(--text-main); }
-
-  .lead-nome { font-weight:600; color:var(--text-main); }
-  .lead-tel { font-size:12px; color:var(--text-muted); }
-  .manual-badge { background:var(--success-light); color:var(--success-dark); font-size:10px; font-weight:700; padding:2px 6px; border-radius:6px; }
-
-  .search-bar { padding:14px 16px; border-bottom:1px solid var(--border-light); }
-  .search-input { width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; color:var(--text-main); outline:none; box-sizing:border-box; }
-  .search-input:focus { border-color:var(--primary); }
-
-  .empty { text-align:center; padding:40px; color:var(--text-light); }
-  .empty i { font-size:32px; display:block; margin-bottom:10px; opacity:.4; }
-</style>
-{% endblock %}
+{% block title %}{{ segmento.nome }} — Segmento{% endblock %}
 
 {% block content %}
-<div class="page-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-  <div style="display:flex; align-items:center; gap:10px;">
-    <div style="width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;background:{{ segmento.cor_hex }}">
-      <i class="fas {{ segmento.icone_fa }}"></i>
+<div class="page-header">
+  <div class="page-header-top">
+    <div class="seg-det-title">
+      <div class="seg-det-icon" style="background: {{ segmento.cor_hex|default:'var(--color-primary)' }};">
+        <i class="bi {{ segmento.icone_fa|default:'bi-people' }}"></i>
+      </div>
+      <div>
+        <h1 class="page-title">{{ segmento.nome }}</h1>
+        <p class="page-subtitle">Detalhes do segmento e gestao de membros.</p>
+      </div>
     </div>
-    <h1 class="page-title">{{ segmento.nome }}</h1>
-  </div>
-  <div style="display:flex; gap:8px;">
-    <a href="{% url 'crm:segmentos_lista' %}" class="btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a>
-    <button class="btn-primary" onclick="abrirModalAdicionar()"><i class="fas fa-plus"></i> Adicionar Lead</button>
+    <div class="page-actions">
+      <a href="{% url 'crm:segmentos_lista' %}" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+      <button class="btn btn-primary btn-sm" onclick="abrirModalAdicionar()"><i class="bi bi-plus-lg"></i> Adicionar lead</button>
+    </div>
   </div>
 </div>
 
-<div class="grid-layout">
-  <!-- SIDEBAR INFO -->
-  <div>
-    <div class="card" style="padding:0; overflow:hidden;">
-      <div class="seg-banner" style="background:{{ segmento.cor_hex }}"></div>
-      <div class="seg-info-content">
-        <div class="seg-icon-big" style="background:{{ segmento.cor_hex }}">
-          <i class="fas {{ segmento.icone_fa }}"></i>
+<div class="seg-det-layout">
+  {# Sidebar info #}
+  <aside>
+    <div class="card seg-det-info">
+      <div class="seg-det-banner" style="background: {{ segmento.cor_hex|default:'var(--color-primary)' }};"></div>
+      <div class="card-body">
+        <div class="seg-det-icon-big" style="background: {{ segmento.cor_hex|default:'var(--color-primary)' }};">
+          <i class="bi {{ segmento.icone_fa|default:'bi-people' }}"></i>
         </div>
-        <div class="seg-nome">{{ segmento.nome }}</div>
-        <span class="seg-tipo-badge seg-tipo-{{ segmento.tipo }}">{{ segmento.get_tipo_display }}</span>
+        <div class="seg-det-nome">{{ segmento.nome }}</div>
+        {% if segmento.tipo == 'dinamico' %}
+          {% include "components/badge.html" with variant="primary" label=segmento.get_tipo_display %}
+        {% elif segmento.tipo == 'manual' %}
+          {% include "components/badge.html" with variant="success" label=segmento.get_tipo_display %}
+        {% elif segmento.tipo == 'hibrido' %}
+          {% include "components/badge.html" with variant="warning" label=segmento.get_tipo_display %}
+        {% else %}
+          {% include "components/badge.html" with variant="neutral" label=segmento.get_tipo_display %}
+        {% endif %}
         {% if segmento.descricao %}
-        <div class="seg-desc">{{ segmento.descricao }}</div>
+          <p class="seg-det-desc">{{ segmento.descricao }}</p>
         {% endif %}
 
-        <div class="seg-stat">
-          <span class="seg-stat-lbl">Total de leads</span>
-          <span class="seg-stat-val">{{ segmento.total_leads }}</span>
+        <div class="seg-det-stats">
+          <div class="seg-det-stat">
+            <span class="seg-det-stat-lbl">Total de leads</span>
+            <span class="seg-det-stat-val">{{ segmento.total_leads }}</span>
+          </div>
+          <div class="seg-det-stat">
+            <span class="seg-det-stat-lbl">Criado por</span>
+            <span class="seg-det-stat-val">{{ segmento.criado_por.get_full_name|default:segmento.criado_por.username|default:"Sistema" }}</span>
+          </div>
+          <div class="seg-det-stat">
+            <span class="seg-det-stat-lbl">Criado em</span>
+            <span class="seg-det-stat-val">{{ segmento.data_criacao|date:"d/m/Y" }}</span>
+          </div>
+          {% if segmento.ultima_atualizacao_dinamica %}
+          <div class="seg-det-stat">
+            <span class="seg-det-stat-lbl">Ultima sync</span>
+            <span class="seg-det-stat-val">{{ segmento.ultima_atualizacao_dinamica|date:"d/m/Y H:i" }}</span>
+          </div>
+          {% endif %}
         </div>
-        <div class="seg-stat">
-          <span class="seg-stat-lbl">Criado por</span>
-          <span class="seg-stat-val">{{ segmento.criado_por.get_full_name|default:segmento.criado_por.username|default:"Sistema" }}</span>
-        </div>
-        <div class="seg-stat">
-          <span class="seg-stat-lbl">Criado em</span>
-          <span class="seg-stat-val">{{ segmento.data_criacao|date:"d/m/Y" }}</span>
-        </div>
-        {% if segmento.ultima_atualizacao_dinamica %}
-        <div class="seg-stat">
-          <span class="seg-stat-lbl">Última sync</span>
-          <span class="seg-stat-val">{{ segmento.ultima_atualizacao_dinamica|date:"d/m/Y H:i" }}</span>
-        </div>
-        {% endif %}
       </div>
     </div>
 
     <div class="card">
-      <p style="font-size:13px;color:var(--text-muted);margin:0 0 12px">Disparar campanha para todos os leads deste segmento.</p>
-      <button class="btn-primary" style="width:100%" onclick="dispararCampanha()"><i class="fas fa-paper-plane"></i> Disparar Campanha</button>
+      <div class="card-body">
+        <p class="seg-det-cta-text">Disparar campanha pra todos os leads deste segmento.</p>
+        <button class="btn btn-primary btn-sm" style="width: 100%;" onclick="dispararCampanha()"><i class="bi bi-send"></i> Disparar campanha</button>
+      </div>
     </div>
-  </div>
+  </aside>
 
-  <!-- MEMBROS TABLE -->
-  <div class="data-table-container" style="margin-bottom:0">
-    <div class="table-header">
-      <span class="table-title"><i class="fas fa-users" style="color:var(--primary)"></i> Membros ({{ membros|length }})</span>
+  {# Membros #}
+  <div class="card seg-det-membros">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-people"></i> Membros</h3>
+      {% include "components/badge.html" with variant="primary" label=membros|length %}
     </div>
-    <div class="search-bar">
-      <input type="text" class="search-input" id="busca" placeholder="Buscar por nome ou telefone..." oninput="filtrar()">
+    <div class="seg-det-search">
+      <div class="field-input-wrap">
+        <i class="bi bi-search field-icon"></i>
+        <input type="text" class="field-input" id="busca" placeholder="Buscar por nome ou telefone..." oninput="filtrar()">
+      </div>
     </div>
-    <div style="overflow-x:auto">
+    <div class="seg-det-table-wrap">
       {% if membros %}
       <table class="data-table" id="tabela-membros">
         <thead>
@@ -112,26 +104,24 @@
           {% for membro in membros %}
           <tr data-busca="{{ membro.lead.nome_completo|lower }} {{ membro.lead.telefone|default:'' }}">
             <td>
-              <div class="lead-nome">{{ membro.lead.nome_completo }}</div>
-              <div class="lead-tel">{{ membro.lead.email|default:"" }}</div>
+              <div class="seg-det-lead-nome">{{ membro.lead.nome_completo }}</div>
+              <div class="seg-det-lead-email">{{ membro.lead.email|default:"" }}</div>
             </td>
-            <td style="color:var(--text-muted)">{{ membro.lead.telefone|default:"—" }}</td>
+            <td style="color: var(--color-text-muted);">{{ membro.lead.telefone|default:"—" }}</td>
             <td>
-              <span class="badge badge-primary">
-                {{ membro.lead.get_status_api_display|default:membro.lead.status_api|default:"—" }}
-              </span>
+              {% include "components/badge.html" with variant="primary" label=membro.lead.get_status_api_display|default:membro.lead.status_api|default:"—" %}
             </td>
-            <td style="color:var(--text-light);font-size:12px">{{ membro.data_adicao|date:"d/m/Y" }}</td>
+            <td style="color: var(--color-text-muted); font-size: var(--fs-xs);">{{ membro.data_adicao|date:"d/m/Y" }}</td>
             <td>
               {% if membro.adicionado_manualmente %}
-              <span class="manual-badge">Manual</span>
+                {% include "components/badge.html" with variant="success" label="Manual" size="sm" %}
               {% else %}
-              <span style="font-size:11px;color:var(--text-light)">Auto</span>
+                {% include "components/badge.html" with variant="neutral" label="Auto" size="sm" %}
               {% endif %}
             </td>
-            <td>
-              <button class="btn-danger btn-sm" onclick="removerMembro({{ membro.pk }}, '{{ membro.lead.nome_completo|escapejs }}')">
-                <i class="fas fa-times"></i>
+            <td style="text-align: right;">
+              <button class="btn btn-ghost btn-sm" style="color: var(--color-danger);" onclick="removerMembro({{ membro.pk }}, '{{ membro.lead.nome_completo|escapejs }}')" title="Remover">
+                <i class="bi bi-x-lg"></i>
               </button>
             </td>
           </tr>
@@ -139,30 +129,118 @@
         </tbody>
       </table>
       {% else %}
-      <div class="empty">
-        <i class="fas fa-users"></i>
-        <p>Nenhum membro ainda. Adicione leads manualmente ou configure regras dinâmicas.</p>
+      <div class="table-empty">
+        <i class="bi bi-people"></i>
+        Nenhum membro ainda. Adicione leads manualmente ou configure regras dinamicas.
       </div>
       {% endif %}
     </div>
   </div>
 </div>
 
-<!-- MODAL ADICIONAR LEAD -->
-<div class="modal-overlay" id="modal-adicionar" style="display:none">
-  <div class="modal-content" style="max-width:440px;">
-    <button class="modal-close" onclick="fecharModal()"><i class="fas fa-times"></i></button>
-    <h3 style="font-size:16px; font-weight:700; color:var(--text-main); margin-bottom:16px;">Adicionar Lead ao Segmento</h3>
-    <div class="form-group">
-      <label class="form-label">Buscar lead por nome ou telefone</label>
-      <input type="text" id="busca-lead" class="form-control" placeholder="Digite para buscar..." oninput="buscarLeads()">
+{# Modal adicionar lead #}
+<div class="modal-overlay" id="modal-adicionar" style="display: none;">
+  <div class="modal-content" style="max-width: 440px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Adicionar lead ao segmento</h3>
+      <button class="modal-close" onclick="fecharModalAdicionar()"><i class="bi bi-x-lg"></i></button>
     </div>
-    <div id="resultados-leads" style="max-height:240px;overflow-y:auto"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
-      <button class="btn-secondary" onclick="fecharModal()">Fechar</button>
+    <div class="modal-body">
+      <div class="field">
+        <label class="field-label" for="busca-lead">Buscar lead por nome ou telefone</label>
+        <div class="field-input-wrap">
+          <input id="busca-lead" type="text" class="field-input" placeholder="Digite pra buscar..." oninput="buscarLeads()">
+        </div>
+      </div>
+      <div id="resultados-leads" class="seg-det-resultados"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="fecharModalAdicionar()">Fechar</button>
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .seg-det-title { display: flex; align-items: center; gap: var(--sp-3); }
+  .seg-det-icon {
+    width: 40px; height: 40px;
+    border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .seg-det-layout { display: grid; grid-template-columns: 300px 1fr; gap: var(--sp-4); }
+  @media (max-width: 900px) { .seg-det-layout { grid-template-columns: 1fr; } }
+
+  .seg-det-info { overflow: hidden; padding: 0; }
+  .seg-det-banner { height: 6px; }
+  .seg-det-icon-big {
+    width: 52px; height: 52px;
+    border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 1.3rem;
+    margin-bottom: var(--sp-3);
+  }
+  .seg-det-nome {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-bold);
+    color: var(--color-text);
+    margin-bottom: var(--sp-2);
+  }
+  .seg-det-desc {
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+    line-height: 1.5;
+    margin: var(--sp-3) 0 0;
+  }
+  .seg-det-stats { margin-top: var(--sp-3); }
+  .seg-det-stat {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--sp-2) 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: var(--fs-sm);
+  }
+  .seg-det-stat:last-child { border-bottom: none; }
+  .seg-det-stat-lbl { color: var(--color-text-muted); font-weight: var(--fw-semibold); }
+  .seg-det-stat-val { font-weight: var(--fw-bold); color: var(--color-text); }
+
+  .seg-det-cta-text {
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+    margin: 0 0 var(--sp-3);
+  }
+
+  .seg-det-membros { padding: 0; }
+  .seg-det-search {
+    padding: var(--sp-3) var(--sp-5);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .seg-det-table-wrap { overflow-x: auto; }
+
+  .seg-det-lead-nome { font-weight: var(--fw-semibold); color: var(--color-text); font-size: var(--fs-sm); }
+  .seg-det-lead-email { font-size: var(--fs-xs); color: var(--color-text-muted); }
+
+  .seg-det-resultados { max-height: 260px; overflow-y: auto; margin-top: var(--sp-3); }
+  .seg-det-resultado-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-2) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .seg-det-resultado-row:last-child { border-bottom: none; }
+  .seg-det-resultado-empty {
+    text-align: center;
+    color: var(--color-text-muted);
+    padding: var(--sp-4);
+    font-size: var(--fs-sm);
+  }
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -183,7 +261,7 @@ function abrirModalAdicionar() {
   document.getElementById('modal-adicionar').style.display = 'flex';
 }
 
-function fecharModal() {
+function fecharModalAdicionar() {
   document.getElementById('modal-adicionar').style.display = 'none';
 }
 
@@ -198,17 +276,17 @@ function buscarLeads() {
       .then(d => {
         const el = document.getElementById('resultados-leads');
         if (!d.leads || !d.leads.length) {
-          el.innerHTML = '<p style="text-align:center;color:var(--text-light);padding:16px;font-size:13px">Nenhum lead encontrado.</p>';
+          el.innerHTML = '<div class="seg-det-resultado-empty">Nenhum lead encontrado.</div>';
           return;
         }
         el.innerHTML = d.leads.map(l => `
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-light)">
+          <div class="seg-det-resultado-row">
             <div>
-              <div style="font-weight:600;color:var(--text-main);font-size:13px">${l.nome}</div>
-              <div style="font-size:12px;color:var(--text-light)">${l.telefone||''}</div>
+              <div style="font-weight: var(--fw-semibold); color: var(--color-text); font-size: var(--fs-sm);">${l.nome}</div>
+              <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">${l.telefone || ''}</div>
             </div>
-            <button class="btn-primary btn-sm" onclick="adicionarLead(${l.pk}, '${l.nome.replace(/'/g,"\\'")}', this)">
-              <i class="fas fa-plus"></i> Adicionar
+            <button class="btn btn-primary btn-sm" onclick="adicionarLead(${l.pk}, '${l.nome.replace(/'/g,"\\'")}', this)">
+              <i class="bi bi-plus-lg"></i> Adicionar
             </button>
           </div>
         `).join('');
@@ -218,14 +296,21 @@ function buscarLeads() {
 
 function adicionarLead(leadPk, nome, btn) {
   btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i>';
   fetch(`/crm/segmentos/${SEG_ID}/adicionar-lead/`, {
     method: 'POST',
     headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
     body: JSON.stringify({ lead_id: leadPk })
   }).then(r => r.json()).then(d => {
-    if (d.ok) { btn.innerHTML = '<i class="fas fa-check"></i> Adicionado'; setTimeout(() => location.reload(), 800); }
-    else { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus"></i> Adicionar'; alert(d.erro || 'Erro.'); }
+    if (d.ok) {
+      btn.innerHTML = '<i class="bi bi-check-lg"></i> Adicionado';
+      toast('Adicionado', `${nome} foi adicionado ao segmento`, 'success');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-plus-lg"></i> Adicionar';
+      toast('Erro', d.erro || 'Erro ao adicionar', 'danger');
+    }
   });
 }
 
@@ -235,22 +320,29 @@ function removerMembro(membroPk, nome) {
     method: 'POST',
     headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
     body: JSON.stringify({ membro_id: membroPk })
-  }).then(r => r.json()).then(d => { if (d.ok) location.reload(); });
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      toast('Removido', `${nome} foi removido`, 'success');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      toast('Erro', d.erro || 'Erro ao remover', 'danger');
+    }
+  });
 }
 
 function dispararCampanha() {
-  if (!confirm('Disparar campanha para {{ segmento.total_leads }} leads?')) return;
+  if (!confirm('Disparar campanha pra {{ segmento.total_leads }} leads?')) return;
   fetch(`/crm/segmentos/${SEG_ID}/disparar-campanha/`, {
     method: 'POST',
     headers: { 'X-CSRFToken': CSRF }
   }).then(r => r.json()).then(d => {
-    if (d.ok) alert(`Campanha disparada para ${d.total} leads via N8N.`);
-    else alert(d.erro || 'Erro ao disparar campanha.');
+    if (d.ok) toast('Campanha disparada', `${d.total} leads via N8N`, 'success');
+    else toast('Erro', d.erro || 'Erro ao disparar campanha', 'danger');
   });
 }
 
 document.getElementById('modal-adicionar').addEventListener('click', function(e) {
-  if (e.target === this) fecharModal();
+  if (e.target === this) fecharModalAdicionar();
 });
 </script>
 {% endblock %}

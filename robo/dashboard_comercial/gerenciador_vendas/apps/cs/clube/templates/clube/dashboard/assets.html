@@ -1,83 +1,144 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 {% load static %}
 
-{% block title %}Visual da Roleta - Dashboard{% endblock %}
+{% block title %}Visual da roleta — Clube{% endblock %}
 
 {% block content %}
-
 <div class="page-header">
-    <h1 class="page-title">Visual</h1>
-    <p class="page-subtitle">Identidade visual e assets da roleta.</p>
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Visual da roleta</h1>
+      <p class="page-subtitle">Identidade visual e assets da roleta (frames, fundo, logo).</p>
+    </div>
+  </div>
 </div>
 
-<!-- Frames -->
+<div class="card" style="margin-bottom: var(--sp-4);">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-images" style="color: var(--color-primary);"></i> Frames da simulacao (0-12)</h3>
+    {% include "components/badge.html" with variant="info" label="Imagens da roleta girando" icon="bi-info-circle" %}
+  </div>
+  <div class="card-body">
+    <div class="assets-grid">
+      {% for frame in frames %}
+        <div class="asset-card">
+          <img src="{{ frame.imagem.url }}" alt="Frame {{ frame.ordem }}" class="asset-img">
+          <div class="asset-label">FRAME {{ frame.ordem }}</div>
+          <form method="POST" class="asset-actions">
+            {% csrf_token %}
+            <input type="hidden" name="asset_id" value="{{ frame.id }}">
+            <button type="submit" class="btn {% if frame.ativo %}btn-secondary{% else %}btn-primary{% endif %} btn-sm" style="flex: 1;">
+              {% if frame.ativo %}Desativar{% else %}Ativar{% endif %}
+            </button>
+            <button type="submit" name="delete" class="btn btn-ghost btn-sm btn-ghost-danger"><i class="bi bi-trash"></i></button>
+          </form>
+        </div>
+      {% endfor %}
+
+      <div class="asset-upload">
+        <form method="POST" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="tipo" value="frame">
+          <i class="bi bi-cloud-upload asset-upload-icon"></i>
+          <div class="asset-upload-title">Novo frame</div>
+          <div class="field-input-wrap" style="margin-bottom: var(--sp-2);">
+            <input type="number" name="ordem" placeholder="Ordem (0-12)" required class="field-input" style="height: 32px; font-size: var(--fs-xs);">
+          </div>
+          <input type="file" name="imagem" accept="image/*" required class="asset-file">
+          <button type="submit" class="btn btn-primary btn-sm" style="width: 100%;"><i class="bi bi-upload"></i> Subir</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="card">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <div class="card-title" style="margin-bottom:0;">Frames da Simula&ccedil;&atilde;o (0-12)</div>
-        <span class="badge badge-info"><i class="fas fa-info-circle"></i> Imagens da roleta girando</span>
-    </div>
-
-    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:16px;">
-        {% for frame in frames %}
-        <div style="background:var(--bg-page); border:1px solid var(--border); border-radius:10px; padding:14px; position:relative;">
-            <img src="{{ frame.imagem.url }}" style="width:100%; height:120px; object-fit:contain; margin-bottom:10px;">
-            <div class="text-xs font-bold text-muted">FRAME {{ frame.ordem }}</div>
-            <form method="POST" style="margin-top:10px; display:flex; gap:6px;">
-                {% csrf_token %}
-                <input type="hidden" name="asset_id" value="{{ frame.id }}">
-                <button type="submit" class="{% if frame.ativo %}btn-secondary{% else %}btn-primary{% endif %} btn-sm" style="flex:1;">
-                    {% if frame.ativo %}Desativar{% else %}Ativar{% endif %}
-                </button>
-                <button type="submit" name="delete" class="btn-danger btn-sm">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </form>
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-palette" style="color: var(--color-primary);"></i> Outros elementos (fundo, logo, ponteiro)</h3>
+  </div>
+  <div class="card-body">
+    <div class="assets-grid outros-grid">
+      {% for asset in outros %}
+        <div class="asset-card">
+          <img src="{{ asset.imagem.url }}" alt="{{ asset.get_tipo_display }}" class="asset-img">
+          <div class="asset-label">{{ asset.get_tipo_display }}</div>
+          <form method="POST" class="asset-actions">
+            {% csrf_token %}
+            <input type="hidden" name="asset_id" value="{{ asset.id }}">
+            <button type="submit" name="delete" class="btn btn-ghost btn-sm btn-ghost-danger" style="width: 100%;"><i class="bi bi-trash"></i> Excluir</button>
+          </form>
         </div>
-        {% endfor %}
+      {% endfor %}
 
-        <!-- Upload New Frame -->
-        <div style="border:2px dashed var(--border); border-radius:10px; padding:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:200px;">
-            <form method="POST" enctype="multipart/form-data" style="text-align:center;">
-                {% csrf_token %}
-                <input type="hidden" name="tipo" value="frame">
-                <i class="fas fa-cloud-upload-alt" style="font-size:28px; color:var(--text-light); margin-bottom:10px;"></i>
-                <div class="text-sm text-muted" style="margin-bottom:10px;">Adicionar Novo Frame</div>
-                <input type="number" name="ordem" placeholder="Ordem (0-12)" required class="form-control" style="margin-bottom:8px; font-size:12px;">
-                <input type="file" name="imagem" accept="image/*" required style="font-size:11px; margin-bottom:10px;">
-                <button type="submit" class="btn-primary btn-sm w-full">Subir Frame</button>
-            </form>
-        </div>
+      <div class="asset-upload">
+        <form method="POST" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="field-input-wrap" style="margin-bottom: var(--sp-2);">
+            <select name="tipo" class="field-input" style="height: 32px; font-size: var(--fs-xs);">
+              <option value="background">Fundo da pagina</option>
+              <option value="logo">Logo central</option>
+              <option value="pointer">Ponteiro/seta</option>
+            </select>
+          </div>
+          <input type="file" name="imagem" accept="image/*" required class="asset-file">
+          <button type="submit" class="btn btn-primary btn-sm" style="width: 100%;"><i class="bi bi-upload"></i> Subir</button>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
+{% endblock %}
 
-<!-- Outros Elementos -->
-<div class="card" style="margin-top:20px;">
-    <div class="card-title">Outros Elementos (Background, Logo)</div>
-    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px;">
-        {% for asset in outros %}
-        <div style="background:var(--bg-page); border:1px solid var(--border); border-radius:10px; padding:14px;">
-            <img src="{{ asset.imagem.url }}" style="width:100%; height:100px; object-fit:contain; margin-bottom:10px;">
-            <div class="font-bold text-sm">{{ asset.get_tipo_display }}</div>
-            <form method="POST" style="margin-top:10px;">
-                {% csrf_token %}
-                <input type="hidden" name="asset_id" value="{{ asset.id }}">
-                <button type="submit" name="delete" class="btn-danger btn-sm">Excluir</button>
-            </form>
-        </div>
-        {% endfor %}
+{% block extra_css %}
+<style>
+  .assets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--sp-3); }
+  .outros-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .asset-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--sp-3);
+    position: relative;
+  }
+  .asset-img {
+    width: 100%;
+    height: 120px;
+    object-fit: contain;
+    margin-bottom: var(--sp-2);
+  }
+  .asset-label {
+    font-size: 11px;
+    font-weight: var(--fw-bold);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .asset-actions { display: flex; gap: 6px; margin-top: var(--sp-2); }
 
-        <div style="border:2px dashed var(--border); border-radius:10px; padding:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:200px;">
-            <form method="POST" enctype="multipart/form-data" style="text-align:center;">
-                {% csrf_token %}
-                <select name="tipo" class="form-control" style="margin-bottom:10px; font-size:13px;">
-                    <option value="background">Fundo da P&aacute;gina</option>
-                    <option value="logo">Logo Central</option>
-                    <option value="pointer">Ponteiro/Seta</option>
-                </select>
-                <input type="file" name="imagem" accept="image/*" required style="font-size:11px; margin-bottom:10px;">
-                <button type="submit" class="btn-primary btn-sm w-full">Subir Elemento</button>
-            </form>
-        </div>
-    </div>
-</div>
+  .asset-upload {
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--sp-4);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 200px;
+  }
+  .asset-upload form { width: 100%; text-align: center; }
+  .asset-upload-icon {
+    font-size: 1.8rem;
+    color: var(--color-text-muted);
+    margin-bottom: var(--sp-2);
+  }
+  .asset-upload-title {
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+    margin-bottom: var(--sp-2);
+  }
+  .asset-file {
+    font-size: 11px;
+    margin-bottom: var(--sp-2);
+    width: 100%;
+  }
+</style>
 {% endblock %}

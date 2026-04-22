@@ -1,184 +1,132 @@
 {% extends 'sistema/base.html' %}
 
-{% block title %}{{ cupom.titulo }} - Cupom{% endblock %}
+{% block title %}{{ cupom.titulo }} — Cupom{% endblock %}
 
 {% block content %}
-
 <div class="page-header">
+  <div class="page-header-top">
     <div>
-        <h1 class="page-title">{{ cupom.titulo }}</h1>
-        <p class="page-subtitle">
-            <span class="badge {% if cupom.ativo %}badge-success{% else %}badge-danger{% endif %}">{% if cupom.ativo %}Ativo{% else %}Inativo{% endif %}</span>
-            &middot; {{ cupom.parceiro.nome }}
-            &middot; <code>{{ cupom.codigo }}</code>
-        </p>
+      <h1 class="page-title">{{ cupom.titulo }}</h1>
+      <p class="page-subtitle">
+        {% if cupom.ativo %}{% include "components/badge.html" with variant="success" label="Ativo" size="sm" %}{% else %}{% include "components/badge.html" with variant="danger" label="Inativo" size="sm" %}{% endif %}
+        &middot; {{ cupom.parceiro.nome }} &middot; <code>{{ cupom.codigo }}</code>
+      </p>
     </div>
-    <a href="{% url 'parceiros:dashboard_cupons' %}" class="btn btn-secondary">
-        <i class="fas fa-arrow-left"></i> Voltar
-    </a>
+    <div class="page-actions">
+      <a href="{% url 'parceiros:dashboard_cupons' %}" class="btn btn-ghost btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
+  </div>
 </div>
 
-<!-- Resumo do Cupom -->
-<div class="card" style="padding:24px; margin-bottom:24px;">
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
-        <!-- Info do cupom -->
-        <div>
-            <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px;">
-                {% if cupom.imagem %}
-                <img src="{{ cupom.imagem.url }}" style="width:64px; height:64px; border-radius:12px; object-fit:cover; border:1px solid var(--border);">
-                {% elif cupom.parceiro.logo %}
-                <img src="{{ cupom.parceiro.logo.url }}" style="width:64px; height:64px; border-radius:12px; object-fit:cover; border:1px solid var(--border);">
-                {% else %}
-                <div style="width:64px; height:64px; border-radius:12px; background:var(--primary-light); display:flex; align-items:center; justify-content:center;">
-                    <i class="fas fa-ticket-alt" style="font-size:24px; color:var(--primary);"></i>
-                </div>
-                {% endif %}
-                <div>
-                    <div style="font-size:28px; font-weight:800; color:var(--primary);">
-                        {% if cupom.tipo_desconto == 'percentual' %}{{ cupom.valor_desconto }}%{% else %}R$ {{ cupom.valor_desconto }}{% endif %}
-                    </div>
-                    <small class="text-muted">de desconto</small>
-                </div>
+<div class="card" style="margin-bottom: var(--sp-4);">
+  <div class="card-body">
+    <div class="cupom-grid">
+      <div>
+        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: var(--sp-4);">
+          {% if cupom.imagem %}<img src="{{ cupom.imagem.url }}" class="cupom-thumb">
+          {% elif cupom.parceiro.logo %}<img src="{{ cupom.parceiro.logo.url }}" class="cupom-thumb">
+          {% else %}<div class="cupom-thumb cupom-thumb-empty"><i class="bi bi-ticket-perforated"></i></div>{% endif %}
+          <div>
+            <div style="font-size: 28px; font-weight: 800; color: var(--color-primary);">
+              {% if cupom.tipo_desconto == 'percentual' %}{{ cupom.valor_desconto }}%{% else %}R$ {{ cupom.valor_desconto }}{% endif %}
             </div>
-
-            {% if cupom.descricao %}
-            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:12px;">{{ cupom.descricao }}</p>
-            {% endif %}
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:13px;">
-                <div>
-                    <span class="text-muted">Modalidade:</span>
-                    <strong>
-                        {% if cupom.modalidade == 'gratuito' %}Gratuito
-                        {% elif cupom.modalidade == 'pontos' %}{{ cupom.custo_pontos }} pontos
-                        {% else %}N&iacute;vel {{ cupom.nivel_minimo.nome|default:"N/A" }}{% endif %}
-                    </strong>
-                </div>
-                <div>
-                    <span class="text-muted">Estoque:</span>
-                    <strong>{{ cupom.estoque_restante }}{% if cupom.quantidade_total > 0 %} / {{ cupom.quantidade_total }}{% endif %}</strong>
-                </div>
-                <div>
-                    <span class="text-muted">In&iacute;cio:</span>
-                    <strong>{{ cupom.data_inicio|date:"d/m/Y H:i" }}</strong>
-                </div>
-                <div>
-                    <span class="text-muted">Fim:</span>
-                    <strong>{{ cupom.data_fim|date:"d/m/Y H:i" }}</strong>
-                </div>
-                <div>
-                    <span class="text-muted">Limite/membro:</span>
-                    <strong>{{ cupom.limite_por_membro }}x</strong>
-                </div>
-                <div>
-                    <span class="text-muted">Cidades:</span>
-                    <strong>{% for c in cupom.cidades_permitidas.all %}{{ c.nome }}{% if not forloop.last %}, {% endif %}{% empty %}Todas{% endfor %}</strong>
-                </div>
-            </div>
+            <small style="color: var(--color-text-muted);">de desconto</small>
+          </div>
         </div>
 
-        <!-- Link de valida&ccedil;&atilde;o -->
-        <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; background:var(--bg-page); border-radius:12px; padding:20px; text-align:center;">
-            <i class="fas fa-qrcode" style="font-size:40px; color:var(--text-muted); margin-bottom:12px;"></i>
-            <p style="font-size:13px; color:var(--text-secondary); margin-bottom:8px;">Link de valida&ccedil;&atilde;o para o parceiro:</p>
-            <code style="font-size:12px; word-break:break-all; color:var(--primary); background:white; padding:8px 12px; border-radius:6px; border:1px solid var(--border);">
-                {{ request.scheme }}://{{ request.get_host }}/roleta/cupom/validar/
-            </code>
+        {% if cupom.descricao %}<p style="color: var(--color-text-muted); font-size: var(--fs-sm); margin-bottom: var(--sp-3);">{{ cupom.descricao }}</p>{% endif %}
+
+        <div class="info-grid">
+          <div><span class="info-label">Modalidade:</span> <strong>
+            {% if cupom.modalidade == 'gratuito' %}Gratuito
+            {% elif cupom.modalidade == 'pontos' %}{{ cupom.custo_pontos }} pontos
+            {% else %}Nivel {{ cupom.nivel_minimo.nome|default:"N/A" }}{% endif %}
+          </strong></div>
+          <div><span class="info-label">Estoque:</span> <strong>{{ cupom.estoque_restante }}{% if cupom.quantidade_total > 0 %} / {{ cupom.quantidade_total }}{% endif %}</strong></div>
+          <div><span class="info-label">Inicio:</span> <strong>{{ cupom.data_inicio|date:"d/m/Y H:i" }}</strong></div>
+          <div><span class="info-label">Fim:</span> <strong>{{ cupom.data_fim|date:"d/m/Y H:i" }}</strong></div>
+          <div><span class="info-label">Limite/membro:</span> <strong>{{ cupom.limite_por_membro }}x</strong></div>
+          <div><span class="info-label">Cidades:</span> <strong>{% for c in cupom.cidades_permitidas.all %}{{ c.nome }}{% if not forloop.last %}, {% endif %}{% empty %}Todas{% endfor %}</strong></div>
         </div>
+      </div>
+
+      <div class="validacao-box">
+        <i class="bi bi-qr-code" style="font-size: 40px; color: var(--color-text-muted); margin-bottom: var(--sp-3);"></i>
+        <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin-bottom: var(--sp-2);">Link de validacao para o parceiro:</p>
+        <code style="font-size: var(--fs-xs); word-break: break-all; color: var(--color-primary); background: white; padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--color-border);">
+          {{ request.scheme }}://{{ request.get_host }}/roleta/cupom/validar/
+        </code>
+      </div>
     </div>
+  </div>
 </div>
 
-<!-- KPIs -->
-<div class="stats-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom:24px;">
-    <div class="stat-card">
-        <div class="stat-label">Total Resgates</div>
-        <div class="stat-value">{{ total_resgates }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Utilizados</div>
-        <div class="stat-value" style="color:var(--success);">{{ total_utilizados }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Pendentes</div>
-        <div class="stat-value" style="color:var(--warning);">{{ total_pendentes }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Pontos Gastos</div>
-        <div class="stat-value">{{ total_pontos }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Valor em Compras</div>
-        <div class="stat-value" style="color:var(--success);">R$ {{ total_valor_compras }}</div>
-    </div>
+<div class="stats-grid stats-grid-5" style="margin-bottom: var(--sp-4);">
+  {% include "components/stat_card.html" with label="Total resgates" value=total_resgates icon="bi-ticket-perforated" %}
+  {% include "components/stat_card.html" with label="Utilizados" value=total_utilizados icon="bi-check-circle" icon_variant="success" %}
+  {% include "components/stat_card.html" with label="Pendentes" value=total_pendentes icon="bi-clock" icon_variant="warning" %}
+  {% include "components/stat_card.html" with label="Pontos gastos" value=total_pontos icon="bi-coin" icon_variant="info" %}
+  {% include "components/stat_card.html" with label="Valor em compras" value="R$ "|add:total_valor_compras icon="bi-currency-dollar" icon_variant="success" %}
 </div>
 
-<!-- Tabela de resgates -->
-<div class="card">
-    <h3 style="padding:16px 20px 0; margin:0; font-size:16px; color:var(--text-main);">
-        <i class="fas fa-list" style="color:var(--primary); margin-right:6px;"></i>Hist&oacute;rico de Utiliza&ccedil;&otilde;es
-    </h3>
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="card-header"><h3 class="card-title"><i class="bi bi-list-ul" style="color: var(--color-primary);"></i> Historico de utilizacoes</h3></div>
+  <div class="table-wrap">
     <table class="data-table">
-        <thead>
-            <tr>
-                <th>Cliente</th>
-                <th style="text-align:center;">C&oacute;digo</th>
-                <th style="text-align:center;">Pontos</th>
-                <th style="text-align:center;">Valor Compra</th>
-                <th style="text-align:center;">Status</th>
-                <th>Resgatado</th>
-                <th>Utilizado</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for r in resgates %}
-            <tr>
-                <td>
-                    <strong>{{ r.membro.nome }}</strong>
-                    <br><small class="text-muted">{{ r.membro.cpf }}</small>
-                </td>
-                <td style="text-align:center;"><code>{{ r.codigo_unico }}</code></td>
-                <td style="text-align:center;">
-                    {% if r.pontos_gastos > 0 %}
-                    <span style="color:var(--danger);">-{{ r.pontos_gastos }}</span>
-                    {% else %}
-                    <span class="text-muted">Gr&aacute;tis</span>
-                    {% endif %}
-                </td>
-                <td style="text-align:center;">
-                    {% if r.valor_compra %}
-                    <strong>R$ {{ r.valor_compra }}</strong>
-                    {% else %}
-                    <span class="text-muted">-</span>
-                    {% endif %}
-                </td>
-                <td style="text-align:center;">
-                    {% if r.status == 'resgatado' %}<span class="badge badge-warning">Resgatado</span>
-                    {% elif r.status == 'utilizado' %}<span class="badge badge-success">Utilizado</span>
-                    {% elif r.status == 'expirado' %}<span class="badge badge-danger">Expirado</span>
-                    {% else %}<span class="badge badge-danger">Cancelado</span>{% endif %}
-                </td>
-                <td>{{ r.data_resgate|date:"d/m/Y H:i" }}</td>
-                <td>{{ r.data_utilizacao|date:"d/m/Y H:i"|default:"-" }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="7" class="text-center text-muted" style="padding:40px;">Nenhum resgate para este cupom.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th style="text-align: center;">Codigo</th>
+          <th style="text-align: center;">Pontos</th>
+          <th style="text-align: center;">Valor compra</th>
+          <th style="text-align: center;">Status</th>
+          <th>Resgatado</th>
+          <th>Utilizado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in resgates %}
+          <tr>
+            <td>
+              <strong>{{ r.membro.nome }}</strong>
+              <div style="font-size: 11px; color: var(--color-text-muted);">{{ r.membro.cpf }}</div>
+            </td>
+            <td style="text-align: center;"><code>{{ r.codigo_unico }}</code></td>
+            <td style="text-align: center;">
+              {% if r.pontos_gastos > 0 %}<span style="color: var(--color-danger);">-{{ r.pontos_gastos }}</span>
+              {% else %}<span style="color: var(--color-text-muted);">Gratis</span>{% endif %}
+            </td>
+            <td style="text-align: center;">
+              {% if r.valor_compra %}<strong>R$ {{ r.valor_compra }}</strong>{% else %}<span style="color: var(--color-text-muted);">-</span>{% endif %}
+            </td>
+            <td style="text-align: center;">
+              {% if r.status == 'resgatado' %}{% include "components/badge.html" with variant="warning" label="Resgatado" size="sm" %}
+              {% elif r.status == 'utilizado' %}{% include "components/badge.html" with variant="success" label="Utilizado" size="sm" %}
+              {% elif r.status == 'expirado' %}{% include "components/badge.html" with variant="danger" label="Expirado" size="sm" %}
+              {% else %}{% include "components/badge.html" with variant="danger" label="Cancelado" size="sm" %}{% endif %}
+            </td>
+            <td>{{ r.data_resgate|date:"d/m/Y H:i" }}</td>
+            <td>{{ r.data_utilizacao|date:"d/m/Y H:i"|default:"-" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" style="text-align: center; padding: var(--sp-8); color: var(--color-text-muted);">Nenhum resgate para este cupom.</td></tr>
+        {% endfor %}
+      </tbody>
     </table>
-
-    {% if resgates.has_other_pages %}
-    <div class="pagination">
-        {% if resgates.has_previous %}
-        <a href="?page={{ resgates.previous_page_number }}" class="btn btn-secondary">&laquo; Anterior</a>
-        {% endif %}
-        <span class="text-muted" style="padding:8px;">P&aacute;gina {{ resgates.number }} de {{ resgates.paginator.num_pages }}</span>
-        {% if resgates.has_next %}
-        <a href="?page={{ resgates.next_page_number }}" class="btn btn-secondary">Pr&oacute;xima &raquo;</a>
-        {% endif %}
-    </div>
-    {% endif %}
+  </div>
+  {% if resgates.has_other_pages %}{% include "components/pagination.html" with page_obj=resgates %}{% endif %}
 </div>
+{% endblock %}
 
+{% block extra_css %}
+<style>
+  .cupom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-6); }
+  @media (max-width: 900px) { .cupom-grid { grid-template-columns: 1fr; } }
+  .cupom-thumb { width: 64px; height: 64px; border-radius: var(--radius-md); object-fit: cover; border: 1px solid var(--color-border); }
+  .cupom-thumb-empty { background: var(--color-primary-soft); display: flex; align-items: center; justify-content: center; color: var(--color-primary); font-size: 24px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: var(--fs-sm); }
+  .info-label { color: var(--color-text-muted); }
+  .validacao-box { display: flex; flex-direction: column; justify-content: center; align-items: center; background: var(--color-surface); border-radius: var(--radius-md); padding: var(--sp-5); text-align: center; }
+  .table-wrap { overflow-x: auto; }
+</style>
 {% endblock %}

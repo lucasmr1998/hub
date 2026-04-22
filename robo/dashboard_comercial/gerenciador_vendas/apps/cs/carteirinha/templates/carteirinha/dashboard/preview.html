@@ -4,64 +4,62 @@
 
 {% block content %}
 <div class="page-header">
+  <div class="page-header-top">
     <div>
-        <h1 class="page-title">Preview: {{ modelo.nome }}</h1>
-        <p class="page-subtitle">Visualizacao do modelo com dados de exemplo.</p>
+      <h1 class="page-title">Preview: {{ modelo.nome }}</h1>
+      <p class="page-subtitle">Visualizacao do modelo com dados de exemplo.</p>
     </div>
-    <a href="{% url 'carteirinha:dashboard_modelos_carteirinha' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a>
+    <div class="page-actions">
+      <a href="{% url 'carteirinha:dashboard_modelos_carteirinha' %}" class="btn btn-ghost btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
+  </div>
 </div>
 
-<div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
-    <!-- Preview do Cartao -->
-    <div class="card" style="padding:24px;">
-        <h3 style="font-size:14px; font-weight:700; margin-bottom:16px; text-align:center;">Cart&atilde;o Renderizado</h3>
-
-        {% include 'carteirinha/partials/cartao.html' with modelo=modelo nome="JOAO DA SILVA SANTOS" cpf="123.456.789-00" nivel="Prata" data_emissao="19/03/2026" pontos="150" cidade="Floriano - PI" texto_rodape=modelo.texto_rodape %}
+<div class="preview-grid">
+  <div class="card">
+    <div class="card-header"><h3 class="card-title" style="text-align: center; width: 100%;">Cartao renderizado</h3></div>
+    <div class="card-body">
+      {% include 'carteirinha/partials/cartao.html' with modelo=modelo nome="JOAO DA SILVA SANTOS" cpf="123.456.789-00" nivel="Prata" data_emissao="19/03/2026" pontos="150" cidade="Floriano - PI" texto_rodape=modelo.texto_rodape %}
     </div>
+  </div>
 
-    <!-- Detalhes -->
-    <div class="card" style="padding:24px;">
-        <h3 style="font-size:14px; font-weight:700; margin-bottom:16px;">Configura&ccedil;&atilde;o</h3>
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">Configuracao</h3></div>
+    <div class="card-body">
+      <div class="config-grid">
+        <div class="config-item"><span class="config-label">Tipo fundo</span><div class="config-value">{{ modelo.get_tipo_fundo_display }}</div></div>
+        <div class="config-item"><span class="config-label">Marca</span><div class="config-value">{{ modelo.texto_marca }}</div></div>
+        <div class="config-item"><span class="config-label">Nome</span><div class="config-value">{% if modelo.mostrar_nome %}<i class="bi bi-check-lg" style="color: var(--color-success);"></i>{% else %}<i class="bi bi-x-lg" style="color: var(--color-danger);"></i>{% endif %}</div></div>
+        <div class="config-item"><span class="config-label">CPF</span><div class="config-value">{% if modelo.mostrar_cpf %}<i class="bi bi-check-lg" style="color: var(--color-success);"></i>{% else %}<i class="bi bi-x-lg" style="color: var(--color-danger);"></i>{% endif %}</div></div>
+        <div class="config-item"><span class="config-label">Nivel</span><div class="config-value">{% if modelo.mostrar_nivel %}<i class="bi bi-check-lg" style="color: var(--color-success);"></i>{% else %}<i class="bi bi-x-lg" style="color: var(--color-danger);"></i>{% endif %}</div></div>
+        <div class="config-item"><span class="config-label">Data emissao</span><div class="config-value">{% if modelo.mostrar_data_emissao %}<i class="bi bi-check-lg" style="color: var(--color-success);"></i>{% else %}<i class="bi bi-x-lg" style="color: var(--color-danger);"></i>{% endif %}</div></div>
+        <div class="config-item"><span class="config-label">QR code</span><div class="config-value">{% if modelo.mostrar_qr_code %}<i class="bi bi-check-lg" style="color: var(--color-success);"></i>{% else %}<i class="bi bi-x-lg" style="color: var(--color-danger);"></i>{% endif %}</div></div>
+        <div class="config-item"><span class="config-label">Pontos</span><div class="config-value">{% if modelo.mostrar_pontos %}<i class="bi bi-check-lg" style="color: var(--color-success);"></i>{% else %}<i class="bi bi-x-lg" style="color: var(--color-danger);"></i>{% endif %}</div></div>
+        <div class="config-item"><span class="config-label">Cidade</span><div class="config-value">{% if modelo.mostrar_cidade %}<i class="bi bi-check-lg" style="color: var(--color-success);"></i>{% else %}<i class="bi bi-x-lg" style="color: var(--color-danger);"></i>{% endif %}</div></div>
+        <div class="config-item"><span class="config-label">Foto</span><div class="config-value">{% if modelo.mostrar_foto %}<i class="bi bi-check-lg" style="color: var(--color-success);"></i>{% else %}<i class="bi bi-x-lg" style="color: var(--color-danger);"></i>{% endif %}</div></div>
+      </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:13px;">
-            <div style="padding:8px; background:var(--bg-page); border-radius:6px;">
-                <span class="text-muted">Tipo Fundo</span>
-                <div class="font-bold">{{ modelo.get_tipo_fundo_display }}</div>
-            </div>
-            <div style="padding:8px; background:var(--bg-page); border-radius:6px;">
-                <span class="text-muted">Marca</span>
-                <div class="font-bold">{{ modelo.texto_marca }}</div>
-            </div>
-            {% for campo in "mostrar_nome,mostrar_cpf,mostrar_nivel,mostrar_data_emissao,mostrar_data_validade,mostrar_qr_code,mostrar_foto,mostrar_pontos,mostrar_cidade"|make_list %}
-            {% endfor %}
-            <div style="padding:8px; background:var(--bg-page); border-radius:6px;"><span class="text-muted">Nome</span><div class="font-bold">{% if modelo.mostrar_nome %}&#10003;{% else %}&#10007;{% endif %}</div></div>
-            <div style="padding:8px; background:var(--bg-page); border-radius:6px;"><span class="text-muted">CPF</span><div class="font-bold">{% if modelo.mostrar_cpf %}&#10003;{% else %}&#10007;{% endif %}</div></div>
-            <div style="padding:8px; background:var(--bg-page); border-radius:6px;"><span class="text-muted">N&iacute;vel</span><div class="font-bold">{% if modelo.mostrar_nivel %}&#10003;{% else %}&#10007;{% endif %}</div></div>
-            <div style="padding:8px; background:var(--bg-page); border-radius:6px;"><span class="text-muted">Data Emiss&atilde;o</span><div class="font-bold">{% if modelo.mostrar_data_emissao %}&#10003;{% else %}&#10007;{% endif %}</div></div>
-            <div style="padding:8px; background:var(--bg-page); border-radius:6px;"><span class="text-muted">QR Code</span><div class="font-bold">{% if modelo.mostrar_qr_code %}&#10003;{% else %}&#10007;{% endif %}</div></div>
-            <div style="padding:8px; background:var(--bg-page); border-radius:6px;"><span class="text-muted">Pontos</span><div class="font-bold">{% if modelo.mostrar_pontos %}&#10003;{% else %}&#10007;{% endif %}</div></div>
-            <div style="padding:8px; background:var(--bg-page); border-radius:6px;"><span class="text-muted">Cidade</span><div class="font-bold">{% if modelo.mostrar_cidade %}&#10003;{% else %}&#10007;{% endif %}</div></div>
-            <div style="padding:8px; background:var(--bg-page); border-radius:6px;"><span class="text-muted">Foto</span><div class="font-bold">{% if modelo.mostrar_foto %}&#10003;{% else %}&#10007;{% endif %}</div></div>
-        </div>
-
-        <div style="margin-top:16px; display:flex; gap:16px; flex-wrap:wrap;">
-            <div style="display:flex; gap:6px; align-items:center;">
-                <div style="width:20px; height:20px; border-radius:4px; background:{{ modelo.cor_fundo_primaria }}; border:1px solid var(--border);"></div>
-                <span style="font-size:12px;">Fundo 1</span>
-            </div>
-            <div style="display:flex; gap:6px; align-items:center;">
-                <div style="width:20px; height:20px; border-radius:4px; background:{{ modelo.cor_fundo_secundaria }}; border:1px solid var(--border);"></div>
-                <span style="font-size:12px;">Fundo 2</span>
-            </div>
-            <div style="display:flex; gap:6px; align-items:center;">
-                <div style="width:20px; height:20px; border-radius:4px; background:{{ modelo.cor_texto }}; border:1px solid var(--border);"></div>
-                <span style="font-size:12px;">Texto</span>
-            </div>
-            <div style="display:flex; gap:6px; align-items:center;">
-                <div style="width:20px; height:20px; border-radius:4px; background:{{ modelo.cor_destaque }}; border:1px solid var(--border);"></div>
-                <span style="font-size:12px;">Destaque</span>
-            </div>
-        </div>
+      <div class="color-legend">
+        <div class="color-chip"><div class="chip-dot" style="background: {{ modelo.cor_fundo_primaria }};"></div><span>Fundo 1</span></div>
+        <div class="color-chip"><div class="chip-dot" style="background: {{ modelo.cor_fundo_secundaria }};"></div><span>Fundo 2</span></div>
+        <div class="color-chip"><div class="chip-dot" style="background: {{ modelo.cor_texto }};"></div><span>Texto</span></div>
+        <div class="color-chip"><div class="chip-dot" style="background: {{ modelo.cor_destaque }};"></div><span>Destaque</span></div>
+      </div>
     </div>
+  </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-5); }
+  @media (max-width: 900px) { .preview-grid { grid-template-columns: 1fr; } }
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: var(--fs-sm); }
+  .config-item { padding: 8px; background: var(--color-surface); border-radius: var(--radius-sm); }
+  .config-label { color: var(--color-text-muted); font-size: var(--fs-xs); }
+  .config-value { font-weight: var(--fw-bold); margin-top: 2px; }
+  .color-legend { margin-top: var(--sp-4); display: flex; gap: var(--sp-4); flex-wrap: wrap; }
+  .color-chip { display: flex; gap: 6px; align-items: center; font-size: var(--fs-xs); }
+  .chip-dot { width: 20px; height: 20px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); }
+</style>
 {% endblock %}

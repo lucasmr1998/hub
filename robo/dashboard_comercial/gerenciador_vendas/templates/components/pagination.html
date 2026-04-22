@@ -1,0 +1,46 @@
+{% comment %}
+Pagination — renderiza navegacao de paginacao a partir do page_obj do Django Paginator.
+
+Params:
+  page_obj: instancia Page do Django Paginator (obrigatorio)
+  base_url: URL base pra links (default: request.path)
+  query: QueryDict extra pra preservar filtros (ex: request.GET.urlencode)
+
+Uso na view:
+  from django.core.paginator import Paginator
+  paginator = Paginator(queryset, 12)
+  page_obj = paginator.get_page(request.GET.get('page'))
+  context['page_obj'] = page_obj
+
+Uso no template:
+  {% include "components/pagination.html" with page_obj=page_obj %}
+{% endcomment %}
+
+{% if page_obj.paginator.num_pages > 1 %}
+  <nav class="pagination" aria-label="Paginacao">
+    <span class="pagination-info">
+      {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }}
+    </span>
+    <div class="pagination-nav">
+      {% if page_obj.has_previous %}
+        <a href="?page=1{% if query %}&{{ query }}{% endif %}" class="pagination-btn" title="Primeira"><i class="bi bi-chevron-double-left"></i></a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if query %}&{{ query }}{% endif %}" class="pagination-btn" title="Anterior"><i class="bi bi-chevron-left"></i></a>
+      {% else %}
+        <span class="pagination-btn is-disabled"><i class="bi bi-chevron-double-left"></i></span>
+        <span class="pagination-btn is-disabled"><i class="bi bi-chevron-left"></i></span>
+      {% endif %}
+
+      <span class="pagination-current">
+        Pagina <strong>{{ page_obj.number }}</strong> de {{ page_obj.paginator.num_pages }}
+      </span>
+
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if query %}&{{ query }}{% endif %}" class="pagination-btn" title="Proxima"><i class="bi bi-chevron-right"></i></a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if query %}&{{ query }}{% endif %}" class="pagination-btn" title="Ultima"><i class="bi bi-chevron-double-right"></i></a>
+      {% else %}
+        <span class="pagination-btn is-disabled"><i class="bi bi-chevron-right"></i></span>
+        <span class="pagination-btn is-disabled"><i class="bi bi-chevron-double-right"></i></span>
+      {% endif %}
+    </div>
+  </nav>
+{% endif %}

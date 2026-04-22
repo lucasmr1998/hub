@@ -1,45 +1,155 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
+
+{% block title %}Oportunidades — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Oportunidades</h1>
+      <p class="page-subtitle">{{ total_oportunidades }} oportunidade{{ total_oportunidades|pluralize }} no pipeline.</p>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'crm:pipeline' %}" class="btn btn-secondary btn-sm"><i class="bi bi-columns-gap"></i> Kanban</a>
+    </div>
+  </div>
+</div>
+
+{% include "components/list_filters.html" with fields=filter_fields search_placeholder="Buscar por nome, telefone ou titulo..." search_name="search" search_value=filtro_search collapsed=True active_filters_count=active_filters_count clear_url=request.path %}
+
+{# Cards resumo por estagio (filtro client-side) #}
+<div class="resumo-grid" id="resumo-estagios">
+  <div class="resumo-card is-selected" onclick="filtrarEstagio('')" id="card-todos" style="border-top-color: var(--color-primary);">
+    <div class="num">{{ page_obj.paginator.count }}</div>
+    <div class="label">Total</div>
+  </div>
+  {% regroup oportunidades by estagio as por_estagio %}
+  {% for grupo in por_estagio %}
+    <div class="resumo-card" onclick="filtrarEstagio('{{ grupo.grouper.pk }}')"
+         id="card-{{ grupo.grouper.pk }}"
+         style="border-top-color: {{ grupo.grouper.cor_hex }};">
+      <div class="num">{{ grupo.list|length }}</div>
+      <div class="label">{{ grupo.grouper.nome }}</div>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th onclick="ordenar('nome')">Lead <i class="bi bi-arrow-down-up"></i></th>
+          <th onclick="ordenar('estagio')">Estagio <i class="bi bi-arrow-down-up"></i></th>
+          <th class="col-prioridade" onclick="ordenar('prioridade')">Prioridade <i class="bi bi-arrow-down-up"></i></th>
+          <th class="col-valor" onclick="ordenar('valor')">Valor <i class="bi bi-arrow-down-up"></i></th>
+          <th onclick="ordenar('prob')">Prob. <i class="bi bi-arrow-down-up"></i></th>
+          <th class="col-responsavel">Responsavel</th>
+          <th onclick="ordenar('dias')">No estagio <i class="bi bi-arrow-down-up"></i></th>
+          <th onclick="ordenar('data')">Cadastro <i class="bi bi-arrow-down-up"></i></th>
+        </tr>
+      </thead>
+      <tbody id="tabela-body">
+        {% for op in oportunidades %}
+          <tr onclick="window.location='{% url 'crm:oportunidade_detalhe' op.pk %}'"
+              style="cursor: pointer;"
+              data-nome="{{ op.lead.nome_razaosocial|lower }}"
+              data-tel="{{ op.lead.telefone|lower }}"
+              data-estagio="{{ op.estagio.pk }}"
+              data-prioridade="{{ op.prioridade|default:'normal' }}"
+              data-valor="{{ op.valor_estimado|default:0 }}"
+              data-prob="{{ op.probabilidade }}"
+              data-data="{{ op.data_criacao|date:'Y-m-d' }}">
+            <td>
+              <div class="lead-nome">{{ op.lead.nome_razaosocial|default:"—"|truncatechars:35 }}</div>
+              <div class="lead-tel">{{ op.lead.telefone }}</div>
+            </td>
+            <td>
+              <span class="estagio-badge" style="background: {{ op.estagio.cor_hex }};">{{ op.estagio.nome }}</span>
+            </td>
+            <td class="col-prioridade">
+              {% if op.prioridade %}
+                <span class="prioridade-badge prio-{{ op.prioridade }}">{{ op.get_prioridade_display }}</span>
+              {% else %}—{% endif %}
+            </td>
+            <td class="col-valor">
+              {% if op.valor_estimado %}R$ {{ op.valor_estimado|floatformat:2 }}{% else %}—{% endif %}
+            </td>
+            <td>
+              <span style="font-weight: var(--fw-semibold); color: {% if op.probabilidade >= 70 %}var(--color-success){% elif op.probabilidade >= 40 %}var(--color-warning){% else %}var(--color-text-muted){% endif %};">{{ op.probabilidade }}%</span>
+            </td>
+            <td class="col-responsavel">
+              {% if op.responsavel %}
+                <span style="display: inline-flex; align-items: center; gap: 6px;">
+                  <span class="op-lista-avatar">{{ op.responsavel.get_full_name|first|upper|default:op.responsavel.username|first|upper }}</span>
+                  {{ op.responsavel.get_full_name|default:op.responsavel.username|truncatechars:18 }}
+                </span>
+              {% else %}
+                <span style="color: var(--color-text-muted); font-size: var(--fs-xs);">Nao atribuido</span>
+              {% endif %}
+            </td>
+            <td>
+              <span style="color: var(--color-text-muted);"><i class="bi bi-clock" style="font-size: 11px;"></i> {{ op.data_entrada_estagio|timesince }}</span>
+            </td>
+            <td style="color: var(--color-text-muted);">{{ op.data_criacao|date:"d/m/Y" }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" class="table-empty" style="padding: var(--sp-10); text-align: center; color: var(--color-text-muted);">
+              <i class="bi bi-briefcase" style="font-size: 32px; display: block; margin-bottom: var(--sp-2); opacity: 0.3;"></i>
+              Nenhuma oportunidade encontrada.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include "components/pagination.html" with page_obj=page_obj query=query %}
+{% endblock %}
 
 {% block extra_css %}
 <style>
-  /* CRM Lista - Estilos específicos */
   .resumo-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
-    margin-bottom: 20px;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-4);
   }
   .resumo-card {
-    background: var(--bg-white);
-    border-radius: 12px;
-    padding: 14px 16px;
-    border: 1px solid var(--border);
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+    padding: var(--sp-3);
+    border: 1px solid var(--color-border);
     text-align: center;
     cursor: pointer;
-    transition: all .2s;
+    transition: transform var(--transition), box-shadow var(--transition);
     border-top: 3px solid transparent;
   }
-  .resumo-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-  .resumo-card.selected { box-shadow: 0 4px 12px rgba(0,0,0,0.08); background: var(--bg-white); }
+  .resumo-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .resumo-card.is-selected { box-shadow: var(--shadow-md); }
   .resumo-card .num {
     font-size: 26px;
-    font-weight: 800;
-    color: var(--text-main);
+    font-weight: var(--fw-bold);
+    color: var(--color-text);
+    letter-spacing: -0.02em;
     line-height: 1;
   }
   .resumo-card .label {
-    font-size: 11px;
-    color: var(--text-light);
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
     margin-top: 4px;
-    font-weight: 500;
+    font-weight: var(--fw-medium);
   }
 
-  /* Badges de estágio */
+  .table-wrap { overflow-x: auto; }
+
   .estagio-badge {
     padding: 3px 10px;
     border-radius: 20px;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     color: #fff;
     white-space: nowrap;
     display: inline-flex;
@@ -50,75 +160,31 @@
     padding: 2px 8px;
     border-radius: 10px;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     white-space: nowrap;
   }
-  .prio-urgente { background: var(--danger-light); color: var(--danger); }
-  .prio-alta    { background: var(--warning-light); color: var(--warning); }
-  .prio-normal  { background: var(--primary-light); color: var(--primary); }
-  .prio-baixa   { background: var(--border-light); color: var(--text-muted); }
+  .prio-urgente { background: var(--color-danger-soft); color: var(--color-danger); }
+  .prio-alta    { background: var(--color-warning-soft); color: var(--color-warning); }
+  .prio-normal  { background: var(--color-primary-soft); color: var(--color-primary); }
+  .prio-baixa   { background: var(--color-surface); color: var(--color-text-muted); }
 
-  .lead-nome { font-weight: 600; color: var(--text-main); }
-  .lead-tel  { font-size: 12px; color: var(--text-light); }
+  .lead-nome { font-weight: var(--fw-semibold); color: var(--color-text); font-size: var(--fs-sm); }
+  .lead-tel { font-size: var(--fs-xs); color: var(--color-text-muted); }
 
-  .sla-ok      { color: var(--success); }
-  .sla-warning { color: var(--warning); }
-  .sla-breach  { color: var(--danger); font-weight: 600; }
-
-  /* Linha vazia */
-  .empty-row td {
-    text-align: center;
-    padding: 48px;
-    color: var(--text-light);
-  }
-  .empty-row td i { font-size: 32px; display: block; margin-bottom: 8px; }
-
-  /* Paginação */
-  .paginacao {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 18px;
-    border-top: 1px solid var(--border);
-    font-size: 13px;
-    color: var(--text-light);
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  /* Filtro ativo */
-  .filtro-ativo {
+  .op-lista-avatar {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--color-primary);
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    background: var(--primary-light);
-    color: var(--primary);
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .filtro-ativo button {
-    background: none;
-    border: none;
-    color: var(--primary);
-    cursor: pointer;
-    padding: 0;
-    font-size: 12px;
-    line-height: 1;
+    justify-content: center;
+    color: #fff;
+    font-size: 10px;
+    font-weight: var(--fw-bold);
+    flex-shrink: 0;
   }
 
-  /* Toolbar */
-  .lista-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
-  }
-  .lista-toolbar .form-control {
-    min-width: 160px;
-  }
+  .data-table th i.bi-arrow-down-up { font-size: 11px; color: var(--color-text-muted); margin-left: 4px; }
 
   @media (max-width: 768px) {
     .col-responsavel, .col-valor, .col-prioridade { display: none; }
@@ -126,291 +192,55 @@
 </style>
 {% endblock %}
 
-{% block content %}
-
-  <!-- TOOLBAR -->
-  <div class="lista-toolbar">
-    <div class="page-header" style="flex:1;margin-bottom:0">
-      <h1 class="page-title"><i class="fas fa-briefcase" style="color:var(--primary);margin-right:8px"></i> Oportunidades</h1>
-    </div>
-
-    <a href="{% url 'crm:pipeline' %}" class="btn-secondary" style="text-decoration:none;">
-      <i class="fas fa-columns"></i> Kanban
-    </a>
-  </div>
-
-  <!-- Filtros -->
-  <div class="card" style="margin-bottom:14px; padding:12px 16px;">
-    <button class="filter-toggle" id="filterToggleOp" onclick="document.getElementById('filtrosContentOp').classList.toggle('open'); this.classList.toggle('open');">
-      <i class="fas fa-filter"></i> Filtros
-      <i class="fas fa-chevron-right chevron"></i>
-    </button>
-    <div id="filtrosContentOp" class="filter-body{% if filtro_search or filtro_estagio or filtro_responsavel or filtro_tag %} open{% endif %}">
-      <div class="filter-row">
-        <div class="form-group"><label class="form-label">Pesquisar</label><input type="text" id="busca" class="form-control" value="{{ filtro_search }}" placeholder="Nome, telefone..." oninput="filtrar()"></div>
-        <div class="form-group"><label class="form-label">Estágio</label>
-          <select id="filtro-estagio" class="form-control" onchange="filtrarServer()">
-            <option value="">Todos</option>
-            {% for e in estagios %}<option value="{{ e.pk }}" {% if filtro_estagio == e.pk|stringformat:"d" %}selected{% endif %}>{{ e.nome }}</option>{% endfor %}
-          </select>
-        </div>
-        <div class="form-group"><label class="form-label">Responsável</label>
-          <select id="filtro-responsavel" class="form-control" onchange="filtrarServer()">
-            <option value="">Todos</option>
-            {% for v in vendedores %}<option value="{{ v.id }}" {% if filtro_responsavel == v.id|stringformat:"d" %}selected{% endif %}>{{ v.nome }}</option>{% endfor %}
-          </select>
-        </div>
-        <div class="form-group"><label class="form-label">Tag</label>
-          <select id="filtro-tag" class="form-control" onchange="filtrarServer()">
-            <option value="">Todas</option>
-            {% for tag in tags %}<option value="{{ tag.nome }}" {% if filtro_tag == tag.nome %}selected{% endif %}>{{ tag.nome }}</option>{% endfor %}
-          </select>
-        </div>
-        <div class="form-group"><button class="btn-secondary" onclick="window.location.href='{% url 'crm:oportunidades_lista' %}'" style="width:100%;margin-top:20px;"><i class="fas fa-times"></i> Limpar</button></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- CARDS RESUMO POR ESTÁGIO -->
-  <div class="resumo-grid" id="resumo-estagios">
-    {% regroup oportunidades by estagio as por_estagio %}
-    <div class="resumo-card" onclick="filtrarEstagio('')" id="card-todos" style="border-top-color:var(--primary)">
-      <div class="num">{{ oportunidades|length }}</div>
-      <div class="label">Total</div>
-    </div>
-    {% for grupo in por_estagio %}
-    <div class="resumo-card" onclick="filtrarEstagio('{{ grupo.grouper.pk }}')"
-         id="card-{{ grupo.grouper.pk }}"
-         style="border-top-color:{{ grupo.grouper.cor_hex }}">
-      <div class="num">{{ grupo.list|length }}</div>
-      <div class="label">{{ grupo.grouper.nome }}</div>
-    </div>
-    {% endfor %}
-  </div>
-
-  <!-- TABELA -->
-  <div class="data-table-container">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th onclick="ordenar('nome')">Lead <i class="fas fa-sort"></i></th>
-          <th onclick="ordenar('estagio')">Estágio <i class="fas fa-sort"></i></th>
-          <th class="col-prioridade" onclick="ordenar('prioridade')">Prioridade <i class="fas fa-sort"></i></th>
-          <th class="col-valor" onclick="ordenar('valor')">Valor <i class="fas fa-sort"></i></th>
-          <th onclick="ordenar('prob')">Prob. <i class="fas fa-sort"></i></th>
-          <th class="col-responsavel">Responsável</th>
-          <th onclick="ordenar('dias')">No estágio <i class="fas fa-sort"></i></th>
-          <th onclick="ordenar('data')">Cadastro <i class="fas fa-sort"></i></th>
-        </tr>
-      </thead>
-      <tbody id="tabela-body">
-        {% for op in oportunidades %}
-        <tr onclick="window.location='{% url 'crm:oportunidade_detalhe' op.pk %}'"
-            style="cursor:pointer"
-            data-nome="{{ op.lead.nome_razaosocial|lower }}"
-            data-tel="{{ op.lead.telefone|lower }}"
-            data-estagio="{{ op.estagio.pk }}"
-            data-prioridade="{{ op.prioridade|default:'normal' }}"
-            data-valor="{{ op.valor_estimado|default:0 }}"
-            data-prob="{{ op.probabilidade }}"
-            data-dias="{{ op.data_entrada_estagio|timesince }}"
-            data-data="{{ op.data_criacao|date:'Y-m-d' }}">
-
-          <td>
-            <div class="lead-nome">{{ op.lead.nome_razaosocial|default:"—"|truncatechars:35 }}</div>
-            <div class="lead-tel">{{ op.lead.telefone }}</div>
-          </td>
-
-          <td>
-            <span class="estagio-badge" style="background:{{ op.estagio.cor_hex }}">
-              <i class="fas {{ op.estagio.icone_fa }}" style="font-size:10px"></i>
-              {{ op.estagio.nome }}
-            </span>
-          </td>
-
-          <td class="col-prioridade">
-            {% if op.prioridade %}
-            <span class="prioridade-badge prio-{{ op.prioridade }}">
-              {{ op.get_prioridade_display }}
-            </span>
-            {% else %}—{% endif %}
-          </td>
-
-          <td class="col-valor">
-            {% if op.valor_estimado %}
-              R$ {{ op.valor_estimado|floatformat:2 }}
-            {% else %}—{% endif %}
-          </td>
-
-          <td>
-            <span style="font-weight:600;color:{% if op.probabilidade >= 70 %}var(--success){% elif op.probabilidade >= 40 %}var(--warning){% else %}var(--text-muted){% endif %}">
-              {{ op.probabilidade }}%
-            </span>
-          </td>
-
-          <td class="col-responsavel">
-            {% if op.responsavel %}
-              <span style="display:flex;align-items:center;gap:6px">
-                <span style="width:24px;height:24px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0">
-                  {{ op.responsavel.get_full_name|first|upper|default:op.responsavel.username|first|upper }}
-                </span>
-                {{ op.responsavel.get_full_name|default:op.responsavel.username|truncatechars:18 }}
-              </span>
-            {% else %}
-              <span style="color:var(--text-light);font-size:12px">Não atribuído</span>
-            {% endif %}
-          </td>
-
-          <td>
-            {% with dias=op.data_entrada_estagio|timesince %}
-            {% if op.estagio.sla_horas %}
-              {% with sla=op.estagio.sla_horas %}
-              <span class="sla-ok"><i class="fas fa-clock" style="font-size:11px"></i> {{ dias }}</span>
-              {% endwith %}
-            {% else %}
-              <span style="color:var(--text-light)">{{ dias }}</span>
-            {% endif %}
-            {% endwith %}
-          </td>
-
-          <td style="color:var(--text-light)">{{ op.data_criacao|date:"d/m/Y" }}</td>
-        </tr>
-        {% empty %}
-        <tr class="empty-row">
-          <td colspan="8">
-            <i class="fas fa-briefcase"></i>
-            Nenhuma oportunidade encontrada.
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-
-    <!-- RODAPÉ -->
-    <div class="paginacao">
-      <span id="pg-info">
-        Mostrando <strong id="count-visivel">{{ oportunidades|length }}</strong>
-        de <strong>{{ oportunidades|length }}</strong> oportunidades
-      </span>
-      <div style="display:flex;gap:8px;align-items:center" id="filtros-ativos"></div>
-    </div>
-  </div>
-
-{% endblock %}
-
 {% block extra_js %}
 <script>
 let estagioFiltro = '';
 
-function filtrarServer() {
-  const params = new URLSearchParams();
-  const search = document.getElementById('busca').value;
-  const estagio = document.getElementById('filtro-estagio').value;
-  const resp = document.getElementById('filtro-responsavel').value;
-  const tag = document.getElementById('filtro-tag').value;
-  if (search) params.set('search', search);
-  if (estagio) params.set('estagio', estagio);
-  if (resp) params.set('responsavel', resp);
-  if (tag) params.set('tag', tag);
-  window.location.href = '{% url "crm:oportunidades_lista" %}?' + params.toString();
-}
-
-function filtrar() {
-  const busca   = document.getElementById('busca').value.toLowerCase();
-  const estagio = estagioFiltro || document.getElementById('filtro-estagio').value;
-  const prio    = document.getElementById('filtro-prioridade').value;
-
-  const rows = document.querySelectorAll('#tabela-body tr[data-nome]');
-  let visivel = 0;
-
-  rows.forEach(tr => {
-    const nome = tr.dataset.nome || '';
-    const tel  = tr.dataset.tel  || '';
-    const est  = tr.dataset.estagio;
-    const pr   = tr.dataset.prioridade;
-
-    const ok = (
-      (!busca   || nome.includes(busca) || tel.includes(busca)) &&
-      (!estagio || est === estagio) &&
-      (!prio    || pr  === prio)
-    );
-
-    tr.style.display = ok ? '' : 'none';
-    if (ok) visivel++;
-  });
-
-  document.getElementById('count-visivel').textContent = visivel;
-  atualizarFiltrosAtivos();
-}
-
 function filtrarEstagio(pk) {
   estagioFiltro = pk;
-  // Atualizar select para refletir
-  document.getElementById('filtro-estagio').value = pk;
-
-  // Highlight card
-  document.querySelectorAll('.resumo-card').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.resumo-card').forEach(c => c.classList.remove('is-selected'));
   const card = pk ? document.getElementById('card-' + pk) : document.getElementById('card-todos');
-  if (card) card.classList.add('selected');
+  if (card) card.classList.add('is-selected');
 
-  filtrar();
+  const rows = document.querySelectorAll('#tabela-body tr[data-nome]');
+  rows.forEach(tr => {
+    const est = tr.dataset.estagio;
+    tr.style.display = (!pk || est === pk) ? '' : 'none';
+  });
 }
 
-function atualizarFiltrosAtivos() {
-  const container = document.getElementById('filtros-ativos');
-  container.innerHTML = '';
-
-  const estagio = document.getElementById('filtro-estagio');
-  if (estagio.value) {
-    const txt = estagio.options[estagio.selectedIndex].text;
-    container.innerHTML += `<span class="filtro-ativo">${txt}
-      <button onclick="document.getElementById('filtro-estagio').value='';estagioFiltro='';filtrar()">✕</button>
-    </span>`;
-  }
-  const prio = document.getElementById('filtro-prioridade');
-  if (prio.value) {
-    const txt = prio.options[prio.selectedIndex].text;
-    container.innerHTML += `<span class="filtro-ativo">${txt}
-      <button onclick="document.getElementById('filtro-prioridade').value='';filtrar()">✕</button>
-    </span>`;
-  }
-}
-
-// Ordenação simples por coluna
+// Ordenacao simples por coluna
 let ordemAtual = '';
-let ordemAsc   = true;
+let ordemAsc = true;
 
 function ordenar(campo) {
   if (ordemAtual === campo) ordemAsc = !ordemAsc;
   else { ordemAtual = campo; ordemAsc = true; }
 
   const tbody = document.getElementById('tabela-body');
-  const rows  = Array.from(tbody.querySelectorAll('tr[data-nome]'));
+  const rows = Array.from(tbody.querySelectorAll('tr[data-nome]'));
 
   const getVal = tr => {
     if (campo === 'nome')      return tr.dataset.nome;
     if (campo === 'estagio')   return tr.dataset.estagio;
-    if (campo === 'prioridade'){
-      const map = {urgente:0,alta:1,normal:2,baixa:3};
+    if (campo === 'prioridade') {
+      const map = { urgente: 0, alta: 1, normal: 2, baixa: 3 };
       return map[tr.dataset.prioridade] ?? 9;
     }
-    if (campo === 'valor')  return parseFloat(tr.dataset.valor) || 0;
-    if (campo === 'prob')   return parseInt(tr.dataset.prob)    || 0;
-    if (campo === 'data')   return tr.dataset.data;
+    if (campo === 'valor') return parseFloat(tr.dataset.valor) || 0;
+    if (campo === 'prob')  return parseInt(tr.dataset.prob) || 0;
+    if (campo === 'data')  return tr.dataset.data;
     return '';
   };
 
   rows.sort((a, b) => {
     const va = getVal(a), vb = getVal(b);
     if (va < vb) return ordemAsc ? -1 : 1;
-    if (va > vb) return ordemAsc ?  1 : -1;
+    if (va > vb) return ordemAsc ? 1 : -1;
     return 0;
   });
 
   rows.forEach(r => tbody.appendChild(r));
 }
-
-// Highlight card "Todos" por padrão
-document.getElementById('card-todos').classList.add('selected');
 </script>
 {% endblock %}

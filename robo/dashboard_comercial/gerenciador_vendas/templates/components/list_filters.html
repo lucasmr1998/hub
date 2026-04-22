@@ -1,0 +1,134 @@
+{% comment %}
+List filters — barra de filtros pra listagens de entidades.
+
+Dois modos:
+
+MODO A (compact) — tabs + search em linha:
+  tabs: lista de {'label':..., 'url':..., 'active':bool, 'count':num?}
+  search_placeholder, search_id, search_oninput (opcional)
+
+MODO B (grid) — multiplos campos de filtro em grid:
+  fields: lista de dicts. Cada dict suporta:
+    {'type':'select','label':'Status','name':'status','value':'ativo',
+     'options':[('','Todos'),('ativo','Ativo'),('inativo','Inativo')]}
+    {'type':'text','label':'Nome','name':'nome','value':'','placeholder':'...'}
+    {'type':'date','label':'Apartir de','name':'data_inicio','value':''}
+  form_action: url pro submit (opcional, default = GET na mesma pagina)
+  search_placeholder, search_name, search_value (opcional)
+
+Comum aos dois:
+  clear_url: URL pra limpar filtros (opcional, mostra botao "Limpar")
+  collapsed: True pra Modo B comecar fechado (clique no header expande).
+             Ideal pra telas tipo kanban onde o conteudo e a estrela.
+  collapsed_label: label do header colapsado (default: "Filtros")
+  active_filters_count: numero opcional pra mostrar badge com filtros ativos
+
+Exemplo MODO A:
+  {% include "components/list_filters.html" with
+    tabs=status_tabs
+    search_placeholder="Buscar template..."
+    search_oninput="buscar(this.value)"
+  %}
+
+Exemplo MODO B (expandido):
+  {% include "components/list_filters.html" with
+    fields=filter_fields
+    search_placeholder="Buscar por nome..."
+    clear_url=request.path
+  %}
+
+Exemplo MODO B (colapsado — preserva espaco em kanban/lista grande):
+  {% include "components/list_filters.html" with
+    fields=filter_fields
+    search_placeholder="Buscar por nome..."
+    collapsed=True
+    active_filters_count=2
+  %}
+{% endcomment %}
+
+{% if tabs %}
+  {# MODO A — compact #}
+  <div class="list-filters list-filters-compact">
+    <div class="list-filters-tabs">
+      {% for tab in tabs %}
+        <a href="{{ tab.url|default:'#' }}" class="list-filters-tab{% if tab.active %} is-active{% endif %}"
+           {% if tab.onclick %}onclick="{{ tab.onclick }}"{% endif %}>
+          {{ tab.label }}
+          {% if tab.count is not None %}<span class="list-filters-tab-count">{{ tab.count }}</span>{% endif %}
+        </a>
+      {% endfor %}
+    </div>
+    {% if search_placeholder %}
+      <div class="field-input-wrap list-filters-search">
+        <i class="bi bi-search field-icon"></i>
+        <input type="text"
+               {% if search_id %}id="{{ search_id }}"{% endif %}
+               class="field-input"
+               placeholder="{{ search_placeholder }}"
+               {% if search_oninput %}oninput="{{ search_oninput }}"{% endif %}
+               {% if search_value %}value="{{ search_value }}"{% endif %}>
+      </div>
+    {% endif %}
+    {% if clear_url %}
+      <a href="{{ clear_url }}" class="btn btn-ghost btn-sm"><i class="bi bi-x-lg"></i> Limpar</a>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% if fields %}
+  {# MODO B — grid #}
+  <div class="list-filters list-filters-grid{% if collapsed %} is-collapsible is-collapsed{% endif %}">
+    {% if collapsed %}
+      <button type="button" class="list-filters-toggle" onclick="this.closest('.list-filters').classList.toggle('is-collapsed')">
+        <span class="list-filters-toggle-label">
+          <i class="bi bi-funnel"></i>
+          {{ collapsed_label|default:"Filtros" }}
+          {% if active_filters_count %}<span class="list-filters-active-count">{{ active_filters_count }}</span>{% endif %}
+        </span>
+        <i class="bi bi-chevron-down list-filters-chevron"></i>
+      </button>
+    {% endif %}
+    <form class="list-filters-body" method="get" {% if form_action %}action="{{ form_action }}"{% endif %}>
+      <div class="list-filters-fields">
+        {% for f in fields %}
+          <div class="field">
+            <label class="field-label">{{ f.label }}</label>
+            <div class="field-input-wrap">
+              {% if f.type == 'select' %}
+                <select name="{{ f.name }}" class="field-input">
+                  {% for opt_val, opt_label in f.options %}
+                    <option value="{{ opt_val }}"{% if opt_val == f.value %} selected{% endif %}>{{ opt_label }}</option>
+                  {% endfor %}
+                </select>
+              {% else %}
+                <input type="{{ f.type|default:'text' }}"
+                       name="{{ f.name }}"
+                       class="field-input"
+                       value="{{ f.value|default:'' }}"
+                       placeholder="{{ f.placeholder|default:'' }}">
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+        {% if search_placeholder %}
+          <div class="field list-filters-search-field">
+            <label class="field-label">Buscar</label>
+            <div class="field-input-wrap">
+              <i class="bi bi-search field-icon"></i>
+              <input type="text"
+                     {% if search_id %}id="{{ search_id }}"{% endif %}
+                     name="{{ search_name|default:'q' }}"
+                     class="field-input"
+                     placeholder="{{ search_placeholder }}"
+                     value="{{ search_value|default:'' }}">
+            </div>
+          </div>
+        {% endif %}
+      </div>
+      <div class="list-filters-actions">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Filtrar</button>
+        {% if clear_url %}<a href="{{ clear_url }}" class="btn btn-ghost btn-sm">Limpar</a>{% endif %}
+      </div>
+    </form>
+  </div>
+{% endif %}

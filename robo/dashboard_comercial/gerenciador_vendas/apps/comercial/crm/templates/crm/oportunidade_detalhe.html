@@ -1,56 +1,474 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 {% load permissoes_tags %}
+
+{% block title %}{{ oportunidade.titulo|default:lead.nome_razaosocial|truncatechars:60 }} — Oportunidade{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div class="page-header-top">
+    <div class="op-header-lead">
+      <div class="op-avatar">{{ lead.nome_razaosocial|first|upper|default:'?' }}</div>
+      <div class="op-header-info">
+        <h1 class="page-title">{{ lead.nome_razaosocial|default:"Lead sem nome" }}</h1>
+        <div class="op-meta-row">
+          {% if lead.telefone %}
+            <span><i class="bi bi-telephone"></i>
+              <a href="https://wa.me/{{ lead.telefone|cut:'+' }}" target="_blank" style="color: var(--color-primary);">{{ lead.telefone }}</a>
+            </span>
+          {% endif %}
+          {% if lead.email %}<span><i class="bi bi-envelope"></i> {{ lead.email }}</span>{% endif %}
+          <span><i class="bi bi-calendar"></i> Cadastro: {{ lead.data_cadastro|date:"d/m/Y" }}</span>
+          {% if lead.origem %}<span><i class="bi bi-tag"></i> {{ lead.get_origem_display }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="page-actions">
+      <span class="estagio-badge" style="background: {{ oportunidade.estagio.cor_hex }};">
+        {{ oportunidade.estagio.nome }}
+      </span>
+      {% if oportunidade.prioridade %}
+        <span class="prioridade-badge prio-{{ oportunidade.prioridade }}">{{ oportunidade.get_prioridade_display }}</span>
+      {% endif %}
+      <button class="btn btn-primary btn-sm" onclick="abrirModalEstagio()"><i class="bi bi-arrow-right"></i> Mover estagio</button>
+      {% if lead.telefone %}
+        <a href="https://wa.me/{{ lead.telefone|cut:'+' }}" target="_blank" class="btn btn-secondary btn-sm" title="WhatsApp"><i class="bi bi-whatsapp" style="color: var(--color-success);"></i></a>
+      {% endif %}
+      {% if user_funcs is None or 'comercial.excluir_oportunidade' in user_funcs %}
+        <button class="btn btn-ghost btn-sm btn-ghost-danger" onclick="excluirOportunidade()" title="Excluir oportunidade"><i class="bi bi-trash"></i></button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="detalhe-grid">
+  {# Sidebar #}
+  <aside class="detalhe-sidebar">
+    {# Oportunidade #}
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title"><i class="bi bi-briefcase" style="color: var(--color-primary);"></i> Oportunidade</h3>
+      </div>
+      <div class="card-body">
+        <div class="detail-field">
+          <label>Valor estimado</label>
+          <div class="value"><span class="editable" data-field="valor_estimado">{{ oportunidade.valor_estimado|default:"" }}</span></div>
+        </div>
+        <div class="detail-field">
+          <label>Probabilidade</label>
+          <div class="value">{{ oportunidade.probabilidade }}%</div>
+          <div class="prob-bar"><div class="prob-fill" style="width: {{ oportunidade.probabilidade }}%;"></div></div>
+        </div>
+        <div class="detail-field">
+          <label>Responsavel</label>
+          <div class="value">
+            {% if oportunidade.responsavel %}
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <i class="bi bi-person-circle" style="color: var(--color-primary);"></i>
+                <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ oportunidade.responsavel.get_full_name|default:oportunidade.responsavel.username }}</span>
+                <button class="btn btn-ghost btn-sm" onclick="abrirModalVendedor()" title="Trocar responsavel" style="padding: 2px 6px; flex-shrink: 0;"><i class="bi bi-pencil"></i></button>
+              </div>
+            {% else %}
+              <span class="value-empty">Nao atribuido</span>
+              <button class="btn btn-secondary btn-sm" style="margin-top: 6px;" onclick="abrirModalVendedor()"><i class="bi bi-person-plus"></i> Atribuir</button>
+            {% endif %}
+          </div>
+        </div>
+        <div class="detail-field">
+          <label>Origem CRM</label>
+          <div class="value">{{ oportunidade.get_origem_crm_display }}</div>
+        </div>
+        <div class="detail-field">
+          <label>Entrada no estagio</label>
+          <div class="value">{{ oportunidade.data_entrada_estagio|date:"d/m/Y H:i" }}</div>
+        </div>
+        {% if oportunidade.data_fechamento_previsto %}
+          <div class="detail-field">
+            <label>Fechamento previsto</label>
+            <div class="value">{{ oportunidade.data_fechamento_previsto|date:"d/m/Y" }}</div>
+          </div>
+        {% endif %}
+        {% if oportunidade.data_fechamento_real %}
+          <div class="detail-field">
+            <label>Fechamento real</label>
+            <div class="value" style="color: var(--color-success); font-weight: var(--fw-bold);">
+              <i class="bi bi-check-circle"></i> {{ oportunidade.data_fechamento_real|date:"d/m/Y" }}
+            </div>
+          </div>
+        {% endif %}
+        {% if oportunidade.tags.all %}
+          <div class="detail-field">
+            <label>Tags</label>
+            <div class="tags-row">
+              {% for tag in oportunidade.tags.all %}
+                <span class="tag-chip" style="background: {{ tag.cor_hex }};">{{ tag.nome }}</span>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+        {% if oportunidade.dados_custom %}
+          <div class="detail-field">
+            <label>Dados personalizados</label>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              {% for key, value in oportunidade.dados_custom.items %}
+                <div style="display: flex; justify-content: space-between; font-size: var(--fs-sm); align-items: center;">
+                  <span style="color: var(--color-text-muted);">{{ key }}</span>
+                  <span class="editable" data-field="dados_custom.{{ key }}" style="font-weight: var(--fw-semibold);">{{ value }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+        {% if oportunidade.motivo_perda %}
+          <div class="detail-field">
+            <label>Motivo da perda</label>
+            <div class="value" style="color: var(--color-danger);">{{ oportunidade.motivo_perda }}</div>
+          </div>
+        {% endif %}
+
+        {# Produtos da oportunidade #}
+        <div class="detail-field">
+          <label>Produtos</label>
+          <div class="value" id="itensContainer">
+            <span class="value-empty">Carregando...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Dados do lead #}
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title"><i class="bi bi-person" style="color: var(--color-primary);"></i> Dados do lead</h3>
+      </div>
+      <div class="card-body">
+        <div class="detail-field"><label>Email</label><div class="value"><span class="editable" data-field="email">{{ lead.email|default:"" }}</span></div></div>
+        <div class="detail-field"><label>Telefone</label><div class="value"><span class="editable" data-field="telefone">{{ lead.telefone|default:"" }}</span></div></div>
+        <div class="detail-field"><label>CPF/CNPJ</label><div class="value"><span class="editable" data-field="cpf_cnpj">{{ lead.cpf_cnpj|default:"" }}</span></div></div>
+        <div class="detail-field"><label>Cidade</label><div class="value"><span class="editable" data-field="cidade">{{ lead.cidade|default:"" }}</span></div></div>
+        <div class="detail-field"><label>Estado</label><div class="value"><span class="editable" data-field="estado">{{ lead.estado|default:"" }}</span></div></div>
+        <div class="detail-field"><label>Empresa</label><div class="value"><span class="editable" data-field="empresa">{{ lead.empresa|default:"" }}</span></div></div>
+
+        <div class="detail-field">
+          <label>Status API</label>
+          <div class="value">
+            <span class="status-servico
+              {% if lead.status_api == 'processado' %}status-habilitado
+              {% elif lead.status_api == 'processamento_manual' %}status-aguardando
+              {% elif lead.status_api == 'erro' %}status-suspenso
+              {% else %}status-cancelado{% endif %}">
+              {{ lead.get_status_api_display|default:lead.status_api }}
+            </span>
+          </div>
+        </div>
+        <div class="detail-field">
+          <label>Documentacao</label>
+          <div class="value">
+            {% if lead.documentacao_validada %}
+              <span style="color: var(--color-success);"><i class="bi bi-check-circle"></i> Validada</span>
+            {% elif lead.documentacao_completa %}
+              <span style="color: var(--color-warning);"><i class="bi bi-clock"></i> Aguardando validacao</span>
+            {% else %}
+              <span style="color: var(--color-danger);"><i class="bi bi-x-circle"></i> Incompleta</span>
+            {% endif %}
+          </div>
+        </div>
+        {% if lead.score_qualificacao %}
+          <div class="detail-field"><label>Score de qualificacao</label><div class="value">{{ lead.score_qualificacao }}/10</div></div>
+        {% endif %}
+        {% if lead.tentativas_contato %}
+          <div class="detail-field"><label>Tentativas de contato</label><div class="value">{{ lead.tentativas_contato }}</div></div>
+        {% endif %}
+        {% if lead.observacoes %}
+          <div class="detail-field"><label>Observacoes</label><div class="value" style="font-size: var(--fs-sm); color: var(--color-text-muted);">{{ lead.observacoes }}</div></div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Hubsoft #}
+    {% if cliente_hubsoft %}
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title"><i class="bi bi-hdd-network" style="color: var(--color-info);"></i> Hubsoft</h3>
+        </div>
+        <div class="card-body">
+          {% if cliente_hubsoft.servicos.all %}
+            {% for servico in cliente_hubsoft.servicos.all %}
+              <div class="hubsoft-servico">
+                <div class="servico-nome">{{ servico.nome_plano|default:"Servico" }}</div>
+                <div class="servico-meta">
+                  <span class="status-servico
+                    {% if servico.status_prefixo == 'servico_habilitado' %}status-habilitado
+                    {% elif servico.status_prefixo == 'aguardando_instalacao' %}status-aguardando
+                    {% elif servico.status_prefixo == 'servico_suspenso' %}status-suspenso
+                    {% else %}status-cancelado{% endif %}">
+                    <i class="bi bi-circle-fill" style="font-size: 6px;"></i>
+                    {{ servico.status_prefixo|default:"—" }}
+                  </span>
+                  {% if servico.data_fim_contrato %} · Contrato: {{ servico.data_fim_contrato }}{% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0;">Nenhum servico encontrado.</p>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  </aside>
+
+  {# Main column #}
+  <div class="main-col">
+    <div class="card" style="overflow: visible;">
+      <div class="tabs-nav">
+        <button class="tab-btn is-active" onclick="switchTab(this, 'tab-timeline')">
+          <i class="bi bi-activity"></i> Timeline
+          <span class="tab-count">{{ timeline_items|length }}</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab(this, 'tab-notas')">
+          <i class="bi bi-sticky"></i> Notas
+          <span class="tab-count" id="notas-count">{{ oportunidade.notas.count }}</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab(this, 'tab-historico')">
+          <i class="bi bi-clock-history"></i> Hist. estagios
+          <span class="tab-count">{{ historico_estagios|length }}</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab(this, 'tab-conversas')">
+          <i class="bi bi-whatsapp"></i> Conversas
+          <span class="tab-count">{{ mensagens_inbox|length }}</span>
+        </button>
+      </div>
+
+      {# Timeline #}
+      <div id="tab-timeline" class="tab-panel is-active">
+        {% if timeline_items %}
+          <div class="timeline">
+            {% for item in timeline_items %}
+              <div class="tl-item">
+                {% if item.tipo == 'contato' %}
+                  <div class="tl-dot {% if item.obj.converteu_venda %}dot-venda{% elif item.obj.sucesso %}dot-contato{% elif item.obj.status == 'chamada_perdida' or item.obj.status == 'nao_atendeu' %}dot-perdido{% else %}dot-contato{% endif %}"></div>
+                  <div class="tl-header">
+                    <div class="tl-title">
+                      <i class="bi bi-telephone" style="color: var(--color-info); font-size: 12px;"></i>
+                      {% if item.obj.converteu_venda %}<span style="color: var(--color-success);">Venda confirmada</span>
+                      {% elif item.obj.status == 'transferido_humano' %}Transferido para humano
+                      {% elif item.obj.status == 'fluxo_finalizado' %}Fluxo finalizado
+                      {% else %}{{ item.obj.get_status_display|default:item.obj.status }}{% endif %}
+                    </div>
+                    <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
+                  </div>
+                  {% if item.obj.observacoes %}<p class="tl-body">{{ item.obj.observacoes|truncatechars:200 }}</p>{% endif %}
+                  <div class="tl-meta">
+                    {% if item.obj.duracao_segundos %}<i class="bi bi-clock"></i> {{ item.obj.duracao_segundos }}s{% endif %}
+                    {% if item.obj.nome_contato %} · {{ item.obj.nome_contato }}{% endif %}
+                  </div>
+                {% elif item.tipo == 'estagio' %}
+                  <div class="tl-dot {% if item.obj.estagio_novo.is_final_ganho %}dot-venda{% elif item.obj.estagio_novo.is_final_perdido %}dot-perdido{% else %}dot-estagio{% endif %}"></div>
+                  <div class="tl-header">
+                    <div class="tl-title">
+                      <i class="bi bi-arrow-right" style="color: var(--color-primary); font-size: 11px;"></i>
+                      {% if item.obj.estagio_anterior %}{{ item.obj.estagio_anterior.nome }} → <strong>{{ item.obj.estagio_novo.nome }}</strong>
+                      {% else %}Entrada: <strong>{{ item.obj.estagio_novo.nome }}</strong>{% endif %}
+                    </div>
+                    <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
+                  </div>
+                  {% if item.obj.motivo %}<p class="tl-body">{{ item.obj.motivo }}</p>{% endif %}
+                  <div class="tl-meta">
+                    {% if item.obj.movido_por %}por {{ item.obj.movido_por.get_full_name|default:item.obj.movido_por.username }}{% endif %}
+                    {% if item.obj.tempo_no_estagio_horas %} · {{ item.obj.tempo_no_estagio_horas|floatformat:1 }}h no estagio anterior{% endif %}
+                  </div>
+                {% elif item.tipo == 'conversa_aberta' %}
+                  <div class="tl-dot dot-contato"></div>
+                  <div class="tl-header">
+                    <div class="tl-title"><i class="bi bi-whatsapp" style="color: var(--color-success); font-size: 13px;"></i> Conversa iniciada <span style="color: var(--color-text-muted);">({{ item.canal }})</span></div>
+                    <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
+                  </div>
+                  <div class="tl-meta">#{{ item.numero }}</div>
+                {% elif item.tipo == 'conversa_resolvida' %}
+                  <div class="tl-dot dot-venda"></div>
+                  <div class="tl-header">
+                    <div class="tl-title"><i class="bi bi-check-circle" style="color: var(--color-success); font-size: 12px;"></i> Conversa finalizada <span style="color: var(--color-text-muted);">({{ item.canal }})</span></div>
+                    <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
+                  </div>
+                  <div class="tl-meta">#{{ item.numero }}{% if item.agente %} · por {{ item.agente }}{% endif %}</div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state"><i class="bi bi-activity"></i> Nenhuma atividade registrada ainda.</div>
+        {% endif %}
+      </div>
+
+      {# Notas #}
+      <div id="tab-notas" class="tab-panel">
+        <div class="nota-form" style="margin-bottom: var(--sp-4);">
+          <textarea id="nota-texto" placeholder="Adicionar uma nota, observacao ou registro de contato..."></textarea>
+          <div class="nota-form-row">
+            <select id="nota-tipo">
+              <option value="geral">Geral</option>
+              <option value="ligacao">Ligacao</option>
+              <option value="reuniao">Reuniao</option>
+              <option value="email">E-mail</option>
+              <option value="importante">Importante</option>
+              <option value="alerta">Alerta</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="salvarNota()"><i class="bi bi-send"></i> Salvar</button>
+          </div>
+        </div>
+
+        <div id="notas-lista">
+          {% for nota in oportunidade.notas.all %}
+            <div class="nota-item nota-{{ nota.tipo }}{% if nota.is_fixada %} nota-fixada{% endif %}">
+              <div class="nota-header">
+                {% if nota.is_fixada %}<i class="bi bi-pin-angle-fill" style="color: var(--color-warning);"></i>{% endif %}
+                <span class="nota-author">{{ nota.autor.get_full_name|default:nota.autor.username }}</span>
+                <span class="nota-date">{{ nota.data_criacao|date:"d/m/Y H:i" }}</span>
+                <span class="nota-tipo">{{ nota.get_tipo_display }}</span>
+              </div>
+              <p class="nota-texto">{{ nota.conteudo }}</p>
+            </div>
+          {% empty %}
+            <div class="empty-state"><i class="bi bi-sticky"></i> Nenhuma nota ainda. Adicione a primeira acima.</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# Historico estagios #}
+      <div id="tab-historico" class="tab-panel">
+        {% if historico_estagios %}
+          <div class="timeline">
+            {% for he in historico_estagios %}
+              <div class="tl-item">
+                <div class="tl-dot {% if he.estagio_novo.is_final_ganho %}dot-venda{% elif he.estagio_novo.is_final_perdido %}dot-perdido{% else %}dot-estagio{% endif %}"></div>
+                <div class="tl-header">
+                  <div class="tl-title">
+                    <span class="estagio-badge" style="background: {{ he.estagio_novo.cor_hex }}; font-size: 11px; padding: 2px 8px;">{{ he.estagio_novo.nome }}</span>
+                  </div>
+                  <span class="tl-date">{{ he.data_transicao|date:"d/m/Y H:i" }}</span>
+                </div>
+                {% if he.estagio_anterior %}
+                  <p class="tl-body"><i class="bi bi-arrow-right" style="color: var(--color-text-muted); font-size: 11px;"></i> Veio de: <strong>{{ he.estagio_anterior.nome }}</strong></p>
+                {% endif %}
+                {% if he.motivo %}<p class="tl-body">{{ he.motivo }}</p>{% endif %}
+                <div class="tl-meta">
+                  {% if he.movido_por %}<i class="bi bi-person" style="font-size: 10px;"></i> {{ he.movido_por.get_full_name|default:he.movido_por.username }}{% endif %}
+                  {% if he.tempo_no_estagio_horas %} · Ficou {{ he.tempo_no_estagio_horas|floatformat:0 }}h no estagio anterior{% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state"><i class="bi bi-clock-history"></i> Nenhuma transicao registrada.</div>
+        {% endif %}
+      </div>
+
+      {# Conversas #}
+      <div id="tab-conversas" class="tab-panel">
+        {% if mensagens_inbox %}
+          <div class="chat-container">
+            {% for msg in mensagens_inbox %}
+              <div class="chat-msg chat-msg-{{ msg.remetente_tipo }}">
+                {% if msg.remetente_tipo != 'sistema' %}<div class="chat-msg-author">{{ msg.remetente_nome }}</div>{% endif %}
+                {{ msg.conteudo|whatsapp_format }}
+                <div class="chat-msg-time">{{ msg.data_envio|date:"d/m H:i" }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state"><i class="bi bi-whatsapp"></i> Nenhuma conversa registrada.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Modal mover estagio #}
+<div class="modal-overlay" id="modal-estagio" style="display: none;">
+  <div class="modal-content" style="max-width: 460px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-arrow-right" style="color: var(--color-primary);"></i> Mover para estagio</h3>
+      <button class="modal-close" onclick="fecharModal('modal-estagio')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="field-label" for="sel-estagio">Estagio destino</label>
+        <div class="field-input-wrap">
+          <select id="sel-estagio" class="field-input">
+            {% for e in estagios %}
+              <option value="{{ e.pk }}" {% if e.pk == oportunidade.estagio.pk %}selected{% endif %}>{{ e.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-top: var(--sp-3);">
+        <label class="field-label" for="motivo-estagio">Motivo (opcional)</label>
+        <div class="field-input-wrap">
+          <textarea id="motivo-estagio" class="field-input" rows="3" style="height: auto; min-height: 80px; padding: var(--sp-2) var(--sp-3); resize: vertical;" placeholder="Motivo da mudanca..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="fecharModal('modal-estagio')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmarMoverEstagio()"><i class="bi bi-check-lg"></i> Confirmar</button>
+    </div>
+  </div>
+</div>
+
+{# Modal atribuir vendedor #}
+<div class="modal-overlay" id="modal-vendedor" style="display: none;">
+  <div class="modal-content" style="max-width: 460px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-person-plus" style="color: var(--color-primary);"></i> Atribuir responsavel</h3>
+      <button class="modal-close" onclick="fecharModal('modal-vendedor')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="field-label" for="sel-vendedor">Responsavel</label>
+        <div class="field-input-wrap">
+          <select id="sel-vendedor" class="field-input">
+            <option value="">— Sem responsavel —</option>
+            {% for v in vendedores %}
+              <option value="{{ v.pk }}" {% if oportunidade.responsavel and oportunidade.responsavel.pk == v.pk %}selected{% endif %}>{{ v.get_full_name|default:v.username }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="fecharModal('modal-vendedor')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmarVendedor()"><i class="bi bi-check-lg"></i> Atribuir</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
 
 {% block extra_css %}
 <style>
-  /* ---- EDITABLE ---- */
-  .editable { cursor:pointer; padding:2px 6px; border-radius:4px; border:1px solid transparent; min-height:18px; display:inline-block; min-width:50px; transition:all 0.15s; }
-  .editable:hover { background:var(--bg-subtle,#f1f5f9); border-color:var(--border); }
-  .editable:empty::after { content:'Clique para editar'; color:var(--text-muted); font-style:italic; font-size:12px; }
-  .editable-input { padding:4px 8px; border:1px solid var(--primary); border-radius:4px; font-size:13px; font-family:'Inter',sans-serif; width:100%; box-sizing:border-box; outline:none; box-shadow:0 0 0 2px rgba(59,130,246,0.1); }
-  .editable-saving { opacity:0.6; }
-
-  /* ---- HEADER ---- */
-  .detalhe-header {
-    background: var(--bg-white);
-    border-radius: 12px;
-    padding: 20px 24px;
-    margin-bottom: 20px;
-    border: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-  .detalhe-header .avatar {
-    width: 56px;
-    height: 56px;
+  /* Header */
+  .page-header .page-header-top { align-items: center; }
+  .op-header-lead { display: flex; align-items: center; gap: var(--sp-3); flex: 1; min-width: 0; }
+  .op-avatar {
+    width: 56px; height: 56px;
     border-radius: 50%;
-    background: var(--primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background: var(--color-primary);
+    display: flex; align-items: center; justify-content: center;
     color: #fff;
     font-size: 22px;
-    font-weight: 700;
+    font-weight: var(--fw-bold);
     flex-shrink: 0;
   }
-  .detalhe-header .info { flex: 1; min-width: 200px; }
-  .detalhe-header .info h1 {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--text-main);
-    margin: 0 0 4px;
-  }
-  .detalhe-header .meta-row {
+  .op-header-info { flex: 1; min-width: 0; }
+  .op-meta-row {
     display: flex;
-    gap: 16px;
+    gap: var(--sp-3);
     flex-wrap: wrap;
     align-items: center;
+    margin-top: 4px;
   }
-  .detalhe-header .meta-row span {
-    font-size: 13px;
-    color: var(--text-muted);
+  .op-meta-row span {
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
     display: flex;
     align-items: center;
     gap: 4px;
@@ -58,8 +476,8 @@
   .estagio-badge {
     padding: 4px 12px;
     border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
     color: #fff;
     white-space: nowrap;
   }
@@ -67,121 +485,99 @@
     padding: 3px 10px;
     border-radius: 20px;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     text-transform: uppercase;
   }
-  .prio-urgente { background: var(--danger-light); color: var(--danger); }
-  .prio-alta    { background: var(--warning-light); color: var(--warning); }
-  .prio-normal  { background: var(--primary-light); color: var(--primary); }
-  .prio-baixa   { background: var(--border-light); color: var(--text-muted); }
+  .prio-urgente { background: var(--color-danger-soft); color: var(--color-danger); }
+  .prio-alta    { background: var(--color-warning-soft); color: var(--color-warning); }
+  .prio-normal  { background: var(--color-primary-soft); color: var(--color-primary); }
+  .prio-baixa   { background: var(--color-surface); color: var(--color-text-muted); }
 
-  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-
-  /* ---- LAYOUT GRID ---- */
+  /* Grid layout */
   .detalhe-grid {
     display: grid;
     grid-template-columns: 300px 1fr;
-    gap: 20px;
+    gap: var(--sp-4);
     align-items: start;
   }
-  @media (max-width: 900px) {
-    .detalhe-grid { grid-template-columns: 1fr; }
-  }
+  @media (max-width: 900px) { .detalhe-grid { grid-template-columns: 1fr; } }
+  .detalhe-sidebar { display: flex; flex-direction: column; gap: var(--sp-4); }
+  .main-col { min-width: 0; }
 
-  /* ---- CARD overrides for detalhe ---- */
-  .detalhe-grid .card {
-    margin-bottom: 16px;
-    overflow: hidden;
-    padding: 0;
-  }
-  .card-header {
-    padding: 14px 18px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-  .card-header h3 {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--text-secondary);
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .card-body { padding: 16px 18px; }
-
-  /* ---- SIDEBAR: campos de detalhe ---- */
-  .detail-field {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    margin-bottom: 14px;
-  }
+  /* Detail field */
+  .detail-field { display: flex; flex-direction: column; gap: 2px; margin-bottom: var(--sp-3); }
   .detail-field label {
     font-size: 11px;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     text-transform: uppercase;
-    letter-spacing: .05em;
-    color: var(--text-light);
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
   }
   .detail-field .value {
-    font-size: 14px;
-    color: var(--text-main);
-    font-weight: 500;
+    font-size: var(--fs-sm);
+    color: var(--color-text);
+    font-weight: var(--fw-medium);
   }
-  .detail-field .value a { color: var(--primary); text-decoration: none; }
+  .detail-field .value a { color: var(--color-primary); text-decoration: none; }
   .detail-field .value a:hover { text-decoration: underline; }
-  .value-empty { color: var(--border) !important; font-style: italic; }
+  .value-empty { color: var(--color-text-muted); font-style: italic; }
 
-  /* Progress de probabilidade */
-  .prob-bar {
-    height: 6px;
-    background: var(--border);
-    border-radius: 99px;
-    margin-top: 6px;
-    overflow: hidden;
+  /* Editable inline */
+  .editable {
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    min-height: 18px;
+    display: inline-block;
+    min-width: 50px;
+    transition: background var(--transition), border-color var(--transition);
   }
-  .prob-fill {
-    height: 100%;
-    border-radius: 99px;
-    background: var(--primary);
-    transition: width .4s;
+  .editable:hover { background: var(--color-surface); border-color: var(--color-border); }
+  .editable:empty::after { content: 'Clique para editar'; color: var(--color-text-muted); font-style: italic; font-size: 12px; }
+  .editable-input {
+    padding: 4px 8px;
+    border: 1px solid var(--color-primary);
+    border-radius: 4px;
+    font-size: var(--fs-sm);
+    font-family: inherit;
+    width: 100%;
+    box-sizing: border-box;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
   }
+  .editable-saving { opacity: 0.6; }
+
+  /* Probability bar */
+  .prob-bar { height: 6px; background: var(--color-surface); border-radius: 99px; margin-top: 6px; overflow: hidden; }
+  .prob-fill { height: 100%; border-radius: 99px; background: var(--color-primary); transition: width 0.4s; }
 
   /* Tags */
   .tags-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-  .tag-chip {
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #fff;
-  }
+  .tag-chip { padding: 3px 10px; border-radius: 20px; font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: #fff; }
 
-  /* ---- TIMELINE ---- */
-  .timeline { position: relative; padding-left: 28px; }
+  /* Timeline */
+  .timeline { position: relative; padding: var(--sp-4) var(--sp-4) var(--sp-4) calc(var(--sp-4) + 28px); }
   .timeline::before {
     content: '';
     position: absolute;
-    left: 9px;
-    top: 0;
-    bottom: 0;
+    left: calc(var(--sp-4) + 9px);
+    top: var(--sp-4);
+    bottom: var(--sp-4);
     width: 2px;
-    background: var(--border);
+    background: var(--color-border);
   }
   .tl-item {
     position: relative;
-    margin-bottom: 16px;
-    padding: 12px 14px;
-    background: var(--bg-white);
-    border-radius: 10px;
-    border: 1px solid var(--border-light);
-    transition: background .2s;
+    margin-bottom: var(--sp-3);
+    padding: var(--sp-3);
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    transition: background var(--transition);
   }
-  .tl-item:hover { background: var(--border-light); }
+  .tl-item:hover { background: var(--color-surface); }
+  .tl-item:last-child { margin-bottom: 0; }
   .tl-dot {
     position: absolute;
     left: -23px;
@@ -189,126 +585,82 @@
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 2px var(--border);
+    border: 2px solid var(--color-bg);
+    box-shadow: 0 0 0 2px var(--color-border);
   }
-  .tl-dot.dot-estagio   { background: var(--primary); }
-  .tl-dot.dot-contato   { background: var(--info); }
-  .tl-dot.dot-nota      { background: var(--warning); }
-  .tl-dot.dot-venda     { background: var(--success); }
-  .tl-dot.dot-perdido   { background: var(--danger); }
+  .tl-dot.dot-estagio { background: var(--color-primary); }
+  .tl-dot.dot-contato { background: var(--color-info); }
+  .tl-dot.dot-nota    { background: var(--color-warning); }
+  .tl-dot.dot-venda   { background: var(--color-success); }
+  .tl-dot.dot-perdido { background: var(--color-danger); }
+  .tl-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2); margin-bottom: 4px; }
+  .tl-title { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--color-text); display: flex; align-items: center; gap: 6px; }
+  .tl-date { font-size: 11px; color: var(--color-text-muted); white-space: nowrap; flex-shrink: 0; }
+  .tl-body { font-size: var(--fs-sm); color: var(--color-text-muted); line-height: 1.5; margin: 0; }
+  .tl-meta { font-size: 11px; color: var(--color-text-muted); margin-top: 4px; }
 
-  .tl-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 4px;
-  }
-  .tl-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-main);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .tl-date {
-    font-size: 11px;
-    color: var(--text-light);
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  .tl-body {
-    font-size: 13px;
-    color: var(--text-muted);
-    line-height: 1.5;
-    margin: 0;
-  }
-  .tl-meta { font-size: 11px; color: var(--text-light); margin-top: 4px; }
-
-  /* Status de contato */
-  .status-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .status-dot.ok   { background: var(--success); }
-  .status-dot.bad  { background: var(--danger); }
-  .status-dot.mid  { background: var(--warning); }
-
-  /* ---- NOTAS ---- */
+  /* Notas */
   .nota-item {
-    padding: 12px;
-    background: var(--bg-white);
-    border-radius: 10px;
-    border-left: 3px solid var(--primary);
-    margin-bottom: 10px;
+    padding: var(--sp-3);
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+    border-left: 3px solid var(--color-primary);
+    margin-bottom: var(--sp-2);
     position: relative;
   }
-  .nota-item.nota-alerta    { border-left-color: var(--danger); }
-  .nota-item.nota-importante{ border-left-color: var(--info); }
-  .nota-item.nota-reuniao   { border-left-color: var(--success); }
-  .nota-item.nota-ligacao   { border-left-color: var(--primary); }
-  .nota-item.nota-email     { border-left-color: var(--warning); }
-  .nota-item.nota-fixada    { background: var(--warning-light); border-left-color: var(--warning); }
-  .nota-header {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 6px;
-    flex-wrap: wrap;
-  }
-  .nota-author { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
-  .nota-date   { font-size: 11px; color: var(--text-light); }
-  .nota-tipo   { font-size: 11px; background: var(--border-light); padding: 2px 8px; border-radius: 10px; color: var(--text-muted); }
-  .nota-texto  { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin: 0; white-space: pre-wrap; }
+  .nota-item.nota-alerta { border-left-color: var(--color-danger); }
+  .nota-item.nota-importante { border-left-color: var(--color-info); }
+  .nota-item.nota-reuniao { border-left-color: var(--color-success); }
+  .nota-item.nota-ligacao { border-left-color: var(--color-primary); }
+  .nota-item.nota-email { border-left-color: var(--color-warning); }
+  .nota-item.nota-fixada { background: var(--color-warning-soft); border-left-color: var(--color-warning); }
+  .nota-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+  .nota-author { font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--color-text); }
+  .nota-date { font-size: 11px; color: var(--color-text-muted); }
+  .nota-tipo { font-size: 11px; background: var(--color-surface); padding: 2px 8px; border-radius: 10px; color: var(--color-text-muted); }
+  .nota-texto { font-size: var(--fs-sm); color: var(--color-text); line-height: 1.6; margin: 0; white-space: pre-wrap; }
 
-  /* ---- FORM NOTA ---- */
+  /* Form nota */
+  .nota-form { padding: var(--sp-4); }
   .nota-form textarea {
     width: 100%;
-    border: 1px solid var(--border);
-    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
     padding: 10px 12px;
-    font-size: 13px;
+    font-size: var(--fs-sm);
     font-family: inherit;
     resize: vertical;
     min-height: 80px;
     outline: none;
-    transition: border-color .2s;
+    transition: border-color var(--transition);
     box-sizing: border-box;
+    color: var(--color-text);
+    background: var(--color-bg);
   }
-  .nota-form textarea:focus { border-color: var(--primary); }
-  .nota-form-row {
-    display: flex;
-    gap: 8px;
-    margin-top: 8px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
+  .nota-form textarea:focus { border-color: var(--color-primary); }
+  .nota-form-row { display: flex; gap: var(--sp-2); margin-top: var(--sp-2); align-items: center; flex-wrap: wrap; }
   .nota-form-row select {
     padding: 7px 10px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 13px;
-    background: var(--bg-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    font-size: var(--fs-sm);
+    background: var(--color-bg);
     outline: none;
     flex: 1;
     min-width: 130px;
+    color: var(--color-text);
   }
 
-  /* ---- HUBSOFT ---- */
+  /* Hubsoft */
   .hubsoft-servico {
     padding: 10px 12px;
-    background: var(--primary-light);
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    margin-bottom: 8px;
+    background: var(--color-primary-soft);
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    margin-bottom: var(--sp-2);
   }
-  .hubsoft-servico .servico-nome { font-size: 13px; font-weight: 600; color: var(--text-main); }
-  .hubsoft-servico .servico-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .hubsoft-servico .servico-nome { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--color-text); }
+  .hubsoft-servico .servico-meta { font-size: var(--fs-xs); color: var(--color-text-muted); margin-top: 2px; }
   .status-servico {
     display: inline-flex;
     align-items: center;
@@ -316,781 +668,132 @@
     padding: 2px 8px;
     border-radius: 10px;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
   }
-  .status-habilitado   { background: var(--success-light); color: var(--success); }
-  .status-aguardando   { background: var(--primary-light); color: var(--primary); }
-  .status-suspenso     { background: var(--danger-light); color: var(--danger); }
-  .status-cancelado    { background: var(--border-light); color: var(--text-muted); }
+  .status-habilitado { background: var(--color-success-soft); color: var(--color-success); }
+  .status-aguardando { background: var(--color-primary-soft); color: var(--color-primary); }
+  .status-suspenso   { background: var(--color-danger-soft); color: var(--color-danger); }
+  .status-cancelado  { background: var(--color-surface); color: var(--color-text-muted); }
 
-  /* ---- BREADCRUMB ---- */
-  .breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: var(--text-light);
-    margin-bottom: 16px;
-  }
-  .breadcrumb a { color: var(--primary); text-decoration: none; }
-  .breadcrumb a:hover { text-decoration: underline; }
-
-  /* ---- TOAST ---- */
-  #toast {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    background: var(--text-main);
-    color: #fff;
-    padding: 12px 20px;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 500;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: all .3s;
-    z-index: 9999;
-    pointer-events: none;
-  }
-  #toast.show { opacity: 1; transform: translateY(0); }
-  #toast.error { background: var(--danger); }
-
-  /* ---- SEÇÃO EMPTY ---- */
-  .empty-state {
-    text-align: center;
-    padding: 24px;
-    color: var(--text-light);
-    font-size: 13px;
-  }
-  .empty-state i { font-size: 28px; margin-bottom: 8px; display: block; }
-
-  /* ---- TABS ---- */
+  /* Tabs */
   .tabs-nav {
     display: flex;
     gap: 4px;
-    border-bottom: 1px solid var(--border);
-    padding: 0 18px;
-    background: var(--bg-white);
+    border-bottom: 1px solid var(--color-border);
+    padding: 0 var(--sp-4);
+    overflow-x: auto;
   }
   .tab-btn {
     padding: 10px 14px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-light);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text-muted);
     border: none;
     background: none;
     border-bottom: 2px solid transparent;
     cursor: pointer;
-    transition: all .2s;
+    transition: color var(--transition), border-color var(--transition);
     display: flex;
     align-items: center;
     gap: 6px;
+    white-space: nowrap;
   }
-  .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
-  .tab-btn .badge {
-    background: var(--primary);
+  .tab-btn:hover { color: var(--color-text); }
+  .tab-btn.is-active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+  .tab-count {
+    background: var(--color-primary);
     color: #fff;
     font-size: 10px;
     padding: 1px 6px;
     border-radius: 10px;
+    min-width: 16px;
+    text-align: center;
   }
-  .tab-panel { display: none; padding: 16px 18px; }
-  .tab-panel.active { display: block; }
+  .tab-panel { display: none; padding: var(--sp-4); }
+  .tab-panel.is-active { display: block; }
 
-  /* ---- MODAL overrides for detalhe ---- */
-  .modal-box {
-    background: var(--bg-white);
-    border-radius: 16px;
-    padding: 24px;
-    width: min(460px, 95vw);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  /* Empty state */
+  .empty-state { text-align: center; padding: var(--sp-5); color: var(--color-text-muted); font-size: var(--fs-sm); }
+  .empty-state i { font-size: 28px; display: block; margin-bottom: var(--sp-2); opacity: 0.5; }
+
+  /* Chat (conversas tab) */
+  .chat-container {
+    max-height: 500px;
+    overflow-y: auto;
+    padding: var(--sp-3);
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
-  .modal-box h3 { margin: 0 0 16px; font-size: 16px; color: var(--text-main); }
-  .modal-box select, .modal-box textarea, .modal-box input[type=text] {
-    width: 100%;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 9px 12px;
-    font-size: 14px;
-    font-family: inherit;
-    outline: none;
-    margin-bottom: 10px;
-    box-sizing: border-box;
+  .chat-msg {
+    max-width: 75%;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    font-size: var(--fs-sm);
+    line-height: 1.5;
+    word-break: break-word;
   }
-  .modal-box select:focus, .modal-box textarea:focus { border-color: var(--primary); }
-  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+  .chat-msg-contato { align-self: flex-start; background: var(--color-bg); border: 1px solid var(--color-border); border-bottom-left-radius: 4px; }
+  .chat-msg-bot { align-self: flex-end; background: var(--color-success-soft); border: 1px solid var(--color-success-soft); border-bottom-right-radius: 4px; }
+  .chat-msg-agente { align-self: flex-end; background: var(--color-primary); color: #fff; border-bottom-right-radius: 4px; }
+  .chat-msg-sistema { align-self: center; background: var(--color-surface); color: var(--color-text-muted); font-size: 11px; text-align: center; max-width: 90%; }
+  .chat-msg-author { font-size: 11px; font-weight: var(--fw-semibold); margin-bottom: 2px; opacity: 0.7; }
+  .chat-msg-time { font-size: 10px; margin-top: 4px; text-align: right; opacity: 0.6; }
 </style>
-{% endblock %}
-
-{% block content %}
-
-  <!-- BREADCRUMB -->
-  <div class="breadcrumb">
-    <a href="{% url 'crm:pipeline' %}"><i class="fas fa-columns"></i> Pipeline</a>
-    <i class="fas fa-chevron-right" style="font-size:10px"></i>
-    <a href="{% url 'crm:oportunidades_lista' %}">Oportunidades</a>
-    <i class="fas fa-chevron-right" style="font-size:10px"></i>
-    <span>{{ oportunidade.titulo|default:lead.nome_razaosocial|truncatechars:40 }}</span>
-  </div>
-
-  <!-- HEADER -->
-  <div class="detalhe-header">
-    <div class="avatar">{{ lead.nome_razaosocial|first|upper }}</div>
-
-    <div class="info">
-      <h1>{{ lead.nome_razaosocial|default:"Lead sem nome" }}</h1>
-      <div class="meta-row">
-        {% if lead.telefone %}
-        <span><i class="fas fa-phone"></i>
-          <a href="https://wa.me/{{ lead.telefone|cut:'+' }}" target="_blank" style="color:var(--primary)">
-            {{ lead.telefone }}
-          </a>
-        </span>
-        {% endif %}
-        {% if lead.email %}
-        <span><i class="fas fa-envelope"></i> {{ lead.email }}</span>
-        {% endif %}
-        <span><i class="fas fa-calendar-alt"></i> Cadastro: {{ lead.data_cadastro|date:"d/m/Y" }}</span>
-        {% if lead.origem %}
-        <span><i class="fas fa-tag"></i> {{ lead.get_origem_display }}</span>
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="header-actions">
-      <!-- Estágio atual -->
-      <span class="estagio-badge" style="background:{{ oportunidade.estagio.cor_hex }}">
-        <i class="fas {{ oportunidade.estagio.icone_fa }}"></i>
-        {{ oportunidade.estagio.nome }}
-      </span>
-
-      <!-- Prioridade -->
-      {% if oportunidade.prioridade %}
-      <span class="prioridade-badge prio-{{ oportunidade.prioridade }}">
-        {{ oportunidade.get_prioridade_display }}
-      </span>
-      {% endif %}
-
-      <!-- Botão mover estágio -->
-      <button class="btn-primary" onclick="abrirModalEstagio()">
-        <i class="fas fa-arrow-right"></i> Mover estágio
-      </button>
-
-      <!-- WhatsApp -->
-      {% if lead.telefone %}
-      <a href="https://wa.me/{{ lead.telefone|cut:'+' }}" target="_blank" class="btn-secondary" style="text-decoration:none;">
-        <i class="fab fa-whatsapp" style="color:var(--success)"></i>
-      </a>
-      {% endif %}
-
-      <!-- Excluir oportunidade (requer permissao) -->
-      {% if user_funcs is None or 'comercial.excluir_oportunidade' in user_funcs %}
-      <button class="btn-secondary" onclick="excluirOportunidade()" style="color:var(--danger);" title="Excluir oportunidade">
-        <i class="fas fa-trash"></i>
-      </button>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- GRID PRINCIPAL -->
-  <div class="detalhe-grid">
-
-    <!-- ===== SIDEBAR ===== -->
-    <div class="detalhe-sidebar">
-
-      <!-- DADOS CRM -->
-      <div class="card">
-        <div class="card-header">
-          <h3><i class="fas fa-briefcase" style="color:var(--primary)"></i> Oportunidade</h3>
-        </div>
-        <div class="card-body">
-
-          <div class="detail-field">
-            <label>Valor estimado</label>
-            <div class="value"><span class="editable" data-field="valor_estimado">{{ oportunidade.valor_estimado|default:"" }}</span></div>
-          </div>
-
-          <div class="detail-field">
-            <label>Probabilidade</label>
-            <div class="value">{{ oportunidade.probabilidade }}%</div>
-            <div class="prob-bar">
-              <div class="prob-fill" style="width:{{ oportunidade.probabilidade }}%"></div>
-            </div>
-          </div>
-
-          <div class="detail-field">
-            <label>Responsável</label>
-            <div class="value">
-              {% if oportunidade.responsavel %}
-                <i class="fas fa-user-circle" style="color:var(--primary)"></i>
-                {{ oportunidade.responsavel.get_full_name|default:oportunidade.responsavel.username }}
-              {% else %}
-                <span class="value-empty">Não atribuído</span>
-                <button class="btn-secondary btn-sm" style="margin-top:6px"
-                  onclick="abrirModalVendedor()">
-                  <i class="fas fa-user-plus"></i> Atribuir
-                </button>
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="detail-field">
-            <label>Origem CRM</label>
-            <div class="value">{{ oportunidade.get_origem_crm_display }}</div>
-          </div>
-
-          <div class="detail-field">
-            <label>Entrada no estágio</label>
-            <div class="value">{{ oportunidade.data_entrada_estagio|date:"d/m/Y H:i" }}</div>
-          </div>
-
-          {% if oportunidade.data_fechamento_previsto %}
-          <div class="detail-field">
-            <label>Fechamento previsto</label>
-            <div class="value">{{ oportunidade.data_fechamento_previsto|date:"d/m/Y" }}</div>
-          </div>
-          {% endif %}
-
-          {% if oportunidade.data_fechamento_real %}
-          <div class="detail-field">
-            <label>Fechamento real</label>
-            <div class="value" style="color:var(--success);font-weight:700">
-              <i class="fas fa-check-circle"></i> {{ oportunidade.data_fechamento_real|date:"d/m/Y" }}
-            </div>
-          </div>
-          {% endif %}
-
-          {% if oportunidade.tags.all %}
-          <div class="detail-field">
-            <label>Tags</label>
-            <div class="tags-row">
-              {% for tag in oportunidade.tags.all %}
-              <span class="tag-chip" style="background:{{ tag.cor_hex }}">{{ tag.nome }}</span>
-              {% endfor %}
-            </div>
-          </div>
-          {% endif %}
-
-          {% if oportunidade.dados_custom %}
-          <div class="detail-field">
-            <label>Dados Personalizados</label>
-            <div style="display:flex;flex-direction:column;gap:4px;">
-              {% for key, value in oportunidade.dados_custom.items %}
-              <div style="display:flex;justify-content:space-between;font-size:13px;align-items:center;">
-                <span style="color:var(--text-muted);">{{ key }}</span>
-                <span class="editable" data-field="dados_custom.{{ key }}" style="font-weight:600;">{{ value }}</span>
-              </div>
-              {% endfor %}
-            </div>
-          </div>
-          {% endif %}
-
-          {% if oportunidade.motivo_perda %}
-          <div class="detail-field">
-            <label>Motivo da perda</label>
-            <div class="value" style="color:var(--danger)">{{ oportunidade.motivo_perda }}</div>
-          </div>
-          {% endif %}
-
-        </div>
-      </div>
-
-      <!-- PRODUTOS / ITENS -->
-      <div class="card">
-        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-          <h3><i class="fas fa-box" style="color:var(--primary)"></i> Produtos</h3>
-          <button class="btn-secondary btn-sm" onclick="abrirModalItem()" style="font-size:11px;padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-white);cursor:pointer;">
-            <i class="fas fa-plus"></i> Adicionar
-          </button>
-        </div>
-        <div class="card-body" id="itensContainer">
-          <div style="text-align:center;color:var(--text-muted);font-size:12px;padding:10px 0;">
-            <i class="fas fa-spinner fa-spin"></i> Carregando...
-          </div>
-        </div>
-      </div>
-
-      <!-- DADOS DO LEAD -->
-      <div class="card">
-        <div class="card-header">
-          <h3><i class="fas fa-user" style="color:var(--primary)"></i> Dados do Lead</h3>
-        </div>
-        <div class="card-body">
-
-          <div class="detail-field">
-            <label>Email</label>
-            <div class="value"><span class="editable" data-field="email">{{ lead.email|default:"" }}</span></div>
-          </div>
-          <div class="detail-field">
-            <label>Telefone</label>
-            <div class="value"><span class="editable" data-field="telefone">{{ lead.telefone|default:"" }}</span></div>
-          </div>
-          <div class="detail-field">
-            <label>CPF/CNPJ</label>
-            <div class="value"><span class="editable" data-field="cpf_cnpj">{{ lead.cpf_cnpj|default:"" }}</span></div>
-          </div>
-          <div class="detail-field">
-            <label>Cidade</label>
-            <div class="value"><span class="editable" data-field="cidade">{{ lead.cidade|default:"" }}</span></div>
-          </div>
-          <div class="detail-field">
-            <label>Estado</label>
-            <div class="value"><span class="editable" data-field="estado">{{ lead.estado|default:"" }}</span></div>
-          </div>
-          <div class="detail-field">
-            <label>Empresa</label>
-            <div class="value"><span class="editable" data-field="empresa">{{ lead.empresa|default:"" }}</span></div>
-          </div>
-
-          <div class="detail-field">
-            <label>Status API</label>
-            <div class="value">
-              <span class="status-servico
-                {% if lead.status_api == 'processado' %}status-habilitado
-                {% elif lead.status_api == 'processamento_manual' %}status-aguardando
-                {% elif lead.status_api == 'erro' %}status-suspenso
-                {% else %}status-cancelado{% endif %}">
-                {{ lead.get_status_api_display|default:lead.status_api }}
-              </span>
-            </div>
-          </div>
-
-          <div class="detail-field">
-            <label>Documentação</label>
-            <div class="value">
-              {% if lead.documentacao_validada %}
-                <span style="color:var(--success)"><i class="fas fa-check-circle"></i> Validada</span>
-              {% elif lead.documentacao_completa %}
-                <span style="color:var(--warning)"><i class="fas fa-clock"></i> Aguardando validação</span>
-              {% else %}
-                <span style="color:var(--danger)"><i class="fas fa-times-circle"></i> Incompleta</span>
-              {% endif %}
-            </div>
-          </div>
-
-          {% if lead.score_qualificacao %}
-          <div class="detail-field">
-            <label>Score de qualificação</label>
-            <div class="value">{{ lead.score_qualificacao }}/10</div>
-          </div>
-          {% endif %}
-
-          {% if lead.tentativas_contato %}
-          <div class="detail-field">
-            <label>Tentativas de contato</label>
-            <div class="value">{{ lead.tentativas_contato }}</div>
-          </div>
-          {% endif %}
-
-          {% if lead.observacoes %}
-          <div class="detail-field">
-            <label>Observações</label>
-            <div class="value" style="font-size:13px;color:var(--text-muted)">{{ lead.observacoes }}</div>
-          </div>
-          {% endif %}
-
-        </div>
-      </div>
-
-      <!-- HUBSOFT -->
-      {% if cliente_hubsoft %}
-      <div class="card">
-        <div class="card-header">
-          <h3><i class="fas fa-network-wired" style="color:var(--info)"></i> Hubsoft</h3>
-        </div>
-        <div class="card-body">
-          {% if cliente_hubsoft.servicos.all %}
-            {% for servico in cliente_hubsoft.servicos.all %}
-            <div class="hubsoft-servico">
-              <div class="servico-nome">{{ servico.nome_plano|default:"Serviço" }}</div>
-              <div class="servico-meta">
-                <span class="status-servico
-                  {% if servico.status_prefixo == 'servico_habilitado' %}status-habilitado
-                  {% elif servico.status_prefixo == 'aguardando_instalacao' %}status-aguardando
-                  {% elif servico.status_prefixo == 'servico_suspenso' %}status-suspenso
-                  {% else %}status-cancelado{% endif %}">
-                  <i class="fas fa-circle" style="font-size:6px"></i>
-                  {{ servico.status_prefixo|default:"—" }}
-                </span>
-                {% if servico.data_fim_contrato %}
-                  &nbsp;· Contrato: {{ servico.data_fim_contrato }}
-                {% endif %}
-              </div>
-            </div>
-            {% endfor %}
-          {% else %}
-            <p style="font-size:13px;color:var(--text-light);margin:0">Nenhum serviço encontrado.</p>
-          {% endif %}
-        </div>
-      </div>
-      {% endif %}
-
-    </div>
-    <!-- fim sidebar -->
-
-    <!-- ===== COLUNA PRINCIPAL ===== -->
-    <div class="main-col">
-
-      <!-- TABS -->
-      <div class="card" style="margin-bottom:16px;overflow:visible">
-        <div class="tabs-nav">
-          <button class="tab-btn active" onclick="switchTab(this,'tab-timeline')">
-            <i class="fas fa-stream"></i> Timeline
-            <span class="badge">{{ timeline_items|length }}</span>
-          </button>
-          <button class="tab-btn" onclick="switchTab(this,'tab-notas')">
-            <i class="fas fa-sticky-note"></i> Notas
-            <span class="badge" id="notas-count">{{ oportunidade.notas.count }}</span>
-          </button>
-          <button class="tab-btn" onclick="switchTab(this,'tab-historico')">
-            <i class="fas fa-history"></i> Hist. Estágios
-            <span class="badge">{{ historico_estagios|length }}</span>
-          </button>
-          <button class="tab-btn" onclick="switchTab(this,'tab-conversas')">
-            <i class="fab fa-whatsapp"></i> Conversas
-            <span class="badge">{{ mensagens_inbox|length }}</span>
-          </button>
-        </div>
-
-        <!-- TAB: TIMELINE MESCLADA -->
-        <div id="tab-timeline" class="tab-panel active">
-          {% if timeline_items %}
-          <div class="timeline">
-            {% for item in timeline_items %}
-            <div class="tl-item">
-
-              {% if item.tipo == 'contato' %}
-              <div class="tl-dot
-                {% if item.obj.converteu_venda %}dot-venda
-                {% elif item.obj.sucesso %}dot-contato
-                {% elif item.obj.status == 'chamada_perdida' or item.obj.status == 'nao_atendeu' %}dot-perdido
-                {% else %}dot-contato{% endif %}">
-              </div>
-              <div class="tl-header">
-                <div class="tl-title">
-                  <i class="fas fa-phone" style="color:var(--info);font-size:12px"></i>
-                  {% if item.obj.converteu_venda %}
-                    <span style="color:var(--success)">Venda confirmada</span>
-                  {% elif item.obj.status == 'transferido_humano' %}
-                    Transferido para humano
-                  {% elif item.obj.status == 'fluxo_finalizado' %}
-                    Fluxo finalizado
-                  {% else %}
-                    {{ item.obj.get_status_display|default:item.obj.status }}
-                  {% endif %}
-                </div>
-                <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
-              </div>
-              {% if item.obj.observacoes %}
-              <p class="tl-body">{{ item.obj.observacoes|truncatechars:200 }}</p>
-              {% endif %}
-              <div class="tl-meta">
-                {% if item.obj.duracao_segundos %}
-                  <i class="fas fa-clock"></i> {{ item.obj.duracao_segundos }}s
-                {% endif %}
-                {% if item.obj.nome_contato %}· {{ item.obj.nome_contato }}{% endif %}
-              </div>
-
-              {% elif item.tipo == 'estagio' %}
-              <div class="tl-dot
-                {% if item.obj.estagio_novo.is_final_ganho %}dot-venda
-                {% elif item.obj.estagio_novo.is_final_perdido %}dot-perdido
-                {% else %}dot-estagio{% endif %}">
-              </div>
-              <div class="tl-header">
-                <div class="tl-title">
-                  <i class="fas fa-arrow-right" style="color:var(--primary);font-size:11px"></i>
-                  {% if item.obj.estagio_anterior %}
-                    {{ item.obj.estagio_anterior.nome }} → <strong>{{ item.obj.estagio_novo.nome }}</strong>
-                  {% else %}
-                    Entrada: <strong>{{ item.obj.estagio_novo.nome }}</strong>
-                  {% endif %}
-                </div>
-                <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
-              </div>
-              {% if item.obj.motivo %}
-              <p class="tl-body">{{ item.obj.motivo }}</p>
-              {% endif %}
-              <div class="tl-meta">
-                {% if item.obj.movido_por %}por {{ item.obj.movido_por.get_full_name|default:item.obj.movido_por.username }}{% endif %}
-                {% if item.obj.tempo_no_estagio_horas %}
-                  &nbsp;· {{ item.obj.tempo_no_estagio_horas|floatformat:1 }}h no estágio anterior
-                {% endif %}
-              </div>
-
-              {% elif item.tipo == 'conversa_aberta' %}
-              <div class="tl-dot dot-contato"></div>
-              <div class="tl-header">
-                <div class="tl-title">
-                  <i class="fab fa-whatsapp" style="color:var(--success);font-size:13px"></i>
-                  Conversa iniciada <span style="color:var(--text-muted)">({{ item.canal }})</span>
-                </div>
-                <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
-              </div>
-              <div class="tl-meta">#{{ item.numero }}</div>
-
-              {% elif item.tipo == 'conversa_resolvida' %}
-              <div class="tl-dot dot-venda"></div>
-              <div class="tl-header">
-                <div class="tl-title">
-                  <i class="fas fa-check-circle" style="color:var(--success);font-size:12px"></i>
-                  Conversa finalizada <span style="color:var(--text-muted)">({{ item.canal }})</span>
-                </div>
-                <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
-              </div>
-              <div class="tl-meta">
-                #{{ item.numero }}
-                {% if item.agente %}&nbsp;· por {{ item.agente }}{% endif %}
-              </div>
-
-              {% endif %}
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <div class="empty-state">
-            <i class="fas fa-stream"></i>
-            Nenhuma atividade registrada ainda.
-          </div>
-          {% endif %}
-        </div>
-
-        <!-- TAB: NOTAS -->
-        <div id="tab-notas" class="tab-panel">
-
-          <!-- Form nova nota -->
-          <div class="nota-form" style="margin-bottom:20px">
-            <textarea id="nota-texto" placeholder="Adicionar uma nota, observação ou registro de contato..."></textarea>
-            <div class="nota-form-row">
-              <select id="nota-tipo">
-                <option value="geral">📝 Geral</option>
-                <option value="ligacao">📞 Ligação</option>
-                <option value="reuniao">🤝 Reunião</option>
-                <option value="email">✉️ E-mail</option>
-                <option value="importante">⭐ Importante</option>
-                <option value="alerta">⚠️ Alerta</option>
-              </select>
-              <button class="btn-primary" onclick="salvarNota()">
-                <i class="fas fa-paper-plane"></i> Salvar
-              </button>
-            </div>
-          </div>
-
-          <!-- Lista de notas -->
-          <div id="notas-lista">
-            {% for nota in oportunidade.notas.all %}
-            <div class="nota-item nota-{{ nota.tipo }}{% if nota.is_fixada %} nota-fixada{% endif %}">
-              <div class="nota-header">
-                {% if nota.is_fixada %}<i class="fas fa-thumbtack" style="color:var(--warning)"></i>{% endif %}
-                <span class="nota-author">{{ nota.autor.get_full_name|default:nota.autor.username }}</span>
-                <span class="nota-date">{{ nota.data_criacao|date:"d/m/Y H:i" }}</span>
-                <span class="nota-tipo">{{ nota.get_tipo_display }}</span>
-              </div>
-              <p class="nota-texto">{{ nota.conteudo }}</p>
-            </div>
-            {% empty %}
-            <div class="empty-state">
-              <i class="fas fa-sticky-note"></i>
-              Nenhuma nota ainda. Adicione a primeira acima.
-            </div>
-            {% endfor %}
-          </div>
-
-        </div>
-
-        <!-- TAB: HISTÓRICO DE ESTÁGIOS -->
-        <div id="tab-historico" class="tab-panel">
-          {% if historico_estagios %}
-          <div class="timeline">
-            {% for he in historico_estagios %}
-            <div class="tl-item">
-              <div class="tl-dot
-                {% if he.estagio_novo.is_final_ganho %}dot-venda
-                {% elif he.estagio_novo.is_final_perdido %}dot-perdido
-                {% else %}dot-estagio{% endif %}">
-              </div>
-              <div class="tl-header">
-                <div class="tl-title">
-                  <span class="estagio-badge" style="background:{{ he.estagio_novo.cor_hex }};font-size:11px;padding:2px 8px">
-                    {{ he.estagio_novo.nome }}
-                  </span>
-                </div>
-                <span class="tl-date">{{ he.data_transicao|date:"d/m/Y H:i" }}</span>
-              </div>
-              {% if he.estagio_anterior %}
-              <p class="tl-body">
-                <i class="fas fa-arrow-right" style="color:var(--text-light);font-size:11px"></i>
-                Veio de: <strong>{{ he.estagio_anterior.nome }}</strong>
-              </p>
-              {% endif %}
-              {% if he.motivo %}
-              <p class="tl-body">{{ he.motivo }}</p>
-              {% endif %}
-              <div class="tl-meta">
-                {% if he.movido_por %}
-                  <i class="fas fa-user" style="font-size:10px"></i>
-                  {{ he.movido_por.get_full_name|default:he.movido_por.username }}
-                {% endif %}
-                {% if he.tempo_no_estagio_horas %}
-                  &nbsp;· Ficou {{ he.tempo_no_estagio_horas|floatformat:0 }}h no estágio anterior
-                {% endif %}
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <div class="empty-state">
-            <i class="fas fa-history"></i>
-            Nenhuma transição registrada.
-          </div>
-          {% endif %}
-        </div>
-
-        <!-- TAB: CONVERSAS INBOX -->
-        <div id="tab-conversas" class="tab-panel">
-          {% if mensagens_inbox %}
-          <div style="max-height:500px;overflow-y:auto;padding:16px;background:var(--border-light,#f1f5f9);border-radius:8px;display:flex;flex-direction:column;gap:6px;">
-            {% for msg in mensagens_inbox %}
-            <div style="max-width:75%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.5;word-break:break-word;
-              {% if msg.remetente_tipo == 'contato' %}align-self:flex-start;background:#fff;border:1px solid var(--border,#e2e8f0);border-bottom-left-radius:4px;
-              {% elif msg.remetente_tipo == 'bot' %}align-self:flex-end;background:#f0fdf4;border:1px solid #bbf7d0;border-bottom-right-radius:4px;
-              {% elif msg.remetente_tipo == 'agente' %}align-self:flex-end;background:var(--primary,#3b82f6);color:#fff;border-bottom-right-radius:4px;
-              {% else %}align-self:center;background:var(--border-light,#f1f5f9);color:var(--text-muted);font-size:11px;text-align:center;max-width:90%;{% endif %}">
-              {% if msg.remetente_tipo != 'sistema' %}
-              <div style="font-size:11px;font-weight:600;margin-bottom:2px;opacity:.7;">{{ msg.remetente_nome }}</div>
-              {% endif %}
-              {{ msg.conteudo|whatsapp_format }}
-              <div style="font-size:10px;margin-top:4px;text-align:right;opacity:.6;">{{ msg.data_envio|date:"d/m H:i" }}</div>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <div class="empty-state">
-            <i class="fab fa-whatsapp"></i>
-            Nenhuma conversa registrada.
-          </div>
-          {% endif %}
-        </div>
-
-      </div>
-      <!-- fim card tabs -->
-
-    </div>
-    <!-- fim main-col -->
-
-  </div>
-  <!-- fim grid -->
-
-<!-- ===== MODAL: MOVER ESTÁGIO ===== -->
-<div class="modal-overlay" id="modal-estagio" style="display:none">
-  <div class="modal-box">
-    <h3><i class="fas fa-arrow-right" style="color:var(--primary)"></i> Mover para estágio</h3>
-    <select id="sel-estagio">
-      {% for e in estagios %}
-      <option value="{{ e.pk }}" {% if e.pk == oportunidade.estagio.pk %}selected{% endif %}>
-        {{ e.nome }}
-      </option>
-      {% endfor %}
-    </select>
-    <textarea id="motivo-estagio" placeholder="Motivo da mudança (opcional)..." rows="3"></textarea>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="fecharModal('modal-estagio')">Cancelar</button>
-      <button class="btn-primary" onclick="confirmarMoverEstagio()">
-        <i class="fas fa-check"></i> Confirmar
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== MODAL: ATRIBUIR VENDEDOR ===== -->
-<div class="modal-overlay" id="modal-vendedor" style="display:none">
-  <div class="modal-box">
-    <h3><i class="fas fa-user-plus" style="color:var(--primary)"></i> Atribuir responsável</h3>
-    <select id="sel-vendedor">
-      <option value="">— Sem responsável —</option>
-      {% for v in vendedores %}
-      <option value="{{ v.pk }}" {% if oportunidade.responsavel and oportunidade.responsavel.pk == v.pk %}selected{% endif %}>
-        {{ v.get_full_name|default:v.username }}
-      </option>
-      {% endfor %}
-    </select>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="fecharModal('modal-vendedor')">Cancelar</button>
-      <button class="btn-primary" onclick="confirmarVendedor()">
-        <i class="fas fa-check"></i> Atribuir
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- TOAST -->
-<div id="toast"></div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 const OP_PK = {{ oportunidade.pk }};
 const URLS = {
-  mover:       "{% url 'crm:api_mover_oportunidade' %}",
-  atribuir:    "{% url 'crm:api_atribuir_responsavel' oportunidade.pk %}",
-  notas_get:   "{% url 'crm:api_notas_oportunidade' oportunidade.pk %}",
-  notas_post:  "{% url 'crm:api_notas_oportunidade' oportunidade.pk %}",
-  itens:       "{% url 'crm:api_itens_oportunidade' oportunidade.pk %}",
-  produtos:    "{% url 'crm:api_produtos_listar' %}",
+  mover: "{% url 'crm:api_mover_oportunidade' %}",
+  atribuir: "{% url 'crm:api_atribuir_responsavel' oportunidade.pk %}",
+  notas_get: "{% url 'crm:api_notas_oportunidade' oportunidade.pk %}",
+  notas_post: "{% url 'crm:api_notas_oportunidade' oportunidade.pk %}",
+  itens: "{% url 'crm:api_itens_oportunidade' oportunidade.pk %}",
+  produtos: "{% url 'crm:api_produtos_listar' %}",
 };
 const CSRF = "{{ csrf_token }}";
 
-// ---- TABS ----
 function switchTab(btn, panelId) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById(panelId).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('is-active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('is-active'));
+  btn.classList.add('is-active');
+  document.getElementById(panelId).classList.add('is-active');
 }
 
-// ---- EXCLUIR OPORTUNIDADE ----
 function excluirOportunidade() {
   const titulo = "{{ oportunidade.titulo|default:lead.nome_razaosocial|escapejs }}";
-  if (!confirm(`Excluir a oportunidade "${titulo}" permanentemente?\n\nIsso tambem vai apagar: tarefas, notas, itens e historico de estagios vinculados.\n\nEssa acao nao pode ser desfeita.`)) {
-    return;
-  }
+  if (!confirm(`Excluir a oportunidade "${titulo}" permanentemente?\n\nIsso tambem vai apagar: tarefas, notas, itens e historico vinculados.\n\nEssa acao nao pode ser desfeita.`)) return;
   fetch("{% url 'crm:api_excluir_oportunidade' oportunidade.pk %}", {
     method: 'DELETE',
-    headers: {'X-CSRFToken': CSRF},
+    headers: { 'X-CSRFToken': CSRF },
   })
-  .then(r => r.json().then(d => ({status: r.status, data: d})))
-  .then(({status, data}) => {
+  .then(r => r.json())
+  .then(data => {
     if (data.success) {
-      alert(data.message || 'Oportunidade excluida.');
-      window.location.href = "{% url 'crm:pipeline' %}";
+      toast('Excluida', data.message || 'Oportunidade excluida', 'success');
+      setTimeout(() => { window.location.href = "{% url 'crm:pipeline' %}"; }, 700);
     } else {
-      alert(data.error || 'Erro ao excluir');
+      toast('Erro', data.error || 'Erro ao excluir', 'danger');
     }
   })
-  .catch(() => alert('Erro de conexao'));
+  .catch(() => toast('Erro', 'Erro de conexao', 'danger'));
 }
 
-// ---- MODAIS ----
-function abrirModalEstagio()  { const m = document.getElementById('modal-estagio'); m.style.display = 'flex'; }
-function abrirModalVendedor() { const m = document.getElementById('modal-vendedor'); m.style.display = 'flex'; }
+function abrirModalEstagio()  { document.getElementById('modal-estagio').style.display = 'flex'; }
+function abrirModalVendedor() { document.getElementById('modal-vendedor').style.display = 'flex'; }
 function fecharModal(id)      { document.getElementById(id).style.display = 'none'; }
 
 document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
 });
 
-// ---- TOAST ----
-function toast(msg, err=false) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'show' + (err ? ' error' : '');
-  setTimeout(() => el.className = '', 2800);
-}
-
-// ---- MOVER ESTÁGIO ----
 async function confirmarMoverEstagio() {
   const estagio_id = document.getElementById('sel-estagio').value;
-  const motivo     = document.getElementById('motivo-estagio').value.trim();
+  const motivo = document.getElementById('motivo-estagio').value.trim();
   try {
     const res = await fetch(URLS.mover, {
       method: 'POST',
@@ -1099,16 +802,15 @@ async function confirmarMoverEstagio() {
     });
     const data = await res.json();
     if (data.ok) {
-      toast('Estágio atualizado!');
+      toast('Atualizado', 'Estagio atualizado', 'success');
       fecharModal('modal-estagio');
       setTimeout(() => location.reload(), 800);
     } else {
-      toast(data.erro || 'Erro ao mover.', true);
+      toast('Erro', data.erro || 'Erro ao mover', 'danger');
     }
-  } catch { toast('Falha na requisição.', true); }
+  } catch { toast('Erro', 'Falha na requisicao', 'danger'); }
 }
 
-// ---- ATRIBUIR VENDEDOR ----
 async function confirmarVendedor() {
   const responsavel_id = document.getElementById('sel-vendedor').value || null;
   try {
@@ -1119,21 +821,19 @@ async function confirmarVendedor() {
     });
     const data = await res.json();
     if (data.ok) {
-      toast('Responsável atualizado!');
+      toast('Atualizado', 'Responsavel atualizado', 'success');
       fecharModal('modal-vendedor');
       setTimeout(() => location.reload(), 800);
     } else {
-      toast(data.erro || 'Erro.', true);
+      toast('Erro', data.erro || 'Erro', 'danger');
     }
-  } catch { toast('Falha na requisição.', true); }
+  } catch { toast('Erro', 'Falha na requisicao', 'danger'); }
 }
 
-// ---- SALVAR NOTA ----
 async function salvarNota() {
   const conteudo = document.getElementById('nota-texto').value.trim();
-  const tipo     = document.getElementById('nota-tipo').value;
-  if (!conteudo) { toast('Escreva algo antes de salvar.', true); return; }
-
+  const tipo = document.getElementById('nota-tipo').value;
+  if (!conteudo) { toast('Aviso', 'Escreva algo antes de salvar', 'warning'); return; }
   try {
     const res = await fetch(URLS.notas_post, {
       method: 'POST',
@@ -1143,199 +843,210 @@ async function salvarNota() {
     const data = await res.json();
     if (data.ok) {
       document.getElementById('nota-texto').value = '';
-      toast('Nota salva!');
+      toast('Salva', 'Nota adicionada', 'success');
       await carregarNotas();
     } else {
-      toast(data.erro || 'Erro ao salvar.', true);
+      toast('Erro', data.erro || 'Erro ao salvar', 'danger');
     }
-  } catch { toast('Falha na requisição.', true); }
+  } catch { toast('Erro', 'Falha na requisicao', 'danger'); }
 }
 
-// ---- CARREGAR NOTAS ----
 async function carregarNotas() {
   try {
-    const res  = await fetch(URLS.notas_get);
+    const res = await fetch(URLS.notas_get);
     const data = await res.json();
     const lista = document.getElementById('notas-lista');
     const count = document.getElementById('notas-count');
     count.textContent = data.notas.length;
 
     if (!data.notas.length) {
-      lista.innerHTML = `<div class="empty-state"><i class="fas fa-sticky-note"></i> Nenhuma nota ainda.</div>`;
+      lista.innerHTML = '<div class="empty-state"><i class="bi bi-sticky"></i> Nenhuma nota ainda.</div>';
       return;
     }
 
     lista.innerHTML = data.notas.map(n => `
       <div class="nota-item nota-${n.tipo}${n.is_fixada ? ' nota-fixada' : ''}">
         <div class="nota-header">
-          ${n.is_fixada ? '<i class="fas fa-thumbtack" style="color:var(--warning)"></i>' : ''}
+          ${n.is_fixada ? '<i class="bi bi-pin-angle-fill" style="color: var(--color-warning);"></i>' : ''}
           <span class="nota-author">${n.autor}</span>
           <span class="nota-date">${n.data}</span>
           <span class="nota-tipo">${n.tipo_label}</span>
         </div>
-        <p class="nota-texto">${n.conteudo.replace(/</g,'&lt;')}</p>
+        <p class="nota-texto">${n.conteudo.replace(/</g, '&lt;')}</p>
       </div>
     `).join('');
-  } catch { /* silently fail */ }
+  } catch { /* silent */ }
 }
 
 // Edicao inline
 document.querySelectorAll('.editable').forEach(function(el) {
-    el.addEventListener('click', function() {
-        if (el.querySelector('input')) return;
-        const field = el.dataset.field;
-        const currentValue = el.textContent.trim();
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'editable-input';
-        input.value = currentValue;
-        el.textContent = '';
-        el.appendChild(input);
-        input.focus();
-        input.select();
+  el.addEventListener('click', function() {
+    if (el.querySelector('input')) return;
+    const field = el.dataset.field;
+    const currentValue = el.textContent.trim();
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'editable-input';
+    input.value = currentValue;
+    el.textContent = '';
+    el.appendChild(input);
+    input.focus();
+    input.select();
 
-        function save() {
-            const newValue = input.value.trim();
-            el.classList.add('editable-saving');
-            fetch('/crm/oportunidades/{{ oportunidade.pk }}/editar/', {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
-                body: JSON.stringify({[field]: newValue})
-            })
-            .then(r => r.json())
-            .then(data => {
-                el.classList.remove('editable-saving');
-                el.textContent = data.success ? newValue : currentValue;
-            })
-            .catch(() => { el.classList.remove('editable-saving'); el.textContent = currentValue; });
-        }
+    function save() {
+      const newValue = input.value.trim();
+      el.classList.add('editable-saving');
+      fetch('/crm/oportunidades/{{ oportunidade.pk }}/editar/', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ [field]: newValue }),
+      })
+      .then(r => r.json())
+      .then(data => {
+        el.classList.remove('editable-saving');
+        el.textContent = data.success ? newValue : currentValue;
+      })
+      .catch(() => { el.classList.remove('editable-saving'); el.textContent = currentValue; });
+    }
 
-        input.addEventListener('blur', save);
-        input.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-            if (e.key === 'Escape') { el.textContent = currentValue; }
-        });
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      if (e.key === 'Escape') { el.textContent = currentValue; }
     });
+  });
 });
 
-// ---- ITENS / PRODUTOS ----
+// Itens / produtos
 let _produtosCache = [];
 
 function carregarItens() {
-    const container = document.getElementById('itensContainer');
-    fetch(URLS.itens)
-        .then(r => r.json())
-        .then(d => {
-            if (!d.success) { container.innerHTML = '<p style="color:var(--danger);font-size:12px;">Erro ao carregar</p>'; return; }
-            if (d.itens.length === 0) {
-                container.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:10px 0;"><i class="fas fa-box-open" style="font-size:20px;opacity:.3;display:block;margin-bottom:6px;"></i>Nenhum produto vinculado</div>';
-                return;
-            }
-            let html = '<div style="display:flex;flex-direction:column;gap:8px;">';
-            d.itens.forEach(item => {
-                html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:12px;">
-                    <div style="flex:1;min-width:0;">
-                        <div style="font-weight:600;color:var(--text-main);">${item.produto_nome}</div>
-                        <div style="color:var(--text-light);">${item.produto_categoria} · ${item.quantidade}x R$ ${parseFloat(item.valor_unitario).toFixed(2)}${parseFloat(item.desconto) > 0 ? ' (-R$'+parseFloat(item.desconto).toFixed(2)+')' : ''}</div>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <span style="font-weight:700;color:var(--primary);white-space:nowrap;">R$ ${parseFloat(item.subtotal).toFixed(2)}</span>
-                        <button onclick="removerItem(${item.id})" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:13px;" title="Remover"><i class="fas fa-times"></i></button>
-                    </div>
-                </div>`;
-            });
-            html += `<div style="display:flex;justify-content:flex-end;padding-top:6px;border-top:1px solid var(--border);margin-top:4px;">
-                <span style="font-size:13px;font-weight:700;color:var(--text-main);">Total: R$ ${parseFloat(d.valor_total).toFixed(2)}</span>
-            </div></div>`;
-            container.innerHTML = html;
-        })
-        .catch(() => { container.innerHTML = '<p style="color:var(--danger);font-size:12px;">Erro ao carregar</p>'; });
+  const container = document.getElementById('itensContainer');
+  fetch(URLS.itens)
+    .then(r => r.json())
+    .then(d => {
+      if (!d.success) { container.innerHTML = '<span class="value-empty">Erro ao carregar</span>'; return; }
+      if (d.itens.length === 0) {
+        container.innerHTML = `
+          <span class="value-empty">Nenhum produto vinculado</span>
+          <button class="btn btn-secondary btn-sm" style="margin-top:6px;" onclick="abrirModalItem()">
+            <i class="bi bi-plus-lg"></i> Adicionar produto
+          </button>
+        `;
+        return;
+      }
+      let html = '<div style="display:flex;flex-direction:column;gap:6px;">';
+      d.itens.forEach(item => {
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:var(--radius);border:1px solid var(--color-border);font-size:var(--fs-xs);">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:var(--fw-semibold);color:var(--color-text);">${item.produto_nome}</div>
+            <div style="color:var(--color-text-muted);">${item.produto_categoria} · ${item.quantidade}x R$ ${parseFloat(item.valor_unitario).toFixed(2)}${parseFloat(item.desconto) > 0 ? ' (-R$'+parseFloat(item.desconto).toFixed(2)+')' : ''}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-weight:var(--fw-bold);color:var(--color-primary);white-space:nowrap;">R$ ${parseFloat(item.subtotal).toFixed(2)}</span>
+            <button onclick="removerItem(${item.id})" class="btn btn-ghost btn-sm" title="Remover" style="padding:2px 4px;"><i class="bi bi-x-lg"></i></button>
+          </div>
+        </div>`;
+      });
+      html += `<div style="display:flex;justify-content:space-between;align-items:center;padding-top:6px;border-top:1px solid var(--color-border);margin-top:2px;">
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalItem()" style="padding:4px 8px;font-size:var(--fs-xs);"><i class="bi bi-plus-lg"></i> Adicionar</button>
+        <span style="font-size:var(--fs-sm);font-weight:var(--fw-bold);color:var(--color-text);">Total: R$ ${parseFloat(d.valor_total).toFixed(2)}</span>
+      </div></div>`;
+      container.innerHTML = html;
+    })
+    .catch(() => { container.innerHTML = '<span class="value-empty">Erro ao carregar</span>'; });
 }
 
 function abrirModalItem() {
-    if (_produtosCache.length === 0) {
-        fetch(URLS.produtos)
-            .then(r => r.json())
-            .then(d => { if (d.success) { _produtosCache = d.produtos; mostrarModalItem(); } });
-    } else {
-        mostrarModalItem();
-    }
+  if (_produtosCache.length === 0) {
+    fetch(URLS.produtos)
+      .then(r => r.json())
+      .then(d => { if (d.success) { _produtosCache = d.produtos; mostrarModalItem(); } });
+  } else {
+    mostrarModalItem();
+  }
 }
 
 function mostrarModalItem() {
-    if (_produtosCache.length === 0) { showNotification('Nenhum produto cadastrado. Crie um produto primeiro.', 'warning'); return; }
-    const opts = _produtosCache.map(p => `<option value="${p.id}" data-preco="${p.preco}">${p.nome} (R$ ${parseFloat(p.preco).toFixed(2)} / ${p.recorrencia_display})</option>`).join('');
-    const html = `<div class="modal-overlay show" id="modalItem" onclick="if(event.target===this)this.remove()" style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;display:flex;align-items:center;justify-content:center;">
-        <div style="background:var(--bg-white);border-radius:16px;padding:24px;width:90%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.15);">
-            <div style="font-size:16px;font-weight:700;margin-bottom:16px;"><i class="fas fa-plus" style="color:var(--primary);"></i> Adicionar Produto</div>
-            <div style="margin-bottom:12px;">
-                <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">Produto *</label>
-                <select id="itemProduto" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;" onchange="document.getElementById('itemValor').value=this.options[this.selectedIndex].dataset.preco">${opts}</select>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
-                <div>
-                    <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">Qtd</label>
-                    <input type="number" id="itemQtd" value="1" min="1" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;">
-                </div>
-                <div>
-                    <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">Valor (R$)</label>
-                    <input type="number" id="itemValor" step="0.01" value="${_produtosCache[0].preco}" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;">
-                </div>
-                <div>
-                    <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">Desconto</label>
-                    <input type="number" id="itemDesconto" step="0.01" value="0" min="0" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;">
-                </div>
-            </div>
-            <div style="display:flex;justify-content:flex-end;gap:8px;">
-                <button onclick="document.getElementById('modalItem').remove()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg-white);cursor:pointer;font-size:13px;">Cancelar</button>
-                <button onclick="adicionarItem()" style="padding:8px 16px;border-radius:8px;border:none;background:var(--primary);color:#fff;cursor:pointer;font-weight:600;font-size:13px;">Adicionar</button>
-            </div>
+  if (_produtosCache.length === 0) { toast('Aviso', 'Nenhum produto cadastrado. Crie um produto primeiro.', 'warning'); return; }
+  const opts = _produtosCache.map(p => `<option value="${p.id}" data-preco="${p.preco}">${p.nome} (R$ ${parseFloat(p.preco).toFixed(2)} / ${p.recorrencia_display})</option>`).join('');
+  const html = `<div class="modal-overlay" id="modalItem" style="display:flex;" onclick="if(event.target===this)this.remove()">
+    <div class="modal-content" style="max-width:420px;">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="bi bi-plus-circle" style="color:var(--color-primary);"></i> Adicionar produto</h3>
+        <button class="modal-close" onclick="document.getElementById('modalItem').remove()"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label class="field-label">Produto</label>
+          <div class="field-input-wrap">
+            <select id="itemProduto" class="field-input" onchange="document.getElementById('itemValor').value=this.options[this.selectedIndex].dataset.preco">${opts}</select>
+          </div>
         </div>
-    </div>`;
-    document.body.insertAdjacentHTML('beforeend', html);
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--sp-2);margin-top:var(--sp-3);">
+          <div class="field">
+            <label class="field-label">Qtd</label>
+            <div class="field-input-wrap"><input id="itemQtd" type="number" class="field-input" value="1" min="1"></div>
+          </div>
+          <div class="field">
+            <label class="field-label">Valor (R$)</label>
+            <div class="field-input-wrap"><input id="itemValor" type="number" class="field-input" step="0.01" value="${_produtosCache[0].preco}"></div>
+          </div>
+          <div class="field">
+            <label class="field-label">Desconto</label>
+            <div class="field-input-wrap"><input id="itemDesconto" type="number" class="field-input" step="0.01" value="0" min="0"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('modalItem').remove()">Cancelar</button>
+        <button class="btn btn-primary btn-sm" onclick="adicionarItem()"><i class="bi bi-plus-lg"></i> Adicionar</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
 }
 
 function adicionarItem() {
-    const payload = {
-        produto_id: document.getElementById('itemProduto').value,
-        quantidade: document.getElementById('itemQtd').value,
-        valor_unitario: document.getElementById('itemValor').value,
-        desconto: document.getElementById('itemDesconto').value || '0',
-    };
-    fetch(URLS.itens, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF},
-        body: JSON.stringify(payload)
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (d.success) {
-            showNotification(d.message, 'success');
-            const modal = document.getElementById('modalItem');
-            if (modal) modal.remove();
-            carregarItens();
-        } else {
-            showNotification(d.error || 'Erro ao adicionar.', 'error');
-        }
-    })
-    .catch(() => showNotification('Erro de conexao.', 'error'));
+  const payload = {
+    produto_id: document.getElementById('itemProduto').value,
+    quantidade: document.getElementById('itemQtd').value,
+    valor_unitario: document.getElementById('itemValor').value,
+    desconto: document.getElementById('itemDesconto').value || '0',
+  };
+  fetch(URLS.itens, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+    body: JSON.stringify(payload),
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      toast('Adicionado', d.message, 'success');
+      const modal = document.getElementById('modalItem');
+      if (modal) modal.remove();
+      carregarItens();
+    } else {
+      toast('Erro', d.error || 'Erro ao adicionar', 'danger');
+    }
+  })
+  .catch(() => toast('Erro', 'Erro de conexao', 'danger'));
 }
 
 function removerItem(id) {
-    if (!confirm('Remover este item?')) return;
-    fetch('/comercial/crm/itens/' + id + '/remover/', {
-        method: 'DELETE',
-        headers: {'X-CSRFToken': CSRF}
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (d.success) { showNotification(d.message, 'success'); carregarItens(); }
-        else { showNotification(d.error || 'Erro.', 'error'); }
-    })
-    .catch(() => showNotification('Erro de conexao.', 'error'));
+  if (!confirm('Remover este item?')) return;
+  fetch('/comercial/crm/itens/' + id + '/remover/', {
+    method: 'DELETE',
+    headers: { 'X-CSRFToken': CSRF },
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) { toast('Removido', d.message, 'success'); carregarItens(); }
+    else { toast('Erro', d.error || 'Erro', 'danger'); }
+  })
+  .catch(() => toast('Erro', 'Erro de conexao', 'danger'));
 }
 
-// Carregar itens ao abrir a pagina
 carregarItens();
 </script>
 {% endblock %}

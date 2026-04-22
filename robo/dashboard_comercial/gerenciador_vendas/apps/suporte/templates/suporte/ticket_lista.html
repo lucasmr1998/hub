@@ -1,292 +1,155 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
 {% block title %}Tickets — Suporte{% endblock %}
 
-{% block extra_css %}
-<style>
-    .suporte-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 24px;
-    }
-    .suporte-header h1 {
-        font-size: 1.3rem;
-        font-weight: 800;
-        color: var(--text-main);
-    }
-    .filter-bar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        align-items: center;
-        margin-bottom: 20px;
-        background: var(--bg-white);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 14px 18px;
-    }
-    .filter-bar select,
-    .filter-bar input[type="text"] {
-        padding: 7px 12px;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        font-size: .82rem;
-        font-family: 'Inter', sans-serif;
-        background: var(--bg-white);
-        color: var(--text-main);
-    }
-    .filter-bar select:focus,
-    .filter-bar input[type="text"]:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(59,130,246,.1);
-    }
-    .filter-bar input[type="text"] { min-width: 200px; }
-    .filter-btn {
-        padding: 7px 16px;
-        border: none;
-        border-radius: 8px;
-        font-size: .82rem;
-        font-weight: 600;
-        font-family: 'Inter', sans-serif;
-        cursor: pointer;
-        background: var(--primary);
-        color: #fff;
-        transition: background .15s;
-    }
-    .filter-btn:hover { background: var(--primary-dark); }
-    .filter-clear {
-        padding: 7px 14px;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        font-size: .82rem;
-        font-weight: 600;
-        font-family: 'Inter', sans-serif;
-        cursor: pointer;
-        background: var(--bg-white);
-        color: var(--text-muted);
-        text-decoration: none;
-        transition: all .15s;
-    }
-    .filter-clear:hover { background: #f8fafc; border-color: #cbd5e1; }
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Tickets</h1>
+      <p class="page-subtitle">Todos os tickets do suporte com filtros e acoes em massa.</p>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'suporte:ticket_criar' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Novo ticket</a>
+    </div>
+  </div>
+</div>
 
-    .suporte-section {
-        background: var(--bg-white);
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        overflow: hidden;
-    }
-    .suporte-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: .82rem;
-    }
-    .suporte-table th {
-        text-align: left;
-        padding: 12px 16px;
-        background: #f8fafc;
-        font-weight: 700;
-        font-size: .72rem;
-        text-transform: uppercase;
-        letter-spacing: .05em;
-        color: var(--text-muted);
-        border-bottom: 1px solid var(--border);
-    }
-    .suporte-table td {
-        padding: 12px 16px;
-        border-bottom: 1px solid #f1f5f9;
-        vertical-align: middle;
-    }
-    .suporte-table tr:last-child td { border-bottom: none; }
-    .suporte-table tr:hover td { background: #f8fafc; }
-    .suporte-table a {
-        color: var(--primary);
-        text-decoration: none;
-        font-weight: 600;
-    }
-    .suporte-table a:hover { text-decoration: underline; }
+{% include "components/list_filters.html" with fields=filter_fields search_placeholder="Buscar por titulo, descricao ou numero..." search_name="q" search_value=busca collapsed=True active_filters_count=active_filters_count clear_url=request.path %}
 
-    .pill {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 99px;
-        font-size: .7rem;
-        font-weight: 600;
-    }
-    .badge-status-aberto { background: #dbeafe; color: #1e40af; }
-    .badge-status-em_andamento { background: #fef3c7; color: #92400e; }
-    .badge-status-aguardando_cliente { background: #ffedd5; color: #9a3412; }
-    .badge-status-resolvido { background: #dcfce7; color: #166534; }
-    .badge-status-fechado { background: #f1f5f9; color: #475569; }
-
-    .badge-prio-baixa { background: #f1f5f9; color: #475569; }
-    .badge-prio-normal { background: #dbeafe; color: #1e40af; }
-    .badge-prio-alta { background: #ffedd5; color: #9a3412; }
-    .badge-prio-urgente { background: #fee2e2; color: #991b1b; }
-
-    .sla-ok { color: #16a34a; }
-    .sla-breach { color: #dc2626; font-weight: 700; }
-
-    .results-info {
-        font-size: .75rem;
-        color: var(--text-muted);
-        padding: 12px 16px;
-        border-bottom: 1px solid var(--border);
-    }
-
-    @media (max-width: 768px) {
-        .filter-bar { flex-direction: column; }
-        .filter-bar input[type="text"] { min-width: 100%; }
-    }
-</style>
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="card-header" style="justify-content: space-between;">
+    <span style="font-size: var(--fs-xs); color: var(--color-text-muted);">{{ total|default:tickets|length }} ticket{{ total|default:tickets|length|pluralize }} encontrado{{ total|default:tickets|length|pluralize }}</span>
+    <div id="bulkBar" style="display: none; gap: var(--sp-2); align-items: center;">
+      <span id="bulkCount" style="font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--color-primary);"></span>
+      <select id="bulkAcao" class="field-input" style="height: 32px; padding: 4px 10px; font-size: var(--fs-xs); width: auto;">
+        <option value="">Acao...</option>
+        <option value="status:resolvido">Marcar resolvido</option>
+        <option value="status:fechado">Marcar fechado</option>
+        <option value="status:em_andamento">Marcar em andamento</option>
+        <option value="prioridade:alta">Prioridade alta</option>
+        <option value="prioridade:urgente">Prioridade urgente</option>
+      </select>
+      <button onclick="executarAcaoMassa()" class="btn btn-primary btn-sm"><i class="bi bi-check-lg"></i> Aplicar</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 30px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>
+          <th>#</th>
+          <th>Titulo</th>
+          <th>Status</th>
+          <th>Prioridade</th>
+          <th>Categoria</th>
+          <th>Solicitante</th>
+          <th>Atendente</th>
+          <th>Data</th>
+          <th>SLA</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ticket in tickets %}
+          <tr>
+            <td><input type="checkbox" class="ticket-check" value="{{ ticket.pk }}" onchange="updateBulkBar()"></td>
+            <td style="font-weight: var(--fw-bold); color: var(--color-text-muted);">{{ ticket.numero }}</td>
+            <td><a href="{% url 'suporte:ticket_detalhe' pk=ticket.pk %}" style="color: var(--color-primary); font-weight: var(--fw-semibold); text-decoration: none;">{{ ticket.titulo }}</a></td>
+            <td><span class="ticket-pill status-{{ ticket.status }}">{{ ticket.get_status_display }}</span></td>
+            <td><span class="ticket-pill prio-{{ ticket.prioridade }}">{{ ticket.get_prioridade_display }}</span></td>
+            <td style="color: var(--color-text-muted);">{{ ticket.categoria.nome|default:"—" }}</td>
+            <td style="color: var(--color-text);">{% if ticket.solicitante %}{{ ticket.solicitante.get_full_name|default:ticket.solicitante.username }}{% else %}—{% endif %}</td>
+            <td style="color: var(--color-text);">{% if ticket.atendente %}{{ ticket.atendente.get_full_name|default:ticket.atendente.username }}{% else %}—{% endif %}</td>
+            <td style="color: var(--color-text-muted); font-size: var(--fs-xs);">{{ ticket.data_abertura|date:"d/m/Y H:i" }}</td>
+            <td>
+              {% if ticket.sla_horas %}
+                {% if ticket.sla_cumprido %}
+                  <span style="color: var(--color-success); font-weight: var(--fw-semibold);"><i class="bi bi-check-circle"></i> OK</span>
+                {% else %}
+                  <span style="color: var(--color-danger); font-weight: var(--fw-bold);"><i class="bi bi-exclamation-circle"></i> Estourado</span>
+                {% endif %}
+              {% else %}
+                <span style="color: var(--color-text-muted);">—</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="10" style="text-align: center; padding: var(--sp-10); color: var(--color-text-muted);">
+              <i class="bi bi-inbox" style="font-size: 2rem; margin-bottom: var(--sp-2); display: block; opacity: 0.3;"></i>
+              Nenhum ticket encontrado.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}
 
-{% block content %}
-<div class="suporte-header">
-    <h1><i class="fas fa-list" style="color:var(--primary);margin-right:8px;"></i> Tickets</h1>
-    <a href="{% url 'suporte:ticket_criar' %}" class="btn-primary" style="text-decoration:none;">
-        <i class="fas fa-plus"></i> Novo Ticket
-    </a>
-</div>
-
-<!-- Filtros -->
-<form method="get" class="filter-bar">
-    <select name="status">
-        <option value="">Todos os status</option>
-        <option value="aberto" {% if filtro_status == 'aberto' %}selected{% endif %}>Aberto</option>
-        <option value="em_andamento" {% if filtro_status == 'em_andamento' %}selected{% endif %}>Em Andamento</option>
-        <option value="aguardando_cliente" {% if filtro_status == 'aguardando_cliente' %}selected{% endif %}>Aguardando Cliente</option>
-        <option value="resolvido" {% if filtro_status == 'resolvido' %}selected{% endif %}>Resolvido</option>
-        <option value="fechado" {% if filtro_status == 'fechado' %}selected{% endif %}>Fechado</option>
-    </select>
-    <select name="prioridade">
-        <option value="">Todas as prioridades</option>
-        <option value="baixa" {% if filtro_prioridade == 'baixa' %}selected{% endif %}>Baixa</option>
-        <option value="normal" {% if filtro_prioridade == 'normal' %}selected{% endif %}>Normal</option>
-        <option value="alta" {% if filtro_prioridade == 'alta' %}selected{% endif %}>Alta</option>
-        <option value="urgente" {% if filtro_prioridade == 'urgente' %}selected{% endif %}>Urgente</option>
-    </select>
-    <select name="categoria">
-        <option value="">Todas as categorias</option>
-        {% for cat in categorias %}
-        <option value="{{ cat.pk }}" {% if filtro_categoria == cat.pk|stringformat:"d" %}selected{% endif %}>{{ cat.nome }}</option>
-        {% endfor %}
-    </select>
-    <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por titulo, descricao ou numero...">
-    <button type="submit" class="filter-btn"><i class="fas fa-search"></i> Filtrar</button>
-    {% if filtro_status or filtro_prioridade or filtro_categoria or busca %}
-    <a href="{% url 'suporte:ticket_lista' %}" class="filter-clear"><i class="fas fa-times"></i> Limpar</a>
-    {% endif %}
-</form>
-
-<!-- Tabela -->
-<div class="suporte-section">
-    <div class="results-info" style="display:flex;align-items:center;justify-content:space-between;">
-        <span>{{ total|default:tickets|length }} ticket{{ total|default:tickets|length|pluralize }} encontrado{{ total|default:tickets|length|pluralize }}</span>
-        <div id="bulkBar" style="display:none;gap:8px;align-items:center;">
-            <span id="bulkCount" style="font-size:12px;font-weight:600;color:var(--primary);"></span>
-            <select id="bulkAcao" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
-                <option value="">Acao...</option>
-                <option value="status:resolvido">Marcar Resolvido</option>
-                <option value="status:fechado">Marcar Fechado</option>
-                <option value="status:em_andamento">Marcar Em Andamento</option>
-                <option value="prioridade:alta">Prioridade Alta</option>
-                <option value="prioridade:urgente">Prioridade Urgente</option>
-            </select>
-            <button onclick="executarAcaoMassa()" class="btn-primary" style="padding:4px 12px;font-size:12px;"><i class="fas fa-check"></i> Aplicar</button>
-        </div>
-    </div>
-    <table class="suporte-table">
-        <thead>
-            <tr>
-                <th style="width:30px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>
-                <th>#</th>
-                <th>Titulo</th>
-                <th>Status</th>
-                <th>Prioridade</th>
-                <th>Categoria</th>
-                <th>Solicitante</th>
-                <th>Atendente</th>
-                <th>Data</th>
-                <th>SLA</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for ticket in tickets %}
-            <tr>
-                <td><input type="checkbox" class="ticket-check" value="{{ ticket.pk }}" onchange="updateBulkBar()"></td>
-                <td style="font-weight:700;color:var(--text-muted);">{{ ticket.numero }}</td>
-                <td>
-                    <a href="{% url 'suporte:ticket_detalhe' pk=ticket.pk %}">{{ ticket.titulo }}</a>
-                </td>
-                <td><span class="pill badge-status-{{ ticket.status }}">{{ ticket.get_status_display }}</span></td>
-                <td><span class="pill badge-prio-{{ ticket.prioridade }}">{{ ticket.get_prioridade_display }}</span></td>
-                <td style="color:var(--text-muted);">{{ ticket.categoria.nome|default:"—" }}</td>
-                <td style="color:var(--text-secondary);">{% if ticket.solicitante %}{{ ticket.solicitante.get_full_name|default:ticket.solicitante.username }}{% else %}—{% endif %}</td>
-                <td style="color:var(--text-secondary);">{% if ticket.atendente %}{{ ticket.atendente.get_full_name|default:ticket.atendente.username }}{% else %}—{% endif %}</td>
-                <td style="color:var(--text-muted);font-size:.75rem;">{{ ticket.data_abertura|date:"d/m/Y H:i" }}</td>
-                <td>
-                    {% if ticket.sla_horas %}
-                        {% if ticket.sla_cumprido %}
-                            <span class="sla-ok"><i class="fas fa-check-circle"></i> OK</span>
-                        {% else %}
-                            <span class="sla-breach"><i class="fas fa-exclamation-circle"></i> Estourado</span>
-                        {% endif %}
-                    {% else %}
-                        <span style="color:var(--text-light);">—</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted);">
-                    <i class="fas fa-inbox" style="font-size:2rem;margin-bottom:8px;display:block;opacity:.4;"></i>
-                    Nenhum ticket encontrado.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
+{% block extra_css %}
+<style>
+  .table-wrap { overflow-x: auto; }
+  .ticket-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: var(--fw-semibold);
+  }
+  .status-aberto { background: var(--color-info-soft); color: var(--color-info); }
+  .status-em_andamento { background: var(--color-warning-soft); color: var(--color-warning); }
+  .status-aguardando_cliente { background: var(--color-warning-soft); color: var(--color-warning); }
+  .status-resolvido { background: var(--color-success-soft); color: var(--color-success); }
+  .status-fechado { background: var(--color-surface); color: var(--color-text-muted); }
+  .prio-baixa { background: var(--color-surface); color: var(--color-text-muted); }
+  .prio-normal { background: var(--color-info-soft); color: var(--color-info); }
+  .prio-alta { background: var(--color-warning-soft); color: var(--color-warning); }
+  .prio-urgente { background: var(--color-danger-soft); color: var(--color-danger); }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 function toggleSelectAll(el) {
-    document.querySelectorAll('.ticket-check').forEach(cb => cb.checked = el.checked);
-    updateBulkBar();
+  document.querySelectorAll('.ticket-check').forEach(cb => cb.checked = el.checked);
+  updateBulkBar();
 }
+
 function updateBulkBar() {
-    const checked = document.querySelectorAll('.ticket-check:checked');
-    const bar = document.getElementById('bulkBar');
-    if (checked.length > 0) {
-        bar.style.display = 'flex';
-        document.getElementById('bulkCount').textContent = checked.length + ' selecionado' + (checked.length > 1 ? 's' : '');
-    } else {
-        bar.style.display = 'none';
-    }
+  const checked = document.querySelectorAll('.ticket-check:checked');
+  const bar = document.getElementById('bulkBar');
+  if (checked.length > 0) {
+    bar.style.display = 'flex';
+    document.getElementById('bulkCount').textContent = checked.length + ' selecionado' + (checked.length > 1 ? 's' : '');
+  } else {
+    bar.style.display = 'none';
+  }
 }
+
 function executarAcaoMassa() {
-    const checked = document.querySelectorAll('.ticket-check:checked');
-    const ids = Array.from(checked).map(cb => parseInt(cb.value));
-    const acaoVal = document.getElementById('bulkAcao').value;
-    if (!acaoVal || !ids.length) return;
+  const checked = document.querySelectorAll('.ticket-check:checked');
+  const ids = Array.from(checked).map(cb => parseInt(cb.value));
+  const acaoVal = document.getElementById('bulkAcao').value;
+  if (!acaoVal || !ids.length) return;
 
-    const [acao, valor] = acaoVal.split(':');
-    if (!confirm('Aplicar "' + acaoVal + '" em ' + ids.length + ' ticket(s)?')) return;
+  const [acao, valor] = acaoVal.split(':');
+  if (!confirm('Aplicar "' + acaoVal + '" em ' + ids.length + ' ticket(s)?')) return;
 
-    fetch('{% url "suporte:api_acoes_massa" %}', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
-        body: JSON.stringify({tickets: ids, acao: acao, valor: valor})
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (d.ok) location.reload();
-        else alert(d.error || 'Erro');
-    });
+  fetch('{% url "suporte:api_acoes_massa" %}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+    body: JSON.stringify({ tickets: ids, acao: acao, valor: valor }),
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      toast('Aplicado', 'Acao executada em ' + ids.length + ' ticket(s)', 'success');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      toast('Erro', d.error || 'Erro', 'danger');
+    }
+  });
 }
 </script>
 {% endblock %}

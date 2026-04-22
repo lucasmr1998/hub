@@ -1,79 +1,87 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Landing Page{% endblock %}
+{% block title %}Landing page — Clube{% endblock %}
 
 {% block content %}
-<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; background:var(--bg-white); border:1px solid var(--border); border-radius:12px; padding:14px 20px; margin-bottom:20px;">
-    <h1 class="page-title" style="margin:0;"><i class="fas fa-file-alt" style="color:var(--primary);margin-right:8px;"></i> Landing Page</h1>
-    <a href="{% url 'clube:landing_clube' %}" target="_blank" class="btn-secondary" style="text-decoration:none;">
-        <i class="fas fa-external-link-alt"></i> Ver Pagina
-    </a>
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Landing page</h1>
+      <p class="page-subtitle">Textos, visual e comportamento da landing publica do clube.</p>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'clube:landing_clube' %}" target="_blank" class="btn btn-secondary btn-sm"><i class="bi bi-box-arrow-up-right"></i> Ver pagina</a>
+    </div>
+  </div>
 </div>
 
 <form method="post" enctype="multipart/form-data">
-{% csrf_token %}
-
-<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-    <!-- Textos -->
+  {% csrf_token %}
+  <div class="lc-grid">
     <div class="card">
-        <div class="card-title">Textos</div>
-
-        <div class="form-group">
-            <label class="form-label">T&iacute;tulo</label>
-            <input type="text" name="titulo" value="{{ config.titulo }}" class="form-control">
+      <div class="card-header">
+        <h3 class="card-title"><i class="bi bi-fonts" style="color: var(--color-primary);"></i> Textos</h3>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label class="field-label">Titulo</label>
+          <div class="field-input-wrap"><input type="text" name="titulo" value="{{ config.titulo }}" class="field-input"></div>
         </div>
-
-        <div class="form-group">
-            <label class="form-label">Subt&iacute;tulo</label>
-            <input type="text" name="subtitulo" value="{{ config.subtitulo }}" class="form-control">
+        <div class="field" style="margin-top: var(--sp-3);">
+          <label class="field-label">Subtitulo</label>
+          <div class="field-input-wrap"><input type="text" name="subtitulo" value="{{ config.subtitulo }}" class="field-input"></div>
         </div>
-
-        <div class="form-group">
-            <label class="form-label">WhatsApp (n&uacute;mero com DDD)</label>
-            <input type="text" name="whatsapp_numero" value="{{ config.whatsapp_numero }}" placeholder="5586999999999" class="form-control">
+        <div class="field" style="margin-top: var(--sp-3);">
+          <label class="field-label">WhatsApp (numero com DDD)</label>
+          <div class="field-input-wrap"><input type="text" name="whatsapp_numero" value="{{ config.whatsapp_numero }}" placeholder="5586999999999" class="field-input"></div>
         </div>
-
-        <div class="form-group">
-            <label class="form-label">Mensagem WhatsApp</label>
-            <input type="text" name="whatsapp_mensagem" value="{{ config.whatsapp_mensagem }}" class="form-control">
+        <div class="field" style="margin-top: var(--sp-3);">
+          <label class="field-label">Mensagem WhatsApp</label>
+          <div class="field-input-wrap"><input type="text" name="whatsapp_mensagem" value="{{ config.whatsapp_mensagem }}" class="field-input"></div>
         </div>
-
-        <div class="form-group">
-            <label class="form-label">Texto Rodap&eacute;</label>
-            <input type="text" name="texto_rodape" value="{{ config.texto_rodape }}" class="form-control">
+        <div class="field" style="margin-top: var(--sp-3);">
+          <label class="field-label">Texto rodape</label>
+          <div class="field-input-wrap"><input type="text" name="texto_rodape" value="{{ config.texto_rodape }}" class="field-input"></div>
         </div>
+      </div>
     </div>
 
-    <!-- Visual -->
     <div class="card">
-        <div class="card-title">Visual</div>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
-            <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">Cor Prim&aacute;ria</label>
-                <input type="color" name="cor_primaria" value="{{ config.cor_primaria }}" class="form-control" style="height:38px; cursor:pointer;">
-            </div>
-            <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">Cor Secund&aacute;ria</label>
-                <input type="color" name="cor_secundaria" value="{{ config.cor_secundaria }}" class="form-control" style="height:38px; cursor:pointer;">
-            </div>
+      <div class="card-header">
+        <h3 class="card-title"><i class="bi bi-palette" style="color: var(--color-primary);"></i> Visual</h3>
+      </div>
+      <div class="card-body">
+        <div class="form-row-2">
+          <div class="field">
+            <label class="field-label">Cor primaria</label>
+            <div class="field-input-wrap"><input type="color" name="cor_primaria" value="{{ config.cor_primaria }}" class="field-input" style="height: 38px; cursor: pointer;"></div>
+          </div>
+          <div class="field">
+            <label class="field-label">Cor secundaria</label>
+            <div class="field-input-wrap"><input type="color" name="cor_secundaria" value="{{ config.cor_secundaria }}" class="field-input" style="height: 38px; cursor: pointer;"></div>
+          </div>
         </div>
-
-        <div class="form-group">
-            <label class="form-label">Logo</label>
-            {% if config.logo %}<div style="margin-bottom:8px;"><img src="{{ config.logo.url }}" style="max-height:60px; border-radius:8px;"></div>{% endif %}
-            <input type="file" name="logo" accept="image/*" class="form-control">
+        <div class="field" style="margin-top: var(--sp-3);">
+          <label class="field-label">Logo</label>
+          {% if config.logo %}<div style="margin-bottom: var(--sp-2);"><img src="{{ config.logo.url }}" alt="Logo" style="max-height: 60px; border-radius: var(--radius);"></div>{% endif %}
+          <div class="field-input-wrap"><input type="file" name="logo" accept="image/*" class="field-input" style="padding: 6px;"></div>
         </div>
-
-        <div class="form-group">
-            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                <input type="checkbox" name="ativo" {% if config.ativo %}checked{% endif %} style="width:18px; height:18px;">
-                <span style="font-size:14px; font-weight:600;">P&aacute;gina ativa</span>
-            </label>
-        </div>
-
-        <button type="submit" class="btn-primary w-full"><i class="fas fa-save"></i> Salvar</button>
+        <label class="chk-inline" style="margin-top: var(--sp-3);">
+          <input type="checkbox" name="ativo" {% if config.ativo %}checked{% endif %}> Pagina ativa
+        </label>
+        <button type="submit" class="btn btn-primary btn-sm" style="width: 100%; margin-top: var(--sp-4);"><i class="bi bi-check-lg"></i> Salvar</button>
+      </div>
     </div>
-</div>
+  </div>
 </form>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .lc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+  @media (max-width: 900px) { .lc-grid { grid-template-columns: 1fr; } }
+  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+  .chk-inline { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); cursor: pointer; color: var(--color-text); }
+  .chk-inline input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--color-primary); }
+</style>
 {% endblock %}

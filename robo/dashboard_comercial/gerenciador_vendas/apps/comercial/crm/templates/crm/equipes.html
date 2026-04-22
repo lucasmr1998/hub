@@ -1,141 +1,256 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
+
+{% block title %}Equipes de vendas — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Equipes de vendas</h1>
+      <p class="page-subtitle">Organize vendedores em times, defina lideres e cargos.</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary btn-sm" onclick="abrirModalEquipe()"><i class="bi bi-plus-lg"></i> Nova equipe</button>
+    </div>
+  </div>
+</div>
+
+{# Modal nova equipe #}
+<div class="modal-overlay" id="modal-equipe" style="display: none;">
+  <div class="modal-content" style="max-width: 440px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-plus-circle" style="color: var(--color-primary);"></i> Nova equipe</h3>
+      <button class="modal-close" onclick="fecharModalEquipe()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="criar_equipe">
+      <div class="modal-body">
+        <div class="field">
+          <label class="field-label" for="eq-nome">Nome da equipe</label>
+          <div class="field-input-wrap"><input id="eq-nome" type="text" name="nome" class="field-input" required placeholder="Ex: Equipe Nordeste"></div>
+        </div>
+        <div class="field" style="margin-top: var(--sp-3);">
+          <label class="field-label" for="eq-desc">Descricao (opcional)</label>
+          <div class="field-input-wrap"><input id="eq-desc" type="text" name="descricao" class="field-input" placeholder="Contexto da equipe"></div>
+        </div>
+        <div class="field" style="margin-top: var(--sp-3); max-width: 140px;">
+          <label class="field-label" for="eq-cor">Cor</label>
+          <div class="field-input-wrap"><input id="eq-cor" type="color" name="cor_hex" class="field-input" value="#2563eb" style="height: 38px; padding: 2px; cursor: pointer;"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalEquipe()">Cancelar</button>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg"></i> Criar equipe</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Lista de equipes #}
+{% if equipes %}
+  <div class="equipe-grid">
+    {% for equipe in equipes %}
+      <div class="equipe-card">
+        <div class="equipe-header">
+          <div class="equipe-cor" style="background: {{ equipe.cor_hex }};"></div>
+          <div class="equipe-nome">{{ equipe.nome }}</div>
+          <form method="post" style="display: inline;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="excluir_equipe">
+            <input type="hidden" name="equipe_id" value="{{ equipe.pk }}">
+            <button type="submit" class="btn btn-ghost btn-sm btn-ghost-danger" onclick="return confirm('Excluir equipe {{ equipe.nome|escapejs }}?')" title="Excluir">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+        </div>
+        <div class="equipe-body">
+          {% if equipe.descricao %}<p class="equipe-desc">{{ equipe.descricao }}</p>{% endif %}
+
+          {% if equipe.lider %}
+            <div class="equipe-lider">
+              <i class="bi bi-star-fill" style="color: var(--color-warning);"></i>
+              Lider: <strong>{{ equipe.lider.get_full_name|default:equipe.lider.username }}</strong>
+            </div>
+          {% endif %}
+
+          <div class="equipe-section-title">Membros ({{ equipe.membros.count }})</div>
+
+          {% for membro in equipe.membros.all %}
+            <div class="membro-row">
+              <div class="membro-avatar" style="background: {{ equipe.cor_hex }};">
+                {{ membro.user.first_name|first|default:membro.user.username|first|upper }}
+              </div>
+              <div class="membro-info">
+                <div class="membro-nome">{{ membro.user.get_full_name|default:membro.user.username }}</div>
+                <div class="membro-cargo">{{ membro.get_cargo_display }}</div>
+              </div>
+              <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="remover_membro">
+                <input type="hidden" name="membro_id" value="{{ membro.pk }}">
+                <button type="submit" class="btn btn-ghost btn-sm" title="Remover">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </form>
+            </div>
+          {% empty %}
+            <p class="membro-vazio">Sem membros</p>
+          {% endfor %}
+
+          <div class="add-form">
+            <form method="post" class="add-form-grid">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="adicionar_membro">
+              <input type="hidden" name="equipe_id" value="{{ equipe.pk }}">
+              <div class="field add-form-user">
+                <label class="field-label">Usuario</label>
+                <div class="field-input-wrap">
+                  <select name="user_id" class="field-input" required>
+                    <option value="">Selecionar...</option>
+                    {% for u in usuarios %}
+                      <option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="field">
+                <label class="field-label">Cargo</label>
+                <div class="field-input-wrap">
+                  <select name="cargo" class="field-input">
+                    <option value="vendedor">Vendedor</option>
+                    <option value="supervisor">Supervisor</option>
+                    <option value="gerente">Gerente</option>
+                    <option value="diretor">Diretor</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Adicionar</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card">
+    <div class="card-body" style="text-align: center; padding: var(--sp-10);">
+      <i class="bi bi-people" style="font-size: 2.5rem; color: var(--color-text-muted); opacity: 0.3; display: block; margin-bottom: var(--sp-3);"></i>
+      <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0;">Nenhuma equipe criada ainda. Use o formulario acima pra criar a primeira.</p>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
 
 {% block extra_css %}
 <style>
-    .equipe-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:16px; margin-bottom:24px; }
-    .equipe-card { background:var(--bg-white,#fff); border:1px solid var(--border,#e2e8f0); border-radius:12px; overflow:hidden; }
-    .equipe-header { padding:16px 18px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--border,#e2e8f0); }
-    .equipe-cor { width:12px; height:12px; border-radius:4px; flex-shrink:0; }
-    .equipe-nome { font-size:15px; font-weight:700; color:var(--text-main,#1e293b); flex:1; }
-    .equipe-actions { display:flex; gap:4px; }
-    .equipe-body { padding:16px 18px; }
-    .membro-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #f1f5f9; }
-    .membro-row:last-child { border-bottom:none; }
-    .membro-avatar { width:32px; height:32px; border-radius:50%; background:var(--primary,#818cf8); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; }
-    .membro-info { flex:1; }
-    .membro-nome { font-size:13px; font-weight:600; color:var(--text-main,#1e293b); }
-    .membro-cargo { font-size:11px; color:var(--text-light,#64748b); }
-    .add-form { background:#f8fafc; border-radius:10px; padding:14px; margin-top:12px; }
+  .equipe-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: var(--sp-4);
+  }
+  .equipe-card {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .equipe-header {
+    padding: var(--sp-3) var(--sp-4);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .equipe-cor { width: 12px; height: 12px; border-radius: 4px; flex-shrink: 0; }
+  .equipe-nome {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-bold);
+    color: var(--color-text);
+    flex: 1;
+  }
+  .equipe-body { padding: var(--sp-3) var(--sp-4); }
+  .equipe-desc {
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+    margin: 0 0 var(--sp-3);
+  }
+  .equipe-lider {
+    font-size: var(--fs-xs);
+    color: var(--color-text);
+    margin-bottom: var(--sp-2);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .equipe-section-title {
+    font-size: 11px;
+    font-weight: var(--fw-bold);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--sp-2);
+    margin-top: var(--sp-2);
+  }
+
+  .membro-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .membro-row:last-of-type { border-bottom: none; }
+  .membro-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
+    flex-shrink: 0;
+  }
+  .membro-info { flex: 1; min-width: 0; }
+  .membro-nome { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--color-text); }
+  .membro-cargo { font-size: 11px; color: var(--color-text-muted); }
+  .membro-vazio {
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+    text-align: center;
+    padding: var(--sp-3) 0;
+    margin: 0;
+  }
+
+  .add-form {
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    padding: var(--sp-3);
+    margin-top: var(--sp-3);
+  }
+  .add-form-grid {
+    display: flex;
+    gap: var(--sp-2);
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+  .add-form-user { flex: 1; min-width: 140px; }
 </style>
 {% endblock %}
 
-{% block content %}
-<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; background:var(--bg-white); border:1px solid var(--border); border-radius:12px; padding:14px 20px; margin-bottom:20px;">
-    <h1 class="page-title" style="margin:0;"><i class="fas fa-users" style="color:var(--primary);margin-right:8px;"></i> Equipes de Vendas</h1>
-</div>
-
-<!-- Criar equipe -->
-<div class="card" style="padding:16px; margin-bottom:24px;">
-    <form method="post" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="criar_equipe">
-        <div>
-            <label style="display:block; font-size:11px; font-weight:600; color:var(--text-light,#64748b); margin-bottom:4px;">Nome da equipe</label>
-            <input type="text" name="nome" required placeholder="Ex: Equipe Nordeste" style="padding:8px 12px; border:1px solid var(--border,#e2e8f0); border-radius:8px; font-size:13px; width:220px;">
-        </div>
-        <div>
-            <label style="display:block; font-size:11px; font-weight:600; color:var(--text-light,#64748b); margin-bottom:4px;">Descricao</label>
-            <input type="text" name="descricao" placeholder="Opcional" style="padding:8px 12px; border:1px solid var(--border,#e2e8f0); border-radius:8px; font-size:13px; width:200px;">
-        </div>
-        <div>
-            <label style="display:block; font-size:11px; font-weight:600; color:var(--text-light,#64748b); margin-bottom:4px;">Cor</label>
-            <input type="color" name="cor_hex" value="#667eea" style="width:40px; height:36px; border:1px solid var(--border,#e2e8f0); border-radius:8px; padding:2px; cursor:pointer;">
-        </div>
-        <button type="submit" class="btn-primary" style="padding:8px 16px; font-size:13px;"><i class="fas fa-plus"></i> Criar Equipe</button>
-    </form>
-</div>
-
-<!-- Equipes -->
-<div class="equipe-grid">
-    {% for equipe in equipes %}
-    <div class="equipe-card">
-        <div class="equipe-header">
-            <div class="equipe-cor" style="background:{{ equipe.cor_hex }};"></div>
-            <div class="equipe-nome">{{ equipe.nome }}</div>
-            <div class="equipe-actions">
-                <form method="post" style="display:inline;">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="excluir_equipe">
-                    <input type="hidden" name="equipe_id" value="{{ equipe.pk }}">
-                    <button type="submit" onclick="return confirm('Excluir equipe {{ equipe.nome }}?')" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:13px;" title="Excluir">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </form>
-            </div>
-        </div>
-        <div class="equipe-body">
-            {% if equipe.descricao %}
-            <p style="font-size:12px; color:var(--text-light,#64748b); margin-bottom:12px;">{{ equipe.descricao }}</p>
-            {% endif %}
-
-            {% if equipe.lider %}
-            <div style="font-size:11px; color:var(--text-light,#64748b); margin-bottom:8px;">
-                <i class="fas fa-crown" style="color:#f59e0b;"></i> Lider: <strong>{{ equipe.lider.get_full_name|default:equipe.lider.username }}</strong>
-            </div>
-            {% endif %}
-
-            <div style="font-size:11px; font-weight:700; color:var(--text-light,#64748b); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px;">
-                Membros ({{ equipe.membros.count }})
-            </div>
-
-            {% for membro in equipe.membros.all %}
-            <div class="membro-row">
-                <div class="membro-avatar" style="background:{{ equipe.cor_hex }};">
-                    {{ membro.user.first_name|first|default:membro.user.username|first|upper }}
-                </div>
-                <div class="membro-info">
-                    <div class="membro-nome">{{ membro.user.get_full_name|default:membro.user.username }}</div>
-                    <div class="membro-cargo">{{ membro.get_cargo_display }}</div>
-                </div>
-                <form method="post" style="display:inline;">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="remover_membro">
-                    <input type="hidden" name="membro_id" value="{{ membro.pk }}">
-                    <button type="submit" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:12px;" title="Remover">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </form>
-            </div>
-            {% empty %}
-            <p style="font-size:12px; color:#94a3b8; text-align:center; padding:12px 0;">Sem membros</p>
-            {% endfor %}
-
-            <!-- Adicionar membro -->
-            <div class="add-form">
-                <form method="post" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="adicionar_membro">
-                    <input type="hidden" name="equipe_id" value="{{ equipe.pk }}">
-                    <div style="flex:1; min-width:140px;">
-                        <label style="display:block; font-size:10px; font-weight:600; color:var(--text-light,#64748b); margin-bottom:3px;">Usuario</label>
-                        <select name="user_id" required style="width:100%; padding:6px 10px; border:1px solid var(--border,#e2e8f0); border-radius:6px; font-size:12px;">
-                            <option value="">Selecionar...</option>
-                            {% for u in usuarios %}
-                            <option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div>
-                        <label style="display:block; font-size:10px; font-weight:600; color:var(--text-light,#64748b); margin-bottom:3px;">Cargo</label>
-                        <select name="cargo" style="padding:6px 10px; border:1px solid var(--border,#e2e8f0); border-radius:6px; font-size:12px;">
-                            <option value="vendedor">Vendedor</option>
-                            <option value="supervisor">Supervisor</option>
-                            <option value="gerente">Gerente</option>
-                            <option value="diretor">Diretor</option>
-                        </select>
-                    </div>
-                    <button type="submit" style="background:var(--primary,#818cf8); color:#fff; border:none; border-radius:6px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer;">
-                        <i class="fas fa-plus"></i> Adicionar
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-    {% empty %}
-    <div style="grid-column:1/-1; text-align:center; padding:48px; color:#94a3b8;">
-        <i class="fas fa-users" style="font-size:36px; margin-bottom:12px; display:block;"></i>
-        <p style="font-size:14px;">Nenhuma equipe criada ainda.</p>
-    </div>
-    {% endfor %}
-</div>
+{% block extra_js %}
+<script>
+  function abrirModalEquipe() {
+    document.getElementById('modal-equipe').style.display = 'flex';
+    document.getElementById('eq-nome').focus();
+  }
+  function fecharModalEquipe() {
+    document.getElementById('modal-equipe').style.display = 'none';
+  }
+  document.getElementById('modal-equipe')?.addEventListener('click', function(e) {
+    if (e.target === this) fecharModalEquipe();
+  });
+</script>
 {% endblock %}

@@ -1,192 +1,320 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Leads - Megalink{% endblock %}
-
-{% block custom_css %}
-<style>
-    .leads-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
-    .leads-header h1 { font-size:22px; font-weight:700; color:var(--text-main); margin:0; }
-    .leads-actions { display:flex; gap:8px; }
-
-
-    .leads-stats { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:20px; }
-    .leads-stat { background:var(--bg-white); border:1px solid var(--border); border-radius:10px; padding:16px; display:flex; align-items:center; gap:12px; }
-    .leads-stat .icon { width:40px; height:40px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#fff; flex-shrink:0; font-size:14px; }
-    .leads-stat-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:2px; }
-    .leads-stat-value { font-size:24px; font-weight:700; color:var(--text-main); }
-
-    .leads-table-wrap { background:var(--bg-white); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
-    .leads-table-header { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid var(--border); }
-    .leads-table-title { font-size:15px; font-weight:600; color:var(--text-main); display:flex; align-items:center; gap:8px; }
-    .leads-count { font-size:12px; font-weight:600; padding:3px 10px; border-radius:6px; background:var(--primary-light); color:var(--primary-dark); }
-
-    .table-scroll { overflow-x:auto; }
-    table.leads-table { width:100%; border-collapse:collapse; min-width:800px; table-layout:fixed; }
-    table.leads-table thead th { padding:10px 14px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted); text-align:left; border-bottom:1px solid var(--border); background:var(--border-light); white-space:nowrap; }
-    table.leads-table tbody td { padding:12px 14px; font-size:13px; color:var(--text-secondary); border-bottom:1px solid var(--border-light); max-width:0; overflow:hidden; text-overflow:ellipsis; }
-    table.leads-table tbody tr:hover { background:var(--border-light); }
-    table.leads-table tbody tr:hover .row-action { background:var(--bg-white); color:var(--text-secondary); }
-    table.leads-table tbody tr:last-child td { border-bottom:none; }
-
-    /* Status badges agora usam .badge-success/.badge-warning/etc do design system via JS statusBadge() */
-
-    /* Pagination e filter-card no dashboard.css global */
-
-    .empty-state { padding:60px 20px; text-align:center; color:var(--text-light); }
-    .empty-state i { font-size:40px; margin-bottom:12px; display:block; color:var(--border); }
-
-    .row-actions { display:flex; gap:4px; }
-    .row-action { width:30px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:6px; border:none; background:var(--border-light); color:var(--text-muted); cursor:pointer; font-size:12px; transition:all 0.15s; }
-    .row-action:hover { background:var(--primary-light); color:var(--primary); }
-
-    @media (max-width:768px) {
-        .leads-stats { grid-template-columns:repeat(2,1fr); }
-        .filter-row { grid-template-columns:1fr; }
-        .leads-header { flex-direction:column; align-items:flex-start; }
-    }
-</style>
-{% endblock %}
+{% block title %}Leads — Hubtrix{% endblock %}
 
 {% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Leads</h1>
+      <p class="page-subtitle">Captura e acompanhamento dos leads de todas as origens.</p>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'comercial_leads:importar_csv' %}" class="btn btn-secondary btn-sm"><i class="bi bi-file-earmark-arrow-up"></i> Importar CSV</a>
+      <button class="btn btn-secondary btn-sm" onclick="toast('Info', 'Exportando...', 'info')"><i class="bi bi-download"></i> Exportar</button>
+      <button class="btn btn-primary btn-sm" onclick="toast('Info', 'Em desenvolvimento', 'info')"><i class="bi bi-plus-lg"></i> Novo lead</button>
+    </div>
+  </div>
+</div>
 
-<div class="filter-card">
-    <button class="filter-toggle" id="filterToggle" onclick="document.getElementById('filterBody').classList.toggle('open');this.classList.toggle('open');">
-        <i class="fas fa-filter"></i> Filtros
-        <i class="fas fa-chevron-right chevron"></i>
-        <span id="filterCount" class="badge badge-primary" style="display:none;margin-left:6px;">0</span>
-    </button>
-    <div class="filter-body" id="filterBody">
-        <div class="filter-row">
-            <div class="form-group"><label class="form-label">Buscar</label><input type="text" class="form-control" id="filterSearch" placeholder="Nome, email, telefone..."></div>
-            <div class="form-group"><label class="form-label">Status</label>
-                <select class="form-control" id="filterStatus"><option value="">Todos</option><option value="pendente">Pendente</option><option value="processado">Processado</option><option value="erro">Erro</option><option value="sucesso">Sucesso</option><option value="rejeitado">Rejeitado</option><option value="aguardando_retry">Aguardando Retry</option><option value="processamento_manual">Proc. Manual</option><option value="cliente">Cliente</option></select>
-            </div>
-            <div class="form-group"><label class="form-label">Origem</label>
-                <select class="form-control" id="filterOrigem"><option value="">Todas</option><option value="site">Site</option><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="google">Google Ads</option><option value="whatsapp">WhatsApp</option><option value="indicacao">Indicacao</option><option value="telefone">Telefone</option><option value="email">Email</option></select>
-            </div>
-            <div class="form-group"><label class="form-label">Ativo</label>
-                <select class="form-control" id="filterAtivo"><option value="">Todos</option><option value="true">Sim</option><option value="false">Nao</option></select>
-            </div>
-            <div class="form-group"><button class="btn-primary" onclick="applyFilters()" style="width:100%"><i class="fas fa-search"></i> Filtrar</button></div>
+{# Stats #}
+<div class="leads-stats-grid">
+  <div class="stat-card">
+    <div class="stat-card-head">
+      <span class="stat-card-label">Total de leads</span>
+      <span class="stat-card-icon stat-card-icon-primary"><i class="bi bi-people"></i></span>
+    </div>
+    <div class="stat-card-value" id="statTotal">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-head">
+      <span class="stat-card-label">Valor total</span>
+      <span class="stat-card-icon stat-card-icon-success"><i class="bi bi-currency-dollar"></i></span>
+    </div>
+    <div class="stat-card-value" id="statValor" style="font-size: var(--fs-lg);">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-head">
+      <span class="stat-card-label">Com erro</span>
+      <span class="stat-card-icon stat-card-icon-danger"><i class="bi bi-exclamation-triangle"></i></span>
+    </div>
+    <div class="stat-card-value" id="statErro">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-head">
+      <span class="stat-card-label">Hoje</span>
+      <span class="stat-card-icon stat-card-icon-warning"><i class="bi bi-calendar-event"></i></span>
+    </div>
+    <div class="stat-card-value" id="statHoje">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-head">
+      <span class="stat-card-label">Esta semana</span>
+      <span class="stat-card-icon stat-card-icon-info"><i class="bi bi-calendar-week"></i></span>
+    </div>
+    <div class="stat-card-value" id="statSemana">—</div>
+  </div>
+</div>
+
+{# Filtros #}
+<div class="card" style="margin-bottom: var(--sp-4);">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-funnel"></i> Filtros</h3>
+    <span id="filterCount" class="badge badge-primary badge-soft" style="display:none;">0 ativos</span>
+  </div>
+  <div class="card-body">
+    <div class="leads-filter-grid">
+      <div class="field">
+        <label class="field-label" for="filterSearch">Buscar</label>
+        <div class="field-input-wrap">
+          <i class="bi bi-search field-icon field-icon-left"></i>
+          <input id="filterSearch" class="field-input has-icon-left" type="text" placeholder="Nome, email, telefone...">
         </div>
-    </div>
-</div>
-
-<div class="leads-stats">
-    <div class="leads-stat">
-        <div class="icon" style="background:var(--primary)"><i class="fas fa-users"></i></div>
-        <div><div class="leads-stat-label">Total de Leads</div><div class="leads-stat-value" id="statTotal">-</div></div>
-    </div>
-    <div class="leads-stat">
-        <div class="icon" style="background:var(--success)"><i class="fas fa-dollar-sign"></i></div>
-        <div><div class="leads-stat-label">Valor Total</div><div class="leads-stat-value" id="statValor" style="font-size:18px;">-</div></div>
-    </div>
-    <div class="leads-stat">
-        <div class="icon" style="background:var(--danger)"><i class="fas fa-exclamation-triangle"></i></div>
-        <div><div class="leads-stat-label">Com Erro</div><div class="leads-stat-value" id="statErro">-</div></div>
-    </div>
-    <div class="leads-stat">
-        <div class="icon" style="background:var(--warning)"><i class="fas fa-calendar-day"></i></div>
-        <div><div class="leads-stat-label">Hoje</div><div class="leads-stat-value" id="statHoje">-</div></div>
-    </div>
-    <div class="leads-stat">
-        <div class="icon" style="background:var(--info)"><i class="fas fa-calendar-week"></i></div>
-        <div><div class="leads-stat-label">Esta Semana</div><div class="leads-stat-value" id="statSemana">-</div></div>
-    </div>
-</div>
-
-<div class="leads-table-wrap">
-    <div class="leads-table-header">
-        <div class="leads-table-title"><i class="fas fa-table"></i> Leads <span class="leads-count" id="totalCount">0</span></div>
-        <div style="display:flex;gap:8px;">
-            <button class="btn-primary btn-sm" onclick="window.showNotification('Em desenvolvimento','info')"><i class="fas fa-plus"></i> Novo Lead</button>
-            <a href="{% url 'comercial_leads:importar_csv' %}" class="btn-secondary btn-sm" style="text-decoration:none;display:flex;align-items:center;gap:4px;"><i class="fas fa-file-csv"></i> Importar CSV</a>
-            <button class="btn-secondary btn-sm" onclick="window.showNotification('Exportando...','info')"><i class="fas fa-download"></i> Exportar</button>
+      </div>
+      <div class="field">
+        <label class="field-label" for="filterStatus">Status</label>
+        <div class="field-input-wrap">
+          <select id="filterStatus" class="field-input">
+            <option value="">Todos</option>
+            <option value="pendente">Pendente</option>
+            <option value="processado">Processado</option>
+            <option value="erro">Erro</option>
+            <option value="sucesso">Sucesso</option>
+            <option value="rejeitado">Rejeitado</option>
+            <option value="aguardando_retry">Aguardando retry</option>
+            <option value="processamento_manual">Proc. manual</option>
+            <option value="cliente">Cliente</option>
+          </select>
         </div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="filterOrigem">Origem</label>
+        <div class="field-input-wrap">
+          <select id="filterOrigem" class="field-input">
+            <option value="">Todas</option>
+            <option value="site">Site</option>
+            <option value="facebook">Facebook</option>
+            <option value="instagram">Instagram</option>
+            <option value="google">Google Ads</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="indicacao">Indicacao</option>
+            <option value="telefone">Telefone</option>
+            <option value="email">Email</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="filterAtivo">Ativo</label>
+        <div class="field-input-wrap">
+          <select id="filterAtivo" class="field-input">
+            <option value="">Todos</option>
+            <option value="true">Sim</option>
+            <option value="false">Nao</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="align-self: end;">
+        <button class="btn btn-primary btn-sm" onclick="applyFilters()" style="width: 100%;"><i class="bi bi-funnel-fill"></i> Filtrar</button>
+      </div>
     </div>
-    <div class="table-scroll">
-        <table class="leads-table">
-            <thead><tr><th class="col-id">ID</th><th class="col-name">Lead</th><th class="col-contact">Contato</th><th class="col-value">Valor</th><th class="col-origin">Origem</th><th class="col-status">Status</th><th class="col-date">Data</th><th class="col-actions">Acoes</th></tr></thead>
-            <tbody id="leadsTableBody"><tr><td colspan="8" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Carregando...</td></tr></tbody>
-        </table>
-    </div>
-    <div class="pagination" id="paginationControls"></div>
+  </div>
 </div>
 
+{# Tabela de leads #}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-table"></i> Leads <span id="totalCount" class="badge badge-primary badge-soft" style="margin-left: var(--sp-2);">0</span></h3>
+  </div>
+  <div class="table-wrap" style="border: none; border-radius: 0;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Lead</th>
+          <th>Contato</th>
+          <th>Valor</th>
+          <th>Origem</th>
+          <th>Status</th>
+          <th>Data</th>
+          <th class="table-col-actions">Acoes</th>
+        </tr>
+      </thead>
+      <tbody id="leadsTableBody">
+        <tr><td colspan="8"><div class="table-empty"><i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite;"></i>Carregando...</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="table-pagination" id="paginationControls" style="display: none;"></div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .leads-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-5);
+  }
+  .leads-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--sp-3);
+    align-items: end;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .lead-row-sub {
+    display: block;
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-const API_URL = '{% url "comercial_leads:consultar_leads_api" %}';
-let currentPage = 1, perPage = 20, currentFilters = {};
+  const API_URL = '{% url "comercial_leads:consultar_leads_api" %}';
+  let currentPage = 1, perPage = 20, currentFilters = {};
 
-function fmtDate(d) { if(!d) return '-'; const dt=new Date(d); return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`; }
-function fmtDateFull(d) { if(!d) return '-'; const dt=new Date(d); return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`; }
-function statusBadge(s, display) { const map={pendente:'badge-warning',processado:'badge-success',erro:'badge-danger',sucesso:'badge-success',rejeitado:'badge-danger',aguardando_retry:'badge-warning',processamento_manual:'badge-info',cliente:'badge-success'}; return `<span class="badge ${map[s]||'badge-muted'}">${display||s}</span>`; }
-function fmtPhone(t) { if(!t) return '-'; const d=t.replace(/\D/g,''); if(d.startsWith('55')&&d.length>=12){const n=d.slice(2);return `(${n.slice(0,2)}) ${n.slice(2,n.length-4)}-${n.slice(-4)}`;} return t; }
+  function fmtDate(d) {
+    if (!d) return '—';
+    const dt = new Date(d);
+    return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+  }
+  function fmtDateFull(d) {
+    if (!d) return '—';
+    const dt = new Date(d);
+    return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+  }
+  function statusBadge(s, display) {
+    const map = {
+      pendente: 'warning', processado: 'success', erro: 'danger',
+      sucesso: 'success', rejeitado: 'danger', aguardando_retry: 'warning',
+      processamento_manual: 'info', cliente: 'success',
+    };
+    const variant = map[s] || 'neutral';
+    return `<span class="badge badge-${variant} badge-soft"><span class="badge-dot"></span>${display || s}</span>`;
+  }
+  function fmtPhone(t) {
+    if (!t) return '—';
+    const d = t.replace(/\D/g, '');
+    if (d.startsWith('55') && d.length >= 12) {
+      const n = d.slice(2);
+      return `(${n.slice(0,2)}) ${n.slice(2, n.length-4)}-${n.slice(-4)}`;
+    }
+    return t;
+  }
 
-async function loadLeads() {
+  async function loadLeads() {
     const tbody = document.getElementById('leadsTableBody');
-    tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Carregando...</td></tr>';
-    const p = new URLSearchParams({page:currentPage,per_page:perPage,ordering:'-data_cadastro'});
-    if(currentFilters.search) p.set('search',currentFilters.search);
-    if(currentFilters.status) p.set('status_api',currentFilters.status);
-    if(currentFilters.origem) p.set('origem',currentFilters.origem);
-    if(currentFilters.ativo) p.set('ativo',currentFilters.ativo);
+    tbody.innerHTML = '<tr><td colspan="8"><div class="table-empty"><i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite;"></i>Carregando...</div></td></tr>';
+    const p = new URLSearchParams({ page: currentPage, per_page: perPage, ordering: '-data_cadastro' });
+    if (currentFilters.search) p.set('search', currentFilters.search);
+    if (currentFilters.status) p.set('status_api', currentFilters.status);
+    if (currentFilters.origem) p.set('origem', currentFilters.origem);
+    if (currentFilters.ativo) p.set('ativo', currentFilters.ativo);
+
     try {
-        const data = await (await fetch(`${API_URL}?${p}`)).json();
-        if(!data.results||!data.results.length){ tbody.innerHTML='<tr><td colspan="8" class="empty-state"><i class="fas fa-inbox"></i> Nenhum lead encontrado.</td></tr>'; document.getElementById('totalCount').textContent='0'; document.getElementById('paginationControls').innerHTML=''; return; }
-        tbody.innerHTML = data.results.map(l=>`<tr>
-            <td style="color:var(--text-light);font-size:12px">#${l.id}</td>
-            <td><span class="cell-main truncate" title="${l.nome_razaosocial}">${l.nome_razaosocial}</span>${l.empresa?`<span class="cell-sub truncate">${l.empresa}</span>`:''}</td>
-            <td><span class="cell-main truncate">${fmtPhone(l.telefone)}</span>${l.email?`<span class="cell-sub truncate" title="${l.email}">${l.email}</span>`:''}</td>
-            <td style="font-weight:600;white-space:nowrap">${l.valor_formatado||'R$ 0,00'}</td>
-            <td><span class="badge badge-muted">${l.origem_display||l.origem}</span></td>
-            <td>${statusBadge(l.status_api, l.status_api_display||l.status_api)}</td>
-            <td style="font-size:12px;color:var(--text-muted);white-space:nowrap" title="${fmtDateFull(l.data_cadastro)}">${fmtDate(l.data_cadastro)}</td>
-            <td><div class="row-actions" style="justify-content:center"><a class="row-action" title="Ver detalhes" href="/leads/${l.id}/" style="text-decoration:none;"><i class="fas fa-eye"></i></a><button class="row-action whatsapp" title="WhatsApp" onclick="window.open('https://wa.me/${(l.telefone||'').replace(/\\D/g,'')}','_blank')"><i class="fab fa-whatsapp"></i></button></div></td>
-        </tr>`).join('');
-        const total=data.total, s=(data.page-1)*data.per_page+1, e=Math.min(data.page*data.per_page,total);
-        document.getElementById('totalCount').textContent=`${total} registro(s)`;
-        document.getElementById('statTotal').textContent=total;
-        renderPagination(data.page,data.pages);
-    } catch(err) { tbody.innerHTML=`<tr><td colspan="8" class="empty-state"><i class="fas fa-exclamation-triangle"></i> Erro: ${err.message}</td></tr>`; }
-}
+      const data = await (await fetch(`${API_URL}?${p}`)).json();
+      if (!data.results || !data.results.length) {
+        tbody.innerHTML = '<tr><td colspan="8"><div class="table-empty"><i class="bi bi-inbox"></i>Nenhum lead encontrado.</div></td></tr>';
+        document.getElementById('totalCount').textContent = '0';
+        document.getElementById('paginationControls').style.display = 'none';
+        return;
+      }
+      tbody.innerHTML = data.results.map(l => `
+        <tr>
+          <td style="color: var(--color-text-muted); font-size: var(--fs-xs);">#${l.id}</td>
+          <td>
+            <div style="font-weight: var(--fw-semibold);">${l.nome_razaosocial}</div>
+            ${l.empresa ? `<span class="lead-row-sub">${l.empresa}</span>` : ''}
+          </td>
+          <td>
+            <div>${fmtPhone(l.telefone)}</div>
+            ${l.email ? `<span class="lead-row-sub" title="${l.email}">${l.email}</span>` : ''}
+          </td>
+          <td style="font-weight: var(--fw-semibold); white-space: nowrap;">${l.valor_formatado || 'R$ 0,00'}</td>
+          <td><span class="badge badge-neutral badge-soft">${l.origem_display || l.origem}</span></td>
+          <td>${statusBadge(l.status_api, l.status_api_display || l.status_api)}</td>
+          <td style="font-size: var(--fs-xs); color: var(--color-text-muted); white-space: nowrap;" title="${fmtDateFull(l.data_cadastro)}">${fmtDate(l.data_cadastro)}</td>
+          <td class="table-col-actions">
+            <a class="btn btn-ghost btn-sm" title="Ver detalhes" href="/leads/${l.id}/"><i class="bi bi-eye"></i></a>
+            <button class="btn btn-ghost btn-sm" title="WhatsApp" onclick="window.open('https://wa.me/${(l.telefone || '').replace(/\\D/g,'')}','_blank')" style="color: #25D366;"><i class="bi bi-whatsapp"></i></button>
+          </td>
+        </tr>
+      `).join('');
+      const total = data.total;
+      document.getElementById('totalCount').textContent = `${total} registro(s)`;
+      document.getElementById('statTotal').textContent = total;
+      renderPagination(data.page, data.pages);
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="8"><div class="table-empty"><i class="bi bi-exclamation-triangle" style="color: var(--color-danger);"></i>Erro: ${err.message}</div></td></tr>`;
+    }
+  }
 
-async function loadStats() {
+  async function loadStats() {
     try {
-        const [errD,hD,wD]=await Promise.all([
-            fetch(`${API_URL}?status_api=erro&per_page=1`).then(r=>r.json()),
-            fetch(`${API_URL}?data_inicio=${new Date().toISOString().split('T')[0]}&per_page=1`).then(r=>r.json()),
-            fetch(`${API_URL}?data_inicio=${new Date(Date.now()-7*864e5).toISOString().split('T')[0]}&per_page=1`).then(r=>r.json()),
-        ]);
-        document.getElementById('statErro').textContent=errD.total||0;
-        document.getElementById('statHoje').textContent=hD.total||0;
-        document.getElementById('statSemana').textContent=wD.total||0;
-        document.getElementById('statValor').textContent='R$ 0,00';
-    } catch(e){}
-}
+      const [errD, hD, wD] = await Promise.all([
+        fetch(`${API_URL}?status_api=erro&per_page=1`).then(r => r.json()),
+        fetch(`${API_URL}?data_inicio=${new Date().toISOString().split('T')[0]}&per_page=1`).then(r => r.json()),
+        fetch(`${API_URL}?data_inicio=${new Date(Date.now() - 7 * 864e5).toISOString().split('T')[0]}&per_page=1`).then(r => r.json()),
+      ]);
+      document.getElementById('statErro').textContent = errD.total || 0;
+      document.getElementById('statHoje').textContent = hD.total || 0;
+      document.getElementById('statSemana').textContent = wD.total || 0;
+      document.getElementById('statValor').textContent = 'R$ 0,00';
+    } catch (e) { /* silencia */ }
+  }
 
-function renderPagination(pg,total) {
-    const div=document.getElementById('paginationControls'); div.innerHTML=''; if(total<=1)return;
-    const prev=document.createElement('button'); prev.innerHTML='&lsaquo; Anterior'; prev.disabled=pg===1;
-    prev.onclick=()=>{currentPage=pg-1;loadLeads();}; div.appendChild(prev);
-    const s=Math.max(1,pg-2),e=Math.min(total,pg+2);
-    for(let i=s;i<=e;i++){const b=document.createElement('button');b.textContent=i;if(i===pg)b.classList.add('active');b.onclick=()=>{currentPage=i;loadLeads();};div.appendChild(b);}
-    if(e<total){const last=document.createElement('button');last.textContent=total;last.onclick=()=>{currentPage=total;loadLeads();};div.appendChild(last);}
-    const next=document.createElement('button'); next.innerHTML='Proximo &rsaquo;'; next.disabled=pg>=total;
-    next.onclick=()=>{currentPage=pg+1;loadLeads();}; div.appendChild(next);
-}
+  function renderPagination(pg, total) {
+    const div = document.getElementById('paginationControls');
+    div.innerHTML = '';
+    if (total <= 1) { div.style.display = 'none'; return; }
+    div.style.display = 'flex';
 
-function applyFilters() {
-    currentFilters={search:document.getElementById('filterSearch').value.trim(),status:document.getElementById('filterStatus').value,origem:document.getElementById('filterOrigem').value,ativo:document.getElementById('filterAtivo').value};
-    const cnt=Object.values(currentFilters).filter(v=>v).length;
-    const b=document.getElementById('filterCount'); if(cnt){b.textContent=cnt;b.style.display='inline';}else{b.style.display='none';}
-    currentPage=1; loadLeads();
-}
+    const makeInfo = document.createElement('span');
+    makeInfo.textContent = `Pagina ${pg} de ${total}`;
+    div.appendChild(makeInfo);
 
-document.getElementById('filterSearch').addEventListener('keydown',e=>{if(e.key==='Enter')applyFilters();});
+    const controls = document.createElement('div');
+    controls.className = 'table-pagination-controls';
 
-document.addEventListener('DOMContentLoaded',()=>{loadLeads();loadStats();});
+    const prev = document.createElement('button');
+    prev.className = 'btn btn-ghost btn-sm';
+    prev.innerHTML = '<i class="bi bi-chevron-left"></i>';
+    prev.disabled = pg === 1;
+    prev.onclick = () => { currentPage = pg - 1; loadLeads(); };
+    controls.appendChild(prev);
+
+    const next = document.createElement('button');
+    next.className = 'btn btn-ghost btn-sm';
+    next.innerHTML = '<i class="bi bi-chevron-right"></i>';
+    next.disabled = pg >= total;
+    next.onclick = () => { currentPage = pg + 1; loadLeads(); };
+    controls.appendChild(next);
+
+    div.appendChild(controls);
+  }
+
+  function applyFilters() {
+    currentFilters = {
+      search: document.getElementById('filterSearch').value.trim(),
+      status: document.getElementById('filterStatus').value,
+      origem: document.getElementById('filterOrigem').value,
+      ativo: document.getElementById('filterAtivo').value,
+    };
+    const cnt = Object.values(currentFilters).filter(v => v).length;
+    const b = document.getElementById('filterCount');
+    if (cnt) { b.textContent = `${cnt} ativo${cnt > 1 ? 's' : ''}`; b.style.display = 'inline-flex'; }
+    else { b.style.display = 'none'; }
+    currentPage = 1;
+    loadLeads();
+  }
+
+  document.getElementById('filterSearch').addEventListener('keydown', e => { if (e.key === 'Enter') applyFilters(); });
+  document.addEventListener('DOMContentLoaded', () => { loadLeads(); loadStats(); });
 </script>
 {% endblock %}

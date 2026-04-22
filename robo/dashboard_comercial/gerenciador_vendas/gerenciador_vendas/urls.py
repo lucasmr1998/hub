@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from django.views.generic import TemplateView
+from django.views.generic import TemplateView, RedirectView
 
 
 class DesignSystemComponentsView(TemplateView):
@@ -51,6 +51,21 @@ class DesignSystemComponentsView(TemplateView):
             {'id': 'sec-3', 'title': 'Perguntas frequentes', 'icon': 'bi-question-circle',
              'body': '<p style="margin:0;">Body pode conter HTML arbitrario — listas, tabelas, botoes, etc.</p>'},
         ]
+        ctx['filter_tabs_demo'] = [
+            {'label': 'Todos', 'url': '#', 'active': True, 'count': 24},
+            {'label': 'Ativos', 'url': '#', 'count': 18},
+            {'label': 'Rascunhos', 'url': '#', 'count': 4},
+            {'label': 'Arquivados', 'url': '#', 'count': 2},
+        ]
+        ctx['filter_fields_demo'] = [
+            {'type': 'select', 'label': 'Status', 'name': 'status', 'value': 'ativo',
+             'options': [('', 'Todos'), ('ativo', 'Ativo'), ('pausado', 'Pausado'), ('arquivado', 'Arquivado')]},
+            {'type': 'select', 'label': 'Origem', 'name': 'origem', 'value': '',
+             'options': [('', 'Todas'), ('google', 'Google Ads'), ('facebook', 'Facebook'), ('organico', 'Organico')]},
+            {'type': 'select', 'label': 'Responsavel', 'name': 'resp', 'value': '',
+             'options': [('', 'Todos'), ('1', 'Lucas Rocha'), ('2', 'Maria Silva'), ('3', 'Joao Souza')]},
+            {'type': 'date', 'label': 'A partir de', 'name': 'data_inicio', 'value': ''},
+        ]
         return ctx
 
 urlpatterns = [
@@ -75,7 +90,10 @@ urlpatterns = [
 
     # === Apps com prefixo proprio ===
     path('aurora-admin/', include('apps.admin_aurora.urls')),
-    path('integracoes/',  include('apps.integracoes.urls')),
+    path('configuracoes/integracoes/', include('apps.integracoes.urls')),
+    # Redirect legado: /integracoes/* -> /configuracoes/integracoes/*
+    path('integracoes/<path:resto>', RedirectView.as_view(url='/configuracoes/integracoes/%(resto)s', permanent=False, query_string=True)),
+    path('integracoes/', RedirectView.as_view(url='/configuracoes/integracoes/', permanent=False, query_string=True)),
     path('crm/',          include('apps.comercial.crm.urls')),
     path('marketing/automacoes/', include('apps.marketing.automacoes.urls')),
     path('marketing/emails/',     include('apps.marketing.emails.urls')),

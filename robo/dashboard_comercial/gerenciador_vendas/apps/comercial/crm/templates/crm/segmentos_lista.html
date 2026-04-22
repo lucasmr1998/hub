@@ -1,168 +1,101 @@
-{% extends 'sistema/base.html' %}
-{% block extra_css %}
-<style>
-  /* Segmento cards */
-  .seg-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
-  .seg-card { background:var(--bg-white); border-radius:12px; border:1px solid var(--border); overflow:hidden; transition:box-shadow .2s; }
-  .seg-card:hover { box-shadow:0 4px 12px rgba(0,0,0,0.06); }
-  .seg-card-top { padding:18px 18px 14px; display:flex; align-items:flex-start; gap:12px; }
-  .seg-icon { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1rem; flex-shrink:0; }
-  .seg-nome { font-size:15px; font-weight:700; color:var(--text-main); margin-bottom:2px; }
-  .seg-desc { font-size:12px; color:var(--text-muted); line-height:1.4; }
-  .seg-card-stats { padding:12px 18px; background:var(--border-light); border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
-  .seg-count-num { font-size:20px; font-weight:700; color:var(--text-main); }
-  .seg-count-lbl { font-size:11px; color:var(--text-light); font-weight:600; margin-left:6px; }
-  .seg-tipo-badge { font-size:10px; font-weight:700; padding:3px 10px; border-radius:6px; text-transform:uppercase; }
-  .seg-tipo-dinamico { background:var(--primary-light); color:var(--primary-dark); }
-  .seg-tipo-manual { background:var(--success-light); color:var(--success-dark); }
-  .seg-tipo-hibrido { background:var(--warning-light); color:var(--warning-dark); }
-  .seg-card-footer { padding:10px 18px 14px; display:flex; gap:8px; align-items:center; }
-  .seg-criado { font-size:11px; color:var(--text-light); flex:1; }
+{% extends "sistema/base.html" %}
 
-  .empty-state { text-align:center; padding:64px 24px; color:var(--text-light); }
-  .empty-state i { font-size:48px; display:block; margin-bottom:16px; opacity:.3; }
-  .empty-state p { font-size:14px; margin-bottom:16px; }
-
-  .cor-row { display:flex; align-items:center; gap:10px; }
-  .cor-preview { width:36px; height:36px; border-radius:8px; flex-shrink:0; border:1px solid var(--border); }
-</style>
-{% endblock %}
+{% block title %}Segmentos — Hubtrix{% endblock %}
 
 {% block content %}
-<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; background:var(--bg-white); border:1px solid var(--border); border-radius:12px; padding:14px 20px; margin-bottom:20px;">
-  <h1 class="page-title" style="margin:0;"><i class="fas fa-layer-group" style="color:var(--primary);margin-right:8px;"></i> Segmentos</h1>
-  <a href="{% url 'marketing_segmentos:segmento_criar' %}" class="btn-primary" style="text-decoration:none;"><i class="fas fa-plus"></i> Novo Segmento</a>
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Segmentos</h1>
+      <p class="page-subtitle">Organize leads em grupos para campanhas e automacoes.</p>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'marketing_segmentos:segmento_criar' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Novo segmento</a>
+    </div>
+  </div>
 </div>
 
 {% if segmentos %}
-<div class="seg-grid">
-  {% for seg in segmentos %}
-  <div class="seg-card">
-    <div class="seg-card-top">
-      <div class="seg-icon" style="background:var(--primary)">
-        <i class="fas {{ seg.icone_fa }}"></i>
-      </div>
-      <div style="flex:1;min-width:0">
-        <div class="seg-nome">{{ seg.nome }}</div>
-        {% if seg.descricao %}
-        <div class="seg-desc">{{ seg.descricao|truncatechars:80 }}</div>
-        {% endif %}
-      </div>
+  {% include "components/list_filters.html" with tabs=status_tabs search_placeholder="Buscar segmento..." search_id="buscaSegmento" search_oninput="filtrarSegmentos()" %}
+
+  <div data-view-scope>
+    <div style="display: flex; justify-content: flex-end; margin-bottom: var(--sp-3);">
+      {% include "components/view_toggle.html" with storage_key="segmentos-view" %}
     </div>
-    <div class="seg-card-stats">
-      <div>
-        <span class="seg-count-num">{{ seg.total_leads }}</span>
-        <span class="seg-count-lbl">leads</span>
-      </div>
-      <span class="seg-tipo-badge seg-tipo-{{ seg.tipo }}">{{ seg.get_tipo_display }}</span>
-    </div>
-    <div class="seg-card-footer">
-      <span class="seg-criado">por {{ seg.criado_por.get_full_name|default:seg.criado_por.username|default:"Sistema" }}</span>
-      <a href="{% url 'crm:segmento_detalhe' seg.pk %}" class="btn-secondary btn-sm">
-        <i class="fas fa-eye"></i> Ver
-      </a>
-      <a href="{% url 'marketing_segmentos:segmento_editar' seg.pk %}" class="btn-secondary btn-sm" style="text-decoration:none;">
-        <i class="fas fa-edit"></i>
-      </a>
-    </div>
-  </div>
-  {% endfor %}
-</div>
-{% else %}
-<div class="empty-state">
-  <i class="fas fa-layer-group"></i>
-  <p>Nenhum segmento cadastrado. Crie segmentos para organizar e disparar campanhas para grupos de leads.</p>
-  <a href="{% url 'marketing_segmentos:segmento_criar' %}" class="btn-primary btn-sm" style="text-decoration:none;"><i class="fas fa-plus"></i> Criar Primeiro Segmento</a>
-</div>
-{% endif %}
 
-<!-- MODAL NOVO / EDITAR SEGMENTO -->
-<div class="modal-overlay" id="modal-seg" style="display:none">
-  <div class="modal-content" style="max-width:460px;">
-    <button class="modal-close" onclick="fecharModal()"><i class="fas fa-times"></i></button>
-    <h3 id="modal-titulo" style="font-size:16px; font-weight:700; color:var(--text-main); margin-bottom:20px;">Novo Segmento</h3>
-    <form id="form-seg" method="post" action="{% url 'crm:api_segmento_salvar' %}">
-      {% csrf_token %}
-      <input type="hidden" name="seg_id" id="seg-id">
-
-      <div class="form-group">
-        <label class="form-label">Nome</label>
-        <input type="text" name="nome" id="campo-nome" class="form-control" placeholder="Ex: Leads Qualificados RJ" required>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Descrição</label>
-        <textarea name="descricao" id="campo-descricao" class="form-control" rows="2" placeholder="Para que serve este segmento?"></textarea>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Tipo</label>
-        <select name="tipo" id="campo-tipo" class="form-control">
-          <option value="manual">Manual — você adiciona leads um a um</option>
-          <option value="dinamico">Dinâmico — regras automáticas de filtro</option>
-          <option value="hibrido">Híbrido — base dinâmica + adições manuais</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Cor</label>
-        <div class="cor-row">
-          <div class="cor-preview" id="cor-preview" style="background:#764ba2"></div>
-          <input type="color" name="cor_hex" id="campo-cor" class="form-control" value="#764ba2" style="width:80px;padding:4px" oninput="document.getElementById('cor-preview').style.background=this.value">
+    <div class="entity-grid view-cards" id="segmentosGrid">
+      {% for seg in segmentos %}
+        {% url 'crm:segmento_detalhe' seg.pk as detalhe_url %}
+        {% url 'marketing_segmentos:segmento_editar' seg.pk as editar_url %}
+        <div data-tipo="{{ seg.tipo }}" data-nome="{{ seg.nome|lower }}" data-desc="{{ seg.descricao|default:''|lower }}">
+          {% if seg.tipo == 'manual' %}
+            {% include "components/entity_card.html" with icon="bi-people" icon_variant="success" title=seg.nome title_url=detalhe_url subtitle=seg.descricao metric_value=seg.total_leads metric_label="leads" tag_variant="success" tag_label=seg.get_tipo_display footer_meta=seg.criado_por.get_full_name|default:seg.criado_por.username|default:"Sistema" primary_action_url=detalhe_url primary_action_label="Ver" primary_action_icon="bi-eye" secondary_action_url=editar_url secondary_action_icon="bi-pencil" secondary_action_title="Editar" %}
+          {% elif seg.tipo == 'hibrido' %}
+            {% include "components/entity_card.html" with icon="bi-people" icon_variant="warning" title=seg.nome title_url=detalhe_url subtitle=seg.descricao metric_value=seg.total_leads metric_label="leads" tag_variant="warning" tag_label=seg.get_tipo_display footer_meta=seg.criado_por.get_full_name|default:seg.criado_por.username|default:"Sistema" primary_action_url=detalhe_url primary_action_label="Ver" primary_action_icon="bi-eye" secondary_action_url=editar_url secondary_action_icon="bi-pencil" secondary_action_title="Editar" %}
+          {% else %}
+            {% include "components/entity_card.html" with icon="bi-people" icon_variant="primary" title=seg.nome title_url=detalhe_url subtitle=seg.descricao metric_value=seg.total_leads metric_label="leads" tag_variant="primary" tag_label=seg.get_tipo_display footer_meta=seg.criado_por.get_full_name|default:seg.criado_por.username|default:"Sistema" primary_action_url=detalhe_url primary_action_label="Ver" primary_action_icon="bi-eye" secondary_action_url=editar_url secondary_action_icon="bi-pencil" secondary_action_title="Editar" %}
+          {% endif %}
         </div>
-      </div>
+      {% endfor %}
+    </div>
 
-      <div class="form-group">
-        <label class="form-label">Ícone (classe Font Awesome)</label>
-        <input type="text" name="icone_fa" id="campo-icone" class="form-control" value="fa-users" placeholder="fa-users">
-      </div>
+    <div class="entity-list view-list" id="segmentosLista" style="display: none;">
+      {% for seg in segmentos %}
+        {% url 'crm:segmento_detalhe' seg.pk as detalhe_url %}
+        {% url 'marketing_segmentos:segmento_editar' seg.pk as editar_url %}
+        <div data-tipo="{{ seg.tipo }}" data-nome="{{ seg.nome|lower }}" data-desc="{{ seg.descricao|default:''|lower }}">
+          {% if seg.tipo == 'manual' %}
+            {% include "components/entity_table.html" with icon="bi-people" icon_variant="success" title=seg.nome title_url=detalhe_url subtitle=seg.descricao metric_value=seg.total_leads metric_label="leads" tag_variant="success" tag_label=seg.get_tipo_display footer_meta=seg.criado_por.get_full_name|default:seg.criado_por.username|default:"Sistema" primary_action_url=detalhe_url primary_action_label="Ver" primary_action_icon="bi-eye" secondary_action_url=editar_url secondary_action_icon="bi-pencil" secondary_action_title="Editar" %}
+          {% elif seg.tipo == 'hibrido' %}
+            {% include "components/entity_table.html" with icon="bi-people" icon_variant="warning" title=seg.nome title_url=detalhe_url subtitle=seg.descricao metric_value=seg.total_leads metric_label="leads" tag_variant="warning" tag_label=seg.get_tipo_display footer_meta=seg.criado_por.get_full_name|default:seg.criado_por.username|default:"Sistema" primary_action_url=detalhe_url primary_action_label="Ver" primary_action_icon="bi-eye" secondary_action_url=editar_url secondary_action_icon="bi-pencil" secondary_action_title="Editar" %}
+          {% else %}
+            {% include "components/entity_table.html" with icon="bi-people" icon_variant="primary" title=seg.nome title_url=detalhe_url subtitle=seg.descricao metric_value=seg.total_leads metric_label="leads" tag_variant="primary" tag_label=seg.get_tipo_display footer_meta=seg.criado_por.get_full_name|default:seg.criado_por.username|default:"Sistema" primary_action_url=detalhe_url primary_action_label="Ver" primary_action_icon="bi-eye" secondary_action_url=editar_url secondary_action_icon="bi-pencil" secondary_action_title="Editar" %}
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
 
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
-        <button type="button" class="btn-secondary" onclick="fecharModal()">Cancelar</button>
-        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar</button>
-      </div>
-    </form>
+    {% include "components/pagination.html" with page_obj=page_obj %}
   </div>
-</div>
+{% else %}
+  <div class="card">
+    <div class="card-body" style="text-align: center; padding: var(--sp-10) var(--sp-5);">
+      <i class="bi bi-diagram-3" style="font-size: 2.5rem; color: var(--color-text-muted); opacity: 0.3; display: block; margin-bottom: var(--sp-3);"></i>
+      <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0 0 var(--sp-4);">Nenhum segmento cadastrado. Crie segmentos pra organizar e disparar campanhas pra grupos de leads.</p>
+      <a href="{% url 'marketing_segmentos:segmento_criar' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Criar primeiro segmento</a>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .entity-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--sp-4);
+  }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function abrirModalNovo() {
-  document.getElementById('modal-titulo').textContent = 'Novo Segmento';
-  document.getElementById('form-seg').reset();
-  document.getElementById('seg-id').value = '';
-  document.getElementById('campo-cor').value = '#764ba2';
-  document.getElementById('cor-preview').style.background = '#764ba2';
-  document.getElementById('modal-seg').style.display = 'flex';
-}
+  let tipoAtivo = '';
 
-function editarSegmento(pk, nome, desc, tipo, cor, icone) {
-  document.getElementById('modal-titulo').textContent = 'Editar Segmento';
-  document.getElementById('seg-id').value = pk;
-  document.getElementById('campo-nome').value = nome;
-  document.getElementById('campo-descricao').value = desc;
-  document.getElementById('campo-tipo').value = tipo;
-  document.getElementById('campo-cor').value = cor;
-  document.getElementById('cor-preview').style.background = cor;
-  document.getElementById('campo-icone').value = icone;
-  document.getElementById('modal-seg').style.display = 'flex';
-}
+  function filtrarPorTipo(tipo) {
+    tipoAtivo = tipo;
+    document.querySelectorAll('.list-filters-tab').forEach(t => t.classList.remove('is-active'));
+    event.currentTarget.classList.add('is-active');
+    filtrarSegmentos();
+  }
 
-function fecharModal() {
-  document.getElementById('modal-seg').style.display = 'none';
-}
-
-document.getElementById('form-seg').addEventListener('submit', function(e) {
-  e.preventDefault();
-  const fd = new FormData(this);
-  fetch(this.action, { method: 'POST', body: fd })
-    .then(r => r.json())
-    .then(d => { if (d.ok) location.reload(); else alert(d.erro || 'Erro ao salvar.'); });
-});
-
-document.getElementById('modal-seg').addEventListener('click', function(e) {
-  if (e.target === this) fecharModal();
-});
+  function filtrarSegmentos() {
+    const q = (document.getElementById('buscaSegmento')?.value || '').toLowerCase();
+    document.querySelectorAll('#segmentosGrid > [data-tipo], #segmentosLista > [data-tipo]').forEach(card => {
+      const matchTipo = !tipoAtivo || card.dataset.tipo === tipoAtivo;
+      const matchQ = !q || card.dataset.nome.includes(q) || card.dataset.desc.includes(q);
+      card.style.display = matchTipo && matchQ ? '' : 'none';
+    });
+  }
 </script>
 {% endblock %}

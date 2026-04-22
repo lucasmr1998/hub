@@ -26,7 +26,7 @@ Visibilidade:
       {% endif %}
 
       {% if modulo_marketing and is_superuser or modulo_marketing and perm.acesso_marketing %}
-        <a href="/marketing/campanhas/" class="app-sidebar-item {% if modulo_atual == 'marketing' %}is-active{% endif %}" data-module="marketing" title="Marketing">
+        <a href="/leads/" class="app-sidebar-item {% if modulo_atual == 'marketing' %}is-active{% endif %}" data-module="marketing" title="Marketing">
           <i class="bi bi-megaphone"></i>
         </a>
       {% endif %}
@@ -38,7 +38,7 @@ Visibilidade:
       {% endif %}
 
       {% if modulo_cs and is_superuser or modulo_cs and perm.acesso_cs %}
-        <a href="/cs/clube/" class="app-sidebar-item {% if modulo_atual == 'cs' %}is-active{% endif %}" data-module="cs" title="Customer Success">
+        <a href="/cs/clube/dashboard/" class="app-sidebar-item {% if modulo_atual == 'cs' %}is-active{% endif %}" data-module="cs" title="Customer Success">
           <i class="bi bi-gift"></i>
         </a>
       {% endif %}

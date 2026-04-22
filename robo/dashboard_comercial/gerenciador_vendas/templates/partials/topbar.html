@@ -51,7 +51,7 @@
               <span>Configuracoes</span>
             </a>
           {% endif %}
-          <form method="post" action="{% url 'sistema:logout' %}" style="margin:0;">
+          <form method="post" action="{% url 'sistema:logout' %}" style="margin:0;" onsubmit="return confirm('Sair da conta?');">
             {% csrf_token %}
             <button type="submit" class="app-topbar-avatar-menu-item app-topbar-avatar-menu-item-danger" style="width:100%; background:transparent; border:none; text-align:left; cursor:pointer; font-family:inherit;">
               <i class="bi bi-box-arrow-right"></i>

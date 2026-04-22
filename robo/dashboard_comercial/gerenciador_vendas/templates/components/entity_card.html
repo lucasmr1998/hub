@@ -1,0 +1,85 @@
+{% comment %}
+Entity card component — card clean pra listagens de entidades (segmento,
+campanha, template, lead, etc.). Estilo HubSpot: icone soft, titulo + subtitle
+opcional, linha de metric/tag e footer com meta + acao.
+
+Params:
+  icon: classe bi-* (opcional)
+  icon_variant: primary (default) | success | warning | danger | info
+  title: titulo principal (string)
+  title_url: url pro titulo virar link (opcional — abre detalhe da entidade)
+  subtitle: descricao curta (opcional, truncada em 2 linhas)
+  metric_value: numero principal (opcional, ex: 0)
+  metric_label: rotulo do numero (ex: "leads")
+  tag_variant: primary | success | warning | danger | info | neutral (opcional)
+  tag_label: texto do badge (opcional)
+  footer_meta: texto pequeno no footer esquerda (ex: "por Lucas")
+  primary_action_url: url da acao (gera <a>) — ou
+  primary_action_onclick: handler JS (gera <button>)
+  primary_action_label: label da acao (ex: "Editar")
+  primary_action_icon: bi-* (ex: "bi-pencil")
+  secondary_action_url ou secondary_action_onclick: idem acima
+  secondary_action_icon: bi-* (ex: "bi-trash")
+  secondary_action_title: tooltip
+  secondary_action_danger: True pra colorir em vermelho (ex: excluir)
+
+Exemplo:
+  {% include "components/entity_card.html" with
+    icon="bi-people" icon_variant="primary"
+    title="Leads com HubSoft" title_url=detalhe_url
+    subtitle="Provedores que usam HubSoft como ERP"
+    metric_value=seg.total_leads metric_label="leads"
+    tag_variant="success" tag_label="Manual"
+    footer_meta="por Lucas"
+    primary_action_url=edit_url primary_action_label="Editar" primary_action_icon="bi-pencil"
+  %}
+{% endcomment %}
+<div class="entity-card">
+  <div class="entity-card-head">
+    {% if icon %}
+      <span class="entity-card-icon entity-card-icon-{{ icon_variant|default:'primary' }}">
+        <i class="bi {{ icon }}"></i>
+      </span>
+    {% endif %}
+    <div class="entity-card-head-text">
+      {% if title_url %}
+        <a href="{{ title_url }}" class="entity-card-title">{{ title }}</a>
+      {% else %}
+        <span class="entity-card-title">{{ title }}</span>
+      {% endif %}
+      {% if subtitle %}<p class="entity-card-subtitle">{{ subtitle }}</p>{% endif %}
+    </div>
+  </div>
+
+  {% if metric_value is not None or tag_label %}
+    <div class="entity-card-row">
+      {% if metric_value is not None %}
+        <div class="entity-card-metric">
+          <span class="entity-card-metric-value">{{ metric_value }}</span>
+          {% if metric_label %}<span class="entity-card-metric-label">{{ metric_label }}</span>{% endif %}
+        </div>
+      {% endif %}
+      {% if tag_label %}
+        {% include "components/badge.html" with variant=tag_variant|default:"neutral" label=tag_label %}
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if footer_meta or primary_action_url or primary_action_onclick or secondary_action_url or secondary_action_onclick %}
+    <div class="entity-card-footer">
+      {% if footer_meta %}<span class="entity-card-meta">{{ footer_meta }}</span>{% endif %}
+      <div class="entity-card-actions">
+        {% if secondary_action_url %}
+          <a href="{{ secondary_action_url }}" class="btn btn-ghost btn-sm{% if secondary_action_danger %} btn-ghost-danger{% endif %}" title="{{ secondary_action_title|default:'' }}"><i class="bi {{ secondary_action_icon }}"></i></a>
+        {% elif secondary_action_onclick %}
+          <button type="button" onclick="{{ secondary_action_onclick }}" class="btn btn-ghost btn-sm{% if secondary_action_danger %} btn-ghost-danger{% endif %}" title="{{ secondary_action_title|default:'' }}"><i class="bi {{ secondary_action_icon }}"></i></button>
+        {% endif %}
+        {% if primary_action_url %}
+          <a href="{{ primary_action_url }}" class="btn btn-secondary btn-sm">{% if primary_action_icon %}<i class="bi {{ primary_action_icon }}"></i> {% endif %}{{ primary_action_label|default:"Abrir" }}</a>
+        {% elif primary_action_onclick %}
+          <button type="button" onclick="{{ primary_action_onclick }}" class="btn btn-secondary btn-sm">{% if primary_action_icon %}<i class="bi {{ primary_action_icon }}"></i> {% endif %}{{ primary_action_label|default:"Abrir" }}</button>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+</div>

@@ -1,130 +1,138 @@
-{% extends 'sistema/base.html' %}
-{% block extra_css %}
-<style>
-  .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
-  .page-title { font-size:20px; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:10px; }
-  .page-title i { color:var(--primary); }
+{% extends "sistema/base.html" %}
 
-  .stats-row { display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
-  .stat-card { background:var(--bg-white); border-radius:12px; border:1px solid var(--border); padding:14px 20px; display:flex; align-items:center; gap:12px; min-width:160px; }
-  .stat-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; }
-  .stat-icon.pendente { background:#fef3c7; color:#d97706; }
-  .stat-icon.respondida { background:#d1fae5; color:#059669; }
-  .stat-value { font-size:22px; font-weight:800; color:var(--text-main); line-height:1; }
-  .stat-label { font-size:11px; color:var(--text-muted); }
-
-  .filters-row { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:center; }
-  .filter-btn { padding:7px 14px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--bg-white); color:var(--text-muted); }
-  .filter-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
-  .filter-input { padding:7px 12px; border-radius:8px; border:1px solid var(--border); font-size:12px; min-width:200px; }
-
-  .pergunta-list { display:flex; flex-direction:column; gap:10px; }
-  .pergunta-card {
-    background:var(--bg-white); border-radius:12px; border:1px solid var(--border);
-    padding:16px 18px; display:flex; justify-content:space-between; align-items:flex-start; gap:14px;
-    transition:all .2s;
-  }
-  .pergunta-card:hover { box-shadow:0 4px 12px rgba(0,0,0,0.06); }
-
-  .pergunta-body { flex:1; min-width:0; }
-  .pergunta-texto { font-size:14px; font-weight:600; color:var(--text-main); margin-bottom:6px; line-height:1.4; }
-  .pergunta-meta { display:flex; gap:12px; flex-wrap:wrap; font-size:12px; color:var(--text-light); align-items:center; }
-  .pergunta-meta span { display:flex; align-items:center; gap:4px; }
-
-  .badge-ocorrencias { background:#fef3c7; color:#d97706; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700; }
-  .badge-respondida { background:#d1fae5; color:#059669; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
-  .badge-ignorada { background:#f1f5f9; color:#64748b; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
-
-  .pergunta-actions { display:flex; gap:6px; flex-shrink:0; }
-  .pergunta-actions button { padding:6px 12px; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer; border:none; }
-  .btn-resolver { background:var(--primary); color:#fff; }
-  .btn-resolver:hover { opacity:.9; }
-  .btn-ignorar { background:var(--bg-subtle,#f1f5f9); color:var(--text-muted); }
-  .btn-ignorar:hover { background:#e2e8f0; }
-  .btn-artigo { background:#d1fae5; color:#059669; }
-  .btn-artigo:hover { background:#a7f3d0; }
-
-  .empty-state { text-align:center; padding:60px 20px; color:var(--text-muted); }
-  .empty-state i { font-size:48px; margin-bottom:12px; opacity:.3; }
-</style>
-{% endblock %}
+{% block title %}Perguntas sem resposta — Suporte{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <div class="page-title"><i class="fas fa-question-circle"></i> Perguntas sem Resposta</div>
-    <a href="{% url 'suporte:gerenciar_conhecimento' %}" style="padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;background:var(--primary);color:#fff;text-decoration:none;">
-        <i class="fas fa-book"></i> Gerenciar Base
-    </a>
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Perguntas sem resposta</h1>
+      <p class="page-subtitle">Perguntas coletadas da triagem do bot que nao tiveram resposta automatica.</p>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'suporte:gerenciar_conhecimento' %}" class="btn btn-primary btn-sm"><i class="bi bi-book"></i> Gerenciar base</a>
+    </div>
+  </div>
 </div>
 
-<div class="stats-row">
-    <div class="stat-card">
-        <div class="stat-icon pendente"><i class="fas fa-clock"></i></div>
-        <div><div class="stat-value">{{ total_pendentes }}</div><div class="stat-label">Pendentes</div></div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon respondida"><i class="fas fa-check"></i></div>
-        <div><div class="stat-value">{{ total_respondidas }}</div><div class="stat-label">Respondidas</div></div>
-    </div>
+<div class="stats-grid stats-grid-2" style="margin-bottom: var(--sp-4);">
+  {% include "components/stat_card.html" with label="Pendentes" value=total_pendentes icon="bi-clock" icon_variant="warning" %}
+  {% include "components/stat_card.html" with label="Respondidas" value=total_respondidas icon="bi-check-circle" icon_variant="success" %}
 </div>
 
-<div class="filters-row">
-    <a href="?status=pendente" class="filter-btn {% if status_filtro == 'pendente' %}active{% endif %}">Pendentes</a>
-    <a href="?status=respondida" class="filter-btn {% if status_filtro == 'respondida' %}active{% endif %}">Respondidas</a>
-    <a href="?status=ignorada" class="filter-btn {% if status_filtro == 'ignorada' %}active{% endif %}">Ignoradas</a>
-    <a href="?status=todas" class="filter-btn {% if status_filtro == 'todas' %}active{% endif %}">Todas</a>
-    <form method="get" style="display:flex;gap:6px;">
-        <input type="hidden" name="status" value="{{ status_filtro }}">
-        <input type="text" name="q" class="filter-input" placeholder="Buscar pergunta..." value="{{ busca }}">
+<div class="card filter-row-card" style="margin-bottom: var(--sp-4);">
+  <div class="filter-row">
+    <a href="?status=pendente" class="filter-btn {% if status_filtro == 'pendente' %}is-active{% endif %}">Pendentes</a>
+    <a href="?status=respondida" class="filter-btn {% if status_filtro == 'respondida' %}is-active{% endif %}">Respondidas</a>
+    <a href="?status=ignorada" class="filter-btn {% if status_filtro == 'ignorada' %}is-active{% endif %}">Ignoradas</a>
+    <a href="?status=todas" class="filter-btn {% if status_filtro == 'todas' %}is-active{% endif %}">Todas</a>
+    <form method="get" class="filter-search">
+      <input type="hidden" name="status" value="{{ status_filtro }}">
+      <div class="field-input-wrap">
+        <i class="bi bi-search field-icon"></i>
+        <input type="text" name="q" class="field-input" placeholder="Buscar pergunta..." value="{{ busca }}">
+      </div>
     </form>
+  </div>
 </div>
 
 {% if perguntas %}
-<div class="pergunta-list">
+  <div class="pergunta-list">
     {% for p in perguntas %}
-    <div class="pergunta-card" id="pergunta-{{ p.pk }}">
-        <div class="pergunta-body">
-            <div class="pergunta-texto">{{ p.pergunta }}</div>
-            <div class="pergunta-meta">
-                {% if p.ocorrencias > 1 %}
-                <span class="badge-ocorrencias">{{ p.ocorrencias }}x</span>
-                {% endif %}
+      <div class="card pergunta-card" id="pergunta-{{ p.pk }}">
+        <div class="card-body">
+          <div class="pergunta-row">
+            <div class="pergunta-body">
+              <div class="pergunta-texto">{{ p.pergunta }}</div>
+              <div class="pergunta-meta">
+                {% if p.ocorrencias > 1 %}<span class="ocorrencias-badge">{{ p.ocorrencias }}x</span>{% endif %}
                 {% if p.status == 'respondida' %}
-                <span class="badge-respondida"><i class="fas fa-check"></i> Respondida</span>
+                  {% include "components/badge.html" with variant="success" label="Respondida" size="sm" icon="bi-check" %}
                 {% elif p.status == 'ignorada' %}
-                <span class="badge-ignorada">Ignorada</span>
+                  {% include "components/badge.html" with variant="neutral" label="Ignorada" size="sm" %}
                 {% endif %}
-                {% if p.lead %}
-                <span><i class="fas fa-user"></i> {{ p.lead.nome_razaosocial }}</span>
-                {% endif %}
-                <span><i class="far fa-clock"></i> {{ p.data_criacao|date:"d/m/Y H:i" }}</span>
-                {% if p.artigo_criado %}
-                <span><i class="fas fa-book"></i> {{ p.artigo_criado.titulo }}</span>
-                {% endif %}
+                {% if p.lead %}<span><i class="bi bi-person"></i> {{ p.lead.nome_razaosocial }}</span>{% endif %}
+                <span><i class="bi bi-clock"></i> {{ p.data_criacao|date:"d/m/Y H:i" }}</span>
+                {% if p.artigo_criado %}<span><i class="bi bi-book"></i> {{ p.artigo_criado.titulo }}</span>{% endif %}
+              </div>
             </div>
+            {% if p.status == 'pendente' %}
+              <div class="pergunta-actions">
+                <button class="btn btn-ghost btn-sm btn-ghost-success" onclick="window.location.href='{% url 'suporte:gerenciar_conhecimento' %}?criar=1&pergunta={{ p.pergunta|urlencode }}&pergunta_id={{ p.pk }}'" title="Criar artigo"><i class="bi bi-plus-lg"></i></button>
+                <button class="btn btn-primary btn-sm" onclick="resolverPergunta({{ p.pk }})" title="Resolver"><i class="bi bi-check-lg"></i> Resolver</button>
+                <button class="btn btn-ghost btn-sm" onclick="ignorarPergunta({{ p.pk }})" title="Ignorar"><i class="bi bi-x-lg"></i></button>
+              </div>
+            {% endif %}
+          </div>
         </div>
-        {% if p.status == 'pendente' %}
-        <div class="pergunta-actions">
-            <button class="btn-artigo" onclick="window.location.href='{% url 'suporte:gerenciar_conhecimento' %}?criar=1&pergunta={{ p.pergunta|urlencode }}&pergunta_id={{ p.pk }}'">
-                <i class="fas fa-plus"></i> Criar Artigo
-            </button>
-            <button class="btn-resolver" onclick="resolverPergunta({{ p.pk }})">
-                <i class="fas fa-check"></i> Resolver
-            </button>
-            <button class="btn-ignorar" onclick="ignorarPergunta({{ p.pk }})">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        {% endif %}
-    </div>
+      </div>
     {% endfor %}
-</div>
+  </div>
 {% else %}
-<div class="empty-state">
-    <i class="fas fa-check-circle"></i>
-    <p>Nenhuma pergunta {% if status_filtro == 'pendente' %}pendente{% elif status_filtro == 'respondida' %}respondida{% elif status_filtro == 'ignorada' %}ignorada{% endif %}.</p>
-</div>
+  <div class="card">
+    <div class="card-body" style="text-align: center; padding: var(--sp-10);">
+      <i class="bi bi-check-circle" style="font-size: 3rem; color: var(--color-success); opacity: 0.5; display: block; margin-bottom: var(--sp-3);"></i>
+      <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0;">Nenhuma pergunta {% if status_filtro == 'pendente' %}pendente{% elif status_filtro == 'respondida' %}respondida{% elif status_filtro == 'ignorada' %}ignorada{% endif %}.</p>
+    </div>
+  </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .stats-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--sp-3); }
+
+  .filter-row-card { padding: var(--sp-3) var(--sp-4); }
+  .filter-row { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+  .filter-btn {
+    padding: 6px 14px;
+    border-radius: var(--radius);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text-muted);
+    text-decoration: none;
+    transition: background var(--transition), color var(--transition), border-color var(--transition);
+  }
+  .filter-btn:hover { color: var(--color-text); }
+  .filter-btn.is-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+  .filter-search { margin-left: auto; max-width: 260px; flex: 1; min-width: 180px; }
+
+  .pergunta-list { display: flex; flex-direction: column; gap: var(--sp-2); }
+  .pergunta-card { transition: box-shadow var(--transition); }
+  .pergunta-card:hover { box-shadow: var(--shadow-sm); }
+  .pergunta-row { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-3); }
+  .pergunta-body { flex: 1; min-width: 0; }
+  .pergunta-texto {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text);
+    margin-bottom: 6px;
+    line-height: 1.4;
+  }
+  .pergunta-meta {
+    display: flex;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+    align-items: center;
+  }
+  .pergunta-meta span { display: flex; align-items: center; gap: 4px; }
+
+  .ocorrencias-badge {
+    background: var(--color-warning-soft);
+    color: var(--color-warning);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: var(--fw-bold);
+  }
+
+  .pergunta-actions { display: flex; gap: 4px; flex-shrink: 0; }
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -132,32 +140,36 @@
 function getCsrf() { const c = document.cookie.match(/csrftoken=([^;]+)/); return c ? c[1] : ''; }
 
 function resolverPergunta(id) {
-    fetch(`/suporte/conhecimento/perguntas/${id}/resolver/`, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json', 'X-CSRFToken': getCsrf()},
-        body: JSON.stringify({})
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (d.success) {
-            showNotification(d.message, 'success');
-            document.getElementById('pergunta-' + id).remove();
-        }
-    });
+  fetch(`/suporte/conhecimento/perguntas/${id}/resolver/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+    body: JSON.stringify({}),
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      toast('Resolvida', d.message, 'success');
+      document.getElementById('pergunta-' + id).remove();
+    } else {
+      toast('Erro', d.error || 'Erro', 'danger');
+    }
+  });
 }
 
 function ignorarPergunta(id) {
-    fetch(`/suporte/conhecimento/perguntas/${id}/ignorar/`, {
-        method: 'POST',
-        headers: {'X-CSRFToken': getCsrf()}
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (d.success) {
-            showNotification(d.message, 'info');
-            document.getElementById('pergunta-' + id).remove();
-        }
-    });
+  fetch(`/suporte/conhecimento/perguntas/${id}/ignorar/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': getCsrf() },
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      toast('Ignorada', d.message, 'info');
+      document.getElementById('pergunta-' + id).remove();
+    } else {
+      toast('Erro', d.error || 'Erro', 'danger');
+    }
+  });
 }
 </script>
 {% endblock %}

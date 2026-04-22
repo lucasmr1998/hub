@@ -1,109 +1,121 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Membros - Admin Roleta{% endblock %}
+{% block title %}Membros — Clube{% endblock %}
 
 {% block content %}
-
-<div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
+<div class="page-header">
+  <div class="page-header-top">
     <div>
-        <h1 class="page-title">Membros</h1>
-        <p class="page-subtitle">Lista de membros do Clube MegaLink.</p>
+      <h1 class="page-title">Membros</h1>
+      <p class="page-subtitle">Lista de membros do clube.</p>
     </div>
-    <a href="{% url 'clube:exportar_csv' %}" class="btn-export">
-        <i class="fas fa-file-csv"></i> Exportar CSV
-    </a>
+    <div class="page-actions">
+      <a href="{% url 'clube:exportar_csv' %}" class="btn btn-secondary btn-sm"><i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV</a>
+    </div>
+  </div>
 </div>
 
-<!-- Filtros -->
-<div class="card" style="margin-bottom:20px;">
-    <form method="get" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
-        <div style="flex:1; min-width:200px;">
-            <label class="form-label">Buscar por Nome ou CPF</label>
-            <input type="text" name="q" value="{{ q }}" placeholder="Busca..." class="form-control">
+<div class="card" style="margin-bottom: var(--sp-4);">
+  <div class="card-body">
+    <form method="get" class="filter-form">
+      <div class="field" style="flex: 1; min-width: 200px;">
+        <label class="field-label">Buscar por nome ou CPF</label>
+        <div class="field-input-wrap">
+          <i class="bi bi-search field-icon"></i>
+          <input type="text" name="q" value="{{ q }}" placeholder="Busca..." class="field-input">
         </div>
-        <div style="min-width:160px;">
-            <label class="form-label">Cidade</label>
-            <select name="cidade" class="form-control">
-                <option value="">Todas</option>
-                {% for city in todas_cidades %}
-                <option value="{{ city }}" {% if cidade == city %}selected{% endif %}>{{ city }}</option>
-                {% endfor %}
-            </select>
+      </div>
+      <div class="field" style="min-width: 180px;">
+        <label class="field-label">Cidade</label>
+        <div class="field-input-wrap">
+          <select name="cidade" class="field-input">
+            <option value="">Todas</option>
+            {% for city in todas_cidades %}<option value="{{ city }}" {% if cidade == city %}selected{% endif %}>{{ city }}</option>{% endfor %}
+          </select>
         </div>
-        <div>
-            <button type="submit" class="btn-secondary" style="margin-top:22px;">Filtrar</button>
-        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Filtrar</button>
     </form>
+  </div>
 </div>
 
-<!-- Tabela -->
-<div class="data-table-container">
-    <div style="overflow-x: auto;">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Nome</th>
-                    <th>CPF</th>
-                    <th>Cidade</th>
-                    <th>Status</th>
-                    <th>Saldo de Pontos</th>
-                    <th>Giros</th>
-                    <th>Cadastro</th>
-                    <th>Hist&oacute;rico</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for p in participantes %}
-                <tr>
-                    <td><strong>{{ p.nome }}</strong></td>
-                    <td style="font-size:13px;">{{ p.cpf }}</td>
-                    <td>{{ p.cidade }}</td>
-                    <td>
-                        {% if p.validado %}
-                        <span class="badge badge-success">Verificado</span>
-                        {% else %}
-                        <span class="badge badge-warning">Pendente</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <form method="POST" style="display:flex; gap:6px; align-items:center;">
-                            {% csrf_token %}
-                            <input type="hidden" name="membro_id" value="{{ p.id }}">
-                            <input type="number" name="saldo" value="{{ p.saldo }}" class="form-control" style="width:70px; padding:6px 8px;">
-                            <button type="submit" class="btn-primary btn-sm">
-                                <i class="fas fa-save"></i>
-                            </button>
-                        </form>
-                    </td>
-                    <td>
-                        <span class="badge badge-info">{{ p.total_giros }} giros</span>
-                    </td>
-                    <td style="font-size:13px; color:var(--text-muted); white-space:nowrap;">{{ p.data_cadastro|date:"d/m/Y H:i" }}</td>
-                    <td>
-                        <a href="{% url 'clube:dashboard_extrato_membro' p.id %}" class="badge badge-primary" style="text-decoration:none;">Ver Extrato</a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="8" class="text-center" style="padding:40px; color:var(--text-light);">Nenhum membro encontrado.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>CPF</th>
+          <th>Cidade</th>
+          <th>Status</th>
+          <th>Saldo de pontos</th>
+          <th>Giros</th>
+          <th>Cadastro</th>
+          <th>Historico</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in participantes %}
+          <tr>
+            <td><strong>{{ p.nome }}</strong></td>
+            <td style="font-size: var(--fs-xs);">{{ p.cpf }}</td>
+            <td>{{ p.cidade }}</td>
+            <td>
+              {% if p.validado %}
+                {% include "components/badge.html" with variant="success" label="Verificado" size="sm" %}
+              {% else %}
+                {% include "components/badge.html" with variant="warning" label="Pendente" size="sm" %}
+              {% endif %}
+            </td>
+            <td>
+              <form method="POST" class="saldo-form">
+                {% csrf_token %}
+                <input type="hidden" name="membro_id" value="{{ p.id }}">
+                <div class="field-input-wrap" style="width: 80px;">
+                  <input type="number" name="saldo" value="{{ p.saldo }}" class="field-input" style="height: 32px; padding: 4px 8px;">
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm" title="Salvar"><i class="bi bi-check-lg"></i></button>
+              </form>
+            </td>
+            <td>{% include "components/badge.html" with variant="info" label=p.total_giros|add:" giros" size="sm" %}</td>
+            <td style="font-size: var(--fs-xs); color: var(--color-text-muted); white-space: nowrap;">{{ p.data_cadastro|date:"d/m/Y H:i" }}</td>
+            <td>
+              <a href="{% url 'clube:dashboard_extrato_membro' p.id %}" class="btn btn-ghost btn-sm"><i class="bi bi-eye"></i> Extrato</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" style="text-align: center; padding: var(--sp-10); color: var(--color-text-muted);">Nenhum membro encontrado.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
-<!-- Paginação -->
 {% if page_obj.has_other_pages %}
-<div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-top:20px;">
-    {% if page_obj.has_previous %}
-    <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&cidade={{ cidade }}" class="btn-secondary btn-sm">&laquo; Anterior</a>
-    {% endif %}
-    <span class="text-sm text-muted">P&aacute;gina {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
-    {% if page_obj.has_next %}
-    <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&cidade={{ cidade }}" class="btn-secondary btn-sm">Pr&oacute;xima &raquo;</a>
-    {% endif %}
-</div>
+  <nav class="pagination">
+    <span class="pagination-info">Pagina {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+    <div class="pagination-nav">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&cidade={{ cidade }}" class="pagination-btn"><i class="bi bi-chevron-left"></i></a>
+      {% else %}
+        <span class="pagination-btn is-disabled"><i class="bi bi-chevron-left"></i></span>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&cidade={{ cidade }}" class="pagination-btn"><i class="bi bi-chevron-right"></i></a>
+      {% else %}
+        <span class="pagination-btn is-disabled"><i class="bi bi-chevron-right"></i></span>
+      {% endif %}
+    </div>
+  </nav>
 {% endif %}
+{% endblock %}
 
+{% block extra_css %}
+<style>
+  .filter-form { display: flex; gap: var(--sp-3); align-items: flex-end; flex-wrap: wrap; }
+  .table-wrap { overflow-x: auto; }
+  .saldo-form { display: inline-flex; gap: 6px; align-items: center; }
+</style>
 {% endblock %}

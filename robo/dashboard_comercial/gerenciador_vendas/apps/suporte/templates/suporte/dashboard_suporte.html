@@ -1,218 +1,261 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
+
 {% block title %}Suporte — Dashboard{% endblock %}
 
-{% block extra_css %}
-<style>
-    .suporte-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
-    .suporte-header h1 { font-size:1.3rem; font-weight:800; color:var(--text-main); }
-    .suporte-stats { display:grid; grid-template-columns:repeat(5, 1fr); gap:12px; margin-bottom:20px; }
-    .suporte-stat { background:var(--bg-white); border-radius:12px; border:1px solid var(--border); padding:16px; display:flex; align-items:center; gap:12px; transition:box-shadow .2s; }
-    .suporte-stat:hover { box-shadow:0 4px 12px rgba(0,0,0,.06); }
-    .suporte-stat-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
-    .suporte-stat-num { font-size:1.4rem; font-weight:800; line-height:1; color:var(--text-main); }
-    .suporte-stat-label { font-size:.7rem; color:var(--text-muted); margin-top:2px; }
-
-    .report-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:12px; margin-bottom:20px; }
-    .report-card { background:var(--bg-white); border-radius:12px; border:1px solid var(--border); padding:16px; text-align:center; }
-    .report-value { font-size:22px; font-weight:800; color:var(--text-main); }
-    .report-label { font-size:11px; color:var(--text-muted); margin-top:2px; }
-
-    .suporte-section { background:var(--bg-white); border-radius:12px; border:1px solid var(--border); overflow:hidden; margin-bottom:16px; }
-    .suporte-section-header { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border-bottom:1px solid var(--border); }
-    .suporte-section-title { font-size:.85rem; font-weight:700; color:var(--text-main); }
-    .suporte-table { width:100%; border-collapse:collapse; font-size:.8rem; }
-    .suporte-table th { text-align:left; padding:10px 14px; background:#f8fafc; font-weight:700; font-size:.7rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); border-bottom:1px solid var(--border); }
-    .suporte-table td { padding:10px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
-    .suporte-table tr:last-child td { border-bottom:none; }
-    .suporte-table tr:hover td { background:#f8fafc; }
-    .suporte-table a { color:var(--primary); text-decoration:none; font-weight:600; }
-    .suporte-table a:hover { text-decoration:underline; }
-
-    .badge-status-aberto { background:#dbeafe; color:#1e40af; }
-    .badge-status-em_andamento { background:#fef3c7; color:#92400e; }
-    .badge-status-aguardando_cliente { background:#ffedd5; color:#9a3412; }
-    .badge-status-resolvido { background:#dcfce7; color:#166534; }
-    .badge-status-fechado { background:#f1f5f9; color:#475569; }
-    .badge-prio-baixa { background:#f1f5f9; color:#475569; }
-    .badge-prio-normal { background:#dbeafe; color:#1e40af; }
-    .badge-prio-alta { background:#ffedd5; color:#9a3412; }
-    .badge-prio-urgente { background:#fee2e2; color:#991b1b; }
-    .pill { display:inline-block; padding:2px 10px; border-radius:99px; font-size:.7rem; font-weight:600; }
-
-    .agent-row { display:flex; align-items:center; gap:12px; padding:8px 14px; border-bottom:1px solid #f1f5f9; font-size:13px; }
-    .agent-row:last-child { border-bottom:none; }
-    .agent-name { font-weight:600; flex:1; }
-    .agent-stat { min-width:50px; text-align:center; }
-    .agent-stat strong { display:block; font-size:15px; color:var(--text-main); }
-    .agent-stat small { font-size:10px; color:var(--text-muted); }
-
-    .bar-item { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
-    .bar-label { font-size:12px; min-width:100px; color:var(--text-secondary); }
-    .bar-fill { height:18px; border-radius:4px; background:var(--primary); min-width:2px; display:flex; align-items:center; padding:0 6px; }
-    .bar-fill span { font-size:10px; color:#fff; font-weight:600; }
-
-    .periodo-tabs { display:flex; gap:6px; }
-    .periodo-tabs a { padding:4px 12px; border-radius:6px; font-size:12px; text-decoration:none; color:var(--text-muted); border:1px solid var(--border); font-weight:600; }
-    .periodo-tabs a.active { background:var(--primary); color:#fff; border-color:var(--primary); }
-
-    @media (max-width: 900px) { .suporte-stats { grid-template-columns:repeat(2, 1fr); } .report-grid { grid-template-columns:repeat(2, 1fr); } }
-    @media (max-width: 600px) { .suporte-stats { grid-template-columns:1fr; } }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="suporte-header">
-    <h1><i class="fas fa-headset" style="color:var(--primary);margin-right:8px;"></i> Suporte</h1>
-    <div style="display:flex;gap:8px;align-items:center;">
-        <div class="periodo-tabs">
-            <a href="?periodo=7" class="{% if periodo == 7 %}active{% endif %}">7d</a>
-            <a href="?periodo=30" class="{% if periodo == 30 %}active{% endif %}">30d</a>
-            <a href="?periodo=90" class="{% if periodo == 90 %}active{% endif %}">90d</a>
-        </div>
-        <a href="{% url 'suporte:ticket_criar' %}" class="btn-primary" style="text-decoration:none;">
-            <i class="fas fa-plus"></i> Novo Ticket
-        </a>
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Suporte</h1>
+      <p class="page-subtitle">Tickets ativos, SLA, desempenho por agente e categorias.</p>
     </div>
+    <div class="page-actions">
+      <div class="periodo-sel">
+        <a href="?periodo=7" class="periodo-btn {% if periodo == 7 %}is-active{% endif %}">7d</a>
+        <a href="?periodo=30" class="periodo-btn {% if periodo == 30 %}is-active{% endif %}">30d</a>
+        <a href="?periodo=90" class="periodo-btn {% if periodo == 90 %}is-active{% endif %}">90d</a>
+      </div>
+      <a href="{% url 'suporte:ticket_criar' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Novo ticket</a>
+    </div>
+  </div>
 </div>
 
-<!-- Stats atuais -->
-<div class="suporte-stats">
-    <div class="suporte-stat">
-        <div class="suporte-stat-icon" style="background:#dbeafe;"><i class="fas fa-envelope-open" style="color:#1e40af;"></i></div>
-        <div><div class="suporte-stat-num">{{ abertos }}</div><div class="suporte-stat-label">Abertos</div></div>
-    </div>
-    <div class="suporte-stat">
-        <div class="suporte-stat-icon" style="background:#fef3c7;"><i class="fas fa-spinner" style="color:#d97706;"></i></div>
-        <div><div class="suporte-stat-num">{{ em_andamento }}</div><div class="suporte-stat-label">Em Andamento</div></div>
-    </div>
-    <div class="suporte-stat">
-        <div class="suporte-stat-icon" style="background:#ffedd5;"><i class="fas fa-clock" style="color:#ea580c;"></i></div>
-        <div><div class="suporte-stat-num">{{ aguardando }}</div><div class="suporte-stat-label">Aguardando</div></div>
-    </div>
-    <div class="suporte-stat">
-        <div class="suporte-stat-icon" style="background:#dcfce7;"><i class="fas fa-check-circle" style="color:#16a34a;"></i></div>
-        <div><div class="suporte-stat-num">{{ resolvidos_hoje }}</div><div class="suporte-stat-label">Resolvidos Hoje</div></div>
-    </div>
-    <div class="suporte-stat">
-        <div class="suporte-stat-icon" style="background:{% if sla_breach > 0 %}#fee2e2{% else %}#f0fdf4{% endif %};"><i class="fas fa-exclamation-triangle" style="color:{% if sla_breach > 0 %}#dc2626{% else %}#16a34a{% endif %};"></i></div>
-        <div><div class="suporte-stat-num">{{ sla_breach }}</div><div class="suporte-stat-label">SLA Estourado</div></div>
-    </div>
+{# Stats atuais #}
+<div class="stats-grid stats-grid-5" style="margin-bottom: var(--sp-4);">
+  {% include "components/stat_card.html" with label="Abertos" value=abertos icon="bi-envelope-open" icon_variant="info" %}
+  {% include "components/stat_card.html" with label="Em andamento" value=em_andamento icon="bi-arrow-repeat" icon_variant="warning" %}
+  {% include "components/stat_card.html" with label="Aguardando" value=aguardando icon="bi-clock" icon_variant="warning" %}
+  {% include "components/stat_card.html" with label="Resolvidos hoje" value=resolvidos_hoje icon="bi-check-circle" icon_variant="success" %}
+  {% if sla_breach > 0 %}
+    {% include "components/stat_card.html" with label="SLA estourado" value=sla_breach icon="bi-exclamation-triangle" icon_variant="danger" %}
+  {% else %}
+    {% include "components/stat_card.html" with label="SLA estourado" value=sla_breach icon="bi-shield-check" icon_variant="success" %}
+  {% endif %}
 </div>
 
-<!-- Metricas do periodo -->
+{# Metricas do periodo #}
 <div class="report-grid">
-    <div class="report-card">
-        <div class="report-value">{{ total_periodo }}</div>
-        <div class="report-label">Tickets ({{ periodo }}d)</div>
-    </div>
-    <div class="report-card">
-        <div class="report-value">{{ taxa_resolucao|floatformat:0 }}%</div>
-        <div class="report-label">Taxa resolucao</div>
-    </div>
-    <div class="report-card">
-        <div class="report-value">{% if tempo_medio %}{{ tempo_medio|floatformat:1 }}h{% else %}—{% endif %}</div>
-        <div class="report-label">Tempo medio resolucao</div>
-    </div>
-    <div class="report-card">
-        <div class="report-value">{% if tempo_primeira_resp %}{{ tempo_primeira_resp|floatformat:1 }}h{% else %}—{% endif %}</div>
-        <div class="report-label">Tempo 1a resposta</div>
-    </div>
-    <div class="report-card">
-        <div class="report-value" style="color:{% if sla_compliance and sla_compliance >= 80 %}var(--success){% elif sla_compliance %}var(--danger){% else %}var(--text-muted){% endif %};">{% if sla_compliance %}{{ sla_compliance|floatformat:0 }}%{% else %}—{% endif %}</div>
-        <div class="report-label">SLA compliance</div>
-    </div>
-    <div class="report-card">
-        <div class="report-value" style="color:#f59e0b;">{% if csat_medio %}{{ csat_medio|floatformat:1 }}/5{% else %}—{% endif %}</div>
-        <div class="report-label">CSAT ({{ csat_total }})</div>
-    </div>
+  <div class="report-card">
+    <div class="report-value">{{ total_periodo }}</div>
+    <div class="report-label">Tickets ({{ periodo }}d)</div>
+  </div>
+  <div class="report-card">
+    <div class="report-value">{{ taxa_resolucao|floatformat:0 }}%</div>
+    <div class="report-label">Taxa resolucao</div>
+  </div>
+  <div class="report-card">
+    <div class="report-value">{% if tempo_medio %}{{ tempo_medio|floatformat:1 }}h{% else %}—{% endif %}</div>
+    <div class="report-label">Tempo medio resolucao</div>
+  </div>
+  <div class="report-card">
+    <div class="report-value">{% if tempo_primeira_resp %}{{ tempo_primeira_resp|floatformat:1 }}h{% else %}—{% endif %}</div>
+    <div class="report-label">Tempo 1a resposta</div>
+  </div>
+  <div class="report-card">
+    <div class="report-value" style="color: {% if sla_compliance and sla_compliance >= 80 %}var(--color-success){% elif sla_compliance %}var(--color-danger){% else %}var(--color-text-muted){% endif %};">{% if sla_compliance %}{{ sla_compliance|floatformat:0 }}%{% else %}—{% endif %}</div>
+    <div class="report-label">SLA compliance</div>
+  </div>
+  <div class="report-card">
+    <div class="report-value" style="color: var(--color-warning);">{% if csat_medio %}{{ csat_medio|floatformat:1 }}/5{% else %}—{% endif %}</div>
+    <div class="report-label">CSAT ({{ csat_total }})</div>
+  </div>
 </div>
 
-<!-- Grids: agentes + categorias -->
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-    {% if por_agente %}
-    <div class="suporte-section">
-        <div class="suporte-section-header"><span class="suporte-section-title"><i class="fas fa-users" style="color:var(--primary);margin-right:6px;"></i> Por Agente</span></div>
+{# Grids: agentes + categorias/prioridade #}
+<div class="sup-grid-2" style="margin-bottom: var(--sp-4);">
+  {% if por_agente %}
+    <div class="card" style="padding: 0;">
+      <div class="card-header">
+        <h3 class="card-title"><i class="bi bi-people" style="color: var(--color-primary);"></i> Por agente</h3>
+      </div>
+      <div>
         {% for a in por_agente %}
-        <div class="agent-row">
+          <div class="agent-row">
             <div class="agent-name">{{ a.atendente__first_name }} {{ a.atendente__last_name|default:a.atendente__username }}</div>
             <div class="agent-stat"><strong>{{ a.total }}</strong><small>tickets</small></div>
             <div class="agent-stat"><strong>{{ a.resolvidos }}</strong><small>resolvidos</small></div>
-        </div>
+          </div>
         {% endfor %}
+      </div>
     </div>
+  {% endif %}
+
+  <div>
+    {% if por_categoria %}
+      <div class="card" style="padding: 0; margin-bottom: var(--sp-3);">
+        <div class="card-header">
+          <h3 class="card-title"><i class="bi bi-tags" style="color: var(--color-info);"></i> Por categoria</h3>
+        </div>
+        <div class="card-body">
+          {% for c in por_categoria %}
+            <div class="bar-item">
+              <div class="bar-label">{{ c.categoria__nome|default:"Sem categoria" }}</div>
+              <div class="bar-fill" style="width: {% widthratio c.total total_periodo 180 %}px;"><span>{{ c.total }}</span></div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
     {% endif %}
 
-    <div>
-        {% if por_categoria %}
-        <div class="suporte-section">
-            <div class="suporte-section-header"><span class="suporte-section-title"><i class="fas fa-tags" style="color:var(--info);margin-right:6px;"></i> Por Categoria</span></div>
-            <div style="padding:14px;">
-                {% for c in por_categoria %}
-                <div class="bar-item">
-                    <div class="bar-label">{{ c.categoria__nome|default:"Sem categoria" }}</div>
-                    <div class="bar-fill" style="width:{% widthratio c.total total_periodo 180 %}px;"><span>{{ c.total }}</span></div>
-                </div>
-                {% endfor %}
-            </div>
+    {% if por_prioridade %}
+      <div class="card" style="padding: 0;">
+        <div class="card-header">
+          <h3 class="card-title"><i class="bi bi-flag" style="color: var(--color-warning);"></i> Por prioridade</h3>
         </div>
-        {% endif %}
-
-        {% if por_prioridade %}
-        <div class="suporte-section">
-            <div class="suporte-section-header"><span class="suporte-section-title"><i class="fas fa-flag" style="color:var(--warning);margin-right:6px;"></i> Por Prioridade</span></div>
-            <div style="padding:14px;">
-                {% for p in por_prioridade %}
-                <div class="bar-item">
-                    <div class="bar-label">{{ p.prioridade|title }}</div>
-                    <div class="bar-fill" style="width:{% widthratio p.total total_periodo 180 %}px;background:{% if p.prioridade == 'urgente' %}var(--danger){% elif p.prioridade == 'alta' %}var(--warning){% elif p.prioridade == 'normal' %}var(--info){% else %}var(--text-light){% endif %};"><span>{{ p.total }}</span></div>
-                </div>
-                {% endfor %}
+        <div class="card-body">
+          {% for p in por_prioridade %}
+            <div class="bar-item">
+              <div class="bar-label">{{ p.prioridade|title }}</div>
+              <div class="bar-fill" style="width: {% widthratio p.total total_periodo 180 %}px; background: {% if p.prioridade == 'urgente' %}var(--color-danger){% elif p.prioridade == 'alta' %}var(--color-warning){% elif p.prioridade == 'normal' %}var(--color-info){% else %}var(--color-text-muted){% endif %};"><span>{{ p.total }}</span></div>
             </div>
+          {% endfor %}
         </div>
-        {% endif %}
-    </div>
+      </div>
+    {% endif %}
+  </div>
 </div>
 
-<!-- Ultimos tickets -->
-<div class="suporte-section">
-    <div class="suporte-section-header">
-        <span class="suporte-section-title">Ultimos Tickets</span>
-        <a href="{% url 'suporte:ticket_lista' %}" style="font-size:.78rem;color:var(--primary);text-decoration:none;font-weight:600;">
-            Ver todos <i class="fas fa-arrow-right" style="font-size:.65rem;"></i>
-        </a>
-    </div>
-    <table class="suporte-table">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Titulo</th>
-                <th>Status</th>
-                <th>Prioridade</th>
-                <th>Categoria</th>
-                <th>Atendente</th>
-                <th>Data</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for ticket in ultimos %}
-            <tr>
-                <td style="font-weight:700;color:var(--text-muted);">{{ ticket.numero }}</td>
-                <td><a href="{% url 'suporte:ticket_detalhe' pk=ticket.pk %}">{{ ticket.titulo }}</a></td>
-                <td><span class="pill badge-status-{{ ticket.status }}">{{ ticket.get_status_display }}</span></td>
-                <td><span class="pill badge-prio-{{ ticket.prioridade }}">{{ ticket.get_prioridade_display }}</span></td>
-                <td style="color:var(--text-muted);">{{ ticket.categoria.nome|default:"—" }}</td>
-                <td style="color:var(--text-secondary);">{% if ticket.atendente %}{{ ticket.atendente.get_full_name|default:ticket.atendente.username }}{% else %}—{% endif %}</td>
-                <td style="color:var(--text-muted);font-size:.75rem;">{{ ticket.data_abertura|date:"d/m/Y H:i" }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">
-                    <i class="fas fa-inbox" style="font-size:2rem;margin-bottom:8px;display:block;opacity:.4;"></i>
-                    Nenhum ticket encontrado.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
+{# Ultimos tickets #}
+<div class="card" style="padding: 0;">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-list-ul" style="color: var(--color-primary);"></i> Ultimos tickets</h3>
+    <a href="{% url 'suporte:ticket_lista' %}" class="card-link">Ver todos <i class="bi bi-arrow-right"></i></a>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Titulo</th>
+          <th>Status</th>
+          <th>Prioridade</th>
+          <th>Categoria</th>
+          <th>Atendente</th>
+          <th>Data</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ticket in ultimos %}
+          <tr>
+            <td style="font-weight: var(--fw-bold); color: var(--color-text-muted);">{{ ticket.numero }}</td>
+            <td><a href="{% url 'suporte:ticket_detalhe' pk=ticket.pk %}" style="color: var(--color-primary); font-weight: var(--fw-semibold); text-decoration: none;">{{ ticket.titulo }}</a></td>
+            <td><span class="ticket-pill status-{{ ticket.status }}">{{ ticket.get_status_display }}</span></td>
+            <td><span class="ticket-pill prio-{{ ticket.prioridade }}">{{ ticket.get_prioridade_display }}</span></td>
+            <td style="color: var(--color-text-muted);">{{ ticket.categoria.nome|default:"—" }}</td>
+            <td style="color: var(--color-text);">{% if ticket.atendente %}{{ ticket.atendente.get_full_name|default:ticket.atendente.username }}{% else %}—{% endif %}</td>
+            <td style="color: var(--color-text-muted); font-size: var(--fs-xs);">{{ ticket.data_abertura|date:"d/m/Y H:i" }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" style="text-align: center; padding: var(--sp-10); color: var(--color-text-muted);">
+              <i class="bi bi-inbox" style="font-size: 2rem; margin-bottom: var(--sp-2); display: block; opacity: 0.3;"></i>
+              Nenhum ticket encontrado.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
     </table>
+  </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .stats-grid-5 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--sp-3); }
+
+  .periodo-sel { display: inline-flex; gap: 2px; background: var(--color-surface); padding: 3px; border-radius: var(--radius); }
+  .periodo-btn {
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    text-decoration: none;
+    color: var(--color-text-muted);
+    transition: background var(--transition), color var(--transition);
+  }
+  .periodo-btn:hover { color: var(--color-text); }
+  .periodo-btn.is-active { background: var(--color-bg); color: var(--color-primary); box-shadow: var(--shadow-sm); }
+
+  .report-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-4);
+  }
+  .report-card {
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    padding: var(--sp-4);
+    text-align: center;
+  }
+  .report-value {
+    font-size: 22px;
+    font-weight: var(--fw-bold);
+    color: var(--color-text);
+    letter-spacing: -0.02em;
+  }
+  .report-label { font-size: 11px; color: var(--color-text-muted); margin-top: 4px; }
+
+  .sup-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+  @media (max-width: 900px) { .sup-grid-2 { grid-template-columns: 1fr; } }
+
+  .agent-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-4);
+    border-bottom: 1px solid var(--color-border);
+    font-size: var(--fs-sm);
+  }
+  .agent-row:last-child { border-bottom: none; }
+  .agent-name { font-weight: var(--fw-semibold); flex: 1; min-width: 0; color: var(--color-text); }
+  .agent-stat { min-width: 60px; text-align: center; }
+  .agent-stat strong { display: block; font-size: var(--fs-md); color: var(--color-text); }
+  .agent-stat small { font-size: 10px; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  .bar-item { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: 6px; }
+  .bar-item:last-child { margin-bottom: 0; }
+  .bar-label { font-size: var(--fs-xs); min-width: 100px; color: var(--color-text); }
+  .bar-fill {
+    height: 18px;
+    border-radius: 4px;
+    background: var(--color-primary);
+    min-width: 24px;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+  }
+  .bar-fill span { font-size: 10px; color: #fff; font-weight: var(--fw-bold); }
+
+  .card-link {
+    font-size: var(--fs-xs);
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: var(--fw-semibold);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .card-link:hover { text-decoration: underline; }
+
+  .table-wrap { overflow-x: auto; }
+
+  .ticket-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: var(--fw-semibold);
+  }
+  .status-aberto { background: var(--color-info-soft); color: var(--color-info); }
+  .status-em_andamento { background: var(--color-warning-soft); color: var(--color-warning); }
+  .status-aguardando_cliente { background: var(--color-warning-soft); color: var(--color-warning); }
+  .status-resolvido { background: var(--color-success-soft); color: var(--color-success); }
+  .status-fechado { background: var(--color-surface); color: var(--color-text-muted); }
+  .prio-baixa { background: var(--color-surface); color: var(--color-text-muted); }
+  .prio-normal { background: var(--color-info-soft); color: var(--color-info); }
+  .prio-alta { background: var(--color-warning-soft); color: var(--color-warning); }
+  .prio-urgente { background: var(--color-danger-soft); color: var(--color-danger); }
+</style>
 {% endblock %}

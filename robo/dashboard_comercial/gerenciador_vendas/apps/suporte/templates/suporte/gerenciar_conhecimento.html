@@ -1,114 +1,204 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Gerenciar Base de Conhecimento{% endblock %}
-
-{% block custom_css %}
-<style>
-    .gc-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
-    .gc-card { background:var(--bg-white); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:10px; }
-    .gc-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; font-size:14px; font-weight:600; }
-    .gc-form { display:grid; gap:10px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border-light); }
-    .gc-form label { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; }
-    .gc-form input, .gc-form select, .gc-form textarea { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; box-sizing:border-box; }
-    .gc-form textarea { min-height:120px; resize:vertical; }
-    .gc-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border-light); font-size:13px; }
-    .gc-row:last-child { border-bottom:none; }
-    .gc-row-info { flex:1; }
-    .gc-row-info strong { color:var(--text-main); }
-    .gc-row-info small { color:var(--text-muted); display:block; font-size:11px; }
-    .gc-badge { font-size:10px; padding:2px 6px; border-radius:4px; font-weight:600; }
-    .gc-check { display:flex; align-items:center; gap:6px; font-size:13px; }
-    @media (max-width:768px) { .gc-grid { grid-template-columns:1fr; } }
-</style>
-{% endblock %}
+{% block title %}Gerenciar base de conhecimento — Hubtrix{% endblock %}
 
 {% block content %}
 {% csrf_token %}
-
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-    <h1 class="page-title"><i class="fas fa-cog" style="color:var(--primary);margin-right:8px;"></i> Gerenciar Base de Conhecimento</h1>
-    <a href="{% url 'suporte:base_conhecimento' %}" class="btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a>
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Gerenciar base de conhecimento</h1>
+      <p class="page-subtitle">Categorias e artigos da base de conhecimento publicados internamente.</p>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'suporte:base_conhecimento' %}" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
+  </div>
 </div>
 
 <div class="gc-grid">
-    <!-- Categorias -->
-    <div>
-        <h3 style="font-size:14px;font-weight:600;margin-bottom:10px;">Categorias</h3>
+  {# Categorias #}
+  <div>
+    <h3 class="gc-section-title">Categorias</h3>
 
-        {% for cat in categorias %}
-        <div class="gc-card">
-            <div class="gc-card-header">
-                <span><i class="fas {{ cat.icone }}" style="color:{{ cat.cor_hex }};margin-right:6px;"></i> {{ cat.nome }}</span>
-                <form method="post" style="display:inline;">{% csrf_token %}
-                    <input type="hidden" name="action" value="excluir_categoria">
-                    <input type="hidden" name="categoria_id" value="{{ cat.pk }}">
-                    <button type="submit" style="border:none;background:none;color:var(--danger);cursor:pointer;font-size:12px;" onclick="return confirm('Excluir categoria e todos os artigos?')"><i class="fas fa-trash"></i></button>
-                </form>
+    {% for cat in categorias %}
+      <div class="card gc-card">
+        <div class="card-body">
+          <div class="gc-row">
+            <i class="bi bi-bookmark" style="color: {{ cat.cor_hex }};"></i>
+            <div class="gc-row-info">
+              <strong>{{ cat.nome }}</strong>
+              <small>{{ cat.total_artigos }} artigo{{ cat.total_artigos|pluralize:"s" }}</small>
             </div>
-            <span style="font-size:12px;color:var(--text-muted);">{{ cat.total_artigos }} artigo{{ cat.total_artigos|pluralize:"s" }}</span>
-        </div>
-        {% endfor %}
-
-        <div class="gc-card">
-            <div class="gc-card-header">Nova Categoria</div>
-            <form method="post" class="gc-form">{% csrf_token %}
-                <input type="hidden" name="action" value="criar_categoria">
-                <div><label>Nome</label><input type="text" name="nome" required placeholder="Ex: Instalação"></div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                    <div><label>Ícone FA</label><input type="text" name="icone" value="fa-book" placeholder="fa-wifi"></div>
-                    <div><label>Cor</label><input type="color" name="cor_hex" value="#3b82f6" style="height:34px;border:none;cursor:pointer;width:100%;"></div>
-                </div>
-                <button type="submit" class="btn-primary" style="font-size:13px;"><i class="fas fa-plus"></i> Criar</button>
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="excluir_categoria">
+              <input type="hidden" name="categoria_id" value="{{ cat.pk }}">
+              <button type="submit" class="btn btn-ghost btn-sm btn-ghost-danger" onclick="return confirm('Excluir categoria e todos os artigos?')" title="Excluir"><i class="bi bi-trash"></i></button>
             </form>
+          </div>
         </div>
-    </div>
+      </div>
+    {% endfor %}
 
-    <!-- Artigos -->
-    <div>
-        <h3 style="font-size:14px;font-weight:600;margin-bottom:10px;">Artigos ({{ artigos|length }})</h3>
-
-        {% for art in artigos %}
-        <div class="gc-card">
-            <div class="gc-card-header">
-                <span>
-                    {% if art.destaque %}<i class="fas fa-star" style="color:#f59e0b;font-size:11px;"></i> {% endif %}
-                    {{ art.titulo }}
-                </span>
-                <div style="display:flex;gap:4px;">
-                    <span class="gc-badge" style="background:{% if art.publicado %}#dcfce7;color:#166534{% else %}#fef3c7;color:#92400e{% endif %};">{% if art.publicado %}Publicado{% else %}Rascunho{% endif %}</span>
-                    <form method="post" style="display:inline;">{% csrf_token %}
-                        <input type="hidden" name="action" value="excluir_artigo">
-                        <input type="hidden" name="artigo_id" value="{{ art.pk }}">
-                        <button type="submit" style="border:none;background:none;color:var(--danger);cursor:pointer;font-size:12px;" onclick="return confirm('Excluir artigo?')"><i class="fas fa-trash"></i></button>
-                    </form>
-                </div>
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title"><i class="bi bi-plus-circle" style="color: var(--color-primary);"></i> Nova categoria</h3>
+      </div>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="criar_categoria">
+        <div class="card-body">
+          <div class="field">
+            <label class="field-label" for="cat-nome">Nome</label>
+            <div class="field-input-wrap"><input id="cat-nome" type="text" name="nome" class="field-input" required placeholder="Ex: Instalacao"></div>
+          </div>
+          <div class="form-row-2" style="margin-top: var(--sp-3);">
+            <div class="field">
+              <label class="field-label" for="cat-icone">Icone</label>
+              <div class="field-input-wrap"><input id="cat-icone" type="text" name="icone" class="field-input" value="bi-bookmark" placeholder="bi-bookmark"></div>
             </div>
-            <span style="font-size:11px;color:var(--text-muted);">{{ art.categoria.nome }} · {{ art.visualizacoes }} views · {{ art.atualizado_em|date:"d/m/Y" }}</span>
+            <div class="field">
+              <label class="field-label" for="cat-cor">Cor</label>
+              <div class="field-input-wrap"><input id="cat-cor" type="color" name="cor_hex" class="field-input" value="#2563eb" style="height: 38px; padding: 2px;"></div>
+            </div>
+          </div>
         </div>
-        {% endfor %}
-
-        <!-- Form novo artigo -->
-        <div class="gc-card">
-            <div class="gc-card-header">Novo Artigo</div>
-            <form method="post" class="gc-form">{% csrf_token %}
-                <input type="hidden" name="action" value="criar_artigo">
-                <div><label>Título</label><input type="text" name="titulo" required placeholder="Ex: Como configurar roteador TP-Link"></div>
-                <div><label>Categoria</label>
-                    <select name="categoria_id" required>
-                        {% for cat in categorias %}<option value="{{ cat.pk }}">{{ cat.nome }}</option>{% endfor %}
-                    </select>
-                </div>
-                <div><label>Resumo (opcional)</label><input type="text" name="resumo" placeholder="Resumo curto para a listagem"></div>
-                <div><label>Conteúdo</label><textarea name="conteudo" required placeholder="Escreva o conteúdo do artigo..."></textarea></div>
-                <div><label>Tags (separadas por vírgula)</label><input type="text" name="tags" placeholder="roteador, tp-link, instalacao"></div>
-                <div style="display:flex;gap:16px;">
-                    <label class="gc-check"><input type="checkbox" name="publicado" checked> Publicado</label>
-                    <label class="gc-check"><input type="checkbox" name="destaque"> Destaque</label>
-                </div>
-                <button type="submit" class="btn-primary" style="font-size:13px;"><i class="fas fa-plus"></i> Criar Artigo</button>
-            </form>
+        <div class="card-footer" style="justify-content: flex-end;">
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Criar categoria</button>
         </div>
+      </form>
     </div>
+  </div>
+
+  {# Artigos #}
+  <div>
+    <h3 class="gc-section-title">Artigos ({{ artigos|length }})</h3>
+
+    {% for art in artigos %}
+      <div class="card gc-card">
+        <div class="card-body">
+          <div class="gc-row">
+            <div class="gc-row-info">
+              <strong>
+                {% if art.destaque %}<i class="bi bi-star-fill" style="color: var(--color-warning); font-size: 11px;"></i> {% endif %}
+                {{ art.titulo }}
+              </strong>
+              <small>{{ art.categoria.nome }} · {{ art.visualizacoes }} views · {{ art.atualizado_em|date:"d/m/Y" }}</small>
+            </div>
+            {% if art.publicado %}
+              {% include "components/badge.html" with variant="success" label="Publicado" size="sm" %}
+            {% else %}
+              {% include "components/badge.html" with variant="warning" label="Rascunho" size="sm" %}
+            {% endif %}
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="excluir_artigo">
+              <input type="hidden" name="artigo_id" value="{{ art.pk }}">
+              <button type="submit" class="btn btn-ghost btn-sm btn-ghost-danger" onclick="return confirm('Excluir artigo?')" title="Excluir"><i class="bi bi-trash"></i></button>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title"><i class="bi bi-plus-circle" style="color: var(--color-primary);"></i> Novo artigo</h3>
+      </div>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="criar_artigo">
+        <div class="card-body">
+          <div class="field">
+            <label class="field-label" for="art-titulo">Titulo</label>
+            <div class="field-input-wrap"><input id="art-titulo" type="text" name="titulo" class="field-input" required placeholder="Ex: Como configurar roteador TP-Link"></div>
+          </div>
+          <div class="field" style="margin-top: var(--sp-3);">
+            <label class="field-label" for="art-categoria">Categoria</label>
+            <div class="field-input-wrap">
+              <select id="art-categoria" name="categoria_id" class="field-input" required>
+                {% for cat in categorias %}<option value="{{ cat.pk }}">{{ cat.nome }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="field" style="margin-top: var(--sp-3);">
+            <label class="field-label" for="art-resumo">Resumo (opcional)</label>
+            <div class="field-input-wrap"><input id="art-resumo" type="text" name="resumo" class="field-input" placeholder="Resumo curto pra listagem"></div>
+          </div>
+          <div class="field" style="margin-top: var(--sp-3);">
+            <label class="field-label" for="art-conteudo">Conteudo</label>
+            <div class="field-input-wrap">
+              <textarea id="art-conteudo" name="conteudo" class="field-input" required style="min-height: 140px; height: auto; padding: var(--sp-2) var(--sp-3); resize: vertical;" placeholder="Escreva o conteudo do artigo..."></textarea>
+            </div>
+          </div>
+          <div class="field" style="margin-top: var(--sp-3);">
+            <label class="field-label" for="art-tags">Tags (separadas por virgula)</label>
+            <div class="field-input-wrap"><input id="art-tags" type="text" name="tags" class="field-input" placeholder="roteador, tp-link, instalacao"></div>
+          </div>
+          <div class="gc-checks" style="margin-top: var(--sp-3);">
+            <label class="chk-inline"><input type="checkbox" name="publicado" checked> Publicado</label>
+            <label class="chk-inline"><input type="checkbox" name="destaque"> Destaque</label>
+          </div>
+        </div>
+        <div class="card-footer" style="justify-content: flex-end;">
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Criar artigo</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
+{% endblock %}
 
+{% block extra_css %}
+<style>
+  .gc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+  @media (max-width: 900px) { .gc-grid { grid-template-columns: 1fr; } }
+
+  .gc-section-title {
+    font-size: 11px;
+    font-weight: var(--fw-bold);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: var(--sp-2);
+  }
+
+  .gc-card { margin-bottom: var(--sp-2); }
+
+  .gc-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+  }
+  .gc-row-info { flex: 1; min-width: 0; }
+  .gc-row-info strong {
+    color: var(--color-text);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .gc-row-info small {
+    color: var(--color-text-muted);
+    font-size: 11px;
+    display: block;
+    margin-top: 2px;
+  }
+
+  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+
+  .gc-checks { display: flex; gap: var(--sp-4); }
+  .chk-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--fs-sm);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+  .chk-inline input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--color-primary); }
+</style>
 {% endblock %}

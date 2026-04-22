@@ -1,174 +1,168 @@
 {% extends 'sistema/base.html' %}
 
-{% block title %}Visual Indica&ccedil;&otilde;es - Admin{% endblock %}
+{% block title %}Visual — Indicacoes{% endblock %}
 
 {% block content %}
-
 <div class="page-header">
+  <div class="page-header-top">
     <div>
-        <h1 class="page-title">Visual da P&aacute;gina de Indica&ccedil;&atilde;o</h1>
-        <p class="page-subtitle">Personalize a apar&ecirc;ncia da p&aacute;gina p&uacute;blica que os indicados v&ecirc;em.</p>
+      <h1 class="page-title">Visual da pagina de indicacao</h1>
+      <p class="page-subtitle">Personalize a aparencia da pagina publica que os indicados veem.</p>
     </div>
+  </div>
 </div>
 
-<div style="display:grid; grid-template-columns:1fr 380px; gap:24px;">
-    <!-- Formul&aacute;rio -->
-    <div class="card" style="padding:24px;">
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
+<div class="visual-grid">
+  <div class="card">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="card-body">
+        <h3 style="font-size: var(--fs-md); font-weight: var(--fw-bold); margin-bottom: var(--sp-4); display: flex; align-items: center; gap: var(--sp-2);"><i class="bi bi-fonts" style="color: var(--color-primary);"></i> Textos</h3>
 
-            <h3 style="font-size:15px; color:var(--text-main); margin-bottom:16px;">
-                <i class="fas fa-font" style="color:var(--primary); margin-right:6px;"></i>Textos
-            </h3>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                <div class="form-group">
-                    <label class="form-label">T&iacute;tulo</label>
-                    <input type="text" name="titulo" class="form-control" value="{{ config.titulo }}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Subt&iacute;tulo</label>
-                    <input type="text" name="subtitulo" class="form-control" value="{{ config.subtitulo }}">
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Texto acima do nome do indicador</label>
-                <input type="text" name="texto_indicador" class="form-control" value="{{ config.texto_indicador }}">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Texto do bot&atilde;o</label>
-                <input type="text" name="texto_botao" class="form-control" value="{{ config.texto_botao }}">
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                <div class="form-group">
-                    <label class="form-label">T&iacute;tulo de sucesso</label>
-                    <input type="text" name="texto_sucesso_titulo" class="form-control" value="{{ config.texto_sucesso_titulo }}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Mensagem de sucesso</label>
-                    <input type="text" name="texto_sucesso_msg" class="form-control" value="{{ config.texto_sucesso_msg }}">
-                </div>
-            </div>
-
-            <hr style="border:none; border-top:1px solid var(--border); margin:20px 0;">
-
-            <h3 style="font-size:15px; color:var(--text-main); margin-bottom:16px;">
-                <i class="fas fa-palette" style="color:var(--primary); margin-right:6px;"></i>Cores
-            </h3>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                <div class="form-group">
-                    <label class="form-label">Cor de Fundo</label>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <input type="color" name="cor_fundo" value="{{ config.cor_fundo }}" style="width:40px; height:36px; border:1px solid var(--border); border-radius:6px; cursor:pointer;">
-                        <input type="text" class="form-control" value="{{ config.cor_fundo }}" style="flex:1;" disabled>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Cor do Bot&atilde;o</label>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <input type="color" name="cor_botao" value="{{ config.cor_botao }}" style="width:40px; height:36px; border:1px solid var(--border); border-radius:6px; cursor:pointer;">
-                        <input type="text" class="form-control" value="{{ config.cor_botao }}" style="flex:1;" disabled>
-                    </div>
-                </div>
-            </div>
-
-            <hr style="border:none; border-top:1px solid var(--border); margin:20px 0;">
-
-            <h3 style="font-size:15px; color:var(--text-main); margin-bottom:16px;">
-                <i class="fas fa-image" style="color:var(--primary); margin-right:6px;"></i>Imagens
-            </h3>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                <div class="form-group">
-                    <label class="form-label">Logo</label>
-                    {% if config.logo %}
-                    <div style="margin-bottom:8px; display:flex; align-items:center; gap:8px;">
-                        <img src="{{ config.logo.url }}" style="height:40px; border-radius:6px;">
-                        <label style="font-size:12px; color:var(--danger); cursor:pointer;">
-                            <input type="checkbox" name="remover_logo" value="1" style="margin-right:4px;"> Remover
-                        </label>
-                    </div>
-                    {% endif %}
-                    <input type="file" name="logo" class="form-control" accept="image/*">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Imagem de Fundo</label>
-                    {% if config.imagem_fundo %}
-                    <div style="margin-bottom:8px; display:flex; align-items:center; gap:8px;">
-                        <img src="{{ config.imagem_fundo.url }}" style="height:40px; border-radius:6px;">
-                        <label style="font-size:12px; color:var(--danger); cursor:pointer;">
-                            <input type="checkbox" name="remover_fundo" value="1" style="margin-right:4px;"> Remover
-                        </label>
-                    </div>
-                    {% endif %}
-                    <input type="file" name="imagem_fundo" class="form-control" accept="image/*">
-                </div>
-            </div>
-
-            <hr style="border:none; border-top:1px solid var(--border); margin:20px 0;">
-
-            <h3 style="font-size:15px; color:var(--text-main); margin-bottom:16px;">
-                <i class="fas fa-sliders-h" style="color:var(--primary); margin-right:6px;"></i>Campos do Formul&aacute;rio
-            </h3>
-
-            <div style="display:flex; gap:24px;">
-                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px;">
-                    <input type="checkbox" name="mostrar_campo_cpf" {% if config.mostrar_campo_cpf %}checked{% endif %}> Exibir campo CPF
-                </label>
-                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px;">
-                    <input type="checkbox" name="mostrar_campo_cidade" {% if config.mostrar_campo_cidade %}checked{% endif %}> Exibir campo Cidade
-                </label>
-            </div>
-
-            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:24px;">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save"></i> Salvar Configura&ccedil;&otilde;es
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Preview -->
-    <div>
-        <div class="card" style="padding:16px;">
-            <h3 style="font-size:14px; color:var(--text-main); margin-bottom:12px; text-align:center;">
-                <i class="fas fa-eye" style="color:var(--primary); margin-right:4px;"></i>Preview
-            </h3>
-            <div style="background:{{ config.cor_fundo }}; border-radius:12px; padding:24px; min-height:400px; display:flex; align-items:center; justify-content:center;
-                {% if config.imagem_fundo %}background-image:url('{{ config.imagem_fundo.url }}'); background-size:cover; background-position:center;{% endif %}">
-                <div style="background:white; border-radius:16px; padding:28px; width:100%; max-width:320px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
-                    <div style="text-align:center; margin-bottom:16px;">
-                        {% if config.logo %}
-                        <img src="{{ config.logo.url }}" style="height:36px; margin-bottom:8px;">
-                        {% endif %}
-                        <h3 style="font-size:20px; font-weight:800; color:var(--text-main);">{{ config.titulo }}</h3>
-                        <small style="color:var(--text-muted);">{{ config.subtitulo }}</small>
-                    </div>
-                    <div style="background:var(--primary-light); border-radius:8px; padding:10px; text-align:center; margin-bottom:14px; border:1px solid var(--border);">
-                        <small style="color:var(--primary);">{{ config.texto_indicador }}</small>
-                        <br><strong style="color:var(--primary-dark); font-size:13px;">Jo&atilde;o da Silva</strong>
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <div style="background:var(--bg-page); border-radius:6px; padding:8px 10px; font-size:11px; color:var(--text-light); margin-bottom:6px;">Seu Nome *</div>
-                        <div style="background:var(--bg-page); border-radius:6px; padding:8px 10px; font-size:11px; color:var(--text-light); margin-bottom:6px;">Seu Telefone *</div>
-                        {% if config.mostrar_campo_cpf %}
-                        <div style="background:var(--bg-page); border-radius:6px; padding:8px 10px; font-size:11px; color:var(--text-light); margin-bottom:6px;">CPF (opcional)</div>
-                        {% endif %}
-                        {% if config.mostrar_campo_cidade %}
-                        <div style="background:var(--bg-page); border-radius:6px; padding:8px 10px; font-size:11px; color:var(--text-light); margin-bottom:6px;">Cidade (opcional)</div>
-                        {% endif %}
-                    </div>
-                    <div style="background:{{ config.cor_botao }}; color:white; text-align:center; padding:10px; border-radius:8px; font-size:13px; font-weight:700;">
-                        {{ config.texto_botao }}
-                    </div>
-                </div>
-            </div>
+        <div class="grid-2">
+          <div class="field">
+            <label class="field-label">Titulo</label>
+            <div class="field-input-wrap"><input type="text" name="titulo" class="field-input" value="{{ config.titulo }}"></div>
+          </div>
+          <div class="field">
+            <label class="field-label">Subtitulo</label>
+            <div class="field-input-wrap"><input type="text" name="subtitulo" class="field-input" value="{{ config.subtitulo }}"></div>
+          </div>
         </div>
-    </div>
-</div>
 
+        <div class="field">
+          <label class="field-label">Texto acima do nome do indicador</label>
+          <div class="field-input-wrap"><input type="text" name="texto_indicador" class="field-input" value="{{ config.texto_indicador }}"></div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Texto do botao</label>
+          <div class="field-input-wrap"><input type="text" name="texto_botao" class="field-input" value="{{ config.texto_botao }}"></div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label class="field-label">Titulo de sucesso</label>
+            <div class="field-input-wrap"><input type="text" name="texto_sucesso_titulo" class="field-input" value="{{ config.texto_sucesso_titulo }}"></div>
+          </div>
+          <div class="field">
+            <label class="field-label">Mensagem de sucesso</label>
+            <div class="field-input-wrap"><input type="text" name="texto_sucesso_msg" class="field-input" value="{{ config.texto_sucesso_msg }}"></div>
+          </div>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid var(--color-border); margin: var(--sp-5) 0;">
+
+        <h3 style="font-size: var(--fs-md); font-weight: var(--fw-bold); margin-bottom: var(--sp-4); display: flex; align-items: center; gap: var(--sp-2);"><i class="bi bi-palette" style="color: var(--color-primary);"></i> Cores</h3>
+
+        <div class="grid-2">
+          <div class="field">
+            <label class="field-label">Cor de fundo</label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input type="color" name="cor_fundo" value="{{ config.cor_fundo }}" class="color-input-sm">
+              <input type="text" class="field-input" value="{{ config.cor_fundo }}" style="flex: 1;" disabled>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Cor do botao</label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input type="color" name="cor_botao" value="{{ config.cor_botao }}" class="color-input-sm">
+              <input type="text" class="field-input" value="{{ config.cor_botao }}" style="flex: 1;" disabled>
+            </div>
+          </div>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid var(--color-border); margin: var(--sp-5) 0;">
+
+        <h3 style="font-size: var(--fs-md); font-weight: var(--fw-bold); margin-bottom: var(--sp-4); display: flex; align-items: center; gap: var(--sp-2);"><i class="bi bi-image" style="color: var(--color-primary);"></i> Imagens</h3>
+
+        <div class="grid-2">
+          <div class="field">
+            <label class="field-label">Logo</label>
+            {% if config.logo %}
+              <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                <img src="{{ config.logo.url }}" style="height: 40px; border-radius: var(--radius-sm);">
+                <label style="font-size: var(--fs-xs); color: var(--color-danger); cursor: pointer;">
+                  <input type="checkbox" name="remover_logo" value="1" style="margin-right: 4px;"> Remover
+                </label>
+              </div>
+            {% endif %}
+            <div class="field-input-wrap"><input type="file" name="logo" class="field-input" accept="image/*"></div>
+          </div>
+          <div class="field">
+            <label class="field-label">Imagem de fundo</label>
+            {% if config.imagem_fundo %}
+              <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                <img src="{{ config.imagem_fundo.url }}" style="height: 40px; border-radius: var(--radius-sm);">
+                <label style="font-size: var(--fs-xs); color: var(--color-danger); cursor: pointer;">
+                  <input type="checkbox" name="remover_fundo" value="1" style="margin-right: 4px;"> Remover
+                </label>
+              </div>
+            {% endif %}
+            <div class="field-input-wrap"><input type="file" name="imagem_fundo" class="field-input" accept="image/*"></div>
+          </div>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid var(--color-border); margin: var(--sp-5) 0;">
+
+        <h3 style="font-size: var(--fs-md); font-weight: var(--fw-bold); margin-bottom: var(--sp-4); display: flex; align-items: center; gap: var(--sp-2);"><i class="bi bi-sliders" style="color: var(--color-primary);"></i> Campos do formulario</h3>
+
+        <div style="display: flex; gap: var(--sp-6);">
+          <label style="display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm);">
+            <input type="checkbox" name="mostrar_campo_cpf" {% if config.mostrar_campo_cpf %}checked{% endif %}> Exibir campo CPF
+          </label>
+          <label style="display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm);">
+            <input type="checkbox" name="mostrar_campo_cidade" {% if config.mostrar_campo_cidade %}checked{% endif %}> Exibir campo cidade
+          </label>
+        </div>
+      </div>
+
+      <div class="card-footer" style="display: flex; gap: var(--sp-3); justify-content: flex-end;">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check2"></i> Salvar configuracoes</button>
+      </div>
+    </form>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-header"><h3 class="card-title" style="text-align: center; width: 100%;"><i class="bi bi-eye" style="color: var(--color-primary);"></i> Preview</h3></div>
+      <div class="card-body">
+        <div class="preview-bg" style="background: {{ config.cor_fundo }}; {% if config.imagem_fundo %}background-image: url('{{ config.imagem_fundo.url }}'); background-size: cover; background-position: center;{% endif %}">
+          <div class="preview-card">
+            <div style="text-align: center; margin-bottom: var(--sp-4);">
+              {% if config.logo %}<img src="{{ config.logo.url }}" style="height: 36px; margin-bottom: 8px;">{% endif %}
+              <h3 style="font-size: 20px; font-weight: 800; color: #0f172a;">{{ config.titulo }}</h3>
+              <small style="color: var(--color-text-muted);">{{ config.subtitulo }}</small>
+            </div>
+            <div style="background: var(--color-primary-soft); border-radius: var(--radius-md); padding: 10px; text-align: center; margin-bottom: var(--sp-3); border: 1px solid var(--color-border);">
+              <small style="color: var(--color-primary);">{{ config.texto_indicador }}</small>
+              <div style="color: var(--color-primary); font-weight: 700; font-size: var(--fs-sm); margin-top: 2px;">Joao da Silva</div>
+            </div>
+            <div style="margin-bottom: 8px;">
+              <div class="preview-input">Seu nome *</div>
+              <div class="preview-input">Seu telefone *</div>
+              {% if config.mostrar_campo_cpf %}<div class="preview-input">CPF (opcional)</div>{% endif %}
+              {% if config.mostrar_campo_cidade %}<div class="preview-input">Cidade (opcional)</div>{% endif %}
+            </div>
+            <div style="background: {{ config.cor_botao }}; color: white; text-align: center; padding: 10px; border-radius: var(--radius-md); font-size: var(--fs-sm); font-weight: 700;">
+              {{ config.texto_botao }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .visual-grid { display: grid; grid-template-columns: 1fr 380px; gap: var(--sp-6); }
+  @media (max-width: 1100px) { .visual-grid { grid-template-columns: 1fr; } }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+  .color-input-sm { width: 40px; height: 36px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); cursor: pointer; padding: 2px; }
+  .preview-bg { border-radius: var(--radius-md); padding: var(--sp-6); min-height: 400px; display: flex; align-items: center; justify-content: center; }
+  .preview-card { background: white; border-radius: var(--radius-lg); padding: var(--sp-6); width: 100%; max-width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+  .preview-input { background: var(--color-surface); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 11px; color: var(--color-text-muted); margin-bottom: 6px; }
+</style>
 {% endblock %}

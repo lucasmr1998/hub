@@ -1,91 +1,96 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Cidades - Admin Roleta{% endblock %}
+{% block title %}Cidades — Clube{% endblock %}
 
 {% block content %}
-
 <div class="page-header">
-    <h1 class="page-title">Cidades</h1>
-    <p class="page-subtitle">Gerencie as cidades permitidas para distribui&ccedil;&atilde;o de pr&ecirc;mios.</p>
-</div>
-
-<!-- Adicionar -->
-<div class="card">
-    <div class="card-title">Adicionar Nova Cidade</div>
-    <form method="post" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="nova_cidade">
-        <div style="flex:1; min-width:200px;">
-            <label class="form-label">Nome da Cidade</label>
-            <input type="text" name="nome" placeholder="Ex: Teresina" required class="form-control">
-        </div>
-        <div style="display:flex; align-items:center; gap:6px; margin-top:22px;">
-            <input type="checkbox" name="ativo" id="nova_cidade_ativa" checked>
-            <label for="nova_cidade_ativa" class="form-label" style="margin-bottom:0;">Ativo</label>
-        </div>
-        <div>
-            <button type="submit" class="btn-primary" style="margin-top:22px;">
-                <i class="fas fa-plus"></i> Adicionar
-            </button>
-        </div>
-    </form>
-</div>
-
-<!-- Tabela -->
-<div class="data-table-container">
-    <div style="overflow-x: auto;">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Nome da Cidade</th>
-                    <th>Status</th>
-                    <th>A&ccedil;&otilde;es</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for c in cidades %}
-                <tr>
-                    <td>
-                        <input type="text" name="nome" value="{{ c.nome }}" required form="form_atualizar_cid_{{ c.id }}" class="form-control" style="max-width:300px;">
-                    </td>
-                    <td>
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            <input type="checkbox" name="ativo" id="cidade_ativa_{{ c.id }}" {% if c.ativo %}checked{% endif %} form="form_atualizar_cid_{{ c.id }}">
-                            <label for="cidade_ativa_{{ c.id }}">
-                                {% if c.ativo %}
-                                <span class="badge badge-success">Ativo</span>
-                                {% else %}
-                                <span class="badge badge-warning">Inativo</span>
-                                {% endif %}
-                            </label>
-                        </div>
-                    </td>
-                    <td style="white-space:nowrap;">
-                        <form method="post" id="form_atualizar_cid_{{ c.id }}" style="display:inline;">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="atualizar_cidade">
-                            <input type="hidden" name="cidade_id" value="{{ c.id }}">
-                            <button type="submit" class="btn-primary btn-sm">
-                                <i class="fas fa-save"></i> Salvar
-                            </button>
-                        </form>
-                        <form method="post" style="display:inline; margin-left:4px;">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="excluir_cidade">
-                            <input type="hidden" name="cidade_id" value="{{ c.id }}">
-                            <button type="submit" class="btn-danger btn-sm" onclick="return confirm('Tem certeza que deseja apagar a cidade {{ c.nome }}?');">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="3" class="text-center" style="padding:20px; color:var(--text-light);">Nenhuma cidade cadastrada.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Cidades</h1>
+      <p class="page-subtitle">Gerencie as cidades permitidas pra distribuicao de premios.</p>
     </div>
+  </div>
 </div>
+
+<div class="card" style="margin-bottom: var(--sp-4);">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-plus-circle" style="color: var(--color-primary);"></i> Adicionar nova cidade</h3>
+  </div>
+  <div class="card-body">
+    <form method="post" class="add-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="nova_cidade">
+      <div class="field" style="flex: 1; min-width: 200px;">
+        <label class="field-label">Nome da cidade</label>
+        <div class="field-input-wrap"><input type="text" name="nome" class="field-input" placeholder="Ex: Teresina" required></div>
+      </div>
+      <label class="chk-inline">
+        <input type="checkbox" name="ativo" checked> Ativa
+      </label>
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Adicionar</button>
+    </form>
+  </div>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Nome da cidade</th>
+          <th>Status</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in cidades %}
+          <tr>
+            <td>
+              <div class="field-input-wrap" style="max-width: 300px;">
+                <input type="text" name="nome" value="{{ c.nome }}" class="field-input" required form="form_atualizar_cid_{{ c.id }}">
+              </div>
+            </td>
+            <td>
+              <label class="chk-inline">
+                <input type="checkbox" name="ativo" {% if c.ativo %}checked{% endif %} form="form_atualizar_cid_{{ c.id }}">
+                {% if c.ativo %}
+                  {% include "components/badge.html" with variant="success" label="Ativa" size="sm" %}
+                {% else %}
+                  {% include "components/badge.html" with variant="warning" label="Inativa" size="sm" %}
+                {% endif %}
+              </label>
+            </td>
+            <td style="white-space: nowrap;">
+              <form method="post" id="form_atualizar_cid_{{ c.id }}" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="atualizar_cidade">
+                <input type="hidden" name="cidade_id" value="{{ c.id }}">
+                <button type="submit" class="btn btn-secondary btn-sm"><i class="bi bi-check-lg"></i> Salvar</button>
+              </form>
+              <form method="post" style="display: inline; margin-left: 4px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="excluir_cidade">
+                <input type="hidden" name="cidade_id" value="{{ c.id }}">
+                <button type="submit" class="btn btn-ghost btn-sm btn-ghost-danger" onclick="return confirm('Apagar a cidade {{ c.nome|escapejs }}?');"><i class="bi bi-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="3" style="text-align: center; padding: var(--sp-10); color: var(--color-text-muted);">Nenhuma cidade cadastrada.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .add-form { display: flex; gap: var(--sp-3); align-items: flex-end; flex-wrap: wrap; }
+  .chk-inline { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); cursor: pointer; color: var(--color-text); }
+  .chk-inline input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--color-primary); }
+  .table-wrap { overflow-x: auto; }
+</style>
 {% endblock %}

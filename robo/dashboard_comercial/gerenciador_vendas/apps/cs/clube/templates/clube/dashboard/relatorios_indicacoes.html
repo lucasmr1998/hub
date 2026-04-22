@@ -1,157 +1,161 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Relat&oacute;rios - Indica&ccedil;&otilde;es{% endblock %}
-
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-{% endblock %}
+{% block title %}Relatorios — Indicacoes{% endblock %}
 
 {% block content %}
-
-<div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
+<div class="page-header">
+  <div class="page-header-top">
     <div>
-        <h1 class="page-title">Relat&oacute;rio de Indica&ccedil;&otilde;es</h1>
-        <p class="page-subtitle">An&aacute;lise de desempenho do programa de indica&ccedil;&otilde;es.</p>
+      <h1 class="page-title">Relatorio de indicacoes</h1>
+      <p class="page-subtitle">Analise de desempenho do programa de indicacoes.</p>
     </div>
-    <form method="get" style="display:flex; gap:6px; align-items:center;">
-        <label class="form-label" style="margin:0; white-space:nowrap;">Per&iacute;odo:</label>
-        <select name="periodo" class="form-control" style="width:auto;" onchange="this.form.submit()">
+    <div class="page-actions">
+      <form method="get" style="display: inline-flex; align-items: center; gap: 6px;">
+        <label style="font-size: var(--fs-xs); color: var(--color-text-muted); white-space: nowrap;">Periodo:</label>
+        <div class="field-input-wrap">
+          <select name="periodo" class="field-input" style="height: 32px; font-size: var(--fs-xs);" onchange="this.form.submit()">
             <option value="7" {% if periodo == '7' %}selected{% endif %}>7 dias</option>
             <option value="15" {% if periodo == '15' %}selected{% endif %}>15 dias</option>
             <option value="30" {% if periodo == '30' %}selected{% endif %}>30 dias</option>
             <option value="90" {% if periodo == '90' %}selected{% endif %}>90 dias</option>
-            <option value="total" {% if periodo == 'total' %}selected{% endif %}>Todo per&iacute;odo</option>
-        </select>
-    </form>
+            <option value="total" {% if periodo == 'total' %}selected{% endif %}>Todo periodo</option>
+          </select>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
-<!-- KPIs -->
-<div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:24px;">
-    <div class="stat-card">
-        <div class="stat-label">Total Indica&ccedil;&otilde;es</div>
-        <div class="stat-value">{{ total_indicacoes }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Pendentes</div>
-        <div class="stat-value" style="color:var(--warning);">{{ indicacoes_pendentes }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Convertidas</div>
-        <div class="stat-value" style="color:var(--success);">{{ indicacoes_convertidas }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Taxa de Convers&atilde;o</div>
-        <div class="stat-value">{{ taxa_conversao_ind }}%</div>
-    </div>
+<div class="stats-grid stats-grid-4" style="margin-bottom: var(--sp-4);">
+  {% include "components/stat_card.html" with label="Total indicacoes" value=total_indicacoes icon="bi-share" %}
+  {% include "components/stat_card.html" with label="Pendentes" value=indicacoes_pendentes icon="bi-clock" icon_variant="warning" %}
+  {% include "components/stat_card.html" with label="Convertidas" value=indicacoes_convertidas icon="bi-check-circle" icon_variant="success" %}
+  {% include "components/stat_card.html" with label="Taxa de conversao" value=taxa_conversao_ind|add:"%" icon="bi-percent" icon_variant="info" %}
 </div>
 
-<!-- Evolu&ccedil;&atilde;o -->
-<div class="card" style="margin-bottom:24px;">
-    <div class="card-title">Evolu&ccedil;&atilde;o de Indica&ccedil;&otilde;es</div>
-    <div style="height:300px;">
-        <canvas id="chart-evo-ind"></canvas>
-    </div>
+<div class="card" style="margin-bottom: var(--sp-4);">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-graph-up" style="color: var(--color-primary);"></i> Evolucao de indicacoes</h3>
+  </div>
+  <div class="card-body"><div class="chart-box"><canvas id="chart-evo-ind"></canvas></div></div>
 </div>
 
-<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px;">
-    <!-- Top Embaixadores -->
-    <div class="card">
-        <div class="card-title">Top 10 Embaixadores</div>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Membro</th>
-                    <th style="text-align:center;">Indica&ccedil;&otilde;es</th>
-                    <th style="text-align:center;">Convertidas</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for m in top_embaixadores %}
-                <tr>
-                    <td><strong>{{ forloop.counter }}</strong></td>
-                    <td>
-                        <strong>{{ m.nome }}</strong>
-                        <br><small class="text-muted">{{ m.cidade|default:"-" }}</small>
-                    </td>
-                    <td style="text-align:center;"><span class="font-bold">{{ m.total_indicacoes }}</span></td>
-                    <td style="text-align:center;">
-                        {% if m.ind_convertidas > 0 %}
-                        <span class="badge badge-success">{{ m.ind_convertidas }}</span>
-                        {% else %}
-                        <span class="text-muted">0</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="4" class="text-center text-muted" style="padding:20px;">Nenhuma indica&ccedil;&atilde;o no per&iacute;odo.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="rel-grid-2">
+  <div class="card" style="padding: 0; overflow: hidden;">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-trophy" style="color: var(--color-warning);"></i> Top 10 embaixadores</h3>
     </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Membro</th>
+            <th style="text-align: center;">Indicacoes</th>
+            <th style="text-align: center;">Convertidas</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in top_embaixadores %}
+            <tr>
+              <td><strong>{{ forloop.counter }}</strong></td>
+              <td>
+                <strong>{{ m.nome }}</strong>
+                <div style="font-size: 11px; color: var(--color-text-muted);">{{ m.cidade|default:"—" }}</div>
+              </td>
+              <td style="text-align: center; font-weight: var(--fw-bold);">{{ m.total_indicacoes }}</td>
+              <td style="text-align: center;">
+                {% if m.ind_convertidas > 0 %}
+                  {% include "components/badge.html" with variant="success" label=m.ind_convertidas size="sm" %}
+                {% else %}
+                  <span style="color: var(--color-text-muted);">0</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4" style="text-align: center; padding: var(--sp-5); color: var(--color-text-muted);">Nenhuma indicacao no periodo.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-    <!-- Indica&ccedil;&otilde;es por Cidade -->
-    <div class="card">
-        <div class="card-title">Indica&ccedil;&otilde;es por Cidade</div>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Cidade</th>
-                    <th style="text-align:center;">Total</th>
-                    <th style="text-align:center;">Convertidas</th>
-                    <th style="text-align:center;">Taxa</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for c in indicacoes_por_cidade %}
-                <tr>
-                    <td><strong>{{ c.cidade_indicado }}</strong></td>
-                    <td style="text-align:center;">{{ c.total }}</td>
-                    <td style="text-align:center;">
-                        {% if c.convertidas > 0 %}
-                        <span class="badge badge-success">{{ c.convertidas }}</span>
-                        {% else %}0{% endif %}
-                    </td>
-                    <td style="text-align:center;">
-                        {% if c.total > 0 %}{% widthratio c.convertidas c.total 100 %}%{% else %}0%{% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="4" class="text-center text-muted" style="padding:20px;">Sem dados no per&iacute;odo.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+  <div class="card" style="padding: 0; overflow: hidden;">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-geo-alt" style="color: var(--color-primary);"></i> Indicacoes por cidade</h3>
     </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Cidade</th>
+            <th style="text-align: center;">Total</th>
+            <th style="text-align: center;">Convertidas</th>
+            <th style="text-align: center;">Taxa</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in indicacoes_por_cidade %}
+            <tr>
+              <td><strong>{{ c.cidade_indicado }}</strong></td>
+              <td style="text-align: center;">{{ c.total }}</td>
+              <td style="text-align: center;">
+                {% if c.convertidas > 0 %}
+                  {% include "components/badge.html" with variant="success" label=c.convertidas size="sm" %}
+                {% else %}0{% endif %}
+              </td>
+              <td style="text-align: center;">
+                {% if c.total > 0 %}{% widthratio c.convertidas c.total 100 %}%{% else %}0%{% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4" style="text-align: center; padding: var(--sp-5); color: var(--color-text-muted);">Sem dados no periodo.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
+{% endblock %}
 
+{% block extra_css %}
+<style>
+  .rel-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+  @media (max-width: 900px) { .rel-grid-2 { grid-template-columns: 1fr; } }
+  .chart-box { height: 300px; }
+  .table-wrap { overflow-x: auto; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    new Chart(document.getElementById('chart-evo-ind'), {
-        type: 'line',
-        data: {
-            labels: {{ chart_evo_labels|safe }},
-            datasets: [{
-                label: 'Indica\u00e7\u00f5es',
-                data: {{ chart_evo_ind|safe }},
-                borderColor: '#f59e0b',
-                backgroundColor: 'rgba(245,158,11,0.1)',
-                fill: true,
-                tension: 0.3,
-                pointRadius: 4,
-                borderWidth: 2,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { beginAtZero: true, grid: { color: '#f3f4f6' }, border: { display: false } },
-                x: { grid: { display: false }, border: { display: false } }
-            }
-        }
-    });
+  new Chart(document.getElementById('chart-evo-ind'), {
+    type: 'line',
+    data: {
+      labels: {{ chart_evo_labels|safe }},
+      datasets: [{
+        label: 'Indicacoes',
+        data: {{ chart_evo_ind|safe }},
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        borderWidth: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#f3f4f6' }, border: { display: false } },
+        x: { grid: { display: false }, border: { display: false } },
+      },
+    },
+  });
 });
 </script>
-
 {% endblock %}

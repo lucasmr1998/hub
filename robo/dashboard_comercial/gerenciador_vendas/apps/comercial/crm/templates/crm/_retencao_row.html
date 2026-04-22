@@ -1,0 +1,29 @@
+{% comment %}
+Linha da tabela de alertas de retencao.
+Params: alerta, nivel ("critico"/"alto"/"medio"/"baixo"), nivel_label, cor_var (ex: "--color-danger")
+{% endcomment %}
+<tr>
+  <td>
+    <div class="cliente-nome">{{ alerta.cliente_hubsoft.nome_razaosocial }}</div>
+    {% if alerta.lead %}<div class="cliente-tel">{{ alerta.lead.telefone|default:"" }}</div>{% endif %}
+  </td>
+  <td><span class="tipo-badge"><i class="bi bi-clock"></i> {{ alerta.get_tipo_alerta_display }}</span></td>
+  <td><span class="nivel-badge nivel-{{ nivel }}"><i class="bi bi-circle-fill" style="font-size: 7px;"></i> {{ nivel_label }}</span></td>
+  <td>
+    <div class="score-wrap">
+      <div class="score-bar"><div class="score-fill" style="width: {{ alerta.score_churn }}%; background: var({{ cor_var }});"></div></div>
+      <span class="score-txt" style="color: var({{ cor_var }});">{{ alerta.score_churn }}</span>
+    </div>
+  </td>
+  <td><span class="status-badge status-{{ alerta.status }}">{{ alerta.get_status_display }}</span></td>
+  <td style="color: var(--color-text-muted); font-size: var(--fs-xs);">{{ alerta.responsavel.get_full_name|default:"—" }}</td>
+  <td style="color: var(--color-text-muted); font-size: var(--fs-xs);">{{ alerta.data_detectado|date:"d/m/Y" }}</td>
+  <td>
+    <div class="acao-btns">
+      {% if alerta.status == 'novo' %}
+        <button class="btn btn-secondary btn-sm" onclick="tratarAlerta({{ alerta.pk }}, this)" title="Marcar em tratamento"><i class="bi bi-play"></i></button>
+      {% endif %}
+      <button class="btn btn-ghost btn-sm btn-ghost-success" onclick="resolverAlerta({{ alerta.pk }})" title="Resolver"><i class="bi bi-check-lg"></i></button>
+    </div>
+  </td>
+</tr>

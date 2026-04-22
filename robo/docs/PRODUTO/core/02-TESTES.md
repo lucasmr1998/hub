@@ -1,9 +1,26 @@
-# Testes — AuroraISP
+# Testes — Hubtrix
 
-**Última atualização:** 01/04/2026
-**Total de testes:** 291 (287 passando, 4 skipped)
-**Cobertura global:** 40%
+**Última atualização:** 19/04/2026
+**Baseline atual:** 784 passando, 17 falhando, 4 skipped, 61 xfailed, 16 xpassed (903 casos, ~5min)
 **Framework:** pytest + pytest-django + pytest-cov + factory_boy
+**CI:** GitHub Actions (`.github/workflows/ci.yml`) roda `pytest tests/ -v` em cada PR/push
+
+## Status da suite (baseline 19/04/2026)
+
+```
+tests/ ............................................... 23 arquivos
+pytest tests/ -v .....................................
+  784 passed, 17 failed, 4 skipped, 61 xfailed, 16 xpassed
+  (303.98s = ~5 min)
+```
+
+**17 testes falhando (bugs conhecidos, NÃO introduzidos pela migração do DS):**
+- `test_views_crm_apis.py` — 3 testes de "sem permissão" (CRM APIs)
+- `test_views_full_coverage.py` — 11 testes de APIs de usuários/notificações com problemas de permissão
+- `test_views_sistema.py::test_login_post_valido` — 1 teste de fluxo de login
+- `test_views_crm_apis.py::test_registrar_lead_token_nao_configurado_503` — 1 teste de token config
+
+Esses testes devem ser consertados antes ou durante a Fase 2B da migração (quando tocamos CRM/sistema).
 
 ---
 
@@ -26,6 +43,51 @@ python -m pytest tests/test_automacoes.py::EngineDispararEventoTest::test_condic
 ```
 
 O `pytest.ini` já configura `DJANGO_SETTINGS_MODULE = gerenciador_vendas.settings_local` (SQLite in-memory).
+
+---
+
+## Cobertura por app (visão atual)
+
+| App | Tem testes de view? | Arquivo principal |
+|---|:-:|---|
+| comercial/crm | ✅ | `test_views_crm.py`, `test_views_crm_apis.py` |
+| comercial/leads | ⚠️ mínimo | `test_views_leads.py` |
+| comercial/atendimento | ✅ | `test_views_atendimento_cadastro.py` |
+| comercial/cadastro | ✅ | `test_views_atendimento_cadastro.py` |
+| dashboard | ✅ | `test_views_dashboard_full.py` |
+| cs/clube | ✅ | `test_views_cs.py` |
+| cs/parceiros | ✅ | `test_views_cs_parceiros.py` |
+| inbox | ✅ | `test_views_atendimento_cadastro.py` |
+| notificacoes | ✅ (parcial) | `test_views_full_coverage.py` |
+| sistema | ⚠️ básico | `test_views_sistema.py` |
+| admin_aurora | ⚠️ básico | `test_admin_aurora.py` |
+| **marketing** | ❌ **zero** | — (gap crítico pra Fase 2B) |
+| **integracoes** | ❌ **zero** | — (webhooks + APIs sensíveis sem proteção) |
+| **suporte** | ✅ (via inbox) | Ok |
+
+**Gaps críticos pra consertar durante a migração:**
+1. Marketing — criar `test_views_marketing.py` antes de migrar (Fase 2B)
+2. Integracoes — criar `test_views_integracoes.py` antes de migrar (já migrado o template, mas sem proteção de regressão)
+3. Decorators `@user_tem_funcionalidade` — sem teste de caso negativo (acesso negado). Criar `test_permissoes_matriz.py` parametrizado.
+
+---
+
+## Política de testes durante a migração do DS
+
+**Regra "se toca view, valida teste":**
+
+1. Antes de migrar um app, rodar `pytest tests/ -k <app>` pra pegar baseline (quantos passam)
+2. Migrar o template
+3. Rodar o teste do app novamente — deve ter mesmo count ou mais
+4. Se baixar count → algum test quebrou por causa da migração → investigar e consertar ANTES de marcar ✅
+5. Se app não tem teste → criar smoke minimal (login, GET na view, verificar 200)
+
+**Comando por app:**
+```bash
+pytest tests/test_views_<app>.py -v      # se existe
+pytest tests/ -k <app_name> -v           # busca por keyword
+pytest tests/ -v --lf                    # só os que falharam na última run
+```
 
 ---
 

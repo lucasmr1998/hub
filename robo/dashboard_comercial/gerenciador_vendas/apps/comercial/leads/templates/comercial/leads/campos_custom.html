@@ -1,164 +1,204 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Campos Personalizados - Leads{% endblock %}
-
-{% block custom_css %}
-<style>
-    .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
-    .page-header h1 { font-size:22px; font-weight:700; color:var(--text-main); margin:0; }
-    .page-header p { font-size:13px; color:var(--text-muted); margin:4px 0 0 0; }
-
-    .cfg-card { background:#fff; border:1px solid var(--border); border-radius:12px; margin-bottom:16px; }
-    .cfg-card-header { padding:14px 18px; border-bottom:1px solid var(--border-light); display:flex; justify-content:space-between; align-items:center; font-size:14px; font-weight:600; }
-    .cfg-card-body { padding:18px; }
-
-    .campo-row { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border-light); gap:12px; }
-    .campo-row:last-child { border-bottom:none; }
-    .campo-info { flex:1; min-width:0; }
-    .campo-nome { font-size:14px; font-weight:600; color:var(--text-main); }
-    .campo-meta { font-size:12px; color:var(--text-light); margin-top:2px; }
-    .campo-actions { display:flex; gap:4px; }
-
-    .btn-icon { background:none; border:none; cursor:pointer; padding:6px 8px; border-radius:6px; font-size:13px; color:var(--text-muted); transition:all .15s; }
-    .btn-icon:hover { background:var(--border-light); color:var(--text-main); }
-    .btn-icon.danger:hover { background:#fee2e2; color:#dc2626; }
-
-    .form-card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:16px; }
-    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-    .form-group { display:flex; flex-direction:column; gap:4px; }
-    .form-group label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-light); }
-    .form-group input, .form-group select { padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; }
-    .form-group input:focus, .form-group select:focus { border-color:var(--primary); outline:none; }
-    .form-check { display:flex; align-items:center; gap:8px; padding-top:20px; }
-    .form-check input { accent-color:var(--primary); }
-    .form-check label { font-size:13px; color:var(--text-secondary); }
-    .form-actions { display:flex; gap:8px; margin-top:16px; justify-content:flex-end; }
-
-    .opcoes-container { grid-column:1/-1; }
-    .opcoes-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
-    .opcao-chip { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; background:var(--border-light); border-radius:6px; font-size:12px; }
-    .opcao-chip button { background:none; border:none; cursor:pointer; color:var(--text-light); font-size:14px; padding:0 2px; }
-    .opcao-chip button:hover { color:#dc2626; }
-    .opcao-add { display:flex; gap:6px; margin-top:8px; }
-    .opcao-add input { flex:1; }
-
-    .empty-state { text-align:center; padding:40px 20px; color:var(--text-light); }
-    .empty-state i { font-size:32px; display:block; margin-bottom:8px; color:var(--border); }
-
-    @media (max-width:768px) {
-        .form-grid { grid-template-columns:1fr; }
-    }
-</style>
-{% endblock %}
+{% block title %}Campos personalizados — Leads{% endblock %}
 
 {% block content %}
-
 <div class="page-header">
+  <div class="page-header-top">
     <div>
-        <h1><i class="fas fa-sliders-h" style="color:var(--text-muted);margin-right:8px;"></i>Campos Personalizados</h1>
-        <p>Defina campos extras para os leads do seu provedor</p>
+      <h1 class="page-title">Campos personalizados</h1>
+      <p class="page-subtitle">Defina campos extras que serao coletados junto aos leads do seu provedor.</p>
     </div>
-    <button class="btn-primary" onclick="toggleForm()"><i class="fas fa-plus"></i> Novo Campo</button>
+    <div class="page-actions">
+      <button class="btn btn-primary btn-sm" onclick="toggleForm()"><i class="bi bi-plus-lg"></i> Novo campo</button>
+    </div>
+  </div>
 </div>
 
-<!-- Formulario de criacao/edicao -->
-<div class="form-card" id="formCard" style="display:none;">
-    <h3 style="font-size:15px;font-weight:600;margin:0 0 16px 0;" id="formTitle">Novo Campo</h3>
-    <div class="form-grid">
-        <div class="form-group">
-            <label>Nome do Campo</label>
-            <input type="text" id="fieldNome" placeholder="Ex: Plano Desejado">
+{# Formulario criacao/edicao #}
+<div class="card" id="formCard" style="display: none; margin-bottom: var(--sp-4);">
+  <div class="card-header">
+    <h3 class="card-title" id="formTitle">Novo campo</h3>
+  </div>
+  <div class="card-body">
+    <div class="campos-form-grid">
+      <div class="field">
+        <label class="field-label" for="fieldNome">Nome do campo</label>
+        <div class="field-input-wrap"><input id="fieldNome" class="field-input" type="text" placeholder="Ex: Plano desejado"></div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="fieldTipo">Tipo</label>
+        <div class="field-input-wrap">
+          <select id="fieldTipo" class="field-input" onchange="toggleOpcoes()">
+            <option value="texto">Texto</option>
+            <option value="numero">Numero</option>
+            <option value="decimal">Decimal</option>
+            <option value="data">Data</option>
+            <option value="booleano">Sim/Nao</option>
+            <option value="select">Lista de opcoes</option>
+            <option value="textarea">Texto longo</option>
+          </select>
         </div>
-        <div class="form-group">
-            <label>Tipo</label>
-            <select id="fieldTipo" onchange="toggleOpcoes()">
-                <option value="texto">Texto</option>
-                <option value="numero">Numero</option>
-                <option value="decimal">Decimal</option>
-                <option value="data">Data</option>
-                <option value="booleano">Sim/Nao</option>
-                <option value="select">Lista de opcoes</option>
-                <option value="textarea">Texto longo</option>
-            </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="fieldOrdem">Ordem de exibicao</label>
+        <div class="field-input-wrap"><input id="fieldOrdem" class="field-input" type="number" value="0" min="0"></div>
+      </div>
+      <label class="campos-checkbox-label" style="align-self: end; padding-bottom: var(--sp-2);">
+        <input type="checkbox" id="fieldObrigatorio">
+        Campo obrigatorio
+      </label>
+      <div class="field campos-opcoes-container" id="opcoesContainer" style="display: none;">
+        <label class="field-label">Opcoes</label>
+        <div class="campos-opcoes-list" id="opcoesList"></div>
+        <div class="campos-opcao-add">
+          <div class="field-input-wrap" style="flex: 1;">
+            <input id="novaOpcao" class="field-input" type="text" placeholder="Digitar opcao..." onkeydown="if(event.key==='Enter'){event.preventDefault();addOpcao();}">
+          </div>
+          <button class="btn btn-secondary btn-sm" type="button" onclick="addOpcao()"><i class="bi bi-plus-lg"></i></button>
         </div>
-        <div class="form-group">
-            <label>Ordem de exibicao</label>
-            <input type="number" id="fieldOrdem" value="0" min="0">
-        </div>
-        <div class="form-check">
-            <input type="checkbox" id="fieldObrigatorio">
-            <label for="fieldObrigatorio">Campo obrigatorio</label>
-        </div>
-        <div class="opcoes-container" id="opcoesContainer" style="display:none;">
-            <div class="form-group">
-                <label>Opcoes</label>
-                <div class="opcoes-list" id="opcoesList"></div>
-                <div class="opcao-add">
-                    <input type="text" id="novaOpcao" placeholder="Digitar opcao..." onkeydown="if(event.key==='Enter'){event.preventDefault();addOpcao();}">
-                    <button class="btn-secondary btn-sm" type="button" onclick="addOpcao()"><i class="fas fa-plus"></i></button>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
-    <div class="form-actions">
-        <button class="btn-secondary" onclick="cancelForm()">Cancelar</button>
-        <button class="btn-primary" onclick="saveField()" id="btnSave">Criar Campo</button>
-    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-secondary btn-sm" onclick="cancelForm()">Cancelar</button>
+    <button class="btn btn-primary btn-sm" id="btnSave" onclick="saveField()">Criar campo</button>
+  </div>
 </div>
 
-<!-- Lista de campos -->
-<div class="cfg-card">
-    <div class="cfg-card-header">
-        <span><i class="fas fa-list" style="margin-right:6px;color:var(--text-muted);"></i> Campos Configurados</span>
-        <span class="badge badge-primary" id="camposCount">{{ campos|length }}</span>
-    </div>
-    <div class="cfg-card-body" id="camposList">
-        {% if campos %}
-        {% for campo in campos %}
+{# Lista de campos #}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-list-ul"></i> Campos configurados</h3>
+    {% include "components/badge.html" with variant="primary" label=campos|length %}
+  </div>
+  <div class="card-body" id="camposList">
+    {% if campos %}
+      {% for campo in campos %}
         <div class="campo-row" id="campo-{{ campo.id }}">
-            <div class="campo-info">
-                <div class="campo-nome">
-                    {{ campo.nome }}
-                    {% if campo.obrigatorio %}<span class="badge badge-warning" style="font-size:10px;margin-left:6px;">Obrigatorio</span>{% endif %}
-                    {% if not campo.ativo %}<span class="badge badge-muted" style="font-size:10px;margin-left:6px;">Inativo</span>{% endif %}
-                </div>
-                <div class="campo-meta">
-                    <span class="badge badge-muted">{{ campo.get_tipo_display }}</span>
-                    &middot; slug: <code style="font-size:11px;">{{ campo.slug }}</code>
-                    {% if campo.opcoes %}&middot; {{ campo.opcoes|length }} opcoes{% endif %}
-                </div>
+          <div class="campo-info">
+            <div class="campo-nome">
+              {{ campo.nome }}
+              {% if campo.obrigatorio %}{% include "components/badge.html" with variant="warning" label="Obrigatorio" size="sm" %}{% endif %}
+              {% if not campo.ativo %}{% include "components/badge.html" with variant="neutral" label="Inativo" size="sm" %}{% endif %}
             </div>
-            <div class="campo-actions">
-                <button class="btn-icon" title="Editar" onclick="editField({{ campo.id }}, '{{ campo.nome }}', '{{ campo.tipo }}', {{ campo.obrigatorio|yesno:'true,false' }}, {{ campo.ordem }}, {{ campo.opcoes|safe }}, {{ campo.ativo|yesno:'true,false' }})"><i class="fas fa-edit"></i></button>
-                <button class="btn-icon danger" title="Excluir" onclick="deleteField({{ campo.id }}, '{{ campo.nome }}')"><i class="fas fa-trash"></i></button>
+            <div class="campo-meta">
+              {% include "components/badge.html" with variant="neutral" label=campo.get_tipo_display %}
+              · slug: <code>{{ campo.slug }}</code>
+              {% if campo.opcoes %} · {{ campo.opcoes|length }} opcoes{% endif %}
             </div>
+          </div>
+          <div class="campo-actions">
+            <button class="btn btn-ghost btn-sm" title="Editar" onclick="editField({{ campo.id }}, '{{ campo.nome }}', '{{ campo.tipo }}', {{ campo.obrigatorio|yesno:'true,false' }}, {{ campo.ordem }}, {{ campo.opcoes|safe }}, {{ campo.ativo|yesno:'true,false' }})"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-ghost btn-sm" title="Excluir" onclick="deleteField({{ campo.id }}, '{{ campo.nome }}')" style="color: var(--color-danger);"><i class="bi bi-trash"></i></button>
+          </div>
         </div>
-        {% endfor %}
-        {% else %}
-        <div class="empty-state" id="emptyState">
-            <i class="fas fa-puzzle-piece"></i>
-            Nenhum campo personalizado configurado.<br>Clique em "Novo Campo" para comecar.
-        </div>
-        {% endif %}
-    </div>
+      {% endfor %}
+    {% else %}
+      <div class="table-empty">
+        <i class="bi bi-puzzle"></i>
+        Nenhum campo personalizado configurado.<br>
+        Clique em "Novo campo" pra comecar.
+      </div>
+    {% endif %}
+  </div>
 </div>
+{% endblock %}
 
+{% block extra_css %}
+<style>
+  .campos-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+  .campos-opcoes-container { grid-column: 1 / -1; }
+  .campos-opcoes-list { display: flex; flex-wrap: wrap; gap: 6px; margin: var(--sp-2) 0; }
+  .campos-opcao-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px var(--sp-3);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-xs);
+  }
+  .campos-opcao-chip button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    font-size: 0.95rem;
+    padding: 0 2px;
+  }
+  .campos-opcao-chip button:hover { color: var(--color-danger); }
+  .campos-opcao-add { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+
+  .campos-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+  }
+  .campos-checkbox-label input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--color-primary);
+  }
+
+  .campo-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-3) 0;
+    border-bottom: 1px solid var(--color-border);
+    gap: var(--sp-3);
+  }
+  .campo-row:last-child { border-bottom: none; }
+  .campo-info { flex: 1; min-width: 0; }
+  .campo-nome {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    flex-wrap: wrap;
+  }
+  .campo-meta {
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    flex-wrap: wrap;
+  }
+  .campo-meta code {
+    background: var(--color-surface-2);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-size: 0.7rem;
+  }
+  .campo-actions { display: inline-flex; gap: 4px; }
+
+  @media (max-width: 768px) {
+    .campos-form-grid { grid-template-columns: 1fr; }
+  }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-const API_URL = '{% url "comercial_leads:api_campos_custom" %}';
-let editingId = null;
-let opcoes = [];
+  const API_URL = '{% url "comercial_leads:api_campos_custom" %}';
+  let editingId = null;
+  let opcoes = [];
 
-function getCSRF() {
-    return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1] || '';
-}
+  function getCSRF() {
+    return document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
+  }
 
-function toggleForm() {
+  function toggleForm() {
     editingId = null;
-    document.getElementById('formTitle').textContent = 'Novo Campo';
-    document.getElementById('btnSave').textContent = 'Criar Campo';
+    document.getElementById('formTitle').textContent = 'Novo campo';
+    document.getElementById('btnSave').textContent = 'Criar campo';
     document.getElementById('fieldNome').value = '';
     document.getElementById('fieldTipo').value = 'texto';
     document.getElementById('fieldOrdem').value = '0';
@@ -168,42 +208,39 @@ function toggleForm() {
     toggleOpcoes();
     document.getElementById('formCard').style.display = 'block';
     document.getElementById('fieldNome').focus();
-}
+  }
 
-function cancelForm() {
+  function cancelForm() {
     document.getElementById('formCard').style.display = 'none';
     editingId = null;
-}
+  }
 
-function toggleOpcoes() {
+  function toggleOpcoes() {
     const tipo = document.getElementById('fieldTipo').value;
     document.getElementById('opcoesContainer').style.display = tipo === 'select' ? 'block' : 'none';
-}
+  }
 
-function addOpcao() {
+  function addOpcao() {
     const input = document.getElementById('novaOpcao');
     const val = input.value.trim();
     if (!val) return;
     opcoes.push(val);
     input.value = '';
     renderOpcoes();
-}
+  }
 
-function removeOpcao(idx) {
-    opcoes.splice(idx, 1);
-    renderOpcoes();
-}
+  function removeOpcao(idx) { opcoes.splice(idx, 1); renderOpcoes(); }
 
-function renderOpcoes() {
+  function renderOpcoes() {
     const list = document.getElementById('opcoesList');
     list.innerHTML = opcoes.map((o, i) =>
-        `<span class="opcao-chip">${o}<button onclick="removeOpcao(${i})">&times;</button></span>`
+      `<span class="campos-opcao-chip">${o}<button onclick="removeOpcao(${i})">&times;</button></span>`
     ).join('');
-}
+  }
 
-function editField(id, nome, tipo, obrigatorio, ordem, fieldOpcoes, ativo) {
+  function editField(id, nome, tipo, obrigatorio, ordem, fieldOpcoes, ativo) {
     editingId = id;
-    document.getElementById('formTitle').textContent = 'Editar Campo';
+    document.getElementById('formTitle').textContent = 'Editar campo';
     document.getElementById('btnSave').textContent = 'Salvar';
     document.getElementById('fieldNome').value = nome;
     document.getElementById('fieldTipo').value = tipo;
@@ -214,47 +251,49 @@ function editField(id, nome, tipo, obrigatorio, ordem, fieldOpcoes, ativo) {
     toggleOpcoes();
     document.getElementById('formCard').style.display = 'block';
     document.getElementById('fieldNome').focus();
-}
+  }
 
-async function saveField() {
+  async function saveField() {
     const nome = document.getElementById('fieldNome').value.trim();
-    if (!nome) { window.showNotification('Nome e obrigatorio', 'error'); return; }
+    if (!nome) { toast('Erro', 'Nome e obrigatorio', 'danger'); return; }
     const payload = {
-        nome,
-        tipo: document.getElementById('fieldTipo').value,
-        ordem: parseInt(document.getElementById('fieldOrdem').value) || 0,
-        obrigatorio: document.getElementById('fieldObrigatorio').checked,
-        opcoes: document.getElementById('fieldTipo').value === 'select' ? opcoes : [],
+      nome,
+      tipo: document.getElementById('fieldTipo').value,
+      ordem: parseInt(document.getElementById('fieldOrdem').value) || 0,
+      obrigatorio: document.getElementById('fieldObrigatorio').checked,
+      opcoes: document.getElementById('fieldTipo').value === 'select' ? opcoes : [],
     };
 
     try {
-        const url = editingId ? `${API_URL}${editingId}/` : API_URL;
-        const method = editingId ? 'PUT' : 'POST';
-        const res = await fetch(url, {
-            method, headers: {'Content-Type':'application/json', 'X-CSRFToken': getCSRF()},
-            body: JSON.stringify(payload)
-        });
-        if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Erro'); }
-        window.showNotification(editingId ? 'Campo atualizado' : 'Campo criado', 'success');
-        cancelForm();
-        location.reload();
+      const url = editingId ? `${API_URL}${editingId}/` : API_URL;
+      const method = editingId ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Erro'); }
+      toast('Salvo', editingId ? 'Campo atualizado' : 'Campo criado', 'success');
+      cancelForm();
+      setTimeout(() => location.reload(), 500);
     } catch (e) {
-        window.showNotification(e.message, 'error');
+      toast('Erro', e.message, 'danger');
     }
-}
+  }
 
-async function deleteField(id, nome) {
+  async function deleteField(id, nome) {
     if (!confirm(`Excluir o campo "${nome}"?\n\nDados ja salvos neste campo nos leads serao mantidos no JSON, mas o campo nao sera mais exibido.`)) return;
     try {
-        const res = await fetch(`${API_URL}${id}/`, {
-            method: 'DELETE', headers: {'X-CSRFToken': getCSRF()}
-        });
-        if (!res.ok) throw new Error('Erro ao excluir');
-        window.showNotification('Campo excluido', 'success');
-        document.getElementById(`campo-${id}`).remove();
+      const res = await fetch(`${API_URL}${id}/`, {
+        method: 'DELETE',
+        headers: { 'X-CSRFToken': getCSRF() },
+      });
+      if (!res.ok) throw new Error('Erro ao excluir');
+      toast('Excluido', `Campo "${nome}" removido`, 'success');
+      document.getElementById(`campo-${id}`).remove();
     } catch (e) {
-        window.showNotification(e.message, 'error');
+      toast('Erro', e.message, 'danger');
     }
-}
+  }
 </script>
 {% endblock %}

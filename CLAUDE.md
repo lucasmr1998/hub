@@ -227,6 +227,7 @@ Estrutura unificada de templates em `robo/dashboard_comercial/gerenciador_vendas
 - Mudancas visuais globais vao nos partials/tokens, nunca em CSS inline da pagina.
 - Ao criar elemento de UI que ja exista como componente, **usar o componente**. Nao reinventar botao/input/badge inline.
 - **Se o elemento nao existe ainda no DS, criar o componente primeiro** em `templates/components/` e adicionar ao showcase (`/design-system/componentes/`). So depois usar. Isso evita o DS voltar a drift de inline CSS/one-offs durante a migracao.
+- **Se o padrao visual ja existe num preview/showcase, COPIAR a estrutura HTML/CSS dele — nao reinventar.** Os previews em `/design-system/preview/` e `/design-system/componentes/` sao a fonte da verdade de como cada padrao se comporta (colapsar, flyout, dropdown, toast, etc.). Quando migrar pra server-side, mantem a mesma marcacao e so troca o conteudo dinamico. Nao adicionar variantes novas (tipo "botao flutuante absoluto") quando o preview ja tem o padrao certo. Se o preview esta errado, conserta o preview primeiro e replica.
 
 ### Como criar pagina nova
 

@@ -143,6 +143,9 @@
     .u-flex-1 { flex: 1 1 auto; min-width: 0; }
   </style>
 
+  {# DS component styles — carregados antes de extra_head pra que CSS das paginas (extra_css/custom_css) sobrescrevam nos conflitos #}
+  {% block ds_styles %}{% endblock %}
+
   {% block extra_head %}{% endblock %}
 </head>
 <body>

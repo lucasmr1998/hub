@@ -1,79 +1,98 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Hist&oacute;rico de Giros - Admin Roleta{% endblock %}
+{% block title %}Historico de giros — Clube{% endblock %}
 
 {% block content %}
-
 <div class="page-header">
-    <h1 class="page-title">Hist&oacute;rico de Giros</h1>
-    <p class="page-subtitle">Registro de todas as transa&ccedil;&otilde;es da roleta.</p>
-</div>
-
-<!-- Filtros -->
-<div class="card" style="margin-bottom:20px;">
-    <form method="get" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
-        <div style="flex:1; min-width:250px;">
-            <label class="form-label">Buscar por Nome, CPF ou Pr&ecirc;mio</label>
-            <input type="text" name="q" value="{{ q }}" placeholder="Busca..." class="form-control">
-        </div>
-        <div>
-            <button type="submit" class="btn-secondary" style="margin-top:22px;">Filtrar</button>
-        </div>
-    </form>
-</div>
-
-<!-- Tabela -->
-<div class="data-table-container">
-    <div style="overflow-x: auto;">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Participante</th>
-                    <th>Pr&ecirc;mio</th>
-                    <th>Custo</th>
-                    <th>Saldo Ap&oacute;s</th>
-                    <th>Data/Hora</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for g in giros %}
-                <tr>
-                    <td>
-                        <strong>{{ g.membro.nome|default:g.nome }}</strong><br>
-                        <span class="text-sm text-muted">{{ g.cpf }}</span>
-                    </td>
-                    <td><span class="text-primary font-semibold">{{ g.premio }}</span></td>
-                    <td><span class="text-danger">-10 pts</span></td>
-                    <td>{{ g.saldo }}</td>
-                    <td style="white-space:nowrap; font-size:13px; color:var(--text-muted);">{{ g.data_criacao|date:"d/m/Y H:i:s" }}</td>
-                    <td>
-                        <span class="badge {% if g.status == 'reservado' %}badge-warning{% elif g.status == 'ganhou' %}badge-success{% else %}badge-danger{% endif %}">
-                            {{ g.get_status_display }}
-                        </span>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="text-center" style="padding:40px; color:var(--text-light);">Nenhum giro registrado.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Historico de giros</h1>
+      <p class="page-subtitle">Registro de todas as transacoes da roleta.</p>
     </div>
+  </div>
 </div>
 
-<!-- Paginação -->
+<div class="card" style="margin-bottom: var(--sp-4);">
+  <div class="card-body">
+    <form method="get" class="filter-form">
+      <div class="field" style="flex: 1; min-width: 250px;">
+        <label class="field-label">Buscar por nome, CPF ou premio</label>
+        <div class="field-input-wrap">
+          <i class="bi bi-search field-icon"></i>
+          <input type="text" name="q" value="{{ q }}" placeholder="Busca..." class="field-input">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Filtrar</button>
+    </form>
+  </div>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Participante</th>
+          <th>Premio</th>
+          <th>Custo</th>
+          <th>Saldo apos</th>
+          <th>Data/hora</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in giros %}
+          <tr>
+            <td>
+              <strong>{{ g.membro.nome|default:g.nome }}</strong>
+              <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">{{ g.cpf }}</div>
+            </td>
+            <td><span style="color: var(--color-primary); font-weight: var(--fw-semibold);">{{ g.premio }}</span></td>
+            <td><span style="color: var(--color-danger);">-10 pts</span></td>
+            <td>{{ g.saldo }}</td>
+            <td style="white-space: nowrap; font-size: var(--fs-xs); color: var(--color-text-muted);">{{ g.data_criacao|date:"d/m/Y H:i:s" }}</td>
+            <td>
+              {% if g.status == 'reservado' %}
+                {% include "components/badge.html" with variant="warning" label=g.get_status_display size="sm" %}
+              {% elif g.status == 'ganhou' %}
+                {% include "components/badge.html" with variant="success" label=g.get_status_display size="sm" %}
+              {% else %}
+                {% include "components/badge.html" with variant="danger" label=g.get_status_display size="sm" %}
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" style="text-align: center; padding: var(--sp-10); color: var(--color-text-muted);">Nenhum giro registrado.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
 {% if page_obj.has_other_pages %}
-<div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-top:20px;">
-    {% if page_obj.has_previous %}
-    <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}" class="btn-secondary btn-sm">&laquo; Anterior</a>
-    {% endif %}
-    <span class="text-sm text-muted">P&aacute;gina {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
-    {% if page_obj.has_next %}
-    <a href="?page={{ page_obj.next_page_number }}&q={{ q }}" class="btn-secondary btn-sm">Pr&oacute;xima &raquo;</a>
-    {% endif %}
-</div>
+  <nav class="pagination">
+    <span class="pagination-info">Pagina {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+    <div class="pagination-nav">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}" class="pagination-btn"><i class="bi bi-chevron-left"></i></a>
+      {% else %}
+        <span class="pagination-btn is-disabled"><i class="bi bi-chevron-left"></i></span>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}&q={{ q }}" class="pagination-btn"><i class="bi bi-chevron-right"></i></a>
+      {% else %}
+        <span class="pagination-btn is-disabled"><i class="bi bi-chevron-right"></i></span>
+      {% endif %}
+    </div>
+  </nav>
 {% endif %}
+{% endblock %}
 
+{% block extra_css %}
+<style>
+  .filter-form { display: flex; gap: var(--sp-3); align-items: flex-end; flex-wrap: wrap; }
+  .table-wrap { overflow-x: auto; }
+</style>
 {% endblock %}

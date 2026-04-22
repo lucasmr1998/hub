@@ -1,234 +1,159 @@
-{% extends 'sistema/base.html' %}
-{% block extra_css %}
-<style>
-  /* Nivel badges */
-  .nivel-badge { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:6px; font-size:12px; font-weight:600; }
-  .nivel-critico { background:var(--danger-light); color:var(--danger-dark); }
-  .nivel-alto { background:var(--warning-light); color:var(--warning-dark); }
-  .nivel-medio { background:var(--info-light); color:var(--info); }
-  .nivel-baixo { background:var(--success-light); color:var(--success-dark); }
+{% extends "sistema/base.html" %}
 
-  .tipo-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:6px; font-size:12px; font-weight:600; background:var(--primary-light); color:var(--primary-dark); }
-
-  .status-badge { display:inline-flex; padding:3px 10px; border-radius:6px; font-size:12px; font-weight:600; }
-  .status-novo { background:var(--info-light); color:var(--info); }
-  .status-em_tratamento { background:var(--warning-light); color:var(--warning-dark); }
-
-  /* Score bar */
-  .score-wrap { display:flex; align-items:center; gap:8px; }
-  .score-bar { width:60px; height:6px; background:var(--border); border-radius:99px; overflow:hidden; }
-  .score-fill { height:100%; border-radius:99px; }
-  .score-txt { font-size:12px; font-weight:700; min-width:28px; text-align:right; }
-
-  .cliente-nome { font-weight:600; color:var(--text-main); }
-  .cliente-tel { font-size:12px; color:var(--text-muted); }
-  .acao-btns { display:flex; gap:6px; }
-
-  .empty { text-align:center; padding:40px; color:var(--text-light); }
-  .empty i { font-size:32px; display:block; margin-bottom:10px; opacity:.4; }
-
-  /* Stats row with 5 cards */
-  .stats-grid-5 { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px; margin-bottom:24px; }
-  .stat-icon { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1rem; flex-shrink:0; }
-</style>
-{% endblock %}
+{% block title %}Retencao de clientes — Hubtrix{% endblock %}
 
 {% block content %}
-<div class="page-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-  <div>
-    <h1 class="page-title"><i class="fas fa-heartbeat" style="color:var(--danger)"></i> Retenção de Clientes</h1>
-  </div>
-  <div style="display:flex; gap:8px;">
-    <button class="btn-secondary" onclick="executarScanner()"><i class="fas fa-sync-alt"></i> Executar Scanner</button>
-    <a href="{% url 'crm:pipeline' %}" class="btn-secondary"><i class="fas fa-stream"></i> Pipeline</a>
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Retencao de clientes</h1>
+      <p class="page-subtitle">Alertas de risco de churn e acoes de retencao.</p>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'crm:pipeline' %}" class="btn btn-secondary btn-sm"><i class="bi bi-kanban"></i> Pipeline</a>
+      <button class="btn btn-primary btn-sm" onclick="executarScanner(this)"><i class="bi bi-arrow-clockwise"></i> Executar scanner</button>
+    </div>
   </div>
 </div>
 
-<!-- STATS -->
-<div class="stats-grid-5">
-  <div class="stat-card" style="display:flex; align-items:center; gap:12px;">
-    <div class="stat-icon" style="background:var(--danger)"><i class="fas fa-exclamation-circle"></i></div>
-    <div><div class="stat-label">Críticos</div><div class="stat-value" style="font-size:24px; color:var(--danger)">{{ alertas_criticos|length }}</div></div>
-  </div>
-  <div class="stat-card" style="display:flex; align-items:center; gap:12px;">
-    <div class="stat-icon" style="background:var(--warning)"><i class="fas fa-exclamation-triangle"></i></div>
-    <div><div class="stat-label">Alto risco</div><div class="stat-value" style="font-size:24px; color:var(--warning-dark)">{{ alertas_altos|length }}</div></div>
-  </div>
-  <div class="stat-card" style="display:flex; align-items:center; gap:12px;">
-    <div class="stat-icon" style="background:var(--info)"><i class="fas fa-info-circle"></i></div>
-    <div><div class="stat-label">Médio risco</div><div class="stat-value" style="font-size:24px; color:var(--info)">{{ alertas_medios|length }}</div></div>
-  </div>
-  <div class="stat-card" style="display:flex; align-items:center; gap:12px;">
-    <div class="stat-icon" style="background:var(--success)"><i class="fas fa-check-circle"></i></div>
-    <div><div class="stat-label">Baixo risco</div><div class="stat-value" style="font-size:24px; color:var(--success)">{{ alertas_baixos|length }}</div></div>
-  </div>
-  <div class="stat-card" style="display:flex; align-items:center; gap:12px;">
-    <div class="stat-icon" style="background:var(--primary)"><i class="fas fa-bell"></i></div>
-    <div><div class="stat-label">Total ativo</div><div class="stat-value" style="font-size:24px;">{{ alertas|length }}</div></div>
-  </div>
+<div class="stats-grid-5" style="margin-bottom: var(--sp-4);">
+  {% include "components/stat_card.html" with label="Criticos" value=alertas_criticos|length icon="bi-exclamation-octagon" icon_variant="danger" %}
+  {% include "components/stat_card.html" with label="Alto risco" value=alertas_altos|length icon="bi-exclamation-triangle" icon_variant="warning" %}
+  {% include "components/stat_card.html" with label="Medio risco" value=alertas_medios|length icon="bi-info-circle" icon_variant="info" %}
+  {% include "components/stat_card.html" with label="Baixo risco" value=alertas_baixos|length icon="bi-check-circle" icon_variant="success" %}
+  {% include "components/stat_card.html" with label="Total ativo" value=alertas|length icon="bi-bell" %}
 </div>
 
 {% if alertas %}
-<div class="data-table-container">
-  <div class="table-header">
-    <span class="table-title"><i class="fas fa-shield-alt" style="color:var(--danger)"></i> Alertas Ativos</span>
+  <div class="card" style="padding: 0; overflow: hidden;">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-shield-exclamation" style="color: var(--color-danger);"></i> Alertas ativos</h3>
+      <span class="badge badge-primary badge-soft">{{ alertas|length }}</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Tipo de alerta</th>
+            <th>Risco</th>
+            <th>Score</th>
+            <th>Status</th>
+            <th>Responsavel</th>
+            <th>Detectado</th>
+            <th>Acoes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for alerta in alertas_criticos %}{% include "crm/_retencao_row.html" with alerta=alerta nivel="critico" nivel_label="Critico" cor_var="--color-danger" %}{% endfor %}
+          {% for alerta in alertas_altos %}{% include "crm/_retencao_row.html" with alerta=alerta nivel="alto" nivel_label="Alto" cor_var="--color-warning" %}{% endfor %}
+          {% for alerta in alertas_medios %}{% include "crm/_retencao_row.html" with alerta=alerta nivel="medio" nivel_label="Medio" cor_var="--color-info" %}{% endfor %}
+          {% for alerta in alertas_baixos %}{% include "crm/_retencao_row.html" with alerta=alerta nivel="baixo" nivel_label="Baixo" cor_var="--color-success" %}{% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
-  <div style="overflow-x:auto">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Cliente</th>
-          <th>Tipo de Alerta</th>
-          <th>Risco</th>
-          <th>Score</th>
-          <th>Status</th>
-          <th>Responsável</th>
-          <th>Detectado</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for alerta in alertas_criticos %}
-        <tr>
-          <td>
-            <div class="cliente-nome">{{ alerta.cliente_hubsoft.nome_razaosocial }}</div>
-            {% if alerta.lead %}<div class="cliente-tel">{{ alerta.lead.telefone|default:"" }}</div>{% endif %}
-          </td>
-          <td><span class="tipo-badge"><i class="fas fa-clock"></i> {{ alerta.get_tipo_alerta_display }}</span></td>
-          <td><span class="nivel-badge nivel-critico"><i class="fas fa-circle"></i> Crítico</span></td>
-          <td>
-            <div class="score-wrap">
-              <div class="score-bar"><div class="score-fill" style="width:{{ alerta.score_churn }}%;background:var(--danger)"></div></div>
-              <span class="score-txt" style="color:var(--danger)">{{ alerta.score_churn }}</span>
-            </div>
-          </td>
-          <td><span class="status-badge status-{{ alerta.status }}">{{ alerta.get_status_display }}</span></td>
-          <td style="color:var(--text-muted);font-size:12px">{{ alerta.responsavel.get_full_name|default:"—" }}</td>
-          <td style="color:var(--text-light);font-size:12px">{{ alerta.data_detectado|date:"d/m/Y" }}</td>
-          <td>
-            <div class="acao-btns">
-              {% if alerta.status == 'novo' %}
-              <button class="btn-secondary btn-sm" onclick="tratarAlerta({{ alerta.pk }}, this)"><i class="fas fa-play"></i> Tratar</button>
-              {% endif %}
-              <button class="btn-primary btn-sm" onclick="resolverAlerta({{ alerta.pk }})"><i class="fas fa-check"></i> Resolver</button>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-
-        {% for alerta in alertas_altos %}
-        <tr>
-          <td>
-            <div class="cliente-nome">{{ alerta.cliente_hubsoft.nome_razaosocial }}</div>
-            {% if alerta.lead %}<div class="cliente-tel">{{ alerta.lead.telefone|default:"" }}</div>{% endif %}
-          </td>
-          <td><span class="tipo-badge">{{ alerta.get_tipo_alerta_display }}</span></td>
-          <td><span class="nivel-badge nivel-alto"><i class="fas fa-circle"></i> Alto</span></td>
-          <td>
-            <div class="score-wrap">
-              <div class="score-bar"><div class="score-fill" style="width:{{ alerta.score_churn }}%;background:var(--warning)"></div></div>
-              <span class="score-txt" style="color:var(--warning-dark)">{{ alerta.score_churn }}</span>
-            </div>
-          </td>
-          <td><span class="status-badge status-{{ alerta.status }}">{{ alerta.get_status_display }}</span></td>
-          <td style="color:var(--text-muted);font-size:12px">{{ alerta.responsavel.get_full_name|default:"—" }}</td>
-          <td style="color:var(--text-light);font-size:12px">{{ alerta.data_detectado|date:"d/m/Y" }}</td>
-          <td>
-            <div class="acao-btns">
-              {% if alerta.status == 'novo' %}
-              <button class="btn-secondary btn-sm" onclick="tratarAlerta({{ alerta.pk }}, this)"><i class="fas fa-play"></i> Tratar</button>
-              {% endif %}
-              <button class="btn-primary btn-sm" onclick="resolverAlerta({{ alerta.pk }})"><i class="fas fa-check"></i> Resolver</button>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-
-        {% for alerta in alertas_medios %}
-        <tr>
-          <td>
-            <div class="cliente-nome">{{ alerta.cliente_hubsoft.nome_razaosocial }}</div>
-            {% if alerta.lead %}<div class="cliente-tel">{{ alerta.lead.telefone|default:"" }}</div>{% endif %}
-          </td>
-          <td><span class="tipo-badge">{{ alerta.get_tipo_alerta_display }}</span></td>
-          <td><span class="nivel-badge nivel-medio"><i class="fas fa-circle"></i> Médio</span></td>
-          <td>
-            <div class="score-wrap">
-              <div class="score-bar"><div class="score-fill" style="width:{{ alerta.score_churn }}%;background:var(--info)"></div></div>
-              <span class="score-txt" style="color:var(--info)">{{ alerta.score_churn }}</span>
-            </div>
-          </td>
-          <td><span class="status-badge status-{{ alerta.status }}">{{ alerta.get_status_display }}</span></td>
-          <td style="color:var(--text-muted);font-size:12px">{{ alerta.responsavel.get_full_name|default:"—" }}</td>
-          <td style="color:var(--text-light);font-size:12px">{{ alerta.data_detectado|date:"d/m/Y" }}</td>
-          <td>
-            <div class="acao-btns">
-              {% if alerta.status == 'novo' %}
-              <button class="btn-secondary btn-sm" onclick="tratarAlerta({{ alerta.pk }}, this)"><i class="fas fa-play"></i> Tratar</button>
-              {% endif %}
-              <button class="btn-primary btn-sm" onclick="resolverAlerta({{ alerta.pk }})"><i class="fas fa-check"></i> Resolver</button>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-
-        {% for alerta in alertas_baixos %}
-        <tr>
-          <td>
-            <div class="cliente-nome">{{ alerta.cliente_hubsoft.nome_razaosocial }}</div>
-            {% if alerta.lead %}<div class="cliente-tel">{{ alerta.lead.telefone|default:"" }}</div>{% endif %}
-          </td>
-          <td><span class="tipo-badge">{{ alerta.get_tipo_alerta_display }}</span></td>
-          <td><span class="nivel-badge nivel-baixo"><i class="fas fa-circle"></i> Baixo</span></td>
-          <td>
-            <div class="score-wrap">
-              <div class="score-bar"><div class="score-fill" style="width:{{ alerta.score_churn }}%;background:var(--success)"></div></div>
-              <span class="score-txt" style="color:var(--success)">{{ alerta.score_churn }}</span>
-            </div>
-          </td>
-          <td><span class="status-badge status-{{ alerta.status }}">{{ alerta.get_status_display }}</span></td>
-          <td style="color:var(--text-muted);font-size:12px">{{ alerta.responsavel.get_full_name|default:"—" }}</td>
-          <td style="color:var(--text-light);font-size:12px">{{ alerta.data_detectado|date:"d/m/Y" }}</td>
-          <td>
-            <div class="acao-btns">
-              {% if alerta.status == 'novo' %}
-              <button class="btn-secondary btn-sm" onclick="tratarAlerta({{ alerta.pk }}, this)"><i class="fas fa-play"></i> Tratar</button>
-              {% endif %}
-              <button class="btn-primary btn-sm" onclick="resolverAlerta({{ alerta.pk }})"><i class="fas fa-check"></i> Resolver</button>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
 {% else %}
-<div class="card" style="text-align:center; padding:40px;">
-  <div class="empty">
-    <i class="fas fa-heartbeat"></i>
-    <p>Nenhum alerta de retenção ativo. Execute o scanner para detectar riscos de churn.</p>
-    <button class="btn-primary" onclick="executarScanner()" style="margin-top:12px"><i class="fas fa-sync-alt"></i> Executar Scanner</button>
+  <div class="card">
+    <div class="card-body" style="text-align: center; padding: var(--sp-10);">
+      <i class="bi bi-heart-pulse" style="font-size: 2.5rem; color: var(--color-text-muted); opacity: 0.3; display: block; margin-bottom: var(--sp-3);"></i>
+      <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0 0 var(--sp-4);">Nenhum alerta de retencao ativo. Execute o scanner pra detectar riscos de churn.</p>
+      <button class="btn btn-primary btn-sm" onclick="executarScanner(this)"><i class="bi bi-arrow-clockwise"></i> Executar scanner</button>
+    </div>
   </div>
-</div>
 {% endif %}
 
-<!-- MODAL RESOLVER -->
-<div class="modal-overlay" id="modal-resolver" style="display:none">
-  <div class="modal-content" style="max-width:440px;">
-    <button class="modal-close" onclick="fecharModalResolver()"><i class="fas fa-times"></i></button>
-    <h3 style="font-size:16px; font-weight:700; color:var(--text-main); margin-bottom:16px;">Resolver Alerta</h3>
-    <input type="hidden" id="alerta-id-resolver">
-    <div class="form-group">
-      <label class="form-label">Ações tomadas</label>
-      <textarea id="acoes-tomadas" class="form-control" rows="4" placeholder="Descreva o que foi feito para resolver o problema..."></textarea>
+{# Modal resolver #}
+<div class="modal-overlay" id="modal-resolver" style="display: none;">
+  <div class="modal-content" style="max-width: 440px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-check-circle" style="color: var(--color-success);"></i> Resolver alerta</h3>
+      <button class="modal-close" onclick="fecharModalResolver()"><i class="bi bi-x-lg"></i></button>
     </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn-secondary" onclick="fecharModalResolver()">Cancelar</button>
-      <button class="btn-primary" onclick="confirmarResolver()"><i class="fas fa-check"></i> Marcar como Resolvido</button>
+    <div class="modal-body">
+      <input type="hidden" id="alerta-id-resolver">
+      <div class="field">
+        <label class="field-label" for="acoes-tomadas">Acoes tomadas</label>
+        <div class="field-input-wrap">
+          <textarea id="acoes-tomadas" class="field-input" rows="4" style="height: auto; min-height: 90px; padding: var(--sp-2) var(--sp-3); resize: vertical;" placeholder="Descreva o que foi feito pra resolver o problema..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="fecharModalResolver()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmarResolver()"><i class="bi bi-check-lg"></i> Marcar como resolvido</button>
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .stats-grid-5 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--sp-3);
+  }
+
+  .table-wrap { overflow-x: auto; }
+
+  .nivel-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+  }
+  .nivel-critico { background: var(--color-danger-soft); color: var(--color-danger); }
+  .nivel-alto { background: var(--color-warning-soft); color: var(--color-warning); }
+  .nivel-medio { background: var(--color-info-soft); color: var(--color-info); }
+  .nivel-baixo { background: var(--color-success-soft); color: var(--color-success); }
+
+  .tipo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+  }
+
+  .status-badge {
+    display: inline-flex;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+  }
+  .status-novo { background: var(--color-info-soft); color: var(--color-info); }
+  .status-em_tratamento { background: var(--color-warning-soft); color: var(--color-warning); }
+  .status-resolvido { background: var(--color-success-soft); color: var(--color-success); }
+
+  .score-wrap { display: flex; align-items: center; gap: var(--sp-2); }
+  .score-bar {
+    width: 60px;
+    height: 6px;
+    background: var(--color-surface);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .score-fill { height: 100%; border-radius: 99px; }
+  .score-txt {
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
+    min-width: 28px;
+    text-align: right;
+  }
+
+  .cliente-nome { font-weight: var(--fw-semibold); color: var(--color-text); font-size: var(--fs-sm); }
+  .cliente-tel { font-size: var(--fs-xs); color: var(--color-text-muted); }
+  .acao-btns { display: flex; gap: var(--sp-2); }
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -238,12 +163,17 @@ const CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
 function tratarAlerta(pk, btn) {
   fetch(`/crm/retencao/alertas/${pk}/tratar/`, {
     method: 'POST',
-    headers: { 'X-CSRFToken': CSRF }
-  }).then(r => r.json()).then(d => {
+    headers: { 'X-CSRFToken': CSRF },
+  })
+  .then(r => r.json())
+  .then(d => {
     if (d.ok) {
       btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i>';
+      toast('Em tratamento', 'Alerta marcado pra tratamento', 'success');
       setTimeout(() => location.reload(), 500);
+    } else {
+      toast('Erro', d.erro || 'Erro ao tratar', 'danger');
     }
   });
 }
@@ -252,6 +182,7 @@ function resolverAlerta(pk) {
   document.getElementById('alerta-id-resolver').value = pk;
   document.getElementById('acoes-tomadas').value = '';
   document.getElementById('modal-resolver').style.display = 'flex';
+  document.getElementById('acoes-tomadas').focus();
 }
 
 function fecharModalResolver() {
@@ -264,30 +195,43 @@ function confirmarResolver() {
   fetch(`/crm/retencao/alertas/${pk}/resolver/`, {
     method: 'POST',
     headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ acoes_tomadas: acoes })
-  }).then(r => r.json()).then(d => {
-    if (d.ok) { fecharModalResolver(); location.reload(); }
+    body: JSON.stringify({ acoes_tomadas: acoes }),
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      fecharModalResolver();
+      toast('Resolvido', 'Alerta marcado como resolvido', 'success');
+      setTimeout(() => location.reload(), 600);
+    } else {
+      toast('Erro', d.erro || 'Erro ao resolver', 'danger');
+    }
   });
 }
 
-function executarScanner() {
-  const btn = event.currentTarget;
+function executarScanner(btn) {
   btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Executando...';
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Executando...';
   fetch('{% url "crm:api_scanner_retencao" %}', {
     method: 'POST',
-    headers: { 'X-CSRFToken': CSRF }
-  }).then(r => r.json()).then(d => {
+    headers: { 'X-CSRFToken': CSRF },
+  })
+  .then(r => r.json())
+  .then(d => {
     if (d.ok) {
-      btn.innerHTML = `<i class="fas fa-check"></i> ${d.criados} criados, ${d.atualizados} atualizados`;
-      setTimeout(() => location.reload(), 1500);
+      toast('Scanner concluido', `${d.criados} criados, ${d.atualizados} atualizados`, 'success');
+      setTimeout(() => location.reload(), 1200);
     } else {
-      btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erro';
+      btn.innerHTML = orig;
       btn.disabled = false;
+      toast('Erro', d.erro || 'Erro no scanner', 'danger');
     }
-  }).catch(() => {
-    btn.innerHTML = '<i class="fas fa-sync-alt"></i> Executar Scanner';
+  })
+  .catch(() => {
+    btn.innerHTML = orig;
     btn.disabled = false;
+    toast('Erro', 'Falha na requisicao', 'danger');
   });
 }
 

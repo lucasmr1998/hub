@@ -1,115 +1,175 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
+
 {% block title %}Relatorios — Suporte{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Relatorios de suporte</h1>
+      <p class="page-subtitle">Volume, SLA e desempenho por agente/categoria/prioridade.</p>
+    </div>
+    <div class="page-actions">
+      <div class="periodo-sel">
+        <a href="?periodo=7" class="periodo-btn {% if periodo == 7 %}is-active{% endif %}">7 dias</a>
+        <a href="?periodo=30" class="periodo-btn {% if periodo == 30 %}is-active{% endif %}">30 dias</a>
+        <a href="?periodo=90" class="periodo-btn {% if periodo == 90 %}is-active{% endif %}">90 dias</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="report-grid">
+  <div class="report-card">
+    <div class="report-value">{{ tickets_total }}</div>
+    <div class="report-label">Tickets abertos</div>
+  </div>
+  <div class="report-card">
+    <div class="report-value">{{ tickets_resolvidos }}</div>
+    <div class="report-label">Resolvidos</div>
+  </div>
+  <div class="report-card">
+    <div class="report-value">{{ taxa_resolucao|floatformat:0 }}%</div>
+    <div class="report-label">Taxa de resolucao</div>
+  </div>
+  <div class="report-card">
+    <div class="report-value">{% if tempo_medio %}{{ tempo_medio|floatformat:1 }}h{% else %}—{% endif %}</div>
+    <div class="report-label">Tempo medio resolucao</div>
+  </div>
+  <div class="report-card">
+    <div class="report-value">{% if tempo_primeira_resp %}{{ tempo_primeira_resp|floatformat:1 }}h{% else %}—{% endif %}</div>
+    <div class="report-label">Tempo 1a resposta</div>
+  </div>
+  <div class="report-card">
+    <div class="report-value" style="color: {% if sla_compliance and sla_compliance >= 80 %}var(--color-success){% elif sla_compliance %}var(--color-danger){% else %}var(--color-text-muted){% endif %};">{% if sla_compliance %}{{ sla_compliance|floatformat:0 }}%{% else %}—{% endif %}</div>
+    <div class="report-label">SLA compliance ({{ sla_total }} tickets)</div>
+  </div>
+  <div class="report-card">
+    <div class="report-value" style="color: var(--color-warning);">{% if csat_medio %}{{ csat_medio|floatformat:1 }}/5{% else %}—{% endif %}</div>
+    <div class="report-label">CSAT medio ({{ csat_total }} avaliacoes)</div>
+  </div>
+</div>
+
+<div class="rel-grid-2">
+  <div class="card" style="padding: 0;">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-people" style="color: var(--color-primary);"></i> Por agente</h3>
+    </div>
+    <div class="card-body">
+      {% for a in por_agente %}
+        <div class="agent-row">
+          <div class="agent-name">{{ a.atendente__first_name }} {{ a.atendente__last_name|default:a.atendente__username }}</div>
+          <div class="agent-stat"><strong>{{ a.total }}</strong><small>tickets</small></div>
+          <div class="agent-stat"><strong>{{ a.resolvidos }}</strong><small>resolvidos</small></div>
+        </div>
+      {% empty %}
+        <p class="empty-text">Sem dados no periodo.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card" style="padding: 0;">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-tags" style="color: var(--color-info);"></i> Por categoria</h3>
+    </div>
+    <div class="card-body">
+      {% for c in por_categoria %}
+        <div class="bar-item">
+          <div class="bar-label">{{ c.categoria__nome|default:"Sem categoria" }}</div>
+          <div class="bar-fill" style="width: {% widthratio c.total tickets_total 200 %}px;"><span>{{ c.total }}</span></div>
+        </div>
+      {% empty %}
+        <p class="empty-text">Sem dados no periodo.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card" style="padding: 0;">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-flag" style="color: var(--color-warning);"></i> Por prioridade</h3>
+    </div>
+    <div class="card-body">
+      {% for p in por_prioridade %}
+        <div class="bar-item">
+          <div class="bar-label">{{ p.prioridade|title }}</div>
+          <div class="bar-fill" style="width: {% widthratio p.total tickets_total 200 %}px; background: {% if p.prioridade == 'urgente' %}var(--color-danger){% elif p.prioridade == 'alta' %}var(--color-warning){% elif p.prioridade == 'normal' %}var(--color-info){% else %}var(--color-text-muted){% endif %};"><span>{{ p.total }}</span></div>
+        </div>
+      {% empty %}
+        <p class="empty-text">Sem dados no periodo.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
 
 {% block extra_css %}
 <style>
-.report-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-.report-card { background: var(--bg-white); border-radius: 12px; border: 1px solid var(--border); padding: 20px; text-align: center; }
-.report-value { font-size: 28px; font-weight: 800; color: var(--text-main); }
-.report-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
-.report-section { background: var(--bg-white); border-radius: 12px; border: 1px solid var(--border); padding: 20px; margin-bottom: 16px; }
-.report-section-title { font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-.agent-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
-.agent-row:last-child { border-bottom: none; }
-.agent-name { font-weight: 600; font-size: 13px; flex: 1; }
-.agent-stat { font-size: 12px; color: var(--text-muted); min-width: 60px; text-align: center; }
-.agent-stat strong { display: block; font-size: 16px; color: var(--text-main); }
-.bar-chart { display: flex; flex-direction: column; gap: 8px; }
-.bar-item { display: flex; align-items: center; gap: 8px; }
-.bar-label { font-size: 12px; min-width: 100px; color: var(--text-secondary); }
-.bar-fill { height: 20px; border-radius: 4px; background: var(--primary); min-width: 2px; transition: width 0.3s; display: flex; align-items: center; padding: 0 6px; }
-.bar-fill span { font-size: 10px; color: #fff; font-weight: 600; }
+  .periodo-sel { display: inline-flex; gap: 2px; background: var(--color-surface); padding: 3px; border-radius: var(--radius); }
+  .periodo-btn {
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    text-decoration: none;
+    color: var(--color-text-muted);
+    transition: background var(--transition), color var(--transition);
+  }
+  .periodo-btn:hover { color: var(--color-text); }
+  .periodo-btn.is-active { background: var(--color-bg); color: var(--color-primary); box-shadow: var(--shadow-sm); }
+
+  .report-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-4);
+  }
+  .report-card {
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    padding: var(--sp-5);
+    text-align: center;
+  }
+  .report-value {
+    font-size: 26px;
+    font-weight: var(--fw-bold);
+    color: var(--color-text);
+    letter-spacing: -0.02em;
+  }
+  .report-label { font-size: var(--fs-xs); color: var(--color-text-muted); margin-top: 4px; }
+
+  .rel-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+  @media (max-width: 900px) { .rel-grid-2 { grid-template-columns: 1fr; } }
+
+  .agent-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-2) 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: var(--fs-sm);
+  }
+  .agent-row:last-child { border-bottom: none; }
+  .agent-name { font-weight: var(--fw-semibold); flex: 1; min-width: 0; color: var(--color-text); }
+  .agent-stat { min-width: 60px; text-align: center; }
+  .agent-stat strong { display: block; font-size: var(--fs-md); color: var(--color-text); }
+  .agent-stat small { font-size: 10px; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  .bar-item { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: 6px; }
+  .bar-item:last-child { margin-bottom: 0; }
+  .bar-label { font-size: var(--fs-xs); min-width: 100px; color: var(--color-text); }
+  .bar-fill {
+    height: 20px;
+    border-radius: 4px;
+    background: var(--color-primary);
+    min-width: 24px;
+    transition: width 0.3s;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+  }
+  .bar-fill span { font-size: 10px; color: #fff; font-weight: var(--fw-bold); }
+
+  .empty-text { color: var(--color-text-muted); font-size: var(--fs-sm); margin: 0; }
 </style>
-{% endblock %}
-
-{% block content %}
-<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-    <div>
-        <h1 class="page-title"><i class="fas fa-chart-bar" style="color:var(--primary)"></i> Relatorios de Suporte</h1>
-    </div>
-    <div style="display:flex;gap:8px;">
-        <a href="?periodo=7" class="btn-secondary btn-sm {% if periodo == 7 %}active{% endif %}" style="text-decoration:none;">7 dias</a>
-        <a href="?periodo=30" class="btn-secondary btn-sm {% if periodo == 30 %}active{% endif %}" style="text-decoration:none;">30 dias</a>
-        <a href="?periodo=90" class="btn-secondary btn-sm {% if periodo == 90 %}active{% endif %}" style="text-decoration:none;">90 dias</a>
-    </div>
-</div>
-
-<!-- KPIs -->
-<div class="report-grid">
-    <div class="report-card">
-        <div class="report-value">{{ tickets_total }}</div>
-        <div class="report-label">Tickets abertos</div>
-    </div>
-    <div class="report-card">
-        <div class="report-value">{{ tickets_resolvidos }}</div>
-        <div class="report-label">Resolvidos</div>
-    </div>
-    <div class="report-card">
-        <div class="report-value">{{ taxa_resolucao|floatformat:0 }}%</div>
-        <div class="report-label">Taxa de resolucao</div>
-    </div>
-    <div class="report-card">
-        <div class="report-value">{% if tempo_medio %}{{ tempo_medio|floatformat:1 }}h{% else %}—{% endif %}</div>
-        <div class="report-label">Tempo medio resolucao</div>
-    </div>
-    <div class="report-card">
-        <div class="report-value">{% if tempo_primeira_resp %}{{ tempo_primeira_resp|floatformat:1 }}h{% else %}—{% endif %}</div>
-        <div class="report-label">Tempo 1a resposta</div>
-    </div>
-    <div class="report-card">
-        <div class="report-value" style="color:{% if sla_compliance and sla_compliance >= 80 %}var(--success){% elif sla_compliance %}var(--danger){% else %}var(--text-muted){% endif %};">
-            {% if sla_compliance %}{{ sla_compliance|floatformat:0 }}%{% else %}—{% endif %}
-        </div>
-        <div class="report-label">SLA compliance ({{ sla_total }} tickets)</div>
-    </div>
-    <div class="report-card">
-        <div class="report-value" style="color:#f59e0b;">{% if csat_medio %}{{ csat_medio|floatformat:1 }}/5{% else %}—{% endif %}</div>
-        <div class="report-label">CSAT medio ({{ csat_total }} avaliacoes)</div>
-    </div>
-</div>
-
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-    <!-- Por agente -->
-    <div class="report-section">
-        <div class="report-section-title"><i class="fas fa-users" style="color:var(--primary);"></i> Por Agente</div>
-        {% for a in por_agente %}
-        <div class="agent-row">
-            <div class="agent-name">{{ a.atendente__first_name }} {{ a.atendente__last_name|default:a.atendente__username }}</div>
-            <div class="agent-stat"><strong>{{ a.total }}</strong>tickets</div>
-            <div class="agent-stat"><strong>{{ a.resolvidos }}</strong>resolvidos</div>
-        </div>
-        {% empty %}
-        <p style="color:var(--text-muted);font-size:13px;">Sem dados no periodo.</p>
-        {% endfor %}
-    </div>
-
-    <!-- Por categoria -->
-    <div class="report-section">
-        <div class="report-section-title"><i class="fas fa-tags" style="color:var(--info);"></i> Por Categoria</div>
-        <div class="bar-chart">
-            {% for c in por_categoria %}
-            <div class="bar-item">
-                <div class="bar-label">{{ c.categoria__nome|default:"Sem categoria" }}</div>
-                <div class="bar-fill" style="width:{% widthratio c.total tickets_total 200 %}px;"><span>{{ c.total }}</span></div>
-            </div>
-            {% empty %}
-            <p style="color:var(--text-muted);font-size:13px;">Sem dados no periodo.</p>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Por prioridade -->
-    <div class="report-section">
-        <div class="report-section-title"><i class="fas fa-flag" style="color:var(--warning);"></i> Por Prioridade</div>
-        <div class="bar-chart">
-            {% for p in por_prioridade %}
-            <div class="bar-item">
-                <div class="bar-label">{{ p.prioridade|title }}</div>
-                <div class="bar-fill" style="width:{% widthratio p.total tickets_total 200 %}px;background:{% if p.prioridade == 'urgente' %}var(--danger){% elif p.prioridade == 'alta' %}var(--warning){% elif p.prioridade == 'normal' %}var(--info){% else %}var(--text-light){% endif %};"><span>{{ p.total }}</span></div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</div>
-
 {% endblock %}

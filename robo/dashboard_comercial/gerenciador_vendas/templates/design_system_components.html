@@ -245,6 +245,105 @@
     </div>
   </section>
 
+  {# ========== LIST FILTERS ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">List Filters</h2>
+    <p class="showcase-section-desc">
+      Barra de filtros pra listagens de entidades. Dois modos: compact (tabs + search) ou grid (multiplos campos).
+    </p>
+
+    <span class="showcase-label">Modo A — compact (tabs + search em linha)</span>
+    <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0 0 var(--sp-3);">
+      Uso ideal: listagens com poucos estados (status, categoria). Tabs na esquerda, search na direita.
+    </p>
+    <div class="showcase-row" style="display: block; padding: var(--sp-4); background: var(--color-surface); border: none;">
+      {% include "components/list_filters.html" with tabs=filter_tabs_demo search_placeholder="Buscar template..." search_id="demoSearchA" search_oninput="console.log(this.value)" %}
+    </div>
+    <code style="display: block; margin-top: var(--sp-2); font-size: var(--fs-xs); background: var(--color-surface); padding: var(--sp-2) var(--sp-3); border-radius: var(--radius-sm);">{% verbatim %}{% include "components/list_filters.html" with tabs=status_tabs search_placeholder="Buscar..." search_oninput="fn(this.value)" %}{% endverbatim %}</code>
+
+    <span class="showcase-label" style="margin-top: var(--sp-5);">Modo B — grid (multiplos campos)</span>
+    <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0 0 var(--sp-3);">
+      Uso ideal: listagens grandes com varios criterios (leads, oportunidades, tickets). Campos em grid responsivo + busca textual embaixo.
+    </p>
+    <div class="showcase-row" style="display: block; padding: var(--sp-4); background: var(--color-surface); border: none;">
+      {% include "components/list_filters.html" with fields=filter_fields_demo search_placeholder="Buscar por nome ou telefone..." clear_url="#" %}
+    </div>
+    <code style="display: block; margin-top: var(--sp-2); font-size: var(--fs-xs); background: var(--color-surface); padding: var(--sp-2) var(--sp-3); border-radius: var(--radius-sm);">{% verbatim %}{% include "components/list_filters.html" with fields=filter_fields search_placeholder="Buscar..." clear_url=request.path %}{% endverbatim %}</code>
+
+    <span class="showcase-label" style="margin-top: var(--sp-5);">Modo B — colapsado (preserva espaco)</span>
+    <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0 0 var(--sp-3);">
+      Passar <code>collapsed=True</code> faz o filtro comecar fechado. Clica no header pra expandir. Ideal pra kanban, listas grandes onde o conteudo e a estrela. Opcional: <code>active_filters_count</code> mostra badge com numero de filtros ativos.
+    </p>
+    <div class="showcase-row" style="display: block; padding: var(--sp-4); background: var(--color-surface); border: none;">
+      {% include "components/list_filters.html" with fields=filter_fields_demo search_placeholder="Buscar..." clear_url="#" collapsed=True active_filters_count=2 %}
+    </div>
+    <code style="display: block; margin-top: var(--sp-2); font-size: var(--fs-xs); background: var(--color-surface); padding: var(--sp-2) var(--sp-3); border-radius: var(--radius-sm);">{% verbatim %}{% include "components/list_filters.html" with fields=filter_fields search_placeholder="Buscar..." collapsed=True active_filters_count=2 %}{% endverbatim %}</code>
+  </section>
+
+  {# ========== VIEW TOGGLE + ENTITY TABLE ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">View Toggle + Entity List</h2>
+    <p class="showcase-section-desc">
+      Toggle cards ↔ lista, com persistencia em localStorage. Entity list e a versao linha do entity card (mesmos params).<br>
+      Uso: <code>{% verbatim %}{% include "components/view_toggle.html" with storage_key="emails-view" %}{% endverbatim %}</code>
+    </p>
+
+    <div data-view-scope>
+      <div style="display: flex; justify-content: flex-end; margin-bottom: var(--sp-3);">
+        {% include "components/view_toggle.html" with storage_key="showcase-demo-view" %}
+      </div>
+
+      <div class="view-cards" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--sp-4);">
+        {% include "components/entity_card.html" with icon="bi-people" icon_variant="primary" title="Leads com HubSoft" title_url="#" subtitle="Provedores que usam HubSoft como ERP." metric_value=0 metric_label="leads" tag_variant="success" tag_label="Manual" footer_meta="por Lucas Rocha" primary_action_url="#" primary_action_label="Ver" primary_action_icon="bi-eye" %}
+        {% include "components/entity_card.html" with icon="bi-megaphone" icon_variant="warning" title="Campanha Natal 2026" title_url="#" subtitle="Disparo pra base inativa." metric_value=1248 metric_label="envios" tag_variant="warning" tag_label="Agendada" footer_meta="15/12/2026" primary_action_url="#" primary_action_label="Ver" primary_action_icon="bi-eye" %}
+        {% include "components/entity_card.html" with icon="bi-envelope" icon_variant="info" title="Boas-vindas novo lead" title_url="#" subtitle="Email automatico 5min apos cadastro." metric_value=342 metric_label="enviados 30d" tag_variant="success" tag_label="Ativo" footer_meta="editado ha 2 dias" primary_action_url="#" primary_action_label="Editar" primary_action_icon="bi-pencil" %}
+      </div>
+
+      <div class="entity-list view-list" style="display: none;">
+        {% include "components/entity_table.html" with icon="bi-people" icon_variant="primary" title="Leads com HubSoft" title_url="#" subtitle="Provedores que usam HubSoft como ERP." metric_value=0 metric_label="leads" tag_variant="success" tag_label="Manual" footer_meta="por Lucas Rocha" primary_action_url="#" primary_action_label="Ver" primary_action_icon="bi-eye" %}
+        {% include "components/entity_table.html" with icon="bi-megaphone" icon_variant="warning" title="Campanha Natal 2026" title_url="#" subtitle="Disparo pra base inativa." metric_value=1248 metric_label="envios" tag_variant="warning" tag_label="Agendada" footer_meta="15/12/2026" primary_action_url="#" primary_action_label="Ver" primary_action_icon="bi-eye" %}
+        {% include "components/entity_table.html" with icon="bi-envelope" icon_variant="info" title="Boas-vindas novo lead" title_url="#" subtitle="Email automatico 5min apos cadastro." metric_value=342 metric_label="enviados 30d" tag_variant="success" tag_label="Ativo" footer_meta="editado ha 2 dias" primary_action_url="#" primary_action_label="Editar" primary_action_icon="bi-pencil" %}
+      </div>
+    </div>
+  </section>
+
+  {# ========== PAGINATION ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">Pagination</h2>
+    <p class="showcase-section-desc">
+      Renderiza a partir do <code>page_obj</code> do Django Paginator. Mostra range, pagina atual e navegacao.<br>
+      Uso na view: <code>paginator = Paginator(qs, 12); page_obj = paginator.get_page(request.GET.get('page'))</code>
+    </p>
+    <div class="showcase-row" style="display: block; padding: var(--sp-4); background: var(--color-surface); border: none;">
+      <nav class="pagination" aria-label="Exemplo">
+        <span class="pagination-info">1–12 de 47</span>
+        <div class="pagination-nav">
+          <span class="pagination-btn is-disabled"><i class="bi bi-chevron-double-left"></i></span>
+          <span class="pagination-btn is-disabled"><i class="bi bi-chevron-left"></i></span>
+          <span class="pagination-current">Pagina <strong>1</strong> de 4</span>
+          <a href="#" class="pagination-btn" onclick="return false;"><i class="bi bi-chevron-right"></i></a>
+          <a href="#" class="pagination-btn" onclick="return false;"><i class="bi bi-chevron-double-right"></i></a>
+        </div>
+      </nav>
+    </div>
+  </section>
+
+  {# ========== ENTITY CARDS ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">Entity Cards</h2>
+    <p class="showcase-section-desc">
+      Card pra listagens de entidades (segmento, campanha, template, lead). Ícone soft, título clicável, subtitle truncada, linha de metric/tag e footer com meta + ação.<br>
+      Uso: <code>{% verbatim %}{% include "components/entity_card.html" with icon="bi-people" title="..." subtitle="..." metric_value=10 metric_label="leads" tag_variant="success" tag_label="Manual" footer_meta="por Lucas" primary_action_url="#" primary_action_label="Editar" primary_action_icon="bi-pencil" %}{% endverbatim %}</code>
+    </p>
+
+    <div class="showcase-row" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); padding: 0; border: none; background: transparent; gap: var(--sp-4);">
+      {% include "components/entity_card.html" with icon="bi-people" icon_variant="primary" title="Leads com HubSoft" title_url="#" subtitle="Provedores que usam HubSoft como ERP. Principal ICP da Aurora." metric_value=0 metric_label="leads" tag_variant="success" tag_label="Manual" footer_meta="por Lucas Rocha" primary_action_url="#" primary_action_label="Editar" primary_action_icon="bi-pencil" %}
+      {% include "components/entity_card.html" with icon="bi-megaphone" icon_variant="warning" title="Campanha Natal 2026" title_url="#" subtitle="Disparo pra base inativa nos ultimos 90 dias." metric_value=1248 metric_label="envios" tag_variant="warning" tag_label="Agendada" footer_meta="15/12/2026" primary_action_url="#" primary_action_label="Ver" primary_action_icon="bi-eye" %}
+      {% include "components/entity_card.html" with icon="bi-envelope" icon_variant="info" title="Boas-vindas novo lead" title_url="#" subtitle="Email automatico enviado 5 min apos cadastro." metric_value=342 metric_label="enviados 30d" tag_variant="success" tag_label="Ativo" footer_meta="editado ha 2 dias" primary_action_url="#" primary_action_label="Editar" primary_action_icon="bi-pencil" %}
+      {% include "components/entity_card.html" with icon="bi-person-circle" icon_variant="primary" title="Joao da Silva" title_url="#" subtitle="Lead vindo de WhatsApp. Interessado em plano 300MB." tag_variant="primary" tag_label="Quente" footer_meta="+55 86 99999-1234" primary_action_url="#" primary_action_label="Abrir" primary_action_icon="bi-arrow-right" %}
+    </div>
+  </section>
+
   {# ========== CARDS (sem include, so classes CSS) ========== #}
   <section class="showcase-section">
     <h2 class="showcase-section-title">Cards</h2>
@@ -481,8 +580,59 @@
     </div>
   </section>
 
+  {# ========== PAGE HEADER ========== #}
+  <section class="showcase-section">
+    <h2 class="showcase-section-title">Page header (padrao unico)</h2>
+    <p class="showcase-section-desc">
+      Mesma estrutura de marcacao. A diferenca e so <strong>ter ou nao</strong> o bloco de tabs. Titulo semibold, divisor sutil, tabs integradas quando precisa filtrar. Eyebrow label (<code>.page-eyebrow</code>) e opcional, pra hierarquia.
+    </p>
+
+    <span class="showcase-label">Sem tabs — pagina de configuracao/detalhe</span>
+    <div class="showcase-row" style="display:block; padding: 0; background: var(--color-bg); border: none;">
+      <div class="page-header" style="margin: 0; padding: var(--sp-5);">
+        <div class="page-header-top">
+          <div>
+            <h1 class="page-title">Minha conta</h1>
+            <p class="page-subtitle">Atualize seus dados pessoais e permissoes de acesso.</p>
+          </div>
+          <div class="page-actions">
+            {% include "components/button.html" with variant="primary" label="Salvar alteracoes" icon="bi-save" %}
+          </div>
+        </div>
+      </div>
+      <div style="padding: var(--sp-5);">
+        <div style="background:var(--color-surface); border:1px dashed var(--color-border); border-radius:var(--radius); padding:var(--sp-4); color:var(--color-text-muted); font-size:var(--fs-sm);">...formulario com os dados da conta...</div>
+      </div>
+    </div>
+
+    <span class="showcase-label">Com tabs — pagina de listagem com filtros</span>
+    <div class="showcase-row" style="display:block; padding: 0; background: var(--color-bg); border: none;">
+      <div class="page-header" style="margin: 0;">
+        <div class="page-header-top">
+          <div>
+            <h1 class="page-title">Tenants</h1>
+            <p class="page-subtitle">Gerencie os clientes contratantes da plataforma Hubtrix.</p>
+          </div>
+          <div class="page-actions">
+            {% include "components/button.html" with variant="secondary" label="Exportar" icon="bi-download" %}
+            {% include "components/button.html" with variant="primary" label="Novo tenant" icon="bi-plus-lg" %}
+          </div>
+        </div>
+        <nav class="page-header-tabs">
+          <button type="button" class="page-header-tab is-active">Todos <span class="page-header-tab-count">248</span></button>
+          <button type="button" class="page-header-tab">Ativos <span class="page-header-tab-count">201</span></button>
+          <button type="button" class="page-header-tab">Em trial <span class="page-header-tab-count">12</span></button>
+          <button type="button" class="page-header-tab">Inativos <span class="page-header-tab-count">35</span></button>
+        </nav>
+      </div>
+      <div style="padding: var(--sp-5);">
+        <div style="background:var(--color-surface); border:1px dashed var(--color-border); border-radius:var(--radius); padding:var(--sp-4); color:var(--color-text-muted); font-size:var(--fs-sm);">...tabela de tenants filtrada pela tab selecionada...</div>
+      </div>
+    </div>
+  </section>
+
   <p style="text-align:center; margin-top: var(--sp-8); color: var(--color-text-muted); font-size: var(--fs-sm);">
-    Biblioteca base completa. Proximos passos: aplicar em paginas reais (aurora-admin).
+    Biblioteca base completa. Proximos passos: aplicar em paginas reais.
   </p>
 
 </div>

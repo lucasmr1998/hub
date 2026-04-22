@@ -1,153 +1,134 @@
 {% extends 'sistema/base.html' %}
 
-{% block title %}Indica&ccedil;&otilde;es - Admin{% endblock %}
+{% block title %}Indicacoes{% endblock %}
 
 {% block content %}
-
 <div class="page-header">
+  <div class="page-header-top">
     <div>
-        <h1 class="page-title">Indica&ccedil;&otilde;es</h1>
-        <p class="page-subtitle">Gerencie as indica&ccedil;&otilde;es dos membros do clube.</p>
+      <h1 class="page-title">Indicacoes</h1>
+      <p class="page-subtitle">Gerencie as indicacoes dos membros do clube.</p>
     </div>
+  </div>
 </div>
 
-<!-- KPIs -->
-<div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:24px;">
-    <div class="stat-card">
-        <div class="stat-label">Total de Indica&ccedil;&otilde;es</div>
-        <div class="stat-value">{{ total }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Pendentes</div>
-        <div class="stat-value" style="color:var(--warning);">{{ pendentes }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Convertidos</div>
-        <div class="stat-value" style="color:var(--success);">{{ convertidos }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Taxa de Convers&atilde;o</div>
-        <div class="stat-value">{{ taxa_conversao }}%</div>
-    </div>
+<div class="stats-grid stats-grid-4" style="margin-bottom: var(--sp-4);">
+  {% include "components/stat_card.html" with label="Total de indicacoes" value=total icon="bi-share" %}
+  {% include "components/stat_card.html" with label="Pendentes" value=pendentes icon="bi-clock" icon_variant="warning" %}
+  {% include "components/stat_card.html" with label="Convertidos" value=convertidos icon="bi-check-circle" icon_variant="success" %}
+  {% include "components/stat_card.html" with label="Taxa de conversao" value=taxa_conversao|stringformat:"s"|add:"%" icon="bi-percent" icon_variant="info" %}
 </div>
 
-<!-- Filtros -->
-<div class="card" style="margin-bottom:20px; padding:16px;">
-    <form method="get" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        <input type="text" name="busca" value="{{ busca }}" class="form-control" placeholder="Buscar indicado ou indicador..." style="max-width:300px;">
-        <select name="status" class="form-control" style="max-width:160px;">
-            <option value="">Todos status</option>
-            <option value="pendente" {% if status_filtro == "pendente" %}selected{% endif %}>Pendente</option>
-            <option value="contato_feito" {% if status_filtro == "contato_feito" %}selected{% endif %}>Contato Feito</option>
-            <option value="convertido" {% if status_filtro == "convertido" %}selected{% endif %}>Convertido</option>
-            <option value="cancelado" {% if status_filtro == "cancelado" %}selected{% endif %}>Cancelado</option>
+<div class="card" style="margin-bottom: var(--sp-4);">
+  <div class="card-body">
+    <form method="get" style="display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap;">
+      <div class="field-input-wrap" style="max-width: 320px; flex: 1;">
+        <input type="text" name="busca" value="{{ busca }}" class="field-input" placeholder="Buscar indicado ou indicador...">
+      </div>
+      <div class="field-input-wrap" style="max-width: 180px;">
+        <select name="status" class="field-input">
+          <option value="">Todos status</option>
+          <option value="pendente" {% if status_filtro == "pendente" %}selected{% endif %}>Pendente</option>
+          <option value="contato_feito" {% if status_filtro == "contato_feito" %}selected{% endif %}>Contato feito</option>
+          <option value="convertido" {% if status_filtro == "convertido" %}selected{% endif %}>Convertido</option>
+          <option value="cancelado" {% if status_filtro == "cancelado" %}selected{% endif %}>Cancelado</option>
         </select>
-        <button type="submit" class="btn btn-primary">Filtrar</button>
-        {% if busca or status_filtro %}
-        <a href="{% url 'indicacoes:dashboard_indicacoes' %}" class="btn btn-secondary">Limpar</a>
-        {% endif %}
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+      {% if busca or status_filtro %}<a href="{% url 'indicacoes:dashboard_indicacoes' %}" class="btn btn-ghost btn-sm">Limpar</a>{% endif %}
     </form>
+  </div>
 </div>
 
-<div style="display:grid; grid-template-columns:1fr 320px; gap:20px;">
-    <!-- Tabela de indicações -->
-    <div class="card">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Indicador</th>
-                    <th>Indicado</th>
-                    <th>Telefone</th>
-                    <th>Cidade</th>
-                    <th style="text-align:center;">Status</th>
-                    <th style="text-align:center;">Pontos</th>
-                    <th>Data</th>
-                    <th style="text-align:center;">A&ccedil;&otilde;es</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for i in indicacoes %}
-                <tr>
-                    <td>
-                        <strong>{{ i.membro_indicador.nome }}</strong>
-                        <br><small class="text-muted">{{ i.membro_indicador.cpf }}</small>
-                    </td>
-                    <td><strong>{{ i.nome_indicado }}</strong></td>
-                    <td>{{ i.telefone_indicado }}</td>
-                    <td>{{ i.cidade_indicado|default:"-" }}</td>
-                    <td style="text-align:center;">
-                        {% if i.status == 'pendente' %}<span class="badge badge-warning">Pendente</span>
-                        {% elif i.status == 'contato_feito' %}<span class="badge badge-info">Contato Feito</span>
-                        {% elif i.status == 'convertido' %}<span class="badge badge-success">Convertido</span>
-                        {% else %}<span class="badge badge-danger">Cancelado</span>{% endif %}
-                    </td>
-                    <td style="text-align:center;">
-                        {% if i.pontos_creditados %}
-                        <i class="fas fa-check-circle" style="color:var(--success);"></i>
-                        {% else %}
-                        <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ i.data_indicacao|date:"d/m/Y H:i" }}</td>
-                    <td style="text-align:center;">
-                        {% if i.status != 'convertido' and i.status != 'cancelado' %}
-                        <form method="post" style="display:inline;">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="alterar_status">
-                            <input type="hidden" name="indicacao_id" value="{{ i.id }}">
-                            <select name="novo_status" class="form-control" style="width:auto; display:inline; padding:4px 8px; font-size:12px;" onchange="this.form.submit()">
-                                <option value="">Alterar...</option>
-                                {% if i.status == 'pendente' %}
-                                <option value="contato_feito">Contato Feito</option>
-                                {% endif %}
-                                <option value="convertido">Convertido</option>
-                                <option value="cancelado">Cancelar</option>
-                            </select>
-                        </form>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="8" class="text-center text-muted" style="padding:40px;">Nenhuma indica&ccedil;&atilde;o registrada.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-        {% if indicacoes.has_other_pages %}
-        <div class="pagination">
-            {% if indicacoes.has_previous %}
-            <a href="?page={{ indicacoes.previous_page_number }}&busca={{ busca }}&status={{ status_filtro }}" class="btn btn-secondary">&laquo; Anterior</a>
-            {% endif %}
-            <span class="text-muted" style="padding:8px;">P&aacute;gina {{ indicacoes.number }} de {{ indicacoes.paginator.num_pages }}</span>
-            {% if indicacoes.has_next %}
-            <a href="?page={{ indicacoes.next_page_number }}&busca={{ busca }}&status={{ status_filtro }}" class="btn btn-secondary">Pr&oacute;xima &raquo;</a>
-            {% endif %}
-        </div>
-        {% endif %}
+<div class="ind-grid">
+  <div class="card" style="padding: 0; overflow: hidden;">
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Indicador</th>
+            <th>Indicado</th>
+            <th>Telefone</th>
+            <th>Cidade</th>
+            <th style="text-align: center;">Status</th>
+            <th style="text-align: center;">Pontos</th>
+            <th>Data</th>
+            <th style="text-align: center;">Acoes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in indicacoes %}
+            <tr>
+              <td>
+                <strong>{{ i.membro_indicador.nome }}</strong>
+                <div style="font-size: 11px; color: var(--color-text-muted);">{{ i.membro_indicador.cpf }}</div>
+              </td>
+              <td><strong>{{ i.nome_indicado }}</strong></td>
+              <td>{{ i.telefone_indicado }}</td>
+              <td>{{ i.cidade_indicado|default:"—" }}</td>
+              <td style="text-align: center;">
+                {% if i.status == 'pendente' %}{% include "components/badge.html" with variant="warning" label="Pendente" size="sm" %}
+                {% elif i.status == 'contato_feito' %}{% include "components/badge.html" with variant="info" label="Contato feito" size="sm" %}
+                {% elif i.status == 'convertido' %}{% include "components/badge.html" with variant="success" label="Convertido" size="sm" %}
+                {% else %}{% include "components/badge.html" with variant="danger" label="Cancelado" size="sm" %}{% endif %}
+              </td>
+              <td style="text-align: center;">
+                {% if i.pontos_creditados %}<i class="bi bi-check-circle" style="color: var(--color-success);"></i>{% else %}<span style="color: var(--color-text-muted);">—</span>{% endif %}
+              </td>
+              <td>{{ i.data_indicacao|date:"d/m/Y H:i" }}</td>
+              <td style="text-align: center;">
+                {% if i.status != 'convertido' and i.status != 'cancelado' %}
+                  <form method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="alterar_status">
+                    <input type="hidden" name="indicacao_id" value="{{ i.id }}">
+                    <select name="novo_status" class="field-input" style="width: auto; display: inline-block; padding: 4px 8px; font-size: var(--fs-xs);" onchange="this.form.submit()">
+                      <option value="">Alterar...</option>
+                      {% if i.status == 'pendente' %}<option value="contato_feito">Contato feito</option>{% endif %}
+                      <option value="convertido">Convertido</option>
+                      <option value="cancelado">Cancelar</option>
+                    </select>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="8" style="text-align: center; padding: var(--sp-8); color: var(--color-text-muted);">Nenhuma indicacao registrada.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+    {% if indicacoes.has_other_pages %}{% include "components/pagination.html" with page_obj=indicacoes extra_params="busca="|add:busca|add:"&status="|add:status_filtro %}{% endif %}
+  </div>
 
-    <!-- Top Indicadores -->
-    <div class="card" style="padding:20px; height:fit-content;">
-        <h3 style="margin:0 0 16px; font-size:16px; color:var(--text-main);">
-            <i class="fas fa-trophy" style="color:var(--warning); margin-right:6px;"></i>Top Indicadores
-        </h3>
-        {% for m in top_indicadores %}
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; {% if not forloop.last %}border-bottom:1px solid var(--border);{% endif %}">
-            <div>
-                <span style="color:var(--text-muted); font-size:12px; margin-right:6px;">{{ forloop.counter }}.</span>
-                <strong style="font-size:13px;">{{ m.nome }}</strong>
-            </div>
-            <div style="text-align:right;">
-                <span class="font-bold">{{ m.total_indicacoes }}</span>
-                <br><small class="text-muted">{{ m.convertidas }} convertidas</small>
-            </div>
+  <div class="card" style="height: fit-content;">
+    <div class="card-header"><h3 class="card-title"><i class="bi bi-trophy" style="color: var(--color-warning);"></i> Top indicadores</h3></div>
+    <div class="card-body">
+      {% for m in top_indicadores %}
+        <div class="top-row">
+          <div>
+            <span style="color: var(--color-text-muted); font-size: var(--fs-xs); margin-right: 6px;">{{ forloop.counter }}.</span>
+            <strong style="font-size: var(--fs-sm);">{{ m.nome }}</strong>
+          </div>
+          <div style="text-align: right;">
+            <span style="font-weight: var(--fw-bold);">{{ m.total_indicacoes }}</span>
+            <div style="font-size: 11px; color: var(--color-text-muted);">{{ m.convertidas }} convertidas</div>
+          </div>
         </div>
-        {% empty %}
-        <p class="text-muted text-center" style="padding:20px;">Nenhuma indica&ccedil;&atilde;o ainda.</p>
-        {% endfor %}
+      {% empty %}
+        <p style="color: var(--color-text-muted); text-align: center; padding: var(--sp-5);">Nenhuma indicacao ainda.</p>
+      {% endfor %}
     </div>
+  </div>
 </div>
+{% endblock %}
 
+{% block extra_css %}
+<style>
+  .ind-grid { display: grid; grid-template-columns: 1fr 320px; gap: var(--sp-4); }
+  @media (max-width: 1100px) { .ind-grid { grid-template-columns: 1fr; } }
+  .table-wrap { overflow-x: auto; }
+  .top-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--color-border); }
+  .top-row:last-child { border-bottom: none; }
+</style>
 {% endblock %}

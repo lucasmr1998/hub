@@ -1,0 +1,50 @@
+{% comment %}
+View toggle — alterna entre visualizacao em cards e lista.
+Persiste a escolha em localStorage (chave passada via storage_key).
+
+A pagina deve ter dois containers com as classes:
+  .view-cards — visivel quando modo='cards'
+  .view-list  — visivel quando modo='list'
+
+Params:
+  storage_key: chave unica do localStorage (default: "view-mode")
+  default_mode: "cards" | "list" (default: "cards")
+
+Uso:
+  {% include "components/view_toggle.html" with storage_key="emails-view" %}
+  <div class="view-cards">...cards aqui...</div>
+  <div class="view-list">...tabela aqui...</div>
+{% endcomment %}
+<div class="view-toggle" data-storage-key="{{ storage_key|default:'view-mode' }}" data-default="{{ default_mode|default:'cards' }}">
+  <button type="button" data-mode="cards" title="Cards"><i class="bi bi-grid-3x3-gap-fill"></i></button>
+  <button type="button" data-mode="list" title="Lista"><i class="bi bi-list-ul"></i></button>
+</div>
+<script>
+  (function() {
+    document.querySelectorAll('.view-toggle').forEach(function(wrap) {
+      if (wrap.dataset.initialized) return;
+      wrap.dataset.initialized = '1';
+      var key = wrap.dataset.storageKey || 'view-mode';
+      var fallback = wrap.dataset.default || 'cards';
+      var current = localStorage.getItem(key) || fallback;
+      applyMode(wrap, current);
+
+      wrap.querySelectorAll('button[data-mode]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var mode = btn.dataset.mode;
+          localStorage.setItem(key, mode);
+          applyMode(wrap, mode);
+        });
+      });
+    });
+
+    function applyMode(wrap, mode) {
+      wrap.querySelectorAll('button[data-mode]').forEach(function(b) {
+        b.classList.toggle('is-active', b.dataset.mode === mode);
+      });
+      var scope = wrap.closest('[data-view-scope]') || document;
+      scope.querySelectorAll('.view-cards').forEach(function(el) { el.style.display = mode === 'cards' ? '' : 'none'; });
+      scope.querySelectorAll('.view-list').forEach(function(el)  { el.style.display = mode === 'list'  ? '' : 'none'; });
+    }
+  })();
+</script>
