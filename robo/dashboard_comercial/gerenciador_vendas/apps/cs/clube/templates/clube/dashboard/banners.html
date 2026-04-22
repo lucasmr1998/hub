@@ -10,7 +10,7 @@
       <p class="page-subtitle">Banners rotativos da landing page publica do clube.</p>
     </div>
     <div class="page-actions">
-      <button class="btn btn-primary btn-sm" onclick="abrirModal()"><i class="bi bi-plus-lg"></i> Novo banner</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirModalBanner()"><i class="bi bi-plus-lg"></i> Novo banner</button>
     </div>
   </div>
 </div>
@@ -111,7 +111,7 @@
 
 {% block extra_js %}
 <script>
-function abrirModal() {
+function abrirModalBanner() {
   document.getElementById('modal-titulo').innerHTML = '<i class="bi bi-image" style="color: var(--color-primary);"></i> Novo banner';
   document.getElementById('form-action').value = 'criar';
   document.getElementById('form-banner-id').value = '';

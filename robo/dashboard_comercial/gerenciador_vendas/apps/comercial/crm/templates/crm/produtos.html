@@ -11,7 +11,7 @@
     </div>
     <div class="page-actions">
       <button class="btn btn-secondary btn-sm" onclick="abrirModalVencimento()"><i class="bi bi-calendar-plus"></i> Novo vencimento</button>
-      <button class="btn btn-primary btn-sm" onclick="abrirModal()"><i class="bi bi-plus-lg"></i> Novo produto</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirModalProduto()"><i class="bi bi-plus-lg"></i> Novo produto</button>
     </div>
   </div>
 </div>
@@ -114,7 +114,7 @@
   <div class="modal-content" style="max-width: 520px;">
     <div class="modal-header">
       <h3 class="modal-title"><i class="bi bi-box" style="color: var(--color-primary);"></i> <span id="modalTitulo">Novo produto</span></h3>
-      <button class="modal-close" onclick="fecharModal()"><i class="bi bi-x-lg"></i></button>
+      <button class="modal-close" onclick="fecharModalProduto()"><i class="bi bi-x-lg"></i></button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="produtoId">
@@ -165,7 +165,7 @@
       </label>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary btn-sm" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-secondary btn-sm" onclick="fecharModalProduto()">Cancelar</button>
       <button class="btn btn-primary btn-sm" onclick="salvarProduto()"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>
   </div>
@@ -296,7 +296,7 @@
 <script>
 function getCsrf() { const c = document.cookie.match(/csrftoken=([^;]+)/); return c ? c[1] : ''; }
 
-function abrirModal(dados) {
+function abrirModalProduto(dados) {
   document.getElementById('produtoId').value = dados ? dados.id : '';
   document.getElementById('prodNome').value = dados ? dados.nome : '';
   document.getElementById('prodPreco').value = dados ? dados.preco : '';
@@ -309,9 +309,9 @@ function abrirModal(dados) {
   document.getElementById('modalProduto').style.display = 'flex';
 }
 
-function fecharModal() { document.getElementById('modalProduto').style.display = 'none'; }
+function fecharModalProduto() { document.getElementById('modalProduto').style.display = 'none'; }
 
-document.getElementById('modalProduto').addEventListener('click', function(e) { if (e.target === this) fecharModal(); });
+document.getElementById('modalProduto').addEventListener('click', function(e) { if (e.target === this) fecharModalProduto(); });
 
 function salvarProduto() {
   const payload = {
@@ -334,7 +334,7 @@ function salvarProduto() {
   })
   .then(r => r.json())
   .then(d => {
-    if (d.success) { toast('Salvo', d.message, 'success'); fecharModal(); setTimeout(() => location.reload(), 500); }
+    if (d.success) { toast('Salvo', d.message, 'success'); fecharModalProduto(); setTimeout(() => location.reload(), 500); }
     else toast('Erro', d.error || 'Erro ao salvar', 'danger');
   })
   .catch(() => toast('Erro', 'Erro de conexao', 'danger'));
@@ -346,7 +346,7 @@ function editarProduto(id) {
     .then(d => {
       if (d.success) {
         const p = d.produtos.find(x => x.id === id);
-        if (p) abrirModal(p);
+        if (p) abrirModalProduto(p);
       }
     });
 }

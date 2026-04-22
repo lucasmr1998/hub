@@ -10,7 +10,7 @@
       <p class="page-subtitle">Organize seus parceiros por categoria.</p>
     </div>
     <div class="page-actions">
-      <button class="btn btn-primary btn-sm" onclick="abrirModal()"><i class="bi bi-plus-lg"></i> Nova categoria</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirModalCategoria()"><i class="bi bi-plus-lg"></i> Nova categoria</button>
     </div>
   </div>
 </div>
@@ -118,7 +118,7 @@
 
 {% block extra_js %}
 <script>
-function abrirModal() {
+function abrirModalCategoria() {
   document.getElementById('modal-titulo').innerHTML = '<i class="bi bi-tag" style="color: var(--color-primary);"></i> Nova categoria';
   document.getElementById('form-action').value = 'criar';
   document.getElementById('form-cat-id').value = '';

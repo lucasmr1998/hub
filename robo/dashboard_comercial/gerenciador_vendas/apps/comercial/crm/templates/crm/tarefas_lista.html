@@ -10,7 +10,7 @@
       <p class="page-subtitle">Acompanhe suas tarefas de hoje, da semana e pendentes.</p>
     </div>
     <div class="page-actions">
-      <button class="btn btn-primary btn-sm" onclick="abrirModal()"><i class="bi bi-plus-lg"></i> Nova tarefa</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirModalTarefa()"><i class="bi bi-plus-lg"></i> Nova tarefa</button>
     </div>
   </div>
 </div>
@@ -101,7 +101,7 @@
   <div class="modal-content" style="max-width: 480px;">
     <div class="modal-header">
       <h3 class="modal-title"><i class="bi bi-plus-circle" style="color: var(--color-primary);"></i> Nova tarefa</h3>
-      <button class="modal-close" onclick="fecharModal()"><i class="bi bi-x-lg"></i></button>
+      <button class="modal-close" onclick="fecharModalTarefa()"><i class="bi bi-x-lg"></i></button>
     </div>
     <div class="modal-body">
       <div class="field">
@@ -148,7 +148,7 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary btn-sm" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-secondary btn-sm" onclick="fecharModalTarefa()">Cancelar</button>
       <button class="btn btn-primary btn-sm" onclick="salvarTarefa()"><i class="bi bi-check-lg"></i> Salvar</button>
     </div>
   </div>
@@ -296,9 +296,9 @@ function switchTab(btn, id) {
   document.getElementById(id).classList.add('is-active');
 }
 
-function abrirModal() { document.getElementById('modal-tarefa').style.display = 'flex'; }
-function fecharModal() { document.getElementById('modal-tarefa').style.display = 'none'; }
-document.getElementById('modal-tarefa').addEventListener('click', e => { if (e.target === e.currentTarget) fecharModal(); });
+function abrirModalTarefa() { document.getElementById('modal-tarefa').style.display = 'flex'; }
+function fecharModalTarefa() { document.getElementById('modal-tarefa').style.display = 'none'; }
+document.getElementById('modal-tarefa').addEventListener('click', e => { if (e.target === e.currentTarget) fecharModalTarefa(); });
 
 async function salvarTarefa() {
   const titulo = document.getElementById('f-titulo').value.trim();
@@ -318,7 +318,7 @@ async function salvarTarefa() {
     const data = await res.json();
     if (data.ok) {
       toast('Criada', 'Tarefa criada com sucesso', 'success');
-      fecharModal();
+      fecharModalTarefa();
       setTimeout(() => location.reload(), 800);
     } else {
       toast('Erro', data.erro || 'Erro', 'danger');
