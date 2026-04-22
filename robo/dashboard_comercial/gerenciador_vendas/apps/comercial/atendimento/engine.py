@@ -774,11 +774,12 @@ def _acao_criar_tarefa(config, contexto, atendimento):
         titulo = _substituir_variaveis(config.get('titulo', 'Tarefa do fluxo'), contexto)
         # Buscar responsavel: config > primeiro user staff do tenant
         responsavel = None
+        tenant = atendimento.fluxo.tenant
         resp_id = config.get('responsavel_id')
         if resp_id:
-            responsavel = User.objects.filter(id=resp_id).first()
+            responsavel = User.objects.filter(id=resp_id, perfil__tenant=tenant).first()
         if not responsavel:
-            responsavel = User.objects.filter(is_staff=True, is_active=True).first()
+            responsavel = User.objects.filter(is_staff=True, is_active=True, perfil__tenant=tenant).first()
         TarefaCRM.objects.create(
             tenant=atendimento.fluxo.tenant,
             titulo=titulo,

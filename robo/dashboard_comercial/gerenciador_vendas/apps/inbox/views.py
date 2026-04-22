@@ -42,7 +42,7 @@ def _get_fluxos_atendimento():
 def inbox_view(request):
     denied = _check_perm(request, 'inbox.ver_minhas')
     if denied: return denied
-    agentes = User.objects.filter(is_active=True).order_by('first_name')
+    agentes = User.objects.filter(is_active=True, perfil__tenant=request.tenant).order_by('first_name')
     etiquetas = EtiquetaConversa.objects.all()
     equipes = EquipeInbox.objects.filter(ativo=True)
     filas = FilaInbox.objects.filter(ativo=True).select_related('equipe')
@@ -621,7 +621,7 @@ def configuracoes_inbox(request):
         'categorias_faq': CategoriaFAQ.objects.prefetch_related('artigos').filter(ativo=True),
         'widget_config': widget_config,
         'canal_widget': canal_widget,
-        'usuarios': User.objects.filter(is_active=True).order_by('first_name'),
+        'usuarios': User.objects.filter(is_active=True, perfil__tenant=request.tenant).order_by('first_name'),
         'dias_semana': HorarioAtendimento.DIA_CHOICES,
         'modos_distribuicao': FilaInbox.MODO_DISTRIBUICAO_CHOICES,
         'page_title': 'Configurações do Inbox',

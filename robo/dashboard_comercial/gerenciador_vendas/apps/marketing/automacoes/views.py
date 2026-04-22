@@ -169,7 +169,7 @@ def editor_fluxo(request, pk):
 
     pipelines = list(Pipeline.objects.values('id', 'nome', 'slug'))
     estagios = list(PipelineEstagio.objects.values('id', 'nome', 'slug', 'pipeline_id', 'ordem').order_by('pipeline_id', 'ordem'))
-    usuarios = list(User.objects.filter(is_staff=True, is_active=True).values('id', 'username', 'first_name', 'last_name'))
+    usuarios = list(User.objects.filter(is_staff=True, is_active=True, perfil__tenant=request.tenant).values('id', 'username', 'first_name', 'last_name'))
     segmentos = list(SegmentoCRM.objects.values('id', 'nome'))
 
     return render(request, 'automacoes/editor_fluxo.html', {

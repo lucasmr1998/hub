@@ -276,12 +276,19 @@ class TarefaAPIView(N8NAPIMixin, APIView):
         elif lead:
             oportunidade = OportunidadeVenda.objects.filter(lead=lead).first()
 
-        # Responsavel
+        # Responsavel (so usuarios do tenant)
         responsavel = None
+        tenant = getattr(request, 'tenant', None)
         if data.get('responsavel_username'):
-            responsavel = User.objects.filter(username=data['responsavel_username']).first()
+            qs = User.objects.filter(username=data['responsavel_username'])
+            if tenant:
+                qs = qs.filter(perfil__tenant=tenant)
+            responsavel = qs.first()
         if not responsavel:
-            responsavel = User.objects.filter(is_staff=True, is_active=True).first()
+            qs = User.objects.filter(is_staff=True, is_active=True)
+            if tenant:
+                qs = qs.filter(perfil__tenant=tenant)
+            responsavel = qs.first()
 
         if not responsavel:
             return Response({'success': False, 'error': 'Nenhum responsavel disponivel'}, status=status.HTTP_400_BAD_REQUEST)

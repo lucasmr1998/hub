@@ -104,8 +104,8 @@ def tipo_notificacao_detalhes_view(request, tipo_id):
         tipo_notificacao=tipo
     ).select_related('usuario', 'canal_preferido').order_by('usuario__username')
 
-    # Buscar todos os usuários do sistema
-    todos_usuarios = User.objects.filter(is_active=True).order_by('username')
+    # Buscar todos os usuários do tenant atual
+    todos_usuarios = User.objects.filter(is_active=True, perfil__tenant=request.tenant).order_by('username')
 
     # Criar lista de usuários com status de preferência
     usuarios_com_status = []
@@ -215,12 +215,12 @@ def api_notificacao_enviar(request):
         if not tipo_codigo:
             return JsonResponse({'error': 'Tipo de notificação é obrigatório'}, status=400)
 
-        # Buscar usuários
+        # Buscar usuários (somente do tenant atual)
         if destinatarios_ids:
-            usuarios = User.objects.filter(id__in=destinatarios_ids, is_active=True)
+            usuarios = User.objects.filter(id__in=destinatarios_ids, is_active=True, perfil__tenant=request.tenant)
         else:
-            # Enviar para todos os usuários ativos
-            usuarios = User.objects.filter(is_active=True)
+            # Enviar para todos os usuários ativos do tenant atual
+            usuarios = User.objects.filter(is_active=True, perfil__tenant=request.tenant)
 
         from apps.notificacoes.services import notificar_usuarios
 
