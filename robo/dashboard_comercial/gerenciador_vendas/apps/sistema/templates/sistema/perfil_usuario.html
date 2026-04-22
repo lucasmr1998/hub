@@ -1,174 +1,195 @@
-{% extends 'sistema/base.html' %}
+{% extends "layouts/layout_app.html" %}
 {% load permissoes_tags %}
 
-{% block title %}Meu Perfil{% endblock %}
+{% block title %}Meu perfil — Hubtrix{% endblock %}
 
-{% block custom_css %}
-<style>
-    .perfil-layout { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
-    .perfil-card { background:var(--bg-white); border:1px solid var(--border); border-radius:12px; padding:20px; }
-    .perfil-header { display:flex; align-items:center; gap:16px; margin-bottom:20px; }
-    .perfil-avatar { width:64px; height:64px; border-radius:50%; background:linear-gradient(135deg,var(--primary),var(--info)); display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:22px; flex-shrink:0; }
-    .perfil-info h2 { margin:0; font-size:18px; font-weight:700; color:var(--text-main); }
-    .perfil-info p { margin:2px 0 0; font-size:13px; color:var(--text-muted); }
-    .perfil-role-badge { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600; background:#dbeafe; color:#2563eb; margin-top:6px; }
-    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
-    .form-row-full { margin-bottom:12px; }
-    .form-label-sm { font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:.03em; }
-    .form-input-sm { width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; }
-    .form-input-sm:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,.1); }
-    .perm-section { margin-bottom:14px; }
-    .perm-module-title { font-size:12px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; display:flex; align-items:center; gap:6px; }
-    .perm-item { display:flex; align-items:center; gap:6px; padding:3px 0; font-size:12px; color:var(--text-secondary); }
-    .perm-check { color:var(--success); font-size:11px; }
-    .perm-cross { color:var(--text-muted); font-size:11px; opacity:.4; }
-    .senha-section { border-top:1px solid var(--border); padding-top:16px; margin-top:16px; }
-    @media (max-width:768px) { .perfil-layout { grid-template-columns:1fr; } .form-row { grid-template-columns:1fr; } }
-</style>
-{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
 
 {% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <h1 class="page-title">Meu perfil</h1>
+        <p class="page-subtitle">Atualize seus dados pessoais e veja suas permissoes de acesso.</p>
+      </div>
+    </div>
+  </div>
 
-<div style="margin-bottom:20px;">
-    <h1 class="page-title">Meu Perfil</h1>
-</div>
+  <div style="max-width: 1100px;">
 
-<!-- Header com avatar e info -->
-<div class="perfil-card" style="margin-bottom:20px;">
-    <div class="perfil-header">
-        <div class="perfil-avatar">
+    {# Header com avatar + badges de papel #}
+    <div class="card" style="margin-bottom: var(--sp-4);">
+      <div class="card-body">
+        <div class="perfil-header">
+          <div class="perfil-avatar">
             {{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|upper|default:"" }}
+          </div>
+          <div class="perfil-info">
+            <h2 style="margin: 0; font-size: var(--fs-lg); font-weight: var(--fw-bold);">{{ user.get_full_name|default:user.username }}</h2>
+            <p style="margin: 2px 0 var(--sp-2); font-size: var(--fs-sm); color: var(--color-text-muted);">@{{ user.username }} · {{ user.email }}</p>
+            <div style="display:flex; gap: var(--sp-2); flex-wrap: wrap;">
+              {% if user.is_superuser %}
+                {% include "components/badge.html" with variant="warning" label="Superuser" icon="bi-gem" %}
+              {% elif perm and perm.perfil %}
+                {% include "components/badge.html" with variant="info" label=perm.perfil.nome icon="bi-shield-check" %}
+              {% else %}
+                {% include "components/badge.html" with variant="neutral" label="Sem perfil" %}
+              {% endif %}
+              {% if perfil and perfil.tenant %}
+                {% include "components/badge.html" with variant="success" label=perfil.tenant.nome icon="bi-building" %}
+              {% endif %}
+            </div>
+          </div>
         </div>
-        <div class="perfil-info">
-            <h2>{{ user.get_full_name|default:user.username }}</h2>
-            <p>@{{ user.username }} · {{ user.email }}</p>
-            {% if user.is_superuser %}
-                <span class="perfil-role-badge" style="background:#fef3c7;color:#d97706;"><i class="fas fa-crown"></i> Superuser</span>
-            {% elif perm and perm.perfil %}
-                <span class="perfil-role-badge"><i class="fas fa-shield-alt"></i> {{ perm.perfil.nome }}</span>
-            {% else %}
-                <span class="perfil-role-badge" style="background:#f1f5f9;color:#64748b;">Sem perfil</span>
-            {% endif %}
-            {% if perfil and perfil.tenant %}
-                <span class="perfil-role-badge" style="background:#ecfdf5;color:#065f46;"><i class="fas fa-building"></i> {{ perfil.tenant.nome }}</span>
-            {% endif %}
-        </div>
+      </div>
     </div>
-</div>
 
-<div class="perfil-layout">
-    <!-- Coluna esquerda: dados pessoais -->
-    <div class="perfil-card">
-        <h3 style="font-size:15px;font-weight:700;color:var(--text-main);margin:0 0 16px;"><i class="fas fa-user" style="color:var(--primary);margin-right:6px;"></i> Dados Pessoais</h3>
-
-        <form method="post">
+    <div class="perfil-layout">
+      {# Coluna esquerda — dados pessoais #}
+      <div class="card">
+        <div class="card-header"><h3 class="card-title"><i class="bi bi-person"></i> Dados pessoais</h3></div>
+        <div class="card-body">
+          <form method="post">
             {% csrf_token %}
-            <div class="form-row">
-                <div>
-                    <label class="form-label-sm">Nome</label>
-                    <input type="text" name="first_name" value="{{ user.first_name }}" class="form-input-sm" placeholder="Nome">
+            <div class="admin-form-grid" style="margin-bottom: var(--sp-3);">
+              <div class="field">
+                <label class="field-label">Nome</label>
+                <div class="field-input-wrap"><input class="field-input" type="text" name="first_name" value="{{ user.first_name }}" placeholder="Nome"></div>
+              </div>
+              <div class="field">
+                <label class="field-label">Sobrenome</label>
+                <div class="field-input-wrap"><input class="field-input" type="text" name="last_name" value="{{ user.last_name }}" placeholder="Sobrenome"></div>
+              </div>
+            </div>
+            <div class="admin-form-grid" style="margin-bottom: var(--sp-3);">
+              <div class="field">
+                <label class="field-label">E-mail</label>
+                <div class="field-input-wrap"><input class="field-input" type="email" name="email" value="{{ user.email }}" required></div>
+              </div>
+              <div class="field">
+                <label class="field-label">Telefone</label>
+                <div class="field-input-wrap"><input class="field-input" type="text" name="telefone" value="{{ perfil.telefone|default:'' }}" placeholder="(XX) XXXXX-XXXX"></div>
+              </div>
+            </div>
+            <div class="field" style="margin-bottom: var(--sp-3);">
+              <label class="field-label">Username</label>
+              <div class="field-input-wrap"><input class="field-input" type="text" value="{{ user.username }}" disabled></div>
+              <p class="field-helper">O username nao pode ser alterado.</p>
+            </div>
+
+            <div style="border-top: 1px solid var(--color-border); padding-top: var(--sp-4); margin-top: var(--sp-4);">
+              <h4 style="font-size: var(--fs-sm); font-weight: var(--fw-semibold); margin: 0 0 var(--sp-3);"><i class="bi bi-lock"></i> Alterar senha</h4>
+              <div class="admin-form-grid">
+                <div class="field">
+                  <label class="field-label">Senha atual</label>
+                  <div class="field-input-wrap"><input class="field-input" type="password" name="senha_atual" placeholder="Senha atual"></div>
                 </div>
-                <div>
-                    <label class="form-label-sm">Sobrenome</label>
-                    <input type="text" name="last_name" value="{{ user.last_name }}" class="form-input-sm" placeholder="Sobrenome">
+                <div class="field">
+                  <label class="field-label">Nova senha</label>
+                  <div class="field-input-wrap"><input class="field-input" type="password" name="nova_senha" placeholder="Nova senha"></div>
                 </div>
+              </div>
+              <p class="field-helper" style="margin-top: var(--sp-2);">Deixe em branco pra manter a senha atual.</p>
             </div>
 
-            <div class="form-row">
-                <div>
-                    <label class="form-label-sm">E-mail</label>
-                    <input type="email" name="email" value="{{ user.email }}" class="form-input-sm" required>
-                </div>
-                <div>
-                    <label class="form-label-sm">Telefone</label>
-                    <input type="text" name="telefone" value="{{ perfil.telefone|default:'' }}" class="form-input-sm" placeholder="(XX) XXXXX-XXXX">
-                </div>
+            <div style="margin-top: var(--sp-4);">
+              <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Salvar alteracoes</button>
             </div>
+          </form>
+        </div>
+      </div>
 
-            <div class="form-row-full">
-                <label class="form-label-sm">Username</label>
-                <input type="text" value="{{ user.username }}" class="form-input-sm" disabled style="background:var(--bg-subtle);color:var(--text-muted);">
-                <span style="font-size:11px;color:var(--text-muted);">O username não pode ser alterado.</span>
+      {# Coluna direita — permissoes #}
+      <div class="card">
+        <div class="card-header"><h3 class="card-title"><i class="bi bi-shield-check"></i> Minhas permissoes</h3></div>
+        <div class="card-body">
+          {% if user.is_superuser %}
+            <div style="text-align: center; padding: var(--sp-5) 0;">
+              <i class="bi bi-gem" style="font-size: 2rem; color: var(--color-warning); display: block; margin-bottom: var(--sp-2);"></i>
+              <p style="font-size: var(--fs-sm); font-weight: var(--fw-semibold); margin: 0 0 4px;">Superuser</p>
+              <p style="font-size: var(--fs-xs); color: var(--color-text-muted); margin: 0;">Acesso total a todos os modulos e funcionalidades.</p>
             </div>
-
-            <!-- Alterar senha -->
-            <div class="senha-section">
-                <h4 style="font-size:13px;font-weight:600;color:var(--text-main);margin:0 0 10px;"><i class="fas fa-lock" style="color:var(--text-muted);margin-right:4px;"></i> Alterar Senha</h4>
-                <div class="form-row">
-                    <div>
-                        <label class="form-label-sm">Senha Atual</label>
-                        <input type="password" name="senha_atual" class="form-input-sm" placeholder="Senha atual">
-                    </div>
-                    <div>
-                        <label class="form-label-sm">Nova Senha</label>
-                        <input type="password" name="nova_senha" class="form-input-sm" placeholder="Nova senha">
-                    </div>
-                </div>
-                <span style="font-size:11px;color:var(--text-muted);">Deixe em branco para manter a senha atual.</span>
-            </div>
-
-            <div style="margin-top:16px;">
-                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Alterações</button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Coluna direita: permissões -->
-    <div class="perfil-card">
-        <h3 style="font-size:15px;font-weight:700;color:var(--text-main);margin:0 0 16px;"><i class="fas fa-shield-alt" style="color:var(--primary);margin-right:6px;"></i> Minhas Permissões</h3>
-
-        {% if user.is_superuser %}
-            <div style="text-align:center;padding:20px;color:var(--text-muted);">
-                <i class="fas fa-crown" style="font-size:28px;color:#d97706;margin-bottom:8px;display:block;"></i>
-                <p style="font-size:13px;font-weight:600;">Superuser</p>
-                <p style="font-size:12px;">Acesso total a todos os módulos e funcionalidades.</p>
-            </div>
-        {% elif funcionalidades %}
+          {% elif funcionalidades %}
             {% for modulo, funcs in funcionalidades.items %}
-            <div class="perm-section">
+              <div style="margin-bottom: var(--sp-4);">
                 <div class="perm-module-title">
-                    {% if modulo == 'comercial' %}<i class="fas fa-handshake" style="color:var(--primary);"></i> Comercial
-                    {% elif modulo == 'marketing' %}<i class="fas fa-bullhorn" style="color:#16a34a;"></i> Marketing
-                    {% elif modulo == 'cs' %}<i class="fas fa-star" style="color:#d97706;"></i> Customer Success
-                    {% elif modulo == 'inbox' %}<i class="fas fa-headset" style="color:#7c3aed;"></i> Suporte
-                    {% elif modulo == 'configuracoes' %}<i class="fas fa-cog" style="color:#dc2626;"></i> Configurações
-                    {% endif %}
+                  {% if modulo == 'comercial' %}<i class="bi bi-briefcase" style="color: var(--color-primary);"></i> Comercial
+                  {% elif modulo == 'marketing' %}<i class="bi bi-megaphone" style="color: var(--color-success);"></i> Marketing
+                  {% elif modulo == 'cs' %}<i class="bi bi-gift" style="color: var(--color-warning);"></i> Customer Success
+                  {% elif modulo == 'inbox' %}<i class="bi bi-chat-dots" style="color: var(--color-info);"></i> Atendimento
+                  {% elif modulo == 'configuracoes' %}<i class="bi bi-gear" style="color: var(--color-danger);"></i> Configuracoes
+                  {% endif %}
                 </div>
                 {% for func in funcs %}
-                <div class="perm-item">
+                  <div class="perm-item">
                     {% if func.tem %}
-                        <i class="fas fa-check-circle perm-check"></i>
+                      <i class="bi bi-check-circle-fill" style="color: var(--color-success);"></i>
                     {% else %}
-                        <i class="fas fa-minus-circle perm-cross"></i>
+                      <i class="bi bi-dash-circle" style="color: var(--color-text-muted); opacity: 0.4;"></i>
                     {% endif %}
-                    <span {% if not func.tem %}style="opacity:.5;"{% endif %}>{{ func.nome }}</span>
-                </div>
+                    <span {% if not func.tem %}style="opacity: 0.5;"{% endif %}>{{ func.nome }}</span>
+                  </div>
                 {% endfor %}
-            </div>
+              </div>
             {% endfor %}
-        {% else %}
-            <div style="text-align:center;padding:20px;color:var(--text-muted);">
-                <i class="fas fa-unlock" style="font-size:28px;opacity:.3;margin-bottom:8px;display:block;"></i>
-                <p style="font-size:13px;">Nenhum perfil de permissão atribuído.</p>
-                <p style="font-size:12px;">Contate o administrador para configurar seu acesso.</p>
+          {% else %}
+            <div style="text-align: center; padding: var(--sp-5) 0;">
+              <i class="bi bi-unlock" style="font-size: 2rem; color: var(--color-text-muted); opacity: 0.3; display: block; margin-bottom: var(--sp-2);"></i>
+              <p style="font-size: var(--fs-sm); color: var(--color-text-secondary); margin: 0 0 4px;">Nenhum perfil atribuido.</p>
+              <p style="font-size: var(--fs-xs); color: var(--color-text-muted); margin: 0;">Contate o administrador pra configurar seu acesso.</p>
             </div>
-        {% endif %}
+          {% endif %}
 
-        {% if perm and perm.perfil %}
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted);">
-            <i class="fas fa-info-circle"></i> Perfil: <strong>{{ perm.perfil.nome }}</strong>
-            {% if perm.perfil.descricao %} · {{ perm.perfil.descricao }}{% endif %}
+          {% if perm and perm.perfil %}
+            <div style="margin-top: var(--sp-3); padding-top: var(--sp-3); border-top: 1px solid var(--color-border); font-size: var(--fs-xs); color: var(--color-text-muted);">
+              <i class="bi bi-info-circle"></i> Perfil: <strong>{{ perm.perfil.nome }}</strong>
+              {% if perm.perfil.descricao %} · {{ perm.perfil.descricao }}{% endif %}
+            </div>
+          {% endif %}
         </div>
-        {% endif %}
+      </div>
     </div>
-</div>
+  </div>
+{% endblock %}
 
-{% if messages %}
-<script>
-{% for message in messages %}
-    window.showNotification && showNotification('{{ message }}', '{{ message.tags }}');
-{% endfor %}
-</script>
-{% endif %}
-
+{% block extra_css %}
+<style>
+  .perfil-layout { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-5); }
+  .perfil-header { display: flex; align-items: center; gap: var(--sp-4); }
+  .perfil-avatar {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-info));
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-weight: var(--fw-bold);
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .admin-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+  .perm-module-title {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    margin-bottom: var(--sp-2);
+  }
+  .perm-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: 3px 0;
+    font-size: var(--fs-xs);
+    color: var(--color-text-secondary);
+  }
+  @media (max-width: 768px) {
+    .perfil-layout { grid-template-columns: 1fr; }
+    .admin-form-grid { grid-template-columns: 1fr; }
+  }
+</style>
 {% endblock %}

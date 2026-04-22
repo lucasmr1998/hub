@@ -1,266 +1,367 @@
 {% extends 'sistema/base.html' %}
 
-{% block title %}Integrações{% endblock %}
-
-{% block custom_css %}
-<style>
-    .integ-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; }
-    .integ-card { background:var(--bg-white); border:1px solid var(--border); border-radius:12px; overflow:hidden; transition:all .2s; }
-    .integ-card:hover { box-shadow:0 4px 12px rgba(0,0,0,.06); }
-    .integ-header { padding:16px 20px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--border-light); }
-    .integ-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; color:#fff; flex-shrink:0; }
-    .integ-info { flex:1; min-width:0; }
-    .integ-info h3 { margin:0; font-size:14px; font-weight:700; color:var(--text-main); }
-    .integ-info p { margin:2px 0 0; font-size:11px; color:var(--text-muted); }
-    .integ-body { padding:16px 20px; }
-    .integ-field { margin-bottom:10px; }
-    .integ-field-label { font-size:10px; font-weight:600; text-transform:uppercase; color:var(--text-muted); letter-spacing:.03em; margin-bottom:3px; }
-    .integ-field-value { font-size:12px; color:var(--text-secondary); word-break:break-all; }
-    .integ-stats { display:flex; gap:16px; padding:10px 20px; background:var(--bg-subtle); font-size:11px; color:var(--text-muted); }
-    .integ-stat strong { color:var(--text-main); }
-    .integ-actions { display:flex; gap:6px; padding:12px 20px; border-top:1px solid var(--border-light); }
-    .integ-btn { padding:5px 12px; border-radius:6px; font-size:11px; font-weight:600; border:1px solid var(--border); background:var(--bg-white); color:var(--text-secondary); cursor:pointer; font-family:inherit; transition:all .15s; }
-    .integ-btn:hover { background:var(--bg-subtle); }
-    .integ-btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
-    .integ-btn.success { background:var(--success); color:#fff; border-color:var(--success); }
-    .integ-btn.danger { color:var(--danger); border-color:var(--danger); }
-    .integ-btn.danger:hover { background:#fee2e2; }
-    .status-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:4px; }
-    .status-dot.active { background:var(--success); }
-    .status-dot.inactive { background:var(--text-muted); }
-
-    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:1000; align-items:center; justify-content:center; }
-    .modal.active { display:flex; }
-    .modal-content { background:var(--bg-white); border-radius:16px; max-width:560px; width:90%; max-height:90vh; overflow-y:auto; padding:24px; }
-    .modal-close { position:absolute; top:16px; right:16px; background:none; border:none; font-size:20px; color:var(--text-muted); cursor:pointer; }
-    .form-group-sm { margin-bottom:12px; }
-    .form-group-sm label { font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px; text-transform:uppercase; }
-    .form-group-sm input, .form-group-sm select, .form-group-sm textarea { width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; }
-    .form-group-sm input:focus, .form-group-sm select:focus { outline:none; border-color:var(--primary); }
-    .form-hint { font-size:11px; color:var(--text-muted); margin-top:2px; }
-    .form-row-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-
-    .test-result { margin-top:8px; padding:8px 12px; border-radius:6px; font-size:12px; display:none; }
-    .test-result.success { background:#dcfce7; color:#166534; display:block; }
-    .test-result.error { background:#fee2e2; color:#991b1b; display:block; }
-</style>
-{% endblock %}
+{% block title %}Integracoes — Hubtrix{% endblock %}
 
 {% block content %}
 {% csrf_token %}
 
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+<div class="page-header">
+  <div class="page-header-top">
     <div>
-        <h1 class="page-title">Integrações</h1>
-        <p style="font-size:13px;color:var(--text-muted);margin:4px 0 0;">Gerencie conexões com sistemas externos (ERP, WhatsApp, automação).</p>
+      <h1 class="page-title">Integracoes</h1>
+      <p class="page-subtitle">Gerencie conexoes com sistemas externos (ERP, WhatsApp, automacao).</p>
     </div>
-    <button class="btn-primary" onclick="abrirModal()"><i class="fas fa-plus"></i> Nova Integração</button>
+    <div class="page-actions">
+      {% include "components/button.html" with variant="primary" label="Nova integracao" icon="bi-plus-lg" %}
+    </div>
+  </div>
 </div>
+<script>
+  // Vincula o botao "Nova integracao" ao modal (o include nao aceita onclick)
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.querySelector('.page-actions .btn-primary');
+    if (btn) btn.addEventListener('click', abrirIntegModal);
+  });
+</script>
 
 {% if integracoes %}
-<div class="integ-grid">
+  <div class="integ-grid">
     {% for integ in integracoes %}
-    <div class="integ-card" id="card-{{ integ.pk }}"
-         data-nome="{{ integ.nome }}"
-         data-tipo="{{ integ.tipo }}"
-         data-url="{{ integ.base_url }}"
-         data-client-id="{{ integ.client_id }}"
-         data-username="{{ integ.username }}"
-         data-token="{{ integ.token_uazapi }}"
-         data-api-key="{{ integ.api_key }}"
-         data-extras='{{ integ.configuracoes_extras|safe }}'>
-        <div class="integ-header">
-            <div class="integ-icon" style="background:{{ integ.cor }}"><i class="{{ integ.icon }}"></i></div>
-            <div class="integ-info">
-                <h3><span class="status-dot {% if integ.ativa %}active{% else %}inactive{% endif %}"></span>{{ integ.nome }}</h3>
-                <p>{{ integ.get_tipo_display }} · {{ integ.tipo_descricao }}</p>
+      <div class="card integ-card" id="card-{{ integ.pk }}"
+           data-nome="{{ integ.nome }}"
+           data-tipo="{{ integ.tipo }}"
+           data-url="{{ integ.base_url }}"
+           data-client-id="{{ integ.client_id }}"
+           data-username="{{ integ.username }}"
+           data-token="{{ integ.token_uazapi }}"
+           data-api-key="{{ integ.api_key }}"
+           data-extras='{{ integ.configuracoes_extras|safe }}'>
+
+        <div class="card-header" style="align-items: flex-start;">
+          <div style="display:flex; align-items: flex-start; gap: var(--sp-3); flex: 1; min-width: 0;">
+            <div class="integ-icon" style="background:{{ integ.cor }}; flex-shrink: 0;"><i class="{{ integ.icon }}"></i></div>
+            <div style="flex:1; min-width: 0;">
+              <h3 class="card-title" style="display:flex; align-items:center; gap: 6px; margin: 0;">
+                <span class="integ-status-dot {% if integ.ativa %}is-active{% endif %}" style="flex-shrink: 0;"></span>
+                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ integ.nome }}</span>
+              </h3>
+              <p class="card-subtitle" style="margin-top: 2px;">{{ integ.get_tipo_display }} · {{ integ.tipo_descricao }}</p>
             </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="excluirIntegracao({{ integ.pk }}, '{{ integ.nome }}')" title="Excluir integracao" style="color: var(--color-danger); flex-shrink: 0;"><i class="bi bi-trash"></i></button>
         </div>
-        <div class="integ-body">
+
+        <div class="card-body" style="display:flex; flex-direction:column; gap: var(--sp-3);">
+          <div class="integ-field">
+            <span class="integ-field-label">URL Base</span>
+            <span class="integ-field-value">{{ integ.base_url|default:"—" }}</span>
+          </div>
+          {% if integ.username %}
             <div class="integ-field">
-                <div class="integ-field-label">URL Base</div>
-                <div class="integ-field-value">{{ integ.base_url }}</div>
+              <span class="integ-field-label">Usuario</span>
+              <span class="integ-field-value">{{ integ.username }}</span>
             </div>
-            {% if integ.username %}
+          {% endif %}
+          {% if integ.configuracoes_extras %}
             <div class="integ-field">
-                <div class="integ-field-label">Usuário</div>
-                <div class="integ-field-value">{{ integ.username }}</div>
+              <span class="integ-field-label">Config extras</span>
+              <span class="integ-field-value integ-field-mono">{% for key, val in integ.configuracoes_extras.items %}{{ key }}: {{ val }}{% if not forloop.last %} · {% endif %}{% endfor %}</span>
             </div>
-            {% endif %}
-            {% if integ.configuracoes_extras %}
-            <div class="integ-field">
-                <div class="integ-field-label">Config extras</div>
-                <div class="integ-field-value" style="font-size:11px;font-family:monospace;">
-                    {% for key, val in integ.configuracoes_extras.items %}{{ key }}: {{ val }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                </div>
-            </div>
-            {% endif %}
-        </div>
-        <div class="integ-stats">
+          {% endif %}
+
+          <div class="integ-stats">
             <span><strong>{{ integ.total_chamadas_24h }}</strong> chamadas (24h)</span>
-            <span>{% if integ.erros_24h %}<span style="color:var(--danger);"><strong>{{ integ.erros_24h }}</strong> erros</span>{% else %}<span style="color:var(--success);">Sem erros</span>{% endif %}</span>
-            {% if integ.token_valido %}<span style="color:var(--success);"><i class="fas fa-check-circle"></i> Token válido</span>{% endif %}
-        </div>
-        {% if integ.tipo == 'uazapi' or integ.tipo == 'evolution' %}
-        {% if integ.api_token %}
-        <div style="padding:8px 20px;background:#f0fdf4;border-top:1px solid #bbf7d0;font-size:11px;">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-                <i class="fas fa-link" style="color:var(--success);"></i>
-                <strong style="color:#059669;">Webhook URL</strong>
-                <button onclick="copiarWebhook(this, '{{ integ.api_token }}')" style="background:none;border:none;cursor:pointer;color:var(--primary);font-size:11px;padding:2px 6px;border-radius:4px;" title="Copiar">
-                    <i class="fas fa-copy"></i> Copiar
-                </button>
+            {% if integ.erros_24h %}
+              <span style="color: var(--color-danger);"><strong>{{ integ.erros_24h }}</strong> erros</span>
+            {% else %}
+              <span style="color: var(--color-success);">Sem erros</span>
+            {% endif %}
+          </div>
+
+          {% if integ.tipo == 'uazapi' or integ.tipo == 'evolution' %}
+            {% if integ.api_token %}
+              <div class="integ-webhook">
+                <div class="integ-webhook-head">
+                  <span style="display:inline-flex; align-items:center; gap:6px; font-size:var(--fs-xs); font-weight:var(--fw-semibold); color:#059669;">
+                    <i class="bi bi-link-45deg"></i> Webhook URL
+                  </span>
+                  <button onclick="copiarWebhook(this, '{{ integ.api_token }}')" class="btn btn-ghost btn-sm" style="padding: 2px 8px; font-size: var(--fs-xs); height: auto;"><i class="bi bi-clipboard"></i> Copiar</button>
+                </div>
+                <code id="webhook-{{ integ.pk }}">{{ request.scheme }}://{{ request.get_host }}/inbox/api/webhook/{{ integ.api_token }}/</code>
+              </div>
+            {% endif %}
+          {% endif %}
+
+          {% if integ.tipo == 'hubsoft' %}
+            <div class="integ-sync-modes" id="sync-modes-{{ integ.pk }}">
+              <div class="integ-field-label" style="margin-bottom: var(--sp-2);"><i class="bi bi-arrow-repeat"></i> Modos de sincronizacao</div>
+              <div id="sync-fields-{{ integ.pk }}">
+                <div class="integ-sync-row"><span>Enviar lead ao criar</span>
+                  <select onchange="salvarModoSync({{ integ.pk }})" class="sync-mode-select" data-feature="enviar_lead">
+                    <option value="automatico">Automatico</option><option value="manual">Manual (API)</option><option value="desativado">Desativado</option>
+                  </select>
+                </div>
+                <div class="integ-sync-row"><span>Sincronizar dados do cliente</span>
+                  <select onchange="salvarModoSync({{ integ.pk }})" class="sync-mode-select" data-feature="sincronizar_cliente">
+                    <option value="automatico">Automatico</option><option value="manual">Manual (API)</option><option value="desativado">Desativado</option>
+                  </select>
+                </div>
+                <div class="integ-sync-row"><span>Sincronizar servicos contratados</span>
+                  <select onchange="salvarModoSync({{ integ.pk }})" class="sync-mode-select" data-feature="sincronizar_servicos">
+                    <option value="automatico">Automatico</option><option value="manual">Manual (API)</option><option value="desativado">Desativado</option>
+                  </select>
+                </div>
+              </div>
             </div>
-            <code style="color:#1e293b;word-break:break-all;font-size:10px;" id="webhook-{{ integ.pk }}">{{ request.scheme }}://{{ request.get_host }}/inbox/api/webhook/{{ integ.api_token }}/</code>
+          {% endif %}
+
+          <div class="integ-test-result" id="test-{{ integ.pk }}" hidden></div>
         </div>
-        {% endif %}
-        {% endif %}
-        {% if integ.tipo == 'hubsoft' %}
-        <div class="integ-sync-modes" id="sync-modes-{{ integ.pk }}" style="margin-bottom:10px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-subtle,#f8fafc);">
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;letter-spacing:.03em;"><i class="fas fa-sync-alt"></i> Modos de Sincronizacao</div>
-            <div style="display:flex;flex-direction:column;gap:6px;" id="sync-fields-{{ integ.pk }}">
-                <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
-                    <span>Enviar lead ao criar</span>
-                    <select onchange="salvarModoSync({{ integ.pk }})" class="sync-mode-select" data-feature="enviar_lead" style="padding:3px 8px;border-radius:6px;border:1px solid var(--border);font-size:11px;">
-                        <option value="automatico">Automatico</option>
-                        <option value="manual">Manual (API)</option>
-                        <option value="desativado">Desativado</option>
-                    </select>
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
-                    <span>Sincronizar dados do cliente</span>
-                    <select onchange="salvarModoSync({{ integ.pk }})" class="sync-mode-select" data-feature="sincronizar_cliente" style="padding:3px 8px;border-radius:6px;border:1px solid var(--border);font-size:11px;">
-                        <option value="automatico">Automatico</option>
-                        <option value="manual">Manual (API)</option>
-                        <option value="desativado">Desativado</option>
-                    </select>
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
-                    <span>Sincronizar servicos contratados</span>
-                    <select onchange="salvarModoSync({{ integ.pk }})" class="sync-mode-select" data-feature="sincronizar_servicos" style="padding:3px 8px;border-radius:6px;border:1px solid var(--border);font-size:11px;">
-                        <option value="automatico">Automatico</option>
-                        <option value="manual">Manual (API)</option>
-                        <option value="desativado">Desativado</option>
-                    </select>
-                </div>
-            </div>
+
+        <div class="card-footer" style="justify-content: flex-start; gap: var(--sp-2);">
+          <button class="btn btn-primary btn-sm" onclick="testarConexao({{ integ.pk }})"><i class="bi bi-plug"></i> Testar</button>
+          <button class="btn btn-secondary btn-sm" onclick="editarIntegracao({{ integ.pk }})"><i class="bi bi-pencil"></i> Editar</button>
+          <button class="btn btn-secondary btn-sm" onclick="toggleIntegracao({{ integ.pk }})">
+            {% if integ.ativa %}<i class="bi bi-pause-fill"></i> Desativar{% else %}<i class="bi bi-play-fill"></i> Ativar{% endif %}
+          </button>
         </div>
-        {% endif %}
-        <div class="integ-actions">
-            <button class="integ-btn primary" onclick="testarConexao({{ integ.pk }})"><i class="fas fa-plug"></i> Testar</button>
-            <button class="integ-btn" onclick="editarIntegracao({{ integ.pk }})"><i class="fas fa-edit"></i> Editar</button>
-            <button class="integ-btn" onclick="toggleIntegracao({{ integ.pk }})">
-                {% if integ.ativa %}<i class="fas fa-pause"></i> Desativar{% else %}<i class="fas fa-play"></i> Ativar{% endif %}
-            </button>
-            <button class="integ-btn danger" onclick="excluirIntegracao({{ integ.pk }}, '{{ integ.nome }}')"><i class="fas fa-trash"></i></button>
-        </div>
-        <div class="test-result" id="test-{{ integ.pk }}"></div>
-    </div>
+      </div>
     {% endfor %}
-</div>
+  </div>
 {% else %}
-<div class="card" style="text-align:center;padding:60px;">
-    <i class="fas fa-plug" style="font-size:40px;color:var(--text-muted);opacity:.3;margin-bottom:12px;"></i>
-    <p style="font-size:14px;color:var(--text-muted);">Nenhuma integração configurada</p>
-    <button class="btn-primary" onclick="abrirModal()" style="margin-top:12px;"><i class="fas fa-plus"></i> Criar primeira integração</button>
-</div>
+  <div class="card">
+    <div class="card-body" style="text-align: center; padding: var(--sp-10) var(--sp-5);">
+      <i class="bi bi-plug" style="font-size: 2.5rem; color: var(--color-text-muted); opacity: 0.3; display: block; margin-bottom: var(--sp-3);"></i>
+      <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0 0 var(--sp-4);">Nenhuma integracao configurada.</p>
+      <button class="btn btn-primary" onclick="abrirIntegModal()"><i class="bi bi-plus-lg"></i> Criar primeira integracao</button>
+    </div>
+  </div>
 {% endif %}
 
-<!-- Modal criar/editar -->
-<div id="integModal" class="modal" onclick="if(event.target===this)fecharModal()">
-    <div class="modal-content" style="position:relative;">
-        <button class="modal-close" onclick="fecharModal()">&times;</button>
-        <h3 id="modalTitle" style="font-size:18px;font-weight:700;margin:0 0 20px;">Nova Integração</h3>
-
-        <form id="integForm">
-            <input type="hidden" id="integId">
-
-            <div class="form-row-2">
-                <div class="form-group-sm">
-                    <label>Nome *</label>
-                    <input type="text" id="integNome" required placeholder="Ex: Uazapi Aurora">
-                </div>
-                <div class="form-group-sm">
-                    <label>Tipo *</label>
-                    <select id="integTipo">
-                        {% for val, label in tipos_disponiveis %}
-                        <option value="{{ val }}">{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-
-            <div class="form-group-sm" id="campoUrl">
-                <label>URL Base</label>
-                <input type="url" id="integUrl" placeholder="Opcional para OpenAI/Anthropic/Groq">
-            </div>
-
-            <!-- Campos OAuth (HubSoft) -->
-            <div id="camposOAuth">
-                <div class="form-row-2">
-                    <div class="form-group-sm">
-                        <label>Client ID</label>
-                        <input type="text" id="integClientId" placeholder="Client ID">
-                    </div>
-                    <div class="form-group-sm">
-                        <label>Client Secret</label>
-                        <input type="password" id="integClientSecret" placeholder="Deixe vazio para manter">
-                    </div>
-                </div>
-                <div class="form-row-2">
-                    <div class="form-group-sm">
-                        <label>Usuário</label>
-                        <input type="text" id="integUsername" placeholder="Usuário da API">
-                    </div>
-                    <div class="form-group-sm">
-                        <label>Senha</label>
-                        <input type="password" id="integPassword" placeholder="Deixe vazio para manter">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Campo Token (Uazapi/N8N) -->
-            <div id="camposToken" style="display:none;">
-                <div class="form-group-sm">
-                    <label>Token</label>
-                    <input type="password" id="integToken" placeholder="Token da instancia">
-                    <div class="form-hint">Token de autenticacao da API</div>
-                </div>
-            </div>
-
-            <!-- Campo API Key (OpenAI/Anthropic/Groq) -->
-            <div id="camposApiKey" style="display:none;">
-                <div class="form-group-sm">
-                    <label>API Key</label>
-                    <input type="password" id="integApiKey" placeholder="sk-... ou chave do provider">
-                    <div class="form-hint">Chave de API do provider de IA</div>
-                </div>
-            </div>
-
-            <div class="form-group-sm">
-                <label>Configurações Extras (JSON)</label>
-                <textarea id="integExtras" rows="3" placeholder='{"numero_whatsapp": "5589999999999"}' style="font-family:monospace;font-size:12px;"></textarea>
-                <div class="form-hint">Parâmetros adicionais em formato JSON</div>
-            </div>
-
-            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
-                <button type="button" class="btn-secondary" onclick="fecharModal()">Cancelar</button>
-                <button type="button" class="btn-primary" onclick="salvarIntegracao()"><i class="fas fa-save"></i> Salvar</button>
-            </div>
-        </form>
+{# Modal criar/editar — usa padrao DS (modal-overlay + hidden) #}
+<div id="integModal" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <h3 id="modalTitle" class="modal-title">Nova integracao</h3>
+      <button type="button" class="modal-close" onclick="fecharIntegModal()"><i class="bi bi-x-lg"></i></button>
     </div>
+    <div class="modal-body">
+      <form id="integForm">
+        <input type="hidden" id="integId">
+        <div class="admin-form-grid" style="margin-bottom: var(--sp-3);">
+          <div class="field">
+            <label class="field-label">Nome <span class="field-required">*</span></label>
+            <div class="field-input-wrap"><input class="field-input" type="text" id="integNome" required placeholder="Ex: Uazapi Aurora"></div>
+          </div>
+          <div class="field">
+            <label class="field-label">Tipo <span class="field-required">*</span></label>
+            <div class="field-input-wrap">
+              <select id="integTipo" class="field-input">
+                {% for val, label in tipos_disponiveis %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="field" id="campoUrl" style="margin-bottom: var(--sp-3);">
+          <label class="field-label">URL Base</label>
+          <div class="field-input-wrap"><input class="field-input" type="url" id="integUrl" placeholder="Opcional para OpenAI/Anthropic/Groq"></div>
+        </div>
+
+        <div id="camposOAuth">
+          <div class="admin-form-grid" style="margin-bottom: var(--sp-3);">
+            <div class="field">
+              <label class="field-label">Client ID</label>
+              <div class="field-input-wrap"><input class="field-input" type="text" id="integClientId" placeholder="Client ID"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">Client Secret</label>
+              <div class="field-input-wrap"><input class="field-input" type="password" id="integClientSecret" placeholder="Deixe vazio pra manter"></div>
+            </div>
+          </div>
+          <div class="admin-form-grid" style="margin-bottom: var(--sp-3);">
+            <div class="field">
+              <label class="field-label">Usuario</label>
+              <div class="field-input-wrap"><input class="field-input" type="text" id="integUsername" placeholder="Usuario da API"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">Senha</label>
+              <div class="field-input-wrap"><input class="field-input" type="password" id="integPassword" placeholder="Deixe vazio pra manter"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="camposToken" style="display:none; margin-bottom: var(--sp-3);">
+          <div class="field">
+            <label class="field-label">Token</label>
+            <div class="field-input-wrap"><input class="field-input" type="password" id="integToken" placeholder="Token da instancia"></div>
+            <p class="field-helper">Token de autenticacao da API.</p>
+          </div>
+        </div>
+
+        <div id="camposApiKey" style="display:none; margin-bottom: var(--sp-3);">
+          <div class="field">
+            <label class="field-label">API Key</label>
+            <div class="field-input-wrap"><input class="field-input" type="password" id="integApiKey" placeholder="sk-... ou chave do provider"></div>
+            <p class="field-helper">Chave de API do provider de IA.</p>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Configuracoes extras (JSON)</label>
+          <div class="field-input-wrap">
+            <textarea id="integExtras" rows="3" class="field-input" style="height:auto; min-height:80px; padding: var(--sp-2) var(--sp-3); font-family: monospace; font-size: var(--fs-xs); resize: vertical;" placeholder='{"numero_whatsapp": "5589999999999"}'></textarea>
+          </div>
+          <p class="field-helper">Parametros adicionais em formato JSON.</p>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="fecharIntegModal()">Cancelar</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="salvarIntegracao()"><i class="bi bi-save"></i> Salvar</button>
+    </div>
+  </div>
 </div>
+{% endblock %}
 
+{% block extra_css %}
+<style>
+  .integ-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: var(--sp-4);
+  }
+  .integ-card {
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow var(--transition);
+  }
+  .integ-card:hover { box-shadow: var(--shadow-md); }
+  /* Subtitle no card-header limitado a 2 linhas com ellipsis pra normalizar altura entre cards */
+  .integ-card .card-subtitle {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.4;
+  }
+  /* Body flex-cresce pra manter footer sempre no fim (alinha botoes entre cards) */
+  .integ-card > .card-body { flex: 1; }
+  .integ-icon {
+    width: 40px; height: 40px;
+    border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .integ-status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--color-text-muted);
+    display: inline-block;
+  }
+  .integ-status-dot.is-active { background: var(--color-success); }
+
+  /* Fields do card — label + valor empilhados (usado dentro do card-body) */
+  .integ-field { display: flex; flex-direction: column; gap: 4px; }
+  .integ-field-label {
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .integ-field-value {
+    font-size: var(--fs-sm);
+    color: var(--color-text);
+    word-break: break-all;
+    line-height: 1.4;
+  }
+  .integ-field-mono {
+    font-family: monospace;
+    font-size: var(--fs-xs);
+    color: var(--color-text-secondary);
+  }
+
+  /* Grid do form do modal */
+  .admin-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+
+  /* Stats row — barra compacta de chamadas/erros */
+  .integ-stats {
+    display: flex;
+    gap: var(--sp-4);
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+  }
+  .integ-stats strong { color: var(--color-text); }
+
+  /* Webhook URL em box verde */
+  .integ-webhook {
+    padding: var(--sp-3);
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: var(--radius);
+  }
+  .integ-webhook-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-2);
+  }
+  .integ-webhook code {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--color-text);
+    word-break: break-all;
+    line-height: 1.4;
+  }
+  .integ-sync-modes {
+    padding: var(--sp-3);
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+  .integ-sync-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--fs-xs);
+    padding: 4px 0;
+  }
+  .sync-mode-select {
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border-strong);
+    font-size: var(--fs-xs);
+    background: var(--color-bg);
+  }
+  .integ-test-result {
+    padding: var(--sp-2) var(--sp-3);
+    border-radius: var(--radius);
+    font-size: var(--fs-xs);
+  }
+  .integ-test-result.is-success { background: var(--color-success-soft); color: #166534; }
+  .integ-test-result.is-error   { background: var(--color-danger-soft);  color: #991b1b; }
+  .integ-test-result.is-loading { background: var(--color-surface-2); color: var(--color-text-muted); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-function getCookie(n){let v=null;if(document.cookie)document.cookie.split(';').forEach(c=>{c=c.trim();if(c.startsWith(n+'='))v=decodeURIComponent(c.substring(n.length+1))});return v}
-const CSRF=getCookie('csrftoken'), H={'Content-Type':'application/json','X-CSRFToken':CSRF};
-let editId = null;
+  function getCookie(n){let v=null;if(document.cookie)document.cookie.split(';').forEach(c=>{c=c.trim();if(c.startsWith(n+'='))v=decodeURIComponent(c.substring(n.length+1))});return v}
+  const CSRF = getCookie('csrftoken');
+  const H = {'Content-Type':'application/json','X-CSRFToken':CSRF};
+  let editId = null;
 
-// Toggle campos baseado no tipo
-const TIPOS_IA = ['openai', 'anthropic', 'groq', 'google_ai'];
-const TIPOS_OAUTH = ['hubsoft'];
+  const TIPOS_IA = ['openai', 'anthropic', 'groq', 'google_ai'];
+  const TIPOS_OAUTH = ['hubsoft'];
 
-document.getElementById('integTipo').addEventListener('change', function() {
+  document.getElementById('integTipo').addEventListener('change', function() {
     const tipo = this.value;
     const isOAuth = TIPOS_OAUTH.includes(tipo);
     const isIA = TIPOS_IA.includes(tipo);
@@ -268,24 +369,22 @@ document.getElementById('integTipo').addEventListener('change', function() {
     document.getElementById('camposToken').style.display = (!isOAuth && !isIA) ? 'block' : 'none';
     document.getElementById('camposApiKey').style.display = isIA ? 'block' : 'none';
     document.getElementById('campoUrl').style.display = isIA ? 'none' : 'block';
-});
+  });
 
-function abrirModal() {
+  function abrirIntegModal() {
     editId = null;
-    document.getElementById('modalTitle').textContent = 'Nova Integração';
+    document.getElementById('modalTitle').textContent = 'Nova integracao';
     document.getElementById('integForm').reset();
     document.getElementById('integId').value = '';
     document.getElementById('integTipo').dispatchEvent(new Event('change'));
-    document.getElementById('integModal').classList.add('active');
-}
+    abrirModal('integModal');
+  }
 
-function fecharModal() {
-    document.getElementById('integModal').classList.remove('active');
-}
+  function fecharIntegModal() { fecharModal('integModal'); }
 
-function editarIntegracao(pk) {
+  function editarIntegracao(pk) {
     editId = pk;
-    document.getElementById('modalTitle').textContent = 'Editar Integração';
+    document.getElementById('modalTitle').textContent = 'Editar integracao';
     document.getElementById('integId').value = pk;
 
     const card = document.getElementById('card-' + pk);
@@ -300,127 +399,122 @@ function editarIntegracao(pk) {
     document.getElementById('integToken').value = card.dataset.token || '';
 
     try {
-        const extras = card.dataset.extras;
-        document.getElementById('integExtras').value = extras && extras !== '{}' ? JSON.stringify(JSON.parse(extras), null, 2) : '';
+      const extras = card.dataset.extras;
+      document.getElementById('integExtras').value = extras && extras !== '{}' ? JSON.stringify(JSON.parse(extras), null, 2) : '';
     } catch(e) { document.getElementById('integExtras').value = ''; }
 
     document.getElementById('integTipo').dispatchEvent(new Event('change'));
-    document.getElementById('integModal').classList.add('active');
-}
+    abrirModal('integModal');
+  }
 
-function salvarIntegracao() {
+  function salvarIntegracao() {
     const nome = document.getElementById('integNome').value.trim();
     const tipo = document.getElementById('integTipo').value;
     const base_url = document.getElementById('integUrl').value.trim();
 
-    if (!nome) { alert('Nome e obrigatorio'); return; }
-    if (!base_url && !TIPOS_IA.includes(tipo)) { alert('URL e obrigatoria'); return; }
+    if (!nome) { toast('Erro', 'Nome e obrigatorio', 'danger'); return; }
+    if (!base_url && !TIPOS_IA.includes(tipo)) { toast('Erro', 'URL e obrigatoria', 'danger'); return; }
 
     const data = { nome, tipo, base_url, configuracoes_extras: {} };
 
     if (TIPOS_OAUTH.includes(tipo)) {
-        data.client_id = document.getElementById('integClientId').value;
-        data.client_secret = document.getElementById('integClientSecret').value;
-        data.username = document.getElementById('integUsername').value;
-        data.password = document.getElementById('integPassword').value;
+      data.client_id = document.getElementById('integClientId').value;
+      data.client_secret = document.getElementById('integClientSecret').value;
+      data.username = document.getElementById('integUsername').value;
+      data.password = document.getElementById('integPassword').value;
     } else if (TIPOS_IA.includes(tipo)) {
-        data.api_key = document.getElementById('integApiKey').value;
+      data.api_key = document.getElementById('integApiKey').value;
     } else {
-        data.access_token = document.getElementById('integToken').value;
+      data.access_token = document.getElementById('integToken').value;
     }
 
     const extras = document.getElementById('integExtras').value.trim();
     if (extras) {
-        try { data.configuracoes_extras = JSON.parse(extras); }
-        catch(e) { alert('JSON de configurações extras inválido'); return; }
+      try { data.configuracoes_extras = JSON.parse(extras); }
+      catch(e) { toast('Erro', 'JSON invalido em configuracoes extras', 'danger'); return; }
     }
 
-    const url = editId ? `/integracoes/api/${editId}/editar/` : '/integracoes/api/criar/';
+    const url = editId ? `/configuracoes/integracoes/api/${editId}/editar/` : '/configuracoes/integracoes/api/criar/';
     const method = editId ? 'PUT' : 'POST';
 
     fetch(url, {method, headers:H, body:JSON.stringify(data)})
-    .then(r=>r.json()).then(d=>{
-        if(d.success){fecharModal();location.reload();}
-        else alert(d.error);
-    });
-}
+      .then(r=>r.json()).then(d=>{
+        if (d.success) { fecharIntegModal(); location.reload(); }
+        else toast('Erro', d.error || 'Erro ao salvar', 'danger');
+      });
+  }
 
-function testarConexao(pk) {
+  function testarConexao(pk) {
     const el = document.getElementById('test-' + pk);
-    el.className = 'test-result';
+    el.hidden = false;
+    el.className = 'integ-test-result is-loading';
     el.textContent = 'Testando...';
-    el.style.display = 'block';
-    el.style.background = '#f1f5f9';
-    el.style.color = '#64748b';
 
-    fetch(`/integracoes/api/${pk}/testar/`, {method:'POST', headers:H})
-    .then(r=>r.json()).then(d=>{
-        el.className = 'test-result ' + (d.success ? 'success' : 'error');
-        el.innerHTML = `<i class="fas fa-${d.success?'check-circle':'times-circle'}"></i> ${d.message}`;
-    }).catch(()=>{
-        el.className = 'test-result error';
-        el.textContent = 'Erro de conexão';
-    });
-}
+    fetch(`/configuracoes/integracoes/api/${pk}/testar/`, {method:'POST', headers:H})
+      .then(r=>r.json()).then(d=>{
+        el.className = 'integ-test-result ' + (d.success ? 'is-success' : 'is-error');
+        el.innerHTML = `<i class="bi bi-${d.success ? 'check-circle' : 'x-circle'}"></i> ${d.message}`;
+      }).catch(()=>{
+        el.className = 'integ-test-result is-error';
+        el.textContent = 'Erro de conexao';
+      });
+  }
 
-function toggleIntegracao(pk) {
-    fetch(`/integracoes/api/${pk}/toggle/`, {method:'POST', headers:H})
-    .then(r=>r.json()).then(d=>{ if(d.success) location.reload(); });
-}
+  function toggleIntegracao(pk) {
+    fetch(`/configuracoes/integracoes/api/${pk}/toggle/`, {method:'POST', headers:H})
+      .then(r=>r.json()).then(d=>{ if (d.success) location.reload(); });
+  }
 
-function copiarWebhook(btn, token) {
+  function copiarWebhook(btn, token) {
     const url = window.location.origin + '/inbox/api/webhook/' + token + '/';
     navigator.clipboard.writeText(url).then(() => {
-        btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
-        setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copiar'; }, 2000);
+      btn.innerHTML = '<i class="bi bi-check-lg"></i> Copiado!';
+      setTimeout(() => { btn.innerHTML = '<i class="bi bi-clipboard"></i> Copiar'; }, 2000);
     });
-}
+  }
 
-function excluirIntegracao(pk, nome) {
-    if(!confirm(`Excluir integração "${nome}"?`)) return;
-    fetch(`/integracoes/api/${pk}/excluir/`, {method:'DELETE', headers:H})
-    .then(r=>r.json()).then(d=>{ if(d.success) location.reload(); else alert(d.error); });
-}
+  function excluirIntegracao(pk, nome) {
+    if (!confirm(`Excluir integracao "${nome}"?`)) return;
+    fetch(`/configuracoes/integracoes/api/${pk}/excluir/`, {method:'DELETE', headers:H})
+      .then(r=>r.json()).then(d=>{
+        if (d.success) location.reload();
+        else toast('Erro', d.error || 'Erro', 'danger');
+      });
+  }
 
-document.addEventListener('keydown', e=>{ if(e.key==='Escape') fecharModal(); });
-
-// ── Modos de Sync ──
-function carregarModosSync(pk) {
-    fetch(`/integracoes/api/${pk}/modos-sync/get/`)
-    .then(r=>r.json())
-    .then(d=>{
-        if(!d.success) return;
-        const container = document.getElementById('sync-fields-'+pk);
-        if(!container) return;
-        container.querySelectorAll('.sync-mode-select').forEach(sel=>{
-            const f = sel.dataset.feature;
-            if(d.modos_sync[f]) sel.value = d.modos_sync[f];
+  // Modos de sync (HubSoft)
+  function carregarModosSync(pk) {
+    fetch(`/configuracoes/integracoes/api/${pk}/modos-sync/get/`)
+      .then(r=>r.json()).then(d=>{
+        if (!d.success) return;
+        const container = document.getElementById('sync-fields-' + pk);
+        if (!container) return;
+        container.querySelectorAll('.sync-mode-select').forEach(sel => {
+          const f = sel.dataset.feature;
+          if (d.modos_sync[f]) sel.value = d.modos_sync[f];
         });
-    });
-}
+      });
+  }
 
-function salvarModoSync(pk) {
-    const container = document.getElementById('sync-fields-'+pk);
+  function salvarModoSync(pk) {
+    const container = document.getElementById('sync-fields-' + pk);
     const modos = {};
-    container.querySelectorAll('.sync-mode-select').forEach(sel=>{
-        modos[sel.dataset.feature] = sel.value;
+    container.querySelectorAll('.sync-mode-select').forEach(sel => {
+      modos[sel.dataset.feature] = sel.value;
     });
-    fetch(`/integracoes/api/${pk}/modos-sync/`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json','X-CSRFToken':H['X-CSRFToken']},
-        body: JSON.stringify({modos_sync: modos})
-    })
-    .then(r=>r.json())
-    .then(d=>{
-        if(d.success) showNotification(d.message, 'success');
-        else showNotification(d.error||'Erro', 'error');
+    fetch(`/configuracoes/integracoes/api/${pk}/modos-sync/`, {
+      method: 'POST',
+      headers: H,
+      body: JSON.stringify({modos_sync: modos})
+    }).then(r=>r.json()).then(d=>{
+      if (d.success) toast('Salvo', d.message || 'Modo atualizado', 'success');
+      else toast('Erro', d.error || 'Erro', 'danger');
     });
-}
+  }
 
-// Carregar modos ao abrir a pagina
-document.querySelectorAll('[id^="sync-modes-"]').forEach(el=>{
-    const pk = el.id.replace('sync-modes-','');
+  document.querySelectorAll('[id^="sync-modes-"]').forEach(el => {
+    const pk = el.id.replace('sync-modes-', '');
     carregarModosSync(pk);
-});
+  });
 </script>
 {% endblock %}

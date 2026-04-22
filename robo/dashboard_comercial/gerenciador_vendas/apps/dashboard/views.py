@@ -47,9 +47,24 @@ def dashboard1(request):
 
 @login_required(login_url='sistema:login')
 def vendas_view(request):
-    """View para a página de gerenciamento de vendas (prospectos)"""
+    """View para a página de gerenciamento de vendas (clientes Hubsoft)."""
+    filter_fields = [
+        {'type': 'select', 'label': 'Status do servico', 'name': 'status_servico', 'value': '',
+         'options': [('', 'Todos')]},
+        {'type': 'select', 'label': 'Cliente ativo', 'name': 'ativo', 'value': '',
+         'options': [('', 'Todos'), ('true', 'Ativo'), ('false', 'Inativo')]},
+        {'type': 'select', 'label': 'Documentacao', 'name': 'doc_status', 'value': '',
+         'options': [
+             ('', 'Todos'),
+             ('pendente', 'Com pendentes'),
+             ('validado', 'Totalmente validada'),
+             ('rejeitado', 'Com rejeitados'),
+             ('sem_docs', 'Sem documentos'),
+         ]},
+    ]
     context = {
-        'user': request.user
+        'user': request.user,
+        'filter_fields': filter_fields,
     }
     return render(request, 'dashboard/vendas.html', context)
 

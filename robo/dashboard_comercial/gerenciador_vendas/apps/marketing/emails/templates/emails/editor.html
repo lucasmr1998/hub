@@ -1,259 +1,512 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
 {% block title %}Editor — {{ template.nome }}{% endblock %}
 
 {% block extra_css %}
 <style>
-/* ── Layout principal ── */
-.email-editor-layout { display:flex; height:calc(100vh - 160px); gap:0; }
-.email-sidebar { width:260px; background:var(--bg-white); border:1px solid var(--border); border-radius:10px 0 0 10px; overflow-y:auto; flex-shrink:0; display:flex; flex-direction:column; }
-.email-canvas-wrap { flex:1; background:#e5e7eb; border-top:1px solid var(--border); border-bottom:1px solid var(--border); overflow-y:auto; display:flex; justify-content:center; padding:24px 16px; }
-.email-config-panel { width:300px; background:var(--bg-white); border:1px solid var(--border); border-radius:0 10px 10px 0; overflow-y:auto; flex-shrink:0; }
+  /* Layout principal */
+  .email-editor-layout { display: flex; height: calc(100vh - 180px); gap: 0; }
+  .email-sidebar {
+    width: 260px;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    overflow-y: auto;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .email-canvas-wrap {
+    flex: 1;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+    padding: var(--sp-5) var(--sp-3);
+  }
+  .email-config-panel {
+    width: 300px;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
 
-/* ── Toolbar ── */
-.email-toolbar { display:flex; align-items:center; gap:12px; padding:10px 16px; background:var(--bg-white); border:1px solid var(--border); border-radius:10px; margin-bottom:14px; }
-.email-toolbar h2 { font-size:15px; font-weight:700; color:var(--text-main); flex:1; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* Toolbar */
+  .email-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-4);
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--sp-3);
+  }
+  .email-toolbar-title {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-bold);
+    color: var(--color-text);
+    flex: 1;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+  }
 
-/* ── Sidebar: blocos ── */
-.sidebar-header { padding:14px 16px; border-bottom:1px solid var(--border); }
-.sidebar-header h3 { font-size:13px; font-weight:700; margin:0; color:var(--text-main); }
-.sidebar-blocks { padding:8px 12px; flex:1; overflow-y:auto; }
-.block-section { margin-bottom:4px; }
-.block-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); padding:8px 4px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none; border-radius:6px; }
-.block-section-title:hover { background:var(--bg-subtle); }
-.block-section-items { padding-bottom:4px; }
-.block-draggable { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:500; color:var(--text-secondary); cursor:grab; transition:all .15s; border:1px solid transparent; margin-bottom:2px; }
-.block-draggable:hover { background:var(--bg-subtle); border-color:var(--border); }
-.block-draggable:active { cursor:grabbing; }
-.block-draggable i { width:20px; text-align:center; flex-shrink:0; }
+  /* Sidebar blocos */
+  .sidebar-header {
+    padding: var(--sp-3) var(--sp-4);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .sidebar-header h3 {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-bold);
+    margin: 0;
+    color: var(--color-text);
+  }
+  .sidebar-blocks { padding: var(--sp-2) var(--sp-3); flex: 1; overflow-y: auto; }
+  .block-section { margin-bottom: 4px; }
+  .block-section-title {
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    padding: var(--sp-2) 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+    border-radius: var(--radius-sm);
+  }
+  .block-section-title:hover { background: var(--color-surface); }
+  .block-section-items { padding-bottom: 4px; }
+  .block-draggable {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    border-radius: var(--radius-md);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text);
+    cursor: grab;
+    transition: background var(--transition), border-color var(--transition);
+    border: 1px solid transparent;
+    margin-bottom: 2px;
+  }
+  .block-draggable:hover { background: var(--color-surface); border-color: var(--color-border); }
+  .block-draggable:active { cursor: grabbing; }
+  .block-draggable i { width: 20px; text-align: center; flex-shrink: 0; }
 
-/* ── Canvas ── */
-.email-canvas { width:600px; min-height:400px; background:#fff; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.08); position:relative; }
-.email-canvas.drag-over { outline:2px dashed var(--primary); outline-offset:4px; }
-.canvas-drop-zone { min-height:80px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:13px; border:2px dashed var(--border); border-radius:8px; margin:16px; transition:all .2s; }
-.canvas-drop-zone:empty::after { content:'Arraste blocos aqui para começar'; }
-.canvas-drop-zone.drag-hover { border-color:var(--primary); background:rgba(59,130,246,0.04); }
+  /* Canvas */
+  .email-canvas {
+    width: 600px;
+    min-height: 400px;
+    background: #fff;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    position: relative;
+  }
+  .email-canvas.drag-over { outline: 2px dashed var(--color-primary); outline-offset: 4px; }
+  .canvas-drop-zone {
+    min-height: 80px;
+    color: var(--color-text-muted);
+    font-size: var(--fs-sm);
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    margin: var(--sp-4);
+    transition: border-color var(--transition), background var(--transition);
+  }
+  .canvas-drop-zone:empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .canvas-drop-zone:empty::after { content: 'Arraste blocos aqui pra comecar'; }
+  .canvas-block { display: block; }
+  .canvas-drop-zone.drag-hover {
+    border-color: var(--color-primary);
+    background: rgba(37, 99, 235, 0.04);
+  }
 
-/* ── Blocos no canvas ── */
-.canvas-block { position:relative; border:2px solid transparent; border-radius:6px; transition:border-color .15s; cursor:pointer; }
-.canvas-block:hover { border-color:var(--border); }
-.canvas-block.selected { border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,0.1); }
-.canvas-block .block-actions { position:absolute; top:-12px; right:8px; display:none; gap:4px; z-index:10; }
-.canvas-block:hover .block-actions, .canvas-block.selected .block-actions { display:flex; }
-.block-action-btn { width:24px; height:24px; border-radius:6px; border:1px solid var(--border); background:var(--bg-white); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--text-muted); transition:all .15s; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
-.block-action-btn:hover { color:var(--primary); border-color:var(--primary); }
-.block-action-btn.danger:hover { color:var(--danger); border-color:var(--danger); }
-.canvas-block .drag-handle { position:absolute; left:-12px; top:50%; transform:translateY(-50%); width:24px; height:24px; border-radius:6px; background:var(--bg-white); border:1px solid var(--border); cursor:grab; display:none; align-items:center; justify-content:center; font-size:10px; color:var(--text-muted); box-shadow:0 1px 3px rgba(0,0,0,0.1); }
-.canvas-block:hover .drag-handle { display:flex; }
-.canvas-block .block-type-badge { position:absolute; top:-10px; left:8px; background:var(--bg-white); border:1px solid var(--border); border-radius:4px; padding:1px 6px; font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:none; }
-.canvas-block:hover .block-type-badge, .canvas-block.selected .block-type-badge { display:block; }
-.drop-indicator { height:3px; background:var(--primary); border-radius:2px; margin:2px 0; transition:all .15s; }
+  /* Blocos no canvas */
+  .canvas-block {
+    position: relative;
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    transition: border-color var(--transition);
+    cursor: pointer;
+  }
+  .canvas-block:hover { border-color: var(--color-border); }
+  .canvas-block.selected {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+  .canvas-block .block-actions {
+    position: absolute;
+    top: -12px;
+    right: 8px;
+    display: none;
+    gap: 4px;
+    z-index: 10;
+  }
+  .canvas-block:hover .block-actions,
+  .canvas-block.selected .block-actions { display: flex; }
+  .block-action-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: var(--color-text);
+    transition: background var(--transition), color var(--transition), border-color var(--transition);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+  }
+  .block-action-btn:hover {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+  }
+  .block-action-btn.danger:hover {
+    background: var(--color-danger);
+    color: #fff;
+    border-color: var(--color-danger);
+  }
+  .canvas-block .drag-handle {
+    background: #fff;
+    color: var(--color-text);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+    border-color: rgba(15, 23, 42, 0.12);
+  }
+  .canvas-block .drag-handle {
+    position: absolute;
+    left: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    cursor: grab;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--color-text-muted);
+    box-shadow: var(--shadow-sm);
+  }
+  .canvas-block:hover .drag-handle { display: flex; }
+  .canvas-block .block-type-badge {
+    position: absolute;
+    top: -10px;
+    left: 8px;
+    background: #0f172a;
+    border: 1px solid #0f172a;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: var(--fw-bold);
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: none;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+  }
+  .canvas-block.selected .block-type-badge { background: var(--color-primary); border-color: var(--color-primary); }
+  .canvas-block:hover .block-type-badge,
+  .canvas-block.selected .block-type-badge { display: block; }
+  .drop-indicator {
+    height: 3px;
+    background: var(--color-primary);
+    border-radius: 2px;
+    margin: 2px 0;
+    transition: all var(--transition);
+  }
 
-/* ── Config panel ── */
-.config-header { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
-.config-header h3 { font-size:13px; font-weight:700; margin:0; color:var(--text-main); }
-.config-body { padding:16px; }
-.config-group { margin-bottom:14px; }
-.config-group label { display:block; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; letter-spacing:.03em; }
-.config-group input, .config-group select, .config-group textarea { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:12px; font-family:'Inter',sans-serif; box-sizing:border-box; }
-.config-group input[type="color"] { height:36px; padding:2px; cursor:pointer; }
-.config-group textarea { min-height:60px; resize:vertical; }
-.config-tabs { display:flex; gap:4px; margin-bottom:16px; }
-.config-tab { flex:1; padding:7px 8px; border-radius:8px; font-size:11px; font-weight:600; text-align:center; cursor:pointer; border:none; background:var(--bg-subtle); color:var(--text-muted); transition:all .2s; }
-.config-tab.active { background:var(--primary); color:#fff; }
+  /* Config panel */
+  .config-header {
+    padding: var(--sp-3) var(--sp-4);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .config-header h3 {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-bold);
+    margin: 0;
+    color: var(--color-text);
+  }
+  .config-body { padding: var(--sp-4); }
+  .config-group { margin-bottom: var(--sp-3); }
+  .config-group label {
+    display: block;
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.03em;
+  }
+  .config-group input,
+  .config-group select,
+  .config-group textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--fs-xs);
+    font-family: inherit;
+    box-sizing: border-box;
+    color: var(--color-text);
+    background: var(--color-card);
+  }
+  .config-group input:focus,
+  .config-group select:focus,
+  .config-group textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+  .config-group input[type="color"] { height: 36px; padding: 2px; cursor: pointer; }
+  .config-group textarea { min-height: 60px; resize: vertical; }
 
-/* ── Preview toggle ── */
-.preview-toggle { display:flex; gap:4px; background:var(--bg-subtle); border-radius:8px; padding:3px; }
-.preview-toggle button { padding:5px 12px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; border:none; background:transparent; color:var(--text-muted); transition:all .2s; }
-.preview-toggle button.active { background:var(--bg-white); color:var(--text-main); box-shadow:0 1px 3px rgba(0,0,0,0.08); }
+  /* Preview toggle */
+  .preview-toggle {
+    display: flex;
+    gap: 4px;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    padding: 3px;
+  }
+  .preview-toggle button {
+    padding: 5px 12px;
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted);
+    transition: background var(--transition), color var(--transition);
+  }
+  .preview-toggle button.active {
+    background: var(--color-card);
+    color: var(--color-text);
+    box-shadow: var(--shadow-sm);
+  }
 
-/* ── Variáveis dropdown ── */
-.var-dropdown { position:absolute; background:var(--bg-white); border:1px solid var(--border); border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.12); z-index:100; width:240px; max-height:280px; overflow-y:auto; }
-.var-group-title { font-size:10px; font-weight:700; text-transform:uppercase; color:var(--text-muted); padding:8px 12px 4px; }
-.var-item { padding:6px 12px; font-size:12px; cursor:pointer; display:flex; justify-content:space-between; }
-.var-item:hover { background:var(--bg-subtle); }
-.var-item code { font-size:11px; color:var(--primary); }
+  /* Variaveis dropdown */
+  .var-dropdown {
+    position: absolute;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+    width: 240px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .var-group-title {
+    font-size: 10px;
+    font-weight: var(--fw-bold);
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    padding: var(--sp-2) var(--sp-3) 4px;
+  }
+  .var-item {
+    padding: 6px var(--sp-3);
+    font-size: var(--fs-xs);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+  }
+  .var-item:hover { background: var(--color-surface); }
+  .var-item code { font-size: 11px; color: var(--color-primary); }
+  .var-copy-item:hover { background: var(--color-surface); }
 
-/* ── Responsivo ── */
-.email-canvas.mobile-preview { width:375px; }
+  /* Responsivo */
+  .email-canvas.mobile-preview { width: 375px; }
 
-/* ── Sortable ghost ── */
-.sortable-ghost { opacity:0.4; }
-.sortable-drag { opacity:0.9; }
+  /* Sortable ghost */
+  .sortable-ghost { opacity: 0.4; }
+  .sortable-drag { opacity: 0.9; }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- Toolbar -->
 <div class="email-toolbar">
-    <a href="{% url 'marketing_emails:lista' %}" style="color:var(--text-muted); font-size:16px;"><i class="fas fa-arrow-left"></i></a>
-    <h2><i class="fas fa-envelope" style="color:var(--primary);"></i> <span id="templateNome">{{ template.nome }}</span></h2>
-    <span class="badge badge-{% if template.status == 'ativo' %}success{% elif template.status == 'rascunho' %}warning{% else %}default{% endif %}" id="statusBadge" style="font-size:11px;">{{ template.get_status_display }}</span>
+  <a href="{% url 'marketing_emails:lista' %}" class="btn btn-ghost btn-sm" title="Voltar"><i class="bi bi-arrow-left"></i></a>
+  <h2 class="email-toolbar-title"><i class="bi bi-envelope" style="color: var(--color-primary);"></i> <span id="templateNome">{{ template.nome }}</span></h2>
+  {% if template.status == 'ativo' %}
+    {% include "components/badge.html" with variant="success" label=template.get_status_display size="sm" %}
+  {% elif template.status == 'rascunho' %}
+    {% include "components/badge.html" with variant="warning" label=template.get_status_display size="sm" %}
+  {% else %}
+    {% include "components/badge.html" with variant="neutral" label=template.get_status_display size="sm" %}
+  {% endif %}
+  <span id="statusBadge" style="display: none;">{{ template.status }}</span>
 
-    <div class="preview-toggle">
-        <button class="active" onclick="setPreviewMode('desktop', this)"><i class="fas fa-desktop"></i></button>
-        <button onclick="setPreviewMode('mobile', this)"><i class="fas fa-mobile-alt"></i></button>
-    </div>
+  <div class="preview-toggle">
+    <button class="active" onclick="setPreviewMode('desktop', this)" title="Desktop"><i class="bi bi-laptop"></i></button>
+    <button onclick="setPreviewMode('mobile', this)" title="Mobile"><i class="bi bi-phone"></i></button>
+  </div>
 
-    <button onclick="previewEmail()" class="btn-primary" style="padding:6px 14px; font-size:12px; background:var(--bg-subtle); color:var(--text-main); border:1px solid var(--border);">
-        <i class="fas fa-eye"></i> Preview
-    </button>
-    <button onclick="salvarTemplate()" class="btn-primary" style="padding:6px 16px; font-size:12px;">
-        <i class="fas fa-save"></i> Salvar
-    </button>
+  <button class="btn btn-secondary btn-sm" onclick="previewEmail()"><i class="bi bi-eye"></i> Preview</button>
+  <button class="btn btn-primary btn-sm" onclick="salvarTemplate()"><i class="bi bi-check-lg"></i> Salvar</button>
 </div>
 
-<!-- Sortable.js -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 
 <div class="email-editor-layout">
-    <!-- ═══ SIDEBAR: Blocos ═══ -->
-    <div class="email-sidebar">
-        <div class="sidebar-header">
-            <h3><i class="fas fa-puzzle-piece" style="color:var(--primary); margin-right:6px;"></i> Blocos</h3>
-        </div>
-        <div class="sidebar-blocks">
-            <!-- Estrutura -->
-            <div class="block-section">
-                <div class="block-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
-                    <span>Estrutura</span>
-                </div>
-                <div class="block-section-items">
-                    <div class="block-draggable" draggable="true" data-tipo="cabecalho"><i class="fas fa-heading" style="color:#6366f1;"></i> Cabeçalho</div>
-                    <div class="block-draggable" draggable="true" data-tipo="rodape"><i class="fas fa-shoe-prints" style="color:#6b7280;"></i> Rodapé</div>
-                    <div class="block-draggable" draggable="true" data-tipo="colunas"><i class="fas fa-columns" style="color:#8b5cf6;"></i> Colunas</div>
-                    <div class="block-draggable" draggable="true" data-tipo="divisor"><i class="fas fa-minus" style="color:#9ca3af;"></i> Divisor</div>
-                    <div class="block-draggable" draggable="true" data-tipo="espacamento"><i class="fas fa-arrows-alt-v" style="color:#d1d5db;"></i> Espaçamento</div>
-                </div>
-            </div>
-
-            <!-- Conteúdo -->
-            <div class="block-section">
-                <div class="block-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
-                    <span>Conteúdo</span>
-                </div>
-                <div class="block-section-items">
-                    <div class="block-draggable" draggable="true" data-tipo="texto"><i class="fas fa-align-left" style="color:#3b82f6;"></i> Texto</div>
-                    <div class="block-draggable" draggable="true" data-tipo="imagem"><i class="fas fa-image" style="color:#10b981;"></i> Imagem</div>
-                    <div class="block-draggable" draggable="true" data-tipo="botao"><i class="fas fa-square" style="color:#f59e0b;"></i> Botão (CTA)</div>
-                    <div class="block-draggable" draggable="true" data-tipo="lista"><i class="fas fa-list-ul" style="color:#06b6d4;"></i> Lista</div>
-                </div>
-            </div>
-
-            <!-- Marketing -->
-            <div class="block-section">
-                <div class="block-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
-                    <span>Marketing</span>
-                </div>
-                <div class="block-section-items">
-                    <div class="block-draggable" draggable="true" data-tipo="card_plano"><i class="fas fa-credit-card" style="color:#ec4899;"></i> Card de Plano</div>
-                    <div class="block-draggable" draggable="true" data-tipo="depoimento"><i class="fas fa-quote-right" style="color:#14b8a6;"></i> Depoimento</div>
-                    <div class="block-draggable" draggable="true" data-tipo="html_custom"><i class="fas fa-code" style="color:#6b7280;"></i> HTML Custom</div>
-                </div>
-            </div>
-
-            <!-- Variáveis -->
-            <div class="block-section" style="margin-top:12px; border-top:1px solid var(--border); padding-top:8px;">
-                <div class="block-section-title">
-                    <span><i class="fas fa-at" style="color:var(--primary); margin-right:4px;"></i> Variáveis</span>
-                </div>
-                <div class="block-section-items" style="font-size:11px;">
-                    {% for grupo, vars in variaveis.items %}
-                    <div style="padding:4px 12px; font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">{{ grupo }}</div>
-                    {% for v in vars %}
-                    <div class="var-copy-item" style="padding:3px 12px; cursor:pointer; display:flex; justify-content:space-between; border-radius:4px;" onclick="copiarVariavel('{{ v.var }}')" title="Clique para copiar">
-                        <span style="color:var(--text-secondary);">{{ v.label }}</span>
-                        <code style="color:var(--primary); font-size:10px;">{{ v.var }}</code>
-                    </div>
-                    {% endfor %}
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
+  {# Sidebar: Blocos #}
+  <div class="email-sidebar">
+    <div class="sidebar-header">
+      <h3><i class="bi bi-puzzle" style="color: var(--color-primary); margin-right: 6px;"></i> Blocos</h3>
     </div>
-
-    <!-- ═══ CANVAS ═══ -->
-    <div class="email-canvas-wrap">
-        <div class="email-canvas" id="emailCanvas">
-            <div class="canvas-drop-zone" id="dropZone">
-                <!-- Blocos renderizados aqui -->
-            </div>
+    <div class="sidebar-blocks">
+      <div class="block-section">
+        <div class="block-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
+          <span>Estrutura</span>
         </div>
+        <div class="block-section-items">
+          <div class="block-draggable" draggable="true" data-tipo="cabecalho"><i class="bi bi-type-h1" style="color: #6366f1;"></i> Cabecalho</div>
+          <div class="block-draggable" draggable="true" data-tipo="rodape"><i class="bi bi-arrow-down-square" style="color: #6b7280;"></i> Rodape</div>
+          <div class="block-draggable" draggable="true" data-tipo="colunas"><i class="bi bi-layout-three-columns" style="color: #8b5cf6;"></i> Colunas</div>
+          <div class="block-draggable" draggable="true" data-tipo="divisor"><i class="bi bi-dash" style="color: #9ca3af;"></i> Divisor</div>
+          <div class="block-draggable" draggable="true" data-tipo="espacamento"><i class="bi bi-arrows-expand" style="color: #d1d5db;"></i> Espacamento</div>
+        </div>
+      </div>
+
+      <div class="block-section">
+        <div class="block-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
+          <span>Conteudo</span>
+        </div>
+        <div class="block-section-items">
+          <div class="block-draggable" draggable="true" data-tipo="texto"><i class="bi bi-text-left" style="color: #3b82f6;"></i> Texto</div>
+          <div class="block-draggable" draggable="true" data-tipo="imagem"><i class="bi bi-image" style="color: #10b981;"></i> Imagem</div>
+          <div class="block-draggable" draggable="true" data-tipo="botao"><i class="bi bi-square" style="color: #f59e0b;"></i> Botao (CTA)</div>
+          <div class="block-draggable" draggable="true" data-tipo="lista"><i class="bi bi-list-ul" style="color: #06b6d4;"></i> Lista</div>
+        </div>
+      </div>
+
+      <div class="block-section">
+        <div class="block-section-title" onclick="this.parentElement.classList.toggle('collapsed')">
+          <span>Marketing</span>
+        </div>
+        <div class="block-section-items">
+          <div class="block-draggable" draggable="true" data-tipo="card_plano"><i class="bi bi-credit-card" style="color: #ec4899;"></i> Card de plano</div>
+          <div class="block-draggable" draggable="true" data-tipo="depoimento"><i class="bi bi-quote" style="color: #14b8a6;"></i> Depoimento</div>
+          <div class="block-draggable" draggable="true" data-tipo="html_custom"><i class="bi bi-code-slash" style="color: #6b7280;"></i> HTML custom</div>
+        </div>
+      </div>
+
+      <div class="block-section" style="margin-top: var(--sp-3); border-top: 1px solid var(--color-border); padding-top: var(--sp-2);">
+        <div class="block-section-title">
+          <span><i class="bi bi-at" style="color: var(--color-primary); margin-right: 4px;"></i> Variaveis</span>
+        </div>
+        <div class="block-section-items" style="font-size: 11px;">
+          {% for grupo, vars in variaveis.items %}
+            <div style="padding: 4px var(--sp-3); font-size: 10px; font-weight: var(--fw-bold); color: var(--color-text-muted); text-transform: uppercase;">{{ grupo }}</div>
+            {% for v in vars %}
+              <div class="var-copy-item" style="padding: 3px var(--sp-3); cursor: pointer; display: flex; justify-content: space-between; border-radius: 4px;" onclick="copiarVariavel('{{ v.var }}')" title="Clique pra copiar">
+                <span style="color: var(--color-text);">{{ v.label }}</span>
+                <code style="color: var(--color-primary); font-size: 10px;">{{ v.var }}</code>
+              </div>
+            {% endfor %}
+          {% endfor %}
+        </div>
+      </div>
     </div>
+  </div>
 
-    <!-- ═══ CONFIG PANEL ═══ -->
-    <div class="email-config-panel" id="configPanel">
-        <div class="config-header">
-            <h3 id="configTitle">Configurações do Email</h3>
-        </div>
-        <div class="config-body" id="configBody">
-            <!-- Config global (padrão) -->
-            <div id="globalConfig">
-                <div class="config-group">
-                    <label>Nome do template</label>
-                    <input type="text" id="cfgNome" value="{{ template.nome }}" onchange="updateGlobal()">
-                </div>
-                <div class="config-group">
-                    <label>Assunto do email</label>
-                    <input type="text" id="cfgAssunto" value="{{ template.assunto }}" placeholder="Ex: Olá {{lead.nome}}, temos uma oferta!" onchange="updateGlobal()">
-                </div>
-                <div class="config-group">
-                    <label>Largura (px)</label>
-                    <input type="number" id="cfgLargura" value="600" min="400" max="800" onchange="updateGlobal()">
-                </div>
-                <div class="config-group">
-                    <label>Cor de fundo</label>
-                    <input type="color" id="cfgCorFundo" value="#f5f5f5" onchange="updateGlobal()">
-                </div>
-                <div class="config-group">
-                    <label>Cor de fundo do conteúdo</label>
-                    <input type="color" id="cfgCorConteudo" value="#ffffff" onchange="updateGlobal()">
-                </div>
-                <div class="config-group">
-                    <label>Fonte</label>
-                    <select id="cfgFonte" onchange="updateGlobal()">
-                        <option value="Arial, Helvetica, sans-serif">Arial</option>
-                        <option value="'Helvetica Neue', Helvetica, sans-serif">Helvetica</option>
-                        <option value="Georgia, serif">Georgia</option>
-                        <option value="Verdana, sans-serif">Verdana</option>
-                        <option value="Tahoma, sans-serif">Tahoma</option>
-                    </select>
-                </div>
-                <div class="config-group">
-                    <label>Status</label>
-                    <select id="cfgStatus">
-                        <option value="rascunho" {% if template.status == 'rascunho' %}selected{% endif %}>Rascunho</option>
-                        <option value="ativo" {% if template.status == 'ativo' %}selected{% endif %}>Ativo</option>
-                        <option value="arquivado" {% if template.status == 'arquivado' %}selected{% endif %}>Arquivado</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Config do bloco selecionado (dinâmico) -->
-            <div id="blockConfig" style="display:none;"></div>
-        </div>
+  {# Canvas #}
+  <div class="email-canvas-wrap">
+    <div class="email-canvas" id="emailCanvas">
+      <div class="canvas-drop-zone" id="dropZone"></div>
     </div>
+  </div>
+
+  {# Config panel #}
+  <div class="email-config-panel" id="configPanel">
+    <div class="config-header">
+      <h3 id="configTitle">Configuracoes do email</h3>
+    </div>
+    <div class="config-body" id="configBody">
+      <div id="globalConfig">
+        <div class="config-group">
+          <label>Nome do template</label>
+          <input type="text" id="cfgNome" value="{{ template.nome }}" onchange="updateGlobal()">
+        </div>
+        <div class="config-group">
+          <label>Assunto do email</label>
+          <input type="text" id="cfgAssunto" value="{{ template.assunto }}" placeholder="Ex: Ola {{lead.nome}}, temos uma oferta!" onchange="updateGlobal()">
+        </div>
+        <div class="config-group">
+          <label>Largura (px)</label>
+          <input type="number" id="cfgLargura" value="600" min="400" max="800" onchange="updateGlobal()">
+        </div>
+        <div class="config-group">
+          <label>Cor de fundo</label>
+          <input type="color" id="cfgCorFundo" value="#f5f5f5" onchange="updateGlobal()">
+        </div>
+        <div class="config-group">
+          <label>Cor de fundo do conteudo</label>
+          <input type="color" id="cfgCorConteudo" value="#ffffff" onchange="updateGlobal()">
+        </div>
+        <div class="config-group">
+          <label>Fonte</label>
+          <select id="cfgFonte" onchange="updateGlobal()">
+            <option value="Arial, Helvetica, sans-serif">Arial</option>
+            <option value="'Helvetica Neue', Helvetica, sans-serif">Helvetica</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="Verdana, sans-serif">Verdana</option>
+            <option value="Tahoma, sans-serif">Tahoma</option>
+          </select>
+        </div>
+        <div class="config-group">
+          <label>Status</label>
+          <select id="cfgStatus">
+            <option value="rascunho" {% if template.status == 'rascunho' %}selected{% endif %}>Rascunho</option>
+            <option value="ativo" {% if template.status == 'ativo' %}selected{% endif %}>Ativo</option>
+            <option value="arquivado" {% if template.status == 'arquivado' %}selected{% endif %}>Arquivado</option>
+          </select>
+        </div>
+      </div>
+      <div id="blockConfig" style="display: none;"></div>
+    </div>
+  </div>
 </div>
 
 <script>
-// ============================================================================
 // STATE
-// ============================================================================
 let blocos = {{ blocos_json|safe }};
 let configGlobal = {{ config_json|safe }};
 let selectedBlockId = null;
 let blockIdCounter = blocos.length ? Math.max(...blocos.map(b => parseInt((b.id||'0').replace('blk_',''))||0)) + 1 : 1;
 
-// Inicializar config global dos inputs
 if (configGlobal.largura) document.getElementById('cfgLargura').value = configGlobal.largura;
 if (configGlobal.cor_fundo) document.getElementById('cfgCorFundo').value = configGlobal.cor_fundo;
 if (configGlobal.cor_fundo_conteudo) document.getElementById('cfgCorConteudo').value = configGlobal.cor_fundo_conteudo;
 if (configGlobal.fonte_padrao) document.getElementById('cfgFonte').value = configGlobal.fonte_padrao;
 
-// ============================================================================
-// DEFAULTS POR TIPO DE BLOCO
-// ============================================================================
 const BLOCK_DEFAULTS = {
     cabecalho: { logo_url:'', cor_fundo:'#1a1a2e', altura:80, alinhamento:'center' },
     texto: { conteudo:'<p>Escreva seu texto aqui...</p>', alinhamento:'left', padding:'20px 24px', cor_texto:'#333333', tamanho_fonte:'14px' },
@@ -262,43 +515,34 @@ const BLOCK_DEFAULTS = {
     divisor: { estilo:'solid', cor:'#e5e7eb', espessura:'1px', largura:'100%', margem:'10px 24px' },
     espacamento: { altura:20 },
     colunas: { layout:'2', gap:'16px', padding:'10px 24px', colunas:[{blocos:[]},{blocos:[]}] },
-    card_plano: { nome:'Plano', preco:'R$ 99,90/mês', beneficios:['Benefício 1','Benefício 2','Benefício 3'], texto_botao:'Assinar', url_botao:'#', cor_destaque:'#3b82f6', cor_fundo:'#ffffff', padding:'16px 24px' },
+    card_plano: { nome:'Plano', preco:'R$ 99,90/mes', beneficios:['Beneficio 1','Beneficio 2','Beneficio 3'], texto_botao:'Assinar', url_botao:'#', cor_destaque:'#3b82f6', cor_fundo:'#ffffff', padding:'16px 24px' },
     lista: { itens:['Item 1','Item 2','Item 3'], estilo:'check', cor_icone:'#3b82f6', padding:'10px 24px' },
-    depoimento: { texto:'Depoimento do cliente aqui...', nome:'Nome do Cliente', cargo:'Cargo', foto_url:'', padding:'16px 24px' },
-    rodape: { texto:'© 2026 Sua Empresa. Todos os direitos reservados.', cor_fundo:'#1a1a2e', cor_texto:'#aaaaaa', link_descadastro:true, redes_sociais:{}, padding:'24px' },
+    depoimento: { texto:'Depoimento do cliente aqui...', nome:'Nome do cliente', cargo:'Cargo', foto_url:'', padding:'16px 24px' },
+    rodape: { texto:'(c) 2026 Sua empresa. Todos os direitos reservados.', cor_fundo:'#1a1a2e', cor_texto:'#aaaaaa', link_descadastro:true, redes_sociais:{}, padding:'24px' },
     html_custom: { html:'<p>Seu HTML aqui</p>' },
 };
 
-// ============================================================================
-// LABELS POR TIPO
-// ============================================================================
 const BLOCK_LABELS = {
-    cabecalho:'Cabeçalho', texto:'Texto', imagem:'Imagem', botao:'Botão',
-    divisor:'Divisor', espacamento:'Espaçamento', colunas:'Colunas',
-    card_plano:'Card de Plano', lista:'Lista', depoimento:'Depoimento',
-    rodape:'Rodapé', html_custom:'HTML Custom',
+    cabecalho:'Cabecalho', texto:'Texto', imagem:'Imagem', botao:'Botao',
+    divisor:'Divisor', espacamento:'Espacamento', colunas:'Colunas',
+    card_plano:'Card de plano', lista:'Lista', depoimento:'Depoimento',
+    rodape:'Rodape', html_custom:'HTML custom',
 };
 
-// ============================================================================
-// RENDER CANVAS
-// ============================================================================
 function renderCanvas() {
     const zone = document.getElementById('dropZone');
-    if (!blocos.length) {
-        zone.innerHTML = '';
-        return;
-    }
+    if (!blocos.length) { zone.innerHTML = ''; return; }
 
     zone.innerHTML = blocos.map((b, i) => {
         const sel = b.id === selectedBlockId ? 'selected' : '';
         return `<div class="canvas-block ${sel}" data-id="${b.id}" data-index="${i}" onclick="selectBlock('${b.id}')">
             <span class="block-type-badge">${BLOCK_LABELS[b.tipo]||b.tipo}</span>
-            <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
+            <div class="drag-handle"><i class="bi bi-grip-vertical"></i></div>
             <div class="block-actions">
-                <button class="block-action-btn" onclick="event.stopPropagation();duplicateBlock('${b.id}')" title="Duplicar"><i class="fas fa-copy"></i></button>
-                <button class="block-action-btn" onclick="event.stopPropagation();moveBlock('${b.id}',-1)" title="Subir"><i class="fas fa-chevron-up"></i></button>
-                <button class="block-action-btn" onclick="event.stopPropagation();moveBlock('${b.id}',1)" title="Descer"><i class="fas fa-chevron-down"></i></button>
-                <button class="block-action-btn danger" onclick="event.stopPropagation();removeBlock('${b.id}')" title="Excluir"><i class="fas fa-trash"></i></button>
+                <button class="block-action-btn" onclick="event.stopPropagation();duplicateBlock('${b.id}')" title="Duplicar"><i class="bi bi-files"></i></button>
+                <button class="block-action-btn" onclick="event.stopPropagation();moveBlock('${b.id}',-1)" title="Subir"><i class="bi bi-chevron-up"></i></button>
+                <button class="block-action-btn" onclick="event.stopPropagation();moveBlock('${b.id}',1)" title="Descer"><i class="bi bi-chevron-down"></i></button>
+                <button class="block-action-btn danger" onclick="event.stopPropagation();removeBlock('${b.id}')" title="Excluir"><i class="bi bi-trash"></i></button>
             </div>
             <div class="block-preview">${renderBlockPreview(b)}</div>
         </div>`;
@@ -318,11 +562,11 @@ function renderBlockPreview(block) {
             return `<div style="padding:${p.padding||'20px 24px'}; font-size:${p.tamanho_fonte||'14px'}; color:${p.cor_texto||'#333'}; text-align:${p.alinhamento||'left'}; line-height:1.6;">${p.conteudo||'Texto...'}</div>`;
         case 'imagem':
             return `<div style="padding:${p.padding||'10px 24px'}; text-align:${p.alinhamento||'center'};">
-                ${p.url ? `<img src="${p.url}" style="max-width:${p.largura||'100%'}; border-radius:${p.border_radius||'0'};">` : '<div style="background:#f3f4f6; padding:32px; color:#9ca3af; border-radius:8px;"><i class="fas fa-image" style="font-size:24px;"></i><br>Adicionar imagem</div>'}
+                ${p.url ? `<img src="${p.url}" style="max-width:${p.largura||'100%'}; border-radius:${p.border_radius||'0'};">` : '<div style="background:#f3f4f6; padding:32px; color:#9ca3af; border-radius:8px;"><i class="bi bi-image" style="font-size:24px;"></i><br>Adicionar imagem</div>'}
             </div>`;
         case 'botao':
             return `<div style="padding:${p.padding||'16px 24px'}; text-align:${p.alinhamento||'center'};">
-                <span style="display:inline-block; background:${p.cor_botao||'#3b82f6'}; color:${p.cor_texto||'#fff'}; padding:10px 24px; border-radius:${p.border_radius||'6px'}; font-weight:600; font-size:13px;">${p.texto||'Botão'}</span>
+                <span style="display:inline-block; background:${p.cor_botao||'#3b82f6'}; color:${p.cor_texto||'#fff'}; padding:10px 24px; border-radius:${p.border_radius||'6px'}; font-weight:600; font-size:13px;">${p.texto||'Botao'}</span>
             </div>`;
         case 'divisor':
             if (p.estilo === 'espaco') return `<div style="padding:${p.margem||'10px 24px'}">&nbsp;</div>`;
@@ -338,11 +582,11 @@ function renderBlockPreview(block) {
                 <div style="border:2px solid ${p.cor_destaque||'#3b82f6'}; border-radius:10px; overflow:hidden;">
                     <div style="background:${p.cor_destaque||'#3b82f6'}; color:#fff; text-align:center; padding:12px; font-weight:700;">${p.nome||'Plano'}</div>
                     <div style="text-align:center; padding:16px;"><div style="font-size:22px; font-weight:800; color:${p.cor_destaque||'#3b82f6'};">${p.preco||'R$ 0'}</div></div>
-                    <div style="padding:8px 20px 16px;">${(p.beneficios||[]).map(b => `<div style="font-size:12px; padding:3px 0;">✓ ${b}</div>`).join('')}</div>
+                    <div style="padding:8px 20px 16px;">${(p.beneficios||[]).map(b => `<div style="font-size:12px; padding:3px 0;">&check; ${b}</div>`).join('')}</div>
                 </div>
             </div>`;
         case 'lista':
-            const icons = {check:'✓', bullet:'•', star:'★', arrow:'→', numero:''};
+            const icons = {check:'\u2713', bullet:'\u2022', star:'\u2605', arrow:'\u2192', numero:''};
             return `<div style="padding:${p.padding||'10px 24px'};">${(p.itens||[]).map((item,i) => `<div style="font-size:13px; padding:3px 0;"><span style="color:${p.cor_icone||'#3b82f6'}; margin-right:8px;">${p.estilo==='numero'?(i+1)+'.':icons[p.estilo||'check']}</span>${item}</div>`).join('')}</div>`;
         case 'depoimento':
             return `<div style="padding:${p.padding||'16px 24px'};"><div style="background:#f9fafb; border-left:4px solid #3b82f6; border-radius:0 8px 8px 0; padding:16px;">
@@ -351,23 +595,18 @@ function renderBlockPreview(block) {
                 <div style="font-size:11px; color:#888;">${p.cargo||''}</div>
             </div></div>`;
         case 'rodape':
-            return `<div style="background:${p.cor_fundo||'#1a1a2e'}; padding:${p.padding||'24px'}; text-align:center; color:${p.cor_texto||'#aaa'}; font-size:11px; border-radius:0 0 6px 6px;">${p.texto||'Rodapé'}</div>`;
+            return `<div style="background:${p.cor_fundo||'#1a1a2e'}; padding:${p.padding||'24px'}; text-align:center; color:${p.cor_texto||'#aaa'}; font-size:11px; border-radius:0 0 6px 6px;">${p.texto||'Rodape'}</div>`;
         case 'html_custom':
-            return `<div style="padding:10px 24px; background:#fefce8; border:1px dashed #fbbf24; border-radius:6px; margin:8px 16px;"><div style="font-size:11px; color:#92400e; margin-bottom:4px;"><i class="fas fa-code"></i> HTML Custom</div><pre style="font-size:10px; color:#555; margin:0; white-space:pre-wrap; max-height:80px; overflow:hidden;">${(p.html||'').substring(0,200)}</pre></div>`;
+            return `<div style="padding:10px 24px; background:#fefce8; border:1px dashed #fbbf24; border-radius:6px; margin:8px 16px;"><div style="font-size:11px; color:#92400e; margin-bottom:4px;"><i class="bi bi-code-slash"></i> HTML custom</div><pre style="font-size:10px; color:#555; margin:0; white-space:pre-wrap; max-height:80px; overflow:hidden;">${(p.html||'').substring(0,200)}</pre></div>`;
         default:
             return `<div style="padding:20px; color:#ccc; text-align:center;">Bloco: ${block.tipo}</div>`;
     }
 }
 
-// ============================================================================
-// SORTABLE (drag-and-drop reordenação)
-// ============================================================================
 let sortableInstance = null;
-
 function initSortable() {
     const zone = document.getElementById('dropZone');
     if (sortableInstance) sortableInstance.destroy();
-
     sortableInstance = new Sortable(zone, {
         animation: 150,
         handle: '.drag-handle',
@@ -381,9 +620,6 @@ function initSortable() {
     });
 }
 
-// ============================================================================
-// DRAG FROM SIDEBAR
-// ============================================================================
 document.querySelectorAll('.block-draggable').forEach(el => {
     el.addEventListener('dragstart', e => {
         e.dataTransfer.setData('block-tipo', el.dataset.tipo);
@@ -402,17 +638,11 @@ dropZone.addEventListener('drop', e => {
     addBlock(tipo);
 });
 
-// ============================================================================
-// BLOCK OPERATIONS
-// ============================================================================
 function addBlock(tipo, index) {
     const id = 'blk_' + (blockIdCounter++);
     const bloco = { tipo, id, props: JSON.parse(JSON.stringify(BLOCK_DEFAULTS[tipo] || {})) };
-    if (index !== undefined) {
-        blocos.splice(index, 0, bloco);
-    } else {
-        blocos.push(bloco);
-    }
+    if (index !== undefined) blocos.splice(index, 0, bloco);
+    else blocos.push(bloco);
     selectedBlockId = id;
     renderCanvas();
     showBlockConfig(bloco);
@@ -427,10 +657,7 @@ function selectBlock(id) {
 
 function removeBlock(id) {
     blocos = blocos.filter(b => b.id !== id);
-    if (selectedBlockId === id) {
-        selectedBlockId = null;
-        showGlobalConfig();
-    }
+    if (selectedBlockId === id) { selectedBlockId = null; showGlobalConfig(); }
     renderCanvas();
 }
 
@@ -454,13 +681,10 @@ function moveBlock(id, dir) {
     renderCanvas();
 }
 
-// ============================================================================
-// CONFIG PANEL
-// ============================================================================
 function showGlobalConfig() {
     document.getElementById('globalConfig').style.display = '';
     document.getElementById('blockConfig').style.display = 'none';
-    document.getElementById('configTitle').textContent = 'Configurações do Email';
+    document.getElementById('configTitle').textContent = 'Configuracoes do email';
 }
 
 function showBlockConfig(bloco) {
@@ -472,11 +696,10 @@ function showBlockConfig(bloco) {
     const p = bloco.props;
     let html = '';
 
-    // Gerar campos de configuração por tipo
     switch(bloco.tipo) {
         case 'cabecalho':
             html = `
-                ${field('URL do Logo', 'text', 'logo_url', p.logo_url)}
+                ${field('URL do logo', 'text', 'logo_url', p.logo_url)}
                 ${field('Cor de fundo', 'color', 'cor_fundo', p.cor_fundo)}
                 ${field('Altura (px)', 'number', 'altura', p.altura)}
                 ${selectField('Alinhamento', 'alinhamento', p.alinhamento, [['left','Esquerda'],['center','Centro'],['right','Direita']])}
@@ -484,11 +707,11 @@ function showBlockConfig(bloco) {
             break;
         case 'texto':
             html = `
-                ${textareaField('Conteúdo (HTML)', 'conteudo', p.conteudo)}
-                <div style="margin-bottom:8px;"><button type="button" class="block-action-btn" style="width:auto; height:auto; padding:4px 10px; font-size:11px;" onclick="insertVarAtCursor()"><i class="fas fa-at"></i> Inserir variável</button></div>
+                ${textareaField('Conteudo (HTML)', 'conteudo', p.conteudo)}
+                <div style="margin-bottom:8px;"><button type="button" class="block-action-btn" style="width:auto; height:auto; padding:4px 10px; font-size:11px;" onclick="insertVarAtCursor()"><i class="bi bi-at"></i> Inserir variavel</button></div>
                 ${selectField('Alinhamento', 'alinhamento', p.alinhamento, [['left','Esquerda'],['center','Centro'],['right','Direita']])}
                 ${field('Cor do texto', 'color', 'cor_texto', p.cor_texto)}
-                ${selectField('Tamanho da fonte', 'tamanho_fonte', p.tamanho_fonte, [['12px','12px'],['13px','13px'],['14px','14px (padrão)'],['16px','16px'],['18px','18px'],['20px','20px'],['24px','24px']])}
+                ${selectField('Tamanho da fonte', 'tamanho_fonte', p.tamanho_fonte, [['12px','12px'],['13px','13px'],['14px','14px (padrao)'],['16px','16px'],['18px','18px'],['20px','20px'],['24px','24px']])}
                 ${field('Padding', 'text', 'padding', p.padding)}
             `;
             break;
@@ -505,19 +728,19 @@ function showBlockConfig(bloco) {
             break;
         case 'botao':
             html = `
-                ${field('Texto do botão', 'text', 'texto', p.texto)}
+                ${field('Texto do botao', 'text', 'texto', p.texto)}
                 ${field('URL (link)', 'text', 'url', p.url)}
-                ${field('Cor do botão', 'color', 'cor_botao', p.cor_botao)}
+                ${field('Cor do botao', 'color', 'cor_botao', p.cor_botao)}
                 ${field('Cor do texto', 'color', 'cor_texto', p.cor_texto)}
                 ${field('Border radius', 'text', 'border_radius', p.border_radius)}
-                ${selectField('Tamanho', 'tamanho', p.tamanho, [['pequeno','Pequeno'],['medio','Médio'],['grande','Grande']])}
+                ${selectField('Tamanho', 'tamanho', p.tamanho, [['pequeno','Pequeno'],['medio','Medio'],['grande','Grande']])}
                 ${selectField('Alinhamento', 'alinhamento', p.alinhamento, [['left','Esquerda'],['center','Centro'],['right','Direita']])}
                 ${field('Padding', 'text', 'padding', p.padding)}
             `;
             break;
         case 'divisor':
             html = `
-                ${selectField('Estilo', 'estilo', p.estilo, [['solid','Linha sólida'],['dashed','Tracejado'],['dotted','Pontilhado'],['espaco','Espaço (sem linha)']])}
+                ${selectField('Estilo', 'estilo', p.estilo, [['solid','Linha solida'],['dashed','Tracejado'],['dotted','Pontilhado'],['espaco','Espaco (sem linha)']])}
                 ${field('Cor', 'color', 'cor', p.cor)}
                 ${field('Espessura', 'text', 'espessura', p.espessura)}
                 ${field('Largura', 'text', 'largura', p.largura)}
@@ -532,18 +755,18 @@ function showBlockConfig(bloco) {
                 ${selectField('Layout', 'layout', p.layout, [['1','1 coluna'],['2','2 colunas (50/50)'],['3','3 colunas'],['1-2','1/3 + 2/3'],['2-1','2/3 + 1/3']])}
                 ${field('Gap', 'text', 'gap', p.gap)}
                 ${field('Padding', 'text', 'padding', p.padding)}
-                <div style="padding:8px; background:var(--bg-subtle); border-radius:6px; font-size:11px; color:var(--text-muted);">
-                    <i class="fas fa-info-circle"></i> Blocos internos das colunas são editados na Fase 2.
+                <div style="padding:8px; background:var(--color-surface); border-radius:6px; font-size:11px; color:var(--color-text-muted);">
+                    <i class="bi bi-info-circle"></i> Blocos internos das colunas sao editados na fase 2.
                 </div>
             `;
             break;
         case 'card_plano':
             html = `
                 ${field('Nome do plano', 'text', 'nome', p.nome)}
-                ${field('Preço', 'text', 'preco', p.preco)}
-                ${textareaField('Benefícios (um por linha)', 'beneficios', (p.beneficios||[]).join('\\n'))}
-                ${field('Texto do botão', 'text', 'texto_botao', p.texto_botao)}
-                ${field('URL do botão', 'text', 'url_botao', p.url_botao)}
+                ${field('Preco', 'text', 'preco', p.preco)}
+                ${textareaField('Beneficios (um por linha)', 'beneficios', (p.beneficios||[]).join('\\n'))}
+                ${field('Texto do botao', 'text', 'texto_botao', p.texto_botao)}
+                ${field('URL do botao', 'text', 'url_botao', p.url_botao)}
                 ${field('Cor destaque', 'color', 'cor_destaque', p.cor_destaque)}
                 ${field('Padding', 'text', 'padding', p.padding)}
             `;
@@ -551,8 +774,8 @@ function showBlockConfig(bloco) {
         case 'lista':
             html = `
                 ${textareaField('Itens (um por linha)', 'itens', (p.itens||[]).join('\\n'))}
-                ${selectField('Estilo', 'estilo', p.estilo, [['check','Check ✓'],['bullet','Bullet •'],['star','Estrela ★'],['arrow','Seta →'],['numero','Numerado']])}
-                ${field('Cor do ícone', 'color', 'cor_icone', p.cor_icone)}
+                ${selectField('Estilo', 'estilo', p.estilo, [['check','Check \u2713'],['bullet','Bullet \u2022'],['star','Estrela \u2605'],['arrow','Seta \u2192'],['numero','Numerado']])}
+                ${field('Cor do icone', 'color', 'cor_icone', p.cor_icone)}
                 ${field('Padding', 'text', 'padding', p.padding)}
             `;
             break;
@@ -575,16 +798,14 @@ function showBlockConfig(bloco) {
             `;
             break;
         case 'html_custom':
-            html = `${textareaField('Código HTML', 'html', p.html)}`;
+            html = `${textareaField('Codigo HTML', 'html', p.html)}`;
             break;
     }
 
-    // Botão voltar para config global
-    html += `<div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border);"><button type="button" onclick="deselectBlock()" style="font-size:12px; color:var(--text-muted); background:none; border:none; cursor:pointer;"><i class="fas fa-arrow-left"></i> Voltar às configurações globais</button></div>`;
+    html += `<div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--color-border);"><button type="button" onclick="deselectBlock()" style="font-size:12px; color:var(--color-text-muted); background:none; border:none; cursor:pointer;"><i class="bi bi-arrow-left"></i> Voltar as configuracoes globais</button></div>`;
 
     container.innerHTML = html;
 
-    // Bind onchange para todos os campos
     container.querySelectorAll('input, select, textarea').forEach(el => {
         el.addEventListener('change', () => updateBlockProp(bloco.id, el.dataset.prop, getFieldValue(el)));
         el.addEventListener('input', () => {
@@ -604,8 +825,6 @@ function deselectBlock() {
 function updateBlockProp(blockId, prop, value) {
     const bloco = blocos.find(b => b.id === blockId);
     if (!bloco) return;
-
-    // Tratar campos especiais
     if (prop === 'beneficios' || prop === 'itens') {
         bloco.props[prop] = value.split('\n').filter(l => l.trim());
     } else {
@@ -628,15 +847,10 @@ function updateGlobal() {
         fonte_padrao: document.getElementById('cfgFonte').value,
     };
     document.getElementById('templateNome').textContent = document.getElementById('cfgNome').value;
-
-    // Atualizar largura do canvas
     const canvas = document.getElementById('emailCanvas');
     canvas.style.width = configGlobal.largura + 'px';
 }
 
-// ============================================================================
-// FIELD HELPERS
-// ============================================================================
 function field(label, type, prop, value) {
     const v = value !== undefined && value !== null ? value : '';
     return `<div class="config-group"><label>${label}</label><input type="${type}" data-prop="${prop}" value="${type==='color'? v : escapeAttr(String(v))}"></div>`;
@@ -658,12 +872,9 @@ function checkboxField(label, prop, value) {
 function escapeAttr(s) { return s.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-// ============================================================================
-// VARIÁVEIS
-// ============================================================================
 function copiarVariavel(v) {
     navigator.clipboard.writeText(v).then(() => {
-        showToast('Variável copiada: ' + v);
+        toast('Copiado', 'Variavel copiada: ' + v, 'success');
     });
 }
 
@@ -676,14 +887,13 @@ function insertVarAtCursor() {
     ];
     let menu = '<div style="padding:4px 0;">';
     vars.forEach(g => {
-        menu += `<div style="font-size:10px; font-weight:700; color:var(--text-muted); padding:6px 12px;">${g.g}</div>`;
+        menu += `<div style="font-size:10px; font-weight:700; color:var(--color-text-muted); padding:6px 12px;">${g.g}</div>`;
         g.items.forEach(([v,l]) => {
-            menu += `<div style="padding:4px 12px; cursor:pointer; font-size:12px;" onmouseover="this.style.background='var(--bg-subtle)'" onmouseout="this.style.background=''" onclick="doInsertVar('${v}')">${l} <code style="color:var(--primary); font-size:10px;">${v}</code></div>`;
+            menu += `<div style="padding:4px 12px; cursor:pointer; font-size:12px;" onmouseover="this.style.background='var(--color-surface)'" onmouseout="this.style.background=''" onclick="doInsertVar('${v}')">${l} <code style="color:var(--color-primary); font-size:10px;">${v}</code></div>`;
         });
     });
     menu += '</div>';
 
-    // Remover dropdown existente
     document.querySelectorAll('.var-dropdown').forEach(d => d.remove());
 
     const dd = document.createElement('div');
@@ -694,7 +904,6 @@ function insertVarAtCursor() {
     dd.style.right = '320px';
     document.body.appendChild(dd);
 
-    // Fechar ao clicar fora
     setTimeout(() => {
         document.addEventListener('click', function handler(e) {
             if (!dd.contains(e.target)) { dd.remove(); document.removeEventListener('click', handler); }
@@ -714,18 +923,12 @@ function doInsertVar(v) {
     document.querySelectorAll('.var-dropdown').forEach(d => d.remove());
 }
 
-// ============================================================================
-// PREVIEW
-// ============================================================================
 function setPreviewMode(mode, btn) {
     const canvas = document.getElementById('emailCanvas');
     document.querySelectorAll('.preview-toggle button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    if (mode === 'mobile') {
-        canvas.classList.add('mobile-preview');
-    } else {
-        canvas.classList.remove('mobile-preview');
-    }
+    if (mode === 'mobile') canvas.classList.add('mobile-preview');
+    else canvas.classList.remove('mobile-preview');
 }
 
 function previewEmail() {
@@ -741,12 +944,9 @@ function previewEmail() {
         win.document.write(data.html);
         win.document.close();
     })
-    .catch(err => showToast('Erro ao gerar preview', 'error'));
+    .catch(() => toast('Erro', 'Erro ao gerar preview', 'danger'));
 }
 
-// ============================================================================
-// SALVAR
-// ============================================================================
 function salvarTemplate() {
     const csrfToken = getCookie('csrftoken');
     const payload = {
@@ -764,48 +964,24 @@ function salvarTemplate() {
     })
     .then(r => r.json())
     .then(data => {
-        if (data.ok) {
-            showToast('Template salvo com sucesso!');
-            // Atualizar badge de status
-            const badge = document.getElementById('statusBadge');
-            const st = document.getElementById('cfgStatus').value;
-            badge.textContent = st.charAt(0).toUpperCase() + st.slice(1);
-            badge.className = 'badge badge-' + (st==='ativo'?'success':st==='rascunho'?'warning':'default');
-        } else {
-            showToast(data.error || 'Erro ao salvar', 'error');
-        }
+        if (data.ok) toast('Salvo', 'Template salvo com sucesso', 'success');
+        else toast('Erro', data.error || 'Erro ao salvar', 'danger');
     })
-    .catch(() => showToast('Erro de conexão', 'error'));
+    .catch(() => toast('Erro', 'Erro de conexao', 'danger'));
 }
 
-// ============================================================================
-// UTILS
-// ============================================================================
 function getCookie(name) {
     const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
     return v ? v.pop() : '';
 }
 
-function showToast(msg, type) {
-    const toast = document.createElement('div');
-    toast.style.cssText = `position:fixed; bottom:24px; right:24px; padding:12px 20px; border-radius:8px; font-size:13px; font-weight:600; color:#fff; z-index:9999; animation:fadeIn .3s; background:${type==='error'?'var(--danger)':'var(--success)'};`;
-    toast.textContent = msg;
-    document.body.appendChild(toast);
-    setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(() => toast.remove(), 300); }, 2500);
-}
-
-// Click fora de um bloco deseleciona
 document.getElementById('emailCanvas').addEventListener('click', function(e) {
     if (e.target === this || e.target === document.getElementById('dropZone')) {
         deselectBlock();
     }
 });
 
-// ============================================================================
-// INIT
-// ============================================================================
 renderCanvas();
 if (!blocos.length) showGlobalConfig();
 </script>
-
 {% endblock %}

@@ -1,183 +1,194 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Emails - Marketing{% endblock %}
+{% block title %}Templates de email — Hubtrix{% endblock %}
 
 {% block content %}
-
-<!-- Header -->
-<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; background:var(--bg-white); border:1px solid var(--border); border-radius:12px; padding:14px 20px; margin-bottom:20px;">
-    <h1 class="page-title" style="margin:0;"><i class="fas fa-envelope" style="color:var(--primary);margin-right:8px;"></i> Templates de Email</h1>
-    <button onclick="abrirModalCriar()" class="btn-primary" style="display:flex; align-items:center; gap:8px;">
-        <i class="fas fa-plus"></i> Novo Email
-    </button>
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Templates de email</h1>
+      <p class="page-subtitle">Crie e gerencie templates de email pra suas campanhas.</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary btn-sm" onclick="abrirModalCriar()"><i class="bi bi-plus-lg"></i> Novo email</button>
+    </div>
+  </div>
 </div>
 
-<!-- KPIs -->
-<div class="stats-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:24px;">
-    <div class="stat-card">
-        <div class="stat-label">TOTAL DE TEMPLATES</div>
-        <div class="stat-value">{{ total }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">ATIVOS</div>
-        <div class="stat-value" style="color:var(--success);">{{ ativos }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">RASCUNHOS</div>
-        <div class="stat-value" style="color:var(--warning);">{{ rascunhos }}</div>
-    </div>
+<div class="stats-grid stats-grid-3">
+  {% include "components/stat_card.html" with label="Total de templates" value=total icon="bi-envelope" %}
+  {% include "components/stat_card.html" with label="Ativos" value=ativos icon="bi-check-circle" variant="success" %}
+  {% include "components/stat_card.html" with label="Rascunhos" value=rascunhos icon="bi-file-earmark" variant="warning" %}
 </div>
 
-<!-- Filtros -->
-<div class="card" style="padding:12px 18px; margin-bottom:16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-    <div style="display:flex; align-items:center; gap:8px;">
-        <a href="{% url 'marketing_emails:lista' %}" class="tab-btn {% if not filtro_status %}active{% endif %}">Todos</a>
-        <a href="?status=ativo" class="tab-btn {% if filtro_status == 'ativo' %}active{% endif %}">Ativos</a>
-        <a href="?status=rascunho" class="tab-btn {% if filtro_status == 'rascunho' %}active{% endif %}">Rascunhos</a>
-        <a href="?status=arquivado" class="tab-btn {% if filtro_status == 'arquivado' %}active{% endif %}">Arquivados</a>
-    </div>
-    <div style="flex:1;"></div>
-    <div style="position:relative;">
-        <i class="fas fa-search" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:12px;"></i>
-        <input type="text" id="buscaEmail" placeholder="Buscar template..." style="padding:7px 12px 7px 30px; border:1px solid var(--border); border-radius:8px; font-size:13px; width:220px;" oninput="buscarTemplate(this.value)">
-    </div>
-</div>
+{% include "components/list_filters.html" with tabs=status_tabs search_placeholder="Buscar template..." search_id="buscaEmail" search_oninput="buscarTemplate(this.value)" %}
 
-<!-- Grid de Templates -->
-<div class="templates-grid" id="templatesGrid">
-    {% for t in templates %}
-    <div class="template-card" data-nome="{{ t.nome|lower }}">
-        <div class="template-card-preview">
-            {% if t.thumbnail %}
-            <img src="{{ t.thumbnail.url }}" alt="{{ t.nome }}">
+<div data-view-scope>
+  {% if templates %}
+    <div style="display: flex; justify-content: flex-end; margin-bottom: var(--sp-3);">
+      {% include "components/view_toggle.html" with storage_key="emails-view" %}
+    </div>
+
+    <div class="entity-grid view-cards" id="templatesGrid">
+      {% for t in templates %}
+        {% url 'marketing_emails:editor' t.pk as editor_url %}
+        {% with subtitle_text=t.assunto|default:"Sem assunto"|truncatechars:60 footer_meta_text=t.atualizado_em|timesince|add:" atras" del_call="excluirTemplate("|add:t.pk|stringformat:"s"|add:", '"|add:t.nome|escapejs|add:"')" %}
+          <div data-nome="{{ t.nome|lower }}">
+            {% if t.status == 'ativo' %}
+              {% include "components/entity_card.html" with icon="bi-envelope" icon_variant="success" title=t.nome title_url=editor_url subtitle=subtitle_text tag_variant="success" tag_label="Ativo" footer_meta=footer_meta_text primary_action_url=editor_url primary_action_label="Editar" primary_action_icon="bi-pencil" secondary_action_onclick=del_call secondary_action_icon="bi-trash" secondary_action_title="Excluir" secondary_action_danger=True %}
+            {% elif t.status == 'rascunho' %}
+              {% include "components/entity_card.html" with icon="bi-envelope" icon_variant="warning" title=t.nome title_url=editor_url subtitle=subtitle_text tag_variant="warning" tag_label="Rascunho" footer_meta=footer_meta_text primary_action_url=editor_url primary_action_label="Editar" primary_action_icon="bi-pencil" secondary_action_onclick=del_call secondary_action_icon="bi-trash" secondary_action_title="Excluir" secondary_action_danger=True %}
             {% else %}
-            <div class="template-card-placeholder">
-                <i class="fas fa-envelope" style="font-size:2rem; color:var(--border);"></i>
-                <span style="font-size:11px; color:var(--text-muted); margin-top:8px;">{{ t.total_blocos }} bloco{{ t.total_blocos|pluralize:"s" }}</span>
-            </div>
+              {% include "components/entity_card.html" with icon="bi-envelope" icon_variant="primary" title=t.nome title_url=editor_url subtitle=subtitle_text tag_variant="neutral" tag_label="Arquivado" footer_meta=footer_meta_text primary_action_url=editor_url primary_action_label="Editar" primary_action_icon="bi-pencil" secondary_action_onclick=del_call secondary_action_icon="bi-trash" secondary_action_title="Excluir" secondary_action_danger=True %}
             {% endif %}
-        </div>
-        <div class="template-card-body">
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                <a href="{% url 'marketing_emails:editor' t.pk %}" style="font-size:14px; font-weight:700; color:var(--text-main); text-decoration:none; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ t.nome }}</a>
-                {% if t.status == 'ativo' %}
-                <span class="badge badge-success" style="font-size:10px;">Ativo</span>
-                {% elif t.status == 'rascunho' %}
-                <span class="badge badge-warning" style="font-size:10px;">Rascunho</span>
-                {% else %}
-                <span class="badge" style="font-size:10px; background:var(--bg-subtle); color:var(--text-muted);">Arquivado</span>
-                {% endif %}
-            </div>
-            <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">
-                {% if t.assunto %}{{ t.assunto|truncatechars:60 }}{% else %}<em>Sem assunto</em>{% endif %}
-            </div>
-            <div style="display:flex; align-items:center; justify-content:space-between; font-size:11px; color:var(--text-muted);">
-                <span>{{ t.atualizado_em|timesince }} atrás</span>
-                <div style="display:flex; gap:4px;">
-                    <a href="{% url 'marketing_emails:editor' t.pk %}" class="btn-icon" style="color:var(--primary); font-size:12px; padding:4px 6px;" title="Editar"><i class="fas fa-pencil-alt"></i></a>
-                    <a href="{% url 'marketing_emails:preview' t.pk %}" class="btn-icon" style="color:var(--text-muted); font-size:12px; padding:4px 6px;" title="Preview" target="_blank"><i class="fas fa-eye"></i></a>
-                    <button onclick="duplicarTemplate({{ t.pk }})" class="btn-icon" style="color:var(--text-muted); font-size:12px; padding:4px 6px; border:none; background:none; cursor:pointer;" title="Duplicar"><i class="fas fa-copy"></i></button>
-                    <button onclick="excluirTemplate({{ t.pk }}, '{{ t.nome|escapejs }}')" class="btn-icon" style="color:var(--danger); font-size:12px; padding:4px 6px; border:none; background:none; cursor:pointer;" title="Excluir"><i class="fas fa-trash"></i></button>
-                </div>
-            </div>
-        </div>
+          </div>
+        {% endwith %}
+      {% endfor %}
     </div>
-    {% empty %}
-    <div style="grid-column:1/-1; padding:48px; text-align:center; color:var(--text-muted);">
-        <i class="fas fa-envelope-open" style="font-size:2.5rem; color:var(--border); margin-bottom:12px; display:block;"></i>
-        <p style="font-size:14px; font-weight:600; margin-bottom:6px;">Nenhum template criado</p>
-        <p style="font-size:12px;">Crie seu primeiro email com o editor visual.</p>
+
+    <div class="entity-list view-list" style="display: none;">
+      {% for t in templates %}
+        {% url 'marketing_emails:editor' t.pk as editor_url %}
+        {% with subtitle_text=t.assunto|default:"Sem assunto"|truncatechars:60 footer_meta_text=t.atualizado_em|timesince|add:" atras" del_call="excluirTemplate("|add:t.pk|stringformat:"s"|add:", '"|add:t.nome|escapejs|add:"')" %}
+          {% if t.status == 'ativo' %}
+            {% include "components/entity_table.html" with icon="bi-envelope" icon_variant="success" title=t.nome title_url=editor_url subtitle=subtitle_text tag_variant="success" tag_label="Ativo" footer_meta=footer_meta_text primary_action_url=editor_url primary_action_label="Editar" primary_action_icon="bi-pencil" secondary_action_onclick=del_call secondary_action_icon="bi-trash" secondary_action_title="Excluir" secondary_action_danger=True %}
+          {% elif t.status == 'rascunho' %}
+            {% include "components/entity_table.html" with icon="bi-envelope" icon_variant="warning" title=t.nome title_url=editor_url subtitle=subtitle_text tag_variant="warning" tag_label="Rascunho" footer_meta=footer_meta_text primary_action_url=editor_url primary_action_label="Editar" primary_action_icon="bi-pencil" secondary_action_onclick=del_call secondary_action_icon="bi-trash" secondary_action_title="Excluir" secondary_action_danger=True %}
+          {% else %}
+            {% include "components/entity_table.html" with icon="bi-envelope" icon_variant="primary" title=t.nome title_url=editor_url subtitle=subtitle_text tag_variant="neutral" tag_label="Arquivado" footer_meta=footer_meta_text primary_action_url=editor_url primary_action_label="Editar" primary_action_icon="bi-pencil" secondary_action_onclick=del_call secondary_action_icon="bi-trash" secondary_action_title="Excluir" secondary_action_danger=True %}
+          {% endif %}
+        {% endwith %}
+      {% endfor %}
     </div>
-    {% endfor %}
+
+    {% include "components/pagination.html" with page_obj=page_obj query=query %}
+  {% else %}
+    <div class="template-empty">
+      <i class="bi bi-envelope-open"></i>
+      <p class="template-empty-title">Nenhum template criado</p>
+      <p class="template-empty-sub">Crie seu primeiro email com o editor visual.</p>
+      <button class="btn btn-primary btn-sm" onclick="abrirModalCriar()"><i class="bi bi-plus-lg"></i> Novo template</button>
+    </div>
+  {% endif %}
 </div>
 
-<!-- Modal Criar -->
-<div class="modal-overlay" id="modalCriar" style="display:none;" onclick="if(event.target===this)fecharModal()">
-    <div class="modal-content" style="max-width:440px;">
-        <div class="modal-header">
-            <h3 style="margin:0; font-size:16px;">Novo Template de Email</h3>
-            <button onclick="fecharModal()" style="background:none; border:none; cursor:pointer; font-size:18px; color:var(--text-muted);">&times;</button>
-        </div>
-        <form method="post" action="{% url 'marketing_emails:criar' %}">
-            {% csrf_token %}
-            <div style="padding:20px;">
-                <div class="config-group">
-                    <label>Nome do template</label>
-                    <input type="text" name="nome" placeholder="Ex: Boas-vindas novo lead" required style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px;">
-                </div>
-                <div class="config-group">
-                    <label>Categoria</label>
-                    <select name="categoria" style="width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px;">
-                        <option value="">Sem categoria</option>
-                        {% for cat in categorias %}
-                        <option value="{{ cat.pk }}">{{ cat.nome }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            <div style="padding:12px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px;">
-                <button type="button" onclick="fecharModal()" style="padding:8px 16px; border:1px solid var(--border); border-radius:8px; background:var(--bg-white); font-size:13px; cursor:pointer;">Cancelar</button>
-                <button type="submit" class="btn-primary" style="padding:8px 20px; font-size:13px;">Criar e Editar</button>
-            </div>
-        </form>
+{# Modal criar #}
+<div class="modal-overlay" id="modalCriar" style="display: none;" onclick="if(event.target===this)fecharModal()">
+  <div class="modal-content" style="max-width: 440px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Novo template de email</h3>
+      <button class="modal-close" onclick="fecharModal()"><i class="bi bi-x-lg"></i></button>
     </div>
+    <form method="post" action="{% url 'marketing_emails:criar' %}">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div class="field">
+          <label class="field-label" for="emailNome">Nome do template</label>
+          <div class="field-input-wrap">
+            <input id="emailNome" type="text" name="nome" class="field-input" placeholder="Ex: Boas-vindas novo lead" required>
+          </div>
+        </div>
+        <div class="field" style="margin-top: var(--sp-3);">
+          <label class="field-label" for="emailCategoria">Categoria</label>
+          <div class="field-input-wrap">
+            <select id="emailCategoria" name="categoria" class="field-input">
+              <option value="">Sem categoria</option>
+              {% for cat in categorias %}
+                <option value="{{ cat.pk }}">{{ cat.nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary btn-sm">Criar e editar</button>
+      </div>
+    </form>
+  </div>
 </div>
+{% endblock %}
 
+{% block extra_css %}
 <style>
-.templates-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px; }
-.template-card { background:var(--bg-white); border:1px solid var(--border); border-radius:10px; overflow:hidden; transition:all .2s; }
-.template-card:hover { border-color:var(--primary); box-shadow:0 2px 8px rgba(59,130,246,0.1); }
-.template-card-preview { height:160px; background:var(--bg-subtle); display:flex; align-items:center; justify-content:center; overflow:hidden; }
-.template-card-preview img { width:100%; height:100%; object-fit:cover; }
-.template-card-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; }
-.template-card-body { padding:14px 16px; }
+  .entity-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--sp-4);
+  }
 
-.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; display:flex; align-items:center; justify-content:center; }
-.modal-content { background:var(--bg-white); border-radius:12px; width:100%; box-shadow:0 8px 30px rgba(0,0,0,0.2); }
-.modal-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border); }
+  .template-empty {
+    grid-column: 1 / -1;
+    padding: var(--sp-10) var(--sp-5);
+    text-align: center;
+    color: var(--color-text-muted);
+    background: var(--color-card);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+  }
+  .template-empty i {
+    font-size: 2.5rem;
+    color: var(--color-border);
+    display: block;
+    margin-bottom: var(--sp-3);
+  }
+  .template-empty-title {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text);
+    margin: 0 0 4px;
+  }
+  .template-empty-sub {
+    font-size: var(--fs-xs);
+    margin: 0 0 var(--sp-3);
+  }
 
-.tab-btn { padding:7px 14px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; border:none; background:var(--bg-white); color:var(--text-muted); transition:all .2s; text-decoration:none; display:inline-block; }
-.tab-btn.active { background:var(--primary); color:#fff; }
-.tab-btn:hover:not(.active) { background:var(--primary-light); color:var(--primary); }
-
-.config-group { margin-bottom:14px; }
-.config-group label { display:block; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; letter-spacing:.03em; }
+  @media (max-width: 640px) {
+    .email-search { max-width: 100%; width: 100%; }
+  }
 </style>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-function abrirModalCriar() { document.getElementById('modalCriar').style.display = 'flex'; }
-function fecharModal() { document.getElementById('modalCriar').style.display = 'none'; }
+  function abrirModalCriar() { document.getElementById('modalCriar').style.display = 'flex'; }
+  function fecharModal() { document.getElementById('modalCriar').style.display = 'none'; }
 
-function buscarTemplate(q) {
+  function buscarTemplate(q) {
     q = q.toLowerCase();
     document.querySelectorAll('.template-card').forEach(card => {
-        card.style.display = card.dataset.nome.includes(q) ? '' : 'none';
+      card.style.display = card.dataset.nome.includes(q) ? '' : 'none';
     });
-}
+  }
 
-function getCookie(name) {
+  function getCookie(name) {
     const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
     return v ? v.pop() : '';
-}
+  }
 
-function duplicarTemplate(pk) {
+  function duplicarTemplate(pk) {
     fetch(`/marketing/emails/${pk}/duplicar/`, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
     })
     .then(r => r.json())
-    .then(data => { if (data.ok) location.reload(); });
-}
+    .then(data => {
+      if (data.ok) { toast('Duplicado', 'Template duplicado', 'success'); setTimeout(() => location.reload(), 500); }
+      else toast('Erro', data.erro || 'Erro ao duplicar', 'danger');
+    });
+  }
 
-function excluirTemplate(pk, nome) {
+  function excluirTemplate(pk, nome) {
     if (!confirm(`Excluir o template "${nome}"?`)) return;
     fetch(`/marketing/emails/${pk}/excluir/`, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
     })
     .then(r => r.json())
-    .then(data => { if (data.ok) location.reload(); });
-}
+    .then(data => {
+      if (data.ok) { toast('Excluido', `${nome} removido`, 'success'); setTimeout(() => location.reload(), 500); }
+      else toast('Erro', data.erro || 'Erro ao excluir', 'danger');
+    });
+  }
 </script>
-
 {% endblock %}

@@ -1,31 +1,132 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Vendas - Clientes Hubsoft - Megalink{% endblock %}
+{% block title %}Vendas — Hubtrix{% endblock %}
 
-{% block custom_css %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Vendas</h1>
+      <p class="page-subtitle">Clientes ativos + servicos + integracao Hubsoft.</p>
+    </div>
+  </div>
+</div>
+
+{% include "components/list_filters.html" with fields=filter_fields search_placeholder="Buscar por nome, CPF, telefone ou login..." search_name="search" search_id="searchInput" collapsed=True %}
+
+<div class="stats-grid stats-grid-4" style="margin-bottom: var(--sp-4);">
+  {% include "components/stat_card.html" with label="Total de clientes" value="0" id="statTotal" icon="bi-people" %}
+  {% include "components/stat_card.html" with label="Clientes ativos" value="0" id="statAtivos" icon="bi-check-circle" icon_variant="success" %}
+  {% include "components/stat_card.html" with label="Total servicos" value="0" id="statServicos" icon="bi-wifi" icon_variant="info" %}
+  {% include "components/stat_card.html" with label="Com alteracoes" value="0" id="statAlteracoes" icon="bi-arrow-repeat" icon_variant="warning" %}
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-table"></i> Clientes &amp; Servicos</h3>
+    <span class="badge badge-primary badge-soft" id="contadorChip">0 cliente(s)</span>
+  </div>
+  <div class="table-wrap">
+    <table id="clientesTable" class="data-table">
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th>CPF/CNPJ</th>
+          <th>Contato</th>
+          <th>Servico / Plano</th>
+          <th>Status</th>
+          <th>Data</th>
+          <th>Documentacao</th>
+          <th style="text-align: center;">Acao</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="pagination" id="pagination"></div>
+</div>
+
+{# Modal detalhes do cliente #}
+<div id="modalDetalhe" class="modal-overlay" style="display: none;">
+  <div class="modal-content" style="max-width: 1100px; max-height: 92vh;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-person-circle" style="color: var(--color-primary);"></i> <span id="modalTitulo">Detalhes do cliente</span></h3>
+      <button class="modal-close" onclick="fecharModal()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body" id="modalBody" style="max-height: calc(92vh - 140px); overflow-y: auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="fecharModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+{# Modal documentos #}
+<div id="modalDocumentos" class="modal-overlay" style="display: none;">
+  <div class="modal-content" style="max-width: 1000px; max-height: 92vh;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-file-image" style="color: var(--color-primary);"></i> <span id="docModalTitulo">Documentos do lead</span></h3>
+      <button class="modal-close" onclick="fecharModalDoc()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body" id="docModalBody" style="max-height: calc(92vh - 140px); overflow-y: auto; min-height: 200px;">
+      <div style="text-align: center; padding: var(--sp-10); color: var(--color-text-muted);">
+        <i class="bi bi-arrow-clockwise" style="font-size: 2rem;"></i>
+        <div style="margin-top: var(--sp-2);">Carregando documentos...</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="fecharModalDoc()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+{# Modal conversa #}
+<div id="modalConversa" class="modal-overlay" style="display: none;">
+  <div class="modal-content" style="max-width: 1100px; max-height: 92vh;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-chat-dots" style="color: var(--color-info);"></i> <span id="conversaTitulo">Conversa do atendimento</span></h3>
+      <button class="modal-close" onclick="fecharModalConversa()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body" id="conversaBody" style="max-height: calc(92vh - 140px); overflow-y: auto;">
+      <div class="conversa-tabs" id="conversaTabs"></div>
+      <div id="conversaPanels"></div>
+    </div>
+    <div class="modal-footer">
+      <a id="conversaPdfLink" href="#" target="_blank" class="btn btn-primary btn-sm" style="display: none;"><i class="bi bi-file-earmark-pdf"></i> Abrir PDF</a>
+      <button class="btn btn-secondary btn-sm" onclick="fecharModalConversa()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+{# Lightbox #}
+<div id="lightboxOverlay" onclick="fecharLightbox()">
+  <button id="lightboxClose" onclick="fecharLightbox()"><i class="bi bi-x-lg"></i></button>
+  <img id="lightboxImg" src="" alt="Documento">
+</div>
+
+{# Obs modal (motivo rejeicao) #}
+<div id="obsModal">
+  <div class="obs-box">
+    <h4><i class="bi bi-chat-left-text" style="color: var(--color-danger);"></i> Motivo da rejeicao</h4>
+    <textarea id="obsTextarea" placeholder="Descreva o motivo (opcional)..."></textarea>
+    <div class="obs-actions">
+      <button class="btn btn-secondary btn-sm" id="obsCancelar">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="obsConfirmar" style="background: var(--color-danger); border-color: var(--color-danger);"><i class="bi bi-x-circle"></i> Confirmar rejeicao</button>
+    </div>
+  </div>
+</div>
+
+{# Loading overlay #}
+<div id="loadingOverlay" class="loading-overlay" style="display: none;">
+  <div class="loading-spinner"></div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
 <style>
-  .container { max-width: 100%; }
+  .table-wrap { overflow-x: auto; }
 
-  /* Stats — design system */
-  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 0; margin-bottom: 16px; }
-  .stat { background: var(--bg-white); border: 1px solid var(--border); border-radius: 10px; padding: 16px; display: flex; align-items: center; gap: 12px; }
-  .stat .icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; font-size: 14px; }
-  .stat h4 { color: var(--text-muted); font-weight: 700; font-size: 11px; margin: 0 0 2px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .stat .value { font-size: 24px; font-weight: 700; color: var(--text-main); }
-
-  /* Filter e pagination no dashboard.css global */
-
-  /* Tabela */
-  .table-wrap { overflow: auto; }
-  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  thead th { background: var(--border-light); color: var(--text-muted); padding: 10px 14px; text-align: left; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  tbody td { padding: 12px 14px; border-bottom: 1px solid var(--border-light); font-size: 13px; vertical-align: middle; color: var(--text-secondary); }
-  tbody tr { cursor: pointer; transition: background .15s; }
-  tbody tr:hover { background: var(--border-light); }
-  tbody tr:hover .row-action { background: var(--bg-white); color: var(--text-secondary); }
-  tbody tr:last-child td { border-bottom: none; }
-
-  /* Column widths (8 colunas: Cliente, CPF, Contato, Servico/Plano, Status, Data, Docs, Acao) */
+  /* Column widths (8 colunas) */
+  #clientesTable { table-layout: fixed; }
   #clientesTable th:nth-child(1), #clientesTable td:nth-child(1) { width: 16%; }
   #clientesTable th:nth-child(2), #clientesTable td:nth-child(2) { width: 11%; }
   #clientesTable th:nth-child(3), #clientesTable td:nth-child(3) { width: 15%; }
@@ -35,95 +136,241 @@
   #clientesTable th:nth-child(7), #clientesTable td:nth-child(7) { width: 14%; }
   #clientesTable th:nth-child(8), #clientesTable td:nth-child(8) { width: 10%; text-align: center; }
 
-  .chip { background: var(--primary-light); color: var(--primary-dark); border-radius: 6px; padding: 3px 10px; font-size: 12px; font-weight: 600; }
+  .cell-main {
+    font-weight: var(--fw-semibold);
+    color: var(--color-text);
+    font-size: var(--fs-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+  }
+  .cell-sub {
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+  }
 
-  /* Badge aliases (legacy compat — JS usa badge-green etc) */
-  .badge-green { background: var(--success-light); color: var(--success-dark); }
-  .badge-yellow { background: var(--warning-light); color: var(--warning-dark); }
-  .badge-red { background: var(--danger-light); color: var(--danger-dark); }
-  .badge-blue { background: var(--info-light); color: var(--info); }
-  .badge-gray { background: var(--border-light); color: var(--text-muted); }
+  .badge-green  { background: var(--color-success-soft); color: var(--color-success); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: var(--fw-semibold); }
+  .badge-yellow { background: var(--color-warning-soft); color: var(--color-warning); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: var(--fw-semibold); }
+  .badge-red    { background: var(--color-danger-soft); color: var(--color-danger); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: var(--fw-semibold); }
+  .badge-blue   { background: var(--color-info-soft); color: var(--color-info); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: var(--fw-semibold); }
+  .badge-gray, .badge-muted { background: var(--color-surface); color: var(--color-text-muted); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: var(--fw-semibold); }
 
-  .name-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .name-cell .name-text { min-width: 0; }
-  .name-cell .name-text .cell-main { font-weight: 600; color: var(--text-main); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-  .name-cell .name-text .cell-sub { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-
-  .servico-tag { display: inline-flex; align-items: center; gap: 4px; background: var(--success-light); border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--success-dark); }
-  .servico-tag.aguardando { background: var(--warning-light); border-color: #fde68a; color: var(--warning-dark); }
-  .servico-tag.cancelado { background: var(--danger-light); border-color: #fecaca; color: var(--danger-dark); }
+  .servico-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--color-success-soft);
+    border: 1px solid var(--color-success-soft);
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    color: var(--color-success);
+  }
+  .servico-tag.aguardando { background: var(--color-warning-soft); border-color: var(--color-warning-soft); color: var(--color-warning); }
+  .servico-tag.cancelado { background: var(--color-danger-soft); border-color: var(--color-danger-soft); color: var(--color-danger); }
   .servico-tag.suspenso { background: #fdf4ff; border-color: #e9d5ff; color: #7e22ce; }
 
+  .row-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition);
+  }
+  .row-action:hover { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+
   /* Paginacao */
-  .pagination { display: flex; gap: 4px; justify-content: center; padding: 12px 20px; border-top: 1px solid var(--border); }
-  .pagination button { padding: 6px 12px; border: 1px solid var(--border); background: var(--bg-white); border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; color: var(--text-secondary); transition: all .15s; }
-  .pagination button.active, .pagination button:hover { border-color: var(--primary); background: var(--primary); color: #fff; }
-  .pagination button:disabled { opacity: .4; cursor: not-allowed; }
+  .pagination {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    padding: var(--sp-3);
+    border-top: 1px solid var(--color-border);
+  }
+  .pagination button {
+    padding: 6px 12px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-weight: var(--fw-semibold);
+    font-size: var(--fs-sm);
+    color: var(--color-text);
+    transition: background var(--transition), color var(--transition), border-color var(--transition);
+  }
+  .pagination button.active,
+  .pagination button:hover { border-color: var(--color-primary); background: var(--color-primary); color: #fff; }
+  .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  /* Modal */
-  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.4); z-index: 1000; }
-  .modal-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-white); border-radius: 16px; width: 95vw; max-width: 1100px; max-height: 92vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
-  .modal-header-bar { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border); }
-  .modal-header-bar h3 { margin: 0; font-size: 16px; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
-  .modal-close { background: var(--border-light); border: none; width: 32px; height: 32px; border-radius: 8px; font-size: 18px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center; transition: all .15s; }
-  .modal-close:hover { background: var(--border); color: var(--text-main); }
-  .modal-scroll { overflow-y: auto; flex: 1; padding: 24px; }
-  .modal-footer-bar { display: flex; gap: 8px; justify-content: flex-end; padding: 12px 24px; border-top: 1px solid var(--border); background: var(--border-light); }
-
-  /* Seções do modal detalhe */
-  .detail-section { margin-bottom: 1.75rem; }
+  /* Detail sections no modal */
+  .detail-section { margin-bottom: var(--sp-5); }
   .detail-section:last-child { margin-bottom: 0; }
-  .section-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid var(--border-light); }
-  .section-title i { color: var(--primary); }
-  .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .75rem; }
-  .detail-item { background: var(--border-light); padding: 10px 12px; border-radius: 8px; border-left: 3px solid var(--primary); }
-  .detail-label { font-size: 11px; color: var(--text-light); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 2px; }
-  .detail-value { font-size: 14px; color: var(--text-main); font-weight: 600; word-break: break-word; }
-  .detail-value.destaque { color: var(--success); font-size: 16px; }
+  .section-title {
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: var(--sp-3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .section-title i { color: var(--color-primary); }
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--sp-2);
+  }
+  .detail-item {
+    background: var(--color-surface);
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    border-left: 3px solid var(--color-primary);
+  }
+  .detail-label {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    font-weight: var(--fw-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 2px;
+  }
+  .detail-value {
+    font-size: var(--fs-sm);
+    color: var(--color-text);
+    font-weight: var(--fw-semibold);
+    word-break: break-word;
+  }
 
-  /* Serviço card no modal */
-  .servico-card { background: #fff; border: 2px solid #e5e7eb; border-radius: 12px; padding: 1.25rem; margin-bottom: .75rem; transition: all .2s; }
-  .servico-card:hover { border-color: #667eea; box-shadow: 0 4px 12px rgba(102,126,234,.1); }
+  /* Servico card no modal */
+  .servico-card {
+    background: var(--color-bg);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-4);
+    margin-bottom: var(--sp-3);
+    transition: border-color var(--transition), box-shadow var(--transition);
+  }
+  .servico-card:hover { border-color: var(--color-primary); box-shadow: var(--shadow-sm); }
   .servico-card:last-child { margin-bottom: 0; }
-  .servico-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: .75rem; gap: 1rem; flex-wrap: wrap; }
-  .servico-nome { font-weight: 700; font-size: 1rem; color: #1F3D59; display: flex; align-items: center; gap: .5rem; }
-  .servico-valor { font-weight: 800; font-size: 1.15rem; color: #059669; white-space: nowrap; }
+  .servico-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--sp-3);
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+  }
+  .servico-nome { font-weight: var(--fw-bold); font-size: var(--fs-md); color: var(--color-text); display: flex; align-items: center; gap: var(--sp-2); }
+  .servico-valor { font-weight: var(--fw-bold); font-size: 1.1rem; color: var(--color-success); white-space: nowrap; }
 
-  /* Histórico alterações */
-  .alteracao-item { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: .75rem 1rem; margin-bottom: .5rem; }
+  /* Historico alteracoes */
+  .alteracao-item {
+    background: var(--color-warning-soft);
+    border: 1px solid var(--color-warning-soft);
+    border-radius: var(--radius);
+    padding: var(--sp-3);
+    margin-bottom: var(--sp-2);
+  }
   .alteracao-item:last-child { margin-bottom: 0; }
-  .alteracao-data { font-size: .7rem; color: #92400e; font-weight: 700; margin-bottom: .3rem; }
-  .alteracao-campo { font-size: .8rem; color: #374151; margin-bottom: .15rem; }
-  .alteracao-campo .label { color: #6b7280; }
-  .alteracao-de { color: #dc2626; text-decoration: line-through; font-weight: 500; }
-  .alteracao-para { color: #059669; font-weight: 600; }
+  .alteracao-data { font-size: 11px; color: var(--color-warning); font-weight: var(--fw-bold); margin-bottom: 4px; }
+  .alteracao-campo { font-size: var(--fs-xs); color: var(--color-text); margin-bottom: 2px; }
+  .alteracao-campo .label { color: var(--color-text-muted); }
+  .alteracao-de { color: var(--color-danger); text-decoration: line-through; font-weight: var(--fw-medium); }
+  .alteracao-para { color: var(--color-success); font-weight: var(--fw-semibold); }
 
-  /* Alerta */
-  .alerta-banner { background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px solid #f59e0b; border-radius: 10px; padding: .75rem 1rem; display: flex; align-items: center; gap: .5rem; margin-bottom: 1rem; color: #92400e; font-weight: 600; font-size: .85rem; }
+  /* Alerta banner */
+  .alerta-banner {
+    background: var(--color-warning-soft);
+    border: 2px solid var(--color-warning);
+    border-radius: var(--radius);
+    padding: var(--sp-3);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-4);
+    color: var(--color-warning);
+    font-weight: var(--fw-semibold);
+    font-size: var(--fs-sm);
+  }
 
-  /* ===== MODAL DOCUMENTOS ===== */
-  .doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+  /* Doc status pills na tabela */
+  .doc-status-wrap { display: flex; flex-direction: column; gap: 4px; min-width: 160px; }
+  .doc-pills { display: flex; gap: 4px; flex-wrap: wrap; }
+  .doc-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: var(--fw-bold);
+    white-space: nowrap;
+  }
+  .doc-pill-ok { background: var(--color-success-soft); color: var(--color-success); }
+  .doc-pill-rej { background: var(--color-danger-soft); color: var(--color-danger); }
+  .doc-pill-pend { background: var(--color-warning-soft); color: var(--color-warning); }
+  .doc-pill-none { background: var(--color-surface); color: var(--color-text-muted); }
+  .doc-pill-validado { background: var(--color-info-soft); color: var(--color-info); }
 
+  .doc-timer {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: var(--fw-bold);
+    color: var(--color-warning);
+    background: var(--color-warning-soft);
+    border: 1px solid var(--color-warning-soft);
+    border-radius: var(--radius-sm);
+    padding: 2px 8px;
+    margin-top: 2px;
+  }
+  .doc-timer i { font-size: 10px; }
+  .doc-timer.urgente {
+    color: var(--color-danger);
+    background: var(--color-danger-soft);
+    border-color: var(--color-danger-soft);
+    animation: pulse-urgente 1.2s infinite;
+  }
+  @keyframes pulse-urgente { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+  /* Doc cards (modal documentos) */
+  .doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--sp-3); }
   .doc-card {
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-lg);
     overflow: hidden;
-    background: #fff;
-    transition: all .2s;
+    background: var(--color-bg);
+    transition: box-shadow var(--transition);
     display: flex;
     flex-direction: column;
   }
-  .doc-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
-  .doc-card.valido   { border-color: #10b981; }
-  .doc-card.rejeitado { border-color: #ef4444; }
-
+  .doc-card:hover { box-shadow: var(--shadow-md); }
+  .doc-card.valido { border-color: var(--color-success); }
+  .doc-card.rejeitado { border-color: var(--color-danger); }
   .doc-card-img {
     width: 100%;
     aspect-ratio: 4/3;
     object-fit: cover;
     display: block;
     cursor: zoom-in;
-    background: #f3f4f6;
+    background: var(--color-surface);
   }
   .doc-card-img-placeholder {
     width: 100%;
@@ -131,1109 +378,965 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f3f4f6;
-    color: #9ca3af;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
     font-size: 2rem;
     cursor: pointer;
     text-decoration: none;
   }
-
-  .doc-card-body { padding: .65rem .75rem; flex: 1; }
-  .doc-card-desc { font-size: .78rem; font-weight: 600; color: #374151; margin-bottom: .35rem; word-break: break-word; }
-  .doc-card-date { font-size: .68rem; color: #9ca3af; margin-bottom: .5rem; }
+  .doc-card-body { padding: var(--sp-2) var(--sp-3); flex: 1; }
+  .doc-card-desc { font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--color-text); margin-bottom: 4px; word-break: break-word; }
+  .doc-card-date { font-size: 10px; color: var(--color-text-muted); margin-bottom: var(--sp-2); }
   .doc-card-status {
-    display: inline-flex; align-items: center; gap: .3rem;
-    padding: .2rem .6rem; border-radius: 20px;
-    font-size: .68rem; font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: var(--fw-bold);
   }
-  .doc-card-status.pendente   { background: #fef3c7; color: #92400e; }
-  .doc-card-status.valido     { background: #d1fae5; color: #065f46; }
-  .doc-card-status.rejeitado  { background: #fee2e2; color: #991b1b; }
-
-  .doc-card-obs { font-size: .7rem; color: #6b7280; margin-top: .3rem; font-style: italic; }
-
-  .doc-card-actions { display: flex; gap: .4rem; padding: .65rem .75rem; border-top: 1px solid #f3f4f6; }
-  .btn-aprovar  { flex: 1; background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; border-radius: 8px; padding: .4rem; font-size: .75rem; font-weight: 700; cursor: pointer; transition: all .2s; }
-  .btn-aprovar:hover  { background: #059669; color: #fff; }
-  .btn-rejeitar { flex: 1; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; border-radius: 8px; padding: .4rem; font-size: .75rem; font-weight: 700; cursor: pointer; transition: all .2s; }
-  .btn-rejeitar:hover { background: #ef4444; color: #fff; }
+  .doc-card-status.pendente { background: var(--color-warning-soft); color: var(--color-warning); }
+  .doc-card-status.valido { background: var(--color-success-soft); color: var(--color-success); }
+  .doc-card-status.rejeitado { background: var(--color-danger-soft); color: var(--color-danger); }
+  .doc-card-obs { font-size: 11px; color: var(--color-text-muted); margin-top: 4px; font-style: italic; }
+  .doc-card-actions {
+    display: flex;
+    gap: 4px;
+    padding: var(--sp-2) var(--sp-3);
+    border-top: 1px solid var(--color-border);
+  }
+  .btn-aprovar, .btn-rejeitar {
+    flex: 1;
+    border-radius: var(--radius-sm);
+    padding: 6px;
+    font-size: 11px;
+    font-weight: var(--fw-bold);
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition);
+  }
+  .btn-aprovar { background: var(--color-success-soft); color: var(--color-success); border: 1px solid var(--color-success-soft); }
+  .btn-aprovar:hover { background: var(--color-success); color: #fff; }
+  .btn-rejeitar { background: var(--color-danger-soft); color: var(--color-danger); border: 1px solid var(--color-danger-soft); }
+  .btn-rejeitar:hover { background: var(--color-danger); color: #fff; }
 
   .doc-resumo {
-    display: flex; gap: .75rem; flex-wrap: wrap;
-    padding: .75rem 1rem; background: #f9fafb;
-    border-radius: 10px; margin-bottom: 1rem;
-    border: 1px solid #e5e7eb;
+    display: flex;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+    padding: var(--sp-3);
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    margin-bottom: var(--sp-4);
+    border: 1px solid var(--color-border);
   }
-  .doc-resumo-item { display: flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 600; }
+  .doc-resumo-item { display: flex; align-items: center; gap: 4px; font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
 
-  /* Lightbox overlay */
+  /* Lightbox */
   #lightboxOverlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,.85); z-index: 2000;
-    align-items: center; justify-content: center;
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
   }
   #lightboxOverlay.active { display: flex; }
-  #lightboxOverlay img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+  #lightboxOverlay img { max-width: 90vw; max-height: 90vh; border-radius: var(--radius); }
   #lightboxClose {
-    position: absolute; top: 1rem; right: 1.5rem;
-    color: #fff; font-size: 2rem; cursor: pointer;
-    background: none; border: none; line-height: 1;
+    position: absolute;
+    top: var(--sp-3);
+    right: var(--sp-4);
+    color: #fff;
+    font-size: 1.8rem;
+    cursor: pointer;
+    background: none;
+    border: none;
+    line-height: 1;
   }
 
-  /* Obs modal */
+  /* Obs modal (motivo rejeicao) */
   #obsModal {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,.5); z-index: 2100;
-    align-items: center; justify-content: center;
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2100;
+    align-items: center;
+    justify-content: center;
   }
   #obsModal.active { display: flex; }
   #obsModal .obs-box {
-    background: #fff; border-radius: 14px; padding: 1.5rem;
-    width: 380px; max-width: 95vw;
-    box-shadow: 0 20px 40px rgba(0,0,0,.2);
+    background: var(--color-bg);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-5);
+    width: 380px;
+    max-width: 95vw;
+    box-shadow: var(--shadow-lg);
   }
-  #obsModal h4 { margin: 0 0 .75rem; font-size: 1rem; color: #1F3D59; }
-  #obsModal textarea { width: 100%; border: 2px solid #e0e0e0; border-radius: 8px; padding: .65rem; font-size: .88rem; resize: vertical; min-height: 80px; font-family: inherit; box-sizing: border-box; }
-  #obsModal textarea:focus { outline: none; border-color: #667eea; }
-  #obsModal .obs-actions { display: flex; gap: .5rem; margin-top: .75rem; justify-content: flex-end; }
-
-  .btn { padding: 9px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
-  .btn-primary { background: var(--primary); color: #fff; }
-  .btn-primary:hover { background: var(--primary-dark); }
-  .btn-secondary { background: var(--border-light); color: var(--text-secondary); }
-  .btn-secondary:hover { background: var(--border); }
+  #obsModal h4 {
+    margin: 0 0 var(--sp-3);
+    font-size: var(--fs-md);
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #obsModal textarea {
+    width: 100%;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: var(--sp-2);
+    font-size: var(--fs-sm);
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+    box-sizing: border-box;
+    color: var(--color-text);
+    background: var(--color-bg);
+  }
+  #obsModal textarea:focus { outline: none; border-color: var(--color-primary); }
+  #obsModal .obs-actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); justify-content: flex-end; }
 
   /* Loading */
-  .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,.8); display: flex; align-items: center; justify-content: center; z-index: 9999; }
-  .spinner { width: 40px; height: 40px; border: 4px solid var(--border-light); border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
-  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--color-border);
+    border-top: 4px solid var(--color-primary);
+    border-radius: 50%;
+    animation: vendas-spin 1s linear infinite;
+  }
+  @keyframes vendas-spin { to { transform: rotate(360deg); } }
 
-  /* Status de documentos na tabela */
-  .doc-status-wrap { display: flex; flex-direction: column; gap: .35rem; min-width: 160px; }
-  .doc-pills { display: flex; gap: .3rem; flex-wrap: wrap; }
-  .doc-pill { display: inline-flex; align-items: center; gap: .25rem; padding: .2rem .55rem; border-radius: 20px; font-size: .7rem; font-weight: 700; white-space: nowrap; }
-  .doc-pill-ok       { background: #d1fae5; color: #065f46; }
-  .doc-pill-rej      { background: #fee2e2; color: #991b1b; }
-  .doc-pill-pend     { background: #fef3c7; color: #92400e; }
-  .doc-pill-none     { background: #f3f4f6; color: #6b7280; }
-  .doc-pill-validado { background: #dbeafe; color: #1e40af; }
-
-  .doc-timer { display: inline-flex; align-items: center; gap: .3rem; font-size: .7rem; font-weight: 700; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: .2rem .55rem; margin-top: .15rem; }
-  .doc-timer i { font-size: .65rem; }
-  .doc-timer.urgente { color: #991b1b; background: #fef2f2; border-color: #fecaca; animation: pulse-urgente 1.2s infinite; }
-  @keyframes pulse-urgente { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
-
-  /* Botoes de acao na tabela */
-  .btn-acao-wrap { display: flex; flex-direction: column; gap: 4px; align-items: center; }
-  .btn-acao { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 8px; border: none; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s; white-space: nowrap; }
-  .btn-acao-docs { background: var(--primary); color: #fff; }
-  .btn-acao-docs:hover { background: var(--primary-dark); }
-  .btn-acao-conversa { background: var(--info); color: #fff; }
-  .btn-acao-conversa:hover { opacity: .85; }
-  .btn-acao-conversa.sem-conversa { background: var(--border-light); color: var(--text-light); cursor: default; }
-
-  /* Modal Conversa */
-  #modalConversa .modal-content { max-width: 1100px; }
-  .conversa-iframe { width: 100%; height: 65vh; border: none; border-radius: 8px; background: #fff; }
-  .conversa-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; }
-  .conversa-tab { padding: .45rem 1rem; border: 2px solid #e5e7eb; border-radius: 8px; background: #fff; font-size: .82rem; font-weight: 700; cursor: pointer; color: #6b7280; transition: all .2s; }
-  .conversa-tab.active { border-color: #0ea5e9; background: #e0f2fe; color: #0284c7; }
+  /* Conversa modal tabs */
+  .conversa-iframe { width: 100%; height: 65vh; border: none; border-radius: var(--radius); background: var(--color-bg); }
+  .conversa-tabs { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+  .conversa-tab {
+    padding: 6px 14px;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
+    cursor: pointer;
+    color: var(--color-text-muted);
+    transition: border-color var(--transition), background var(--transition), color var(--transition);
+  }
+  .conversa-tab.active { border-color: var(--color-info); background: var(--color-info-soft); color: var(--color-info); }
   .conversa-panel { display: none; }
   .conversa-panel.active { display: block; }
 
-  /* Responsive */
-  @media (max-width: 1024px) {
-    .stats-grid { grid-template-columns: repeat(2, 1fr); }
-    .detail-grid { grid-template-columns: repeat(2, 1fr); }
-  }
   @media (max-width: 768px) {
-    .stats-grid { grid-template-columns: 1fr; }
-    table { min-width: 820px; }
-    .modal-content { width: 100vw; max-height: 100vh; border-radius: 0; }
-    .detail-grid { grid-template-columns: 1fr; }
-    .filters-grid { grid-template-columns: 1fr; }
+    #clientesTable { min-width: 820px; }
   }
 </style>
 {% endblock %}
 
-{% block content %}
-<div>
-
-  <!-- Filtros -->
-  <div class="card" style="margin-bottom:16px;padding:16px 20px;">
-    <button class="filter-toggle" id="filterToggle" onclick="toggleFiltros()">
-      <i class="fas fa-filter"></i> Filtros
-      <i class="fas fa-chevron-right chevron" id="filtrosChevron"></i>
-    </button>
-    <div id="filtrosContent" class="filter-body">
-      <div class="filter-row">
-        <div class="form-group"><label class="form-label">Pesquisar</label><input type="text" id="searchInput" class="form-control" placeholder="Nome, CPF, telefone, login..."></div>
-        <div class="form-group"><label class="form-label">Status do Servico</label>
-          <select id="statusServicoFilter" class="form-control"><option value="">Todos</option></select>
-        </div>
-        <div class="form-group"><label class="form-label">Cliente Ativo</label>
-          <select id="ativoFilter" class="form-control"><option value="">Todos</option><option value="true">Ativo</option><option value="false">Inativo</option></select>
-        </div>
-        <div class="form-group"><label class="form-label">Documentacao</label>
-          <select id="docStatusFilter" class="form-control"><option value="">Todos</option><option value="pendente">Com pendentes</option><option value="validado">Totalmente validada</option><option value="rejeitado">Com rejeitados</option><option value="sem_docs">Sem documentos</option></select>
-        </div>
-        <div class="form-group"><button class="btn-primary" id="btnFiltrar" style="width:100%"><i class="fas fa-search"></i> Filtrar</button></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Stats -->
-  <div class="stats-grid" style="margin-bottom:16px;">
-    <div class="stat">
-      <div class="icon" style="background:var(--primary)"><i class="fas fa-users"></i></div>
-      <div>
-        <h4>Total Clientes</h4>
-        <div class="value" id="statTotal">0</div>
-      </div>
-    </div>
-    <div class="stat">
-      <div class="icon" style="background:var(--success)"><i class="fas fa-check-circle"></i></div>
-      <div>
-        <h4>Clientes Ativos</h4>
-        <div class="value" id="statAtivos">0</div>
-      </div>
-    </div>
-    <div class="stat">
-      <div class="icon" style="background:var(--info)"><i class="fas fa-wifi"></i></div>
-      <div>
-        <h4>Total Servicos</h4>
-        <div class="value" id="statServicos">0</div>
-      </div>
-    </div>
-    <div class="stat">
-      <div class="icon" style="background:var(--warning)"><i class="fas fa-sync-alt"></i></div>
-      <div>
-        <h4>Com Alteracoes</h4>
-        <div class="value" id="statAlteracoes">0</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Lista de Clientes -->
-  <div class="data-table-container">
-    <div class="table-header">
-      <span class="table-title"><i class="fas fa-table"></i> Clientes &amp; Servicos</span>
-      <span class="chip" id="contadorChip">0 cliente(s)</span>
-    </div>
-    <div class="table-wrap">
-      <table id="clientesTable">
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>CPF/CNPJ</th>
-            <th>Contato</th>
-            <th>Servico / Plano</th>
-            <th>Status</th>
-            <th>Data</th>
-            <th>Documentacao</th>
-            <th style="text-align:center;">Acao</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div class="pagination" id="pagination"></div>
-  </div>
-</div>
-
-<!-- Modal Detalhes do Cliente -->
-<div id="modalDetalhe" class="modal">
-  <div class="modal-content">
-    <div class="modal-header-bar">
-      <h3><i class="fas fa-user-circle"></i> <span id="modalTitulo">Detalhes do Cliente</span></h3>
-      <button class="modal-close" onclick="fecharModal()">&times;</button>
-    </div>
-    <div class="modal-scroll" id="modalBody">
-    </div>
-    <div class="modal-footer-bar">
-      <button class="btn btn-secondary" onclick="fecharModal()"><i class="fas fa-times"></i> Fechar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Loading -->
-<div id="loadingOverlay" class="loading-overlay" style="display:none;">
-  <div class="spinner"></div>
-</div>
-
-<!-- Modal Documentos / Validação -->
-<div id="modalDocumentos" class="modal">
-  <div class="modal-content" style="max-width:1000px;">
-    <div class="modal-header-bar">
-      <h3><i class="fas fa-file-image" style="color:#667eea;"></i> <span id="docModalTitulo">Documentos do Lead</span></h3>
-      <button class="modal-close" onclick="fecharModalDoc()">&times;</button>
-    </div>
-    <div class="modal-scroll" id="docModalBody" style="min-height:200px;">
-      <div style="text-align:center;padding:3rem;color:#9ca3af;">
-        <i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i>
-        <div style="margin-top:.75rem;">Carregando documentos...</div>
-      </div>
-    </div>
-    <div class="modal-footer-bar">
-      <button class="btn btn-secondary" onclick="fecharModalDoc()"><i class="fas fa-times"></i> Fechar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Conversa -->
-<div id="modalConversa" class="modal">
-  <div class="modal-content">
-    <div class="modal-header-bar">
-      <h3><i class="fas fa-comments" style="color:#0ea5e9;"></i> <span id="conversaTitulo">Conversa do Atendimento</span></h3>
-      <button class="modal-close" onclick="fecharModalConversa()">&times;</button>
-    </div>
-    <div class="modal-scroll" id="conversaBody" style="padding:1.25rem;">
-      <div class="conversa-tabs" id="conversaTabs"></div>
-      <div id="conversaPanels"></div>
-    </div>
-    <div class="modal-footer-bar">
-      <a id="conversaPdfLink" href="#" target="_blank" class="btn btn-primary" style="display:none;">
-        <i class="fas fa-file-pdf"></i> Abrir PDF
-      </a>
-      <button class="btn btn-secondary" onclick="fecharModalConversa()"><i class="fas fa-times"></i> Fechar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Lightbox -->
-<div id="lightboxOverlay" onclick="fecharLightbox()">
-  <button id="lightboxClose" onclick="fecharLightbox()">&times;</button>
-  <img id="lightboxImg" src="" alt="Documento">
-</div>
-
-<!-- Modal observação para rejeição -->
-<div id="obsModal">
-  <div class="obs-box">
-    <h4><i class="fas fa-comment-alt" style="color:#ef4444;"></i> Motivo da Rejeição</h4>
-    <textarea id="obsTextarea" placeholder="Descreva o motivo da rejeição (opcional)..."></textarea>
-    <div class="obs-actions">
-      <button class="btn btn-secondary" id="obsCancelar">Cancelar</button>
-      <button class="btn" style="background:#ef4444;color:#fff;" id="obsConfirmar">
-        <i class="fas fa-times-circle"></i> Confirmar Rejeição
-      </button>
-    </div>
-  </div>
-</div>
-
-{% endblock %}
-
 {% block extra_js %}
 <script>
-  const API_CLIENTES = '{% url "integracoes:api_clientes_hubsoft" %}';
-  const URL_LEADS = '{% url "comercial_leads:leads" %}';
-  let page = 1;
-  let search = '';
-  let filtros = { status_servico: '', ativo: '' };
+const API_CLIENTES = '{% url "integracoes:api_clientes_hubsoft" %}';
+const URL_LEADS = '{% url "comercial_leads:leads" %}';
+let page = 1;
+let search = '';
+let filtros = { status_servico: '', ativo: '' };
 
-  function toggleFiltros() {
-    document.getElementById('filtrosContent').classList.toggle('open');
-    document.getElementById('filterToggle').classList.toggle('open');
+function mostrarLoading(v) { document.getElementById('loadingOverlay').style.display = v ? 'flex' : 'none'; }
+
+function formatarCpfCnpj(v) {
+  if (!v) return '-';
+  v = v.replace(/\D/g, '');
+  if (v.length === 11) return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  if (v.length === 14) return v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+  return v;
+}
+
+function formatarTelefone(v) {
+  if (!v) return '-';
+  v = v.replace(/\D/g, '');
+  if (v.length === 11) return v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  if (v.length === 10) return v.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+  return v;
+}
+
+function formatarMoeda(v) {
+  if (!v && v !== 0) return 'R$ 0,00';
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+}
+
+function formatarData(d) {
+  if (!d) return '-';
+  try {
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return d;
+    return dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  } catch { return d; }
+}
+
+function formatarDataCurta(d) {
+  if (!d) return '-';
+  try {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      const [ano, mes, dia] = d.split('-');
+      return `${dia}/${mes}/${ano}`;
+    }
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return d;
+    return dt.toLocaleDateString('pt-BR');
+  } catch { return d; }
+}
+
+function getServicoClass(statusPrefixo) {
+  if (!statusPrefixo) return '';
+  const s = statusPrefixo.toLowerCase();
+  if (s.includes('cancel')) return 'cancelado';
+  if (s.includes('suspen')) return 'suspenso';
+  if (s.includes('aguard') || s.includes('pend')) return 'aguardando';
+  return '';
+}
+
+function getBadgeClass(statusPrefixo) {
+  if (!statusPrefixo) return 'badge-gray';
+  const s = statusPrefixo.toLowerCase();
+  if (s.includes('habilit') || s.includes('ativ')) return 'badge-green';
+  if (s.includes('aguard') || s.includes('pend')) return 'badge-yellow';
+  if (s.includes('cancel') || s.includes('bloq')) return 'badge-red';
+  if (s.includes('suspen')) return 'badge-blue';
+  return 'badge-gray';
+}
+
+async function carregarClientes() {
+  mostrarLoading(true);
+  try {
+    const params = new URLSearchParams({ page, search, ...filtros });
+    const resp = await fetch(`${API_CLIENTES}?${params}`);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+
+    window._ultimosClientes = data;
+    renderizarTabela(data.clientes || []);
+    renderPaginacao(data.page || 1, data.pages || 0);
+    atualizarStats(data.stats || {});
+    document.getElementById('contadorChip').textContent = `${data.total || 0} cliente(s)`;
+
+    popularFiltroStatus(data.stats?.status_servicos || {});
+  } catch (e) {
+    console.error('Erro:', e);
+    toast('Erro', 'Erro ao carregar clientes: ' + e.message, 'danger');
+  } finally {
+    mostrarLoading(false);
   }
+}
 
-  function mostrarLoading(v) { document.getElementById('loadingOverlay').style.display = v ? 'flex' : 'none'; }
+function popularFiltroStatus(statusMap) {
+  const sel = document.querySelector('[name="status_servico"]');
+  if (!sel) return;
+  const atual = sel.value;
+  if (sel.options.length > 1) return;
+  Object.entries(statusMap).forEach(([key, info]) => {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = `${info.label} (${info.count})`;
+    sel.appendChild(opt);
+  });
+  if (atual) sel.value = atual;
+}
 
-  function formatarCpfCnpj(v) {
-    if (!v) return '-';
-    v = v.replace(/\D/g, '');
-    if (v.length === 11) return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-    if (v.length === 14) return v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
-    return v;
-  }
-
-  function formatarTelefone(v) {
-    if (!v) return '-';
-    v = v.replace(/\D/g, '');
-    if (v.length === 11) return v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-    if (v.length === 10) return v.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-    return v;
-  }
-
-  function formatarMoeda(v) {
-    if (!v && v !== 0) return 'R$ 0,00';
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
-  }
-
-  function formatarData(d) {
-    if (!d) return '-';
-    try {
-      const dt = new Date(d);
-      if (isNaN(dt.getTime())) return d;
-      return dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    } catch { return d; }
-  }
-
-  function formatarDataCurta(d) {
-    if (!d) return '-';
-    try {
-      // Datas no formato YYYY-MM-DD são tratadas como UTC pelo Date(),
-      // causando deslocamento de fuso. Parseamos manualmente para evitar isso.
-      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
-        const [ano, mes, dia] = d.split('-');
-        return `${dia}/${mes}/${ano}`;
+function atualizarStats(s) {
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || 0; };
+  // stat_card usa .stat-card-value pro numero principal
+  const byLabel = (label, val) => {
+    document.querySelectorAll('.stat-card').forEach(card => {
+      const l = card.querySelector('.stat-card-label');
+      if (l && l.textContent.trim().toLowerCase().includes(label.toLowerCase())) {
+        const v = card.querySelector('.stat-card-value');
+        if (v) v.textContent = val || 0;
       }
-      const dt = new Date(d);
-      if (isNaN(dt.getTime())) return d;
-      return dt.toLocaleDateString('pt-BR');
-    } catch { return d; }
-  }
-
-  function getServicoClass(statusPrefixo) {
-    if (!statusPrefixo) return '';
-    const s = statusPrefixo.toLowerCase();
-    if (s.includes('cancel')) return 'cancelado';
-    if (s.includes('suspen')) return 'suspenso';
-    if (s.includes('aguard') || s.includes('pend')) return 'aguardando';
-    return '';
-  }
-
-  function getBadgeClass(statusPrefixo) {
-    if (!statusPrefixo) return 'badge-gray';
-    const s = statusPrefixo.toLowerCase();
-    if (s.includes('habilit') || s.includes('ativ')) return 'badge-green';
-    if (s.includes('aguard') || s.includes('pend')) return 'badge-yellow';
-    if (s.includes('cancel') || s.includes('bloq')) return 'badge-red';
-    if (s.includes('suspen')) return 'badge-blue';
-    return 'badge-gray';
-  }
-
-  async function carregarClientes() {
-    mostrarLoading(true);
-    try {
-      const params = new URLSearchParams({ page, search, ...filtros });
-      const resp = await fetch(`${API_CLIENTES}?${params}`);
-      const data = await resp.json();
-      if (data.error) throw new Error(data.error);
-
-      window._ultimosClientes = data;
-      renderizarTabela(data.clientes || []);
-      renderPaginacao(data.page || 1, data.pages || 0);
-      atualizarStats(data.stats || {});
-      document.getElementById('contadorChip').textContent = `${data.total || 0} cliente(s)`;
-
-      popularFiltroStatus(data.stats?.status_servicos || {});
-    } catch (e) {
-      console.error('Erro:', e);
-      alert('Erro ao carregar clientes: ' + e.message);
-    } finally {
-      mostrarLoading(false);
-    }
-  }
-
-  function popularFiltroStatus(statusMap) {
-    const sel = document.getElementById('statusServicoFilter');
-    const atual = sel.value;
-    if (sel.options.length > 1) return;
-    Object.entries(statusMap).forEach(([key, info]) => {
-      const opt = document.createElement('option');
-      opt.value = key;
-      opt.textContent = `${info.label} (${info.count})`;
-      sel.appendChild(opt);
     });
-    if (atual) sel.value = atual;
+  };
+  byLabel('Total de clientes', s.total_clientes);
+  byLabel('Clientes ativos', s.total_ativos);
+  byLabel('Total servicos', s.total_servicos);
+  byLabel('Com alteracoes', s.total_com_alteracao);
+}
+
+let _timersAtivos = [];
+
+function _renderDocStatus(lead, clienteId, nomeCliente) {
+  if (!lead) {
+    return `<div class="doc-pills"><span class="doc-pill doc-pill-none"><i class="bi bi-link-45deg"></i> Sem lead</span></div>`;
+  }
+  const docs = lead.docs || {};
+  const total = docs.total || 0;
+
+  if (total === 0) {
+    return `<div class="doc-pills"><span class="doc-pill doc-pill-none"><i class="bi bi-folder2-open"></i> Sem docs</span></div>`;
   }
 
-  function atualizarStats(s) {
-    document.getElementById('statTotal').textContent = s.total_clientes || 0;
-    document.getElementById('statAtivos').textContent = s.total_ativos || 0;
-    document.getElementById('statServicos').textContent = s.total_servicos || 0;
-    document.getElementById('statAlteracoes').textContent = s.total_com_alteracao || 0;
+  if (lead.documentacao_validada) {
+    return `<div class="doc-pills">
+      <span class="doc-pill doc-pill-validado"><i class="bi bi-shield-check"></i> Validada</span>
+      <span class="doc-pill doc-pill-ok"><i class="bi bi-check"></i> ${docs.aprovados}</span>
+    </div>`;
   }
 
-  // Guarda timers ativos para limpeza ao re-renderizar
-  let _timersAtivos = [];
+  let pills = '';
+  if (docs.aprovados > 0) pills += `<span class="doc-pill doc-pill-ok"><i class="bi bi-check-circle"></i> ${docs.aprovados} ok</span>`;
+  if (docs.rejeitados > 0) pills += `<span class="doc-pill doc-pill-rej"><i class="bi bi-x-circle"></i> ${docs.rejeitados} rej.</span>`;
+  if (docs.pendentes > 0) pills += `<span class="doc-pill doc-pill-pend"><i class="bi bi-clock"></i> ${docs.pendentes} pend.</span>`;
 
-  function _renderDocStatus(lead, clienteId, nomeCliente) {
-    if (!lead) {
-      return `<div class="doc-pills"><span class="doc-pill doc-pill-none"><i class="fas fa-unlink"></i> Sem lead</span></div>`;
-    }
-    const docs = lead.docs || {};
-    const total = docs.total || 0;
-
-    if (total === 0) {
-      return `<div class="doc-pills"><span class="doc-pill doc-pill-none"><i class="fas fa-folder-open"></i> Sem docs</span></div>`;
-    }
-
-    if (lead.documentacao_validada) {
-      return `<div class="doc-pills">
-        <span class="doc-pill doc-pill-validado"><i class="fas fa-shield-alt"></i> Validada</span>
-        <span class="doc-pill doc-pill-ok"><i class="fas fa-check"></i> ${docs.aprovados}</span>
-      </div>`;
-    }
-
-    let pills = '';
-    if (docs.aprovados > 0)  pills += `<span class="doc-pill doc-pill-ok"><i class="fas fa-check-circle"></i> ${docs.aprovados} ok</span>`;
-    if (docs.rejeitados > 0) pills += `<span class="doc-pill doc-pill-rej"><i class="fas fa-times-circle"></i> ${docs.rejeitados} rej.</span>`;
-    if (docs.pendentes > 0)  pills += `<span class="doc-pill doc-pill-pend"><i class="fas fa-clock"></i> ${docs.pendentes} pend.</span>`;
-
-    let timerHtml = '';
-    if (docs.pendentes > 0 && docs.data_pendente_mais_antiga) {
-      const uid = `timer-${clienteId}`;
-      timerHtml = `<div class="doc-timer" id="${uid}" data-desde="${docs.data_pendente_mais_antiga}">
-        <i class="fas fa-hourglass-half"></i> <span class="timer-val">...</span>
-      </div>`;
-    }
-
-    return `<div class="doc-status-wrap"><div class="doc-pills">${pills}</div>${timerHtml}</div>`;
+  let timerHtml = '';
+  if (docs.pendentes > 0 && docs.data_pendente_mais_antiga) {
+    const uid = `timer-${clienteId}`;
+    timerHtml = `<div class="doc-timer" id="${uid}" data-desde="${docs.data_pendente_mais_antiga}">
+      <i class="bi bi-hourglass-split"></i> <span class="timer-val">...</span>
+    </div>`;
   }
 
-  function _iniciarTimers() {
-    _timersAtivos.forEach(id => clearInterval(id));
-    _timersAtivos = [];
+  return `<div class="doc-status-wrap"><div class="doc-pills">${pills}</div>${timerHtml}</div>`;
+}
 
-    document.querySelectorAll('.doc-timer[data-desde]').forEach(el => {
-      const desde = new Date(el.getAttribute('data-desde'));
-      const span = el.querySelector('.timer-val');
+function _iniciarTimers() {
+  _timersAtivos.forEach(id => clearInterval(id));
+  _timersAtivos = [];
 
-      function atualizar() {
-        const diff = Math.floor((Date.now() - desde) / 1000);
-        const h = Math.floor(diff / 3600);
-        const m = Math.floor((diff % 3600) / 60);
-        const s = diff % 60;
-        const txt = h > 0
-          ? `${h}h ${String(m).padStart(2,'0')}m`
-          : `${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
-        if (span) span.textContent = txt;
-        // Urgente se > 2 horas
-        if (diff > 7200) el.classList.add('urgente');
-        else el.classList.remove('urgente');
-      }
+  document.querySelectorAll('.doc-timer[data-desde]').forEach(el => {
+    const desde = new Date(el.getAttribute('data-desde'));
+    const span = el.querySelector('.timer-val');
 
-      atualizar();
-      _timersAtivos.push(setInterval(atualizar, 1000));
-    });
+    function atualizar() {
+      const diff = Math.floor((Date.now() - desde) / 1000);
+      const h = Math.floor(diff / 3600);
+      const m = Math.floor((diff % 3600) / 60);
+      const s = diff % 60;
+      const txt = h > 0
+        ? `${h}h ${String(m).padStart(2, '0')}m`
+        : `${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+      if (span) span.textContent = txt;
+      if (diff > 7200) el.classList.add('urgente');
+      else el.classList.remove('urgente');
+    }
+
+    atualizar();
+    _timersAtivos.push(setInterval(atualizar, 1000));
+  });
+}
+
+function renderizarTabela(clientes) {
+  const tbody = document.querySelector('#clientesTable tbody');
+  tbody.innerHTML = '';
+  if (!clientes.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:var(--sp-10);color:var(--color-text-muted);"><i class="bi bi-inbox" style="font-size:1.5rem;display:block;margin-bottom:var(--sp-2);opacity:0.3;"></i>Nenhum cliente encontrado</td></tr>';
+    return;
   }
 
-  function renderizarTabela(clientes) {
-    const tbody = document.querySelector('#clientesTable tbody');
-    tbody.innerHTML = '';
-    if (!clientes.length) {
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2.5rem;color:#9ca3af;"><i class="fas fa-inbox" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>Nenhum cliente encontrado</td></tr>';
-      return;
-    }
+  const docFiltro = document.querySelector('[name="doc_status"]')?.value || '';
+  const clientesFiltrados = docFiltro ? clientes.filter(c => {
+    const docs = c.lead?.docs;
+    if (docFiltro === 'sem_docs') return !c.lead || !docs || docs.total === 0;
+    if (docFiltro === 'validado') return c.lead?.documentacao_validada;
+    if (docFiltro === 'pendente') return docs && docs.pendentes > 0;
+    if (docFiltro === 'rejeitado') return docs && docs.rejeitados > 0;
+    return true;
+  }) : clientes;
 
-    // Filtro local por status de documentação
-    const docFiltro = document.getElementById('docStatusFilter').value;
-    const clientesFiltrados = docFiltro ? clientes.filter(c => {
-      const docs = c.lead?.docs;
-      if (docFiltro === 'sem_docs') return !c.lead || !docs || docs.total === 0;
-      if (docFiltro === 'validado')  return c.lead?.documentacao_validada;
-      if (docFiltro === 'pendente')  return docs && docs.pendentes > 0;
-      if (docFiltro === 'rejeitado') return docs && docs.rejeitados > 0;
-      return true;
-    }) : clientes;
+  if (!clientesFiltrados.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:var(--sp-10);color:var(--color-text-muted);"><i class="bi bi-funnel" style="font-size:1.5rem;display:block;margin-bottom:var(--sp-2);opacity:0.3;"></i>Nenhum cliente para o filtro selecionado</td></tr>';
+    return;
+  }
 
-    if (!clientesFiltrados.length) {
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2.5rem;color:#9ca3af;"><i class="fas fa-filter" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>Nenhum cliente para o filtro selecionado</td></tr>';
-      return;
-    }
+  clientesFiltrados.forEach(c => {
+    const tr = document.createElement('tr');
+    tr.style.cursor = 'pointer';
+    tr.onclick = () => abrirDetalhe(c);
+    const servico = c.servicos && c.servicos.length > 0 ? c.servicos[0] : null;
+    const badgeClass = servico ? getBadgeClass(servico.status_prefixo) : 'badge-gray';
+    const nomeEsc = (c.nome_razaosocial || '').replace(/'/g, "\\'");
 
-    clientesFiltrados.forEach(c => {
-      const tr = document.createElement('tr');
-      tr.onclick = () => abrirDetalhe(c);
-      const iniciais = (c.nome_razaosocial || '?').split(' ').filter(Boolean).map(p => p[0]).slice(0, 2).join('').toUpperCase();
-      const servico = c.servicos && c.servicos.length > 0 ? c.servicos[0] : null;
-      const sClass = servico ? getServicoClass(servico.status_prefixo) : '';
-      const badgeClass = servico ? getBadgeClass(servico.status_prefixo) : 'badge-gray';
-      const nomeEsc = (c.nome_razaosocial || '').replace(/'/g, "\\'");
+    tr.innerHTML = `
+      <td>
+        <span class="cell-main" title="${c.nome_razaosocial}">${(c.nome_razaosocial || '').split(' ').slice(0, 2).join(' ')}</span>
+        <span class="cell-sub">Cod: ${c.codigo_cliente || '-'}</span>
+      </td>
+      <td style="font-size: var(--fs-xs);">${formatarCpfCnpj(c.cpf_cnpj)}</td>
+      <td>
+        <span class="cell-main">${formatarTelefone(c.telefone_primario)}</span>
+        <span class="cell-sub" title="${c.email_principal || ''}">${c.email_principal || '-'}</span>
+      </td>
+      <td>
+        ${servico
+          ? `<span class="cell-main" title="${servico.nome}">${servico.nome}</span>
+             <span class="cell-sub">${formatarMoeda(servico.valor)}${c.servicos.length > 1 ? ` · +${c.servicos.length - 1}` : ''}</span>`
+          : '<span class="cell-sub">Sem servico</span>'}
+      </td>
+      <td>
+        ${servico
+          ? `<span class="${badgeClass}">${servico.status}</span>`
+          : '<span class="badge-muted">-</span>'}
+      </td>
+      <td>
+        ${servico && servico.data_venda
+          ? `<span class="cell-main">${servico.data_venda}</span>
+             <span class="cell-sub">${c.data_cadastro_hubsoft ? new Date(c.data_cadastro_hubsoft).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}</span>`
+          : '<span class="cell-sub">-</span>'}
+      </td>
+      <td onclick="event.stopPropagation();">
+        ${_renderDocStatus(c.lead, c.id, nomeEsc)}
+      </td>
+      <td onclick="event.stopPropagation();">
+        <div style="display: flex; gap: 4px; justify-content: center;">
+          <button class="row-action" title="Documentos" onclick="abrirDocumentos(${c.id}, '${nomeEsc}')"><i class="bi bi-file-image"></i></button>
+          ${c.lead
+            ? `<button class="row-action" title="Conversa" onclick="abrirConversa(${c.lead.id}, '${nomeEsc}', '${(c.lead.url_pdf_conversa || '').replace(/'/g, "\\'")}', '${(c.lead.html_conversa_path || '').replace(/'/g, "\\'")}')"><i class="bi bi-chat-dots"></i></button>`
+            : `<button class="row-action" title="Sem lead" disabled style="opacity: 0.3; cursor: default;"><i class="bi bi-chat-dots"></i></button>`}
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
 
-      tr.innerHTML = `
-        <td>
-          <span class="cell-main truncate" title="${c.nome_razaosocial}">${(c.nome_razaosocial || '').split(' ').slice(0,2).join(' ')}</span>
-          <span class="cell-sub">Cod: ${c.codigo_cliente || '-'}</span>
-        </td>
-        <td style="font-size:12px;">${formatarCpfCnpj(c.cpf_cnpj)}</td>
-        <td>
-          <span class="cell-main truncate">${formatarTelefone(c.telefone_primario)}</span>
-          <span class="cell-sub truncate" title="${c.email_principal || ''}">${c.email_principal || '-'}</span>
-        </td>
-        <td>
-          ${servico
-            ? `<span class="cell-main truncate" title="${servico.nome}">${servico.nome}</span>
-               <span class="cell-sub">${formatarMoeda(servico.valor)}${c.servicos.length > 1 ? ` · +${c.servicos.length - 1}` : ''}</span>`
-            : '<span class="cell-sub">Sem servico</span>'
-          }
-        </td>
-        <td>
-          ${servico
-            ? `<span class="badge ${badgeClass}">${servico.status}</span>`
-            : '<span class="badge badge-muted">-</span>'
-          }
-        </td>
-        <td>
-          ${servico && servico.data_venda
-            ? `<span class="cell-main">${servico.data_venda}</span>
-               <span class="cell-sub">${c.data_cadastro_hubsoft ? new Date(c.data_cadastro_hubsoft).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : ''}</span>`
-            : '<span class="cell-sub">-</span>'
-          }
-        </td>
-        <td onclick="event.stopPropagation();">
-          ${_renderDocStatus(c.lead, c.id, nomeEsc)}
-        </td>
-        <td onclick="event.stopPropagation();">
-          <div style="display:flex;gap:4px;justify-content:center;flex-wrap:nowrap;">
-            <button class="row-action" title="Documentos" onclick="abrirDocumentos(${c.id}, '${nomeEsc}')"><i class="fas fa-file-image"></i></button>
-            ${c.lead
-              ? `<button class="row-action" title="Conversa" onclick="abrirConversa(${c.lead.id}, '${nomeEsc}', '${(c.lead.url_pdf_conversa||'').replace(/'/g,"\\'")}', '${(c.lead.html_conversa_path||'').replace(/'/g,"\\'")}')"><i class="fas fa-comments"></i></button>`
-              : `<button class="row-action" title="Sem lead" disabled style="opacity:0.3;cursor:default;"><i class="fas fa-comments"></i></button>`
-            }
+  _iniciarTimers();
+}
+
+function renderPaginacao(current, total) {
+  const div = document.getElementById('pagination');
+  div.innerHTML = '';
+  if (total <= 1) return;
+
+  const prev = document.createElement('button');
+  prev.innerHTML = '&lsaquo; Anterior';
+  prev.disabled = current === 1;
+  prev.onclick = () => { page = current - 1; carregarClientes(); };
+  div.appendChild(prev);
+
+  const s = Math.max(1, current - 2);
+  const e = Math.min(total, current + 2);
+  for (let i = s; i <= e; i++) {
+    const b = document.createElement('button');
+    b.textContent = i;
+    if (i === current) b.classList.add('active');
+    b.onclick = () => { page = i; carregarClientes(); };
+    div.appendChild(b);
+  }
+
+  const next = document.createElement('button');
+  next.innerHTML = 'Proximo &rsaquo;';
+  next.disabled = current === total;
+  next.onclick = () => { page = current + 1; carregarClientes(); };
+  div.appendChild(next);
+}
+
+function abrirDetalhe(c) {
+  document.getElementById('modalTitulo').textContent = c.nome_razaosocial;
+  const body = document.getElementById('modalBody');
+
+  let alertaHtml = '';
+  if (c.alerta && c.alerta_mensagens && c.alerta_mensagens.length > 0) {
+    alertaHtml = `<div class="alerta-banner"><i class="bi bi-exclamation-triangle"></i> ${c.alerta_mensagens.join(' | ')}</div>`;
+  }
+
+  let dadosPessoais = `
+    <div class="detail-section">
+      <div class="section-title"><i class="bi bi-person"></i> Dados pessoais</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Nome / Razao Social</div><div class="detail-value">${c.nome_razaosocial}</div></div>
+        ${c.nome_fantasia ? `<div class="detail-item"><div class="detail-label">Nome fantasia</div><div class="detail-value">${c.nome_fantasia}</div></div>` : ''}
+        <div class="detail-item"><div class="detail-label">CPF/CNPJ</div><div class="detail-value">${formatarCpfCnpj(c.cpf_cnpj)}</div></div>
+        <div class="detail-item"><div class="detail-label">Tipo pessoa</div><div class="detail-value">${c.tipo_pessoa === 'pj' ? 'Pessoa juridica' : 'Pessoa fisica'}</div></div>
+        <div class="detail-item"><div class="detail-label">RG</div><div class="detail-value">${c.rg || '-'}</div></div>
+        ${c.data_nascimento ? `<div class="detail-item"><div class="detail-label">Data nascimento</div><div class="detail-value">${formatarDataCurta(c.data_nascimento)}</div></div>` : ''}
+        ${c.genero ? `<div class="detail-item"><div class="detail-label">Genero</div><div class="detail-value">${c.genero}</div></div>` : ''}
+        ${c.estado_civil ? `<div class="detail-item"><div class="detail-label">Estado civil</div><div class="detail-value">${c.estado_civil}</div></div>` : ''}
+        ${c.nacionalidade ? `<div class="detail-item"><div class="detail-label">Nacionalidade</div><div class="detail-value">${c.nacionalidade}</div></div>` : ''}
+        ${c.profissao ? `<div class="detail-item"><div class="detail-label">Profissao</div><div class="detail-value">${c.profissao}</div></div>` : ''}
+        ${c.nome_pai ? `<div class="detail-item"><div class="detail-label">Nome do pai</div><div class="detail-value">${c.nome_pai}</div></div>` : ''}
+        ${c.nome_mae ? `<div class="detail-item"><div class="detail-label">Nome da mae</div><div class="detail-value">${c.nome_mae}</div></div>` : ''}
+      </div>
+    </div>`;
+
+  let contato = `
+    <div class="detail-section">
+      <div class="section-title"><i class="bi bi-telephone"></i> Contato</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Telefone principal</div><div class="detail-value">${formatarTelefone(c.telefone_primario)}</div></div>
+        ${c.telefone_secundario ? `<div class="detail-item"><div class="detail-label">Telefone secundario</div><div class="detail-value">${formatarTelefone(c.telefone_secundario)}</div></div>` : ''}
+        ${c.telefone_terciario ? `<div class="detail-item"><div class="detail-label">Telefone terciario</div><div class="detail-value">${formatarTelefone(c.telefone_terciario)}</div></div>` : ''}
+        <div class="detail-item"><div class="detail-label">E-mail principal</div><div class="detail-value">${c.email_principal || '-'}</div></div>
+        ${c.email_secundario ? `<div class="detail-item"><div class="detail-label">E-mail secundario</div><div class="detail-value">${c.email_secundario}</div></div>` : ''}
+      </div>
+    </div>`;
+
+  let ids = `
+    <div class="detail-section">
+      <div class="section-title"><i class="bi bi-fingerprint"></i> Identificacao Hubsoft</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">ID cliente</div><div class="detail-value">${c.id_cliente}</div></div>
+        <div class="detail-item"><div class="detail-label">Codigo</div><div class="detail-value">${c.codigo_cliente || '-'}</div></div>
+        <div class="detail-item"><div class="detail-label">UUID</div><div class="detail-value" style="font-size: 11px;">${c.uuid_cliente || '-'}</div></div>
+        <div class="detail-item"><div class="detail-label">ID externo</div><div class="detail-value">${c.id_externo || '-'}</div></div>
+        <div class="detail-item"><div class="detail-label">Origem</div><div class="detail-value">${c.origem_cliente || '-'}</div></div>
+        <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="${c.ativo ? 'badge-green' : 'badge-red'}">${c.ativo ? 'Ativo' : 'Inativo'}</span></div></div>
+        <div class="detail-item"><div class="detail-label">Cadastro Hubsoft</div><div class="detail-value">${formatarData(c.data_cadastro_hubsoft)}</div></div>
+        <div class="detail-item"><div class="detail-label">Ultima sincronizacao</div><div class="detail-value">${formatarData(c.data_sync)}</div></div>
+      </div>
+    </div>`;
+
+  let servicosHtml = '';
+  if (c.servicos && c.servicos.length > 0) {
+    const servicosCards = c.servicos.map(s => {
+      const badgeClass = getBadgeClass(s.status_prefixo);
+      return `
+        <div class="servico-card">
+          <div class="servico-header">
+            <div class="servico-nome"><i class="bi bi-wifi"></i> ${s.nome}</div>
+            <div class="servico-valor">${formatarMoeda(s.valor)}</div>
           </div>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    _iniciarTimers();
-  }
-
-  function renderPaginacao(current, total) {
-    const div = document.getElementById('pagination');
-    div.innerHTML = '';
-    if (total <= 1) return;
-
-    const prev = document.createElement('button');
-    prev.innerHTML = '&lsaquo; Anterior';
-    prev.disabled = current === 1;
-    prev.onclick = () => { page = current - 1; carregarClientes(); };
-    div.appendChild(prev);
-
-    const s = Math.max(1, current - 2);
-    const e = Math.min(total, current + 2);
-    for (let i = s; i <= e; i++) {
-      const b = document.createElement('button');
-      b.textContent = i;
-      if (i === current) b.classList.add('active');
-      b.onclick = () => { page = i; carregarClientes(); };
-      div.appendChild(b);
-    }
-
-    const next = document.createElement('button');
-    next.innerHTML = 'Próximo &rsaquo;';
-    next.disabled = current === total;
-    next.onclick = () => { page = current + 1; carregarClientes(); };
-    div.appendChild(next);
-  }
-
-  function abrirDetalhe(c) {
-    document.getElementById('modalTitulo').textContent = c.nome_razaosocial;
-    const body = document.getElementById('modalBody');
-
-    let alertaHtml = '';
-    if (c.alerta && c.alerta_mensagens && c.alerta_mensagens.length > 0) {
-      alertaHtml = `<div class="alerta-banner"><i class="fas fa-exclamation-triangle"></i> ${c.alerta_mensagens.join(' | ')}</div>`;
-    }
-
-    let dadosPessoais = `
-      <div class="detail-section">
-        <div class="section-title"><i class="fas fa-user"></i> Dados Pessoais</div>
-        <div class="detail-grid">
-          <div class="detail-item"><div class="detail-label">Nome / Razão Social</div><div class="detail-value">${c.nome_razaosocial}</div></div>
-          ${c.nome_fantasia ? `<div class="detail-item"><div class="detail-label">Nome Fantasia</div><div class="detail-value">${c.nome_fantasia}</div></div>` : ''}
-          <div class="detail-item"><div class="detail-label">CPF/CNPJ</div><div class="detail-value">${formatarCpfCnpj(c.cpf_cnpj)}</div></div>
-          <div class="detail-item"><div class="detail-label">Tipo Pessoa</div><div class="detail-value">${c.tipo_pessoa === 'pj' ? 'Pessoa Jurídica' : 'Pessoa Física'}</div></div>
-          <div class="detail-item"><div class="detail-label">RG</div><div class="detail-value">${c.rg || '-'}</div></div>
-          ${c.data_nascimento ? `<div class="detail-item"><div class="detail-label">Data Nascimento</div><div class="detail-value">${formatarDataCurta(c.data_nascimento)}</div></div>` : ''}
-          ${c.genero ? `<div class="detail-item"><div class="detail-label">Gênero</div><div class="detail-value">${c.genero}</div></div>` : ''}
-          ${c.estado_civil ? `<div class="detail-item"><div class="detail-label">Estado Civil</div><div class="detail-value">${c.estado_civil}</div></div>` : ''}
-          ${c.nacionalidade ? `<div class="detail-item"><div class="detail-label">Nacionalidade</div><div class="detail-value">${c.nacionalidade}</div></div>` : ''}
-          ${c.profissao ? `<div class="detail-item"><div class="detail-label">Profissão</div><div class="detail-value">${c.profissao}</div></div>` : ''}
-          ${c.nome_pai ? `<div class="detail-item"><div class="detail-label">Nome do Pai</div><div class="detail-value">${c.nome_pai}</div></div>` : ''}
-          ${c.nome_mae ? `<div class="detail-item"><div class="detail-label">Nome da Mãe</div><div class="detail-value">${c.nome_mae}</div></div>` : ''}
-        </div>
-      </div>`;
-
-    let contato = `
-      <div class="detail-section">
-        <div class="section-title"><i class="fas fa-phone-alt"></i> Contato</div>
-        <div class="detail-grid">
-          <div class="detail-item"><div class="detail-label">Telefone Principal</div><div class="detail-value">${formatarTelefone(c.telefone_primario)}</div></div>
-          ${c.telefone_secundario ? `<div class="detail-item"><div class="detail-label">Telefone Secundário</div><div class="detail-value">${formatarTelefone(c.telefone_secundario)}</div></div>` : ''}
-          ${c.telefone_terciario ? `<div class="detail-item"><div class="detail-label">Telefone Terciário</div><div class="detail-value">${formatarTelefone(c.telefone_terciario)}</div></div>` : ''}
-          <div class="detail-item"><div class="detail-label">E-mail Principal</div><div class="detail-value">${c.email_principal || '-'}</div></div>
-          ${c.email_secundario ? `<div class="detail-item"><div class="detail-label">E-mail Secundário</div><div class="detail-value">${c.email_secundario}</div></div>` : ''}
-        </div>
-      </div>`;
-
-    let ids = `
-      <div class="detail-section">
-        <div class="section-title"><i class="fas fa-fingerprint"></i> Identificação Hubsoft</div>
-        <div class="detail-grid">
-          <div class="detail-item"><div class="detail-label">ID Cliente</div><div class="detail-value">${c.id_cliente}</div></div>
-          <div class="detail-item"><div class="detail-label">Código</div><div class="detail-value">${c.codigo_cliente || '-'}</div></div>
-          <div class="detail-item"><div class="detail-label">UUID</div><div class="detail-value" style="font-size:.75rem;">${c.uuid_cliente || '-'}</div></div>
-          <div class="detail-item"><div class="detail-label">ID Externo</div><div class="detail-value">${c.id_externo || '-'}</div></div>
-          <div class="detail-item"><div class="detail-label">Origem</div><div class="detail-value">${c.origem_cliente || '-'}</div></div>
-          <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="badge ${c.ativo ? 'badge-green' : 'badge-red'}">${c.ativo ? 'Ativo' : 'Inativo'}</span></div></div>
-          <div class="detail-item"><div class="detail-label">Cadastro Hubsoft</div><div class="detail-value">${formatarData(c.data_cadastro_hubsoft)}</div></div>
-          <div class="detail-item"><div class="detail-label">Última Sincronização</div><div class="detail-value">${formatarData(c.data_sync)}</div></div>
-        </div>
-      </div>`;
-
-    let servicosHtml = '';
-    if (c.servicos && c.servicos.length > 0) {
-      const servicosCards = c.servicos.map(s => {
-        const sClass = getServicoClass(s.status_prefixo);
-        const badgeClass = getBadgeClass(s.status_prefixo);
-        return `
-          <div class="servico-card">
-            <div class="servico-header">
-              <div class="servico-nome"><i class="fas fa-wifi"></i> ${s.nome}</div>
-              <div class="servico-valor">${formatarMoeda(s.valor)}</div>
-            </div>
-            <div class="detail-grid">
-              <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="badge ${badgeClass}">${s.status}</span></div></div>
-              <div class="detail-item"><div class="detail-label">Download / Upload</div><div class="detail-value">${s.velocidade_download || '-'} / ${s.velocidade_upload || '-'}</div></div>
-              <div class="detail-item"><div class="detail-label">Tecnologia</div><div class="detail-value">${s.tecnologia || '-'}</div></div>
-              <div class="detail-item"><div class="detail-label">Login PPPoE</div><div class="detail-value">${s.login || '-'}</div></div>
-              ${s.senha ? `<div class="detail-item"><div class="detail-label">Senha PPPoE</div><div class="detail-value">${s.senha}</div></div>` : ''}
-              ${s.mac_addr ? `<div class="detail-item"><div class="detail-label">MAC Address</div><div class="detail-value">${s.mac_addr}</div></div>` : ''}
-              ${s.ipv4 ? `<div class="detail-item"><div class="detail-label">IPv4</div><div class="detail-value">${s.ipv4}</div></div>` : ''}
-              <div class="detail-item"><div class="detail-label">Data Venda</div><div class="detail-value">${s.data_venda || '-'}</div></div>
-              <div class="detail-item"><div class="detail-label">Habilitação</div><div class="detail-value">${formatarData(s.data_habilitacao)}</div></div>
-              <div class="detail-item"><div class="detail-label">Contrato</div><div class="detail-value">${s.data_inicio_contrato || '-'} a ${s.data_fim_contrato || '-'} (${s.vigencia_meses || '-'} meses)</div></div>
-              <div class="detail-item"><div class="detail-label">Vendedor</div><div class="detail-value">${s.vendedor_nome || '-'}</div></div>
-              ${s.vendedor_email ? `<div class="detail-item"><div class="detail-label">E-mail Vendedor</div><div class="detail-value">${s.vendedor_email}</div></div>` : ''}
-              ${s.data_cancelamento ? `<div class="detail-item" style="border-left-color:#dc2626;"><div class="detail-label">Cancelamento</div><div class="detail-value" style="color:#dc2626;">${formatarData(s.data_cancelamento)} - ${s.motivo_cancelamento || 'Sem motivo'}</div></div>` : ''}
-            </div>
-          </div>`;
-      }).join('');
-
-      servicosHtml = `
-        <div class="detail-section">
-          <div class="section-title"><i class="fas fa-cubes"></i> Serviços Contratados (${c.servicos.length})</div>
-          ${servicosCards}
-        </div>`;
-    }
-
-    let leadHtml = '';
-    if (c.lead) {
-      const docs = c.lead.docs || {};
-      let docResumoHtml = '';
-      if (docs.total > 0) {
-        const docItems = [];
-        if (docs.aprovados  > 0) docItems.push(`<span class="doc-pill doc-pill-ok"><i class="fas fa-check-circle"></i> ${docs.aprovados} aprovado(s)</span>`);
-        if (docs.rejeitados > 0) docItems.push(`<span class="doc-pill doc-pill-rej"><i class="fas fa-times-circle"></i> ${docs.rejeitados} rejeitado(s)</span>`);
-        if (docs.pendentes  > 0) docItems.push(`<span class="doc-pill doc-pill-pend"><i class="fas fa-clock"></i> ${docs.pendentes} pendente(s)</span>`);
-        if (c.lead.documentacao_validada) docItems.push(`<span class="doc-pill doc-pill-validado"><i class="fas fa-shield-alt"></i> Documentação Validada</span>`);
-        docResumoHtml = `<div class="doc-pills" style="margin-top:.5rem;">${docItems.join('')}</div>`;
-      } else {
-        docResumoHtml = `<div style="margin-top:.5rem;font-size:.8rem;color:#9ca3af;">Nenhum documento anexado</div>`;
-      }
-
-      leadHtml = `
-        <div class="detail-section">
-          <div class="section-title"><i class="fas fa-link"></i> Lead de Origem</div>
           <div class="detail-grid">
-            <div class="detail-item"><div class="detail-label">ID Lead</div><div class="detail-value">#${c.lead.id}</div></div>
-            <div class="detail-item"><div class="detail-label">Nome</div><div class="detail-value">${c.lead.nome_razaosocial || '-'}</div></div>
-            <div class="detail-item"><div class="detail-label">Telefone</div><div class="detail-value">${formatarTelefone(c.lead.telefone)}</div></div>
-            <div class="detail-item"><div class="detail-label">E-mail</div><div class="detail-value">${c.lead.email || '-'}</div></div>
-            <div class="detail-item"><div class="detail-label">Status API</div><div class="detail-value">${c.lead.status_api || '-'}</div></div>
-            <div class="detail-item"><div class="detail-label">ID Hubsoft</div><div class="detail-value">${c.lead.id_hubsoft || '-'}</div></div>
-          </div>
-          <div style="margin-top:.75rem;">
-            <div class="section-title" style="margin-top:.75rem;"><i class="fas fa-file-image"></i> Documentação</div>
-            ${docResumoHtml}
-            <div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap;">
-              <a href="${URL_LEADS}?lead_id=${c.lead.id}" class="btn btn-primary" target="_blank" onclick="event.stopPropagation();">
-                <i class="fas fa-external-link-alt"></i> Ver Lead Completo
-              </a>
-              <button class="btn btn-secondary" onclick="event.stopPropagation();fecharModal();abrirDocumentos(${c.id},'${(c.nome_razaosocial||'').replace(/'/g,"\\'")}')">
-                <i class="fas fa-file-image"></i> Ver Documentos
-              </button>
-            </div>
+            <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="${badgeClass}">${s.status}</span></div></div>
+            <div class="detail-item"><div class="detail-label">Download / Upload</div><div class="detail-value">${s.velocidade_download || '-'} / ${s.velocidade_upload || '-'}</div></div>
+            <div class="detail-item"><div class="detail-label">Tecnologia</div><div class="detail-value">${s.tecnologia || '-'}</div></div>
+            <div class="detail-item"><div class="detail-label">Login PPPoE</div><div class="detail-value">${s.login || '-'}</div></div>
+            ${s.senha ? `<div class="detail-item"><div class="detail-label">Senha PPPoE</div><div class="detail-value">${s.senha}</div></div>` : ''}
+            ${s.mac_addr ? `<div class="detail-item"><div class="detail-label">MAC address</div><div class="detail-value">${s.mac_addr}</div></div>` : ''}
+            ${s.ipv4 ? `<div class="detail-item"><div class="detail-label">IPv4</div><div class="detail-value">${s.ipv4}</div></div>` : ''}
+            <div class="detail-item"><div class="detail-label">Data venda</div><div class="detail-value">${s.data_venda || '-'}</div></div>
+            <div class="detail-item"><div class="detail-label">Habilitacao</div><div class="detail-value">${formatarData(s.data_habilitacao)}</div></div>
+            <div class="detail-item"><div class="detail-label">Contrato</div><div class="detail-value">${s.data_inicio_contrato || '-'} a ${s.data_fim_contrato || '-'} (${s.vigencia_meses || '-'} meses)</div></div>
+            <div class="detail-item"><div class="detail-label">Vendedor</div><div class="detail-value">${s.vendedor_nome || '-'}</div></div>
+            ${s.vendedor_email ? `<div class="detail-item"><div class="detail-label">E-mail vendedor</div><div class="detail-value">${s.vendedor_email}</div></div>` : ''}
+            ${s.data_cancelamento ? `<div class="detail-item" style="border-left-color: var(--color-danger);"><div class="detail-label">Cancelamento</div><div class="detail-value" style="color: var(--color-danger);">${formatarData(s.data_cancelamento)} - ${s.motivo_cancelamento || 'Sem motivo'}</div></div>` : ''}
           </div>
         </div>`;
-    }
+    }).join('');
 
-    let alteracoesHtml = '';
-    if (c.historico_alteracoes && c.historico_alteracoes.length > 0) {
-      const maxShow = 10;
-      const items = c.historico_alteracoes.slice(-maxShow).reverse();
-      const altCards = items.map(alt => {
-        let campos = '';
-        if (alt.alteracoes && Array.isArray(alt.alteracoes)) {
-          campos = alt.alteracoes.map(a => {
-            const de = a.valor_anterior ?? a.anterior ?? '';
-            const para = a.valor_novo ?? a.novo ?? '';
-            return `<div class="alteracao-campo"><span class="label">${a.campo}:</span> <span class="alteracao-de">${de || '(vazio)'}</span> &rarr; <span class="alteracao-para">${para || '(vazio)'}</span></div>`;
-          }).join('');
-        }
-        return `<div class="alteracao-item"><div class="alteracao-data"><i class="fas fa-clock"></i> ${formatarData(alt.data)}</div>${campos}</div>`;
-      }).join('');
-
-      alteracoesHtml = `
-        <div class="detail-section">
-          <div class="section-title"><i class="fas fa-history"></i> Histórico de Alterações (${c.historico_alteracoes.length})</div>
-          ${altCards}
-          ${c.historico_alteracoes.length > maxShow ? `<div style="text-align:center;padding:.5rem;color:#6b7280;font-size:.8rem;">Exibindo últimas ${maxShow} de ${c.historico_alteracoes.length} alterações</div>` : ''}
-        </div>`;
-    }
-
-    body.innerHTML = alertaHtml + dadosPessoais + contato + ids + servicosHtml + leadHtml + alteracoesHtml;
-    document.getElementById('modalDetalhe').style.display = 'block';
+    servicosHtml = `
+      <div class="detail-section">
+        <div class="section-title"><i class="bi bi-box-seam"></i> Servicos contratados (${c.servicos.length})</div>
+        ${servicosCards}
+      </div>`;
   }
 
-  function fecharModal() {
-    document.getElementById('modalDetalhe').style.display = 'none';
+  let leadHtml = '';
+  if (c.lead) {
+    const docs = c.lead.docs || {};
+    let docResumoHtml = '';
+    if (docs.total > 0) {
+      const docItems = [];
+      if (docs.aprovados > 0) docItems.push(`<span class="doc-pill doc-pill-ok"><i class="bi bi-check-circle"></i> ${docs.aprovados} aprovado(s)</span>`);
+      if (docs.rejeitados > 0) docItems.push(`<span class="doc-pill doc-pill-rej"><i class="bi bi-x-circle"></i> ${docs.rejeitados} rejeitado(s)</span>`);
+      if (docs.pendentes > 0) docItems.push(`<span class="doc-pill doc-pill-pend"><i class="bi bi-clock"></i> ${docs.pendentes} pendente(s)</span>`);
+      if (c.lead.documentacao_validada) docItems.push(`<span class="doc-pill doc-pill-validado"><i class="bi bi-shield-check"></i> Documentacao validada</span>`);
+      docResumoHtml = `<div class="doc-pills" style="margin-top: var(--sp-2);">${docItems.join('')}</div>`;
+    } else {
+      docResumoHtml = `<div style="margin-top: var(--sp-2); font-size: var(--fs-xs); color: var(--color-text-muted);">Nenhum documento anexado</div>`;
+    }
+
+    leadHtml = `
+      <div class="detail-section">
+        <div class="section-title"><i class="bi bi-link-45deg"></i> Lead de origem</div>
+        <div class="detail-grid">
+          <div class="detail-item"><div class="detail-label">ID lead</div><div class="detail-value">#${c.lead.id}</div></div>
+          <div class="detail-item"><div class="detail-label">Nome</div><div class="detail-value">${c.lead.nome_razaosocial || '-'}</div></div>
+          <div class="detail-item"><div class="detail-label">Telefone</div><div class="detail-value">${formatarTelefone(c.lead.telefone)}</div></div>
+          <div class="detail-item"><div class="detail-label">E-mail</div><div class="detail-value">${c.lead.email || '-'}</div></div>
+          <div class="detail-item"><div class="detail-label">Status API</div><div class="detail-value">${c.lead.status_api || '-'}</div></div>
+          <div class="detail-item"><div class="detail-label">ID Hubsoft</div><div class="detail-value">${c.lead.id_hubsoft || '-'}</div></div>
+        </div>
+        <div style="margin-top: var(--sp-3);">
+          <div class="section-title"><i class="bi bi-file-image"></i> Documentacao</div>
+          ${docResumoHtml}
+          <div style="margin-top: var(--sp-3); display: flex; gap: var(--sp-2); flex-wrap: wrap;">
+            <a href="${URL_LEADS}?lead_id=${c.lead.id}" class="btn btn-primary btn-sm" target="_blank" onclick="event.stopPropagation();">
+              <i class="bi bi-box-arrow-up-right"></i> Ver lead completo
+            </a>
+            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); fecharModal(); abrirDocumentos(${c.id}, '${(c.nome_razaosocial || '').replace(/'/g, "\\'")}')">
+              <i class="bi bi-file-image"></i> Ver documentos
+            </button>
+          </div>
+        </div>
+      </div>`;
   }
 
-  // Event listeners
-  document.addEventListener('DOMContentLoaded', () => {
-    const searchInput = document.getElementById('searchInput');
-    let timeout;
+  let alteracoesHtml = '';
+  if (c.historico_alteracoes && c.historico_alteracoes.length > 0) {
+    const maxShow = 10;
+    const items = c.historico_alteracoes.slice(-maxShow).reverse();
+    const altCards = items.map(alt => {
+      let campos = '';
+      if (alt.alteracoes && Array.isArray(alt.alteracoes)) {
+        campos = alt.alteracoes.map(a => {
+          const de = a.valor_anterior ?? a.anterior ?? '';
+          const para = a.valor_novo ?? a.novo ?? '';
+          return `<div class="alteracao-campo"><span class="label">${a.campo}:</span> <span class="alteracao-de">${de || '(vazio)'}</span> &rarr; <span class="alteracao-para">${para || '(vazio)'}</span></div>`;
+        }).join('');
+      }
+      return `<div class="alteracao-item"><div class="alteracao-data"><i class="bi bi-clock"></i> ${formatarData(alt.data)}</div>${campos}</div>`;
+    }).join('');
+
+    alteracoesHtml = `
+      <div class="detail-section">
+        <div class="section-title"><i class="bi bi-clock-history"></i> Historico de alteracoes (${c.historico_alteracoes.length})</div>
+        ${altCards}
+        ${c.historico_alteracoes.length > maxShow ? `<div style="text-align: center; padding: var(--sp-2); color: var(--color-text-muted); font-size: var(--fs-xs);">Exibindo ultimas ${maxShow} de ${c.historico_alteracoes.length} alteracoes</div>` : ''}
+      </div>`;
+  }
+
+  body.innerHTML = alertaHtml + dadosPessoais + contato + ids + servicosHtml + leadHtml + alteracoesHtml;
+  document.getElementById('modalDetalhe').style.display = 'flex';
+}
+
+function fecharModal() { document.getElementById('modalDetalhe').style.display = 'none'; }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const searchInput = document.getElementById('searchInput');
+  let timeout;
+  if (searchInput) {
     searchInput.addEventListener('input', e => {
       search = e.target.value;
       clearTimeout(timeout);
       timeout = setTimeout(() => { page = 1; carregarClientes(); }, 400);
     });
+    searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') { page = 1; carregarClientes(); } });
+  }
 
-    document.getElementById('statusServicoFilter').addEventListener('change', e => {
-      filtros.status_servico = e.target.value;
-      page = 1;
-      carregarClientes();
-    });
+  // Filtros do list_filters Modo B
+  const statusSel = document.querySelector('[name="status_servico"]');
+  const ativoSel = document.querySelector('[name="ativo"]');
+  const docSel = document.querySelector('[name="doc_status"]');
 
-    document.getElementById('ativoFilter').addEventListener('change', e => {
-      filtros.ativo = e.target.value;
-      page = 1;
-      carregarClientes();
-    });
-
-    // Filtro local de documentação — não vai ao servidor, re-renderiza os dados já carregados
-    document.getElementById('docStatusFilter').addEventListener('change', () => {
-      const data = window._ultimosClientes;
-      if (data) renderizarTabela(data.clientes || []);
-    });
-
-    document.getElementById('btnFiltrar').addEventListener('click', () => { page = 1; carregarClientes(); });
-
-    // Limpar filtros com Enter no campo de busca
-    searchInput.addEventListener('keydown', e => { if(e.key==='Enter'){ page=1; carregarClientes(); } });
-
-    window.addEventListener('click', e => {
-      if (e.target.classList.contains('modal')) fecharModal();
-      if (e.target.id === 'modalDocumentos') fecharModalDoc();
-      if (e.target.id === 'modalConversa') fecharModalConversa();
-    });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') { fecharModal(); fecharModalDoc(); fecharModalConversa(); fecharLightbox(); } });
-
-    carregarClientes();
+  if (statusSel) statusSel.addEventListener('change', e => { filtros.status_servico = e.target.value; page = 1; carregarClientes(); });
+  if (ativoSel) ativoSel.addEventListener('change', e => { filtros.ativo = e.target.value; page = 1; carregarClientes(); });
+  if (docSel) docSel.addEventListener('change', () => {
+    const data = window._ultimosClientes;
+    if (data) renderizarTabela(data.clientes || []);
   });
 
-  // ════════════════════════════════════════════════════════
-  //  MÓDULO DE DOCUMENTOS / VALIDAÇÃO
-  // ════════════════════════════════════════════════════════
-  const API_IMAGENS_POR_CLIENTE = '{% url "comercial_leads:imagens_por_cliente" %}';
-  const API_VALIDAR_IMAGEM      = '{% url "comercial_leads:validar_imagem" %}';
+  // Interceptar submit do form de filtros (evita reload)
+  const form = document.querySelector('.list-filters-grid .list-filters-body');
+  if (form) form.addEventListener('submit', e => { e.preventDefault(); page = 1; carregarClientes(); });
 
-  let _docClienteId   = null;
-  let _obsImagemId    = null;
-  let _obsAcao        = null;
+  // Fechar modais ao clicar fora
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { fecharModal(); fecharModalDoc(); fecharModalConversa(); fecharLightbox(); }
+  });
 
-  async function abrirDocumentos(clienteId, nomeCliente) {
-    _docClienteId = clienteId;
-    document.getElementById('docModalTitulo').textContent = `Documentos — ${nomeCliente}`;
+  carregarClientes();
+});
+
+// ============================================================================
+// MODULO DOCUMENTOS / VALIDACAO
+// ============================================================================
+const API_IMAGENS_POR_CLIENTE = '{% url "comercial_leads:imagens_por_cliente" %}';
+const API_VALIDAR_IMAGEM = '{% url "comercial_leads:validar_imagem" %}';
+
+let _docClienteId = null;
+let _obsImagemId = null;
+let _obsAcao = null;
+
+async function abrirDocumentos(clienteId, nomeCliente) {
+  _docClienteId = clienteId;
+  document.getElementById('docModalTitulo').textContent = `Documentos — ${nomeCliente}`;
+  document.getElementById('docModalBody').innerHTML = `
+    <div style="text-align: center; padding: var(--sp-10); color: var(--color-text-muted);">
+      <i class="bi bi-arrow-clockwise" style="font-size: 2rem;"></i>
+      <div style="margin-top: var(--sp-2);">Carregando documentos...</div>
+    </div>`;
+  document.getElementById('modalDocumentos').style.display = 'flex';
+  await _carregarDocumentos();
+}
+
+async function _carregarDocumentos() {
+  try {
+    const resp = await fetch(`${API_IMAGENS_POR_CLIENTE}?cliente_hubsoft_id=${_docClienteId}`);
+    const data = await resp.json();
+    if (!data.success) throw new Error(data.error || 'Erro ao carregar');
+    _renderizarDocumentos(data);
+  } catch (e) {
     document.getElementById('docModalBody').innerHTML = `
-      <div style="text-align:center;padding:3rem;color:#9ca3af;">
-        <i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i>
-        <div style="margin-top:.75rem;">Carregando documentos...</div>
+      <div style="text-align: center; padding: var(--sp-5); color: var(--color-danger);">
+        <i class="bi bi-exclamation-circle" style="font-size: 1.5rem;"></i>
+        <div style="margin-top: var(--sp-2);">Erro: ${e.message}</div>
       </div>`;
-    document.getElementById('modalDocumentos').style.display = 'block';
+  }
+}
+
+function _renderizarDocumentos(data) {
+  const body = document.getElementById('docModalBody');
+  const imagens = data.imagens || [];
+  const lead = data.lead;
+
+  if (!lead) {
+    body.innerHTML = `
+      <div style="text-align: center; padding: var(--sp-5); color: var(--color-text-muted);">
+        <i class="bi bi-link-45deg" style="font-size: 2rem; display: block; margin-bottom: var(--sp-2);"></i>
+        <div>Este cliente nao possui lead relacionado.</div>
+        <div style="font-size: var(--fs-xs); margin-top: 4px;">Vincule um lead ao cliente pra visualizar documentos.</div>
+      </div>`;
+    return;
+  }
+
+  const total = imagens.length;
+  const validos = imagens.filter(i => i.status_validacao === 'documentos_validos').length;
+  const rejeit = imagens.filter(i => i.status_validacao === 'documentos_rejeitados').length;
+  const pend = imagens.filter(i => i.status_validacao === 'pendente').length;
+
+  const resumoHtml = `
+    <div class="doc-resumo">
+      <div class="doc-resumo-item">
+        <i class="bi bi-person" style="color: var(--color-primary);"></i>
+        <span>Lead: <strong>#${lead.id} — ${lead.nome}</strong></span>
+      </div>
+      <div class="doc-resumo-item">
+        <i class="bi bi-images" style="color: var(--color-text-muted);"></i>
+        <span>${total} documento(s)</span>
+      </div>
+      <div class="doc-resumo-item">
+        <i class="bi bi-check-circle" style="color: var(--color-success);"></i>
+        <span style="color: var(--color-success);">${validos} aprovado(s)</span>
+      </div>
+      <div class="doc-resumo-item">
+        <i class="bi bi-x-circle" style="color: var(--color-danger);"></i>
+        <span style="color: var(--color-danger);">${rejeit} rejeitado(s)</span>
+      </div>
+      <div class="doc-resumo-item">
+        <i class="bi bi-clock" style="color: var(--color-warning);"></i>
+        <span style="color: var(--color-warning);">${pend} pendente(s)</span>
+      </div>
+      ${lead.documentacao_validada
+        ? '<div class="doc-resumo-item"><span style="background: var(--color-success-soft); color: var(--color-success); padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: var(--fw-bold);"><i class="bi bi-shield-check"></i> Documentacao validada</span></div>'
+        : ''}
+    </div>`;
+
+  if (total === 0) {
+    body.innerHTML = resumoHtml + `
+      <div style="text-align: center; padding: var(--sp-5); color: var(--color-text-muted);">
+        <i class="bi bi-folder2-open" style="font-size: 2.5rem; display: block; margin-bottom: var(--sp-2);"></i>
+        <div>Nenhum documento anexado a este lead.</div>
+      </div>`;
+    return;
+  }
+
+  const cardsHtml = imagens.map(img => {
+    const statusKey = img.status_validacao === 'documentos_validos' ? 'valido'
+                    : img.status_validacao === 'documentos_rejeitados' ? 'rejeitado'
+                    : 'pendente';
+    const statusLabel = { valido: 'Aprovado', rejeitado: 'Rejeitado', pendente: 'Pendente' }[statusKey];
+    const statusIcon = { valido: 'bi-check-circle', rejeitado: 'bi-x-circle', pendente: 'bi-clock' }[statusKey];
+
+    const isImagem = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(img.link_url);
+    const imgTag = isImagem
+      ? `<img class="doc-card-img" src="${img.link_url}" alt="${img.descricao || 'Documento'}"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            onclick="abrirLightbox('${img.link_url}')">`
+      : '';
+    const placeholder = `
+      <a href="${img.link_url}" target="_blank" class="doc-card-img-placeholder"
+         style="${isImagem ? 'display: none;' : ''}">
+        <i class="bi bi-file-earmark"></i>
+      </a>`;
+
+    const dataVal = img.data_validacao ? new Date(img.data_validacao).toLocaleString('pt-BR') : '';
+
+    return `
+      <div class="doc-card ${statusKey}" id="doc-card-${img.id}">
+        ${imgTag}${placeholder}
+        <div class="doc-card-body">
+          <div class="doc-card-desc">${img.descricao || 'Documento'}</div>
+          <div class="doc-card-date">
+            <i class="bi bi-calendar"></i>
+            ${new Date(img.data_criacao).toLocaleString('pt-BR')}
+          </div>
+          <span class="doc-card-status ${statusKey}">
+            <i class="bi ${statusIcon}"></i> ${statusLabel}
+          </span>
+          ${img.observacao_validacao
+            ? `<div class="doc-card-obs"><i class="bi bi-chat-left"></i> ${img.observacao_validacao}</div>`
+            : ''}
+          ${img.validado_por && dataVal
+            ? `<div class="doc-card-obs">${img.validado_por} · ${dataVal}</div>`
+            : ''}
+        </div>
+        <div class="doc-card-actions">
+          <button class="btn-aprovar" onclick="_validarImagem(${img.id}, 'aprovar')">
+            <i class="bi bi-check"></i> Aprovar
+          </button>
+          <button class="btn-rejeitar" onclick="_pedirObs(${img.id})">
+            <i class="bi bi-x"></i> Rejeitar
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+
+  body.innerHTML = resumoHtml + `<div class="doc-grid">${cardsHtml}</div>`;
+}
+
+async function _validarImagem(imagemId, acao, observacao = '') {
+  try {
+    const resp = await fetch(API_VALIDAR_IMAGEM, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _getCsrf() },
+      body: JSON.stringify({ imagem_id: imagemId, acao, observacao }),
+    });
+    const data = await resp.json();
+    if (!data.success) throw new Error(data.error || 'Erro na validacao');
     await _carregarDocumentos();
+  } catch (e) {
+    toast('Erro', 'Erro ao validar: ' + e.message, 'danger');
   }
+}
 
-  async function _carregarDocumentos() {
-    try {
-      const resp = await fetch(`${API_IMAGENS_POR_CLIENTE}?cliente_hubsoft_id=${_docClienteId}`);
-      const data = await resp.json();
+function _pedirObs(imagemId) {
+  _obsImagemId = imagemId;
+  _obsAcao = 'rejeitar';
+  document.getElementById('obsTextarea').value = '';
+  document.getElementById('obsModal').classList.add('active');
+}
 
-      if (!data.success) throw new Error(data.error || 'Erro ao carregar');
-
-      _renderizarDocumentos(data);
-    } catch (e) {
-      document.getElementById('docModalBody').innerHTML = `
-        <div style="text-align:center;padding:2rem;color:#ef4444;">
-          <i class="fas fa-exclamation-circle" style="font-size:1.5rem;"></i>
-          <div style="margin-top:.5rem;">Erro: ${e.message}</div>
-        </div>`;
-    }
-  }
-
-  function _renderizarDocumentos(data) {
-    const body   = document.getElementById('docModalBody');
-    const imagens = data.imagens || [];
-    const lead   = data.lead;
-
-    if (!lead) {
-      body.innerHTML = `
-        <div style="text-align:center;padding:2rem;color:#9ca3af;">
-          <i class="fas fa-unlink" style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>
-          <div>Este cliente não possui lead relacionado.</div>
-          <div style="font-size:.8rem;margin-top:.4rem;">Vincule um lead ao cliente para visualizar documentos.</div>
-        </div>`;
-      return;
-    }
-
-    const total    = imagens.length;
-    const validos  = imagens.filter(i => i.status_validacao === 'documentos_validos').length;
-    const rejeit   = imagens.filter(i => i.status_validacao === 'documentos_rejeitados').length;
-    const pend     = imagens.filter(i => i.status_validacao === 'pendente').length;
-
-    const resumoHtml = `
-      <div class="doc-resumo">
-        <div class="doc-resumo-item">
-          <i class="fas fa-user" style="color:#667eea;"></i>
-          <span>Lead: <strong>#${lead.id} — ${lead.nome}</strong></span>
-        </div>
-        <div class="doc-resumo-item">
-          <i class="fas fa-images" style="color:#6b7280;"></i>
-          <span>${total} documento(s)</span>
-        </div>
-        <div class="doc-resumo-item">
-          <i class="fas fa-check-circle" style="color:#10b981;"></i>
-          <span style="color:#065f46;">${validos} aprovado(s)</span>
-        </div>
-        <div class="doc-resumo-item">
-          <i class="fas fa-times-circle" style="color:#ef4444;"></i>
-          <span style="color:#991b1b;">${rejeit} rejeitado(s)</span>
-        </div>
-        <div class="doc-resumo-item">
-          <i class="fas fa-clock" style="color:#f59e0b;"></i>
-          <span style="color:#92400e;">${pend} pendente(s)</span>
-        </div>
-        ${lead.documentacao_validada
-          ? '<div class="doc-resumo-item"><span style="background:#d1fae5;color:#065f46;padding:.2rem .6rem;border-radius:20px;font-size:.75rem;font-weight:700;"><i class="fas fa-shield-alt"></i> Documentação Validada</span></div>'
-          : ''}
-      </div>`;
-
-    if (total === 0) {
-      body.innerHTML = resumoHtml + `
-        <div style="text-align:center;padding:2rem;color:#9ca3af;">
-          <i class="fas fa-folder-open" style="font-size:2.5rem;display:block;margin-bottom:.75rem;"></i>
-          <div>Nenhum documento anexado a este lead.</div>
-        </div>`;
-      return;
-    }
-
-    const cardsHtml = imagens.map(img => {
-      const statusKey  = img.status_validacao === 'documentos_validos'    ? 'valido'
-                       : img.status_validacao === 'documentos_rejeitados' ? 'rejeitado'
-                       : 'pendente';
-      const statusLabel = { valido: 'Aprovado', rejeitado: 'Rejeitado', pendente: 'Pendente' }[statusKey];
-      const statusIcon  = { valido: 'fa-check-circle', rejeitado: 'fa-times-circle', pendente: 'fa-clock' }[statusKey];
-
-      const isImagem = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(img.link_url);
-      const imgTag   = isImagem
-        ? `<img class="doc-card-img" src="${img.link_url}" alt="${img.descricao || 'Documento'}"
-              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
-              onclick="abrirLightbox('${img.link_url}')">`
-        : '';
-      const placeholder = `
-        <a href="${img.link_url}" target="_blank" class="doc-card-img-placeholder"
-           style="${isImagem ? 'display:none;' : ''}">
-          <i class="fas fa-file-alt"></i>
-        </a>`;
-
-      const dataVal = img.data_validacao
-        ? new Date(img.data_validacao).toLocaleString('pt-BR')
-        : '';
-
-      return `
-        <div class="doc-card ${statusKey}" id="doc-card-${img.id}">
-          ${imgTag}${placeholder}
-          <div class="doc-card-body">
-            <div class="doc-card-desc">${img.descricao || 'Documento'}</div>
-            <div class="doc-card-date">
-              <i class="fas fa-calendar-alt"></i>
-              ${new Date(img.data_criacao).toLocaleString('pt-BR')}
-            </div>
-            <span class="doc-card-status ${statusKey}">
-              <i class="fas ${statusIcon}"></i> ${statusLabel}
-            </span>
-            ${img.observacao_validacao
-              ? `<div class="doc-card-obs"><i class="fas fa-comment"></i> ${img.observacao_validacao}</div>`
-              : ''}
-            ${img.validado_por && dataVal
-              ? `<div class="doc-card-obs">${img.validado_por} · ${dataVal}</div>`
-              : ''}
-          </div>
-          <div class="doc-card-actions">
-            <button class="btn-aprovar" onclick="_validarImagem(${img.id}, 'aprovar')">
-              <i class="fas fa-check"></i> Aprovar
-            </button>
-            <button class="btn-rejeitar" onclick="_pedirObs(${img.id})">
-              <i class="fas fa-times"></i> Rejeitar
-            </button>
-          </div>
-        </div>`;
-    }).join('');
-
-    body.innerHTML = resumoHtml + `<div class="doc-grid">${cardsHtml}</div>`;
-  }
-
-  async function _validarImagem(imagemId, acao, observacao = '') {
-    try {
-      const resp = await fetch(API_VALIDAR_IMAGEM, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _getCsrf() },
-        body: JSON.stringify({ imagem_id: imagemId, acao, observacao }),
-      });
-      const data = await resp.json();
-      if (!data.success) throw new Error(data.error || 'Erro na validação');
-
-      // Recarregar os documentos para refletir o novo estado
-      await _carregarDocumentos();
-    } catch (e) {
-      alert('Erro ao validar: ' + e.message);
-    }
-  }
-
-  function _pedirObs(imagemId) {
-    _obsImagemId = imagemId;
-    _obsAcao     = 'rejeitar';
-    document.getElementById('obsTextarea').value = '';
-    document.getElementById('obsModal').classList.add('active');
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('obsCancelar').addEventListener('click', () => {
-      document.getElementById('obsModal').classList.remove('active');
-      _obsImagemId = null;
-    });
-    document.getElementById('obsConfirmar').addEventListener('click', async () => {
-      const obs = document.getElementById('obsTextarea').value.trim();
-      document.getElementById('obsModal').classList.remove('active');
-      if (_obsImagemId) await _validarImagem(_obsImagemId, _obsAcao, obs);
-      _obsImagemId = null;
-    });
+document.addEventListener('DOMContentLoaded', () => {
+  const btnCancel = document.getElementById('obsCancelar');
+  const btnConfirm = document.getElementById('obsConfirmar');
+  if (btnCancel) btnCancel.addEventListener('click', () => {
+    document.getElementById('obsModal').classList.remove('active');
+    _obsImagemId = null;
   });
+  if (btnConfirm) btnConfirm.addEventListener('click', async () => {
+    const obs = document.getElementById('obsTextarea').value.trim();
+    document.getElementById('obsModal').classList.remove('active');
+    if (_obsImagemId) await _validarImagem(_obsImagemId, _obsAcao, obs);
+    _obsImagemId = null;
+  });
+});
 
-  function abrirLightbox(url) {
-    document.getElementById('lightboxImg').src = url;
-    document.getElementById('lightboxOverlay').classList.add('active');
+function abrirLightbox(url) {
+  document.getElementById('lightboxImg').src = url;
+  document.getElementById('lightboxOverlay').classList.add('active');
+}
+
+function fecharLightbox() {
+  document.getElementById('lightboxOverlay').classList.remove('active');
+  document.getElementById('lightboxImg').src = '';
+}
+
+function fecharModalDoc() {
+  document.getElementById('modalDocumentos').style.display = 'none';
+  _docClienteId = null;
+}
+
+// ============================================================================
+// MODULO CONVERSA DO LEAD
+// ============================================================================
+const URL_CONVERSA_HTML_TPL = '{% url "comercial_leads:visualizar_conversa_lead" 0 %}'.replace('/0/', '/{id}/');
+const _urlConversa = (leadId) => URL_CONVERSA_HTML_TPL.replace('{id}', leadId);
+
+function abrirConversa(leadId, nomeCliente, urlPdf, htmlPath) {
+  document.getElementById('conversaTitulo').textContent = `Conversa — ${nomeCliente}`;
+
+  const tabs = document.getElementById('conversaTabs');
+  const panels = document.getElementById('conversaPanels');
+  const pdfLink = document.getElementById('conversaPdfLink');
+
+  tabs.innerHTML = '';
+  panels.innerHTML = '';
+  pdfLink.style.display = 'none';
+
+  const temHtml = !!htmlPath;
+  const temPdf = !!urlPdf;
+
+  if (!temHtml && !temPdf) {
+    panels.innerHTML = `
+      <div style="text-align: center; padding: var(--sp-10); color: var(--color-text-muted);">
+        <i class="bi bi-chat-dots" style="font-size: 2.5rem; display: block; margin-bottom: var(--sp-2);"></i>
+        <div style="font-weight: var(--fw-semibold);">Nenhuma conversa disponivel</div>
+        <div style="font-size: var(--fs-xs); margin-top: 4px;">Este lead ainda nao possui HTML ou PDF de atendimento gerado.</div>
+      </div>`;
+    document.getElementById('modalConversa').style.display = 'flex';
+    return;
   }
 
-  function fecharLightbox() {
-    document.getElementById('lightboxOverlay').classList.remove('active');
-    document.getElementById('lightboxImg').src = '';
+  let primeiraAba = null;
+
+  if (temHtml) {
+    const tabId = 'tab-html';
+    const panelId = 'panel-html';
+    const tab = document.createElement('button');
+    tab.className = 'conversa-tab active';
+    tab.id = tabId;
+    tab.innerHTML = '<i class="bi bi-code"></i> Conversa HTML';
+    tab.onclick = () => _ativarAba(tabId, panelId);
+    tabs.appendChild(tab);
+
+    const panel = document.createElement('div');
+    panel.className = 'conversa-panel active';
+    panel.id = panelId;
+    panel.innerHTML = `<iframe class="conversa-iframe" src="${_urlConversa(leadId)}" title="Conversa"></iframe>`;
+    panels.appendChild(panel);
+    primeiraAba = tabId;
   }
 
-  function fecharModalDoc() {
-    document.getElementById('modalDocumentos').style.display = 'none';
-    _docClienteId = null;
+  if (temPdf) {
+    const tabId = 'tab-pdf';
+    const panelId = 'panel-pdf';
+    const tab = document.createElement('button');
+    tab.className = `conversa-tab${!primeiraAba ? ' active' : ''}`;
+    tab.id = tabId;
+    tab.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> PDF';
+    tab.onclick = () => _ativarAba(tabId, panelId);
+    tabs.appendChild(tab);
+
+    const panel = document.createElement('div');
+    panel.className = `conversa-panel${!primeiraAba ? ' active' : ''}`;
+    panel.id = panelId;
+    panel.innerHTML = `
+      <div style="text-align: center; padding: var(--sp-5);">
+        <i class="bi bi-file-earmark-pdf" style="font-size: 3rem; color: var(--color-danger); display: block; margin-bottom: var(--sp-3);"></i>
+        <div style="font-size: var(--fs-sm); color: var(--color-text); margin-bottom: var(--sp-3);">PDF da conversa disponivel</div>
+        <a href="${urlPdf}" target="_blank" class="btn btn-primary btn-sm">
+          <i class="bi bi-box-arrow-up-right"></i> Abrir PDF
+        </a>
+      </div>`;
+    panels.appendChild(panel);
+
+    pdfLink.href = urlPdf;
+    pdfLink.style.display = 'inline-flex';
+    if (!primeiraAba) primeiraAba = tabId;
   }
 
-  // ════════════════════════════════════════════════════════
-  //  MÓDULO DE CONVERSA DO LEAD
-  // ════════════════════════════════════════════════════════
-  const URL_CONVERSA_HTML_TPL = '{% url "comercial_leads:visualizar_conversa_lead" 0 %}'.replace('/0/', '/{id}/');
-  const _urlConversa = (leadId) => URL_CONVERSA_HTML_TPL.replace('{id}', leadId);
+  if (tabs.children.length <= 1) tabs.style.display = 'none';
+  else tabs.style.display = 'flex';
 
-  function abrirConversa(leadId, nomeCliente, urlPdf, htmlPath) {
-    document.getElementById('conversaTitulo').textContent = `Conversa — ${nomeCliente}`;
+  document.getElementById('modalConversa').style.display = 'flex';
+}
 
-    const tabs   = document.getElementById('conversaTabs');
-    const panels = document.getElementById('conversaPanels');
-    const pdfLink = document.getElementById('conversaPdfLink');
+function _ativarAba(tabId, panelId) {
+  document.querySelectorAll('.conversa-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.conversa-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  document.getElementById(panelId).classList.add('active');
+}
 
-    tabs.innerHTML = '';
-    panels.innerHTML = '';
-    pdfLink.style.display = 'none';
+function fecharModalConversa() {
+  document.getElementById('modalConversa').style.display = 'none';
+  document.getElementById('conversaPanels').innerHTML = '';
+}
 
-    // Aba HTML do atendimento (iframe via URL do servidor)
-    const temHtml = !!htmlPath;
-    const temPdf  = !!urlPdf;
-
-    if (!temHtml && !temPdf) {
-      panels.innerHTML = `
-        <div style="text-align:center;padding:3rem;color:#9ca3af;">
-          <i class="fas fa-comments" style="font-size:2.5rem;display:block;margin-bottom:.75rem;"></i>
-          <div style="font-weight:600;">Nenhuma conversa disponível</div>
-          <div style="font-size:.82rem;margin-top:.4rem;">Este lead ainda não possui HTML ou PDF de atendimento gerado.</div>
-        </div>`;
-      document.getElementById('modalConversa').style.display = 'block';
-      return;
-    }
-
-    let primeiraAba = null;
-
-    if (temHtml) {
-      const tabId = 'tab-html';
-      const panelId = 'panel-html';
-      const tab = document.createElement('button');
-      tab.className = 'conversa-tab active';
-      tab.id = tabId;
-      tab.innerHTML = '<i class="fas fa-code"></i> Conversa HTML';
-      tab.onclick = () => _ativarAba(tabId, panelId);
-      tabs.appendChild(tab);
-
-      const panel = document.createElement('div');
-      panel.className = 'conversa-panel active';
-      panel.id = panelId;
-      panel.innerHTML = `<iframe class="conversa-iframe" src="${_urlConversa(leadId)}"
-        title="Conversa do atendimento"></iframe>`;
-      panels.appendChild(panel);
-      primeiraAba = tabId;
-    }
-
-    if (temPdf) {
-      const tabId = 'tab-pdf';
-      const panelId = 'panel-pdf';
-      const tab = document.createElement('button');
-      tab.className = `conversa-tab${!primeiraAba ? ' active' : ''}`;
-      tab.id = tabId;
-      tab.innerHTML = '<i class="fas fa-file-pdf"></i> PDF';
-      tab.onclick = () => _ativarAba(tabId, panelId);
-      tabs.appendChild(tab);
-
-      const panel = document.createElement('div');
-      panel.className = `conversa-panel${!primeiraAba ? ' active' : ''}`;
-      panel.id = panelId;
-      panel.innerHTML = `
-        <div style="text-align:center;padding:2rem;">
-          <i class="fas fa-file-pdf" style="font-size:3rem;color:#ef4444;display:block;margin-bottom:1rem;"></i>
-          <div style="font-size:.95rem;color:#374151;margin-bottom:1.25rem;">PDF da conversa disponível</div>
-          <a href="${urlPdf}" target="_blank" class="btn btn-primary">
-            <i class="fas fa-external-link-alt"></i> Abrir PDF no Visualizador
-          </a>
-        </div>`;
-      panels.appendChild(panel);
-
-      pdfLink.href = urlPdf;
-      pdfLink.style.display = 'inline-flex';
-      if (!primeiraAba) primeiraAba = tabId;
-    }
-
-    // Esconde tabs se só existe uma
-    if (tabs.children.length <= 1) tabs.style.display = 'none';
-    else tabs.style.display = 'flex';
-
-    document.getElementById('modalConversa').style.display = 'block';
-  }
-
-  function _ativarAba(tabId, panelId) {
-    document.querySelectorAll('.conversa-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.conversa-panel').forEach(p => p.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    document.getElementById(panelId).classList.add('active');
-  }
-
-  function fecharModalConversa() {
-    document.getElementById('modalConversa').style.display = 'none';
-    // Destruir iframe para parar carregamento
-    document.getElementById('conversaPanels').innerHTML = '';
-  }
-
-  function _getCsrf() {
-    const el = document.querySelector('[name=csrfmiddlewaretoken]');
-    if (el) return el.value;
-    const match = document.cookie.match(/csrftoken=([^;]+)/);
-    return match ? match[1] : '';
-  }
+function _getCsrf() {
+  const el = document.querySelector('[name=csrfmiddlewaretoken]');
+  if (el) return el.value;
+  const match = document.cookie.match(/csrftoken=([^;]+)/);
+  return match ? match[1] : '';
+}
 </script>
 {% endblock %}

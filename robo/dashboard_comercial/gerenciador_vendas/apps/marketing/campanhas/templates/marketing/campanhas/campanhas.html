@@ -1,209 +1,295 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Campanhas - Megalink{% endblock %}
-
-{% block custom_css %}
-<style>
-    .campanhas-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
-    .campanha-card { background:var(--bg-white); border:1px solid var(--border); border-radius:12px; overflow:hidden; transition:all 0.2s; }
-    .campanha-card:hover { box-shadow:0 4px 12px rgba(0,0,0,0.06); }
-    .campanha-header { padding:20px; color:white; position:relative; background:linear-gradient(135deg, var(--primary), var(--primary-dark)); }
-    .campanha-header h3 { font-size:16px; font-weight:700; margin:0 0 4px; }
-    .campanha-codigo { font-size:12px; opacity:0.8; }
-    .campanha-body { padding:16px 20px; }
-    .campanha-info-item { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-secondary); margin-bottom:8px; }
-    .campanha-info-item i { color:var(--text-muted); width:16px; text-align:center; font-size:12px; }
-    .campanha-stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:12px 0; }
-    .campanha-stat { text-align:center; padding:10px; background:var(--border-light); border-radius:8px; }
-    .campanha-stat-value { font-size:20px; font-weight:700; color:var(--text-main); }
-    .campanha-stat-label { font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; }
-    .campanha-actions { display:flex; gap:6px; margin-top:12px; }
-    .plataforma-badge { background:var(--primary-light); color:var(--primary-dark); padding:2px 8px; border-radius:4px; font-size:12px; font-weight:600; }
-    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:1000; align-items:center; justify-content:center; }
-    .modal.active { display:flex; }
-    .modal-content { background:var(--bg-white); border-radius:16px; max-width:560px; width:90%; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
-    .modal-header { display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:1px solid var(--border); }
-    .modal-header h2 { margin:0; font-size:18px; font-weight:700; color:var(--text-main); }
-    .modal-close { background:var(--border-light); border:none; width:32px; height:32px; border-radius:8px; font-size:18px; color:var(--text-muted); cursor:pointer; display:flex; align-items:center; justify-content:center; }
-    .modal-close:hover { background:var(--border); }
-    .modal-body { padding:24px; }
-    .modal-footer { display:flex; justify-content:flex-end; gap:8px; padding:16px 24px; border-top:1px solid var(--border); background:var(--border-light); }
-    .form-input, .form-select, .form-textarea { width:100%; padding:9px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; color:var(--text-main); background:var(--bg-white); }
-    .form-input:focus, .form-select:focus, .form-textarea:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,0.1); }
-    .form-textarea { resize:vertical; min-height:80px; }
-    .form-checkbox { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text-secondary); cursor:pointer; }
-    .status-badge { position:absolute; top:12px; right:12px; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:600; }
-    .status-ativa { background:rgba(255,255,255,0.2); color:white; }
-    .status-inativa { background:rgba(0,0,0,0.2); color:white; }
-</style>
-{% endblock %}
+{% block title %}Campanhas — Hubtrix{% endblock %}
 
 {% block content %}
 {% csrf_token %}
 
-<!-- Header -->
-<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; background:var(--bg-white); border:1px solid var(--border); border-radius:12px; padding:14px 20px; margin-bottom:20px;">
-    <h1 class="page-title" style="margin:0;"><i class="fas fa-bullhorn" style="color:var(--primary);margin-right:8px;"></i> Campanhas</h1>
-    <button onclick="abrirModalNovaCampanha()" class="btn-primary btn-sm"><i class="fas fa-plus"></i> Nova Campanha</button>
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Campanhas</h1>
+      <p class="page-subtitle">Detecção automática de leads por palavra-chave em anúncios e canais de tráfego.</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary btn-sm" onclick="abrirModalNovaCampanha()"><i class="bi bi-plus-lg"></i> Nova campanha</button>
+    </div>
+  </div>
 </div>
 
-<!-- Stats -->
-<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
-    <div class="stat-icon-card">
-        <div class="icon" style="background:var(--primary)"><i class="fas fa-bullhorn"></i></div>
-        <div><div class="stat-label">TOTAL CAMPANHAS</div><div class="stat-value">{{ total_campanhas }}</div></div>
-    </div>
-    <div class="stat-icon-card">
-        <div class="icon" style="background:var(--success)"><i class="fas fa-check-circle"></i></div>
-        <div><div class="stat-label">ATIVAS</div><div class="stat-value">{{ campanhas_ativas }}</div></div>
-    </div>
-    <div class="stat-icon-card">
-        <div class="icon" style="background:var(--info)"><i class="fas fa-chart-line"></i></div>
-        <div><div class="stat-label">DETECCOES</div><div class="stat-value">{{ total_deteccoes }}</div></div>
-    </div>
-    <div class="stat-icon-card">
-        <div class="icon" style="background:var(--warning)"><i class="fas fa-users"></i></div>
-        <div><div class="stat-label">LEADS</div><div class="stat-value">{{ total_leads }}</div></div>
-    </div>
+{# Stats #}
+<div class="camp-stats-grid">
+  {% include "components/stat_card.html" with label="Total campanhas" value=total_campanhas icon="bi-megaphone" icon_variant="primary" %}
+  {% include "components/stat_card.html" with label="Ativas" value=campanhas_ativas icon="bi-check-circle" icon_variant="success" %}
+  {% include "components/stat_card.html" with label="Deteccoes" value=total_deteccoes icon="bi-graph-up" icon_variant="info" %}
+  {% include "components/stat_card.html" with label="Leads" value=total_leads icon="bi-people" icon_variant="warning" %}
 </div>
 
-<!-- Campanhas grid -->
+{# Grid de campanhas #}
 {% if campanhas %}
-<div class="campanhas-grid">
-    {% for campanha in campanhas %}
-    <div class="campanha-card">
-        <div class="campanha-header">
-            <span class="status-badge {% if campanha.ativa %}status-ativa{% else %}status-inativa{% endif %}">
-                {% if campanha.ativa %}Ativa{% else %}Inativa{% endif %}
-            </span>
-            <h3>{{ campanha.nome }}</h3>
-            <div class="campanha-codigo">{{ campanha.codigo }}</div>
-        </div>
-        <div class="campanha-body">
-            <div class="campanha-info-item"><i class="fas fa-key"></i><span>Palavra-chave: <strong>"{{ campanha.palavra_chave }}"</strong></span></div>
-            <div class="campanha-info-item"><i class="fas fa-search"></i><span>Tipo: {{ campanha.get_tipo_match_display }}</span></div>
-            <div class="campanha-info-item"><i class="fas fa-layer-group"></i><span class="plataforma-badge">{{ campanha.get_plataforma_display }}</span></div>
+  {% include "components/list_filters.html" with tabs=status_tabs search_placeholder="Buscar campanha..." search_id="buscaCampanha" search_oninput="filtrarCampanhas()" %}
 
-            <div class="campanha-stats">
-                <div class="campanha-stat"><div class="campanha-stat-value">{{ campanha.contador_deteccoes }}</div><div class="campanha-stat-label">Deteccoes</div></div>
-                <div class="campanha-stat"><div class="campanha-stat-value">{{ campanha.total_leads }}</div><div class="campanha-stat-label">Leads</div></div>
-            </div>
-
-            <div class="campanha-actions">
-                <button onclick="editarCampanha({{ campanha.id }})" class="btn-primary btn-sm" style="flex:1;"><i class="fas fa-edit"></i> Editar</button>
-                <button onclick="excluirCampanha({{ campanha.id }})" class="btn-danger btn-sm"><i class="fas fa-trash"></i></button>
-            </div>
-        </div>
+  <div data-view-scope>
+    <div style="display: flex; justify-content: flex-end; margin-bottom: var(--sp-3);">
+      {% include "components/view_toggle.html" with storage_key="campanhas-view" %}
     </div>
-    {% endfor %}
-</div>
+
+    <div class="entity-grid view-cards" id="campanhasGrid">
+      {% for campanha in campanhas %}
+        {% with edit_fn="editarCampanha("|add:campanha.id|stringformat:"s" del_fn="excluirCampanha("|add:campanha.id|stringformat:"s" %}
+          {% with edit_call=edit_fn|add:")" del_call=del_fn|add:")" subtitle_text=campanha.palavra_chave|add:" · "|add:campanha.get_tipo_match_display %}
+            <div data-status="{% if campanha.ativa %}ativa{% else %}inativa{% endif %}" data-nome="{{ campanha.nome|lower }} {{ campanha.palavra_chave|lower }} {{ campanha.codigo|lower }}">
+              {% if campanha.ativa %}
+                {% include "components/entity_card.html" with icon="bi-megaphone" icon_variant="primary" title=campanha.nome subtitle=subtitle_text metric_value=campanha.total_leads metric_label="leads" tag_variant="success" tag_label="Ativa" footer_meta=campanha.get_plataforma_display primary_action_onclick=edit_call primary_action_label="Editar" primary_action_icon="bi-pencil" secondary_action_onclick=del_call secondary_action_icon="bi-trash" secondary_action_title="Excluir" secondary_action_danger=True %}
+              {% else %}
+                {% include "components/entity_card.html" with icon="bi-megaphone" icon_variant="info" title=campanha.nome subtitle=subtitle_text metric_value=campanha.total_leads metric_label="leads" tag_variant="neutral" tag_label="Inativa" footer_meta=campanha.get_plataforma_display primary_action_onclick=edit_call primary_action_label="Editar" primary_action_icon="bi-pencil" secondary_action_onclick=del_call secondary_action_icon="bi-trash" secondary_action_title="Excluir" secondary_action_danger=True %}
+              {% endif %}
+            </div>
+          {% endwith %}
+        {% endwith %}
+      {% endfor %}
+    </div>
+
+    <div class="entity-list view-list" id="campanhasLista" style="display: none;">
+      {% for campanha in campanhas %}
+        {% with edit_fn="editarCampanha("|add:campanha.id|stringformat:"s" del_fn="excluirCampanha("|add:campanha.id|stringformat:"s" %}
+          {% with edit_call=edit_fn|add:")" del_call=del_fn|add:")" subtitle_text=campanha.palavra_chave|add:" · "|add:campanha.get_tipo_match_display %}
+            <div data-status="{% if campanha.ativa %}ativa{% else %}inativa{% endif %}" data-nome="{{ campanha.nome|lower }} {{ campanha.palavra_chave|lower }} {{ campanha.codigo|lower }}">
+              {% if campanha.ativa %}
+                {% include "components/entity_table.html" with icon="bi-megaphone" icon_variant="primary" title=campanha.nome subtitle=subtitle_text metric_value=campanha.total_leads metric_label="leads" tag_variant="success" tag_label="Ativa" footer_meta=campanha.get_plataforma_display primary_action_onclick=edit_call primary_action_label="Editar" primary_action_icon="bi-pencil" secondary_action_onclick=del_call secondary_action_icon="bi-trash" secondary_action_title="Excluir" secondary_action_danger=True %}
+              {% else %}
+                {% include "components/entity_table.html" with icon="bi-megaphone" icon_variant="info" title=campanha.nome subtitle=subtitle_text metric_value=campanha.total_leads metric_label="leads" tag_variant="neutral" tag_label="Inativa" footer_meta=campanha.get_plataforma_display primary_action_onclick=edit_call primary_action_label="Editar" primary_action_icon="bi-pencil" secondary_action_onclick=del_call secondary_action_icon="bi-trash" secondary_action_title="Excluir" secondary_action_danger=True %}
+              {% endif %}
+            </div>
+          {% endwith %}
+        {% endwith %}
+      {% endfor %}
+    </div>
+
+    {% include "components/pagination.html" with page_obj=page_obj %}
+  </div>
 {% else %}
-<div class="card">
-    <div class="empty-state">
-        <i class="fas fa-bullhorn"></i>
-        <p>Nenhuma campanha cadastrada</p>
-        <a onclick="abrirModalNovaCampanha()" style="color:var(--primary);font-size:13px;font-weight:600;cursor:pointer;">+ Criar Campanha</a>
+  <div class="card">
+    <div class="card-body" style="text-align: center; padding: var(--sp-10);">
+      <i class="bi bi-megaphone" style="font-size: 2.5rem; color: var(--color-text-muted); opacity: 0.3; display: block; margin-bottom: var(--sp-3);"></i>
+      <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0 0 var(--sp-4);">Nenhuma campanha cadastrada.</p>
+      <button class="btn btn-primary btn-sm" onclick="abrirModalNovaCampanha()"><i class="bi bi-plus-lg"></i> Criar primeira campanha</button>
     </div>
-</div>
+  </div>
 {% endif %}
 
-<!-- Modal -->
-<div id="modalCampanha" class="modal" onclick="if(event.target===this)fecharModal()">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="modalTitle">Nova Campanha</h2>
-            <button class="modal-close" onclick="fecharModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <form id="formCampanha">
-                <input type="hidden" id="campanhaId">
-                <div class="form-group"><label class="form-label">Nome da Campanha *</label><input type="text" id="nome" class="form-input" required placeholder="Ex: Black Friday 2024"></div>
-                <div class="form-group"><label class="form-label">Codigo Unico *</label><input type="text" id="codigo" class="form-input" required placeholder="Ex: BF2024"><div class="form-hint">Codigo identificador unico (sem espacos)</div></div>
-                <div class="form-group"><label class="form-label">Palavra-chave *</label><input type="text" id="palavra_chave" class="form-input" required placeholder="Ex: cupom50"><div class="form-hint">Palavra ou termo que identifica esta campanha</div></div>
-                <div class="form-group"><label class="form-label">Tipo de Deteccao *</label><select id="tipo_match" class="form-select" required><option value="parcial">Match Parcial (recomendado)</option><option value="exato">Match Exato</option><option value="regex">Expressao Regular</option></select></div>
-                <div class="form-group"><label class="form-label">Plataforma *</label><select id="plataforma" class="form-select" required><option value="google_ads">Google Ads</option><option value="facebook_ads">Facebook Ads</option><option value="instagram_ads">Instagram Ads</option><option value="tiktok_ads">TikTok Ads</option><option value="linkedin_ads">LinkedIn Ads</option><option value="email">Email Marketing</option><option value="sms">SMS Marketing</option><option value="whatsapp">WhatsApp Business</option><option value="outro">Outro</option></select></div>
-                <div class="form-group"><label class="form-label">Prioridade (1-10)</label><input type="number" id="prioridade" class="form-input" min="1" max="10" value="5"><div class="form-hint">Prioridade para desempate entre campanhas</div></div>
-                <div class="form-group"><label class="form-label">Descricao</label><textarea id="descricao" class="form-textarea" placeholder="Descricao da campanha..."></textarea></div>
-                <div class="form-group"><label class="form-checkbox"><input type="checkbox" id="ativa" checked> Campanha Ativa</label></div>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button onclick="fecharModal()" class="btn-secondary">Cancelar</button>
-            <button onclick="salvarCampanha()" class="btn-primary" id="btnSalvar"><i class="fas fa-save"></i> Salvar</button>
-        </div>
+{# Modal criar/editar #}
+<div id="modalCampanha" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <h3 id="modalTitle" class="modal-title">Nova campanha</h3>
+      <button type="button" class="modal-close" onclick="fecharModal()"><i class="bi bi-x-lg"></i></button>
     </div>
+    <div class="modal-body">
+      <form id="formCampanha">
+        <input type="hidden" id="campanhaId">
+        <div class="field" style="margin-bottom: var(--sp-3);">
+          <label class="field-label">Nome da campanha <span class="field-required">*</span></label>
+          <div class="field-input-wrap"><input id="nome" class="field-input" type="text" required placeholder="Ex: Black Friday 2024"></div>
+        </div>
+        <div class="camp-form-grid" style="margin-bottom: var(--sp-3);">
+          <div class="field">
+            <label class="field-label">Codigo unico <span class="field-required">*</span></label>
+            <div class="field-input-wrap"><input id="codigo" class="field-input" type="text" required placeholder="Ex: BF2024"></div>
+            <p class="field-helper">Identificador unico (sem espacos)</p>
+          </div>
+          <div class="field">
+            <label class="field-label">Palavra-chave <span class="field-required">*</span></label>
+            <div class="field-input-wrap"><input id="palavra_chave" class="field-input" type="text" required placeholder="Ex: cupom50"></div>
+            <p class="field-helper">Termo que identifica a campanha</p>
+          </div>
+        </div>
+        <div class="camp-form-grid" style="margin-bottom: var(--sp-3);">
+          <div class="field">
+            <label class="field-label">Tipo de deteccao <span class="field-required">*</span></label>
+            <div class="field-input-wrap">
+              <select id="tipo_match" class="field-input" required>
+                <option value="parcial">Match parcial (recomendado)</option>
+                <option value="exato">Match exato</option>
+                <option value="regex">Expressao regular</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Plataforma <span class="field-required">*</span></label>
+            <div class="field-input-wrap">
+              <select id="plataforma" class="field-input" required>
+                <option value="google_ads">Google Ads</option>
+                <option value="facebook_ads">Facebook Ads</option>
+                <option value="instagram_ads">Instagram Ads</option>
+                <option value="tiktok_ads">TikTok Ads</option>
+                <option value="linkedin_ads">LinkedIn Ads</option>
+                <option value="email">Email Marketing</option>
+                <option value="sms">SMS Marketing</option>
+                <option value="whatsapp">WhatsApp Business</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom: var(--sp-3);">
+          <label class="field-label">Prioridade (1-10)</label>
+          <div class="field-input-wrap"><input id="prioridade" class="field-input" type="number" min="1" max="10" value="5"></div>
+          <p class="field-helper">Prioridade pra desempate entre campanhas</p>
+        </div>
+        <div class="field" style="margin-bottom: var(--sp-3);">
+          <label class="field-label">Descricao</label>
+          <div class="field-input-wrap">
+            <textarea id="descricao" class="field-input" rows="3" style="height: auto; min-height: 80px; padding: var(--sp-2) var(--sp-3); resize: vertical;" placeholder="Descricao da campanha..."></textarea>
+          </div>
+        </div>
+        <label class="camp-checkbox-label">
+          <input type="checkbox" id="ativa" checked>
+          Campanha ativa
+        </label>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModal()">Cancelar</button>
+      <button type="button" class="btn btn-primary btn-sm" id="btnSalvar" onclick="salvarCampanha()"><i class="bi bi-save"></i> Salvar</button>
+    </div>
+  </div>
 </div>
+{% endblock %}
 
+{% block extra_css %}
+<style>
+  .camp-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-5);
+  }
+
+  .entity-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--sp-4);
+  }
+
+  .camp-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+  .camp-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+  }
+  .camp-checkbox-label input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--color-primary);
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-function abrirModalNovaCampanha() {
-    document.getElementById('modalTitle').textContent = 'Nova Campanha';
+  let statusAtivo = '';
+
+  function filtrarPorStatus(status) {
+    statusAtivo = status;
+    document.querySelectorAll('.list-filters-tab').forEach(t => t.classList.remove('is-active'));
+    event.currentTarget.classList.add('is-active');
+    filtrarCampanhas();
+  }
+
+  function filtrarCampanhas() {
+    const q = (document.getElementById('buscaCampanha')?.value || '').toLowerCase();
+    document.querySelectorAll('#campanhasGrid > [data-status], #campanhasLista > [data-status]').forEach(card => {
+      const matchStatus = !statusAtivo || card.dataset.status === statusAtivo;
+      const matchQ = !q || card.dataset.nome.includes(q);
+      card.style.display = matchStatus && matchQ ? '' : 'none';
+    });
+  }
+
+  function abrirModalNovaCampanha() {
+    document.getElementById('modalTitle').textContent = 'Nova campanha';
     document.getElementById('formCampanha').reset();
     document.getElementById('campanhaId').value = '';
-    document.getElementById('modalCampanha').classList.add('active');
-}
+    abrirModal('modalCampanha');
+  }
 
-function fecharModal() { document.getElementById('modalCampanha').classList.remove('active'); }
+  function fecharModal() { fecharModal('modalCampanha'); }
 
-function getCsrfToken() {
+  function getCsrfToken() {
     const i = document.querySelector('[name=csrfmiddlewaretoken]');
     if (i) return i.value;
     const c = document.cookie.split('; ').find(r => r.startsWith('csrftoken='));
     return c ? c.split('=')[1] : '';
-}
+  }
 
-function salvarCampanha() {
+  function salvarCampanha() {
     const nome = document.getElementById('nome').value.trim();
     const codigo = document.getElementById('codigo').value.trim();
     const palavra_chave = document.getElementById('palavra_chave').value.trim();
-    if (!nome || !codigo || !palavra_chave) { window.showNotification('Preencha todos os campos obrigatorios','warning'); return; }
+    if (!nome || !codigo || !palavra_chave) { toast('Erro', 'Preencha todos os campos obrigatorios', 'warning'); return; }
 
     const btn = document.getElementById('btnSalvar');
     const orig = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    btn.innerHTML = '<i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite;"></i> Salvando...';
 
     const id = document.getElementById('campanhaId').value;
-    const data = { nome, codigo, palavra_chave, tipo_match:document.getElementById('tipo_match').value, plataforma:document.getElementById('plataforma').value, prioridade:parseInt(document.getElementById('prioridade').value)||5, descricao:document.getElementById('descricao').value.trim(), ativa:document.getElementById('ativa').checked };
+    const data = {
+      nome, codigo, palavra_chave,
+      tipo_match: document.getElementById('tipo_match').value,
+      plataforma: document.getElementById('plataforma').value,
+      prioridade: parseInt(document.getElementById('prioridade').value) || 5,
+      descricao: document.getElementById('descricao').value.trim(),
+      ativa: document.getElementById('ativa').checked,
+    };
     if (id) data.id = parseInt(id);
 
-    fetch('/api/campanhas/', { method:id?'PUT':'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()}, body:JSON.stringify(data) })
-    .then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-    .then(result => {
-        btn.disabled = false; btn.innerHTML = orig;
-        if (result.success) { window.showNotification(result.message,'success'); setTimeout(()=>location.reload(),1000); }
-        else { window.showNotification(result.error||'Erro desconhecido','error'); }
+    fetch('/api/campanhas/', {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+      body: JSON.stringify(data),
     })
-    .catch(err => { btn.disabled=false; btn.innerHTML=orig; window.showNotification('Erro: '+err.message,'error'); });
-}
+    .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+    .then(result => {
+      btn.disabled = false; btn.innerHTML = orig;
+      if (result.success) { toast('Salvo', result.message, 'success'); setTimeout(() => location.reload(), 800); }
+      else { toast('Erro', result.error || 'Erro desconhecido', 'danger'); }
+    })
+    .catch(err => { btn.disabled = false; btn.innerHTML = orig; toast('Erro', err.message, 'danger'); });
+  }
 
-function editarCampanha(id) {
-    fetch('/api/campanhas/').then(r=>r.json()).then(result => {
-        if (!result.success) return;
-        const c = result.data.find(x => x.id === id);
-        if (!c) return;
-        document.getElementById('modalTitle').textContent = 'Editar Campanha';
-        document.getElementById('campanhaId').value = c.id;
-        document.getElementById('nome').value = c.nome;
-        document.getElementById('codigo').value = c.codigo;
-        document.getElementById('palavra_chave').value = c.palavra_chave;
-        document.getElementById('tipo_match').value = c.tipo_match;
-        document.getElementById('plataforma').value = c.plataforma;
-        document.getElementById('prioridade').value = c.prioridade;
-        document.getElementById('descricao').value = c.descricao || '';
-        document.getElementById('ativa').checked = c.ativa;
-        document.getElementById('modalCampanha').classList.add('active');
+  function editarCampanha(id) {
+    fetch('/api/campanhas/').then(r => r.json()).then(result => {
+      if (!result.success) return;
+      const c = result.data.find(x => x.id === id);
+      if (!c) return;
+      document.getElementById('modalTitle').textContent = 'Editar campanha';
+      document.getElementById('campanhaId').value = c.id;
+      document.getElementById('nome').value = c.nome;
+      document.getElementById('codigo').value = c.codigo;
+      document.getElementById('palavra_chave').value = c.palavra_chave;
+      document.getElementById('tipo_match').value = c.tipo_match;
+      document.getElementById('plataforma').value = c.plataforma;
+      document.getElementById('prioridade').value = c.prioridade;
+      document.getElementById('descricao').value = c.descricao || '';
+      document.getElementById('ativa').checked = c.ativa;
+      abrirModal('modalCampanha');
     });
-}
+  }
 
-function excluirCampanha(id) {
+  function excluirCampanha(id) {
     if (!confirm('Excluir esta campanha?')) return;
-    fetch('/api/campanhas/', { method:'DELETE', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()}, body:JSON.stringify({id}) })
-    .then(r=>r.json()).then(result => {
-        if (result.success) { window.showNotification(result.message,'success'); setTimeout(()=>location.reload(),1000); }
-        else { window.showNotification(result.error||'Erro','error'); }
-    }).catch(()=>window.showNotification('Erro ao excluir','error'));
-}
-
-document.addEventListener('keydown', e => { if(e.key==='Escape') fecharModal(); });
+    fetch('/api/campanhas/', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+      body: JSON.stringify({ id }),
+    })
+    .then(r => r.json()).then(result => {
+      if (result.success) { toast('Excluida', result.message, 'success'); setTimeout(() => location.reload(), 800); }
+      else { toast('Erro', result.error || 'Erro', 'danger'); }
+    })
+    .catch(() => toast('Erro', 'Erro ao excluir', 'danger'));
+  }
 </script>
 {% endblock %}

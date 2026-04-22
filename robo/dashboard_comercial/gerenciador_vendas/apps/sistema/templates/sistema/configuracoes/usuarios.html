@@ -1,209 +1,243 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Usuarios - Megalink{% endblock %}
-
-{% block custom_css %}
-<style>
-    .user-avatar-sm { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,var(--primary),var(--info)); display:flex; align-items:center; justify-content:center; color:white; font-weight:600; font-size:13px; flex-shrink:0; }
-    .user-cell { display:flex; align-items:center; gap:10px; }
-    .user-cell h4 { margin:0; font-size:14px; font-weight:600; color:var(--text-main); }
-    .user-cell p { margin:0; font-size:12px; color:var(--text-muted); }
-    .group-chip { background:var(--border-light); color:var(--text-muted); padding:2px 8px; border-radius:4px; font-size:11px; font-weight:500; }
-    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:1000; align-items:center; justify-content:center; }
-    .modal.active { display:flex; }
-</style>
-{% endblock %}
+{% block title %}Usuarios — Hubtrix{% endblock %}
 
 {% block content %}
-<!-- Header -->
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-    <h1 class="page-title">Usuarios e Permissões</h1>
-    <div style="display:flex;gap:8px;align-items:center;">
-        <div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:8px;padding:0 12px;background:var(--bg-white);">
-            <i class="fas fa-search" style="color:var(--text-light);font-size:13px;"></i>
-            <input type="text" id="searchInput" placeholder="Buscar usuarios..." style="border:none;outline:none;padding:9px 8px;font-size:14px;font-family:inherit;background:transparent;width:220px;">
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Usuarios e permissoes</h1>
+      <p class="page-subtitle">Gerencie quem tem acesso ao sistema e qual perfil de permissao.</p>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'sistema:perfis_permissao' %}" class="btn btn-secondary btn-sm"><i class="bi bi-shield-check"></i> Perfis</a>
+      <button class="btn btn-primary btn-sm" onclick="openCreateModal()"><i class="bi bi-plus-lg"></i> Novo usuario</button>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: var(--sp-4);">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-people"></i> Usuarios do sistema</h3>
+    <div class="card-actions">
+      <div class="field" style="margin: 0; width: 240px;">
+        <div class="field-input-wrap">
+          <i class="bi bi-search field-icon field-icon-left"></i>
+          <input id="searchInput" class="field-input has-icon-left" type="text" placeholder="Buscar usuario..." style="height: 32px; font-size: var(--fs-xs);">
         </div>
-        <a href="{% url 'sistema:perfis_permissao' %}" class="btn-secondary"><i class="fas fa-shield-alt"></i> Perfis</a>
-        <button class="btn-primary" onclick="openCreateModal()"><i class="fas fa-plus"></i> Novo Usuario</button>
+      </div>
     </div>
+  </div>
+  <div class="table-wrap" style="border:none; border-radius:0;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Email</th>
+          <th>Status</th>
+          <th>Perfil</th>
+          <th>Criado em</th>
+          <th class="table-col-actions">Acoes</th>
+        </tr>
+      </thead>
+      <tbody id="usersTableBody">
+        {% for user in users %}
+          <tr data-user-id="{{ user.id }}" data-perfil-id="{% if user.perm and user.perm.perfil %}{{ user.perm.perfil.id }}{% endif %}">
+            <td>
+              <div style="display: flex; align-items: center; gap: var(--sp-3);">
+                <div class="user-avatar-sm">{{ user.first_name|first|default:user.username|first|upper }}</div>
+                <div>
+                  <div style="font-weight: var(--fw-semibold); font-size: var(--fs-sm);" class="user-name">{{ user.get_full_name|default:user.username }}</div>
+                  <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">{{ user.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="user-email-cell">{{ user.email }}</td>
+            <td>
+              {% if user.is_active %}
+                {% include "components/badge.html" with variant="success" label="Ativo" dot=True %}
+              {% else %}
+                {% include "components/badge.html" with variant="danger" label="Inativo" dot=True %}
+              {% endif %}
+            </td>
+            <td>
+              {% if user.is_superuser %}
+                {% include "components/badge.html" with variant="warning" label="Superuser" icon="bi-gem" %}
+              {% elif user.perm and user.perm.perfil %}
+                {% include "components/badge.html" with variant="info" label=user.perm.perfil.nome %}
+              {% else %}
+                {% include "components/badge.html" with variant="neutral" label="Sem perfil" %}
+              {% endif %}
+            </td>
+            <td style="font-size: var(--fs-xs); color: var(--color-text-muted);">{{ user.date_joined|date:"d/m/Y H:i" }}</td>
+            <td class="table-col-actions">
+              <button class="btn btn-ghost btn-sm" onclick="editUser({{ user.id }})" title="Editar"><i class="bi bi-pencil"></i></button>
+              {% if not user.is_superuser and user.id != request.user.id %}
+                <button class="btn btn-ghost btn-sm" onclick="deleteUser({{ user.id }}, '{{ user.username }}')" title="Deletar" style="color: var(--color-danger);"><i class="bi bi-trash"></i></button>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6"><div class="table-empty"><i class="bi bi-people"></i>Nenhum usuario cadastrado.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
-<!-- Table -->
-<div class="data-table-container">
-    <div class="table-header">
-        <span class="table-title">Usuarios do Sistema</span>
+{# Modal usuario #}
+<div id="userModal" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3 id="modalTitle" class="modal-title">Novo usuario</h3>
+      <button type="button" class="modal-close" onclick="closeModal()"><i class="bi bi-x-lg"></i></button>
     </div>
-    <div style="overflow-x:auto;">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Usuario</th>
-                    <th>Email</th>
-                    <th>Status</th>
-                    <th>Permissões</th>
-                    <th>Data de Criacao</th>
-                    <th style="width:100px">Acoes</th>
-                </tr>
-            </thead>
-            <tbody id="usersTableBody">
-                {% for user in users %}
-                <tr data-user-id="{{ user.id }}"
-                    data-perfil-id="{% if user.perm and user.perm.perfil %}{{ user.perm.perfil.id }}{% endif %}">
-                    <td>
-                        <div class="user-cell">
-                            <div class="user-avatar-sm">{{ user.first_name|first|default:user.username|first|upper }}</div>
-                            <div class="user-details">
-                                <h4>{{ user.get_full_name|default:user.username }}</h4>
-                                <p>{{ user.email }}</p>
-                            </div>
-                        </div>
-                    </td>
-                    <td>{{ user.email }}</td>
-                    <td>
-                        {% if user.is_active %}
-                            <span class="badge badge-success">Ativo</span>
-                        {% else %}
-                            <span class="badge badge-danger">Inativo</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if user.is_superuser %}
-                            <span class="group-chip" style="background:#fef3c7;color:#d97706;">Superuser</span>
-                        {% elif user.perm and user.perm.perfil %}
-                            <span class="group-chip" style="background:#dbeafe;color:#2563eb;">{{ user.perm.perfil.nome }}</span>
-                        {% else %}
-                            <span class="group-chip">Sem perfil</span>
-                        {% endif %}
-                    </td>
-                    <td style="font-size:12px;color:var(--text-muted);">{{ user.date_joined|date:"d/m/Y H:i" }}</td>
-                    <td>
-                        <div style="display:flex;gap:4px;">
-                            <button class="row-action" onclick="editUser({{ user.id }})" title="Editar" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:none;background:var(--border-light);color:var(--text-muted);cursor:pointer;font-size:12px;">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            {% if not user.is_superuser and user.id != request.user.id %}
-                            <button class="row-action" onclick="deleteUser({{ user.id }}, '{{ user.username }}')" title="Deletar" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:none;background:var(--danger-light);color:var(--danger);cursor:pointer;font-size:12px;">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Modal -->
-<div id="userModal" class="modal" onclick="if(event.target===this)closeModal()">
-    <div class="modal-content" style="max-width:500px;padding:24px;">
-        <button class="modal-close" onclick="closeModal()">&times;</button>
-        <h3 style="font-size:18px;font-weight:700;margin-bottom:20px;" id="modalTitle">Novo Usuario</h3>
-        <div id="alertContainer"></div>
-        <form id="userForm">
-            <input type="hidden" id="userId" name="user_id">
-            <div class="form-group"><label class="form-label">Email *</label><input type="email" id="email" name="email" class="form-control" required></div>
-            <div class="form-group"><label class="form-label">Nome</label><input type="text" id="firstName" name="first_name" class="form-control"></div>
-            <div class="form-group"><label class="form-label">Sobrenome</label><input type="text" id="lastName" name="last_name" class="form-control"></div>
-            <div class="form-group"><label class="form-label">Senha <span id="passwordRequired">*</span></label><input type="password" id="password" name="password" class="form-control"><div class="form-hint">Deixe em branco para manter a senha atual (apenas em edicao)</div></div>
-            <!-- Perfil de permissão -->
-            <div class="form-group">
-                <label class="form-label"><i class="fas fa-shield-alt" style="color:var(--primary);margin-right:4px;"></i> Perfil de Permissão</label>
-                <select id="perfilId" name="perfil_id" class="form-control">
-                    <option value="">Sem perfil (acesso total)</option>
-                    {% for perfil in perfis %}
-                    <option value="{{ perfil.id }}">{{ perfil.nome }}</option>
-                    {% endfor %}
-                </select>
-                <div class="form-hint">Define quais módulos e papéis o usuário tem acesso. Gerencie perfis no botão "Perfis".</div>
-            </div>
-
-            <div class="form-group"><label style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-secondary);cursor:pointer;"><input type="checkbox" id="isActive" name="is_active" checked> Usuario ativo</label></div>
-        </form>
-        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
-            <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
-            <button class="btn-primary" onclick="saveUser()">Salvar</button>
+    <div class="modal-body">
+      <div id="alertContainer"></div>
+      <form id="userForm">
+        <input type="hidden" id="userId" name="user_id">
+        <div class="field" style="margin-bottom: var(--sp-3);">
+          <label class="field-label">Email <span class="field-required">*</span></label>
+          <div class="field-input-wrap"><input class="field-input" type="email" id="email" name="email" required></div>
         </div>
+        <div class="admin-form-grid" style="margin-bottom: var(--sp-3);">
+          <div class="field">
+            <label class="field-label">Nome</label>
+            <div class="field-input-wrap"><input class="field-input" type="text" id="firstName" name="first_name"></div>
+          </div>
+          <div class="field">
+            <label class="field-label">Sobrenome</label>
+            <div class="field-input-wrap"><input class="field-input" type="text" id="lastName" name="last_name"></div>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom: var(--sp-3);">
+          <label class="field-label">Senha <span id="passwordRequired">*</span></label>
+          <div class="field-input-wrap"><input class="field-input" type="password" id="password" name="password"></div>
+          <p class="field-helper">Deixe em branco pra manter a senha atual (apenas em edicao).</p>
+        </div>
+        <div class="field" style="margin-bottom: var(--sp-3);">
+          <label class="field-label"><i class="bi bi-shield-check"></i> Perfil de permissao</label>
+          <div class="field-input-wrap">
+            <select id="perfilId" name="perfil_id" class="field-input">
+              <option value="">Sem perfil (acesso total)</option>
+              {% for perfil in perfis %}<option value="{{ perfil.id }}">{{ perfil.nome }}</option>{% endfor %}
+            </select>
+          </div>
+          <p class="field-helper">Define quais modulos o usuario tem acesso. Gerencie perfis na aba "Perfis".</p>
+        </div>
+        <label style="display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm); cursor: pointer;">
+          <input type="checkbox" id="isActive" name="is_active" checked style="width: 16px; height: 16px; accent-color: var(--color-primary);">
+          Usuario ativo
+        </label>
+      </form>
     </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal()">Cancelar</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="saveUser()"><i class="bi bi-save"></i> Salvar</button>
+    </div>
+  </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .user-avatar-sm {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-info));
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-weight: var(--fw-semibold);
+    font-size: var(--fs-sm);
+    flex-shrink: 0;
+  }
+  .admin-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-let currentUser = null, isEditMode = false;
+  let currentUser = null, isEditMode = false;
+  function getCookie(name) { let v=null; if(document.cookie) document.cookie.split(';').forEach(c=>{ c=c.trim(); if(c.startsWith(name+'=')) v=decodeURIComponent(c.substring(name.length+1)); }); return v; }
+  const CSRF = getCookie('csrftoken');
+  const headers = {'Content-Type':'application/json','X-CSRFToken':CSRF};
 
-function getCookie(name) { let v=null; if(document.cookie) document.cookie.split(';').forEach(c=>{ c=c.trim(); if(c.startsWith(name+'=')) v=decodeURIComponent(c.substring(name.length+1)); }); return v; }
-const CSRF = getCookie('csrftoken');
-const headers = {'Content-Type':'application/json','X-CSRFToken':CSRF};
-
-// ── Busca ──
-document.getElementById('searchInput').addEventListener('input', function(e) {
+  document.getElementById('searchInput').addEventListener('input', function(e) {
     const s = e.target.value.toLowerCase();
     document.querySelectorAll('#usersTableBody tr').forEach(row => {
-        const name = row.querySelector('.user-details h4').textContent.toLowerCase();
-        const email = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
-        row.style.display = (name.includes(s) || email.includes(s)) ? '' : 'none';
+      const nameEl = row.querySelector('.user-name');
+      const emailEl = row.querySelector('.user-email-cell');
+      if (!nameEl || !emailEl) return;
+      const name = nameEl.textContent.toLowerCase();
+      const email = emailEl.textContent.toLowerCase();
+      row.style.display = (name.includes(s) || email.includes(s)) ? '' : 'none';
     });
-});
+  });
 
-// ── Modal Usuários ──
-function openCreateModal() {
+  function openCreateModal() {
     isEditMode = false; currentUser = null;
-    document.getElementById('modalTitle').textContent = 'Novo Usuario';
+    document.getElementById('modalTitle').textContent = 'Novo usuario';
     document.getElementById('passwordRequired').textContent = '*';
     document.getElementById('userForm').reset();
     document.getElementById('isActive').checked = true;
     document.getElementById('perfilId').value = '';
-    document.getElementById('userModal').classList.add('active');
     clearAlerts();
-}
+    abrirModal('userModal');
+  }
 
-function editUser(userId) {
+  function editUser(userId) {
     isEditMode = true; currentUser = userId;
-    document.getElementById('modalTitle').textContent = 'Editar Usuario';
+    document.getElementById('modalTitle').textContent = 'Editar usuario';
     document.getElementById('passwordRequired').textContent = '';
     const row = document.querySelector(`tr[data-user-id="${userId}"]`);
     document.getElementById('userId').value = userId;
-    document.getElementById('email').value = row.querySelector('td:nth-child(2)').textContent;
-    const parts = row.querySelector('.user-details h4').textContent.split(' ');
+    document.getElementById('email').value = row.querySelector('.user-email-cell').textContent.trim();
+    const fullName = row.querySelector('.user-name').textContent.trim();
+    const parts = fullName.split(' ');
     document.getElementById('firstName').value = parts[0] || '';
     document.getElementById('lastName').value = parts.slice(1).join(' ') || '';
     document.getElementById('password').value = '';
     document.getElementById('perfilId').value = row.dataset.perfilId || '';
-    const txt = (row.querySelector('.badge')?.textContent || '').trim();
-    document.getElementById('isActive').checked = txt !== 'Inativo';
-    document.getElementById('userModal').classList.add('active');
+    const badgeText = (row.querySelector('.badge')?.textContent || '').trim();
+    document.getElementById('isActive').checked = badgeText !== 'Inativo';
     clearAlerts();
-}
+    abrirModal('userModal');
+  }
 
-function closeModal() { document.getElementById('userModal').classList.remove('active'); clearAlerts(); }
-function clearAlerts() { document.getElementById('alertContainer').innerHTML = ''; }
-function showAlert(msg, type) { document.getElementById('alertContainer').innerHTML = `<div class="alert alert-${type==='error'?'danger':type}">${msg}</div>`; }
+  function closeModal() { fecharModal('userModal'); clearAlerts(); }
+  function clearAlerts() { document.getElementById('alertContainer').innerHTML = ''; }
+  function showAlert(msg, type) {
+    const variant = type === 'error' ? 'danger' : (type === 'success' ? 'success' : 'info');
+    toast(type === 'error' ? 'Erro' : 'Sucesso', msg, variant);
+  }
 
-function saveUser() {
+  function saveUser() {
     const fd = new FormData(document.getElementById('userForm'));
     if (!fd.get('email')) { showAlert('Email obrigatorio', 'error'); return; }
     if (!isEditMode && !fd.get('password')) { showAlert('Senha obrigatoria para novos usuarios', 'error'); return; }
     const perfilVal = document.getElementById('perfilId').value;
     const data = {
-        email:fd.get('email'), first_name:fd.get('first_name'), last_name:fd.get('last_name'),
-        password:fd.get('password'), is_active:fd.get('is_active')==='on',
-        groups:[], perfil_id: perfilVal ? parseInt(perfilVal) : null,
+      email: fd.get('email'), first_name: fd.get('first_name'), last_name: fd.get('last_name'),
+      password: fd.get('password'), is_active: fd.get('is_active') === 'on',
+      groups: [], perfil_id: perfilVal ? parseInt(perfilVal) : null,
     };
     const url = isEditMode ? `/api/configuracoes/usuarios/${currentUser}/` : '/api/configuracoes/usuarios/';
-    fetch(url, { method:isEditMode?'PUT':'POST', headers, body:JSON.stringify(data) })
-    .then(r=>r.json()).then(d=>{ if(d.success){showAlert(d.message,'success');setTimeout(()=>location.reload(),1500);}else{showAlert(d.error,'error');} })
-    .catch(()=>showAlert('Erro ao salvar','error'));
-}
+    fetch(url, { method: isEditMode ? 'PUT' : 'POST', headers, body: JSON.stringify(data) })
+      .then(r => r.json()).then(d => {
+        if (d.success) { showAlert(d.message, 'success'); setTimeout(() => location.reload(), 1200); }
+        else showAlert(d.error, 'error');
+      })
+      .catch(() => showAlert('Erro ao salvar', 'error'));
+  }
 
-function deleteUser(id, name) {
+  function deleteUser(id, name) {
     if (!confirm(`Deletar "${name}"? Acao irreversivel.`)) return;
-    fetch(`/api/configuracoes/usuarios/${id}/deletar/`, { method:'DELETE', headers })
-    .then(r=>r.json()).then(d=>{ if(d.success){showAlert(d.message,'success');setTimeout(()=>location.reload(),1500);}else{showAlert(d.error,'error');} })
-    .catch(()=>showAlert('Erro ao deletar','error'));
-}
-
-document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+    fetch(`/api/configuracoes/usuarios/${id}/deletar/`, { method: 'DELETE', headers })
+      .then(r => r.json()).then(d => {
+        if (d.success) { showAlert(d.message, 'success'); setTimeout(() => location.reload(), 1200); }
+        else showAlert(d.error, 'error');
+      })
+      .catch(() => showAlert('Erro ao deletar', 'error'));
+  }
 </script>
 {% endblock %}

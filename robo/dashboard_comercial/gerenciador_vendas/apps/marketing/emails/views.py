@@ -1,8 +1,10 @@
 import json
 
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse
 from django.views.decorators.http import require_POST, require_http_methods
 
 from apps.sistema.decorators import user_tem_funcionalidade
@@ -74,10 +76,29 @@ def lista_emails(request):
     total = TemplateEmail.objects.count()
     ativos = TemplateEmail.objects.filter(status='ativo').count()
     rascunhos = TemplateEmail.objects.filter(status='rascunho').count()
+    arquivados = TemplateEmail.objects.filter(status='arquivado').count()
+
+    base = reverse('marketing_emails:lista')
+    status_tabs = [
+        {'label': 'Todos', 'url': base, 'active': not status, 'count': total},
+        {'label': 'Ativos', 'url': f'{base}?status=ativo', 'active': status == 'ativo', 'count': ativos},
+        {'label': 'Rascunhos', 'url': f'{base}?status=rascunho', 'active': status == 'rascunho', 'count': rascunhos},
+        {'label': 'Arquivados', 'url': f'{base}?status=arquivado', 'active': status == 'arquivado', 'count': arquivados},
+    ]
+
+    paginator = Paginator(templates, 12)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
+    query = query_params.urlencode()
 
     context = {
-        'templates': templates,
+        'templates': page_obj,
+        'page_obj': page_obj,
+        'query': query,
         'categorias': categorias,
+        'status_tabs': status_tabs,
         'total': total,
         'ativos': ativos,
         'rascunhos': rascunhos,

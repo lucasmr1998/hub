@@ -108,14 +108,14 @@ def _detectar_modulo_atual(request):
         return 'admin'
     if path.startswith('/cs/'):
         return 'cs'
-    if path.startswith('/crm/') or 'crm' in app_name:
+    if path.startswith('/crm/') or path.startswith('/vendas/') or 'crm' in app_name:
         return 'comercial'
     if path.startswith('/inbox/') or path.startswith('/suporte/') or 'atendimento' in app_name:
         return 'atendimento'
-    if path.startswith('/marketing/') or url_name in ('leads', 'campanhas_trafego', 'configuracoes_cadastro'):
+    if path.startswith('/marketing/') or path.startswith('/leads/') or app_name == 'comercial_leads' or url_name in ('leads', 'campanhas_trafego', 'configuracoes_cadastro'):
         return 'marketing'
     if url_name.startswith('relatorio'):
         return 'relatorios'
-    if '/configuracoes' in path:
+    if '/configuracoes' in path or path.startswith('/perfil/'):
         return 'configuracoes'
     return 'dashboard'

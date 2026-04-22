@@ -1,73 +1,101 @@
-{% extends 'sistema/base.html' %}
-{% block title %}Configuracoes da Empresa{% endblock %}
+{% extends "sistema/base.html" %}
+
+{% block title %}Dados da empresa — Hubtrix{% endblock %}
 
 {% block content %}
-<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; background:var(--bg-white); border:1px solid var(--border); border-radius:12px; padding:14px 20px; margin-bottom:20px;">
-    <h1 class="page-title" style="margin:0;"><i class="fas fa-building" style="color:var(--primary);margin-right:8px;"></i> Dados da Empresa</h1>
-    <a href="{% url 'sistema:configuracoes' %}" class="btn-secondary" style="text-decoration:none;"><i class="fas fa-arrow-left"></i> Voltar</a>
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Dados da empresa</h1>
+      <p class="page-subtitle">Identidade visual e integracoes automaticas de leads.</p>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'sistema:configuracoes' %}" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
+  </div>
 </div>
 
-<form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
+<form method="post" enctype="multipart/form-data" style="max-width: 720px;">
+  {% csrf_token %}
 
-    <!-- Dados basicos -->
-    <div class="card" style="padding:24px;margin-bottom:16px;">
-        <h3 style="font-size:14px;font-weight:700;color:var(--text-main);margin-bottom:16px;"><i class="fas fa-info-circle" style="color:var(--primary);margin-right:6px;"></i> Informacoes Basicas</h3>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div>
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Nome da Empresa</label>
-                <input type="text" name="nome_empresa" value="{{ config.nome_empresa }}" class="form-control">
-            </div>
-            <div>
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Logo</label>
-                <input type="file" name="logo_empresa" class="form-control" accept="image/*">
-                {% if config.logo_empresa %}
-                <div style="margin-top:8px;"><img src="{{ config.logo_empresa.url }}" style="max-height:40px;border-radius:6px;"></div>
-                {% endif %}
-            </div>
-            <div>
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Cor Primaria</label>
-                <div style="display:flex;gap:8px;align-items:center;">
-                    <input type="color" name="cor_primaria" value="{{ config.cor_primaria }}" style="width:50px;height:36px;border:1px solid var(--border);border-radius:6px;padding:2px;">
-                    <span style="font-size:12px;color:var(--text-muted);">{{ config.cor_primaria }}</span>
-                </div>
-            </div>
-            <div>
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Cor Secundaria</label>
-                <div style="display:flex;gap:8px;align-items:center;">
-                    <input type="color" name="cor_secundaria" value="{{ config.cor_secundaria }}" style="width:50px;height:36px;border:1px solid var(--border);border-radius:6px;padding:2px;">
-                    <span style="font-size:12px;color:var(--text-muted);">{{ config.cor_secundaria }}</span>
-                </div>
-            </div>
+  <div class="card" style="margin-bottom: var(--sp-4);">
+    <div class="card-header"><h3 class="card-title"><i class="bi bi-info-circle"></i> Informacoes basicas</h3></div>
+    <div class="card-body">
+      <div class="admin-form-grid">
+        <div class="field">
+          <label class="field-label">Nome da empresa</label>
+          <div class="field-input-wrap"><input class="field-input" type="text" name="nome_empresa" value="{{ config.nome_empresa }}"></div>
         </div>
-    </div>
-
-    <!-- Integracoes -->
-    <div class="card" style="padding:24px;margin-bottom:16px;">
-        <h3 style="font-size:14px;font-weight:700;color:var(--text-main);margin-bottom:16px;"><i class="fas fa-plug" style="color:var(--info);margin-right:6px;"></i> Integracoes de Leads</h3>
-
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;cursor:pointer;" onclick="var cb=this.querySelector('input');cb.checked=!cb.checked;document.getElementById('integFields').style.display=cb.checked?'block':'none';">
-            <input type="checkbox" name="enviar_leads_integracao" {% if config.enviar_leads_integracao %}checked{% endif %} onclick="event.stopPropagation();document.getElementById('integFields').style.display=this.checked?'block':'none';" style="width:auto;margin:0;">
-            <span style="font-size:14px;font-weight:600;color:var(--text-main);">Enviar leads automaticamente para integracao</span>
+        <div class="field">
+          <label class="field-label">Logo</label>
+          <div class="field-input-wrap"><input class="field-input" type="file" name="logo_empresa" accept="image/*"></div>
+          {% if config.logo_empresa %}
+            <img src="{{ config.logo_empresa.url }}" alt="Logo" style="margin-top: var(--sp-2); max-height: 40px; border-radius: var(--radius-sm);">
+          {% endif %}
         </div>
-
-        <div id="integFields" style="display:{% if config.enviar_leads_integracao %}block{% else %}none{% endif %};">
-            <div style="max-width:400px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Integracao de destino</label>
-                <select name="integracao_leads" class="form-control">
-                    <option value="">Nenhuma</option>
-                    {% for i in integracoes %}
-                    <option value="{{ i.pk }}" {% if config.integracao_leads_id == i.pk %}selected{% endif %}>{{ i.nome }} ({{ i.tipo }})</option>
-                    {% endfor %}
-                </select>
-                <p style="font-size:11px;color:var(--text-muted);margin-top:4px;">Leads serao enviados automaticamente para esta integracao ao serem cadastrados.</p>
-            </div>
+        <div class="field">
+          <label class="field-label">Cor primaria</label>
+          <div style="display:flex; gap: var(--sp-2); align-items: center;">
+            <input type="color" name="cor_primaria" value="{{ config.cor_primaria }}" style="width: 50px; height: 36px; border: 1px solid var(--color-border-strong); border-radius: var(--radius); padding: 2px; background: var(--color-bg);">
+            <span style="font-size: var(--fs-sm); color: var(--color-text-muted);">{{ config.cor_primaria }}</span>
+          </div>
         </div>
+        <div class="field">
+          <label class="field-label">Cor secundaria</label>
+          <div style="display:flex; gap: var(--sp-2); align-items: center;">
+            <input type="color" name="cor_secundaria" value="{{ config.cor_secundaria }}" style="width: 50px; height: 36px; border: 1px solid var(--color-border-strong); border-radius: var(--radius); padding: 2px; background: var(--color-bg);">
+            <span style="font-size: var(--fs-sm); color: var(--color-text-muted);">{{ config.cor_secundaria }}</span>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <div style="display:flex;justify-content:flex-end;">
-        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar</button>
+  <div class="card" style="margin-bottom: var(--sp-4);">
+    <div class="card-header"><h3 class="card-title"><i class="bi bi-plug"></i> Integracoes de leads</h3></div>
+    <div class="card-body">
+      <label class="admin-checkbox-label" style="margin-bottom: var(--sp-4);">
+        <input type="checkbox" name="enviar_leads_integracao" id="chkIntegLeads" {% if config.enviar_leads_integracao %}checked{% endif %} onclick="document.getElementById('integFields').style.display=this.checked?'block':'none';">
+        Enviar leads automaticamente para integracao
+      </label>
+
+      <div id="integFields" style="display:{% if config.enviar_leads_integracao %}block{% else %}none{% endif %}; max-width: 420px;">
+        <div class="field">
+          <label class="field-label">Integracao de destino</label>
+          <div class="field-input-wrap">
+            <select class="field-input" name="integracao_leads">
+              <option value="">Nenhuma</option>
+              {% for i in integracoes %}
+                <option value="{{ i.pk }}" {% if config.integracao_leads_id == i.pk %}selected{% endif %}>{{ i.nome }} ({{ i.tipo }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <p class="field-helper">Leads serao enviados automaticamente pra esta integracao ao serem cadastrados.</p>
+        </div>
+      </div>
     </div>
+  </div>
+
+  <div style="display:flex; justify-content: flex-end;">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Salvar</button>
+  </div>
 </form>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .admin-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+  .admin-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+  }
+  .admin-checkbox-label input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--color-primary);
+  }
+</style>
 {% endblock %}

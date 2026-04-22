@@ -1,75 +1,98 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Relatorio Leads - Megalink{% endblock %}
-
-{% block extra_css %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-{% endblock %}
+{% block title %}Relatorio de leads — Hubtrix{% endblock %}
 
 {% block content %}
-<h1 class="page-title" style="margin-bottom:20px;">Leads</h1>
-
-<!-- Stats -->
-<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;">
-    <div class="stat-icon-card">
-        <div class="icon" style="background:var(--primary)"><i class="fas fa-users"></i></div>
-        <div><div class="stat-label">TOTAL GERAL</div><div class="stat-value">{{ stats.total }}</div></div>
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Relatorio de leads</h1>
+      <p class="page-subtitle">Total geral, periodo e distribuicao por origem.</p>
     </div>
-    <div class="stat-icon-card">
-        <div class="icon" style="background:var(--warning)"><i class="fas fa-calendar-day"></i></div>
-        <div><div class="stat-label">HOJE</div><div class="stat-value">{{ stats.hoje }}</div></div>
-    </div>
-    <div class="stat-icon-card">
-        <div class="icon" style="background:var(--info)"><i class="fas fa-calendar-week"></i></div>
-        <div><div class="stat-label">ULTIMOS 7 DIAS</div><div class="stat-value">{{ stats.semana }}</div></div>
-    </div>
-    <div class="stat-icon-card">
-        <div class="icon" style="background:var(--success)"><i class="fas fa-calendar-alt"></i></div>
-        <div><div class="stat-label">ULTIMOS 30 DIAS</div><div class="stat-value">{{ stats.mes }}</div></div>
-    </div>
+  </div>
 </div>
 
-<!-- Charts -->
-<div class="dashboard-grid grid-2" style="margin-bottom:24px;">
-    <div class="card" style="padding:20px;">
-        <div class="card-title" style="margin-bottom:16px;">Leads por Origem</div>
-        <div style="height:280px;"><canvas id="chartOrigem"></canvas></div>
-    </div>
-    <div class="card" style="padding:20px;">
-        <div class="card-title" style="margin-bottom:16px;">Leads por Periodo (Ultimos 30 dias)</div>
-        <div style="height:280px;"><canvas id="chartPeriodo"></canvas></div>
-    </div>
+<div class="stats-grid stats-grid-4" style="margin-bottom: var(--sp-4);">
+  {% include "components/stat_card.html" with label="Total geral" value=stats.total icon="bi-people" %}
+  {% include "components/stat_card.html" with label="Hoje" value=stats.hoje icon="bi-calendar-day" icon_variant="warning" %}
+  {% include "components/stat_card.html" with label="Ultimos 7 dias" value=stats.semana icon="bi-calendar-week" icon_variant="info" %}
+  {% include "components/stat_card.html" with label="Ultimos 30 dias" value=stats.mes icon="bi-calendar3" icon_variant="success" %}
 </div>
+
+<div class="relat-grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-pie-chart" style="color: var(--color-primary);"></i> Leads por origem</h3>
+    </div>
+    <div class="card-body">
+      <div class="chart-box"><canvas id="chartOrigem"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-graph-up" style="color: var(--color-primary);"></i> Leads por periodo (ultimos 30 dias)</h3>
+    </div>
+    <div class="card-body">
+      <div class="chart-box"><canvas id="chartPeriodo"></canvas></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .relat-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+  @media (max-width: 900px) { .relat-grid-2 { grid-template-columns: 1fr; } }
+  .chart-box { height: 280px; }
+</style>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const dados = JSON.parse('{{ graficos|escapejs }}');
+  const dados = JSON.parse('{{ graficos|escapejs }}');
 
-    // Leads por origem
-    if (dados.por_origem && dados.por_origem.length) {
-        new Chart(document.getElementById('chartOrigem'), {
-            type: 'doughnut',
-            data: {
-                labels: dados.por_origem.map(i => i.origem || 'Outros'),
-                datasets: [{ data: dados.por_origem.map(i => i.total), backgroundColor: ['#3b82f6','#10b981','#f59e0b','#ef4444','#6366f1','#94a3b8'] }]
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
-        });
-    }
+  if (dados.por_origem && dados.por_origem.length) {
+    new Chart(document.getElementById('chartOrigem'), {
+      type: 'doughnut',
+      data: {
+        labels: dados.por_origem.map(i => i.origem || 'Outros'),
+        datasets: [{
+          data: dados.por_origem.map(i => i.total),
+          backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#94a3b8'],
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+      },
+    });
+  }
 
-    // Leads por periodo
-    if (dados.por_dia && dados.por_dia.length) {
-        new Chart(document.getElementById('chartPeriodo'), {
-            type: 'line',
-            data: {
-                labels: dados.por_dia.map(i => i.data),
-                datasets: [{ label: 'Leads', data: dados.por_dia.map(i => i.total), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.08)', fill: true, tension: 0.3 }]
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-        });
-    }
+  if (dados.por_dia && dados.por_dia.length) {
+    new Chart(document.getElementById('chartPeriodo'), {
+      type: 'line',
+      data: {
+        labels: dados.por_dia.map(i => i.data),
+        datasets: [{
+          label: 'Leads',
+          data: dados.por_dia.map(i => i.total),
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.08)',
+          fill: true,
+          tension: 0.3,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } },
+      },
+    });
+  }
 });
 </script>
 {% endblock %}

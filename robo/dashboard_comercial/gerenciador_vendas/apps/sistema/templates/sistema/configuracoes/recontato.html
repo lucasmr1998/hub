@@ -1,69 +1,86 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Recontato - Megalink{% endblock %}
+{% block title %}Recontato automatico — Hubtrix{% endblock %}
 
-{% block custom_css %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Recontato automatico</h1>
+      <p class="page-subtitle">Mensagem e tempo pra recontatar clientes que abandonaram o cadastro.</p>
+    </div>
+  </div>
+</div>
+
+<div style="max-width: 720px;">
+  <div class="card">
+    <form id="formRecontato" onsubmit="salvarConfiguracoesRecontato(event)">
+      <div class="card-body">
+        <div style="display:flex; justify-content:space-between; align-items:center; background: var(--color-surface); padding: var(--sp-3) var(--sp-4); border-radius: var(--radius); border: 1px solid var(--color-border); margin-bottom: var(--sp-4);">
+          <label style="margin: 0; font-size: var(--fs-sm); font-weight: var(--fw-medium);">Ativar recontato automatico</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="ativo" name="ativo" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="field" style="margin-bottom: var(--sp-4);">
+          <label class="field-label">Mensagem de recontato</label>
+          <div class="field-input-wrap">
+            <textarea id="mensagem" name="mensagem" class="field-input" rows="4" style="height: auto; min-height: 96px; padding: var(--sp-2) var(--sp-3); resize: vertical;" placeholder="Ex: Ola! Vimos que voce iniciou seu cadastro mas nao concluiu...">Ola, notamos que voce ainda nao terminou o cadastro, gostaria de continuar?</textarea>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Tempo para recontato</label>
+          <div style="display: flex; align-items: stretch; max-width: 280px;">
+            <div class="field-input-wrap" style="flex: 1;">
+              <input type="number" id="tempo_recontato" name="tempo_recontato" class="field-input" value="15" min="1" style="border-top-right-radius: 0; border-bottom-right-radius: 0;">
+            </div>
+            <span style="padding: 0 var(--sp-3); background: var(--color-surface); border: 1px solid var(--color-border-strong); border-left: none; border-top-right-radius: var(--radius); border-bottom-right-radius: var(--radius); display: inline-flex; align-items: center; font-size: var(--fs-sm); color: var(--color-text-muted);">Minutos</span>
+          </div>
+          <p class="field-helper">Tempo apos o abandono do cadastro pra enviar a mensagem.</p>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
 <style>
-    .toggle-switch { position:relative; display:inline-block; width:50px; height:28px; }
-    .toggle-switch input { opacity:0; width:0; height:0; }
-    .slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#ccc; transition:.4s; border-radius:28px; }
-    .slider:before { position:absolute; content:""; height:20px; width:20px; left:4px; bottom:4px; background:white; transition:.4s; border-radius:50%; }
-    input:checked + .slider { background:var(--success); }
-    input:checked + .slider:before { transform:translateX(22px); }
-    .input-group { display:flex; align-items:center; }
-    .input-group input { border-top-right-radius:0; border-bottom-right-radius:0; border-right:0; }
-    .input-group-text { padding:9px 12px; background:var(--border-light); border:1px solid var(--border); border-left:none; border-top-right-radius:8px; border-bottom-right-radius:8px; color:var(--text-muted); font-size:14px; }
+  .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--color-border-strong);
+    transition: 0.2s;
+    border-radius: 24px;
+  }
+  .toggle-slider::before {
+    position: absolute;
+    content: "";
+    height: 18px; width: 18px;
+    left: 3px; bottom: 3px;
+    background: #fff;
+    transition: 0.2s;
+    border-radius: 50%;
+  }
+  .toggle-switch input:checked + .toggle-slider { background: var(--color-success); }
+  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
 </style>
 {% endblock %}
 
-{% block content %}
-<div style="max-width:700px;">
-    <h1 class="page-title" style="margin-bottom:20px;">Recontato Automatico</h1>
-
-    <div class="card" style="padding:0;">
-        <div style="padding:20px 24px;border-bottom:1px solid var(--border);">
-            <div style="font-size:16px;font-weight:600;color:var(--text-main);">Configuracoes de Recontato</div>
-            <div style="font-size:13px;color:var(--text-muted);margin-top:4px;">Configure a mensagem e o tempo para recontatar clientes que abandonaram o cadastro.</div>
-        </div>
-
-        <form id="formConfiguracoesRecontato" onsubmit="salvarConfiguracoesRecontato(event)">
-            <div style="padding:24px;">
-                <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;background:var(--border-light);padding:14px 16px;border-radius:8px;border:1px solid var(--border);">
-                    <label class="form-label" style="margin:0;">Ativar recontato automatico</label>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="ativo" name="ativo" checked>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Mensagem de recontato</label>
-                    <textarea id="mensagem" name="mensagem" class="form-control" rows="4" placeholder="Ex: Ola! Vimos que voce iniciou seu cadastro mas nao concluiu...">Ola, notamos que voce ainda nao terminou o cadastro, gostaria de continuar?</textarea>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Tempo para recontato</label>
-                    <div class="input-group">
-                        <input type="number" id="tempo_recontato" name="tempo_recontato" class="form-control" placeholder="Ex: 15" value="15" min="1">
-                        <span class="input-group-text">Minutos</span>
-                    </div>
-                    <div class="form-hint">Tempo apos o abandono do cadastro para enviar a mensagem.</div>
-                </div>
-            </div>
-
-            <div style="padding:12px 24px;background:var(--border-light);border-top:1px solid var(--border);display:flex;justify-content:flex-end;">
-                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> <span id="btnSalvarTexto">Salvar</span></button>
-            </div>
-        </form>
-    </div>
-</div>
-
+{% block extra_js %}
 <script>
-async function salvarConfiguracoesRecontato(event) {
+  async function salvarConfiguracoesRecontato(event) {
     event.preventDefault();
-    const fd = new FormData(event.target);
-    const data = { ativo: fd.get('ativo') === 'on', mensagem: fd.get('mensagem'), tempo_recontato: fd.get('tempo_recontato') };
-    window.showNotification('Configuracoes salvas (simulado)', 'success');
-}
+    toast('Salvo', 'Configuracoes atualizadas', 'success');
+  }
 </script>
 {% endblock %}

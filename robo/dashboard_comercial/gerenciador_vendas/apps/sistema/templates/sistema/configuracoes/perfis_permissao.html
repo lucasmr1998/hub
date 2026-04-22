@@ -1,251 +1,281 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Perfis de Permissão{% endblock %}
-
-{% block custom_css %}
-<style>
-    .perfil-card { background:var(--bg-white); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:8px; cursor:pointer; transition:all .15s; }
-    .perfil-card:hover { border-color:var(--primary-light); }
-    .perfil-card.active { border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,.1); }
-    .perfil-nome { font-size:14px; font-weight:700; color:var(--text-main); }
-    .perfil-desc { font-size:12px; color:var(--text-muted); margin-top:2px; }
-    .perfil-meta { display:flex; align-items:center; gap:8px; margin-top:6px; font-size:11px; color:var(--text-muted); }
-    .perfil-form { background:var(--bg-white); border:1px solid var(--border); border-radius:10px; padding:20px; position:sticky; top:70px; }
-    .modulo-section { margin-bottom:16px; }
-    .modulo-header { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--text-main); margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--border-light); }
-    .func-item { display:flex; align-items:flex-start; gap:8px; padding:6px 0; }
-    .func-item input[type="checkbox"] { margin-top:2px; accent-color:var(--primary); }
-    .func-item-info { flex:1; }
-    .func-item-name { font-size:12px; font-weight:600; color:var(--text-secondary); }
-    .func-item-desc { font-size:11px; color:var(--text-muted); }
-    .btn-delete-perfil { border:none; background:none; color:var(--text-muted); cursor:pointer; padding:4px; border-radius:4px; font-size:12px; }
-    .btn-delete-perfil:hover { background:#fee2e2; color:#dc2626; }
-</style>
-{% endblock %}
+{% block title %}Perfis de permissao — Hubtrix{% endblock %}
 
 {% block content %}
 {% csrf_token %}
 
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+<div class="page-header">
+  <div class="page-header-top">
     <div>
-        <h1 class="page-title">Perfis de Permissão</h1>
-        <p style="font-size:13px;color:var(--text-muted);margin:4px 0 0;">Crie perfis reutilizáveis e escolha exatamente quais funcionalidades cada perfil pode acessar.</p>
+      <h1 class="page-title">Perfis de permissao</h1>
+      <p class="page-subtitle">Crie perfis reutilizaveis e escolha quais funcionalidades cada um pode acessar.</p>
     </div>
-    <a href="{% url 'sistema:configuracoes_usuarios' %}" class="btn-secondary"><i class="fas fa-arrow-left"></i> Usuários</a>
+    <div class="page-actions">
+      <a href="{% url 'sistema:configuracoes_usuarios' %}" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left"></i> Usuarios</a>
+    </div>
+  </div>
 </div>
 
-<div style="display:grid;grid-template-columns:300px 1fr;gap:20px;">
-    <!-- Coluna esquerda: lista de perfis -->
-    <div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-            <span style="font-size:13px;font-weight:600;color:var(--text-muted);">PERFIS</span>
-            <button class="btn-primary" style="font-size:12px;padding:5px 12px;" onclick="novoPerfil()"><i class="fas fa-plus"></i> Novo</button>
-        </div>
-        <div id="perfisLista">
-            <p style="color:var(--text-muted);font-size:13px;">Carregando...</p>
-        </div>
+<div class="perfis-layout">
+  {# Coluna esquerda: lista de perfis #}
+  <div>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: var(--sp-3);">
+      <span style="font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.08em;">Perfis</span>
+      <button class="btn btn-primary btn-sm" onclick="novoPerfil()"><i class="bi bi-plus-lg"></i> Novo</button>
     </div>
-
-    <!-- Coluna direita: formulário com funcionalidades -->
-    <div>
-        <div class="perfil-form">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-                <h3 id="formTitle" style="font-size:15px;font-weight:700;color:var(--text-main);margin:0;">Novo Perfil</h3>
-                <div id="formActions" style="display:none;">
-                    <button class="btn-delete-perfil" onclick="excluirPerfilAtual()" title="Excluir perfil"><i class="fas fa-trash"></i> Excluir</button>
-                </div>
-            </div>
-
-            <input type="hidden" id="editPerfilId">
-
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-                <div>
-                    <label class="form-label">Nome *</label>
-                    <input type="text" id="perfilNome" class="form-control" placeholder="Ex: Vendedor">
-                </div>
-                <div>
-                    <label class="form-label">Descrição</label>
-                    <input type="text" id="perfilDesc" class="form-control" placeholder="Opcional">
-                </div>
-            </div>
-
-            <label class="form-label" style="margin-bottom:12px;">Funcionalidades</label>
-            <div id="funcionalidadesContainer">
-                <p style="color:var(--text-muted);font-size:13px;">Carregando funcionalidades...</p>
-            </div>
-
-            <div style="display:flex;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
-                <button class="btn-primary" onclick="salvarPerfil()"><i class="fas fa-save"></i> Salvar Perfil</button>
-                <button class="btn-secondary" onclick="novoPerfil()">Limpar</button>
-            </div>
-        </div>
+    <div id="perfisLista">
+      <p style="color: var(--color-text-muted); font-size: var(--fs-sm);">Carregando...</p>
     </div>
+  </div>
+
+  {# Coluna direita: formulario #}
+  <div>
+    <div class="card perfil-form">
+      <div class="card-header">
+        <h3 id="formTitle" class="card-title">Novo perfil</h3>
+        <div id="formActions" class="card-actions" style="display:none;">
+          <button class="btn btn-ghost btn-sm" onclick="excluirPerfilAtual()" style="color: var(--color-danger);" title="Excluir perfil"><i class="bi bi-trash"></i> Excluir</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <input type="hidden" id="editPerfilId">
+
+        <div class="admin-form-grid" style="margin-bottom: var(--sp-4);">
+          <div class="field">
+            <label class="field-label">Nome <span class="field-required">*</span></label>
+            <div class="field-input-wrap"><input class="field-input" type="text" id="perfilNome" placeholder="Ex: Vendedor"></div>
+          </div>
+          <div class="field">
+            <label class="field-label">Descricao</label>
+            <div class="field-input-wrap"><input class="field-input" type="text" id="perfilDesc" placeholder="Opcional"></div>
+          </div>
+        </div>
+
+        <label class="field-label" style="margin-bottom: var(--sp-3);">Funcionalidades</label>
+        <div id="funcionalidadesContainer">
+          <p style="color: var(--color-text-muted); font-size: var(--fs-sm);">Carregando funcionalidades...</p>
+        </div>
+      </div>
+      <div class="card-footer" style="justify-content:flex-start;">
+        <button class="btn btn-primary btn-sm" onclick="salvarPerfil()"><i class="bi bi-save"></i> Salvar perfil</button>
+        <button class="btn btn-secondary btn-sm" onclick="novoPerfil()">Limpar</button>
+      </div>
+    </div>
+  </div>
 </div>
+{% endblock %}
 
+{% block extra_css %}
+<style>
+  .perfis-layout { display: grid; grid-template-columns: 300px 1fr; gap: var(--sp-5); }
+  .admin-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+  .perfil-form { position: sticky; top: calc(var(--topbar-h) + var(--sp-4)); }
+
+  .perfil-card {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: var(--sp-3) var(--sp-4);
+    margin-bottom: var(--sp-2);
+    cursor: pointer;
+    transition: border-color var(--transition), box-shadow var(--transition);
+  }
+  .perfil-card:hover { border-color: var(--color-border-strong); }
+  .perfil-card.active {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+  }
+  .perfil-nome { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--color-text); }
+  .perfil-desc { font-size: var(--fs-xs); color: var(--color-text-muted); margin-top: 2px; }
+  .perfil-meta {
+    display: flex; align-items: center; gap: var(--sp-2);
+    margin-top: 6px; font-size: var(--fs-xs); color: var(--color-text-muted);
+  }
+
+  .modulo-section { margin-bottom: var(--sp-4); }
+  .modulo-header {
+    display: flex; align-items: center; gap: 6px;
+    font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--color-text);
+    margin-bottom: var(--sp-2); padding-bottom: 6px; border-bottom: 1px solid var(--color-border);
+  }
+  .func-item { display: flex; align-items: flex-start; gap: var(--sp-2); padding: 6px 0; }
+  .func-item input[type="checkbox"] { margin-top: 2px; accent-color: var(--color-primary); width: 14px; height: 14px; }
+  .func-item-info { flex: 1; }
+  .func-item-name { font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--color-text-secondary); }
+  .func-item-desc { font-size: 0.7rem; color: var(--color-text-muted); }
+
+  @media (max-width: 900px) {
+    .perfis-layout { grid-template-columns: 1fr; }
+    .perfil-form { position: static; }
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-function getCookie(name) { let v=null; if(document.cookie) document.cookie.split(';').forEach(c=>{ c=c.trim(); if(c.startsWith(name+'=')) v=decodeURIComponent(c.substring(name.length+1)); }); return v; }
-const headers = {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')};
+  function getCookie(name) { let v=null; if(document.cookie) document.cookie.split(';').forEach(c=>{ c=c.trim(); if(c.startsWith(name+'=')) v=decodeURIComponent(c.substring(name.length+1)); }); return v; }
+  const headers = {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')};
 
-let allFuncionalidades = [];
-let allPerfis = [];
-let currentPerfilId = null;
+  let allFuncionalidades = [];
+  let allPerfis = [];
+  let currentPerfilId = null;
 
-const MODULO_ICONS = {
-    'comercial': '<i class="fas fa-handshake" style="color:var(--primary);"></i> Comercial',
-    'marketing': '<i class="fas fa-bullhorn" style="color:#16a34a;"></i> Marketing',
-    'cs': '<i class="fas fa-star" style="color:#d97706;"></i> Customer Success',
-    'inbox': '<i class="fas fa-headset" style="color:#7c3aed;"></i> Inbox / Suporte',
-    'configuracoes': '<i class="fas fa-cog" style="color:#dc2626;"></i> Configurações',
-};
+  const MODULO_ICONS = {
+    'comercial':     '<i class="bi bi-briefcase" style="color: var(--color-primary);"></i> Comercial',
+    'marketing':     '<i class="bi bi-megaphone" style="color: var(--color-success);"></i> Marketing',
+    'cs':            '<i class="bi bi-gift" style="color: var(--color-warning);"></i> Customer Success',
+    'inbox':         '<i class="bi bi-chat-dots" style="color: var(--color-info);"></i> Atendimento',
+    'configuracoes': '<i class="bi bi-gear" style="color: var(--color-danger);"></i> Configuracoes',
+  };
 
-function carregarDados() {
+  function carregarDados() {
     fetch('/api/configuracoes/perfis/', {headers}).then(r=>r.json()).then(d => {
-        allFuncionalidades = d.funcionalidades || [];
-        allPerfis = d.perfis || [];
-        renderPerfisLista();
-        renderFuncionalidades([]);
+      allFuncionalidades = d.funcionalidades || [];
+      allPerfis = d.perfis || [];
+      renderPerfisLista();
+      renderFuncionalidades([]);
     });
-}
+  }
 
-function renderPerfisLista() {
+  function renderPerfisLista() {
     const container = document.getElementById('perfisLista');
     if (!allPerfis.length) {
-        container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);"><i class="fas fa-shield-alt" style="font-size:24px;opacity:.3;display:block;margin-bottom:8px;"></i><p style="font-size:12px;">Nenhum perfil</p></div>';
-        return;
+      container.innerHTML = '<div style="text-align:center; padding: var(--sp-5); color: var(--color-text-muted);"><i class="bi bi-shield-check" style="font-size: 1.6rem; opacity: 0.3; display: block; margin-bottom: var(--sp-2);"></i><p style="font-size: var(--fs-xs); margin: 0;">Nenhum perfil</p></div>';
+      return;
     }
     container.innerHTML = allPerfis.map(p => {
-        const count = p.funcionalidades.length;
-        const isActive = currentPerfilId === p.id;
-        return `<div class="perfil-card ${isActive ? 'active' : ''}" onclick="selecionarPerfil(${p.id})">
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-                <div class="perfil-nome">${p.nome}</div>
-                <span style="font-size:11px;color:var(--text-muted);"><i class="fas fa-users"></i> ${p.total_usuarios}</span>
-            </div>
-            ${p.descricao ? `<div class="perfil-desc">${p.descricao}</div>` : ''}
-            <div class="perfil-meta">
-                <span><i class="fas fa-check-circle" style="color:var(--success);"></i> ${count} funcionalidade${count !== 1 ? 's' : ''}</span>
-            </div>
-        </div>`;
+      const count = p.funcionalidades.length;
+      const isActive = currentPerfilId === p.id;
+      return `<div class="perfil-card${isActive ? ' active' : ''}" onclick="selecionarPerfil(${p.id})">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div class="perfil-nome">${p.nome}</div>
+          <span style="font-size: var(--fs-xs); color: var(--color-text-muted);"><i class="bi bi-people"></i> ${p.total_usuarios}</span>
+        </div>
+        ${p.descricao ? `<div class="perfil-desc">${p.descricao}</div>` : ''}
+        <div class="perfil-meta">
+          <span><i class="bi bi-check-circle" style="color: var(--color-success);"></i> ${count} funcionalidade${count !== 1 ? 's' : ''}</span>
+        </div>
+      </div>`;
     }).join('');
-}
+  }
 
-function renderFuncionalidades(selectedIds) {
+  function renderFuncionalidades(selectedIds) {
     const container = document.getElementById('funcionalidadesContainer');
     const byModule = {};
     allFuncionalidades.forEach(f => {
-        if (!byModule[f.modulo]) byModule[f.modulo] = [];
-        byModule[f.modulo].push(f);
+      if (!byModule[f.modulo]) byModule[f.modulo] = [];
+      byModule[f.modulo].push(f);
     });
 
     let html = '';
     for (const [modulo, funcs] of Object.entries(byModule)) {
-        const allChecked = funcs.every(f => selectedIds.includes(f.id));
-        html += `<div class="modulo-section">
-            <div class="modulo-header">
-                ${MODULO_ICONS[modulo] || modulo}
-                <label style="margin-left:auto;font-size:11px;font-weight:400;color:var(--text-muted);cursor:pointer;">
-                    <input type="checkbox" onchange="toggleModulo('${modulo}', this.checked)" ${allChecked ? 'checked' : ''}> Todos
-                </label>
-            </div>`;
-        funcs.sort((a, b) => a.ordem - b.ordem);
-        funcs.forEach(f => {
-            const checked = selectedIds.includes(f.id) ? 'checked' : '';
-            html += `<div class="func-item">
-                <input type="checkbox" id="func_${f.id}" data-modulo="${modulo}" data-func-id="${f.id}" ${checked} onchange="updateModuloToggle('${modulo}')">
-                <div class="func-item-info">
-                    <div class="func-item-name">${f.nome}</div>
-                    <div class="func-item-desc">${f.descricao || ''}</div>
-                </div>
-            </div>`;
-        });
-        html += '</div>';
+      const allChecked = funcs.every(f => selectedIds.includes(f.id));
+      html += `<div class="modulo-section">
+        <div class="modulo-header">
+          ${MODULO_ICONS[modulo] || modulo}
+          <label style="margin-left:auto; font-size: var(--fs-xs); font-weight: var(--fw-regular); color: var(--color-text-muted); cursor: pointer;">
+            <input type="checkbox" onchange="toggleModulo('${modulo}', this.checked)" ${allChecked ? 'checked' : ''}> Todos
+          </label>
+        </div>`;
+      funcs.sort((a, b) => a.ordem - b.ordem);
+      funcs.forEach(f => {
+        const checked = selectedIds.includes(f.id) ? 'checked' : '';
+        html += `<div class="func-item">
+          <input type="checkbox" id="func_${f.id}" data-modulo="${modulo}" data-func-id="${f.id}" ${checked} onchange="updateModuloToggle('${modulo}')">
+          <div class="func-item-info">
+            <div class="func-item-name">${f.nome}</div>
+            <div class="func-item-desc">${f.descricao || ''}</div>
+          </div>
+        </div>`;
+      });
+      html += '</div>';
     }
     container.innerHTML = html;
-}
+  }
 
-function toggleModulo(modulo, checked) {
+  function toggleModulo(modulo, checked) {
     document.querySelectorAll(`input[data-modulo="${modulo}"]`).forEach(cb => { cb.checked = checked; });
-}
+  }
 
-function updateModuloToggle(modulo) {
+  function updateModuloToggle(modulo) {
     const cbs = document.querySelectorAll(`input[data-modulo="${modulo}"]`);
     const allChecked = Array.from(cbs).every(cb => cb.checked);
     const headerCb = cbs[0]?.closest('.modulo-section')?.querySelector('.modulo-header input');
     if (headerCb) headerCb.checked = allChecked;
-}
+  }
 
-function getSelectedFuncIds() {
+  function getSelectedFuncIds() {
     return Array.from(document.querySelectorAll('input[data-func-id]:checked')).map(cb => parseInt(cb.dataset.funcId));
-}
+  }
 
-function novoPerfil() {
+  function novoPerfil() {
     currentPerfilId = null;
     document.getElementById('editPerfilId').value = '';
-    document.getElementById('formTitle').textContent = 'Novo Perfil';
+    document.getElementById('formTitle').textContent = 'Novo perfil';
     document.getElementById('formActions').style.display = 'none';
     document.getElementById('perfilNome').value = '';
     document.getElementById('perfilDesc').value = '';
     renderFuncionalidades([]);
     renderPerfisLista();
-}
+  }
 
-function selecionarPerfil(id) {
+  function selecionarPerfil(id) {
     const p = allPerfis.find(x => x.id === id);
     if (!p) return;
     currentPerfilId = id;
     document.getElementById('editPerfilId').value = id;
     document.getElementById('formTitle').textContent = 'Editar: ' + p.nome;
-    document.getElementById('formActions').style.display = 'block';
+    document.getElementById('formActions').style.display = 'flex';
     document.getElementById('perfilNome').value = p.nome;
     document.getElementById('perfilDesc').value = p.descricao || '';
     renderFuncionalidades(p.funcionalidades);
     renderPerfisLista();
-}
+  }
 
-function salvarPerfil() {
+  function salvarPerfil() {
     const id = document.getElementById('editPerfilId').value;
     const nome = document.getElementById('perfilNome').value.trim();
-    if (!nome) { window.showNotification ? showNotification('Nome é obrigatório','warning') : alert('Nome é obrigatório'); return; }
+    if (!nome) { toast('Erro', 'Nome e obrigatorio', 'danger'); return; }
     const data = {
-        nome,
-        descricao: document.getElementById('perfilDesc').value,
-        funcionalidades: getSelectedFuncIds(),
+      nome,
+      descricao: document.getElementById('perfilDesc').value,
+      funcionalidades: getSelectedFuncIds(),
     };
     const url = id ? `/api/configuracoes/perfis/${id}/` : '/api/configuracoes/perfis/';
-    fetch(url, { method:id?'PUT':'POST', headers, body:JSON.stringify(data) })
-    .then(r=>r.json()).then(d => {
+    fetch(url, { method: id ? 'PUT' : 'POST', headers, body: JSON.stringify(data) })
+      .then(r => r.json()).then(d => {
         if (d.success) {
-            window.showNotification && showNotification(d.message, 'success');
-            // Recarregar dados e manter seleção
-            const keepId = id ? parseInt(id) : d.id;
-            fetch('/api/configuracoes/perfis/', {headers}).then(r=>r.json()).then(dd => {
-                allFuncionalidades = dd.funcionalidades || [];
-                allPerfis = dd.perfis || [];
-                if (keepId) selecionarPerfil(keepId);
-                else { renderPerfisLista(); renderFuncionalidades([]); }
-            });
+          toast('Salvo', d.message, 'success');
+          const keepId = id ? parseInt(id) : d.id;
+          fetch('/api/configuracoes/perfis/', {headers}).then(r=>r.json()).then(dd => {
+            allFuncionalidades = dd.funcionalidades || [];
+            allPerfis = dd.perfis || [];
+            if (keepId) selecionarPerfil(keepId);
+            else { renderPerfisLista(); renderFuncionalidades([]); }
+          });
         } else {
-            window.showNotification ? showNotification(d.error, 'error') : alert(d.error);
+          toast('Erro', d.error, 'danger');
         }
-    });
-}
+      });
+  }
 
-function excluirPerfilAtual() {
+  function excluirPerfilAtual() {
     if (!currentPerfilId) return;
     const p = allPerfis.find(x => x.id === currentPerfilId);
-    if (!confirm(`Excluir perfil "${p?.nome}"? Usuários com este perfil ficarão sem permissões.`)) return;
-    fetch(`/api/configuracoes/perfis/${currentPerfilId}/`, { method:'DELETE', headers })
-    .then(r=>r.json()).then(d => {
+    if (!confirm(`Excluir perfil "${p?.nome}"? Usuarios com este perfil ficarao sem permissoes.`)) return;
+    fetch(`/api/configuracoes/perfis/${currentPerfilId}/`, { method: 'DELETE', headers })
+      .then(r => r.json()).then(d => {
         if (d.success) {
-            window.showNotification && showNotification(d.message, 'success');
-            novoPerfil();
-            carregarDados();
+          toast('Excluido', d.message, 'success');
+          novoPerfil();
+          carregarDados();
         } else {
-            window.showNotification ? showNotification(d.error, 'error') : alert(d.error);
+          toast('Erro', d.error, 'danger');
         }
-    });
-}
+      });
+  }
 
-carregarDados();
+  carregarDados();
 </script>
 {% endblock %}

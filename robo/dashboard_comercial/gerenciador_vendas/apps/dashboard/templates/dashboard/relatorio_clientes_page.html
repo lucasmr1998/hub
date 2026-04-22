@@ -1,93 +1,105 @@
-{% extends 'sistema/base.html' %}
+{% extends "sistema/base.html" %}
 
-{% block title %}Relatorio Clientes - Megalink{% endblock %}
-
-{% block extra_css %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-{% endblock %}
+{% block title %}Relatorio de clientes — Hubtrix{% endblock %}
 
 {% block content %}
-<h1 class="page-title" style="margin-bottom:20px;">Clientes</h1>
-
-<!-- Stats row 1 -->
-<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
-    <div class="stat-icon-card">
-        <div class="icon" style="background:var(--success)"><i class="fas fa-check-circle"></i></div>
-        <div><div class="stat-label">HABILITADOS</div><div class="stat-value">{{ stats.habilitados }}</div></div>
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Relatorio de clientes</h1>
+      <p class="page-subtitle">Status de contratos, receita e evolucao de habilitacoes.</p>
     </div>
-    <div class="stat-icon-card">
-        <div class="icon" style="background:var(--warning)"><i class="fas fa-clock"></i></div>
-        <div><div class="stat-label">AGUARDANDO</div><div class="stat-value">{{ stats.aguardando }}</div></div>
-    </div>
-    <div class="stat-icon-card">
-        <div class="icon" style="background:var(--primary)"><i class="fas fa-users"></i></div>
-        <div><div class="stat-label">TOTAL CLIENTES</div><div class="stat-value">{{ stats.total_clientes }}</div></div>
-    </div>
-    <div class="stat-icon-card">
-        <div class="icon" style="background:var(--info)"><i class="fas fa-wifi"></i></div>
-        <div><div class="stat-label">TOTAL SERVICOS</div><div class="stat-value">{{ stats.total_servicos }}</div></div>
-    </div>
+  </div>
 </div>
 
-<!-- Stats row 2 -->
-<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;">
-    <div class="stat-icon-card">
-        <div class="icon" style="background:var(--danger)"><i class="fas fa-times-circle"></i></div>
-        <div><div class="stat-label">CANCELADOS</div><div class="stat-value">{{ stats.cancelados }}</div></div>
-    </div>
-    <div class="stat-icon-card">
-        <div class="icon" style="background:#7e22ce"><i class="fas fa-pause-circle"></i></div>
-        <div><div class="stat-label">SUSPENSOS</div><div class="stat-value">{{ stats.suspensos }}</div></div>
-    </div>
-    <div class="stat-icon-card">
-        <div class="icon" style="background:#059669"><i class="fas fa-dollar-sign"></i></div>
-        <div><div class="stat-label">RECEITA HABILITADOS</div><div class="stat-value" style="font-size:18px;">R$ {{ stats.receita|floatformat:2 }}</div></div>
-    </div>
-    <div class="stat-icon-card">
-        <div class="icon" style="background:var(--primary)"><i class="fas fa-calendar-check"></i></div>
-        <div><div class="stat-label">HAB. ULTIMOS 30D</div><div class="stat-value">{{ stats.hab_30d }}</div></div>
-    </div>
+<div class="stats-grid stats-grid-4" style="margin-bottom: var(--sp-3);">
+  {% include "components/stat_card.html" with label="Habilitados" value=stats.habilitados icon="bi-check-circle" icon_variant="success" %}
+  {% include "components/stat_card.html" with label="Aguardando" value=stats.aguardando icon="bi-clock" icon_variant="warning" %}
+  {% include "components/stat_card.html" with label="Total clientes" value=stats.total_clientes icon="bi-people" %}
+  {% include "components/stat_card.html" with label="Total servicos" value=stats.total_servicos icon="bi-wifi" icon_variant="info" %}
 </div>
 
-<!-- Charts -->
-<div class="dashboard-grid grid-2">
-    <div class="card" style="padding:20px;">
-        <div class="card-title" style="margin-bottom:16px;">Servicos por Status</div>
-        <div style="height:280px;"><canvas id="chartStatus"></canvas></div>
-    </div>
-    <div class="card" style="padding:20px;">
-        <div class="card-title" style="margin-bottom:16px;">Habilitacoes (Ultimos 30 dias)</div>
-        <div style="height:280px;"><canvas id="chartEvolucao"></canvas></div>
-    </div>
+<div class="stats-grid stats-grid-4" style="margin-bottom: var(--sp-4);">
+  {% include "components/stat_card.html" with label="Cancelados" value=stats.cancelados icon="bi-x-circle" icon_variant="danger" %}
+  {% include "components/stat_card.html" with label="Suspensos" value=stats.suspensos icon="bi-pause-circle" icon_variant="warning" %}
+  {% include "components/stat_card.html" with label="Receita habilitados" value="R$ "|add:stats.receita|floatformat:2 icon="bi-currency-dollar" icon_variant="success" %}
+  {% include "components/stat_card.html" with label="Hab. ultimos 30d" value=stats.hab_30d icon="bi-calendar-check" %}
 </div>
+
+<div class="relat-grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-pie-chart" style="color: var(--color-primary);"></i> Servicos por status</h3>
+    </div>
+    <div class="card-body">
+      <div class="chart-box"><canvas id="chartStatus"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-graph-up-arrow" style="color: var(--color-primary);"></i> Habilitacoes (ultimos 30 dias)</h3>
+    </div>
+    <div class="card-body">
+      <div class="chart-box"><canvas id="chartEvolucao"></canvas></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .relat-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+  @media (max-width: 900px) { .relat-grid-2 { grid-template-columns: 1fr; } }
+  .chart-box { height: 280px; }
+</style>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const dados = JSON.parse('{{ graficos|escapejs }}');
+  const dados = JSON.parse('{{ graficos|escapejs }}');
 
-    if (dados.servicos_por_status && dados.servicos_por_status.length) {
-        new Chart(document.getElementById('chartStatus'), {
-            type: 'doughnut',
-            data: {
-                labels: dados.servicos_por_status.map(i => i.status),
-                datasets: [{ data: dados.servicos_por_status.map(i => i.total), backgroundColor: ['#10b981','#f59e0b','#ef4444','#6366f1','#94a3b8','#3b82f6'] }]
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
-        });
-    }
+  if (dados.servicos_por_status && dados.servicos_por_status.length) {
+    new Chart(document.getElementById('chartStatus'), {
+      type: 'doughnut',
+      data: {
+        labels: dados.servicos_por_status.map(i => i.status),
+        datasets: [{
+          data: dados.servicos_por_status.map(i => i.total),
+          backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#6366f1', '#94a3b8', '#2563eb'],
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+      },
+    });
+  }
 
-    if (dados.evolucao_habilitacoes && dados.evolucao_habilitacoes.length) {
-        new Chart(document.getElementById('chartEvolucao'), {
-            type: 'line',
-            data: {
-                labels: dados.evolucao_habilitacoes.map(i => i.data),
-                datasets: [{ label: 'Habilitacoes', data: dados.evolucao_habilitacoes.map(i => i.total), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', fill: true, tension: 0.3 }]
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-        });
-    }
+  if (dados.evolucao_habilitacoes && dados.evolucao_habilitacoes.length) {
+    new Chart(document.getElementById('chartEvolucao'), {
+      type: 'line',
+      data: {
+        labels: dados.evolucao_habilitacoes.map(i => i.data),
+        datasets: [{
+          label: 'Habilitacoes',
+          data: dados.evolucao_habilitacoes.map(i => i.total),
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.08)',
+          fill: true,
+          tension: 0.3,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } },
+      },
+    });
+  }
 });
 </script>
 {% endblock %}

@@ -9,6 +9,7 @@ import traceback
 from decimal import Decimal
 
 from django.shortcuts import render
+from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -40,12 +41,24 @@ def campanhas_trafego_view(request):
     total_deteccoes = sum(c.contador_deteccoes for c in campanhas)
     total_leads = sum(c.total_leads for c in campanhas)
 
+    campanhas_inativas = total_campanhas - campanhas_ativas
+    status_tabs = [
+        {'label': 'Todas', 'url': '#', 'onclick': "filtrarPorStatus(''); return false;", 'active': True, 'count': total_campanhas},
+        {'label': 'Ativas', 'url': '#', 'onclick': "filtrarPorStatus('ativa'); return false;", 'count': campanhas_ativas},
+        {'label': 'Inativas', 'url': '#', 'onclick': "filtrarPorStatus('inativa'); return false;", 'count': campanhas_inativas},
+    ]
+
+    paginator = Paginator(campanhas, 12)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
     return render(request, 'marketing/campanhas/campanhas.html', {
-        'campanhas': campanhas,
+        'campanhas': page_obj,
+        'page_obj': page_obj,
         'total_campanhas': total_campanhas,
         'campanhas_ativas': campanhas_ativas,
         'total_deteccoes': total_deteccoes,
         'total_leads': total_leads,
+        'status_tabs': status_tabs,
     })
 
 
