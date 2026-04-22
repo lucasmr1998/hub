@@ -115,6 +115,17 @@ Uso em template que extende layout_app:
           <i class="bi bi-journal-text"></i><span>Conhecimento</span>
         </a>
       </nav>
+      {% if is_superuser or perm.acesso_configuracoes %}
+        <div class="app-subnav-section">Configuracoes</div>
+        <nav class="app-subnav-list">
+          <a href="/inbox/configuracoes/" class="app-subnav-item {% if request.resolver_match.url_name == 'configuracoes' and '/inbox/' in request.path %}is-active{% endif %}">
+            <i class="bi bi-sliders"></i><span>Inbox, filas e equipes</span>
+          </a>
+          <a href="/configuracoes/sessoes/" class="app-subnav-item {% if 'sessao' in request.resolver_match.url_name %}is-active{% endif %}">
+            <i class="bi bi-activity"></i><span>Sessoes ativas</span>
+          </a>
+        </nav>
+      {% endif %}
 
     {% elif modulo_atual == 'cs' %}
       <nav class="app-subnav-list">
