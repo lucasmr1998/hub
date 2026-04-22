@@ -484,6 +484,17 @@ Com subnav:
     }
 
     // ============================================
+    // LEGACY SHIM — window.showNotification -> toast()
+    // Mantém compat com templates pre-DS (ex: fluxos, editor_fluxo, ajuda).
+    // Remover quando todos os templates migrarem pra toast() direto.
+    // ============================================
+    window.showNotification = function(message, type, opts) {
+      const variantMap = { error: 'danger', success: 'success', warning: 'warning', info: 'info' };
+      const variant = variantMap[type] || 'info';
+      toast('', message, variant);
+    };
+
+    // ============================================
     // ACCORDION — toggle via .accordion-trigger
     // ============================================
     document.querySelectorAll('[data-accordion]').forEach(group => {
