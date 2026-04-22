@@ -55,6 +55,15 @@ urlpatterns = [
     path('metas/salvar/', views.api_meta_salvar, name='api_meta_salvar'),
     path('metas/<int:pk>/excluir/', views.api_meta_excluir, name='api_meta_excluir'),
 
+    # Automações do Pipeline
+    path('automacoes-pipeline/', views.automacoes_pipeline_view, name='automacoes_pipeline'),
+    path('automacoes-pipeline/nova/', views.regra_pipeline_criar, name='regra_pipeline_criar'),
+    path('automacoes-pipeline/<int:pk>/editar/', views.regra_pipeline_editar, name='regra_pipeline_editar'),
+    path('automacoes-pipeline/<int:pk>/excluir/', views.regra_pipeline_excluir, name='regra_pipeline_excluir'),
+    path('automacoes-pipeline/<int:pk>/toggle/', views.regra_pipeline_toggle, name='regra_pipeline_toggle'),
+    path('automacoes-pipeline/<int:pk>/duplicar/', views.regra_pipeline_duplicar, name='regra_pipeline_duplicar'),
+    path('automacoes-pipeline/<int:pk>/preview/', views.regra_pipeline_preview, name='regra_pipeline_preview'),
+
     # Configurações
     path('configuracoes/', views.configuracoes_crm, name='configuracoes'),
     path('configuracoes/salvar/', views.api_salvar_config, name='api_salvar_config'),

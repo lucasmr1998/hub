@@ -780,6 +780,92 @@ def validar_imagem_api(request):
 
 
 # ============================================================================
+# APIs DE TAGS (Automações do Pipeline)
+# ============================================================================
+
+@csrf_exempt
+@api_token_required
+@require_http_methods(["POST"])
+def api_lead_tags(request):
+    """
+    Adiciona e/ou remove tags da OportunidadeVenda de um lead.
+
+    Payload:
+      {
+        "lead_id": 123,
+        "tags_add": ["Comercial", "Assinado"],
+        "tags_remove": []
+      }
+
+    O signal m2m_changed em OportunidadeVenda.tags dispara o motor de
+    Automações do Pipeline após a alteração.
+    """
+    data = _parse_json_request(request)
+    if data is None:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+
+    lead_id = data.get('lead_id')
+    tags_add = data.get('tags_add') or []
+    tags_remove = data.get('tags_remove') or []
+
+    if not lead_id:
+        return JsonResponse({'error': 'Campo obrigatório: lead_id'}, status=400)
+    if not tags_add and not tags_remove:
+        return JsonResponse({'error': 'Informe tags_add e/ou tags_remove'}, status=400)
+
+    from apps.comercial.crm.models import OportunidadeVenda, TagCRM
+
+    try:
+        oportunidade = OportunidadeVenda.objects.select_related('lead').get(lead_id=lead_id)
+    except OportunidadeVenda.DoesNotExist:
+        return JsonResponse(
+            {'error': f'Oportunidade não encontrada para o lead {lead_id}'},
+            status=404,
+        )
+
+    tags_adicionadas = []
+    tags_removidas = []
+
+    for nome_tag in tags_add:
+        nome = str(nome_tag).strip()
+        if not nome:
+            continue
+        tag, _ = TagCRM.objects.get_or_create(nome=nome, defaults={'cor_hex': '#667eea'})
+        oportunidade.tags.add(tag)
+        tags_adicionadas.append(tag.nome)
+
+    if tags_remove:
+        nomes_remover = [str(t).strip() for t in tags_remove if str(t).strip()]
+        tags_obj = TagCRM.objects.filter(nome__in=nomes_remover)
+        oportunidade.tags.remove(*tags_obj)
+        tags_removidas = list(tags_obj.values_list('nome', flat=True))
+
+    # Refresh pra pegar estado final (o engine pode ter movido de estágio)
+    oportunidade.refresh_from_db()
+    tags_atuais = list(oportunidade.tags.values_list('nome', flat=True))
+
+    try:
+        from apps.sistema.utils import registrar_acao
+        registrar_acao(
+            'crm', 'tags', 'oportunidade', oportunidade.pk,
+            f"Tags — add: {tags_adicionadas}, remove: {tags_removidas}",
+            request=request,
+        )
+    except Exception:
+        pass
+
+    return JsonResponse({
+        'success': True,
+        'lead_id': int(lead_id),
+        'oportunidade_id': oportunidade.pk,
+        'estagio_atual': oportunidade.estagio.nome if oportunidade.estagio else None,
+        'tags_adicionadas': tags_adicionadas,
+        'tags_removidas': tags_removidas,
+        'tags_atuais': tags_atuais,
+    })
+
+
+# ============================================================================
 # APIs DE REGISTRO E ATUALIZAÇÃO — PROSPECTOS
 # ============================================================================
 

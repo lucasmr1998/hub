@@ -1,0 +1,216 @@
+{% extends "sistema/base.html" %}
+
+{% block title %}Automações do Pipeline — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Automações do Pipeline</h1>
+      <p class="page-subtitle">Regras que movem oportunidades automaticamente entre estágios com base em tags, histórico, documentos e outros eventos.</p>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'crm:configuracoes' %}" class="btn btn-ghost btn-sm"><i class="bi bi-sliders"></i> Configurações CRM</a>
+      <a href="{% url 'crm:regra_pipeline_criar' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Nova regra</a>
+    </div>
+  </div>
+</div>
+
+<div class="stats-grid stats-grid-4" style="margin-bottom: var(--sp-4);">
+  {% include "components/stat_card.html" with label="Regras totais" value=total_regras icon="bi-diagram-3" %}
+  {% include "components/stat_card.html" with label="Regras ativas" value=total_ativas icon="bi-check-circle" icon_variant="success" %}
+  {% include "components/stat_card.html" with label="Estágios com regra" value=total_estagios_com_regra icon="bi-bullseye" icon_variant="info" %}
+  {% include "components/stat_card.html" with label="Disparos totais" value=total_disparos_global icon="bi-lightning" icon_variant="warning" %}
+</div>
+
+<div class="card" style="margin-bottom: var(--sp-4); background: var(--color-info-soft); border-left: 3px solid var(--color-info);">
+  <div class="card-body" style="display: flex; gap: var(--sp-3); align-items: flex-start;">
+    <i class="bi bi-info-circle" style="color: var(--color-info); font-size: 18px;"></i>
+    <div style="flex: 1; font-size: var(--fs-sm);">
+      <strong>Como funciona:</strong> o motor é acionado quando uma tag é adicionada/removida,
+      histórico é registrado, documento é validado ou status do serviço HubSoft muda. Ele avalia
+      todas as regras ativas e, se alguma bater, move a oportunidade pro estágio correspondente.
+      <strong>Estágios são avaliados dos mais avançados pros menos.</strong>
+    </div>
+  </div>
+</div>
+
+{% if pipelines_todos|length > 1 %}
+  <div class="card" style="margin-bottom: var(--sp-4);">
+    <div class="card-body">
+      <form method="get" style="display: flex; gap: var(--sp-3); align-items: center;">
+        <label style="font-size: var(--fs-sm); color: var(--color-text-muted); white-space: nowrap;">Pipeline:</label>
+        <div class="field-input-wrap" style="max-width: 260px; flex: 1;">
+          <select name="pipeline" class="field-input" onchange="this.form.submit()">
+            <option value="">Todos os pipelines</option>
+            {% for p in pipelines_todos %}
+              <option value="{{ p.pk }}" {% if pipeline_filtro == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% if pipeline_filtro %}<a href="{% url 'crm:automacoes_pipeline' %}" class="btn btn-ghost btn-sm">Limpar</a>{% endif %}
+      </form>
+    </div>
+  </div>
+{% endif %}
+
+{% for pipe_ctx in pipelines_ctx %}
+  <div style="margin-bottom: var(--sp-6);">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--sp-2); margin-bottom: var(--sp-3); border-bottom: 2px solid {{ pipe_ctx.pipeline.cor_hex }};">
+      <h2 style="font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px;">
+        <i class="bi bi-funnel-fill" style="color: {{ pipe_ctx.pipeline.cor_hex }};"></i>
+        {{ pipe_ctx.pipeline.nome }}
+        <span style="font-size: var(--fs-xs); color: var(--color-text-muted); font-weight: normal;">({{ pipe_ctx.pipeline.get_tipo_display }})</span>
+      </h2>
+      <span style="color: var(--color-text-muted); font-size: var(--fs-xs);">{{ pipe_ctx.total_regras }} regra{{ pipe_ctx.total_regras|pluralize }} em {{ pipe_ctx.estagios|length }} estágio{{ pipe_ctx.estagios|length|pluralize }}</span>
+    </div>
+
+    {% for grupo in pipe_ctx.estagios %}
+      {% if grupo.regras %}
+        <div class="card" style="margin-bottom: var(--sp-3); padding: 0; overflow: hidden;">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 class="card-title" style="display: flex; align-items: center; gap: 8px;">
+              <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: {{ grupo.estagio.cor_hex }};"></span>
+              {{ grupo.estagio.nome }}
+              <span style="color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: normal;">({{ grupo.estagio.get_tipo_display }})</span>
+            </h3>
+            <a href="{% url 'crm:regra_pipeline_criar' %}?estagio={{ grupo.estagio.pk }}" class="btn btn-ghost btn-sm"><i class="bi bi-plus"></i> Regra neste estágio</a>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="text-align: center; width: 70px;">Prio.</th>
+                  <th>Nome</th>
+                  <th>Condições (AND)</th>
+                  <th style="text-align: center; width: 90px;">Disparos</th>
+                  <th style="text-align: center; width: 90px;">Status</th>
+                  <th style="text-align: center; width: 150px;">Última execução</th>
+                  <th style="text-align: center; width: 180px;">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for regra in grupo.regras %}
+                  <tr>
+                    <td style="text-align: center; font-weight: var(--fw-bold);">{{ regra.prioridade }}</td>
+                    <td><strong>{{ regra.nome }}</strong></td>
+                    <td>
+                      {% if regra.condicoes_prosa %}
+                        <ul style="margin: 0; padding-left: 18px; font-size: var(--fs-sm);">
+                          {% for c in regra.condicoes_prosa %}<li>{{ c }}</li>{% endfor %}
+                        </ul>
+                      {% else %}
+                        <span style="color: var(--color-text-muted); font-style: italic;">sem condições — regra nunca dispara</span>
+                      {% endif %}
+                    </td>
+                    <td style="text-align: center; font-weight: var(--fw-bold);">{{ regra.total_disparos }}</td>
+                    <td style="text-align: center;">
+                      {% if regra.ativo %}
+                        {% include "components/badge.html" with variant="success" label="Ativa" size="sm" %}
+                      {% else %}
+                        {% include "components/badge.html" with variant="danger" label="Inativa" size="sm" %}
+                      {% endif %}
+                    </td>
+                    <td style="text-align: center; font-size: var(--fs-xs); color: var(--color-text-muted);">
+                      {% if regra.ultima_execucao %}{{ regra.ultima_execucao|date:"d/m/Y H:i" }}{% else %}—{% endif %}
+                    </td>
+                    <td style="text-align: center; white-space: nowrap;">
+                      <a href="{% url 'crm:regra_pipeline_editar' regra.id %}" class="btn btn-ghost btn-sm" title="Editar"><i class="bi bi-pencil"></i></a>
+                      <button class="btn btn-ghost btn-sm" title="{% if regra.ativo %}Desativar{% else %}Ativar{% endif %}" onclick="toggleRegra({{ regra.id }})">
+                        <i class="bi {% if regra.ativo %}bi-pause{% else %}bi-play{% endif %}"></i>
+                      </button>
+                      <button class="btn btn-ghost btn-sm" title="Duplicar" onclick="duplicarRegra({{ regra.id }})"><i class="bi bi-files"></i></button>
+                      <button class="btn btn-ghost-danger btn-sm" title="Excluir" onclick="excluirRegra({{ regra.id }}, '{{ regra.nome|escapejs }}')"><i class="bi bi-trash"></i></button>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% else %}
+        <div class="estagio-empty">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: {{ grupo.estagio.cor_hex }};"></span>
+            <strong style="font-size: var(--fs-sm);">{{ grupo.estagio.nome }}</strong>
+            <span style="color: var(--color-text-muted); font-size: var(--fs-xs);">({{ grupo.estagio.get_tipo_display }})</span>
+            <span style="color: var(--color-text-muted); font-size: var(--fs-xs); font-style: italic;">sem regras</span>
+          </div>
+          <a href="{% url 'crm:regra_pipeline_criar' %}?estagio={{ grupo.estagio.pk }}" class="btn btn-ghost btn-sm"><i class="bi bi-plus"></i> Criar regra aqui</a>
+        </div>
+      {% endif %}
+    {% empty %}
+      <div class="card">
+        <div class="card-body" style="text-align: center; padding: var(--sp-5); color: var(--color-text-muted);">
+          Pipeline sem estágios ativos. Configure em <a href="{% url 'crm:configuracoes' %}?pipeline={{ pipe_ctx.pipeline.pk }}">Configurações CRM</a>.
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% empty %}
+  <div class="card">
+    <div class="card-body" style="text-align: center; padding: var(--sp-8);">
+      <i class="bi bi-diagram-3" style="font-size: 40px; color: var(--color-border);"></i>
+      <p style="color: var(--color-text-muted); margin-top: var(--sp-3);">Nenhum pipeline ativo. Configure em <a href="{% url 'crm:configuracoes' %}">Configurações CRM</a>.</p>
+    </div>
+  </div>
+{% endfor %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .table-wrap { overflow-x: auto; }
+  .estagio-empty {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    margin-bottom: 6px;
+    background: var(--color-surface);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function _csrfToken() {
+  return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+}
+
+function _post(url) {
+  return fetch(url, {
+    method: 'POST',
+    headers: {'X-CSRFToken': _csrfToken()},
+  }).then(r => r.json());
+}
+
+function toggleRegra(id) {
+  _post(`/crm/automacoes-pipeline/${id}/toggle/`).then(d => {
+    if (d.success) window.location.reload();
+    else toast('Erro', d.error || 'Falha ao alternar regra', 'danger');
+  });
+}
+
+function duplicarRegra(id) {
+  _post(`/crm/automacoes-pipeline/${id}/duplicar/`).then(d => {
+    if (d.success) {
+      toast('Duplicada', 'Cópia criada (inativa). Ative quando estiver pronta.', 'success');
+      setTimeout(() => window.location.reload(), 600);
+    } else {
+      toast('Erro', d.error || 'Falha ao duplicar', 'danger');
+    }
+  });
+}
+
+function excluirRegra(id, nome) {
+  if (!confirm(`Excluir regra "${nome}"? Essa ação não pode ser desfeita.`)) return;
+  _post(`/crm/automacoes-pipeline/${id}/excluir/`).then(d => {
+    if (d.success) window.location.reload();
+    else toast('Erro', d.error || 'Falha ao excluir', 'danger');
+  });
+}
+</script>
+<form style="display: none;">{% csrf_token %}</form>
+{% endblock %}

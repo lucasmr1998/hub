@@ -1,0 +1,37 @@
+{% load static %}
+<div class="cond-row">
+  <div class="field">
+    <label class="field-label">Tipo</label>
+    <div class="field-input-wrap">
+      <select name="cond_tipo" class="field-input">
+        <option value="">—</option>
+        {% for val, lbl in tipos_condicao %}
+          <option value="{{ val }}" {% if c and c.tipo == val %}selected{% endif %}>{{ lbl }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="field">
+    <label class="field-label">Campo (opcional)</label>
+    <div class="field-input-wrap">
+      <input type="text" name="cond_campo" class="field-input" placeholder="Ex: status_api" value="{% if c %}{{ c.campo|default:'' }}{% endif %}">
+    </div>
+  </div>
+  <div class="field">
+    <label class="field-label">Operador</label>
+    <div class="field-input-wrap">
+      <select name="cond_operador" class="field-input">
+        {% for val, lbl in operadores %}
+          <option value="{{ val }}" {% if c and c.operador == val %}selected{% endif %}>{{ lbl }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="field">
+    <label class="field-label">Valor</label>
+    <div class="field-input-wrap">
+      <input type="text" name="cond_valor" class="field-input" placeholder="Ex: Assinado, true, servico_habilitado" value="{% if c and c.valor is not None %}{{ c.valor }}{% endif %}">
+    </div>
+  </div>
+  <button type="button" class="cond-remove" title="Remover condição"><i class="bi bi-trash"></i></button>
+</div>

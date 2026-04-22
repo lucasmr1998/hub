@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import requests
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
@@ -16,7 +17,7 @@ from apps.sistema.models import PerfilUsuario
 from apps.sistema.utils import auditar
 
 from .models import (
-    PipelineEstagio, OportunidadeVenda, HistoricoPipelineEstagio,
+    Pipeline, PipelineEstagio, OportunidadeVenda, HistoricoPipelineEstagio,
     TarefaCRM, NotaInterna, MetaVendas, SegmentoCRM, AlertaRetencao,
     ConfiguracaoCRM, EquipeVendas, PerfilVendedor,
     ProdutoServico, ItemOportunidade, OpcaoVencimentoCRM,
@@ -112,12 +113,28 @@ def pipeline_view(request):
     from .models import TagCRM
     tags = TagCRM.objects.all().order_by('nome')
 
+    filter_fields = [
+        {'type': 'select', 'label': 'Responsavel', 'name': 'responsavel', 'value': '',
+         'options': [('', 'Todos')] + [(str(v['id']), v['nome']) for v in vendedores]},
+        {'type': 'select', 'label': 'Tag', 'name': 'tag', 'value': '',
+         'options': [('', 'Todas')] + [(t.nome, t.nome) for t in tags]},
+        {'type': 'select', 'label': 'Valor', 'name': 'valor', 'value': '',
+         'options': [
+             ('', 'Qualquer'),
+             ('0-100', 'Ate R$ 100'),
+             ('100-500', 'R$ 100 a R$ 500'),
+             ('500-1000', 'R$ 500 a R$ 1.000'),
+             ('1000+', 'Acima de R$ 1.000'),
+         ]},
+    ]
+
     context = {
         'estagios': estagios,
         'vendedores': vendedores,
         'tags': tags,
         'pipelines': pipelines,
         'pipeline_atual': pipeline_atual,
+        'filter_fields': filter_fields,
         'page_title': f'Pipeline: {pipeline_atual.nome}' if pipeline_atual else 'Pipeline CRM',
     }
     return render(request, 'crm/pipeline.html', context)
@@ -347,15 +364,38 @@ def oportunidades_lista(request):
     for u in User.objects.filter(is_active=True, perfil__tenant=request.tenant).order_by('first_name'):
         vendedores.append({'id': u.pk, 'nome': u.get_full_name() or u.username})
 
+    filter_fields = [
+        {'type': 'select', 'label': 'Estagio', 'name': 'estagio', 'value': estagio_id or '',
+         'options': [('', 'Todos')] + [(str(e.pk), e.nome) for e in estagios]},
+        {'type': 'select', 'label': 'Responsavel', 'name': 'responsavel', 'value': responsavel_id or '',
+         'options': [('', 'Todos')] + [(str(v['id']), v['nome']) for v in vendedores]},
+        {'type': 'select', 'label': 'Tag', 'name': 'tag', 'value': tag_nome,
+         'options': [('', 'Todas')] + [(t.nome, t.nome) for t in tags]},
+    ]
+
+    active_filters_count = sum(1 for v in [estagio_id, responsavel_id, tag_nome] if v) + (1 if search else 0)
+
+    paginator = Paginator(qs, 25)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
+    query = query_params.urlencode()
+
     context = {
-        'oportunidades': qs,
+        'oportunidades': page_obj,
+        'page_obj': page_obj,
+        'query': query,
         'estagios': estagios,
         'tags': tags,
         'vendedores': vendedores,
+        'filter_fields': filter_fields,
+        'active_filters_count': active_filters_count,
         'filtro_search': search,
         'filtro_estagio': estagio_id,
         'filtro_responsavel': responsavel_id,
         'filtro_tag': tag_nome,
+        'total_oportunidades': qs.count(),
         'page_title': 'Oportunidades',
     }
     return render(request, 'crm/oportunidades_lista.html', context)
@@ -773,6 +813,16 @@ def tarefas_lista(request):
     for u in User.objects.filter(is_active=True, perfil__tenant=request.tenant).order_by('first_name'):
         vendedores.append({'id': u.pk, 'nome': u.get_full_name() or u.username})
 
+    filter_fields = [
+        {'type': 'select', 'label': 'Tipo', 'name': 'tipo', 'value': filtro_tipo,
+         'options': [('', 'Todos')] + list(TarefaCRM.TIPO_CHOICES)},
+        {'type': 'select', 'label': 'Responsavel', 'name': 'responsavel', 'value': filtro_responsavel,
+         'options': [('', 'Todos')] + [(str(v['id']), v['nome']) for v in vendedores]},
+        {'type': 'select', 'label': 'Prioridade', 'name': 'prioridade', 'value': filtro_prioridade,
+         'options': [('', 'Todas')] + list(TarefaCRM.PRIORIDADE_CHOICES)},
+    ]
+    active_filters_count = sum(1 for v in [filtro_tipo, filtro_responsavel, filtro_prioridade] if v) + (1 if filtro_search else 0)
+
     context = {
         'tarefas_hoje': tarefas_hoje,
         'tarefas_semana': tarefas_semana,
@@ -780,12 +830,15 @@ def tarefas_lista(request):
         'tarefas_todas': tarefas_todas,
         'tarefas_concluidas': tarefas_concluidas,
         'vendedores': vendedores,
+        'filter_fields': filter_fields,
+        'active_filters_count': active_filters_count,
         'filtro_tipo': filtro_tipo,
         'filtro_responsavel': filtro_responsavel,
         'filtro_prioridade': filtro_prioridade,
         'filtro_search': filtro_search,
         'tipos_tarefa': TarefaCRM.TIPO_CHOICES,
         'prioridades': TarefaCRM.PRIORIDADE_CHOICES,
+        'hoje': hoje,
         'page_title': 'Tarefas CRM',
     }
     return render(request, 'crm/tarefas_lista.html', context)
@@ -1064,8 +1117,13 @@ def metas_view(request):
     vendedores = User.objects.filter(is_active=True, perfil__tenant=request.tenant).order_by('first_name')
     equipes = EquipeVendas.objects.filter(ativo=True)
 
+    metas_individuais = [m for m in metas_ativas if m.tipo == 'individual']
+    metas_equipe = [m for m in metas_ativas if m.tipo == 'equipe']
+
     context = {
         'metas_ativas': metas_ativas,
+        'metas_individuais': metas_individuais,
+        'metas_equipe': metas_equipe,
         'vendedores': vendedores,
         'equipes': equipes,
         'page_title': 'Metas de Vendas',
@@ -1243,9 +1301,27 @@ def api_scanner_retencao(request):
 
 @login_required
 def segmentos_lista(request):
-    segmentos = SegmentoCRM.objects.filter(ativo=True).select_related('criado_por').order_by('nome')
+    segmentos_qs = SegmentoCRM.objects.filter(ativo=True).select_related('criado_por').order_by('nome')
+    total = segmentos_qs.count()
+    por_tipo = {'dinamico': 0, 'manual': 0, 'hibrido': 0}
+    for s in segmentos_qs:
+        if s.tipo in por_tipo:
+            por_tipo[s.tipo] += 1
+
+    status_tabs = [
+        {'label': 'Todos', 'url': '#', 'onclick': "filtrarPorTipo(''); return false;", 'active': True, 'count': total},
+        {'label': 'Dinamicos', 'url': '#', 'onclick': "filtrarPorTipo('dinamico'); return false;", 'count': por_tipo['dinamico']},
+        {'label': 'Manuais', 'url': '#', 'onclick': "filtrarPorTipo('manual'); return false;", 'count': por_tipo['manual']},
+        {'label': 'Hibridos', 'url': '#', 'onclick': "filtrarPorTipo('hibrido'); return false;", 'count': por_tipo['hibrido']},
+    ]
+
+    paginator = Paginator(segmentos_qs, 12)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
     context = {
-        'segmentos': segmentos,
+        'segmentos': page_obj,
+        'page_obj': page_obj,
+        'status_tabs': status_tabs,
         'page_title': 'Segmentos CRM',
     }
     return render(request, 'crm/segmentos_lista.html', context)
@@ -2178,3 +2254,300 @@ def api_vencimentos_listar(request):
         'ativo': v.ativo,
     } for v in qs]
     return JsonResponse({'success': True, 'vencimentos': data})
+
+
+# ============================================================================
+# AUTOMAÇÕES DO PIPELINE (tela read-only)
+# ============================================================================
+
+from .services.automacao_constantes import (
+    TIPOS_CONDICAO, OPERADORES, TIPOS_CONDICAO_DICT, OPERADORES_DICT,
+)
+
+
+def _formatar_condicao(cond):
+    """Formata uma condição em prosa pra exibir na UI."""
+    tipo_slug = cond.get('tipo', '')
+    operador_slug = cond.get('operador', '')
+    tipo = TIPOS_CONDICAO_DICT.get(tipo_slug, tipo_slug)
+    operador = OPERADORES_DICT.get(operador_slug, operador_slug)
+    campo = cond.get('campo', '')
+    valor = cond.get('valor', '')
+
+    partes = [tipo]
+    if campo:
+        partes.append(f"({campo})")
+    partes.append(operador)
+    if valor not in ('', None):
+        partes.append(f"'{valor}'")
+    return ' '.join(str(p) for p in partes)
+
+
+@login_required
+def automacoes_pipeline_view(request):
+    """Tela que lista regras agrupadas por Pipeline > Estágio > Regras."""
+    denied = _check_perm(request, 'comercial.configurar_pipeline')
+    if denied:
+        return denied
+
+    from .models import Pipeline
+
+    # Filtro opcional por pipeline
+    pipeline_filtro = request.GET.get('pipeline')
+    pipelines_qs = Pipeline.objects.filter(ativo=True).order_by('ordem', 'nome')
+    if pipeline_filtro:
+        pipelines_qs = pipelines_qs.filter(pk=pipeline_filtro)
+
+    pipelines_todos = list(Pipeline.objects.filter(ativo=True).order_by('ordem', 'nome'))
+
+    pipelines_ctx = []
+    total_regras = 0
+    total_ativas = 0
+    total_disparos_global = 0
+    total_estagios_com_regra = 0
+
+    for pipe in pipelines_qs.prefetch_related('estagios__regras'):
+        estagios_ctx = []
+        total_regras_pipe = 0
+
+        estagios = pipe.estagios.filter(ativo=True).order_by('ordem')
+        for est in estagios:
+            regras = []
+            for regra in est.regras.all().order_by('prioridade'):
+                regras.append({
+                    'id': regra.pk,
+                    'nome': regra.nome,
+                    'prioridade': regra.prioridade,
+                    'ativo': regra.ativo,
+                    'condicoes_prosa': [_formatar_condicao(c) for c in (regra.condicoes or [])],
+                    'atualizado_em': regra.atualizado_em,
+                    'total_disparos': getattr(regra, 'total_disparos', 0),
+                    'ultima_execucao': getattr(regra, 'ultima_execucao', None),
+                })
+            estagios_ctx.append({
+                'estagio': est,
+                'regras': regras,
+                'total_regras': len(regras),
+            })
+            total_regras += len(regras)
+            total_regras_pipe += len(regras)
+            total_ativas += sum(1 for r in regras if r['ativo'])
+            total_disparos_global += sum(r['total_disparos'] for r in regras)
+            if regras:
+                total_estagios_com_regra += 1
+
+        pipelines_ctx.append({
+            'pipeline': pipe,
+            'estagios': estagios_ctx,
+            'total_regras': total_regras_pipe,
+        })
+
+    return render(request, 'crm/automacoes_pipeline.html', {
+        'pipelines_ctx': pipelines_ctx,
+        'pipelines_todos': pipelines_todos,
+        'pipeline_filtro': pipeline_filtro,
+        'total_regras': total_regras,
+        'total_ativas': total_ativas,
+        'total_disparos_global': total_disparos_global,
+        'total_estagios_com_regra': total_estagios_com_regra,
+    })
+
+
+# ----------------------------------------------------------------------------
+# CRUD (Fase 2)
+# ----------------------------------------------------------------------------
+
+def _parse_condicoes_do_post(request):
+    """
+    Lê condições enviadas como formset simples via POST.
+    Espera listas: cond_tipo[], cond_campo[], cond_operador[], cond_valor[].
+    """
+    tipos = request.POST.getlist('cond_tipo')
+    campos = request.POST.getlist('cond_campo')
+    operadores = request.POST.getlist('cond_operador')
+    valores = request.POST.getlist('cond_valor')
+
+    condicoes = []
+    for tipo, campo, op, valor in zip(tipos, campos, operadores, valores):
+        tipo = (tipo or '').strip()
+        if not tipo:
+            continue
+        cond = {'tipo': tipo, 'operador': (op or 'igual').strip()}
+        if campo.strip():
+            cond['campo'] = campo.strip()
+        valor = valor.strip() if isinstance(valor, str) else valor
+        if valor in ('true', 'True'):
+            cond['valor'] = True
+        elif valor in ('false', 'False'):
+            cond['valor'] = False
+        elif valor != '':
+            cond['valor'] = valor
+        condicoes.append(cond)
+    return condicoes
+
+
+def _contexto_form_regra(regra=None, estagio_preselecionado=None):
+    from .models import PipelineEstagio
+    estagios = PipelineEstagio.objects.filter(ativo=True).order_by('ordem')
+    return {
+        'regra': regra,
+        'estagios': estagios,
+        'estagio_preselecionado_id': estagio_preselecionado,
+        'tipos_condicao': TIPOS_CONDICAO,
+        'operadores': OPERADORES,
+    }
+
+
+@login_required
+def regra_pipeline_criar(request):
+    denied = _check_perm(request, 'comercial.configurar_pipeline')
+    if denied:
+        return denied
+
+    from django.shortcuts import redirect
+    from .models import RegraPipelineEstagio, PipelineEstagio
+
+    if request.method == 'POST':
+        estagio_id = request.POST.get('estagio')
+        estagio = PipelineEstagio.objects.filter(pk=estagio_id).first()
+        if not estagio:
+            return JsonResponse({'error': 'Estágio inválido'}, status=400)
+
+        RegraPipelineEstagio.objects.create(
+            estagio=estagio,
+            nome=request.POST.get('nome', '').strip() or 'Regra sem nome',
+            prioridade=int(request.POST.get('prioridade') or 0),
+            condicoes=_parse_condicoes_do_post(request),
+            ativo=bool(request.POST.get('ativo')),
+        )
+        return redirect('crm:automacoes_pipeline')
+
+    estagio_pre = request.GET.get('estagio')
+    try:
+        estagio_pre = int(estagio_pre) if estagio_pre else None
+    except (TypeError, ValueError):
+        estagio_pre = None
+
+    return render(request, 'crm/regra_form.html', _contexto_form_regra(estagio_preselecionado=estagio_pre))
+
+
+@login_required
+def regra_pipeline_editar(request, pk):
+    denied = _check_perm(request, 'comercial.configurar_pipeline')
+    if denied:
+        return denied
+
+    from django.shortcuts import redirect, get_object_or_404
+    from .models import RegraPipelineEstagio, PipelineEstagio
+
+    regra = get_object_or_404(RegraPipelineEstagio, pk=pk)
+
+    if request.method == 'POST':
+        estagio_id = request.POST.get('estagio')
+        estagio = PipelineEstagio.objects.filter(pk=estagio_id).first()
+        if estagio:
+            regra.estagio = estagio
+        regra.nome = request.POST.get('nome', regra.nome).strip() or regra.nome
+        regra.prioridade = int(request.POST.get('prioridade') or regra.prioridade)
+        regra.ativo = bool(request.POST.get('ativo'))
+        regra.condicoes = _parse_condicoes_do_post(request)
+        regra.save()
+        return redirect('crm:automacoes_pipeline')
+
+    return render(request, 'crm/regra_form.html', _contexto_form_regra(regra))
+
+
+@login_required
+@require_http_methods(["POST"])
+def regra_pipeline_excluir(request, pk):
+    denied = _check_perm(request, 'comercial.configurar_pipeline')
+    if denied:
+        return denied
+
+    from .models import RegraPipelineEstagio
+
+    regra = RegraPipelineEstagio.objects.filter(pk=pk).first()
+    if regra:
+        regra.delete()
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_http_methods(["POST"])
+def regra_pipeline_toggle(request, pk):
+    denied = _check_perm(request, 'comercial.configurar_pipeline')
+    if denied:
+        return denied
+
+    from .models import RegraPipelineEstagio
+
+    regra = RegraPipelineEstagio.objects.filter(pk=pk).first()
+    if not regra:
+        return JsonResponse({'error': 'Regra não encontrada'}, status=404)
+
+    regra.ativo = not regra.ativo
+    regra.save(update_fields=['ativo', 'atualizado_em'])
+    return JsonResponse({'success': True, 'ativo': regra.ativo})
+
+
+@login_required
+@require_http_methods(["POST"])
+def regra_pipeline_duplicar(request, pk):
+    denied = _check_perm(request, 'comercial.configurar_pipeline')
+    if denied:
+        return denied
+
+    from .models import RegraPipelineEstagio
+
+    regra = RegraPipelineEstagio.objects.filter(pk=pk).first()
+    if not regra:
+        return JsonResponse({'error': 'Regra não encontrada'}, status=404)
+
+    RegraPipelineEstagio.objects.create(
+        estagio=regra.estagio,
+        nome=f"{regra.nome} (cópia)",
+        prioridade=regra.prioridade + 1,
+        condicoes=list(regra.condicoes or []),
+        ativo=False,
+    )
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_http_methods(["POST"])
+def regra_pipeline_preview(request, pk):
+    """
+    Retorna quantas oportunidades atualmente bateriam com essa regra.
+    Útil pra o usuário testar antes de ativar.
+    """
+    denied = _check_perm(request, 'comercial.configurar_pipeline')
+    if denied:
+        return denied
+
+    from .models import RegraPipelineEstagio, OportunidadeVenda
+    from .services.automacao_pipeline import _construir_contexto, _regra_bate
+
+    regra = RegraPipelineEstagio.objects.filter(pk=pk).first()
+    if not regra:
+        return JsonResponse({'error': 'Regra não encontrada'}, status=404)
+
+    # Só oportunidades fora de estágio final
+    oportunidades = (
+        OportunidadeVenda.objects
+        .select_related('estagio', 'lead')
+        .filter(estagio__is_final_ganho=False, estagio__is_final_perdido=False)
+    )
+
+    matches = 0
+    for opp in oportunidades[:500]:  # limite de segurança
+        contexto = _construir_contexto(opp)
+        if _regra_bate(regra, contexto):
+            matches += 1
+
+    return JsonResponse({
+        'success': True,
+        'regra_id': regra.pk,
+        'regra_nome': regra.nome,
+        'oportunidades_que_bateriam': matches,
+        'total_avaliado': min(oportunidades.count(), 500),
+    })

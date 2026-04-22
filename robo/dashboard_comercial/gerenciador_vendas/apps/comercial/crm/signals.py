@@ -1,7 +1,7 @@
 import logging
 from decimal import Decimal
 
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -153,3 +153,74 @@ def avaliar_segmentos_dinamicos(sender, instance, **kwargs):
                 }, tenant=instance.tenant)
     except Exception as e:
         logger.error(f"[CRM] Erro ao avaliar segmentos para lead {instance.pk}: {e}")
+
+
+# ============================================================================
+# AUTOMAÇÕES DO PIPELINE — disparam o engine em eventos do lead/oportunidade
+# ============================================================================
+
+def _disparar_engine(*, oportunidade=None, lead_id=None):
+    """Importa e chama o engine de forma isolada pra não derrubar signals."""
+    from .services.automacao_pipeline import processar_seguro
+    processar_seguro(oportunidade=oportunidade, lead_id=lead_id)
+
+
+@receiver(post_save, sender='leads.LeadProspecto')
+def engine_apos_lead_atualizado(sender, instance, **kwargs):
+    """Reavalia regras quando o lead é criado ou atualizado."""
+    if getattr(instance, '_skip_rules_evaluation', False):
+        return
+    _disparar_engine(lead_id=instance.pk)
+
+
+@receiver(post_save, sender='leads.HistoricoContato')
+def engine_apos_historico(sender, instance, created, **kwargs):
+    """Reavalia regras quando um histórico de contato é criado."""
+    if not created:
+        return
+    lead_id = getattr(instance, 'lead_id', None)
+    if lead_id:
+        _disparar_engine(lead_id=lead_id)
+
+
+@receiver(post_save, sender='leads.ImagemLeadProspecto')
+def engine_apos_imagem(sender, instance, **kwargs):
+    """Reavalia regras quando uma imagem/documento muda de status."""
+    lead_id = getattr(instance, 'lead_id', None)
+    if lead_id:
+        _disparar_engine(lead_id=lead_id)
+
+
+def _conectar_signal_servico_hubsoft():
+    """Conecta post_save de ServicoClienteHubsoft se o modelo existir."""
+    try:
+        from apps.integracoes.models import ServicoClienteHubsoft
+    except Exception:
+        return
+
+    @receiver(post_save, sender=ServicoClienteHubsoft, weak=False)
+    def engine_apos_servico_hubsoft(sender, instance, **kwargs):
+        cliente = getattr(instance, 'cliente', None)
+        if not cliente:
+            return
+        lead_id = getattr(cliente, 'lead_id', None)
+        if lead_id:
+            _disparar_engine(lead_id=lead_id)
+
+
+def _conectar_signal_tags():
+    """Conecta m2m_changed em OportunidadeVenda.tags pra reavaliar regras."""
+    from apps.comercial.crm.models import OportunidadeVenda
+
+    @receiver(m2m_changed, sender=OportunidadeVenda.tags.through, weak=False)
+    def engine_apos_tag_changed(sender, instance, action, **kwargs):
+        if action not in ('post_add', 'post_remove', 'post_clear'):
+            return
+        if getattr(instance, '_skip_rules_evaluation', False):
+            return
+        _disparar_engine(oportunidade=instance)
+
+
+# Conectar signals externos ao importar o módulo
+_conectar_signal_tags()
+_conectar_signal_servico_hubsoft()

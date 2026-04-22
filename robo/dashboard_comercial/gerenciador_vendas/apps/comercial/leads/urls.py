@@ -20,6 +20,9 @@ urlpatterns = [
     path('api/leads/registrar/', views.registrar_lead_api, name='registrar_lead'),
     path('api/leads/atualizar/', views.atualizar_lead_api, name='atualizar_lead'),
 
+    # API de tags (Automacoes do Pipeline)
+    path('api/leads/tags/', views.api_lead_tags, name='api_lead_tags'),
+
     # APIs de imagens de leads
     path('api/leads/imagens/registrar/', views.registrar_imagem_lead_api, name='registrar_imagem_lead'),
     path('api/leads/imagens/listar/', views.listar_imagens_lead_api, name='listar_imagens_lead'),

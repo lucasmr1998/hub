@@ -54,3 +54,8 @@ node_modules/
 
 # ── Projetos de código (repos git separados) ────────────
 megaroleta/
+prod/
+
+# ── Dumps e configs locais ────────────────────────────────
+*.sql
+.claude/settings.local.json

@@ -806,3 +806,68 @@ class ConfiguracaoCRM(TenantMixin):
         if not obj:
             obj = cls.objects.create()
         return obj
+
+
+# ============================================================================
+# AUTOMAÇÕES DO PIPELINE (motor de regras)
+# ============================================================================
+
+class RegraPipelineEstagio(TenantMixin):
+    """
+    Regra configurável que move oportunidades automaticamente entre estágios.
+
+    Dentro de uma mesma regra, condições são AND (todas devem bater).
+    Dentro de um mesmo estágio, múltiplas regras são OR (qualquer uma basta).
+    Estágios são avaliados dos mais avançados pros menos avançados (ordem DESC);
+    o primeiro match ganha e a oportunidade é movida.
+
+    Estágios finais (is_final_ganho / is_final_perdido) não são reavaliados.
+
+    Tipos de condição e operadores são definidos em
+    `apps.comercial.crm.services.automacao_constantes` (fonte única).
+    """
+
+    estagio = models.ForeignKey(
+        PipelineEstagio,
+        on_delete=models.CASCADE,
+        related_name='regras',
+        verbose_name="Estágio",
+    )
+    nome = models.CharField(
+        max_length=150,
+        verbose_name="Nome da Regra",
+        help_text="Descrição curta (ex: 'Serviço habilitado + doc validada')",
+    )
+    condicoes = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Condições",
+        help_text="Lista de condições AND: [{tipo, campo, operador, valor}, ...]",
+    )
+    ativo = models.BooleanField(default=True, verbose_name="Ativa")
+    prioridade = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Prioridade",
+        help_text="Menor valor = avaliada primeiro dentro do estágio",
+    )
+    total_disparos = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Total de disparos",
+        help_text="Quantas vezes a regra já moveu uma oportunidade",
+    )
+    ultima_execucao = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name="Última execução",
+    )
+
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'crm_regras_pipeline_estagio'
+        verbose_name = "Regra do Pipeline"
+        verbose_name_plural = "🎯 13. Automações do Pipeline"
+        ordering = ['estagio__ordem', 'prioridade']
+
+    def __str__(self):
+        return f"{self.estagio.nome} — {self.nome}"

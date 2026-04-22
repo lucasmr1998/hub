@@ -1,0 +1,155 @@
+{% extends "sistema/base.html" %}
+
+{% block title %}{% if regra %}Editar{% else %}Nova{% endif %} regra — Automações do Pipeline{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">{% if regra %}Editar regra{% else %}Nova regra{% endif %}</h1>
+      <p class="page-subtitle">Configure as condições que fazem uma oportunidade avançar pro estágio escolhido.</p>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'crm:automacoes_pipeline' %}" class="btn btn-ghost btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
+  </div>
+</div>
+
+<form method="post" class="card">
+  {% csrf_token %}
+  <div class="card-body">
+    <div class="field">
+      <label class="field-label">Nome da regra *</label>
+      <div class="field-input-wrap">
+        <input type="text" name="nome" class="field-input" required placeholder="Ex: Tag Assinado move pra Ganho" value="{{ regra.nome|default:'' }}">
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3);">
+      <div class="field">
+        <label class="field-label">Estágio destino *</label>
+        <div class="field-input-wrap">
+          <select name="estagio" class="field-input" required>
+            <option value="">Selecione...</option>
+            {% for e in estagios %}
+              <option value="{{ e.pk }}" {% if regra and regra.estagio_id == e.pk %}selected{% elif not regra and estagio_preselecionado_id == e.pk %}selected{% endif %}>{{ e.pipeline.nome|default:"—" }} &middot; {{ e.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Prioridade</label>
+        <div class="field-input-wrap">
+          <input type="number" name="prioridade" class="field-input" min="0" value="{{ regra.prioridade|default:0 }}">
+        </div>
+        <div class="field-help">Menor número = avaliada primeiro.</div>
+      </div>
+      <div class="field">
+        <label class="field-label">&nbsp;</label>
+        <label style="display: flex; align-items: center; gap: var(--sp-2); padding-top: 10px;">
+          <input type="checkbox" name="ativo" {% if not regra or regra.ativo %}checked{% endif %}> Ativa
+        </label>
+      </div>
+    </div>
+
+    <hr style="margin: var(--sp-5) 0; border: none; border-top: 1px solid var(--color-border);">
+
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--sp-3);">
+      <h3 style="font-size: var(--fs-md); font-weight: var(--fw-bold); margin: 0;">Condições (AND)</h3>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="addCondicao()"><i class="bi bi-plus-lg"></i> Adicionar condição</button>
+    </div>
+
+    <div id="condicoes-list">
+      {% for c in regra.condicoes %}
+        {% include "crm/_regra_condicao_row.html" with c=c tipos_condicao=tipos_condicao operadores=operadores %}
+      {% endfor %}
+    </div>
+
+    <template id="condicao-template">
+      {% include "crm/_regra_condicao_row.html" with c=None tipos_condicao=tipos_condicao operadores=operadores %}
+    </template>
+
+    <div id="condicoes-empty" style="{% if regra.condicoes %}display: none;{% endif %} color: var(--color-text-muted); font-style: italic; padding: var(--sp-4); text-align: center; border: 1px dashed var(--color-border); border-radius: var(--radius-md);">
+      Nenhuma condição — a regra nunca dispara. Adicione pelo menos uma.
+    </div>
+  </div>
+
+  <div class="card-footer" style="display: flex; gap: var(--sp-3); justify-content: flex-end;">
+    <a href="{% url 'crm:automacoes_pipeline' %}" class="btn btn-ghost">Cancelar</a>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check2"></i> Salvar regra</button>
+  </div>
+</form>
+
+{% if regra %}
+  <div class="card" style="margin-top: var(--sp-4);">
+    <div class="card-header"><h3 class="card-title"><i class="bi bi-eye" style="color: var(--color-primary);"></i> Preview de impacto</h3></div>
+    <div class="card-body">
+      <p style="color: var(--color-text-muted); font-size: var(--fs-sm); margin-bottom: var(--sp-3);">
+        Avalia esta regra contra todas as oportunidades ativas pra descobrir quantas bateriam agora.
+      </p>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="rodarPreview()"><i class="bi bi-play"></i> Rodar preview</button>
+      <span id="preview-result" style="margin-left: var(--sp-3); font-weight: var(--fw-bold);"></span>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .cond-row { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1.4fr 40px; gap: 8px; align-items: end; margin-bottom: 8px; }
+  .cond-row .field { margin: 0; }
+  .cond-row .field-label { font-size: var(--fs-xs); }
+  .cond-remove { background: transparent; border: 1px solid var(--color-border); border-radius: var(--radius-sm); height: 36px; cursor: pointer; color: var(--color-danger); }
+  .cond-remove:hover { background: var(--color-danger-soft); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function addCondicao() {
+  const tpl = document.getElementById('condicao-template');
+  const list = document.getElementById('condicoes-list');
+  const clone = tpl.content.cloneNode(true);
+  list.appendChild(clone);
+  document.getElementById('condicoes-empty').style.display = 'none';
+}
+
+document.addEventListener('click', function(e) {
+  if (e.target.closest('.cond-remove')) {
+    const row = e.target.closest('.cond-row');
+    if (row) {
+      row.remove();
+      if (!document.querySelector('.cond-row')) {
+        document.getElementById('condicoes-empty').style.display = 'block';
+      }
+    }
+  }
+});
+
+{% if regra %}
+function rodarPreview() {
+  const btn = event.target.closest('button');
+  const result = document.getElementById('preview-result');
+  btn.disabled = true;
+  result.textContent = 'Avaliando...';
+  fetch('{% url "crm:regra_pipeline_preview" regra.pk %}', {
+    method: 'POST',
+    headers: {'X-CSRFToken': '{{ csrf_token }}'},
+  })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      if (data.success) {
+        result.innerHTML = `<span style="color: var(--color-success);">${data.oportunidades_que_bateriam}</span> de ${data.total_avaliado} oportunidades bateriam agora`;
+      } else {
+        result.textContent = 'Erro: ' + (data.error || 'desconhecido');
+      }
+    })
+    .catch(err => {
+      btn.disabled = false;
+      result.textContent = 'Erro: ' + err.message;
+    });
+}
+{% endif %}
+</script>
+{% endblock %}

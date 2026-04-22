@@ -6,6 +6,7 @@ from .models import (
     TarefaCRM, NotaInterna, MetaVendas,
     SegmentoCRM, MembroSegmento, AlertaRetencao, ConfiguracaoCRM,
     ProdutoServico, ItemOportunidade, OpcaoVencimentoCRM,
+    RegraPipelineEstagio,
 )
 
 
@@ -208,3 +209,31 @@ class ConfiguracaoCRMAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(RegraPipelineEstagio)
+class RegraPipelineEstagioAdmin(admin.ModelAdmin):
+    list_display = ['nome', 'estagio', 'prioridade', 'qtd_condicoes', 'ativo', 'atualizado_em']
+    list_display_links = ['nome']
+    list_editable = ['prioridade', 'ativo']
+    list_filter = ['ativo', 'estagio__tipo']
+    search_fields = ['nome', 'estagio__nome']
+    ordering = ['estagio__ordem', 'prioridade']
+    readonly_fields = ['criado_em', 'atualizado_em']
+    fieldsets = (
+        (None, {'fields': ('estagio', 'nome', 'ativo', 'prioridade')}),
+        ('Condições (AND)', {
+            'fields': ('condicoes',),
+            'description': (
+                'Lista de condições em JSON. Exemplo: '
+                '[{"tipo": "tag", "operador": "igual", "valor": "Assinado"}]. '
+                'Tipos aceitos: historico_status, lead_status_api, lead_campo, '
+                'servico_status, tag, converteu_venda, imagem_status.'
+            ),
+        }),
+        ('Auditoria', {'fields': ('criado_em', 'atualizado_em'), 'classes': ('collapse',)}),
+    )
+
+    def qtd_condicoes(self, obj):
+        return len(obj.condicoes or [])
+    qtd_condicoes.short_description = 'Condições'

@@ -20,6 +20,7 @@ CRM Kanban completo para gestao do funil de vendas. Pipeline visual com drag-and
 | [metas.md](metas.md) | MetaVendas individuais e de equipe |
 | [segmentos.md](segmentos.md) | SegmentoCRM (dinamico/manual/hibrido) + services |
 | [retencao.md](retencao.md) | AlertaRetencao e scanner de churn |
+| [automacoes-pipeline.md](automacoes-pipeline.md) | Motor de regras que move oportunidades entre estagios automaticamente |
 
 ---
 
