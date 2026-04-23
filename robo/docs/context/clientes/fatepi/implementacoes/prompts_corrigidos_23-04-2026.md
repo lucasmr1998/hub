@@ -1,7 +1,9 @@
 # FATEPI v3 — Prompts corrigidos (Fix #1 e Fix #5)
 
 **Data:** 23/04/2026
-**Como aplicar:** editor de fluxos do Matrix → abrir fluxo v3 → editar nodos abaixo → salvar.
+**Como aplicar:** editor de fluxos do **Hubtrix** (rota `/configuracoes/fluxos/<id>/editor/`) → abrir fluxo v3 (id=6) → editar nodos abaixo → salvar.
+
+Obs: FATEPI usa o editor nativo do Hubtrix, NÃO o Matrix. Matrix é contexto de Megalink/Nuvyon.
 
 ---
 
@@ -182,7 +184,7 @@ Regras:
 
 ## Aplicação
 
-1. Abrir Matrix/editor de fluxos
+1. Abrir editor de fluxos do Hubtrix (`app.hubtrix.com.br` > Atendimento > Configurações > Fluxos)
 2. Selecionar fluxo "FATEPI - IA v3 (com fallback)"
 3. Para cada nodo (521 e 523):
    - Abrir configuração
