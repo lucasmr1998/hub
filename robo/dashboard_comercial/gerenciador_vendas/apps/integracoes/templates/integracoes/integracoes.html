@@ -1,4 +1,5 @@
 {% extends 'sistema/base.html' %}
+{% load json_filters %}
 
 {% block title %}Integracoes — Hubtrix{% endblock %}
 
@@ -35,7 +36,7 @@
            data-username="{{ integ.username }}"
            data-token="{{ integ.token_uazapi }}"
            data-api-key="{{ integ.api_key }}"
-           data-extras='{{ integ.configuracoes_extras|safe }}'>
+           data-extras='{{ integ.configuracoes_extras|jsonify }}'>
 
         <div class="card-header" style="align-items: flex-start;">
           <div style="display:flex; align-items: flex-start; gap: var(--sp-3); flex: 1; min-width: 0;">
