@@ -255,7 +255,6 @@ class TestApiTiposNotificacao:
         assert data['success'] is True
         assert len(data['tipos']) >= 1
 
-    @pytest.mark.xfail(reason="BUG: /api/ esta em _PERM_SKIP_PATHS do middleware, user_tem_funcionalidade retorna True por default (None). Rastreado em backlog/api_perm_skip_paths.")
     def test_tipos_non_superuser_denied(self, client, full_setup, notif_data):
         from apps.sistema.models import PermissaoUsuario
         regular_user = UserFactory(is_staff=False, is_superuser=False)
@@ -275,7 +274,6 @@ class TestApiCanaisNotificacao:
         assert data['success'] is True
         assert len(data['canais']) >= 1
 
-    @pytest.mark.xfail(reason="BUG: /api/ em _PERM_SKIP_PATHS do middleware. Ver tarefa no backlog.")
     def test_canais_non_superuser_denied(self, client, full_setup, notif_data):
         from apps.sistema.models import PermissaoUsuario
         regular_user = UserFactory(is_staff=False, is_superuser=False)
@@ -462,7 +460,6 @@ class TestApiUsuariosCriar:
         assert 'vendedores' in data['user']['groups']
         assert 'grupo_inexistente' not in data['user']['groups']
 
-    @pytest.mark.xfail(reason="BUG: /api/ em _PERM_SKIP_PATHS do middleware. Ver tarefa no backlog.")
     def test_criar_usuario_sem_permissao_403(self, client, full_setup):
         from apps.sistema.models import PermissaoUsuario
         regular_user = UserFactory(is_staff=False, is_superuser=False)
@@ -508,7 +505,6 @@ class TestApiUsuariosEditar:
         )
         assert resp.status_code == 404
 
-    @pytest.mark.xfail(reason="BUG: /api/ em _PERM_SKIP_PATHS do middleware. Ver tarefa no backlog.")
     def test_editar_usuario_sem_permissao_403(self, client, full_setup):
         from apps.sistema.models import PermissaoUsuario
         regular_user = UserFactory(is_staff=False, is_superuser=False)
@@ -558,7 +554,6 @@ class TestApiUsuariosDeletar:
         )
         assert resp.status_code == 404
 
-    @pytest.mark.xfail(reason="BUG: /api/ em _PERM_SKIP_PATHS do middleware. Ver tarefa no backlog.")
     def test_deletar_usuario_sem_permissao_403(self, client, full_setup):
         from apps.sistema.models import PermissaoUsuario
         regular_user = UserFactory(is_staff=False, is_superuser=False)

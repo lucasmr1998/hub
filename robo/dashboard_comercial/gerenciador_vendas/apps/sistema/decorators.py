@@ -140,11 +140,22 @@ def permissao_required(modulo, papel_minimo=None):
     return decorator
 
 
+_SENTINEL_MIDDLEWARE_NAO_RODOU = '__nao_setado__'
+
+
 def user_tem_funcionalidade(request, codigo):
     """
     Verifica se o usuário do request tem a funcionalidade.
-    Superuser e sem perfil (legado) = True.
-    Usa o cache do PermissaoMiddleware (request.user_funcionalidades).
+    Superuser sempre = True.
+
+    Ordem de lookup:
+      1. Cache do PermissaoMiddleware (`request.user_funcionalidades`)
+         — setado pro caminho normal (nao-API)
+      2. Se o middleware foi pulado (rotas /api/, etc), faz fallback
+         consultando PermissaoUsuario no DB e cacheando no request
+      3. Usuario sem PermissaoUsuario cadastrado = True (retrocompat legado)
+      4. Usuario com PermissaoUsuario mas sem perfil = False (bloqueado)
+      5. Com perfil = True se codigo estiver nas funcionalidades
 
     Uso nas views:
         if not user_tem_funcionalidade(request, 'comercial.configurar_pipeline'):
@@ -152,8 +163,27 @@ def user_tem_funcionalidade(request, codigo):
     """
     if request.user.is_superuser:
         return True
-    funcs = getattr(request, 'user_funcionalidades', None)
-    if funcs is None:  # None = sem perfil (legado), tudo liberado
+
+    funcs = getattr(request, 'user_funcionalidades', _SENTINEL_MIDDLEWARE_NAO_RODOU)
+
+    if funcs is _SENTINEL_MIDDLEWARE_NAO_RODOU:
+        # Middleware pulou (rota em _PERM_SKIP_PATHS). Fallback no DB.
+        try:
+            from apps.sistema.models import PermissaoUsuario
+            perm = PermissaoUsuario.get_for_user(request.user)
+        except Exception:
+            perm = None
+
+        if perm is None:
+            funcs = None  # retrocompat
+        elif perm.perfil:
+            funcs = set(perm.perfil.funcionalidades.values_list('codigo', flat=True))
+        else:
+            funcs = set()  # com PermissaoUsuario mas sem perfil = nada liberado
+
+        request.user_funcionalidades = funcs  # cache pro mesmo request
+
+    if funcs is None:  # None = sem PermissaoUsuario (legado), tudo liberado
         return True
     return codigo in funcs
 
