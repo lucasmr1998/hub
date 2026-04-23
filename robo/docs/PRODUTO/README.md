@@ -27,6 +27,7 @@ modulos/        Um diretorio por modulo funcional
 | [01-HUBSOFT](integracoes/01-HUBSOFT.md) | Integracao com HubSoft |
 | [02-INTEGRACOES](integracoes/02-INTEGRACOES.md) | Demais integracoes (WhatsApp providers, IA providers, etc) |
 | [03-APIS_N8N](integracoes/03-APIS_N8N.md) | APIs consumidas pelo N8N |
+| [04-GUIA-NOVA-INTEGRACAO-ERP](integracoes/04-GUIA-NOVA-INTEGRACAO-ERP.md) | Manual pra integrar novo ERP (arquitetura + contrato + passo-a-passo) |
 
 ## ops/
 
