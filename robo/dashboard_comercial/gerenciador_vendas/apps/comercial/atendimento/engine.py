@@ -563,11 +563,15 @@ def _avaliar_condicao(nodo, contexto):
 
 
 def _resolver_campo_contexto(campo, contexto):
-    """Resolve campo.subcampo no contexto (dot notation)."""
+    """Resolve campo.subcampo no contexto (dot notation).
+
+    Aceita dict puro e qualquer mapping compativel (ex: ContextoLogado).
+    Usa duck typing — qualquer objeto com .get() eh tratado como mapping.
+    """
     partes = campo.split('.')
     obj = contexto
     for parte in partes:
-        if isinstance(obj, dict):
+        if hasattr(obj, 'get') and callable(obj.get):
             obj = obj.get(parte)
         elif hasattr(obj, parte):
             obj = getattr(obj, parte)

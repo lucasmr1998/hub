@@ -336,3 +336,131 @@ class TestSeguirConexoes:
         # Tipo_saida inexistente deve cair no default
         resultado = eng._seguir_conexoes(atend, entrada, contexto, branch_forcado='inexistente')
         assert resultado['mensagem'] == 'DEFAULT'
+
+
+# ══════════════════════════════════════════════════════════════════
+# _resolver_campo_contexto — dot notation + ContextoLogado
+#
+# Bug em producao (23/04/2026, fluxo v3 FATEPI): toda condicao `var.X == Y`
+# retornava false porque isinstance(ContextoLogado, dict) eh False, o loop
+# caia no fallback e contexto.get('var_X') devolvia None. Afetou todo
+# fluxo que usa ia_classificador/ia_extrator antes de condicao.
+# ══════════════════════════════════════════════════════════════════
+
+class TestResolverCampoContexto:
+
+    def test_chave_simples_dict(self):
+        contexto = {'nome': 'Maria'}
+        assert eng._resolver_campo_contexto('nome', contexto) == 'Maria'
+
+    def test_chave_simples_contexto_logado(self):
+        contexto = ContextoLogado({'nome': 'Maria'})
+        assert eng._resolver_campo_contexto('nome', contexto) == 'Maria'
+
+    def test_dot_notation_var_em_contexto_logado(self):
+        """Regressao do bug: var.X tem que resolver quando contexto eh ContextoLogado."""
+        contexto = ContextoLogado({
+            'var': {'validacao_curso': 'curso_valido', 'tipo_fallback': 'outro'},
+        })
+        assert eng._resolver_campo_contexto('var.validacao_curso', contexto) == 'curso_valido'
+        assert eng._resolver_campo_contexto('var.tipo_fallback', contexto) == 'outro'
+
+    def test_dot_notation_var_em_dict_legacy(self):
+        """Nao quebrar caminho antigo com dict puro."""
+        contexto = {'var': {'validacao_curso': 'curso_valido'}}
+        assert eng._resolver_campo_contexto('var.validacao_curso', contexto) == 'curso_valido'
+
+    def test_dot_notation_chave_inexistente_retorna_none(self):
+        contexto = ContextoLogado({'var': {'outra': 'x'}})
+        assert eng._resolver_campo_contexto('var.validacao_curso', contexto) is None
+
+    def test_flat_key_fallback(self):
+        """Quando nao ha estrutura aninhada, aceitar var_validacao_curso como chave flat."""
+        contexto = ContextoLogado({'var_validacao_curso': 'curso_valido'})
+        assert eng._resolver_campo_contexto('var.validacao_curso', contexto) == 'curso_valido'
+
+
+class TestCondicaoComVarContextoLogado:
+    """Nivel acima: garantir que o roteamento por var.X numa condicao funciona.
+    Cobre a classe de bug que deixou o fluxo FATEPI v3 preso — candidato
+    com classificacao valida caindo no branch 'false' da condicao.
+    """
+
+    def test_condicao_var_valida_retorna_true(self, setup_flow):
+        fluxo = setup_flow['fluxo']
+        contexto = ContextoLogado({
+            'var': {'validacao_curso': 'curso_valido'},
+        })
+        nodo = criar_nodo(
+            fluxo, 'condicao',
+            campo='var.validacao_curso',
+            operador='igual',
+            valor='curso_valido',
+        )
+        assert eng._avaliar_condicao(nodo, contexto) is True
+
+    def test_condicao_var_invalida_retorna_false(self, setup_flow):
+        fluxo = setup_flow['fluxo']
+        contexto = ContextoLogado({
+            'var': {'validacao_curso': 'curso_invalido'},
+        })
+        nodo = criar_nodo(
+            fluxo, 'condicao',
+            campo='var.validacao_curso',
+            operador='igual',
+            valor='curso_valido',
+        )
+        assert eng._avaliar_condicao(nodo, contexto) is False
+
+    def test_roteamento_branch_true_com_var_valida(self, setup_flow):
+        """E2E micro: entrada -> condicao(var.X == val) -> true/false.
+        Mesmo formato de nodo que quebrou no FATEPI v3.
+        """
+        fluxo = setup_flow['fluxo']
+        atend = setup_flow['atend']
+
+        entrada = criar_nodo(fluxo, 'entrada')
+        cond = criar_nodo(
+            fluxo, 'condicao',
+            campo='var.validacao_curso',
+            operador='igual',
+            valor='curso_valido',
+        )
+        fim_true = criar_nodo(fluxo, 'finalizacao', mensagem_final='CURSO_OK')
+        fim_false = criar_nodo(fluxo, 'finalizacao', mensagem_final='CURSO_INVALIDO')
+        conectar(entrada, cond)
+        conectar(cond, fim_true, 'true')
+        conectar(cond, fim_false, 'false')
+
+        # Injetar var.validacao_curso via dados_respostas + reconstruir contexto
+        atend.dados_respostas = {'variaveis': {'validacao_curso': 'curso_valido'}}
+        atend.save(update_fields=['dados_respostas'])
+
+        resultado = eng.iniciar_fluxo_visual(atend)
+        assert resultado['mensagem'] == 'CURSO_OK', (
+            f"Com validacao_curso=curso_valido devia rotear pro branch true. "
+            f"Deu: {resultado}"
+        )
+
+    def test_roteamento_branch_false_com_var_invalida(self, setup_flow):
+        fluxo = setup_flow['fluxo']
+        atend = setup_flow['atend']
+
+        entrada = criar_nodo(fluxo, 'entrada')
+        cond = criar_nodo(
+            fluxo, 'condicao',
+            campo='var.validacao_curso',
+            operador='igual',
+            valor='curso_valido',
+        )
+        fim_true = criar_nodo(fluxo, 'finalizacao', mensagem_final='CURSO_OK')
+        fim_false = criar_nodo(fluxo, 'finalizacao', mensagem_final='CURSO_INVALIDO')
+        conectar(entrada, cond)
+        conectar(cond, fim_true, 'true')
+        conectar(cond, fim_false, 'false')
+
+        atend.dados_respostas = {'variaveis': {'validacao_curso': 'curso_invalido'}}
+        atend.save(update_fields=['dados_respostas'])
+
+        resultado = eng.iniciar_fluxo_visual(atend)
+        assert resultado['mensagem'] == 'CURSO_INVALIDO'

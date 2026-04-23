@@ -45,6 +45,26 @@ Quando a questao tem IA integrada:
 
 ---
 
+## Contexto e resolucao de campos
+
+O engine monta o contexto via `_construir_contexto(atendimento)` e o envolve em `ContextoLogado` (dict wrapper que grava cada mutacao pra debug). O contexto contem:
+
+- `lead`, `lead_id`, `lead_nome`, `lead_telefone`, ... (campos do Lead)
+- `var` — dict com variaveis salvas por ia_classificador / ia_extrator (ex: `var.validacao_curso`, `var.tipo_fallback`)
+- Variaveis IA tambem ficam no nivel raiz pra compat (`validacao_curso`, `tipo_fallback`)
+- `resposta_nodo_<id>` — respostas anteriores do atendimento
+- `ultima_resposta`, `_ultima_mensagem` — convenience
+
+### Dot notation em condicoes
+
+Nodos `condicao` (campo_check) usam `_resolver_campo_contexto(campo, contexto)` pra navegar em dot notation: `var.validacao_curso`, `lead.nome`, etc.
+
+**Importante:** `_resolver_campo_contexto` usa **duck typing** (`hasattr(obj, 'get')`) pra decidir se um nivel eh um mapping. Isso aceita `dict` puro E `ContextoLogado` (MutableMapping). Versao antiga usava `isinstance(obj, dict)` e quebrou silenciosamente toda condicao `var.X` no dia que ContextoLogado foi introduzido — veja `tests/test_engine_nodos.py::TestResolverCampoContexto` pra regressao.
+
+Fallback: se o caminho nao resolve, tenta `contexto.get('var_validacao_curso')` (chave flat com underscore).
+
+---
+
 ## Validacao de respostas (cascata)
 
 Para nodo `questao`, `_validar_resposta_questao` roda em cascata:
