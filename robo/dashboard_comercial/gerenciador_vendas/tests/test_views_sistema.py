@@ -41,14 +41,14 @@ class TestSistemaViews:
 
     def test_login_post_valido(self, client, sys_setup):
         resp = client.post(reverse('sistema:login'), {
-            'username': sys_setup['user'].username,
+            'email': sys_setup['user'].email,
             'password': 'senha123',
         })
         assert resp.status_code == 302  # Redirect após login
 
     def test_login_post_invalido(self, client, sys_setup):
         resp = client.post(reverse('sistema:login'), {
-            'username': sys_setup['user'].username,
+            'email': sys_setup['user'].email,
             'password': 'errada',
         })
         assert resp.status_code == 200  # Fica na página de login

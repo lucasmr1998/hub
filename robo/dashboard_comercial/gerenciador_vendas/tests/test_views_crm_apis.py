@@ -543,8 +543,11 @@ class TestCriarEstagioAPI:
         assert resp.status_code == 400
 
     def test_criar_estagio_sem_permissao(self, client, crm_api_setup):
+        from apps.sistema.models import PermissaoUsuario
         regular_user = UserFactory(is_staff=True, is_superuser=False)
         PerfilFactory(user=regular_user, tenant=crm_api_setup['tenant'])
+        # Criar PermissaoUsuario vazio pra bloquear (sem perfil = user_funcionalidades=set())
+        PermissaoUsuario.objects.create(user=regular_user, tenant=crm_api_setup['tenant'])
         client.force_login(regular_user)
         resp = client.post(
             reverse('crm:api_criar_estagio'),
@@ -599,8 +602,10 @@ class TestSalvarConfigAPI:
         assert resp.json()['ok'] is True
 
     def test_salvar_config_sem_permissao(self, client, crm_api_setup):
+        from apps.sistema.models import PermissaoUsuario
         regular_user = UserFactory(is_staff=True, is_superuser=False)
         PerfilFactory(user=regular_user, tenant=crm_api_setup['tenant'])
+        PermissaoUsuario.objects.create(user=regular_user, tenant=crm_api_setup['tenant'])
         client.force_login(regular_user)
         resp = client.post(
             reverse('crm:api_salvar_config'),
@@ -622,8 +627,10 @@ class TestCriarEquipeAPI:
         assert data['ok'] is True
 
     def test_criar_equipe_sem_permissao(self, client, crm_api_setup):
+        from apps.sistema.models import PermissaoUsuario
         regular_user = UserFactory(is_staff=True, is_superuser=False)
         PerfilFactory(user=regular_user, tenant=crm_api_setup['tenant'])
+        PermissaoUsuario.objects.create(user=regular_user, tenant=crm_api_setup['tenant'])
         client.force_login(regular_user)
         resp = client.post(
             reverse('crm:api_criar_equipe'),
@@ -749,7 +756,8 @@ class TestLeadsTokenAPIs:
         finally:
             os.environ.pop('N8N_API_TOKEN', None)
 
-    def test_registrar_lead_token_nao_configurado_503(self, client, crm_api_setup):
+    def test_registrar_lead_token_nao_configurado_401(self, client, crm_api_setup):
+        """Sem env var e com token invalido, decorator retorna 401 (auth failure)."""
         os.environ.pop('N8N_API_TOKEN', None)
         resp = client.post(
             reverse('comercial_leads:registrar_lead'),
@@ -757,7 +765,7 @@ class TestLeadsTokenAPIs:
             content_type='application/json',
             HTTP_AUTHORIZATION='Bearer some-token',
         )
-        assert resp.status_code == 503
+        assert resp.status_code == 401
 
 
 # ── Auth: CRM APIs require login ─────────────────────────────────────────
