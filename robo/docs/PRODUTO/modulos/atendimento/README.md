@@ -15,6 +15,8 @@ Para a **configuracao** dos fluxos (editor visual, tipos de nodos) ver [Fluxos](
 |---------|----------|
 | [models.md](models.md) | AtendimentoFluxo, LogFluxoAtendimento, ExecucaoFluxoAtendimento + tabelas |
 | [engine.md](engine.md) | Engine (traversal, branches, validacao cascata, KB fallbacks, acoes, tools IA) |
+| [tipos-de-nodo.md](tipos-de-nodo.md) | Catalogo completo: cada tipo de nodo, campos aceitos, saidas, exemplo |
+| [exemplo-fluxo-ia.md](exemplo-fluxo-ia.md) | Fluxo real comentado (FATEPI v3): 3 jornadas, estado a cada passo, como debugar |
 | [integracao-inbox.md](integracao-inbox.md) | Signal do Inbox que dispara o engine |
 | [recontato-automatico.md](recontato-automatico.md) | Cron de reengajamento, config e retomada |
 | [sessoes.md](sessoes.md) | Telas: lista, detalhe, fluxo ao vivo, logs no editor |

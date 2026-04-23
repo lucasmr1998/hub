@@ -16,6 +16,7 @@ Motor de automacao do hub. Define regras que reagem a eventos do sistema e execu
 | [editor-visual.md](editor-visual.md) | Editor Drawflow (distinto do editor de fluxos de atendimento) |
 | [endpoints.md](endpoints.md) | APIs + management command + testes E2E + admin |
 | [reguas-padrao.md](reguas-padrao.md) | Catalogo de reguas padrao sugeridas (templates prontos) |
+| [exemplo-automacao.md](exemplo-automacao.md) | Regua C02 comentada + debug playbook (6 queries) + armadilhas conhecidas |
 
 ---
 
