@@ -57,6 +57,8 @@ Nao comecar feature nova enquanto houver bug critico aberto no produto em produc
 
 **Se o comando que quero rodar cair na zona cinza** (ex: "atualizar 1 campo num lead"), **SEMPRE confirmar com o usuario antes de executar**, mesmo que pareça trivial.
 
+**Credenciais de acesso ao servidor de producao:** ver arquivo local `.env.prod_readonly` (gitignored). Contem `PROD_DB_*` (Postgres) e eventualmente SSH do VPS Hostinger (EasyPanel). **NUNCA** colar credenciais no chat ou em arquivos versionados. Servidor roda no IP `103.199.187.4`; Postgres na porta 5433; console do EasyPanel (UI) ja roda dentro do container do app Django — comandos `python manage.py X` funcionam direto sem `docker exec`.
+
 ### Multi-Tenancy (CRITICO)
 - **TODA query deve filtrar por tenant.** Nunca usar `.objects.all()` em views sem filtro de tenant.
 - Models com `TenantMixin` usam `TenantManager` que filtra automaticamente. Models sem `TenantMixin` (como `IntegracaoAPI`) devem ser filtrados manualmente: `.filter(tenant=request.tenant)`.
