@@ -789,6 +789,13 @@ class ConfiguracaoCRM(TenantMixin):
         verbose_name="Último vendedor atribuído (round robin)"
     )
 
+    # Automações do Pipeline
+    preview_regras_max = models.PositiveIntegerField(
+        default=500,
+        verbose_name="Preview de regras — oportunidades avaliadas",
+        help_text="Quantas oportunidades o preview de regra avalia. Aumentar dá amostra maior mas deixa mais lento.",
+    )
+
     data_atualizacao = models.DateTimeField(auto_now=True)
 
     class Meta:

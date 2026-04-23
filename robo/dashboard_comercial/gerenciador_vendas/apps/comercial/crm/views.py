@@ -1463,6 +1463,14 @@ def api_salvar_config(request):
     equipe_id = request.POST.get('distribuicao_equipe_id', '').strip()
     config.distribuicao_equipe = EquipeVendas.objects.filter(pk=equipe_id).first() if equipe_id else None
 
+    # Automações do Pipeline
+    preview_max_raw = request.POST.get('preview_regras_max', '').strip()
+    if preview_max_raw:
+        try:
+            config.preview_regras_max = max(10, min(int(preview_max_raw), 10000))
+        except ValueError:
+            pass
+
     config.save()
     return JsonResponse({'ok': True})
 
@@ -2524,12 +2532,19 @@ def regra_pipeline_preview(request, pk):
     if denied:
         return denied
 
-    from .models import RegraPipelineEstagio, OportunidadeVenda
+    from .models import RegraPipelineEstagio, OportunidadeVenda, ConfiguracaoCRM
     from .services.automacao_pipeline import _construir_contexto, _regra_bate
 
     regra = RegraPipelineEstagio.objects.filter(pk=pk).first()
     if not regra:
         return JsonResponse({'error': 'Regra não encontrada'}, status=404)
+
+    # Limite configurável por tenant
+    try:
+        limite = ConfiguracaoCRM.get_config().preview_regras_max or 500
+    except Exception:
+        limite = 500
+    limite = max(10, min(limite, 10000))  # sanity bounds
 
     # Só oportunidades fora de estágio final
     oportunidades = (
@@ -2539,7 +2554,7 @@ def regra_pipeline_preview(request, pk):
     )
 
     matches = 0
-    for opp in oportunidades[:500]:  # limite de segurança
+    for opp in oportunidades[:limite]:
         contexto = _construir_contexto(opp)
         if _regra_bate(regra, contexto):
             matches += 1
@@ -2549,5 +2564,6 @@ def regra_pipeline_preview(request, pk):
         'regra_id': regra.pk,
         'regra_nome': regra.nome,
         'oportunidades_que_bateriam': matches,
-        'total_avaliado': min(oportunidades.count(), 500),
+        'total_avaliado': min(oportunidades.count(), limite),
+        'limite_configurado': limite,
     })

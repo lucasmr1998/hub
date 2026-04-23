@@ -214,6 +214,16 @@
             <p class="field-helper">Membros ativos desta equipe recebem oportunidades em rodizio.</p>
           </div>
 
+          <div class="cfg-section-title"><i class="bi bi-diagram-3"></i> Automacoes do pipeline</div>
+          <div class="field">
+            <label class="field-label">Preview — oportunidades avaliadas</label>
+            <div class="field-input-wrap">
+              <input type="number" name="preview_regras_max" class="field-input"
+                     value="{{ config.preview_regras_max|default:500 }}" min="10" max="10000" step="10">
+            </div>
+            <p class="field-helper">Ao rodar preview de uma regra, quantas oportunidades testamos. Entre 10 e 10000 (default: 500). Mais = amostra maior e mais lento.</p>
+          </div>
+
           <div class="cfg-section-title"><i class="bi bi-robot"></i> Webhooks N8N</div>
           <div class="field">
             <label class="field-label">Nova oportunidade</label>
