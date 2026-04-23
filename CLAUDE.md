@@ -30,8 +30,32 @@ Nao comecar feature nova enquanto houver bug critico aberto no produto em produc
 ## Regras Fundamentais
 
 ### Banco de Dados
-- **NUNCA rodar comandos que afetem o banco de producao.** Sempre usar `--settings=gerenciador_vendas.settings_local` (SQLite local).
-- Isso inclui: `migrate`, `makemigrations`, `createsuperuser`, `flush`, `loaddata`, `dumpdata`, `dbshell`, ou qualquer script que conecte ao PostgreSQL de producao.
+
+**Desenvolvimento padrao:** sempre usar `--settings=gerenciador_vendas.settings_local` (SQLite local) pra rodar codigo, testes, `runserver`, etc.
+
+**Consultas read-only em producao:** permitidas quando necessarias pra investigacao/analise, com as seguintes regras.
+
+**Permitido em producao:**
+- `SELECT` via `manage.py shell`, `manage.py dbshell` ou scripts
+- Queries do Django ORM com `.filter()`, `.values()`, `.annotate()`, `.aggregate()`
+- Exports pontuais (CSV/JSON) pra analise offline
+- Management commands marcados explicitamente como read-only
+
+**Proibido em producao (sem autorizacao explicita do usuario por tarefa):**
+- `migrate`, `makemigrations` — migrations sobem via CI/CD ou manualmente pelo dono
+- `createsuperuser`, `flush`, `loaddata`, `dumpdata` — mudam estado
+- Qualquer `.create()`, `.save()`, `.update()`, `.delete()`, `.bulk_*()` no ORM
+- `UPDATE`, `INSERT`, `DELETE`, `TRUNCATE`, `ALTER` em SQL cru
+- Rodar codigo que dispare signals que escrevam (ex: instanciar model com `save=True`)
+
+**Obrigatorio em qualquer consulta de producao:**
+1. **Avisar no chat** antes de conectar (ex: "vou rodar uma query em producao pra investigar X")
+2. **Filtrar por tenant** sempre que o model herdar `TenantMixin`, mesmo em leitura
+3. **Respeitar LGPD:** conversas, dados pessoais e PII precisam ser tratados como confidenciais. Nunca copiar/exibir dados de clientes em chat/docs sem necessidade clara
+4. **Nunca compartilhar credenciais** ou dumps de producao em arquivos versionados ou canais externos
+5. **Em caso de duvida, perguntar ao usuario** antes de rodar
+
+**Se o comando que quero rodar cair na zona cinza** (ex: "atualizar 1 campo num lead"), **SEMPRE confirmar com o usuario antes de executar**, mesmo que pareça trivial.
 
 ### Multi-Tenancy (CRITICO)
 - **TODA query deve filtrar por tenant.** Nunca usar `.objects.all()` em views sem filtro de tenant.

@@ -337,7 +337,14 @@ def _executar_nodo(atendimento, nodo, contexto):
         if espera:
             # PAUSA: retorna dados da questao para o lead responder
             atendimento.nodo_atual = nodo
-            atendimento.save(update_fields=['nodo_atual', 'dados_respostas', 'questoes_respondidas'])
+            # Atualiza questao_atual: numero sequencial de questao no fluxo (1-indexed)
+            try:
+                atendimento.questao_atual = atendimento.fluxo.nodos.filter(
+                    tipo='questao', ordem__lte=nodo.ordem
+                ).count()
+            except Exception:
+                pass
+            atendimento.save(update_fields=['nodo_atual', 'dados_respostas', 'questoes_respondidas', 'questao_atual'])
             _registrar_log(atendimento, nodo, 'aguardando', f'Pergunta: {titulo}')
             # Incluir mensagens pendentes de nodos anteriores (espera_resposta=False)
             pendentes = getattr(atendimento, '_mensagens_pendentes', [])
