@@ -104,64 +104,22 @@ def _avaliar_regras(oportunidade):
 
 
 def _construir_contexto(oportunidade):
-    """Pré-carrega dados usados pelas condições, minimizando queries."""
-    from apps.comercial.leads.models import HistoricoContato, ImagemLeadProspecto
+    """
+    Pré-carrega dados usados pelas condições chamando `coletar_contexto` de cada
+    tipo registrado. Ordem minimiza queries (cada tipo popula só o que precisa).
+    """
+    from apps.comercial.crm.services import automacao_condicoes
 
-    lead = oportunidade.lead
-    lead_id = lead.pk if lead else None
-    tenant = oportunidade.tenant
-
-    historico_statuses = set()
-    tem_conversao_venda = False
-    imagens_statuses = []
-
-    if lead_id:
-        historico_statuses = set(
-            HistoricoContato.all_tenants
-            .filter(tenant=tenant, lead_id=lead_id)
-            .values_list('status', flat=True)
-        )
-        tem_conversao_venda = HistoricoContato.all_tenants.filter(
-            tenant=tenant, lead_id=lead_id, converteu_venda=True,
-        ).exists()
-        imagens_statuses = list(
-            ImagemLeadProspecto.all_tenants
-            .filter(tenant=tenant, lead_id=lead_id)
-            .values_list('status_validacao', flat=True)
-        )
-
-    servico_statuses = _coletar_status_servicos(lead_id, tenant)
-
-    tags = set(oportunidade.tags.values_list('nome', flat=True))
-
-    return {
-        'lead': lead,
+    contexto = {
+        'lead': oportunidade.lead,
         'oportunidade': oportunidade,
-        'historico_statuses': historico_statuses,
-        'tem_conversao_venda': tem_conversao_venda,
-        'imagens_statuses': imagens_statuses,
-        'servico_statuses': servico_statuses,
-        'tags': tags,
     }
-
-
-def _coletar_status_servicos(lead_id, tenant):
-    """Busca status dos serviços HubSoft do lead, se existirem."""
-    if not lead_id:
-        return set()
-    try:
-        from apps.integracoes.models import ServicoClienteHubsoft
-    except Exception:
-        return set()
-
-    try:
-        return set(
-            ServicoClienteHubsoft.all_tenants
-            .filter(tenant=tenant, cliente__lead_id=lead_id)
-            .values_list('status_prefixo', flat=True)
-        )
-    except Exception:
-        return set()
+    for tipo in automacao_condicoes.REGISTRY.values():
+        try:
+            tipo.coletar_contexto(oportunidade, contexto)
+        except Exception as exc:
+            logger.warning("[Automacao Pipeline] Falha ao coletar contexto de %s: %s", tipo.slug, exc)
+    return contexto
 
 
 def _regra_bate(regra, contexto):
@@ -173,95 +131,24 @@ def _regra_bate(regra, contexto):
 
 
 def _condicao_bate(condicao, contexto):
-    """Avalia uma condição individual contra o contexto pré-carregado."""
-    tipo = condicao.get('tipo', '')
+    """Avalia uma condição individual delegando ao tipo registrado."""
+    from apps.comercial.crm.services import automacao_condicoes
+
+    tipo_slug = condicao.get('tipo', '')
     operador = condicao.get('operador', 'igual')
     valor = condicao.get('valor')
     campo = condicao.get('campo', '')
 
-    if tipo == 'historico_status':
-        return _comparar_conjunto(contexto['historico_statuses'], operador, valor)
+    tipo = automacao_condicoes.tipo_por_slug(tipo_slug)
+    if tipo is None:
+        logger.warning("[Automacao Pipeline] Tipo de condicao desconhecido: %s", tipo_slug)
+        return False
 
-    if tipo == 'lead_status_api':
-        lead = contexto['lead']
-        status_atual = getattr(lead, 'status_api', '') if lead else ''
-        return _comparar_valor(status_atual or '', operador, valor)
-
-    if tipo == 'lead_campo':
-        lead = contexto['lead']
-        valor_campo = getattr(lead, campo, None) if lead else None
-        if isinstance(valor_campo, bool) or isinstance(valor, bool):
-            return _comparar_bool(valor_campo, operador, valor)
-        return _comparar_valor(valor_campo, operador, valor)
-
-    if tipo == 'servico_status':
-        return _comparar_conjunto(contexto['servico_statuses'], operador, valor)
-
-    if tipo == 'tag':
-        return _comparar_conjunto(contexto['tags'], operador, valor)
-
-    if tipo == 'converteu_venda':
-        tem = contexto['tem_conversao_venda']
-        if operador in ('igual', 'existe'):
-            return tem == bool(valor)
-        if operador in ('diferente', 'nao_existe'):
-            return tem != bool(valor)
-
-    if tipo == 'imagem_status':
-        imagens = contexto['imagens_statuses']
-        if operador == 'igual':
-            return valor in imagens
-        if operador == 'diferente':
-            return valor not in imagens
-        if operador == 'todas_iguais':
-            return len(imagens) > 0 and all(s == valor for s in imagens)
-        if operador == 'nenhuma_com':
-            return valor not in imagens
-        if operador == 'existe':
-            return len(imagens) > 0
-        if operador == 'nao_existe':
-            return len(imagens) == 0
-
-    logger.warning("[Automacao Pipeline] Tipo de condicao desconhecido: %s", tipo)
-    return False
-
-
-# ============================================================================
-# COMPARADORES
-# ============================================================================
-
-def _comparar_conjunto(conjunto, operador, valor):
-    if operador == 'igual':
-        return valor in conjunto
-    if operador == 'diferente':
-        return valor not in conjunto
-    if operador == 'existe':
-        return len(conjunto) > 0
-    if operador == 'nao_existe':
-        return len(conjunto) == 0
-    return False
-
-
-def _comparar_valor(valor_atual, operador, valor_esperado):
-    if operador == 'igual':
-        return str(valor_atual).strip() == str(valor_esperado).strip()
-    if operador == 'diferente':
-        return str(valor_atual).strip() != str(valor_esperado).strip()
-    if operador == 'existe':
-        return bool(valor_atual)
-    if operador == 'nao_existe':
-        return not bool(valor_atual)
-    return False
-
-
-def _comparar_bool(valor_campo, operador, valor_esperado):
-    campo_bool = bool(valor_campo)
-    esperado_bool = bool(valor_esperado)
-    if operador in ('igual', 'existe'):
-        return campo_bool == esperado_bool
-    if operador in ('diferente', 'nao_existe'):
-        return campo_bool != esperado_bool
-    return False
+    try:
+        return tipo.avaliar(operador, valor, campo, contexto)
+    except Exception as exc:
+        logger.warning("[Automacao Pipeline] Falha ao avaliar %s: %s", tipo_slug, exc)
+        return False
 
 
 # ============================================================================

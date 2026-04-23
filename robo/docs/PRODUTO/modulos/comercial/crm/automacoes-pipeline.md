@@ -43,6 +43,25 @@ Sempre que o engine move uma oportunidade, seta `_skip_rules_evaluation = True` 
 | `converteu_venda` | Existe algum `HistoricoContato` com `converteu_venda=True` |
 | `imagem_status` | Status de validação das `ImagemLeadProspecto` do lead |
 
+### Como adicionar um tipo novo
+
+Tipos vivem em `apps/comercial/crm/services/automacao_condicoes.py` como classes. Pra adicionar um novo, basta criar uma classe com `slug`, `label`, `coletar_contexto` e `avaliar`, e decorar com `@registrar`:
+
+```python
+@registrar
+class CondicaoScoreChurn:
+    slug = 'score_churn'
+    label = 'Score de churn'
+
+    def coletar_contexto(self, oportunidade, contexto):
+        contexto['score_churn'] = oportunidade.churn_risk_score or 0
+
+    def avaliar(self, operador, valor, campo, contexto):
+        return comparar_valor(contexto['score_churn'], operador, int(valor))
+```
+
+O registry detecta automaticamente — a UI do editor, o admin Django e o JSON das regras passam a aceitar o novo tipo sem tocar no engine nem em views.
+
 ## Operadores
 
 | Operador | Uso |

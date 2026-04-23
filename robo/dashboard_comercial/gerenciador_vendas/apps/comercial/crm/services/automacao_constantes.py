@@ -2,19 +2,12 @@
 Fonte única de tipos de condição e operadores usados no motor de
 Automações do Pipeline.
 
-Models, views e engine importam daqui pra evitar divergência entre camadas.
-"""
+Os TIPOS_CONDICAO sao agora derivados do registry em `automacao_condicoes.py`.
+Qualquer classe de condicao registrada via `@registrar` aparece aqui
+automaticamente — views e models nao precisam conhecer a lista.
 
-# (slug, label)
-TIPOS_CONDICAO = [
-    ('tag', 'Tag'),
-    ('historico_status', 'Status do histórico de contato'),
-    ('lead_status_api', 'Status API do lead'),
-    ('lead_campo', 'Campo do lead'),
-    ('servico_status', 'Status do serviço HubSoft'),
-    ('converteu_venda', 'Converteu em venda'),
-    ('imagem_status', 'Status de imagem/documento'),
-]
+Operadores sao definidos aqui porque sao transversais a varios tipos.
+"""
 
 OPERADORES = [
     ('igual', 'igual a'),
@@ -25,7 +18,34 @@ OPERADORES = [
     ('nenhuma_com', 'nenhuma com'),
 ]
 
-
-# Dicts prontos pra lookup — evitam scan linear em hotpaths
-TIPOS_CONDICAO_DICT = dict(TIPOS_CONDICAO)
 OPERADORES_DICT = dict(OPERADORES)
+
+
+def _lazy_tipos_condicao():
+    """
+    Lista de (slug, label) dos tipos registrados.
+    Avaliada sob demanda pra evitar problema de import order com apps Django.
+    """
+    from apps.comercial.crm.services.automacao_condicoes import todos_tipos
+    return todos_tipos()
+
+
+class _TiposLazy:
+    """Proxy que delega pras funcoes do registry a cada acesso."""
+    def __iter__(self):
+        return iter(_lazy_tipos_condicao())
+
+    def __len__(self):
+        return len(_lazy_tipos_condicao())
+
+    def __getitem__(self, idx):
+        return _lazy_tipos_condicao()[idx]
+
+    def get(self, slug, default=None):
+        from apps.comercial.crm.services.automacao_condicoes import tipo_por_slug
+        t = tipo_por_slug(slug)
+        return t.label if t else default
+
+
+TIPOS_CONDICAO = _TiposLazy()
+TIPOS_CONDICAO_DICT = _TiposLazy()
