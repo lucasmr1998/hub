@@ -22,6 +22,10 @@ myenv/
 *.env
 !.env.example
 
+# ── Backups pontuais de dados de producao ────────────────
+.backup_*.json
+.backup_*.sql
+
 # ── Django ───────────────────────────────────────────────
 *.sqlite3
 *.sqlite3-journal
