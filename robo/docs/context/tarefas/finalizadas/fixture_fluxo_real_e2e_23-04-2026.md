@@ -10,7 +10,7 @@ responsavel: "Tech Lead"
 **Data:** 23/04/2026
 **Responsável:** Tech Lead
 **Prioridade:** 🟡 Média (esforco ~1 dia, fecha maior lacuna de testes)
-**Status:** ⏳ Pendente
+**Status:** ✅ Concluída (v1: fixture sintetica + 5 cenarios e2e. v2 futura: substituir por export real do fluxo v3 FATEPI quando alguem rodar `exportar_fluxo 6` em prod)
 
 ---
 

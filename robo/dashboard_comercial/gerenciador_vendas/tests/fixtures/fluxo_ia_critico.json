@@ -1,0 +1,116 @@
+{
+  "_comentario": "Fixture sintetica que reproduz o padrao IA critico: questao com ia_acao=classificar_extrair -> condicao var.X -> acao criar_oportunidade. Eh o caminho que o bug var.X (23/04/2026) quebrou em producao. Mantem formato identico ao output de `python manage.py exportar_fluxo <id>` pra permitir substituir por um export de fluxo real no futuro.",
+  "fluxo": {
+    "nome": "Fluxo IA Critico (fixture de teste)",
+    "descricao": "Fluxo minimo que exercita questao IA + condicao var + acao",
+    "canal": "qualquer",
+    "tipo_fluxo": "qualificacao",
+    "ativo": true,
+    "status": "ativo",
+    "modo_fluxo": true,
+    "max_tentativas": 3,
+    "base_conhecimento_ativa": false
+  },
+  "nodos": [
+    {
+      "id_original": 1,
+      "tipo": "entrada",
+      "subtipo": "inicio_fluxo",
+      "ordem": 1,
+      "configuracao": {}
+    },
+    {
+      "id_original": 2,
+      "tipo": "questao",
+      "subtipo": "texto",
+      "ordem": 2,
+      "configuracao": {
+        "titulo": "Qual seu nome?",
+        "espera_resposta": true,
+        "validacao": "texto",
+        "salvar_em": "nome_razaosocial",
+        "ia_acao": "validar",
+        "max_tentativas": 3
+      }
+    },
+    {
+      "id_original": 3,
+      "tipo": "questao",
+      "subtipo": "texto",
+      "ordem": 3,
+      "configuracao": {
+        "titulo": "Qual curso voce tem interesse?",
+        "espera_resposta": true,
+        "validacao": "texto",
+        "ia_acao": "classificar_extrair",
+        "integracao_ia_id": "1",
+        "ia_modelo": "gpt-4o-mini",
+        "ia_categorias": ["curso_valido", "curso_invalido"],
+        "ia_variavel_saida": "validacao_curso",
+        "prompt_validacao": "Classifique a mensagem do candidato como curso_valido ou curso_invalido",
+        "ia_campos_extrair": [
+          {"nome": "oport.dados_custom.curso_interesse", "tipo": "string", "descricao": "Curso escolhido"}
+        ],
+        "ia_salvar_no_lead": false,
+        "max_tentativas": 3
+      }
+    },
+    {
+      "id_original": 4,
+      "tipo": "condicao",
+      "subtipo": "campo_check",
+      "ordem": 4,
+      "configuracao": {
+        "campo": "var.validacao_curso",
+        "operador": "igual",
+        "valor": "curso_valido"
+      }
+    },
+    {
+      "id_original": 5,
+      "tipo": "finalizacao",
+      "subtipo": "finalizar",
+      "ordem": 5,
+      "configuracao": {
+        "status": "completado",
+        "motivo_finalizacao": "curso_valido",
+        "mensagem_final": "OK_VALIDO",
+        "score": 80
+      }
+    },
+    {
+      "id_original": 6,
+      "tipo": "finalizacao",
+      "subtipo": "finalizar",
+      "ordem": 6,
+      "configuracao": {
+        "status": "abandonado",
+        "motivo_finalizacao": "curso_invalido",
+        "mensagem_final": "OK_INVALIDO",
+        "score": 0
+      }
+    },
+    {
+      "id_original": 7,
+      "tipo": "ia_respondedor",
+      "subtipo": "ia_respondedor",
+      "ordem": 7,
+      "configuracao": {
+        "integracao_ia_id": "1",
+        "modelo": "gpt-4o-mini",
+        "system_prompt": "Responda brevemente e termine pedindo o curso de volta",
+        "continuar_conversa": false,
+        "max_turnos": 3,
+        "mensagem_timeout": "FALLBACK_TIMEOUT"
+      }
+    }
+  ],
+  "conexoes": [
+    {"id_origem": 1, "id_destino": 2, "tipo_saida": "default"},
+    {"id_origem": 2, "id_destino": 3, "tipo_saida": "true"},
+    {"id_origem": 3, "id_destino": 4, "tipo_saida": "true"},
+    {"id_origem": 3, "id_destino": 7, "tipo_saida": "false"},
+    {"id_origem": 4, "id_destino": 5, "tipo_saida": "true"},
+    {"id_origem": 4, "id_destino": 6, "tipo_saida": "false"}
+  ]
+}
