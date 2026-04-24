@@ -31,7 +31,7 @@ Nao comecar feature nova enquanto houver bug critico aberto no produto em produc
 
 ### Banco de Dados
 
-**Desenvolvimento padrao:** sempre usar `--settings=gerenciador_vendas.settings_local` (SQLite local) pra rodar codigo, testes, `runserver`, etc.
+**Desenvolvimento padrao:** sempre usar `--settings=gerenciador_vendas.settings_local` pra rodar codigo, testes, `runserver`, etc. No ambiente atual, `settings_local` e `settings_local_pg` apontam para o mesmo Postgres local (`aurora_dev` em `localhost:5432`). A alternativa SQLite nao esta configurada.
 
 **Consultas read-only em producao:** permitidas quando necessarias pra investigacao/analise, com as seguintes regras.
 
@@ -195,31 +195,26 @@ hub/
 
 | Ambiente | Settings | Banco | Uso |
 |----------|----------|-------|-----|
-| **Dev SQLite** | `settings_local` | `db_local.sqlite3` | Desenvolvimento rapido, testes |
-| **Dev PostgreSQL** | `settings_local_pg` | `aurora_dev` (localhost:5432, user: postgres, pass: admin123) | Testes com banco real, validacao |
+| **Dev PostgreSQL (padrao)** | `settings_local` ou `settings_local_pg` | `aurora_dev` (localhost:5432, user: postgres, pass: admin123) | Desenvolvimento e validacao. Ambos os settings apontam para o mesmo Postgres local. |
 | **Producao** | `settings` | PostgreSQL remoto (variaveis .env) | **NUNCA usar no desenvolvimento** |
+
+> Historico: originalmente `settings_local` apontava para SQLite (`db_local.sqlite3`) e `settings_local_pg` para Postgres. Hoje ambos foram unificados no Postgres local para garantir paridade com producao. Se precisar de SQLite isolado pra um teste, crie um settings dedicado em vez de assumir que `settings_local` e SQLite.
 
 ### Como rodar
 
 ```bash
 cd robo/dashboard_comercial/gerenciador_vendas
 
-# SQLite (padrao para desenvolvimento)
+# Desenvolvimento padrao (Postgres local aurora_dev)
 python manage.py runserver 8001 --settings=gerenciador_vendas.settings_local
-
-# PostgreSQL local (para testar com banco real)
-python manage.py runserver 8001 --settings=gerenciador_vendas.settings_local_pg
 ```
 
 ### Commands essenciais
 
 ```bash
-# Migrations (SQLite)
+# Migrations (Postgres local aurora_dev)
 python manage.py makemigrations --settings=gerenciador_vendas.settings_local
 python manage.py migrate --settings=gerenciador_vendas.settings_local
-
-# Migrations (PostgreSQL local)
-python manage.py migrate --settings=gerenciador_vendas.settings_local_pg
 
 # Testes
 python manage.py test tests/ --settings=gerenciador_vendas.settings_local

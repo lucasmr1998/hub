@@ -12,6 +12,7 @@ class IntegracaoAPI(TenantMixin):
     """
     TIPO_CHOICES = [
         ('hubsoft', 'HubSoft'),
+        ('sgp', 'SGP (inSystem)'),
         ('uazapi', 'Uazapi (WhatsApp)'),
         ('evolution', 'Evolution API (WhatsApp)'),
         ('meta_cloud', 'Meta Cloud API (WhatsApp)'),
@@ -154,6 +155,11 @@ class IntegracaoAPI(TenantMixin):
         'enviar_lead': 'Enviar lead ao criar',
         'sincronizar_cliente': 'Sincronizar dados do cliente',
         'sincronizar_servicos': 'Sincronizar servicos contratados',
+        'sincronizar_planos': 'Sincronizar catalogo de planos (ERP -> ProdutoServico)',
+        'sincronizar_vencimentos': 'Sincronizar opcoes de vencimento (ERP -> OpcaoVencimentoCRM)',
+        'sincronizar_vendedores': 'Sincronizar vendedores (ERP -> configuracoes_extras.cache)',
+        'sincronizar_pops': 'Sincronizar POPs (ERP -> configuracoes_extras.cache)',
+        'sincronizar_portadores': 'Sincronizar portadores financeiros (ERP -> configuracoes_extras.cache)',
     }
 
     def get_modo_sync(self, feature):

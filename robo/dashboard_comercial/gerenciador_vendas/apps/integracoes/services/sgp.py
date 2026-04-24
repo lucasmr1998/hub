@@ -1,0 +1,545 @@
+import logging
+import time
+from decimal import Decimal
+
+import requests
+
+from apps.integracoes.models import IntegracaoAPI, LogIntegracao
+
+logger = logging.getLogger(__name__)
+
+
+class SGPServiceError(Exception):
+    """Erro genérico do serviço SGP."""
+    pass
+
+
+class SGPService:
+    """
+    Encapsula a comunicação com a API do SGP (inSystem).
+
+    Autenticação: `app + token` como campos de formdata em cada request.
+    Diferente do HubSoft (OAuth2 Bearer), o SGP não rotaciona token
+    automaticamente; o token é estático até ser revogado no painel.
+
+    Fase 2.1b: autenticação + catálogos (planos, vencimentos).
+    Fase 2.2: fluxo lead → cliente (cadastrar_prospecto, sincronizar_cliente).
+    """
+
+    # Mapeamento dos campos da IntegracaoAPI para os conceitos SGP:
+    #   integracao.client_id     → app (nome da aplicação no SGP)
+    #   integracao.access_token  → token (gerado em Sistema → Ferramentas → Painel Admin → Tokens)
+    #   integracao.base_url      → URL base da instância do provedor (ex: https://gigamax.sgp.net.br)
+
+    ENDPOINT_VALIDAR = '/api/precadastro/plano/list'
+    ENDPOINT_PLANOS = '/api/precadastro/plano/list'
+    ENDPOINT_VENCIMENTOS = '/api/precadastro/vencimento/list'
+    ENDPOINT_VENDEDORES = '/api/precadastro/vendedor/list'
+    ENDPOINT_POPS = '/api/ura/pops/'
+    ENDPOINT_PORTADORES = '/api/ura/portador/'
+
+    def __init__(self, integracao: IntegracaoAPI):
+        if integracao.tipo != 'sgp':
+            raise SGPServiceError(
+                f"Integração '{integracao.nome}' não é do tipo sgp (tipo={integracao.tipo})."
+            )
+        self.integracao = integracao
+        self.base_url = (integracao.base_url or '').rstrip('/')
+
+    # ------------------------------------------------------------------
+    # Autenticação / validação
+    # ------------------------------------------------------------------
+
+    def validar_credenciais(self) -> bool:
+        """
+        Testa se as credenciais (app + token) da integração funcionam.
+
+        Usa POST /api/precadastro/plano/list como ping barato: se retornar
+        HTTP 200 com uma lista, as credenciais são válidas.
+
+        Retorna True em sucesso. Lança SGPServiceError em falha.
+        """
+        resposta = self._post(self.ENDPOINT_VALIDAR, {})
+        if not isinstance(resposta, list):
+            raise SGPServiceError(
+                f"Credenciais SGP inválidas ou endpoint inesperado. Resposta: {resposta}"
+            )
+        return True
+
+    # ------------------------------------------------------------------
+    # Catálogos — Planos
+    # ------------------------------------------------------------------
+
+    def listar_planos(self) -> list[dict]:
+        """
+        Lista todos os planos cadastrados no SGP do tenant.
+
+        Retorna lista de dicts com shape:
+            {'tipo': 'internet', 'id': 4, 'descricao': '...',
+             'valor': 119.9, 'observacao': '', 'gateway': {...}}
+
+        Levanta SGPServiceError em falha HTTP ou auth.
+        """
+        resposta = self._post(self.ENDPOINT_PLANOS, {})
+        if not isinstance(resposta, list):
+            raise SGPServiceError(
+                f"Shape inesperado em {self.ENDPOINT_PLANOS}: {resposta}"
+            )
+        return resposta
+
+    def sincronizar_planos(self, *, dry_run: bool = False) -> dict:
+        """
+        Puxa todos os planos do SGP e faz upsert em crm.ProdutoServico,
+        respeitando multi-tenancy (integracao.tenant).
+
+        Mapeamento:
+            plano['id']         -> ProdutoServico.codigo e ProdutoServico.id_externo
+            plano['descricao']  -> ProdutoServico.nome
+            plano['valor']      -> ProdutoServico.preco (Decimal)
+            plano['tipo']       -> dados_erp['tipo_sgp']
+            plano['gateway']    -> dados_erp['gateway']
+            plano['observacao'] -> dados_erp['observacao_sgp']
+            (fixo)              -> categoria='plano', recorrencia='mensal'
+
+        Se dry_run=True, não persiste; só calcula o que seria feito.
+
+        Retorna dict com contagens: {'total', 'criados', 'atualizados', 'inalterados', 'dry_run'}.
+        """
+        # Import local pra evitar import circular no carregamento do app
+        from apps.comercial.crm.models import ProdutoServico
+
+        planos_sgp = self.listar_planos()
+        tenant = self.integracao.tenant
+
+        resumo = {
+            'total': len(planos_sgp),
+            'criados': 0,
+            'atualizados': 0,
+            'inalterados': 0,
+            'dry_run': dry_run,
+        }
+
+        for plano in planos_sgp:
+            id_sgp = plano.get('id')
+            if id_sgp is None:
+                logger.warning("Plano SGP sem 'id', ignorando: %s", plano)
+                continue
+
+            codigo = str(id_sgp)
+            nome = plano.get('descricao') or f"Plano SGP {id_sgp}"
+
+            # valor pode vir como float ou string numérica
+            valor_raw = plano.get('valor')
+            try:
+                preco = Decimal(str(valor_raw)) if valor_raw is not None else Decimal('0')
+            except (ValueError, ArithmeticError):
+                logger.warning(
+                    "Plano SGP id=%s com valor inválido (%r), usando 0.",
+                    id_sgp, valor_raw,
+                )
+                preco = Decimal('0')
+
+            dados_erp = {
+                'origem_erp': 'sgp',
+                'tipo_sgp': plano.get('tipo') or '',
+                'gateway': plano.get('gateway') or {},
+                'observacao_sgp': plano.get('observacao') or '',
+            }
+
+            defaults = {
+                'nome': nome,
+                'preco': preco,
+                'categoria': 'plano',
+                'recorrencia': 'mensal',
+                'id_externo': codigo,
+                'dados_erp': dados_erp,
+            }
+
+            if dry_run:
+                # Apenas classifica o que seria feito, sem salvar
+                existente = ProdutoServico.objects.filter(
+                    tenant=tenant, codigo=codigo,
+                ).first()
+                if existente is None:
+                    resumo['criados'] += 1
+                elif self._produto_precisa_atualizar(existente, defaults):
+                    resumo['atualizados'] += 1
+                else:
+                    resumo['inalterados'] += 1
+                continue
+
+            produto, criado = ProdutoServico.objects.update_or_create(
+                tenant=tenant,
+                codigo=codigo,
+                defaults=defaults,
+            )
+            if criado:
+                resumo['criados'] += 1
+            else:
+                # Heurística simples: se update_or_create tocou qualquer campo, contamos como atualizado.
+                # Para distinguir "atualizado vs inalterado" com precisão teríamos que snapshot antes.
+                # Aqui marcamos como atualizado qualquer registro pré-existente.
+                resumo['atualizados'] += 1
+
+        return resumo
+
+    @staticmethod
+    def _produto_precisa_atualizar(produto, defaults: dict) -> bool:
+        """Compara os campos dos defaults com o produto existente. Usado em dry-run."""
+        for campo, novo in defaults.items():
+            atual = getattr(produto, campo, None)
+            # dados_erp é JSONField (dict) — comparar por igualdade
+            if atual != novo:
+                return True
+        return False
+
+    # ------------------------------------------------------------------
+    # Catálogos — Vencimentos
+    # ------------------------------------------------------------------
+
+    def listar_vencimentos(self) -> list[dict]:
+        """
+        Lista todas as opções de dia de vencimento cadastradas no SGP.
+
+        Retorna lista de dicts com shape: {'id': 1, 'dia': 5}
+
+        Levanta SGPServiceError em falha HTTP ou auth.
+        """
+        resposta = self._post(self.ENDPOINT_VENCIMENTOS, {})
+        if not isinstance(resposta, list):
+            raise SGPServiceError(
+                f"Shape inesperado em {self.ENDPOINT_VENCIMENTOS}: {resposta}"
+            )
+        return resposta
+
+    def sincronizar_vencimentos(self, *, dry_run: bool = False) -> dict:
+        """
+        Puxa todas as opções de vencimento do SGP e faz upsert em
+        crm.OpcaoVencimentoCRM, respeitando multi-tenancy (integracao.tenant).
+
+        Mapeamento:
+            venc['id']  -> OpcaoVencimentoCRM.id_externo
+            venc['dia'] -> OpcaoVencimentoCRM.dia (chave natural junto com tenant)
+            (derivado)  -> ordem = dia (ordena naturalmente pelo dia)
+            (fixo)      -> ativo=True, dados_erp={'origem_erp': 'sgp', 'id_sgp': N}
+
+        Chave natural pra upsert: (tenant, dia).
+
+        Se dry_run=True, não persiste.
+
+        Retorna: {'total', 'criados', 'atualizados', 'inalterados', 'dry_run'}.
+        """
+        from apps.comercial.crm.models import OpcaoVencimentoCRM
+
+        vencimentos_sgp = self.listar_vencimentos()
+        tenant = self.integracao.tenant
+
+        resumo = {
+            'total': len(vencimentos_sgp),
+            'criados': 0,
+            'atualizados': 0,
+            'inalterados': 0,
+            'dry_run': dry_run,
+        }
+
+        for venc in vencimentos_sgp:
+            id_sgp = venc.get('id')
+            dia = venc.get('dia')
+            if id_sgp is None or dia is None:
+                logger.warning("Vencimento SGP incompleto, ignorando: %s", venc)
+                continue
+
+            try:
+                dia_int = int(dia)
+            except (ValueError, TypeError):
+                logger.warning("Vencimento SGP com 'dia' invalido (%r), ignorando.", dia)
+                continue
+
+            defaults = {
+                'id_externo': str(id_sgp),
+                'ordem': dia_int,
+                'ativo': True,
+                'dados_erp': {
+                    'origem_erp': 'sgp',
+                    'id_sgp': id_sgp,
+                },
+            }
+
+            if dry_run:
+                existente = OpcaoVencimentoCRM.objects.filter(
+                    tenant=tenant, dia=dia_int,
+                ).first()
+                if existente is None:
+                    resumo['criados'] += 1
+                elif self._vencimento_precisa_atualizar(existente, defaults):
+                    resumo['atualizados'] += 1
+                else:
+                    resumo['inalterados'] += 1
+                continue
+
+            _, criado = OpcaoVencimentoCRM.objects.update_or_create(
+                tenant=tenant,
+                dia=dia_int,
+                defaults=defaults,
+            )
+            if criado:
+                resumo['criados'] += 1
+            else:
+                resumo['atualizados'] += 1
+
+        return resumo
+
+    @staticmethod
+    def _vencimento_precisa_atualizar(venc, defaults: dict) -> bool:
+        """Compara campos de OpcaoVencimentoCRM existente com defaults (uso em dry-run)."""
+        for campo, novo in defaults.items():
+            atual = getattr(venc, campo, None)
+            if atual != novo:
+                return True
+        return False
+
+    # ------------------------------------------------------------------
+    # Catálogos de referência — vendedores, POPs, portadores
+    # Persistem em IntegracaoAPI.configuracoes_extras['cache'][<nome>]
+    # ------------------------------------------------------------------
+
+    def sincronizar_vendedores(self, *, dry_run: bool = False) -> dict:
+        """Puxa vendedores do SGP e cacheia em configuracoes_extras['cache']['vendedores']."""
+        itens = self._listar_generico(self.ENDPOINT_VENDEDORES)
+        return self._persistir_cache('vendedores', itens, dry_run=dry_run)
+
+    def sincronizar_pops(self, *, dry_run: bool = False) -> dict:
+        """Puxa POPs do SGP e cacheia em configuracoes_extras['cache']['pops']."""
+        itens = self._listar_generico(self.ENDPOINT_POPS)
+        return self._persistir_cache('pops', itens, dry_run=dry_run)
+
+    def sincronizar_portadores(self, *, dry_run: bool = False) -> dict:
+        """
+        Puxa portadores financeiros do SGP e cacheia em configuracoes_extras['cache']['portadores'].
+
+        Atenção: este endpoint só aceita GET (diferente dos outros catálogos).
+        """
+        itens = self._listar_generico(self.ENDPOINT_PORTADORES, method='GET')
+        return self._persistir_cache('portadores', itens, dry_run=dry_run)
+
+    # --- Helpers privados pros catálogos de cache ---
+
+    def _listar_generico(self, endpoint: str, method: str = 'POST') -> list[dict]:
+        """
+        Chamada autenticada + validação de shape de lista. Retorna lista de dicts.
+
+        Suporta GET e POST porque o SGP é inconsistente entre endpoints de listagem:
+        a maioria é POST formdata, mas alguns (ex: /api/ura/portador/) só aceitam GET.
+        """
+        if method.upper() == 'GET':
+            resposta = self._get(endpoint)
+        else:
+            resposta = self._post(endpoint, {})
+        if not isinstance(resposta, list):
+            raise SGPServiceError(f"Shape inesperado em {endpoint}: {resposta}")
+        return resposta
+
+    def _persistir_cache(self, chave: str, itens: list, *, dry_run: bool) -> dict:
+        """
+        Guarda `itens` em integracao.configuracoes_extras['cache'][<chave>].
+
+        Retorna resumo com total/criados/atualizados/inalterados relativo ao cache anterior.
+        Semântica:
+          - criados    = ids novos que não estavam no cache
+          - atualizados= ids existentes cujo dict mudou
+          - inalterados= ids existentes cujo dict é igual
+        """
+        extras = dict(self.integracao.configuracoes_extras or {})
+        cache = dict(extras.get('cache') or {})
+        anterior = {self._chave_item(i): i for i in (cache.get(chave) or [])}
+        novo_list = list(itens)
+        atual = {self._chave_item(i): i for i in novo_list}
+
+        criados = sum(1 for k in atual if k not in anterior)
+        atualizados = sum(
+            1 for k, v in atual.items()
+            if k in anterior and anterior[k] != v
+        )
+        inalterados = sum(
+            1 for k, v in atual.items()
+            if k in anterior and anterior[k] == v
+        )
+
+        resumo = {
+            'total': len(novo_list),
+            'criados': criados,
+            'atualizados': atualizados,
+            'inalterados': inalterados,
+            'dry_run': dry_run,
+        }
+
+        if dry_run:
+            return resumo
+
+        cache[chave] = novo_list
+        extras['cache'] = cache
+
+        # Atualiza só o JSONField, sem disparar save() completo
+        type(self.integracao).objects.filter(pk=self.integracao.pk).update(
+            configuracoes_extras=extras,
+        )
+        # Reflete no objeto em memória pra consultas subsequentes no mesmo processo
+        self.integracao.configuracoes_extras = extras
+
+        return resumo
+
+    @staticmethod
+    def _chave_item(item: dict) -> str:
+        """Identifica um item do SGP pelo 'id' (padrão). Fallback pra repr."""
+        if isinstance(item, dict) and 'id' in item:
+            return f"id:{item['id']}"
+        return repr(item)
+
+    # ------------------------------------------------------------------
+    # Wrapper de POST com auth + log
+    # ------------------------------------------------------------------
+
+    def _get(self, endpoint: str, params: dict = None, lead=None) -> dict | list:
+        """
+        GET autenticado com app+token via query string. Registra LogIntegracao
+        e levanta SGPServiceError em falha HTTP ou rede.
+
+        Alguns endpoints do SGP só aceitam GET (ex: /api/ura/portador/).
+        """
+        url = f"{self.base_url}{endpoint}"
+        query = {
+            'app': self.integracao.client_id,
+            'token': self.integracao.access_token,
+        }
+        if params:
+            query.update(params)
+
+        inicio = time.time()
+        try:
+            resp = requests.get(url, params=query, timeout=30)
+            tempo_ms = int((time.time() - inicio) * 1000)
+        except requests.RequestException as exc:
+            tempo_ms = int((time.time() - inicio) * 1000)
+            self._registrar_log(
+                endpoint=endpoint, metodo='GET',
+                payload=self._payload_seguro(query), resposta={},
+                status_code=0, sucesso=False, erro=str(exc),
+                tempo_ms=tempo_ms, lead=lead,
+            )
+            raise SGPServiceError(f"Falha de conexão com SGP: {exc}") from exc
+
+        try:
+            resposta_json = resp.json()
+        except ValueError:
+            resposta_json = {'raw': resp.text[:2000]}
+
+        sucesso = resp.status_code == 200
+        resposta_para_log = (
+            resposta_json if isinstance(resposta_json, dict)
+            else {'list': resposta_json}
+        )
+
+        self._registrar_log(
+            endpoint=endpoint, metodo='GET',
+            payload=self._payload_seguro(query),
+            resposta=resposta_para_log,
+            status_code=resp.status_code,
+            sucesso=sucesso,
+            erro='' if sucesso else f"HTTP {resp.status_code}",
+            tempo_ms=tempo_ms, lead=lead,
+        )
+
+        if not sucesso:
+            raise SGPServiceError(
+                f"Erro SGP em {endpoint} (HTTP {resp.status_code}): {resposta_json}"
+            )
+
+        return resposta_json
+
+    def _post(self, endpoint: str, payload: dict = None, files: dict = None,
+              lead=None) -> dict | list:
+        """
+        POST autenticado com app+token via formdata. Registra LogIntegracao
+        automaticamente e levanta SGPServiceError em caso de falha HTTP ou rede.
+        """
+        url = f"{self.base_url}{endpoint}"
+        data = {
+            'app': self.integracao.client_id,
+            'token': self.integracao.access_token,
+        }
+        if payload:
+            data.update(payload)
+
+        inicio = time.time()
+        try:
+            resp = requests.post(url, data=data, files=files, timeout=30)
+            tempo_ms = int((time.time() - inicio) * 1000)
+        except requests.RequestException as exc:
+            tempo_ms = int((time.time() - inicio) * 1000)
+            self._registrar_log(
+                endpoint=endpoint, metodo='POST',
+                payload=self._payload_seguro(data), resposta={},
+                status_code=0, sucesso=False, erro=str(exc),
+                tempo_ms=tempo_ms, lead=lead,
+            )
+            raise SGPServiceError(f"Falha de conexão com SGP: {exc}") from exc
+
+        try:
+            resposta_json = resp.json()
+        except ValueError:
+            resposta_json = {'raw': resp.text[:2000]}
+
+        sucesso = resp.status_code == 200
+
+        # LogIntegracao.resposta_recebida é JSONField (dict). Envolver lista para serialização uniforme.
+        resposta_para_log = (
+            resposta_json if isinstance(resposta_json, dict)
+            else {'list': resposta_json}
+        )
+
+        self._registrar_log(
+            endpoint=endpoint, metodo='POST',
+            payload=self._payload_seguro(data),
+            resposta=resposta_para_log,
+            status_code=resp.status_code,
+            sucesso=sucesso,
+            erro='' if sucesso else f"HTTP {resp.status_code}",
+            tempo_ms=tempo_ms, lead=lead,
+        )
+
+        if not sucesso:
+            raise SGPServiceError(
+                f"Erro SGP em {endpoint} (HTTP {resp.status_code}): {resposta_json}"
+            )
+
+        return resposta_json
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _payload_seguro(data: dict) -> dict:
+        """Mascara o token no payload logado para não vazar segredo em auditoria."""
+        return {
+            k: (v if k != 'token' else '***REDACTED***')
+            for k, v in data.items()
+        }
+
+    def _registrar_log(self, *, endpoint, metodo, payload, resposta,
+                       status_code, sucesso, erro, tempo_ms, lead=None):
+        try:
+            LogIntegracao.objects.create(
+                integracao=self.integracao,
+                lead=lead,
+                endpoint=endpoint,
+                metodo=metodo,
+                payload_enviado=payload,
+                resposta_recebida=resposta,
+                status_code=status_code,
+                sucesso=sucesso,
+                mensagem_erro=erro,
+                tempo_resposta_ms=tempo_ms,
+            )
+        except Exception as exc:
+            logger.error("Erro ao registrar log de integração SGP: %s", exc)
