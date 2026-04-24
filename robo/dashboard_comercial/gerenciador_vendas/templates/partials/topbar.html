@@ -30,15 +30,13 @@
 
     {# Direita: acoes rapidas #}
     <div class="app-topbar-right">
-      <a href="{% url 'notificacoes:configuracoes_notificacoes' %}" class="app-topbar-bell-btn" title="Notificacoes">
-        <i class="bi bi-bell"></i>
-        <span class="app-topbar-bell-dot" id="notificationBadge" hidden></span>
-      </a>
       <div class="app-topbar-avatar-wrap">
         <button class="app-topbar-avatar-trigger" type="button" title="Minha conta"
                 onclick="this.parentElement.classList.toggle('is-open')">
-          <span class="app-topbar-avatar">
-            <i class="bi bi-person-circle"></i>
+          <span class="app-topbar-avatar app-topbar-avatar-bell" title="Notificacoes"
+                onclick="event.stopPropagation(); window.location.href='{% url 'notificacoes:configuracoes_notificacoes' %}'">
+            <i class="bi bi-bell"></i>
+            <span class="app-topbar-bell-dot" id="notificationBadge" hidden></span>
           </span>
           <span class="app-topbar-avatar-name">{{ request.user.first_name|default:request.user.username|default:"Usuario" }}</span>
         </button>
@@ -170,7 +168,7 @@
   .app-topbar-right {
     display: flex;
     align-items: center;
-    gap: var(--sp-2);
+    gap: var(--sp-1);
   }
   .app-topbar-action {
     width: 36px; height: 36px;
@@ -222,6 +220,12 @@
     background: var(--color-primary-soft);
     color: var(--color-primary);
     font-size: 0.95rem;
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  .app-topbar-avatar-bell:hover {
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
   }
   .app-topbar-avatar-name {
     font-size: var(--fs-sm);
@@ -239,31 +243,10 @@
   }
 
   .app-topbar-action-bell { position: relative; }
-  .app-topbar-bell-btn {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    color: var(--color-text-muted);
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    font-size: 0.95rem;
-    text-decoration: none;
-    cursor: pointer;
-    transition: background var(--transition), color var(--transition), border-color var(--transition);
-  }
-  .app-topbar-bell-btn:hover {
-    color: var(--color-primary);
-    background: var(--color-primary-soft);
-    border-color: var(--color-primary-soft);
-  }
   .app-topbar-bell-dot {
     position: absolute;
-    top: 2px;
-    right: 2px;
+    top: -2px;
+    right: -2px;
     width: 8px;
     height: 8px;
     background: var(--color-danger);
