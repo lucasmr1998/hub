@@ -39,6 +39,30 @@ GET /api/viabilidade/?cidade=Teresina&uf=PI
 
 ---
 
-## Template
+## Gestao no sistema
 
-Nenhum. Modulo e API-only.
+Pagina server-side dentro do DS: **`/viabilidade/cidades/`** (Comercial > Configuracoes CRM > Viabilidade tecnica).
+
+Funcionalidades:
+- Listagem com filtros (busca livre em cidade/CEP/bairro, UF, status ativo/inativo)
+- Paginacao (30 por pagina)
+- Modal de criar / editar (cidade + UF obrigatorios; CEP, bairro, observacao opcionais)
+- Botao toggle ativo/inativo
+- Botao excluir (hard delete)
+
+Multi-tenant: views usam `CidadeViabilidade.objects.all()` e o `TenantManager` filtra pelo `request.tenant` automaticamente. Criacao usa `tenant=request.tenant` no create.
+
+Permissao: `@login_required`. Apenas configuracoes CRM (is_superuser ou `perm.acesso_configuracoes`) veem o link no subnav.
+
+### Rotas
+
+| Rota | Metodo | Nome URL | Funcao |
+|------|--------|----------|--------|
+| `/viabilidade/cidades/` | GET | `comercial_viabilidade:cidades_lista` | Pagina de listagem |
+| `/viabilidade/cidades/salvar/` | POST | `comercial_viabilidade:cidade_salvar` | Criar ou atualizar (JSON body) |
+| `/viabilidade/cidades/<pk>/toggle/` | POST | `comercial_viabilidade:cidade_toggle` | Alterna flag ativo |
+| `/viabilidade/cidades/<pk>/excluir/` | DELETE | `comercial_viabilidade:cidade_excluir` | Remove registro |
+
+### Template
+
+`apps/comercial/viabilidade/templates/viabilidade/cidades.html` — extende `sistema/base.html` (shim do DS). Usa `components/badge.html`, `components/pagination.html` e JS global `toast()`.

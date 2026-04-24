@@ -68,6 +68,9 @@ Uso em template que extende layout_app:
           <a href="/crm/automacoes-pipeline/" class="app-subnav-item {% if 'automacoes_pipeline' in request.resolver_match.url_name %}is-active{% endif %}">
             <i class="bi bi-diagram-3"></i><span>Automacoes do pipeline</span>
           </a>
+          <a href="/viabilidade/cidades/" class="app-subnav-item {% if 'cidade' in request.resolver_match.url_name and '/viabilidade/' in request.path %}is-active{% endif %}">
+            <i class="bi bi-geo-alt"></i><span>Viabilidade tecnica</span>
+          </a>
         </nav>
       {% endif %}
 

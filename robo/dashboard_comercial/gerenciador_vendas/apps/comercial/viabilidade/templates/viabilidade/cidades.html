@@ -1,0 +1,315 @@
+{% extends "sistema/base.html" %}
+
+{% block title %}Viabilidade tecnica — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Viabilidade tecnica</h1>
+      <p class="page-subtitle">Cidades e CEPs onde voce atende. Cadastre por cidade para cobertura ampla ou por CEP para pontos especificos.</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary btn-sm" onclick="abrirModalCidade()"><i class="bi bi-plus-lg"></i> Nova area</button>
+    </div>
+  </div>
+</div>
+
+{# Filtros #}
+<div class="card" style="margin-bottom: var(--sp-4); padding: var(--sp-3);">
+  <form method="get" class="viab-filtros">
+    <div class="field" style="flex: 1; min-width: 220px;">
+      <div class="field-input-wrap">
+        <input type="text" name="q" value="{{ filtro_q }}" class="field-input"
+               placeholder="Buscar por cidade, CEP ou bairro...">
+      </div>
+    </div>
+    <div class="field" style="width: 150px;">
+      <div class="field-input-wrap">
+        <select name="uf" class="field-input">
+          <option value="">Todas UFs</option>
+          {% for sigla, nome in estados %}
+            <option value="{{ sigla }}" {% if filtro_uf == sigla %}selected{% endif %}>{{ sigla }} — {{ nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="field" style="width: 150px;">
+      <div class="field-input-wrap">
+        <select name="status" class="field-input">
+          <option value="">Todos status</option>
+          <option value="ativo" {% if filtro_status == 'ativo' %}selected{% endif %}>Ativos</option>
+          <option value="inativo" {% if filtro_status == 'inativo' %}selected{% endif %}>Inativos</option>
+        </select>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-secondary btn-sm"><i class="bi bi-search"></i> Filtrar</button>
+    {% if filtro_q or filtro_uf or filtro_status %}
+      <a href="{% url 'comercial_viabilidade:cidades_lista' %}" class="btn btn-ghost btn-sm">Limpar</a>
+    {% endif %}
+  </form>
+</div>
+
+{# Lista #}
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-geo-alt" style="color: var(--color-primary);"></i> Areas cadastradas</h3>
+    <span class="badge badge-primary badge-soft">{{ total }}</span>
+  </div>
+  {% if cidades %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Cidade</th>
+            <th>UF</th>
+            <th>CEP</th>
+            <th>Bairro</th>
+            <th>Observacao</th>
+            <th>Status</th>
+            <th style="width: 120px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in cidades %}
+            <tr id="cid-{{ c.pk }}" {% if not c.ativo %}style="opacity: 0.5;"{% endif %}>
+              <td><div style="font-weight: var(--fw-semibold); color: var(--color-text);">{{ c.cidade }}</div></td>
+              <td><span class="viab-uf">{{ c.estado }}</span></td>
+              <td>
+                {% if c.cep %}
+                  <span class="viab-cep">{{ c.cep }}</span>
+                {% else %}
+                  <span style="color: var(--color-text-muted); font-size: 11px;">Cidade inteira</span>
+                {% endif %}
+              </td>
+              <td>{{ c.bairro|default:"—" }}</td>
+              <td style="max-width: 240px; font-size: var(--fs-xs); color: var(--color-text-muted);">
+                {{ c.observacao|default:"—"|truncatechars:60 }}
+              </td>
+              <td>
+                {% if c.ativo %}
+                  {% include "components/badge.html" with variant="success" label="Ativo" size="sm" %}
+                {% else %}
+                  {% include "components/badge.html" with variant="neutral" label="Inativo" size="sm" %}
+                {% endif %}
+              </td>
+              <td>
+                <div style="display: inline-flex; gap: 2px;">
+                  <button class="btn btn-ghost btn-sm" onclick="editarCidade({{ c.pk }})" title="Editar"><i class="bi bi-pencil"></i></button>
+                  <button class="btn btn-ghost btn-sm" onclick="toggleCidade({{ c.pk }})" title="Ativar/desativar"><i class="bi bi-toggle-on"></i></button>
+                  <button class="btn btn-ghost btn-sm btn-ghost-danger" onclick="excluirCidade({{ c.pk }}, '{{ c.cidade|escapejs }}')" title="Excluir"><i class="bi bi-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "components/pagination.html" with page_obj=page_obj %}
+  {% else %}
+    <div class="table-empty">
+      <i class="bi bi-geo-alt"></i>
+      Nenhuma area cadastrada ainda.<br>
+      <span style="font-size: var(--fs-xs);">Clique em "Nova area" pra comecar.</span>
+    </div>
+  {% endif %}
+</div>
+
+{# Modal de cadastro/edicao #}
+<div class="modal-overlay" id="modalCidade" style="display: none;">
+  <div class="modal-content" style="max-width: 560px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-geo-alt" style="color: var(--color-primary);"></i> <span id="modalCidadeTitulo">Nova area</span></h3>
+      <button class="modal-close" onclick="fecharModalCidade()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cidadeId">
+      <div class="form-row-2">
+        <div class="field">
+          <label class="field-label" for="cidCidade">Cidade <span class="field-required">*</span></label>
+          <div class="field-input-wrap"><input id="cidCidade" type="text" class="field-input" placeholder="Ex: Teresina"></div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="cidEstado">UF <span class="field-required">*</span></label>
+          <div class="field-input-wrap">
+            <select id="cidEstado" class="field-input">
+              <option value="">Selecione...</option>
+              {% for sigla, nome in estados %}
+                <option value="{{ sigla }}">{{ sigla }} — {{ nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="form-row-2" style="margin-top: var(--sp-3);">
+        <div class="field">
+          <label class="field-label" for="cidCep">CEP</label>
+          <div class="field-input-wrap"><input id="cidCep" type="text" class="field-input" placeholder="00000-000 (opcional)" maxlength="9"></div>
+          <small style="color: var(--color-text-muted); font-size: 11px;">Deixe em branco pra cobrir a cidade inteira.</small>
+        </div>
+        <div class="field">
+          <label class="field-label" for="cidBairro">Bairro</label>
+          <div class="field-input-wrap"><input id="cidBairro" type="text" class="field-input" placeholder="Opcional"></div>
+        </div>
+      </div>
+      <div class="field" style="margin-top: var(--sp-3);">
+        <label class="field-label" for="cidObservacao">Observacao</label>
+        <div class="field-input-wrap">
+          <textarea id="cidObservacao" class="field-input" rows="3"
+                    style="height: auto; min-height: 70px; padding: var(--sp-2) var(--sp-3); resize: vertical;"
+                    placeholder="Tecnologia, restricoes, etc. (opcional)"></textarea>
+        </div>
+      </div>
+      <label class="viab-check-label" style="margin-top: var(--sp-3);">
+        <input type="checkbox" id="cidAtivo" checked> Area ativa
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="fecharModalCidade()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="salvarCidade()"><i class="bi bi-check-lg"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .viab-filtros { display: flex; gap: var(--sp-2); align-items: flex-end; flex-wrap: wrap; }
+  .viab-uf {
+    display: inline-block;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    font-weight: var(--fw-bold);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .viab-cep {
+    font-family: monospace;
+    background: #f3f4f6;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .viab-check-label { display: flex; align-items: center; gap: 8px; font-size: var(--fs-sm); cursor: pointer; }
+  .table-wrap { overflow-x: auto; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const URL_SALVAR = "{% url 'comercial_viabilidade:cidade_salvar' %}";
+const URL_TOGGLE = "{% url 'comercial_viabilidade:cidade_toggle' pk=0 %}".replace('/0/', '/__PK__/');
+const URL_EXCLUIR = "{% url 'comercial_viabilidade:cidade_excluir' pk=0 %}".replace('/0/', '/__PK__/');
+
+const CIDADES = {
+  {% for c in cidades %}
+  {{ c.pk }}: {
+    id: {{ c.pk }},
+    cidade: "{{ c.cidade|escapejs }}",
+    estado: "{{ c.estado }}",
+    cep: "{{ c.cep|default_if_none:''|escapejs }}",
+    bairro: "{{ c.bairro|default_if_none:''|escapejs }}",
+    observacao: "{{ c.observacao|default_if_none:''|escapejs }}",
+    ativo: {{ c.ativo|yesno:"true,false" }},
+  },
+  {% endfor %}
+};
+
+function abrirModalCidade() {
+  document.getElementById('modalCidadeTitulo').textContent = 'Nova area';
+  document.getElementById('cidadeId').value = '';
+  document.getElementById('cidCidade').value = '';
+  document.getElementById('cidEstado').value = '';
+  document.getElementById('cidCep').value = '';
+  document.getElementById('cidBairro').value = '';
+  document.getElementById('cidObservacao').value = '';
+  document.getElementById('cidAtivo').checked = true;
+  document.getElementById('modalCidade').style.display = 'flex';
+}
+function fecharModalCidade() { document.getElementById('modalCidade').style.display = 'none'; }
+
+function editarCidade(pk) {
+  const c = CIDADES[pk];
+  if (!c) return;
+  document.getElementById('modalCidadeTitulo').textContent = 'Editar area';
+  document.getElementById('cidadeId').value = c.id;
+  document.getElementById('cidCidade').value = c.cidade;
+  document.getElementById('cidEstado').value = c.estado;
+  document.getElementById('cidCep').value = c.cep;
+  document.getElementById('cidBairro').value = c.bairro;
+  document.getElementById('cidObservacao').value = c.observacao;
+  document.getElementById('cidAtivo').checked = c.ativo;
+  document.getElementById('modalCidade').style.display = 'flex';
+}
+
+function getCsrf() {
+  return document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] || '';
+}
+
+async function salvarCidade() {
+  const payload = {
+    id: document.getElementById('cidadeId').value || null,
+    cidade: document.getElementById('cidCidade').value.trim(),
+    estado: document.getElementById('cidEstado').value,
+    cep: document.getElementById('cidCep').value.trim(),
+    bairro: document.getElementById('cidBairro').value.trim(),
+    observacao: document.getElementById('cidObservacao').value.trim(),
+    ativo: document.getElementById('cidAtivo').checked,
+  };
+  if (!payload.cidade || !payload.estado) {
+    toast('Campos obrigatorios', 'Informe cidade e UF.', 'warning');
+    return;
+  }
+  try {
+    const resp = await fetch(URL_SALVAR, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      toast('Erro', data.error || 'Falha ao salvar.', 'danger');
+      return;
+    }
+    toast('Pronto', data.message, 'success');
+    fecharModalCidade();
+    setTimeout(() => location.reload(), 400);
+  } catch (e) {
+    toast('Erro', String(e), 'danger');
+  }
+}
+
+async function toggleCidade(pk) {
+  try {
+    const resp = await fetch(URL_TOGGLE.replace('__PK__', pk), {
+      method: 'POST',
+      headers: {'X-CSRFToken': getCsrf()},
+    });
+    if (!resp.ok) throw new Error('Falha');
+    setTimeout(() => location.reload(), 300);
+  } catch (e) {
+    toast('Erro', String(e), 'danger');
+  }
+}
+
+async function excluirCidade(pk, nome) {
+  if (!confirm(`Excluir "${nome}"? Essa acao nao pode ser desfeita.`)) return;
+  try {
+    const resp = await fetch(URL_EXCLUIR.replace('__PK__', pk), {
+      method: 'DELETE',
+      headers: {'X-CSRFToken': getCsrf()},
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      toast('Erro', data.error || 'Falha ao excluir.', 'danger');
+      return;
+    }
+    toast('Pronto', data.message, 'success');
+    setTimeout(() => location.reload(), 400);
+  } catch (e) {
+    toast('Erro', String(e), 'danger');
+  }
+}
+</script>
+{% endblock %}

@@ -77,7 +77,7 @@ Pontos de integração extras que vão facilitar módulos além de Comercial:
 
 | Operação | Endpoint | Módulo Hubtrix que usa |
 |----------|----------|------------------------|
-| Viabilidade técnica por endereço | `POST /api/ura/viabilidade/` | Comercial — Viabilidade |
+| ~~Viabilidade técnica por endereço~~ | ~~`POST /api/ura/viabilidade/`~~ | **Não utilizado.** Gigamax faz viabilidade por ferramenta externa; Hubtrix usa `CidadeViabilidade` local ([apps.comercial.viabilidade](../../../dashboard_comercial/gerenciador_vendas/apps/comercial/viabilidade/)). |
 | Validar credenciais do token | `GET /api/auth/info/` | Setup (testar integração) |
 | Listar POPs do provedor | `POST /api/ura/pops/` | Cadastro (choice-list) |
 | Listar vencimentos disponíveis | `POST /api/precadastro/vencimento/list` | Cadastro (choice-list) |
@@ -133,7 +133,7 @@ Com base na leitura da doc + experiência HubSoft:
    - `consultar_cliente(cpf_cnpj)` → `POST /api/ura/consultacliente/`
    - `sincronizar_cliente(lead)` → consulta + upsert em `ClienteERPExterno` (ou modelo novo `ClienteSGP`)
    - `listar_titulos(cliente_id, **filtros)` → `POST /api/ura/titulos/` — substitui consulta ao banco que o HubSoft exige
-   - `consultar_viabilidade(endereco)` → `POST /api/ura/viabilidade/`
+   - ~~`consultar_viabilidade(endereco)` → `POST /api/ura/viabilidade/`~~ — **descartado**. Gigamax faz viabilidade por ferramenta externa. O Hubtrix usa o modelo local `CidadeViabilidade` (app `apps.comercial.viabilidade`) pra gestao de areas atendidas, independente do ERP.
 4. Criar `setup_sgp` management command (pedindo `base_url`, `app`, `token`)
 5. Branch `elif integracao.tipo == 'sgp'` em [signals.py](../../../dashboard_comercial/gerenciador_vendas/apps/integracoes/signals.py)
 6. Testes unitários com `requests_mock` + integração end-to-end

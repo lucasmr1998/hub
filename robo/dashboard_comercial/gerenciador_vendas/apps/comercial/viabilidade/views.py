@@ -1,12 +1,16 @@
 # ============================================================================
 # Views migradas de vendas_web.views (Phase 3B)
 # ============================================================================
+import json
 import unicodedata
 import logging
 
 import requests as req_ext
-from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, render
+from django.views.decorators.http import require_http_methods
 
 from apps.comercial.viabilidade.models import CidadeViabilidade
 
@@ -148,3 +152,124 @@ def api_viabilidade(request):
         'total':    len(registros),
         'registros': registros,
     })
+
+
+# ============================================================================
+# Gestao server-side (pagina interna do Hubtrix)
+# ============================================================================
+
+@login_required
+def cidades_lista(request):
+    """Pagina de gestao das cidades/CEPs com viabilidade do tenant."""
+    q = (request.GET.get('q') or '').strip()
+    uf = (request.GET.get('uf') or '').strip().upper()
+    status = (request.GET.get('status') or '').strip()
+
+    qs = CidadeViabilidade.objects.all()
+    if q:
+        qs = qs.filter(cidade__icontains=q) | qs.filter(cep__icontains=q) | qs.filter(bairro__icontains=q)
+    if uf:
+        qs = qs.filter(estado=uf)
+    if status == 'ativo':
+        qs = qs.filter(ativo=True)
+    elif status == 'inativo':
+        qs = qs.filter(ativo=False)
+
+    qs = qs.order_by('estado', 'cidade', 'cep')
+
+    paginator = Paginator(qs, 30)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    context = {
+        'cidades': page_obj.object_list,
+        'page_obj': page_obj,
+        'total': qs.count(),
+        'estados': CidadeViabilidade.ESTADO_CHOICES,
+        'filtro_q': q,
+        'filtro_uf': uf,
+        'filtro_status': status,
+        'modulo_atual': 'comercial',
+    }
+    return render(request, 'viabilidade/cidades.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def cidade_salvar(request):
+    """Cria ou atualiza uma CidadeViabilidade do tenant atual."""
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON invalido'}, status=400)
+
+    cidade = (data.get('cidade') or '').strip()
+    estado = (data.get('estado') or '').strip().upper()
+    if not cidade or not estado:
+        return JsonResponse({'error': 'Cidade e estado sao obrigatorios.'}, status=400)
+
+    ufs_validas = {c for c, _ in CidadeViabilidade.ESTADO_CHOICES}
+    if estado not in ufs_validas:
+        return JsonResponse({'error': f'UF invalida: {estado}'}, status=400)
+
+    pk = data.get('id')
+    campos = {
+        'cidade': cidade,
+        'estado': estado,
+        'cep': (data.get('cep') or '').strip() or None,
+        'bairro': (data.get('bairro') or '').strip() or None,
+        'observacao': (data.get('observacao') or '').strip() or None,
+        'ativo': bool(data.get('ativo', True)),
+    }
+
+    if pk:
+        obj = get_object_or_404(CidadeViabilidade, pk=pk)
+        for k, v in campos.items():
+            setattr(obj, k, v)
+        try:
+            obj.full_clean()
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+        obj.save()
+        msg = 'Cidade atualizada.'
+    else:
+        campos['tenant'] = request.tenant
+        obj = CidadeViabilidade(**campos)
+        try:
+            obj.full_clean()
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+        obj.save()
+        msg = 'Cidade cadastrada.'
+
+    return JsonResponse({
+        'success': True,
+        'message': msg,
+        'cidade': {
+            'id': obj.pk,
+            'cidade': obj.cidade,
+            'estado': obj.estado,
+            'cep': obj.cep,
+            'bairro': obj.bairro,
+            'observacao': obj.observacao,
+            'ativo': obj.ativo,
+        },
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def cidade_toggle(request, pk):
+    """Alterna o flag ativo da cidade."""
+    obj = get_object_or_404(CidadeViabilidade, pk=pk)
+    obj.ativo = not obj.ativo
+    obj.save(update_fields=['ativo', 'data_atualizacao'])
+    return JsonResponse({'success': True, 'ativo': obj.ativo})
+
+
+@login_required
+@require_http_methods(["DELETE"])
+def cidade_excluir(request, pk):
+    """Remove uma cidade do tenant."""
+    obj = get_object_or_404(CidadeViabilidade, pk=pk)
+    obj.delete()
+    return JsonResponse({'success': True, 'message': 'Cidade removida.'})
