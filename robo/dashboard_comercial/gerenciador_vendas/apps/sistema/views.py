@@ -402,22 +402,28 @@ def configuracoes_usuarios_view(request):
 
     # Filtrar usuarios pelo tenant atual (via PerfilUsuario)
     from apps.sistema.models import PerfilUsuario
+    from django.core.paginator import Paginator
     if request.tenant:
         user_ids = PerfilUsuario.objects.filter(tenant=request.tenant).values_list('user_id', flat=True)
-        users = User.objects.filter(id__in=user_ids).order_by('-date_joined')
+        users_qs = User.objects.filter(id__in=user_ids).order_by('-date_joined')
     else:
-        users = User.objects.none()
+        users_qs = User.objects.none()
     groups = Group.objects.all().order_by('name')
 
-    # Pré-carregar permissões de cada usuário
-    permissoes = {p.user_id: p for p in PermissaoUsuario.objects.select_related('perfil').filter(user__in=users)}
-    for u in users:
+    paginator = Paginator(users_qs, 25)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    users_pagina = list(page_obj.object_list)
+
+    # Pré-carregar permissões só dos usuarios da pagina atual
+    permissoes = {p.user_id: p for p in PermissaoUsuario.objects.select_related('perfil').filter(user__in=users_pagina)}
+    for u in users_pagina:
         u.perm = permissoes.get(u.id)
 
     perfis = PerfilPermissao.objects.filter(tenant=request.tenant).order_by('nome') if request.tenant else PerfilPermissao.objects.none()
 
     context = {
-        'users': users,
+        'users': users_pagina,
+        'page_obj': page_obj,
         'groups': groups,
         'perfis': perfis,
         'user': request.user,
@@ -866,6 +872,7 @@ def perfil_usuario_view(request):
 def logs_auditoria_view(request):
     """Tela centralizada de logs de auditoria."""
     from apps.sistema.models import LogSistema
+    from django.core.paginator import Paginator
 
     categoria = request.GET.get('categoria', '')
     acao_filter = request.GET.get('acao', '')
@@ -886,8 +893,18 @@ def logs_auditoria_view(request):
     if entidade:
         logs = logs.filter(entidade__icontains=entidade)
 
+    paginator = Paginator(logs, 50)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    # Preserva filtros nos links de paginacao
+    params = request.GET.copy()
+    params.pop('page', None)
+    query = params.urlencode()
+
     context = {
-        'logs': logs[:200],
+        'logs': page_obj.object_list,
+        'page_obj': page_obj,
+        'query': query,
         'categoria': categoria,
         'acao_filter': acao_filter,
         'usuario_filter': usuario_filter,

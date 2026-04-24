@@ -32,6 +32,8 @@ logger = logging.getLogger(__name__)
 @login_required
 def minhas_notificacoes_view(request):
     """Pagina que lista as notificacoes do usuario logado."""
+    from django.core.paginator import Paginator
+
     qs = Notificacao.objects.filter(
         tenant=request.tenant,
         destinatario=request.user,
@@ -43,16 +45,22 @@ def minhas_notificacoes_view(request):
     elif filtro == 'lidas':
         qs = qs.filter(lida=True)
 
-    notificacoes = list(qs[:100])
+    paginator = Paginator(qs, 25)
+    page_obj = paginator.get_page(request.GET.get('page'))
     total_nao_lidas = Notificacao.objects.filter(
         tenant=request.tenant, destinatario=request.user, lida=False
     ).count()
 
+    # Preserva filtro no link de paginacao
+    query = f'filtro={filtro}' if filtro != 'todas' else ''
+
     context = {
-        'notificacoes': notificacoes,
+        'notificacoes': page_obj.object_list,
+        'page_obj': page_obj,
+        'query': query,
         'filtro_atual': filtro,
         'total_nao_lidas': total_nao_lidas,
-        'total_exibidas': len(notificacoes),
+        'total_exibidas': paginator.count,
     }
     return render(request, 'notificacoes/minhas_notificacoes.html', context)
 

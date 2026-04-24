@@ -7,7 +7,7 @@
   <div class="page-header-top">
     <div>
       <h1 class="page-title">Minhas notificacoes</h1>
-      <p class="page-subtitle">{{ total_nao_lidas }} nao lida{{ total_nao_lidas|pluralize }} — exibindo {{ total_exibidas }} recente{{ total_exibidas|pluralize }}.</p>
+      <p class="page-subtitle">{{ total_nao_lidas }} nao lida{{ total_nao_lidas|pluralize }} — total {{ total_exibidas }}.</p>
     </div>
     <div class="page-actions">
       {% if total_nao_lidas > 0 %}
@@ -66,6 +66,8 @@
     </div>
   </div>
 {% endif %}
+
+{% include "components/pagination.html" with page_obj=page_obj query=query %}
 
 <form style="display: none;">{% csrf_token %}</form>
 {% endblock %}
