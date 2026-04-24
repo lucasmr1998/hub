@@ -18,16 +18,20 @@ responsavel: "Tech Lead"
 
 Componente `components/pagination.html` ja existe e envolve `django.core.paginator.Paginator`. Padrao ja usado em oportunidades, segmentos, campanhas, suporte.
 
-Auditoria 24/04:
+Auditoria 24/04 (inicial) + reauditoria exaustiva:
 - ✅ Minhas notificacoes (corrigido — 25/pagina)
 - ✅ Logs auditoria (corrigido — 50/pagina)
 - ✅ Usuarios (corrigido — 25/pagina)
+- ✅ Produtos CRM (corrigido — 25/pagina)
+- ⏳ **Pipeline CRM** (`apps/comercial/crm/templates/crm/pipeline.html`): KANBAN visual — carrega TODAS as oportunidades por estagio. Risco alto. **Solucao diferente**: limitar N oportunidades por estagio + "ver mais" / lazy scroll. Nao eh um `<Paginator>` tradicional
 - ⏳ **Tarefas** (`apps/comercial/crm/views.py::tarefas_lista`): carrega tudo e agrupa em "hoje/semana/vencidas/todas"
 - ⏳ **Fluxos de atendimento** (`apps/comercial/atendimento/views.py:141`): sem paginacao
 - ⏳ **Inbox conversas** (`apps/inbox/views.py:42`): sem paginacao (risco: polling + WebSocket pode complicar paginacao no scroll)
 - ⏳ **Automacoes** (`apps/marketing/automacoes/views.py:25`): sem paginacao
 - ⏳ **Integracoes** (`apps/integracoes/views.py:288`): sem paginacao
 - ⏳ **Leads template** — API ja pagina, mas renderizacao JS nao mostra controles de paginacao
+
+Demais 25+ tabelas sem paginacao sao config ou relatorios pequenos (criticidade 1 — < 100 registros sempre). Nao justificam paginar no curto prazo. Listagem completa em auditoria separada.
 
 ## Proposta
 

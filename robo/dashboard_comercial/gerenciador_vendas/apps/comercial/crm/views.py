@@ -2009,10 +2009,15 @@ def webhook_hubsoft_contrato(request):
 @login_required
 def produtos_lista(request):
     """Página de gestão de produtos/serviços e opções de vencimento."""
-    produtos = ProdutoServico.objects.all().order_by('ordem', 'nome')
+    produtos_qs = ProdutoServico.objects.all().order_by('ordem', 'nome')
     vencimentos = OpcaoVencimentoCRM.objects.all().order_by('ordem', 'dia')
+
+    paginator = Paginator(produtos_qs, 25)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
     context = {
-        'produtos': produtos,
+        'produtos': page_obj.object_list,
+        'page_obj': page_obj,
         'vencimentos': vencimentos,
         'categorias': ProdutoServico.CATEGORIA_CHOICES,
         'recorrencias': ProdutoServico.RECORRENCIA_CHOICES,
