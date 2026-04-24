@@ -464,3 +464,73 @@ class TestCondicaoComVarContextoLogado:
 
         resultado = eng.iniciar_fluxo_visual(atend)
         assert resultado['mensagem'] == 'CURSO_INVALIDO'
+
+
+# ══════════════════════════════════════════════════════════════════
+# Signal pre_delete em NodoFluxoAtendimento (prevencao de zumbi)
+#
+# Contexto: em 15-16/04/2026, refactor do fluxo v3 FATEPI deletou nodos
+# antigos (473/475/484) e criou novos (521/523/532), mas 5 atendimentos
+# ficaram com nodo_atual apontando pros antigos (orfaos). Signal previne
+# recorrencia: bloqueia delete se algum atendimento ativo ainda aponta.
+# ══════════════════════════════════════════════════════════════════
+
+class TestPreDeleteNodoSemZumbi:
+
+    def test_delete_permitido_sem_atendimento_ativo(self, setup_flow):
+        fluxo = setup_flow['fluxo']
+        nodo = criar_nodo(fluxo, 'questao', titulo='Qual seu nome?')
+        # Sem AtendimentoFluxo apontando — delete passa
+        nodo.delete()
+
+    def test_delete_permitido_com_atendimento_finalizado(self, setup_flow):
+        """Atendimentos completados/abandonados nao bloqueiam —
+        nodo_atual deles nao sera mais percorrido."""
+        fluxo = setup_flow['fluxo']
+        atend = setup_flow['atend']
+        nodo = criar_nodo(fluxo, 'questao', titulo='Nome')
+        atend.nodo_atual = nodo
+        atend.status = 'completado'
+        atend.save(update_fields=['nodo_atual', 'status'])
+        nodo.delete()  # nao deve bloquear
+
+    def test_delete_bloqueado_com_atendimento_iniciado(self, setup_flow):
+        """Captura a mensagem — sem query adicional pra nao bater em
+        transacao broken (o ProtectedError eh levantado no meio de um
+        atomic do pytest-django)."""
+        from django.db.models import ProtectedError
+        fluxo = setup_flow['fluxo']
+        atend = setup_flow['atend']
+        nodo = criar_nodo(fluxo, 'questao', titulo='Nome')
+        atend.nodo_atual = nodo
+        atend.status = 'iniciado'
+        atend.save(update_fields=['nodo_atual', 'status'])
+        with pytest.raises(ProtectedError):
+            nodo.delete()
+
+    def test_delete_bloqueado_com_atendimento_em_andamento(self, setup_flow):
+        from django.db.models import ProtectedError
+        fluxo = setup_flow['fluxo']
+        atend = setup_flow['atend']
+        nodo = criar_nodo(fluxo, 'questao', titulo='Nome')
+        atend.nodo_atual = nodo
+        atend.status = 'em_andamento'
+        atend.save(update_fields=['nodo_atual', 'status'])
+        with pytest.raises(ProtectedError):
+            nodo.delete()
+
+    def test_delete_permitido_apos_migrar_atendimento(self, setup_flow):
+        """Fluxo recomendado: antes de deletar nodo, encerrar/migrar
+        atendimentos que apontam pra ele."""
+        from apps.comercial.atendimento.models import AtendimentoFluxo
+        fluxo = setup_flow['fluxo']
+        atend = setup_flow['atend']
+        nodo = criar_nodo(fluxo, 'questao', titulo='Nome')
+        atend.nodo_atual = nodo
+        atend.status = 'iniciado'
+        atend.save(update_fields=['nodo_atual', 'status'])
+        # Migrar antes de deletar
+        AtendimentoFluxo.all_tenants.filter(nodo_atual=nodo).update(
+            status='abandonado', nodo_atual=None
+        )
+        nodo.delete()  # agora passa
