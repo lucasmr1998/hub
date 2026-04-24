@@ -10,7 +10,7 @@ responsavel: "Tech Lead"
 **Data:** 23/04/2026
 **Responsável:** Tech Lead
 **Prioridade:** 🟡 Média
-**Status:** ⏳ Pendente
+**Status:** ✅ Concluída (aplicado em ci.yml, testa no proximo PR)
 
 ---
 

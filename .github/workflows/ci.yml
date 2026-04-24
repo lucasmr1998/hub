@@ -12,6 +12,33 @@ on:
       - 'robo/**'
 
 jobs:
+  gate-engine-test:
+    name: Gate — engine.py exige teste
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verificar mudança em engine + testes
+        run: |
+          BASE=origin/${{ github.base_ref }}
+          CHANGED=$(git diff --name-only "$BASE" HEAD)
+          CHANGED_ENGINE=$(echo "$CHANGED" | grep -E "apps/comercial/atendimento/engine\.py$|apps/marketing/automacoes/engine\.py$" || true)
+          CHANGED_TESTS=$(echo "$CHANGED" | grep -E "tests/test_engine_.*\.py$|tests/test_automacoes\.py$|tests/test_automacao_pipeline\.py$|tests/test_fluxo_.*\.py$" || true)
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          if [ -n "$CHANGED_ENGINE" ] && [ -z "$CHANGED_TESTS" ]; then
+            if echo "$PR_TITLE" | grep -qi "\[no-test-needed\]"; then
+              echo "⚠ engine.py mudou sem teste, mas PR tem [no-test-needed]. Ok."
+              exit 0
+            fi
+            echo "::error::engine.py mudou sem teste correspondente. Adicionar teste em tests/ ou justificar com [no-test-needed] no titulo do PR."
+            echo "Arquivos de engine alterados:"
+            echo "$CHANGED_ENGINE"
+            exit 1
+          fi
+          echo "✅ Gate ok"
+
   test:
     name: Django Tests
     runs-on: ubuntu-latest
