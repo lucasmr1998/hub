@@ -1,0 +1,188 @@
+{% extends "sistema/base.html" %}
+
+{% block title %}Minhas notificacoes — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Minhas notificacoes</h1>
+      <p class="page-subtitle">{{ total_nao_lidas }} nao lida{{ total_nao_lidas|pluralize }} — exibindo {{ total_exibidas }} recente{{ total_exibidas|pluralize }}.</p>
+    </div>
+    <div class="page-actions">
+      {% if total_nao_lidas > 0 %}
+      <button class="btn btn-secondary btn-sm" onclick="marcarTodasLidas()"><i class="bi bi-check2-all"></i> Marcar todas como lidas</button>
+      {% endif %}
+      <a href="{% url 'notificacoes:configuracoes_notificacoes' %}" class="btn btn-ghost btn-sm"><i class="bi bi-gear"></i> Configuracoes</a>
+    </div>
+  </div>
+</div>
+
+<div class="tabs-wrap" style="margin-bottom: var(--sp-4);">
+  <a href="?filtro=todas" class="tab{% if filtro_atual == 'todas' %} is-active{% endif %}">Todas</a>
+  <a href="?filtro=nao_lidas" class="tab{% if filtro_atual == 'nao_lidas' %} is-active{% endif %}">Nao lidas {% if total_nao_lidas > 0 %}<span class="tab-badge">{{ total_nao_lidas }}</span>{% endif %}</a>
+  <a href="?filtro=lidas" class="tab{% if filtro_atual == 'lidas' %} is-active{% endif %}">Lidas</a>
+</div>
+
+{% if notificacoes %}
+  <div class="notif-list">
+    {% for n in notificacoes %}
+      <div class="notif-item{% if not n.lida %} notif-item-unread{% endif %}" data-id="{{ n.id }}">
+        <div class="notif-icon notif-icon-{{ n.prioridade }}">
+          {% if n.prioridade == 'urgente' %}<i class="bi bi-exclamation-triangle-fill"></i>
+          {% elif n.prioridade == 'alta' %}<i class="bi bi-exclamation-circle-fill"></i>
+          {% elif n.prioridade == 'baixa' %}<i class="bi bi-info-circle"></i>
+          {% else %}<i class="bi bi-bell-fill"></i>{% endif %}
+        </div>
+        <div class="notif-body">
+          <div class="notif-head">
+            <strong class="notif-title">{{ n.titulo }}</strong>
+            <span class="notif-time" title="{{ n.data_criacao|date:'d/m/Y H:i' }}">{{ n.data_criacao|timesince }} atras</span>
+          </div>
+          <p class="notif-msg">{{ n.mensagem|truncatechars:280 }}</p>
+          <div class="notif-meta">
+            <span class="notif-tipo">{{ n.tipo.nome }}</span>
+            {% if not n.lida %}<span class="notif-badge-unread">Nova</span>{% endif %}
+            {% if n.url_acao %}
+              <a href="{{ n.url_acao }}" class="notif-link" onclick="marcarLida({{ n.id }})">Ver detalhes <i class="bi bi-arrow-right"></i></a>
+            {% endif %}
+          </div>
+        </div>
+        {% if not n.lida %}
+          <button class="notif-mark" title="Marcar como lida" onclick="marcarLida({{ n.id }}, true)"><i class="bi bi-check-lg"></i></button>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card">
+    <div class="card-body" style="text-align: center; padding: var(--sp-8);">
+      <i class="bi bi-bell-slash" style="font-size: 40px; color: var(--color-border);"></i>
+      <p style="color: var(--color-text-muted); margin-top: var(--sp-3);">
+        {% if filtro_atual == 'nao_lidas' %}Nenhuma notificacao nao lida. Tudo em dia.
+        {% elif filtro_atual == 'lidas' %}Nenhuma notificacao lida ainda.
+        {% else %}Nenhuma notificacao recebida ainda.{% endif %}
+      </p>
+    </div>
+  </div>
+{% endif %}
+
+<form style="display: none;">{% csrf_token %}</form>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .tabs-wrap { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--color-border); }
+  .tab {
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .tab.is-active { color: var(--color-primary); border-bottom-color: var(--color-primary); font-weight: var(--fw-semibold); }
+  .tab-badge {
+    background: var(--color-danger);
+    color: var(--color-text-inverse);
+    font-size: var(--fs-xs);
+    padding: 1px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+  }
+
+  .notif-list { display: flex; flex-direction: column; gap: var(--sp-2); }
+  .notif-item {
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    gap: var(--sp-3);
+    align-items: start;
+    padding: var(--sp-3);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition: background var(--transition);
+  }
+  .notif-item-unread {
+    background: var(--color-primary-soft);
+    border-left: 3px solid var(--color-primary);
+  }
+  .notif-icon {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font-size: 1.05rem;
+  }
+  .notif-icon-urgente { background: var(--color-danger-soft, #fee2e2); color: var(--color-danger); }
+  .notif-icon-alta { background: var(--color-warning-soft, #fef3c7); color: var(--color-warning, #d97706); }
+  .notif-icon-baixa { background: var(--color-surface); color: var(--color-text-muted); }
+  .notif-icon-normal { background: var(--color-primary-soft); color: var(--color-primary); }
+
+  .notif-body { min-width: 0; }
+  .notif-head { display: flex; justify-content: space-between; gap: var(--sp-2); margin-bottom: 4px; }
+  .notif-title { font-size: var(--fs-sm); color: var(--color-text); }
+  .notif-time { font-size: var(--fs-xs); color: var(--color-text-muted); white-space: nowrap; }
+  .notif-msg { margin: 0; font-size: var(--fs-sm); color: var(--color-text-muted); line-height: 1.4; }
+  .notif-meta { display: flex; gap: var(--sp-3); align-items: center; margin-top: var(--sp-2); flex-wrap: wrap; }
+  .notif-tipo { font-size: var(--fs-xs); color: var(--color-text-muted); background: var(--color-surface); padding: 2px 8px; border-radius: 10px; }
+  .notif-badge-unread { font-size: var(--fs-xs); color: var(--color-primary); font-weight: var(--fw-semibold); }
+  .notif-link { font-size: var(--fs-xs); color: var(--color-primary); text-decoration: none; }
+  .notif-link:hover { text-decoration: underline; }
+
+  .notif-mark {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    cursor: pointer;
+  }
+  .notif-mark:hover {
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    border-color: var(--color-primary);
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function _csrfToken() {
+  return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+}
+
+function marcarLida(id, soMarkar) {
+  fetch(`/api/notificacoes/${id}/lida/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': _csrfToken() },
+  }).then(r => r.json()).then(d => {
+    if (d.success || d.ok) {
+      if (soMarkar) {
+        const item = document.querySelector(`.notif-item[data-id="${id}"]`);
+        if (item) { item.classList.remove('notif-item-unread'); item.querySelector('.notif-mark')?.remove(); item.querySelector('.notif-badge-unread')?.remove(); }
+        toast('Marcada', 'Notificacao marcada como lida', 'success');
+      }
+    }
+  }).catch(() => {});
+}
+
+function marcarTodasLidas() {
+  if (!confirm('Marcar todas como lidas?')) return;
+  fetch('/api/notificacoes/marcar-todas-lidas/', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': _csrfToken() },
+  }).then(r => r.json()).then(d => {
+    if (d.success || d.ok) {
+      toast('Feito', 'Todas marcadas como lidas', 'success');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      toast('Erro', d.error || 'Falha ao marcar', 'danger');
+    }
+  }).catch(() => toast('Erro', 'Falha na requisicao', 'danger'));
+}
+</script>
+{% endblock %}

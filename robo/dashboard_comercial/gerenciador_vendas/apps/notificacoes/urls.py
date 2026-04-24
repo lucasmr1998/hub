@@ -4,6 +4,9 @@ from . import views
 app_name = 'notificacoes'
 
 urlpatterns = [
+    # Minhas notificacoes (usuario logado)
+    path('notificacoes/', views.minhas_notificacoes_view, name='minhas_notificacoes'),
+
     # Paginas de configuracao de notificacoes
     path('configuracoes/notificacoes/', views.configuracoes_notificacoes_view, name='configuracoes_notificacoes'),
     path('configuracoes/notificacoes/tipo/<int:tipo_id>/', views.tipo_notificacao_detalhes_view, name='tipo_notificacao_detalhes'),

@@ -30,6 +30,34 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 @login_required
+def minhas_notificacoes_view(request):
+    """Pagina que lista as notificacoes do usuario logado."""
+    qs = Notificacao.objects.filter(
+        tenant=request.tenant,
+        destinatario=request.user,
+    ).select_related('tipo', 'canal').order_by('-data_criacao')
+
+    filtro = request.GET.get('filtro', 'todas')
+    if filtro == 'nao_lidas':
+        qs = qs.filter(lida=False)
+    elif filtro == 'lidas':
+        qs = qs.filter(lida=True)
+
+    notificacoes = list(qs[:100])
+    total_nao_lidas = Notificacao.objects.filter(
+        tenant=request.tenant, destinatario=request.user, lida=False
+    ).count()
+
+    context = {
+        'notificacoes': notificacoes,
+        'filtro_atual': filtro,
+        'total_nao_lidas': total_nao_lidas,
+        'total_exibidas': len(notificacoes),
+    }
+    return render(request, 'notificacoes/minhas_notificacoes.html', context)
+
+
+@login_required
 def configuracoes_notificacoes_view(request):
     """View para gerenciar sistema de notificações"""
     from apps.sistema.decorators import user_tem_funcionalidade
