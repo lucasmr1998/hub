@@ -55,16 +55,21 @@
 {% endif %}
 
 {% for pipe_ctx in pipelines_ctx %}
-  <div style="margin-bottom: var(--sp-6);">
-    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--sp-2); margin-bottom: var(--sp-3); border-bottom: 2px solid {{ pipe_ctx.pipeline.cor_hex }};">
-      <h2 style="font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px;">
+  <details class="pipeline-accordion"{% if forloop.first %} open{% endif %} style="margin-bottom: var(--sp-4);">
+    <summary class="pipeline-accordion-header" style="border-bottom: 2px solid {{ pipe_ctx.pipeline.cor_hex }};">
+      <div class="pipeline-accordion-title">
+        <i class="bi bi-chevron-right pipeline-accordion-chevron"></i>
         <i class="bi bi-funnel-fill" style="color: {{ pipe_ctx.pipeline.cor_hex }};"></i>
-        {{ pipe_ctx.pipeline.nome }}
+        <span class="pipeline-nome">{{ pipe_ctx.pipeline.nome }}</span>
         <span style="font-size: var(--fs-xs); color: var(--color-text-muted); font-weight: normal;">({{ pipe_ctx.pipeline.get_tipo_display }})</span>
-      </h2>
-      <span style="color: var(--color-text-muted); font-size: var(--fs-xs);">{{ pipe_ctx.total_regras }} regra{{ pipe_ctx.total_regras|pluralize }} em {{ pipe_ctx.estagios|length }} estágio{{ pipe_ctx.estagios|length|pluralize }}</span>
-    </div>
+      </div>
+      <div class="pipeline-accordion-meta">
+        {% include "components/badge.html" with variant="primary" label=pipe_ctx.total_regras size="sm" %}
+        <span style="color: var(--color-text-muted); font-size: var(--fs-xs);">regra{{ pipe_ctx.total_regras|pluralize }} em {{ pipe_ctx.estagios|length }} estágio{{ pipe_ctx.estagios|length|pluralize }}</span>
+      </div>
+    </summary>
 
+    <div class="pipeline-accordion-body">
     {% for grupo in pipe_ctx.estagios %}
       {% if grupo.regras %}
         <div class="card" style="margin-bottom: var(--sp-3); padding: 0; overflow: hidden;">
@@ -146,7 +151,8 @@
         </div>
       </div>
     {% endfor %}
-  </div>
+    </div>
+  </details>
 {% empty %}
   <div class="card">
     <div class="card-body" style="text-align: center; padding: var(--sp-8);">
@@ -169,6 +175,44 @@
     background: var(--color-surface);
     border: 1px dashed var(--color-border);
     border-radius: var(--radius-md);
+  }
+
+  /* Accordion de pipelines */
+  .pipeline-accordion { border: 0; }
+  .pipeline-accordion > summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--sp-2) var(--sp-1);
+    margin-bottom: var(--sp-3);
+    user-select: none;
+  }
+  .pipeline-accordion > summary::-webkit-details-marker { display: none; }
+  .pipeline-accordion > summary:hover { opacity: 0.85; }
+  .pipeline-accordion-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: var(--fw-semibold);
+  }
+  .pipeline-accordion-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .pipeline-accordion-chevron {
+    color: var(--color-text-muted);
+    font-size: 14px;
+    transition: transform 0.15s ease;
+  }
+  .pipeline-accordion[open] > summary .pipeline-accordion-chevron {
+    transform: rotate(90deg);
+  }
+  .pipeline-accordion-body {
+    padding-top: var(--sp-1);
   }
 </style>
 {% endblock %}

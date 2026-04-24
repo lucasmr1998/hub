@@ -83,7 +83,7 @@
   <div class="modal modal-md">
     <div class="modal-header">
       <h3 id="modalTitle" class="modal-title">Nova campanha</h3>
-      <button type="button" class="modal-close" onclick="fecharModal()"><i class="bi bi-x-lg"></i></button>
+      <button type="button" class="modal-close" onclick="fecharModalCampanha()"><i class="bi bi-x-lg"></i></button>
     </div>
     <div class="modal-body">
       <form id="formCampanha">
@@ -150,7 +150,7 @@
       </form>
     </div>
     <div class="modal-footer">
-      <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModal()">Cancelar</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalCampanha()">Cancelar</button>
       <button type="button" class="btn btn-primary btn-sm" id="btnSalvar" onclick="salvarCampanha()"><i class="bi bi-save"></i> Salvar</button>
     </div>
   </div>
@@ -214,7 +214,7 @@
     abrirModal('modalCampanha');
   }
 
-  function fecharModal() { fecharModal('modalCampanha'); }
+  function fecharModalCampanha() { fecharModal('modalCampanha'); }
 
   function getCsrfToken() {
     const i = document.querySelector('[name=csrfmiddlewaretoken]');

@@ -136,9 +136,24 @@
           </div>
         </div>
       </div>
-      <div class="field" style="margin-top: var(--sp-3);">
-        <label class="field-label" for="f-vencimento">Vencimento</label>
-        <div class="field-input-wrap"><input id="f-vencimento" type="datetime-local" class="field-input"></div>
+      <div class="form-row" style="margin-top: var(--sp-3);">
+        <div class="field">
+          <label class="field-label" for="f-responsavel">Responsavel</label>
+          <div class="field-input-wrap">
+            <select id="f-responsavel" class="field-input">
+              <option value="{{ request.user.pk }}">Eu mesmo ({{ request.user.get_full_name|default:request.user.username }})</option>
+              {% for v in vendedores %}
+                {% if v.id != request.user.pk %}
+                <option value="{{ v.id }}">{{ v.nome }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="f-vencimento">Vencimento</label>
+          <div class="field-input-wrap"><input id="f-vencimento" type="datetime-local" class="field-input"></div>
+        </div>
       </div>
       <div class="field" style="margin-top: var(--sp-3);">
         <label class="field-label" for="f-descricao">Descricao (opcional)</label>
@@ -311,6 +326,7 @@ async function salvarTarefa() {
         titulo,
         tipo: document.getElementById('f-tipo').value,
         prioridade: document.getElementById('f-prioridade').value,
+        responsavel_id: document.getElementById('f-responsavel').value,
         data_vencimento: document.getElementById('f-vencimento').value || null,
         descricao: document.getElementById('f-descricao').value,
       }),
