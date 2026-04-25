@@ -1,30 +1,47 @@
 """
 Campos criptografados compatíveis com Django 5.2.
 Usa Fernet (AES-128-CBC) via biblioteca cryptography.
+
+Chave de criptografia derivada de `settings.SECRET_KEY` (estável entre
+processos e ambientes — desde que SECRET_KEY nao mude). Permite override
+via env var FIELD_ENCRYPTION_KEY pra cenarios de rotacao.
 """
 import base64
+import hashlib
+import logging
 import os
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
+from django.conf import settings
 from django.db import models
 
+logger = logging.getLogger(__name__)
 
-def _get_key():
-    """Retorna a chave Fernet. Gera uma se não existir no env."""
-    key = os.environ.get('FIELD_ENCRYPTION_KEY', '')
-    if not key:
-        key = Fernet.generate_key().decode()
-        os.environ['FIELD_ENCRYPTION_KEY'] = key
-    if isinstance(key, str):
-        key = key.encode()
-    # Fernet exige 32 bytes base64-encoded. Se a chave não tiver formato correto, derivar.
+
+def _get_key() -> bytes:
+    """
+    Retorna a chave Fernet (32 bytes urlsafe-base64) derivada de uma fonte
+    estavel. Ordem de precedencia:
+      1. FIELD_ENCRYPTION_KEY no env (usada como esta se for Fernet valida,
+         senao derivada via SHA256). Util pra rotacao.
+      2. settings.SECRET_KEY (default — sempre disponivel em qualquer processo).
+
+    NUNCA gera chave aleatoria — isso quebrava decrypt entre processos
+    porque a chave era perdida no fim de cada processo Python.
+    """
+    raw = os.environ.get('FIELD_ENCRYPTION_KEY') or settings.SECRET_KEY
+    if isinstance(raw, str):
+        raw = raw.encode()
+
+    # Se ja vier no formato Fernet (32 bytes urlsafe-base64), usa direto.
     try:
-        Fernet(key)
-        return key
+        Fernet(raw)
+        return raw
     except Exception:
-        import hashlib
-        derived = base64.urlsafe_b64encode(hashlib.sha256(key).digest())
-        return derived
+        pass
+
+    # Senao, deriva via SHA256 -> 32 bytes -> urlsafe-base64.
+    return base64.urlsafe_b64encode(hashlib.sha256(raw).digest())
 
 
 class EncryptedCharField(models.CharField):
@@ -42,8 +59,19 @@ class EncryptedCharField(models.CharField):
         try:
             f = Fernet(_get_key())
             return f.decrypt(value.encode()).decode()
-        except Exception:
-            return value  # Retorna sem decriptar se falhar (dados antigos não criptografados)
+        except InvalidToken:
+            # Valor no banco nao foi encriptado com a chave atual.
+            # Pode ser dado legado (texto puro pre-criptografia) ou chave
+            # rotacionada. Loga e retorna None pra evitar mandar lixo
+            # encriptado pra APIs externas, o que confunde o diagnostico.
+            logger.error(
+                'EncryptedCharField: falha de decrypt em %s.%s. '
+                'Provavel: SECRET_KEY mudou ou dado salvo com chave antiga. '
+                'Retornando None pra forcar reentrada do segredo.',
+                getattr(getattr(self, 'model', None), '_meta', None) and self.model._meta.label or '?',
+                getattr(self, 'name', '?'),
+            )
+            return None
 
 
 class EncryptedTextField(models.TextField):
@@ -61,5 +89,11 @@ class EncryptedTextField(models.TextField):
         try:
             f = Fernet(_get_key())
             return f.decrypt(value.encode()).decode()
-        except Exception:
-            return value
+        except InvalidToken:
+            logger.error(
+                'EncryptedTextField: falha de decrypt em %s.%s. '
+                'Provavel: SECRET_KEY mudou ou dado salvo com chave antiga.',
+                getattr(getattr(self, 'model', None), '_meta', None) and self.model._meta.label or '?',
+                getattr(self, 'name', '?'),
+            )
+            return None
