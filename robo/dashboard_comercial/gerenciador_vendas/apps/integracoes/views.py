@@ -602,6 +602,43 @@ def integracao_detalhe(request, pk):
              'total': len(cache.get('portadores') or []),
              'destino': 'cache (configuracoes_extras)'},
         ]
+    elif integ.tipo == 'hubsoft':
+        from apps.comercial.crm.models import ProdutoServico, OpcaoVencimentoCRM
+        catalogos = [
+            {'chave': 'servicos', 'label': 'Planos / Servicos', 'icon': 'bi-box-seam',
+             'total': ProdutoServico.objects.filter(tenant=integ.tenant, categoria='plano').count(),
+             'destino': 'crm.ProdutoServico'},
+            {'chave': 'vencimentos', 'label': 'Opcoes de vencimento', 'icon': 'bi-calendar',
+             'total': OpcaoVencimentoCRM.objects.filter(tenant=integ.tenant).count(),
+             'destino': 'crm.OpcaoVencimentoCRM'},
+            {'chave': 'vendedores', 'label': 'Vendedores', 'icon': 'bi-person-badge',
+             'total': len(cache.get('vendedores') or []),
+             'destino': 'cache (configuracoes_extras)'},
+            {'chave': 'origens_cliente', 'label': 'Origens de cliente', 'icon': 'bi-tag',
+             'total': len(cache.get('origens_cliente') or []),
+             'destino': 'cache (configuracoes_extras)'},
+            {'chave': 'origens_contato', 'label': 'Origens de contato', 'icon': 'bi-chat-left',
+             'total': len(cache.get('origens_contato') or []),
+             'destino': 'cache (configuracoes_extras)'},
+            {'chave': 'meios_pagamento', 'label': 'Meios de pagamento', 'icon': 'bi-credit-card',
+             'total': len(cache.get('meios_pagamento') or []),
+             'destino': 'cache (configuracoes_extras)'},
+            {'chave': 'grupos_cliente', 'label': 'Grupos de cliente', 'icon': 'bi-people',
+             'total': len(cache.get('grupos_cliente') or []),
+             'destino': 'cache (configuracoes_extras)'},
+            {'chave': 'motivos_contratacao', 'label': 'Motivos de contratacao', 'icon': 'bi-question-circle',
+             'total': len(cache.get('motivos_contratacao') or []),
+             'destino': 'cache (configuracoes_extras)'},
+            {'chave': 'tipos_servico', 'label': 'Tipos de servico', 'icon': 'bi-list-ul',
+             'total': len(cache.get('tipos_servico') or []),
+             'destino': 'cache (configuracoes_extras)'},
+            {'chave': 'servico_status', 'label': 'Status de servico', 'icon': 'bi-toggle-on',
+             'total': len(cache.get('servico_status') or []),
+             'destino': 'cache (configuracoes_extras)'},
+            {'chave': 'servicos_tecnologia', 'label': 'Tecnologias de servico', 'icon': 'bi-broadcast',
+             'total': len(cache.get('servicos_tecnologia') or []),
+             'destino': 'cache (configuracoes_extras)'},
+        ]
 
     defaults_sgp = {
         # Fixos (1 valor)
@@ -623,6 +660,43 @@ def integracao_detalhe(request, pk):
         'id_origem_padrao': extras.get('id_origem_padrao'),
         'id_origem_servico_padrao': extras.get('id_origem_servico_padrao'),
     }
+
+    hubsoft_choices = {}
+    if integ.tipo == 'hubsoft':
+        from apps.comercial.crm.models import ProdutoServico, OpcaoVencimentoCRM
+        hubsoft_choices = {
+            'planos': [
+                {'id': int(p.id_externo), 'label': p.nome}
+                for p in ProdutoServico.objects.filter(
+                    tenant=integ.tenant, categoria='plano', ativo=True,
+                ).order_by('nome')
+                if p.id_externo and p.id_externo.isdigit()
+            ],
+            'vendedores': [
+                {'id': v.get('id'), 'label': v.get('name', '?')}
+                for v in (cache.get('vendedores') or [])
+                if v.get('id') is not None
+            ],
+            'vencimentos': [
+                {'id': int(v.id_externo), 'label': f'Dia {v.dia}'}
+                for v in OpcaoVencimentoCRM.objects.filter(
+                    tenant=integ.tenant, ativo=True,
+                ).order_by('dia')
+                if v.id_externo and v.id_externo.isdigit()
+            ],
+            'origens_cliente': [
+                {'id': o.get('id_origem_cliente'), 'label': o.get('descricao', '?')}
+                for o in (cache.get('origens_cliente') or [])
+                if o.get('id_origem_cliente') is not None
+            ],
+            # HubSoft expoe origens de contato (canal); o campo na API de prospecto
+            # eh id_origem_servico — usamos a mesma lista cacheada como melhor proxy.
+            'origens_servico': [
+                {'id': o.get('id_origem_contato'), 'label': o.get('descricao', '?')}
+                for o in (cache.get('origens_contato') or [])
+                if o.get('id_origem_contato') is not None
+            ],
+        }
 
     sgp_choices = {}
     if integ.tipo == 'sgp':
@@ -661,7 +735,10 @@ def integracao_detalhe(request, pk):
             'sincronizar_vendedores', 'sincronizar_pops', 'sincronizar_portadores',
         )
     elif integ.tipo == 'hubsoft':
-        features_relevantes = ('enviar_lead', 'sincronizar_cliente', 'sincronizar_servicos')
+        features_relevantes = (
+            'enviar_lead', 'sincronizar_cliente', 'sincronizar_servicos',
+            'sincronizar_planos', 'sincronizar_vencimentos', 'sincronizar_vendedores',
+        )
     else:
         features_relevantes = tuple(IntegracaoAPI.SYNC_FEATURES.keys())
 
@@ -692,6 +769,8 @@ def integracao_detalhe(request, pk):
         'catalogos': catalogos,
         'defaults_sgp': defaults_sgp,
         'sgp_choices': sgp_choices,
+        'defaults_hubsoft': defaults_hubsoft,
+        'hubsoft_choices': hubsoft_choices,
         'modos_sync_view': modos_sync_view,
         'modos_disponiveis': IntegracaoAPI.SYNC_MODOS,
         'logs_recentes': logs_recentes,
@@ -716,10 +795,14 @@ def api_integracao_defaults(request, pk):
 
     extras = dict(integ.configuracoes_extras or {})
 
-    # Fixos: 1 inteiro
+    # Fixos: 1 inteiro (chaves SGP + HubSoft)
     chaves_int = (
+        # SGP
         'vendedor_id_padrao', 'portador_id_padrao',
         'precadastro_ativar_padrao', 'pop_id_padrao',
+        # HubSoft (vendedor_id_padrao ja entra acima)
+        'plano_id_padrao', 'dia_vencimento_id_padrao',
+        'id_origem_padrao', 'id_origem_servico_padrao',
     )
     for chave in chaves_int:
         if chave in data:
@@ -763,33 +846,60 @@ def api_integracao_sincronizar_catalogo(request, pk):
     except IntegracaoAPI.DoesNotExist:
         return JsonResponse({'error': 'Integracao nao encontrada'}, status=404)
 
-    if integ.tipo != 'sgp':
-        return JsonResponse({'error': 'Sincronizacao de catalogo so suportada em integracoes SGP por enquanto.'}, status=400)
+    if integ.tipo not in ('sgp', 'hubsoft'):
+        return JsonResponse({'error': 'Sincronizacao de catalogo so suportada em SGP e HubSoft.'}, status=400)
 
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
         data = {}
     chave = data.get('chave') or 'todos'
-    permitidos = ('planos', 'vencimentos', 'vendedores', 'pops', 'portadores', 'todos')
+
+    if integ.tipo == 'sgp':
+        permitidos = ('planos', 'vencimentos', 'vendedores', 'pops', 'portadores', 'todos')
+        if chave not in permitidos:
+            return JsonResponse({'error': f'chave invalida. Permitidos: {permitidos}'}, status=400)
+
+        from apps.integracoes.services.sgp import SGPService, SGPServiceError
+        svc = SGPService(integ)
+        resumos = {}
+        try:
+            if chave in ('planos', 'todos'):
+                resumos['planos'] = svc.sincronizar_planos()
+            if chave in ('vencimentos', 'todos'):
+                resumos['vencimentos'] = svc.sincronizar_vencimentos()
+            if chave in ('vendedores', 'todos'):
+                resumos['vendedores'] = svc.sincronizar_vendedores()
+            if chave in ('pops', 'todos'):
+                resumos['pops'] = svc.sincronizar_pops()
+            if chave in ('portadores', 'todos'):
+                resumos['portadores'] = svc.sincronizar_portadores()
+        except SGPServiceError as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=502)
+        return JsonResponse({'success': True, 'resumos': resumos})
+
+    # HubSoft
+    from apps.integracoes.services.hubsoft import HubsoftService, HubsoftServiceError
+    permitidos = (
+        'todos', 'servicos', 'vencimentos',
+        'vendedores', 'origens_cliente', 'origens_contato',
+        'meios_pagamento', 'grupos_cliente', 'motivos_contratacao',
+        'tipos_servico', 'servico_status', 'servicos_tecnologia',
+    )
     if chave not in permitidos:
         return JsonResponse({'error': f'chave invalida. Permitidos: {permitidos}'}, status=400)
 
-    from apps.integracoes.services.sgp import SGPService, SGPServiceError
-    svc = SGPService(integ)
-    resumos = {}
+    svc = HubsoftService(integ)
     try:
-        if chave in ('planos', 'todos'):
-            resumos['planos'] = svc.sincronizar_planos()
-        if chave in ('vencimentos', 'todos'):
-            resumos['vencimentos'] = svc.sincronizar_vencimentos()
-        if chave in ('vendedores', 'todos'):
-            resumos['vendedores'] = svc.sincronizar_vendedores()
-        if chave in ('pops', 'todos'):
-            resumos['pops'] = svc.sincronizar_pops()
-        if chave in ('portadores', 'todos'):
-            resumos['portadores'] = svc.sincronizar_portadores()
-    except SGPServiceError as e:
+        if chave == 'todos':
+            resultado = svc.sincronizar_configuracoes()
+            resumos = {k: v for k, v in resultado.items() if not k.startswith('_')}
+        elif chave == 'servicos':
+            resumos = {'servicos': svc.sincronizar_servicos_catalogo()}
+        elif chave == 'vencimentos':
+            resumos = {'vencimentos': svc.sincronizar_vencimentos()}
+        else:
+            resumos = {chave: svc.sincronizar_catalogo_cacheado(chave)}
+    except HubsoftServiceError as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=502)
-
     return JsonResponse({'success': True, 'resumos': resumos})

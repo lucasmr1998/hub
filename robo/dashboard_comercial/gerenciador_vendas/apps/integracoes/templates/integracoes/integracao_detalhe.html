@@ -211,7 +211,89 @@
     </div>
   </div>
 </div>
+{% endif %}
 
+{% if integracao.tipo == 'hubsoft' %}
+{# Configuracao de cadastro automatico — HubSoft #}
+<div class="card" style="margin-bottom: var(--sp-4); padding: 0; overflow: hidden;">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-sliders" style="color: var(--color-primary);"></i> Configuracao de cadastro automatico</h3>
+    <button class="btn btn-primary btn-sm" onclick="salvarDefaultsHubsoft()"><i class="bi bi-check-lg"></i> Salvar configuracao</button>
+  </div>
+  <div style="padding: var(--sp-4);">
+    <p style="margin: 0 0 var(--sp-4); font-size: var(--fs-xs); color: var(--color-text-muted);">
+      Define os defaults usados quando o lead chega sem o campo (ex: WhatsApp). Sincronize os catalogos antes pra popular as listas.
+    </p>
+
+    <div class="form-row-2">
+      <div class="field">
+        <label class="field-label">Plano padrao</label>
+        <div class="field-input-wrap">
+          <select class="field-input" id="hs-plano">
+            <option value="">— Nao definido —</option>
+            {% for c in hubsoft_choices.planos %}
+              <option value="{{ c.id }}" {% if defaults_hubsoft.plano_id_padrao == c.id %}selected{% endif %}>{{ c.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Vendedor padrao</label>
+        <div class="field-input-wrap">
+          <select class="field-input" id="hs-vendedor">
+            <option value="">— Nao definido —</option>
+            {% for c in hubsoft_choices.vendedores %}
+              <option value="{{ c.id }}" {% if defaults_hubsoft.vendedor_id_padrao == c.id %}selected{% endif %}>{{ c.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row-2" style="margin-top: var(--sp-3);">
+      <div class="field">
+        <label class="field-label">Dia de vencimento padrao</label>
+        <div class="field-input-wrap">
+          <select class="field-input" id="hs-vencimento">
+            <option value="">— Nao definido —</option>
+            {% for c in hubsoft_choices.vencimentos %}
+              <option value="{{ c.id }}" {% if defaults_hubsoft.dia_vencimento_id_padrao == c.id %}selected{% endif %}>{{ c.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Origem do cliente padrao</label>
+        <div class="field-input-wrap">
+          <select class="field-input" id="hs-origem">
+            <option value="">— Nao definido —</option>
+            {% for c in hubsoft_choices.origens_cliente %}
+              <option value="{{ c.id }}" {% if defaults_hubsoft.id_origem_padrao == c.id %}selected{% endif %}>{{ c.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row-2" style="margin-top: var(--sp-3);">
+      <div class="field">
+        <label class="field-label">Origem de servico padrao</label>
+        <div class="field-input-wrap">
+          <select class="field-input" id="hs-origem-servico">
+            <option value="">— Nao definido —</option>
+            {% for c in hubsoft_choices.origens_servico %}
+              <option value="{{ c.id }}" {% if defaults_hubsoft.id_origem_servico_padrao == c.id %}selected{% endif %}>{{ c.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div></div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if catalogos %}
 {# Catalogos #}
 <div class="card" style="margin-bottom: var(--sp-4); padding: 0; overflow: hidden;">
   <div class="card-header">
@@ -413,8 +495,28 @@ async function salvarDefaults() {
   } catch (e) { toast('Erro', String(e), 'danger'); }
 }
 
+async function salvarDefaultsHubsoft() {
+  const payload = {
+    plano_id_padrao: document.getElementById('hs-plano').value || null,
+    vendedor_id_padrao: document.getElementById('hs-vendedor').value || null,
+    dia_vencimento_id_padrao: document.getElementById('hs-vencimento').value || null,
+    id_origem_padrao: document.getElementById('hs-origem').value || null,
+    id_origem_servico_padrao: document.getElementById('hs-origem-servico').value || null,
+  };
+  try {
+    const r = await fetch(URL_DEFAULTS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (!r.ok) { toast('Erro', d.error || 'Falha ao salvar.', 'danger'); return; }
+    toast('Pronto', d.message, 'success');
+  } catch (e) { toast('Erro', String(e), 'danger'); }
+}
+
 async function sincronizarCatalogo(chave) {
-  toast('Sincronizando...', `Puxando ${chave} do SGP.`, 'info');
+  toast('Sincronizando...', `Puxando ${chave} do ERP.`, 'info');
   try {
     const r = await fetch(URL_SINC_CAT, {
       method: 'POST',

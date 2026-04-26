@@ -36,9 +36,9 @@ Análise da Postman collection oficial (`Hubsoft API.postman_collection.json` na
 - [x] Generalizar `MATRIX_EMPRESA` hardcoded em `contrato_service.buscar_id_contrato` — agora aceita `integracao=...` e lê `configuracoes_extras['matrix']` (`url`, `empresa`), com fallback histórico pra Megalink.
 - [x] Validado: `manage.py check` limpo, suite `tests/test_models_integracoes.py` + `tests/test_services_sgp.py` passa (43 testes)
 
-### Bloco H2 — Sincronizar catálogos de configuração
+### Bloco H2 — Sincronizar catálogos de configuração ✅
 
-**Backend concluído (26/04/2026).** UI pendente.
+**Backend + UI concluídos em 26/04/2026.**
 
 - [x] `sincronizar_servicos_catalogo` (planos) — `GET /configuracao/servico` → upsert em `ProdutoServico`. Preço fica em 0 e é preservado em re-syncs (HubSoft não traz valor em `/configuracao/servico`, só em `/cliente.servicos[].valor`).
 - [x] `sincronizar_vencimentos` — `GET /configuracao/vencimento` → upsert em `OpcaoVencimentoCRM`
@@ -53,7 +53,7 @@ Análise da Postman collection oficial (`Hubsoft API.postman_collection.json` na
 - [x] `sincronizar_catalogo_cacheado('servicos_tecnologia')` — `GET /configuracao/servico_tecnologia` → cache
 - [x] Wrapper `sincronizar_configuracoes(dry_run=False)` dispara todos em sequência, com captura de erro por catálogo (um falhar não derruba os outros)
 - [x] Management command `sincronizar_catalogo_hubsoft --categoria=todos|<chave> --integracao-id --tenant --dry-run`
-- [ ] UI no painel `/configuracoes/integracoes/<pk>/`: botão "sincronizar catálogos" + selects populados por cache (substituem o JSON manual). **Próximo sub-passo do H2.**
+- [x] UI no painel `/configuracoes/integracoes/<pk>/`: card "Configuracao de cadastro automatico" com 5 selects (plano, vendedor, dia de vencimento, origem cliente, origem servico) populados pelo cache HubSoft + card "Catalogos sincronizados" com 11 linhas e botão "Sincronizar tudo". APIs `api_integracao_defaults` e `api_integracao_sincronizar_catalogo` aceitam HubSoft (antes só SGP). Features de sync hubsoft expandidas para incluir `sincronizar_planos/vencimentos/vendedores`.
 
 ### Bloco H3 — Financeiro
 
