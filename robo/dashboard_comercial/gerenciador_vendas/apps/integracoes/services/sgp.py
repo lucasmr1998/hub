@@ -39,6 +39,7 @@ class SGPService:
     ENDPOINT_PORTADORES = '/api/ura/portador/'
     ENDPOINT_CONSULTA_CLIENTE = '/api/ura/consultacliente/'
     ENDPOINT_PRECADASTRO_PF = '/api/precadastro/F'
+    ENDPOINT_TITULOS = '/api/ura/titulos/'
 
     def __init__(self, integracao: IntegracaoAPI):
         if integracao.tipo != 'sgp':
@@ -433,6 +434,72 @@ class SGPService:
     @staticmethod
     def _somente_numeros(valor: str) -> str:
         return ''.join(c for c in (valor or '') if c.isdigit())
+
+    # ------------------------------------------------------------------
+    # Titulos / faturas (situacao financeira do cliente)
+    # ------------------------------------------------------------------
+
+    def listar_titulos(
+        self,
+        cpf_cnpj: str = None,
+        *,
+        cliente_id: int = None,
+        contrato_id: int = None,
+        status: str = None,
+        data_vencimento_inicio: str = None,
+        data_vencimento_fim: str = None,
+        data_pagamento_inicio: str = None,
+        data_pagamento_fim: str = None,
+        lead=None,
+    ) -> list:
+        """
+        Lista titulos (faturas) do cliente no SGP.
+
+        Identificacao do cliente: passar `cpf_cnpj` OU `cliente_id` (id_sgp).
+        Pelo menos um eh obrigatorio.
+
+        Filtros opcionais:
+          - status: 'abertos' | 'pagos' | 'cancelados'
+          - data_vencimento_inicio/fim: 'YYYY-MM-DD'
+          - data_pagamento_inicio/fim: 'YYYY-MM-DD'
+          - contrato_id: filtra por contrato especifico
+
+        Retorna lista de titulos com valor, vencimento, data_pagamento,
+        codigo_barras, pix, etc. Lanca SGPServiceError em falha HTTP.
+        """
+        if not cpf_cnpj and not cliente_id:
+            raise SGPServiceError(
+                'listar_titulos: informe cpf_cnpj OU cliente_id.'
+            )
+
+        payload = {}
+        if cpf_cnpj:
+            payload['cpfcnpj'] = self._somente_numeros(cpf_cnpj)
+        if cliente_id:
+            payload['cliente'] = int(cliente_id)
+        if contrato_id:
+            payload['contrato'] = int(contrato_id)
+        if status:
+            payload['status'] = status
+        if data_vencimento_inicio:
+            payload['data_vencimento_inicio'] = data_vencimento_inicio
+        if data_vencimento_fim:
+            payload['data_vencimento_fim'] = data_vencimento_fim
+        if data_pagamento_inicio:
+            payload['data_pagamento_inicio'] = data_pagamento_inicio
+        if data_pagamento_fim:
+            payload['data_pagamento_fim'] = data_pagamento_fim
+
+        resposta = self._post(self.ENDPOINT_TITULOS, payload, lead=lead)
+
+        # SGP costuma retornar lista direto OU dict {titulos: [...]}
+        if isinstance(resposta, list):
+            return resposta
+        if isinstance(resposta, dict):
+            return resposta.get('titulos') or resposta.get('list') or []
+        raise SGPServiceError(
+            f"Shape inesperado em {self.ENDPOINT_TITULOS}: {resposta}"
+        )
 
     # ------------------------------------------------------------------
     # Cadastro de prospecto (pessoa fisica)
