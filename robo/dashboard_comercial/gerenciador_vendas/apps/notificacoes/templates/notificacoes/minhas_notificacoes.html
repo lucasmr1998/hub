@@ -27,7 +27,7 @@
 {% if notificacoes %}
   <div class="notif-list">
     {% for n in notificacoes %}
-      <div class="notif-item{% if not n.lida %} notif-item-unread{% endif %}" data-id="{{ n.id }}">
+      <div class="notif-item{% if not n.lida_para_usuario %} notif-item-unread{% endif %}" data-id="{{ n.id }}">
         <div class="notif-icon notif-icon-{{ n.prioridade }}">
           {% if n.prioridade == 'urgente' %}<i class="bi bi-exclamation-triangle-fill"></i>
           {% elif n.prioridade == 'alta' %}<i class="bi bi-exclamation-circle-fill"></i>
@@ -42,13 +42,13 @@
           <p class="notif-msg">{{ n.mensagem|truncatechars:280 }}</p>
           <div class="notif-meta">
             <span class="notif-tipo">{{ n.tipo.nome }}</span>
-            {% if not n.lida %}<span class="notif-badge-unread">Nova</span>{% endif %}
+            {% if not n.lida_para_usuario %}<span class="notif-badge-unread">Nova</span>{% endif %}
             {% if n.url_acao %}
               <a href="{{ n.url_acao }}" class="notif-link" onclick="marcarLida({{ n.id }})">Ver detalhes <i class="bi bi-arrow-right"></i></a>
             {% endif %}
           </div>
         </div>
-        {% if not n.lida %}
+        {% if not n.lida_para_usuario %}
           <button class="notif-mark" title="Marcar como lida" onclick="marcarLida({{ n.id }}, true)"><i class="bi bi-check-lg"></i></button>
         {% endif %}
       </div>

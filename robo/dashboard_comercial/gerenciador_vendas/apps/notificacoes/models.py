@@ -309,6 +309,47 @@ class Notificacao(TenantMixin):
     def __str__(self):
         return f"{self.tipo.nome} - {self.destinatario or self.destinatario_email}"
 
+    @property
+    def is_broadcast(self):
+        """True quando a notif e broadcast (todos os usuarios do tenant veem)."""
+        return self.destinatario_id is None
+
+
+class NotificacaoLeituraBroadcast(models.Model):
+    """
+    Track de leitura de notificacoes broadcast (destinatario=NULL).
+
+    Notificacoes pessoais usam Notificacao.lida direto. Broadcasts nao tem
+    "uma" leitura — cada user que ve precisa ter seu proprio registro.
+    """
+    notificacao = models.ForeignKey(
+        Notificacao,
+        on_delete=models.CASCADE,
+        related_name='leituras_broadcast',
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='leituras_notif_broadcast',
+    )
+    data_leitura = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = 'Leitura de notificacao broadcast'
+        verbose_name_plural = 'Leituras de notificacao broadcast'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['notificacao', 'user'],
+                name='unique_leitura_broadcast_por_user',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['user', 'notificacao']),
+        ]
+
+    def __str__(self):
+        return f'{self.user} leu broadcast #{self.notificacao_id}'
+
     def marcar_lida(self):
         if not self.lida:
             self.lida = True

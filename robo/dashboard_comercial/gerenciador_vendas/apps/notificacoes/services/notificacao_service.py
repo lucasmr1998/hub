@@ -1,10 +1,11 @@
 import logging
 
-from django.contrib.auth.models import User
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.notificacoes.models import (
     Notificacao,
+    NotificacaoLeituraBroadcast,
     TipoNotificacao,
     CanalNotificacao,
 )
@@ -123,32 +124,74 @@ def notificar_usuarios(
     return notificacoes
 
 
+def notificacoes_visiveis(tenant, user):
+    """
+    Queryset de notificacoes que o user pode ver:
+      - Pessoais: destinatario=user
+      - Broadcast: destinatario=NULL e do mesmo tenant
+    """
+    return Notificacao.objects.filter(tenant=tenant).filter(
+        Q(destinatario=user) | Q(destinatario__isnull=True)
+    )
+
+
+def _ids_broadcasts_lidos(tenant, user):
+    """Set de IDs de broadcasts que o user ja leu (via NotificacaoLeituraBroadcast)."""
+    return set(
+        NotificacaoLeituraBroadcast.objects.filter(
+            user=user,
+            notificacao__tenant=tenant,
+            notificacao__destinatario__isnull=True,
+        ).values_list('notificacao_id', flat=True)
+    )
+
+
 def marcar_lida(notificacao_id, user):
-    """Marca uma notificação como lida."""
-    try:
-        notificacao = Notificacao.objects.get(pk=notificacao_id, destinatario=user)
-        notificacao.marcar_lida()
-        return True
-    except Notificacao.DoesNotExist:
+    """Marca uma notificacao como lida.
+
+    - Pessoal (destinatario=user): seta Notificacao.lida=True
+    - Broadcast (destinatario=NULL): cria NotificacaoLeituraBroadcast (idempotente)
+    - Outros casos (destinada a outro user): retorna False
+    """
+    notif = Notificacao.objects.filter(pk=notificacao_id).first()
+    if not notif:
         return False
+    if notif.is_broadcast:
+        NotificacaoLeituraBroadcast.objects.get_or_create(notificacao=notif, user=user)
+        return True
+    if notif.destinatario_id == user.pk:
+        notif.marcar_lida()
+        return True
+    return False
 
 
 def marcar_todas_lidas(tenant, user):
-    """Marca todas as notificações não lidas do usuário como lidas."""
-    return Notificacao.objects.filter(
-        tenant=tenant,
-        destinatario=user,
-        lida=False,
+    """Marca pessoais (lida=True) e broadcasts (cria registros) como lidas."""
+    qtd_pessoais = Notificacao.objects.filter(
+        tenant=tenant, destinatario=user, lida=False,
     ).update(lida=True, data_lida=timezone.now())
+
+    broadcasts = Notificacao.objects.filter(
+        tenant=tenant, destinatario__isnull=True,
+    ).exclude(leituras_broadcast__user=user)
+    novos = [
+        NotificacaoLeituraBroadcast(notificacao=n, user=user)
+        for n in broadcasts
+    ]
+    if novos:
+        NotificacaoLeituraBroadcast.objects.bulk_create(novos, ignore_conflicts=True)
+    return qtd_pessoais + len(novos)
 
 
 def contar_nao_lidas(tenant, user):
-    """Conta notificações não lidas do usuário."""
-    return Notificacao.objects.filter(
-        tenant=tenant,
-        destinatario=user,
-        lida=False,
+    """Conta pessoais nao-lidas + broadcasts nao-lidas pelo user."""
+    pessoais = Notificacao.objects.filter(
+        tenant=tenant, destinatario=user, lida=False,
     ).count()
+    broadcasts = Notificacao.objects.filter(
+        tenant=tenant, destinatario__isnull=True,
+    ).exclude(leituras_broadcast__user=user).count()
+    return pessoais + broadcasts
 
 
 def _garantir_canal_sistema(tenant):

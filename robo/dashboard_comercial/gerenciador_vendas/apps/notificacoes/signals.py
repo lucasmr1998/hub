@@ -7,6 +7,27 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================================
+# SEED AUTOMATICO DE TIPOS+CANAIS POR TENANT
+# Garante que todo tenant novo ja nasce com os tipos canonicos disponiveis.
+# ============================================================================
+
+@receiver(post_save, sender='sistema.Tenant')
+def seedar_tipos_canais_tenant(sender, instance, created, **kwargs):
+    """Quando um Tenant eh criado, replica todos os tipos/canais padrao."""
+    if not created:
+        return
+    try:
+        from apps.notificacoes.seeds import seed_tenant
+        resumo = seed_tenant(instance)
+        logger.info(
+            'Tenant %s seedado: %d tipos + %d canais de notificacao',
+            instance.slug, resumo['tipos_criados'], resumo['canais_criados'],
+        )
+    except Exception as exc:
+        logger.exception('Erro seedando tipos/canais para tenant %s: %s', instance.slug, exc)
+
+
+# ============================================================================
 # LEAD NOVO
 # ============================================================================
 

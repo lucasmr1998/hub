@@ -34,22 +34,39 @@ def minhas_notificacoes_view(request):
     """Pagina que lista as notificacoes do usuario logado."""
     from django.core.paginator import Paginator
 
-    qs = Notificacao.objects.filter(
-        tenant=request.tenant,
-        destinatario=request.user,
-    ).select_related('tipo', 'canal').order_by('-data_criacao')
+    from apps.notificacoes.services import notificacoes_visiveis, _ids_broadcasts_lidos, contar_nao_lidas
+
+    qs = notificacoes_visiveis(request.tenant, request.user) \
+        .select_related('tipo', 'canal').order_by('-data_criacao')
+
+    # IDs de broadcasts ja lidos pelo usuario (pra calcular "lida" no template)
+    broadcasts_lidos = _ids_broadcasts_lidos(request.tenant, request.user)
 
     filtro = request.GET.get('filtro', 'todas')
     if filtro == 'nao_lidas':
-        qs = qs.filter(lida=False)
+        from django.db.models import Q
+        qs = qs.filter(
+            Q(destinatario=request.user, lida=False)
+            | Q(destinatario__isnull=True) & ~Q(pk__in=broadcasts_lidos)
+        )
     elif filtro == 'lidas':
-        qs = qs.filter(lida=True)
+        from django.db.models import Q
+        qs = qs.filter(
+            Q(destinatario=request.user, lida=True)
+            | Q(destinatario__isnull=True, pk__in=broadcasts_lidos)
+        )
 
-    paginator = Paginator(qs, 25)
+    # Anota lida_para_usuario em cada notif
+    notifs = list(qs)
+    for n in notifs:
+        if n.is_broadcast:
+            n.lida_para_usuario = n.pk in broadcasts_lidos
+        else:
+            n.lida_para_usuario = n.lida
+
+    paginator = Paginator(notifs, 25)
     page_obj = paginator.get_page(request.GET.get('page'))
-    total_nao_lidas = Notificacao.objects.filter(
-        tenant=request.tenant, destinatario=request.user, lida=False
-    ).count()
+    total_nao_lidas = contar_nao_lidas(request.tenant, request.user)
 
     # Preserva filtro no link de paginacao
     query = f'filtro={filtro}' if filtro != 'todas' else ''

@@ -1,7 +1,7 @@
 # Modulo de Notificacoes — AuroraISP
 
-**Ultima atualizacao:** 11/04/2026
-**Status:** ✅ Implementado
+**Ultima atualizacao:** 26/04/2026
+**Status:** ✅ Implementado (com suporte a broadcast desde 04/26)
 **Localizacao:** `apps/notificacoes/`
 
 ---
@@ -45,7 +45,42 @@ Evento acontece (lead novo, conversa, ticket)
 
 ---
 
-## Banco de Dados (5 Models)
+## Notificacoes pessoais vs broadcast
+
+Cada `Notificacao` pode ser:
+
+- **Pessoal** (`destinatario` = User): so aquele user ve. Estado de leitura no proprio campo `Notificacao.lida`.
+- **Broadcast** (`destinatario` = NULL): **todos os users do tenant veem**. Estado de leitura por usuario fica em `NotificacaoLeituraBroadcast` (cada user que marca como lida cria 1 registro).
+
+Use broadcast pra avisos que valem pra equipe inteira (ex: "lead novo entrou", regras de automacao tipo "notificar equipe", manutencoes do sistema).
+
+```python
+from apps.notificacoes.services import criar_notificacao
+# Pessoal
+criar_notificacao(tenant, 'lead_novo', 'Titulo', 'Msg', destinatario=user)
+# Broadcast (equipe inteira)
+criar_notificacao(tenant, 'sistema_geral', 'Titulo', 'Msg', destinatario=None)
+```
+
+---
+
+## Seed de tipos por tenant
+
+**Todos os tenants ganham automaticamente os 17 tipos canonicos** (lead_novo, venda_aprovada, ticket_criado, etc) + 4 canais (sistema, email, whatsapp, webhook) via signal `post_save` em `Tenant` (em `apps/notificacoes/signals.py`).
+
+Lista canonica em `apps/notificacoes/seeds.py::TIPOS_PADRAO` e `CANAIS_PADRAO`.
+
+Pra re-aplicar manualmente (ex: depois de adicionar tipo novo na lista):
+```bash
+python manage.py seedar_notificacoes              # todos os tenants
+python manage.py seedar_notificacoes --tenant gigamax
+```
+
+Idempotente: nunca duplica tipos/canais existentes, nao sobrescreve customizacoes do tenant.
+
+---
+
+## Banco de Dados (6 Models)
 
 ### TipoNotificacao
 
@@ -163,11 +198,12 @@ Arquivo: `services/notificacao_service.py`
 
 | Funcao | Descricao |
 |--------|-----------|
-| `criar_notificacao(tenant, codigo_tipo, titulo, mensagem, ...)` | Cria notificacao in-app |
-| `notificar_usuarios(tenant, codigo_tipo, titulo, mensagem, usuarios, ...)` | Cria para multiplos usuarios |
-| `marcar_lida(notificacao_id, user)` | Marca uma como lida |
-| `marcar_todas_lidas(tenant, user)` | Marca todas como lidas |
-| `contar_nao_lidas(tenant, user)` | Contagem de nao lidas |
+| `criar_notificacao(tenant, codigo_tipo, titulo, mensagem, destinatario=None, ...)` | Cria notif. `destinatario=None` -> broadcast |
+| `notificar_usuarios(tenant, codigo_tipo, titulo, mensagem, usuarios, ...)` | Cria pessoais para multiplos usuarios |
+| `notificacoes_visiveis(tenant, user)` | Queryset de pessoais (do user) + broadcasts (do tenant) |
+| `marcar_lida(notificacao_id, user)` | Marca como lida (pessoal: seta `.lida`; broadcast: cria leitura) |
+| `marcar_todas_lidas(tenant, user)` | Marca pessoais + broadcasts como lidas pro user |
+| `contar_nao_lidas(tenant, user)` | Soma pessoais nao-lidas + broadcasts nao-lidas pelo user |
 
 **Uso em qualquer parte do sistema:**
 
@@ -298,3 +334,4 @@ Arquivo: `tests/test_models_notificacoes.py` �� 9 testes
 | 0001 | Criacao inicial (5 models) |
 | 0002 | unique_together com tenant (tipo, canal) |
 | 0003 | Adiciona lida, data_lida, url_acao, icone, resposta_externa. Remove campos n8n. Fix unique_together preferencia e template. Index destinatario+lida |
+| 0004 | NotificacaoLeituraBroadcast — track de leitura por user pra notif broadcast |

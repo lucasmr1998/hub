@@ -575,22 +575,27 @@ def _acao_atribuir_responsavel(regra, acao, contexto):
 
 
 def _acao_notificacao_sistema(regra, acao, contexto):
-    from apps.notificacoes.models import Notificacao, TipoNotificacao, CanalNotificacao
+    """
+    Cria notificacao broadcast (destinatario=NULL) — todos os usuarios do
+    tenant veem. Eh assim que automacoes de "notificar equipe" funcionam.
+
+    Sem destinatario, a Notificacao usa o suporte a broadcast do
+    apps.notificacoes (ver NotificacaoLeituraBroadcast).
+    """
+    from apps.notificacoes.services import criar_notificacao
 
     mensagem = _substituir_variaveis(acao.configuracao, contexto)
     titulo = getattr(acao, '_titulo', '') or f'Automacao: {regra.nome}'
     titulo = _substituir_variaveis(titulo, contexto)
 
-    tipo = TipoNotificacao.all_tenants.filter(tenant=regra.tenant, codigo='lead_novo').first()
-    canal = CanalNotificacao.all_tenants.filter(tenant=regra.tenant, codigo='sistema').first()
-
-    if tipo and canal:
-        Notificacao.all_tenants.create(
-            tenant=regra.tenant, tipo=tipo, canal=canal,
-            titulo=titulo, mensagem=mensagem, status='enviada',
-        )
-        return 'Notificacao criada'
-    return 'Tipo/canal de notificacao nao encontrado'
+    notif = criar_notificacao(
+        tenant=regra.tenant,
+        codigo_tipo='sistema_geral',
+        titulo=titulo,
+        mensagem=mensagem,
+        destinatario=None,  # broadcast — equipe inteira ve
+    )
+    return 'Notificacao broadcast criada' if notif else 'Tipo de notificacao nao encontrado pro tenant (rode seedar_notificacoes)'
 
 
 def _acao_criar_tarefa(regra, acao, contexto):
