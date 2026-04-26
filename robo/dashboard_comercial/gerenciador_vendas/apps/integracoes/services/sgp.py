@@ -40,6 +40,10 @@ class SGPService:
     ENDPOINT_CONSULTA_CLIENTE = '/api/ura/consultacliente/'
     ENDPOINT_PRECADASTRO_PF = '/api/precadastro/F'
     ENDPOINT_TITULOS = '/api/ura/titulos/'
+    ENDPOINT_VERIFICAR_ACESSO = '/api/ura/verificaacesso/'
+    ENDPOINT_FATURA_2VIA = '/api/ura/fatura2via/'
+    ENDPOINT_DOCUMENTO_TPL = '/api/suporte/cliente/{cliente_id}/documento/add/'
+    ENDPOINT_TERMO_ACEITE_TPL = '/api/contrato/termoaceite/{contrato_id}'
 
     def __init__(self, integracao: IntegracaoAPI):
         if integracao.tipo != 'sgp':
@@ -502,6 +506,95 @@ class SGPService:
         )
 
     # ------------------------------------------------------------------
+    # Operacional (acesso/conexao, 2via, documentos, contrato)
+    # ------------------------------------------------------------------
+
+    def verificar_acesso(self, *, cliente_id: int = None, contrato_id: int = None,
+                         cpf_cnpj: str = None, lead=None) -> dict:
+        """
+        Consulta status de conexao do cliente (online/offline, sinal, etc).
+
+        Aceita cliente_id, contrato_id ou cpf_cnpj — pelo menos um.
+        Retorna dict cru da resposta (status, ultima_atividade, etc).
+        """
+        if not any([cliente_id, contrato_id, cpf_cnpj]):
+            raise SGPServiceError(
+                'verificar_acesso: informe cliente_id, contrato_id ou cpf_cnpj.'
+            )
+        payload = {}
+        if cliente_id:
+            payload['cliente'] = int(cliente_id)
+        if contrato_id:
+            payload['contrato'] = int(contrato_id)
+        if cpf_cnpj:
+            payload['cpfcnpj'] = self._somente_numeros(cpf_cnpj)
+        resposta = self._post(self.ENDPOINT_VERIFICAR_ACESSO, payload, lead=lead)
+        if not isinstance(resposta, (dict, list)):
+            raise SGPServiceError(
+                f"Shape inesperado em {self.ENDPOINT_VERIFICAR_ACESSO}: {resposta}"
+            )
+        return resposta
+
+    def gerar_2via_fatura(self, titulo_id: int, *, lead=None) -> dict:
+        """
+        Gera 2a via de uma fatura especifica. Retorna dict com link/PDF/PIX
+        atualizados.
+        """
+        if not titulo_id:
+            raise SGPServiceError('gerar_2via_fatura: titulo_id obrigatorio.')
+        payload = {'titulo': int(titulo_id)}
+        resposta = self._post(self.ENDPOINT_FATURA_2VIA, payload, lead=lead)
+        if not isinstance(resposta, dict):
+            raise SGPServiceError(
+                f"Shape inesperado em {self.ENDPOINT_FATURA_2VIA}: {resposta}"
+            )
+        return resposta
+
+    def anexar_documento(self, cliente_id: int, file_obj, *,
+                         nome_arquivo: str = None, descricao: str = '',
+                         lead=None) -> dict:
+        """
+        Anexa documento ao cliente no SGP via PUT multipart.
+
+        Args:
+            cliente_id: id do cliente no SGP
+            file_obj: file-like object (open('foo.pdf', 'rb')) ou bytes
+            nome_arquivo: nome opcional (default: file_obj.name)
+            descricao: descricao opcional do documento
+
+        Retorna dict com id do documento criado / status.
+        """
+        if not cliente_id:
+            raise SGPServiceError('anexar_documento: cliente_id obrigatorio.')
+        endpoint = self.ENDPOINT_DOCUMENTO_TPL.format(cliente_id=int(cliente_id))
+        nome = nome_arquivo or getattr(file_obj, 'name', 'arquivo.bin')
+        files = {'file': (nome, file_obj)}
+        payload = {}
+        if descricao:
+            payload['descricao'] = descricao
+        resposta = self._put(endpoint, payload, files=files, lead=lead)
+        if not isinstance(resposta, dict):
+            raise SGPServiceError(
+                f"Shape inesperado em {endpoint}: {resposta}"
+            )
+        return resposta
+
+    def aceitar_contrato(self, contrato_id: int, *, lead=None) -> dict:
+        """
+        Aceita o termo de um contrato. Body: aceite=sim. Usado apos
+        cliente revisar o termo e confirmar aceite digital.
+        """
+        if not contrato_id:
+            raise SGPServiceError('aceitar_contrato: contrato_id obrigatorio.')
+        endpoint = self.ENDPOINT_TERMO_ACEITE_TPL.format(contrato_id=int(contrato_id))
+        resposta = self._post(endpoint, {'aceite': 'sim'}, lead=lead)
+        if not isinstance(resposta, dict):
+            raise SGPServiceError(
+                f"Shape inesperado em {endpoint}: {resposta}"
+            )
+        return resposta
+
+    # ------------------------------------------------------------------
     # Cadastro de prospecto (pessoa fisica)
     # ------------------------------------------------------------------
 
@@ -744,9 +837,19 @@ class SGPService:
 
     def _post(self, endpoint: str, payload: dict = None, files: dict = None,
               lead=None) -> dict | list:
+        """POST autenticado com app+token via formdata."""
+        return self._request('POST', endpoint, payload=payload, files=files, lead=lead)
+
+    def _put(self, endpoint: str, payload: dict = None, files: dict = None,
+             lead=None) -> dict | list:
+        """PUT autenticado com app+token via formdata. Usado por anexar_documento."""
+        return self._request('PUT', endpoint, payload=payload, files=files, lead=lead)
+
+    def _request(self, metodo: str, endpoint: str, payload: dict = None,
+                 files: dict = None, lead=None) -> dict | list:
         """
-        POST autenticado com app+token via formdata. Registra LogIntegracao
-        automaticamente e levanta SGPServiceError em caso de falha HTTP ou rede.
+        Helper generico HTTP autenticado com app+token via formdata.
+        Registra LogIntegracao e levanta SGPServiceError em falha.
         """
         url = f"{self.base_url}{endpoint}"
         data = {
@@ -758,12 +861,12 @@ class SGPService:
 
         inicio = time.time()
         try:
-            resp = requests.post(url, data=data, files=files, timeout=30)
+            resp = requests.request(metodo, url, data=data, files=files, timeout=30)
             tempo_ms = int((time.time() - inicio) * 1000)
         except requests.RequestException as exc:
             tempo_ms = int((time.time() - inicio) * 1000)
             self._registrar_log(
-                endpoint=endpoint, metodo='POST',
+                endpoint=endpoint, metodo=metodo,
                 payload=self._payload_seguro(data), resposta={},
                 status_code=0, sucesso=False, erro=str(exc),
                 tempo_ms=tempo_ms, lead=lead,
@@ -775,16 +878,14 @@ class SGPService:
         except ValueError:
             resposta_json = {'raw': resp.text[:2000]}
 
-        sucesso = resp.status_code == 200
-
-        # LogIntegracao.resposta_recebida é JSONField (dict). Envolver lista para serialização uniforme.
+        sucesso = resp.status_code in (200, 201)
         resposta_para_log = (
             resposta_json if isinstance(resposta_json, dict)
             else {'list': resposta_json}
         )
 
         self._registrar_log(
-            endpoint=endpoint, metodo='POST',
+            endpoint=endpoint, metodo=metodo,
             payload=self._payload_seguro(data),
             resposta=resposta_para_log,
             status_code=resp.status_code,

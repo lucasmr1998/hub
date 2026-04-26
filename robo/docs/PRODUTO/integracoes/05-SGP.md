@@ -82,7 +82,7 @@ Pontos de integração extras que vão facilitar módulos além de Comercial:
 | Listar POPs do provedor | `POST /api/ura/pops/` | Cadastro (choice-list) |
 | Listar vencimentos disponíveis | `POST /api/precadastro/vencimento/list` | Cadastro (choice-list) |
 | Listar vendedores | `POST /api/precadastro/vendedor/list` | Cadastro (escolher vendedor padrão) |
-| Verificar status de conexão | `POST /api/ura/verificaacesso/` | Suporte |
+| Verificar status de conexão | `POST /api/ura/verificaacesso/` | Suporte — **Validado em prod 26/04.** Body: `contrato` (id) — `cliente` retorna "Contrato não localizado". Resposta: `{status, msg, contratoId, razaoSocial, cpfCnpj, login, servico_id}`. status: 1=online, 2=offline. |
 | Gerar 2ª via de fatura | `POST /api/ura/fatura2via/` | CS / Clube |
 | Abrir chamado/OS | `POST /api/ura/chamado/` | Suporte (reverso) |
 | Listar ordens de serviço | `POST /api/os/list/` | Suporte |
@@ -135,6 +135,10 @@ Com base na leitura da doc + experiência HubSoft:
    - ✅ `cadastrar_prospecto_para_lead(lead)` — wrapper que usa defaults da `IntegracaoAPI.configuracoes_extras`
    - ✅ `sincronizar_cliente(lead)` → consulta + upsert em `ClienteSGP` (modelo novo + migration 0009). ⚠️ Validacao end-to-end pendente: endpoint `/api/ura/consultacliente/` so retorna clientes com contrato ativo. Pra confirmar funcionamento completo, precisa CPF de cliente real da Gigamax.
    - ✅ `listar_titulos(cpf_cnpj=..., cliente_id=..., status=..., ...)` → `POST /api/ura/titulos/` — passthrough da API, retorna lista. Validado 26/04 com GDM TELECOM (6 titulos por cpfcnpj, 250 por cliente_id).
+   - ✅ `verificar_acesso(contrato_id=...)` → `POST /api/ura/verificaacesso/` — status de conexao por contrato. Validado 26/04 (status=2 offline pra contrato 7232).
+   - ✅ `gerar_2via_fatura(titulo_id=...)` → `POST /api/ura/fatura2via/` — passthrough. **Validacao end-to-end pendente** (precisa titulo_id real e nao-pago pra testar sem efeito).
+   - ✅ `anexar_documento(cliente_id, file_obj, nome_arquivo, descricao)` → `PUT /api/suporte/cliente/{id}/documento/add/` (multipart). **Validacao end-to-end pendente** (write definitivo, sem alvo seguro pra teste).
+   - ✅ `aceitar_contrato(contrato_id)` → `POST /api/contrato/termoaceite/{id}` — body `aceite=sim`. **Validacao end-to-end pendente** (write definitivo, registro de aceite digital).
    - ~~`consultar_viabilidade(endereco)` → `POST /api/ura/viabilidade/`~~ — **descartado**. Gigamax faz viabilidade por ferramenta externa. O Hubtrix usa o modelo local `CidadeViabilidade` (app `apps.comercial.viabilidade`) pra gestao de areas atendidas, independente do ERP.
 4. ✅ `setup_sgp` management command
 5. ✅ Branch `elif integracao.tipo == 'sgp'` em [signals.py](../../../dashboard_comercial/gerenciador_vendas/apps/integracoes/signals.py) — `post_save` em `LeadProspecto` dispara `cadastrar_prospecto_para_lead` + `sincronizar_cliente` automaticamente quando `enviar_lead` em modo automatico
