@@ -11,5 +11,5 @@ Params:
 <span class="badge badge-{{ variant|default:'neutral' }} badge-{{ style|default:'soft' }}{% if size %} badge-{{ size }}{% endif %}">
   {% if dot %}<span class="badge-dot"></span>{% endif %}
   {% if icon %}<i class="bi {{ icon }}"></i>{% endif %}
-  {% if label %}{{ label }}{% endif %}
+  {% if label is not None %}{{ label }}{% endif %}
 </span>
