@@ -37,6 +37,8 @@ class SGPService:
     ENDPOINT_VENDEDORES = '/api/precadastro/vendedor/list'
     ENDPOINT_POPS = '/api/ura/pops/'
     ENDPOINT_PORTADORES = '/api/ura/portador/'
+    ENDPOINT_CONSULTA_CLIENTE = '/api/ura/consultacliente/'
+    ENDPOINT_PRECADASTRO_PF = '/api/precadastro/F'
 
     def __init__(self, integracao: IntegracaoAPI):
         if integracao.tipo != 'sgp':
@@ -321,6 +323,104 @@ class SGPService:
         """
         itens = self._listar_generico(self.ENDPOINT_PORTADORES, method='GET')
         return self._persistir_cache('portadores', itens, dry_run=dry_run)
+
+    # ------------------------------------------------------------------
+    # Consulta de cliente (por CPF/CNPJ)
+    # ------------------------------------------------------------------
+
+    def consultar_cliente(self, cpf_cnpj: str, lead=None) -> dict:
+        """
+        Consulta um cliente no SGP por CPF/CNPJ.
+
+        Usa POST /api/ura/consultacliente/ com cpfcnpj no formdata.
+        Retorna o dict cru da resposta (que inclui dados pessoais, contratos
+        e servicos). Lanca SGPServiceError em falha HTTP.
+        """
+        cpf_limpo = self._somente_numeros(cpf_cnpj)
+        if not cpf_limpo:
+            raise SGPServiceError('consultar_cliente: cpf_cnpj vazio ou invalido.')
+
+        resposta = self._post(
+            self.ENDPOINT_CONSULTA_CLIENTE,
+            {'cpfcnpj': cpf_limpo},
+            lead=lead,
+        )
+        if not isinstance(resposta, dict):
+            raise SGPServiceError(
+                f"Shape inesperado em {self.ENDPOINT_CONSULTA_CLIENTE}: {resposta}"
+            )
+        return resposta
+
+    @staticmethod
+    def _somente_numeros(valor: str) -> str:
+        return ''.join(c for c in (valor or '') if c.isdigit())
+
+    # ------------------------------------------------------------------
+    # Cadastro de prospecto (pessoa fisica)
+    # ------------------------------------------------------------------
+
+    def cadastrar_prospecto_pf(
+        self,
+        *,
+        nome: str,
+        cpf: str,
+        email: str,
+        telefone_celular: str,
+        cep: str,
+        logradouro: str,
+        numero: str,
+        bairro: str,
+        cidade: str,
+        uf: str,
+        plano_id: int,
+        vendedor_id: int,
+        pop_id: int,
+        portador_id: int,
+        dia_vencimento: int,
+        forma_cobranca: int,
+        precadastro_ativar: int = 0,
+        complemento: str = '',
+        rg: str = '',
+        data_nascimento: str = '',
+        lead=None,
+    ) -> dict:
+        """
+        Cria prospecto PF no SGP via POST /api/precadastro/F.
+
+        precadastro_ativar=0 -> apenas pre-cadastro (nao cria contrato/boleto)
+        precadastro_ativar=1 -> cria cliente efetivo + contrato + servicos
+
+        Forma cobranca: codigos SGP (1=Dinheiro, 4=Cartao Credito, 6=PIX, etc).
+
+        Retorna o dict cru da resposta. Lanca SGPServiceError em falha HTTP.
+        """
+        payload = {
+            'nome': nome.strip(),
+            'cpfcnpj': self._somente_numeros(cpf),
+            'email': email.strip(),
+            'telefone_celular': self._somente_numeros(telefone_celular),
+            'cep': self._somente_numeros(cep),
+            'logradouro': logradouro.strip(),
+            'numero': str(numero).strip(),
+            'bairro': bairro.strip(),
+            'cidade': cidade.strip(),
+            'uf': uf.strip().upper(),
+            'plano': int(plano_id),
+            'vendedor': int(vendedor_id),
+            'pop': int(pop_id),
+            'portador': int(portador_id),
+            'dia_vencimento': int(dia_vencimento),
+            'forma_cobranca': int(forma_cobranca),
+            'precadastro_ativar': int(precadastro_ativar),
+        }
+        if complemento:
+            payload['complemento'] = complemento.strip()
+        if rg:
+            payload['rg'] = rg.strip()
+        if data_nascimento:
+            payload['data_nascimento'] = data_nascimento.strip()
+
+        return self._post(self.ENDPOINT_PRECADASTRO_PF, payload, lead=lead)
 
     # --- Helpers privados pros catálogos de cache ---
 

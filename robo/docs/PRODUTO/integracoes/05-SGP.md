@@ -62,7 +62,7 @@ Tabela contra o contrato mínimo exigido pelo Hubtrix (seção 1.2 do [guia](04-
 
 | # | Operação Hubtrix | Endpoint SGP | Método | Auth | Observação |
 |---|------------------|--------------|--------|------|------------|
-| 5 | Criar prospecto | **Opção A:** `/api/precadastro/F` (PF) ou `/api/precadastro/J` (PJ) | POST | app+token | Pré-cadastro. Se passar `precadastro_ativar=1`, já vira cliente efetivo + contrato. Melhor pra lead vindo do WhatsApp. |
+| 5 | Criar prospecto | **Opção A:** `/api/precadastro/F` (PF) ou `/api/precadastro/J` (PJ) | POST | app+token | Pré-cadastro. Se passar `precadastro_ativar=1`, já vira cliente efetivo + contrato. Melhor pra lead vindo do WhatsApp. **Campos validados em prod:** `nome`, `cpfcnpj`, `email`, `telefone_celular`, `cep`, `logradouro`, `numero`, `bairro`, `cidade`, `uf`, `plano` (id), `vendedor` (id), `pop` (id), `portador` (id), `dia_vencimento`, `forma_cobranca` (1=Dinheiro/4=Cartão/6=PIX), `precadastro_ativar` (0\|1). Opcionais: `complemento`, `rg`, `data_nascimento`. **Não usar prefixo `endereco_`.** Resposta: `{precadastro_id, new_cliente_id, message}`. |
 | 5b | Criar cliente + contrato (alternativa) | `/api/crm/cliente/F` (ou J/E/EJ) + `/api/crm/cliente/{id}/contratos` | POST | app+token | Fluxo em 2 passos. Mais controle, usado se quisermos separar cadastro de cliente e geração de contrato. |
 | 6 | Anexar documento | `/api/suporte/cliente/{cliente_id}/documento/add/` | PUT | app+token ou Basic | **Observação:** SGP anexa no **cliente**, não no contrato diretamente (diferente do HubSoft). Suporta upload de arquivo (`file` como multipart). |
 | 7 | Aceitar contrato | `/api/contrato/termoaceite/{idcontrato}` | POST | app+token | Body: `aceite=sim`. Existe também GET `/api/contrato/termoaceite/{idcontrato}/` pra exibir o termo antes. |
@@ -125,19 +125,20 @@ Com base na leitura da doc + experiência HubSoft:
 - [ ] Ambiente de homologação separado de produção?
 
 **Do nosso lado (implementação — fase 2):**
-1. Adicionar `('sgp', 'SGP (inSystem)')` em `IntegracaoAPI.TIPO_CHOICES` ([apps/integracoes/models.py](../../../dashboard_comercial/gerenciador_vendas/apps/integracoes/models.py))
-2. Criar migration
-3. Criar `SGPService` em `apps/integracoes/services/sgp.py` espelhando interface do [`HubsoftService`](../../../dashboard_comercial/gerenciador_vendas/apps/integracoes/services/hubsoft.py). Métodos mínimos:
-   - `obter_token()` → apenas valida `app + token` via `GET /api/auth/info/` (não há renovação, token é estático)
-   - `cadastrar_prospecto(lead)` → `POST /api/precadastro/F` ou `/J` com `precadastro_ativar=1`
-   - `consultar_cliente(cpf_cnpj)` → `POST /api/ura/consultacliente/`
-   - `sincronizar_cliente(lead)` → consulta + upsert em `ClienteERPExterno` (ou modelo novo `ClienteSGP`)
-   - `listar_titulos(cliente_id, **filtros)` → `POST /api/ura/titulos/` — substitui consulta ao banco que o HubSoft exige
+1. ✅ Adicionar `('sgp', 'SGP (inSystem)')` em `IntegracaoAPI.TIPO_CHOICES` ([apps/integracoes/models.py](../../../dashboard_comercial/gerenciador_vendas/apps/integracoes/models.py))
+2. ✅ Migration `0008_alter_integracaoapi_tipo`
+3. `SGPService` em [apps/integracoes/services/sgp.py](../../../dashboard_comercial/gerenciador_vendas/apps/integracoes/services/sgp.py):
+   - ✅ `validar_credenciais()` → ping em `POST /api/precadastro/plano/list` (mais barato que `/api/auth/info/` e mesma garantia)
+   - ✅ `cadastrar_prospecto_pf(...)` → `POST /api/precadastro/F` (validado em prod 2026-04-25 — campos `nome/cpfcnpj/email/telefone_celular/cep/logradouro/numero/bairro/cidade/uf/plano/vendedor/pop/portador/dia_vencimento/forma_cobranca/precadastro_ativar`, **sem prefixo `endereco_`**)
+   - ✅ `consultar_cliente(cpf_cnpj)` → `POST /api/ura/consultacliente/`
+   - ✅ `sincronizar_planos/vencimentos/vendedores/pops/portadores`
+   - ⏳ `sincronizar_cliente(lead)` → consulta + upsert em modelo novo `ClienteSGP`
+   - ⏳ `listar_titulos(cliente_id, **filtros)` → `POST /api/ura/titulos/`
    - ~~`consultar_viabilidade(endereco)` → `POST /api/ura/viabilidade/`~~ — **descartado**. Gigamax faz viabilidade por ferramenta externa. O Hubtrix usa o modelo local `CidadeViabilidade` (app `apps.comercial.viabilidade`) pra gestao de areas atendidas, independente do ERP.
-4. Criar `setup_sgp` management command (pedindo `base_url`, `app`, `token`)
-5. Branch `elif integracao.tipo == 'sgp'` em [signals.py](../../../dashboard_comercial/gerenciador_vendas/apps/integracoes/signals.py)
-6. Testes unitários com `requests_mock` + integração end-to-end
-7. Homologação com token real da Gigamax
+4. ✅ `setup_sgp` management command
+5. ⏳ Branch `elif integracao.tipo == 'sgp'` em [signals.py](../../../dashboard_comercial/gerenciador_vendas/apps/integracoes/signals.py)
+6. ⏳ Testes unitários com `requests_mock` + integração end-to-end
+7. 🟡 Homologação parcial com token real da Gigamax (planos/vencimentos/vendedores/pops/portadores OK; pre-cadastro PF validado 2026-04-25 com `precadastro_id=100367` que sera desativado manualmente)
 
 ---
 

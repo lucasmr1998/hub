@@ -31,11 +31,12 @@ Diferente do HubSoft, o SGP **não** exige IDs fixos pra todas as chamadas. Os I
 
 | Chave | Descrição | Como descobrir | Valor Gigamax |
 |-------|-----------|----------------|----------------|
-| `pop_id_padrao` | POP default ao criar prospecto | `POST /api/ura/pops/` → pegar ID da cidade-sede | ❓ pós-credencial |
-| `plano_id_padrao` | Plano sugerido pra lead não-qualificado | `POST /api/ura/consultaplano/` → escolher com o comercial | ❓ pós-credencial |
-| `portador_id_padrao` | Portador financeiro default (obrigatório ao criar contrato) | `POST /api/ura/portador/` | ❓ pós-credencial |
-| `vendedor_id_padrao` | Vendedor default (leads via WhatsApp) | `POST /api/precadastro/vendedor/list` | ❓ pós-credencial |
-| `forma_cobranca_id_padrao` | Forma de cobrança default (1=Dinheiro, 4=Cartão de Crédito, 6=PIX, etc) | Valores fixos na doc SGP | ❓ preferência Gigamax |
+| `pop_id_padrao` | POP default ao criar prospecto | `POST /api/ura/pops/` → pegar ID da cidade-sede | **1** (Elesbão Veloso-PI) |
+| `plano_id_padrao` | Plano sugerido pra lead não-qualificado | `POST /api/ura/consultaplano/` → escolher com o comercial | **8** (Fibra 320 MB R$ 69,90) — usado em teste 25/04 |
+| `portador_id_padrao` | Portador financeiro default | `POST /api/ura/portador/` | **1** (Cobrança local) — usado em teste 25/04, confirmar com financeiro |
+| `vendedor_id_padrao` | Vendedor default (leads via WhatsApp) | `POST /api/precadastro/vendedor/list` | **1** (Jessyca Cavalcante) — temporário; pendente criar vendedor "Aurora" no painel SGP |
+| `forma_cobranca_id_padrao` | Forma de cobrança default (1=Dinheiro, 4=Cartão de Crédito, 6=PIX, etc) | Valores fixos na doc SGP | **6** (PIX) |
+| `dia_vencimento_padrao` | Dia do vencimento default | Preferência Gigamax | **5** |
 
 **Como preencher:** depois que `SGPService` estiver implementado, rodar endpoints de listagem com as credenciais da Gigamax e confirmar com o comercial/administrativo quais IDs usar como default.
 
@@ -79,14 +80,15 @@ Endpoints do Hubtrix prontos para receber callbacks, se a Gigamax quiser orquest
 
 - [x] Método de auth identificado (`app + token`)
 - [x] Token de acesso recebido (guardado fora do repo)
-- [ ] `app` (nome do aplicativo) recebido
-- [ ] URL base da instância Gigamax recebida
-- [ ] Discovery técnico finalizado ([05-SGP.md](../../../PRODUTO/integracoes/05-SGP.md) está em estado 🟡)
-- [ ] Tenant provisionado no Hubtrix com slug `gigamax`
-- [ ] `SGPService` implementado (fase 2)
-- [ ] `IntegracaoAPI` criada via `setup_sgp` (command a implementar)
-- [ ] Credenciais validadas via `GET /api/auth/info/` (log com status 200 em `LogIntegracao`)
-- [ ] IDs padrão (`pop_id`, `plano_id`, `portador_id`, `vendedor_id`) descobertos e gravados em `configuracoes_extras`
-- [ ] Lead de teste enviado com sucesso
-- [ ] Cliente de teste sincronizado com sucesso
+- [x] `app` (nome do aplicativo) recebido — `aurora`
+- [x] URL base da instância Gigamax recebida — `https://gigamax.sgp.net.br`
+- [x] Discovery técnico finalizado ([05-SGP.md](../../../PRODUTO/integracoes/05-SGP.md))
+- [x] Tenant provisionado no Hubtrix com slug `gigamax`
+- [x] `SGPService` implementado (fase 2 — minimo viavel)
+- [x] `IntegracaoAPI` criada via `setup_sgp` (pk=11 no local)
+- [x] Credenciais validadas (planos/vencimentos/vendedores/pops/portadores OK)
+- [x] IDs padrão descobertos (ver tabela acima)
+- [x] Lead de teste enviado com sucesso (`precadastro_id=100367`, `new_cliente_id=5113881` em 25/04 — desativar manual)
+- [ ] Cliente de teste sincronizado com sucesso (`sincronizar_cliente` ainda nao implementado)
+- [ ] Vendedor "Aurora" criado no painel SGP (hoje usando id=1 Jessyca como fallback)
 - [ ] Modos de sync habilitados em produção
