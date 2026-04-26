@@ -1,8 +1,8 @@
+import io
 import logging
 import re
 import time
 from datetime import timedelta
-from decimal import Decimal
 
 import requests
 from django.utils import timezone
@@ -19,13 +19,22 @@ class HubsoftServiceError(Exception):
 
 class HubsoftService:
     """
-    Encapsula a comunicação com a API do Hubsoft.
-    - Autenticação OAuth2 (password grant)
-    - Cadastro de prospecto
+    Encapsula a comunicação com a API REST do Hubsoft.
+
+    Padrão (espelhando o SGPService):
+      - Wrapper único `_request` com mascaramento de credencial em log
+      - Helpers `_get`, `_post`, `_put` por cima do `_request`
+      - Token OAuth2 cacheado em `IntegracaoAPI.access_token`
+      - Cada método público retorna o JSON cru ou levanta `HubsoftServiceError`
     """
 
     ENDPOINT_TOKEN = '/oauth/token'
     ENDPOINT_PROSPECTO = '/api/v1/integracao/prospecto'
+    ENDPOINT_CLIENTE = '/api/v1/integracao/cliente'
+    ENDPOINT_CONTRATO_ANEXO_TPL = '/api/v1/integracao/cliente/contrato/adicionar_anexo_contrato/{id_contrato}'
+    ENDPOINT_CONTRATO_ACEITAR = '/api/v1/integracao/cliente/contrato/aceitar_contrato'
+
+    CAMPOS_SEGREDO_LOG = ('password', 'client_secret', 'token', 'access_token')
 
     def __init__(self, integracao: IntegracaoAPI):
         if integracao.tipo != 'hubsoft':
@@ -41,13 +50,12 @@ class HubsoftService:
 
     def obter_token(self) -> str:
         """
-        Obtém (ou reutiliza) um access_token válido.
-        Cacheia o token no próprio model IntegracaoAPI.
+        Obtém (ou reutiliza) um access_token válido. Cacheia no
+        `IntegracaoAPI.access_token` + `token_expira_em`.
         """
         if self.integracao.token_valido:
             return self.integracao.access_token
 
-        url = f"{self.base_url}{self.ENDPOINT_TOKEN}"
         payload = {
             'client_id': self.integracao.client_id,
             'client_secret': self.integracao.client_secret,
@@ -56,203 +64,58 @@ class HubsoftService:
             'grant_type': self.integracao.grant_type,
         }
 
-        inicio = time.time()
-        try:
-            resp = requests.post(url, json=payload, timeout=30)
-            tempo_ms = int((time.time() - inicio) * 1000)
-        except requests.RequestException as exc:
-            tempo_ms = int((time.time() - inicio) * 1000)
-            self._registrar_log(
-                endpoint=self.ENDPOINT_TOKEN,
-                metodo='POST',
-                payload=payload,
-                resposta={},
-                status_code=0,
-                sucesso=False,
-                erro=str(exc),
-                tempo_ms=tempo_ms,
-            )
-            raise HubsoftServiceError(f"Falha de conexão ao obter token: {exc}") from exc
-
-        resposta_json = {}
-        try:
-            resposta_json = resp.json()
-        except ValueError:
-            resposta_json = {'raw': resp.text[:2000]}
-
-        self._registrar_log(
-            endpoint=self.ENDPOINT_TOKEN,
-            metodo='POST',
-            payload={k: v for k, v in payload.items() if k != 'password'},
-            resposta=resposta_json,
-            status_code=resp.status_code,
-            sucesso=resp.status_code == 200,
-            erro='' if resp.status_code == 200 else f"HTTP {resp.status_code}",
-            tempo_ms=tempo_ms,
+        resposta = self._request(
+            'POST', self.ENDPOINT_TOKEN,
+            json=payload, autenticar=False,
         )
 
-        if resp.status_code != 200:
-            raise HubsoftServiceError(
-                f"Erro ao obter token (HTTP {resp.status_code}): "
-                f"{resposta_json}"
-            )
-
-        token = resposta_json.get('access_token', '')
-        expires_in = resposta_json.get('expires_in', 3600)
+        token = resposta.get('access_token', '')
+        expires_in = resposta.get('expires_in', 3600)
+        if not token:
+            raise HubsoftServiceError(f"Token não retornado pelo HubSoft: {resposta}")
 
         IntegracaoAPI.objects.filter(pk=self.integracao.pk).update(
             access_token=token,
             token_expira_em=timezone.now() + timedelta(seconds=int(expires_in) - 60),
         )
         self.integracao.refresh_from_db()
-
         return token
 
     # ------------------------------------------------------------------
-    # Cadastro de Prospecto
+    # Prospecto
     # ------------------------------------------------------------------
 
     def cadastrar_prospecto(self, lead) -> dict:
-        """
-        Envia um LeadProspecto para o Hubsoft como prospecto.
-        Retorna o dict da resposta da API em caso de sucesso.
-        Lança HubsoftServiceError em caso de falha.
-        """
-        token = self.obter_token()
-
-        url = f"{self.base_url}{self.ENDPOINT_PROSPECTO}"
+        """Envia LeadProspecto para o HubSoft. Retorna dict da API."""
         payload = self._mapear_lead_para_hubsoft(lead)
-        headers = {
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-        }
+        resposta = self._post(self.ENDPOINT_PROSPECTO, json=payload, lead=lead)
 
-        inicio = time.time()
-        try:
-            resp = requests.post(url, json=payload, headers=headers, timeout=30)
-            tempo_ms = int((time.time() - inicio) * 1000)
-        except requests.RequestException as exc:
-            tempo_ms = int((time.time() - inicio) * 1000)
-            self._registrar_log(
-                endpoint=self.ENDPOINT_PROSPECTO,
-                metodo='POST',
-                payload=payload,
-                resposta={},
-                status_code=0,
-                sucesso=False,
-                erro=str(exc),
-                tempo_ms=tempo_ms,
-                lead=lead,
-            )
-            raise HubsoftServiceError(f"Falha de conexão ao cadastrar prospecto: {exc}") from exc
-
-        resposta_json = {}
-        try:
-            resposta_json = resp.json()
-        except ValueError:
-            resposta_json = {'raw': resp.text[:2000]}
-
-        sucesso = resp.status_code in (200, 201) and resposta_json.get('status') == 'success'
-
-        self._registrar_log(
-            endpoint=self.ENDPOINT_PROSPECTO,
-            metodo='POST',
-            payload=payload,
-            resposta=resposta_json,
-            status_code=resp.status_code,
-            sucesso=sucesso,
-            erro='' if sucesso else f"HTTP {resp.status_code}: {resposta_json.get('msg', '')}",
-            tempo_ms=tempo_ms,
-            lead=lead,
-        )
-
-        if not sucesso:
+        if resposta.get('status') != 'success':
             raise HubsoftServiceError(
-                f"Erro ao cadastrar prospecto (HTTP {resp.status_code}): "
-                f"{resposta_json}"
+                f"HubSoft rejeitou prospecto: {resposta}"
             )
-
-        return resposta_json
+        return resposta
 
     # ------------------------------------------------------------------
-    # Consulta de Cliente
+    # Cliente
     # ------------------------------------------------------------------
-
-    ENDPOINT_CLIENTE = '/api/v1/integracao/cliente'
 
     def consultar_cliente(self, cpf_cnpj: str, lead=None) -> dict:
-        """
-        Consulta um cliente no Hubsoft por CPF/CNPJ.
-        Retorna o dict da resposta ou lança HubsoftServiceError.
-        """
-        token = self.obter_token()
+        """Consulta cliente no HubSoft por CPF/CNPJ."""
+        cpf_limpo = self._somente_numeros(cpf_cnpj)
+        params = {'busca': 'cpf_cnpj', 'termo_busca': cpf_limpo}
+        resposta = self._get(self.ENDPOINT_CLIENTE, params=params, lead=lead)
 
-        cpf_cnpj_limpo = self._somente_numeros(cpf_cnpj)
-        url = f"{self.base_url}{self.ENDPOINT_CLIENTE}"
-        params = {'busca': 'cpf_cnpj', 'termo_busca': cpf_cnpj_limpo}
-        headers = {
-            'Authorization': f'Bearer {token}',
-            'Accept': 'application/json',
-        }
-
-        inicio = time.time()
-        try:
-            resp = requests.get(url, headers=headers, params=params, timeout=30)
-            tempo_ms = int((time.time() - inicio) * 1000)
-        except requests.RequestException as exc:
-            tempo_ms = int((time.time() - inicio) * 1000)
-            self._registrar_log(
-                endpoint=self.ENDPOINT_CLIENTE,
-                metodo='GET',
-                payload={'busca': 'cpf_cnpj', 'termo_busca': cpf_cnpj_limpo},
-                resposta={},
-                status_code=0,
-                sucesso=False,
-                erro=str(exc),
-                tempo_ms=tempo_ms,
-                lead=lead,
-            )
-            raise HubsoftServiceError(f"Falha de conexão ao consultar cliente: {exc}") from exc
-
-        resposta_json = {}
-        try:
-            resposta_json = resp.json()
-        except ValueError:
-            resposta_json = {'raw': resp.text[:2000]}
-
-        sucesso = resp.status_code == 200 and resposta_json.get('status') == 'success'
-
-        if not sucesso:
-            self._registrar_log(
-                endpoint=self.ENDPOINT_CLIENTE,
-                metodo='GET',
-                payload={'busca': 'cpf_cnpj', 'termo_busca': cpf_cnpj_limpo},
-                resposta=resposta_json,
-                status_code=resp.status_code,
-                sucesso=False,
-                erro=f"HTTP {resp.status_code}: {resposta_json.get('msg', '')}",
-                tempo_ms=tempo_ms,
-                lead=lead,
-            )
-
-        if not sucesso:
+        if resposta.get('status') != 'success':
             raise HubsoftServiceError(
-                f"Erro ao consultar cliente (HTTP {resp.status_code}): "
-                f"{resposta_json}"
+                f"HubSoft retornou erro ao consultar cliente {cpf_limpo}: {resposta}"
             )
-
-        return resposta_json
-
-    # ------------------------------------------------------------------
-    # Sincronização de Cliente
-    # ------------------------------------------------------------------
+        return resposta
 
     def sincronizar_cliente(self, lead) -> ClienteHubsoft | None:
         """
-        Consulta o Hubsoft pelo CPF/CNPJ do lead e cria/atualiza
-        o ClienteHubsoft local. Detecta alterações entre syncs.
-        Retorna o ClienteHubsoft atualizado ou None se não encontrado.
+        Consulta o HubSoft pelo CPF/CNPJ do lead e cria/atualiza
+        ClienteHubsoft + ServicoClienteHubsoft local. Detecta alterações.
         """
         if not lead.cpf_cnpj:
             logger.warning("Lead pk=%s sem CPF/CNPJ, impossível consultar cliente.", lead.pk)
@@ -260,13 +123,11 @@ class HubsoftService:
 
         resposta = self.consultar_cliente(lead.cpf_cnpj, lead=lead)
         clientes = resposta.get('clientes', [])
-
         if not clientes:
             logger.info("Nenhum cliente encontrado no Hubsoft para CPF/CNPJ %s", lead.cpf_cnpj)
             return None
 
-        dados_cliente = clientes[0]
-        return self._sincronizar_dados_cliente(dados_cliente, lead)
+        return self._sincronizar_dados_cliente(clientes[0], lead)
 
     def _sincronizar_dados_cliente(self, dados: dict, lead=None) -> ClienteHubsoft:
         """Cria ou atualiza o ClienteHubsoft e seus ServicoClienteHubsoft."""
@@ -315,19 +176,14 @@ class HubsoftService:
                 dt = timezone.make_aware(dt)
             return dt
 
-        dt_cadastro = dados.get('data_cadastro')
-        if dt_cadastro:
-            campos_cliente['data_cadastro_hubsoft'] = _make_aware(dt_cadastro)
-
-        dt_nascimento = dados.get('data_nascimento')
-        if dt_nascimento:
-            parsed = parse_date(dt_nascimento[:10])
+        if dados.get('data_cadastro'):
+            campos_cliente['data_cadastro_hubsoft'] = _make_aware(dados['data_cadastro'])
+        if dados.get('data_nascimento'):
+            parsed = parse_date(dados['data_nascimento'][:10])
             if parsed:
                 campos_cliente['data_nascimento'] = parsed
-
-        dt_atualizacao = dados.get('data_atualizacao')
-        if dt_atualizacao:
-            campos_cliente['data_atualizacao_hubsoft'] = _make_aware(dt_atualizacao)
+        if dados.get('data_atualizacao'):
+            campos_cliente['data_atualizacao_hubsoft'] = _make_aware(dados['data_atualizacao'])
 
         try:
             cliente_existente = ClienteHubsoft.objects.get(id_cliente=id_cliente)
@@ -347,7 +203,6 @@ class HubsoftService:
         )
 
         alteracoes_servicos = self._sincronizar_servicos(cliente, dados.get('servicos') or [])
-
         todas_alteracoes = alteracoes + alteracoes_servicos
 
         ClienteHubsoft.objects.filter(pk=cliente.pk).update(
@@ -376,10 +231,7 @@ class HubsoftService:
         return cliente
 
     def _sincronizar_servicos(self, cliente: ClienteHubsoft, servicos_data: list) -> list:
-        """
-        Cria ou atualiza os ServicoClienteHubsoft vinculados ao cliente.
-        Retorna lista de alterações detectadas nos serviços.
-        """
+        """Cria/atualiza ServicoClienteHubsoft. Retorna lista de alterações."""
         from django.utils.dateparse import parse_datetime as _parse_datetime
 
         def _make_aware_svc(dt_str):
@@ -400,7 +252,6 @@ class HubsoftService:
             ids_encontrados.append(id_cs)
 
             vendedor = svc.get('vendedor') or {}
-
             campos_servico = {
                 'cliente': cliente,
                 'uuid_cliente_servico': svc.get('uuid_cliente_servico') or '',
@@ -434,17 +285,12 @@ class HubsoftService:
                 'dados_completos': svc,
             }
 
-            dt_hab = svc.get('data_habilitacao')
-            if dt_hab:
-                campos_servico['data_habilitacao'] = _make_aware_svc(dt_hab)
-
-            dt_cancel = svc.get('data_cancelamento')
-            if dt_cancel:
-                campos_servico['data_cancelamento'] = _make_aware_svc(dt_cancel)
-
-            dt_atualiz = svc.get('data_atualizacao')
-            if dt_atualiz:
-                campos_servico['data_atualizacao_servico'] = _make_aware_svc(dt_atualiz)
+            if svc.get('data_habilitacao'):
+                campos_servico['data_habilitacao'] = _make_aware_svc(svc['data_habilitacao'])
+            if svc.get('data_cancelamento'):
+                campos_servico['data_cancelamento'] = _make_aware_svc(svc['data_cancelamento'])
+            if svc.get('data_atualizacao'):
+                campos_servico['data_atualizacao_servico'] = _make_aware_svc(svc['data_atualizacao'])
 
             try:
                 servico_existente = ServicoClienteHubsoft.objects.get(id_cliente_servico=id_cs)
@@ -460,9 +306,7 @@ class HubsoftService:
 
         removidos = ServicoClienteHubsoft.objects.filter(
             cliente=cliente,
-        ).exclude(
-            id_cliente_servico__in=ids_encontrados,
-        )
+        ).exclude(id_cliente_servico__in=ids_encontrados)
         for svc_rem in removidos:
             todas_alteracoes.append({
                 'campo': f'servico[{svc_rem.id_cliente_servico}]',
@@ -471,9 +315,7 @@ class HubsoftService:
             })
         removidos.delete()
 
-        # Sincronizar ProdutoServico (catálogo unificado) para cada serviço
         self._sincronizar_produtos_crm(cliente, servicos_data)
-
         return todas_alteracoes
 
     def _sincronizar_produtos_crm(self, cliente, servicos_data):
@@ -491,14 +333,6 @@ class HubsoftService:
                 if not id_servico or not nome:
                     continue
 
-                dados_erp = {
-                    'velocidade_download': svc.get('velocidade_download') or '',
-                    'velocidade_upload': svc.get('velocidade_upload') or '',
-                    'tecnologia': svc.get('tecnologia') or '',
-                    'numero_plano': svc.get('numero_plano'),
-                    'id_servico_hubsoft': svc.get('id_servico'),
-                }
-
                 ProdutoServico.objects.update_or_create(
                     tenant=tenant,
                     id_externo=id_servico,
@@ -507,15 +341,79 @@ class HubsoftService:
                         'preco': svc.get('valor') or 0,
                         'categoria': 'plano',
                         'recorrencia': 'mensal',
-                        'dados_erp': dados_erp,
+                        'dados_erp': {
+                            'velocidade_download': svc.get('velocidade_download') or '',
+                            'velocidade_upload': svc.get('velocidade_upload') or '',
+                            'tecnologia': svc.get('tecnologia') or '',
+                            'numero_plano': svc.get('numero_plano'),
+                            'id_servico_hubsoft': svc.get('id_servico'),
+                        },
                     }
                 )
         except Exception as e:
             logger.warning(f'Erro ao sincronizar ProdutoServico: {e}')
 
+    # ------------------------------------------------------------------
+    # Contrato — anexos e aceite (movido de cadastro/contrato_service)
+    # ------------------------------------------------------------------
+
+    def anexar_arquivos_contrato(
+        self,
+        id_contrato: int,
+        arquivos: list[tuple[str, bytes, str]],
+        lead=None,
+    ) -> dict:
+        """
+        Anexa múltiplos arquivos a um contrato no HubSoft em uma única request.
+
+        HubSoft exige chaves indexadas: files[0], files[1], ...
+        Cada item de `arquivos` é (nome_arquivo, conteudo_bytes, content_type).
+        Levanta HubsoftServiceError em falha.
+        """
+        endpoint = self.ENDPOINT_CONTRATO_ANEXO_TPL.format(id_contrato=int(id_contrato))
+        files_payload = [
+            (f"files[{i}]", (nome, io.BytesIO(conteudo), content_type))
+            for i, (nome, conteudo, content_type) in enumerate(arquivos)
+        ]
+        nomes = [n for n, _, _ in arquivos]
+        total_bytes = sum(len(c) for _, c, _ in arquivos)
+        log_payload = {'id_contrato': id_contrato, 'arquivos': nomes, 'total_bytes': total_bytes}
+
+        resposta = self._request(
+            'POST', endpoint,
+            files=files_payload,
+            log_payload=log_payload,
+            timeout=120,
+            lead=lead,
+        )
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft rejeitou anexo de contrato {id_contrato}: {resposta}"
+            )
+        return resposta
+
+    def aceitar_contrato(self, id_contrato: int, *, observacao: str = '', lead=None) -> dict:
+        """Marca contrato como aceito no HubSoft."""
+        agora = timezone.localtime(timezone.now())
+        payload = {
+            'ids_cliente_servico_contrato': [int(id_contrato)],
+            'data_aceito': agora.strftime('%Y-%m-%d'),
+            'hora_aceito': agora.strftime('%H:%M'),
+            'observacao': observacao or 'Contrato aceito via Hubtrix.',
+        }
+        resposta = self._put(self.ENDPOINT_CONTRATO_ACEITAR, json=payload, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft rejeitou aceite do contrato {id_contrato}: {resposta}"
+            )
+        return resposta
+
+    # ------------------------------------------------------------------
+    # Detecção de alterações (vantagem do HubSoft sobre SGP — mantido)
+    # ------------------------------------------------------------------
+
     @staticmethod
     def _valores_iguais(valor_atual, novo_valor):
-        """Compara dois valores de forma inteligente, tratando timezone e decimais."""
         from datetime import datetime as dt_class
         from decimal import Decimal as Dec, InvalidOperation
 
@@ -534,9 +432,7 @@ class HubsoftService:
             return valor_atual == novo_valor
 
         try:
-            d_atual = Dec(str(valor_atual))
-            d_novo = Dec(str(novo_valor))
-            return d_atual == d_novo
+            return Dec(str(valor_atual)) == Dec(str(novo_valor))
         except (InvalidOperation, ValueError, TypeError):
             pass
 
@@ -544,30 +440,25 @@ class HubsoftService:
 
     @classmethod
     def _detectar_alteracoes(cls, existente: ClienteHubsoft, novos_campos: dict) -> list:
-        """Compara campos atuais do cliente com novos valores e retorna lista de diffs."""
         campos_ignorar = {
             'dados_completos', 'lead', 'houve_alteracao',
             'grupos', 'alerta_mensagens',
         }
         alteracoes = []
-
         for campo, novo_valor in novos_campos.items():
             if campo in campos_ignorar:
                 continue
             valor_atual = getattr(existente, campo, None)
-
             if not cls._valores_iguais(valor_atual, novo_valor):
                 alteracoes.append({
                     'campo': campo,
                     'valor_anterior': str(valor_atual or ''),
                     'valor_novo': str(novo_valor or ''),
                 })
-
         return alteracoes
 
     @classmethod
     def _detectar_alteracoes_servico(cls, existente: ServicoClienteHubsoft, novos_campos: dict) -> list:
-        """Compara campos atuais do serviço com novos valores e retorna lista de diffs."""
         campos_rastrear = {
             'status', 'status_prefixo', 'nome', 'valor',
             'velocidade_download', 'velocidade_upload',
@@ -577,99 +468,85 @@ class HubsoftService:
         }
         alteracoes = []
         id_cs = existente.id_cliente_servico
-
         for campo in campos_rastrear:
             novo_valor = novos_campos.get(campo)
             valor_atual = getattr(existente, campo, None)
-
             if not cls._valores_iguais(valor_atual, novo_valor):
                 alteracoes.append({
                     'campo': f'servico[{id_cs}].{campo}',
                     'valor_anterior': str(valor_atual or ''),
                     'valor_novo': str(novo_valor or ''),
                 })
-
         return alteracoes
 
     # ------------------------------------------------------------------
-    # Mapeamento de campos
+    # Mapeamento Lead → payload HubSoft
     # ------------------------------------------------------------------
 
     def _mapear_lead_para_hubsoft(self, lead) -> dict:
-        """
-        Converte os campos de um LeadProspecto para o formato esperado
-        pela API Hubsoft POST /api/v1/integracao/prospecto.
-        """
-        payload = {}
-
-        payload['nome_razaosocial'] = lead.nome_razaosocial or ''
-        payload['tipo_pessoa'] = self._detectar_tipo_pessoa(lead.cpf_cnpj)
+        payload = {
+            'nome_razaosocial': lead.nome_razaosocial or '',
+            'tipo_pessoa': self._detectar_tipo_pessoa(lead.cpf_cnpj),
+        }
 
         if lead.cpf_cnpj:
             payload['cpf_cnpj'] = self._somente_numeros(lead.cpf_cnpj)
 
-        # Telefone: remover caracteres não numéricos e, se começar com 55,
-        # descartar esse prefixo de DDI para enviar apenas DDD + número.
         payload['telefone'] = self._normalizar_telefone(lead.telefone)
 
         if lead.email:
             payload['email'] = lead.email
-
         if lead.observacoes:
             payload['observacao'] = lead.observacoes
 
         payload['cep'] = self._somente_numeros(lead.cep) if lead.cep else ''
-
         payload['bairro'] = lead.bairro or ''
-
-        if lead.rua:
-            payload['endereco'] = lead.rua
-        elif lead.endereco:
-            payload['endereco'] = lead.endereco
-        else:
-            payload['endereco'] = ''
-
+        payload['endereco'] = lead.rua or lead.endereco or ''
         payload['numero'] = lead.numero_residencia or 'S/N'
 
         if lead.ponto_referencia:
             payload['referencia'] = lead.ponto_referencia
-
         if lead.rg:
             payload['rg'] = lead.rg
-
         if lead.data_nascimento:
             payload['data_nascimento'] = lead.data_nascimento.strftime('%Y-%m-%d')
 
-        # Serviço (plano) — obrigatório na API
+        # Defaults da integração — fallback quando o lead não traz o id específico.
+        extras = self.integracao.configuracoes_extras or {}
+
+        plano_id = lead.id_plano_rp or extras.get('plano_id_padrao') or 0
         payload['servico'] = {
-            'id_servico': lead.id_plano_rp if lead.id_plano_rp else 0,
+            'id_servico': int(plano_id) if plano_id else 0,
             'valor': float(lead.valor) if lead.valor else 0,
         }
 
-        if lead.id_vendedor_rp:
-            payload['id_vendedor'] = lead.id_vendedor_rp
+        vendedor_id = lead.id_vendedor_rp or extras.get('vendedor_id_padrao')
+        if vendedor_id:
+            payload['id_vendedor'] = int(vendedor_id)
 
-        if lead.id_dia_vencimento:
-            payload['id_vencimento'] = lead.id_dia_vencimento
+        venc_id = lead.id_dia_vencimento or extras.get('dia_vencimento_id_padrao')
+        if venc_id:
+            payload['id_vencimento'] = int(venc_id)
 
-        if lead.id_origem:
+        origem_id = lead.id_origem or extras.get('id_origem_padrao')
+        if origem_id:
             try:
-                payload['id_origem_cliente'] = int(lead.id_origem)
+                payload['id_origem_cliente'] = int(origem_id)
             except (ValueError, TypeError):
                 pass
 
-        if lead.id_origem_servico:
+        origem_servico_id = lead.id_origem_servico or extras.get('id_origem_servico_padrao')
+        if origem_servico_id:
             try:
-                payload['id_origem_servico'] = int(lead.id_origem_servico)
+                payload['id_origem_servico'] = int(origem_servico_id)
             except (ValueError, TypeError):
                 pass
 
         payload['id_externo'] = str(lead.pk)
-
         return payload
 
     # ------------------------------------------------------------------
-    # Helpers
+    # Helpers de normalização
     # ------------------------------------------------------------------
 
     @staticmethod
@@ -680,11 +557,6 @@ class HubsoftService:
 
     @staticmethod
     def _normalizar_telefone(valor: str) -> str:
-        """
-        Remove caracteres não numéricos e, se o telefone começar com 55
-        (DDI do Brasil), remove esse prefixo para manter apenas DDD + número.
-        Ex.: 5589994034399 -> 89994034399
-        """
         numeros = HubsoftService._somente_numeros(valor)
         if numeros.startswith('55') and len(numeros) > 11:
             numeros = numeros[2:]
@@ -696,6 +568,117 @@ class HubsoftService:
             return 'pf'
         numeros = re.sub(r'\D', '', cpf_cnpj)
         return 'pj' if len(numeros) > 11 else 'pf'
+
+    # ------------------------------------------------------------------
+    # Wrapper HTTP central
+    # ------------------------------------------------------------------
+
+    def _get(self, endpoint: str, *, params: dict = None, lead=None) -> dict:
+        return self._request('GET', endpoint, params=params, lead=lead)
+
+    def _post(self, endpoint: str, *, json: dict = None, params: dict = None, lead=None) -> dict:
+        return self._request('POST', endpoint, json=json, params=params, lead=lead)
+
+    def _put(self, endpoint: str, *, json: dict = None, params: dict = None, lead=None) -> dict:
+        return self._request('PUT', endpoint, json=json, params=params, lead=lead)
+
+    def _request(
+        self,
+        metodo: str,
+        endpoint: str,
+        *,
+        json: dict = None,
+        params: dict = None,
+        files: list = None,
+        log_payload: dict = None,
+        timeout: int = 30,
+        autenticar: bool = True,
+        lead=None,
+    ) -> dict:
+        """
+        Wrapper HTTP único: aplica auth (Bearer ou skip), executa, registra
+        LogIntegracao com payload mascarado, levanta HubsoftServiceError em falha.
+
+        - `json`: corpo JSON (POST/PUT). Ignorado se `files` informado.
+        - `files`: lista no formato requests (multipart).
+        - `params`: query string.
+        - `log_payload`: o que registrar quando o body é multipart (não dá pra logar bytes).
+        - `autenticar`: False só para o endpoint de token.
+        """
+        url = f"{self.base_url}{endpoint}"
+        headers = {'Accept': 'application/json'}
+        if autenticar:
+            token = self.obter_token()
+            headers['Authorization'] = f'Bearer {token}'
+
+        payload_para_log = (
+            log_payload if log_payload is not None
+            else self._payload_seguro(json or params or {})
+        )
+
+        inicio = time.time()
+        try:
+            resp = requests.request(
+                metodo, url,
+                json=json if files is None else None,
+                params=params,
+                files=files,
+                headers=headers,
+                timeout=timeout,
+            )
+            tempo_ms = int((time.time() - inicio) * 1000)
+        except requests.RequestException as exc:
+            tempo_ms = int((time.time() - inicio) * 1000)
+            self._registrar_log(
+                endpoint=endpoint, metodo=metodo,
+                payload=payload_para_log, resposta={},
+                status_code=0, sucesso=False, erro=str(exc),
+                tempo_ms=tempo_ms, lead=lead,
+            )
+            raise HubsoftServiceError(f"Falha de conexão com HubSoft: {exc}") from exc
+
+        try:
+            resposta_json = resp.json()
+        except ValueError:
+            resposta_json = {'raw': resp.text[:2000]}
+
+        sucesso = resp.status_code in (200, 201)
+        resposta_para_log = (
+            resposta_json if isinstance(resposta_json, dict)
+            else {'list': resposta_json}
+        )
+        msg_erro_api = ''
+        if isinstance(resposta_json, dict):
+            msg_erro_api = resposta_json.get('msg', '') or ''
+
+        self._registrar_log(
+            endpoint=endpoint, metodo=metodo,
+            payload=payload_para_log,
+            resposta=resposta_para_log,
+            status_code=resp.status_code,
+            sucesso=sucesso,
+            erro='' if sucesso else f"HTTP {resp.status_code}: {msg_erro_api}",
+            tempo_ms=tempo_ms, lead=lead,
+        )
+
+        if not sucesso:
+            raise HubsoftServiceError(
+                f"Erro HubSoft em {endpoint} (HTTP {resp.status_code}): {resposta_json}"
+            )
+
+        if isinstance(resposta_json, dict):
+            return resposta_json
+        return {'list': resposta_json}
+
+    @classmethod
+    def _payload_seguro(cls, data: dict) -> dict:
+        """Mascara segredos no payload logado."""
+        if not isinstance(data, dict):
+            return data
+        return {
+            k: ('***REDACTED***' if k in cls.CAMPOS_SEGREDO_LOG else v)
+            for k, v in data.items()
+        }
 
     def _registrar_log(self, *, endpoint, metodo, payload, resposta,
                        status_code, sucesso, erro, tempo_ms, lead=None):

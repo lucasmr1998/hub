@@ -615,6 +615,15 @@ def integracao_detalhe(request, pk):
         'dias_vencimento_permitidos': extras.get('dias_vencimento_permitidos') or [],
     }
 
+    # Defaults HubSoft — usados como fallback quando o lead nao traz o id
+    defaults_hubsoft = {
+        'plano_id_padrao': extras.get('plano_id_padrao'),
+        'vendedor_id_padrao': extras.get('vendedor_id_padrao'),
+        'dia_vencimento_id_padrao': extras.get('dia_vencimento_id_padrao'),
+        'id_origem_padrao': extras.get('id_origem_padrao'),
+        'id_origem_servico_padrao': extras.get('id_origem_servico_padrao'),
+    }
+
     sgp_choices = {}
     if integ.tipo == 'sgp':
         from apps.comercial.crm.models import ProdutoServico

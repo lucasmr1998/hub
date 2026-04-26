@@ -1,0 +1,154 @@
+---
+name: "Paridade da integração HubSoft com SGP + cobertura ampla da API"
+description: "Refatorar HubsoftService para o padrão do SGPService e expandir consumo da API HubSoft (catálogos, financeiro, operacional, viabilidade, atendimento bidirecional). Hoje usamos 5 de 185 endpoints disponíveis."
+prioridade: "🟡 Média"
+responsavel: "Tech Lead"
+---
+
+# Paridade integração HubSoft — 26/04/2026
+
+**Data:** 26/04/2026
+**Responsável:** Tech Lead
+**Prioridade:** 🟡 Média
+**Status:** 🔧 Em andamento (H1 concluído em 26/04/2026)
+
+---
+
+## Descrição
+
+O `HubsoftService` está num patamar funcional menor que o `SGPService`, que evoluiu rápido nos últimos commits (Bloco 1+2+3 do SGP — sincronização inversa, listar títulos, operacional). Como o HubSoft é o ERP mais consumido pelos clientes do Hubtrix (Megalink, FATEPI), a defasagem é estrategicamente ruim.
+
+Análise da Postman collection oficial (`Hubsoft API.postman_collection.json` na raiz, 185 endpoints) mostra que existe muito mais superfície disponível do que o que consumimos hoje (5 endpoints, ~3%). Várias dessas rotas resolveriam dores reais (cobrança ativa, suporte 1ª linha, viabilidade, atendimento bidirecional Inbox ↔ HubSoft).
+
+**Objetivo desta tarefa:** trazer o `HubsoftService` pra paridade com o `SGPService` (refactor + catálogos), depois ir além expondo financeiro, operacional, viabilidade e atendimento.
+
+---
+
+## Tarefas
+
+### Bloco H1 — Refactor `_request` único + limpeza estrutural (não-invasivo) ✅
+
+- [x] Extrair `_request(method, endpoint, ...)` central em `HubsoftService`, espelhando o padrão do `SGPService._request`
+- [x] Adicionar `_get`, `_post`, `_put` como wrappers do `_request` (PATCH/DELETE serão adicionados quando os blocos H4/H6 precisarem)
+- [x] Centralizar `_payload_seguro` para mascarar segredos (password, token, client_secret, access_token) em log
+- [x] Refatorar `obter_token`, `cadastrar_prospecto`, `consultar_cliente` para usar o novo `_request`
+- [x] Mover `cadastro/contrato_service.anexar_arquivos_contrato` e `aceitar_contrato` pra dentro de `HubsoftService` como métodos próprios. `contrato_service` virou apenas orquestração (Matrix, baixar imagens, gerar PDF da conversa).
+- [x] Generalizar `MATRIX_EMPRESA` hardcoded em `contrato_service.buscar_id_contrato` — agora aceita `integracao=...` e lê `configuracoes_extras['matrix']` (`url`, `empresa`), com fallback histórico pra Megalink.
+- [x] Validado: `manage.py check` limpo, suite `tests/test_models_integracoes.py` + `tests/test_services_sgp.py` passa (43 testes)
+
+### Bloco H2 — Sincronizar catálogos de configuração
+
+- [ ] `sincronizar_servicos_hubsoft` (planos) — `GET /configuracao/servico` → upsert em `ProdutoServico`
+- [ ] `sincronizar_vencimentos` — `GET /configuracao/vencimento` → upsert em `OpcaoVencimentoCRM`
+- [ ] `sincronizar_vendedores` — `GET /configuracao/vendedor` → cache em `configuracoes_extras['cache']['vendedores']`
+- [ ] `sincronizar_origens_cliente` — `GET /configuracao/origem_cliente` → cache
+- [ ] `sincronizar_origens_servico` — `GET /configuracao/origem_servico` (verificar nome exato) → cache
+- [ ] `sincronizar_meios_pagamento` — `GET /configuracao/meio_pagamento` → cache
+- [ ] `sincronizar_grupos_cliente` — `GET /configuracao/grupo_cliente` → cache
+- [ ] `sincronizar_motivos_contratacao` — `GET /configuracao/motivo_contratacao` → cache
+- [ ] Wrapper `sincronizar_configuracoes(dry_run=False)` que dispara todos os anteriores em sequência
+- [ ] Management command `sincronizar_catalogo_hubsoft` (espelho do `sincronizar_catalogo_sgp`)
+- [ ] UI no painel de detalhe da integração: botão "sincronizar catálogos" + selects populados por cache (substituem o JSON manual atual)
+
+### Bloco H3 — Financeiro
+
+- [ ] `listar_faturas_cliente(cpf_cnpj, status, data_*)` — `GET /cliente/financeiro`
+- [ ] `enviar_fatura_email(id_fatura)` — `POST /cliente/financeiro/enviar_email`
+- [ ] `enviar_fatura_sms(id_fatura)` — `POST /cliente/financeiro/enviar_sms`
+- [ ] `enviar_fatura_push(id_fatura)` — `POST /cliente/financeiro/enviar_push`
+- [ ] `simular_renegociacao(payload)` — `POST /financeiro/renegociacao/simular`
+- [ ] `efetivar_renegociacao(payload)` — `POST /financeiro/renegociacao/efetivar`
+- [ ] `listar_faturas_admin(filtros)` — `GET /financeiro/fatura` (admin)
+- [ ] `liquidar_fatura(id_fatura)` — `POST /financeiro/fatura/liquidar`
+- [ ] **Avaliar substituição** de `cs/clube/services/hubsoft_service.checar_pontos_extras_cpf` (SQL direto) pelo equivalente REST. Se cobrir, deprecar o acesso direto ao banco
+
+### Bloco H4 — Operacional / suporte de 1ª linha
+
+- [ ] `verificar_extrato_conexao(id_cliente_servico)` — `GET /cliente/extrato_conexao` (paridade com SGP `verificar_acesso`)
+- [ ] `solicitar_desconexao(id_cliente_servico)` — `GET /cliente/solicitar_desconexao/<id>`
+- [ ] `desbloqueio_confianca(id_cliente_servico)` — `POST /cliente/desbloqueio_confianca`
+- [ ] `suspender_servico(id_cliente_servico)` — `POST /cliente/cliente_servico/suspender/:id`
+- [ ] `habilitar_servico(id_cliente_servico)` — `POST /cliente/cliente_servico/habilitar/:id`
+- [ ] `ativar_servico(id_cliente_servico)` — `POST /cliente/cliente_servico/ativar/:id`
+- [ ] `reset_mac_addr(id_cliente_servico)` — `POST /cliente/reset_mac_addr`
+- [ ] `reset_phy_addr(id_cliente_servico)` — `POST /cliente/reset_phy_addr`
+- [ ] Plugar essas operações no Inbox/Atendimento como ações rápidas (suporte resolve sem sair do Hubtrix)
+
+### Bloco H5 — Viabilidade e cobertura
+
+- [ ] `consultar_viabilidade_endereco(cep, numero, ...)` — `POST /mapeamento/viabilidade/consultar`
+- [ ] `consultar_viabilidade_coords(lat, lng)` — `POST /mapeamento/viabilidade/consultar`
+- [ ] `listar_planos_disponiveis_cep(cep)` — `GET /prospecto/create?cep=` (combina viabilidade + filtro de plano)
+- [ ] Integrar no fluxo de cadastro de lead em `apps/comercial/viabilidade/` — substitui consulta manual
+
+### Bloco H6 — Atendimento bidirecional Inbox ↔ HubSoft
+
+- [ ] `criar_atendimento_hubsoft(lead, payload)` — `POST /atendimento`
+- [ ] `editar_atendimento(id, payload)` — `PUT /atendimento/:id`
+- [ ] `adicionar_mensagem_atendimento(id, mensagem, anexos)` — `POST /atendimento/adicionar_mensagem/:id`
+- [ ] `adicionar_anexo_atendimento(id, file)` — `POST /atendimento/adicionar_anexo/:id`
+- [ ] `listar_atendimentos_cliente(cpf, ...)` — `GET /cliente/atendimento`
+- [ ] `abrir_os_a_partir_de_atendimento(id_atendimento)` — `POST /ordem_servico/abrir_os?id_atendimento=`
+- [ ] `agendar_os(payload)` — `POST /ordem_servico/agendar`
+- [ ] `consultar_horarios_disponiveis_agenda(...)` — `GET /ordem_servico/horarios_disponiveis_agenda`
+- [ ] Espelhar conversa do Inbox no atendimento HubSoft (sync bidirecional, não destrutivo)
+
+### Bloco H7 — Testes e documentação
+
+- [ ] Cobertura unitária para H1 (refactor `_request`, mascaramento de credencial, log)
+- [ ] Cobertura para H2 (sincronização de catálogos com mock de response)
+- [ ] Cobertura para H3 (financeiro, renegociação)
+- [ ] Cobertura para H4 (suspender/habilitar/ativar, reset MAC)
+- [ ] Cobertura para H5 (viabilidade)
+- [ ] Cobertura para H6 (atendimento, OS)
+- [ ] Atingir paridade com os 27 testes do `SGPService`
+- [ ] Atualizar `robo/docs/PRODUTO/integracoes/01-HUBSOFT.md` em cada bloco que entregar
+
+---
+
+## Ordem sugerida e gating
+
+```
+H1 (refactor) → H2 (catálogos) → H3 (financeiro) → H5 (viabilidade)
+                                       ↓                  ↓
+                                       H4 (operacional) → H6 (atendimento)
+                                                            ↓
+                                                            H7 (testes finais)
+```
+
+H1 é gating duro — sem `_request` único, todos os outros blocos duplicam boilerplate e ficam difíceis de testar.
+
+H2 é gating pra UI — sem catálogos sincronizados, os defaults da integração continuam sendo JSONField editado a mão.
+
+---
+
+## Antes de cada bloco
+
+1. **Extrair shape do payload e response da Postman collection**. Cada item da collection tem exemplo de request/body e response — usar como fonte da verdade para evitar o que aconteceu com o `consultacliente` do SGP (shape descoberto só em produção).
+2. **Validar com integração real do FATEPI** ou Megalink antes de marcar como entregue.
+3. **Atualizar `01-HUBSOFT.md`** ao fechar o bloco (regra do CLAUDE.md).
+
+---
+
+## Contexto e referências
+
+- `robo/dashboard_comercial/gerenciador_vendas/apps/integracoes/services/hubsoft.py` — service atual (727 linhas)
+- `robo/dashboard_comercial/gerenciador_vendas/apps/integracoes/services/sgp.py` — referência de paridade (932 linhas, 27 testes)
+- `Hubsoft API.postman_collection.json` — collection oficial (185 endpoints) na raiz do repo
+- `robo/docs/PRODUTO/integracoes/01-HUBSOFT.md` — doc do módulo (atualizada com cobertura real e débitos técnicos)
+- `robo/docs/PRODUTO/integracoes/05-SGP.md` — referência do que já foi feito no SGP
+- Commits SGP referência: `528da1b` (testes), `20e80de` (Bloco 3 operacional), `87ea396` (Bloco 2 financeiro), `10f850b` (Bloco 1 sincronização inversa)
+- Tarefa relacionada: `discovery_sgp_gigamax_23-04-2026.md` (mostra o método aplicado ao SGP)
+- Tarefa relacionada: `resiliencia_integracoes_erp_17-04-2026.md`
+
+---
+
+## Resultado esperado
+
+- `HubsoftService` no mesmo nível arquitetural do `SGPService` (`_request` central, `_payload_seguro`, mascaramento padronizado).
+- Cobertura de endpoints HubSoft sai de 5/185 (~3%) para ~30/185 (~16%) cobrindo as áreas que importam pro Hubtrix: comercial, cobrança, suporte, viabilidade, atendimento.
+- Painel de configuração da integração HubSoft em `/configuracoes/integracoes/<pk>/` com selects populados por cache (catálogos sincronizados), botão "sincronizar catálogos" e botão "testar conexão" funcionais.
+- `cadastro/contrato_service` extinto, fluxo absorvido pelo `HubsoftService`.
+- Inbox/Atendimento com ações rápidas HubSoft (suspender, habilitar, reset MAC, anexar documento, abrir OS).
+- Cobertura de testes equivalente aos 27 do `SGPService`.
+- Acesso direto ao banco PostgreSQL do HubSoft (`cs/clube/services/hubsoft_service.py`) **avaliado para deprecação** em favor da API REST de financeiro.

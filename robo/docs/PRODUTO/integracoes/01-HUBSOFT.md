@@ -209,10 +209,48 @@ Para cada novo provedor, validar:
 
 ## Limitações Conhecidas
 
-1. **API HubSoft não expõe dados de pagamento/recorrência.** O Clube depende de conexão direta ao banco. Se a HubSoft liberar esses endpoints no futuro, migrar para API REST.
+1. **API HubSoft expõe sim faturas e renegociação** — `GET /api/v1/integracao/cliente/financeiro` e `POST /api/v1/integracao/financeiro/renegociacao/*`. A premissa antiga (de que a API não cobria pagamento) **não é mais verdade**. O Clube hoje acessa via banco direto por motivo histórico, mas existe caminho REST equivalente. Migrar pra REST está no plano de paridade (`paridade_integracao_hubsoft_26-04-2026.md`).
 
-2. **Token OAuth2 tem expiração.** O sistema faz cache e renova automaticamente, mas se as credenciais mudarem no HubSoft, o `IntegracaoAPI` precisa ser atualizado.
+2. **Token OAuth2 tem expiração.** O sistema faz cache em `IntegracaoAPI.access_token` + `token_expira_em` e renova automaticamente.
 
 3. **Sincronização não é em tempo real.** Clientes são sincronizados sob demanda (após cadastro de prospecto) ou via command (`sincronizar_clientes`). Não há webhook do HubSoft para a Aurora.
 
-4. **Cada provedor tem sua própria instância HubSoft.** As credenciais são por tenant (model `IntegracaoAPI` usa `TenantMixin`).
+4. **Cada provedor tem sua própria instância HubSoft.** As credenciais REST são por tenant (`IntegracaoAPI` usa `TenantMixin`). **Mas a camada de banco direto e a API Matrix não são multi-tenant** — ver "Débitos técnicos" abaixo.
+
+---
+
+## Cobertura real da API HubSoft
+
+A Postman collection oficial expõe **185 endpoints**. Hoje o Hubtrix consome **5** (~3%):
+
+| Endpoint | Método nosso | Status |
+|---|---|---|
+| `POST /oauth/token` | `HubsoftService.obter_token` | ativo |
+| `POST /api/v1/integracao/prospecto` | `HubsoftService.cadastrar_prospecto` | ativo |
+| `GET  /api/v1/integracao/cliente?busca=cpf_cnpj` | `HubsoftService.consultar_cliente` / `sincronizar_cliente` | ativo |
+| `POST /api/v1/integracao/cliente/contrato/adicionar_anexo_contrato/{id}` | `cadastro/contrato_service.adicionar_anexo` | ativo (legado, fora do `HubsoftService`) |
+| `PUT  /api/v1/integracao/cliente/contrato/aceitar_contrato` | `cadastro/contrato_service.aceitar_contrato` | ativo (idem) |
+
+Endpoints relevantes ainda não consumidos: catálogos (`/configuracao/*`), financeiro (`/cliente/financeiro`, `/financeiro/renegociacao/*`), operacional (`/cliente/cliente_servico/{ativar,suspender,habilitar}`, `/cliente/desbloqueio_confianca`, `/cliente/reset_mac_addr`), atendimento bidirecional (`/atendimento`, `/ordem_servico/abrir_os`), viabilidade (`/mapeamento/viabilidade/consultar`, `/prospecto/create?cep=`).
+
+Plano de fechamento dessas lacunas: `robo/docs/context/tarefas/backlog/paridade_integracao_hubsoft_26-04-2026.md`.
+
+---
+
+## Débitos técnicos
+
+> **Bloco H1 concluído (26/04/2026):** itens 1, 2 e 5 abaixo foram resolvidos. Detalhes em `paridade_integracao_hubsoft_26-04-2026.md`.
+
+1. ~~**`contrato_service` reimplementa boilerplate de auth/log do zero.**~~ ✅ Resolvido em H1. As chamadas HTTP (`anexar_arquivos_contrato`, `aceitar_contrato`) agora moram em `HubsoftService`. `contrato_service` ficou só com a orquestração (resolver Matrix, baixar imagens, gerar PDF da conversa).
+
+2. ~~**API Matrix com `MATRIX_EMPRESA = "megalink"` hardcoded.**~~ ✅ Resolvido em H1. `buscar_id_contrato` agora aceita `integracao=...` e lê `configuracoes_extras['matrix']` (`url`, `empresa`). Fallback Megalink mantido pra compatibilidade.
+
+3. **Acesso ao banco PostgreSQL HubSoft não é multi-tenant.** `apps/cs/clube/services/hubsoft_service.py` lê de `os.getenv('HUBSOFT_DB_*')` global. Funciona porque só Megalink usa Clube + HubSoft. Vira blocker no momento que um 2º provedor HubSoft assinar Clube. Ou migra pra credencial por tenant em `IntegracaoAPI`, ou aposenta em favor da API REST (limitação 1).
+
+4. **Webhook N8N hardcoded.** URL `https://automation-n8n.v4riem.easypanel.host/webhook/roletaconsultarcliente` está fixa em `cs/clube/services/hubsoft_service.py`. Mesmo problema multi-tenant.
+
+5. ~~**`HubsoftService` não tem `_request` único.**~~ ✅ Resolvido em H1. Centralizado em `_request(metodo, endpoint, json=, params=, files=, autenticar=, log_payload=, timeout=, lead=)`. Helpers `_get`, `_post`, `_put` por cima. `_payload_seguro` mascara `password`, `client_secret`, `token`, `access_token` em qualquer log.
+
+6. **Defaults da integração** (`plano_id_padrao`, `vendedor_id_padrao`, `id_origem_padrao` etc) são editados manualmente no JSONField. Não há comando `sincronizar_configuracoes` que puxe os IDs reais do HubSoft pra alimentar selects na UI. `SGPService` já tem `sincronizar_planos`, `sincronizar_vendedores`, etc. **Próximo passo: bloco H2.**
+
+7. **Cobertura de testes baixa.** `SGPService` tem 27 testes (commit `528da1b`). `HubsoftService` quase não tem. **Endereçado no bloco H7.**
