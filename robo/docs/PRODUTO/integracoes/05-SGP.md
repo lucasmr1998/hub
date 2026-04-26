@@ -142,7 +142,7 @@ Com base na leitura da doc + experiência HubSoft:
    - ~~`consultar_viabilidade(endereco)` → `POST /api/ura/viabilidade/`~~ — **descartado**. Gigamax faz viabilidade por ferramenta externa. O Hubtrix usa o modelo local `CidadeViabilidade` (app `apps.comercial.viabilidade`) pra gestao de areas atendidas, independente do ERP.
 4. ✅ `setup_sgp` management command
 5. ✅ Branch `elif integracao.tipo == 'sgp'` em [signals.py](../../../dashboard_comercial/gerenciador_vendas/apps/integracoes/signals.py) — `post_save` em `LeadProspecto` dispara `cadastrar_prospecto_para_lead` + `sincronizar_cliente` automaticamente quando `enviar_lead` em modo automatico
-6. ⏳ Testes unitários com `requests_mock` + integração end-to-end
+6. ✅ Testes unitários (27 testes em [tests/test_services_sgp.py](../../../dashboard_comercial/gerenciador_vendas/tests/test_services_sgp.py)) — mockam `requests.request`, cobrem todos os 11 metodos publicos do `SGPService` (validar_credenciais, consultar_cliente, sincronizar_cliente, cadastrar_prospecto_pf, cadastrar_prospecto_para_lead, listar_titulos, verificar_acesso, gerar_2via_fatura, anexar_documento, aceitar_contrato). Inclui regressao critica do bug "sem prefixo `endereco_`".
 7. 🟡 Homologação parcial com token real da Gigamax (planos/vencimentos/vendedores/pops/portadores OK; pre-cadastro PF validado 2026-04-25 com `precadastro_id=100367` que sera desativado manualmente)
 
 ---
