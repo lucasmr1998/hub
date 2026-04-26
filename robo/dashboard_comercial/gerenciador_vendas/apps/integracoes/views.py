@@ -654,11 +654,15 @@ def integracao_detalhe(request, pk):
 
     # Defaults HubSoft — usados como fallback quando o lead nao traz o id
     defaults_hubsoft = {
+        # Fixos (1 valor)
         'plano_id_padrao': extras.get('plano_id_padrao'),
         'vendedor_id_padrao': extras.get('vendedor_id_padrao'),
         'dia_vencimento_id_padrao': extras.get('dia_vencimento_id_padrao'),
         'id_origem_padrao': extras.get('id_origem_padrao'),
         'id_origem_servico_padrao': extras.get('id_origem_servico_padrao'),
+        # Listas permitidas (multi)
+        'planos_permitidos_hubsoft': extras.get('planos_permitidos_hubsoft') or [],
+        'dias_vencimento_permitidos_hubsoft': extras.get('dias_vencimento_permitidos_hubsoft') or [],
     }
 
     hubsoft_choices = {}
@@ -817,7 +821,10 @@ def api_integracao_defaults(request, pk):
 
     # Listas permitidas: lista de inteiros
     chaves_lista = (
+        # SGP
         'planos_permitidos', 'formas_cobranca_permitidas', 'dias_vencimento_permitidos',
+        # HubSoft (chaves separadas pra nao colidir com SGP num tenant que use os dois)
+        'planos_permitidos_hubsoft', 'dias_vencimento_permitidos_hubsoft',
     )
     for chave in chaves_lista:
         if chave in data:

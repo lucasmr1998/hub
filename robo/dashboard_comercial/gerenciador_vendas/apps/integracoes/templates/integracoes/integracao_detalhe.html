@@ -222,21 +222,13 @@
   </div>
   <div style="padding: var(--sp-4);">
     <p style="margin: 0 0 var(--sp-4); font-size: var(--fs-xs); color: var(--color-text-muted);">
-      Define os defaults usados quando o lead chega sem o campo (ex: WhatsApp). Sincronize os catalogos antes pra popular as listas.
+      Define como leads novos sao cadastrados como prospecto no HubSoft. Sincronize os catalogos antes de selecionar (a lista vem deles).
     </p>
 
+    {# Padroes fixos (1 valor) #}
+    <h4 style="margin: 0 0 var(--sp-3); font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--color-text);">Padroes fixos</h4>
+    <p style="margin: 0 0 var(--sp-3); font-size: 11px; color: var(--color-text-muted);">Politica do provedor — usado em todo cadastro automatico quando o lead nao traz o campo.</p>
     <div class="form-row-2">
-      <div class="field">
-        <label class="field-label">Plano padrao</label>
-        <div class="field-input-wrap">
-          <select class="field-input" id="hs-plano">
-            <option value="">— Nao definido —</option>
-            {% for c in hubsoft_choices.planos %}
-              <option value="{{ c.id }}" {% if defaults_hubsoft.plano_id_padrao == c.id %}selected{% endif %}>{{ c.label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
       <div class="field">
         <label class="field-label">Vendedor padrao</label>
         <div class="field-input-wrap">
@@ -247,12 +239,24 @@
             {% endfor %}
           </select>
         </div>
+        {% if not hubsoft_choices.vendedores %}<p style="font-size: 11px; color: var(--color-text-muted); margin-top: 4px;">Sincronize "vendedores" antes pra ver as opcoes.</p>{% endif %}
+      </div>
+      <div class="field">
+        <label class="field-label">Plano padrao (fallback)</label>
+        <div class="field-input-wrap">
+          <select class="field-input" id="hs-plano">
+            <option value="">— Nao definido —</option>
+            {% for c in hubsoft_choices.planos %}
+              <option value="{{ c.id }}" {% if defaults_hubsoft.plano_id_padrao == c.id %}selected{% endif %}>{{ c.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% if not hubsoft_choices.planos %}<p style="font-size: 11px; color: var(--color-text-muted); margin-top: 4px;">Sincronize "planos / servicos" antes.</p>{% endif %}
       </div>
     </div>
-
     <div class="form-row-2" style="margin-top: var(--sp-3);">
       <div class="field">
-        <label class="field-label">Dia de vencimento padrao</label>
+        <label class="field-label">Dia de vencimento padrao (fallback)</label>
         <div class="field-input-wrap">
           <select class="field-input" id="hs-vencimento">
             <option value="">— Nao definido —</option>
@@ -261,7 +265,11 @@
             {% endfor %}
           </select>
         </div>
+        {% if not hubsoft_choices.vencimentos %}<p style="font-size: 11px; color: var(--color-text-muted); margin-top: 4px;">Sincronize "opcoes de vencimento" antes.</p>{% endif %}
       </div>
+      <div></div>
+    </div>
+    <div class="form-row-2" style="margin-top: var(--sp-3);">
       <div class="field">
         <label class="field-label">Origem do cliente padrao</label>
         <div class="field-input-wrap">
@@ -272,10 +280,8 @@
             {% endfor %}
           </select>
         </div>
+        {% if not hubsoft_choices.origens_cliente %}<p style="font-size: 11px; color: var(--color-text-muted); margin-top: 4px;">Sincronize "origens de cliente" antes.</p>{% endif %}
       </div>
-    </div>
-
-    <div class="form-row-2" style="margin-top: var(--sp-3);">
       <div class="field">
         <label class="field-label">Origem de servico padrao</label>
         <div class="field-input-wrap">
@@ -286,8 +292,42 @@
             {% endfor %}
           </select>
         </div>
+        {% if not hubsoft_choices.origens_servico %}<p style="font-size: 11px; color: var(--color-text-muted); margin-top: 4px;">Sincronize "origens de contato" antes.</p>{% endif %}
       </div>
-      <div></div>
+    </div>
+
+    {# Opcoes permitidas (multi-select) #}
+    <h4 style="margin: var(--sp-5) 0 var(--sp-3); font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--color-text);">Opcoes permitidas</h4>
+    <p style="margin: 0 0 var(--sp-3); font-size: 11px; color: var(--color-text-muted);">Lista do que o bot oferece ao cliente. Lead escolhe na conversa, valor escolhido vai pro HubSoft.</p>
+
+    <div class="field" style="margin-top: var(--sp-3);">
+      <label class="field-label">Planos oferecidos no bot</label>
+      <div class="check-grid" id="grid-hs-planos">
+        {% for c in hubsoft_choices.planos %}
+          <label class="check-chip">
+            <input type="checkbox" value="{{ c.id }}" {% if c.id in defaults_hubsoft.planos_permitidos_hubsoft %}checked{% endif %}>
+            <span>{{ c.label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      {% if not hubsoft_choices.planos %}
+        <p style="font-size: 11px; color: var(--color-text-muted); margin-top: 4px;">Sincronize os planos antes pra ver as opcoes.</p>
+      {% endif %}
+    </div>
+
+    <div class="field" style="margin-top: var(--sp-4);">
+      <label class="field-label">Dias de vencimento permitidos</label>
+      <div class="check-grid" id="grid-hs-dias">
+        {% for c in hubsoft_choices.vencimentos %}
+          <label class="check-chip">
+            <input type="checkbox" value="{{ c.id }}" {% if c.id in defaults_hubsoft.dias_vencimento_permitidos_hubsoft %}checked{% endif %}>
+            <span>{{ c.label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      {% if not hubsoft_choices.vencimentos %}
+        <p style="font-size: 11px; color: var(--color-text-muted); margin-top: 4px;">Sincronize as opcoes de vencimento antes pra ver as listas.</p>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -502,6 +542,8 @@ async function salvarDefaultsHubsoft() {
     dia_vencimento_id_padrao: document.getElementById('hs-vencimento').value || null,
     id_origem_padrao: document.getElementById('hs-origem').value || null,
     id_origem_servico_padrao: document.getElementById('hs-origem-servico').value || null,
+    planos_permitidos_hubsoft: getCheckedValues('grid-hs-planos'),
+    dias_vencimento_permitidos_hubsoft: getCheckedValues('grid-hs-dias'),
   };
   try {
     const r = await fetch(URL_DEFAULTS, {
