@@ -302,7 +302,7 @@ O N8N funciona como middleware entre o Aurora e os sistemas externos. Não é ob
 | **HubSoft** | Sim (OAuth2) | Integração nativa e profunda. Caso de produção. |
 | **MK Solutions** | Sim | Popular em provedores médios. API documentada. |
 | **IXCSoft** | Sim | Grande base instalada. API REST disponível. |
-| **SGP** | Parcial | Alguns endpoints. Pode precisar de workaround. |
+| **SGP (inSystem)** | Sim (`app+token`) | **Integrado em prod desde 04/26 (Gigamax como piloto).** 7/7 endpoints minimos cobertos + bonus (verificar acesso, 2via fatura). Detalhes em [05-SGP.md](05-SGP.md). |
 | **Controllr** | Sim | API REST. Crescendo no mercado. |
 | **Topapp** | Sim | Focado em provedores menores. |
 

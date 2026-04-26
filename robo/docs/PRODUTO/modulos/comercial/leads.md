@@ -107,10 +107,11 @@ Registra cada interacao do bot ou agente com o contato. Usado para funil de conv
 
 ---
 
-## Signals (2)
+## Signals (3)
 
 1. **relate_prospecto_when_lead_has_hubsoft** — Quando lead salvo com `id_hubsoft`, vincula prospectos com mesmo `id_prospecto_hubsoft`
 2. **relate_lead_when_prospecto_has_hubsoft** — Quando prospecto salvo com `id_prospecto_hubsoft` sem lead, vincula ao lead
+3. **enviar_lead_para_integracao** (em `apps/integracoes/signals.py`) — Quando lead criado com `status_api='pendente'` e `ConfiguracaoEmpresa.enviar_leads_integracao=True`, dispara cadastro automatico no ERP da empresa. Roteia por tipo: HubSoft -> `cadastrar_prospecto`, SGP -> `cadastrar_prospecto_para_lead`. Sincroniza cliente apos cadastro se `sincronizar_cliente` em modo automatico. Persiste `new_cliente_id` em `LeadProspecto.id_hubsoft`.
 
 ---
 

@@ -217,11 +217,18 @@ Este documento é a fonte da verdade sobre o que está pronto, em desenvolviment
 | Funcionalidade | Status | Observação |
 |----------------|--------|------------|
 | OAuth2 com HubSoft | ✅ Pronto | |
-| Envio automático de leads | ✅ Pronto | Signal post_save |
-| Sincronização de clientes | ✅ Pronto | Command + automático |
-| Anexação de docs ao contrato | ✅ Pronto | |
+| **SGP (inSystem)** — `app+token` | ✅ Pronto | **7/7 endpoints minimos. Piloto Gigamax em prod desde 04/26.** Ver [05-SGP.md](../integracoes/05-SGP.md). |
+| Envio automático de leads | ✅ Pronto | Signal post_save (HubSoft + SGP) |
+| Sincronização de clientes | ✅ Pronto | Command + automático (`ClienteHubsoft`, `ClienteSGP`) |
+| Anexação de docs ao contrato | ✅ Pronto | HubSoft + SGP |
+| Listar titulos / situacao financeira | ✅ Pronto | SGP `listar_titulos` substitui acesso direto ao banco |
+| Verificar status de conexao | ✅ Pronto | SGP `verificar_acesso(contrato_id)` |
+| 2via de fatura | ✅ Pronto | SGP `gerar_2via_fatura` (validacao end-to-end pendente) |
+| Aceite digital de contrato | ✅ Pronto | SGP `aceitar_contrato` (validacao end-to-end pendente) |
+| Pagina de detalhe de integracao no painel | ✅ Pronto | `/configuracoes/integracoes/<pk>/` com defaults, catalogos, modos sync, logs |
 | Logs de auditoria | ✅ Pronto | |
 | Conexão direta banco HubSoft (CS) | ✅ Pronto | Para dados não disponíveis na API |
+| Criptografia de tokens persistente entre processos | ✅ Pronto | Derivada de `SECRET_KEY` (fix 04/26) |
 
 ### API REST (apps/api/)
 
