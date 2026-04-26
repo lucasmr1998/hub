@@ -466,3 +466,92 @@ class ServicoClienteHubsoft(TenantMixin):
 
     def __str__(self):
         return f"{self.nome} — {self.status} (ID: {self.id_cliente_servico})"
+
+
+class ClienteSGP(TenantMixin):
+    """
+    Espelho local do cliente vindo da API SGP (POST /api/ura/consultacliente/).
+    Schema diferente do ClienteHubsoft: contratos vem aninhados na resposta,
+    nao ha uuid_cliente, e o id_cliente do SGP nao e globalmente unico — e
+    unico DENTRO do tenant SGP do provedor (gigamax.sgp.net.br tem ids
+    diferentes de outroprovedor.sgp.net.br).
+    """
+
+    integracao = models.ForeignKey(
+        'integracoes.IntegracaoAPI',
+        on_delete=models.CASCADE,
+        related_name='clientes_sgp',
+        verbose_name='Integracao SGP de origem',
+        help_text='Garante que id_cliente_sgp e unico por integracao, nao globalmente.',
+    )
+
+    lead = models.ForeignKey(
+        'leads.LeadProspecto',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='clientes_sgp',
+        verbose_name='Lead de origem',
+    )
+
+    # --- Identificacao SGP ---
+    id_cliente_sgp = models.IntegerField(
+        verbose_name='ID Cliente no SGP',
+        help_text='Retornado em new_cliente_id ao cadastrar e em consultas.',
+        db_index=True,
+    )
+    precadastro_id = models.IntegerField(
+        null=True, blank=True,
+        verbose_name='ID Pre-cadastro SGP',
+        help_text='So preenchido quando o cliente veio via cadastrar_prospecto_pf.',
+    )
+
+    # --- Dados pessoais ---
+    nome = models.CharField(max_length=300, verbose_name='Nome')
+    cpf_cnpj = models.CharField(max_length=20, db_index=True, verbose_name='CPF/CNPJ')
+    email = models.EmailField(blank=True, default='', verbose_name='Email')
+    telefone = models.CharField(max_length=30, blank=True, default='', verbose_name='Telefone')
+
+    # --- Endereco ---
+    cep = models.CharField(max_length=10, blank=True, default='', verbose_name='CEP')
+    logradouro = models.CharField(max_length=255, blank=True, default='', verbose_name='Logradouro')
+    numero = models.CharField(max_length=20, blank=True, default='', verbose_name='Numero')
+    bairro = models.CharField(max_length=120, blank=True, default='', verbose_name='Bairro')
+    cidade = models.CharField(max_length=100, blank=True, default='', verbose_name='Cidade')
+    uf = models.CharField(max_length=2, blank=True, default='', verbose_name='UF')
+
+    # --- Status ---
+    ativo = models.BooleanField(default=True, verbose_name='Ativo no SGP')
+
+    # --- Aninhados como JSON (SGP retorna estruturas variaveis) ---
+    contratos = models.JSONField(default=list, blank=True, verbose_name='Contratos')
+    dados_completos = models.JSONField(
+        default=dict, blank=True,
+        verbose_name='Snapshot da resposta SGP',
+        help_text='JSON cru de POST /api/ura/consultacliente/ — fonte de verdade.',
+    )
+
+    # --- Controle de sync ---
+    data_sync = models.DateTimeField(auto_now=True, verbose_name='Ultima sync')
+    data_criacao = models.DateTimeField(auto_now_add=True, verbose_name='Criado em')
+    houve_alteracao = models.BooleanField(default=False, verbose_name='Houve alteracao na ultima sync')
+    historico_alteracoes = models.JSONField(default=list, blank=True, verbose_name='Historico de alteracoes')
+
+    class Meta:
+        db_table = 'clientes_sgp'
+        verbose_name = 'Cliente SGP'
+        verbose_name_plural = '👤 05. Clientes SGP'
+        ordering = ['-data_sync']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['integracao', 'id_cliente_sgp'],
+                name='unique_cliente_sgp_por_integracao',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['cpf_cnpj']),
+            models.Index(fields=['lead']),
+            models.Index(fields=['integracao', 'id_cliente_sgp']),
+        ]
+
+    def __str__(self):
+        return f'{self.nome} (SGP id={self.id_cliente_sgp})'

@@ -328,6 +328,70 @@ class SGPService:
     # Consulta de cliente (por CPF/CNPJ)
     # ------------------------------------------------------------------
 
+    def sincronizar_cliente(self, lead, *, cpf_cnpj: str = None):
+        """
+        Consulta o SGP pelo CPF/CNPJ do lead (ou explicito) e cria/atualiza
+        ClienteSGP local. Retorna ClienteSGP ou None se nao encontrado.
+        """
+        from apps.integracoes.models import ClienteSGP
+
+        cpf = cpf_cnpj or getattr(lead, 'cpf_cnpj', None)
+        if not cpf:
+            logger.warning('sincronizar_cliente: lead pk=%s sem CPF/CNPJ.', getattr(lead, 'pk', '?'))
+            return None
+
+        try:
+            resposta = self.consultar_cliente(cpf, lead=lead)
+        except SGPServiceError as exc:
+            logger.error('sincronizar_cliente: erro consultando %s: %s', cpf, exc)
+            return None
+
+        # Shape SGP de /api/ura/consultacliente/: dict com chaves variaveis.
+        # Tentamos extrair de forma tolerante a variacoes.
+        cliente_data = resposta.get('cliente') or resposta
+        id_cliente_sgp = (
+            cliente_data.get('id') or cliente_data.get('id_cliente') or cliente_data.get('cliente_id')
+        )
+        if not id_cliente_sgp:
+            logger.warning(
+                'sincronizar_cliente: resposta SGP sem id_cliente. cpf=%s resposta=%s',
+                cpf, str(resposta)[:300],
+            )
+            return None
+
+        defaults = {
+            'tenant': self.integracao.tenant,
+            'lead': lead,
+            'nome': (cliente_data.get('nome') or cliente_data.get('nome_razaosocial') or '')[:300],
+            'cpf_cnpj': self._somente_numeros(cpf),
+            'email': (cliente_data.get('email') or '')[:254],
+            'telefone': (
+                cliente_data.get('telefone_celular')
+                or cliente_data.get('telefone')
+                or ''
+            )[:30],
+            'cep': self._somente_numeros(cliente_data.get('cep') or '')[:10],
+            'logradouro': (cliente_data.get('logradouro') or '')[:255],
+            'numero': str(cliente_data.get('numero') or '')[:20],
+            'bairro': (cliente_data.get('bairro') or '')[:120],
+            'cidade': (cliente_data.get('cidade') or '')[:100],
+            'uf': (cliente_data.get('uf') or '')[:2],
+            'ativo': bool(cliente_data.get('ativo', True)),
+            'contratos': resposta.get('contratos') or cliente_data.get('contratos') or [],
+            'dados_completos': resposta,
+        }
+
+        cliente, criado = ClienteSGP.objects.update_or_create(
+            integracao=self.integracao,
+            id_cliente_sgp=int(id_cliente_sgp),
+            defaults=defaults,
+        )
+        if criado:
+            logger.info('ClienteSGP criado: pk=%s id_sgp=%s', cliente.pk, id_cliente_sgp)
+        else:
+            logger.info('ClienteSGP atualizado: pk=%s id_sgp=%s', cliente.pk, id_cliente_sgp)
+        return cliente
+
     def consultar_cliente(self, cpf_cnpj: str, lead=None) -> dict:
         """
         Consulta um cliente no SGP por CPF/CNPJ.
@@ -421,6 +485,46 @@ class SGPService:
             payload['data_nascimento'] = data_nascimento.strip()
 
         return self._post(self.ENDPOINT_PRECADASTRO_PF, payload, lead=lead)
+
+    def cadastrar_prospecto_para_lead(self, lead) -> dict:
+        """
+        Cadastra prospecto a partir de um LeadProspecto. Usa defaults do
+        IntegracaoAPI.configuracoes_extras pra plano/vendedor/pop/portador
+        /forma_cobranca/dia_vencimento. Levanta SGPServiceError se algum
+        default obrigatorio nao estiver configurado.
+        """
+        extras = self.integracao.configuracoes_extras or {}
+        required = ('plano_id_padrao', 'vendedor_id_padrao', 'pop_id_padrao',
+                    'portador_id_padrao', 'forma_cobranca_id_padrao', 'dia_vencimento_padrao')
+        faltando = [k for k in required if not extras.get(k)]
+        if faltando:
+            raise SGPServiceError(
+                f'cadastrar_prospecto_para_lead: defaults faltando em '
+                f'IntegracaoAPI.configuracoes_extras: {faltando}'
+            )
+        if not lead.cpf_cnpj:
+            raise SGPServiceError('cadastrar_prospecto_para_lead: lead sem CPF/CNPJ.')
+
+        return self.cadastrar_prospecto_pf(
+            nome=lead.nome_razaosocial,
+            cpf=lead.cpf_cnpj,
+            email=lead.email or '',
+            telefone_celular=lead.telefone or '',
+            cep=lead.cep or '',
+            logradouro=lead.rua or '',
+            numero=lead.numero_residencia or 'S/N',
+            bairro=lead.bairro or '',
+            cidade=lead.cidade or '',
+            uf=lead.estado or '',
+            plano_id=extras['plano_id_padrao'],
+            vendedor_id=extras['vendedor_id_padrao'],
+            pop_id=extras['pop_id_padrao'],
+            portador_id=extras['portador_id_padrao'],
+            dia_vencimento=extras['dia_vencimento_padrao'],
+            forma_cobranca=extras['forma_cobranca_id_padrao'],
+            precadastro_ativar=int(extras.get('precadastro_ativar_padrao', 0)),
+            lead=lead,
+        )
 
     # --- Helpers privados pros catálogos de cache ---
 

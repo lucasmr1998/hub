@@ -53,7 +53,7 @@ Tabela contra o contrato mínimo exigido pelo Hubtrix (seção 1.2 do [guia](04-
 
 | # | Operação Hubtrix | Endpoint SGP | Método | Auth | Observação |
 |---|------------------|--------------|--------|------|------------|
-| 1 | Consultar cliente por CPF/CNPJ | `/api/ura/consultacliente/` | POST | app+token | Retorna dados completos: nome, endereço, telefones, emails, contratos, serviços. Alternativa: `/api/crm/cliente/?cpfcnpj=X` (GET, resposta mais enxuta). |
+| 1 | Consultar cliente por CPF/CNPJ | `/api/ura/consultacliente/` | POST | app+token | **Validado em prod 2026-04-25.** Body: `cpfcnpj` (so digitos). Retorna `{contratos: [...]}`. ⚠️ **So retorna clientes COM contrato ativo.** Pre-cadastros (sem contrato) vem `{contratos: []}`. Pra dados de prospecto sem contrato, ainda nao identificamos endpoint dedicado. Alternativa `/api/crm/cliente/?cpfcnpj=X` (GET) tambem nao retorna pre-cadastros (HTTP 400 "nao encontrado cliente CRM"). |
 | 2 | Listar contratos do cliente | `/api/ura/listacontrato/` ou `/api/crm/cliente/{id}/contratos/` | POST / GET | app+token | Inclui status do contrato (Ativo/Suspenso/Cancelado/etc), plano, endereço, data de cadastro. |
 | 3 | Consultar situação financeira | `/api/ura/titulos/` | POST | app+token | Filtra por `status: 'abertos' / 'pagos' / 'cancelados'`, datas de vencimento/pagamento. Retorna valor, data pagamento, código de barras, PIX. **Substitui o acesso direto ao banco que o HubSoft exige.** |
 | 4 | Listar planos disponíveis | `/api/ura/consultaplano/` | GET / POST | app+token | Retorna id, descrição, preço, qtd de serviços. Filtro opcional por `pop`. |
@@ -132,11 +132,12 @@ Com base na leitura da doc + experiência HubSoft:
    - ✅ `cadastrar_prospecto_pf(...)` → `POST /api/precadastro/F` (validado em prod 2026-04-25 — campos `nome/cpfcnpj/email/telefone_celular/cep/logradouro/numero/bairro/cidade/uf/plano/vendedor/pop/portador/dia_vencimento/forma_cobranca/precadastro_ativar`, **sem prefixo `endereco_`**)
    - ✅ `consultar_cliente(cpf_cnpj)` → `POST /api/ura/consultacliente/`
    - ✅ `sincronizar_planos/vencimentos/vendedores/pops/portadores`
-   - ⏳ `sincronizar_cliente(lead)` → consulta + upsert em modelo novo `ClienteSGP`
+   - ✅ `cadastrar_prospecto_para_lead(lead)` — wrapper que usa defaults da `IntegracaoAPI.configuracoes_extras`
+   - ✅ `sincronizar_cliente(lead)` → consulta + upsert em `ClienteSGP` (modelo novo + migration 0009). ⚠️ Validacao end-to-end pendente: endpoint `/api/ura/consultacliente/` so retorna clientes com contrato ativo. Pra confirmar funcionamento completo, precisa CPF de cliente real da Gigamax.
    - ⏳ `listar_titulos(cliente_id, **filtros)` → `POST /api/ura/titulos/`
    - ~~`consultar_viabilidade(endereco)` → `POST /api/ura/viabilidade/`~~ — **descartado**. Gigamax faz viabilidade por ferramenta externa. O Hubtrix usa o modelo local `CidadeViabilidade` (app `apps.comercial.viabilidade`) pra gestao de areas atendidas, independente do ERP.
 4. ✅ `setup_sgp` management command
-5. ⏳ Branch `elif integracao.tipo == 'sgp'` em [signals.py](../../../dashboard_comercial/gerenciador_vendas/apps/integracoes/signals.py)
+5. ✅ Branch `elif integracao.tipo == 'sgp'` em [signals.py](../../../dashboard_comercial/gerenciador_vendas/apps/integracoes/signals.py) — `post_save` em `LeadProspecto` dispara `cadastrar_prospecto_para_lead` + `sincronizar_cliente` automaticamente quando `enviar_lead` em modo automatico
 6. ⏳ Testes unitários com `requests_mock` + integração end-to-end
 7. 🟡 Homologação parcial com token real da Gigamax (planos/vencimentos/vendedores/pops/portadores OK; pre-cadastro PF validado 2026-04-25 com `precadastro_id=100367` que sera desativado manualmente)
 
