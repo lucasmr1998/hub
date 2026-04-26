@@ -34,6 +34,15 @@ Configuração via management command:
 python manage.py setup_hubsoft
 ```
 
+**OU pelo painel** (desde 04/26): `/configuracoes/integracoes/<pk>/` — pagina de detalhe permite editar todos os 5 campos diretamente (URL, Client ID, Client Secret, Username, Password). Ver [05-SGP.md](05-SGP.md) pra detalhes da pagina de detalhe (a mesma pagina serve HubSoft + SGP, com campos condicionais por tipo).
+
+Pagina de detalhe inclui:
+- Stats (chamadas/erros 24h, total logs, clientes sincronizados)
+- Credenciais editaveis (5 campos OAuth2 do HubSoft)
+- Modos de sincronizacao (3 features: enviar_lead, sincronizar_cliente, sincronizar_servicos)
+- Logs das ultimas 20 chamadas
+- Botao "testar conexao" (chama `obter_token()`)
+
 ### Conexão direta ao banco (necessário apenas para CS / Clube)
 
 | Variável | Descrição |

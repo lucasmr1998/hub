@@ -55,17 +55,42 @@
     </div>
     <div class="form-row-2" style="margin-top: var(--sp-3);">
       <div class="field">
-        <label class="field-label">App / Client ID</label>
-        <div class="field-input-wrap"><input class="field-input" id="cred-client-id" value="{{ integracao.client_id }}" placeholder="app SGP cadastrado no painel"></div>
+        <label class="field-label">{% if integracao.tipo == 'hubsoft' %}Client ID (OAuth2){% else %}App / Client ID{% endif %}</label>
+        <div class="field-input-wrap"><input class="field-input" id="cred-client-id" value="{{ integracao.client_id }}"></div>
       </div>
-      <div class="field">
-        <label class="field-label">Token / API Key</label>
-        <div class="field-input-wrap" style="position: relative;">
-          <input class="field-input" id="cred-token" type="password" value="{{ integracao.access_token|default:integracao.api_key }}" placeholder="Deixe em branco pra manter">
-          <button type="button" class="btn btn-ghost btn-sm" onclick="toggleToken()" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%);"><i class="bi bi-eye" id="token-eye"></i></button>
+      {% if integracao.tipo == 'hubsoft' %}
+        <div class="field">
+          <label class="field-label">Client Secret (OAuth2)</label>
+          <div class="field-input-wrap" style="position: relative;">
+            <input class="field-input" id="cred-client-secret" type="password" value="{{ integracao.client_secret }}" placeholder="Deixe em branco pra manter">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="toggleField('cred-client-secret', 'eye-cs')" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%);"><i class="bi bi-eye" id="eye-cs"></i></button>
+          </div>
+        </div>
+      {% else %}
+        <div class="field">
+          <label class="field-label">Token / API Key</label>
+          <div class="field-input-wrap" style="position: relative;">
+            <input class="field-input" id="cred-token" type="password" value="{{ integracao.access_token|default:integracao.api_key }}" placeholder="Deixe em branco pra manter">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="toggleToken()" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%);"><i class="bi bi-eye" id="token-eye"></i></button>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+    {% if integracao.tipo == 'hubsoft' %}
+      <div class="form-row-2" style="margin-top: var(--sp-3);">
+        <div class="field">
+          <label class="field-label">Username (OAuth2 password grant)</label>
+          <div class="field-input-wrap"><input class="field-input" id="cred-username" value="{{ integracao.username }}"></div>
+        </div>
+        <div class="field">
+          <label class="field-label">Password</label>
+          <div class="field-input-wrap" style="position: relative;">
+            <input class="field-input" id="cred-password" type="password" value="{{ integracao.password }}" placeholder="Deixe em branco pra manter">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="toggleField('cred-password', 'eye-pwd')" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%);"><i class="bi bi-eye" id="eye-pwd"></i></button>
+          </div>
         </div>
       </div>
-    </div>
+    {% endif %}
   </div>
 </div>
 
@@ -311,9 +336,11 @@ function getCsrf() {
   return document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] || '';
 }
 
-function toggleToken() {
-  const inp = document.getElementById('token-display');
-  const eye = document.getElementById('token-eye');
+function toggleToken() { toggleField('cred-token', 'token-eye'); }
+function toggleField(inpId, eyeId) {
+  const inp = document.getElementById(inpId);
+  const eye = document.getElementById(eyeId);
+  if (!inp || !eye) return;
   if (inp.type === 'password') { inp.type = 'text'; eye.className = 'bi bi-eye-slash'; }
   else { inp.type = 'password'; eye.className = 'bi bi-eye'; }
 }
@@ -324,11 +351,18 @@ async function salvarCredenciais() {
     base_url: document.getElementById('cred-base-url').value.trim(),
     client_id: document.getElementById('cred-client-id').value.trim(),
   };
-  // Token: so envia se foi alterado (o input vem populado com o valor atual,
-  // mas se o user nao mexer, ainda enviamos pra revalidar; se limpar de
-  // proposito, fica vazio e nao sobrescreve no backend).
-  const novoToken = document.getElementById('cred-token').value;
-  if (novoToken) payload.access_token = novoToken;
+  // Token: so envia se foi alterado (deixar em branco preserva).
+  const novoToken = document.getElementById('cred-token');
+  if (novoToken && novoToken.value) payload.access_token = novoToken.value;
+
+  // HubSoft tem 3 campos extras: client_secret, username, password
+  const cs = document.getElementById('cred-client-secret');
+  if (cs && cs.value) payload.client_secret = cs.value;
+  const usr = document.getElementById('cred-username');
+  if (usr) payload.username = usr.value.trim();
+  const pwd = document.getElementById('cred-password');
+  if (pwd && pwd.value) payload.password = pwd.value;
+
   if (!payload.nome) { toast('Erro', 'Nome obrigatorio.', 'warning'); return; }
   try {
     const r = await fetch(URL_EDITAR, {
