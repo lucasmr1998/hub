@@ -439,11 +439,20 @@ Com subnav:
     // ============================================
     function abrirModal(id) {
       const m = document.getElementById(id);
-      if (m) { m.hidden = false; document.body.style.overflow = 'hidden'; }
+      if (m) {
+        m.hidden = false;
+        // Compat com CSS legado (dashboard.css) que usa .show/.active pra display:flex
+        m.classList.add('show', 'active');
+        document.body.style.overflow = 'hidden';
+      }
     }
     function fecharModal(id) {
       const m = document.getElementById(id);
-      if (m) { m.hidden = true; document.body.style.overflow = ''; }
+      if (m) {
+        m.hidden = true;
+        m.classList.remove('show', 'active');
+        document.body.style.overflow = '';
+      }
     }
     document.querySelectorAll('.modal-overlay').forEach(o => {
       o.addEventListener('click', (e) => { if (e.target === o) fecharModal(o.id); });

@@ -1,0 +1,431 @@
+{% extends "sistema/base.html" %}
+
+{% block title %}{{ integracao.nome }} — Integracoes — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <a href="{% url 'integracoes:integracoes' %}" class="btn btn-ghost btn-sm" style="margin-bottom: 8px;"><i class="bi bi-arrow-left"></i> Integracoes</a>
+      <h1 class="page-title">
+        <i class="{{ integracao.icon }}" style="color: {{ integracao.cor }}; margin-right: 6px;"></i>
+        {{ integracao.nome }}
+      </h1>
+      <p class="page-subtitle">{{ integracao.tipo_descricao }} — <span style="font-family: monospace;">{{ integracao.base_url|default:"sem URL base" }}</span></p>
+    </div>
+    <div class="page-actions">
+      {% if integracao.ativa %}
+        {% include "components/badge.html" with variant="success" label="Ativa" dot=True %}
+      {% else %}
+        {% include "components/badge.html" with variant="neutral" label="Inativa" dot=True %}
+      {% endif %}
+      <button class="btn btn-secondary btn-sm" onclick="testarConexao()"><i class="bi bi-broadcast"></i> Testar conexao</button>
+    </div>
+  </div>
+</div>
+
+{# Stats #}
+<div class="stats-row">
+  {% include "components/stat_card.html" with label="Chamadas (24h)" value=stats.chamadas_24h icon="bi-graph-up-arrow" %}
+  {% include "components/stat_card.html" with label="Erros (24h)" value=stats.erros_24h icon="bi-exclamation-triangle" %}
+  {% include "components/stat_card.html" with label="Total de logs" value=stats.total_logs icon="bi-journal-text" %}
+  {% include "components/stat_card.html" with label="Clientes sincronizados" value=stats.clientes_sincronizados icon="bi-people" %}
+</div>
+
+{# Identificacao / credenciais #}
+<div class="card" style="margin-bottom: var(--sp-4); padding: 0; overflow: hidden;">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-key" style="color: var(--color-primary);"></i> Credenciais e identificacao</h3>
+    <button class="btn btn-primary btn-sm" onclick="salvarCredenciais()"><i class="bi bi-check-lg"></i> Salvar credenciais</button>
+  </div>
+  <div style="padding: var(--sp-4);">
+    <div class="form-row-2">
+      <div class="field">
+        <label class="field-label">Nome</label>
+        <div class="field-input-wrap"><input class="field-input" id="cred-nome" value="{{ integracao.nome }}"></div>
+      </div>
+      <div class="field">
+        <label class="field-label">Tipo</label>
+        <div class="field-input-wrap"><input class="field-input" value="{{ integracao.get_tipo_display }}" readonly disabled></div>
+      </div>
+    </div>
+    <div class="field" style="margin-top: var(--sp-3);">
+      <label class="field-label">URL base</label>
+      <div class="field-input-wrap"><input class="field-input" id="cred-base-url" value="{{ integracao.base_url }}" placeholder="https://provedor.sgp.net.br"></div>
+    </div>
+    <div class="form-row-2" style="margin-top: var(--sp-3);">
+      <div class="field">
+        <label class="field-label">App / Client ID</label>
+        <div class="field-input-wrap"><input class="field-input" id="cred-client-id" value="{{ integracao.client_id }}" placeholder="app SGP cadastrado no painel"></div>
+      </div>
+      <div class="field">
+        <label class="field-label">Token / API Key</label>
+        <div class="field-input-wrap" style="position: relative;">
+          <input class="field-input" id="cred-token" type="password" value="{{ integracao.access_token|default:integracao.api_key }}" placeholder="Deixe em branco pra manter">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="toggleToken()" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%);"><i class="bi bi-eye" id="token-eye"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if integracao.tipo == 'sgp' %}
+{# Configuracao de cadastro automatico #}
+<div class="card" style="margin-bottom: var(--sp-4); padding: 0; overflow: hidden;">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-sliders" style="color: var(--color-primary);"></i> Configuracao de cadastro automatico</h3>
+    <button class="btn btn-primary btn-sm" onclick="salvarDefaults()"><i class="bi bi-check-lg"></i> Salvar configuracao</button>
+  </div>
+  <div style="padding: var(--sp-4);">
+    <p style="margin: 0 0 var(--sp-4); font-size: var(--fs-xs); color: var(--color-text-muted);">
+      Define como leads novos sao cadastrados como prospecto no SGP. Sincronize os catalogos antes de selecionar (a lista vem deles).
+    </p>
+
+    {# Padroes fixos (1 valor) #}
+    <h4 style="margin: 0 0 var(--sp-3); font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--color-text);">Padroes fixos</h4>
+    <p style="margin: 0 0 var(--sp-3); font-size: 11px; color: var(--color-text-muted);">Politica do provedor — usado em todo cadastro automatico.</p>
+    <div class="form-row-2">
+      <div class="field">
+        <label class="field-label">Vendedor padrao</label>
+        <div class="field-input-wrap">
+          <select class="field-input" id="def-vendedor">
+            <option value="">— Nao definido —</option>
+            {% for c in sgp_choices.vendedores %}
+              <option value="{{ c.id }}" {% if defaults_sgp.vendedor_id_padrao == c.id %}selected{% endif %}>{{ c.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Portador financeiro padrao</label>
+        <div class="field-input-wrap">
+          <select class="field-input" id="def-portador">
+            <option value="">— Nao definido —</option>
+            {% for c in sgp_choices.portadores %}
+              <option value="{{ c.id }}" {% if defaults_sgp.portador_id_padrao == c.id %}selected{% endif %}>{{ c.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="form-row-2" style="margin-top: var(--sp-3);">
+      <div class="field">
+        <label class="field-label">Ativar pre-cadastro automaticamente</label>
+        <div class="field-input-wrap">
+          <select class="field-input" id="def-ativar">
+            <option value="0" {% if defaults_sgp.precadastro_ativar_padrao == 0 %}selected{% endif %}>Nao (apenas pre-cadastro, sem contrato)</option>
+            <option value="1" {% if defaults_sgp.precadastro_ativar_padrao == 1 %}selected{% endif %}>Sim (cria cliente + contrato + boleto)</option>
+          </select>
+        </div>
+      </div>
+      <div></div>
+    </div>
+
+    {# Opcoes permitidas (multi-select) #}
+    <h4 style="margin: var(--sp-5) 0 var(--sp-3); font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--color-text);">Opcoes permitidas</h4>
+    <p style="margin: 0 0 var(--sp-3); font-size: 11px; color: var(--color-text-muted);">Lista do que o bot oferece ao cliente. Lead escolhe na conversa, valor escolhido vai pro SGP.</p>
+
+    <div class="field" style="margin-top: var(--sp-3);">
+      <label class="field-label">Planos oferecidos no bot</label>
+      <div class="check-grid" id="grid-planos">
+        {% for c in sgp_choices.planos %}
+          <label class="check-chip">
+            <input type="checkbox" value="{{ c.id }}" {% if c.id in defaults_sgp.planos_permitidos %}checked{% endif %}>
+            <span>{{ c.label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      {% if not sgp_choices.planos %}
+        <p style="font-size: 11px; color: var(--color-text-muted); margin-top: 4px;">Sincronize os planos antes pra ver as opcoes.</p>
+      {% endif %}
+    </div>
+
+    <div class="form-row-2" style="margin-top: var(--sp-4);">
+      <div class="field">
+        <label class="field-label">Formas de cobranca aceitas</label>
+        <div class="check-grid" id="grid-formas">
+          {% for c in sgp_choices.formas_cobranca %}
+            <label class="check-chip">
+              <input type="checkbox" value="{{ c.id }}" {% if c.id in defaults_sgp.formas_cobranca_permitidas %}checked{% endif %}>
+              <span>{{ c.label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Dias de vencimento permitidos</label>
+        <div class="check-grid" id="grid-dias">
+          {% for c in sgp_choices.dias_vencimento %}
+            <label class="check-chip">
+              <input type="checkbox" value="{{ c.id }}" {% if c.id in defaults_sgp.dias_vencimento_permitidos %}checked{% endif %}>
+              <span>{{ c.label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# POP — derivado do CEP no futuro #}
+    <h4 style="margin: var(--sp-5) 0 var(--sp-3); font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--color-text);">POP (regiao de atendimento)</h4>
+    <p style="margin: 0 0 var(--sp-3); font-size: 11px; color: var(--color-text-muted);">
+      ⚠️ POP deveria ser derivado do CEP/endereco do lead. Mapeamento CEP → POP ainda nao foi implementado. Por enquanto, usa-se um valor fixo como fallback.
+    </p>
+    <div class="form-row-2">
+      <div class="field">
+        <label class="field-label">POP padrao (fallback)</label>
+        <div class="field-input-wrap">
+          <select class="field-input" id="def-pop">
+            <option value="">— Nao definido —</option>
+            {% for c in sgp_choices.pops %}
+              <option value="{{ c.id }}" {% if defaults_sgp.pop_id_padrao == c.id %}selected{% endif %}>{{ c.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div></div>
+    </div>
+  </div>
+</div>
+
+{# Catalogos #}
+<div class="card" style="margin-bottom: var(--sp-4); padding: 0; overflow: hidden;">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-database" style="color: var(--color-primary);"></i> Catalogos sincronizados</h3>
+    <button class="btn btn-primary btn-sm" onclick="sincronizarTudo()"><i class="bi bi-arrow-clockwise"></i> Sincronizar tudo</button>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Catalogo</th><th>Total</th><th>Destino local</th><th style="width: 160px;"></th></tr>
+      </thead>
+      <tbody>
+        {% for c in catalogos %}
+          <tr>
+            <td><i class="{{ c.icon }}" style="color: var(--color-primary); margin-right: 4px;"></i> {{ c.label }}</td>
+            <td>{% include "components/badge.html" with variant="primary" label=c.total size="sm" %}</td>
+            <td style="font-size: var(--fs-xs); color: var(--color-text-muted); font-family: monospace;">{{ c.destino }}</td>
+            <td>
+              <button class="btn btn-ghost btn-sm" onclick="sincronizarCatalogo('{{ c.chave }}')" title="Sincronizar agora"><i class="bi bi-arrow-clockwise"></i> Sincronizar</button>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# Modos de sincronizacao #}
+<div class="card" style="margin-bottom: var(--sp-4); padding: 0; overflow: hidden;">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-arrow-repeat" style="color: var(--color-primary);"></i> Modos de sincronizacao</h3>
+    <button class="btn btn-primary btn-sm" onclick="salvarModos()"><i class="bi bi-check-lg"></i> Salvar modos</button>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Funcionalidade</th><th style="width: 220px;">Modo</th></tr>
+      </thead>
+      <tbody>
+        {% for m in modos_sync_view %}
+          <tr>
+            <td>{{ m.label }}<div style="font-size: 11px; color: var(--color-text-muted); font-family: monospace;">{{ m.feature }}</div></td>
+            <td>
+              <select class="field-input sync-mode-select" data-feature="{{ m.feature }}">
+                {% for codigo in modos_disponiveis %}
+                  <option value="{{ codigo }}" {% if m.modo == codigo %}selected{% endif %}>{{ codigo|title }}</option>
+                {% endfor %}
+              </select>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# Logs recentes #}
+<div class="card" style="margin-bottom: var(--sp-4); padding: 0; overflow: hidden;">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-clock-history" style="color: var(--color-primary);"></i> Ultimas chamadas</h3>
+    <span class="badge badge-primary badge-soft">{{ logs_recentes|length }}</span>
+  </div>
+  {% if logs_recentes %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>Quando</th><th>Metodo</th><th>Endpoint</th><th>Status</th><th>Tempo</th><th>Mensagem</th></tr>
+        </thead>
+        <tbody>
+          {% for log in logs_recentes %}
+            <tr>
+              <td style="font-size: var(--fs-xs); color: var(--color-text-muted); white-space: nowrap;">{{ log.data_criacao|date:"d/m H:i:s" }}</td>
+              <td><span class="viab-uf">{{ log.metodo }}</span></td>
+              <td style="font-family: monospace; font-size: 11px;">{{ log.endpoint }}</td>
+              <td>
+                {% if log.sucesso %}
+                  {% include "components/badge.html" with variant="success" label=log.status_code size="sm" %}
+                {% else %}
+                  {% include "components/badge.html" with variant="danger" label=log.status_code size="sm" %}
+                {% endif %}
+              </td>
+              <td style="font-size: var(--fs-xs); color: var(--color-text-muted);">{{ log.tempo_resposta_ms }}ms</td>
+              <td style="font-size: var(--fs-xs); color: var(--color-text-muted); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ log.mensagem_erro|default:"—" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="table-empty">
+      <i class="bi bi-inbox"></i>
+      Nenhuma chamada registrada ainda.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-4); }
+  .table-wrap { overflow-x: auto; }
+  .viab-uf { display: inline-block; background: var(--color-primary-soft); color: var(--color-primary); font-weight: var(--fw-bold); font-size: 10px; padding: 2px 8px; border-radius: 10px; }
+  .check-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .check-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; transition: all var(--transition); font-size: var(--fs-xs); user-select: none; background: var(--color-bg); }
+  .check-chip:hover { border-color: var(--color-primary); }
+  .check-chip:has(input:checked) { background: var(--color-primary-soft); border-color: var(--color-primary); color: var(--color-primary); font-weight: var(--fw-semibold); }
+  .check-chip input { margin: 0; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const PK = {{ integracao.pk }};
+const URL_DEFAULTS = "{% url 'integracoes:api_integracao_defaults' pk=integracao.pk %}";
+const URL_SINC_CAT = "{% url 'integracoes:api_integracao_sincronizar_catalogo' pk=integracao.pk %}";
+const URL_TESTAR = "{% url 'integracoes:api_integracao_testar' pk=integracao.pk %}";
+const URL_MODOS = "{% url 'integracoes:api_integracao_modos_sync' pk=integracao.pk %}";
+const URL_EDITAR = "{% url 'integracoes:api_integracao_editar' pk=integracao.pk %}";
+
+function getCsrf() {
+  return document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] || '';
+}
+
+function toggleToken() {
+  const inp = document.getElementById('token-display');
+  const eye = document.getElementById('token-eye');
+  if (inp.type === 'password') { inp.type = 'text'; eye.className = 'bi bi-eye-slash'; }
+  else { inp.type = 'password'; eye.className = 'bi bi-eye'; }
+}
+
+async function salvarCredenciais() {
+  const payload = {
+    nome: document.getElementById('cred-nome').value.trim(),
+    base_url: document.getElementById('cred-base-url').value.trim(),
+    client_id: document.getElementById('cred-client-id').value.trim(),
+  };
+  // Token: so envia se foi alterado (o input vem populado com o valor atual,
+  // mas se o user nao mexer, ainda enviamos pra revalidar; se limpar de
+  // proposito, fica vazio e nao sobrescreve no backend).
+  const novoToken = document.getElementById('cred-token').value;
+  if (novoToken) payload.access_token = novoToken;
+  if (!payload.nome) { toast('Erro', 'Nome obrigatorio.', 'warning'); return; }
+  try {
+    const r = await fetch(URL_EDITAR, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (!r.ok) { toast('Erro', d.error || 'Falha ao salvar.', 'danger'); return; }
+    toast('Pronto', d.message, 'success');
+  } catch (e) { toast('Erro', String(e), 'danger'); }
+}
+
+async function testarConexao() {
+  toast('Testando...', 'Aguarde a resposta da API.', 'info');
+  try {
+    const r = await fetch(URL_TESTAR, { method: 'POST', headers: { 'X-CSRFToken': getCsrf() } });
+    const d = await r.json();
+    toast(d.success ? 'OK' : 'Falhou', d.message, d.success ? 'success' : 'danger');
+  } catch (e) { toast('Erro', String(e), 'danger'); }
+}
+
+function getCheckedValues(gridId) {
+  return Array.from(document.querySelectorAll(`#${gridId} input[type=checkbox]:checked`))
+    .map(c => parseInt(c.value, 10))
+    .filter(v => !isNaN(v));
+}
+
+async function salvarDefaults() {
+  const payload = {
+    vendedor_id_padrao: document.getElementById('def-vendedor').value || null,
+    portador_id_padrao: document.getElementById('def-portador').value || null,
+    pop_id_padrao: document.getElementById('def-pop').value || null,
+    precadastro_ativar_padrao: document.getElementById('def-ativar').value,
+    planos_permitidos: getCheckedValues('grid-planos'),
+    formas_cobranca_permitidas: getCheckedValues('grid-formas'),
+    dias_vencimento_permitidos: getCheckedValues('grid-dias'),
+  };
+  try {
+    const r = await fetch(URL_DEFAULTS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (!r.ok) { toast('Erro', d.error || 'Falha ao salvar.', 'danger'); return; }
+    toast('Pronto', d.message, 'success');
+  } catch (e) { toast('Erro', String(e), 'danger'); }
+}
+
+async function sincronizarCatalogo(chave) {
+  toast('Sincronizando...', `Puxando ${chave} do SGP.`, 'info');
+  try {
+    const r = await fetch(URL_SINC_CAT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+      body: JSON.stringify({ chave }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.success) { toast('Erro', d.error || 'Falha na sincronizacao.', 'danger'); return; }
+    const resumo = d.resumos[chave];
+    const msg = resumo ? `total=${resumo.total} criados=${resumo.criados} atualizados=${resumo.atualizados}` : 'OK';
+    toast('Pronto', msg, 'success');
+    setTimeout(() => location.reload(), 700);
+  } catch (e) { toast('Erro', String(e), 'danger'); }
+}
+
+async function sincronizarTudo() {
+  toast('Sincronizando tudo...', 'Pode demorar alguns segundos.', 'info');
+  try {
+    const r = await fetch(URL_SINC_CAT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+      body: JSON.stringify({ chave: 'todos' }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.success) { toast('Erro', d.error || 'Falha.', 'danger'); return; }
+    toast('Pronto', 'Todos catalogos atualizados.', 'success');
+    setTimeout(() => location.reload(), 700);
+  } catch (e) { toast('Erro', String(e), 'danger'); }
+}
+
+async function salvarModos() {
+  const modos = {};
+  document.querySelectorAll('.sync-mode-select').forEach(s => {
+    modos[s.dataset.feature] = s.value;
+  });
+  try {
+    const r = await fetch(URL_MODOS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+      body: JSON.stringify({ modos_sync: modos }),
+    });
+    const d = await r.json();
+    if (!r.ok) { toast('Erro', d.error || 'Falha.', 'danger'); return; }
+    toast('Pronto', d.message, 'success');
+  } catch (e) { toast('Erro', String(e), 'danger'); }
+}
+</script>
+{% endblock %}

@@ -9,7 +9,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from .models import IntegracaoAPI, LogIntegracao, ClienteHubsoft, ServicoClienteHubsoft
+from .models import IntegracaoAPI, LogIntegracao, ClienteHubsoft, ServicoClienteHubsoft, ClienteSGP
 from apps.comercial.leads.models import ImagemLeadProspecto, LeadProspecto
 from apps.sistema.decorators import user_tem_funcionalidade
 
@@ -559,3 +559,228 @@ def api_integracao_testar(request, pk):
 
     except IntegracaoAPI.DoesNotExist:
         return JsonResponse({'error': 'Integração não encontrada'}, status=404)
+
+
+# ============================================================================
+# Pagina de detalhe (visualizacao + configuracao avancada por integracao)
+# ============================================================================
+
+@login_required
+def integracao_detalhe(request, pk):
+    """Pagina de detalhe + configuracao avancada de uma integracao."""
+    try:
+        integ = IntegracaoAPI.objects.get(pk=pk, tenant=request.tenant)
+    except IntegracaoAPI.DoesNotExist:
+        from django.http import Http404
+        raise Http404('Integracao nao encontrada.')
+
+    info = TIPO_INFO.get(integ.tipo, TIPO_INFO['outro'])
+    integ.icon = info['icon']
+    integ.cor = info['cor']
+    integ.tipo_descricao = info['descricao']
+
+    extras = integ.configuracoes_extras or {}
+    cache = extras.get('cache') or {}
+
+    catalogos = []
+    if integ.tipo == 'sgp':
+        from apps.comercial.crm.models import ProdutoServico, OpcaoVencimentoCRM
+        catalogos = [
+            {'chave': 'planos', 'label': 'Planos', 'icon': 'bi-box-seam',
+             'total': ProdutoServico.objects.filter(tenant=integ.tenant, categoria='plano').count(),
+             'destino': 'crm.ProdutoServico'},
+            {'chave': 'vencimentos', 'label': 'Opcoes de vencimento', 'icon': 'bi-calendar',
+             'total': OpcaoVencimentoCRM.objects.filter(tenant=integ.tenant).count(),
+             'destino': 'crm.OpcaoVencimentoCRM'},
+            {'chave': 'vendedores', 'label': 'Vendedores', 'icon': 'bi-person-badge',
+             'total': len(cache.get('vendedores') or []),
+             'destino': 'cache (configuracoes_extras)'},
+            {'chave': 'pops', 'label': 'POPs', 'icon': 'bi-broadcast-pin',
+             'total': len(cache.get('pops') or []),
+             'destino': 'cache (configuracoes_extras)'},
+            {'chave': 'portadores', 'label': 'Portadores financeiros', 'icon': 'bi-bank',
+             'total': len(cache.get('portadores') or []),
+             'destino': 'cache (configuracoes_extras)'},
+        ]
+
+    defaults_sgp = {
+        # Fixos (1 valor)
+        'vendedor_id_padrao': extras.get('vendedor_id_padrao'),
+        'portador_id_padrao': extras.get('portador_id_padrao'),
+        'precadastro_ativar_padrao': extras.get('precadastro_ativar_padrao', 0),
+        'pop_id_padrao': extras.get('pop_id_padrao'),  # TODO: derivar do CEP
+        # Listas permitidas (multi)
+        'planos_permitidos': extras.get('planos_permitidos') or [],
+        'formas_cobranca_permitidas': extras.get('formas_cobranca_permitidas') or [],
+        'dias_vencimento_permitidos': extras.get('dias_vencimento_permitidos') or [],
+    }
+
+    sgp_choices = {}
+    if integ.tipo == 'sgp':
+        from apps.comercial.crm.models import ProdutoServico
+        sgp_choices = {
+            'planos': [
+                {'id': p.codigo or p.id_externo, 'label': f'{p.nome} (R$ {p.preco})'}
+                for p in ProdutoServico.objects.filter(tenant=integ.tenant, categoria='plano', ativo=True).order_by('nome')
+                if (p.codigo or p.id_externo)
+            ],
+            'vendedores': [
+                {'id': v.get('id'), 'label': v.get('nome', '?')}
+                for v in (cache.get('vendedores') or [])
+            ],
+            'pops': [
+                {'id': p.get('id'), 'label': p.get('pop', '?')}
+                for p in (cache.get('pops') or [])
+            ],
+            'portadores': [
+                {'id': p.get('id'), 'label': p.get('descricao', '?')}
+                for p in (cache.get('portadores') or [])
+            ],
+            'formas_cobranca': [
+                {'id': 1, 'label': 'Dinheiro'},
+                {'id': 4, 'label': 'Cartao de Credito'},
+                {'id': 6, 'label': 'PIX'},
+                {'id': 3, 'label': 'Boleto'},
+            ],
+            'dias_vencimento': [{'id': d, 'label': f'Dia {d}'} for d in (5, 10, 15, 20, 25)],
+        }
+
+    if integ.tipo == 'sgp':
+        features_relevantes = (
+            'enviar_lead', 'sincronizar_cliente', 'sincronizar_servicos',
+            'sincronizar_planos', 'sincronizar_vencimentos',
+            'sincronizar_vendedores', 'sincronizar_pops', 'sincronizar_portadores',
+        )
+    elif integ.tipo == 'hubsoft':
+        features_relevantes = ('enviar_lead', 'sincronizar_cliente', 'sincronizar_servicos')
+    else:
+        features_relevantes = tuple(IntegracaoAPI.SYNC_FEATURES.keys())
+
+    modos_sync_view = [
+        {
+            'feature': f,
+            'label': IntegracaoAPI.SYNC_FEATURES[f],
+            'modo': integ.get_modo_sync(f),
+        }
+        for f in features_relevantes if f in IntegracaoAPI.SYNC_FEATURES
+    ]
+
+    desde_24h = timezone.now() - timedelta(hours=24)
+    logs_recentes = integ.logs.order_by('-data_criacao')[:20]
+    stats = {
+        'chamadas_24h': integ.logs.filter(data_criacao__gte=desde_24h).count(),
+        'erros_24h': integ.logs.filter(data_criacao__gte=desde_24h, sucesso=False).count(),
+        'total_logs': integ.logs.count(),
+        'clientes_sincronizados': (
+            ClienteSGP.objects.filter(integracao=integ).count() if integ.tipo == 'sgp'
+            else ClienteHubsoft.objects.filter(tenant=integ.tenant).count() if integ.tipo == 'hubsoft'
+            else 0
+        ),
+    }
+
+    return render(request, 'integracoes/integracao_detalhe.html', {
+        'integracao': integ,
+        'catalogos': catalogos,
+        'defaults_sgp': defaults_sgp,
+        'sgp_choices': sgp_choices,
+        'modos_sync_view': modos_sync_view,
+        'modos_disponiveis': IntegracaoAPI.SYNC_MODOS,
+        'logs_recentes': logs_recentes,
+        'stats': stats,
+        'modulo_atual': 'configuracoes',
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_integracao_defaults(request, pk):
+    """Salva defaults da integracao em configuracoes_extras (SGP-style)."""
+    try:
+        integ = IntegracaoAPI.objects.get(pk=pk, tenant=request.tenant)
+    except IntegracaoAPI.DoesNotExist:
+        return JsonResponse({'error': 'Integracao nao encontrada'}, status=404)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON invalido'}, status=400)
+
+    extras = dict(integ.configuracoes_extras or {})
+
+    # Fixos: 1 inteiro
+    chaves_int = (
+        'vendedor_id_padrao', 'portador_id_padrao',
+        'precadastro_ativar_padrao', 'pop_id_padrao',
+    )
+    for chave in chaves_int:
+        if chave in data:
+            valor = data[chave]
+            if valor in (None, ''):
+                extras.pop(chave, None)
+            else:
+                try:
+                    extras[chave] = int(valor)
+                except (TypeError, ValueError):
+                    return JsonResponse({'error': f'{chave} deve ser inteiro.'}, status=400)
+
+    # Listas permitidas: lista de inteiros
+    chaves_lista = (
+        'planos_permitidos', 'formas_cobranca_permitidas', 'dias_vencimento_permitidos',
+    )
+    for chave in chaves_lista:
+        if chave in data:
+            valor = data[chave]
+            if valor in (None, '', []):
+                extras.pop(chave, None)
+            elif isinstance(valor, list):
+                try:
+                    extras[chave] = [int(v) for v in valor]
+                except (TypeError, ValueError):
+                    return JsonResponse({'error': f'{chave} deve ser lista de inteiros.'}, status=400)
+            else:
+                return JsonResponse({'error': f'{chave} deve ser lista.'}, status=400)
+
+    integ.configuracoes_extras = extras
+    integ.save(update_fields=['configuracoes_extras'])
+    return JsonResponse({'success': True, 'message': 'Configuracao salva.', 'configuracoes_extras': extras})
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_integracao_sincronizar_catalogo(request, pk):
+    """Sincroniza um catalogo do SGP sob demanda (botao 'sincronizar agora')."""
+    try:
+        integ = IntegracaoAPI.objects.get(pk=pk, tenant=request.tenant)
+    except IntegracaoAPI.DoesNotExist:
+        return JsonResponse({'error': 'Integracao nao encontrada'}, status=404)
+
+    if integ.tipo != 'sgp':
+        return JsonResponse({'error': 'Sincronizacao de catalogo so suportada em integracoes SGP por enquanto.'}, status=400)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        data = {}
+    chave = data.get('chave') or 'todos'
+    permitidos = ('planos', 'vencimentos', 'vendedores', 'pops', 'portadores', 'todos')
+    if chave not in permitidos:
+        return JsonResponse({'error': f'chave invalida. Permitidos: {permitidos}'}, status=400)
+
+    from apps.integracoes.services.sgp import SGPService, SGPServiceError
+    svc = SGPService(integ)
+    resumos = {}
+    try:
+        if chave in ('planos', 'todos'):
+            resumos['planos'] = svc.sincronizar_planos()
+        if chave in ('vencimentos', 'todos'):
+            resumos['vencimentos'] = svc.sincronizar_vencimentos()
+        if chave in ('vendedores', 'todos'):
+            resumos['vendedores'] = svc.sincronizar_vendedores()
+        if chave in ('pops', 'todos'):
+            resumos['pops'] = svc.sincronizar_pops()
+        if chave in ('portadores', 'todos'):
+            resumos['portadores'] = svc.sincronizar_portadores()
+    except SGPServiceError as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=502)
+
+    return JsonResponse({'success': True, 'resumos': resumos})

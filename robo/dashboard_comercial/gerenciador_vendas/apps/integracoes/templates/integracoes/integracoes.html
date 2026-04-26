@@ -13,17 +13,10 @@
       <p class="page-subtitle">Gerencie conexoes com sistemas externos (ERP, WhatsApp, automacao).</p>
     </div>
     <div class="page-actions">
-      {% include "components/button.html" with variant="primary" label="Nova integracao" icon="bi-plus-lg" %}
+      <button type="button" id="btnNovaIntegracao" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Nova integracao</button>
     </div>
   </div>
 </div>
-<script>
-  // Vincula o botao "Nova integracao" ao modal (o include nao aceita onclick)
-  document.addEventListener('DOMContentLoaded', () => {
-    const btn = document.querySelector('.page-actions .btn-primary');
-    if (btn) btn.addEventListener('click', abrirIntegModal);
-  });
-</script>
 
 {% if integracoes %}
   <div class="integ-grid">
@@ -65,8 +58,10 @@
           {% endif %}
           {% if integ.configuracoes_extras %}
             <div class="integ-field">
-              <span class="integ-field-label">Config extras</span>
-              <span class="integ-field-value integ-field-mono">{% for key, val in integ.configuracoes_extras.items %}{{ key }}: {{ val }}{% if not forloop.last %} · {% endif %}{% endfor %}</span>
+              <span class="integ-field-label">Configuracoes extras</span>
+              <span class="integ-field-value" style="font-size: 11px; color: var(--color-text-muted);">
+                {{ integ.configuracoes_extras|length }} chave(s) configurada(s) — <a href="{% url 'integracoes:integracao_detalhe' pk=integ.pk %}">ver detalhes</a>
+              </span>
             </div>
           {% endif %}
 
@@ -120,8 +115,8 @@
         </div>
 
         <div class="card-footer" style="justify-content: flex-start; gap: var(--sp-2);">
-          <button class="btn btn-primary btn-sm" onclick="testarConexao({{ integ.pk }})"><i class="bi bi-plug"></i> Testar</button>
-          <button class="btn btn-secondary btn-sm" onclick="editarIntegracao({{ integ.pk }})"><i class="bi bi-pencil"></i> Editar</button>
+          <a href="{% url 'integracoes:integracao_detalhe' pk=integ.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-arrow-right-circle"></i> Ver detalhes</a>
+          <button class="btn btn-secondary btn-sm" onclick="testarConexao({{ integ.pk }})"><i class="bi bi-plug"></i> Testar</button>
           <button class="btn btn-secondary btn-sm" onclick="toggleIntegracao({{ integ.pk }})">
             {% if integ.ativa %}<i class="bi bi-pause-fill"></i> Desativar{% else %}<i class="bi bi-play-fill"></i> Ativar{% endif %}
           </button>
@@ -362,15 +357,26 @@
   const TIPOS_IA = ['openai', 'anthropic', 'groq', 'google_ai'];
   const TIPOS_OAUTH = ['hubsoft'];
 
-  document.getElementById('integTipo').addEventListener('change', function() {
-    const tipo = this.value;
-    const isOAuth = TIPOS_OAUTH.includes(tipo);
-    const isIA = TIPOS_IA.includes(tipo);
-    document.getElementById('camposOAuth').style.display = isOAuth ? 'block' : 'none';
-    document.getElementById('camposToken').style.display = (!isOAuth && !isIA) ? 'block' : 'none';
-    document.getElementById('camposApiKey').style.display = isIA ? 'block' : 'none';
-    document.getElementById('campoUrl').style.display = isIA ? 'none' : 'block';
-  });
+  const _integTipoEl = document.getElementById('integTipo');
+  if (_integTipoEl) {
+    _integTipoEl.addEventListener('change', function() {
+      const tipo = this.value;
+      const isOAuth = TIPOS_OAUTH.includes(tipo);
+      const isIA = TIPOS_IA.includes(tipo);
+      const elOAuth = document.getElementById('camposOAuth');
+      const elToken = document.getElementById('camposToken');
+      const elApiKey = document.getElementById('camposApiKey');
+      const elUrl = document.getElementById('campoUrl');
+      if (elOAuth) elOAuth.style.display = isOAuth ? 'block' : 'none';
+      if (elToken) elToken.style.display = (!isOAuth && !isIA) ? 'block' : 'none';
+      if (elApiKey) elApiKey.style.display = isIA ? 'block' : 'none';
+      if (elUrl) elUrl.style.display = isIA ? 'none' : 'block';
+    });
+  }
+
+  // Bind direto — script roda no fim do body, DOMContentLoaded ja passou
+  const _btnNovaInteg = document.getElementById('btnNovaIntegracao');
+  if (_btnNovaInteg) _btnNovaInteg.addEventListener('click', abrirIntegModal);
 
   function abrirIntegModal() {
     editId = null;
