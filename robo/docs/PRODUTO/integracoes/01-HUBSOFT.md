@@ -251,6 +251,6 @@ Plano de fechamento dessas lacunas: `robo/docs/context/tarefas/backlog/paridade_
 
 5. ~~**`HubsoftService` não tem `_request` único.**~~ ✅ Resolvido em H1. Centralizado em `_request(metodo, endpoint, json=, params=, files=, autenticar=, log_payload=, timeout=, lead=)`. Helpers `_get`, `_post`, `_put` por cima. `_payload_seguro` mascara `password`, `client_secret`, `token`, `access_token` em qualquer log.
 
-6. **Defaults da integração** (`plano_id_padrao`, `vendedor_id_padrao`, `id_origem_padrao` etc) são editados manualmente no JSONField. Não há comando `sincronizar_configuracoes` que puxe os IDs reais do HubSoft pra alimentar selects na UI. `SGPService` já tem `sincronizar_planos`, `sincronizar_vendedores`, etc. **Próximo passo: bloco H2.**
+6. ~~**Defaults da integração editados manualmente no JSONField.**~~ ✅ Backend resolvido em H2. `HubsoftService` agora expõe `sincronizar_servicos_catalogo`, `sincronizar_vencimentos` e `sincronizar_catalogo_cacheado(<chave>)` para 9 catálogos (vendedores, origens_cliente/contato, meios_pagamento, grupos_cliente, motivos_contratacao, tipos_servico, servico_status, servicos_tecnologia). Wrapper `sincronizar_configuracoes` dispara tudo. Management command: `python manage.py sincronizar_catalogo_hubsoft [--categoria=todos|<chave>] [--integracao-id] [--tenant] [--dry-run]`. **Pendente: UI consumindo o cache.**
 
 7. **Cobertura de testes baixa.** `SGPService` tem 27 testes (commit `528da1b`). `HubsoftService` quase não tem. **Endereçado no bloco H7.**

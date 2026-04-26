@@ -34,6 +34,19 @@ class HubsoftService:
     ENDPOINT_CONTRATO_ANEXO_TPL = '/api/v1/integracao/cliente/contrato/adicionar_anexo_contrato/{id_contrato}'
     ENDPOINT_CONTRATO_ACEITAR = '/api/v1/integracao/cliente/contrato/aceitar_contrato'
 
+    # Catálogos de configuração
+    ENDPOINT_CFG_SERVICO = '/api/v1/integracao/configuracao/servico'
+    ENDPOINT_CFG_VENCIMENTO = '/api/v1/integracao/configuracao/vencimento'
+    ENDPOINT_CFG_VENDEDOR = '/api/v1/integracao/configuracao/vendedor'
+    ENDPOINT_CFG_ORIGEM_CLIENTE = '/api/v1/integracao/configuracao/origem_cliente'
+    ENDPOINT_CFG_ORIGEM_CONTATO = '/api/v1/integracao/configuracao/origem_contato'
+    ENDPOINT_CFG_MEIO_PAGAMENTO = '/api/v1/integracao/configuracao/meio_pagamento'
+    ENDPOINT_CFG_GRUPO_CLIENTE = '/api/v1/integracao/configuracao/grupo_cliente'
+    ENDPOINT_CFG_MOTIVO_CONTRATACAO = '/api/v1/integracao/configuracao/motivo_contratacao'
+    ENDPOINT_CFG_TIPO_SERVICO = '/api/v1/integracao/configuracao/tipo_servico'
+    ENDPOINT_CFG_SERVICO_STATUS = '/api/v1/integracao/configuracao/servico_status'
+    ENDPOINT_CFG_SERVICO_TECNOLOGIA = '/api/v1/integracao/configuracao/servico_tecnologia'
+
     CAMPOS_SEGREDO_LOG = ('password', 'client_secret', 'token', 'access_token')
 
     def __init__(self, integracao: IntegracaoAPI):
@@ -478,6 +491,232 @@ class HubsoftService:
                     'valor_novo': str(novo_valor or ''),
                 })
         return alteracoes
+
+    # ------------------------------------------------------------------
+    # Catálogos de configuração — paridade com SGP Bloco 1
+    # Estratégia:
+    #   - Planos (servicos)  → upsert em ProdutoServico (preço fica em 0 até
+    #     ser preenchido por sync de cliente, já que a HubSoft não traz preço
+    #     no /configuracao/servico, só em /cliente.servicos[].valor)
+    #   - Vencimentos        → upsert em OpcaoVencimentoCRM
+    #   - Demais             → cache em integracao.configuracoes_extras['cache'][<chave>]
+    # ------------------------------------------------------------------
+
+    def listar_servicos(self) -> list[dict]:
+        """Lista serviços (planos) cadastrados no HubSoft."""
+        resposta = self._get(self.ENDPOINT_CFG_SERVICO)
+        return resposta.get('servicos') or []
+
+    def listar_vencimentos(self) -> list[dict]:
+        """Lista opções de dia de vencimento."""
+        resposta = self._get(self.ENDPOINT_CFG_VENCIMENTO)
+        return resposta.get('vencimentos') or []
+
+    def sincronizar_servicos_catalogo(self, *, dry_run: bool = False) -> dict:
+        """
+        Puxa serviços (planos) do HubSoft e faz upsert em crm.ProdutoServico.
+
+        HubSoft só expõe id_servico + descrição + tecnologia em
+        /configuracao/servico (sem preço). O preço é preservado se já
+        existir; novos registros entram com preço 0 e são atualizados
+        depois quando um cliente real é sincronizado.
+        """
+        from apps.comercial.crm.models import ProdutoServico
+        from decimal import Decimal
+
+        servicos = self.listar_servicos()
+        tenant = self.integracao.tenant
+        resumo = {'total': len(servicos), 'criados': 0, 'atualizados': 0,
+                  'inalterados': 0, 'dry_run': dry_run}
+
+        for svc in servicos:
+            id_svc = svc.get('id_servico')
+            if id_svc is None:
+                continue
+            codigo = str(id_svc)
+            nome = svc.get('descricao') or f'Serviço HubSoft {id_svc}'
+            tecnologia = (svc.get('servico_tecnologia') or {}).get('descricao') or ''
+
+            dados_erp = {
+                'origem_erp': 'hubsoft',
+                'id_servico_hubsoft': id_svc,
+                'tecnologia': tecnologia,
+                'id_servico_tecnologia': svc.get('id_servico_tecnologia'),
+            }
+
+            existente = ProdutoServico.objects.filter(
+                tenant=tenant, codigo=codigo,
+            ).first()
+
+            if dry_run:
+                if existente is None:
+                    resumo['criados'] += 1
+                else:
+                    # compara campos que vamos atualizar (não o preço, preservado)
+                    mudou = (
+                        existente.nome != nome
+                        or existente.id_externo != codigo
+                        or existente.dados_erp != dados_erp
+                    )
+                    resumo['atualizados' if mudou else 'inalterados'] += 1
+                continue
+
+            defaults = {
+                'nome': nome,
+                'categoria': 'plano',
+                'recorrencia': 'mensal',
+                'id_externo': codigo,
+                'dados_erp': dados_erp,
+            }
+            if existente is None:
+                defaults['preco'] = Decimal('0')
+                ProdutoServico.objects.create(tenant=tenant, codigo=codigo, **defaults)
+                resumo['criados'] += 1
+            else:
+                ProdutoServico.objects.filter(pk=existente.pk).update(**defaults)
+                resumo['atualizados'] += 1
+
+        return resumo
+
+    def sincronizar_vencimentos(self, *, dry_run: bool = False) -> dict:
+        """Puxa vencimentos do HubSoft e faz upsert em crm.OpcaoVencimentoCRM."""
+        from apps.comercial.crm.models import OpcaoVencimentoCRM
+
+        vencimentos = self.listar_vencimentos()
+        tenant = self.integracao.tenant
+        resumo = {'total': len(vencimentos), 'criados': 0, 'atualizados': 0,
+                  'inalterados': 0, 'dry_run': dry_run}
+
+        for venc in vencimentos:
+            id_venc = venc.get('id_vencimento')
+            dia = venc.get('dia_vencimento')
+            if id_venc is None or dia is None:
+                continue
+
+            try:
+                dia_int = int(dia)
+            except (ValueError, TypeError):
+                continue
+
+            defaults = {
+                'id_externo': str(id_venc),
+                'ordem': dia_int,
+                'ativo': True,
+                'dados_erp': {'origem_erp': 'hubsoft', 'id_vencimento_hubsoft': id_venc},
+            }
+
+            if dry_run:
+                existente = OpcaoVencimentoCRM.objects.filter(tenant=tenant, dia=dia_int).first()
+                if existente is None:
+                    resumo['criados'] += 1
+                else:
+                    mudou = any(
+                        getattr(existente, k, None) != v for k, v in defaults.items()
+                    )
+                    resumo['atualizados' if mudou else 'inalterados'] += 1
+                continue
+
+            _, criado = OpcaoVencimentoCRM.objects.update_or_create(
+                tenant=tenant, dia=dia_int, defaults=defaults,
+            )
+            resumo['criados' if criado else 'atualizados'] += 1
+
+        return resumo
+
+    # --- Catálogos cacheados em configuracoes_extras['cache'][<chave>] ---
+
+    # Mapa chave_cache → (endpoint, raiz_response, fn_chave_item)
+    # `raiz_response` é o nome do array dentro do JSON do HubSoft.
+    # `fn_chave_item` extrai um identificador estável pra contar diff.
+    CATALOGOS_CACHE = {
+        'vendedores':         ('ENDPOINT_CFG_VENDEDOR',           'vendedores',         lambda i: f"id:{i.get('id')}"),
+        'origens_cliente':    ('ENDPOINT_CFG_ORIGEM_CLIENTE',     'origens_cliente',    lambda i: f"id:{i.get('id_origem_cliente')}"),
+        'origens_contato':    ('ENDPOINT_CFG_ORIGEM_CONTATO',     'origem_contatos',    lambda i: f"id:{i.get('id_origem_contato')}"),
+        'meios_pagamento':    ('ENDPOINT_CFG_MEIO_PAGAMENTO',     'meios_pagamento',    lambda i: f"prefixo:{i.get('prefixo')}"),
+        'grupos_cliente':     ('ENDPOINT_CFG_GRUPO_CLIENTE',      'grupo_cliente',      lambda i: f"id:{i.get('id_grupo_cliente')}"),
+        'motivos_contratacao':('ENDPOINT_CFG_MOTIVO_CONTRATACAO', 'motivos_contratacao',lambda i: f"id:{i.get('id_motivo_contratacao')}"),
+        'tipos_servico':      ('ENDPOINT_CFG_TIPO_SERVICO',       'tipos_servico',      lambda i: f"id:{i.get('id_tipo_servico')}"),
+        'servico_status':     ('ENDPOINT_CFG_SERVICO_STATUS',     'servico_status',     lambda i: f"id:{i.get('id_servico_status')}"),
+        'servicos_tecnologia':('ENDPOINT_CFG_SERVICO_TECNOLOGIA', 'servicos_tecnologia',lambda i: f"id:{i.get('id_servico_tecnologia')}"),
+    }
+
+    def sincronizar_catalogo_cacheado(self, chave: str, *, dry_run: bool = False) -> dict:
+        """Puxa um catálogo nominal e cacheia em configuracoes_extras['cache'][chave]."""
+        if chave not in self.CATALOGOS_CACHE:
+            raise HubsoftServiceError(f"Catálogo desconhecido: {chave}")
+        attr_endpoint, raiz, fn_chave = self.CATALOGOS_CACHE[chave]
+        endpoint = getattr(self, attr_endpoint)
+
+        resposta = self._get(endpoint)
+        itens = resposta.get(raiz) or []
+        return self._persistir_cache(chave, itens, fn_chave=fn_chave, dry_run=dry_run)
+
+    def sincronizar_configuracoes(self, *, dry_run: bool = False) -> dict:
+        """
+        Sincroniza todos os catálogos do HubSoft de uma vez.
+        Retorna dict com resumo por catálogo + total_geral.
+        """
+        resultado = {}
+
+        # Catálogos persistidos em modelo CRM
+        try:
+            resultado['servicos'] = self.sincronizar_servicos_catalogo(dry_run=dry_run)
+        except HubsoftServiceError as exc:
+            resultado['servicos'] = {'erro': str(exc)}
+
+        try:
+            resultado['vencimentos'] = self.sincronizar_vencimentos(dry_run=dry_run)
+        except HubsoftServiceError as exc:
+            resultado['vencimentos'] = {'erro': str(exc)}
+
+        # Catálogos cacheados
+        for chave in self.CATALOGOS_CACHE:
+            try:
+                resultado[chave] = self.sincronizar_catalogo_cacheado(chave, dry_run=dry_run)
+            except HubsoftServiceError as exc:
+                resultado[chave] = {'erro': str(exc)}
+
+        # Sumário rápido
+        total = sum(
+            (r.get('criados', 0) + r.get('atualizados', 0))
+            for r in resultado.values() if isinstance(r, dict) and 'erro' not in r
+        )
+        resultado['_total_geral'] = total
+        resultado['_dry_run'] = dry_run
+        return resultado
+
+    def _persistir_cache(self, chave: str, itens: list, *, fn_chave, dry_run: bool) -> dict:
+        """
+        Guarda `itens` em integracao.configuracoes_extras['cache'][<chave>].
+        Compara com o cache anterior pra reportar criados/atualizados/inalterados.
+        """
+        extras = dict(self.integracao.configuracoes_extras or {})
+        cache = dict(extras.get('cache') or {})
+        anterior = {fn_chave(i): i for i in (cache.get(chave) or [])}
+        atual = {fn_chave(i): i for i in itens}
+
+        criados = sum(1 for k in atual if k not in anterior)
+        atualizados = sum(
+            1 for k, v in atual.items() if k in anterior and anterior[k] != v
+        )
+        inalterados = sum(
+            1 for k, v in atual.items() if k in anterior and anterior[k] == v
+        )
+
+        resumo = {
+            'total': len(itens), 'criados': criados, 'atualizados': atualizados,
+            'inalterados': inalterados, 'dry_run': dry_run,
+        }
+        if dry_run:
+            return resumo
+
+        cache[chave] = itens
+        extras['cache'] = cache
+        type(self.integracao).objects.filter(pk=self.integracao.pk).update(
+            configuracoes_extras=extras,
+        )
+        self.integracao.configuracoes_extras = extras
+        return resumo
 
     # ------------------------------------------------------------------
     # Mapeamento Lead → payload HubSoft

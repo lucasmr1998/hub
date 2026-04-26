@@ -38,17 +38,22 @@ Análise da Postman collection oficial (`Hubsoft API.postman_collection.json` na
 
 ### Bloco H2 — Sincronizar catálogos de configuração
 
-- [ ] `sincronizar_servicos_hubsoft` (planos) — `GET /configuracao/servico` → upsert em `ProdutoServico`
-- [ ] `sincronizar_vencimentos` — `GET /configuracao/vencimento` → upsert em `OpcaoVencimentoCRM`
-- [ ] `sincronizar_vendedores` — `GET /configuracao/vendedor` → cache em `configuracoes_extras['cache']['vendedores']`
-- [ ] `sincronizar_origens_cliente` — `GET /configuracao/origem_cliente` → cache
-- [ ] `sincronizar_origens_servico` — `GET /configuracao/origem_servico` (verificar nome exato) → cache
-- [ ] `sincronizar_meios_pagamento` — `GET /configuracao/meio_pagamento` → cache
-- [ ] `sincronizar_grupos_cliente` — `GET /configuracao/grupo_cliente` → cache
-- [ ] `sincronizar_motivos_contratacao` — `GET /configuracao/motivo_contratacao` → cache
-- [ ] Wrapper `sincronizar_configuracoes(dry_run=False)` que dispara todos os anteriores em sequência
-- [ ] Management command `sincronizar_catalogo_hubsoft` (espelho do `sincronizar_catalogo_sgp`)
-- [ ] UI no painel de detalhe da integração: botão "sincronizar catálogos" + selects populados por cache (substituem o JSON manual atual)
+**Backend concluído (26/04/2026).** UI pendente.
+
+- [x] `sincronizar_servicos_catalogo` (planos) — `GET /configuracao/servico` → upsert em `ProdutoServico`. Preço fica em 0 e é preservado em re-syncs (HubSoft não traz valor em `/configuracao/servico`, só em `/cliente.servicos[].valor`).
+- [x] `sincronizar_vencimentos` — `GET /configuracao/vencimento` → upsert em `OpcaoVencimentoCRM`
+- [x] `sincronizar_catalogo_cacheado('vendedores')` — `GET /configuracao/vendedor` → cache em `configuracoes_extras['cache']['vendedores']`
+- [x] `sincronizar_catalogo_cacheado('origens_cliente')` — `GET /configuracao/origem_cliente` → cache
+- [x] `sincronizar_catalogo_cacheado('origens_contato')` — `GET /configuracao/origem_contato` → cache
+- [x] `sincronizar_catalogo_cacheado('meios_pagamento')` — `GET /configuracao/meio_pagamento` → cache
+- [x] `sincronizar_catalogo_cacheado('grupos_cliente')` — `GET /configuracao/grupo_cliente` → cache
+- [x] `sincronizar_catalogo_cacheado('motivos_contratacao')` — `GET /configuracao/motivo_contratacao` → cache
+- [x] `sincronizar_catalogo_cacheado('tipos_servico')` — `GET /configuracao/tipo_servico` → cache
+- [x] `sincronizar_catalogo_cacheado('servico_status')` — `GET /configuracao/servico_status` → cache
+- [x] `sincronizar_catalogo_cacheado('servicos_tecnologia')` — `GET /configuracao/servico_tecnologia` → cache
+- [x] Wrapper `sincronizar_configuracoes(dry_run=False)` dispara todos em sequência, com captura de erro por catálogo (um falhar não derruba os outros)
+- [x] Management command `sincronizar_catalogo_hubsoft --categoria=todos|<chave> --integracao-id --tenant --dry-run`
+- [ ] UI no painel `/configuracoes/integracoes/<pk>/`: botão "sincronizar catálogos" + selects populados por cache (substituem o JSON manual). **Próximo sub-passo do H2.**
 
 ### Bloco H3 — Financeiro
 
