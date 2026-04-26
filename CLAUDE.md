@@ -3,10 +3,11 @@
 ## Abordagem de Trabalho
 
 **OBRIGATORIO:** Antes de implementar qualquer funcionalidade, correcao ou alteracao:
-1. **Discutir antes de fazer.** Apresentar o problema/tarefa, sugerir abordagens e perguntar como o usuario quer proceder.
-2. **Trazer opcoes.** Sempre que houver mais de uma forma de resolver, apresentar as opcoes com pros e contras.
-3. **Nunca implementar sem alinhamento.** Mesmo que a solucao pareca obvia, perguntar antes. O usuario decide a direcao.
-4. **Confirmar escopo.** Antes de comecar, resumir o que vai ser feito e pedir confirmacao.
+1. **Ler a documentacao do modulo PRIMEIRO.** Antes de qualquer alteracao, **sempre** ler `robo/docs/PRODUTO/` do modulo correspondente (ex: mexer em notificacoes -> ler `robo/docs/PRODUTO/ops/03-NOTIFICACOES.md`; mexer em integracao -> `robo/docs/PRODUTO/integracoes/`; modulo funcional -> `robo/docs/PRODUTO/modulos/<modulo>/`). A doc tem o desenho original, decisoes ja tomadas e armadilhas conhecidas. **Nao implementar sem ler a doc.** Se a doc nao existir, criar antes — nao confiar so no que o codigo aparenta fazer.
+2. **Discutir antes de fazer.** Apresentar o problema/tarefa, sugerir abordagens e perguntar como o usuario quer proceder.
+3. **Trazer opcoes.** Sempre que houver mais de uma forma de resolver, apresentar as opcoes com pros e contras.
+4. **Nunca implementar sem alinhamento.** Mesmo que a solucao pareca obvia, perguntar antes. O usuario decide a direcao.
+5. **Confirmar escopo.** Antes de comecar, resumir o que vai ser feito e pedir confirmacao.
 
 ### Checklist de "feature completa"
 
