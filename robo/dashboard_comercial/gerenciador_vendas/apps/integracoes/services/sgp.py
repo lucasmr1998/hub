@@ -331,7 +331,14 @@ class SGPService:
     def sincronizar_cliente(self, lead, *, cpf_cnpj: str = None):
         """
         Consulta o SGP pelo CPF/CNPJ do lead (ou explicito) e cria/atualiza
-        ClienteSGP local. Retorna ClienteSGP ou None se nao encontrado.
+        ClienteSGP local.
+
+        Shape do SGP: `{contratos: [...]}`. Cada contrato carrega os dados
+        do cliente embutidos em camelCase (clienteId, cpfCnpj, razaoSocial,
+        telefones, emails, endereco_*). Mesmo cliente aparece N vezes (1 por
+        contrato) — extraimos do primeiro e salvamos a lista de contratos.
+
+        Returns: ClienteSGP ou None se cliente nao encontrado / sem contratos.
         """
         from apps.integracoes.models import ClienteSGP
 
@@ -346,38 +353,46 @@ class SGPService:
             logger.error('sincronizar_cliente: erro consultando %s: %s', cpf, exc)
             return None
 
-        # Shape SGP de /api/ura/consultacliente/: dict com chaves variaveis.
-        # Tentamos extrair de forma tolerante a variacoes.
-        cliente_data = resposta.get('cliente') or resposta
-        id_cliente_sgp = (
-            cliente_data.get('id') or cliente_data.get('id_cliente') or cliente_data.get('cliente_id')
-        )
-        if not id_cliente_sgp:
+        contratos = resposta.get('contratos') or []
+        if not contratos:
             logger.warning(
-                'sincronizar_cliente: resposta SGP sem id_cliente. cpf=%s resposta=%s',
-                cpf, str(resposta)[:300],
+                'sincronizar_cliente: SGP retornou sem contratos pra cpf=%s. '
+                'Provavelmente eh prospecto/pre-cadastro (sem contrato ativo).',
+                cpf,
             )
             return None
+
+        # Pega cliente do primeiro contrato (todos tem o mesmo cliente)
+        primeiro = contratos[0]
+        id_cliente_sgp = primeiro.get('clienteId')
+        if not id_cliente_sgp:
+            logger.warning(
+                'sincronizar_cliente: contrato sem clienteId. cpf=%s primeiro=%s',
+                cpf, str(primeiro)[:300],
+            )
+            return None
+
+        # Telefones e emails vem como lista — pega o primeiro
+        telefones = primeiro.get('telefones') or []
+        emails = primeiro.get('emails') or []
+        # Status do cliente: ativo se TEM algum contrato ativo (Status=1)
+        ativo = any(c.get('contratoStatus') == 1 for c in contratos)
 
         defaults = {
             'tenant': self.integracao.tenant,
             'lead': lead,
-            'nome': (cliente_data.get('nome') or cliente_data.get('nome_razaosocial') or '')[:300],
-            'cpf_cnpj': self._somente_numeros(cpf),
-            'email': (cliente_data.get('email') or '')[:254],
-            'telefone': (
-                cliente_data.get('telefone_celular')
-                or cliente_data.get('telefone')
-                or ''
-            )[:30],
-            'cep': self._somente_numeros(cliente_data.get('cep') or '')[:10],
-            'logradouro': (cliente_data.get('logradouro') or '')[:255],
-            'numero': str(cliente_data.get('numero') or '')[:20],
-            'bairro': (cliente_data.get('bairro') or '')[:120],
-            'cidade': (cliente_data.get('cidade') or '')[:100],
-            'uf': (cliente_data.get('uf') or '')[:2],
-            'ativo': bool(cliente_data.get('ativo', True)),
-            'contratos': resposta.get('contratos') or cliente_data.get('contratos') or [],
+            'nome': (primeiro.get('razaoSocial') or primeiro.get('nome') or '')[:300],
+            'cpf_cnpj': self._somente_numeros(primeiro.get('cpfCnpj') or cpf),
+            'email': (emails[0] if emails else '')[:254],
+            'telefone': (telefones[0] if telefones else '')[:30],
+            'cep': self._somente_numeros(primeiro.get('endereco_cep') or '')[:10],
+            'logradouro': (primeiro.get('endereco_logradouro') or '')[:255],
+            'numero': str(primeiro.get('endereco_numero') or '')[:20],
+            'bairro': (primeiro.get('endereco_bairro') or '')[:120],
+            'cidade': (primeiro.get('endereco_cidade') or '')[:100],
+            'uf': (primeiro.get('endereco_uf') or '')[:2],
+            'ativo': ativo,
+            'contratos': contratos,
             'dados_completos': resposta,
         }
 
@@ -387,9 +402,9 @@ class SGPService:
             defaults=defaults,
         )
         if criado:
-            logger.info('ClienteSGP criado: pk=%s id_sgp=%s', cliente.pk, id_cliente_sgp)
+            logger.info('ClienteSGP criado: pk=%s id_sgp=%s nome=%s', cliente.pk, id_cliente_sgp, cliente.nome)
         else:
-            logger.info('ClienteSGP atualizado: pk=%s id_sgp=%s', cliente.pk, id_cliente_sgp)
+            logger.info('ClienteSGP atualizado: pk=%s id_sgp=%s nome=%s', cliente.pk, id_cliente_sgp, cliente.nome)
         return cliente
 
     def consultar_cliente(self, cpf_cnpj: str, lead=None) -> dict:

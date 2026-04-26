@@ -76,6 +76,17 @@ Endpoints do Hubtrix prontos para receber callbacks, se a Gigamax quiser orquest
 
 ---
 
+## Dados de teste (homologação)
+
+| Caso | Documento | Origem | Observação |
+|------|-----------|--------|------------|
+| Cliente PJ ativo (com contrato) | **06.064.410/0001-82** | Cliente real Gigamax | Usar pra validar `consultar_cliente` end-to-end via `POST /api/ura/consultacliente/`. **Não cadastrar como prospecto** — já existe na base. |
+| Pré-cadastro PF de teste | 02988460043 | Lucas (criado via `cadastrar_prospecto_pf` em 25/04) | `precadastro_id=100367` / `new_cliente_id=5113881`. Desativar manual no painel SGP quando não precisar mais. |
+
+> ⚠️ Ao testar contra estes documentos, sempre via shell ou command com `--dry-run` quando possível. Nunca passe esses dados por canais externos (chat, email).
+
+---
+
 ## Checklist de ativação
 
 - [x] Método de auth identificado (`app + token`)
@@ -89,6 +100,6 @@ Endpoints do Hubtrix prontos para receber callbacks, se a Gigamax quiser orquest
 - [x] Credenciais validadas (planos/vencimentos/vendedores/pops/portadores OK)
 - [x] IDs padrão descobertos (ver tabela acima)
 - [x] Lead de teste enviado com sucesso (`precadastro_id=100367`, `new_cliente_id=5113881` em 25/04 — desativar manual)
-- [ ] Cliente de teste sincronizado com sucesso (`sincronizar_cliente` ainda nao implementado)
+- [x] Cliente de teste sincronizado com sucesso — `GDM TELECOM LTDA` (id_sgp=215) com 8 contratos sincronizados em 26/04/2026
 - [ ] Vendedor "Aurora" criado no painel SGP (hoje usando id=1 Jessyca como fallback)
 - [ ] Modos de sync habilitados em produção
