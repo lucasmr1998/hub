@@ -401,11 +401,12 @@
     <div class="table-wrap">
       <table class="data-table">
         <thead>
-          <tr><th>Quando</th><th>Metodo</th><th>Endpoint</th><th>Status</th><th>Tempo</th><th>Mensagem</th></tr>
+          <tr><th style="width: 30px;"></th><th>Quando</th><th>Metodo</th><th>Endpoint</th><th>Status</th><th>Tempo</th><th>Mensagem</th></tr>
         </thead>
         <tbody>
           {% for log in logs_recentes %}
-            <tr>
+            <tr class="log-row" data-log-id="{{ log.pk }}" style="cursor: pointer;" onclick="toggleLogDetail({{ log.pk }})">
+              <td style="text-align: center; color: var(--color-text-muted);"><i class="bi bi-chevron-right log-chevron" id="chev-{{ log.pk }}"></i></td>
               <td style="font-size: var(--fs-xs); color: var(--color-text-muted); white-space: nowrap;">{{ log.data_criacao|date:"d/m H:i:s" }}</td>
               <td><span class="viab-uf">{{ log.metodo }}</span></td>
               <td style="font-family: monospace; font-size: 11px;">{{ log.endpoint }}</td>
@@ -418,6 +419,26 @@
               </td>
               <td style="font-size: var(--fs-xs); color: var(--color-text-muted);">{{ log.tempo_resposta_ms }}ms</td>
               <td style="font-size: var(--fs-xs); color: var(--color-text-muted); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ log.mensagem_erro|default:"—" }}</td>
+            </tr>
+            <tr class="log-detail" id="log-detail-{{ log.pk }}" style="display: none; background: var(--color-bg-subtle, #f8f9fb);">
+              <td colspan="7" style="padding: var(--sp-3) var(--sp-4);">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3);">
+                  <div>
+                    <h5 style="margin: 0 0 4px; font-size: 11px; font-weight: var(--fw-semibold); text-transform: uppercase; color: var(--color-text-muted);">Payload enviado</h5>
+                    <pre class="log-pre">{{ log.payload_enviado|pprint }}</pre>
+                  </div>
+                  <div>
+                    <h5 style="margin: 0 0 4px; font-size: 11px; font-weight: var(--fw-semibold); text-transform: uppercase; color: var(--color-text-muted);">Resposta recebida</h5>
+                    <pre class="log-pre">{{ log.resposta_recebida|pprint }}</pre>
+                  </div>
+                </div>
+                {% if log.mensagem_erro %}
+                <div style="margin-top: var(--sp-2);">
+                  <h5 style="margin: 0 0 4px; font-size: 11px; font-weight: var(--fw-semibold); text-transform: uppercase; color: var(--color-danger, #dc3545);">Mensagem de erro completa</h5>
+                  <pre class="log-pre log-pre-error">{{ log.mensagem_erro }}</pre>
+                </div>
+                {% endif %}
+              </td>
             </tr>
           {% endfor %}
         </tbody>
@@ -442,6 +463,18 @@
   .check-chip:hover { border-color: var(--color-primary); }
   .check-chip:has(input:checked) { background: var(--color-primary-soft); border-color: var(--color-primary); color: var(--color-primary); font-weight: var(--fw-semibold); }
   .check-chip input { margin: 0; }
+  .log-row:hover { background: var(--color-bg-subtle, #f8f9fb); }
+  .log-chevron { transition: transform 0.15s; font-size: 10px; }
+  .log-row.is-open .log-chevron { transform: rotate(90deg); }
+  .log-pre {
+    margin: 0; padding: 8px 10px; background: var(--color-bg, #fff);
+    border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px; line-height: 1.4;
+    max-height: 360px; overflow: auto;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .log-pre-error { color: var(--color-danger, #dc3545); border-color: var(--color-danger, #dc3545); }
 </style>
 {% endblock %}
 
@@ -453,6 +486,15 @@ const URL_SINC_CAT = "{% url 'integracoes:api_integracao_sincronizar_catalogo' p
 const URL_TESTAR = "{% url 'integracoes:api_integracao_testar' pk=integracao.pk %}";
 const URL_MODOS = "{% url 'integracoes:api_integracao_modos_sync' pk=integracao.pk %}";
 const URL_EDITAR = "{% url 'integracoes:api_integracao_editar' pk=integracao.pk %}";
+
+function toggleLogDetail(id) {
+  const detail = document.getElementById('log-detail-' + id);
+  const row = document.querySelector('.log-row[data-log-id="' + id + '"]');
+  if (!detail || !row) return;
+  const open = detail.style.display !== 'none';
+  detail.style.display = open ? 'none' : 'table-row';
+  row.classList.toggle('is-open', !open);
+}
 
 function getCsrf() {
   return document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] || '';
