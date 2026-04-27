@@ -50,12 +50,6 @@
             <span class="integ-field-label">URL Base</span>
             <span class="integ-field-value">{{ integ.base_url|default:"—" }}</span>
           </div>
-          {% if integ.username %}
-            <div class="integ-field">
-              <span class="integ-field-label">Usuario</span>
-              <span class="integ-field-value">{{ integ.username }}</span>
-            </div>
-          {% endif %}
           {% if integ.configuracoes_extras %}
             <div class="integ-field">
               <span class="integ-field-label">Configuracoes extras</span>
@@ -86,29 +80,6 @@
                 <code id="webhook-{{ integ.pk }}">{{ request.scheme }}://{{ request.get_host }}/inbox/api/webhook/{{ integ.api_token }}/</code>
               </div>
             {% endif %}
-          {% endif %}
-
-          {% if integ.tipo == 'hubsoft' %}
-            <div class="integ-sync-modes" id="sync-modes-{{ integ.pk }}">
-              <div class="integ-field-label" style="margin-bottom: var(--sp-2);"><i class="bi bi-arrow-repeat"></i> Modos de sincronizacao</div>
-              <div id="sync-fields-{{ integ.pk }}">
-                <div class="integ-sync-row"><span>Enviar lead ao criar</span>
-                  <select onchange="salvarModoSync({{ integ.pk }})" class="sync-mode-select" data-feature="enviar_lead">
-                    <option value="automatico">Automatico</option><option value="manual">Manual (API)</option><option value="desativado">Desativado</option>
-                  </select>
-                </div>
-                <div class="integ-sync-row"><span>Sincronizar dados do cliente</span>
-                  <select onchange="salvarModoSync({{ integ.pk }})" class="sync-mode-select" data-feature="sincronizar_cliente">
-                    <option value="automatico">Automatico</option><option value="manual">Manual (API)</option><option value="desativado">Desativado</option>
-                  </select>
-                </div>
-                <div class="integ-sync-row"><span>Sincronizar servicos contratados</span>
-                  <select onchange="salvarModoSync({{ integ.pk }})" class="sync-mode-select" data-feature="sincronizar_servicos">
-                    <option value="automatico">Automatico</option><option value="manual">Manual (API)</option><option value="desativado">Desativado</option>
-                  </select>
-                </div>
-              </div>
-            </div>
           {% endif %}
 
           <div class="integ-test-result" id="test-{{ integ.pk }}" hidden></div>
@@ -489,39 +460,6 @@
       });
   }
 
-  // Modos de sync (HubSoft)
-  function carregarModosSync(pk) {
-    fetch(`/configuracoes/integracoes/api/${pk}/modos-sync/get/`)
-      .then(r=>r.json()).then(d=>{
-        if (!d.success) return;
-        const container = document.getElementById('sync-fields-' + pk);
-        if (!container) return;
-        container.querySelectorAll('.sync-mode-select').forEach(sel => {
-          const f = sel.dataset.feature;
-          if (d.modos_sync[f]) sel.value = d.modos_sync[f];
-        });
-      });
-  }
-
-  function salvarModoSync(pk) {
-    const container = document.getElementById('sync-fields-' + pk);
-    const modos = {};
-    container.querySelectorAll('.sync-mode-select').forEach(sel => {
-      modos[sel.dataset.feature] = sel.value;
-    });
-    fetch(`/configuracoes/integracoes/api/${pk}/modos-sync/`, {
-      method: 'POST',
-      headers: H,
-      body: JSON.stringify({modos_sync: modos})
-    }).then(r=>r.json()).then(d=>{
-      if (d.success) toast('Salvo', d.message || 'Modo atualizado', 'success');
-      else toast('Erro', d.error || 'Erro', 'danger');
-    });
-  }
-
-  document.querySelectorAll('[id^="sync-modes-"]').forEach(el => {
-    const pk = el.id.replace('sync-modes-', '');
-    carregarModosSync(pk);
-  });
+  // Modos de sincronizacao moveram para a pagina de detalhe da integracao.
 </script>
 {% endblock %}
