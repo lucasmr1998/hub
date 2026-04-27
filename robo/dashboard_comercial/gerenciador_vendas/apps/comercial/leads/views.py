@@ -202,6 +202,8 @@ def api_campos_custom(request):
                 slug = f"{base_slug}_{counter}"
                 counter += 1
             campo = CampoCustomizado.objects.create(
+                tenant=request.tenant,
+                entidade=data.get('entidade', 'lead'),
                 nome=nome,
                 slug=slug,
                 tipo=data.get('tipo', 'texto'),
