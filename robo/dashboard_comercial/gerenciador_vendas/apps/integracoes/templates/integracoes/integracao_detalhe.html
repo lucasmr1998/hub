@@ -94,6 +94,36 @@
   </div>
 </div>
 
+{# Tabs de gerenciamento — agrupa configuracao, catalogos, sandbox, modos sync e logs #}
+<div class="tabs tabs-line" role="tablist" style="margin-bottom: 0;">
+  {% if integracao.tipo == 'sgp' or integracao.tipo == 'hubsoft' %}
+    <button type="button" class="tabs-item is-active" role="tab" data-tab="tab-config" aria-selected="true">
+      <i class="bi bi-sliders"></i><span>Configuracao</span>
+    </button>
+  {% endif %}
+  {% if catalogos %}
+    <button type="button" class="tabs-item{% if integracao.tipo != 'sgp' and integracao.tipo != 'hubsoft' %} is-active{% endif %}" role="tab" data-tab="tab-catalogos" aria-selected="{% if integracao.tipo != 'sgp' and integracao.tipo != 'hubsoft' %}true{% else %}false{% endif %}">
+      <i class="bi bi-database"></i><span>Catalogos</span>
+      <span class="tabs-item-badge">{{ catalogos|length }}</span>
+    </button>
+  {% endif %}
+  {% if integracao.tipo == 'hubsoft' %}
+    <button type="button" class="tabs-item" role="tab" data-tab="tab-sandbox" aria-selected="false">
+      <i class="bi bi-cash-coin"></i><span>Sandbox financeiro</span>
+    </button>
+  {% endif %}
+  <button type="button" class="tabs-item{% if integracao.tipo != 'sgp' and integracao.tipo != 'hubsoft' and not catalogos %} is-active{% endif %}" role="tab" data-tab="tab-modos" aria-selected="{% if integracao.tipo != 'sgp' and integracao.tipo != 'hubsoft' and not catalogos %}true{% else %}false{% endif %}">
+    <i class="bi bi-arrow-repeat"></i><span>Modos de sincronizacao</span>
+  </button>
+  <button type="button" class="tabs-item" role="tab" data-tab="tab-logs" aria-selected="false">
+    <i class="bi bi-clock-history"></i><span>Logs</span>
+    <span class="tabs-item-badge">{{ logs_recentes|length }}</span>
+  </button>
+</div>
+
+{% if integracao.tipo == 'sgp' or integracao.tipo == 'hubsoft' %}
+<div class="tabs-panel is-active" id="tab-config">
+
 {% if integracao.tipo == 'sgp' %}
 {# Configuracao de cadastro automatico #}
 <div class="card" style="margin-bottom: var(--sp-4); padding: 0; overflow: hidden;">
@@ -333,7 +363,11 @@
 </div>
 {% endif %}
 
+</div>{# /tab-config #}
+{% endif %}
+
 {% if catalogos %}
+<div class="tabs-panel{% if integracao.tipo != 'sgp' and integracao.tipo != 'hubsoft' %} is-active{% endif %}" id="tab-catalogos">
 {# Catalogos #}
 <div class="card" style="margin-bottom: var(--sp-4); padding: 0; overflow: hidden;">
   <div class="card-header">
@@ -360,9 +394,11 @@
     </table>
   </div>
 </div>
-{% endif %}
+{% endif %}{# /catalogos card #}
+{% if catalogos %}</div>{# /tab-catalogos #}{% endif %}
 
 {% if integracao.tipo == 'hubsoft' %}
+<div class="tabs-panel" id="tab-sandbox">
 {# Sandbox financeiro — teste rapido por CPF antes de plugar no Inbox #}
 <div class="card" style="margin-bottom: var(--sp-4); padding: 0; overflow: hidden;">
   <div class="card-header">
@@ -393,8 +429,10 @@
     </div>
   </div>
 </div>
-{% endif %}
+{% endif %}{# /sandbox card #}
+{% if integracao.tipo == 'hubsoft' %}</div>{# /tab-sandbox #}{% endif %}
 
+<div class="tabs-panel{% if integracao.tipo != 'sgp' and integracao.tipo != 'hubsoft' and not catalogos %} is-active{% endif %}" id="tab-modos">
 {# Modos de sincronizacao #}
 <div class="card" style="margin-bottom: var(--sp-4); padding: 0; overflow: hidden;">
   <div class="card-header">
@@ -424,6 +462,9 @@
   </div>
 </div>
 
+</div>{# /tab-modos #}
+
+<div class="tabs-panel" id="tab-logs">
 {# Logs recentes #}
 <div class="card" style="margin-bottom: var(--sp-4); padding: 0; overflow: hidden;">
   <div class="card-header">
@@ -484,6 +525,7 @@
     </div>
   {% endif %}
 </div>
+</div>{# /tab-logs #}
 {% endblock %}
 
 {% block extra_css %}
