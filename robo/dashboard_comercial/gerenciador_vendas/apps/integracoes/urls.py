@@ -9,6 +9,7 @@ urlpatterns = [
     path('<int:pk>/', views.integracao_detalhe, name='integracao_detalhe'),
     path('<int:pk>/api/defaults/', views.api_integracao_defaults, name='api_integracao_defaults'),
     path('<int:pk>/api/sincronizar-catalogo/', views.api_integracao_sincronizar_catalogo, name='api_integracao_sincronizar_catalogo'),
+    path('<int:pk>/api/financeiro-sandbox/', views.api_integracao_financeiro_sandbox, name='api_integracao_financeiro_sandbox'),
 
     # APIs CRUD
     path('api/criar/', views.api_integracao_criar, name='api_integracao_criar'),

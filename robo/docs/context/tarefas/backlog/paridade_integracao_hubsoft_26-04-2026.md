@@ -66,7 +66,8 @@ Análise da Postman collection oficial (`Hubsoft API.postman_collection.json` na
 - [x] Helper `_renegociacao_post` compartilhado entre simular/efetivar (mesmo shape)
 - [ ] **Cortado de escopo:** `enviar_email/sms/push` (motor próprio do Hubtrix), `listar_faturas_admin`, `liquidar_fatura`, `conta_pagar`, `cobranca_avulsa` — fora do dominio do Hubtrix (gestao financeira interna do provedor é HubSoft direto).
 - [ ] **Avaliar substituição** de `cs/clube/services/hubsoft_service.checar_pontos_extras_cpf` (SQL direto) pelo equivalente REST agora possível com `listar_faturas_cliente`. Se cobrir, deprecar o acesso direto ao banco. (Sub-tarefa, fica pra depois de validar com o CS.)
-- [ ] UI no Inbox/Atendimento: ações rápidas "ver faturas em aberto", "gerar 2ª via" (link/PIX da fatura), "simular acordo". Próximo sub-passo do H3.
+- [ ] UI no Inbox/Atendimento: ações rápidas "ver faturas em aberto", "gerar 2ª via" (link/PIX da fatura), "simular acordo". **Movido pra tarefa dedicada:** `inbox_acoes_hubsoft_26-04-2026.md`.
+- [x] **Sandbox de teste no painel da integração** (`/configuracoes/integracoes/<pk>/`) — atendente/admin testa `listar_faturas_cliente` e `listar_renegociacoes` por CPF antes de plugar nos fluxos finais.
 
 ### Bloco H4 — Operacional / suporte de 1ª linha
 

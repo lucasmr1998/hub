@@ -362,6 +362,39 @@
 </div>
 {% endif %}
 
+{% if integracao.tipo == 'hubsoft' %}
+{# Sandbox financeiro — teste rapido por CPF antes de plugar no Inbox #}
+<div class="card" style="margin-bottom: var(--sp-4); padding: 0; overflow: hidden;">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-cash-coin" style="color: var(--color-primary);"></i> Sandbox financeiro</h3>
+    <span style="font-size: var(--fs-xs); color: var(--color-text-muted);">Consulta-only. Sem escrita.</span>
+  </div>
+  <div style="padding: var(--sp-4);">
+    <p style="margin: 0 0 var(--sp-3); font-size: var(--fs-xs); color: var(--color-text-muted);">
+      Testa endpoints REST de financeiro do HubSoft direto daqui. Use pra validar se o cliente eh encontrado e se as faturas/acordos vem corretos antes de plugar no Inbox/Atendimento.
+    </p>
+    <div class="form-row-2">
+      <div class="field">
+        <label class="field-label">CPF / CNPJ do cliente</label>
+        <div class="field-input-wrap">
+          <input type="text" class="field-input" id="hs-fin-cpf" placeholder="Apenas numeros ou com mascara" />
+        </div>
+      </div>
+      <div class="field" style="display: flex; gap: 8px; align-items: flex-end;">
+        <button class="btn btn-primary btn-sm" onclick="hsFinanceiro('listar_faturas', true)"><i class="bi bi-receipt"></i> Faturas em aberto</button>
+        <button class="btn btn-ghost btn-sm" onclick="hsFinanceiro('listar_faturas', false)"><i class="bi bi-list-ul"></i> Todas as faturas</button>
+        <button class="btn btn-ghost btn-sm" onclick="hsFinanceiro('listar_renegociacoes')"><i class="bi bi-handshake"></i> Renegociacoes</button>
+      </div>
+    </div>
+
+    <div id="hs-fin-result" style="margin-top: var(--sp-3); display: none;">
+      <h5 id="hs-fin-result-title" style="margin: 0 0 4px; font-size: 11px; font-weight: var(--fw-semibold); text-transform: uppercase; color: var(--color-text-muted);">Resultado</h5>
+      <pre class="log-pre" id="hs-fin-result-body"></pre>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {# Modos de sincronizacao #}
 <div class="card" style="margin-bottom: var(--sp-4); padding: 0; overflow: hidden;">
   <div class="card-header">
@@ -483,9 +516,49 @@
 const PK = {{ integracao.pk }};
 const URL_DEFAULTS = "{% url 'integracoes:api_integracao_defaults' pk=integracao.pk %}";
 const URL_SINC_CAT = "{% url 'integracoes:api_integracao_sincronizar_catalogo' pk=integracao.pk %}";
+const URL_FIN_SANDBOX = "{% url 'integracoes:api_integracao_financeiro_sandbox' pk=integracao.pk %}";
 const URL_TESTAR = "{% url 'integracoes:api_integracao_testar' pk=integracao.pk %}";
 const URL_MODOS = "{% url 'integracoes:api_integracao_modos_sync' pk=integracao.pk %}";
 const URL_EDITAR = "{% url 'integracoes:api_integracao_editar' pk=integracao.pk %}";
+
+async function hsFinanceiro(acao, apenasPendente = false) {
+  const cpf = (document.getElementById('hs-fin-cpf').value || '').trim();
+  if (!cpf) { toast('Aviso', 'Informe um CPF/CNPJ.', 'warning'); return; }
+  const wrap = document.getElementById('hs-fin-result');
+  const title = document.getElementById('hs-fin-result-title');
+  const body = document.getElementById('hs-fin-result-body');
+  wrap.style.display = 'block';
+  title.textContent = 'Consultando...';
+  body.textContent = '';
+  try {
+    const payload = { acao, cpf_cnpj: cpf };
+    if (acao === 'listar_faturas') payload.apenas_pendente = apenasPendente;
+    const r = await fetch(URL_FIN_SANDBOX, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.success) {
+      title.textContent = 'Erro';
+      body.textContent = JSON.stringify(d, null, 2);
+      toast('Erro', d.error || 'Falha na consulta.', 'danger');
+      return;
+    }
+    if (acao === 'listar_faturas') {
+      title.textContent = `${d.total} fatura(s) ${apenasPendente ? 'em aberto' : 'no total'}`;
+    } else {
+      const total = (d.paginacao && d.paginacao.total_registros) || (d.renegociacoes || []).length;
+      title.textContent = `${total} renegociacao(oes) encontrada(s)`;
+    }
+    body.textContent = JSON.stringify(d, null, 2);
+    toast('Pronto', 'Consulta concluida.', 'success');
+  } catch (e) {
+    title.textContent = 'Erro de rede';
+    body.textContent = String(e);
+    toast('Erro', String(e), 'danger');
+  }
+}
 
 function toggleLogDetail(id) {
   const detail = document.getElementById('log-detail-' + id);

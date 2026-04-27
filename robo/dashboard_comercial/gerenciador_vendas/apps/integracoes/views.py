@@ -910,3 +910,66 @@ def api_integracao_sincronizar_catalogo(request, pk):
     except HubsoftServiceError as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=502)
     return JsonResponse({'success': True, 'resumos': resumos})
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_integracao_financeiro_sandbox(request, pk):
+    """
+    Sandbox de teste do financeiro HubSoft direto do painel da integracao.
+
+    Body JSON:
+      {
+        "acao": "listar_faturas" | "listar_renegociacoes",
+        "cpf_cnpj": "...",
+        "apenas_pendente": true,   // listar_faturas
+        "limit": 20,                // listar_faturas
+        "data_inicio": "YYYY-MM-DD",  // listar_renegociacoes
+        "data_fim": "YYYY-MM-DD"      // listar_renegociacoes
+      }
+
+    Nao escreve nada — so consulta. Pra simular/efetivar renegociacao,
+    usar o fluxo do Inbox/Atendimento (ver inbox_acoes_hubsoft).
+    """
+    try:
+        integ = IntegracaoAPI.objects.get(pk=pk, tenant=request.tenant)
+    except IntegracaoAPI.DoesNotExist:
+        return JsonResponse({'error': 'Integracao nao encontrada'}, status=404)
+
+    if integ.tipo != 'hubsoft':
+        return JsonResponse({'error': 'Sandbox financeiro so suportado em integracoes HubSoft.'}, status=400)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON invalido'}, status=400)
+
+    acao = data.get('acao')
+    cpf = (data.get('cpf_cnpj') or '').strip()
+    if not cpf:
+        return JsonResponse({'error': 'cpf_cnpj eh obrigatorio.'}, status=400)
+
+    from apps.integracoes.services.hubsoft import HubsoftService, HubsoftServiceError
+    svc = HubsoftService(integ)
+
+    try:
+        if acao == 'listar_faturas':
+            faturas = svc.listar_faturas_cliente(
+                cpf_cnpj=cpf,
+                apenas_pendente=bool(data.get('apenas_pendente', False)),
+                limit=data.get('limit') or None,
+            )
+            return JsonResponse({'success': True, 'acao': acao, 'total': len(faturas), 'faturas': faturas})
+        elif acao == 'listar_renegociacoes':
+            resultado = svc.listar_renegociacoes(
+                cpf_cnpj=cpf,
+                data_inicio=data.get('data_inicio') or None,
+                data_fim=data.get('data_fim') or None,
+                pagina=int(data.get('pagina') or 0),
+                itens_por_pagina=int(data.get('itens_por_pagina') or 50),
+            )
+            return JsonResponse({'success': True, 'acao': acao, **resultado})
+        else:
+            return JsonResponse({'error': 'acao invalida. Permitidos: listar_faturas, listar_renegociacoes.'}, status=400)
+    except HubsoftServiceError as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=502)
