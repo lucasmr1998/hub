@@ -107,16 +107,18 @@ Análise da Postman collection oficial (`Hubsoft API.postman_collection.json` na
 - ~~`abrir_os_a_partir_de_atendimento`~~, ~~`agendar_os`~~, ~~`consultar_horarios_disponiveis_agenda`~~
 - ~~Espelhar conversa do Inbox no atendimento HubSoft~~
 
-### Bloco H7 — Testes e documentação
+### Bloco H7 — Testes e documentação ✅
 
-- [ ] Cobertura unitária para H1 (refactor `_request`, mascaramento de credencial, log)
-- [ ] Cobertura para H2 (sincronização de catálogos com mock de response)
-- [ ] Cobertura para H3 (financeiro, renegociação)
-- [ ] Cobertura para H4 (suspender/habilitar/ativar, reset MAC)
-- [ ] Cobertura para H5 (viabilidade)
-- [ ] Cobertura para H6 (atendimento, OS)
-- [ ] Atingir paridade com os 27 testes do `SGPService`
-- [ ] Atualizar `robo/docs/PRODUTO/integracoes/01-HUBSOFT.md` em cada bloco que entregar
+**Concluído em 26/04/2026 — 41 testes passando (paridade superada: SGP tem 27).**
+
+- [x] Cobertura unitária para H1 (`_request`, `_payload_seguro`, mascaramento, log de sucesso/falha de rede)
+- [x] Cobertura para H2 (catálogos: listar, dry_run, captura de erro por catálogo, chave inválida)
+- [x] Cobertura para H3 (financeiro: listar faturas com filtros, renegociação simular + validações)
+- [x] Cobertura para H4 (operacional: extrato, desbloqueio, reset MAC, suspender/ativar com endpoint correto)
+- [x] Cobertura para H5 (viabilidade: endereço, coords, planos por CEP)
+- [x] Cobertura para H6 reduzido (listar atendimentos/OS, validação de identificação)
+- [x] Helpers de normalização (cpf, telefone, tipo_pessoa)
+- [x] Arquivo: `tests/test_services_hubsoft.py`
 
 ---
 
