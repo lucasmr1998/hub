@@ -946,7 +946,14 @@ def api_integracao_financeiro_sandbox(request, pk):
 
     acao = data.get('acao')
     cpf = (data.get('cpf_cnpj') or '').strip()
-    if not cpf:
+
+    # Acoes que nao usam cpf_cnpj — viabilidade por coords/endereco e operacionais por id
+    acoes_sem_cpf = {
+        'viabilidade_coords', 'viabilidade_endereco',
+        'solicitar_desconexao', 'reset_mac', 'reset_phy',
+        'desbloqueio_confianca', 'suspender', 'habilitar', 'ativar',
+    }
+    if not cpf and acao not in acoes_sem_cpf:
         return JsonResponse({'error': 'cpf_cnpj eh obrigatorio.'}, status=400)
 
     from apps.integracoes.services.hubsoft import HubsoftService, HubsoftServiceError
@@ -989,9 +996,43 @@ def api_integracao_financeiro_sandbox(request, pk):
         elif acao == 'listar_os':
             os_list = svc.listar_os_cliente(cpf_cnpj=cpf, limit=int(data.get('limit') or 20))
             return JsonResponse({'success': True, 'acao': acao, 'total': len(os_list), 'ordens_servico': os_list})
+        elif acao == 'viabilidade_coords':
+            r = svc.consultar_viabilidade_coords(
+                latitude=float(data['latitude']), longitude=float(data['longitude']),
+                raio=int(data.get('raio') or 250),
+            )
+            return JsonResponse({'success': True, 'acao': acao, 'resultado': r})
+        elif acao == 'viabilidade_endereco':
+            r = svc.consultar_viabilidade_endereco(
+                endereco=data.get('endereco', ''), numero=data.get('numero', ''),
+                bairro=data.get('bairro', ''), cidade=data.get('cidade', ''),
+                estado=data.get('estado', ''), raio=int(data.get('raio') or 250),
+            )
+            return JsonResponse({'success': True, 'acao': acao, 'resultado': r})
+        elif acao in {'solicitar_desconexao', 'reset_mac', 'reset_phy',
+                      'desbloqueio_confianca', 'suspender', 'habilitar', 'ativar'}:
+            id_cs = data.get('id_cliente_servico')
+            if not id_cs:
+                return JsonResponse({'error': 'id_cliente_servico obrigatorio.'}, status=400)
+            id_cs = int(id_cs)
+            if acao == 'solicitar_desconexao':
+                r = svc.solicitar_desconexao(id_cs)
+            elif acao == 'reset_mac':
+                r = svc.reset_mac_addr(id_cs)
+            elif acao == 'reset_phy':
+                r = svc.reset_phy_addr(id_cs)
+            elif acao == 'desbloqueio_confianca':
+                r = svc.desbloqueio_confianca(id_cs, dias_desbloqueio=int(data.get('dias') or 1))
+            elif acao == 'suspender':
+                r = svc.suspender_servico(id_cs, tipo_suspensao=data.get('tipo_suspensao') or 'suspenso_debito')
+            elif acao == 'habilitar':
+                r = svc.habilitar_servico(id_cs, motivo_habilitacao=data.get('motivo') or 'Habilitado via Hubtrix sandbox.')
+            else:  # ativar
+                r = svc.ativar_servico(id_cs)
+            return JsonResponse({'success': True, 'acao': acao, 'resposta': r})
         else:
             return JsonResponse({
-                'error': 'acao invalida. Permitidos: listar_faturas, listar_renegociacoes, extrato_conexao, planos_por_cep, listar_atendimentos, listar_os.'
+                'error': 'acao invalida. Permitidos: listar_faturas, listar_renegociacoes, extrato_conexao, planos_por_cep, listar_atendimentos, listar_os, viabilidade_coords, viabilidade_endereco, solicitar_desconexao, reset_mac, reset_phy, desbloqueio_confianca, suspender, habilitar, ativar.'
             }, status=400)
     except HubsoftServiceError as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=502)

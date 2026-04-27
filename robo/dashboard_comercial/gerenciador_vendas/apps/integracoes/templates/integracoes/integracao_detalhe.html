@@ -453,18 +453,59 @@
       </div>
     </div>
 
-    <div class="form-row-2" style="margin-top: var(--sp-3);">
+    <h4 style="margin: var(--sp-5) 0 var(--sp-2); font-size: var(--fs-sm); font-weight: var(--fw-semibold);"><i class="bi bi-geo-alt"></i> Viabilidade</h4>
+    <div class="form-row-2" style="margin-top: var(--sp-2);">
       <div class="field">
-        <label class="field-label">Viabilidade — Planos por CEP</label>
+        <label class="field-label">Planos por CEP</label>
         <div class="field-input-wrap" style="display: flex; gap: 8px;">
           <input type="text" class="field-input" id="hs-cep" placeholder="00000-000" />
-          <button class="btn btn-ghost btn-sm" onclick="hsPlanosCep()"><i class="bi bi-geo-alt"></i> Listar</button>
+          <button class="btn btn-ghost btn-sm" onclick="hsPlanosCep()"><i class="bi bi-list-ul"></i> Listar</button>
         </div>
       </div>
-      <div></div>
+      <div class="field">
+        <label class="field-label">Por coordenadas (lat, lng)</label>
+        <div class="field-input-wrap" style="display: flex; gap: 8px;">
+          <input type="text" class="field-input" id="hs-lat" placeholder="-5.0892" style="flex: 1;" />
+          <input type="text" class="field-input" id="hs-lng" placeholder="-42.8019" style="flex: 1;" />
+          <button class="btn btn-ghost btn-sm" onclick="hsViabilidadeCoords()"><i class="bi bi-pin-map"></i> Consultar</button>
+        </div>
+      </div>
+    </div>
+    <div class="field" style="margin-top: var(--sp-2);">
+      <label class="field-label">Por endereco (numero, rua, bairro, cidade, UF)</label>
+      <div class="field-input-wrap" style="display: grid; grid-template-columns: 60px 2fr 1fr 1fr 50px auto; gap: 8px;">
+        <input type="text" class="field-input" id="hs-end-numero" placeholder="N" />
+        <input type="text" class="field-input" id="hs-end-rua" placeholder="Rua / Av." />
+        <input type="text" class="field-input" id="hs-end-bairro" placeholder="Bairro" />
+        <input type="text" class="field-input" id="hs-end-cidade" placeholder="Cidade" />
+        <input type="text" class="field-input" id="hs-end-uf" placeholder="UF" maxlength="2" />
+        <button class="btn btn-ghost btn-sm" onclick="hsViabilidadeEndereco()"><i class="bi bi-pin-map"></i> Consultar</button>
+      </div>
     </div>
 
-    <div id="hs-fin-result" style="margin-top: var(--sp-3); display: none;">
+    <h4 style="margin: var(--sp-5) 0 var(--sp-2); font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--color-danger, #dc3545);"><i class="bi bi-exclamation-triangle"></i> Acoes destrutivas (operacional)</h4>
+    <p style="margin: 0 0 var(--sp-2); font-size: 11px; color: var(--color-text-muted);">
+      ⚠️ Estas acoes <strong>escrevem</strong> no HubSoft. Cada botao pede confirmacao. Use IDs de teste — nao mexa em servicos reais sem necessidade.
+    </p>
+    <div class="form-row-2" style="margin-top: var(--sp-2);">
+      <div class="field">
+        <label class="field-label">id_cliente_servico</label>
+        <div class="field-input-wrap">
+          <input type="text" class="field-input" id="hs-op-id" placeholder="ex: 11000" />
+        </div>
+      </div>
+      <div class="field" style="display: flex; gap: 6px; align-items: flex-end; flex-wrap: wrap;">
+        <button class="btn btn-ghost btn-sm" onclick="hsOp('solicitar_desconexao', 'Forcar desconexao do cliente?')"><i class="bi bi-power"></i> Desconectar</button>
+        <button class="btn btn-ghost btn-sm" onclick="hsOp('reset_mac', 'Resetar MAC autorizado?')"><i class="bi bi-arrow-counterclockwise"></i> Reset MAC</button>
+        <button class="btn btn-ghost btn-sm" onclick="hsOp('reset_phy', 'Resetar MAC Layer2?')"><i class="bi bi-arrow-counterclockwise"></i> Reset Phy</button>
+        <button class="btn btn-ghost btn-sm" onclick="hsOp('desbloqueio_confianca', 'Desbloquear por 1 dia (confianca)?')"><i class="bi bi-unlock"></i> Desbloqueio 1d</button>
+        <button class="btn btn-ghost btn-sm" onclick="hsOp('suspender', 'SUSPENDER servico?', 'suspenso_debito')" style="color: var(--color-danger);"><i class="bi bi-pause-fill"></i> Suspender</button>
+        <button class="btn btn-ghost btn-sm" onclick="hsOp('habilitar', 'Reabilitar servico?', 'Habilitado via sandbox')"><i class="bi bi-play-fill"></i> Habilitar</button>
+        <button class="btn btn-ghost btn-sm" onclick="hsOp('ativar', 'ATIVAR servico (pos-instalacao)?')"><i class="bi bi-check-circle"></i> Ativar</button>
+      </div>
+    </div>
+
+    <div id="hs-fin-result" style="margin-top: var(--sp-4); display: none;">
       <h5 id="hs-fin-result-title" style="margin: 0 0 4px; font-size: 11px; font-weight: var(--fw-semibold); text-transform: uppercase; color: var(--color-text-muted);">Resultado</h5>
       <pre class="log-pre" id="hs-fin-result-body"></pre>
     </div>
@@ -603,6 +644,37 @@ const URL_FIN_SANDBOX = "{% url 'integracoes:api_integracao_financeiro_sandbox' 
 const URL_TESTAR = "{% url 'integracoes:api_integracao_testar' pk=integracao.pk %}";
 const URL_MODOS = "{% url 'integracoes:api_integracao_modos_sync' pk=integracao.pk %}";
 const URL_EDITAR = "{% url 'integracoes:api_integracao_editar' pk=integracao.pk %}";
+
+async function hsViabilidadeCoords() {
+  const lat = parseFloat((document.getElementById('hs-lat').value || '').trim());
+  const lng = parseFloat((document.getElementById('hs-lng').value || '').trim());
+  if (!lat || !lng) { toast('Aviso', 'Informe latitude e longitude.', 'warning'); return; }
+  await hsExecutar('viabilidade_coords', { latitude: lat, longitude: lng });
+}
+
+async function hsViabilidadeEndereco() {
+  const payload = {
+    numero: (document.getElementById('hs-end-numero').value || '').trim(),
+    endereco: (document.getElementById('hs-end-rua').value || '').trim(),
+    bairro: (document.getElementById('hs-end-bairro').value || '').trim(),
+    cidade: (document.getElementById('hs-end-cidade').value || '').trim(),
+    estado: (document.getElementById('hs-end-uf').value || '').trim(),
+  };
+  if (!payload.endereco || !payload.cidade || !payload.estado) {
+    toast('Aviso', 'Informe ao menos rua, cidade e UF.', 'warning'); return;
+  }
+  await hsExecutar('viabilidade_endereco', payload);
+}
+
+async function hsOp(acao, msgConfirm, extra) {
+  const id = (document.getElementById('hs-op-id').value || '').trim();
+  if (!id) { toast('Aviso', 'Informe id_cliente_servico.', 'warning'); return; }
+  if (!confirm(`${msgConfirm}\n\nid_cliente_servico = ${id}`)) return;
+  const payload = { id_cliente_servico: id };
+  if (acao === 'suspender') payload.tipo_suspensao = extra;
+  if (acao === 'habilitar') payload.motivo = extra;
+  await hsExecutar(acao, payload);
+}
 
 async function hsAcaoCpf(acao) {
   // Helper generico: usa o CPF acima e dispara acao no backend
