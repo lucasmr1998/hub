@@ -742,6 +742,7 @@ def integracao_detalhe(request, pk):
         features_relevantes = (
             'enviar_lead', 'sincronizar_cliente', 'sincronizar_servicos',
             'sincronizar_planos', 'sincronizar_vencimentos', 'sincronizar_vendedores',
+            'anexar_documentos_contrato', 'aceitar_contrato',
         )
     else:
         features_relevantes = tuple(IntegracaoAPI.SYNC_FEATURES.keys())

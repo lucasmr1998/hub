@@ -41,12 +41,35 @@ class Command(BaseCommand):
         parser.add_argument('--tenant', help='Slug do tenant.')
         parser.add_argument('--dry-run', action='store_true',
                             help='Simula sem salvar; reporta contagens.')
+        parser.add_argument(
+            '--apenas-automatico', action='store_true',
+            help='Roda so as categorias com modo de sync "automatico" '
+                 '(use no cron). Categorias em modo manual/desativado sao puladas.',
+        )
+
+    # Mapeia categoria -> feature do SYNC_FEATURES.
+    # Catalogos cacheados sem feature dedicada herdam 'sincronizar_vendedores' como
+    # fallback (modo grupo de catalogos secundarios), ate criarmos features individuais.
+    CATEGORIA_FEATURE = {
+        'servicos': 'sincronizar_planos',
+        'vencimentos': 'sincronizar_vencimentos',
+        'vendedores': 'sincronizar_vendedores',
+        'origens_cliente': 'sincronizar_vendedores',
+        'origens_contato': 'sincronizar_vendedores',
+        'meios_pagamento': 'sincronizar_vendedores',
+        'grupos_cliente': 'sincronizar_vendedores',
+        'motivos_contratacao': 'sincronizar_vendedores',
+        'tipos_servico': 'sincronizar_vendedores',
+        'servico_status': 'sincronizar_vendedores',
+        'servicos_tecnologia': 'sincronizar_vendedores',
+    }
 
     def handle(self, *args, **options):
         from apps.integracoes.services.hubsoft import HubsoftService, HubsoftServiceError
 
         categoria = options['categoria']
         dry_run = options['dry_run']
+        apenas_auto = options['apenas_automatico']
 
         qs = IntegracaoAPI.objects.filter(tipo='hubsoft', ativa=True)
         if options.get('integracao_id'):
@@ -71,10 +94,51 @@ class Command(BaseCommand):
                 continue
 
             if categoria == 'todos':
-                resultado = service.sincronizar_configuracoes(dry_run=dry_run)
-                self._imprimir_todos(resultado)
+                if apenas_auto:
+                    self._sincronizar_todas_automaticas(service, dry_run)
+                else:
+                    resultado = service.sincronizar_configuracoes(dry_run=dry_run)
+                    self._imprimir_todos(resultado)
             else:
+                if apenas_auto and not self._categoria_em_modo_automatico(integ, categoria):
+                    self.stdout.write(self.style.WARNING(
+                        f'  {categoria}: pulado (modo de sync nao eh "automatico")'
+                    ))
+                    continue
                 self._sincronizar_uma(service, categoria, dry_run)
+
+    def _categoria_em_modo_automatico(self, integ, categoria: str) -> bool:
+        feature = self.CATEGORIA_FEATURE.get(categoria)
+        if not feature:
+            return True  # categoria sem feature mapeada — nao bloqueia
+        return integ.sync_habilitado(feature)
+
+    def _sincronizar_todas_automaticas(self, service, dry_run: bool):
+        """Roda categoria por categoria, pulando as que nao estao em automatico."""
+        from apps.integracoes.services.hubsoft import HubsoftServiceError
+        integ = service.integracao
+        for categoria in ('servicos', 'vencimentos'):
+            if not self._categoria_em_modo_automatico(integ, categoria):
+                self.stdout.write(self.style.WARNING(f'  {categoria}: pulado (modo nao automatico)'))
+                continue
+            try:
+                if categoria == 'servicos':
+                    r = service.sincronizar_servicos_catalogo(dry_run=dry_run)
+                else:
+                    r = service.sincronizar_vencimentos(dry_run=dry_run)
+                self._imprimir_resumo(categoria, r)
+            except HubsoftServiceError as exc:
+                self.stderr.write(self.style.ERROR(f'  {categoria}: {exc}'))
+        from apps.integracoes.services.hubsoft import HubsoftService
+        for chave in HubsoftService.CATALOGOS_CACHE:
+            if not self._categoria_em_modo_automatico(integ, chave):
+                self.stdout.write(self.style.WARNING(f'  {chave}: pulado (modo nao automatico)'))
+                continue
+            try:
+                r = service.sincronizar_catalogo_cacheado(chave, dry_run=dry_run)
+                self._imprimir_resumo(chave, r)
+            except HubsoftServiceError as exc:
+                self.stderr.write(self.style.ERROR(f'  {chave}: {exc}'))
 
     def _sincronizar_uma(self, service, categoria: str, dry_run: bool):
         from apps.integracoes.services.hubsoft import HubsoftServiceError

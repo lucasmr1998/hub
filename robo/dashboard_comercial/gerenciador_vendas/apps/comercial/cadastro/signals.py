@@ -50,8 +50,21 @@ def gerar_pdf_quando_documentos_validados(sender, instance: ImagemLeadProspecto,
             # Recarrega o lead para obter o html_conversa_path atualizado
             lead.refresh_from_db()
 
-    # Anexa documentos ao contrato no HubSoft e marca como aceito
+    # Anexa documentos ao contrato no HubSoft (so se a feature estiver em modo automatico)
     if not lead.anexos_contrato_enviados:
+        from apps.integracoes.models import IntegracaoAPI
+        integ_hs = IntegracaoAPI.objects.filter(
+            tenant=lead.tenant, tipo='hubsoft', ativa=True,
+        ).first()
+        if not integ_hs:
+            logger.debug('Sem integracao HubSoft ativa pro tenant. Lead pk=%s.', lead.pk)
+            return
+        if not integ_hs.sync_habilitado('anexar_documentos_contrato'):
+            logger.debug(
+                'Modo de anexar_documentos_contrato eh "%s" (nao automatico). Lead pk=%s ignorado.',
+                integ_hs.get_modo_sync('anexar_documentos_contrato'), lead.pk,
+            )
+            return
         try:
             from apps.comercial.cadastro.services.contrato_service import anexar_documentos_e_aceitar_contrato
             anexar_documentos_e_aceitar_contrato(lead)

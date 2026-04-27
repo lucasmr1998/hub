@@ -247,18 +247,24 @@ def anexar_documentos_e_aceitar_contrato(lead) -> bool:
     )
 
     contrato_aceito = False
-    try:
-        hubsoft_service.aceitar_contrato(
-            id_contrato,
-            observacao="Contrato aceito automaticamente apos validacao de documentos.",
-            lead=lead,
+    if not hubsoft_service.integracao.sync_habilitado('aceitar_contrato'):
+        logger.info(
+            "Modo de aceitar_contrato eh '%s' (nao automatico). Aceite manual pendente para lead %s, contrato %s.",
+            hubsoft_service.integracao.get_modo_sync('aceitar_contrato'), lead.pk, id_contrato,
         )
-        contrato_aceito = True
-    except HubsoftServiceError as exc:
-        logger.warning(
-            "Contrato %s nao pode ser aceito agora (lead %s): %s",
-            id_contrato, lead.pk, exc,
-        )
+    else:
+        try:
+            hubsoft_service.aceitar_contrato(
+                id_contrato,
+                observacao="Contrato aceito automaticamente apos validacao de documentos.",
+                lead=lead,
+            )
+            contrato_aceito = True
+        except HubsoftServiceError as exc:
+            logger.warning(
+                "Contrato %s nao pode ser aceito agora (lead %s): %s",
+                id_contrato, lead.pk, exc,
+            )
 
     if contrato_aceito and not lead.contrato_aceito:
         lead.contrato_aceito = True

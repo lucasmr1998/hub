@@ -160,6 +160,8 @@ class IntegracaoAPI(TenantMixin):
         'sincronizar_vendedores': 'Sincronizar vendedores (ERP -> configuracoes_extras.cache)',
         'sincronizar_pops': 'Sincronizar POPs (ERP -> configuracoes_extras.cache)',
         'sincronizar_portadores': 'Sincronizar portadores financeiros (ERP -> configuracoes_extras.cache)',
+        'anexar_documentos_contrato': 'Anexar documentos validados ao contrato (HubSoft)',
+        'aceitar_contrato': 'Aceitar contrato apos anexar documentos (HubSoft)',
     }
 
     def get_modo_sync(self, feature):

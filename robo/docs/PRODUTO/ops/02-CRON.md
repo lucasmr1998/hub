@@ -90,6 +90,37 @@ Persistent=true
 
 ---
 
+### 3.1 sincronizar_catalogo_hubsoft
+
+**Funcao:** Sincroniza catalogos do HubSoft (planos, vencimentos, vendedores, origens, meios de pagamento, grupos, motivos, tipos, status, tecnologias) para todas as `IntegracaoAPI(tipo='hubsoft', ativa=True)`.
+
+**Comando:**
+```bash
+python manage.py sincronizar_catalogo_hubsoft --categoria=todos --apenas-automatico --settings=gerenciador_vendas.settings_local
+```
+
+**Frequencia recomendada:** 1x ao dia (ex: 03:00 da manha).
+
+**Flag `--apenas-automatico`:** essencial em cron. Roda so as categorias com modo de sync `automatico` em `IntegracaoAPI.modos_sync`. Categorias em `manual` ou `desativado` sao puladas — assim cada tenant controla via `/configuracoes/integracoes/<pk>/` aba "Modos de sincronizacao" o que vai rodar.
+
+**Mapeamento categoria → feature:**
+- `servicos` → feature `sincronizar_planos`
+- `vencimentos` → feature `sincronizar_vencimentos`
+- `vendedores` + 8 catalogos secundarios → feature `sincronizar_vendedores` (modo grupo)
+
+**Output esperado (sucesso):**
+```
+>> megalink / Hubsoft (id=12)
+  servicos              total= 142  criados=  3  atualizados= 12  inalterados=127
+  vencimentos           total=  10  criados=  0  atualizados=  0  inalterados= 10
+  vendedores            total=  45  criados=  1  atualizados=  2  inalterados= 42
+  ...
+```
+
+**Falhas comuns:** token expirado (renovacao automatica), HTTP 5xx do HubSoft (logado em `LogIntegracao`, segue pra proxima categoria).
+
+---
+
 ## Servicos de Manutencao (diario/semanal)
 
 ### 4. taguear_leads
