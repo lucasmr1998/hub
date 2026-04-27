@@ -38,9 +38,18 @@ python manage.py setup_hubsoft
 
 Pagina de detalhe inclui:
 - Stats (chamadas/erros 24h, total logs, clientes sincronizados)
-- Credenciais editaveis (5 campos OAuth2 do HubSoft)
-- Modos de sincronizacao (3 features: enviar_lead, sincronizar_cliente, sincronizar_servicos)
-- Logs das ultimas 20 chamadas
+- Aba **Credenciais** (default) — 5 campos OAuth2 editaveis
+- Aba **Configuracao** — defaults para cadastro automatico (plano, vendedor, vencimento, origens, planos permitidos, dias de vencimento permitidos)
+- Aba **Catalogos** — 11 catalogos sincronizaveis (servicos, vencimentos, vendedores + 8 cacheados) com botao "Sincronizar tudo"
+- Aba **Sandbox** — testa endpoints sem escrita (faturas, renegociacoes, atendimentos, OS, viabilidade) + acoes destrutivas com `confirm()` (suspender, reset MAC, desbloqueio etc)
+- Aba **Modos de sincronizacao** — 8 features com modo `automatico` / `manual` / `desativado`:
+  - `enviar_lead` (signal post_save LeadProspecto)
+  - `sincronizar_cliente` (signal pos-cadastro + cron `sincronizar_clientes`)
+  - `sincronizar_servicos` (sync de catalogo CRM dentro do sync de cliente)
+  - `sincronizar_planos`, `sincronizar_vencimentos`, `sincronizar_vendedores` (cron `sincronizar_catalogo_hubsoft --apenas-automatico`)
+  - `anexar_documentos_contrato` (signal post_save ImagemLeadProspecto)
+  - `aceitar_contrato` (dentro do anexa, apos sucesso)
+- Aba **Logs** — ultimas 20 chamadas, expansiveis com payload+resposta JSON
 - Botao "testar conexao" (chama `obter_token()`)
 
 ### Conexão direta ao banco (necessário apenas para CS / Clube)
@@ -108,11 +117,21 @@ python manage.py processar_pendentes
 python manage.py sincronizar_clientes --todos
 ```
 
+**Cron de catalogos** (planos, vencimentos, vendedores e demais):
+```bash
+python manage.py sincronizar_catalogo_hubsoft --categoria=todos --apenas-automatico
+```
+Roda 1x/dia (ver [`ops/02-CRON.md §3.1`](../ops/02-CRON.md)). A flag `--apenas-automatico` respeita o modo configurado por feature em cada tenant — categorias em `manual` ou `desativado` sao puladas.
+
 ---
 
 ### 3. Cadastro — Contratos e Documentos
 
 **Fluxo:** Após validação dos documentos do lead (fotos do RG, comprovante), a Aurora anexa automaticamente ao contrato no HubSoft e aceita o contrato.
+
+**Modos por feature** (configuráveis em `/configuracoes/integracoes/<pk>/` aba "Modos de sincronização"):
+- `anexar_documentos_contrato`: automatico (default) | manual | desativado — controla se o signal dispara ao validar todas as imagens.
+- `aceitar_contrato`: automatico (default) | manual | desativado — controla se, depois de anexar, o aceite do termo eh disparado. Em `manual` os anexos sao enviados mas o aceite fica pendente pra atendente.
 
 | Item | Detalhe |
 |------|---------|

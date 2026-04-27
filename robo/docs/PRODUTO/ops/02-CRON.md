@@ -301,6 +301,7 @@ Para ambiente de desenvolvimento no Windows, criar tarefas no Agendador de Taref
 | Aurora Automacoes | python | `manage.py executar_automacoes_cron --settings=gerenciador_vendas.settings_local` | 5 min |
 | Aurora HubSoft Sync | python | `manage.py sincronizar_clientes --settings=gerenciador_vendas.settings_local` | 1 min |
 | Aurora Pendentes | python | `manage.py processar_pendentes --settings=gerenciador_vendas.settings_local` | 30 min |
+| Aurora HubSoft Catalogos | python | `manage.py sincronizar_catalogo_hubsoft --categoria=todos --apenas-automatico --settings=gerenciador_vendas.settings_local` | 1x ao dia (03:00) |
 
 ---
 
