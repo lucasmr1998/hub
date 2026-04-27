@@ -55,17 +55,18 @@ Análise da Postman collection oficial (`Hubsoft API.postman_collection.json` na
 - [x] Management command `sincronizar_catalogo_hubsoft --categoria=todos|<chave> --integracao-id --tenant --dry-run`
 - [x] UI no painel `/configuracoes/integracoes/<pk>/`: card "Configuracao de cadastro automatico" com 5 selects (plano, vendedor, dia de vencimento, origem cliente, origem servico) populados pelo cache HubSoft + card "Catalogos sincronizados" com 11 linhas e botão "Sincronizar tudo". APIs `api_integracao_defaults` e `api_integracao_sincronizar_catalogo` aceitam HubSoft (antes só SGP). Features de sync hubsoft expandidas para incluir `sincronizar_planos/vencimentos/vendedores`.
 
-### Bloco H3 — Financeiro
+### Bloco H3 — Financeiro (escopo enxuto, aprovado em 26/04/2026)
 
-- [ ] `listar_faturas_cliente(cpf_cnpj, status, data_*)` — `GET /cliente/financeiro`
-- [ ] `enviar_fatura_email(id_fatura)` — `POST /cliente/financeiro/enviar_email`
-- [ ] `enviar_fatura_sms(id_fatura)` — `POST /cliente/financeiro/enviar_sms`
-- [ ] `enviar_fatura_push(id_fatura)` — `POST /cliente/financeiro/enviar_push`
-- [ ] `simular_renegociacao(payload)` — `POST /financeiro/renegociacao/simular`
-- [ ] `efetivar_renegociacao(payload)` — `POST /financeiro/renegociacao/efetivar`
-- [ ] `listar_faturas_admin(filtros)` — `GET /financeiro/fatura` (admin)
-- [ ] `liquidar_fatura(id_fatura)` — `POST /financeiro/fatura/liquidar`
-- [ ] **Avaliar substituição** de `cs/clube/services/hubsoft_service.checar_pontos_extras_cpf` (SQL direto) pelo equivalente REST. Se cobrir, deprecar o acesso direto ao banco
+**Backend concluído.** 4 endpoints essenciais implementados; 6 itens cortados de escopo após análise de cabimento.
+
+- [x] `listar_faturas_cliente(cpf_cnpj | id_cliente | codigo_cliente, apenas_pendente, limit, order_*)` — `GET /cliente/financeiro`
+- [x] `simular_renegociacao(ids_faturas, qtd_parcelas, vencimento, ...)` — `POST /financeiro/renegociacao/simular`
+- [x] `efetivar_renegociacao(...)` — `POST /financeiro/renegociacao/efetivar`
+- [x] `listar_renegociacoes(cpf_cnpj, status, data_*, paginacao)` — `GET /financeiro/renegociacao`
+- [x] Helper `_renegociacao_post` compartilhado entre simular/efetivar (mesmo shape)
+- [ ] **Cortado de escopo:** `enviar_email/sms/push` (motor próprio do Hubtrix), `listar_faturas_admin`, `liquidar_fatura`, `conta_pagar`, `cobranca_avulsa` — fora do dominio do Hubtrix (gestao financeira interna do provedor é HubSoft direto).
+- [ ] **Avaliar substituição** de `cs/clube/services/hubsoft_service.checar_pontos_extras_cpf` (SQL direto) pelo equivalente REST agora possível com `listar_faturas_cliente`. Se cobrir, deprecar o acesso direto ao banco. (Sub-tarefa, fica pra depois de validar com o CS.)
+- [ ] UI no Inbox/Atendimento: ações rápidas "ver faturas em aberto", "gerar 2ª via" (link/PIX da fatura), "simular acordo". Próximo sub-passo do H3.
 
 ### Bloco H4 — Operacional / suporte de 1ª linha
 

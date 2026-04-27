@@ -209,7 +209,7 @@ Para cada novo provedor, validar:
 
 ## Limitações Conhecidas
 
-1. **API HubSoft expõe sim faturas e renegociação** — `GET /api/v1/integracao/cliente/financeiro` e `POST /api/v1/integracao/financeiro/renegociacao/*`. A premissa antiga (de que a API não cobria pagamento) **não é mais verdade**. O Clube hoje acessa via banco direto por motivo histórico, mas existe caminho REST equivalente. Migrar pra REST está no plano de paridade (`paridade_integracao_hubsoft_26-04-2026.md`).
+1. **API HubSoft expõe sim faturas e renegociação** — `GET /api/v1/integracao/cliente/financeiro` e `POST /api/v1/integracao/financeiro/renegociacao/*`. A premissa antiga (de que a API não cobria pagamento) **não é mais verdade**. ✅ Backend implementado em H3: `HubsoftService.listar_faturas_cliente`, `listar_renegociacoes`, `simular_renegociacao`, `efetivar_renegociacao`. O Clube hoje ainda acessa via banco direto por motivo histórico — avaliação de migração pendente.
 
 2. **Token OAuth2 tem expiração.** O sistema faz cache em `IntegracaoAPI.access_token` + `token_expira_em` e renova automaticamente.
 

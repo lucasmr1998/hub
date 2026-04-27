@@ -47,6 +47,12 @@ class HubsoftService:
     ENDPOINT_CFG_SERVICO_STATUS = '/api/v1/integracao/configuracao/servico_status'
     ENDPOINT_CFG_SERVICO_TECNOLOGIA = '/api/v1/integracao/configuracao/servico_tecnologia'
 
+    # Financeiro
+    ENDPOINT_CLIENTE_FINANCEIRO = '/api/v1/integracao/cliente/financeiro'
+    ENDPOINT_RENEGOCIACAO_LISTAR = '/api/v1/integracao/financeiro/renegociacao'
+    ENDPOINT_RENEGOCIACAO_SIMULAR = '/api/v1/integracao/financeiro/renegociacao/simular'
+    ENDPOINT_RENEGOCIACAO_EFETIVAR = '/api/v1/integracao/financeiro/renegociacao/efetivar'
+
     CAMPOS_SEGREDO_LOG = ('password', 'client_secret', 'token', 'access_token')
 
     def __init__(self, integracao: IntegracaoAPI):
@@ -717,6 +723,213 @@ class HubsoftService:
         )
         self.integracao.configuracoes_extras = extras
         return resumo
+
+    # ------------------------------------------------------------------
+    # Financeiro — Bloco H3 (escopo enxuto: faturas + renegociacao)
+    # ------------------------------------------------------------------
+
+    def listar_faturas_cliente(
+        self,
+        *,
+        cpf_cnpj: str = None,
+        id_cliente: int = None,
+        codigo_cliente: int = None,
+        apenas_pendente: bool = False,
+        limit: int = None,
+        order_by: str = None,
+        order_type: str = None,
+        lead=None,
+    ) -> list:
+        """
+        Lista faturas (boletos) de um cliente no HubSoft.
+
+        Identificacao: passar `cpf_cnpj`, `id_cliente` ou `codigo_cliente`
+        (pelo menos um). HubSoft chama isso de `busca` + `termo_busca`.
+
+        Cada fatura traz status, valor, datas, codigo de barras, linha
+        digitavel, link do PDF e PIX copia/cola quando disponivel.
+        """
+        if cpf_cnpj:
+            params = {'busca': 'cpf_cnpj', 'termo_busca': self._somente_numeros(cpf_cnpj)}
+        elif id_cliente:
+            params = {'busca': 'id_cliente', 'termo_busca': str(int(id_cliente))}
+        elif codigo_cliente:
+            params = {'busca': 'codigo_cliente', 'termo_busca': str(int(codigo_cliente))}
+        else:
+            raise HubsoftServiceError(
+                'listar_faturas_cliente: informe cpf_cnpj, id_cliente ou codigo_cliente.'
+            )
+
+        if apenas_pendente:
+            params['apenas_pendente'] = 'sim'
+        if limit:
+            params['limit'] = int(limit)
+        if order_by:
+            params['order_by'] = order_by
+        if order_type:
+            params['order_type'] = order_type
+
+        resposta = self._get(self.ENDPOINT_CLIENTE_FINANCEIRO, params=params, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft retornou erro em /cliente/financeiro: {resposta}"
+            )
+        return resposta.get('faturas') or []
+
+    def listar_renegociacoes(
+        self,
+        *,
+        cpf_cnpj: str = None,
+        documento_empresa: str = None,
+        status: str = None,
+        data_inicio: str = None,
+        data_fim: str = None,
+        pagina: int = 0,
+        itens_por_pagina: int = 100,
+        lead=None,
+    ) -> dict:
+        """
+        Lista renegociacoes (acordos). Datas no formato 'YYYY-MM-DD'.
+
+        Retorna {'paginacao': {...}, 'renegociacoes': [...]}.
+        """
+        params = {'pagina': int(pagina), 'itens_por_pagina': int(itens_por_pagina)}
+        if cpf_cnpj:
+            params['documento_cliente'] = self._somente_numeros(cpf_cnpj)
+        if documento_empresa:
+            params['documento_empresa'] = self._somente_numeros(documento_empresa)
+        if status:
+            params['status'] = status
+        if data_inicio:
+            params['data_inicio'] = data_inicio
+        if data_fim:
+            params['data_fim'] = data_fim
+
+        resposta = self._get(self.ENDPOINT_RENEGOCIACAO_LISTAR, params=params, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft retornou erro em /financeiro/renegociacao: {resposta}"
+            )
+        return {
+            'paginacao': resposta.get('paginacao') or {},
+            'renegociacoes': resposta.get('renegociacoes') or [],
+        }
+
+    def simular_renegociacao(
+        self,
+        *,
+        ids_faturas: list,
+        quantidade_parcelas: int,
+        vencimento: str,
+        id_cliente: int = None,
+        cpf_cnpj: str = None,
+        cliente_servico: int = None,
+        forma_cobranca: int = None,
+        empresa: int = None,
+        lead=None,
+    ) -> dict:
+        """
+        Simula renegociacao sem efetivar. Retorna parcelas geradas.
+
+        - `ids_faturas`: lista de ids de faturas em aberto a renegociar
+        - `quantidade_parcelas`: numero de parcelas do acordo
+        - `vencimento`: 'YYYY-MM-DD' da primeira parcela
+        - `id_cliente` ou `cpf_cnpj`: identificacao do cliente
+        - `cliente_servico`, `forma_cobranca`, `empresa`: opcionais — usados
+          quando o tenant nao tem regra de renegociacao configurada no HubSoft
+
+        Retorna dict com `regra_utilizada` + `faturas_que_foram_geradas`.
+        """
+        return self._renegociacao_post(
+            self.ENDPOINT_RENEGOCIACAO_SIMULAR,
+            ids_faturas=ids_faturas,
+            quantidade_parcelas=quantidade_parcelas,
+            vencimento=vencimento,
+            id_cliente=id_cliente, cpf_cnpj=cpf_cnpj,
+            cliente_servico=cliente_servico, forma_cobranca=forma_cobranca,
+            empresa=empresa, lead=lead,
+        )
+
+    def efetivar_renegociacao(
+        self,
+        *,
+        ids_faturas: list,
+        quantidade_parcelas: int,
+        vencimento: str,
+        id_cliente: int = None,
+        cpf_cnpj: str = None,
+        cliente_servico: int = None,
+        forma_cobranca: int = None,
+        empresa: int = None,
+        lead=None,
+    ) -> dict:
+        """
+        Efetiva a renegociacao no HubSoft. Mesmo payload de simular_renegociacao.
+        Cria as parcelas e cancela as faturas originais.
+        """
+        return self._renegociacao_post(
+            self.ENDPOINT_RENEGOCIACAO_EFETIVAR,
+            ids_faturas=ids_faturas,
+            quantidade_parcelas=quantidade_parcelas,
+            vencimento=vencimento,
+            id_cliente=id_cliente, cpf_cnpj=cpf_cnpj,
+            cliente_servico=cliente_servico, forma_cobranca=forma_cobranca,
+            empresa=empresa, lead=lead,
+        )
+
+    def _renegociacao_post(
+        self,
+        endpoint: str,
+        *,
+        ids_faturas: list,
+        quantidade_parcelas: int,
+        vencimento: str,
+        id_cliente: int = None,
+        cpf_cnpj: str = None,
+        cliente_servico: int = None,
+        forma_cobranca: int = None,
+        empresa: int = None,
+        lead=None,
+    ) -> dict:
+        """Helper compartilhado por simular/efetivar (mesma forma de payload)."""
+        if not ids_faturas:
+            raise HubsoftServiceError('renegociacao: ids_faturas eh obrigatorio.')
+        if not vencimento:
+            raise HubsoftServiceError('renegociacao: vencimento eh obrigatorio (YYYY-MM-DD).')
+        if not quantidade_parcelas or int(quantidade_parcelas) < 1:
+            raise HubsoftServiceError('renegociacao: quantidade_parcelas deve ser >= 1.')
+
+        if id_cliente:
+            tipo_dados = 'id_cliente'
+            dados = int(id_cliente)
+        elif cpf_cnpj:
+            tipo_dados = 'cpf_cnpj'
+            dados = self._somente_numeros(cpf_cnpj)
+        else:
+            raise HubsoftServiceError('renegociacao: informe id_cliente OU cpf_cnpj.')
+
+        payload = {
+            'vencimento': vencimento,
+            'faturas': 'definir_faturas',
+            'quantidade_parcelas': int(quantidade_parcelas),
+            'ids_faturas': [int(i) for i in ids_faturas],
+            'tipo_dados_cliente': tipo_dados,
+            'dados_cliente': dados,
+        }
+        # Campos opcionais — exigidos quando tenant nao tem regra de renegociacao
+        if cliente_servico is not None:
+            payload['cliente_servico'] = int(cliente_servico)
+        if forma_cobranca is not None:
+            payload['forma_cobranca'] = int(forma_cobranca)
+        if empresa is not None:
+            payload['empresa'] = int(empresa)
+
+        resposta = self._post(endpoint, json=payload, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft rejeitou renegociacao em {endpoint}: {resposta}"
+            )
+        return resposta
 
     # ------------------------------------------------------------------
     # Mapeamento Lead → payload HubSoft
