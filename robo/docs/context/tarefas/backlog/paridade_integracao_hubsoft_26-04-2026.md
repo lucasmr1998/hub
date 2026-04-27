@@ -69,17 +69,19 @@ Análise da Postman collection oficial (`Hubsoft API.postman_collection.json` na
 - [ ] UI no Inbox/Atendimento: ações rápidas "ver faturas em aberto", "gerar 2ª via" (link/PIX da fatura), "simular acordo". **Movido pra tarefa dedicada:** `inbox_acoes_hubsoft_26-04-2026.md`.
 - [x] **Sandbox de teste no painel da integração** (`/configuracoes/integracoes/<pk>/`) — atendente/admin testa `listar_faturas_cliente` e `listar_renegociacoes` por CPF antes de plugar nos fluxos finais.
 
-### Bloco H4 — Operacional / suporte de 1ª linha
+### Bloco H4 — Operacional / suporte de 1ª linha ✅
 
-- [ ] `verificar_extrato_conexao(id_cliente_servico)` — `GET /cliente/extrato_conexao` (paridade com SGP `verificar_acesso`)
-- [ ] `solicitar_desconexao(id_cliente_servico)` — `GET /cliente/solicitar_desconexao/<id>`
-- [ ] `desbloqueio_confianca(id_cliente_servico)` — `POST /cliente/desbloqueio_confianca`
-- [ ] `suspender_servico(id_cliente_servico)` — `POST /cliente/cliente_servico/suspender/:id`
-- [ ] `habilitar_servico(id_cliente_servico)` — `POST /cliente/cliente_servico/habilitar/:id`
-- [ ] `ativar_servico(id_cliente_servico)` — `POST /cliente/cliente_servico/ativar/:id`
-- [ ] `reset_mac_addr(id_cliente_servico)` — `POST /cliente/reset_mac_addr`
-- [ ] `reset_phy_addr(id_cliente_servico)` — `POST /cliente/reset_phy_addr`
-- [ ] Plugar essas operações no Inbox/Atendimento como ações rápidas (suporte resolve sem sair do Hubtrix)
+**Backend concluído em 26/04/2026.** UI no Inbox vai pra tarefa dedicada.
+
+- [x] `verificar_extrato_conexao(busca, termo_busca, limit, data_*)` — `GET /cliente/extrato_conexao`. Busca por login/ipv4/ipv6_wan/ipv6_lan/mac. Disponível tambem no Sandbox da pagina de detalhe da integracao.
+- [x] `solicitar_desconexao(id_cliente_servico)` — `GET /cliente/solicitar_desconexao/<id>`
+- [x] `desbloqueio_confianca(id_cliente_servico, dias_desbloqueio)` — `POST /cliente/desbloqueio_confianca`
+- [x] `suspender_servico(id_cliente_servico, tipo_suspensao)` — `POST /cliente/cliente_servico/suspender/:id`
+- [x] `habilitar_servico(id_cliente_servico, motivo_habilitacao)` — `POST /cliente/cliente_servico/habilitar/:id`
+- [x] `ativar_servico(id_cliente_servico)` — `POST /cliente/cliente_servico/ativar/:id`
+- [x] `reset_mac_addr(id_cliente_servico)` — `POST /cliente/reset_mac_addr`
+- [x] `reset_phy_addr(id_cliente_servico)` — `POST /cliente/reset_phy_addr`
+- [ ] Plugar essas operações no Inbox/Atendimento como ações rápidas — **movido pra tarefa dedicada `inbox_acoes_hubsoft_26-04-2026.md`**. Acoes destrutivas (suspender/reset/desbloqueio) NAO entram no Sandbox da pagina de gerenciamento — so no Inbox com permissao.
 
 ### Bloco H5 — Viabilidade e cobertura
 

@@ -969,7 +969,17 @@ def api_integracao_financeiro_sandbox(request, pk):
                 itens_por_pagina=int(data.get('itens_por_pagina') or 50),
             )
             return JsonResponse({'success': True, 'acao': acao, **resultado})
+        elif acao == 'extrato_conexao':
+            # busca pode ser 'login', 'ipv4', 'ipv6_wan', 'ipv6_lan', 'mac'
+            registros = svc.verificar_extrato_conexao(
+                busca=data.get('busca') or 'login',
+                termo_busca=cpf,  # aqui cpf vira o termo livre
+                limit=int(data.get('limit') or 20),
+                data_inicio=data.get('data_inicio') or None,
+                data_fim=data.get('data_fim') or None,
+            )
+            return JsonResponse({'success': True, 'acao': acao, 'total': len(registros), 'registros': registros})
         else:
-            return JsonResponse({'error': 'acao invalida. Permitidos: listar_faturas, listar_renegociacoes.'}, status=400)
+            return JsonResponse({'error': 'acao invalida. Permitidos: listar_faturas, listar_renegociacoes, extrato_conexao.'}, status=400)
     except HubsoftServiceError as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=502)

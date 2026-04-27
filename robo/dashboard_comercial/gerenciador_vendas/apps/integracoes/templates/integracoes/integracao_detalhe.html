@@ -50,7 +50,7 @@
   {% endif %}
   {% if integracao.tipo == 'hubsoft' %}
     <button type="button" class="tabs-item" role="tab" data-tab="tab-sandbox" aria-selected="false">
-      <i class="bi bi-cash-coin"></i><span>Sandbox financeiro</span>
+      <i class="bi bi-flask"></i><span>Sandbox</span>
     </button>
   {% endif %}
   <button type="button" class="tabs-item" role="tab" data-tab="tab-modos" aria-selected="false">
@@ -408,12 +408,12 @@
 {# Sandbox financeiro — teste rapido por CPF antes de plugar no Inbox #}
 <div class="card" style="margin-bottom: var(--sp-4); padding: 0; overflow: hidden;">
   <div class="card-header">
-    <h3 class="card-title"><i class="bi bi-cash-coin" style="color: var(--color-primary);"></i> Sandbox financeiro</h3>
-    <span style="font-size: var(--fs-xs); color: var(--color-text-muted);">Consulta-only. Sem escrita.</span>
+    <h3 class="card-title"><i class="bi bi-flask" style="color: var(--color-primary);"></i> Sandbox de testes (consulta-only)</h3>
+    <span style="font-size: var(--fs-xs); color: var(--color-text-muted);">Sem escrita.</span>
   </div>
   <div style="padding: var(--sp-4);">
     <p style="margin: 0 0 var(--sp-3); font-size: var(--fs-xs); color: var(--color-text-muted);">
-      Testa endpoints REST de financeiro do HubSoft direto daqui. Use pra validar se o cliente eh encontrado e se as faturas/acordos vem corretos antes de plugar no Inbox/Atendimento.
+      Testa endpoints REST do HubSoft direto daqui. Acoes destrutivas (suspender/habilitar/reset MAC/desbloqueio confianca) ficam fora do sandbox e moram so no Inbox/Atendimento (com permissao).
     </p>
     <div class="form-row-2">
       <div class="field">
@@ -422,10 +422,32 @@
           <input type="text" class="field-input" id="hs-fin-cpf" placeholder="Apenas numeros ou com mascara" />
         </div>
       </div>
-      <div class="field" style="display: flex; gap: 8px; align-items: flex-end;">
+      <div class="field" style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
         <button class="btn btn-primary btn-sm" onclick="hsFinanceiro('listar_faturas', true)"><i class="bi bi-receipt"></i> Faturas em aberto</button>
         <button class="btn btn-ghost btn-sm" onclick="hsFinanceiro('listar_faturas', false)"><i class="bi bi-list-ul"></i> Todas as faturas</button>
         <button class="btn btn-ghost btn-sm" onclick="hsFinanceiro('listar_renegociacoes')"><i class="bi bi-handshake"></i> Renegociacoes</button>
+        <button class="btn btn-ghost btn-sm" onclick="hsExtrato()" title="O CPF/CNPJ acima eh ignorado — usa o campo abaixo como termo livre"><i class="bi bi-broadcast"></i> Extrato de conexao</button>
+      </div>
+    </div>
+
+    <div class="form-row-2" style="margin-top: var(--sp-3);">
+      <div class="field">
+        <label class="field-label">Extrato de conexao — busca por</label>
+        <div class="field-input-wrap">
+          <select class="field-input" id="hs-ext-busca">
+            <option value="login">Login PPPoE</option>
+            <option value="ipv4">IPv4</option>
+            <option value="ipv6_wan">IPv6 WAN</option>
+            <option value="ipv6_lan">IPv6 LAN</option>
+            <option value="mac">MAC</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Termo livre (login, IP ou MAC)</label>
+        <div class="field-input-wrap">
+          <input type="text" class="field-input" id="hs-ext-termo" placeholder="ex: hubsoft, 10.0.0.1, AA:BB..." />
+        </div>
       </div>
     </div>
 
@@ -568,6 +590,39 @@ const URL_FIN_SANDBOX = "{% url 'integracoes:api_integracao_financeiro_sandbox' 
 const URL_TESTAR = "{% url 'integracoes:api_integracao_testar' pk=integracao.pk %}";
 const URL_MODOS = "{% url 'integracoes:api_integracao_modos_sync' pk=integracao.pk %}";
 const URL_EDITAR = "{% url 'integracoes:api_integracao_editar' pk=integracao.pk %}";
+
+async function hsExtrato() {
+  const busca = document.getElementById('hs-ext-busca').value;
+  const termo = (document.getElementById('hs-ext-termo').value || '').trim();
+  if (!termo) { toast('Aviso', 'Informe um termo (login, IP ou MAC).', 'warning'); return; }
+  const wrap = document.getElementById('hs-fin-result');
+  const title = document.getElementById('hs-fin-result-title');
+  const body = document.getElementById('hs-fin-result-body');
+  wrap.style.display = 'block';
+  title.textContent = 'Consultando extrato de conexao...';
+  body.textContent = '';
+  try {
+    const r = await fetch(URL_FIN_SANDBOX, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+      body: JSON.stringify({ acao: 'extrato_conexao', cpf_cnpj: termo, busca, limit: 20 }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.success) {
+      title.textContent = 'Erro';
+      body.textContent = JSON.stringify(d, null, 2);
+      toast('Erro', d.error || 'Falha.', 'danger');
+      return;
+    }
+    title.textContent = `${d.total} registro(s) de conexao`;
+    body.textContent = JSON.stringify(d, null, 2);
+    toast('Pronto', 'Consulta concluida.', 'success');
+  } catch (e) {
+    title.textContent = 'Erro de rede';
+    body.textContent = String(e);
+    toast('Erro', String(e), 'danger');
+  }
+}
 
 async function hsFinanceiro(acao, apenasPendente = false) {
   const cpf = (document.getElementById('hs-fin-cpf').value || '').trim();

@@ -53,6 +53,16 @@ class HubsoftService:
     ENDPOINT_RENEGOCIACAO_SIMULAR = '/api/v1/integracao/financeiro/renegociacao/simular'
     ENDPOINT_RENEGOCIACAO_EFETIVAR = '/api/v1/integracao/financeiro/renegociacao/efetivar'
 
+    # Operacional / suporte
+    ENDPOINT_EXTRATO_CONEXAO = '/api/v1/integracao/cliente/extrato_conexao'
+    ENDPOINT_SOLICITAR_DESCONEXAO_TPL = '/api/v1/integracao/cliente/solicitar_desconexao/{id_cliente_servico}'
+    ENDPOINT_DESBLOQUEIO_CONFIANCA = '/api/v1/integracao/cliente/desbloqueio_confianca'
+    ENDPOINT_RESET_MAC = '/api/v1/integracao/cliente/reset_mac_addr'
+    ENDPOINT_RESET_PHY = '/api/v1/integracao/cliente/reset_phy_addr'
+    ENDPOINT_SVC_SUSPENDER_TPL = '/api/v1/integracao/cliente/cliente_servico/suspender/{id}'
+    ENDPOINT_SVC_HABILITAR_TPL = '/api/v1/integracao/cliente/cliente_servico/habilitar/{id}'
+    ENDPOINT_SVC_ATIVAR_TPL = '/api/v1/integracao/cliente/cliente_servico/ativar/{id}'
+
     CAMPOS_SEGREDO_LOG = ('password', 'client_secret', 'token', 'access_token')
 
     def __init__(self, integracao: IntegracaoAPI):
@@ -929,6 +939,151 @@ class HubsoftService:
             raise HubsoftServiceError(
                 f"HubSoft rejeitou renegociacao em {endpoint}: {resposta}"
             )
+        return resposta
+
+    # ------------------------------------------------------------------
+    # Operacional — Bloco H4 (suporte de 1a linha)
+    # ------------------------------------------------------------------
+
+    def verificar_extrato_conexao(
+        self,
+        *,
+        busca: str = 'login',
+        termo_busca: str,
+        limit: int = 20,
+        data_inicio: str = None,
+        data_fim: str = None,
+        lead=None,
+    ) -> list:
+        """
+        Lista historico de conexoes (RADIUS) do cliente.
+
+        - `busca`: campo usado como filtro: 'login' | 'ipv4' | 'ipv6_wan' | 'ipv6_lan' | 'mac'
+        - `termo_busca`: valor do filtro (ex: o login PPPoE do cliente)
+        - `limit`: 1 a 50 (default 20)
+        - `data_inicio` / `data_fim`: 'YYYY-MM-DD' (default: ultimos 30 dias)
+
+        Retorna lista de registros com acctstarttime/stoptime, IPs, MAC,
+        upload/download em MB, etc. Util pra atendente checar se cliente
+        ta online ou quando caiu pela ultima vez.
+        """
+        if not termo_busca:
+            raise HubsoftServiceError('verificar_extrato_conexao: termo_busca obrigatorio.')
+        params = {'busca': busca, 'termo_busca': termo_busca, 'limit': int(limit)}
+        if data_inicio:
+            params['data_inicio'] = data_inicio
+        if data_fim:
+            params['data_fim'] = data_fim
+        resposta = self._get(self.ENDPOINT_EXTRATO_CONEXAO, params=params, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft retornou erro em /cliente/extrato_conexao: {resposta}"
+            )
+        return resposta.get('registros') or []
+
+    def solicitar_desconexao(self, id_cliente_servico: int, *, lead=None) -> dict:
+        """
+        Forca desconexao do cliente no concentrador (PPPoE). Util pra refazer
+        conexao apos mudanca de plano ou diagnostico.
+        """
+        if not id_cliente_servico:
+            raise HubsoftServiceError('solicitar_desconexao: id_cliente_servico obrigatorio.')
+        endpoint = self.ENDPOINT_SOLICITAR_DESCONEXAO_TPL.format(
+            id_cliente_servico=int(id_cliente_servico),
+        )
+        resposta = self._get(endpoint, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft rejeitou solicitar_desconexao: {resposta}"
+            )
+        return resposta
+
+    def desbloqueio_confianca(
+        self,
+        id_cliente_servico: int,
+        *,
+        dias_desbloqueio: int = 1,
+        lead=None,
+    ) -> dict:
+        """
+        Libera o servico do cliente por N dias (mesmo com fatura em aberto).
+        Acao tipica de retencao.
+        """
+        if not id_cliente_servico:
+            raise HubsoftServiceError('desbloqueio_confianca: id_cliente_servico obrigatorio.')
+        payload = {
+            'id_cliente_servico': str(int(id_cliente_servico)),
+            'dias_desbloqueio': str(int(dias_desbloqueio)),
+        }
+        resposta = self._post(self.ENDPOINT_DESBLOQUEIO_CONFIANCA, json=payload, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft rejeitou desbloqueio_confianca: {resposta}"
+            )
+        return resposta
+
+    def reset_mac_addr(self, id_cliente_servico: int, *, lead=None) -> dict:
+        """Reseta o MAC autorizado no concentrador. Cliente pode reconectar com qualquer dispositivo."""
+        return self._reset_addr(self.ENDPOINT_RESET_MAC, id_cliente_servico, lead=lead)
+
+    def reset_phy_addr(self, id_cliente_servico: int, *, lead=None) -> dict:
+        """Reseta o MAC Layer2 (phy) — usado em alguns concentradores."""
+        return self._reset_addr(self.ENDPOINT_RESET_PHY, id_cliente_servico, lead=lead)
+
+    def _reset_addr(self, endpoint: str, id_cliente_servico: int, *, lead=None) -> dict:
+        if not id_cliente_servico:
+            raise HubsoftServiceError(f'reset em {endpoint}: id_cliente_servico obrigatorio.')
+        payload = {'id_cliente_servico': str(int(id_cliente_servico))}
+        resposta = self._post(endpoint, json=payload, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(f"HubSoft rejeitou {endpoint}: {resposta}")
+        return resposta
+
+    def suspender_servico(
+        self,
+        id_cliente_servico: int,
+        *,
+        tipo_suspensao: str = 'suspenso_debito',
+        lead=None,
+    ) -> dict:
+        """
+        Suspende um servico do cliente. tipo_suspensao tipico:
+        'suspenso_debito', 'suspenso_solicitacao_cliente'.
+        """
+        if not id_cliente_servico:
+            raise HubsoftServiceError('suspender_servico: id_cliente_servico obrigatorio.')
+        endpoint = self.ENDPOINT_SVC_SUSPENDER_TPL.format(id=int(id_cliente_servico))
+        payload = {'tipo_suspensao': tipo_suspensao}
+        resposta = self._post(endpoint, json=payload, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(f"HubSoft rejeitou suspender_servico: {resposta}")
+        return resposta
+
+    def habilitar_servico(
+        self,
+        id_cliente_servico: int,
+        *,
+        motivo_habilitacao: str = 'Habilitado via Hubtrix.',
+        lead=None,
+    ) -> dict:
+        """Reabilita servico previamente suspenso."""
+        if not id_cliente_servico:
+            raise HubsoftServiceError('habilitar_servico: id_cliente_servico obrigatorio.')
+        endpoint = self.ENDPOINT_SVC_HABILITAR_TPL.format(id=int(id_cliente_servico))
+        payload = {'motivo_habilitacao': motivo_habilitacao}
+        resposta = self._post(endpoint, json=payload, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(f"HubSoft rejeitou habilitar_servico: {resposta}")
+        return resposta
+
+    def ativar_servico(self, id_cliente_servico: int, *, lead=None) -> dict:
+        """Ativa servico que estava aguardando ativacao (pos-instalacao)."""
+        if not id_cliente_servico:
+            raise HubsoftServiceError('ativar_servico: id_cliente_servico obrigatorio.')
+        endpoint = self.ENDPOINT_SVC_ATIVAR_TPL.format(id=int(id_cliente_servico))
+        resposta = self._post(endpoint, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(f"HubSoft rejeitou ativar_servico: {resposta}")
         return resposta
 
     # ------------------------------------------------------------------
