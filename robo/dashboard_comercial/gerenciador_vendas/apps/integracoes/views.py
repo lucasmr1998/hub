@@ -979,7 +979,19 @@ def api_integracao_financeiro_sandbox(request, pk):
                 data_fim=data.get('data_fim') or None,
             )
             return JsonResponse({'success': True, 'acao': acao, 'total': len(registros), 'registros': registros})
+        elif acao == 'planos_por_cep':
+            # cpf vira o cep aqui
+            servicos = svc.listar_planos_por_cep(cep=cpf)
+            return JsonResponse({'success': True, 'acao': acao, 'total': len(servicos), 'servicos': servicos})
+        elif acao == 'listar_atendimentos':
+            atendimentos = svc.listar_atendimentos_cliente(cpf_cnpj=cpf, limit=int(data.get('limit') or 20))
+            return JsonResponse({'success': True, 'acao': acao, 'total': len(atendimentos), 'atendimentos': atendimentos})
+        elif acao == 'listar_os':
+            os_list = svc.listar_os_cliente(cpf_cnpj=cpf, limit=int(data.get('limit') or 20))
+            return JsonResponse({'success': True, 'acao': acao, 'total': len(os_list), 'ordens_servico': os_list})
         else:
-            return JsonResponse({'error': 'acao invalida. Permitidos: listar_faturas, listar_renegociacoes, extrato_conexao.'}, status=400)
+            return JsonResponse({
+                'error': 'acao invalida. Permitidos: listar_faturas, listar_renegociacoes, extrato_conexao, planos_por_cep, listar_atendimentos, listar_os.'
+            }, status=400)
     except HubsoftServiceError as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=502)

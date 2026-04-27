@@ -426,7 +426,8 @@
         <button class="btn btn-primary btn-sm" onclick="hsFinanceiro('listar_faturas', true)"><i class="bi bi-receipt"></i> Faturas em aberto</button>
         <button class="btn btn-ghost btn-sm" onclick="hsFinanceiro('listar_faturas', false)"><i class="bi bi-list-ul"></i> Todas as faturas</button>
         <button class="btn btn-ghost btn-sm" onclick="hsFinanceiro('listar_renegociacoes')"><i class="bi bi-handshake"></i> Renegociacoes</button>
-        <button class="btn btn-ghost btn-sm" onclick="hsExtrato()" title="O CPF/CNPJ acima eh ignorado — usa o campo abaixo como termo livre"><i class="bi bi-broadcast"></i> Extrato de conexao</button>
+        <button class="btn btn-ghost btn-sm" onclick="hsAcaoCpf('listar_atendimentos')"><i class="bi bi-headset"></i> Atendimentos</button>
+        <button class="btn btn-ghost btn-sm" onclick="hsAcaoCpf('listar_os')"><i class="bi bi-tools"></i> Ordens de servico</button>
       </div>
     </div>
 
@@ -444,11 +445,23 @@
         </div>
       </div>
       <div class="field">
-        <label class="field-label">Termo livre (login, IP ou MAC)</label>
-        <div class="field-input-wrap">
+        <label class="field-label">Termo livre</label>
+        <div class="field-input-wrap" style="display: flex; gap: 8px;">
           <input type="text" class="field-input" id="hs-ext-termo" placeholder="ex: hubsoft, 10.0.0.1, AA:BB..." />
+          <button class="btn btn-ghost btn-sm" onclick="hsExtrato()"><i class="bi bi-broadcast"></i> Extrato</button>
         </div>
       </div>
+    </div>
+
+    <div class="form-row-2" style="margin-top: var(--sp-3);">
+      <div class="field">
+        <label class="field-label">Viabilidade — Planos por CEP</label>
+        <div class="field-input-wrap" style="display: flex; gap: 8px;">
+          <input type="text" class="field-input" id="hs-cep" placeholder="00000-000" />
+          <button class="btn btn-ghost btn-sm" onclick="hsPlanosCep()"><i class="bi bi-geo-alt"></i> Listar</button>
+        </div>
+      </div>
+      <div></div>
     </div>
 
     <div id="hs-fin-result" style="margin-top: var(--sp-3); display: none;">
@@ -590,6 +603,49 @@ const URL_FIN_SANDBOX = "{% url 'integracoes:api_integracao_financeiro_sandbox' 
 const URL_TESTAR = "{% url 'integracoes:api_integracao_testar' pk=integracao.pk %}";
 const URL_MODOS = "{% url 'integracoes:api_integracao_modos_sync' pk=integracao.pk %}";
 const URL_EDITAR = "{% url 'integracoes:api_integracao_editar' pk=integracao.pk %}";
+
+async function hsAcaoCpf(acao) {
+  // Helper generico: usa o CPF acima e dispara acao no backend
+  const cpf = (document.getElementById('hs-fin-cpf').value || '').trim();
+  if (!cpf) { toast('Aviso', 'Informe um CPF/CNPJ.', 'warning'); return; }
+  await hsExecutar(acao, { cpf_cnpj: cpf });
+}
+
+async function hsPlanosCep() {
+  const cep = (document.getElementById('hs-cep').value || '').trim();
+  if (!cep) { toast('Aviso', 'Informe um CEP.', 'warning'); return; }
+  await hsExecutar('planos_por_cep', { cpf_cnpj: cep });
+}
+
+async function hsExecutar(acao, payload) {
+  const wrap = document.getElementById('hs-fin-result');
+  const title = document.getElementById('hs-fin-result-title');
+  const body = document.getElementById('hs-fin-result-body');
+  wrap.style.display = 'block';
+  title.textContent = `Consultando ${acao}...`;
+  body.textContent = '';
+  try {
+    const r = await fetch(URL_FIN_SANDBOX, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+      body: JSON.stringify({ acao, ...payload }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.success) {
+      title.textContent = 'Erro';
+      body.textContent = JSON.stringify(d, null, 2);
+      toast('Erro', d.error || 'Falha.', 'danger');
+      return;
+    }
+    title.textContent = `${d.total ?? '?'} resultado(s) — ${acao}`;
+    body.textContent = JSON.stringify(d, null, 2);
+    toast('Pronto', 'Consulta concluida.', 'success');
+  } catch (e) {
+    title.textContent = 'Erro de rede';
+    body.textContent = String(e);
+    toast('Erro', String(e), 'danger');
+  }
+}
 
 async function hsExtrato() {
   const busca = document.getElementById('hs-ext-busca').value;

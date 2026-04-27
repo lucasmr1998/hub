@@ -1,16 +1,25 @@
 ---
-name: "Acoes rapidas HubSoft no Inbox/Atendimento"
-description: "Plugar os endpoints REST do HubsoftService (financeiro, operacional) como acoes rapidas dentro do Inbox e do detalhe do cliente, pra atendente resolver sem trocar de tela."
-prioridade: "🟡 Média"
+name: "Acoes HubSoft no detalhe do cliente/lead (Inbox NAO)"
+description: "Plugar os endpoints REST do HubsoftService (financeiro, operacional) como acoes rapidas no detalhe do cliente e do lead. Inbox foi descartado como ponto de entrada — provedores nao vao usar nosso Inbox."
+prioridade: "🟢 Baixa"
 responsavel: "Tech Lead"
 ---
 
-# Acoes rapidas HubSoft no Inbox/Atendimento — 26/04/2026
+# Acoes HubSoft no detalhe do cliente/lead — 26/04/2026
 
 **Data:** 26/04/2026
 **Responsável:** Tech Lead
-**Prioridade:** 🟡 Média
-**Status:** ⏳ Aguardando
+**Prioridade:** 🟢 Baixa
+**Status:** 🚫 Bloqueada (escopo a redefinir)
+
+> **Mudanca de premissa (26/04):** os provedores **nao vao usar o Inbox do Hubtrix** por enquanto. Isso invalida a premissa original desta tarefa de "acoes no painel da conversa". O escopo precisa ser redefinido para acoes plugadas no **detalhe do cliente** (CRM nativo do Hubtrix) ou no **detalhe do lead**, e nao no Inbox.
+
+> Acao destrutiva (suspender, reset MAC, desbloqueio) exige:
+> - Permissao granular dedicada
+> - Confirmacao do usuario (modal)
+> - Audit trail explicito
+> 
+> Por isso a tarefa fica em **espera** ate o produto definir onde o atendente opera (CRM, espelho do atendimento HubSoft, etc).
 
 ---
 

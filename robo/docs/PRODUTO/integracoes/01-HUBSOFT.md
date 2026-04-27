@@ -221,19 +221,28 @@ Para cada novo provedor, validar:
 
 ## Cobertura real da API HubSoft
 
-A Postman collection oficial expõe **185 endpoints**. Hoje o Hubtrix consome **5** (~3%):
+A Postman collection oficial expõe **185 endpoints**. Após H1–H6, o Hubtrix consome **~32 endpoints (~17%)** — saiu de 5 (~3%) no início da paridade.
 
-| Endpoint | Método nosso | Status |
+**Cobertos:**
+
+| Categoria | Endpoints | Service |
 |---|---|---|
-| `POST /oauth/token` | `HubsoftService.obter_token` | ativo |
-| `POST /api/v1/integracao/prospecto` | `HubsoftService.cadastrar_prospecto` | ativo |
-| `GET  /api/v1/integracao/cliente?busca=cpf_cnpj` | `HubsoftService.consultar_cliente` / `sincronizar_cliente` | ativo |
-| `POST /api/v1/integracao/cliente/contrato/adicionar_anexo_contrato/{id}` | `cadastro/contrato_service.adicionar_anexo` | ativo (legado, fora do `HubsoftService`) |
-| `PUT  /api/v1/integracao/cliente/contrato/aceitar_contrato` | `cadastro/contrato_service.aceitar_contrato` | ativo (idem) |
+| Auth | `POST /oauth/token` | `obter_token` |
+| Prospecto | `POST /prospecto` + `GET /prospecto/create?cep=` | `cadastrar_prospecto`, `listar_planos_por_cep` |
+| Cliente | `GET /cliente?busca=cpf_cnpj` | `consultar_cliente` / `sincronizar_cliente` |
+| Contrato | `POST /cliente/contrato/adicionar_anexo_contrato/{id}` + `PUT /cliente/contrato/aceitar_contrato` | `anexar_arquivos_contrato`, `aceitar_contrato` |
+| Catálogos (11) | `GET /configuracao/{servico,vencimento,vendedor,origem_cliente,origem_contato,meio_pagamento,grupo_cliente,motivo_contratacao,tipo_servico,servico_status,servico_tecnologia}` | `sincronizar_servicos_catalogo`, `sincronizar_vencimentos`, `sincronizar_catalogo_cacheado(<chave>)` |
+| Financeiro (4) | `GET /cliente/financeiro` + `GET /financeiro/renegociacao` + `POST /financeiro/renegociacao/{simular,efetivar}` | `listar_faturas_cliente`, `listar_renegociacoes`, `simular_renegociacao`, `efetivar_renegociacao` |
+| Operacional (8) | `GET /cliente/extrato_conexao`, `GET /cliente/solicitar_desconexao/<id>`, `POST /cliente/desbloqueio_confianca`, `POST /cliente/reset_{mac,phy}_addr`, `POST /cliente/cliente_servico/{suspender,habilitar,ativar}/:id` | `verificar_extrato_conexao`, `solicitar_desconexao`, `desbloqueio_confianca`, `reset_mac_addr`, `reset_phy_addr`, `suspender_servico`, `habilitar_servico`, `ativar_servico` |
+| Viabilidade (1) | `POST /mapeamento/viabilidade/consultar` (endereço ou coords) | `consultar_viabilidade_endereco`, `consultar_viabilidade_coords` |
+| Atendimento/OS leitura (2) | `GET /cliente/atendimento`, `GET /cliente/ordem_servico` | `listar_atendimentos_cliente`, `listar_os_cliente` |
 
-Endpoints relevantes ainda não consumidos: catálogos (`/configuracao/*`), financeiro (`/cliente/financeiro`, `/financeiro/renegociacao/*`), operacional (`/cliente/cliente_servico/{ativar,suspender,habilitar}`, `/cliente/desbloqueio_confianca`, `/cliente/reset_mac_addr`), atendimento bidirecional (`/atendimento`, `/ordem_servico/abrir_os`), viabilidade (`/mapeamento/viabilidade/consultar`, `/prospecto/create?cep=`).
+**Pendente:**
+- H7 (testes unitários do `HubsoftService`)
+- Tarefa `mapeamento_campos_erp_26-04-2026.md` (after H7)
+- Tarefa `inbox_acoes_hubsoft_26-04-2026.md` — bloqueada (Inbox não será adotado por enquanto)
 
-Plano de fechamento dessas lacunas: `robo/docs/context/tarefas/backlog/paridade_integracao_hubsoft_26-04-2026.md`.
+Plano completo: `robo/docs/context/tarefas/backlog/paridade_integracao_hubsoft_26-04-2026.md`.
 
 ---
 

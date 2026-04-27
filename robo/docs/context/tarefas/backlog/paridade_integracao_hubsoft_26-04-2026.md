@@ -83,24 +83,29 @@ Análise da Postman collection oficial (`Hubsoft API.postman_collection.json` na
 - [x] `reset_phy_addr(id_cliente_servico)` — `POST /cliente/reset_phy_addr`
 - [ ] Plugar essas operações no Inbox/Atendimento como ações rápidas — **movido pra tarefa dedicada `inbox_acoes_hubsoft_26-04-2026.md`**. Acoes destrutivas (suspender/reset/desbloqueio) NAO entram no Sandbox da pagina de gerenciamento — so no Inbox com permissao.
 
-### Bloco H5 — Viabilidade e cobertura
+### Bloco H5 — Viabilidade e cobertura ✅
 
-- [ ] `consultar_viabilidade_endereco(cep, numero, ...)` — `POST /mapeamento/viabilidade/consultar`
-- [ ] `consultar_viabilidade_coords(lat, lng)` — `POST /mapeamento/viabilidade/consultar`
-- [ ] `listar_planos_disponiveis_cep(cep)` — `GET /prospecto/create?cep=` (combina viabilidade + filtro de plano)
-- [ ] Integrar no fluxo de cadastro de lead em `apps/comercial/viabilidade/` — substitui consulta manual
+**Concluído em 26/04/2026.**
 
-### Bloco H6 — Atendimento bidirecional Inbox ↔ HubSoft
+- [x] `consultar_viabilidade_endereco(endereco, numero, bairro, cidade, estado, raio, detalhar_portas)` — `POST /mapeamento/viabilidade/consultar`
+- [x] `consultar_viabilidade_coords(latitude, longitude, raio, detalhar_portas)` — mesmo endpoint
+- [x] `listar_planos_por_cep(cep)` — `GET /prospecto/create?cep=` (planos com preço REAL, diferente de `/configuracao/servico` que não traz valor)
+- [x] Sandbox da pagina de detalhe ganha campo CEP + botao "Listar planos por CEP".
+- [ ] Integrar no fluxo de cadastro de lead em `apps/comercial/viabilidade/` — **fica pra tarefa de UI quando o produto definir onde a viabilidade entra**.
 
-- [ ] `criar_atendimento_hubsoft(lead, payload)` — `POST /atendimento`
-- [ ] `editar_atendimento(id, payload)` — `PUT /atendimento/:id`
-- [ ] `adicionar_mensagem_atendimento(id, mensagem, anexos)` — `POST /atendimento/adicionar_mensagem/:id`
-- [ ] `adicionar_anexo_atendimento(id, file)` — `POST /atendimento/adicionar_anexo/:id`
-- [ ] `listar_atendimentos_cliente(cpf, ...)` — `GET /cliente/atendimento`
-- [ ] `abrir_os_a_partir_de_atendimento(id_atendimento)` — `POST /ordem_servico/abrir_os?id_atendimento=`
-- [ ] `agendar_os(payload)` — `POST /ordem_servico/agendar`
-- [ ] `consultar_horarios_disponiveis_agenda(...)` — `GET /ordem_servico/horarios_disponiveis_agenda`
-- [ ] Espelhar conversa do Inbox no atendimento HubSoft (sync bidirecional, não destrutivo)
+### Bloco H6 — Atendimento HubSoft (LEITURA — escopo reduzido em 26/04) ✅
+
+**Concluído em 26/04/2026 (escopo reduzido).** Inbox do Hubtrix nao sera adotado pelos provedores por enquanto, entao "atendimento bidirecional" perdeu sentido. Reduzido a leitura.
+
+- [x] `listar_atendimentos_cliente(cpf_cnpj, id_cliente, codigo_cliente, limit)` — `GET /cliente/atendimento`
+- [x] `listar_os_cliente(cpf_cnpj, ...)` — `GET /cliente/ordem_servico`
+- [x] Sandbox ganha botoes "Atendimentos" e "Ordens de servico" usando o CPF informado.
+- [x] Helper compartilhado `_params_busca_cliente` reutilizado em ambos.
+
+**Cortado de escopo (volta quando Inbox for adotado):**
+- ~~`criar_atendimento_hubsoft`~~, ~~`editar_atendimento`~~, ~~`adicionar_mensagem_atendimento`~~, ~~`adicionar_anexo_atendimento`~~
+- ~~`abrir_os_a_partir_de_atendimento`~~, ~~`agendar_os`~~, ~~`consultar_horarios_disponiveis_agenda`~~
+- ~~Espelhar conversa do Inbox no atendimento HubSoft~~
 
 ### Bloco H7 — Testes e documentação
 

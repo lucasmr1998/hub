@@ -53,6 +53,14 @@ class HubsoftService:
     ENDPOINT_RENEGOCIACAO_SIMULAR = '/api/v1/integracao/financeiro/renegociacao/simular'
     ENDPOINT_RENEGOCIACAO_EFETIVAR = '/api/v1/integracao/financeiro/renegociacao/efetivar'
 
+    # Viabilidade / cobertura
+    ENDPOINT_VIABILIDADE = '/api/v1/integracao/mapeamento/viabilidade/consultar'
+    ENDPOINT_PROSPECTO_CREATE = '/api/v1/integracao/prospecto/create'
+
+    # Atendimento / OS (LEITURA — Bloco H6 reduzido)
+    ENDPOINT_CLIENTE_ATENDIMENTO = '/api/v1/integracao/cliente/atendimento'
+    ENDPOINT_CLIENTE_OS = '/api/v1/integracao/cliente/ordem_servico'
+
     # Operacional / suporte
     ENDPOINT_EXTRATO_CONEXAO = '/api/v1/integracao/cliente/extrato_conexao'
     ENDPOINT_SOLICITAR_DESCONEXAO_TPL = '/api/v1/integracao/cliente/solicitar_desconexao/{id_cliente_servico}'
@@ -1085,6 +1093,146 @@ class HubsoftService:
         if resposta.get('status') != 'success':
             raise HubsoftServiceError(f"HubSoft rejeitou ativar_servico: {resposta}")
         return resposta
+
+    # ------------------------------------------------------------------
+    # Viabilidade / cobertura — Bloco H5
+    # ------------------------------------------------------------------
+
+    def consultar_viabilidade_endereco(
+        self,
+        *,
+        endereco: str,
+        numero: str,
+        bairro: str,
+        cidade: str,
+        estado: str,
+        raio: int = 250,
+        detalhar_portas: bool = True,
+        lead=None,
+    ) -> dict:
+        """
+        Consulta viabilidade tecnica por endereco. Retorna projetos de
+        mapeamento e caixas opticas proximas (com portas disponiveis se
+        detalhar_portas=True).
+
+        `raio` em metros (default 250m).
+        """
+        payload = {
+            'tipo_busca': 'endereco',
+            'raio': int(raio),
+            'endereco': {
+                'numero': str(numero),
+                'endereco': endereco,
+                'bairro': bairro,
+                'cidade': cidade,
+                'estado': (estado or '').upper(),
+            },
+            'detalhar_portas': bool(detalhar_portas),
+        }
+        return self._consultar_viabilidade(payload, lead=lead)
+
+    def consultar_viabilidade_coords(
+        self,
+        *,
+        latitude: float,
+        longitude: float,
+        raio: int = 250,
+        detalhar_portas: bool = True,
+        lead=None,
+    ) -> dict:
+        """Mesmo que consultar_viabilidade_endereco mas por lat/lng."""
+        payload = {
+            'tipo_busca': 'coordenadas',
+            'raio': int(raio),
+            'latitude': float(latitude),
+            'longitude': float(longitude),
+            'detalhar_portas': bool(detalhar_portas),
+        }
+        return self._consultar_viabilidade(payload, lead=lead)
+
+    def _consultar_viabilidade(self, payload: dict, *, lead=None) -> dict:
+        resposta = self._post(self.ENDPOINT_VIABILIDADE, json=payload, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft retornou erro em /viabilidade/consultar: {resposta}"
+            )
+        return resposta.get('resultado') or {}
+
+    def listar_planos_por_cep(self, cep: str, *, lead=None) -> list:
+        """
+        Lista planos/servicos disponiveis para um CEP especifico.
+
+        Retorna lista de servicos com id_servico, descricao, valor (real,
+        diferente do /configuracao/servico que nao traz preco), velocidades
+        e display ja formatado.
+        """
+        cep_limpo = self._somente_numeros(cep)
+        if not cep_limpo:
+            raise HubsoftServiceError('listar_planos_por_cep: cep obrigatorio.')
+        resposta = self._get(self.ENDPOINT_PROSPECTO_CREATE, params={'cep': cep_limpo}, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft retornou erro em /prospecto/create?cep={cep_limpo}: {resposta}"
+            )
+        return resposta.get('servicos') or []
+
+    # ------------------------------------------------------------------
+    # Atendimento / OS — Bloco H6 (LEITURA, reduzido em 26/04)
+    # ------------------------------------------------------------------
+
+    def listar_atendimentos_cliente(
+        self,
+        *,
+        cpf_cnpj: str = None,
+        id_cliente: int = None,
+        codigo_cliente: int = None,
+        limit: int = 20,
+        lead=None,
+    ) -> list:
+        """
+        Lista atendimentos abertos no HubSoft pra um cliente.
+        Util pra mostrar "ja existem N atendimentos abertos" antes do
+        atendente abrir um novo.
+        """
+        params = self._params_busca_cliente(cpf_cnpj, id_cliente, codigo_cliente)
+        if limit:
+            params['limit'] = int(limit)
+        resposta = self._get(self.ENDPOINT_CLIENTE_ATENDIMENTO, params=params, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft retornou erro em /cliente/atendimento: {resposta}"
+            )
+        return resposta.get('atendimentos') or []
+
+    def listar_os_cliente(
+        self,
+        *,
+        cpf_cnpj: str = None,
+        id_cliente: int = None,
+        codigo_cliente: int = None,
+        limit: int = 20,
+        lead=None,
+    ) -> list:
+        """Lista ordens de servico do cliente."""
+        params = self._params_busca_cliente(cpf_cnpj, id_cliente, codigo_cliente)
+        if limit:
+            params['limit'] = int(limit)
+        resposta = self._get(self.ENDPOINT_CLIENTE_OS, params=params, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft retornou erro em /cliente/ordem_servico: {resposta}"
+            )
+        return resposta.get('ordens_servico') or resposta.get('ordem_servico') or []
+
+    def _params_busca_cliente(self, cpf_cnpj=None, id_cliente=None, codigo_cliente=None) -> dict:
+        """Helper compartilhado: monta busca/termo_busca pra endpoints de cliente."""
+        if cpf_cnpj:
+            return {'busca': 'cpf_cnpj', 'termo_busca': self._somente_numeros(cpf_cnpj)}
+        if id_cliente:
+            return {'busca': 'id_cliente', 'termo_busca': str(int(id_cliente))}
+        if codigo_cliente:
+            return {'busca': 'codigo_cliente', 'termo_busca': str(int(codigo_cliente))}
+        raise HubsoftServiceError('Informe cpf_cnpj, id_cliente ou codigo_cliente.')
 
     # ------------------------------------------------------------------
     # Mapeamento Lead → payload HubSoft
