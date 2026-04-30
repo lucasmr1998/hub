@@ -1,0 +1,186 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}Voz e tom — Brand — Hubtrix{% endblock %}
+
+{% block extra_head %}
+<style>
+  .brand-wrap { max-width: 1100px; margin: 0 auto; padding: var(--sp-8) var(--sp-6); }
+  .brand-back { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; color: var(--color-text-secondary); text-decoration: none; margin-bottom: var(--sp-4); }
+  .brand-back:hover { color: var(--color-primary); }
+  .brand-page-title { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 2.5rem; font-weight: 800; letter-spacing: -0.025em; margin: 0 0 var(--sp-2); line-height: 1.05; }
+  .brand-page-sub { color: var(--color-text-secondary); margin: 0 0 var(--sp-8); font-size: 1.0625rem; line-height: 1.6; }
+  .section-title { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.015em; margin: var(--sp-8) 0 var(--sp-4); }
+
+  .principle {
+    border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; margin-bottom: var(--sp-3);
+  }
+  .principle-head {
+    padding: var(--sp-4) var(--sp-5); background: var(--color-bg);
+    display: flex; align-items: center; gap: var(--sp-3); border-bottom: 1px solid var(--color-border);
+  }
+  .principle-num {
+    flex-shrink: 0; width: 32px; height: 32px; border-radius: 99px;
+    background: #252020; color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Inter Tight'; font-weight: 700; font-size: 0.95rem;
+  }
+  .principle-title {
+    font-family: 'Inter Tight'; font-size: 1.1875rem; font-weight: 700; letter-spacing: -0.015em; margin: 0;
+  }
+  .principle-body { padding: var(--sp-4) var(--sp-5); }
+  .principle-explain { font-size: 0.9375rem; line-height: 1.6; color: var(--color-text-secondary); margin: 0 0 var(--sp-4); }
+  .examples { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+  @media (max-width: 700px) { .examples { grid-template-columns: 1fr; } }
+  .example {
+    padding: var(--sp-3) var(--sp-4); border-radius: 10px; font-size: 0.9375rem; line-height: 1.5;
+    display: flex; gap: var(--sp-2); align-items: flex-start;
+  }
+  .example.do { background: #DCFCE7; color: #14532D; }
+  .example.dont { background: #FEE2E2; color: #7F1D1D; }
+  .example-icon { flex-shrink: 0; font-weight: 700; font-size: 1rem; line-height: 1.5; }
+
+  .voice-summary {
+    background: #252020; color: white; padding: var(--sp-6); border-radius: 14px;
+    margin-bottom: var(--sp-6);
+  }
+  .voice-summary h3 {
+    font-family: 'Inter Tight'; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 var(--sp-2);
+  }
+  .voice-summary p { color: rgba(255,255,255,0.8); margin: 0; font-size: 1rem; line-height: 1.6; }
+  .voice-summary strong { color: #E76F51; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="brand-wrap">
+
+  <a href="/design-system/brand/" class="brand-back"><i class="bi bi-arrow-left"></i> Voltar para Brand</a>
+
+  <h1 class="brand-page-title">Voz e tom</h1>
+  <p class="brand-page-sub">
+    Como Hubtrix fala. Direto, próximo, sem rodeio. Prova antes de promessa. Toda peça de texto (site, e-mail, WhatsApp, post, proposta) segue essas 5 regras.
+  </p>
+
+  <div class="voice-summary">
+    <h3>Hubtrix soa <strong>direto</strong>, <strong>humano</strong>, e <strong>provado</strong>.</h3>
+    <p>Não é corporativo. Não é infantil. Não é tech-bro. É o tom de quem sabe o que faz, fala a língua do provedor regional brasileiro, e mostra resultado antes de prometer.</p>
+  </div>
+
+  <h2 class="section-title">5 princípios</h2>
+
+  <div class="principle">
+    <div class="principle-head">
+      <span class="principle-num">1</span>
+      <h3 class="principle-title">Direto. Frase curta. Sem rodeio.</h3>
+    </div>
+    <div class="principle-body">
+      <p class="principle-explain">Provedor regional não tem tempo pra ler 3 parágrafos. Frase de 6-12 palavras na maioria das vezes. Verbo no início.</p>
+      <div class="examples">
+        <div class="example do"><span class="example-icon">✓</span><span>Vende mais. Perde menos. Fideliza sempre.</span></div>
+        <div class="example dont"><span class="example-icon">✗</span><span>Nossa solução foi cuidadosamente desenvolvida pra ajudar você a otimizar todo o seu funil de vendas e incrementar seus resultados comerciais de forma mensurável.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="principle">
+    <div class="principle-head">
+      <span class="principle-num">2</span>
+      <h3 class="principle-title">Prova antes de promessa.</h3>
+    </div>
+    <div class="principle-body">
+      <p class="principle-explain">Mostrar número/case antes de afirmar benefício. Sem "vai aumentar suas vendas" antes de "ticket subiu 18% em 4 meses".</p>
+      <div class="examples">
+        <div class="example do"><span class="example-icon">✓</span><span>"Em 4 meses paramos de perder lead no WhatsApp e o ticket cresceu 18%." — Diretor Comercial, ~10k assinantes.</span></div>
+        <div class="example dont"><span class="example-icon">✗</span><span>O Hubtrix vai transformar sua operação comercial e levar suas vendas a um novo patamar.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="principle">
+    <div class="principle-head">
+      <span class="principle-num">3</span>
+      <h3 class="principle-title">Sem superlativo vazio.</h3>
+    </div>
+    <div class="principle-body">
+      <p class="principle-explain">"Líder", "revolucionário", "melhor", "incrível", "inovador" — só com dado que comprove. Sem dado, cortar.</p>
+      <div class="examples">
+        <div class="example do"><span class="example-icon">✓</span><span>A IA que conversa, qualifica e vende pelo seu time.</span></div>
+        <div class="example dont"><span class="example-icon">✗</span><span>A IA mais avançada e revolucionária do mercado de telecom.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="principle">
+    <div class="principle-head">
+      <span class="principle-num">4</span>
+      <h3 class="principle-title">Benefício antes de feature.</h3>
+    </div>
+    <div class="principle-body">
+      <p class="principle-explain">"Vende mais" antes de "bot com IA". O leitor quer saber o que ganha, não o como.</p>
+      <div class="examples">
+        <div class="example do"><span class="example-icon">✓</span><span>Seu atendente só recebe quem tá pronto pra fechar. (benefício)</span></div>
+        <div class="example dont"><span class="example-icon">✗</span><span>Bot conversacional com NLP treinado em corpus de telecom usando LLM proprietária. (feature)</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="principle">
+    <div class="principle-head">
+      <span class="principle-num">5</span>
+      <h3 class="principle-title">Sem traço como pontuação.</h3>
+    </div>
+    <div class="principle-body">
+      <p class="principle-explain">Traço/hífen é caro pra gente. Substituir por ponto, vírgula ou reescrever. Hífen só em palavras compostas (pós-venda, anti-IA).</p>
+      <div class="examples">
+        <div class="example do"><span class="example-icon">✓</span><span>Vende mais. Perde menos. Fideliza sempre.</span></div>
+        <div class="example dont"><span class="example-icon">✗</span><span>Vende mais — perde menos — fideliza sempre.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Aplicação por canal</h2>
+
+  <div class="principle">
+    <div class="principle-head">
+      <span class="principle-num" style="background: #E76F51;"><i class="bi bi-whatsapp"></i></span>
+      <h3 class="principle-title">WhatsApp</h3>
+    </div>
+    <div class="principle-body">
+      <p class="principle-explain">Tom mais conversacional. Saudação curta. Máximo 3 parágrafos. 1 emoji por mensagem (no máximo). Nunca substituir argumento por emoji.</p>
+      <div class="examples">
+        <div class="example do"><span class="example-icon">✓</span><span>"Oi, [nome]! Aqui é [fulano] do Hubtrix. Vi que você é provedor em [cidade]. Posso te mandar um vídeo de 3 min do que a gente faz?"</span></div>
+        <div class="example dont"><span class="example-icon">✗</span><span>"Olá! Tudo bem com você? Esperamos que sim! 😊✨🎉 Gostaríamos de apresentar uma solução incrível..."</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="principle">
+    <div class="principle-head">
+      <span class="principle-num" style="background: #E76F51;"><i class="bi bi-envelope"></i></span>
+      <h3 class="principle-title">E-mail</h3>
+    </div>
+    <div class="principle-body">
+      <p class="principle-explain">Assunto máximo 50 caracteres, direto, sem clickbait. Corpo em 3 blocos. 1 CTA claro.</p>
+      <div class="examples">
+        <div class="example do"><span class="example-icon">✓</span><span>Assunto: "Sua IA já tá conversando." → Corpo curto, número de prova, CTA.</span></div>
+        <div class="example dont"><span class="example-icon">✗</span><span>Assunto: "🎉 INCRÍVEL NOTÍCIA SOBRE O FUTURO DO SEU PROVEDOR! 🚀"</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="principle">
+    <div class="principle-head">
+      <span class="principle-num" style="background: #E76F51;"><i class="bi bi-megaphone"></i></span>
+      <h3 class="principle-title">Posts e carrosséis</h3>
+    </div>
+    <div class="principle-body">
+      <p class="principle-explain">H1 forte com tipografia editorial. Marginalia em uma palavra-chave. Números grandes pra prova. Sem stock photo, sem AI sparkle.</p>
+      <div class="examples">
+        <div class="example do"><span class="example-icon">✓</span><span>"Da primeira mensagem ao técnico chegando." (H1) → 5 etapas listadas → marginalia "↘ zero atendente"</span></div>
+        <div class="example dont"><span class="example-icon">✗</span><span>"🚀 Descubra como nossa IA pode revolucionar seu provedor! 💡✨"</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

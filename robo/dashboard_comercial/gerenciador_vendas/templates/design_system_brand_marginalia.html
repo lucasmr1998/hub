@@ -1,0 +1,190 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}Marginalia — Brand — Hubtrix{% endblock %}
+
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  .brand-wrap { max-width: 1100px; margin: 0 auto; padding: var(--sp-8) var(--sp-6); }
+  .brand-back { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; color: var(--color-text-secondary); text-decoration: none; margin-bottom: var(--sp-4); }
+  .brand-back:hover { color: var(--color-primary); }
+  .brand-page-title { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 2.5rem; font-weight: 800; letter-spacing: -0.025em; margin: 0 0 var(--sp-2); line-height: 1.05; }
+  .brand-page-sub { color: var(--color-text-secondary); margin: 0 0 var(--sp-8); font-size: 1.0625rem; line-height: 1.6; }
+  .section-title { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.015em; margin: var(--sp-8) 0 var(--sp-4); }
+
+  .marg-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-4); }
+  @media (max-width: 700px) { .marg-grid { grid-template-columns: 1fr; } }
+  .marg-card { border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; }
+  .marg-canvas {
+    background: #FFFFFF; height: 240px;
+    display: flex; align-items: center; justify-content: center;
+    padding: var(--sp-6); position: relative;
+  }
+  .marg-meta { padding: var(--sp-4) var(--sp-5); background: var(--color-bg-alt); border-top: 1px solid var(--color-border); }
+  .marg-meta-name { font-weight: 700; font-size: 0.95rem; font-family: 'Inter Tight'; }
+  .marg-meta-desc { font-size: 0.8125rem; color: var(--color-text-secondary); margin-top: 4px; line-height: 1.5; }
+
+  /* Sublinhado em palavra */
+  .marg-sublinhado h3 {
+    font-family: 'Inter Tight'; font-size: 2.5rem; font-weight: 800; letter-spacing: -0.025em;
+    color: #252020; margin: 0; line-height: 1.05;
+  }
+  .marg-sublinhado .underlined {
+    position: relative; display: inline-block;
+  }
+  .marg-sublinhado .underlined svg {
+    position: absolute; bottom: -10px; left: 0; width: 100%;
+  }
+
+  /* Seta apontando número */
+  .marg-seta { display: flex; align-items: center; gap: var(--sp-3); }
+  .marg-seta-numero {
+    font-family: 'Inter Tight'; font-size: 5rem; font-weight: 800; color: #252020; line-height: 1; letter-spacing: -0.04em;
+  }
+  .marg-seta-arrow {
+    font-family: 'Caveat', cursive; color: #E76F51; font-size: 1.25rem;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  }
+
+  /* Círculo destacando UI */
+  .marg-circulo-ui {
+    background: #FFFFFF; border: 1px solid var(--color-border); border-radius: 8px;
+    padding: var(--sp-4); display: inline-flex; flex-direction: column; gap: 8px;
+    font-family: 'Inter';
+  }
+  .marg-ui-row { display: flex; gap: 8px; align-items: center; font-size: 0.875rem; }
+  .marg-ui-pill { padding: 2px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: 600; }
+
+  /* Asterisco em margem */
+  .marg-asterisco-page {
+    width: 280px; height: 200px; background: #FFFFFF;
+    border: 1px solid var(--color-border); border-radius: 6px;
+    padding: var(--sp-3); display: flex; flex-direction: column; gap: 6px;
+    position: relative;
+  }
+  .marg-asterisco-line {
+    height: 4px; background: var(--color-bg-alt); border-radius: 2px;
+  }
+  .marg-asterisco-line.short { width: 40%; }
+  .marg-asterisco-line.med { width: 70%; }
+  .marg-asterisco-mark {
+    position: absolute; top: 24px; right: -32px;
+    font-family: 'Caveat', cursive; color: #E76F51; font-size: 1.125rem;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  .rules-callout {
+    background: var(--color-bg-alt); border-left: 3px solid #E76F51; border-radius: 6px;
+    padding: var(--sp-4) var(--sp-5); margin-top: var(--sp-4);
+    display: flex; flex-direction: column; gap: var(--sp-2);
+  }
+  .rules-callout strong { color: var(--color-text); }
+  .rules-callout p { margin: 0; font-size: 0.9375rem; line-height: 1.55; color: var(--color-text-secondary); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="brand-wrap">
+
+  <a href="/design-system/brand/" class="brand-back"><i class="bi bi-arrow-left"></i> Voltar para Brand</a>
+
+  <h1 class="brand-page-title">Marginalia</h1>
+  <p class="brand-page-sub">
+    Detalhe à mão livre em <strong style="color: #E76F51;">burnt sienna #E76F51</strong>.
+    Assinatura editorial da marca. Imitação de caneta, nunca régua perfeita.
+    1 elemento por peça/seção, sem exceder.
+  </p>
+
+  <h2 class="section-title">4 aplicações</h2>
+
+  <div class="marg-grid">
+
+    <div class="marg-card">
+      <div class="marg-canvas">
+        <div class="marg-sublinhado">
+          <h3>vende mais. perde menos. <span class="underlined">fideliza sempre.<svg viewBox="0 0 360 14" fill="none" preserveAspectRatio="none"><path d="M2 8 Q 90 2, 180 8 T 358 6" stroke="#E76F51" stroke-width="3" stroke-linecap="round" fill="none"/></svg></span></h3>
+        </div>
+      </div>
+      <div class="marg-meta">
+        <div class="marg-meta-name">Sublinhado em palavra-chave</div>
+        <div class="marg-meta-desc">SVG curva orgânica abaixo da palavra mais importante do título. Hero da Home, capa de proposta, post.</div>
+      </div>
+    </div>
+
+    <div class="marg-card">
+      <div class="marg-canvas">
+        <div class="marg-seta">
+          <span class="marg-seta-numero">+18%</span>
+          <span class="marg-seta-arrow">↙ depois de 4 meses<br>de Hubtrix</span>
+        </div>
+      </div>
+      <div class="marg-meta">
+        <div class="marg-meta-name">Seta apontando número de prova</div>
+        <div class="marg-meta-desc">Anotação Caveat com seta orgânica apontando pra número-chave. Case, dashboard, post de resultado.</div>
+      </div>
+    </div>
+
+    <div class="marg-card">
+      <div class="marg-canvas">
+        <div class="marg-circulo-ui">
+          <div class="marg-ui-row" style="position: relative;">
+            <span style="font-weight: 600;">Lead novo</span>
+            <span class="marg-ui-pill" style="background: #E76F51; color: white; position: relative;">
+              quente
+              <svg style="position: absolute; top: -8px; left: -8px; width: calc(100% + 16px); height: calc(100% + 16px);" viewBox="0 0 100 50" fill="none" preserveAspectRatio="none">
+                <ellipse cx="50" cy="25" rx="46" ry="20" stroke="#E76F51" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="0"/>
+              </svg>
+            </span>
+          </div>
+          <div class="marg-ui-row">
+            <span style="font-weight: 600;">Em qualificação</span>
+            <span class="marg-ui-pill" style="background: #DBEAFE; color: #1E40AF;">morno</span>
+          </div>
+        </div>
+      </div>
+      <div class="marg-meta">
+        <div class="marg-meta-name">Círculo destacando elemento</div>
+        <div class="marg-meta-desc">Círculo aberto desenhado à mão sobre screenshot ou mock de UI. Tutorial, demo, post explicativo.</div>
+      </div>
+    </div>
+
+    <div class="marg-card">
+      <div class="marg-canvas" style="overflow: visible;">
+        <div class="marg-asterisco-page">
+          <div class="marg-asterisco-line"></div>
+          <div class="marg-asterisco-line med"></div>
+          <div class="marg-asterisco-line short"></div>
+          <div class="marg-asterisco-line"></div>
+          <div class="marg-asterisco-line med"></div>
+          <div class="marg-asterisco-line short"></div>
+          <span class="marg-asterisco-mark">* validar com cliente</span>
+        </div>
+      </div>
+      <div class="marg-meta">
+        <div class="marg-meta-name">Asterisco/anotação à margem</div>
+        <div class="marg-meta-desc">Marca sienna fora da margem do conteúdo, como anotação manuscrita. Proposta, deck, documento longo.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <h2 class="section-title">Regras</h2>
+
+  <div class="rules-callout">
+    <p><strong>1 elemento por peça/seção.</strong> Marginalia em excesso vira ruído visual. Em uma Home, máximo 3 (hero, case, CTA final).</p>
+  </div>
+  <div class="rules-callout">
+    <p><strong>Sempre parecer caneta de mão.</strong> Curvas orgânicas, traço variado. Nunca régua perfeita ou SVG geometricamente exato.</p>
+  </div>
+  <div class="rules-callout">
+    <p><strong>Cor exclusiva: burnt sienna #E76F51.</strong> Nunca vermelho, nunca laranja-banana, nunca outra variação. Mantém a assinatura única.</p>
+  </div>
+  <div class="rules-callout">
+    <p><strong>Fonte das anotações: Caveat.</strong> Google Font, peso 400 ou 600. Lembra letra cursiva discreta, sem virar caligrafia decorativa.</p>
+  </div>
+  <div class="rules-callout">
+    <p><strong>Não substituir conteúdo.</strong> A marginalia destaca, não explica. O conteúdo principal deve fazer sentido sem ela.</p>
+  </div>
+
+</div>
+{% endblock %}

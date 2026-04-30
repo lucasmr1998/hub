@@ -1,0 +1,249 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}Assinatura de e-mail — Brand — Hubtrix{% endblock %}
+
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  .brand-wrap { max-width: 1100px; margin: 0 auto; padding: var(--sp-8) var(--sp-6); }
+  .brand-back { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; color: var(--color-text-secondary); text-decoration: none; margin-bottom: var(--sp-4); }
+  .brand-back:hover { color: var(--color-primary); }
+  .brand-page-title { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 2.5rem; font-weight: 800; letter-spacing: -0.025em; margin: 0 0 var(--sp-2); line-height: 1.05; }
+  .brand-page-sub { color: var(--color-text-secondary); margin: 0 0 var(--sp-8); font-size: 1.0625rem; line-height: 1.6; }
+  .section-title { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.015em; margin: var(--sp-8) 0 var(--sp-4); }
+
+  .form-row { display: flex; gap: var(--sp-3); margin-bottom: var(--sp-4); flex-wrap: wrap; }
+  .form-field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 200px; }
+  .form-field label { font-size: 0.75rem; font-weight: 600; color: var(--color-text-secondary); letter-spacing: 0.05em; text-transform: uppercase; }
+  .form-field input {
+    padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px;
+    font-family: 'Inter'; font-size: 0.9375rem; color: var(--color-text);
+  }
+  .form-field input:focus { outline: 2px solid #252020; outline-offset: -1px; }
+
+  .preview-card { border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; }
+  .preview-header {
+    background: var(--color-bg-alt); padding: var(--sp-3) var(--sp-5);
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .preview-header-name { font-family: 'Inter Tight'; font-weight: 700; font-size: 1rem; }
+  .preview-actions { display: flex; gap: 8px; }
+  .btn {
+    padding: 8px 14px; border: none; border-radius: 8px;
+    font-family: 'Inter'; font-size: 0.8125rem; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary { background: #252020; color: white; }
+  .btn-primary:hover { background: #1A1717; }
+  .btn-secondary { background: white; color: #252020; border: 1px solid var(--color-border); }
+  .btn-secondary:hover { background: #F8FAFC; }
+
+  .preview-canvas {
+    background: #FAFAFA; padding: var(--sp-6);
+    display: flex; align-items: flex-start; justify-content: flex-start;
+    min-height: 220px;
+  }
+
+  .signature-html-wrap { padding: var(--sp-4) var(--sp-5); background: var(--color-bg); }
+  .signature-html-wrap pre {
+    background: #252020; color: #E2E8F0; padding: var(--sp-4); border-radius: 8px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.75rem;
+    overflow-x: auto; margin: 0; line-height: 1.5;
+    max-height: 240px;
+  }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px);
+    background: #252020; color: white; padding: 12px 20px; border-radius: 8px;
+    font-family: 'Inter'; font-size: 0.875rem; opacity: 0;
+    transition: all 0.3s ease; z-index: 1000;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="brand-wrap">
+
+  <a href="/design-system/brand/" class="brand-back"><i class="bi bi-arrow-left"></i> Voltar para Brand</a>
+
+  <h1 class="brand-page-title">Assinatura de e-mail</h1>
+  <p class="brand-page-sub">
+    Template oficial pra colar nas configurações de assinatura do Gmail / Outlook / cliente de e-mail.
+    Personalize seu nome/cargo abaixo, copie o HTML ou baixe o arquivo <code>.html</code>.
+  </p>
+
+  <div class="form-row">
+    <div class="form-field">
+      <label for="sig-nome">Nome</label>
+      <input id="sig-nome" type="text" value="Lucas Rodrigues" oninput="atualizarPreview()">
+    </div>
+    <div class="form-field">
+      <label for="sig-cargo">Cargo</label>
+      <input id="sig-cargo" type="text" value="Fundador" oninput="atualizarPreview()">
+    </div>
+    <div class="form-field">
+      <label for="sig-telefone">Telefone</label>
+      <input id="sig-telefone" type="text" value="(86) 9 9999-9999" oninput="atualizarPreview()">
+    </div>
+    <div class="form-field">
+      <label for="sig-email">E-mail</label>
+      <input id="sig-email" type="text" value="lucas@hubtrix.com.br" oninput="atualizarPreview()">
+    </div>
+  </div>
+
+  <h2 class="section-title">Template oficial</h2>
+
+  <div class="preview-card">
+    <div class="preview-header">
+      <span class="preview-header-name">Hubtrix · assinatura padrão</span>
+      <div class="preview-actions">
+        <button class="btn btn-secondary" onclick="copiarHTML()"><i class="bi bi-clipboard"></i> Copiar HTML</button>
+        <button class="btn btn-primary" onclick="baixarHTML()"><i class="bi bi-download"></i> Baixar .html</button>
+      </div>
+    </div>
+
+    <div class="preview-canvas" id="preview"></div>
+
+    <div class="signature-html-wrap">
+      <pre id="html-output"></pre>
+    </div>
+  </div>
+
+  <h2 class="section-title">Como aplicar</h2>
+
+  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3);">
+    <div style="border: 1px solid var(--color-border); border-radius: 10px; padding: var(--sp-4) var(--sp-5);">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+        <i class="bi bi-google" style="font-size: 1.25rem; color: #252020;"></i>
+        <strong style="font-family: 'Inter Tight'; font-size: 1rem;">Gmail</strong>
+      </div>
+      <ol style="font-size: 0.875rem; line-height: 1.6; color: var(--color-text-secondary); margin: 0; padding-left: 20px;">
+        <li>Configurações → "Ver todas as configurações"</li>
+        <li>Aba <strong>Geral</strong> → seção <strong>Assinatura</strong></li>
+        <li>Cole o HTML (use o botão "Copiar HTML" acima)</li>
+        <li>Salve as alterações no rodapé</li>
+      </ol>
+    </div>
+    <div style="border: 1px solid var(--color-border); border-radius: 10px; padding: var(--sp-4) var(--sp-5);">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+        <i class="bi bi-microsoft" style="font-size: 1.25rem; color: #252020;"></i>
+        <strong style="font-family: 'Inter Tight'; font-size: 1rem;">Outlook</strong>
+      </div>
+      <ol style="font-size: 0.875rem; line-height: 1.6; color: var(--color-text-secondary); margin: 0; padding-left: 20px;">
+        <li>Arquivo → Opções → E-mail → <strong>Assinaturas</strong></li>
+        <li>Crie nova assinatura ou edite uma existente</li>
+        <li>Cole o HTML no editor</li>
+        <li>Defina como padrão pra novas mensagens e respostas</li>
+      </ol>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast">Copiado pra área de transferência</div>
+
+<script>
+  function gerarHTML() {
+    const nome = document.getElementById('sig-nome').value.trim() || 'Seu Nome';
+    const cargo = document.getElementById('sig-cargo').value.trim() || 'Cargo';
+    const telefone = document.getElementById('sig-telefone').value.trim() || '';
+    const email = document.getElementById('sig-email').value.trim() || '';
+
+    return `<table cellpadding="0" cellspacing="0" border="0" style="font-family: -apple-system, BlinkMacSystemFont, 'Inter', Arial, sans-serif; color: #252020;">
+  <tr>
+    <td style="padding-right: 16px; vertical-align: top;">
+      <div style="width: 56px; height: 56px; background: #252020; border-radius: 10px; text-align: center; vertical-align: middle; line-height: 56px; position: relative;">
+        <span style="color: #FFFFFF; font-family: 'Inter Tight', Arial, sans-serif; font-weight: 800; font-size: 28px; letter-spacing: -0.05em;">h</span>
+      </div>
+    </td>
+    <td style="vertical-align: top; border-left: 2px solid #E76F51; padding-left: 16px;">
+      <div style="font-family: 'Inter Tight', Arial, sans-serif; font-weight: 700; font-size: 16px; color: #252020; line-height: 1.2; letter-spacing: -0.01em;">${nome}</div>
+      <div style="font-family: 'Inter', Arial, sans-serif; font-size: 13px; color: #475569; margin-top: 2px;">${cargo} · Hubtrix</div>
+      <div style="font-family: 'Inter', Arial, sans-serif; font-size: 12px; color: #475569; margin-top: 8px; line-height: 1.5;">
+        ${telefone ? `<span style="display: inline-block; margin-right: 12px;">📱 ${telefone}</span>` : ''}
+        ${email ? `<span style="display: inline-block;"><a href="mailto:${email}" style="color: #475569; text-decoration: none;">✉️ ${email}</a></span>` : ''}
+      </div>
+      <div style="margin-top: 8px;">
+        <a href="https://hubtrix.com.br" style="font-family: 'Inter', Arial, sans-serif; font-size: 12px; color: #252020; font-weight: 600; text-decoration: none; border-bottom: 1px solid #E76F51;">hubtrix.com.br</a>
+      </div>
+      <div style="margin-top: 6px; font-family: 'Inter Tight', Arial, sans-serif; font-size: 10px; color: #94A3B8; letter-spacing: 0.05em;">Vende mais · Perde menos · Fideliza sempre</div>
+    </td>
+  </tr>
+</table>`;
+  }
+
+  function atualizarPreview() {
+    const html = gerarHTML();
+    document.getElementById('preview').innerHTML = html;
+    document.getElementById('html-output').textContent = html;
+  }
+
+  function copiarHTML() {
+    const html = gerarHTML();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(html).then(
+        () => mostrarToast('HTML copiado pra área de transferência'),
+        (err) => {
+          console.error('Clipboard erro:', err);
+          fallbackCopy(html);
+        }
+      );
+    } else {
+      fallbackCopy(html);
+    }
+  }
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      mostrarToast('HTML copiado (modo legado)');
+    } catch (e) {
+      alert('Não consegui copiar. Selecione e copie o HTML manualmente do bloco abaixo.');
+    }
+    document.body.removeChild(ta);
+  }
+
+  function baixarHTML() {
+    try {
+      const html = gerarHTML();
+      const fullHtml = `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><title>Assinatura Hubtrix</title></head>
+<body style="margin: 24px; font-family: -apple-system, BlinkMacSystemFont, 'Inter', Arial, sans-serif;">
+${html}
+</body></html>`;
+      const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'hubtrix_assinatura_email.html';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+      mostrarToast('Arquivo baixado: hubtrix_assinatura_email.html');
+    } catch (e) {
+      console.error('Erro ao baixar HTML:', e);
+      alert('Erro ao gerar arquivo: ' + e.message);
+    }
+  }
+
+  function mostrarToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+
+  atualizarPreview();
+</script>
+{% endblock %}

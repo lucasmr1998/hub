@@ -46,7 +46,7 @@
     }
 
     .metric-card {
-        background: linear-gradient(135deg, #667eea, #764ba2);
+        background: #f8fafc;
         color: white;
         padding: 2rem;
         border-radius: 12px;
@@ -75,7 +75,7 @@
     .coming-soon i {
         font-size: 4rem;
         margin-bottom: 2rem;
-        color: #1F3D59;
+        color: #252020;
     }
 
     .coming-soon h3 {
@@ -110,7 +110,7 @@
     .feature-icon {
         width: 40px;
         height: 40px;
-        background: #1F3D59;
+        background: #252020;
         color: white;
         border-radius: 8px;
         display: flex;
@@ -138,7 +138,7 @@
     <div class="analysis-card">
         <div class="card-header">
             <div style="display:flex; align-items:center; gap:.5rem;">
-                <i class="fas fa-chart-line" style="color:#1F3D59"></i>
+                <i class="fas fa-chart-line" style="color:#252020"></i>
                 <strong>Análise de Atendimentos</strong>
             </div>
         </div>
@@ -175,13 +175,13 @@
                     </div>
                 </div>
                 <div class="filter-actions" style="display: flex; gap: 1rem;">
-                    <button id="btnFiltrar" style="background: #1F3D59; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    <button id="btnFiltrar" style="background: #252020; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer;">
                         <i class="fas fa-search"></i> Aplicar Filtros
                     </button>
                     <button id="btnLimparFiltros" style="background: #e0e0e0; color: #333; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer;">
                         <i class="fas fa-times"></i> Limpar
                     </button>
-                    <button id="btnExportar" style="background: #27ae60; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    <button id="btnExportar" style="background: #16a34a; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer;">
                         <i class="fas fa-download"></i> Exportar
                     </button>
                 </div>
@@ -193,15 +193,15 @@
                     <div class="metric-value" id="totalAtendimentos">0</div>
                     <div class="metric-label">Total Atendimentos</div>
                 </div>
-                <div class="metric-card" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+                <div class="metric-card" style="background: #16a34a;">
                     <div class="metric-value" id="taxaCompletude">0%</div>
                     <div class="metric-label">Taxa de Completude</div>
                 </div>
-                <div class="metric-card" style="background: linear-gradient(135deg, #1F3D59, #2a4f73);">
+                <div class="metric-card" style="background: #252020;">
                     <div class="metric-value" id="tempoMedio">0s</div>
                     <div class="metric-label">Tempo Médio</div>
                 </div>
-                <div class="metric-card" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
+                <div class="metric-card" style="background: #d97706;">
                     <div class="metric-value" id="scoreMedio">0</div>
                     <div class="metric-label">Score Médio</div>
                 </div>
@@ -211,19 +211,19 @@
             <div style="margin-top: 2rem;">
                 <h3 style="color: #333; font-size: 1.2rem; margin-bottom: 1rem;">Métricas de Contatos</h3>
                 <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                    <div class="metric-card" style="background: linear-gradient(135deg, #3498db, #2980b9);">
+                    <div class="metric-card" style="background: #252020;">
                         <div class="metric-value" id="totalContatos">0</div>
                         <div class="metric-label">Total Contatos</div>
                     </div>
-                    <div class="metric-card" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
+                    <div class="metric-card" style="background: #252020;">
                         <div class="metric-value" id="contatosConvertidos">0</div>
                         <div class="metric-label">Contatos Convertidos</div>
                 </div>
-                <div class="metric-card" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+                <div class="metric-card" style="background: #E76F51;">
                         <div class="metric-value" id="vendasConfirmadas">0</div>
                         <div class="metric-label">Vendas Confirmadas</div>
                     </div>
-                    <div class="metric-card" style="background: linear-gradient(135deg, #16a085, #1abc9c);">
+                    <div class="metric-card" style="background: #252020;">
                         <div class="metric-value" id="taxaConversao">0%</div>
                         <div class="metric-label">Taxa Conversão</div>
                     </div>
@@ -236,7 +236,7 @@
                     <!-- Gráfico de Evolução -->
                     <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                         <h3 style="color: #333; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                            <i class="fas fa-chart-line" style="color: #1F3D59;"></i>
+                            <i class="fas fa-chart-line" style="color: #252020;"></i>
                             Evolução dos Últimos 7 Dias
                         </h3>
                         <div style="position: relative; height: 300px;">
@@ -247,7 +247,7 @@
                     <!-- Gráfico de Status -->
                     <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                         <h3 style="color: #333; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                            <i class="fas fa-chart-pie" style="color: #1F3D59;"></i>
+                            <i class="fas fa-chart-pie" style="color: #252020;"></i>
                             Distribuição por Status
                         </h3>
                         <div style="position: relative; height: 300px;">
@@ -259,7 +259,7 @@
                 <!-- Gráfico de Fluxos -->
                 <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 2rem;">
                     <h3 style="color: #333; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <i class="fas fa-chart-bar" style="color: #1F3D59;"></i>
+                        <i class="fas fa-chart-bar" style="color: #252020;"></i>
                         Top 10 Fluxos por Volume
                     </h3>
                     <div style="position: relative; height: 300px;">
@@ -272,7 +272,7 @@
             <div style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-top: 2rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h3 style="color: #333; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-                        <i class="fas fa-table" style="color: #1F3D59;"></i>
+                        <i class="fas fa-table" style="color: #252020;"></i>
                         Atendimentos Detalhados
                     </h3>
                     <input type="text" id="searchAtendimentos" placeholder="Buscar por nome, telefone, fluxo..." 
@@ -318,7 +318,7 @@
 <div id="modalJornada" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 20px; padding: 0; min-width: 90vw; max-width: 95vw; max-height: 90vh; overflow: hidden;">
         <!-- Header do Modal -->
-        <div style="background: linear-gradient(135deg, #1F3D59, #2a4f73); color: white; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: #252020; color: white; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
             <div>
                 <h3 style="margin: 0; font-size: 1.5rem;">Jornada Completa do Cliente</h3>
                 <div id="clienteInfo" style="margin-top: 0.5rem; opacity: 0.9; font-size: 0.9rem;"></div>
@@ -338,7 +338,7 @@
             <!-- Abas -->
             <div style="border-bottom: 2px solid #e0e0e0; margin-bottom: 2rem;">
                 <div style="display: flex; gap: 2rem;">
-                    <button id="tabTimeline" onclick="showTab('timeline')" style="background: none; border: none; padding: 1rem 0; border-bottom: 3px solid #1F3D59; color: #1F3D59; font-weight: 600; cursor: pointer;">
+                    <button id="tabTimeline" onclick="showTab('timeline')" style="background: none; border: none; padding: 1rem 0; border-bottom: 3px solid #252020; color: #252020; font-weight: 600; cursor: pointer;">
                         <i class="fas fa-timeline"></i> Timeline
                     </button>
                     <button id="tabAtendimentos" onclick="showTab('atendimentos')" style="background: none; border: none; padding: 1rem 0; border-bottom: 3px solid transparent; color: #666; font-weight: 600; cursor: pointer;">
@@ -526,16 +526,16 @@
                     {
                         label: 'Total Atendimentos',
                         data: data.map(item => item.atendimentos),
-                        borderColor: '#1F3D59',
-                        backgroundColor: 'rgba(31, 61, 89, 0.1)',
+                        borderColor: '#252020',
+                        backgroundColor: 'rgba(37, 32, 32, 0.1)',
                         tension: 0.4,
                         fill: true
                     },
                     {
                         label: 'Completados',
                         data: data.map(item => item.completados),
-                        borderColor: '#27ae60',
-                        backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                        borderColor: '#E76F51',
+                        backgroundColor: 'rgba(231, 111, 81, 0.12)',
                         tension: 0.4,
                         fill: true
                     }
@@ -567,8 +567,9 @@
         }
         
         const colors = [
-            '#1F3D59', '#27ae60', '#f39c12', '#e74c3c', 
-            '#9b59b6', '#3498db', '#95a5a6', '#34495e'
+            // Paleta Hubtrix v2 (tinta + sienna + neutros)
+            '#252020', '#E76F51', '#475569', '#94A3B8',
+            '#1A1717', '#FED7AA', '#E2E8F0', '#3a3434'
         ];
         
         chartStatus = new Chart(ctx, {
@@ -608,7 +609,7 @@
                 datasets: [{
                     label: 'Quantidade de Atendimentos',
                     data: data.map(item => item.count),
-                    backgroundColor: '#1F3D59',
+                    backgroundColor: '#252020',
                     borderRadius: 4
                 }]
             },
@@ -658,7 +659,7 @@
         } catch (error) {
             console.error('Erro ao carregar atendimentos detalhados:', error);
             document.getElementById('atendimentosTableBody').innerHTML = 
-                '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #e74c3c;">Erro ao carregar dados</td></tr>';
+                '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #dc2626;">Erro ao carregar dados</td></tr>';
         }
     }
 
@@ -683,7 +684,7 @@
             // Barra de progresso
             const progressBar = `
                 <div style="background: #e0e0e0; border-radius: 10px; height: 6px; width: 100%; margin-bottom: 0.25rem;">
-                    <div style="background: #27ae60; height: 100%; border-radius: 10px; width: ${atendimento.progresso_percentual}%;"></div>
+                    <div style="background: #16a34a; height: 100%; border-radius: 10px; width: ${atendimento.progresso_percentual}%;"></div>
                 </div>
                 <small style="color: #666;">${atendimento.progresso_percentual}% (${atendimento.questao_atual}/${atendimento.total_questoes})</small>
             `;
@@ -714,12 +715,12 @@
                 </td>
                 <td style="padding: 1rem; text-align: center;">
                     ${atendimento.score_qualificacao ? 
-                        `<span style="background: #1F3D59; color: white; padding: 0.25rem 0.5rem; border-radius: 50%; font-weight: 600; font-size: 0.9rem;">${atendimento.score_qualificacao}</span>` : 
+                        `<span style="background: #252020; color: white; padding: 0.25rem 0.5rem; border-radius: 50%; font-weight: 600; font-size: 0.9rem;">${atendimento.score_qualificacao}</span>` : 
                         '<span style="color: #666;">-</span>'
                     }
                 </td>
                 <td style="padding: 1rem; text-align: center;">
-                    <button onclick="visualizarJornada(${atendimento.id})" style="background: #1F3D59; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
+                    <button onclick="visualizarJornada(${atendimento.id})" style="background: #252020; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
                         <i class="fas fa-eye"></i> Ver Jornada
                     </button>
                 </td>
@@ -774,7 +775,7 @@
         for (let i = startPage; i <= endPage; i++) {
             const pageBtn = document.createElement('button');
             pageBtn.textContent = i;
-            pageBtn.style.cssText = `padding: 0.5rem 1rem; border: 1px solid #e0e0e0; background: ${i === page ? '#1F3D59' : 'white'}; color: ${i === page ? 'white' : '#333'}; border-radius: 6px; cursor: pointer;`;
+            pageBtn.style.cssText = `padding: 0.5rem 1rem; border: 1px solid #e0e0e0; background: ${i === page ? '#252020' : 'white'}; color: ${i === page ? 'white' : '#333'}; border-radius: 6px; cursor: pointer;`;
             pageBtn.onclick = () => {
                 currentPage = i;
                 loadDetailedAttendances(currentPage, document.getElementById('searchAtendimentos').value);
@@ -873,19 +874,19 @@
     function updateEstatisticasJornada(stats) {
         const container = document.getElementById('estatisticasJornada');
         container.innerHTML = `
-            <div style="background: linear-gradient(135deg, #3498db, #2980b9); color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
+            <div style="background: #252020; color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
                 <div style="font-size: 2rem; font-weight: bold; margin-bottom: 0.5rem;">${stats.total_contatos}</div>
                 <div style="font-size: 0.9rem; opacity: 0.9;">Total Contatos</div>
             </div>
-            <div style="background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
+            <div style="background: #16a34a; color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
                 <div style="font-size: 2rem; font-weight: bold; margin-bottom: 0.5rem;">${stats.taxa_sucesso_contatos}%</div>
                 <div style="font-size: 0.9rem; opacity: 0.9;">Taxa Sucesso</div>
             </div>
-            <div style="background: linear-gradient(135deg, #9b59b6, #8e44ad); color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
+            <div style="background: #252020; color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
                 <div style="font-size: 2rem; font-weight: bold; margin-bottom: 0.5rem;">${stats.total_atendimentos}</div>
                 <div style="font-size: 0.9rem; opacity: 0.9;">Atendimentos</div>
             </div>
-            <div style="background: linear-gradient(135deg, #f39c12, #e67e22); color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
+            <div style="background: #d97706; color: white; padding: 1.5rem; border-radius: 12px; text-align: center;">
                 <div style="font-size: 2rem; font-weight: bold; margin-bottom: 0.5rem;">${stats.taxa_completude_atendimentos}%</div>
                 <div style="font-size: 0.9rem; opacity: 0.9;">Taxa Completude</div>
             </div>
@@ -934,7 +935,7 @@
                         ` : ''}
                         
                         ${evento.detalhes.observacoes ? `
-                            <div style="margin-top: 1rem; padding: 0.75rem; background: #fff3cd; border-radius: 6px; border-left: 4px solid #f39c12;">
+                            <div style="margin-top: 1rem; padding: 0.75rem; background: #fff3cd; border-radius: 6px; border-left: 4px solid #d97706;">
                                 <div style="font-size: 0.8rem; color: #856404; font-weight: 600; margin-bottom: 0.25rem;">📝 Observações:</div>
                                 <div style="color: #856404; font-size: 0.85rem;">${evento.detalhes.observacoes}</div>
                             </div>
@@ -942,7 +943,7 @@
                         
                         ${evento.tipo === 'atendimento' && evento.detalhes.respostas ? `
                             <div style="margin-top: 1rem;">
-                                <button onclick="toggleRespostas(${index})" style="background: #1F3D59; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
+                                <button onclick="toggleRespostas(${index})" style="background: #252020; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
                                     <i class="fas fa-list"></i> Ver Respostas (${evento.detalhes.respostas.length})
                                 </button>
                                 <div id="respostas-${index}" style="display: none; margin-top: 1rem;">
@@ -982,8 +983,8 @@
         
         // Ativar aba selecionada
         const tabButton = document.getElementById(`tab${tabName.charAt(0).toUpperCase() + tabName.slice(1).replace('-', 'Real')}`);
-        tabButton.style.borderBottom = '3px solid #1F3D59';
-        tabButton.style.color = '#1F3D59';
+        tabButton.style.borderBottom = '3px solid #252020';
+        tabButton.style.color = '#252020';
         document.getElementById(`content-${tabName}`).style.display = 'block';
         
         // Carregar conteúdo específico se necessário
@@ -1032,7 +1033,7 @@
                         <div>
                             <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.25rem;">Progresso</div>
                             <div style="background: #e0e0e0; border-radius: 10px; height: 6px; margin-bottom: 0.25rem;">
-                                <div style="background: #27ae60; height: 100%; border-radius: 10px; width: ${atendimento.progresso_percentual}%;"></div>
+                                <div style="background: #16a34a; height: 100%; border-radius: 10px; width: ${atendimento.progresso_percentual}%;"></div>
                             </div>
                             <div style="font-size: 0.8rem; color: #666;">${atendimento.progresso_percentual}% (${atendimento.questoes_respondidas}/${atendimento.total_questoes})</div>
                         </div>
@@ -1047,7 +1048,7 @@
                     </div>
 
                     ${atendimento.observacoes ? `
-                        <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; border-left: 4px solid #1F3D59;">
+                        <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; border-left: 4px solid #252020;">
                             <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">💬 Observações:</div>
                             <div style="color: #555; font-size: 0.9rem;">${atendimento.observacoes}</div>
                         </div>
@@ -1077,7 +1078,7 @@
         
         let html = '';
         contatos.forEach(contato => {
-            const cor = contato.sucesso ? '#27ae60' : '#e74c3c';
+            const cor = contato.sucesso ? '#16a34a' : '#dc2626';
             
             html += `
                 <div style="background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
@@ -1123,7 +1124,7 @@
                     ` : ''}
                     
                     ${contato.observacoes ? `
-                        <div style="background: #fff3cd; border-radius: 8px; padding: 1rem; margin-top: 1rem; border-left: 4px solid #f39c12;">
+                        <div style="background: #fff3cd; border-radius: 8px; padding: 1rem; margin-top: 1rem; border-left: 4px solid #d97706;">
                             <div style="font-size: 0.8rem; color: #856404; margin-bottom: 0.5rem;">📝 Observações:</div>
                             <div style="color: #856404; font-size: 0.9rem;">${contato.observacoes}</div>
                         </div>
@@ -1151,21 +1152,21 @@
             let html = `
                 <div style="background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                     <h3 style="margin: 0 0 1.5rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
-                        <i class="fas fa-clock" style="color: #1F3D59;"></i>
+                        <i class="fas fa-clock" style="color: #252020;"></i>
                         Status em Tempo Real
                     </h3>
                     
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-bottom: 2rem;">
                         <div style="text-align: center; padding: 1.5rem; background: #f8f9fa; border-radius: 12px;">
-                            <div style="font-size: 2rem; font-weight: bold; color: #1F3D59; margin-bottom: 0.5rem;">${data.atendimento.progresso_percentual}%</div>
+                            <div style="font-size: 2rem; font-weight: bold; color: #252020; margin-bottom: 0.5rem;">${data.atendimento.progresso_percentual}%</div>
                             <div style="color: #666; font-size: 0.9rem;">Progresso</div>
                         </div>
                         <div style="text-align: center; padding: 1.5rem; background: #f8f9fa; border-radius: 12px;">
-                            <div style="font-size: 1.5rem; font-weight: bold; color: #27ae60; margin-bottom: 0.5rem;">${data.atendimento.questoes_respondidas}/${data.atendimento.total_questoes}</div>
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #16a34a; margin-bottom: 0.5rem;">${data.atendimento.questoes_respondidas}/${data.atendimento.total_questoes}</div>
                             <div style="color: #666; font-size: 0.9rem;">Questões</div>
                         </div>
                         <div style="text-align: center; padding: 1.5rem; background: #f8f9fa; border-radius: 12px;">
-                            <div style="font-size: 1.5rem; font-weight: bold; color: #f39c12; margin-bottom: 0.5rem;">${data.atendimento.tempo_formatado}</div>
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #d97706; margin-bottom: 0.5rem;">${data.atendimento.tempo_formatado}</div>
                             <div style="color: #666; font-size: 0.9rem;">Tempo Total</div>
                         </div>
                     </div>
@@ -1199,7 +1200,7 @@
             
             data.todas_questoes.forEach(questao => {
                 const statusIcon = questao.respondida ? '✅' : '⏳';
-                const statusColor = questao.respondida ? '#27ae60' : '#666';
+                const statusColor = questao.respondida ? '#16a34a' : '#666';
                 
                 html += `
                     <div style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: ${questao.respondida ? '#f8fff8' : '#f8f9fa'}; border-radius: 8px; border-left: 4px solid ${statusColor};">
@@ -1226,7 +1227,7 @@
         } catch (error) {
             console.error('Erro ao carregar dados em tempo real:', error);
             document.getElementById('tempoRealContainer').innerHTML = `
-                <div style="text-align: center; padding: 2rem; color: #e74c3c;">
+                <div style="text-align: center; padding: 2rem; color: #dc2626;">
                     <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
                     <div>Erro ao carregar dados em tempo real</div>
         </div>

@@ -1,0 +1,224 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}Brand — Design System — Hubtrix{% endblock %}
+
+{% block extra_head %}
+<style>
+  .brand-wrap { max-width: 1100px; margin: 0 auto; padding: var(--sp-8) var(--sp-6); }
+  .brand-hero { display: flex; flex-direction: column; gap: var(--sp-3); margin-bottom: var(--sp-8); }
+  .brand-hero-eyebrow {
+    font-size: 0.75rem; font-weight: 600; color: var(--color-primary);
+    letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .brand-hero-title {
+    font-family: 'Inter Tight', system-ui, sans-serif;
+    font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; letter-spacing: -0.025em;
+    color: var(--color-text); margin: 0; line-height: 1.05;
+  }
+  .brand-hero-sub {
+    font-size: 1.125rem; color: var(--color-text-secondary); max-width: 720px;
+    margin: 0; line-height: 1.6;
+  }
+  .brand-hero-marginalia {
+    font-family: 'Caveat', cursive; font-size: 1.25rem; color: #E76F51;
+    margin-top: var(--sp-2); display: inline-block;
+  }
+  .brand-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-4);
+  }
+  @media (max-width: 800px) { .brand-grid { grid-template-columns: 1fr; } }
+  .brand-card {
+    display: flex; flex-direction: column; gap: var(--sp-3);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 12px; padding: var(--sp-6);
+    text-decoration: none; color: inherit;
+    transition: all 0.15s ease;
+  }
+  .brand-card:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 12px rgba(11,18,32,0.06);
+    transform: translateY(-2px);
+  }
+  .brand-card-header { display: flex; align-items: center; justify-content: space-between; }
+  .brand-card-title {
+    font-family: 'Inter Tight', system-ui, sans-serif;
+    font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; margin: 0;
+  }
+  .brand-card-count {
+    font-size: 0.75rem; font-weight: 600; padding: 2px 10px;
+    background: var(--color-bg-alt); color: var(--color-text-secondary);
+    border-radius: 99px;
+  }
+  .brand-card-items { font-size: 0.875rem; color: var(--color-text-secondary); line-height: 1.6; }
+  .brand-status-row {
+    display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-3);
+    padding-top: var(--sp-3); border-top: 1px solid var(--color-border);
+    font-size: 0.75rem; color: var(--color-text-secondary);
+  }
+  .status-dot { width: 8px; height: 8px; border-radius: 99px; display: inline-block; }
+  .status-dot.green { background: #22C55E; }
+  .status-dot.yellow { background: #F59E0B; }
+  .status-dot.gray { background: #94A3B8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="brand-wrap">
+
+  <header class="brand-hero">
+    <span class="brand-hero-eyebrow">Sistema visual Hubtrix · v1.0</span>
+    <h1 class="brand-hero-title">Brand Hubtrix</h1>
+    <p class="brand-hero-sub">
+      Sistema visual editorial baseado em tipografia forte e marginalia humana.
+      Inspiração HubSpot/Kommo. Anti cara-de-IA. Tudo que voce precisa pra aplicar a marca em qualquer ponto de contato.
+    </p>
+    <span class="brand-hero-marginalia">↘ direção 01 escolhida em 26/04/2026</span>
+  </header>
+
+  <div class="brand-grid">
+
+    <a href="/design-system/brand/logo/" class="brand-card">
+      <div class="brand-card-header">
+        <h2 class="brand-card-title">Logo</h2>
+        <span class="brand-card-count">8 variações</span>
+      </div>
+      <div class="brand-card-items">
+        Wordmark · Ícone "h" · Favicon · Lockup com tagline · todas com download SVG/PNG
+      </div>
+      <div class="brand-status-row">
+        <span class="status-dot green"></span>
+        Direção 01 (wordmark) + 04 (ícone) oficiais
+      </div>
+    </a>
+
+    <a href="/design-system/brand/cores/" class="brand-card">
+      <div class="brand-card-header">
+        <h2 class="brand-card-title">Cores</h2>
+        <span class="brand-card-count">3 cores</span>
+      </div>
+      <div class="brand-card-items">
+        Tinta <code style="background:#252020;color:#fff;padding:1px 6px;border-radius:4px;font-size:0.75rem;">#252020</code> · Burnt sienna <code style="background:#E76F51;color:#fff;padding:1px 6px;border-radius:4px;font-size:0.75rem;">#E76F51</code> · Branco
+      </div>
+      <div class="brand-status-row">
+        <span class="status-dot green"></span>
+        Paleta consolidada em 27/04 · Sem azul
+      </div>
+    </a>
+
+    <a href="/design-system/brand/tipografia/" class="brand-card">
+      <div class="brand-card-header">
+        <h2 class="brand-card-title">Tipografia</h2>
+        <span class="brand-card-count">2 fontes · 7 níveis</span>
+      </div>
+      <div class="brand-card-items">
+        Inter Tight (display) · Inter (corpo) · Hierarquia H1-Label · Tracking editorial
+      </div>
+      <div class="brand-status-row">
+        <span class="status-dot green"></span>
+        Google Fonts · CSS vars
+      </div>
+    </a>
+
+    <a href="/design-system/brand/voz-e-tom/" class="brand-card">
+      <div class="brand-card-header">
+        <h2 class="brand-card-title">Voz e tom</h2>
+        <span class="brand-card-count">5 princípios</span>
+      </div>
+      <div class="brand-card-items">
+        Direto · Prova antes de promessa · Sem superlativo vazio · Benefício antes de feature · Sem traço
+      </div>
+      <div class="brand-status-row">
+        <span class="status-dot green"></span>
+        Com exemplos do/dont · Aplicação por canal
+      </div>
+    </a>
+
+    <a href="/design-system/brand/marginalia/" class="brand-card">
+      <div class="brand-card-header">
+        <h2 class="brand-card-title">Marginalia</h2>
+        <span class="brand-card-count">4 aplicações</span>
+      </div>
+      <div class="brand-card-items">
+        Sublinhado em título · Seta pra número · Círculo em UI · Asterisco em proposta
+      </div>
+      <div class="brand-status-row">
+        <span class="status-dot green"></span>
+        Galeria com exemplos renderizados
+      </div>
+    </a>
+
+    <a href="/design-system/brand/aplicacoes/" class="brand-card">
+      <div class="brand-card-header">
+        <h2 class="brand-card-title">Aplicações</h2>
+        <span class="brand-card-count">8 peças</span>
+      </div>
+      <div class="brand-card-items">
+        Site · E-mails · Posts · Proposta · WhatsApp · Favicon · Cards sociais · Assinatura
+      </div>
+      <div class="brand-status-row">
+        <span class="status-dot green"></span>
+        Mock-ups + status de cada peça
+      </div>
+    </a>
+
+    <a href="/design-system/brand/instagram/" class="brand-card">
+      <div class="brand-card-header">
+        <h2 class="brand-card-title">Instagram</h2>
+        <span class="brand-card-count">Perfil + 6 posts</span>
+      </div>
+      <div class="brand-card-items">
+        Avatar · Bio · Highlights · Grid 3×2 com 6 posts variados aplicando a paleta
+      </div>
+      <div class="brand-status-row">
+        <span class="status-dot green"></span>
+        Simulação completa @hubtrix · download PNG 1080×1080
+      </div>
+    </a>
+
+    <a href="/design-system/brand/assinatura-email/" class="brand-card">
+      <div class="brand-card-header">
+        <h2 class="brand-card-title">Assinatura de e-mail</h2>
+        <span class="brand-card-count">Template oficial</span>
+      </div>
+      <div class="brand-card-items">
+        Editor de nome/cargo/contato · Preview ao vivo · Copiar HTML · Baixar .html
+      </div>
+      <div class="brand-status-row">
+        <span class="status-dot green"></span>
+        Pronto pra Gmail / Outlook
+      </div>
+    </a>
+
+    <div class="brand-card" style="cursor: default;">
+      <div class="brand-card-header">
+        <h2 class="brand-card-title">Componentes visuais</h2>
+        <span class="brand-card-count">6 specs</span>
+      </div>
+      <div class="brand-card-items">
+        Border radius · Sombras · Padding · Gap entre seções · Tokens
+      </div>
+      <div class="brand-status-row">
+        <span class="status-dot gray"></span>
+        Ja em <a href="/design-system/preview/">layouts/base.html</a>
+      </div>
+    </div>
+
+    <div class="brand-card" style="cursor: default;">
+      <div class="brand-card-header">
+        <h2 class="brand-card-title">Documentação</h2>
+        <span class="brand-card-count">4 docs</span>
+      </div>
+      <div class="brand-card-items">
+        BRANDBOOK · GUIA_APLICACAO · SESSAO_PAPER · HOME_SPEC
+      </div>
+      <div class="brand-status-row">
+        <span class="status-dot gray"></span>
+        Em <code style="background: var(--color-bg-alt); padding: 1px 6px; border-radius: 4px;">robo/docs/BRAND/</code>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

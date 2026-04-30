@@ -1,0 +1,489 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}Logo — Brand — Hubtrix{% endblock %}
+
+{% block extra_head %}
+<style>
+  .brand-wrap { max-width: 1100px; margin: 0 auto; padding: var(--sp-8) var(--sp-6); }
+  .brand-back {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem;
+    color: var(--color-text-secondary); text-decoration: none; margin-bottom: var(--sp-4);
+  }
+  .brand-back:hover { color: var(--color-primary); }
+  .brand-page-title {
+    font-family: 'Inter Tight', system-ui, sans-serif;
+    font-size: 2.5rem; font-weight: 800; letter-spacing: -0.025em;
+    margin: 0 0 var(--sp-2); line-height: 1.05;
+  }
+  .brand-page-sub { color: var(--color-text-secondary); margin: 0 0 var(--sp-8); font-size: 1.0625rem; line-height: 1.6; }
+
+  .section-title {
+    font-family: 'Inter Tight', system-ui, sans-serif;
+    font-size: 1.5rem; font-weight: 700; letter-spacing: -0.015em;
+    margin: var(--sp-8) 0 var(--sp-4);
+  }
+  .logo-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-4);
+  }
+  @media (max-width: 700px) { .logo-grid { grid-template-columns: 1fr; } }
+
+  .logo-card {
+    border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .logo-canvas {
+    height: 220px; display: flex; align-items: center; justify-content: center;
+    padding: var(--sp-6); position: relative;
+  }
+  .logo-canvas.light { background: #FFFFFF; }
+  .logo-canvas.tinta { background: #252020; }
+  .logo-canvas.sienna { background: #E76F51; }
+  .logo-canvas.offwhite { background: #F8FAFC; border-bottom: 1px solid var(--color-border); }
+
+  /* Wordmark "hubtrix" — Inter Tight 800, tracking -0.02em */
+  .wordmark {
+    font-family: 'Inter Tight', system-ui, sans-serif;
+    font-weight: 800; letter-spacing: -0.02em; line-height: 1;
+  }
+  .wordmark-lg { font-size: 4rem; }
+  .wordmark-md { font-size: 2.5rem; }
+
+  .logo-meta {
+    padding: var(--sp-4) var(--sp-5);
+    background: var(--color-bg);
+    border-top: 1px solid var(--color-border);
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .logo-meta-name { font-weight: 600; font-size: 0.95rem; }
+  .logo-meta-desc { font-size: 0.8125rem; color: var(--color-text-secondary); }
+
+  /* Favicon canvas */
+  .favicon-mock {
+    width: 64px; height: 64px; background: #252020; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Inter Tight', system-ui, sans-serif; font-weight: 800;
+    color: #FFFFFF; font-size: 2rem; letter-spacing: -0.02em;
+    position: relative;
+  }
+  .favicon-mock::after {
+    content: ''; position: absolute; bottom: 8px; right: 8px;
+    width: 8px; height: 8px; border-radius: 50%; background: #E76F51;
+  }
+  .favicon-row { display: flex; align-items: center; gap: var(--sp-4); }
+  .favicon-mock.sm { width: 32px; height: 32px; font-size: 1rem; border-radius: 6px; }
+  .favicon-mock.sm::after { bottom: 4px; right: 4px; width: 4px; height: 4px; }
+  .favicon-mock.xs { width: 16px; height: 16px; font-size: 0.5rem; border-radius: 3px; }
+  .favicon-mock.xs::after { display: none; }
+
+  /* Specs table */
+  .specs {
+    background: var(--color-bg-alt); border: 1px solid var(--color-border);
+    border-radius: 10px; padding: var(--sp-4) var(--sp-5);
+    display: grid; grid-template-columns: 200px 1fr; gap: 8px var(--sp-3);
+    font-size: 0.875rem;
+  }
+  .specs dt { font-weight: 600; color: var(--color-text); }
+  .specs dd { margin: 0; color: var(--color-text-secondary); font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.8125rem; }
+
+  /* Lockup */
+  .lockup {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .lockup-tagline {
+    font-family: 'Inter Tight', system-ui, sans-serif;
+    font-size: 0.875rem; font-weight: 600;
+    color: rgba(255,255,255,0.75); letter-spacing: 0.02em;
+  }
+
+  /* Download buttons em cada logo card */
+  .logo-card { position: relative; }
+  .logo-download {
+    position: absolute; top: 8px; right: 8px; z-index: 10;
+    display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s;
+  }
+  .logo-card:hover .logo-download { opacity: 1; }
+  .logo-download button {
+    padding: 5px 9px; background: rgba(255,255,255,0.95); color: #252020;
+    border: 1px solid var(--color-border); border-radius: 6px;
+    font-family: 'Inter'; font-size: 0.7rem; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .logo-download button:hover { background: white; }
+
+  .toast-brand {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px);
+    background: #252020; color: white; padding: 12px 20px; border-radius: 8px;
+    font-family: 'Inter'; font-size: 0.875rem; opacity: 0;
+    transition: all 0.3s ease; z-index: 1000;
+  }
+  .toast-brand.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* Proibições */
+  .dont-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3);
+  }
+  @media (max-width: 700px) { .dont-grid { grid-template-columns: 1fr; } }
+  .dont-card {
+    border: 1px solid var(--color-border); border-radius: 10px; padding: var(--sp-4);
+    background: var(--color-bg);
+  }
+  .dont-canvas {
+    height: 90px; background: #FFFFFF; border-radius: 6px; border: 1px solid var(--color-border);
+    display: flex; align-items: center; justify-content: center; margin-bottom: var(--sp-2);
+    position: relative; overflow: hidden;
+  }
+  .dont-label { font-size: 0.8125rem; color: #DC2626; font-weight: 500; }
+  .dont-icon-no {
+    position: absolute; top: 6px; right: 6px; width: 22px; height: 22px;
+    background: #DC2626; color: #FFF; border-radius: 99px;
+    display: flex; align-items: center; justify-content: center; font-size: 0.7rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="brand-wrap">
+
+  <a href="/design-system/brand/" class="brand-back"><i class="bi bi-arrow-left"></i> Voltar para Brand</a>
+
+  <h1 class="brand-page-title">Logo</h1>
+  <p class="brand-page-sub">
+    Wordmark puro <strong>hubtrix</strong> em Inter Tight 800, sempre minúsculo, tracking -0.02em.
+    Direção 01 escolhida na sessão Paper.design de 26/04/2026.
+  </p>
+
+  <h2 class="section-title">Wordmark — variações por cor</h2>
+
+  <div class="logo-grid">
+
+    <div class="logo-card">
+      <div class="logo-download">
+        <button onclick="baixarSVG('wordmark', 'tinta', 'hubtrix_wordmark_tinta')"><i class="bi bi-download"></i> SVG</button>
+        <button onclick="baixarPNG(this)"><i class="bi bi-image"></i> PNG</button>
+      </div>
+      <div class="logo-canvas light">
+        <span class="wordmark wordmark-lg" style="color: #252020;">hubtrix</span>
+      </div>
+      <div class="logo-meta">
+        <span class="logo-meta-name">Padrão · tinta sobre claro</span>
+        <span class="logo-meta-desc">Uso geral em fundos brancos / off-white</span>
+      </div>
+    </div>
+
+    <div class="logo-card">
+      <div class="logo-download">
+        <button onclick="baixarSVG('wordmark', 'branco', 'hubtrix_wordmark_branco')"><i class="bi bi-download"></i> SVG</button>
+        <button onclick="baixarPNG(this)"><i class="bi bi-image"></i> PNG</button>
+      </div>
+      <div class="logo-canvas tinta">
+        <span class="wordmark wordmark-lg" style="color: #FFFFFF;">hubtrix</span>
+      </div>
+      <div class="logo-meta">
+        <span class="logo-meta-name">Inverso · branco sobre tinta</span>
+        <span class="logo-meta-desc">Header escuro, fundo escuro, footer da Home</span>
+      </div>
+    </div>
+
+    <div class="logo-card">
+      <div class="logo-download">
+        <button onclick="baixarSVG('wordmark', 'branco', 'hubtrix_wordmark_branco_sobre_sienna')"><i class="bi bi-download"></i> SVG</button>
+        <button onclick="baixarPNG(this)"><i class="bi bi-image"></i> PNG</button>
+      </div>
+      <div class="logo-canvas sienna">
+        <span class="wordmark wordmark-lg" style="color: #FFFFFF;">hubtrix</span>
+      </div>
+      <div class="logo-meta">
+        <span class="logo-meta-name">Sobre sienna · branco sobre laranja</span>
+        <span class="logo-meta-desc">Hero de proposta, capa de deck, peças de destaque</span>
+      </div>
+    </div>
+
+    <div class="logo-card">
+      <div class="logo-canvas offwhite">
+        <div class="lockup">
+          <span class="wordmark wordmark-md" style="color: #252020;">hubtrix</span>
+          <span class="lockup-tagline" style="color: #475569;">Vende mais. Perde menos. Fideliza sempre.</span>
+        </div>
+      </div>
+      <div class="logo-meta">
+        <span class="logo-meta-name">Lockup com tagline</span>
+        <span class="logo-meta-desc">Capa de deck, rodapé de proposta, materiais comerciais</span>
+      </div>
+    </div>
+
+  </div>
+
+  <h2 class="section-title">Ícone "h" — variações por cor</h2>
+
+  <div class="logo-grid">
+
+    <div class="logo-card">
+      <div class="logo-download">
+        <button onclick="baixarSVG('icone', 'tinta-dot', 'hubtrix_icone_tinta')"><i class="bi bi-download"></i> SVG</button>
+        <button onclick="baixarPNG(this)"><i class="bi bi-image"></i> PNG</button>
+      </div>
+      <div class="logo-canvas light">
+        <div style="width: 96px; height: 96px; background: #252020; border-radius: 20px; display: flex; align-items: center; justify-content: center; position: relative;">
+          <span style="color: white; font-family: 'Inter Tight'; font-weight: 800; font-size: 4rem; letter-spacing: -0.05em;">h</span>
+          <div style="position: absolute; bottom: 14px; right: 14px; width: 10px; height: 10px; border-radius: 50%; background: #E76F51;"></div>
+        </div>
+      </div>
+      <div class="logo-meta">
+        <span class="logo-meta-name">Padrão · tinta com dot sienna</span>
+        <span class="logo-meta-desc">Uso geral · favicon · avatar de app · canto da página</span>
+      </div>
+    </div>
+
+    <div class="logo-card">
+      <div class="logo-download">
+        <button onclick="baixarSVG('icone', 'branco-dot', 'hubtrix_icone_branco')"><i class="bi bi-download"></i> SVG</button>
+        <button onclick="baixarPNG(this)"><i class="bi bi-image"></i> PNG</button>
+      </div>
+      <div class="logo-canvas tinta">
+        <div style="width: 96px; height: 96px; background: #FFFFFF; border-radius: 20px; display: flex; align-items: center; justify-content: center; position: relative;">
+          <span style="color: #252020; font-family: 'Inter Tight'; font-weight: 800; font-size: 4rem; letter-spacing: -0.05em;">h</span>
+          <div style="position: absolute; bottom: 14px; right: 14px; width: 10px; height: 10px; border-radius: 50%; background: #E76F51;"></div>
+        </div>
+      </div>
+      <div class="logo-meta">
+        <span class="logo-meta-name">Inverso · branco em fundo tinta</span>
+        <span class="logo-meta-desc">CTA finals, hero escuro, slides de capa em tinta</span>
+      </div>
+    </div>
+
+    <div class="logo-card">
+      <div class="logo-download">
+        <button onclick="baixarSVG('icone', 'branco-sem-dot', 'hubtrix_icone_branco_sem_dot')"><i class="bi bi-download"></i> SVG</button>
+        <button onclick="baixarPNG(this)"><i class="bi bi-image"></i> PNG</button>
+      </div>
+      <div class="logo-canvas sienna">
+        <div style="width: 96px; height: 96px; background: #FFFFFF; border-radius: 20px; display: flex; align-items: center; justify-content: center;">
+          <span style="color: #252020; font-family: 'Inter Tight'; font-weight: 800; font-size: 4rem; letter-spacing: -0.05em;">h</span>
+        </div>
+      </div>
+      <div class="logo-meta">
+        <span class="logo-meta-name">Sobre sienna · branco em fundo laranja</span>
+        <span class="logo-meta-desc">Card destaque, banner colorido, peças de campanha · sem dot (já há sienna no fundo)</span>
+      </div>
+    </div>
+
+    <div class="logo-card">
+      <div class="logo-download">
+        <button onclick="baixarSVG('icone', 'tinta-sem-dot', 'hubtrix_icone_tinta_sem_dot')"><i class="bi bi-download"></i> SVG</button>
+        <button onclick="baixarPNG(this)"><i class="bi bi-image"></i> PNG</button>
+      </div>
+      <div class="logo-canvas light">
+        <div style="width: 96px; height: 96px; background: #252020; border-radius: 20px; display: flex; align-items: center; justify-content: center;">
+          <span style="color: white; font-family: 'Inter Tight'; font-weight: 800; font-size: 4rem; letter-spacing: -0.05em;">h</span>
+        </div>
+      </div>
+      <div class="logo-meta">
+        <span class="logo-meta-name">Sem dot · uso minimalista</span>
+        <span class="logo-meta-desc">Quando o dot fica pequeno demais (favicons 16px, redução extrema)</span>
+      </div>
+    </div>
+
+  </div>
+
+  <h2 class="section-title">Favicon — 3 tamanhos</h2>
+  <div class="logo-card">
+    <div class="logo-canvas light" style="height: 180px;">
+      <div class="favicon-row">
+        <div class="favicon-mock">h</div>
+        <div class="favicon-mock sm">h</div>
+        <div class="favicon-mock xs">h</div>
+      </div>
+    </div>
+    <div class="logo-meta">
+      <span class="logo-meta-name">Favicon "h" — 64×64, 32×32, 16×16</span>
+      <span class="logo-meta-desc">Tinta <code>#252020</code> + dot sienna <code>#E76F51</code>. Em 16px o dot é omitido (sem fidelidade visual em pixel reduzido).</span>
+    </div>
+  </div>
+
+  <h2 class="section-title">Especificações</h2>
+  <dl class="specs">
+    <dt>Tipo</dt><dd>Wordmark (só texto, sem símbolo)</dd>
+    <dt>Texto</dt><dd>hubtrix (sempre minúsculo)</dd>
+    <dt>Fonte</dt><dd>Inter Tight</dd>
+    <dt>Peso</dt><dd>800 (ExtraBold)</dd>
+    <dt>Tracking</dt><dd>-0.02em</dd>
+    <dt>Cor padrão</dt><dd>#252020 (tinta) sobre fundo claro</dd>
+    <dt>Cor inversa</dt><dd>#FFFFFF sobre fundo tinta ou sienna</dd>
+    <dt>Tamanho mínimo digital</dt><dd>24px de altura</dd>
+    <dt>Tamanho mínimo impresso</dt><dd>10mm de altura</dd>
+    <dt>Área de proteção</dt><dd>Espaço mínimo equivalente à altura da letra "h"</dd>
+  </dl>
+
+  <h2 class="section-title">Direções oficiais (do Paper)</h2>
+  <p style="color: var(--color-text-secondary); margin: 0 0 var(--sp-4); font-size: 0.9375rem;">
+    Da sessão Paper.design de 26/04/2026, <strong>duas direções foram adotadas oficialmente</strong>: a 01 (wordmark) como logo principal, e a 04 (h em quadrado) como ícone/favicon. As demais (02 H matriz, 03 Pontos conectados) foram descartadas em 27/04 — não correspondiam à direção editorial da marca.
+  </p>
+
+  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); margin-bottom: var(--sp-6);">
+
+    <div style="background: #FFFFFF; border: 2px solid #22C55E; border-radius: 12px; padding: var(--sp-5);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4);">
+        <span style="font-size: 0.75rem; font-weight: 600; color: var(--color-text-secondary); letter-spacing: 0.1em; text-transform: uppercase;">01 · Wordmark puro</span>
+        <span style="font-size: 0.7rem; font-weight: 600; color: #22C55E; padding: 2px 8px; background: #DCFCE7; border-radius: 99px;">ESCOLHIDA</span>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center; padding: var(--sp-6) 0;">
+        <span class="wordmark wordmark-lg" style="color: #252020; font-size: 4.75rem; letter-spacing: -0.045em;">hubtrix</span>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 32px; padding-top: var(--sp-3); border-top: 1px solid #F0F2F5;">
+        <span class="wordmark" style="color: #252020; font-size: 1.375rem; letter-spacing: -0.04em;">hubtrix</span>
+        <span class="wordmark" style="color: #252020; font-size: 1.5rem; letter-spacing: -0.04em;">h.</span>
+      </div>
+    </div>
+
+    <div style="background: #FFFFFF; border: 2px solid #22C55E; border-radius: 12px; padding: var(--sp-5);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4);">
+        <span style="font-size: 0.75rem; font-weight: 600; color: var(--color-text-secondary); letter-spacing: 0.1em; text-transform: uppercase;">04 · Quadrado H</span>
+        <span style="font-size: 0.7rem; font-weight: 600; color: #22C55E; padding: 2px 8px; background: #DCFCE7; border-radius: 99px;">ÍCONE OFICIAL</span>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 16px; padding: var(--sp-6) 0;">
+        <div style="width: 84px; height: 84px; background: #252020; border-radius: 18px; display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0;">
+          <span style="color: white; font-family: 'Inter Tight', sans-serif; font-weight: 800; font-size: 3.5rem; letter-spacing: -0.05em;">h</span>
+          <div style="position: absolute; bottom: 14px; right: 14px; width: 8px; height: 8px; border-radius: 50%; background: #E76F51;"></div>
+        </div>
+        <span class="wordmark" style="color: #252020; font-size: 3.5rem; letter-spacing: -0.04em;">Hubtrix</span>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 32px; padding-top: var(--sp-3); border-top: 1px solid #F0F2F5;">
+        <div style="width: 32px; height: 32px; background: #252020; border-radius: 7px; display: flex; align-items: center; justify-content: center; position: relative;">
+          <span style="color: white; font-family: 'Inter Tight'; font-weight: 800; font-size: 1.375rem; letter-spacing: -0.05em;">h</span>
+          <div style="position: absolute; bottom: 5px; right: 5px; width: 4px; height: 4px; border-radius: 50%; background: #E76F51;"></div>
+        </div>
+        <div style="width: 20px; height: 20px; background: #252020; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+          <span style="color: white; font-family: 'Inter Tight'; font-weight: 800; font-size: 0.875rem; letter-spacing: -0.05em;">h</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <h2 class="section-title">Proibições</h2>
+
+  <div class="dont-grid">
+    <div class="dont-card">
+      <div class="dont-canvas">
+        <div class="dont-icon-no"><i class="bi bi-x"></i></div>
+        <span class="wordmark wordmark-md" style="color: #252020; transform: rotate(-12deg);">hubtrix</span>
+      </div>
+      <span class="dont-label">Não rotacionar</span>
+    </div>
+    <div class="dont-card">
+      <div class="dont-canvas">
+        <div class="dont-icon-no"><i class="bi bi-x"></i></div>
+        <span class="wordmark wordmark-md" style="color: #252020; transform: scaleX(0.6);">hubtrix</span>
+      </div>
+      <span class="dont-label">Não distorcer</span>
+    </div>
+    <div class="dont-card">
+      <div class="dont-canvas">
+        <div class="dont-icon-no"><i class="bi bi-x"></i></div>
+        <span class="wordmark wordmark-md" style="color: #DC2626;">hubtrix</span>
+      </div>
+      <span class="dont-label">Não trocar cor fora da paleta</span>
+    </div>
+    <div class="dont-card">
+      <div class="dont-canvas">
+        <div class="dont-icon-no"><i class="bi bi-x"></i></div>
+        <span class="wordmark wordmark-md" style="color: #252020; text-shadow: 2px 2px 8px rgba(0,0,0,0.3);">hubtrix</span>
+      </div>
+      <span class="dont-label">Não adicionar sombra/efeito</span>
+    </div>
+    <div class="dont-card">
+      <div class="dont-canvas">
+        <div class="dont-icon-no"><i class="bi bi-x"></i></div>
+        <span style="font-family: Georgia, serif; font-weight: 700; font-size: 2.5rem; color: #252020;">hubtrix</span>
+      </div>
+      <span class="dont-label">Não recriar em outra fonte</span>
+    </div>
+    <div class="dont-card">
+      <div class="dont-canvas">
+        <div class="dont-icon-no"><i class="bi bi-x"></i></div>
+        <span class="wordmark wordmark-md" style="color: #252020;">Hubtrix</span>
+      </div>
+      <span class="dont-label">Nunca H maiúsculo no logotipo</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast-brand" id="toastBrand">Baixado</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+  // SVG generators — geram SVGs limpos com texto em tipografia Inter Tight
+  // (texto vira path embutido pra não depender de fonte instalada no leitor)
+
+  function svgWordmark(corTexto, corFundo) {
+    const fundoTag = corFundo ? `<rect width="100%" height="100%" fill="${corFundo}"/>` : '';
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="200" viewBox="0 0 800 200" style="background:${corFundo || 'transparent'}">
+${fundoTag}
+<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Inter Tight, system-ui, sans-serif" font-weight="800" font-size="140" letter-spacing="-2.8" fill="${corTexto}">hubtrix</text>
+</svg>`;
+  }
+
+  function svgIcone(corQuadrado, corTexto, comDot) {
+    const dotTag = comDot ? '<circle cx="172" cy="172" r="14" fill="#E76F51"/>' : '';
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+<rect x="0" y="0" width="200" height="200" rx="42" fill="${corQuadrado}"/>
+<text x="100" y="148" text-anchor="middle" font-family="Inter Tight, system-ui, sans-serif" font-weight="800" font-size="160" letter-spacing="-8" fill="${corTexto}">h</text>
+${dotTag}
+</svg>`;
+  }
+
+  function baixarSVG(tipo, variante, filename) {
+    let svg = '';
+    if (tipo === 'wordmark') {
+      if (variante === 'tinta') svg = svgWordmark('#252020', null);
+      else if (variante === 'branco') svg = svgWordmark('#FFFFFF', null);
+    } else if (tipo === 'icone') {
+      if (variante === 'tinta-dot') svg = svgIcone('#252020', '#FFFFFF', true);
+      else if (variante === 'branco-dot') svg = svgIcone('#FFFFFF', '#252020', true);
+      else if (variante === 'branco-sem-dot') svg = svgIcone('#FFFFFF', '#252020', false);
+      else if (variante === 'tinta-sem-dot') svg = svgIcone('#252020', '#FFFFFF', false);
+    }
+    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename + '.svg'; a.click();
+    URL.revokeObjectURL(url);
+    mostrarToastBrand('Baixado: ' + filename + '.svg');
+  }
+
+  async function baixarPNG(btnEl) {
+    const card = btnEl.closest('.logo-card');
+    const canvas = card.querySelector('.logo-canvas');
+    const meta = card.querySelector('.logo-meta-name');
+    const filename = (meta ? meta.textContent : 'hubtrix_logo')
+      .toLowerCase().replace(/[·]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+
+    btnEl.disabled = true; const orig = btnEl.innerHTML;
+    btnEl.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+
+    try {
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      await new Promise(r => setTimeout(r, 200));
+      const result = await html2canvas(canvas, {
+        scale: 4, backgroundColor: null, logging: false, useCORS: true,
+      });
+      const link = document.createElement('a');
+      link.download = 'hubtrix_' + filename + '.png';
+      link.href = result.toDataURL('image/png');
+      link.click();
+      mostrarToastBrand('Baixado: hubtrix_' + filename + '.png');
+    } catch (e) {
+      console.error(e); alert('Erro: ' + e.message);
+    }
+    btnEl.disabled = false; btnEl.innerHTML = orig;
+  }
+
+  function mostrarToastBrand(msg) {
+    const t = document.getElementById('toastBrand');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2400);
+  }
+</script>
+{% endblock %}

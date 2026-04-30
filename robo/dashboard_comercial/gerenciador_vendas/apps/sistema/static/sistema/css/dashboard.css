@@ -4,11 +4,13 @@
    ============================================================================ */
 
 /* ── Variaveis ─────────────────────────────────────────────────────────────── */
+/* NOTA: paleta atualizada em 28/04/2026 pra alinhar com brand v2 (tinta + sienna).
+   Usa as vars de templates/layouts/base.html como source of truth. */
 :root {
-    --primary: #3b82f6;
-    --primary-dark: #2563eb;
-    --primary-light: #eff6ff;
-    --text-main: #1e293b;
+    --primary: #252020;          /* tinta v2 (era #3b82f6 cobalto) */
+    --primary-dark: #1A1717;     /* tinta hover (era #2563eb) */
+    --primary-light: #FED7AA;    /* sienna soft (era #eff6ff) — destaque editorial */
+    --text-main: #252020;        /* tinta v2 (era #1e293b) */
     --text-secondary: #374151;
     --text-muted: #64748b;
     --text-light: #94a3b8;

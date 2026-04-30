@@ -1,0 +1,297 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}Aplicações — Brand — Hubtrix{% endblock %}
+
+{% block extra_head %}
+<style>
+  .brand-wrap { max-width: 1100px; margin: 0 auto; padding: var(--sp-8) var(--sp-6); }
+  .brand-back { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; color: var(--color-text-secondary); text-decoration: none; margin-bottom: var(--sp-4); }
+  .brand-back:hover { color: var(--color-primary); }
+  .brand-page-title { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 2.5rem; font-weight: 800; letter-spacing: -0.025em; margin: 0 0 var(--sp-2); line-height: 1.05; }
+  .brand-page-sub { color: var(--color-text-secondary); margin: 0 0 var(--sp-8); font-size: 1.0625rem; line-height: 1.6; }
+  .section-title { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.015em; margin: var(--sp-8) 0 var(--sp-4); }
+
+  .apps-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-4); }
+  @media (max-width: 800px) { .apps-grid { grid-template-columns: 1fr; } }
+  .app-card {
+    border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden;
+    display: flex; flex-direction: column; background: var(--color-bg);
+  }
+  .app-canvas {
+    background: #F8FAFC; padding: var(--sp-5); display: flex; align-items: center; justify-content: center;
+    height: 280px; overflow: hidden; position: relative;
+  }
+  .app-meta {
+    padding: var(--sp-4) var(--sp-5);
+    display: flex; flex-direction: column; gap: 6px;
+    border-top: 1px solid var(--color-border);
+  }
+  .app-meta-row { display: flex; justify-content: space-between; align-items: center; }
+  .app-meta-name { font-weight: 700; font-size: 1rem; font-family: 'Inter Tight'; letter-spacing: -0.01em; }
+  .app-status-pill {
+    font-size: 0.7rem; font-weight: 600; padding: 3px 10px; border-radius: 99px;
+  }
+  .app-status-pill.done { background: #DCFCE7; color: #14532D; }
+  .app-status-pill.partial { background: #FEF3C7; color: #92400E; }
+  .app-status-pill.todo { background: #F1F5F9; color: #475569; }
+  .app-meta-desc { font-size: 0.875rem; color: var(--color-text-secondary); line-height: 1.5; margin: 0; }
+
+  /* Mock previews */
+  .mock-site {
+    width: 360px; height: 220px; background: white; border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(11,18,32,0.08); display: flex; flex-direction: column; overflow: hidden;
+  }
+  .mock-site-bar { background: #252020; padding: 8px 12px; display: flex; align-items: center; gap: 6px; }
+  .mock-site-bar-dot { width: 8px; height: 8px; border-radius: 99px; background: rgba(255,255,255,0.3); }
+  .mock-site-content {
+    flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .mock-eyebrow { font-size: 7px; font-weight: 600; color: #252020; letter-spacing: 0.12em; text-transform: uppercase; }
+  .mock-h1 { font-family: 'Inter Tight'; font-weight: 800; font-size: 14px; color: #252020; letter-spacing: -0.025em; line-height: 1.05; }
+  .mock-h1-sienna { color: #E76F51; }
+  .mock-cta { background: #252020; color: white; padding: 4px 10px; border-radius: 4px; font-size: 7px; font-weight: 600; align-self: flex-start; margin-top: 2px; }
+
+  .mock-email {
+    width: 240px; height: 200px; background: white; border-radius: 8px;
+    border: 1px solid #E2E8F0; padding: 12px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .mock-email-h1 { font-family: 'Inter Tight'; font-size: 13px; font-weight: 800; color: #252020; line-height: 1.05; letter-spacing: -0.02em; }
+  .mock-email-card { background: #252020; border-radius: 6px; padding: 8px; color: white; }
+  .mock-email-num { font-family: 'Inter Tight'; font-size: 14px; font-weight: 800; }
+
+  .mock-post {
+    width: 200px; height: 200px; background: white; border-radius: 8px;
+    padding: 14px; display: flex; flex-direction: column; gap: 6px;
+    box-shadow: 0 4px 16px rgba(11,18,32,0.08);
+  }
+  .mock-post-eyebrow { font-size: 7px; font-weight: 600; color: #252020; letter-spacing: 0.14em; text-transform: uppercase; }
+  .mock-post-h1 { font-family: 'Inter Tight'; font-size: 14px; font-weight: 800; color: #252020; line-height: 1.05; letter-spacing: -0.025em; }
+  .mock-step { display: flex; gap: 6px; align-items: center; }
+  .mock-step-num { width: 14px; height: 14px; border-radius: 99px; background: #252020; color: white; font-family: 'Inter Tight'; font-weight: 700; font-size: 8px; display: flex; align-items: center; justify-content: center; }
+  .mock-step-text { font-size: 8px; color: #252020; }
+
+  .mock-proposta {
+    width: 320px; height: 200px; background: #252020; border-radius: 8px;
+    padding: 16px; display: flex; flex-direction: column; justify-content: space-between;
+    box-shadow: 0 4px 16px rgba(11,18,32,0.12);
+  }
+  .mock-proposta-h1 { font-family: 'Inter Tight'; font-size: 24px; font-weight: 800; color: white; line-height: 1.05; letter-spacing: -0.025em; }
+  .mock-proposta-h1 span { color: #E76F51; }
+  .mock-proposta-foot { font-size: 8px; color: rgba(255,255,255,0.6); letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .mock-wpp {
+    width: 200px; height: 200px; background: #ECE5DD; border-radius: 8px; padding: 12px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .mock-wpp-bubble {
+    background: white; padding: 8px 10px; border-radius: 8px 8px 8px 2px;
+    font-size: 9px; color: #252020; max-width: 80%; line-height: 1.4;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.08);
+  }
+  .mock-wpp-bubble.them { align-self: flex-start; }
+  .mock-wpp-bubble.us { align-self: flex-end; background: #DCF8C6; border-radius: 8px 8px 2px 8px; }
+
+  .mock-favicon-row { display: flex; gap: 16px; align-items: flex-end; }
+  .favicon-bare { width: 64px; height: 64px; background: #252020; border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative; }
+  .favicon-bare::after { content: ''; position: absolute; bottom: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: #E76F51; }
+  .favicon-bare.sm { width: 32px; height: 32px; border-radius: 6px; }
+  .favicon-bare.sm::after { bottom: 4px; right: 4px; width: 4px; height: 4px; }
+  .favicon-bare span { color: white; font-family: 'Inter Tight'; font-weight: 800; letter-spacing: -0.05em; font-size: 2rem; }
+  .favicon-bare.sm span { font-size: 1rem; }
+
+  .mock-card-social {
+    width: 200px; height: 200px; background: white; border-radius: 8px;
+    padding: 16px; display: flex; flex-direction: column; gap: 6px;
+    box-shadow: 0 4px 16px rgba(11,18,32,0.08);
+  }
+  .social-card-bg-sienna { background: #E76F51; color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="brand-wrap">
+
+  <a href="/design-system/brand/" class="brand-back"><i class="bi bi-arrow-left"></i> Voltar para Brand</a>
+
+  <h1 class="brand-page-title">Aplicações</h1>
+  <p class="brand-page-sub">
+    Onde a marca aparece. Site, e-mails, posts, propostas, WhatsApp, favicon. Mock-ups abaixo refletem o estado atual de cada peça.
+  </p>
+
+  <h2 class="section-title">Peças vivas</h2>
+
+  <div class="apps-grid">
+
+    <a href="/static/site/index.html" class="app-card" style="text-decoration: none; color: inherit;">
+      <div class="app-canvas">
+        <div class="mock-site">
+          <div class="mock-site-bar">
+            <div class="mock-site-bar-dot"></div><div class="mock-site-bar-dot"></div><div class="mock-site-bar-dot"></div>
+          </div>
+          <div class="mock-site-content">
+            <span class="mock-eyebrow">Plataforma para provedores</span>
+            <span class="mock-h1">A plataforma do provedor que vende mais, perde menos e <span class="mock-h1-sienna">fideliza sempre.</span></span>
+            <span style="font-size: 8px; color: #475569;">IA que qualifica lead, organiza CRM e segura cliente.</span>
+            <span class="mock-cta">Agendar demo</span>
+          </div>
+        </div>
+      </div>
+      <div class="app-meta">
+        <div class="app-meta-row">
+          <span class="app-meta-name">Site comercial — Home</span>
+          <span class="app-status-pill done">No ar (mock HTML)</span>
+        </div>
+        <p class="app-meta-desc">Hero · Problemas · Módulos · Integrações · Case · CTA · Footer · Em <code>site/index_preto.html</code>.</p>
+      </div>
+    </a>
+
+    <div class="app-card">
+      <div class="app-canvas" style="background: #F8FAFC;">
+        <div class="mock-email">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="width: 14px; height: 14px; background: #252020; border-radius: 3px; display: flex; align-items: center; justify-content: center;"><span style="font-family: 'Inter Tight'; font-weight: 800; font-size: 8px; color: white;">h</span></div>
+            <span style="font-family: 'Inter Tight'; font-weight: 800; font-size: 10px; color: #252020;">hubtrix</span>
+          </div>
+          <span style="font-size: 8px; font-weight: 600; color: #E76F51; letter-spacing: 0.14em; text-transform: uppercase;">Inteligência artificial</span>
+          <span class="mock-email-h1">Da primeira mensagem ao técnico chegando.</span>
+          <div class="mock-email-card">
+            <span style="font-size: 7px; color: #E76F51; font-weight: 600; letter-spacing: 0.12em;">RESULTADO</span>
+            <div style="display: flex; gap: 12px; margin-top: 4px;">
+              <span class="mock-email-num">15min</span>
+              <span class="mock-email-num">0</span>
+              <span class="mock-email-num" style="color: #E76F51;">24/7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="app-meta">
+        <div class="app-meta-row">
+          <span class="app-meta-name">E-mails (sequência IA)</span>
+          <span class="app-status-pill done">5 prontos</span>
+        </div>
+        <p class="app-meta-desc">Boas-vindas · Atendimento · CRM · Fidelização · Automação · IA fluxo completo. Designs no Paper, falta refazer com paleta nova.</p>
+      </div>
+    </div>
+
+    <div class="app-card">
+      <div class="app-canvas">
+        <div class="mock-post">
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <div style="width: 12px; height: 12px; background: #252020; border-radius: 3px; display: flex; align-items: center; justify-content: center;"><span style="font-family: 'Inter Tight'; font-weight: 800; font-size: 7px; color: white;">h</span></div>
+            <span style="font-family: 'Inter Tight'; font-weight: 800; font-size: 9px; color: #252020;">hubtrix</span>
+          </div>
+          <span class="mock-post-eyebrow">Inteligência artificial</span>
+          <span class="mock-post-h1">Da primeira mensagem ao <span style="color: #E76F51;">técnico chegando.</span></span>
+          <div style="display: flex; flex-direction: column; gap: 3px; margin-top: 4px;">
+            <div class="mock-step"><span class="mock-step-num">1</span><span class="mock-step-text">Atende WhatsApp</span></div>
+            <div class="mock-step"><span class="mock-step-num">2</span><span class="mock-step-text">Qualifica</span></div>
+            <div class="mock-step"><span class="mock-step-num">3</span><span class="mock-step-text">Cadastra ERP</span></div>
+            <div class="mock-step" style="background: #E76F51; padding: 2px; border-radius: 4px;"><span class="mock-step-num" style="background: white; color: #E76F51;">5</span><span class="mock-step-text" style="color: white;">Abre O.S.</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="app-meta">
+        <div class="app-meta-row">
+          <span class="app-meta-name">Post 1080×1080 (5 etapas IA)</span>
+          <span class="app-status-pill done">Pronto no Paper</span>
+        </div>
+        <p class="app-meta-desc">Card pra LinkedIn/Instagram. 5 etapas da IA do primeiro WhatsApp ao agendamento técnico. Refazer com paleta nova.</p>
+      </div>
+    </div>
+
+    <div class="app-card">
+      <div class="app-canvas">
+        <div class="mock-proposta">
+          <div>
+            <span style="font-size: 8px; color: rgba(255,255,255,0.6); letter-spacing: 0.14em; text-transform: uppercase;">Proposta · 2026</span>
+          </div>
+          <span class="mock-proposta-h1">A plataforma do <span>provedor</span></span>
+          <span class="mock-proposta-foot">14 páginas · 1920×1080</span>
+        </div>
+      </div>
+      <div class="app-meta">
+        <div class="app-meta-row">
+          <span class="app-meta-name">Proposta comercial</span>
+          <span class="app-status-pill partial">4 de 14 páginas</span>
+        </div>
+        <p class="app-meta-desc">Capa + 3 páginas finalizadas no Paper. Resto pendente. Refazer com paleta nova quando concluir.</p>
+      </div>
+    </div>
+
+    <div class="app-card">
+      <div class="app-canvas">
+        <div class="mock-wpp">
+          <div class="mock-wpp-bubble them">Oi! Tava olhando seu site, vocês integram com SGP?</div>
+          <div class="mock-wpp-bubble us">Oi! Sim, integração nativa com SGP, HubSoft, MK-Auth e IXC. Quer um demo de 15 min?</div>
+          <div class="mock-wpp-bubble them">Manda o link 👍</div>
+          <div class="mock-wpp-bubble us" style="background: #252020; color: white;">hubtrix.com.br/demo</div>
+        </div>
+      </div>
+      <div class="app-meta">
+        <div class="app-meta-row">
+          <span class="app-meta-name">WhatsApp · scripts</span>
+          <span class="app-status-pill todo">A escrever</span>
+        </div>
+        <p class="app-meta-desc">Mensagens padrão (resposta inicial, qualificação, follow-up). PMM redige. Salvo em <code>exports/drafts/whatsapp/</code>.</p>
+      </div>
+    </div>
+
+    <div class="app-card">
+      <div class="app-canvas">
+        <div class="mock-favicon-row">
+          <div class="favicon-bare"><span>h</span></div>
+          <div class="favicon-bare sm"><span>h</span></div>
+        </div>
+      </div>
+      <div class="app-meta">
+        <div class="app-meta-row">
+          <span class="app-meta-name">Favicon · avatar de app</span>
+          <span class="app-status-pill done">Especificado</span>
+        </div>
+        <p class="app-meta-desc">"h" branco em quadrado tinta + dot sienna. 64×64, 32×32. Em 16×16 dot é omitido. Falta exportar PNG/ICO.</p>
+      </div>
+    </div>
+
+    <div class="app-card">
+      <div class="app-canvas">
+        <div class="mock-card-social social-card-bg-sienna">
+          <span style="font-size: 7px; color: rgba(255,255,255,0.7); letter-spacing: 0.14em; text-transform: uppercase;">04 — Automação</span>
+          <span style="font-family: 'Inter Tight'; font-size: 13px; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; margin-top: 4px;">Editor visual de fluxos com IA treinada no seu provedor.</span>
+        </div>
+      </div>
+      <div class="app-meta">
+        <div class="app-meta-row">
+          <span class="app-meta-name">Cards de redes sociais</span>
+          <span class="app-status-pill partial">4 de 4 prontos no Paper</span>
+        </div>
+        <p class="app-meta-desc">Um por módulo (Atendimento · CRM · Fidelização · Automação). Refazer com paleta nova.</p>
+      </div>
+    </div>
+
+    <div class="app-card">
+      <div class="app-canvas">
+        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px; width: 240px; display: flex; flex-direction: column; gap: 8px;">
+          <span style="font-size: 8px; font-weight: 600; color: #252020; letter-spacing: 0.14em; text-transform: uppercase;">Assinatura</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 32px; height: 32px; background: #252020; border-radius: 6px; display: flex; align-items: center; justify-content: center; position: relative;"><span style="font-family: 'Inter Tight'; font-weight: 800; font-size: 1rem; color: white;">h</span><div style="position: absolute; bottom: 4px; right: 4px; width: 4px; height: 4px; border-radius: 50%; background: #E76F51;"></div></div>
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-family: 'Inter Tight'; font-weight: 700; font-size: 11px; color: #252020;">Lucas Rodrigues</span>
+              <span style="font-size: 8px; color: #475569;">Fundador · Hubtrix</span>
+            </div>
+          </div>
+          <div style="font-size: 8px; color: #475569; line-height: 1.4;">hubtrix.com.br · (86) 9 9999-9999</div>
+        </div>
+      </div>
+      <div class="app-meta">
+        <div class="app-meta-row">
+          <span class="app-meta-name">Assinatura de e-mail</span>
+          <span class="app-status-pill todo">A criar</span>
+        </div>
+        <p class="app-meta-desc">Template de assinatura. Logo + nome + cargo + contato. Sem banner pesado.</p>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

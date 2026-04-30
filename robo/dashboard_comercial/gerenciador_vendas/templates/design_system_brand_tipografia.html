@@ -1,0 +1,191 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}Tipografia — Brand — Hubtrix{% endblock %}
+
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700;800&family=Inter:wght@400;500;600;700&family=Caveat:wght@400&display=swap" rel="stylesheet">
+<style>
+  .brand-wrap { max-width: 1100px; margin: 0 auto; padding: var(--sp-8) var(--sp-6); }
+  .brand-back { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; color: var(--color-text-secondary); text-decoration: none; margin-bottom: var(--sp-4); }
+  .brand-back:hover { color: var(--color-primary); }
+  .brand-page-title { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 2.5rem; font-weight: 800; letter-spacing: -0.025em; margin: 0 0 var(--sp-2); line-height: 1.05; }
+  .brand-page-sub { color: var(--color-text-secondary); margin: 0 0 var(--sp-8); font-size: 1.0625rem; line-height: 1.6; }
+  .section-title { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.015em; margin: var(--sp-8) 0 var(--sp-4); }
+
+  /* Família — cards lado a lado */
+  .family-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-4); }
+  @media (max-width: 700px) { .family-grid { grid-template-columns: 1fr; } }
+  .family-card {
+    border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden;
+  }
+  .family-display {
+    padding: var(--sp-6) var(--sp-5); background: var(--color-bg);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .family-sample {
+    font-size: 4rem; line-height: 1; letter-spacing: -0.025em; margin: 0;
+  }
+  .family-meta {
+    background: var(--color-bg-alt); border-top: 1px solid var(--color-border);
+    padding: var(--sp-3) var(--sp-5);
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .family-meta-name { font-weight: 600; font-size: 0.95rem; }
+  .family-meta-desc { font-size: 0.8125rem; color: var(--color-text-secondary); }
+
+  /* Hierarquia */
+  .hier-list { display: flex; flex-direction: column; }
+  .hier-row {
+    display: grid; grid-template-columns: 110px 1fr 200px;
+    align-items: center; gap: var(--sp-3);
+    padding: var(--sp-4) 0; border-bottom: 1px solid var(--color-border);
+  }
+  .hier-row:last-child { border-bottom: none; }
+  .hier-label {
+    font-size: 0.75rem; color: var(--color-text-secondary); font-weight: 600;
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .hier-sample { color: var(--color-text); }
+  .hier-specs {
+    font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.75rem;
+    color: var(--color-text-secondary); text-align: right;
+  }
+  @media (max-width: 700px) {
+    .hier-row { grid-template-columns: 1fr; }
+    .hier-specs { text-align: left; }
+  }
+
+  .h1-sample { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 56px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.05; }
+  .h2-sample { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 40px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .h3-sample { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 28px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.15; }
+  .body-large-sample { font-family: 'Inter', system-ui, sans-serif; font-size: 18px; font-weight: 400; line-height: 1.6; }
+  .body-sample { font-family: 'Inter', system-ui, sans-serif; font-size: 16px; font-weight: 400; line-height: 1.6; }
+  .small-sample { font-family: 'Inter', system-ui, sans-serif; font-size: 14px; font-weight: 400; line-height: 1.55; }
+  .label-sample { font-family: 'Inter', system-ui, sans-serif; font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* Regras */
+  .rules { display: flex; flex-direction: column; gap: var(--sp-3); }
+  .rule {
+    background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 10px;
+    padding: var(--sp-4) var(--sp-5);
+  }
+  .rule strong { font-weight: 600; }
+  .rule code { background: var(--color-bg-alt); padding: 1px 6px; border-radius: 4px; font-size: 0.85em; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="brand-wrap">
+
+  <a href="/design-system/brand/" class="brand-back"><i class="bi bi-arrow-left"></i> Voltar para Brand</a>
+
+  <h1 class="brand-page-title">Tipografia</h1>
+  <p class="brand-page-sub">
+    Duas famílias <strong>Inter Tight</strong> (display) e <strong>Inter</strong> (corpo).
+    Tracking negativo nos títulos pra sensação editorial. Line-height aberto pra respirar.
+  </p>
+
+  <h2 class="section-title">Famílias</h2>
+  <div class="family-grid">
+
+    <div class="family-card">
+      <div class="family-display">
+        <p class="family-sample" style="font-family: 'Inter Tight', system-ui, sans-serif; font-weight: 800;">Aa</p>
+        <p style="font-family: 'Inter Tight', system-ui, sans-serif; font-size: 1.5rem; font-weight: 600;">Inter Tight</p>
+        <p style="font-family: 'Inter Tight', system-ui, sans-serif; font-size: 1rem; color: var(--color-text-secondary);">
+          Vende mais. Perde menos. Fideliza sempre.
+        </p>
+      </div>
+      <div class="family-meta">
+        <span class="family-meta-name">Display / Títulos</span>
+        <span class="family-meta-desc">Pesos: 600, 700, 800 · Fallback: system-ui, sans-serif · Google Fonts</span>
+      </div>
+    </div>
+
+    <div class="family-card">
+      <div class="family-display">
+        <p class="family-sample" style="font-family: 'Inter', system-ui, sans-serif; font-weight: 400;">Aa</p>
+        <p style="font-family: 'Inter', system-ui, sans-serif; font-size: 1.5rem; font-weight: 500;">Inter</p>
+        <p style="font-family: 'Inter', system-ui, sans-serif; font-size: 1rem; color: var(--color-text-secondary);">
+          Corpo de leitura, labels, badges e UI. Maior legibilidade em tamanhos pequenos.
+        </p>
+      </div>
+      <div class="family-meta">
+        <span class="family-meta-name">Corpo / UI</span>
+        <span class="family-meta-desc">Pesos: 400, 500, 600, 700 · Fallback: system-ui, sans-serif · Google Fonts</span>
+      </div>
+    </div>
+
+  </div>
+
+  <h2 class="section-title">Hierarquia</h2>
+
+  <div class="family-card">
+    <div class="hier-list" style="padding: 0 var(--sp-5);">
+
+      <div class="hier-row">
+        <span class="hier-label">H1</span>
+        <span class="hier-sample h1-sample">A plataforma do provedor</span>
+        <span class="hier-specs">Inter Tight · 56-72px · 800<br>tracking -0.025em · lh 1.05</span>
+      </div>
+
+      <div class="hier-row">
+        <span class="hier-label">H2</span>
+        <span class="hier-sample h2-sample">Quatro módulos. Um sistema.</span>
+        <span class="hier-specs">Inter Tight · 40-48px · 700<br>tracking -0.02em · lh 1.1</span>
+      </div>
+
+      <div class="hier-row">
+        <span class="hier-label">H3</span>
+        <span class="hier-sample h3-sample">A IA que vende pelo seu time.</span>
+        <span class="hier-specs">Inter Tight · 28-32px · 600<br>tracking -0.015em · lh 1.15</span>
+      </div>
+
+      <div class="hier-row">
+        <span class="hier-label">Corpo grande</span>
+        <span class="hier-sample body-large-sample" style="color: var(--color-text-secondary);">IA que qualifica lead, organiza CRM e segura cliente. Integrada a todos os seus sistemas.</span>
+        <span class="hier-specs">Inter · 18-20px · 400<br>lh 1.6</span>
+      </div>
+
+      <div class="hier-row">
+        <span class="hier-label">Corpo</span>
+        <span class="hier-sample body-sample">A IA do Hubtrix conecta na plataforma de atendimento que seu provedor já usa, qualifica lead com 8 perguntas, agenda visita técnica e recontata sozinha.</span>
+        <span class="hier-specs">Inter · 16px · 400<br>lh 1.6</span>
+      </div>
+
+      <div class="hier-row">
+        <span class="hier-label">Pequeno</span>
+        <span class="hier-sample small-sample" style="color: var(--color-text-secondary);">Servidor no Brasil. Conformidade LGPD. Backup diário.</span>
+        <span class="hier-specs">Inter · 14px · 400<br>lh 1.55</span>
+      </div>
+
+      <div class="hier-row">
+        <span class="hier-label">Label</span>
+        <span class="hier-sample label-sample" style="color: var(--color-primary);">Plataforma para provedores</span>
+        <span class="hier-specs">Inter · 12px · 500<br>uppercase · tracking 0.08em</span>
+      </div>
+
+    </div>
+  </div>
+
+  <h2 class="section-title">Regras</h2>
+  <div class="rules">
+    <div class="rule">
+      <strong>Tracking negativo nos títulos.</strong> H1/H2 sempre com <code>letter-spacing: -0.02em</code> a <code>-0.025em</code> pra sensação editorial.
+    </div>
+    <div class="rule">
+      <strong>Line-height curto em títulos.</strong> H1: 1.05 · H2: 1.1 · H3: 1.15 · Corpo: 1.6.
+    </div>
+    <div class="rule">
+      <strong>Inter Tight não é pra leitura longa.</strong> Display only. Texto com mais de 2 linhas vai em Inter.
+    </div>
+    <div class="rule">
+      <strong>Sem itálico em títulos.</strong> Itálico só em citações curtas no corpo.
+    </div>
+    <div class="rule">
+      <strong>Labels sempre em uppercase.</strong> 12px · weight 500 · tracking 0.08em. Cor cobalto pra eyebrows.
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,601 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}Instagram — Brand — Hubtrix{% endblock %}
+
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  .brand-wrap { max-width: 1000px; margin: 0 auto; padding: var(--sp-8) var(--sp-6); }
+  .brand-back { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; color: var(--color-text-secondary); text-decoration: none; margin-bottom: var(--sp-4); }
+  .brand-back:hover { color: var(--color-primary); }
+  .brand-page-title { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 2.5rem; font-weight: 800; letter-spacing: -0.025em; margin: 0 0 var(--sp-2); line-height: 1.05; }
+  .brand-page-sub { color: var(--color-text-secondary); margin: 0 0 var(--sp-8); font-size: 1.0625rem; line-height: 1.6; }
+
+  /* Mock IG container */
+  .ig-mock {
+    background: #FFFFFF; border: 1px solid var(--color-border); border-radius: 14px;
+    overflow: hidden; box-shadow: 0 4px 16px rgba(11,18,32,0.04);
+  }
+
+  /* Profile header */
+  .ig-profile {
+    padding: var(--sp-6) var(--sp-6) var(--sp-5);
+    display: flex; gap: var(--sp-6); align-items: flex-start;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .ig-avatar-wrap { position: relative; flex-shrink: 0; }
+  .ig-avatar {
+    width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
+    background: #252020; display: flex; align-items: center; justify-content: center; position: relative;
+  }
+  .avatar-download-bar {
+    margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; max-width: 120px;
+  }
+  .avatar-download-bar button {
+    flex: 1; padding: 6px 8px; background: white; color: #252020;
+    border: 1px solid var(--color-border); border-radius: 6px;
+    font-family: 'Inter'; font-size: 0.7rem; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+    white-space: nowrap;
+  }
+  .avatar-download-bar button:hover { background: #F8FAFC; }
+  .ig-avatar span {
+    color: white; font-family: 'Inter Tight', sans-serif; font-weight: 800;
+    font-size: 4rem; letter-spacing: -0.05em;
+  }
+  .ig-avatar::after {
+    content: ''; position: absolute; bottom: 24px; right: 24px;
+    width: 12px; height: 12px; border-radius: 50%; background: #E76F51;
+  }
+  .ig-info { flex: 1; }
+  .ig-handle-row {
+    display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3);
+  }
+  .ig-handle {
+    font-size: 1.5rem; font-weight: 400; color: #252020;
+  }
+  .ig-handle strong { font-weight: 600; }
+  .ig-btn {
+    padding: 6px 14px; border-radius: 8px; font-family: 'Inter';
+    font-size: 0.8125rem; font-weight: 600; border: none; cursor: pointer;
+  }
+  .ig-btn.primary { background: #252020; color: white; }
+  .ig-btn.secondary { background: #F1F5F9; color: #252020; }
+
+  .ig-stats { display: flex; gap: var(--sp-5); margin-bottom: var(--sp-3); font-size: 0.95rem; }
+  .ig-stats strong { font-weight: 700; }
+
+  .ig-bio {
+    font-family: 'Inter'; font-size: 0.9375rem; line-height: 1.5; color: #252020;
+  }
+  .ig-bio .bio-name { font-weight: 700; display: block; }
+  .ig-bio .bio-tag { color: #E76F51; }
+
+  /* Highlights */
+  .ig-highlights {
+    display: flex; gap: var(--sp-4); padding: var(--sp-5) var(--sp-6);
+    border-bottom: 1px solid var(--color-border); overflow-x: auto;
+  }
+  .ig-highlight {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  .ig-highlight-circle {
+    width: 72px; height: 72px; border-radius: 50%;
+    border: 2px solid #E2E8F0;
+    display: flex; align-items: center; justify-content: center;
+    background: #F8FAFC;
+  }
+  .ig-highlight-icon { font-size: 1.5rem; color: #252020; }
+  .ig-highlight-label { font-size: 0.75rem; color: #252020; font-weight: 500; }
+
+  /* Tabs */
+  .ig-tabs {
+    display: flex; justify-content: center; gap: var(--sp-8);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .ig-tab {
+    padding: var(--sp-3) 0; font-size: 0.7rem; font-weight: 600;
+    color: #94A0B0; letter-spacing: 0.1em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+    border-top: 1px solid transparent;
+    margin-top: -1px;
+  }
+  .ig-tab.active {
+    color: #252020; border-top-color: #252020;
+  }
+
+  /* Grid de posts */
+  .ig-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
+  }
+  .ig-post {
+    aspect-ratio: 1; position: relative; overflow: hidden;
+    cursor: pointer;
+  }
+  .ig-post:hover .ig-post-overlay { opacity: 1; }
+  .ig-post-overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.4);
+    opacity: 0; transition: opacity 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: var(--sp-4);
+    color: white; font-weight: 700; font-size: 0.875rem;
+  }
+
+  /* Post types */
+  .post-hero {
+    background: #FFFFFF; padding: 18px;
+    display: flex; flex-direction: column; gap: 8px; justify-content: space-between;
+  }
+  .post-hero-eyebrow { font-size: 8px; font-weight: 600; color: #252020; letter-spacing: 0.14em; text-transform: uppercase; }
+  .post-hero-h1 {
+    font-family: 'Inter Tight'; font-weight: 800; font-size: 17px;
+    color: #252020; line-height: 1.05; letter-spacing: -0.025em;
+  }
+  .post-hero-h1 span { position: relative; }
+  .post-hero-h1 span::after {
+    content: ''; position: absolute; bottom: -3px; left: 0; right: 0;
+    height: 2px; background: #E76F51; border-radius: 99px;
+  }
+  .post-hero-foot {
+    display: flex; justify-content: space-between; align-items: end;
+    font-family: 'Caveat', cursive; color: #E76F51; font-size: 11px;
+  }
+  .post-hero-logo {
+    display: flex; align-items: center; gap: 4px;
+  }
+  .post-hero-logo-mark {
+    width: 14px; height: 14px; background: #252020; border-radius: 3px;
+    display: flex; align-items: center; justify-content: center; position: relative;
+  }
+  .post-hero-logo-mark::after {
+    content: ''; position: absolute; bottom: 2px; right: 2px;
+    width: 4px; height: 4px; border-radius: 50%; background: #E76F51;
+  }
+  .post-hero-logo-mark span {
+    color: white; font-family: 'Inter Tight'; font-weight: 800; font-size: 0.5rem; letter-spacing: -0.05em;
+  }
+  .post-hero-logo-text { font-family: 'Inter Tight'; font-weight: 700; font-size: 9px; color: #252020; letter-spacing: -0.02em; }
+
+  /* Module post */
+  .post-module {
+    background: #252020; padding: 18px; display: flex; flex-direction: column;
+    justify-content: space-between; color: white;
+  }
+  .post-module-num {
+    font-size: 8px; color: #E76F51; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+  }
+  .post-module-h1 {
+    font-family: 'Inter Tight'; font-weight: 800; font-size: 16px;
+    line-height: 1.1; letter-spacing: -0.02em;
+  }
+  .post-module-foot {
+    display: flex; align-items: center; gap: 4px; margin-top: 8px;
+  }
+
+  /* Sienna post */
+  .post-sienna {
+    background: #E76F51; padding: 18px; display: flex; flex-direction: column;
+    justify-content: space-between; color: white;
+  }
+  .post-sienna-h1 {
+    font-family: 'Inter Tight'; font-weight: 800; font-size: 18px;
+    line-height: 1.05; letter-spacing: -0.025em;
+  }
+
+  /* Number post */
+  .post-number {
+    background: #FFFFFF; padding: 18px; display: flex; flex-direction: column;
+    justify-content: space-between; align-items: flex-start;
+  }
+  .post-number-eyebrow {
+    font-size: 8px; font-weight: 600; color: #252020; letter-spacing: 0.14em; text-transform: uppercase;
+  }
+  .post-number-big {
+    font-family: 'Inter Tight'; font-weight: 800; font-size: 64px;
+    color: #252020; line-height: 0.95; letter-spacing: -0.04em;
+  }
+  .post-number-context {
+    font-family: 'Inter'; font-size: 9px; color: #475569; line-height: 1.4;
+  }
+  .post-number-arrow {
+    font-family: 'Caveat', cursive; color: #E76F51; font-size: 12px;
+  }
+
+  /* Quote post */
+  .post-quote {
+    background: #F8FAFC; padding: 18px; display: flex; flex-direction: column;
+    justify-content: space-between;
+  }
+  .post-quote-text {
+    font-family: 'Inter Tight'; font-weight: 600; font-size: 13px;
+    color: #252020; line-height: 1.3; letter-spacing: -0.02em;
+  }
+  .post-quote-author {
+    font-size: 9px; color: #475569; line-height: 1.3;
+  }
+  .post-quote-author strong { color: #252020; font-weight: 700; }
+
+  /* Carousel post */
+  .post-carousel {
+    background: #FFFFFF; padding: 18px; display: flex; flex-direction: column;
+    justify-content: space-between; position: relative;
+  }
+  .post-carousel-icon {
+    position: absolute; top: 8px; right: 8px;
+    color: #252020; font-size: 1rem;
+  }
+  .post-carousel-eyebrow {
+    font-size: 8px; font-weight: 600; color: #E76F51; letter-spacing: 0.14em; text-transform: uppercase;
+  }
+  .post-carousel-h1 {
+    font-family: 'Inter Tight'; font-weight: 800; font-size: 16px;
+    color: #252020; line-height: 1.05; letter-spacing: -0.025em;
+  }
+  .post-carousel-dots {
+    display: flex; gap: 4px; align-self: center;
+  }
+  .post-carousel-dot {
+    width: 5px; height: 5px; border-radius: 50%; background: #E2E8F0;
+  }
+  .post-carousel-dot.active { background: #252020; }
+
+  /* Export controls */
+  .export-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: var(--sp-3) var(--sp-5);
+    background: var(--color-bg-alt); border-top: 1px solid var(--color-border);
+    font-size: 0.875rem;
+  }
+  .export-bar-text { color: var(--color-text-secondary); font-size: 0.8125rem; }
+  .export-all-btn {
+    padding: 8px 16px; background: #252020; color: white; border: none; border-radius: 8px;
+    font-family: 'Inter'; font-size: 0.8125rem; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .export-all-btn:hover { background: #1A1717; }
+  .export-all-btn:disabled { opacity: 0.5; cursor: progress; }
+
+  .post-export-btn {
+    position: absolute; top: 8px; left: 8px; z-index: 10;
+    padding: 5px 9px; background: rgba(255,255,255,0.95); color: #252020;
+    border: none; border-radius: 6px;
+    font-family: 'Inter'; font-size: 0.7rem; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 4px;
+    opacity: 0; transition: opacity 0.15s;
+  }
+  .ig-post:hover .post-export-btn { opacity: 1; }
+  .post-export-btn:hover { background: white; }
+
+  /* Hidden render area pra exportar em 1080x1080 */
+  .export-stage {
+    position: fixed; top: -9999px; left: -9999px;
+    width: 1080px; height: 1080px;
+    pointer-events: none; opacity: 0;
+  }
+  .export-stage .ig-post {
+    width: 1080px; height: 1080px;
+    aspect-ratio: 1;
+  }
+  /* Escala todos os elementos do post pra 4x quando dentro do .export-stage */
+  .export-stage .post-hero { padding: 72px; gap: 32px; }
+  .export-stage .post-hero-eyebrow { font-size: 32px; }
+  .export-stage .post-hero-h1 { font-size: 68px; }
+  .export-stage .post-hero-h1 span::after { bottom: -12px; height: 8px; }
+  .export-stage .post-hero-foot { font-size: 44px; }
+  .export-stage .post-hero-logo-mark { width: 56px; height: 56px; border-radius: 12px; }
+  .export-stage .post-hero-logo-mark::after { bottom: 8px; right: 8px; width: 16px; height: 16px; }
+  .export-stage .post-hero-logo-mark span { font-size: 32px; }
+  .export-stage .post-hero-logo-text { font-size: 36px; }
+
+  .export-stage .post-module { padding: 72px; }
+  .export-stage .post-module-num { font-size: 32px; }
+  .export-stage .post-module-h1 { font-size: 64px; }
+  .export-stage .post-module-foot { gap: 16px; margin-top: 32px; }
+
+  .export-stage .post-sienna { padding: 72px; }
+  .export-stage .post-sienna h2 { font-size: 72px; }
+
+  .export-stage .post-number { padding: 72px; }
+  .export-stage .post-number-eyebrow { font-size: 32px; }
+  .export-stage .post-number-big { font-size: 256px; }
+  .export-stage .post-number-context { font-size: 36px; }
+  .export-stage .post-number-arrow { font-size: 48px; }
+
+  .export-stage .post-quote { padding: 72px; }
+  .export-stage .post-quote > span:first-child { font-size: 96px !important; }
+  .export-stage .post-quote-text { font-size: 52px; }
+  .export-stage .post-quote-author { font-size: 36px; }
+
+  .export-stage .post-carousel { padding: 72px; }
+  .export-stage .post-carousel-icon { font-size: 4rem !important; top: 32px; right: 32px; }
+  .export-stage .post-carousel-eyebrow { font-size: 32px; }
+  .export-stage .post-carousel-h1 { font-size: 64px; }
+  .export-stage .post-carousel-dot { width: 20px; height: 20px; }
+
+  .export-stage .post-hero-h1 { font-weight: 800; }
+
+  /* Note */
+  .note {
+    margin-top: var(--sp-6); padding: var(--sp-4) var(--sp-5);
+    background: var(--color-bg-alt); border-left: 3px solid #E76F51; border-radius: 6px;
+    font-size: 0.875rem; color: var(--color-text-secondary); line-height: 1.55;
+  }
+  .note strong { color: var(--color-text); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="brand-wrap">
+
+  <a href="/design-system/brand/" class="brand-back"><i class="bi bi-arrow-left"></i> Voltar para Brand</a>
+
+  <h1 class="brand-page-title">Instagram</h1>
+  <p class="brand-page-sub">
+    Simulação do perfil oficial @hubtrix com 6 posts aplicando a paleta. Cada post explora um padrão visual diferente — todos só com tinta + sienna + branco. Avatar = ícone "h" oficial.
+  </p>
+
+  <div class="ig-mock">
+
+    <!-- Profile header -->
+    <div class="ig-profile">
+      <div class="ig-avatar-wrap">
+        <div class="ig-avatar" id="igAvatar"><span>h</span></div>
+        <div class="avatar-download-bar">
+          <button onclick="baixarAvatarSVG()" title="SVG vetorial"><i class="bi bi-download"></i> SVG</button>
+          <button onclick="baixarAvatarPNG()" title="PNG 1080×1080"><i class="bi bi-image"></i> PNG</button>
+        </div>
+      </div>
+      <div class="ig-info">
+        <div class="ig-handle-row">
+          <span class="ig-handle"><strong>hubtrix</strong></span>
+          <button class="ig-btn primary">Seguir</button>
+          <button class="ig-btn secondary">Mensagem</button>
+        </div>
+        <div class="ig-stats">
+          <span><strong>342</strong> posts</span>
+          <span><strong>4.821</strong> seguidores</span>
+          <span><strong>89</strong> seguindo</span>
+        </div>
+        <div class="ig-bio">
+          <span class="bio-name">Hubtrix · Plataforma do provedor</span>
+          IA que vende, organiza e fideliza pra ISP regional.<br>
+          <span class="bio-tag">↘ vende mais. perde menos. fideliza sempre.</span><br>
+          <span style="color: #475569;">hubtrix.com.br/demo</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Highlights -->
+    <div class="ig-highlights">
+      <div class="ig-highlight">
+        <div class="ig-highlight-circle"><i class="bi bi-broadcast ig-highlight-icon"></i></div>
+        <span class="ig-highlight-label">Cases</span>
+      </div>
+      <div class="ig-highlight">
+        <div class="ig-highlight-circle"><i class="bi bi-cpu ig-highlight-icon"></i></div>
+        <span class="ig-highlight-label">IA explica</span>
+      </div>
+      <div class="ig-highlight">
+        <div class="ig-highlight-circle"><i class="bi bi-bar-chart ig-highlight-icon"></i></div>
+        <span class="ig-highlight-label">Resultados</span>
+      </div>
+      <div class="ig-highlight">
+        <div class="ig-highlight-circle"><i class="bi bi-chat-dots ig-highlight-icon"></i></div>
+        <span class="ig-highlight-label">FAQ ISP</span>
+      </div>
+      <div class="ig-highlight">
+        <div class="ig-highlight-circle"><i class="bi bi-people ig-highlight-icon"></i></div>
+        <span class="ig-highlight-label">Time</span>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="ig-tabs">
+      <span class="ig-tab active"><i class="bi bi-grid-3x3"></i> Posts</span>
+      <span class="ig-tab"><i class="bi bi-play-btn"></i> Reels</span>
+      <span class="ig-tab"><i class="bi bi-bookmark"></i> Salvos</span>
+      <span class="ig-tab"><i class="bi bi-person-square"></i> Marcações</span>
+    </div>
+
+    <!-- Export bar -->
+    <div class="export-bar">
+      <span class="export-bar-text">Hover em cada post → "↓ PNG" pra baixar individual. Ou "Baixar todos" pra fazer os 6 de uma vez.</span>
+      <button class="export-all-btn" id="exportAllBtn"><i class="bi bi-download"></i> Baixar todos (6)</button>
+    </div>
+
+    <!-- Grid de 6 posts -->
+    <div class="ig-grid">
+
+      <!-- Post 1: Hero com marginalia -->
+      <div class="ig-post post-hero" data-post-name="hubtrix_post_01_hero"><button class="post-export-btn" onclick="exportarPost(event, this)"><i class="bi bi-download"></i> PNG</button>
+        <span class="post-hero-eyebrow">Plataforma para provedores</span>
+        <h2 class="post-hero-h1">A plataforma do provedor que vende mais, perde menos e <span>fideliza sempre.</span></h2>
+        <div class="post-hero-foot">
+          <span>↘ pluga no que você já usa</span>
+          <div class="post-hero-logo">
+            <div class="post-hero-logo-mark"><span>h</span></div>
+            <span class="post-hero-logo-text">hubtrix</span>
+          </div>
+        </div>
+        <div class="ig-post-overlay"><span><i class="bi bi-heart-fill"></i> 312</span><span><i class="bi bi-chat-fill"></i> 24</span></div>
+      </div>
+
+      <!-- Post 2: Módulo Atendimento (tinta) -->
+      <div class="ig-post post-module" data-post-name="hubtrix_post_02_atendimento"><button class="post-export-btn" onclick="exportarPost(event, this)"><i class="bi bi-download"></i> PNG</button>
+        <span class="post-module-num">01 — Atendimento</span>
+        <h2 class="post-module-h1">A IA que conversa, qualifica e vende pelo seu time.</h2>
+        <div class="post-module-foot">
+          <div class="post-hero-logo-mark" style="background: white;"><span style="color: #252020;">h</span></div>
+          <span style="font-family: 'Inter Tight'; font-weight: 700; font-size: 9px; color: white; letter-spacing: -0.02em;">hubtrix</span>
+        </div>
+        <div class="ig-post-overlay"><span><i class="bi bi-heart-fill"></i> 421</span><span><i class="bi bi-chat-fill"></i> 38</span></div>
+      </div>
+
+      <!-- Post 3: Número de prova -->
+      <div class="ig-post post-number" data-post-name="hubtrix_post_03_caso_18"><button class="post-export-btn" onclick="exportarPost(event, this)"><i class="bi bi-download"></i> PNG</button>
+        <span class="post-number-eyebrow">Case</span>
+        <span class="post-number-big">+18%</span>
+        <div>
+          <span class="post-number-context">Ticket médio após 4 meses<br>de Hubtrix</span>
+        </div>
+        <span class="post-number-arrow">↙ depois de 4 meses</span>
+        <div class="ig-post-overlay"><span><i class="bi bi-heart-fill"></i> 587</span><span><i class="bi bi-chat-fill"></i> 41</span></div>
+      </div>
+
+      <!-- Post 4: Sienna grande -->
+      <div class="ig-post post-sienna" data-post-name="hubtrix_post_04_automacao"><button class="post-export-btn" onclick="exportarPost(event, this)"><i class="bi bi-download"></i> PNG</button>
+        <span style="font-size: 8px; font-weight: 600; color: rgba(255,255,255,0.85); letter-spacing: 0.14em; text-transform: uppercase;">04 — Automação</span>
+        <h2 class="post-sienna-h1">Editor visual de fluxos com IA treinada no seu provedor.</h2>
+        <div class="post-module-foot">
+          <div class="post-hero-logo-mark" style="background: white;"><span style="color: #E76F51;">h</span></div>
+          <span style="font-family: 'Inter Tight'; font-weight: 700; font-size: 9px; color: white; letter-spacing: -0.02em;">hubtrix</span>
+        </div>
+        <div class="ig-post-overlay"><span><i class="bi bi-heart-fill"></i> 396</span><span><i class="bi bi-chat-fill"></i> 28</span></div>
+      </div>
+
+      <!-- Post 5: Quote / depoimento -->
+      <div class="ig-post post-quote" data-post-name="hubtrix_post_05_depoimento"><button class="post-export-btn" onclick="exportarPost(event, this)"><i class="bi bi-download"></i> PNG</button>
+        <span style="font-family: 'Inter Tight'; font-weight: 800; font-size: 24px; color: #E76F51; line-height: 1;">"</span>
+        <p class="post-quote-text">Em 4 meses paramos de perder lead no WhatsApp e o ticket cresceu 18%. O time respira.</p>
+        <p class="post-quote-author">
+          <strong>Diretor Comercial</strong><br>
+          provedor regional, ~10k assinantes
+        </p>
+        <div class="ig-post-overlay"><span><i class="bi bi-heart-fill"></i> 234</span><span><i class="bi bi-chat-fill"></i> 19</span></div>
+      </div>
+
+      <!-- Post 6: Carrossel "5 etapas IA" -->
+      <div class="ig-post post-carousel" data-post-name="hubtrix_post_06_carrossel_5etapas"><button class="post-export-btn" onclick="exportarPost(event, this)"><i class="bi bi-download"></i> PNG</button>
+        <i class="bi bi-images post-carousel-icon"></i>
+        <span class="post-carousel-eyebrow">Inteligência artificial</span>
+        <h2 class="post-carousel-h1">5 etapas. Da primeira mensagem ao técnico chegando.</h2>
+        <div class="post-carousel-dots">
+          <span class="post-carousel-dot active"></span>
+          <span class="post-carousel-dot"></span>
+          <span class="post-carousel-dot"></span>
+          <span class="post-carousel-dot"></span>
+          <span class="post-carousel-dot"></span>
+        </div>
+        <div class="ig-post-overlay"><span><i class="bi bi-heart-fill"></i> 712</span><span><i class="bi bi-chat-fill"></i> 56</span></div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Hidden stage pra renderizar em 1080x1080 -->
+  <div class="export-stage" id="exportStage"></div>
+
+  <div class="note">
+    <strong>Observação:</strong> Todos os posts usam apenas <strong>tinta #252020</strong>, <strong>burnt sienna #E76F51</strong> e <strong>branco</strong>. O contraste vem da composição (post escuro entre claros, post sienna como pico de cor) — não da introdução de cores novas. Marginalia em Caveat aparece em 3 dos 6 posts (sublinhado, seta, comentário). Aspect ratio fixo 1:1 (1080×1080 em produção).
+  </div>
+
+</div>
+
+<script>
+  async function renderPostToPng(postEl, filename) {
+    const clone = postEl.cloneNode(true);
+    const btn = clone.querySelector('.post-export-btn');
+    if (btn) btn.remove();
+    const overlay = clone.querySelector('.ig-post-overlay');
+    if (overlay) overlay.remove();
+    const stage = document.getElementById('exportStage');
+    stage.innerHTML = '';
+    stage.appendChild(clone);
+
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    await new Promise(r => setTimeout(r, 250));
+
+    const canvas = await html2canvas(clone, {
+      width: 1080, height: 1080, scale: 1,
+      backgroundColor: null, logging: false, useCORS: true,
+    });
+
+    const link = document.createElement('a');
+    link.download = filename + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+
+    stage.innerHTML = '';
+  }
+
+  async function exportarPost(ev, btnEl) {
+    ev.stopPropagation();
+    const post = btnEl.closest('.ig-post');
+    const name = post.dataset.postName || 'hubtrix_post';
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+    try { await renderPostToPng(post, name); }
+    catch (e) { console.error(e); alert('Erro: ' + e.message); }
+    btnEl.disabled = false;
+    btnEl.innerHTML = '<i class="bi bi-download"></i> PNG';
+  }
+
+  // Avatar download
+  function baixarAvatarSVG() {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <rect x="0" y="0" width="1080" height="1080" fill="#252020"/>
+  <text x="540" y="780" text-anchor="middle" font-family="Inter Tight, system-ui, sans-serif" font-weight="800" font-size="860" letter-spacing="-43" fill="#FFFFFF">h</text>
+  <circle cx="820" cy="820" r="70" fill="#E76F51"/>
+</svg>`;
+    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'hubtrix_avatar_instagram.svg';
+    a.style.display = 'none';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+  }
+
+  async function baixarAvatarPNG() {
+    // Cria canvas 1080x1080 e desenha
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080; canvas.height = 1080;
+    const ctx = canvas.getContext('2d');
+
+    // Fundo tinta
+    ctx.fillStyle = '#252020';
+    ctx.fillRect(0, 0, 1080, 1080);
+
+    // Letra h
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '800 860px "Inter Tight", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('h', 540, 780);
+
+    // Dot sienna (movido pra safe area do crop circular do Instagram)
+    ctx.fillStyle = '#E76F51';
+    ctx.beginPath();
+    ctx.arc(820, 820, 70, 0, Math.PI * 2);
+    ctx.fill();
+
+    canvas.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'hubtrix_avatar_instagram.png';
+      a.style.display = 'none';
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    }, 'image/png');
+  }
+
+  document.getElementById('exportAllBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('exportAllBtn');
+    const posts = document.querySelectorAll('.ig-grid .ig-post');
+    btn.disabled = true;
+    for (let i = 0; i < posts.length; i++) {
+      btn.innerHTML = `<i class="bi bi-hourglass-split"></i> ${i+1}/${posts.length}...`;
+      try {
+        await renderPostToPng(posts[i], posts[i].dataset.postName || ('hubtrix_post_' + (i+1)));
+        await new Promise(r => setTimeout(r, 400));
+      } catch (e) { console.error('Post', i+1, e); }
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-check2-circle"></i> Pronto! ' + posts.length + ' baixados';
+    setTimeout(() => { btn.innerHTML = '<i class="bi bi-download"></i> Baixar todos (' + posts.length + ')'; }, 3000);
+  });
+</script>
+{% endblock %}

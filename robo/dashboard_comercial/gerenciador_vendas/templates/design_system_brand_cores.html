@@ -1,0 +1,206 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}Cores — Brand — Hubtrix{% endblock %}
+
+{% block extra_head %}
+<style>
+  .brand-wrap { max-width: 1100px; margin: 0 auto; padding: var(--sp-8) var(--sp-6); }
+  .brand-back { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; color: var(--color-text-secondary); text-decoration: none; margin-bottom: var(--sp-4); }
+  .brand-back:hover { color: var(--color-primary); }
+  .brand-page-title { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 2.5rem; font-weight: 800; letter-spacing: -0.025em; margin: 0 0 var(--sp-2); line-height: 1.05; }
+  .brand-page-sub { color: var(--color-text-secondary); margin: 0 0 var(--sp-8); font-size: 1.0625rem; line-height: 1.6; }
+  .section-title { font-family: 'Inter Tight', system-ui, sans-serif; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.015em; margin: var(--sp-8) 0 var(--sp-4); }
+
+  .swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--sp-3); }
+  .swatch {
+    border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden;
+    cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .swatch:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(11,18,32,0.06); }
+  .swatch-color { height: 110px; }
+  .swatch-meta { padding: var(--sp-3) var(--sp-4); background: var(--color-bg); display: flex; flex-direction: column; gap: 2px; }
+  .swatch-name { font-weight: 600; font-size: 0.95rem; }
+  .swatch-hex { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.8125rem; color: var(--color-text-secondary); }
+  .swatch-use { font-size: 0.75rem; color: var(--color-text-secondary); margin-top: 4px; }
+
+  .rules { display: flex; flex-direction: column; gap: var(--sp-3); }
+  .rule {
+    background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 10px;
+    padding: var(--sp-4) var(--sp-5); display: flex; gap: var(--sp-3); align-items: flex-start;
+  }
+  .rule-icon {
+    flex-shrink: 0; width: 28px; height: 28px; border-radius: 99px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; font-weight: 700;
+  }
+  .rule-icon.do { background: #DCFCE7; color: #166534; }
+  .rule-icon.dont { background: #FEE2E2; color: #DC2626; }
+  .rule-text { font-size: 0.9375rem; line-height: 1.55; }
+  .rule-text strong { color: var(--color-text); }
+
+  .copy-feedback {
+    display: inline-block; font-size: 0.7rem; color: #22C55E; opacity: 0; transition: opacity 0.2s;
+    margin-left: 6px;
+  }
+  .swatch.copied .copy-feedback { opacity: 1; }
+
+  .palette-headline {
+    background: #252020; color: white; padding: var(--sp-5) var(--sp-6);
+    border-radius: 14px; margin-bottom: var(--sp-6);
+    display: flex; align-items: center; gap: var(--sp-4);
+  }
+  .palette-circles { display: flex; gap: 8px; flex-shrink: 0; }
+  .palette-circle { width: 56px; height: 56px; border-radius: 99px; border: 3px solid white; }
+  .palette-text {
+    font-family: 'Inter Tight', sans-serif; font-size: 1.125rem; font-weight: 600;
+    letter-spacing: -0.01em; line-height: 1.4;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="brand-wrap">
+
+  <a href="/design-system/brand/" class="brand-back"><i class="bi bi-arrow-left"></i> Voltar para Brand</a>
+
+  <h1 class="brand-page-title">Cores</h1>
+  <p class="brand-page-sub">
+    Paleta editorial Hubtrix: <strong>preto + laranja + branco</strong>. Apenas três cores, três papéis claros.
+    Decisão tomada em 27/04/2026 ao consolidar a marca: cobalto fora, sienna como protagonista.
+  </p>
+
+  <div class="palette-headline">
+    <div class="palette-circles">
+      <div class="palette-circle" style="background: #252020;"></div>
+      <div class="palette-circle" style="background: #E76F51;"></div>
+      <div class="palette-circle" style="background: #FFFFFF;"></div>
+    </div>
+    <span class="palette-text">Tinta · Burnt sienna · Branco<br><span style="font-size: 0.875rem; opacity: 0.7;">3 cores. Nenhum azul. Sem ambiguidade.</span></span>
+  </div>
+
+  <h2 class="section-title">Cores principais</h2>
+  <div class="swatch-grid">
+
+    <div class="swatch" data-hex="#252020">
+      <div class="swatch-color" style="background: #252020;"></div>
+      <div class="swatch-meta">
+        <div><span class="swatch-name">Tinta</span><span class="copy-feedback">copiado</span></div>
+        <span class="swatch-hex">#252020</span>
+        <span class="swatch-use">Texto principal · CTAs · backgrounds escuros · ícone do logo</span>
+      </div>
+    </div>
+
+    <div class="swatch" data-hex="#E76F51">
+      <div class="swatch-color" style="background: #E76F51;"></div>
+      <div class="swatch-meta">
+        <div><span class="swatch-name">Burnt sienna</span><span class="copy-feedback">copiado</span></div>
+        <span class="swatch-hex">#E76F51</span>
+        <span class="swatch-use">Acento · marginalia · destaques · CTAs em fundo escuro · dot do logo</span>
+      </div>
+    </div>
+
+    <div class="swatch" data-hex="#FFFFFF">
+      <div class="swatch-color" style="background: #FFFFFF; border-bottom: 1px solid var(--color-border);"></div>
+      <div class="swatch-meta">
+        <div><span class="swatch-name">Branco</span><span class="copy-feedback">copiado</span></div>
+        <span class="swatch-hex">#FFFFFF</span>
+        <span class="swatch-use">Background padrão · texto sobre escuro</span>
+      </div>
+    </div>
+
+  </div>
+
+  <h2 class="section-title">Apoio (neutros)</h2>
+  <div class="swatch-grid">
+
+    <div class="swatch" data-hex="#475569">
+      <div class="swatch-color" style="background: #475569;"></div>
+      <div class="swatch-meta">
+        <div><span class="swatch-name">Grafite</span><span class="copy-feedback">copiado</span></div>
+        <span class="swatch-hex">#475569</span>
+        <span class="swatch-use">Texto secundário · legendas · labels</span>
+      </div>
+    </div>
+
+    <div class="swatch" data-hex="#F8FAFC">
+      <div class="swatch-color" style="background: #F8FAFC; border-bottom: 1px solid var(--color-border);"></div>
+      <div class="swatch-meta">
+        <div><span class="swatch-name">Off-white</span><span class="copy-feedback">copiado</span></div>
+        <span class="swatch-hex">#F8FAFC</span>
+        <span class="swatch-use">Cards · seções alternadas</span>
+      </div>
+    </div>
+
+    <div class="swatch" data-hex="#E2E8F0">
+      <div class="swatch-color" style="background: #E2E8F0;"></div>
+      <div class="swatch-meta">
+        <div><span class="swatch-name">Borda</span><span class="copy-feedback">copiado</span></div>
+        <span class="swatch-hex">#E2E8F0</span>
+        <span class="swatch-use">Separadores · contornos</span>
+      </div>
+    </div>
+
+  </div>
+
+  <h2 class="section-title">Status (sistema)</h2>
+  <div class="swatch-grid">
+    <div class="swatch" data-hex="#22C55E">
+      <div class="swatch-color" style="background: #22C55E;"></div>
+      <div class="swatch-meta"><div><span class="swatch-name">Verde</span><span class="copy-feedback">copiado</span></div><span class="swatch-hex">#22C55E</span><span class="swatch-use">Sucesso, ativo</span></div>
+    </div>
+    <div class="swatch" data-hex="#F59E0B">
+      <div class="swatch-color" style="background: #F59E0B;"></div>
+      <div class="swatch-meta"><div><span class="swatch-name">Amarelo</span><span class="copy-feedback">copiado</span></div><span class="swatch-hex">#F59E0B</span><span class="swatch-use">Aviso, em andamento</span></div>
+    </div>
+    <div class="swatch" data-hex="#EF4444">
+      <div class="swatch-color" style="background: #EF4444;"></div>
+      <div class="swatch-meta"><div><span class="swatch-name">Vermelho</span><span class="copy-feedback">copiado</span></div><span class="swatch-hex">#EF4444</span><span class="swatch-use">Erro, urgente</span></div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Regras de uso</h2>
+  <div class="rules">
+    <div class="rule">
+      <span class="rule-icon do">✓</span>
+      <span class="rule-text"><strong>3 cores. Nenhuma a mais.</strong> Tinta, sienna, branco. Tudo o que precisa pra qualquer peça.</span>
+    </div>
+    <div class="rule">
+      <span class="rule-icon do">✓</span>
+      <span class="rule-text"><strong>Tinta é a cor de ação principal.</strong> Botão primário em <code>#252020</code>, texto em <code>#252020</code>, backgrounds escuros em <code>#252020</code>.</span>
+    </div>
+    <div class="rule">
+      <span class="rule-icon do">✓</span>
+      <span class="rule-text"><strong>Sienna é assinatura editorial e CTAs em fundo escuro.</strong> Marginalia, sublinhados desenhados, destaque de número, dot do logo, botão primário sobre tinta.</span>
+    </div>
+    <div class="rule">
+      <span class="rule-icon do">✓</span>
+      <span class="rule-text"><strong>Branco é respiro.</strong> Background padrão · texto em fundos escuros. Off-white pra alternância de seções.</span>
+    </div>
+    <div class="rule">
+      <span class="rule-icon dont">✗</span>
+      <span class="rule-text"><strong>Sem cobalto, sem azul.</strong> Cobalto foi aposentado em 27/04/2026 pra não brigar com sienna e diferenciar de qualquer SaaS B2B padrão.</span>
+    </div>
+    <div class="rule">
+      <span class="rule-icon dont">✗</span>
+      <span class="rule-text"><strong>Sem preto puro.</strong> Tinta <code>#252020</code> tem leve calor (puxa pra marrom), substitui <code>#000000</code> em qualquer contexto.</span>
+    </div>
+    <div class="rule">
+      <span class="rule-icon dont">✗</span>
+      <span class="rule-text"><strong>Burnt sienna não é cor primária de botão em contexto claro.</strong> Em fundo claro, ação primária é tinta. Sienna entra como destaque ocasional ou em botão sobre fundo tinta.</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  document.querySelectorAll('.swatch[data-hex]').forEach(sw => {
+    sw.addEventListener('click', () => {
+      const hex = sw.dataset.hex;
+      navigator.clipboard.writeText(hex).then(() => {
+        sw.classList.add('copied');
+        setTimeout(() => sw.classList.remove('copied'), 1500);
+      });
+    });
+  });
+</script>
+{% endblock %}
