@@ -25,8 +25,9 @@ COPY robo/dashboard_comercial/gerenciador_vendas/ .
 COPY robo/docs /app/docs_repo
 ENV AURORA_DOCS_PATH=/app/docs_repo
 
-# Coletar arquivos estaticos
-RUN python manage.py collectstatic --noinput --settings=gerenciador_vendas.settings || true
+# Coletar arquivos estaticos (SECRET_KEY temporaria so para o build)
+RUN SECRET_KEY=build-only-dummy-key-not-used-in-runtime-xxxxxxxxxxx \
+    python manage.py collectstatic --noinput --settings=gerenciador_vendas.settings
 
 # Porta
 EXPOSE 8000
