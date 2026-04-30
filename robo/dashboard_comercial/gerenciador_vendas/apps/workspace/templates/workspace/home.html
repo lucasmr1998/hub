@@ -1,0 +1,120 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}{{ pagetitle }} — Hubtrix{% endblock %}
+
+{% block extra_head %}{% include "workspace/_workspace_styles.html" %}{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">Workspace</p>
+        <h1 class="page-title">Visao geral</h1>
+        <p class="page-subtitle">Projetos, tarefas urgentes e documentos recentes em um unico lugar.</p>
+      </div>
+      <div class="page-actions">
+        <a href="{% url 'workspace:documento_criar' %}" class="btn btn-secondary">
+          <i class="bi bi-file-earmark-plus"></i> Novo documento
+        </a>
+        <a href="{% url 'workspace:projeto_criar' %}" class="btn btn-primary">
+          <i class="bi bi-plus-lg"></i> Novo projeto
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--sp-4); margin: var(--sp-5) 0;">
+    {% include "components/stat_card.html" with label="Projetos ativos" value=total_projetos icon="bi-kanban" %}
+    {% include "components/stat_card.html" with label="Tarefas pendentes" value=total_tarefas_pendentes icon="bi-check2-square" %}
+    {% include "components/stat_card.html" with label="Documentos" value=total_docs icon="bi-file-earmark-text" %}
+  </div>
+
+  <div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--sp-5);">
+
+    <section style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-5);">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-4);">
+        <h2 style="margin: 0; font-size: 1rem; font-weight: 600;">Projetos ativos</h2>
+        <a href="{% url 'workspace:projetos_lista' %}" style="font-size: 0.875rem; color: var(--color-text-muted); text-decoration: none;">Ver todos &rarr;</a>
+      </div>
+
+      {% if projetos_ativos %}
+        <div style="display: flex; flex-direction: column; gap: var(--sp-3);">
+          {% for p in projetos_ativos %}
+            <a href="{% url 'workspace:projeto_detalhe' pk=p.pk %}" style="display: block; padding: var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius); text-decoration: none; color: inherit; transition: border-color 0.15s;">
+              <div style="display: flex; align-items: start; justify-content: space-between; gap: var(--sp-3);">
+                <div>
+                  <div style="font-weight: 600; color: var(--color-text);">{{ p.nome }}</div>
+                  <div style="font-size: 0.875rem; color: var(--color-text-muted); margin-top: 2px;">
+                    {{ p.get_status_display }} &middot; {{ p.total_tarefas }} tarefa{{ p.total_tarefas|pluralize }}
+                  </div>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--color-text-muted); white-space: nowrap;">
+                  {{ p.progresso }}%
+                </div>
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p style="color: var(--color-text-muted); text-align: center; padding: var(--sp-5) 0;">
+          Nenhum projeto ativo. <a href="{% url 'workspace:projeto_criar' %}" style="color: var(--color-accent);">Criar o primeiro</a>.
+        </p>
+      {% endif %}
+    </section>
+
+    <section style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-5);">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-4);">
+        <h2 style="margin: 0; font-size: 1rem; font-weight: 600;">Tarefas urgentes</h2>
+        <a href="{% url 'workspace:minhas_tarefas' %}" style="font-size: 0.875rem; color: var(--color-text-muted); text-decoration: none;">Todas &rarr;</a>
+      </div>
+
+      {% if tarefas_urgentes %}
+        <div style="display: flex; flex-direction: column; gap: var(--sp-2);">
+          {% for t in tarefas_urgentes %}
+            <a href="{% url 'workspace:tarefa_detalhe' pk=t.pk %}" style="display: block; padding: var(--sp-2) var(--sp-3); border-left: 3px solid var(--color-accent); border-radius: 4px; background: var(--color-surface); text-decoration: none; color: inherit;">
+              <div style="font-weight: 500; font-size: 0.9rem;">{{ t.titulo|truncatechars:50 }}</div>
+              <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px;">
+                {% if t.data_limite %}{{ t.data_limite|date:"d/m" }} &middot; {% endif %}{{ t.get_prioridade_display }}
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p style="color: var(--color-text-muted); text-align: center; padding: var(--sp-5) 0; font-size: 0.875rem;">
+          Sem tarefas urgentes. Bom trabalho.
+        </p>
+      {% endif %}
+    </section>
+
+  </div>
+
+  <section style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-5); margin-top: var(--sp-5);">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-4);">
+      <h2 style="margin: 0; font-size: 1rem; font-weight: 600;">Documentos recentes</h2>
+      <a href="{% url 'workspace:documentos_lista' %}" style="font-size: 0.875rem; color: var(--color-text-muted); text-decoration: none;">Ver todos &rarr;</a>
+    </div>
+
+    {% if docs_recentes %}
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--sp-3);">
+        {% for d in docs_recentes %}
+          <a href="{% url 'workspace:documento_detalhe' pk=d.pk %}" style="display: block; padding: var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius); text-decoration: none; color: inherit;">
+            <div style="display: flex; align-items: start; gap: var(--sp-2);">
+              <i class="bi bi-file-earmark-text" style="color: var(--color-accent); font-size: 1.1rem; flex-shrink: 0;"></i>
+              <div style="min-width: 0;">
+                <div style="font-weight: 500; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ d.titulo }}</div>
+                <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px;">
+                  {{ d.get_categoria_display }} &middot; {{ d.atualizado_em|date:"d/m H:i" }}
+                </div>
+              </div>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="color: var(--color-text-muted); text-align: center; padding: var(--sp-5) 0;">
+        Nenhum documento ainda. <a href="{% url 'workspace:documento_criar' %}" style="color: var(--color-accent);">Criar o primeiro</a>.
+      </p>
+    {% endif %}
+  </section>
+{% endblock %}

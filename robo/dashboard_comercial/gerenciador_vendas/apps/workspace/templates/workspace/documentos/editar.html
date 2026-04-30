@@ -1,0 +1,293 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}{{ pagetitle }} — Hubtrix{% endblock %}
+
+{% block extra_head %}{% include "workspace/_workspace_styles.html" %}{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow"><a href="{% url 'workspace:documentos_lista' %}" style="color: inherit; text-decoration: none;">Workspace &middot; Documentos</a></p>
+        <h1 class="page-title">{{ pagetitle }}</h1>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div style="background: #fef2f2; border: 1px solid #fca5a5; padding: var(--sp-3); border-radius: var(--radius); margin-bottom: var(--sp-4); color: #991b1b;">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <div class="doc-form-grid">
+
+      {# Coluna principal: titulo + conteudo (markdown) #}
+      <main class="doc-form-main">
+        <section class="form-card">
+          <div class="field-row">
+            <label class="field-label" for="id_titulo">Titulo *</label>
+            {{ form.titulo }}
+            {% if form.titulo.errors %}<p style="color: var(--color-danger); font-size: 0.875rem; margin-top: 4px;">{{ form.titulo.errors|join:", " }}</p>{% endif %}
+          </div>
+
+          <div class="field-row">
+            <label class="field-label" for="id_resumo">Resumo (1-2 linhas)</label>
+            {{ form.resumo }}
+          </div>
+
+          <div class="field-row" style="margin-bottom: 0;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+              <label class="field-label" for="id_conteudo" style="margin: 0;">Conteudo (markdown)</label>
+              {% if doc %}
+                <div style="display: flex; gap: 6px;">
+                  <button type="button" id="btn-upload-img" class="btn btn-secondary" style="font-size: 0.75rem; padding: 4px 10px;">
+                    <i class="bi bi-image"></i> Anexar imagem
+                  </button>
+                  <button type="button" id="btn-upload-arq" class="btn btn-secondary" style="font-size: 0.75rem; padding: 4px 10px;">
+                    <i class="bi bi-paperclip"></i> Anexar arquivo
+                  </button>
+                  <button type="button" id="btn-gerar-ia" class="btn btn-secondary" style="font-size: 0.75rem; padding: 4px 10px; border-color: var(--color-accent); color: var(--color-accent);">
+                    <i class="bi bi-stars"></i> Gerar imagem IA
+                  </button>
+                </div>
+              {% endif %}
+            </div>
+            {{ form.conteudo }}
+            <p style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 4px;">
+              Suporta markdown (titulos, listas, tabelas, links, imagens). HTML inline permitido (sanitizado).
+              {% if not doc %}<br><em>Salve o documento primeiro pra liberar anexos e geracao por IA.</em>{% endif %}
+            </p>
+          </div>
+
+          {% if doc %}
+            {# Inputs file ocultos #}
+            <input type="file" id="file-img" accept="image/*" style="display:none;">
+            <input type="file" id="file-arq" style="display:none;">
+          {% endif %}
+        </section>
+      </main>
+
+      {# Rail lateral: metadados + avancado #}
+      <aside class="doc-form-rail">
+        <section class="form-card">
+          <h2 class="form-card-title">Metadados</h2>
+
+          <div class="field-row">
+            <label class="field-label" for="id_categoria">Categoria</label>
+            {{ form.categoria }}
+          </div>
+
+          <div class="field-row">
+            <label class="field-label" for="id_formato">Formato</label>
+            {{ form.formato }}
+            <p style="font-size: 0.7rem; color: var(--color-text-muted); margin-top: 4px;">
+              Como o conteúdo é renderizado.
+            </p>
+          </div>
+
+          <div class="field-row">
+            <label class="field-label" for="id_pasta">Pasta</label>
+            {{ form.pasta }}
+          </div>
+
+          <div class="field-row">
+            <label class="field-label" for="id_url_externa">URL externa</label>
+            {{ form.url_externa }}
+            <p style="font-size: 0.7rem; color: var(--color-text-muted); margin-top: 4px;">
+              Apenas para formato = Link externo.
+            </p>
+          </div>
+
+          <div class="field-row">
+            <label class="field-label" for="id_slug">Slug (URL)</label>
+            {{ form.slug }}
+            <p style="font-size: 0.7rem; color: var(--color-text-muted); margin-top: 4px;">Auto se vazio.</p>
+          </div>
+        </section>
+
+        <section class="form-card">
+          <h2 class="form-card-title">Avancado</h2>
+
+          <div class="field-row">
+            <label class="field-label" for="id_descricao">Descricao</label>
+            {{ form.descricao }}
+          </div>
+
+          <div class="field-row">
+            <label class="field-label" for="id_arquivo">Arquivo anexo</label>
+            {{ form.arquivo }}
+            {% if doc.arquivo %}<p style="font-size: 0.7rem; margin-top: 4px;">Atual: <a href="{{ doc.arquivo.url }}" target="_blank">{{ doc.arquivo.name }}</a></p>{% endif %}
+          </div>
+
+          <div class="field-row">
+            <label class="field-label" for="id_ordem">Ordem</label>
+            {{ form.ordem }}
+          </div>
+
+          <label style="display: flex; align-items: center; gap: var(--sp-2); cursor: pointer;">
+            {{ form.visivel_agentes }}
+            <span class="field-label" style="margin: 0;"><i class="bi bi-robot"></i> Visivel para agentes IA</span>
+          </label>
+        </section>
+      </aside>
+
+    </div>
+
+    <div class="form-actions">
+      <a href="{% if doc %}{% url 'workspace:documento_detalhe' pk=doc.pk %}{% else %}{% url 'workspace:documentos_lista' %}{% endif %}" class="btn btn-secondary">Cancelar</a>
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-check2"></i> Salvar
+      </button>
+    </div>
+  </form>
+
+  <style>
+    .doc-form-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: var(--sp-4);
+      margin-bottom: var(--sp-4);
+      align-items: start;
+    }
+    @media (max-width: 1100px) {
+      .doc-form-grid { grid-template-columns: 1fr; }
+    }
+    .doc-form-main { min-width: 0; }
+    .doc-form-rail {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-4);
+    }
+    .form-card {
+      background: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--sp-5);
+    }
+    .form-card-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-muted);
+      margin: 0 0 var(--sp-4) 0;
+    }
+    .field-row { margin-bottom: var(--sp-4); }
+    .field-row:last-child { margin-bottom: 0; }
+    /* Conteudo markdown precisa de altura maior */
+    #id_conteudo {
+      min-height: 480px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .form-actions {
+      display: flex;
+      gap: var(--sp-3);
+      justify-content: flex-end;
+      padding-top: var(--sp-4);
+      border-top: 1px solid var(--color-border);
+    }
+  </style>
+
+  {% if doc %}
+  <script>
+  (function(){
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const textarea = document.getElementById('id_conteudo');
+    const docPk = {{ doc.pk }};
+
+    function inserirNoTextarea(snippet) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const val = textarea.value;
+      const novaPos = start + snippet.length + 1;
+      textarea.value = val.slice(0, start) + snippet + '\n' + val.slice(end);
+      textarea.focus();
+      textarea.setSelectionRange(novaPos, novaPos);
+    }
+
+    async function enviarUpload(file, urlEndpoint) {
+      const fd = new FormData();
+      fd.append('arquivo', file);
+      const r = await fetch(urlEndpoint, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken },
+        body: fd,
+      });
+      const data = await r.json();
+      if (!data.ok) throw new Error(data.erro || 'Erro');
+      return data;
+    }
+
+    function feedback(msg, kind='info') {
+      if (window.toast) window.toast(kind === 'erro' ? 'Erro' : 'OK', msg, kind === 'erro' ? 'danger' : 'success');
+      else alert(msg);
+    }
+
+    // Upload de imagem
+    document.getElementById('btn-upload-img').addEventListener('click', () => {
+      document.getElementById('file-img').click();
+    });
+    document.getElementById('file-img').addEventListener('change', async (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      try {
+        const data = await enviarUpload(f, `/workspace/documentos/${docPk}/anexos/upload/`);
+        inserirNoTextarea(data.markdown_snippet);
+        feedback('Imagem anexada.');
+      } catch(err) { feedback(err.message, 'erro'); }
+      e.target.value = '';
+    });
+
+    // Upload de arquivo
+    document.getElementById('btn-upload-arq').addEventListener('click', () => {
+      document.getElementById('file-arq').click();
+    });
+    document.getElementById('file-arq').addEventListener('change', async (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      try {
+        const data = await enviarUpload(f, `/workspace/documentos/${docPk}/anexos/upload/`);
+        inserirNoTextarea(data.markdown_snippet);
+        feedback('Arquivo anexado.');
+      } catch(err) { feedback(err.message, 'erro'); }
+      e.target.value = '';
+    });
+
+    // Geracao por IA
+    document.getElementById('btn-gerar-ia').addEventListener('click', async () => {
+      const prompt = window.prompt('Descreva a imagem que quer gerar (em ingles funciona melhor):', '');
+      if (!prompt || prompt.trim().length < 10) {
+        if (prompt !== null) feedback('Prompt muito curto (min 10 chars)', 'erro');
+        return;
+      }
+      const btn = document.getElementById('btn-gerar-ia');
+      const txtOriginal = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Gerando...';
+      try {
+        const fd = new FormData();
+        fd.append('prompt', prompt);
+        const r = await fetch(`/workspace/documentos/${docPk}/anexos/gerar-ia/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrfToken },
+          body: fd,
+        });
+        const data = await r.json();
+        if (!data.ok) throw new Error(data.erro || 'Erro');
+        inserirNoTextarea(data.markdown_snippet);
+        feedback(`Imagem gerada (modelo: ${data.anexo.modelo}).`);
+      } catch(err) { feedback(err.message, 'erro'); }
+      btn.disabled = false;
+      btn.innerHTML = txtOriginal;
+    });
+  })();
+  </script>
+  {% endif %}
+{% endblock %}

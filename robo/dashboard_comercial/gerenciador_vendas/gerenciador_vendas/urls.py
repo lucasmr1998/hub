@@ -14,6 +14,8 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import TemplateView, RedirectView
@@ -74,6 +76,15 @@ urlpatterns = [
     # === Design system preview (temporario — remover quando o DS estiver adotado) ===
     path('design-system/preview/', TemplateView.as_view(template_name='design_system_preview.html'), name='design_system_preview'),
     path('design-system/componentes/', DesignSystemComponentsView.as_view(), name='design_system_components'),
+    path('design-system/brand/', TemplateView.as_view(template_name='design_system_brand.html'), name='design_system_brand'),
+    path('design-system/brand/logo/', TemplateView.as_view(template_name='design_system_brand_logo.html'), name='design_system_brand_logo'),
+    path('design-system/brand/cores/', TemplateView.as_view(template_name='design_system_brand_cores.html'), name='design_system_brand_cores'),
+    path('design-system/brand/tipografia/', TemplateView.as_view(template_name='design_system_brand_tipografia.html'), name='design_system_brand_tipografia'),
+    path('design-system/brand/voz-e-tom/', TemplateView.as_view(template_name='design_system_brand_voz_tom.html'), name='design_system_brand_voz_tom'),
+    path('design-system/brand/marginalia/', TemplateView.as_view(template_name='design_system_brand_marginalia.html'), name='design_system_brand_marginalia'),
+    path('design-system/brand/aplicacoes/', TemplateView.as_view(template_name='design_system_brand_aplicacoes.html'), name='design_system_brand_aplicacoes'),
+    path('design-system/brand/instagram/', TemplateView.as_view(template_name='design_system_brand_instagram.html'), name='design_system_brand_instagram'),
+    path('design-system/brand/assinatura-email/', TemplateView.as_view(template_name='design_system_brand_assinatura.html'), name='design_system_brand_assinatura'),
 
     # === API REST (DRF + OpenAPI) ===
     path('api/', include('apps.api.urls')),
@@ -114,7 +125,13 @@ urlpatterns = [
     # === Widget público (sem login) ===
     path('api/public/widget/', include('apps.inbox.urls_public')),
 
+    # Webhook publico do Resend (validado por assinatura HMAC)
+    path('api/public/resend/', include('apps.marketing.emails.urls_public')),
+
     # === Assistente CRM (webhook WhatsApp) ===
     path('assistente/', include('apps.assistente.urls')),
 
-]
+    # === Workspace (projetos, tarefas, documentos) ===
+    path('workspace/', include('apps.workspace.urls')),
+
+] + (static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) if settings.DEBUG else [])

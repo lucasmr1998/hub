@@ -121,9 +121,11 @@ def tenant_detalhe_view(request, tenant_id):
             tenant.modulo_comercial = request.POST.get('modulo_comercial') == 'on'
             tenant.modulo_marketing = request.POST.get('modulo_marketing') == 'on'
             tenant.modulo_cs = request.POST.get('modulo_cs') == 'on'
+            tenant.modulo_workspace = request.POST.get('modulo_workspace') == 'on'
             tenant.plano_comercial = request.POST.get('plano_comercial', 'starter')
             tenant.plano_marketing = request.POST.get('plano_marketing', 'starter')
             tenant.plano_cs = request.POST.get('plano_cs', 'starter')
+            tenant.plano_workspace = request.POST.get('plano_workspace', 'starter')
             tenant.save()
 
         elif action == 'toggle_ativo':

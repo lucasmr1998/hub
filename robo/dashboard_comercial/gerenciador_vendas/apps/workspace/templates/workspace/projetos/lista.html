@@ -1,0 +1,83 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}Projetos — Hubtrix{% endblock %}
+
+{% block extra_head %}{% include "workspace/_workspace_styles.html" %}{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">Workspace &middot; Projetos</p>
+        <h1 class="page-title">Projetos</h1>
+        <p class="page-subtitle">Iniciativas estrategicas em curso, com tarefas e etapas vinculadas.</p>
+      </div>
+      <div class="page-actions">
+        <a href="{% url 'workspace:projeto_criar' %}" class="btn btn-primary">
+          <i class="bi bi-plus-lg"></i> Novo projeto
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <form method="get" style="display: flex; gap: var(--sp-3); margin-bottom: var(--sp-5); flex-wrap: wrap;">
+    <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por nome, descricao ou objetivo..." class="field-input" style="flex: 1; min-width: 240px;">
+    <select name="status" class="field-input" style="min-width: 180px;">
+      <option value="">Todos os status</option>
+      {% for v, label in status_choices %}
+        <option value="{{ v }}" {% if filtro_status == v %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <label style="display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); cursor: pointer;">
+      <input type="checkbox" name="arquivados" value="1" {% if mostrar_arquivados %}checked{% endif %} onchange="this.form.submit()">
+      <span style="font-size: 0.875rem;">Incluir arquivados</span>
+    </label>
+    <button type="submit" class="btn btn-secondary"><i class="bi bi-funnel"></i> Filtrar</button>
+  </form>
+
+  {% if projetos %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--sp-4);">
+      {% for p in projetos %}
+        <a href="{% url 'workspace:projeto_detalhe' pk=p.pk %}" style="display: block; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-4); text-decoration: none; color: inherit;">
+          <div style="display: flex; align-items: start; justify-content: space-between; gap: var(--sp-3); margin-bottom: var(--sp-3);">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 600; color: var(--color-text); font-size: 1rem; margin-bottom: 4px;">{{ p.nome }}</div>
+              {% if p.descricao %}
+                <p style="margin: 0; font-size: 0.875rem; color: var(--color-text-muted); line-height: 1.4;">{{ p.descricao|truncatechars:120 }}</p>
+              {% endif %}
+            </div>
+            {% include "components/badge.html" with variant=p.status|default:"neutral" label=p.get_status_display %}
+          </div>
+
+          {% if p.n_tarefas %}
+            <div style="margin-top: var(--sp-3);">
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 4px;">
+                <span>{{ p.n_concluidas }} de {{ p.n_tarefas }} tarefa{{ p.n_tarefas|pluralize }}</span>
+                <span>{{ p.progresso }}%</span>
+              </div>
+              <div style="height: 6px; background: var(--color-surface); border-radius: 999px; overflow: hidden;">
+                <div style="height: 100%; width: {{ p.progresso }}%; background: var(--color-accent);"></div>
+              </div>
+            </div>
+          {% endif %}
+
+          <div style="display: flex; gap: var(--sp-3); margin-top: var(--sp-3); font-size: 0.75rem; color: var(--color-text-muted); flex-wrap: wrap;">
+            {% if p.responsavel %}<span><i class="bi bi-person"></i> {{ p.responsavel.get_full_name|default:p.responsavel.username }}</span>{% endif %}
+            {% if p.data_fim_prevista %}<span><i class="bi bi-calendar"></i> {{ p.data_fim_prevista|date:"d/m/Y" }}</span>{% endif %}
+            {% if not p.ativo %}<span style="color: var(--color-warning);"><i class="bi bi-archive"></i> Arquivado</span>{% endif %}
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div style="background: var(--color-bg); border: 1px dashed var(--color-border); border-radius: var(--radius); padding: var(--sp-7); text-align: center; color: var(--color-text-muted);">
+      <i class="bi bi-kanban" style="font-size: 2rem; color: var(--color-accent);"></i>
+      <h2 style="margin-top: var(--sp-3); margin-bottom: var(--sp-2); font-size: 1.1rem; color: var(--color-text);">Nenhum projeto encontrado</h2>
+      <p style="margin: 0 0 var(--sp-3) 0;">{% if busca or filtro_status %}Tente ajustar os filtros.{% else %}Comece pelo primeiro projeto pra organizar tarefas e etapas.{% endif %}</p>
+      {% if not busca and not filtro_status %}
+        <a href="{% url 'workspace:projeto_criar' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Novo projeto</a>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}

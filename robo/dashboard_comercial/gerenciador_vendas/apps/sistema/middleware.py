@@ -131,6 +131,7 @@ _MODULO_MAP = [
     ('/roleta/', 'acesso_cs'),
     ('/inbox/', 'acesso_inbox'),
     ('/suporte/', 'acesso_inbox'),
+    ('/workspace/', 'acesso_workspace'),
     ('/configuracoes', 'acesso_configuracoes'),
 ]
 

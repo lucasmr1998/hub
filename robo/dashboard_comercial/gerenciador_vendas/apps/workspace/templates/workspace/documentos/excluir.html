@@ -1,0 +1,38 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}Excluir documento — Hubtrix{% endblock %}
+
+{% block extra_head %}{% include "workspace/_workspace_styles.html" %}{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">Workspace &middot; Documentos</p>
+        <h1 class="page-title">Excluir documento</h1>
+      </div>
+    </div>
+  </div>
+
+  <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-5); max-width: 600px;">
+    <div style="display: flex; gap: var(--sp-3); align-items: start; margin-bottom: var(--sp-4);">
+      <i class="bi bi-exclamation-triangle" style="color: var(--color-danger); font-size: 1.5rem; flex-shrink: 0;"></i>
+      <div>
+        <h2 style="margin: 0 0 var(--sp-2) 0; font-size: 1.1rem;">Tem certeza?</h2>
+        <p style="margin: 0; color: var(--color-text-muted);">
+          Esta acao excluira o documento <strong>{{ doc.titulo }}</strong> permanentemente.
+          Anexos serao removidos junto. Esta operacao nao pode ser desfeita.
+        </p>
+      </div>
+    </div>
+
+    <form method="post" style="display: flex; gap: var(--sp-3); justify-content: flex-end;">
+      {% csrf_token %}
+      <a href="{% url 'workspace:documento_detalhe' pk=doc.pk %}" class="btn btn-secondary">Cancelar</a>
+      <button type="submit" class="btn btn-primary" style="background: var(--color-danger); border-color: var(--color-danger);">
+        <i class="bi bi-trash"></i> Excluir definitivamente
+      </button>
+    </form>
+  </div>
+{% endblock %}

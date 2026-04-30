@@ -1,0 +1,57 @@
+{% comment %}
+Estilos auxiliares do Workspace.
+
+Inclui em qualquer template do workspace via:
+  {% block extra_head %}{% include "workspace/_workspace_styles.html" %}{% endblock %}
+
+Sobrescreve `.field-input` pra textareas e date inputs do workspace,
+ja que o DS define `.field-input { height: 38px }` fixo.
+{% endcomment %}
+<style>
+  /* Textareas: altura automatica */
+  textarea.field-input,
+  .field-input.field-textarea,
+  textarea.field-input.field-textarea {
+    height: auto;
+    min-height: 80px;
+    padding: 10px 12px;
+    line-height: 1.5;
+    font-family: inherit;
+    resize: vertical;
+  }
+
+  /* Selects e date pickers nativos: align baseline com inputs */
+  select.field-input,
+  input[type="date"].field-input,
+  input[type="number"].field-input,
+  input[type="color"].field-input {
+    height: 38px;
+    cursor: pointer;
+  }
+
+  /* Color picker: ajustar pra nao parecer botao gigante */
+  input[type="color"].field-input {
+    padding: 2px;
+    width: 100%;
+    cursor: pointer;
+  }
+
+  /* Checkbox/radio inline com texto: nao aplicar field-input estilizado */
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: auto;
+    height: auto;
+    cursor: pointer;
+    accent-color: var(--color-accent, #E76F51);
+  }
+
+  /* File input: altura natural */
+  input[type="file"].field-input,
+  input[type="file"] {
+    height: auto;
+    padding: var(--sp-2);
+    cursor: pointer;
+  }
+
+  /* page-subtitle e page-actions ja existem no DS (_components_styles.html) — nao redefinir */
+</style>

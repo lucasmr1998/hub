@@ -1,0 +1,34 @@
+{% comment %}
+Partial: lista de tarefas em formato de linhas. Aceita:
+  - tarefas: queryset/lista de Tarefa
+  - tone: 'danger' | 'warning' | '' (vazio) — define a cor de borda lateral
+{% endcomment %}
+<div style="display: flex; flex-direction: column; gap: 6px;">
+  {% for t in tarefas %}
+    <a href="{% url 'workspace:tarefa_detalhe' pk=t.pk %}" style="display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); background: var(--color-bg); border: 1px solid var(--color-border); border-left: 3px solid {% if tone == 'danger' %}var(--color-danger){% elif tone == 'warning' %}var(--color-warning){% else %}var(--color-accent){% endif %}; border-radius: var(--radius); text-decoration: none; color: inherit;">
+      <i class="bi {% if t.status == 'concluida' %}bi-check2-circle{% elif t.status == 'em_andamento' %}bi-arrow-clockwise{% elif t.status == 'bloqueada' %}bi-lock{% else %}bi-circle{% endif %}" style="color: var(--color-accent); font-size: 1rem; flex-shrink: 0;"></i>
+
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-weight: 500; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ t.titulo }}</div>
+        <div style="display: flex; gap: var(--sp-3); font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px;">
+          <span><i class="bi bi-folder"></i> {{ t.projeto.nome|truncatechars:35 }}</span>
+          {% if t.etapa %}<span>&middot; {{ t.etapa.nome|truncatechars:25 }}</span>{% endif %}
+          {% if t.responsavel %}<span><i class="bi bi-person"></i> {{ t.responsavel.username }}</span>{% endif %}
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: var(--sp-3); flex-shrink: 0;">
+        {% if t.prioridade == 'critica' %}
+          <span style="font-size: 0.75rem; color: var(--color-danger);"><i class="bi bi-flag-fill"></i> Critica</span>
+        {% elif t.prioridade == 'alta' %}
+          <span style="font-size: 0.75rem; color: var(--color-warning);"><i class="bi bi-flag"></i> Alta</span>
+        {% endif %}
+        {% if t.data_limite %}
+          <span style="font-size: 0.75rem; color: var(--color-text-muted); white-space: nowrap;">
+            <i class="bi bi-calendar"></i> {{ t.data_limite|date:"d/m" }}
+          </span>
+        {% endif %}
+      </div>
+    </a>
+  {% endfor %}
+</div>

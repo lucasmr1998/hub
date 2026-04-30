@@ -1,0 +1,23 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}{{ pagetitle }} — Hubtrix{% endblock %}
+
+{% block extra_head %}{% include "workspace/_workspace_styles.html" %}{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">Workspace</p>
+        <h1 class="page-title">{{ pagetitle }}</h1>
+      </div>
+    </div>
+  </div>
+
+  <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-6); text-align: center; color: var(--color-text-muted); max-width: 720px; margin: var(--sp-6) auto;">
+    <i class="bi bi-cone-striped" style="font-size: 2rem; color: var(--color-accent);"></i>
+    <h2 style="margin-top: var(--sp-3); margin-bottom: var(--sp-2); font-size: 1.25rem; color: var(--color-text);">Em construcao</h2>
+    <p style="margin: 0;">{{ mensagem }}</p>
+  </div>
+{% endblock %}

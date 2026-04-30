@@ -21,6 +21,7 @@ Uso em template que extende layout_app:
         {% elif modulo_atual == 'marketing' %}Marketing
         {% elif modulo_atual == 'atendimento' %}Atendimento
         {% elif modulo_atual == 'cs' %}Customer Success
+        {% elif modulo_atual == 'workspace' %}Workspace
         {% elif modulo_atual == 'relatorios' %}Relatorios
         {% elif modulo_atual == 'configuracoes' %}Configuracoes
         {% else %}Dashboard{% endif %}
@@ -89,8 +90,11 @@ Uso em template que extende layout_app:
         <a href="/marketing/segmentos/" class="app-subnav-item {% if 'segmento' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-funnel"></i><span>Segmentos</span>
         </a>
-        <a href="/marketing/emails/" class="app-subnav-item {% if 'email' in request.resolver_match.url_name %}is-active{% endif %}">
+        <a href="/marketing/emails/" class="app-subnav-item {% if 'email' in request.resolver_match.url_name and 'dominio' not in request.resolver_match.url_name and 'remetente' not in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-envelope"></i><span>E-mails</span>
+        </a>
+        <a href="/marketing/emails/dominios/" class="app-subnav-item {% if 'dominio' in request.resolver_match.url_name or 'remetente' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-globe2"></i><span>Dominios de envio</span>
         </a>
       </nav>
       <div class="app-subnav-section">Automacao</div>
@@ -200,6 +204,28 @@ Uso em template que extende layout_app:
         </a>
         <a href="/cs/carteirinha/dashboard/carteirinha/" class="app-subnav-item {% if 'carteirinha' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-person-vcard"></i><span>Carteirinhas</span>
+        </a>
+      </nav>
+
+    {% elif modulo_atual == 'workspace' %}
+      <nav class="app-subnav-list">
+        <a href="{% url 'workspace:home' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'home' %}is-active{% endif %}">
+          <i class="bi bi-house"></i><span>Inicio</span>
+        </a>
+      </nav>
+      <div class="app-subnav-section">Trabalho</div>
+      <nav class="app-subnav-list">
+        <a href="{% url 'workspace:projetos_lista' %}" class="app-subnav-item {% if 'projeto' in request.resolver_match.url_name or 'etapa' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-kanban"></i><span>Projetos</span>
+        </a>
+        <a href="{% url 'workspace:minhas_tarefas' %}" class="app-subnav-item {% if 'tarefa' in request.resolver_match.url_name or 'nota' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-check2-square"></i><span>Minhas tarefas</span>
+        </a>
+      </nav>
+      <div class="app-subnav-section">Conhecimento</div>
+      <nav class="app-subnav-list">
+        <a href="{% url 'workspace:documentos_lista' %}" class="app-subnav-item {% if 'documento' in request.resolver_match.url_name or 'pasta' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-folder2-open"></i><span>Documentos</span>
         </a>
       </nav>
 

@@ -17,9 +17,11 @@ def empresa_context(request):
         'modulo_comercial': False,
         'modulo_marketing': False,
         'modulo_cs': False,
+        'modulo_workspace': False,
         'plano_comercial': 'starter',
         'plano_marketing': 'starter',
         'plano_cs': 'starter',
+        'plano_workspace': 'starter',
         'em_trial': False,
         'setup_completo': True,
     }
@@ -35,9 +37,11 @@ def empresa_context(request):
     ctx['modulo_comercial'] = tenant.modulo_comercial
     ctx['modulo_marketing'] = tenant.modulo_marketing
     ctx['modulo_cs'] = tenant.modulo_cs
+    ctx['modulo_workspace'] = tenant.modulo_workspace
     ctx['plano_comercial'] = tenant.plano_comercial
     ctx['plano_marketing'] = tenant.plano_marketing
     ctx['plano_cs'] = tenant.plano_cs
+    ctx['plano_workspace'] = tenant.plano_workspace
     ctx['em_trial'] = tenant.em_trial
 
     config = ConfiguracaoEmpresa.all_tenants.filter(tenant=tenant, ativo=True).first()
@@ -106,6 +110,8 @@ def _detectar_modulo_atual(request):
 
     if path.startswith('/aurora-admin/'):
         return 'admin'
+    if path.startswith('/workspace/'):
+        return 'workspace'
     if path.startswith('/cs/'):
         return 'cs'
     if path.startswith('/crm/') or path.startswith('/vendas/') or 'crm' in app_name:

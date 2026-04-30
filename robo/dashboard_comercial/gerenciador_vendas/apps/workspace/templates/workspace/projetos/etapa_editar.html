@@ -1,0 +1,66 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}{{ pagetitle }} — Hubtrix{% endblock %}
+
+{% block extra_head %}{% include "workspace/_workspace_styles.html" %}{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">
+          <a href="{% url 'workspace:projeto_detalhe' pk=projeto.pk %}" style="color: inherit; text-decoration: none;">{{ projeto.nome }}</a>
+        </p>
+        <h1 class="page-title">{{ pagetitle }}</h1>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" style="max-width: 600px; margin: 0 auto;">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div style="background: #fef2f2; border: 1px solid #fca5a5; padding: var(--sp-3); border-radius: var(--radius); margin-bottom: var(--sp-4); color: #991b1b;">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-5); margin-bottom: var(--sp-4);">
+
+      <div style="margin-bottom: var(--sp-4);">
+        <label class="field-label" for="id_nome">Nome *</label>
+        {{ form.nome }}
+        {% if form.nome.errors %}<p style="color: var(--color-danger); font-size: 0.875rem; margin-top: 4px;">{{ form.nome.errors|join:", " }}</p>{% endif %}
+      </div>
+
+      <div style="margin-bottom: var(--sp-4);">
+        <label class="field-label" for="id_descricao">Descricao</label>
+        {{ form.descricao }}
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3);">
+        <div>
+          <label class="field-label" for="id_data_inicio">Inicio</label>
+          {{ form.data_inicio }}
+        </div>
+        <div>
+          <label class="field-label" for="id_data_fim">Fim</label>
+          {{ form.data_fim }}
+        </div>
+        <div>
+          <label class="field-label" for="id_ordem">Ordem</label>
+          {{ form.ordem }}
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: var(--sp-3); justify-content: flex-end;">
+      <a href="{% url 'workspace:projeto_detalhe' pk=projeto.pk %}" class="btn btn-secondary">Cancelar</a>
+      {% if etapa %}
+        <a href="{% url 'workspace:etapa_excluir' pk=etapa.pk %}" class="btn btn-secondary" style="color: var(--color-danger);">
+          <i class="bi bi-trash"></i> Excluir
+        </a>
+      {% endif %}
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check2"></i> Salvar</button>
+    </div>
+  </form>
+{% endblock %}

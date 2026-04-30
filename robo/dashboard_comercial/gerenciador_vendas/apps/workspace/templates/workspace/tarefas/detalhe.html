@@ -1,0 +1,183 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}{{ tarefa.titulo }} — Hubtrix{% endblock %}
+
+{% block extra_head %}{% include "workspace/_workspace_styles.html" %}{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">
+          <a href="{% url 'workspace:projeto_detalhe' pk=tarefa.projeto.pk %}" style="color: inherit; text-decoration: none;">{{ tarefa.projeto.nome }}</a>
+          {% if tarefa.etapa %} &middot; {{ tarefa.etapa.nome }}{% endif %}
+        </p>
+        <div style="display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap;">
+          <h1 class="page-title" style="margin: 0;">{{ tarefa.titulo }}</h1>
+          {% include "components/badge.html" with variant="neutral" label=tarefa.get_status_display %}
+          {% if tarefa.prioridade == 'critica' %}
+            {% include "components/badge.html" with variant="danger" label="Critica" %}
+          {% elif tarefa.prioridade == 'alta' %}
+            {% include "components/badge.html" with variant="warning" label="Alta" %}
+          {% endif %}
+        </div>
+      </div>
+      <div class="page-actions">
+        {% if pode_editar %}
+          <a href="{% url 'workspace:tarefa_editar' pk=tarefa.pk %}" class="btn btn-secondary">
+            <i class="bi bi-pencil"></i> Editar
+          </a>
+          <a href="{% url 'workspace:tarefa_excluir' pk=tarefa.pk %}" class="btn btn-secondary" style="color: var(--color-danger);">
+            <i class="bi bi-trash"></i> Excluir
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--sp-5);">
+
+    <div>
+      {% if tarefa.descricao %}
+        <section style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-5); margin-bottom: var(--sp-4);">
+          <h2 style="margin: 0 0 var(--sp-3) 0; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted);">Descricao</h2>
+          <p style="margin: 0; line-height: 1.6;">{{ tarefa.descricao|linebreaks }}</p>
+        </section>
+      {% endif %}
+
+      {% if tarefa.objetivo or tarefa.contexto or tarefa.passos or tarefa.entregavel or tarefa.criterios_aceite %}
+        <details style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-3) var(--sp-5); margin-bottom: var(--sp-4);" open>
+          <summary style="cursor: pointer; font-size: 0.875rem; color: var(--color-text-muted); padding: var(--sp-2) 0;">
+            <i class="bi bi-list-task"></i> Briefing executivo
+          </summary>
+          <div style="padding-top: var(--sp-3);">
+            {% if tarefa.objetivo %}
+              <div style="margin-bottom: var(--sp-3);">
+                <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 4px; font-weight: 600;">Objetivo</div>
+                <p style="margin: 0; line-height: 1.5;">{{ tarefa.objetivo|linebreaks }}</p>
+              </div>
+            {% endif %}
+            {% if tarefa.contexto %}
+              <div style="margin-bottom: var(--sp-3);">
+                <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 4px; font-weight: 600;">Contexto</div>
+                <p style="margin: 0; line-height: 1.5;">{{ tarefa.contexto|linebreaks }}</p>
+              </div>
+            {% endif %}
+            {% if tarefa.passos %}
+              <div style="margin-bottom: var(--sp-3);">
+                <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 4px; font-weight: 600;">Passos</div>
+                <p style="margin: 0; line-height: 1.5;">{{ tarefa.passos|linebreaks }}</p>
+              </div>
+            {% endif %}
+            {% if tarefa.entregavel %}
+              <div style="margin-bottom: var(--sp-3);">
+                <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 4px; font-weight: 600;">Entregavel</div>
+                <p style="margin: 0; line-height: 1.5;">{{ tarefa.entregavel|linebreaks }}</p>
+              </div>
+            {% endif %}
+            {% if tarefa.criterios_aceite %}
+              <div>
+                <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 4px; font-weight: 600;">Criterios de aceite</div>
+                <p style="margin: 0; line-height: 1.5;">{{ tarefa.criterios_aceite|linebreaks }}</p>
+              </div>
+            {% endif %}
+          </div>
+        </details>
+      {% endif %}
+
+      <section style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-5);">
+        <h2 style="margin: 0 0 var(--sp-3) 0; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted);">Notas e historico</h2>
+
+        {% if pode_editar %}
+          <form method="post" action="{% url 'workspace:nota_criar' tarefa_pk=tarefa.pk %}" style="margin-bottom: var(--sp-4);">
+            {% csrf_token %}
+            {{ nota_form.texto }}
+            <div style="display: flex; justify-content: flex-end; margin-top: var(--sp-2);">
+              <button type="submit" class="btn btn-primary"><i class="bi bi-chat-plus"></i> Adicionar nota</button>
+            </div>
+          </form>
+        {% endif %}
+
+        {% if notas %}
+          <div style="display: flex; flex-direction: column; gap: var(--sp-3);">
+            {% for n in notas %}
+              <div style="display: flex; gap: var(--sp-3); padding-bottom: var(--sp-3); border-bottom: 1px solid var(--color-border);">
+                <div style="flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%; background: var(--color-surface); display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--color-text-muted); font-size: 0.875rem;">
+                  {{ n.autor.username|first|upper|default:"?" }}
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: var(--sp-2); margin-bottom: 4px;">
+                    <span style="font-weight: 500; font-size: 0.875rem;">{{ n.autor.get_full_name|default:n.autor.username|default:"Sem autor" }}</span>
+                    <span style="font-size: 0.75rem; color: var(--color-text-muted);">{{ n.criado_em|date:"d/m/Y H:i" }}</span>
+                    {% if pode_editar or n.autor_id == request.user.id %}
+                      <form method="post" action="{% url 'workspace:nota_excluir' pk=n.pk %}" style="display: inline; margin-left: auto;" onsubmit="return confirm('Excluir esta nota?');">
+                        {% csrf_token %}
+                        <button type="submit" style="background: none; border: none; color: var(--color-text-muted); cursor: pointer; font-size: 0.75rem;"><i class="bi bi-trash"></i></button>
+                      </form>
+                    {% endif %}
+                  </div>
+                  <p style="margin: 0; line-height: 1.5; white-space: pre-wrap;">{{ n.texto }}</p>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p style="color: var(--color-text-muted); padding: var(--sp-3) 0; font-size: 0.875rem;">Nenhuma nota ainda.</p>
+        {% endif %}
+      </section>
+    </div>
+
+    <aside style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-5); height: fit-content;">
+      <h2 style="margin: 0 0 var(--sp-3) 0; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted);">Detalhes</h2>
+
+      <div style="margin-bottom: var(--sp-3);">
+        <div style="font-size: 0.75rem; color: var(--color-text-muted);">Status</div>
+        <div style="font-weight: 500;">{{ tarefa.get_status_display }}</div>
+      </div>
+
+      <div style="margin-bottom: var(--sp-3);">
+        <div style="font-size: 0.75rem; color: var(--color-text-muted);">Prioridade</div>
+        <div style="font-weight: 500;">{{ tarefa.get_prioridade_display }}</div>
+      </div>
+
+      {% if tarefa.responsavel %}
+        <div style="margin-bottom: var(--sp-3);">
+          <div style="font-size: 0.75rem; color: var(--color-text-muted);">Responsavel</div>
+          <div style="font-weight: 500;">{{ tarefa.responsavel.get_full_name|default:tarefa.responsavel.username }}</div>
+        </div>
+      {% endif %}
+
+      {% if tarefa.data_limite %}
+        <div style="margin-bottom: var(--sp-3);">
+          <div style="font-size: 0.75rem; color: var(--color-text-muted);">Prazo</div>
+          <div style="font-weight: 500;">{{ tarefa.data_limite|date:"d/m/Y" }}</div>
+        </div>
+      {% endif %}
+
+      {% if tarefa.data_conclusao %}
+        <div style="margin-bottom: var(--sp-3);">
+          <div style="font-size: 0.75rem; color: var(--color-text-muted);">Concluida em</div>
+          <div style="font-weight: 500;">{{ tarefa.data_conclusao|date:"d/m/Y H:i" }}</div>
+        </div>
+      {% endif %}
+
+      <div style="padding-top: var(--sp-3); border-top: 1px solid var(--color-border); margin-top: var(--sp-3);">
+        <div style="font-size: 0.75rem; color: var(--color-text-muted);">Criada</div>
+        <div style="font-size: 0.875rem;">{{ tarefa.criado_em|date:"d/m/Y H:i" }}</div>
+      </div>
+      <div style="margin-top: var(--sp-2);">
+        <div style="font-size: 0.75rem; color: var(--color-text-muted);">Atualizada</div>
+        <div style="font-size: 0.875rem;">{{ tarefa.atualizado_em|date:"d/m/Y H:i" }}</div>
+      </div>
+
+      {% if tarefa.log_execucao %}
+        <details style="margin-top: var(--sp-4); padding-top: var(--sp-3); border-top: 1px solid var(--color-border);">
+          <summary style="cursor: pointer; font-size: 0.75rem; color: var(--color-text-muted);">Log de execucao (IA)</summary>
+          <pre style="margin-top: var(--sp-2); font-size: 0.75rem; white-space: pre-wrap; color: var(--color-text-muted);">{{ tarefa.log_execucao }}</pre>
+        </details>
+      {% endif %}
+    </aside>
+
+  </div>
+{% endblock %}

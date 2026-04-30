@@ -26,3 +26,6 @@ DATABASES = {
         'PORT': '5432',
     }
 }
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR.parent.parent.parent  # hub/ root (arquivos em hub/workspace/anexos/...)

@@ -16,6 +16,20 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# ── Carrega .env (gitignored) para os.environ se existir ──────────────────
+# Permite definir RESEND_API_KEY e outras secrets sem export no shell.
+_env_file = BASE_DIR / '.env'
+if _env_file.exists():
+    for _line in _env_file.read_text(encoding='utf-8').splitlines():
+        _line = _line.strip()
+        if not _line or _line.startswith('#') or '=' not in _line:
+            continue
+        _k, _v = _line.split('=', 1)
+        _k, _v = _k.strip(), _v.strip().strip('"').strip("'")
+        # Nao sobrescreve se a env ja foi setada no shell
+        os.environ.setdefault(_k, _v)
+del _env_file
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -91,6 +105,12 @@ INSTALLED_APPS = [
 
     # === Assistente CRM ===
     'apps.assistente',
+
+    # === Workspace (multi-tenant: projetos, tarefas, documentos) ===
+    'apps.workspace',
+
+    # === Comando (mono-tenant Hubtrix interno: agentes IA, automações — DORMENTE fase 1) ===
+    'apps.comando',
 ]
 
 MIDDLEWARE = [
@@ -337,6 +357,14 @@ EMAIL_TEMPLATES = {
         'template': 'emails/sistema_erro.html'
     }
 }
+
+# ── Resend (provedor de envio master) ─────────────────────────────────────
+# Configurar via variavel de ambiente em producao.
+# Em dev, deixar vazio ativa modo stub (sem envio real, util pra testar UI).
+# Pegar chave em: https://resend.com/api-keys
+# Webhook secret pegar em: https://resend.com/webhooks
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+RESEND_WEBHOOK_SECRET = os.environ.get('RESEND_WEBHOOK_SECRET', '')
 
 # ── Structured Logging ─────────────────────────────────────────────────────
 LOGGING = {

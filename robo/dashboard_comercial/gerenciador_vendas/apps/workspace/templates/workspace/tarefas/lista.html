@@ -1,0 +1,95 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}Minhas tarefas — Hubtrix{% endblock %}
+
+{% block extra_head %}{% include "workspace/_workspace_styles.html" %}{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">Workspace &middot; Tarefas</p>
+        <h1 class="page-title">{% if escopo == 'minhas' %}Minhas tarefas{% elif escopo == 'criadas' %}Tarefas dos meus projetos{% else %}Todas as tarefas{% endif %}</h1>
+        <p class="page-subtitle">Cross-projeto, agrupadas por prazo. Atrasadas em destaque.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: var(--sp-2); margin-bottom: var(--sp-4); flex-wrap: wrap;">
+    <a href="?escopo=minhas" style="padding: 6px 14px; border-radius: 999px; font-size: 0.875rem; text-decoration: none; {% if escopo == 'minhas' %}background: var(--color-text); color: white;{% else %}background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border);{% endif %}">Minhas</a>
+    <a href="?escopo=criadas" style="padding: 6px 14px; border-radius: 999px; font-size: 0.875rem; text-decoration: none; {% if escopo == 'criadas' %}background: var(--color-text); color: white;{% else %}background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border);{% endif %}">Dos meus projetos</a>
+    <a href="?escopo=todas" style="padding: 6px 14px; border-radius: 999px; font-size: 0.875rem; text-decoration: none; {% if escopo == 'todas' %}background: var(--color-text); color: white;{% else %}background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border);{% endif %}">Todas</a>
+  </div>
+
+  <form method="get" style="display: flex; gap: var(--sp-3); margin-bottom: var(--sp-5); flex-wrap: wrap;">
+    <input type="hidden" name="escopo" value="{{ escopo }}">
+    <input type="text" name="q" value="{{ busca }}" placeholder="Buscar por titulo ou descricao..." class="field-input" style="flex: 1; min-width: 240px;">
+    <select name="status" class="field-input" style="min-width: 160px;">
+      <option value="">Todos status (exceto concluidas)</option>
+      {% for v, label in status_choices %}
+        <option value="{{ v }}" {% if filtro_status == v %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <select name="prioridade" class="field-input" style="min-width: 140px;">
+      <option value="">Toda prioridade</option>
+      {% for v, label in prioridade_choices %}
+        <option value="{{ v }}" {% if filtro_prioridade == v %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-secondary"><i class="bi bi-funnel"></i> Filtrar</button>
+  </form>
+
+  {% if atrasadas %}
+    <section style="margin-bottom: var(--sp-5);">
+      <h2 style="font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-danger); margin: 0 0 var(--sp-3) 0;">
+        <i class="bi bi-exclamation-triangle"></i> Atrasadas ({{ atrasadas|length }})
+      </h2>
+      {% include "workspace/tarefas/_lista_partial.html" with tarefas=atrasadas tone="danger" %}
+    </section>
+  {% endif %}
+
+  {% if hoje %}
+    <section style="margin-bottom: var(--sp-5);">
+      <h2 style="font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-warning); margin: 0 0 var(--sp-3) 0;">
+        <i class="bi bi-calendar-day"></i> Hoje ({{ hoje|length }})
+      </h2>
+      {% include "workspace/tarefas/_lista_partial.html" with tarefas=hoje tone="warning" %}
+    </section>
+  {% endif %}
+
+  {% if proximas %}
+    <section style="margin-bottom: var(--sp-5);">
+      <h2 style="font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); margin: 0 0 var(--sp-3) 0;">
+        Proximos 7 dias ({{ proximas|length }})
+      </h2>
+      {% include "workspace/tarefas/_lista_partial.html" with tarefas=proximas tone="" %}
+    </section>
+  {% endif %}
+
+  {% if futuras %}
+    <section style="margin-bottom: var(--sp-5);">
+      <h2 style="font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); margin: 0 0 var(--sp-3) 0;">
+        Futuras ({{ futuras|length }})
+      </h2>
+      {% include "workspace/tarefas/_lista_partial.html" with tarefas=futuras tone="" %}
+    </section>
+  {% endif %}
+
+  {% if sem_prazo %}
+    <section style="margin-bottom: var(--sp-5);">
+      <h2 style="font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); margin: 0 0 var(--sp-3) 0;">
+        Sem prazo definido
+      </h2>
+      {% include "workspace/tarefas/_lista_partial.html" with tarefas=sem_prazo tone="" %}
+    </section>
+  {% endif %}
+
+  {% if not atrasadas and not hoje and not proximas and not sem_prazo and not futuras %}
+    <div style="background: var(--color-bg); border: 1px dashed var(--color-border); border-radius: var(--radius); padding: var(--sp-7); text-align: center; color: var(--color-text-muted);">
+      <i class="bi bi-check2-circle" style="font-size: 2rem; color: var(--color-success);"></i>
+      <h2 style="margin-top: var(--sp-3); margin-bottom: var(--sp-2); font-size: 1.1rem; color: var(--color-text);">Nenhuma tarefa encontrada</h2>
+      <p style="margin: 0;">{% if filtro_status or busca or filtro_prioridade %}Tente ajustar os filtros.{% else %}Bom trabalho. Sem tarefas pendentes.{% endif %}</p>
+    </div>
+  {% endif %}
+{% endblock %}

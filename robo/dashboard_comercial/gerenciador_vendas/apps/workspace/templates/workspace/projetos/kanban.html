@@ -1,0 +1,177 @@
+{% extends "layouts/layout_app.html" %}
+{% load static %}
+{% block title %}Kanban — {{ projeto.nome }}{% endblock %}
+
+{% block extra_head %}{% include "workspace/_workspace_styles.html" %}{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  {# CSRF pro fetch do JS #}
+  <form style="display:none;">{% csrf_token %}</form>
+
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">
+          <a href="{% url 'workspace:projeto_detalhe' pk=projeto.pk %}" style="color: inherit; text-decoration: none;">{{ projeto.nome }}</a>
+        </p>
+        <h1 class="page-title">Kanban</h1>
+      </div>
+      <div class="page-actions">
+        {% if pode_editar %}
+          <a href="{% url 'workspace:tarefa_criar' projeto_pk=projeto.pk %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Nova tarefa
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="kanban-board" data-projeto-id="{{ projeto.pk }}" data-pode-editar="{% if pode_editar %}1{% else %}0{% endif %}">
+    {% for status_key, label, tarefas in colunas %}
+      <div class="kanban-col" data-status="{{ status_key }}">
+        <div class="kanban-col-header">
+          <h3>{{ label }}</h3>
+          <span class="kanban-count">{{ tarefas|length }}</span>
+        </div>
+        <div class="kanban-col-body">
+          {% for t in tarefas %}
+            <a href="{% url 'workspace:tarefa_detalhe' pk=t.pk %}" class="kanban-card" data-tarefa-id="{{ t.pk }}">
+              <div class="kanban-card-title">{{ t.titulo|truncatechars:80 }}</div>
+              {% if t.etapa %}<div class="kanban-card-tag">{{ t.etapa.nome }}</div>{% endif %}
+              <div class="kanban-card-meta">
+                {% if t.responsavel %}<span><i class="bi bi-person"></i> {{ t.responsavel.username }}</span>{% endif %}
+                {% if t.data_limite %}<span><i class="bi bi-calendar"></i> {{ t.data_limite|date:"d/m" }}</span>{% endif %}
+                {% if t.prioridade == 'critica' %}<span style="color: var(--color-danger);"><i class="bi bi-flag-fill"></i></span>
+                {% elif t.prioridade == 'alta' %}<span style="color: var(--color-warning);"><i class="bi bi-flag"></i></span>{% endif %}
+              </div>
+            </a>
+          {% empty %}
+            <p class="kanban-col-empty">Nenhuma tarefa.</p>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  {% if not pode_editar %}
+    <p style="color: var(--color-text-muted); font-size: 0.875rem; margin-top: var(--sp-4);">
+      <i class="bi bi-info-circle"></i> Voce nao tem permissao pra mover cards. Contate o admin.
+    </p>
+  {% else %}
+    <p style="color: var(--color-text-muted); font-size: 0.875rem; margin-top: var(--sp-4);">
+      <i class="bi bi-arrows-move"></i> Arraste cards entre colunas pra mudar o status.
+    </p>
+  {% endif %}
+
+  <script>
+    window.WORKSPACE_API_KANBAN_MOVER = "{% url 'workspace:api_kanban_mover' %}";
+  </script>
+  <script src="{% static 'workspace/js/kanban.js' %}"></script>
+
+  <style>
+    .kanban-board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--sp-3);
+      align-items: start;
+    }
+    @media (max-width: 1024px) {
+      .kanban-board { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .kanban-board { grid-template-columns: 1fr; }
+    }
+    .kanban-col {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--sp-3);
+      min-height: 300px;
+    }
+    .kanban-col-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--sp-3);
+      padding-bottom: var(--sp-2);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .kanban-col-header h3 {
+      margin: 0;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .kanban-count {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      background: var(--color-bg);
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .kanban-col-body {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-2);
+    }
+    .kanban-card {
+      display: block;
+      background: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--sp-3);
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .kanban-card:hover {
+      border-color: var(--color-accent);
+      transform: translateY(-1px);
+    }
+    .kanban-card.is-dragging {
+      opacity: 0.4;
+      cursor: grabbing;
+    }
+    .kanban-col.is-drop-target {
+      background: rgba(231, 111, 81, 0.08);
+      border-color: var(--color-accent);
+    }
+    .kanban-col.is-drop-target .kanban-col-header {
+      border-bottom-color: var(--color-accent);
+    }
+    [data-pode-editar="1"] .kanban-card {
+      cursor: grab;
+    }
+    .kanban-card-title {
+      font-weight: 500;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+      line-height: 1.3;
+    }
+    .kanban-card-tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      background: var(--color-surface);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--color-text-muted);
+      margin-bottom: 4px;
+    }
+    .kanban-card-meta {
+      display: flex;
+      gap: var(--sp-2);
+      font-size: 0.7rem;
+      color: var(--color-text-muted);
+      flex-wrap: wrap;
+    }
+    .kanban-col-empty {
+      color: var(--color-text-muted);
+      font-size: 0.8rem;
+      text-align: center;
+      padding: var(--sp-4) 0;
+    }
+  </style>
+{% endblock %}

@@ -29,3 +29,7 @@ DATABASES = {
 
 # Herda INSTALLED_APPS do settings.py (já inclui todos os apps modulares)
 # Não precisa redefinir — settings.py é a fonte da verdade
+
+# Media files — serve localmente via static()
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR.parent.parent.parent  # hub/ root (arquivos em hub/workspace/anexos/...)

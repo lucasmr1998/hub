@@ -125,6 +125,17 @@
                 <option value="advanced" {% if tenant.plano_cs == 'advanced' %}selected{% endif %}>Advanced</option>
               </select>
             </div>
+            <div class="admin-module-card">
+              <label class="admin-module-label">
+                <input type="checkbox" name="modulo_workspace" {% if tenant.modulo_workspace %}checked{% endif %}>
+                Workspace
+              </label>
+              <select name="plano_workspace" class="field-input">
+                <option value="starter" {% if tenant.plano_workspace == 'starter' %}selected{% endif %}>Starter</option>
+                <option value="start" {% if tenant.plano_workspace == 'start' %}selected{% endif %}>Start</option>
+                <option value="pro" {% if tenant.plano_workspace == 'pro' %}selected{% endif %}>Pro</option>
+              </select>
+            </div>
           </div>
           <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save"></i> Salvar</button>
         </form>

@@ -43,6 +43,12 @@ Visibilidade:
         </a>
       {% endif %}
 
+      {% if modulo_workspace and is_superuser or modulo_workspace and perm.acesso_workspace %}
+        <a href="/workspace/" class="app-sidebar-item {% if modulo_atual == 'workspace' %}is-active{% endif %}" data-module="workspace" title="Workspace">
+          <i class="bi bi-kanban"></i>
+        </a>
+      {% endif %}
+
       <a href="/relatorios/" class="app-sidebar-item {% if modulo_atual == 'relatorios' %}is-active{% endif %}" data-module="relatorios" title="Relatorios">
         <i class="bi bi-bar-chart"></i>
       </a>

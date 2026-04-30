@@ -1,0 +1,161 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}{{ projeto.nome }} — Hubtrix{% endblock %}
+
+{% block extra_head %}{% include "workspace/_workspace_styles.html" %}{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow"><a href="{% url 'workspace:projetos_lista' %}" style="color: inherit; text-decoration: none;">Workspace &middot; Projetos</a></p>
+        <div style="display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap;">
+          <h1 class="page-title" style="margin: 0;">{{ projeto.nome }}</h1>
+          {% include "components/badge.html" with variant="neutral" label=projeto.get_status_display %}
+          {% include "components/badge.html" with variant="warning" label=projeto.get_prioridade_display %}
+        </div>
+        {% if projeto.descricao %}
+          <p class="page-subtitle">{{ projeto.descricao }}</p>
+        {% endif %}
+      </div>
+      <div class="page-actions">
+        <a href="{% url 'workspace:projeto_kanban' pk=projeto.pk %}" class="btn btn-secondary">
+          <i class="bi bi-kanban"></i> Kanban
+        </a>
+        {% if pode_editar %}
+          <a href="{% url 'workspace:projeto_editar' pk=projeto.pk %}" class="btn btn-secondary">
+            <i class="bi bi-pencil"></i> Editar
+          </a>
+          <a href="{% url 'workspace:tarefa_criar' projeto_pk=projeto.pk %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Nova tarefa
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-5);">
+    {% include "components/stat_card.html" with label="Pendentes" value=tarefas_por_status.pendente icon="bi-circle" %}
+    {% include "components/stat_card.html" with label="Em andamento" value=tarefas_por_status.em_andamento icon="bi-arrow-clockwise" %}
+    {% include "components/stat_card.html" with label="Concluidas" value=tarefas_por_status.concluida icon="bi-check2-circle" %}
+    {% include "components/stat_card.html" with label="Bloqueadas" value=tarefas_por_status.bloqueada icon="bi-lock" %}
+  </div>
+
+  <div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--sp-5);">
+
+    <section style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-5);">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-4);">
+        <h2 style="margin: 0; font-size: 1rem; font-weight: 600;">Etapas</h2>
+        {% if pode_editar %}
+          <a href="{% url 'workspace:etapa_criar' projeto_pk=projeto.pk %}" style="font-size: 0.875rem; color: var(--color-accent); text-decoration: none;">+ Adicionar etapa</a>
+        {% endif %}
+      </div>
+
+      {% if etapas %}
+        <div style="display: flex; flex-direction: column; gap: var(--sp-3);">
+          {% for e in etapas %}
+            <div style="padding: var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius);">
+              <div style="display: flex; align-items: start; justify-content: space-between; gap: var(--sp-3); margin-bottom: var(--sp-2);">
+                <div style="flex: 1;">
+                  <div style="font-weight: 600;">{{ forloop.counter }}. {{ e.nome }}</div>
+                  {% if e.descricao %}<p style="margin: 4px 0 0 0; font-size: 0.875rem; color: var(--color-text-muted);">{{ e.descricao }}</p>{% endif %}
+                </div>
+                {% if pode_editar %}
+                  <a href="{% url 'workspace:etapa_editar' pk=e.pk %}" style="color: var(--color-text-muted); font-size: 0.875rem;"><i class="bi bi-pencil"></i></a>
+                {% endif %}
+              </div>
+              <div style="display: flex; gap: var(--sp-3); font-size: 0.75rem; color: var(--color-text-muted); flex-wrap: wrap;">
+                <span>{{ e.n_concluidas }}/{{ e.n_tarefas }} tarefa{{ e.n_tarefas|pluralize }}</span>
+                {% if e.data_inicio %}<span><i class="bi bi-calendar-event"></i> {{ e.data_inicio|date:"d/m" }}{% if e.data_fim %} &rarr; {{ e.data_fim|date:"d/m" }}{% endif %}</span>{% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p style="color: var(--color-text-muted); padding: var(--sp-3) 0;">Nenhuma etapa criada. Etapas ajudam a estruturar projetos longos em fases.</p>
+      {% endif %}
+
+      <div style="margin-top: var(--sp-5);">
+        <h3 style="margin: 0 0 var(--sp-3) 0; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted);">Tarefas recentes</h3>
+        {% if tarefas_recentes %}
+          <div style="display: flex; flex-direction: column; gap: var(--sp-2);">
+            {% for t in tarefas_recentes %}
+              <a href="{% url 'workspace:tarefa_detalhe' pk=t.pk %}" style="display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-radius: var(--radius); text-decoration: none; color: inherit; transition: background 0.15s;">
+                <i class="bi {% if t.status == 'concluida' %}bi-check2-circle{% elif t.status == 'em_andamento' %}bi-arrow-clockwise{% elif t.status == 'bloqueada' %}bi-lock{% else %}bi-circle{% endif %}" style="color: var(--color-accent);"></i>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-weight: 500; font-size: 0.9rem;">{{ t.titulo|truncatechars:60 }}</div>
+                  <div style="font-size: 0.75rem; color: var(--color-text-muted);">
+                    {% if t.responsavel %}{{ t.responsavel.username }}{% endif %}
+                    {% if t.data_limite %} &middot; {{ t.data_limite|date:"d/m" }}{% endif %}
+                  </div>
+                </div>
+                {% include "components/badge.html" with variant="neutral" label=t.get_status_display %}
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p style="color: var(--color-text-muted); font-size: 0.875rem;">Nenhuma tarefa criada ainda.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <aside style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-5); height: fit-content;">
+      <h2 style="margin: 0 0 var(--sp-3) 0; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted);">Detalhes</h2>
+
+      {% if projeto.responsavel %}
+        <div style="margin-bottom: var(--sp-3);">
+          <div style="font-size: 0.75rem; color: var(--color-text-muted);">Responsavel</div>
+          <div style="font-weight: 500;">{{ projeto.responsavel.get_full_name|default:projeto.responsavel.username }}</div>
+        </div>
+      {% endif %}
+
+      {% if projeto.data_inicio or projeto.data_fim_prevista %}
+        <div style="margin-bottom: var(--sp-3);">
+          <div style="font-size: 0.75rem; color: var(--color-text-muted);">Periodo</div>
+          <div style="font-weight: 500;">
+            {% if projeto.data_inicio %}{{ projeto.data_inicio|date:"d/m/Y" }}{% else %}—{% endif %}
+            &rarr;
+            {% if projeto.data_fim_prevista %}{{ projeto.data_fim_prevista|date:"d/m/Y" }}{% else %}—{% endif %}
+          </div>
+        </div>
+      {% endif %}
+
+      {% if projeto.orcamento %}
+        <div style="margin-bottom: var(--sp-3);">
+          <div style="font-size: 0.75rem; color: var(--color-text-muted);">Orcamento</div>
+          <div style="font-weight: 500;">R$ {{ projeto.orcamento|floatformat:2 }}</div>
+        </div>
+      {% endif %}
+
+      {% if projeto.objetivo %}
+        <div style="margin-bottom: var(--sp-3); padding-top: var(--sp-3); border-top: 1px solid var(--color-border);">
+          <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 4px;">Objetivo</div>
+          <p style="margin: 0; font-size: 0.875rem; line-height: 1.5;">{{ projeto.objetivo|linebreaks }}</p>
+        </div>
+      {% endif %}
+
+      {% if projeto.criterios_sucesso %}
+        <div style="margin-bottom: var(--sp-3);">
+          <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 4px;">Criterios de sucesso</div>
+          <p style="margin: 0; font-size: 0.875rem; line-height: 1.5;">{{ projeto.criterios_sucesso|linebreaks }}</p>
+        </div>
+      {% endif %}
+
+      {% if projeto.riscos %}
+        <div style="margin-bottom: var(--sp-3);">
+          <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 4px;">Riscos</div>
+          <p style="margin: 0; font-size: 0.875rem; line-height: 1.5; color: var(--color-text);">{{ projeto.riscos|linebreaks }}</p>
+        </div>
+      {% endif %}
+
+      {% if projeto.stakeholders %}
+        <div style="margin-bottom: var(--sp-3);">
+          <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 4px;">Stakeholders</div>
+          <p style="margin: 0; font-size: 0.875rem; line-height: 1.5;">{{ projeto.stakeholders|linebreaks }}</p>
+        </div>
+      {% endif %}
+    </aside>
+
+  </div>
+{% endblock %}
