@@ -162,6 +162,27 @@
     </div>
     {% endfor %}
 </div>
+
+{% if page_obj.has_other_pages %}
+<div style="display:flex; align-items:center; justify-content:center; gap:4px; margin-top:16px; flex-wrap:wrap;">
+  {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}" style="padding:6px 12px; border:1px solid var(--border); border-radius:6px; font-size:12px; color:var(--text-secondary); text-decoration:none; background:var(--bg-white);">&laquo; Anterior</a>
+  {% endif %}
+  {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+      <span style="padding:6px 12px; border:1px solid var(--primary); border-radius:6px; font-size:12px; background:var(--primary); color:#fff; font-weight:600;">{{ num }}</span>
+    {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+      <a href="?page={{ num }}" style="padding:6px 12px; border:1px solid var(--border); border-radius:6px; font-size:12px; color:var(--text-secondary); text-decoration:none; background:var(--bg-white);">{{ num }}</a>
+    {% endif %}
+  {% endfor %}
+  {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}" style="padding:6px 12px; border:1px solid var(--border); border-radius:6px; font-size:12px; color:var(--text-secondary); text-decoration:none; background:var(--bg-white);">Proxima &raquo;</a>
+  {% endif %}
+</div>
+<p style="text-align:center; font-size:11px; color:var(--text-muted); margin-top:6px;">
+  Pagina {{ page_obj.number }} de {{ page_obj.paginator.num_pages }} &middot; {{ page_obj.paginator.count }} fluxos
+</p>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}

@@ -140,9 +140,13 @@ def _serialize_atendimento_fluxo(atendimento):
 @login_required
 def fluxos_atendimento_view(request):
     """View para gerenciar fluxos de atendimento"""
-    fluxos = FluxoAtendimento.objects.all().order_by('-data_criacao')
+    from django.core.paginator import Paginator
+    fluxos_qs = FluxoAtendimento.objects.all().order_by('-data_criacao')
+    paginator = Paginator(fluxos_qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
     return render(request, 'comercial/atendimento/fluxos.html', {
-        'fluxos': fluxos
+        'fluxos': page_obj,
+        'page_obj': page_obj,
     })
 
 

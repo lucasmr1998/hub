@@ -1,6 +1,8 @@
 import json
 
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
@@ -26,23 +28,36 @@ def lista_automacoes(request):
     """Lista de automações configuradas pelo tenant."""
     denied = _check_perm(request, 'marketing.ver_automacoes')
     if denied: return denied
-    regras = RegraAutomacao.objects.all().prefetch_related('condicoes', 'acoes')
 
+    status_filtro = request.GET.get('status', 'todas')
+
+    todas = RegraAutomacao.objects.all()
     hoje = timezone.now().date()
     execucoes_hoje = LogExecucao.objects.filter(data_execucao__date=hoje).count()
-
-    total_ativas = regras.filter(ativa=True).count()
-    total_pausadas = regras.filter(ativa=False).count()
-    total_exec = sum(r.total_execucoes for r in regras)
-    total_suc = sum(r.total_sucesso for r in regras)
+    total_ativas = todas.filter(ativa=True).count()
+    total_pausadas = todas.filter(ativa=False).count()
+    agg = todas.aggregate(total_exec=Sum('total_execucoes'), total_suc=Sum('total_sucesso'))
+    total_exec = agg['total_exec'] or 0
+    total_suc = agg['total_suc'] or 0
     taxa_sucesso = round(total_suc / total_exec * 100) if total_exec > 0 else 100
 
+    regras_qs = todas.prefetch_related('condicoes', 'acoes')
+    if status_filtro == 'ativa':
+        regras_qs = regras_qs.filter(ativa=True)
+    elif status_filtro == 'pausada':
+        regras_qs = regras_qs.filter(ativa=False)
+
+    paginator = Paginator(regras_qs, 25)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
     context = {
-        'regras': regras,
+        'regras': page_obj,
+        'page_obj': page_obj,
         'total_ativas': total_ativas,
         'total_pausadas': total_pausadas,
         'execucoes_hoje': execucoes_hoje,
         'taxa_sucesso': taxa_sucesso,
+        'status_filtro': status_filtro,
     }
     return render(request, 'automacoes/lista.html', context)
 
