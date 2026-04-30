@@ -1,7 +1,25 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import CategoriaTemplate, TemplateEmail, EnvioEmail
+from .models import (
+    CategoriaTemplate, TemplateEmail, EnvioEmail,
+    DominioRemetente, RemetenteEmail,
+)
+
+
+@admin.register(DominioRemetente)
+class DominioRemetenteAdmin(admin.ModelAdmin):
+    list_display = ('dominio', 'nome_amigavel', 'status', 'tenant', 'validado_em', 'criado_em')
+    list_filter = ('status', 'tenant', 'capturar_bounces', 'capturar_complaints', 'auto_remover_lista')
+    search_fields = ('dominio', 'nome_amigavel', 'resend_domain_id')
+    readonly_fields = ('resend_domain_id', 'registros_dns', 'validado_em', 'ultima_verificacao', 'criado_em', 'atualizado_em')
+
+
+@admin.register(RemetenteEmail)
+class RemetenteEmailAdmin(admin.ModelAdmin):
+    list_display = ('email_completo', 'nome_exibicao', 'dominio', 'padrao', 'ativo', 'tenant')
+    list_filter = ('ativo', 'padrao', 'dominio', 'tenant')
+    search_fields = ('local_part', 'nome_exibicao', 'reply_to')
 
 
 @admin.register(CategoriaTemplate)

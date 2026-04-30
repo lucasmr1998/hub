@@ -1,0 +1,65 @@
+{% extends "sistema/base.html" %}
+{% block title %}Dominios de envio — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <p class="page-eyebrow">Marketing &middot; Email</p>
+      <h1 class="page-title">Dominios de envio</h1>
+      <p class="page-subtitle">Configure dominios proprios pra que emails saiam com a sua marca, nao da Hubtrix.</p>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'marketing_emails:dominio_criar' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Adicionar dominio
+      </a>
+    </div>
+  </div>
+</div>
+
+{% if not dominios %}
+  <div style="background: var(--color-bg); border: 1px dashed var(--color-border); border-radius: var(--radius); padding: var(--sp-7); text-align: center; color: var(--color-text-muted); margin-top: var(--sp-5);">
+    <i class="bi bi-globe" style="font-size: 2rem; color: var(--color-accent);"></i>
+    <h2 style="margin-top: var(--sp-3); margin-bottom: var(--sp-2); font-size: 1.1rem; color: var(--color-text);">Nenhum dominio configurado</h2>
+    <p style="margin: 0 0 var(--sp-3) 0;">Sem dominio proprio, emails saem como noreply@hubtrix.com — pior pra deliverability e pra branding.</p>
+    <a href="{% url 'marketing_emails:dominio_criar' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Configurar primeiro dominio</a>
+  </div>
+{% else %}
+  <div style="display: grid; gap: var(--sp-3); margin-top: var(--sp-5);">
+    {% for d in dominios %}
+      <a href="{% url 'marketing_emails:dominio_detalhe' pk=d.pk %}" style="display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-4); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); text-decoration: none; color: inherit;">
+        <i class="bi bi-globe2" style="font-size: 1.5rem; color: var(--color-accent);"></i>
+        <div style="flex: 1;">
+          <div style="font-weight: 600; color: var(--color-text);">{{ d.dominio }}</div>
+          <div style="font-size: 0.8rem; color: var(--color-text-muted); margin-top: 2px;">
+            {% if d.nome_amigavel %}{{ d.nome_amigavel }} &middot; {% endif %}
+            {{ d.total_remetentes }} remetente{{ d.total_remetentes|pluralize }}
+            {% if d.validado_em %} &middot; verificado em {{ d.validado_em|date:"d/m/Y" }}{% endif %}
+          </div>
+        </div>
+        <div>
+          {% if d.status == 'verificado' %}
+            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #dcfce7; color: #166534; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
+              <i class="bi bi-check-circle-fill"></i> Verificado
+            </span>
+          {% elif d.status == 'pendente_dns' %}
+            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #fef3c7; color: #92400e; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
+              <i class="bi bi-exclamation-triangle-fill"></i> Pendente DNS
+            </span>
+          {% elif d.status == 'validando' %}
+            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #dbeafe; color: #1e40af; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
+              <i class="bi bi-arrow-clockwise"></i> Validando
+            </span>
+          {% elif d.status == 'falhou' %}
+            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #fee2e2; color: #991b1b; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
+              <i class="bi bi-x-circle-fill"></i> Falhou
+            </span>
+          {% else %}
+            <span style="padding: 4px 10px; background: var(--color-surface); color: var(--color-text-muted); border-radius: 999px; font-size: 0.75rem;">{{ d.get_status_display }}</span>
+          {% endif %}
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

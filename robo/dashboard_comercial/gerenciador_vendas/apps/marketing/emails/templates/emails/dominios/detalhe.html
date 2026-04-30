@@ -1,0 +1,171 @@
+{% extends "sistema/base.html" %}
+{% block title %}{{ dom.dominio }} — Dominios{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <p class="page-eyebrow"><a href="{% url 'marketing_emails:dominios_lista' %}" style="color: inherit; text-decoration: none;">Dominios de envio</a></p>
+      <div style="display: flex; align-items: center; gap: var(--sp-3);">
+        <h1 class="page-title" style="margin: 0;">{{ dom.dominio }}</h1>
+        {% if dom.status == 'verificado' %}
+          <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #dcfce7; color: #166534; border-radius: 999px; font-size: 0.8rem; font-weight: 600;"><i class="bi bi-check-circle-fill"></i> Verificado</span>
+        {% elif dom.status == 'pendente_dns' %}
+          <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #fef3c7; color: #92400e; border-radius: 999px; font-size: 0.8rem; font-weight: 600;"><i class="bi bi-exclamation-triangle-fill"></i> Aguardando DNS</span>
+        {% elif dom.status == 'validando' %}
+          <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #dbeafe; color: #1e40af; border-radius: 999px; font-size: 0.8rem; font-weight: 600;"><i class="bi bi-arrow-clockwise"></i> Validando</span>
+        {% elif dom.status == 'falhou' %}
+          <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #fee2e2; color: #991b1b; border-radius: 999px; font-size: 0.8rem; font-weight: 600;"><i class="bi bi-x-circle-fill"></i> Falhou</span>
+        {% endif %}
+      </div>
+      {% if dom.nome_amigavel %}<p class="page-subtitle">{{ dom.nome_amigavel }}</p>{% endif %}
+    </div>
+    <div class="page-actions">
+      {% if dom.status != 'verificado' %}
+        <form method="post" action="{% url 'marketing_emails:dominio_verificar' pk=dom.pk %}" style="display: inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-clockwise"></i> Verificar agora</button>
+        </form>
+      {% endif %}
+      <form method="post" action="{% url 'marketing_emails:dominio_excluir' pk=dom.pk %}" style="display: inline;" onsubmit="return confirm('Excluir dominio {{ dom.dominio }}? Todos os remetentes serao removidos.');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary" style="color: var(--color-danger);"><i class="bi bi-trash"></i> Excluir</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: var(--sp-5); margin-top: var(--sp-5); align-items: start;">
+
+  {# DNS records #}
+  <section style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-5);">
+    <h2 style="margin: 0 0 var(--sp-3) 0; font-size: 1rem;">Registros DNS</h2>
+    {% if dom.status == 'verificado' %}
+      <p style="color: #166534; margin: 0 0 var(--sp-4) 0;"><i class="bi bi-check-circle-fill"></i> Dominio verificado em {{ dom.validado_em|date:"d/m/Y H:i" }}. DNS configurado corretamente.</p>
+    {% else %}
+      <p style="margin: 0 0 var(--sp-4) 0; color: var(--color-text-muted);">Adicione esses 3 registros no DNS do seu dominio. Apos propagacao (5-30min), clique em "Verificar agora".</p>
+    {% endif %}
+
+    {% if dom.registros_dns %}
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+          <thead>
+            <tr style="background: var(--color-surface); text-align: left;">
+              <th style="padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--color-border);">Tipo</th>
+              <th style="padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--color-border);">Nome</th>
+              <th style="padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--color-border);">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in dom.registros_dns %}
+              <tr>
+                <td style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border); vertical-align: top;">
+                  <strong>{{ r.record|default:r.type }}</strong>
+                  <div style="font-size: 0.7rem; color: var(--color-text-muted);">{{ r.type }}</div>
+                </td>
+                <td style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border); vertical-align: top;">
+                  <code style="background: var(--color-surface); padding: 2px 6px; border-radius: 3px; font-size: 0.75rem; word-break: break-all;">{{ r.name }}</code>
+                </td>
+                <td style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border); vertical-align: top;">
+                  <code style="background: var(--color-surface); padding: 2px 6px; border-radius: 3px; font-size: 0.75rem; word-break: break-all; display: block; max-width: 100%;">{{ r.value }}</code>
+                  <button onclick="navigator.clipboard.writeText('{{ r.value|escapejs }}'); this.textContent='Copiado'" style="margin-top: 4px; font-size: 0.7rem; background: none; border: 1px solid var(--color-border); padding: 2px 8px; border-radius: 3px; cursor: pointer;"><i class="bi bi-clipboard"></i> Copiar</button>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p style="color: var(--color-text-muted);">Nenhum registro DNS gerado.</p>
+    {% endif %}
+
+    {% if dom.falha_motivo %}
+      <div style="background: #fef2f2; border: 1px solid #fca5a5; padding: var(--sp-3); border-radius: var(--radius); margin-top: var(--sp-4); color: #991b1b; font-size: 0.85rem;">
+        <strong>Motivo da falha:</strong> {{ dom.falha_motivo }}
+      </div>
+    {% endif %}
+  </section>
+
+  <aside style="display: flex; flex-direction: column; gap: var(--sp-4);">
+
+    {# Remetentes #}
+    <section style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-5);">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3);">
+        <h2 style="margin: 0; font-size: 1rem;">Remetentes</h2>
+        {% if dom.status == 'verificado' %}
+          <a href="{% url 'marketing_emails:remetente_criar' dominio_pk=dom.pk %}" style="font-size: 0.8rem; color: var(--color-accent); text-decoration: none;">+ Novo</a>
+        {% endif %}
+      </div>
+
+      {% if remetentes %}
+        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--sp-2);">
+          {% for r in remetentes %}
+            <li style="padding: var(--sp-2) var(--sp-3); background: var(--color-surface); border-radius: var(--radius);">
+              <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div>
+                  <div style="font-weight: 500; font-size: 0.85rem;">{{ r.email_completo }}</div>
+                  <div style="font-size: 0.75rem; color: var(--color-text-muted);">{{ r.nome_exibicao }}</div>
+                </div>
+                <div style="display: flex; gap: 4px; align-items: center;">
+                  {% if r.padrao %}<span style="background: var(--color-accent); color: white; padding: 1px 6px; border-radius: 3px; font-size: 0.65rem;">PADRAO</span>{% endif %}
+                  {% if not r.padrao %}
+                    <form method="post" action="{% url 'marketing_emails:remetente_set_padrao' pk=r.pk %}" style="display: inline;">
+                      {% csrf_token %}
+                      <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 0.7rem; color: var(--color-accent);" title="Marcar como padrao"><i class="bi bi-star"></i></button>
+                    </form>
+                  {% endif %}
+                  <form method="post" action="{% url 'marketing_emails:remetente_excluir' pk=r.pk %}" style="display: inline;" onsubmit="return confirm('Excluir {{ r.email_completo }}?');">
+                    {% csrf_token %}
+                    <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 0.7rem; color: var(--color-text-muted);"><i class="bi bi-trash"></i></button>
+                  </form>
+                </div>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p style="color: var(--color-text-muted); font-size: 0.85rem; margin: 0;">
+          {% if dom.status == 'verificado' %}
+            Nenhum remetente. <a href="{% url 'marketing_emails:remetente_criar' dominio_pk=dom.pk %}">Criar primeiro</a>.
+          {% else %}
+            Verifique o dominio antes de adicionar remetentes.
+          {% endif %}
+        </p>
+      {% endif %}
+    </section>
+
+    {# Configuracoes (flags) #}
+    <section style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-5);">
+      <h2 style="margin: 0 0 var(--sp-3) 0; font-size: 1rem;">Configuracoes</h2>
+      <form method="post" action="{% url 'marketing_emails:dominio_toggle_flag' pk=dom.pk %}">
+        {% csrf_token %}
+        <label style="display: flex; align-items: start; gap: var(--sp-2); margin-bottom: var(--sp-3); cursor: pointer;">
+          <input type="checkbox" name="capturar_bounces" {% if dom.capturar_bounces %}checked{% endif %} style="margin-top: 3px;">
+          <div>
+            <div style="font-size: 0.85rem; font-weight: 500;">Capturar bounces</div>
+            <div style="font-size: 0.7rem; color: var(--color-text-muted);">Salva info quando email volta (caixa cheia, endereco invalido).</div>
+          </div>
+        </label>
+
+        <label style="display: flex; align-items: start; gap: var(--sp-2); margin-bottom: var(--sp-3); cursor: pointer;">
+          <input type="checkbox" name="capturar_complaints" {% if dom.capturar_complaints %}checked{% endif %} style="margin-top: 3px;">
+          <div>
+            <div style="font-size: 0.85rem; font-weight: 500;">Capturar complaints</div>
+            <div style="font-size: 0.7rem; color: var(--color-text-muted);">Salva info quando destinatario marca como spam.</div>
+          </div>
+        </label>
+
+        <label style="display: flex; align-items: start; gap: var(--sp-2); margin-bottom: var(--sp-3); cursor: pointer;">
+          <input type="checkbox" name="auto_remover_lista" {% if dom.auto_remover_lista %}checked{% endif %} style="margin-top: 3px;">
+          <div>
+            <div style="font-size: 0.85rem; font-weight: 500;">Auto-remover da lista</div>
+            <div style="font-size: 0.7rem; color: var(--color-text-muted);">Quando bate bounce/complaint, marca lead como "nao aceita emails" automaticamente.</div>
+          </div>
+        </label>
+
+        <button type="submit" class="btn btn-secondary" style="width: 100%; margin-top: var(--sp-2);"><i class="bi bi-check2"></i> Salvar configuracoes</button>
+      </form>
+    </section>
+  </aside>
+</div>
+{% endblock %}

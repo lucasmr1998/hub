@@ -1,0 +1,55 @@
+{% extends "sistema/base.html" %}
+{% block title %}Novo remetente — {{ dom.dominio }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <p class="page-eyebrow"><a href="{% url 'marketing_emails:dominio_detalhe' pk=dom.pk %}" style="color: inherit; text-decoration: none;">{{ dom.dominio }}</a></p>
+      <h1 class="page-title">Novo remetente</h1>
+      <p class="page-subtitle">Endereco de envio especifico (ex: atendimento@, marketing@, noreply@).</p>
+    </div>
+  </div>
+</div>
+
+<form method="post" style="max-width: 720px; margin: var(--sp-5) auto 0;">
+  {% csrf_token %}
+
+  <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-5);">
+
+    <div style="display: grid; grid-template-columns: 1fr auto; gap: var(--sp-2); align-items: end; margin-bottom: var(--sp-4);">
+      <div>
+        <label class="field-label" for="id_local_part">Local part *</label>
+        <input type="text" name="local_part" id="id_local_part" class="field-input" placeholder="atendimento" required pattern="[a-z0-9._-]+" autofocus>
+      </div>
+      <div style="padding-bottom: 10px; color: var(--color-text-muted); font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;">@{{ dom.dominio }}</div>
+    </div>
+
+    <div style="margin-bottom: var(--sp-4);">
+      <label class="field-label" for="id_nome_exibicao">Nome de exibicao *</label>
+      <input type="text" name="nome_exibicao" id="id_nome_exibicao" class="field-input" placeholder="Atendimento Hubtrix" required>
+      <p style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 4px;">
+        Como vai aparecer no inbox do destinatario. Ex: "Atendimento Hubtrix &lt;atendimento@hubtrix.com.br&gt;"
+      </p>
+    </div>
+
+    <div style="margin-bottom: var(--sp-4);">
+      <label class="field-label" for="id_reply_to">Reply-to (opcional)</label>
+      <input type="email" name="reply_to" id="id_reply_to" class="field-input" placeholder="contato@hubtrix.com.br">
+      <p style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 4px;">
+        Email pra onde respostas vao. Vazio = ignora.
+      </p>
+    </div>
+
+    <label style="display: flex; align-items: center; gap: var(--sp-2); cursor: pointer;">
+      <input type="checkbox" name="padrao">
+      <span class="field-label" style="margin: 0;">Marcar como remetente padrao</span>
+    </label>
+  </div>
+
+  <div style="display: flex; gap: var(--sp-3); justify-content: flex-end; margin-top: var(--sp-4);">
+    <a href="{% url 'marketing_emails:dominio_detalhe' pk=dom.pk %}" class="btn btn-secondary">Cancelar</a>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check2"></i> Criar remetente</button>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "sistema/base.html" %}
+{% block title %}Adicionar dominio — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <p class="page-eyebrow"><a href="{% url 'marketing_emails:dominios_lista' %}" style="color: inherit; text-decoration: none;">Dominios de envio</a></p>
+      <h1 class="page-title">Adicionar dominio</h1>
+      <p class="page-subtitle">Configure um dominio proprio (ex: meuprovedor.com.br) pra enviar emails em nome da sua marca.</p>
+    </div>
+  </div>
+</div>
+
+<form method="post" style="max-width: 720px; margin: var(--sp-5) auto 0;">
+  {% csrf_token %}
+
+  <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-5);">
+
+    <div style="margin-bottom: var(--sp-4);">
+      <label class="field-label" for="id_dominio">Dominio *</label>
+      <input type="text" name="dominio" id="id_dominio" class="field-input" placeholder="meuprovedor.com.br" required autofocus>
+      <p style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 4px;">
+        Sem http:// e sem www. Apenas o dominio raiz.
+      </p>
+    </div>
+
+    <div>
+      <label class="field-label" for="id_nome_amigavel">Nome amigavel (opcional)</label>
+      <input type="text" name="nome_amigavel" id="id_nome_amigavel" class="field-input" placeholder="Marca principal">
+      <p style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 4px;">
+        Util quando voce tem multiplos dominios pra organizar (ex: "Marca principal", "Submarca").
+      </p>
+    </div>
+  </div>
+
+  <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radius); padding: var(--sp-4); margin-top: var(--sp-4); color: #78350f;">
+    <strong><i class="bi bi-info-circle"></i> Proximo passo:</strong>
+    Apos criar, voce vera 3 registros DNS (SPF, DKIM, DMARC) que precisa adicionar no painel do seu provedor de DNS (Registro.br, Cloudflare, GoDaddy, etc.). A propagacao costuma levar 5-30 minutos.
+  </div>
+
+  <div style="display: flex; gap: var(--sp-3); justify-content: flex-end; margin-top: var(--sp-4);">
+    <a href="{% url 'marketing_emails:dominios_lista' %}" class="btn btn-secondary">Cancelar</a>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Criar e gerar DNS</button>
+  </div>
+</form>
+{% endblock %}
