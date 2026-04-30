@@ -10,7 +10,7 @@ responsavel: "Tech Lead"
 **Data:** 24/04/2026
 **Responsável:** Tech Lead
 **Prioridade:** 🟡 Média
-**Status:** ⏳ Pendente
+**Status:** ⏳ Parcial — 2 de 6 concluídas (30/04)
 
 ---
 
@@ -25,9 +25,9 @@ Auditoria 24/04 (inicial) + reauditoria exaustiva:
 - ✅ Produtos CRM (corrigido — 25/pagina)
 - ⏳ **Pipeline CRM** (`apps/comercial/crm/templates/crm/pipeline.html`): KANBAN visual — carrega TODAS as oportunidades por estagio. Risco alto. **Solucao diferente**: limitar N oportunidades por estagio + "ver mais" / lazy scroll. Nao eh um `<Paginator>` tradicional
 - ⏳ **Tarefas** (`apps/comercial/crm/views.py::tarefas_lista`): carrega tudo e agrupa em "hoje/semana/vencidas/todas"
-- ⏳ **Fluxos de atendimento** (`apps/comercial/atendimento/views.py:141`): sem paginacao
+- ✅ **Fluxos de atendimento** (`apps/comercial/atendimento/views.py`): Paginator(20) + controles — 30/04
 - ⏳ **Inbox conversas** (`apps/inbox/views.py:42`): sem paginacao (risco: polling + WebSocket pode complicar paginacao no scroll)
-- ⏳ **Automacoes** (`apps/marketing/automacoes/views.py:25`): sem paginacao
+- ✅ **Automacoes** (`apps/marketing/automacoes/views.py`): Paginator(25) + filtro status server-side + Sum aggregate pra stats — 30/04
 - ⏳ **Integracoes** (`apps/integracoes/views.py:288`): sem paginacao
 - ⏳ **Leads template** — API ja pagina, mas renderizacao JS nao mostra controles de paginacao
 
@@ -67,9 +67,9 @@ API ja retorna `page`, `total_pages`, `count`. Falta renderizar controles em JS.
 
 ## Tarefas
 
-- [ ] Automacoes de marketing (paginator simples)
+- [x] Automacoes de marketing — Paginator(25) + filtro status server-side (30/04)
 - [ ] Integracoes (paginator simples)
-- [ ] Fluxos de atendimento (paginator simples)
+- [x] Fluxos de atendimento — Paginator(20) (30/04)
 - [ ] Tarefas CRM (paginar so grupo 'todas')
 - [ ] Inbox (infinite scroll ou limite + filtro)
 - [ ] Leads JS (adicionar controles de paginacao ao render)

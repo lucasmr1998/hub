@@ -10,7 +10,8 @@ responsavel: "Tech Lead"
 **Data:** 24/04/2026
 **Responsável:** Tech Lead
 **Prioridade:** 🟢 Baixa
-**Status:** ⏳ Pendente
+**Status:** ✅ Cancelado — 30/04/2026
+**Motivo:** Decisão de produto: sino já abre a página de notificações diretamente. Dropdown inline deixou de ser necessário — a página cobre o caso de uso com mais contexto.
 
 ---
 
