@@ -212,9 +212,11 @@ def _chamar_llm(integracao, messages, tools, tenant, usuario):
                 try:
                     resultado = tool_config['func'](tenant, usuario, func_args)
                     logger.info(f'[Assistente] Tool {func_name}: {resultado[:100]}')
+                    _audit_tool_assistente(tenant, usuario, func_name, func_args, resultado, nivel='INFO')
                 except Exception as e:
                     resultado = f'Erro ao executar {func_name}: {str(e)}'
                     logger.error(f'[Assistente] Tool {func_name} erro: {e}')
+                    _audit_tool_assistente(tenant, usuario, func_name, func_args, str(e), nivel='ERROR', falhou=True)
             else:
                 resultado = f'Tool {func_name} nao encontrada.'
 
@@ -237,3 +239,26 @@ def _registrar_log(tenant, usuario, mensagem, resposta):
         )
     except Exception:
         pass
+
+
+def _audit_tool_assistente(tenant, usuario, tool_name, args, resultado, *, nivel='INFO', falhou=False):
+    """
+    Auditoria por tool call do assistente. Defensivo — não quebra fluxo se falhar.
+    Categoria fixa 'assistente' pra agregar fácil em LogSistema.
+    """
+    try:
+        from apps.sistema.models import LogSistema
+        acao = f'tool_{tool_name}_erro' if falhou else f'tool_{tool_name}'
+        LogSistema.objects.create(
+            tenant=tenant,
+            nivel=nivel,
+            modulo=f'assistente.{acao}',
+            mensagem=f'Args: {str(args)[:200]} → {"Erro" if falhou else "Resultado"}: {str(resultado)[:300]}',
+            categoria='assistente',
+            acao=acao,
+            entidade='AssistenteTool',
+            entidade_id=None,
+            usuario=usuario.username if usuario else '',
+        )
+    except Exception as exc:
+        logger.warning('Falha ao auditar tool %s do assistente: %s', tool_name, exc)

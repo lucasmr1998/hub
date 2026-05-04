@@ -21,6 +21,28 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
+def _audit_assistente(*, tenant, usuario, acao, entidade, entidade_id, mensagem, nivel='INFO'):
+    """
+    Registra ação do assistente CRM na trilha de auditoria (LogSistema).
+    Defensivo: nunca quebra fluxo se auditoria falhar.
+    """
+    try:
+        from apps.sistema.models import LogSistema
+        LogSistema.objects.create(
+            tenant=tenant,
+            nivel=nivel,
+            modulo=f'assistente.{acao}',
+            mensagem=mensagem,
+            categoria='assistente',
+            acao=acao,
+            entidade=entidade,
+            entidade_id=int(entidade_id) if entidade_id else None,
+            usuario=usuario.username if usuario else '',
+        )
+    except Exception as exc:
+        logger.warning('Falha ao auditar ação do assistente %s: %s', acao, exc)
+
+
 # ============================================================================
 # DESPACHO POR CANAL
 # ============================================================================
@@ -2535,9 +2557,28 @@ def _chamar_llm_com_tools(integracao, modelo, messages, config, atendimento, con
                             tool_result = tool_func(tenant, usuario, func_args)
                             _registrar_log(atendimento, atendimento.nodo_atual, 'sucesso',
                                            f'Tool {func_name}: {tool_result[:100]}')
+
+                            # Auditoria — categoria 'assistente' (LogSistema direto)
+                            _audit_assistente(
+                                tenant=tenant, usuario=usuario,
+                                acao=f'tool_{func_name}',
+                                entidade='AtendimentoFluxo',
+                                entidade_id=atendimento.id,
+                                mensagem=f'Args: {str(func_args)[:200]} → Resultado: {tool_result[:300]}',
+                                nivel='INFO',
+                            )
                         except Exception as e:
                             tool_result = f'Erro ao executar {func_name}: {str(e)}'
                             logger.error(f'Tool {func_name} erro: {e}')
+
+                            _audit_assistente(
+                                tenant=tenant, usuario=usuario,
+                                acao=f'tool_{func_name}_erro',
+                                entidade='AtendimentoFluxo',
+                                entidade_id=atendimento.id,
+                                mensagem=f'Args: {str(func_args)[:200]} → Erro: {str(e)[:300]}',
+                                nivel='ERROR',
+                            )
                     else:
                         tool_result = f'Tool {func_name} nao encontrada'
 
