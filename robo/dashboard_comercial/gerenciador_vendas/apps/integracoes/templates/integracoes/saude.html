@@ -1,0 +1,120 @@
+{% extends "layouts/layout_app.html" %}
+{% load static %}
+
+{% block title %}Saúde das integrações — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-eyebrow">Integrações</div>
+  <h1 class="page-title">Saúde das integrações</h1>
+  <p class="page-subtitle">Monitora taxa de sucesso, latência e falhas das integrações com ERPs e canais externos. Janela: últimas 24h e 7 dias.</p>
+  <div class="page-actions">
+    <a href="{% url 'integracoes:integracoes' %}" class="btn btn-secondary">
+      <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+  </div>
+</div>
+
+<style>
+  .saude-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .saude-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 20px; }
+  .saude-card.status-saudavel { border-left: 4px solid var(--color-success, #10B981); }
+  .saude-card.status-degradado { border-left: 4px solid var(--color-warning, #F59E0B); }
+  .saude-card.status-critico { border-left: 4px solid var(--color-danger, #DC2626); background: #FEF2F2; }
+  .saude-card.status-sem_dados { border-left: 4px solid #94A3B8; }
+  .saude-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .saude-header i { font-size: 24px; }
+  .saude-header h3 { margin: 0; font-size: 16px; font-weight: 700; }
+  .saude-status-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .saude-status-badge.saudavel { background: #D1FAE5; color: #065F46; }
+  .saude-status-badge.degradado { background: #FEF3C7; color: #92400E; }
+  .saude-status-badge.critico { background: #FEE2E2; color: #991B1B; }
+  .saude-status-badge.sem_dados { background: #F1F5F9; color: #475569; }
+  .saude-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .saude-stat { font-size: 12px; color: var(--color-text-muted, #64748B); }
+  .saude-stat strong { display: block; font-size: 18px; color: var(--color-text, #0F172A); font-weight: 700; }
+  .saude-falhas-table { width: 100%; border-collapse: collapse; }
+  .saude-falhas-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--color-border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; }
+  .saude-falhas-table td { padding: 10px 12px; border-bottom: 1px solid var(--color-border); font-size: 13px; }
+  .saude-falhas-table .erro-cell { color: var(--color-danger, #DC2626); font-family: monospace; font-size: 12px; max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+
+<div class="saude-grid">
+  {% for item in integracoes_status %}
+    <div class="saude-card status-{{ item.status }}">
+      <div class="saude-header">
+        <i class="{{ item.icon }}" style="color: {{ item.cor }};"></i>
+        <h3>{{ item.integracao.nome }}</h3>
+        <span class="saude-status-badge {{ item.status }}" style="margin-left: auto;">
+          {% if item.status == 'saudavel' %}Saudável
+          {% elif item.status == 'degradado' %}Degradado
+          {% elif item.status == 'critico' %}Crítico
+          {% else %}Sem dados{% endif %}
+        </span>
+      </div>
+
+      <div class="saude-stats">
+        <div class="saude-stat">
+          <strong>{{ item.taxa_sucesso_24h|default:"—" }}{% if item.taxa_sucesso_24h %}%{% endif %}</strong>
+          Sucesso 24h ({{ item.total_24h }} chamadas)
+        </div>
+        <div class="saude-stat">
+          <strong>{{ item.taxa_sucesso_7d|default:"—" }}{% if item.taxa_sucesso_7d %}%{% endif %}</strong>
+          Sucesso 7d ({{ item.total_7d }} chamadas)
+        </div>
+        <div class="saude-stat">
+          <strong>{% if item.latencia_avg_ms %}{{ item.latencia_avg_ms }}ms{% else %}—{% endif %}</strong>
+          Latência média
+        </div>
+        <div class="saude-stat">
+          <strong>{% if item.latencia_max_ms %}{{ item.latencia_max_ms }}ms{% else %}—{% endif %}</strong>
+          Latência máx
+        </div>
+      </div>
+
+      {% if item.falhas_consecutivas >= 3 %}
+        <div style="margin-top: 14px; padding: 8px 12px; background: #FEE2E2; border-radius: 6px; color: #991B1B; font-size: 12px;">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          <strong>{{ item.falhas_consecutivas }} falhas consecutivas</strong> — investigue agora
+        </div>
+      {% endif %}
+
+      <a href="{% url 'integracoes:integracao_detalhe' pk=item.integracao.pk %}" style="display: block; margin-top: 14px; font-size: 13px; color: var(--color-primary);">Ver detalhes →</a>
+    </div>
+  {% empty %}
+    <p style="color: var(--color-text-muted);">Nenhuma integração configurada ainda.</p>
+  {% endfor %}
+</div>
+
+<h2 style="font-size: 20px; font-weight: 700; margin: 32px 0 16px;">Últimas 30 falhas</h2>
+
+{% if ultimas_falhas %}
+  <table class="saude-falhas-table">
+    <thead>
+      <tr>
+        <th>Quando</th>
+        <th>Integração</th>
+        <th>Endpoint</th>
+        <th>Status</th>
+        <th>Erro</th>
+        <th>Lead</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in ultimas_falhas %}
+        <tr>
+          <td>{{ log.data_criacao|date:"d/m H:i:s" }}</td>
+          <td>{{ log.integracao.nome }}</td>
+          <td><code>{{ log.metodo }} {{ log.endpoint|truncatechars:50 }}</code></td>
+          <td><strong>{{ log.status_code|default:"—" }}</strong></td>
+          <td class="erro-cell" title="{{ log.mensagem_erro }}">{{ log.mensagem_erro|truncatechars:80 }}</td>
+          <td>{% if log.lead %}<a href="#">#{{ log.lead.id }}</a>{% else %}—{% endif %}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p style="color: var(--color-text-muted);">Nenhuma falha nos últimos registros. ✓</p>
+{% endif %}
+
+{% endblock %}

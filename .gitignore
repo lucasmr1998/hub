@@ -20,7 +20,21 @@ myenv/
 # ── Variáveis de ambiente / segredos ─────────────────────
 .env
 *.env
+.env.*
 !.env.example
+.env.prod_readonly
+
+# ── MCP / Claude Code internal ───────────────────────────
+.mcp.json
+.claude/scheduled_tasks.lock
+
+# ── Postman / API specs locais ───────────────────────────
+*.postman_collection.json
+
+# ── Media uploads (devem viver em volume bind, nao em git) ─
+workspace/
+robo/dashboard_comercial/gerenciador_vendas/workspace/anexos/
+robo/dashboard_comercial/gerenciador_vendas/media/
 
 # ── Backups pontuais de dados de producao ────────────────
 .backup_*.json

@@ -95,6 +95,10 @@
       </div>
     {% endfor %}
   </div>
+
+  {% if is_paginated %}
+    {% include "components/pagination.html" with page_obj=page_obj %}
+  {% endif %}
 {% else %}
   <div class="card">
     <div class="card-body" style="text-align: center; padding: var(--sp-10) var(--sp-5);">

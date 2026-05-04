@@ -287,9 +287,13 @@ TIPO_INFO = {
 @login_required
 def integracoes_view(request):
     """Página de gerenciamento de integrações."""
-    integracoes = IntegracaoAPI.objects.order_by('-ativa', 'nome')
+    from django.core.paginator import Paginator
 
-    for integ in integracoes:
+    qs = IntegracaoAPI.objects.order_by('-ativa', 'nome')
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    for integ in page_obj.object_list:
         info = TIPO_INFO.get(integ.tipo, TIPO_INFO['outro'])
         integ.icon = info['icon']
         integ.cor = info['cor']
@@ -306,9 +310,89 @@ def integracoes_view(request):
     tipos_disponiveis = IntegracaoAPI.TIPO_CHOICES
 
     return render(request, 'integracoes/integracoes.html', {
-        'integracoes': integracoes,
+        'integracoes': page_obj.object_list,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'is_paginated': page_obj.has_other_pages(),
         'tipos_disponiveis': tipos_disponiveis,
         'tipo_info': TIPO_INFO,
+    })
+
+
+@login_required
+def saude_integracoes_view(request):
+    """
+    Dashboard de saúde das integrações: latência, % sucesso,
+    falhas recentes. Tudo em janelas de 24h e 7d.
+    """
+    from django.db.models import Avg, Max
+
+    agora = timezone.now()
+    janela_24h = agora - timedelta(hours=24)
+    janela_7d = agora - timedelta(days=7)
+
+    integracoes_status = []
+    for integ in IntegracaoAPI.objects.order_by('nome'):
+        logs_24h = integ.logs.filter(data_criacao__gte=janela_24h)
+        logs_7d = integ.logs.filter(data_criacao__gte=janela_7d)
+
+        total_24h = logs_24h.count()
+        sucesso_24h = logs_24h.filter(sucesso=True).count()
+        erros_24h = total_24h - sucesso_24h
+
+        total_7d = logs_7d.count()
+        sucesso_7d = logs_7d.filter(sucesso=True).count()
+
+        latencia = logs_24h.filter(sucesso=True).aggregate(
+            avg=Avg('tempo_resposta_ms'),
+            max=Max('tempo_resposta_ms'),
+        )
+
+        # Falhas consecutivas: olha as últimas 10 chamadas e conta erros no topo
+        ultimas_10 = list(integ.logs.order_by('-data_criacao')[:10])
+        falhas_consecutivas = 0
+        for log in ultimas_10:
+            if log.sucesso:
+                break
+            falhas_consecutivas += 1
+
+        # Status agregado
+        if total_24h == 0:
+            status = 'sem_dados'
+        elif falhas_consecutivas >= 3:
+            status = 'critico'
+        elif erros_24h / total_24h > 0.1 if total_24h else False:
+            status = 'degradado'
+        else:
+            status = 'saudavel'
+
+        info = TIPO_INFO.get(integ.tipo, TIPO_INFO['outro'])
+
+        integracoes_status.append({
+            'integracao': integ,
+            'icon': info['icon'],
+            'cor': info['cor'],
+            'status': status,
+            'total_24h': total_24h,
+            'sucesso_24h': sucesso_24h,
+            'erros_24h': erros_24h,
+            'taxa_sucesso_24h': round(sucesso_24h / total_24h * 100, 1) if total_24h else None,
+            'total_7d': total_7d,
+            'taxa_sucesso_7d': round(sucesso_7d / total_7d * 100, 1) if total_7d else None,
+            'latencia_avg_ms': int(latencia['avg']) if latencia['avg'] else None,
+            'latencia_max_ms': int(latencia['max']) if latencia['max'] else None,
+            'falhas_consecutivas': falhas_consecutivas,
+        })
+
+    # Últimas falhas globais (todas integrações)
+    ultimas_falhas = LogIntegracao.objects.filter(
+        sucesso=False,
+    ).select_related('integracao', 'lead').order_by('-data_criacao')[:30]
+
+    return render(request, 'integracoes/saude.html', {
+        'integracoes_status': integracoes_status,
+        'ultimas_falhas': ultimas_falhas,
+        'agora': agora,
     })
 
 

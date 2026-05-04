@@ -1337,6 +1337,11 @@ class HubsoftService:
     def _put(self, endpoint: str, *, json: dict = None, params: dict = None, lead=None) -> dict:
         return self._request('PUT', endpoint, json=json, params=params, lead=lead)
 
+    # Resiliência: retry com exponential backoff em erros transitórios
+    MAX_RETRIES = 3
+    RETRY_BACKOFF_BASE = 1.5  # segundos. Tentativa 1: 1.5s, 2: 3s, 3: 6s
+    RETRY_STATUS_CODES = {408, 429, 500, 502, 503, 504}
+
     def _request(
         self,
         metodo: str,
@@ -1351,14 +1356,12 @@ class HubsoftService:
         lead=None,
     ) -> dict:
         """
-        Wrapper HTTP único: aplica auth (Bearer ou skip), executa, registra
-        LogIntegracao com payload mascarado, levanta HubsoftServiceError em falha.
+        Wrapper HTTP único: aplica auth (Bearer ou skip), executa com retry
+        em erros transitórios (timeouts, 5xx, 429), registra LogIntegracao,
+        levanta HubsoftServiceError em falha definitiva.
 
-        - `json`: corpo JSON (POST/PUT). Ignorado se `files` informado.
-        - `files`: lista no formato requests (multipart).
-        - `params`: query string.
-        - `log_payload`: o que registrar quando o body é multipart (não dá pra logar bytes).
-        - `autenticar`: False só para o endpoint de token.
+        - 4xx (exceto 408/429) não são reexecutadas — erros do cliente.
+        - 5xx, timeouts, conn refused são reexecutados até MAX_RETRIES com backoff exponencial.
         """
         url = f"{self.base_url}{endpoint}"
         headers = {'Accept': 'application/json'}
@@ -1371,59 +1374,113 @@ class HubsoftService:
             else self._payload_seguro(json or params or {})
         )
 
-        inicio = time.time()
-        try:
-            resp = requests.request(
-                metodo, url,
-                json=json if files is None else None,
-                params=params,
-                files=files,
-                headers=headers,
-                timeout=timeout,
+        ultimo_erro = None
+
+        for tentativa in range(1, self.MAX_RETRIES + 1):
+            inicio = time.time()
+            try:
+                resp = requests.request(
+                    metodo, url,
+                    json=json if files is None else None,
+                    params=params,
+                    files=files,
+                    headers=headers,
+                    timeout=timeout,
+                )
+                tempo_ms = int((time.time() - inicio) * 1000)
+            except requests.RequestException as exc:
+                # Erro de conexão / timeout — sempre tentar de novo se ainda houver tentativas
+                tempo_ms = int((time.time() - inicio) * 1000)
+                ultimo_erro = str(exc)
+
+                if tentativa < self.MAX_RETRIES:
+                    self._registrar_log(
+                        endpoint=endpoint, metodo=metodo,
+                        payload=payload_para_log, resposta={},
+                        status_code=0, sucesso=False,
+                        erro=f"[Tentativa {tentativa}/{self.MAX_RETRIES}] {exc}",
+                        tempo_ms=tempo_ms, lead=lead,
+                    )
+                    time.sleep(self.RETRY_BACKOFF_BASE * (2 ** (tentativa - 1)))
+                    continue
+
+                # Esgotou tentativas — registra final e levanta
+                self._registrar_log(
+                    endpoint=endpoint, metodo=metodo,
+                    payload=payload_para_log, resposta={},
+                    status_code=0, sucesso=False,
+                    erro=f"[FINAL após {tentativa} tentativas] {exc}",
+                    tempo_ms=tempo_ms, lead=lead,
+                )
+                raise HubsoftServiceError(f"Falha de conexão com HubSoft após {tentativa} tentativas: {exc}") from exc
+
+            # Resposta HTTP recebida — checar status
+            try:
+                resposta_json = resp.json()
+            except ValueError:
+                resposta_json = {'raw': resp.text[:2000]}
+
+            sucesso = resp.status_code in (200, 201)
+            resposta_para_log = (
+                resposta_json if isinstance(resposta_json, dict)
+                else {'list': resposta_json}
             )
-            tempo_ms = int((time.time() - inicio) * 1000)
-        except requests.RequestException as exc:
-            tempo_ms = int((time.time() - inicio) * 1000)
+            msg_erro_api = ''
+            if isinstance(resposta_json, dict):
+                msg_erro_api = resposta_json.get('msg', '') or ''
+
+            if sucesso:
+                self._registrar_log(
+                    endpoint=endpoint, metodo=metodo,
+                    payload=payload_para_log,
+                    resposta=resposta_para_log,
+                    status_code=resp.status_code,
+                    sucesso=True,
+                    erro='' if tentativa == 1 else f"Sucesso após {tentativa} tentativas",
+                    tempo_ms=tempo_ms, lead=lead,
+                )
+                if isinstance(resposta_json, dict):
+                    return resposta_json
+                return {'list': resposta_json}
+
+            # Falha — decidir se reexecuta
+            ultimo_erro = f"HTTP {resp.status_code}: {msg_erro_api}"
+
+            if resp.status_code in self.RETRY_STATUS_CODES and tentativa < self.MAX_RETRIES:
+                self._registrar_log(
+                    endpoint=endpoint, metodo=metodo,
+                    payload=payload_para_log,
+                    resposta=resposta_para_log,
+                    status_code=resp.status_code,
+                    sucesso=False,
+                    erro=f"[Tentativa {tentativa}/{self.MAX_RETRIES}] {ultimo_erro}",
+                    tempo_ms=tempo_ms, lead=lead,
+                )
+                time.sleep(self.RETRY_BACKOFF_BASE * (2 ** (tentativa - 1)))
+                continue
+
+            # Erro não-retryable (4xx) ou esgotou tentativas — falha final
+            erro_final = (
+                f"[FINAL após {tentativa} tentativas] {ultimo_erro}"
+                if tentativa > 1 else ultimo_erro
+            )
             self._registrar_log(
                 endpoint=endpoint, metodo=metodo,
-                payload=payload_para_log, resposta={},
-                status_code=0, sucesso=False, erro=str(exc),
+                payload=payload_para_log,
+                resposta=resposta_para_log,
+                status_code=resp.status_code,
+                sucesso=False,
+                erro=erro_final,
                 tempo_ms=tempo_ms, lead=lead,
             )
-            raise HubsoftServiceError(f"Falha de conexão com HubSoft: {exc}") from exc
-
-        try:
-            resposta_json = resp.json()
-        except ValueError:
-            resposta_json = {'raw': resp.text[:2000]}
-
-        sucesso = resp.status_code in (200, 201)
-        resposta_para_log = (
-            resposta_json if isinstance(resposta_json, dict)
-            else {'list': resposta_json}
-        )
-        msg_erro_api = ''
-        if isinstance(resposta_json, dict):
-            msg_erro_api = resposta_json.get('msg', '') or ''
-
-        self._registrar_log(
-            endpoint=endpoint, metodo=metodo,
-            payload=payload_para_log,
-            resposta=resposta_para_log,
-            status_code=resp.status_code,
-            sucesso=sucesso,
-            erro='' if sucesso else f"HTTP {resp.status_code}: {msg_erro_api}",
-            tempo_ms=tempo_ms, lead=lead,
-        )
-
-        if not sucesso:
             raise HubsoftServiceError(
                 f"Erro HubSoft em {endpoint} (HTTP {resp.status_code}): {resposta_json}"
             )
 
-        if isinstance(resposta_json, dict):
-            return resposta_json
-        return {'list': resposta_json}
+        # Esgotou retries sem sucesso (caminho defensivo)
+        raise HubsoftServiceError(
+            f"Falha definitiva em {endpoint} após {self.MAX_RETRIES} tentativas: {ultimo_erro}"
+        )
 
     @classmethod
     def _payload_seguro(cls, data: dict) -> dict:
