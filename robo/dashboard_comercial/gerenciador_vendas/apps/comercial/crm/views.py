@@ -796,6 +796,8 @@ def tarefas_lista(request):
             Q(lead__nome_razaosocial__icontains=filtro_search)
         )
 
+    from django.core.paginator import Paginator
+
     hoje = timezone.now().date()
     tarefas_hoje = qs.filter(data_vencimento__date=hoje, status__in=['pendente', 'em_andamento'])
     tarefas_semana = qs.filter(
@@ -804,7 +806,13 @@ def tarefas_lista(request):
         status__in=['pendente', 'em_andamento']
     )
     tarefas_vencidas = qs.filter(data_vencimento__lt=timezone.now(), status__in=['pendente', 'em_andamento', 'vencida'])
-    tarefas_todas = qs.exclude(status='concluida')
+
+    # Aba "Todas" pode ter centenas de itens — pagina apenas ela
+    tarefas_todas_qs = qs.exclude(status='concluida')
+    tarefas_todas_paginator = Paginator(tarefas_todas_qs, 30)
+    tarefas_todas_page = tarefas_todas_paginator.get_page(request.GET.get('page'))
+    tarefas_todas = tarefas_todas_page.object_list
+
     tarefas_concluidas = qs.filter(status='concluida').order_by('-data_conclusao')[:20]
 
     # Dados para filtros
@@ -828,6 +836,8 @@ def tarefas_lista(request):
         'tarefas_semana': tarefas_semana,
         'tarefas_vencidas': tarefas_vencidas,
         'tarefas_todas': tarefas_todas,
+        'tarefas_todas_page_obj': tarefas_todas_page,
+        'tarefas_todas_paginated': tarefas_todas_page.has_other_pages(),
         'tarefas_concluidas': tarefas_concluidas,
         'vendedores': vendedores,
         'filter_fields': filter_fields,

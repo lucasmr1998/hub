@@ -80,6 +80,9 @@
     <div class="tarefa-list">
       {% for t in tarefas_todas %}{% include "crm/_tarefa_card.html" with tarefa=t %}{% endfor %}
     </div>
+    {% if tarefas_todas_paginated %}
+      {% include "components/pagination.html" with page_obj=tarefas_todas_page_obj %}
+    {% endif %}
   {% else %}
     <div class="empty-state"><i class="bi bi-inbox"></i><p>Nenhuma tarefa pendente.</p></div>
   {% endif %}
