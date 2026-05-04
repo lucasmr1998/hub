@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hubtrix — Histórico de versões do site</title>
+  <meta name="description" content="Snapshots de cada mudança estrutural grande do site Hubtrix. Histórico de aprendizado de positioning, copy e layout." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@600;700;800&family=Caveat:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          spacing: { '4.5': '1.125rem', '5.5': '1.375rem', '180': '45rem', '240': '60rem' },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif'],
+            'inter-tight': ['"Inter Tight"', 'system-ui', 'sans-serif'],
+            caveat: ['Caveat', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { font-synthesis: none; -webkit-font-smoothing: antialiased; }
+    .container-narrow { max-width: 60rem; margin: 0 auto; }
+  </style>
+</head>
+<body class="font-inter antialiased text-[15px]/6 bg-white text-[#252020]">
+
+  <!-- TOPBAR simples -->
+  <section class="w-full border-b border-solid border-[#E2E8F0]">
+    <div class="container-narrow flex items-center justify-between py-6 px-6">
+      <div class="flex items-center gap-2">
+        <div class="rounded-md bg-[#252020] shrink-0 size-6 flex items-center justify-center relative">
+          <span class="text-white font-inter-tight font-extrabold text-sm leading-none" style="letter-spacing: -0.05em;">h</span>
+          <div class="absolute" style="bottom: 3px; right: 3px; width: 4px; height: 4px; border-radius: 50%; background: #E76F51;"></div>
+        </div>
+        <div class="tracking-[-0.02em] inline-block text-[#252020] font-inter-tight font-extrabold text-xl/6">hubtrix</div>
+        <span class="ml-2 inline-block text-[#94A3B8] font-inter text-sm/4.5">/ versões</span>
+      </div>
+      <a href="../index_preto.html" class="inline-block text-[#475569] font-inter font-medium text-sm/4.5 hover:text-[#252020]">← Voltar pro site live</a>
+    </div>
+  </section>
+
+  <!-- HEADER -->
+  <section class="w-full">
+    <div class="container-narrow flex flex-col py-16 px-6 gap-4">
+      <div class="tracking-[0.12em] uppercase inline-block text-[#252020] font-inter font-semibold text-xs/4">Arquivadas</div>
+      <h1 class="text-[44px] leading-[1.1] tracking-[-0.02em] text-[#252020] font-inter-tight font-extrabold m-0">Histórico de versões do site.</h1>
+      <p class="text-[18px] leading-[1.6] text-[#475569] font-inter m-0">Cada mudança estrutural grande vira um snapshot aqui — pra rastrear evolução de positioning, copy e layout. Funciona como histórico de aprendizado.</p>
+    </div>
+  </section>
+
+  <!-- LISTA -->
+  <section class="w-full bg-[#F8FAFC] border-t border-solid border-[#E2E8F0]">
+    <div class="container-narrow flex flex-col py-16 px-6 gap-6">
+
+      <!-- v2 (atual) -->
+      <article class="flex flex-col rounded-2xl bg-white border border-solid border-[#E2E8F0] p-8 gap-5">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <div class="flex items-center gap-3">
+            <span class="inline-block rounded-full px-3 py-1 bg-[#252020] text-white font-inter font-semibold text-xs/4">v2</span>
+            <span class="inline-block rounded-full px-3 py-1 bg-[#FED7AA] text-[#252020] font-inter font-semibold text-xs/4">ATUAL</span>
+            <span class="inline-block text-[#94A3B8] font-inter text-sm/4.5">03/05/2026</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <a href="v2/index_preto.html" class="rounded-lg py-2 px-4 bg-[#252020] hover:bg-[#1F2937]">
+              <span class="inline-block text-white font-inter font-semibold text-sm/4.5">Ver preto+sienna</span>
+            </a>
+            <a href="v2/index.html" class="rounded-lg py-2 px-4 border border-solid border-[#E2E8F0] hover:bg-[#F8FAFC]">
+              <span class="inline-block text-[#252020] font-inter font-medium text-sm/4.5">Ver clean</span>
+            </a>
+          </div>
+        </div>
+        <h2 class="text-[26px] leading-[1.2] tracking-[-0.02em] text-[#252020] font-inter-tight font-bold m-0">Categoria nova: copiloto de IA + marquee de capacidades</h2>
+        <p class="text-[15px] leading-[1.6] text-[#475569] font-inter m-0">Hero migra de "plataforma do provedor" para <strong class="text-[#252020]">"O Hubtrix é o copiloto de IA do seu provedor"</strong> — cria categoria nova e ancora positioning. Adiciona seção "Um copiloto. Dezenas de capacidades de IA." com marquee em 3 linhas, mostrando 30 capacidades em movimento — comunica abundância sem listar features uma por uma.</p>
+        <div class="flex flex-col gap-1 pt-3 border-t border-solid border-[#E2E8F0]">
+          <div class="text-xs/4 text-[#94A3B8] font-inter font-semibold uppercase tracking-[0.08em]">Inspiração</div>
+          <a href="https://visioai-website.netlify.app/" target="_blank" rel="noopener" class="text-sm/5 text-[#475569] hover:text-[#252020] font-inter">visioai-website.netlify.app — estrutura "Uma plataforma. Dezenas de ferramentas." + marquee</a>
+        </div>
+      </article>
+
+      <!-- v1 -->
+      <article class="flex flex-col rounded-2xl bg-white border border-solid border-[#E2E8F0] p-8 gap-5">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <div class="flex items-center gap-3">
+            <span class="inline-block rounded-full px-3 py-1 bg-[#475569] text-white font-inter font-semibold text-xs/4">v1</span>
+            <span class="inline-block text-[#94A3B8] font-inter text-sm/4.5">pré-03/05/2026</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <a href="v1/index_preto.html" class="rounded-lg py-2 px-4 border border-solid border-[#E2E8F0] hover:bg-[#F8FAFC]">
+              <span class="inline-block text-[#252020] font-inter font-medium text-sm/4.5">Ver preto+sienna</span>
+            </a>
+            <a href="v1/index.html" class="rounded-lg py-2 px-4 border border-solid border-[#E2E8F0] hover:bg-[#F8FAFC]">
+              <span class="inline-block text-[#252020] font-inter font-medium text-sm/4.5">Ver clean</span>
+            </a>
+          </div>
+        </div>
+        <h2 class="text-[26px] leading-[1.2] tracking-[-0.02em] text-[#252020] font-inter-tight font-bold m-0">Estado inicial: plataforma do provedor + 4 módulos</h2>
+        <p class="text-[15px] leading-[1.6] text-[#475569] font-inter m-0">Hero como <strong class="text-[#252020]">"A plataforma do provedor que vende mais, perde menos e fideliza sempre."</strong> Estrutura focada em escassez controlada (4 módulos) e benefício direto. Sem categoria nomeada, sem marquee.</p>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- COMO FUNCIONA -->
+  <section class="w-full">
+    <div class="container-narrow flex flex-col py-16 px-6 gap-4">
+      <div class="tracking-[0.12em] uppercase inline-block text-[#252020] font-inter font-semibold text-xs/4">Processo</div>
+      <h2 class="text-[28px] leading-[1.2] tracking-[-0.02em] text-[#252020] font-inter-tight font-bold m-0">Quando salvar uma versão nova</h2>
+      <ul class="flex flex-col gap-3 m-0 pl-5 text-[15px]/6 text-[#475569] font-inter">
+        <li>Mudança grande de positioning ou categoria (ex: "plataforma" → "copiloto").</li>
+        <li>Reorganização estrutural de seções (adicionar, remover ou trocar a ordem de blocos).</li>
+        <li>Refresh visual amplo (novo design system, paleta, tipografia).</li>
+        <li>Pivô de público-alvo ou pricing.</li>
+      </ul>
+      <p class="text-sm/5 text-[#94A3B8] font-inter m-0 mt-2">Ajustes pequenos (palavra trocada, cor de botão) não viram versão — ficam só no live.</p>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <section class="w-full bg-[#252020]">
+    <div class="container-narrow flex items-center justify-between py-8 px-6">
+      <span class="inline-block text-[#94A3B8] font-inter text-xs/4">© 2026 Hubtrix · histórico de versões do site</span>
+      <a href="../index_preto.html" class="inline-block text-[#CBD5E1] font-inter font-medium text-sm/4.5 hover:text-white">hubtrix.com.br →</a>
+    </div>
+  </section>
+
+</body>
+</html>
