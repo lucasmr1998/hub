@@ -117,14 +117,16 @@ robo/docs/context/reunioes/assunto_DD-MM-AAAA.md
 Template em `robo/docs/context/reunioes/TEMPLATE.md`.
 
 ### Tarefas
-Registrar tarefas em:
-```
-robo/docs/context/tarefas/assunto_DD-MM-AAAA.md
-```
-- Pendentes: `robo/docs/context/tarefas/backlog/`
-- Concluidas: `robo/docs/context/tarefas/finalizadas/`
-- Template: `robo/docs/context/tarefas/TEMPLATE.md`
-- Toda implementacao deve estar vinculada a uma tarefa. Se nao existir, **criar antes de implementar**.
+
+**A partir de 04/05/2026, fonte da verdade do backlog é o módulo Workspace** (não mais markdown).
+
+- **Onde:** `https://app.hubtrix.com.br/workspace/` — tenant Aurora HQ (id 3)
+- **Tabela DB:** `workspace_tarefa`
+- **Consulta read-only via SQL:** ver `robo/docs/context/tarefas/README.md`
+
+Toda implementação deve estar vinculada a uma tarefa no Workspace. Se nao existir, **criar antes de implementar** — pela UI, não via markdown.
+
+A pasta `robo/docs/context/tarefas/backlog/` e `finalizadas/` ficam **deprecadas** (preservadas como histórico). Não criar arquivos `.md` novos lá. O `TEMPLATE.md` segue como referência de campos pra preencher na UI do Workspace.
 
 ### Documentos de produto existentes
 
