@@ -1,0 +1,41 @@
+{% extends "layouts/layout_app.html" %}
+{% load static %}
+
+{% block title %}Início — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-eyebrow">Início · CS</div>
+  <h1 class="page-title">Olá, {{ user.first_name|default:user.username }}.</h1>
+  <p class="page-subtitle">Indicações pendentes, novos membros do clube e relacionamento.</p>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 32px;">
+  {% if indicacoes_pendentes is not None %}
+    {% include "components/stat_card.html" with label="Indicações pendentes" value=indicacoes_pendentes icon="bi-people-fill" %}
+    {% include "components/stat_card.html" with label="Indicações 30d" value=indicacoes_30d icon="bi-graph-up" %}
+  {% endif %}
+  {% if membros_total is not None %}
+    {% include "components/stat_card.html" with label="Membros do clube" value=membros_total icon="bi-trophy" %}
+    {% include "components/stat_card.html" with label="Novos 30d" value=membros_novos_30d icon="bi-stars" %}
+  {% endif %}
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+  <div class="card">
+    <h3 style="margin: 0 0 8px; font-size: 16px; font-weight: 700;">Atalhos CS</h3>
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+      <a href="/cs/clube/" class="btn btn-secondary btn-sm"><i class="bi bi-trophy"></i> Clube de benefícios</a>
+      <a href="/cs/indicacoes/" class="btn btn-secondary btn-sm"><i class="bi bi-people"></i> Indicações</a>
+      <a href="/cs/parceiros/" class="btn btn-secondary btn-sm"><i class="bi bi-shop"></i> Parceiros</a>
+      <a href="/cs/carteirinha/" class="btn btn-secondary btn-sm"><i class="bi bi-credit-card"></i> Carteirinha</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin: 0 0 8px; font-size: 16px; font-weight: 700;">Inbox</h3>
+    <p style="color: var(--color-text-muted); font-size: 13px; margin: 0 0 12px;">Atendimentos abertos da sua equipe.</p>
+    <a href="/inbox/" class="btn btn-primary btn-sm">Ir pra inbox →</a>
+  </div>
+</div>
+{% endblock %}

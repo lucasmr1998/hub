@@ -46,6 +46,186 @@ def dashboard1(request):
 
 
 @login_required(login_url='sistema:login')
+def home_router(request):
+    """
+    Home personalizada por perfil. Detecta o PerfilPermissao do usuário
+    e renderiza widgets relevantes pra ele. Entry point pós-login.
+
+    Perfis suportados (com home dedicada):
+    - Admin / superuser: visão geral de tudo
+    - Vendedor: pipeline pessoal + tarefas de hoje
+    - Gerente Comercial: equipe + metas + funil agregado
+    - Operador CS: clube + indicações + NPS
+
+    Outros perfis caem no dashboard padrão (new_dash.html).
+    """
+    user = request.user
+    perfil_nome = None
+
+    # Detectar perfil do usuário via PermissaoUsuario.perfil
+    if hasattr(user, 'permissoes') and user.permissoes and user.permissoes.perfil:
+        perfil_nome = user.permissoes.perfil.nome
+
+    # Superuser ou Admin → home admin
+    if user.is_superuser or perfil_nome == 'Admin':
+        return _home_admin(request)
+
+    if perfil_nome == 'Vendedor':
+        return _home_vendedor(request)
+
+    if perfil_nome in ('Gerente Comercial', 'Supervisor Comercial'):
+        return _home_gerente_comercial(request)
+
+    if perfil_nome in ('Operador CS', 'Gerente CS'):
+        return _home_cs(request)
+
+    # Fallback: dashboard padrão
+    return render(request, 'dashboard/new_dash.html', {'user': user})
+
+
+def _home_admin(request):
+    """Home do admin: KPIs gerais, saúde de integrações, atividade recente."""
+    from apps.integracoes.models import IntegracaoAPI, LogIntegracao
+
+    agora = timezone.now()
+    janela_24h = agora - timedelta(hours=24)
+
+    integracoes_qtd = IntegracaoAPI.objects.filter(ativa=True).count()
+    falhas_24h = LogIntegracao.objects.filter(
+        data_criacao__gte=janela_24h, sucesso=False
+    ).count()
+    leads_24h = LeadProspecto.objects.filter(data_cadastro__gte=janela_24h).count()
+    leads_total = LeadProspecto.objects.count()
+
+    return render(request, 'dashboard/home_admin.html', {
+        'user': request.user,
+        'perfil_nome': 'Admin',
+        'integracoes_ativas': integracoes_qtd,
+        'falhas_24h': falhas_24h,
+        'leads_24h': leads_24h,
+        'leads_total': leads_total,
+    })
+
+
+def _home_vendedor(request):
+    """Home do vendedor: pipeline pessoal + tarefas de hoje + leads novos."""
+    from apps.comercial.crm.models import Oportunidade, TarefaCRM
+
+    user = request.user
+    hoje = timezone.now().date()
+
+    minhas_oportunidades = Oportunidade.objects.filter(
+        responsavel=user,
+    ).exclude(status__in=['ganha', 'perdida'])
+
+    oportunidades_qtd = minhas_oportunidades.count()
+    oportunidades_valor = minhas_oportunidades.aggregate(
+        total=Sum('valor_estimado')
+    )['total'] or 0
+
+    tarefas_hoje = TarefaCRM.objects.filter(
+        responsavel=user,
+        data_vencimento__date=hoje,
+        status__in=['pendente', 'em_andamento'],
+    ).select_related('lead', 'oportunidade').order_by('data_vencimento')[:10]
+
+    tarefas_vencidas = TarefaCRM.objects.filter(
+        responsavel=user,
+        data_vencimento__lt=timezone.now(),
+        status__in=['pendente', 'em_andamento'],
+    ).count()
+
+    leads_novos = LeadProspecto.objects.filter(
+        data_cadastro__date=hoje,
+    ).count()
+
+    return render(request, 'dashboard/home_vendedor.html', {
+        'user': user,
+        'perfil_nome': 'Vendedor',
+        'oportunidades_qtd': oportunidades_qtd,
+        'oportunidades_valor': oportunidades_valor,
+        'tarefas_hoje': tarefas_hoje,
+        'tarefas_hoje_qtd': tarefas_hoje.count() if hasattr(tarefas_hoje, 'count') else len(tarefas_hoje),
+        'tarefas_vencidas': tarefas_vencidas,
+        'leads_novos': leads_novos,
+    })
+
+
+def _home_gerente_comercial(request):
+    """Home do gerente: funil agregado + ranking equipe + leads sem responsável."""
+    from apps.comercial.crm.models import Oportunidade
+
+    agora = timezone.now()
+    janela_30d = agora - timedelta(days=30)
+
+    funil_status = (
+        Oportunidade.objects
+        .exclude(status='perdida')
+        .values('status')
+        .annotate(qtd=Count('id'), valor=Sum('valor_estimado'))
+        .order_by('status')
+    )
+
+    leads_sem_resp = LeadProspecto.objects.filter(
+        responsavel__isnull=True,
+        data_cadastro__gte=janela_30d,
+    ).count()
+
+    oportunidades_30d = Oportunidade.objects.filter(
+        criado_em__gte=janela_30d,
+    ).count()
+    fechadas_30d = Oportunidade.objects.filter(
+        status='ganha',
+        atualizado_em__gte=janela_30d,
+    ).count()
+    valor_fechado_30d = Oportunidade.objects.filter(
+        status='ganha',
+        atualizado_em__gte=janela_30d,
+    ).aggregate(total=Sum('valor_estimado'))['total'] or 0
+
+    return render(request, 'dashboard/home_gerente_comercial.html', {
+        'user': request.user,
+        'perfil_nome': 'Gerente Comercial',
+        'funil_status': list(funil_status),
+        'leads_sem_resp': leads_sem_resp,
+        'oportunidades_30d': oportunidades_30d,
+        'fechadas_30d': fechadas_30d,
+        'valor_fechado_30d': valor_fechado_30d,
+    })
+
+
+def _home_cs(request):
+    """Home do CS: indicações pendentes + NPS recente + membros novos do clube."""
+    agora = timezone.now()
+    janela_30d = agora - timedelta(days=30)
+
+    contexto = {
+        'user': request.user,
+        'perfil_nome': 'CS',
+        'agora': agora,
+    }
+
+    # Tenta carregar dados de CS — se modelos não existirem (módulo desativado), fallback gracioso
+    try:
+        from apps.cs.indicacoes.models import Indicacao
+        contexto['indicacoes_pendentes'] = Indicacao.objects.filter(status='pendente').count()
+        contexto['indicacoes_30d'] = Indicacao.objects.filter(criado_em__gte=janela_30d).count()
+    except Exception:
+        contexto['indicacoes_pendentes'] = None
+        contexto['indicacoes_30d'] = None
+
+    try:
+        from apps.cs.clube.models import MembroClube
+        contexto['membros_novos_30d'] = MembroClube.objects.filter(criado_em__gte=janela_30d).count()
+        contexto['membros_total'] = MembroClube.objects.count()
+    except Exception:
+        contexto['membros_novos_30d'] = None
+        contexto['membros_total'] = None
+
+    return render(request, 'dashboard/home_cs.html', contexto)
+
+
+@login_required(login_url='sistema:login')
 def vendas_view(request):
     """View para a página de gerenciamento de vendas (clientes Hubsoft)."""
     filter_fields = [

@@ -4,6 +4,9 @@ from . import views
 app_name = 'dashboard'
 
 urlpatterns = [
+    # Home personalizada por perfil — entry point pós-login
+    path('home/', views.home_router, name='home'),
+
     # Dashboard principal
     path('dashboard/', views.dashboard_view, name='dashboard'),
     path('dashboard1/', views.dashboard1, name='dashboard1'),

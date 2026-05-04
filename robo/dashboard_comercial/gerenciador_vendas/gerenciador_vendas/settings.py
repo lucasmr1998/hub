@@ -285,7 +285,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Login
 LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/dashboard1/'
+LOGIN_REDIRECT_URL = '/home/'  # roteado por perfil em apps/dashboard/views.py:home_router
 LOGOUT_REDIRECT_URL = '/'
 
 # Disable APPEND_SLASH for API endpoints to avoid POST redirect issues

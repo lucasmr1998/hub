@@ -1,0 +1,59 @@
+{% extends "layouts/layout_app.html" %}
+{% load static %}
+
+{% block title %}Início — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-eyebrow">Início · Vendedor</div>
+  <h1 class="page-title">Olá, {{ user.first_name|default:user.username }}.</h1>
+  <p class="page-subtitle">Suas oportunidades, tarefas e leads novos. Foque no que precisa de você hoje.</p>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 32px;">
+  {% include "components/stat_card.html" with label="Minhas oportunidades" value=oportunidades_qtd icon="bi-briefcase" %}
+  {% include "components/stat_card.html" with label="Valor em aberto" value=oportunidades_valor icon="bi-currency-dollar" %}
+  {% include "components/stat_card.html" with label="Tarefas hoje" value=tarefas_hoje_qtd icon="bi-check-circle" %}
+  {% include "components/stat_card.html" with label="Tarefas vencidas" value=tarefas_vencidas icon="bi-clock-history" %}
+</div>
+
+<div class="card" style="margin-bottom: 24px;">
+  <h3 style="margin: 0 0 16px; font-size: 16px; font-weight: 700;">Suas tarefas de hoje</h3>
+  {% if tarefas_hoje %}
+    <ul style="list-style: none; padding: 0; margin: 0;">
+      {% for t in tarefas_hoje %}
+        <li style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--color-border);">
+          <div>
+            <div style="font-weight: 600;">{{ t.titulo }}</div>
+            {% if t.lead %}<div style="font-size: 13px; color: var(--color-text-muted);">Lead: {{ t.lead.nome_razaosocial }}</div>{% endif %}
+          </div>
+          <span style="font-size: 13px; color: var(--color-text-muted);">{{ t.data_vencimento|time:"H:i" }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p style="color: var(--color-text-muted); margin: 0;">Sem tarefas hoje. Hora de prospectar.</p>
+  {% endif %}
+  <div style="margin-top: 16px; text-align: right;">
+    <a href="/crm/tarefas/" class="btn btn-secondary btn-sm">Ver todas →</a>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+  <div class="card">
+    <h3 style="margin: 0 0 8px; font-size: 16px; font-weight: 700;">Leads novos</h3>
+    <p style="font-size: 32px; font-weight: 800; margin: 8px 0; color: var(--color-primary);">{{ leads_novos }}</p>
+    <p style="color: var(--color-text-muted); font-size: 13px; margin: 0;">cadastrados hoje</p>
+    <a href="/leads/" class="btn btn-secondary btn-sm" style="margin-top: 12px;">Ver leads →</a>
+  </div>
+
+  <div class="card">
+    <h3 style="margin: 0 0 8px; font-size: 16px; font-weight: 700;">Atalhos</h3>
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+      <a href="/crm/" class="btn btn-secondary btn-sm"><i class="bi bi-kanban"></i> Pipeline</a>
+      <a href="/inbox/" class="btn btn-secondary btn-sm"><i class="bi bi-chat-dots"></i> Inbox</a>
+      <a href="/crm/tarefas/" class="btn btn-secondary btn-sm"><i class="bi bi-check2-square"></i> Tarefas</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
