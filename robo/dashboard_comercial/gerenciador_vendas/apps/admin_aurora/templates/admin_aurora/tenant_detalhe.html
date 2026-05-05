@@ -249,19 +249,26 @@
     <div class="card">
       <div class="card-header"><h3 class="card-title"><i class="bi bi-plug"></i> Integracoes</h3></div>
       <div class="card-body">
-        {% if integracao %}
-          <div class="admin-form-grid">
-            <div class="admin-field"><span class="admin-field-label">HubSoft URL</span><span class="admin-field-value">{{ integracao.base_url }}</span></div>
-            <div class="admin-field">
-              <span class="admin-field-label">Status</span>
-              <span>
-                {% if integracao.ativa %}
-                  {% include "components/badge.html" with variant="success" label="Conectado" dot=True %}
-                {% else %}
-                  {% include "components/badge.html" with variant="danger" label="Desconectado" dot=True %}
-                {% endif %}
-              </span>
-            </div>
+        {% if integracoes %}
+          <div style="display: flex; flex-direction: column; gap: var(--sp-3);">
+            {% for integ in integracoes %}
+              <div style="padding: var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);">
+                <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: var(--sp-2);">
+                    <strong style="font-size: var(--fs-sm);">{{ integ.nome }}</strong>
+                    <span style="font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--color-surface-2, #F1F5F9); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em;">{{ integ.tipo }}</span>
+                  </div>
+                  <div style="font-size: var(--fs-xs); color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ integ.base_url|default:"—" }}</div>
+                </div>
+                <div>
+                  {% if integ.ativa %}
+                    {% include "components/badge.html" with variant="success" label="Ativa" dot=True %}
+                  {% else %}
+                    {% include "components/badge.html" with variant="neutral" label="Inativa" dot=True %}
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
           </div>
         {% else %}
           <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0;">Nenhuma integracao configurada.</p>

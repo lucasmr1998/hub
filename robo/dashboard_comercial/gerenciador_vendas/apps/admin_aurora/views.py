@@ -107,7 +107,7 @@ def tenant_detalhe_view(request, tenant_id):
     from apps.integracoes.models import IntegracaoAPI
     from apps.sistema.models import PermissaoUsuario
     leads_count = LeadProspecto.all_tenants.filter(tenant=tenant).count()
-    integracao = IntegracaoAPI.all_tenants.filter(tenant=tenant, tipo='hubsoft').first()
+    integracoes = IntegracaoAPI.all_tenants.filter(tenant=tenant).order_by('tipo', 'nome')
 
     # Carregar permissoes dos usuarios
     permissoes = {p.user_id: p for p in PermissaoUsuario.objects.select_related('perfil').filter(tenant=tenant)}
@@ -150,7 +150,7 @@ def tenant_detalhe_view(request, tenant_id):
         'config': config,
         'users': users,
         'leads_count': leads_count,
-        'integracao': integracao,
+        'integracoes': integracoes,
     })
 
 
