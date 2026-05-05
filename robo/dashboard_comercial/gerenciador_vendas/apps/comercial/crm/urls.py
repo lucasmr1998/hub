@@ -20,6 +20,9 @@ urlpatterns = [
     path('oportunidades/<int:pk>/notas/', views.api_notas_oportunidade, name='api_notas_oportunidade'),
     path('oportunidades/<int:pk>/tarefas/', views.api_tarefas_oportunidade, name='api_tarefas_oportunidade'),
 
+    # Relatórios
+    path('relatorios/win-loss/', views.relatorio_win_loss, name='relatorio_win_loss'),
+
     # Tarefas
     path('tarefas/', views.tarefas_lista, name='tarefas_lista'),
     path('tarefas/criar/', views.api_tarefa_criar, name='api_tarefa_criar'),

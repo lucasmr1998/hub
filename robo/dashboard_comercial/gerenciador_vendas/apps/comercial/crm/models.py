@@ -216,8 +216,38 @@ class OportunidadeVenda(TenantMixin):
     tags = models.ManyToManyField(TagCRM, blank=True, related_name='oportunidades', verbose_name="Tags")
 
     data_entrada_estagio = models.DateTimeField(default=timezone.now, verbose_name="Entrada no Estágio Atual")
-    motivo_perda = models.TextField(null=True, blank=True, verbose_name="Motivo da Perda")
+    motivo_perda = models.TextField(null=True, blank=True, verbose_name="Motivo da Perda (texto livre)")
     concorrente_perdido = models.CharField(max_length=100, null=True, blank=True, verbose_name="Concorrente (Perda)")
+
+    # Win/Loss analysis — categorias agregáveis
+    MOTIVO_PERDA_CHOICES = [
+        ('preco', 'Preço'),
+        ('concorrente', 'Concorrente'),
+        ('timing', 'Timing / não era o momento'),
+        ('sem_orcamento', 'Sem orçamento / poder de decisão'),
+        ('viabilidade_tecnica', 'Sem viabilidade técnica'),
+        ('sem_resposta', 'Sumiu / sem resposta'),
+        ('outro', 'Outro'),
+    ]
+    MOTIVO_GANHO_CHOICES = [
+        ('preco', 'Preço competitivo'),
+        ('atendimento', 'Atendimento / experiência'),
+        ('viabilidade', 'Viabilidade / cobertura'),
+        ('combo_plano', 'Plano / combo certo'),
+        ('indicacao', 'Indicação / boca-a-boca'),
+        ('marca', 'Reputação / marca'),
+        ('outro', 'Outro'),
+    ]
+    motivo_perda_categoria = models.CharField(
+        max_length=30, choices=MOTIVO_PERDA_CHOICES,
+        null=True, blank=True, db_index=True,
+        verbose_name="Categoria do motivo de perda",
+    )
+    motivo_ganho_categoria = models.CharField(
+        max_length=30, choices=MOTIVO_GANHO_CHOICES,
+        null=True, blank=True, db_index=True,
+        verbose_name="Categoria do motivo de ganho",
+    )
     contrato_hubsoft_id = models.CharField(max_length=100, null=True, blank=True, verbose_name="ID Contrato Hubsoft")
     churn_risk_score = models.IntegerField(null=True, blank=True, verbose_name="Score de Churn (0-100)")
 

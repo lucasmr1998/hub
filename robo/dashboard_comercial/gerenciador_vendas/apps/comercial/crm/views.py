@@ -474,7 +474,10 @@ def api_editar_oportunidade(request, pk):
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({'error': 'JSON invalido'}, status=400)
 
-    campos_oport = ['titulo', 'valor_estimado', 'prioridade', 'motivo_perda']
+    campos_oport = [
+        'titulo', 'valor_estimado', 'prioridade', 'motivo_perda',
+        'motivo_perda_categoria', 'motivo_ganho_categoria', 'concorrente_perdido',
+    ]
     campos_lead = [
         'nome_razaosocial', 'email', 'telefone', 'cpf_cnpj', 'cidade', 'estado',
         'cep', 'rua', 'numero_residencia', 'bairro', 'empresa', 'observacoes',
@@ -2581,4 +2584,88 @@ def regra_pipeline_preview(request, pk):
         'oportunidades_que_bateriam': matches,
         'total_avaliado': min(oportunidades.count(), limite),
         'limite_configurado': limite,
+    })
+
+
+@login_required
+def relatorio_win_loss(request):
+    """
+    Dashboard de Win/Loss analysis.
+    Mostra oportunidades ganhas e perdidas no período, agrupadas por motivo
+    categorizado, com timeline e filtro por período.
+    """
+    from datetime import timedelta
+    from django.db.models import Count, Sum
+
+    if not user_tem_funcionalidade(request, 'comercial.ver_todas_oportunidades'):
+        return JsonResponse({'error': 'Acesso negado'}, status=403)
+
+    # Período: últimos 90 dias por padrão
+    dias = int(request.GET.get('dias', 90))
+    desde = timezone.now() - timedelta(days=dias)
+
+    qs = OportunidadeVenda.objects.filter(
+        atualizado_em__gte=desde,
+        status__in=['ganha', 'perdida'],
+    )
+
+    ganhas = qs.filter(status='ganha')
+    perdidas = qs.filter(status='perdida')
+
+    breakdown_perda = (
+        perdidas.values('motivo_perda_categoria')
+        .annotate(qtd=Count('id'), valor=Sum('valor_estimado'))
+        .order_by('-qtd')
+    )
+    breakdown_ganho = (
+        ganhas.values('motivo_ganho_categoria')
+        .annotate(qtd=Count('id'), valor=Sum('valor_estimado'))
+        .order_by('-qtd')
+    )
+
+    total_ganhas = ganhas.count()
+    total_perdidas = perdidas.count()
+    total = total_ganhas + total_perdidas
+    win_rate = round(total_ganhas / total * 100, 1) if total else 0
+
+    valor_ganho = ganhas.aggregate(total=Sum('valor_estimado'))['total'] or 0
+    valor_perdido = perdidas.aggregate(total=Sum('valor_estimado'))['total'] or 0
+
+    # Mapas de label legíveis
+    perda_labels = dict(OportunidadeVenda.MOTIVO_PERDA_CHOICES)
+    ganho_labels = dict(OportunidadeVenda.MOTIVO_GANHO_CHOICES)
+
+    breakdown_perda_lst = []
+    for item in breakdown_perda:
+        cat = item['motivo_perda_categoria']
+        breakdown_perda_lst.append({
+            'categoria': cat,
+            'label': perda_labels.get(cat, 'Sem categoria') if cat else 'Sem categoria',
+            'qtd': item['qtd'],
+            'valor': item['valor'] or 0,
+            'percent': round(item['qtd'] / total_perdidas * 100, 1) if total_perdidas else 0,
+        })
+
+    breakdown_ganho_lst = []
+    for item in breakdown_ganho:
+        cat = item['motivo_ganho_categoria']
+        breakdown_ganho_lst.append({
+            'categoria': cat,
+            'label': ganho_labels.get(cat, 'Sem categoria') if cat else 'Sem categoria',
+            'qtd': item['qtd'],
+            'valor': item['valor'] or 0,
+            'percent': round(item['qtd'] / total_ganhas * 100, 1) if total_ganhas else 0,
+        })
+
+    return render(request, 'crm/relatorio_win_loss.html', {
+        'dias': dias,
+        'desde': desde,
+        'total_ganhas': total_ganhas,
+        'total_perdidas': total_perdidas,
+        'win_rate': win_rate,
+        'valor_ganho': valor_ganho,
+        'valor_perdido': valor_perdido,
+        'breakdown_perda': breakdown_perda_lst,
+        'breakdown_ganho': breakdown_ganho_lst,
+        'page_title': 'Win/Loss Analysis',
     })
