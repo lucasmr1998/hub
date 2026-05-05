@@ -8,6 +8,7 @@ urlpatterns = [
     path('leads/', views.leads_view, name='leads'),
     path('leads/<int:lead_id>/', views.lead_detail_view, name='lead_detail'),
     path('api/leads/criar/', views.api_lead_criar, name='api_lead_criar'),
+    path('api/leads/<int:lead_id>/risco-inadimplencia/', views.api_lead_risco_inadimplencia, name='api_lead_risco_inadimplencia'),
     path('api/leads/<int:lead_id>/editar/', views.api_lead_editar, name='api_lead_editar'),
     path('api/leads/<int:lead_id>/excluir/', views.api_lead_excluir, name='api_lead_excluir'),
     path('historico/<int:historico_id>/', views.historico_detail_view, name='historico_detail'),

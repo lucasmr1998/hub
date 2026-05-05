@@ -69,6 +69,46 @@ def api_lead_excluir(request, lead_id):
 
 
 @login_required(login_url='sistema:login')
+@require_http_methods(["GET"])
+def api_lead_risco_inadimplencia(request, lead_id):
+    """
+    Calcula score de risco de inadimplência pro lead.
+    Query params opcionais: ?plano_valor=199.90&forma_cobranca=boleto
+    """
+    from apps.comercial.cadastro.services import risco_inadimplencia
+
+    try:
+        lead = LeadProspecto.objects.get(id=lead_id)
+    except LeadProspecto.DoesNotExist:
+        return JsonResponse({'error': 'Lead nao encontrado'}, status=404)
+
+    plano_valor = request.GET.get('plano_valor')
+    forma_cobranca = request.GET.get('forma_cobranca')
+
+    score, sinais = risco_inadimplencia.calcular(
+        lead, plano_valor=plano_valor, forma_cobranca=forma_cobranca,
+    )
+    classe = risco_inadimplencia.classificar(score)
+
+    return JsonResponse({
+        'score': score,
+        'classe': classe,
+        'classe_label': {
+            'baixo': 'Risco baixo',
+            'medio': 'Risco médio',
+            'alto': 'Alto risco — requer aprovação de gerente',
+            'sem_dados': 'Sem dados',
+        }.get(classe, classe),
+        'sinais': sinais,
+        'requer_aprovacao_gerente': risco_inadimplencia.requer_aprovacao_gerente(score),
+        'parametros_usados': {
+            'plano_valor': plano_valor,
+            'forma_cobranca': forma_cobranca,
+        },
+    })
+
+
+@login_required(login_url='sistema:login')
 @require_http_methods(["POST"])
 def api_lead_criar(request):
     """
