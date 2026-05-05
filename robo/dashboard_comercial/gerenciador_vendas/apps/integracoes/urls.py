@@ -7,6 +7,7 @@ urlpatterns = [
     # Página de gerenciamento
     path('', views.integracoes_view, name='integracoes'),
     path('saude/', views.saude_integracoes_view, name='saude_integracoes'),
+    path('churn-score/', views.configuracao_churn_score_view, name='configuracao_churn_score'),
     path('<int:pk>/', views.integracao_detalhe, name='integracao_detalhe'),
     path('<int:pk>/api/defaults/', views.api_integracao_defaults, name='api_integracao_defaults'),
     path('<int:pk>/api/sincronizar-catalogo/', views.api_integracao_sincronizar_catalogo, name='api_integracao_sincronizar_catalogo'),

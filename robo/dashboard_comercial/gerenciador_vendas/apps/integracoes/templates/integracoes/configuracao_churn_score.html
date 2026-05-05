@@ -1,0 +1,247 @@
+{% extends "layouts/layout_app.html" %}
+{% load static %}
+
+{% block title %}Configuração Churn Score — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-eyebrow">Configurações · Churn</div>
+  <h1 class="page-title">Configuração do scanner de churn</h1>
+  <p class="page-subtitle">Ajuste quais sinais usar e o peso de cada um. Os defaults são heurística do Hubtrix — adapte para a realidade do seu provedor.</p>
+</div>
+
+<style>
+  .churn-form { max-width: 900px; }
+  .churn-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .churn-card-disabled { opacity: 0.55; }
+  .churn-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .churn-card-title { font-size: 15px; font-weight: 700; margin: 0; }
+  .churn-card-desc { font-size: 12px; color: var(--color-text-muted); margin: 0 0 12px; }
+  .churn-row { display: grid; grid-template-columns: 1fr 100px; gap: 12px; align-items: center; margin-top: 10px; }
+  .churn-row-extra { display: grid; grid-template-columns: 1fr 100px; gap: 12px; align-items: center; margin-top: 8px; }
+  .churn-label { font-size: 13px; color: var(--color-text); }
+  .churn-input { width: 100%; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 14px; text-align: right; }
+
+  .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #CBD5E1; transition: 0.3s; border-radius: 24px; }
+  .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; transition: 0.3s; border-radius: 50%; }
+  .toggle-switch input:checked + .toggle-slider { background: var(--color-primary, #252020); }
+  .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+  .threshold-bar { background: linear-gradient(90deg, #10B981 0%, #10B981 var(--p1), #F59E0B var(--p1), #F59E0B var(--p2), #DC2626 var(--p2), #DC2626 100%); height: 12px; border-radius: 6px; margin: 12px 0; }
+
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 700px) { .preview-grid { grid-template-columns: 1fr; } }
+  .preview-card { padding: 12px; border: 1px solid var(--color-border); border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .preview-score { font-weight: 700; font-size: 16px; }
+  .preview-classe-saudavel { color: #10B981; }
+  .preview-classe-atencao { color: #F59E0B; }
+  .preview-classe-alto_risco { color: #DC2626; }
+</style>
+
+<form method="post" class="churn-form">
+  {% csrf_token %}
+
+  <h2 style="font-size: 18px; font-weight: 700; margin: 24px 0 12px;">Sinais</h2>
+
+  {# === Inadimplência === #}
+  <div class="churn-card" id="card-inadimplencia">
+    <div class="churn-card-header">
+      <h3 class="churn-card-title">💰 Inadimplência ativa</h3>
+      <label class="toggle-switch">
+        <input type="checkbox" name="inadimplencia_ativo" {% if config.inadimplencia_ativo %}checked{% endif %} onchange="toggleCard('inadimplencia', this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <p class="churn-card-desc">Cliente com alerta de cobrança/atraso/pendência ativo no ERP.</p>
+    <div class="churn-row">
+      <span class="churn-label">Peso (0-50)</span>
+      <input class="churn-input" type="number" name="inadimplencia_peso" value="{{ config.inadimplencia_peso }}" min="0" max="50">
+    </div>
+  </div>
+
+  {# === Múltiplos tickets === #}
+  <div class="churn-card" id="card-multiplos_tickets">
+    <div class="churn-card-header">
+      <h3 class="churn-card-title">🎫 Múltiplos tickets abertos</h3>
+      <label class="toggle-switch">
+        <input type="checkbox" name="multiplos_tickets_ativo" {% if config.multiplos_tickets_ativo %}checked{% endif %} onchange="toggleCard('multiplos_tickets', this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <p class="churn-card-desc">Cliente com N+ tickets de suporte abertos no mês — sinal de frustração reincidente.</p>
+    <div class="churn-row">
+      <span class="churn-label">Peso (0-50)</span>
+      <input class="churn-input" type="number" name="multiplos_tickets_peso" value="{{ config.multiplos_tickets_peso }}" min="0" max="50">
+    </div>
+    <div class="churn-row-extra">
+      <span class="churn-label">Quantidade mínima de tickets</span>
+      <input class="churn-input" type="number" name="multiplos_tickets_minimo" value="{{ config.multiplos_tickets_minimo }}" min="2" max="20">
+    </div>
+  </div>
+
+  {# === 1 ticket === #}
+  <div class="churn-card" id="card-ticket_aberto">
+    <div class="churn-card-header">
+      <h3 class="churn-card-title">📩 1 ticket aberto</h3>
+      <label class="toggle-switch">
+        <input type="checkbox" name="ticket_aberto_ativo" {% if config.ticket_aberto_ativo %}checked{% endif %} onchange="toggleCard('ticket_aberto', this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <p class="churn-card-desc">Cliente com pelo menos 1 ticket aberto. Atenção, não pânico.</p>
+    <div class="churn-row">
+      <span class="churn-label">Peso (0-30)</span>
+      <input class="churn-input" type="number" name="ticket_aberto_peso" value="{{ config.ticket_aberto_peso }}" min="0" max="30">
+    </div>
+  </div>
+
+  {# === Sem atividade === #}
+  <div class="churn-card" id="card-sem_atividade">
+    <div class="churn-card-header">
+      <h3 class="churn-card-title">🔇 Sem atividade no inbox</h3>
+      <label class="toggle-switch">
+        <input type="checkbox" name="sem_atividade_ativo" {% if config.sem_atividade_ativo %}checked{% endif %} onchange="toggleCard('sem_atividade', this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <p class="churn-card-desc">Cliente sem nenhuma conversa nos últimos N dias — vínculo enfraquecendo.</p>
+    <div class="churn-row">
+      <span class="churn-label">Peso (0-50)</span>
+      <input class="churn-input" type="number" name="sem_atividade_peso" value="{{ config.sem_atividade_peso }}" min="0" max="50">
+    </div>
+    <div class="churn-row-extra">
+      <span class="churn-label">Janela em dias</span>
+      <input class="churn-input" type="number" name="sem_atividade_dias" value="{{ config.sem_atividade_dias }}" min="7" max="365">
+    </div>
+  </div>
+
+  {# === Cliente novo === #}
+  <div class="churn-card" id="card-cliente_novo">
+    <div class="churn-card-header">
+      <h3 class="churn-card-title">🌱 Cliente novo (curva da banheira)</h3>
+      <label class="toggle-switch">
+        <input type="checkbox" name="cliente_novo_ativo" {% if config.cliente_novo_ativo %}checked{% endif %} onchange="toggleCard('cliente_novo', this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <p class="churn-card-desc">Cliente novo está numa janela vulnerável (frustração inicial, ainda não fidelizou).</p>
+    <div class="churn-row">
+      <span class="churn-label">Peso (0-30)</span>
+      <input class="churn-input" type="number" name="cliente_novo_peso" value="{{ config.cliente_novo_peso }}" min="0" max="30">
+    </div>
+    <div class="churn-row-extra">
+      <span class="churn-label">Corte em meses</span>
+      <input class="churn-input" type="number" name="cliente_novo_meses" value="{{ config.cliente_novo_meses }}" min="1" max="24">
+    </div>
+  </div>
+
+  {# === Cliente longo === #}
+  <div class="churn-card" id="card-cliente_longo">
+    <div class="churn-card-header">
+      <h3 class="churn-card-title">⏳ Cliente longo</h3>
+      <label class="toggle-switch">
+        <input type="checkbox" name="cliente_longo_ativo" {% if config.cliente_longo_ativo %}checked{% endif %} onchange="toggleCard('cliente_longo', this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <p class="churn-card-desc">Cliente muito antigo pode estar saturado ou alvo da concorrência.</p>
+    <div class="churn-row">
+      <span class="churn-label">Peso (0-30)</span>
+      <input class="churn-input" type="number" name="cliente_longo_peso" value="{{ config.cliente_longo_peso }}" min="0" max="30">
+    </div>
+    <div class="churn-row-extra">
+      <span class="churn-label">Corte em meses</span>
+      <input class="churn-input" type="number" name="cliente_longo_meses" value="{{ config.cliente_longo_meses }}" min="12" max="120">
+    </div>
+  </div>
+
+  {# === NPS detrator === #}
+  <div class="churn-card" id="card-nps_detrator">
+    <div class="churn-card-header">
+      <h3 class="churn-card-title">😡 NPS detrator</h3>
+      <label class="toggle-switch">
+        <input type="checkbox" name="nps_detrator_ativo" {% if config.nps_detrator_ativo %}checked{% endif %} onchange="toggleCard('nps_detrator', this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <p class="churn-card-desc">⚠️ Requer módulo NPS configurado. Cliente que avaliou com nota ≤ 6 declarou intenção de não recomendar.</p>
+    <div class="churn-row">
+      <span class="churn-label">Peso (0-50)</span>
+      <input class="churn-input" type="number" name="nps_detrator_peso" value="{{ config.nps_detrator_peso }}" min="0" max="50">
+    </div>
+  </div>
+
+  {# === Thresholds === #}
+  <h2 style="font-size: 18px; font-weight: 700; margin: 32px 0 12px;">Thresholds de classificação</h2>
+  <div class="churn-card">
+    <div class="churn-row">
+      <span class="churn-label">Atenção (a partir de)</span>
+      <input class="churn-input" type="number" name="threshold_atencao" value="{{ config.threshold_atencao }}" min="10" max="80">
+    </div>
+    <div class="churn-row-extra">
+      <span class="churn-label">Alto risco (a partir de)</span>
+      <input class="churn-input" type="number" name="threshold_alto_risco" value="{{ config.threshold_alto_risco }}" min="20" max="100">
+    </div>
+    <div class="threshold-bar" style="--p1: {{ config.threshold_atencao }}%; --p2: {{ config.threshold_alto_risco }}%;"></div>
+    <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--color-text-muted);">
+      <span>0 — saudável</span>
+      <span>{{ config.threshold_atencao }} — atenção</span>
+      <span>{{ config.threshold_alto_risco }} — alto risco</span>
+      <span>100</span>
+    </div>
+  </div>
+
+  <div class="churn-card">
+    <div class="churn-card-header">
+      <h3 class="churn-card-title">📨 Notificar gerentes em alto risco</h3>
+      <label class="toggle-switch">
+        <input type="checkbox" name="notificar_em_alto_risco" {% if config.notificar_em_alto_risco %}checked{% endif %}>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <p class="churn-card-desc">Quando cliente passa de saudável/atenção pra alto risco, dispara notificação automática pros perfis Gerente CS / Operador CS / Admin.</p>
+  </div>
+
+  {# === Preview === #}
+  <h2 style="font-size: 18px; font-weight: 700; margin: 32px 0 12px;">Preview com sua configuração atual</h2>
+  <p style="font-size: 13px; color: var(--color-text-muted); margin-bottom: 16px;">Cenários típicos e que score gerariam com seus pesos atuais. Salve as alterações pra atualizar.</p>
+  <div class="preview-grid">
+    {% for p in previews %}
+      <div class="preview-card">
+        <span style="font-size: 13px;">{{ p.nome }}</span>
+        <span class="preview-score preview-classe-{{ p.classe }}">{{ p.score }} <small>({{ p.classe }})</small></span>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div style="display: flex; justify-content: space-between; gap: 12px; margin-top: 32px;">
+    <button type="submit" name="action" value="restaurar_padroes" class="btn btn-secondary"
+            onclick="return confirm('Tem certeza? Vai resetar todos os pesos pros padrões Hubtrix.');">
+      <i class="bi bi-arrow-counterclockwise"></i> Restaurar padrões Hubtrix
+    </button>
+    <button type="submit" name="action" value="salvar" class="btn btn-primary">
+      <i class="bi bi-check-lg"></i> Salvar configuração
+    </button>
+  </div>
+</form>
+
+<script>
+  function toggleCard(slug, ativo) {
+    const card = document.getElementById('card-' + slug);
+    if (!card) return;
+    if (ativo) card.classList.remove('churn-card-disabled');
+    else card.classList.add('churn-card-disabled');
+  }
+
+  // Aplicar estado inicial
+  document.addEventListener('DOMContentLoaded', () => {
+    const slugs = ['inadimplencia', 'multiplos_tickets', 'ticket_aberto', 'sem_atividade', 'cliente_novo', 'cliente_longo', 'nps_detrator'];
+    slugs.forEach(s => {
+      const cb = document.querySelector(`input[name="${s}_ativo"]`);
+      if (cb) toggleCard(s, cb.checked);
+    });
+  });
+</script>
+{% endblock %}

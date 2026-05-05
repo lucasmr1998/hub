@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Count
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
@@ -316,6 +316,87 @@ def integracoes_view(request):
         'is_paginated': page_obj.has_other_pages(),
         'tipos_disponiveis': tipos_disponiveis,
         'tipo_info': TIPO_INFO,
+    })
+
+
+@login_required
+def configuracao_churn_score_view(request):
+    """
+    Tela de configuração dos pesos do scanner de churn por tenant.
+    Permissão: superuser ou Admin/Gerente CS.
+    """
+    from apps.integracoes.models import ConfiguracaoChurnScore
+    from apps.integracoes.services import churn_score as churn_svc
+
+    user = request.user
+    if not user.is_superuser:
+        perfil_nome = None
+        if hasattr(user, 'permissoes') and user.permissoes and user.permissoes.perfil:
+            perfil_nome = user.permissoes.perfil.nome
+        if perfil_nome not in ('Admin', 'Gerente CS', 'Operador CS'):
+            return JsonResponse({'error': 'Acesso negado'}, status=403)
+
+    tenant = request.tenant
+    config = ConfiguracaoChurnScore.get_or_create_default(tenant)
+
+    if request.method == 'POST':
+        action = request.POST.get('action', 'salvar')
+
+        if action == 'restaurar_padroes':
+            config.restaurar_padroes()
+            from apps.sistema.utils import registrar_acao
+            registrar_acao('config', 'restaurar_padroes', 'churn_score', config.id,
+                           'Config churn score restaurada pros padroes Hubtrix', request=request)
+            return redirect('integracoes:configuracao_churn_score')
+
+        # Salvar
+        campos = [
+            'inadimplencia_ativo', 'inadimplencia_peso',
+            'multiplos_tickets_ativo', 'multiplos_tickets_peso', 'multiplos_tickets_minimo',
+            'ticket_aberto_ativo', 'ticket_aberto_peso',
+            'sem_atividade_ativo', 'sem_atividade_peso', 'sem_atividade_dias',
+            'cliente_novo_ativo', 'cliente_novo_peso', 'cliente_novo_meses',
+            'cliente_longo_ativo', 'cliente_longo_peso', 'cliente_longo_meses',
+            'nps_detrator_ativo', 'nps_detrator_peso',
+            'threshold_atencao', 'threshold_alto_risco',
+            'notificar_em_alto_risco',
+        ]
+        for campo in campos:
+            if campo.endswith('_ativo') or campo == 'notificar_em_alto_risco':
+                setattr(config, campo, request.POST.get(campo) == 'on')
+            else:
+                valor = request.POST.get(campo, '').strip()
+                if valor.isdigit():
+                    setattr(config, campo, int(valor))
+
+        # Validar thresholds
+        if config.threshold_alto_risco <= config.threshold_atencao:
+            config.threshold_alto_risco = config.threshold_atencao + 20
+
+        config.save()
+
+        from apps.sistema.utils import registrar_acao
+        registrar_acao('config', 'editar', 'churn_score', config.id,
+                       'Config churn score atualizada', request=request)
+        return redirect('integracoes:configuracao_churn_score')
+
+    # Preview: simular score com vários cenários comuns
+    cenarios = [
+        ('Inadimplente apenas', ['inadimplencia']),
+        ('Inadimplente + 2 tickets', ['inadimplencia', 'multiplos_tickets']),
+        ('2 tickets + sem atividade', ['multiplos_tickets', 'sem_atividade']),
+        ('Cliente novo + 1 ticket', ['cliente_novo', 'ticket_aberto']),
+        ('Inadimplente + 2 tickets + sem atividade', ['inadimplencia', 'multiplos_tickets', 'sem_atividade']),
+        ('NPS detrator + inadimplente', ['nps_detrator', 'inadimplencia']),
+    ]
+    previews = []
+    for nome, sinais in cenarios:
+        score, classe = churn_svc.calcular_score_preview(tenant, sinais)
+        previews.append({'nome': nome, 'score': score, 'classe': classe})
+
+    return render(request, 'integracoes/configuracao_churn_score.html', {
+        'config': config,
+        'previews': previews,
     })
 
 

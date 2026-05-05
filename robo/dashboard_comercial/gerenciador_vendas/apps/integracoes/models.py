@@ -575,6 +575,106 @@ class ClienteSGP(TenantMixin):
         return f'{self.nome} (SGP id={self.id_cliente_sgp})'
 
 
+class ConfiguracaoChurnScore(TenantMixin):
+    """
+    Configuração por tenant dos pesos e thresholds do scanner de churn.
+
+    Singleton por tenant — usa get_or_create_default(tenant). Cada sinal é
+    ligável independentemente, com peso ajustável e parâmetros específicos.
+
+    Defaults sensatos (heurística do Hubtrix). Tenant pode customizar pra
+    sua realidade — ex: ISP sem módulo NPS desliga o sinal NPS, ISP com
+    histórico de inadimplência diferente ajusta o peso.
+    """
+    # === Sinal: Inadimplência ===
+    inadimplencia_ativo = models.BooleanField(default=True, verbose_name='Inadimplência: ativo')
+    inadimplencia_peso = models.PositiveSmallIntegerField(default=25, verbose_name='Inadimplência: peso')
+
+    # === Sinal: Múltiplos tickets abertos ===
+    multiplos_tickets_ativo = models.BooleanField(default=True, verbose_name='Múltiplos tickets: ativo')
+    multiplos_tickets_peso = models.PositiveSmallIntegerField(default=30, verbose_name='Múltiplos tickets: peso')
+    multiplos_tickets_minimo = models.PositiveSmallIntegerField(
+        default=2, verbose_name='Múltiplos tickets: qtd mínima',
+        help_text='Quantidade mínima de tickets abertos pra acionar este sinal',
+    )
+
+    # === Sinal: 1 ticket aberto ===
+    ticket_aberto_ativo = models.BooleanField(default=True, verbose_name='Ticket aberto: ativo')
+    ticket_aberto_peso = models.PositiveSmallIntegerField(default=10, verbose_name='Ticket aberto: peso')
+
+    # === Sinal: Sem atividade ===
+    sem_atividade_ativo = models.BooleanField(default=True, verbose_name='Sem atividade: ativo')
+    sem_atividade_peso = models.PositiveSmallIntegerField(default=20, verbose_name='Sem atividade: peso')
+    sem_atividade_dias = models.PositiveSmallIntegerField(
+        default=30, verbose_name='Sem atividade: janela em dias',
+        help_text='Sem conversas nos últimos N dias = aciona',
+    )
+
+    # === Sinal: Cliente novo ===
+    cliente_novo_ativo = models.BooleanField(default=True, verbose_name='Cliente novo: ativo')
+    cliente_novo_peso = models.PositiveSmallIntegerField(default=10, verbose_name='Cliente novo: peso')
+    cliente_novo_meses = models.PositiveSmallIntegerField(
+        default=6, verbose_name='Cliente novo: corte em meses',
+        help_text='Cliente com menos de N meses entra na curva da banheira inicial',
+    )
+
+    # === Sinal: Cliente longo ===
+    cliente_longo_ativo = models.BooleanField(default=True, verbose_name='Cliente longo: ativo')
+    cliente_longo_peso = models.PositiveSmallIntegerField(default=5, verbose_name='Cliente longo: peso')
+    cliente_longo_meses = models.PositiveSmallIntegerField(
+        default=36, verbose_name='Cliente longo: corte em meses',
+        help_text='Cliente com mais de N meses na outra ponta da banheira',
+    )
+
+    # === Sinal: NPS detrator (placeholder até módulo NPS) ===
+    nps_detrator_ativo = models.BooleanField(
+        default=False, verbose_name='NPS detrator: ativo',
+        help_text='Ative quando módulo NPS estiver configurado',
+    )
+    nps_detrator_peso = models.PositiveSmallIntegerField(default=25, verbose_name='NPS detrator: peso')
+
+    # === Thresholds de classificação ===
+    threshold_atencao = models.PositiveSmallIntegerField(
+        default=40, verbose_name='Threshold atenção',
+        help_text='Score >= este valor mas < alto_risco classifica como atenção',
+    )
+    threshold_alto_risco = models.PositiveSmallIntegerField(
+        default=60, verbose_name='Threshold alto risco',
+        help_text='Score >= este valor classifica como alto risco. Notifica gerentes.',
+    )
+
+    # === Notificações ===
+    notificar_em_alto_risco = models.BooleanField(
+        default=True, verbose_name='Notificar gerentes ao entrar em alto risco',
+    )
+
+    # === Auditoria ===
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'integracoes_config_churn_score'
+        verbose_name = 'Configuração de Churn Score'
+        verbose_name_plural = '⚙️ Config Churn Score (1 por tenant)'
+
+    def __str__(self):
+        return f'Config Churn Score · {self.tenant}'
+
+    @classmethod
+    def get_or_create_default(cls, tenant):
+        """Singleton por tenant. Cria com defaults se não existir."""
+        config, _ = cls.objects.get_or_create(tenant=tenant)
+        return config
+
+    def restaurar_padroes(self):
+        """Reseta todos os campos pros defaults do Hubtrix."""
+        for f in self._meta.fields:
+            if f.name in ('id', 'tenant', 'atualizado_em'):
+                continue
+            if f.has_default():
+                setattr(self, f.name, f.get_default())
+        self.save()
+
+
 class ClienteConsolidado(TenantMixin):
     """
     Cache normalizado de cliente vindo de qualquer ERP.
