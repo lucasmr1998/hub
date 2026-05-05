@@ -174,6 +174,7 @@
         wsSend({ action: 'join_conversa', conversa_id: id });
         loadConversaDetalhe(id);
         loadMensagens(id);
+        loadRespostasRapidas();  // recarrega com variáveis renderizadas pra essa conversa
         if (!state.wsConnected) startMessagePoll(id);
     }
 
@@ -340,7 +341,11 @@
     // ── Respostas rápidas ─────────────────────────────────────────────
 
     function loadRespostasRapidas() {
-        fetchJSON('/inbox/api/respostas-rapidas/').then(d => { state.respostasRapidas = d.respostas || []; });
+        // Se houver conversa ativa, pede o servidor pra renderizar as variáveis
+        const url = state.currentConversaId
+            ? '/inbox/api/respostas-rapidas/?conversa=' + state.currentConversaId
+            : '/inbox/api/respostas-rapidas/';
+        fetchJSON(url).then(d => { state.respostasRapidas = d.respostas || []; });
     }
 
     function showQuickResponses(filter) {
@@ -353,12 +358,18 @@
         }
         if (!items.length) { dropdown.style.display = 'none'; return; }
 
-        list.innerHTML = items.map(r => `
-            <div class="quick-response-item" data-content="${esc(r.conteudo)}">
-                <span class="quick-response-item-title">${esc(r.titulo)}</span>
-                ${r.atalho ? `<span class="quick-response-item-shortcut">${esc(r.atalho)}</span>` : ''}
-                <div class="quick-response-item-preview">${esc(r.conteudo.substring(0, 80))}</div>
-            </div>`).join('');
+        list.innerHTML = items.map(r => {
+            // Usa renderizado se disponível (conversa ativa); senão, conteudo cru
+            const previewText = r.conteudo_renderizado || r.conteudo;
+            const insertText = r.conteudo_renderizado || r.conteudo;
+            const hasVars = r.conteudo.includes('{{');
+            return `
+                <div class="quick-response-item" data-content="${esc(insertText)}">
+                    <span class="quick-response-item-title">${esc(r.titulo)}${hasVars && r.conteudo_renderizado ? ' <span style="font-size:10px;color:#10B981;">●</span>' : ''}</span>
+                    ${r.atalho ? `<span class="quick-response-item-shortcut">${esc(r.atalho)}</span>` : ''}
+                    <div class="quick-response-item-preview">${esc(previewText.substring(0, 80))}</div>
+                </div>`;
+        }).join('');
 
         dropdown.style.display = 'block';
         list.querySelectorAll('.quick-response-item').forEach(el => {

@@ -514,19 +514,93 @@ def api_notas(request, pk):
 
 @login_required
 def api_respostas_rapidas(request):
-    """GET: Listar respostas rápidas."""
+    """
+    GET: Listar respostas rápidas.
+
+    Query params opcionais:
+      ?conversa=<id> — se informado, retorna também `conteudo_renderizado`
+                       com variáveis substituídas pelos dados da conversa.
+
+    Variáveis suportadas em `conteudo`:
+      {{nome_cliente}}, {{primeiro_nome}}, {{telefone}}, {{email}},
+      {{atendente}}, {{primeiro_nome_atendente}}, {{empresa}}.
+    """
     respostas = RespostaRapida.objects.filter(ativo=True)
-    data = [
-        {
+
+    conversa = None
+    conversa_id = request.GET.get('conversa')
+    if conversa_id:
+        try:
+            conversa = Conversa.objects.select_related('lead', 'agente').filter(pk=conversa_id).first()
+        except Exception:
+            conversa = None
+
+    data = []
+    for r in respostas:
+        item = {
             'id': r.id,
             'titulo': r.titulo,
             'atalho': r.atalho,
             'conteudo': r.conteudo,
             'categoria': r.categoria,
         }
-        for r in respostas
-    ]
-    return JsonResponse({'respostas': data})
+        if conversa:
+            item['conteudo_renderizado'] = renderizar_resposta(r.conteudo, conversa, request.user)
+        data.append(item)
+
+    return JsonResponse({
+        'respostas': data,
+        'variaveis_disponiveis': [
+            {'tag': '{{nome_cliente}}', 'descricao': 'Nome completo do cliente / contato'},
+            {'tag': '{{primeiro_nome}}', 'descricao': 'Primeiro nome do cliente'},
+            {'tag': '{{telefone}}', 'descricao': 'Telefone do cliente'},
+            {'tag': '{{email}}', 'descricao': 'E-mail do cliente'},
+            {'tag': '{{atendente}}', 'descricao': 'Nome do atendente que está respondendo'},
+            {'tag': '{{primeiro_nome_atendente}}', 'descricao': 'Primeiro nome do atendente'},
+            {'tag': '{{empresa}}', 'descricao': 'Nome da empresa do cliente (se houver)'},
+        ],
+    })
+
+
+def renderizar_resposta(conteudo, conversa, atendente=None):
+    """
+    Substitui variáveis {{var}} em conteudo pelos dados reais.
+    Defensivo: variáveis sem dados retornam string vazia (em vez do placeholder).
+    """
+    if not conteudo or '{{' not in conteudo:
+        return conteudo
+
+    nome = (
+        (conversa.lead.nome_razaosocial if conversa.lead else None)
+        or conversa.contato_nome
+        or 'cliente'
+    )
+    primeiro_nome = nome.split()[0] if nome else ''
+    telefone = (conversa.lead.telefone if conversa.lead else None) or conversa.contato_telefone or ''
+    email = (conversa.lead.email if conversa.lead else None) or conversa.contato_email or ''
+    empresa = (conversa.lead.empresa if conversa.lead else '') or ''
+
+    atendente_obj = atendente or conversa.agente
+    atendente_nome = ''
+    primeiro_nome_atendente = ''
+    if atendente_obj:
+        atendente_nome = atendente_obj.get_full_name() or atendente_obj.username
+        primeiro_nome_atendente = atendente_nome.split()[0] if atendente_nome else ''
+
+    substituicoes = {
+        '{{nome_cliente}}': nome,
+        '{{primeiro_nome}}': primeiro_nome,
+        '{{telefone}}': telefone,
+        '{{email}}': email,
+        '{{atendente}}': atendente_nome,
+        '{{primeiro_nome_atendente}}': primeiro_nome_atendente,
+        '{{empresa}}': empresa,
+    }
+
+    resultado = conteudo
+    for tag, valor in substituicoes.items():
+        resultado = resultado.replace(tag, str(valor or ''))
+    return resultado
 
 
 @login_required
