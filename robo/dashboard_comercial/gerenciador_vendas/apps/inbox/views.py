@@ -4,6 +4,7 @@ Todas protegidas por @login_required.
 """
 
 import json
+import logging
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -23,6 +24,8 @@ from . import services
 from apps.sistema.decorators import user_tem_funcionalidade
 from apps.sistema.utils import auditar
 from apps.integracoes.models import IntegracaoAPI
+
+logger = logging.getLogger(__name__)
 
 
 def _check_perm(request, codigo):
@@ -696,6 +699,161 @@ def api_resumir_conversa(request, conversa_id):
         'resumo': resumo,
         'from_cache': False,
         'mensagens_processadas': len(mensagens),
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_avaliacao_responder(request, avaliacao_id):
+    """
+    Registra a nota CSAT (e opcional comentário) numa avaliação pendente.
+    Usado quando o gerente CS recebe a resposta off-band e quer registrar manual.
+    Body: {nota: 1-5, comentario?: str}
+    """
+    from apps.inbox.models import AvaliacaoAtendimento
+
+    try:
+        avaliacao = AvaliacaoAtendimento.objects.get(pk=avaliacao_id)
+    except AvaliacaoAtendimento.DoesNotExist:
+        return JsonResponse({'error': 'Avaliação não encontrada'}, status=404)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+
+    nota = data.get('nota')
+    if nota is None or not isinstance(nota, int) or not (1 <= nota <= 5):
+        return JsonResponse({'error': 'Nota deve ser inteiro de 1 a 5'}, status=400)
+
+    avaliacao.nota = nota
+    avaliacao.comentario = (data.get('comentario') or '').strip()
+    avaliacao.data_resposta = timezone.now()
+
+    # Classificar sentimento via IA se houver comentário
+    if avaliacao.comentario:
+        avaliacao.sentimento = _classificar_sentimento_csat(avaliacao.comentario, avaliacao.tenant)
+
+    avaliacao.save(update_fields=['nota', 'comentario', 'sentimento', 'data_resposta'])
+
+    # Notificar gerente se detrator
+    if avaliacao.eh_detrator:
+        try:
+            from django.contrib.auth.models import User
+            from apps.notificacoes.services import criar_notificacao
+            gerentes = User.objects.filter(
+                perfil__tenant=avaliacao.tenant,
+                permissoes__perfil__nome__in=['Gerente CS', 'Gerente Suporte', 'Admin'],
+                is_active=True,
+            ).distinct()
+            for g in gerentes:
+                criar_notificacao(
+                    tenant=avaliacao.tenant,
+                    codigo_tipo='csat_detrator',
+                    titulo=f'Detrator no atendimento (nota {nota}/5)',
+                    mensagem=f'Conversa #{avaliacao.conversa.numero}: {avaliacao.comentario[:120] or "sem comentário"}',
+                    destinatario=g,
+                    url_acao=f'/inbox/?conversa={avaliacao.conversa_id}',
+                    dados_contexto={'avaliacao_id': avaliacao.id, 'nota': nota},
+                )
+        except Exception as exc:
+            logger.warning('Falha ao notificar detrator: %s', exc)
+
+    return JsonResponse({
+        'success': True,
+        'nota': nota,
+        'sentimento': avaliacao.sentimento,
+        'eh_detrator': avaliacao.eh_detrator,
+    })
+
+
+def _classificar_sentimento_csat(comentario, tenant):
+    """Classifica sentimento de comentário CSAT via LLM. Retorna 'positivo'|'neutro'|'negativo'."""
+    try:
+        from apps.integracoes.models import IntegracaoAPI
+        import requests as http_requests
+
+        integracao = IntegracaoAPI.all_tenants.filter(
+            tenant=tenant, tipo__in=['openai', 'anthropic', 'groq'], ativa=True,
+        ).first()
+        if not integracao:
+            return ''
+
+        api_key = (integracao.api_key or integracao.configuracoes_extras.get('api_key', '') or integracao.access_token or '')
+        modelo = integracao.configuracoes_extras.get('modelo', 'gpt-4o-mini')
+        url = ('https://api.openai.com/v1/chat/completions' if integracao.tipo == 'openai'
+               else 'https://api.groq.com/openai/v1/chat/completions' if integracao.tipo == 'groq'
+               else integracao.base_url)
+
+        resp = http_requests.post(
+            url,
+            headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+            json={
+                'model': modelo,
+                'messages': [
+                    {'role': 'system', 'content': 'Classifique o sentimento do comentário sobre atendimento. Responda APENAS uma palavra: positivo, neutro, ou negativo.'},
+                    {'role': 'user', 'content': comentario[:500]},
+                ],
+                'temperature': 0.1,
+                'max_tokens': 10,
+            },
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            return ''
+        text = resp.json()['choices'][0]['message']['content'].strip().lower()
+        for s in ('positivo', 'negativo', 'neutro'):
+            if s in text:
+                return s
+        return ''
+    except Exception as exc:
+        logger.warning('Falha ao classificar sentimento CSAT: %s', exc)
+        return ''
+
+
+@login_required
+def csat_dashboard(request):
+    """Dashboard CSAT: NPS médio, distribuição 1-5, lista detratores."""
+    from datetime import timedelta
+    from django.db.models import Count, Avg
+    from apps.inbox.models import AvaliacaoAtendimento
+
+    dias = int(request.GET.get('dias', 30))
+    desde = timezone.now() - timedelta(days=dias)
+
+    qs = AvaliacaoAtendimento.objects.filter(criado_em__gte=desde)
+    respondidas = qs.exclude(nota__isnull=True)
+    pendentes = qs.filter(nota__isnull=True).count()
+
+    total_resp = respondidas.count()
+    csat_medio = respondidas.aggregate(media=Avg('nota'))['media'] or 0
+
+    # Distribuição
+    dist = {i: 0 for i in range(1, 6)}
+    for item in respondidas.values('nota').annotate(qtd=Count('id')):
+        dist[item['nota']] = item['qtd']
+
+    detratores = (
+        respondidas.filter(nota__lte=2)
+        .select_related('conversa', 'conversa__lead')
+        .order_by('-criado_em')[:30]
+    )
+
+    promotores = respondidas.filter(nota=5).count()
+    neutros = respondidas.filter(nota__in=[3, 4]).count()
+    qtd_detratores = respondidas.filter(nota__lte=2).count()
+
+    return render(request, 'inbox/csat_dashboard.html', {
+        'dias': dias,
+        'csat_medio': round(csat_medio, 2),
+        'total_respondidas': total_resp,
+        'total_pendentes': pendentes,
+        'distribuicao': [(nota, dist[nota], round(dist[nota] / total_resp * 100, 1) if total_resp else 0) for nota in range(5, 0, -1)],
+        'promotores': promotores,
+        'neutros': neutros,
+        'detratores_qtd': qtd_detratores,
+        'detratores_lista': detratores,
+        'taxa_resposta': round(total_resp / qs.count() * 100, 1) if qs.count() else 0,
     })
 
 

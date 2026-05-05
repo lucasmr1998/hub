@@ -1,0 +1,105 @@
+{% extends "layouts/layout_app.html" %}
+{% load static %}
+
+{% block title %}CSAT — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-eyebrow">Inbox · Qualidade</div>
+  <h1 class="page-title">CSAT pós-atendimento</h1>
+  <p class="page-subtitle">Satisfação dos clientes em atendimentos resolvidos. Últimos {{ dias }} dias.</p>
+  <div class="page-actions">
+    <form method="get" style="display: inline-flex; gap: 8px; align-items: center;">
+      <select name="dias" onchange="this.form.submit()" class="form-control" style="width: auto;">
+        <option value="7" {% if dias == 7 %}selected{% endif %}>7 dias</option>
+        <option value="30" {% if dias == 30 %}selected{% endif %}>30 dias</option>
+        <option value="90" {% if dias == 90 %}selected{% endif %}>90 dias</option>
+      </select>
+    </form>
+  </div>
+</div>
+
+<style>
+  .csat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .csat-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 20px; }
+  .csat-stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); margin-bottom: 6px; }
+  .csat-stat-value { font-size: 36px; font-weight: 800; color: var(--color-text); }
+  .csat-stat-sub { font-size: 12px; color: var(--color-text-muted); margin-top: 4px; }
+  .csat-bar-row { display: grid; grid-template-columns: 80px 1fr 80px; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .csat-bar-wrap { background: #F1F5F9; height: 28px; border-radius: 4px; overflow: hidden; position: relative; }
+  .csat-bar { height: 100%; transition: width 0.4s; }
+  .csat-bar.s5 { background: #10B981; }
+  .csat-bar.s4 { background: #34D399; }
+  .csat-bar.s3 { background: #F59E0B; }
+  .csat-bar.s2 { background: #F97316; }
+  .csat-bar.s1 { background: #DC2626; }
+  .csat-detrator { background: #FEF2F2; border-left: 3px solid #DC2626; padding: 12px 16px; margin-bottom: 8px; border-radius: 6px; }
+  .csat-sentimento-tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .csat-sentimento-tag.negativo { background: #FEE2E2; color: #991B1B; }
+  .csat-sentimento-tag.positivo { background: #D1FAE5; color: #065F46; }
+  .csat-sentimento-tag.neutro { background: #F1F5F9; color: #475569; }
+</style>
+
+<div class="csat-grid">
+  <div class="csat-card">
+    <div class="csat-stat-label">CSAT médio</div>
+    <div class="csat-stat-value">{{ csat_medio }}<span style="font-size: 18px; color: var(--color-text-muted);">/5</span></div>
+    <div class="csat-stat-sub">{{ total_respondidas }} respostas no período</div>
+  </div>
+  <div class="csat-card">
+    <div class="csat-stat-label">Taxa de resposta</div>
+    <div class="csat-stat-value">{{ taxa_resposta }}%</div>
+    <div class="csat-stat-sub">{{ total_pendentes }} pendentes</div>
+  </div>
+  <div class="csat-card" style="border-left: 4px solid #10B981;">
+    <div class="csat-stat-label">Promotores (5)</div>
+    <div class="csat-stat-value" style="color: #065F46;">{{ promotores }}</div>
+  </div>
+  <div class="csat-card" style="border-left: 4px solid #DC2626;">
+    <div class="csat-stat-label">Detratores (1-2)</div>
+    <div class="csat-stat-value" style="color: #991B1B;">{{ detratores_qtd }}</div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 24px;">
+  <h2 style="margin: 0 0 16px; font-size: 18px; font-weight: 700;">Distribuição</h2>
+  {% for nota, qtd, pct in distribuicao %}
+    <div class="csat-bar-row">
+      <div style="font-weight: 600;">{{ nota }} estrela{{ nota|pluralize:"s" }}</div>
+      <div class="csat-bar-wrap">
+        <div class="csat-bar s{{ nota }}" style="width: {{ pct }}%;"></div>
+      </div>
+      <div style="text-align: right; font-weight: 600;">{{ qtd }} ({{ pct }}%)</div>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2 style="margin: 0 0 16px; font-size: 18px; font-weight: 700;">Detratores recentes</h2>
+  {% if detratores_lista %}
+    {% for av in detratores_lista %}
+      <div class="csat-detrator">
+        <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px;">
+          <strong>
+            Conversa #{{ av.conversa.numero }} · Nota {{ av.nota }}/5
+            {% if av.sentimento %}
+              <span class="csat-sentimento-tag {{ av.sentimento }}">{{ av.sentimento }}</span>
+            {% endif %}
+          </strong>
+          <small style="color: var(--color-text-muted);">{{ av.data_resposta|date:"d/m H:i" }}</small>
+        </div>
+        {% if av.comentario %}
+          <p style="margin: 0; font-size: 13px; color: var(--color-text);">"{{ av.comentario }}"</p>
+        {% endif %}
+        <a href="/inbox/?conversa={{ av.conversa_id }}" style="font-size: 12px; color: var(--color-primary); margin-top: 6px; display: inline-block;">Ver conversa →</a>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p style="color: var(--color-text-muted);">Nenhum detrator no período. ✓</p>
+  {% endif %}
+</div>
+
+<p style="margin-top: 20px; font-size: 12px; color: var(--color-text-muted);">
+  AvaliacaoAtendimento é criada automaticamente quando conversa é resolvida (signal). Envio do bot via WhatsApp/email + endpoint público de resposta são follow-ups separados — por enquanto registro manual via API.
+</p>
+{% endblock %}

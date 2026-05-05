@@ -445,6 +445,32 @@ def on_conversa_resolvida(sender, instance, created, **kwargs):
         logger.error("Erro ao disparar automação conversa_resolvida: %s", e)
 
 
+@receiver(post_save, sender='inbox.Conversa')
+def on_conversa_criar_avaliacao_csat(sender, instance, created, **kwargs):
+    """
+    Cria AvaliacaoAtendimento (pendente) quando conversa muda pra resolvida.
+    O envio real da pergunta via WhatsApp/email é follow-up — por enquanto
+    a avaliação fica registrada esperando resposta manual ou via webhook.
+    """
+    if created or instance.status != 'resolvida':
+        return
+
+    if getattr(instance, '_skip_csat', False):
+        return
+
+    try:
+        from apps.inbox.models import AvaliacaoAtendimento
+        # Idempotente: só cria se ainda não existe
+        if not AvaliacaoAtendimento.objects.filter(conversa=instance).exists():
+            AvaliacaoAtendimento.objects.create(
+                tenant=instance.tenant,
+                conversa=instance,
+                # data_envio será setada quando bot disparar pergunta (follow-up)
+            )
+    except Exception as exc:
+        logger.error('Erro ao criar avaliação CSAT pra conversa %s: %s', instance.id, exc)
+
+
 @receiver(post_save, sender='inbox.NotaInternaConversa')
 def on_nota_mencao(sender, instance, created, **kwargs):
     """

@@ -285,6 +285,71 @@ class RespostaRapida(TenantMixin):
         return self.titulo
 
 
+class AvaliacaoAtendimento(TenantMixin):
+    """
+    CSAT (Customer Satisfaction Score) pós-atendimento.
+    Criada automaticamente quando uma conversa é resolvida.
+    """
+    SENTIMENTO_CHOICES = [
+        ('positivo', 'Positivo'),
+        ('neutro', 'Neutro'),
+        ('negativo', 'Negativo'),
+    ]
+
+    conversa = models.OneToOneField(
+        Conversa,
+        on_delete=models.CASCADE,
+        related_name='avaliacao',
+        verbose_name='Conversa',
+    )
+    nota = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        verbose_name='Nota (1-5)',
+        help_text='1 = péssimo, 5 = excelente. Null = ainda não respondeu.',
+    )
+    comentario = models.TextField(
+        blank=True, default='',
+        verbose_name='Comentário',
+    )
+    sentimento = models.CharField(
+        max_length=10, choices=SENTIMENTO_CHOICES,
+        blank=True, default='',
+        verbose_name='Sentimento (IA)',
+        help_text='Classificação automática do comentário aberto.',
+    )
+    data_envio = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name='Pergunta enviada em',
+    )
+    data_resposta = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name='Cliente respondeu em',
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'inbox_avaliacao_atendimento'
+        verbose_name = 'Avaliação de Atendimento (CSAT)'
+        verbose_name_plural = 'Avaliações de Atendimento (CSAT)'
+        ordering = ['-criado_em']
+        indexes = [
+            models.Index(fields=['nota']),
+            models.Index(fields=['sentimento']),
+            models.Index(fields=['-criado_em']),
+        ]
+
+    def __str__(self):
+        return f'Avaliação conversa #{self.conversa_id}: {self.nota or "—"}/5'
+
+    @property
+    def respondeu(self):
+        return self.nota is not None
+
+    @property
+    def eh_detrator(self):
+        return self.nota is not None and self.nota <= 2
+
+
 class NotaInternaConversa(TenantMixin):
     conversa = models.ForeignKey(
         Conversa, on_delete=models.CASCADE,
