@@ -659,6 +659,46 @@
             state.currentConversaId = null;
         });
 
+        // Resumir conversa via IA
+        const resumirBtn = $('resumirBtn');
+        if (resumirBtn) {
+            resumirBtn.addEventListener('click', () => {
+                if (!state.currentConversaId) return;
+                resumirBtn.disabled = true;
+                const original = resumirBtn.innerHTML;
+                resumirBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                fetch('/inbox/api/conversas/' + state.currentConversaId + '/resumir/')
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.error) { alert('Erro: ' + d.error); return; }
+                        const cacheTag = d.from_cache ? ' (cache)' : '';
+                        const titulo = '✦ Resumo da conversa' + cacheTag;
+                        const corpo = (d.resumo || '').replace(/\n/g, '<br>');
+                        const html = `
+                            <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;
+                                        padding:24px;border-radius:12px;max-width:540px;width:90%;
+                                        box-shadow:0 20px 60px rgba(0,0,0,0.25);z-index:10000;">
+                                <h3 style="margin:0 0 12px;font-size:16px;color:#252020;">${titulo}</h3>
+                                <div style="font-size:13px;line-height:1.6;color:#475569;white-space:pre-wrap;">${corpo}</div>
+                                <p style="font-size:11px;color:#94A3B8;margin:16px 0 8px;">
+                                    Gerado por IA · ${d.mensagens_processadas || 0} mensagens analisadas · Cache 1h
+                                </p>
+                                <div style="text-align:right;">
+                                    <button onclick="this.closest('div[style*=position]').remove();document.getElementById('__resumoBg').remove();"
+                                            style="padding:8px 16px;background:#252020;color:white;border:none;border-radius:6px;cursor:pointer;">
+                                        Fechar
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="__resumoBg" onclick="this.remove();this.previousElementSibling.remove();"
+                                 style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;"></div>`;
+                        document.body.insertAdjacentHTML('beforeend', html);
+                    })
+                    .catch(err => alert('Falha ao gerar resumo: ' + err.message))
+                    .finally(() => { resumirBtn.disabled = false; resumirBtn.innerHTML = original; });
+            });
+        }
+
         // Transfer modal
         $('transferBtn').addEventListener('click', () => { $('transferModal').style.display = 'flex'; });
         $('transferModalClose').addEventListener('click', () => { $('transferModal').style.display = 'none'; });

@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from .models import (
-    Conversa, RespostaRapida, EtiquetaConversa, NotaInternaConversa,
+    Conversa, Mensagem, RespostaRapida, EtiquetaConversa, NotaInternaConversa,
     EquipeInbox, MembroEquipeInbox, PerfilAgenteInbox,
     FilaInbox, RegraRoteamento, HorarioAtendimento, ConfiguracaoInbox, CanalInbox,
     CategoriaFAQ, ArtigoFAQ, WidgetConfig,
@@ -559,6 +559,143 @@ def api_respostas_rapidas(request):
             {'tag': '{{primeiro_nome_atendente}}', 'descricao': 'Primeiro nome do atendente'},
             {'tag': '{{empresa}}', 'descricao': 'Nome da empresa do cliente (se houver)'},
         ],
+    })
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def api_resumir_conversa(request, conversa_id):
+    """
+    Gera resumo IA das últimas N mensagens da conversa.
+    GET: retorna do cache se houver, senão gera.
+    POST: força regenerar (ignora cache).
+    Cache: 1h por conversa.
+    """
+    from django.core.cache import cache
+    from apps.integracoes.models import IntegracaoAPI
+    import requests as http_requests
+
+    try:
+        conversa = Conversa.objects.select_related('tenant', 'lead').get(pk=conversa_id)
+    except Conversa.DoesNotExist:
+        return JsonResponse({'error': 'Conversa não encontrada'}, status=404)
+
+    cache_key = f'resumo_conversa_{conversa_id}'
+    if request.method == 'GET':
+        cached = cache.get(cache_key)
+        if cached:
+            return JsonResponse({'resumo': cached, 'from_cache': True})
+
+    # Pega últimas 50 mensagens
+    mensagens = list(
+        Mensagem.objects.filter(conversa=conversa)
+        .order_by('-criado_em')[:50]
+    )
+    mensagens.reverse()
+
+    if not mensagens:
+        return JsonResponse({'error': 'Conversa sem mensagens'}, status=400)
+
+    # Monta transcript
+    linhas = []
+    for m in mensagens:
+        remetente = (
+            'Cliente' if m.remetente_tipo == 'cliente'
+            else 'Bot' if m.remetente_tipo == 'bot'
+            else 'Atendente'
+        )
+        conteudo = (m.conteudo or '')[:500]  # truncar pra evitar prompt muito longo
+        linhas.append(f"[{remetente}] {conteudo}")
+    transcript = '\n'.join(linhas)
+
+    # Busca integração de IA do tenant
+    integracao = IntegracaoAPI.all_tenants.filter(
+        tenant=conversa.tenant,
+        tipo__in=['openai', 'anthropic', 'groq'],
+        ativa=True,
+    ).first()
+
+    if not integracao:
+        return JsonResponse({
+            'error': 'Nenhuma integração de IA ativa pra este tenant'
+        }, status=503)
+
+    api_key = (
+        integracao.api_key
+        or integracao.configuracoes_extras.get('api_key', '')
+        or integracao.access_token
+        or ''
+    )
+    modelo = integracao.configuracoes_extras.get('modelo', 'gpt-4o-mini')
+
+    if integracao.tipo == 'openai':
+        url = 'https://api.openai.com/v1/chat/completions'
+    elif integracao.tipo == 'groq':
+        url = 'https://api.groq.com/openai/v1/chat/completions'
+    else:
+        url = integracao.base_url
+
+    cliente_nome = (
+        (conversa.lead.nome_razaosocial if conversa.lead else None)
+        or conversa.contato_nome
+        or 'cliente'
+    )
+
+    system_prompt = (
+        "Você é um assistente que resume conversas de atendimento ao cliente "
+        "de provedor de internet (ISP). Seja extremamente conciso. "
+        "Português brasileiro, tom profissional."
+    )
+
+    user_prompt = (
+        f"Resuma a conversa abaixo (cliente: {cliente_nome}) em até 5 bullets curtos, focando em:\n"
+        f"1. Motivo do contato\n"
+        f"2. Dados confirmados (plano, endereço, viabilidade, etc)\n"
+        f"3. Decisões/acordos firmados\n"
+        f"4. Próximos passos pendentes\n"
+        f"5. Status atual (se aplicável)\n\n"
+        f"Formato: bullets com '-' iniciando cada um. Sem cabeçalho. Sem numerais.\n\n"
+        f"--- TRANSCRIPT ---\n{transcript}"
+    )
+
+    try:
+        resp = http_requests.post(
+            url,
+            headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+            json={
+                'model': modelo,
+                'messages': [
+                    {'role': 'system', 'content': system_prompt},
+                    {'role': 'user', 'content': user_prompt},
+                ],
+                'temperature': 0.2,
+                'max_tokens': 400,
+            },
+            timeout=30,
+        )
+        if resp.status_code != 200:
+            return JsonResponse(
+                {'error': f'IA retornou {resp.status_code}: {resp.text[:200]}'},
+                status=502,
+            )
+        resumo = resp.json()['choices'][0]['message']['content'].strip()
+    except Exception as exc:
+        return JsonResponse({'error': f'Erro chamando IA: {exc}'}, status=500)
+
+    cache.set(cache_key, resumo, timeout=3600)  # 1h
+
+    # Auditoria
+    from apps.sistema.utils import registrar_acao
+    registrar_acao(
+        'inbox', 'resumir_conversa', 'conversa', conversa.id,
+        f'Resumo IA gerado ({len(mensagens)} msgs)',
+        request=request,
+    )
+
+    return JsonResponse({
+        'resumo': resumo,
+        'from_cache': False,
+        'mensagens_processadas': len(mensagens),
     })
 
 
