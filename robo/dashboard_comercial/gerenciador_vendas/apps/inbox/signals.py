@@ -443,3 +443,59 @@ def on_conversa_resolvida(sender, instance, created, **kwargs):
         disparar_evento('conversa_resolvida', contexto, tenant=instance.tenant)
     except Exception as e:
         logger.error("Erro ao disparar automação conversa_resolvida: %s", e)
+
+
+@receiver(post_save, sender='inbox.NotaInternaConversa')
+def on_nota_mencao(sender, instance, created, **kwargs):
+    """
+    Detecta menções @username em notas internas e cria notificação
+    in-app pro mencionado.
+    Padrão: @nome (sem espaço, [a-zA-Z0-9_-]+)
+    """
+    if not created:
+        return
+
+    try:
+        from django.contrib.auth.models import User
+        from apps.notificacoes.services import criar_notificacao
+
+        # Captura @handles. Permite letras, dígitos, _ e -.
+        handles = set(re.findall(r'@([A-Za-z0-9_\-\.]+)', instance.conteudo or ''))
+        if not handles:
+            return
+
+        # Usuários do mesmo tenant (acesso a essa conversa)
+        for handle in handles:
+            usuario = User.objects.filter(
+                username__iexact=handle,
+                perfil__tenant=instance.tenant,
+            ).first()
+            if not usuario:
+                # tentar por first_name sem espaço
+                usuario = User.objects.filter(
+                    first_name__iexact=handle,
+                    perfil__tenant=instance.tenant,
+                ).first()
+            if not usuario or usuario == instance.criado_por:
+                continue  # pular auto-menções e handles inexistentes
+
+            mencionador = (
+                instance.criado_por.get_full_name() if instance.criado_por
+                else 'alguém'
+            )
+            preview = (instance.conteudo or '')[:140]
+            criar_notificacao(
+                tenant=instance.tenant,
+                codigo_tipo='mencao_nota',
+                titulo='Você foi mencionado em uma nota',
+                mensagem=f'{mencionador}: "{preview}"',
+                destinatario=usuario,
+                url_acao=f'/inbox/?conversa={instance.conversa_id}',
+                dados_contexto={
+                    'conversa_id': instance.conversa_id,
+                    'nota_id': instance.id,
+                    'mencionador_id': instance.criado_por_id,
+                },
+            )
+    except Exception as exc:
+        logger.error('Erro ao processar menção em nota: %s', exc)
