@@ -194,6 +194,62 @@ def _home_gerente_comercial(request):
     })
 
 
+@login_required(login_url='sistema:login')
+def clientes_em_risco_churn(request):
+    """
+    Lista clientes ativos ordenados por churn_score (alto risco primeiro).
+    Mostra os sinais que compuseram o score pra cada cliente.
+    """
+    from apps.integracoes.models import ClienteHubsoft
+    from apps.integracoes.services import churn_score as churn_svc
+
+    classe_filtro = request.GET.get('classe', 'alto_risco')  # alto_risco | atencao | saudavel | todos
+
+    qs = ClienteHubsoft.objects.filter(ativo=True).select_related('lead')
+
+    if classe_filtro == 'alto_risco':
+        qs = qs.filter(churn_score__gte=60)
+    elif classe_filtro == 'atencao':
+        qs = qs.filter(churn_score__gte=40, churn_score__lt=60)
+    elif classe_filtro == 'saudavel':
+        qs = qs.filter(churn_score__lt=40)
+    # 'todos' = sem filtro
+
+    qs = qs.order_by('-churn_score', 'nome_razaosocial')
+
+    # Paginação
+    from django.core.paginator import Paginator
+    paginator = Paginator(qs, 30)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    # Enriquecer com classe pra cada
+    clientes = []
+    for c in page_obj.object_list:
+        clientes.append({
+            'cliente': c,
+            'classe': churn_svc.classificar(c.churn_score),
+            'sinais': c.churn_sinais or {},
+        })
+
+    # Agregados
+    todos_ativos = ClienteHubsoft.objects.filter(ativo=True)
+    total_alto = todos_ativos.filter(churn_score__gte=60).count()
+    total_atencao = todos_ativos.filter(churn_score__gte=40, churn_score__lt=60).count()
+    total_saudavel = todos_ativos.filter(churn_score__lt=40).count()
+    total_sem_score = todos_ativos.filter(churn_score__isnull=True).count()
+
+    return render(request, 'dashboard/clientes_em_risco_churn.html', {
+        'clientes': clientes,
+        'page_obj': page_obj,
+        'is_paginated': page_obj.has_other_pages(),
+        'classe_filtro': classe_filtro,
+        'total_alto': total_alto,
+        'total_atencao': total_atencao,
+        'total_saudavel': total_saudavel,
+        'total_sem_score': total_sem_score,
+    })
+
+
 def _home_cs(request):
     """Home do CS: indicações pendentes + NPS recente + membros novos do clube."""
     agora = timezone.now()

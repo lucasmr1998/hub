@@ -344,6 +344,22 @@ class ClienteHubsoft(TenantMixin):
     alerta_mensagens = models.JSONField(default=list, blank=True, verbose_name="Mensagens de Alerta")
     ativo = models.BooleanField(default=True, verbose_name="Ativo")
 
+    # --- Churn score (rule-based) — atualizado pelo cron atualizar_churn_score
+    churn_score = models.IntegerField(
+        null=True, blank=True, db_index=True,
+        verbose_name="Score de Churn (0-100)",
+        help_text="Quanto maior, maior o risco de cancelamento. Threshold sugerido: 60+",
+    )
+    churn_sinais = models.JSONField(
+        default=dict, blank=True,
+        verbose_name="Sinais de churn",
+        help_text="Breakdown dos sinais que compuseram o score. Ex: {'inadimplente': 25, 'tickets_abertos': 30}",
+    )
+    churn_atualizado_em = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name="Score atualizado em",
+    )
+
     # --- Origem e classificação -----------------------------------------------
     id_origem_cliente = models.IntegerField(null=True, blank=True, verbose_name="ID Origem Cliente")
     origem_cliente = models.CharField(max_length=200, blank=True, default='', verbose_name="Origem Cliente")

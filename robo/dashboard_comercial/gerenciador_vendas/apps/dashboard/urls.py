@@ -6,6 +6,7 @@ app_name = 'dashboard'
 urlpatterns = [
     # Home personalizada por perfil — entry point pós-login
     path('home/', views.home_router, name='home'),
+    path('clientes-em-risco/', views.clientes_em_risco_churn, name='clientes_em_risco_churn'),
 
     # Dashboard principal
     path('dashboard/', views.dashboard_view, name='dashboard'),

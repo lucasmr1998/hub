@@ -1,0 +1,105 @@
+{% extends "layouts/layout_app.html" %}
+{% load static %}
+
+{% block title %}Clientes em risco — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-eyebrow">CS · Retenção</div>
+  <h1 class="page-title">Clientes em risco de churn</h1>
+  <p class="page-subtitle">Score 0-100 baseado em sinais de uso, atendimento e cobrança. Atualizado diariamente pelo cron.</p>
+</div>
+
+<style>
+  .churn-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .churn-stat-card { background: white; border: 1px solid var(--color-border); border-radius: 10px; padding: 16px; cursor: pointer; transition: border-color 0.15s; }
+  .churn-stat-card:hover { border-color: var(--color-primary); }
+  .churn-stat-card.is-active { border-color: var(--color-primary); background: #FFF8F4; }
+  .churn-stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); }
+  .churn-stat-value { font-size: 28px; font-weight: 800; margin-top: 4px; }
+  .churn-stat-card.alto .churn-stat-value { color: #DC2626; }
+  .churn-stat-card.atencao .churn-stat-value { color: #F59E0B; }
+  .churn-stat-card.saudavel .churn-stat-value { color: #10B981; }
+  .churn-stat-card.semscore .churn-stat-value { color: #94A3B8; }
+
+  .churn-table { width: 100%; border-collapse: collapse; }
+  .churn-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--color-border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); }
+  .churn-table td { padding: 14px 12px; border-bottom: 1px solid var(--color-border); font-size: 13px; vertical-align: middle; }
+  .churn-score-badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; min-width: 40px; text-align: center; }
+  .churn-score-badge.alto { background: #FEE2E2; color: #991B1B; }
+  .churn-score-badge.atencao { background: #FEF3C7; color: #92400E; }
+  .churn-score-badge.saudavel { background: #D1FAE5; color: #065F46; }
+  .churn-score-badge.semscore { background: #F1F5F9; color: #475569; }
+
+  .churn-sinal { display: inline-block; padding: 2px 8px; background: #FEF2F2; color: #991B1B; border-radius: 4px; font-size: 11px; margin-right: 4px; margin-top: 2px; }
+</style>
+
+<div class="churn-stats">
+  <a href="?classe=alto_risco" class="churn-stat-card alto {% if classe_filtro == 'alto_risco' %}is-active{% endif %}" style="text-decoration:none;color:inherit;display:block;">
+    <div class="churn-stat-label">Alto risco (60+)</div>
+    <div class="churn-stat-value">{{ total_alto }}</div>
+  </a>
+  <a href="?classe=atencao" class="churn-stat-card atencao {% if classe_filtro == 'atencao' %}is-active{% endif %}" style="text-decoration:none;color:inherit;display:block;">
+    <div class="churn-stat-label">Atenção (40-59)</div>
+    <div class="churn-stat-value">{{ total_atencao }}</div>
+  </a>
+  <a href="?classe=saudavel" class="churn-stat-card saudavel {% if classe_filtro == 'saudavel' %}is-active{% endif %}" style="text-decoration:none;color:inherit;display:block;">
+    <div class="churn-stat-label">Saudável (&lt;40)</div>
+    <div class="churn-stat-value">{{ total_saudavel }}</div>
+  </a>
+  <a href="?classe=todos" class="churn-stat-card semscore {% if classe_filtro == 'todos' %}is-active{% endif %}" style="text-decoration:none;color:inherit;display:block;">
+    <div class="churn-stat-label">Sem score (não calculado)</div>
+    <div class="churn-stat-value">{{ total_sem_score }}</div>
+  </a>
+</div>
+
+<div class="card">
+  <table class="churn-table">
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th>Score</th>
+        <th>Sinais que pesaram</th>
+        <th>Telefone</th>
+        <th>Atualizado</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in clientes %}
+        <tr>
+          <td>
+            <strong>{{ item.cliente.nome_razaosocial }}</strong>
+            {% if item.cliente.lead %}
+              <br><small style="color:var(--color-text-muted);">Lead #{{ item.cliente.lead.id }}</small>
+            {% endif %}
+          </td>
+          <td>
+            <span class="churn-score-badge {% if item.classe == 'alto_risco' %}alto{% elif item.classe == 'atencao' %}atencao{% elif item.classe == 'saudavel' %}saudavel{% else %}semscore{% endif %}">
+              {{ item.cliente.churn_score|default:"—" }}
+            </span>
+          </td>
+          <td>
+            {% for sinal, peso in item.sinais.items %}
+              <span class="churn-sinal">{{ sinal }} (+{{ peso }})</span>
+            {% empty %}
+              <span style="color:var(--color-text-muted);">—</span>
+            {% endfor %}
+          </td>
+          <td>{{ item.cliente.telefone_primario|default:"—" }}</td>
+          <td><small style="color:var(--color-text-muted);">{{ item.cliente.churn_atualizado_em|date:"d/m H:i"|default:"nunca" }}</small></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:40px;">Nenhum cliente nesta categoria.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if is_paginated %}
+    {% include "components/pagination.html" with page_obj=page_obj %}
+  {% endif %}
+</div>
+
+<p style="margin-top: 20px; font-size: 12px; color: var(--color-text-muted);">
+  Score recalculado por <code>python manage.py atualizar_churn_score</code> (cron diário 4h). Sinais NPS desativados até módulo NPS existir.
+</p>
+{% endblock %}
