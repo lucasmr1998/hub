@@ -10,7 +10,7 @@
       <p class="page-subtitle">Captura e acompanhamento dos leads de todas as origens.</p>
     </div>
     <div class="page-actions">
-      <button class="btn btn-primary btn-sm" onclick="toast('Info', 'Em desenvolvimento', 'info')"><i class="bi bi-plus-lg"></i> Novo lead</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirModalNovoLead()"><i class="bi bi-plus-lg"></i> Novo lead</button>
     </div>
   </div>
 </div>
@@ -143,6 +143,65 @@
     </table>
   </div>
   <div class="table-pagination" id="paginationControls" style="display: none;"></div>
+</div>
+
+{# Modal — Criar lead manual #}
+<div class="modal-overlay" id="modalNovoLead" style="display: none;">
+  <div class="modal-content" style="max-width: 540px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-plus-circle" style="color: var(--color-primary);"></i> Novo lead</h3>
+      <button class="modal-close" onclick="fecharModalNovoLead()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <form id="formNovoLead" onsubmit="event.preventDefault(); salvarNovoLead();">
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
+        <div>
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">Nome / Razão social <span style="color: var(--color-danger);">*</span></label>
+          <input type="text" name="nome_razaosocial" class="form-control" required maxlength="150" placeholder="Ex: João da Silva" />
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">Telefone</label>
+            <input type="tel" name="telefone" class="form-control" placeholder="(86) 99999-0000" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">CPF/CNPJ</label>
+            <input type="text" name="cpf_cnpj" class="form-control" placeholder="000.000.000-00" />
+          </div>
+        </div>
+        <div>
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">E-mail</label>
+          <input type="email" name="email" class="form-control" placeholder="email@exemplo.com" />
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">Cidade</label>
+            <input type="text" name="cidade" class="form-control" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">Origem</label>
+            <select name="origem" class="form-control">
+              <option value="manual">Manual (cadastro pelo time)</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="site">Site</option>
+              <option value="indicacao">Indicação</option>
+              <option value="outro">Outro</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">Observações</label>
+          <textarea name="observacoes" class="form-control" rows="2" placeholder="Contexto, próximas ações…"></textarea>
+        </div>
+        <p style="font-size: 12px; color: var(--color-text-muted); margin: 4px 0 0;">
+          <i class="bi bi-info-circle"></i> Se já existe lead ativo com este telefone ou CPF, abre o existente em vez de duplicar.
+        </p>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="btn btn-secondary" onclick="fecharModalNovoLead()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btnSalvarLead"><i class="bi bi-check-lg"></i> Criar lead</button>
+      </div>
+    </form>
+  </div>
 </div>
 {% endblock %}
 
@@ -314,5 +373,57 @@
 
   document.getElementById('filterSearch').addEventListener('keydown', e => { if (e.key === 'Enter') applyFilters(); });
   document.addEventListener('DOMContentLoaded', () => { loadLeads(); loadStats(); });
+
+  // === Modal Novo Lead ===
+  function abrirModalNovoLead() {
+    document.getElementById('modalNovoLead').style.display = 'flex';
+    document.querySelector('#formNovoLead [name="nome_razaosocial"]').focus();
+  }
+  function fecharModalNovoLead() {
+    document.getElementById('modalNovoLead').style.display = 'none';
+    document.getElementById('formNovoLead').reset();
+  }
+  // ESC fecha
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('modalNovoLead').style.display === 'flex') fecharModalNovoLead();
+  });
+
+  async function salvarNovoLead() {
+    const form = document.getElementById('formNovoLead');
+    const btn = document.getElementById('btnSalvarLead');
+    const data = Object.fromEntries(new FormData(form).entries());
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite;"></i> Salvando…';
+
+    const csrf = document.cookie.split('csrftoken=')[1]?.split(';')[0] || '';
+    try {
+      const resp = await fetch('/api/leads/criar/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+        body: JSON.stringify(data),
+      });
+      const result = await resp.json();
+
+      if (result.duplicado) {
+        toast('Lead já existe', result.mensagem, 'warning');
+        if (confirm(`${result.mensagem}\n\nIr para o lead existente?`)) {
+          window.location.href = `/leads/${result.lead_existente.id}/`;
+        }
+      } else if (result.success) {
+        toast('Lead criado', `${result.lead.nome_razaosocial} adicionado com sucesso`, 'success');
+        fecharModalNovoLead();
+        loadLeads();
+        loadStats();
+      } else {
+        toast('Erro', result.error || 'Falha ao criar lead', 'danger');
+      }
+    } catch (err) {
+      toast('Erro', err.message, 'danger');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-check-lg"></i> Criar lead';
+    }
+  }
 </script>
 {% endblock %}

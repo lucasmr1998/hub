@@ -69,6 +69,86 @@ def api_lead_excluir(request, lead_id):
 
 
 @login_required(login_url='sistema:login')
+@require_http_methods(["POST"])
+def api_lead_criar(request):
+    """
+    Criar lead manualmente via modal na página /leads/.
+    Dedupe: se já existir lead ATIVO com mesmo telefone OU CPF, retorna o existente.
+    Origem default: 'manual'.
+    """
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'JSON invalido'}, status=400)
+
+    nome = (data.get('nome_razaosocial') or '').strip()
+    telefone = (data.get('telefone') or '').strip()
+    cpf_cnpj = (data.get('cpf_cnpj') or '').strip()
+    email = (data.get('email') or '').strip()
+
+    if not nome:
+        return JsonResponse({'error': 'Nome é obrigatório'}, status=400)
+    if not telefone and not email and not cpf_cnpj:
+        return JsonResponse({'error': 'Informe pelo menos telefone, email ou CPF/CNPJ'}, status=400)
+
+    # Dedupe: telefone normalizado ou CPF
+    telefone_digits = ''.join(c for c in telefone if c.isdigit())
+    existente = None
+    if telefone_digits:
+        existente = LeadProspecto.objects.filter(
+            telefone__regex=f'.*{telefone_digits[-9:]}.*',
+            ativo=True,
+        ).first()
+    if not existente and cpf_cnpj:
+        existente = LeadProspecto.objects.filter(cpf_cnpj=cpf_cnpj, ativo=True).first()
+
+    if existente:
+        return JsonResponse({
+            'success': False,
+            'duplicado': True,
+            'lead_existente': {
+                'id': existente.id,
+                'nome_razaosocial': existente.nome_razaosocial,
+                'telefone': existente.telefone,
+                'data_cadastro': existente.data_cadastro.isoformat(),
+            },
+            'mensagem': f'Lead já existe (#{existente.id}: {existente.nome_razaosocial})',
+        }, status=200)
+
+    campos_permitidos = [
+        'nome_razaosocial', 'telefone', 'email', 'cpf_cnpj', 'cidade', 'estado',
+        'cep', 'rua', 'numero_residencia', 'bairro', 'ponto_referencia',
+        'empresa', 'data_nascimento', 'observacoes',
+    ]
+    payload = {k: data[k] for k in campos_permitidos if data.get(k)}
+    payload['origem'] = data.get('origem') or 'manual'
+    payload['status_api'] = 'pendente'
+    payload['responsavel'] = request.user
+
+    try:
+        lead = LeadProspecto.objects.create(**payload)
+    except Exception as exc:
+        return JsonResponse({'error': f'Falha ao criar lead: {exc}'}, status=500)
+
+    from apps.sistema.utils import registrar_acao
+    registrar_acao(
+        'leads', 'criar', 'lead', lead.id,
+        f'Lead criado manualmente via modal: {lead.nome_razaosocial}',
+        request=request,
+    )
+
+    return JsonResponse({
+        'success': True,
+        'lead': {
+            'id': lead.id,
+            'nome_razaosocial': lead.nome_razaosocial,
+            'telefone': lead.telefone,
+            'email': lead.email,
+        },
+    }, status=201)
+
+
+@login_required(login_url='sistema:login')
 @require_http_methods(["PUT"])
 def api_lead_editar(request, lead_id):
     """API para editar campos do lead inline."""
