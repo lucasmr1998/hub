@@ -573,3 +573,153 @@ class ClienteSGP(TenantMixin):
 
     def __str__(self):
         return f'{self.nome} (SGP id={self.id_cliente_sgp})'
+
+
+class ClienteConsolidado(TenantMixin):
+    """
+    Cache normalizado de cliente vindo de qualquer ERP.
+
+    Resolve o problema de scanners (churn, inadimplência, dashboards) precisarem
+    funcionar consistentemente sem importar de qual ERP veio o cliente.
+
+    Cada adapter (HubSoft, SGP, Voalle, ...) popula essa tabela com os mesmos
+    campos normalizados. Scanners leem só daqui — agnósticos de ERP.
+
+    Identidade: chave dupla (origem, id_origem) é única.
+    cpf_cnpj é índice secundário pra cruzar mesmo CPF entre múltiplos ERPs.
+    """
+    ORIGEM_CHOICES = [
+        ('hubsoft', 'HubSoft'),
+        ('sgp', 'SGP / inSystem'),
+        ('voalle', 'Voalle'),
+        ('mk_auth', 'MK-Auth'),
+        ('ixc', 'IXC'),
+        ('manual', 'Cadastro manual no Hubtrix'),
+    ]
+
+    FORMA_COBRANCA_CHOICES = [
+        ('boleto', 'Boleto'),
+        ('pix', 'Pix'),
+        ('cartao', 'Cartão'),
+        ('misto', 'Misto'),
+        ('outro', 'Outro / não informado'),
+    ]
+
+    TECNOLOGIA_CHOICES = [
+        ('fibra', 'Fibra óptica'),
+        ('radio', 'Rádio'),
+        ('cabo', 'Cabo metálico'),
+        ('outro', 'Outro'),
+    ]
+
+    # === Identidade & origem ===
+    origem = models.CharField(max_length=20, choices=ORIGEM_CHOICES, db_index=True, verbose_name='Origem')
+    id_origem = models.CharField(max_length=100, db_index=True, verbose_name='ID no ERP de origem')
+    cpf_cnpj = models.CharField(max_length=20, blank=True, default='', db_index=True, verbose_name='CPF/CNPJ')
+
+    # === Pessoa ===
+    nome = models.CharField(max_length=300, verbose_name='Nome / Razão Social')
+    email = models.EmailField(blank=True, default='', verbose_name='E-mail')
+    telefone = models.CharField(max_length=30, blank=True, default='', verbose_name='Telefone')
+
+    # === Vínculo com Hubtrix ===
+    lead = models.ForeignKey(
+        'leads.LeadProspecto',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='clientes_consolidados',
+        verbose_name='Lead vinculado',
+    )
+
+    # === Cliente — relacionamento com ISP ===
+    data_virou_cliente = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name='Data de início do relacionamento',
+        help_text='Quando assinou primeiro contrato',
+    )
+    meses_como_cliente = models.FloatField(
+        null=True, blank=True,
+        verbose_name='Meses como cliente',
+    )
+    cliente_ativo = models.BooleanField(default=True, db_index=True, verbose_name='Cliente ativo')
+    cliente_suspenso = models.BooleanField(default=False, verbose_name='Cliente suspenso')
+
+    # === Contratos / planos ===
+    contratos_ativos_qtd = models.IntegerField(default=0, verbose_name='Contratos ativos')
+    valor_mensal_total = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        verbose_name='Valor mensal total (R$)',
+    )
+    planos_resumo = models.JSONField(
+        default=list, blank=True,
+        verbose_name='Resumo de planos',
+        help_text='[{nome, valor, velocidade, status}]',
+    )
+
+    # === Financeiro ===
+    inadimplente = models.BooleanField(default=False, db_index=True, verbose_name='Inadimplente')
+    dias_em_atraso = models.IntegerField(null=True, blank=True, verbose_name='Dias em atraso')
+    historico_atrasos_qtd = models.IntegerField(default=0, verbose_name='Histórico de atrasos')
+    forma_cobranca = models.CharField(
+        max_length=20, choices=FORMA_COBRANCA_CHOICES, blank=True, default='',
+        verbose_name='Forma de cobrança predominante',
+    )
+
+    # === Suporte ===
+    tickets_abertos_qtd = models.IntegerField(default=0, verbose_name='Tickets abertos')
+    tickets_30d_qtd = models.IntegerField(default=0, verbose_name='Tickets últimos 30d')
+
+    # === Tecnologia (ISP-specific, opcional) ===
+    tecnologia = models.CharField(
+        max_length=20, choices=TECNOLOGIA_CHOICES, blank=True, default='',
+        verbose_name='Tecnologia',
+    )
+    cto_id_origem = models.CharField(
+        max_length=100, blank=True, default='',
+        verbose_name='CTO/POP ID no ERP',
+    )
+    uso_banda_pct_queda_60d = models.FloatField(
+        null=True, blank=True,
+        verbose_name='Queda no uso de banda 60d (%)',
+        help_text='% de queda no uso médio nos últimos 60d vs 60d anteriores',
+    )
+
+    # === Engajamento (Hubtrix internal) ===
+    ultima_conversa_em = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name='Última conversa no Inbox',
+    )
+    nps_ultimo = models.IntegerField(
+        null=True, blank=True,
+        verbose_name='Última nota NPS',
+        help_text='0-10. Detrator <= 6, neutro 7-8, promotor 9-10.',
+    )
+
+    # === Cache / sync ===
+    sincronizado_em = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Último sync no Hubtrix',
+    )
+    sync_origem_em = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name='Quando dado foi puxado do ERP',
+    )
+    dados_brutos = models.JSONField(
+        default=dict, blank=True,
+        verbose_name='Dados brutos do ERP (debug)',
+    )
+
+    class Meta:
+        db_table = 'integracoes_cliente_consolidado'
+        verbose_name = 'Cliente Consolidado'
+        verbose_name_plural = '🌐 Clientes Consolidados (multi-ERP)'
+        unique_together = [['origem', 'id_origem']]
+        indexes = [
+            models.Index(fields=['cpf_cnpj']),
+            models.Index(fields=['inadimplente', '-dias_em_atraso']),
+            models.Index(fields=['cliente_ativo', 'origem']),
+            models.Index(fields=['-sincronizado_em']),
+        ]
+
+    def __str__(self):
+        return f'{self.nome} ({self.get_origem_display()} #{self.id_origem})'
