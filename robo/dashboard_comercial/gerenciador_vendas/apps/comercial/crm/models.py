@@ -248,6 +248,13 @@ class OportunidadeVenda(TenantMixin):
         null=True, blank=True, db_index=True,
         verbose_name="Categoria do motivo de ganho",
     )
+
+    # AI-suggested next action — atualizado pelo cron sugerir_proxima_acao
+    proxima_acao_sugerida = models.JSONField(
+        default=dict, blank=True,
+        verbose_name="Próxima ação sugerida (IA)",
+        help_text="Estrutura: {tipo, titulo, mensagem_sugerida, justificativa, urgencia, gerada_em, estado}",
+    )
     contrato_hubsoft_id = models.CharField(max_length=100, null=True, blank=True, verbose_name="ID Contrato Hubsoft")
     churn_risk_score = models.IntegerField(null=True, blank=True, verbose_name="Score de Churn (0-100)")
 

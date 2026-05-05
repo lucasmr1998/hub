@@ -2588,6 +2588,79 @@ def regra_pipeline_preview(request, pk):
 
 
 @login_required
+@require_http_methods(["POST"])
+def api_sugestao_aplicar(request, pk):
+    """
+    Aplica a sugestão de próxima ação: cria TarefaCRM com os dados da sugestão
+    e marca o estado como 'aplicada' (regenera em 3 dias).
+    """
+    try:
+        op = OportunidadeVenda.objects.get(pk=pk)
+    except OportunidadeVenda.DoesNotExist:
+        return JsonResponse({'error': 'Oportunidade não encontrada'}, status=404)
+
+    sugestao = op.proxima_acao_sugerida or {}
+    if not sugestao or sugestao.get('estado') != 'pendente':
+        return JsonResponse({'error': 'Sem sugestão pendente'}, status=400)
+
+    try:
+        tarefa = TarefaCRM.objects.create(
+            tenant=op.tenant,
+            oportunidade=op,
+            lead=op.lead,
+            titulo=sugestao.get('titulo', 'Próxima ação sugerida pela IA')[:200],
+            descricao=(
+                f"{sugestao.get('mensagem_sugerida', '')}\n\n"
+                f"--- Sugerido por IA ---\n"
+                f"Justificativa: {sugestao.get('justificativa', '')}"
+            ),
+            tipo=sugestao.get('tipo', 'outro')[:30],
+            prioridade='alta' if sugestao.get('urgencia') == 'alta' else 'normal',
+            data_vencimento=timezone.now() + timezone.timedelta(hours=24),
+            responsavel=op.responsavel or request.user,
+            criado_por=request.user,
+        )
+    except Exception as exc:
+        return JsonResponse({'error': f'Falha ao criar tarefa: {exc}'}, status=500)
+
+    sugestao['estado'] = 'aplicada'
+    sugestao['aplicada_em'] = timezone.now().isoformat()
+    sugestao['tarefa_id'] = tarefa.id
+    op.proxima_acao_sugerida = sugestao
+    op.save(update_fields=['proxima_acao_sugerida'])
+
+    from apps.sistema.utils import registrar_acao
+    registrar_acao(
+        'crm', 'aplicar_sugestao_ia', 'oportunidade', op.id,
+        f'Sugestão IA aplicada → tarefa #{tarefa.id}: {tarefa.titulo[:80]}',
+        request=request,
+    )
+
+    return JsonResponse({'success': True, 'tarefa_id': tarefa.id})
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_sugestao_rejeitar(request, pk):
+    """Marca sugestão como rejeitada (regenera em 3 dias)."""
+    try:
+        op = OportunidadeVenda.objects.get(pk=pk)
+    except OportunidadeVenda.DoesNotExist:
+        return JsonResponse({'error': 'Oportunidade não encontrada'}, status=404)
+
+    sugestao = op.proxima_acao_sugerida or {}
+    if not sugestao:
+        return JsonResponse({'error': 'Sem sugestão'}, status=400)
+
+    sugestao['estado'] = 'rejeitada'
+    sugestao['rejeitada_em'] = timezone.now().isoformat()
+    op.proxima_acao_sugerida = sugestao
+    op.save(update_fields=['proxima_acao_sugerida'])
+
+    return JsonResponse({'success': True})
+
+
+@login_required
 def relatorio_win_loss(request):
     """
     Dashboard de Win/Loss analysis.

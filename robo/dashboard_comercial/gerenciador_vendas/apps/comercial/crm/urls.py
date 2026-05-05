@@ -23,6 +23,10 @@ urlpatterns = [
     # Relatórios
     path('relatorios/win-loss/', views.relatorio_win_loss, name='relatorio_win_loss'),
 
+    # AI suggested next action
+    path('oportunidades/<int:pk>/sugestao/aplicar/', views.api_sugestao_aplicar, name='api_sugestao_aplicar'),
+    path('oportunidades/<int:pk>/sugestao/rejeitar/', views.api_sugestao_rejeitar, name='api_sugestao_rejeitar'),
+
     # Tarefas
     path('tarefas/', views.tarefas_lista, name='tarefas_lista'),
     path('tarefas/criar/', views.api_tarefa_criar, name='api_tarefa_criar'),
