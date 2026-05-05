@@ -2030,7 +2030,7 @@ class ConexaoNodoAtendimento(TenantMixin):
         max_length=50,
         default='default',
         verbose_name="Tipo de Saida",
-        help_text="default, true, false, erro, ou nome de categoria (ia_classificador)"
+        help_text="default, true, false, erro, timeout, ou nome de categoria (ia_classificador). 'timeout' segue automaticamente quando nodo_origem.configuracao['timeout_segundos'] expira sem resposta — disparado pelo cron check_nodo_timeouts."
     )
 
     class Meta:
