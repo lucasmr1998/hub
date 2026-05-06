@@ -1,0 +1,37 @@
+{% comment %}
+Section card — card com header (titulo, icone, contagem) + body.
+Usado em dashboards e telas de configuracao.
+
+Params:
+  title: titulo da secao (string, obrigatorio)
+  icon: classe bi-* (opcional)
+  variant: default | success | danger | warning | info (default: default) — controla gradient do header
+  count: numero/string opcional (badge no canto direito do header)
+  count_label: texto a frente do count (ex: "motivos") (opcional)
+  body: HTML pre-renderizado (string com html safe). Use junto com {% with %} ou compose manualmente.
+
+Para conteudo dinamico, use sem `body` e abra/feche manualmente:
+  <div class="section-card section-card-{{ variant }}">
+    <div class="section-card-header">...</div>
+    <div class="section-card-body">SEU CONTEUDO</div>
+  </div>
+
+Ou use a forma compacta com `body`:
+  {% include "components/section_card.html" with title="X" body="<p>html</p>" %}
+{% endcomment %}
+<div class="section-card section-card-{{ variant|default:'default' }}">
+  <div class="section-card-header">
+    <h2 class="section-card-title">
+      {% if icon %}<span class="section-card-icon section-card-icon-{{ variant|default:'default' }}"><i class="bi {{ icon }}"></i></span>{% endif %}
+      {{ title }}
+    </h2>
+    {% if count is not None and count != '' %}
+      <span class="section-card-count">
+        {{ count }}{% if count_label %} {{ count_label }}{% endif %}
+      </span>
+    {% endif %}
+  </div>
+  {% if body %}
+    <div class="section-card-body">{{ body|safe }}</div>
+  {% endif %}
+</div>

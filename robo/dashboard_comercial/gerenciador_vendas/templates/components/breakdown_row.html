@@ -1,0 +1,27 @@
+{% comment %}
+Breakdown row — linha tabular pra dashboards de distribuicao
+(ex: por motivo de perda, por canal, por status).
+
+Estrutura: label + meta (linha auxiliar) + barra de progresso colorida + pct destacado a direita.
+
+Params:
+  label: titulo da linha (obrigatorio)
+  meta: texto auxiliar abaixo do label (ex: "23 oportunidades — R$ 4.000")
+  percent: numero 0-100 (largura da barra, e tambem mostrado a direita)
+  variant: primary (default) | success | danger | warning | info — cor da barra
+  pct_label: texto auxiliar abaixo do pct (default: "do total")
+  bar_max_width: largura maxima da barra em px (default: 280)
+{% endcomment %}
+<div class="breakdown-row">
+  <div class="breakdown-row-info">
+    <span class="breakdown-row-label">{{ label }}</span>
+    {% if meta %}<span class="breakdown-row-meta">{{ meta }}</span>{% endif %}
+    <div class="breakdown-row-bar-wrap" style="max-width: {{ bar_max_width|default:'280' }}px;">
+      <div class="breakdown-row-bar breakdown-row-bar-{{ variant|default:'primary' }}" style="width: {{ percent|default:0 }}%;"></div>
+    </div>
+  </div>
+  <div class="breakdown-row-stats">
+    <span class="breakdown-row-pct">{{ percent|default:0 }}%</span>
+    <span class="breakdown-row-pct-label">{{ pct_label|default:'do total' }}</span>
+  </div>
+</div>

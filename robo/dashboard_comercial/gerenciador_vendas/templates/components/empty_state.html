@@ -1,0 +1,23 @@
+{% comment %}
+Empty state — icone + texto pra estado vazio.
+Centralizado, padding generoso, ícone em fade.
+
+Params:
+  icon: classe bi-* (default: bi-inbox)
+  text: mensagem principal (string)
+  subtext: texto auxiliar abaixo (opcional)
+  cta_label: texto do botao de acao (opcional)
+  cta_href: link do botao (opcional)
+  cta_icon: classe bi-* do icone do botao (default: bi-plus-lg)
+  size: sm | md (default) | lg — controla padding e tamanho do icone
+{% endcomment %}
+<div class="empty-state empty-state-{{ size|default:'md' }}">
+  <i class="bi {{ icon|default:'bi-inbox' }} empty-state-icon"></i>
+  <p class="empty-state-text">{{ text }}</p>
+  {% if subtext %}<p class="empty-state-subtext">{{ subtext }}</p>{% endif %}
+  {% if cta_label and cta_href %}
+    <a href="{{ cta_href }}" class="btn btn-primary btn-sm empty-state-cta">
+      <i class="bi {{ cta_icon|default:'bi-plus-lg' }}"></i> {{ cta_label }}
+    </a>
+  {% endif %}
+</div>
