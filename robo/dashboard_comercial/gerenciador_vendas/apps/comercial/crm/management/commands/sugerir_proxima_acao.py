@@ -34,8 +34,9 @@ class Command(BaseCommand):
         dry = options['dry_run']
         limit = options['limit']
 
+        from django.db.models import Q
         qs = OportunidadeVenda.objects.exclude(
-            status__in=['ganha', 'perdida']
+            Q(estagio__is_final_ganho=True) | Q(estagio__is_final_perdido=True)
         ).select_related('lead', 'estagio', 'tenant', 'responsavel').order_by('-data_criacao')
 
         processadas = 0

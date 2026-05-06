@@ -114,9 +114,10 @@ def _home_vendedor(request):
     user = request.user
     hoje = timezone.now().date()
 
+    from django.db.models import Q
     minhas_oportunidades = Oportunidade.objects.filter(
         responsavel=user,
-    ).exclude(status__in=['ganha', 'perdida'])
+    ).exclude(Q(estagio__is_final_ganho=True) | Q(estagio__is_final_perdido=True))
 
     oportunidades_qtd = minhas_oportunidades.count()
     oportunidades_valor = minhas_oportunidades.aggregate(
@@ -160,10 +161,10 @@ def _home_gerente_comercial(request):
 
     funil_status = (
         Oportunidade.objects
-        .exclude(status='perdida')
-        .values('status')
+        .exclude(estagio__is_final_perdido=True)
+        .values('estagio__nome')
         .annotate(qtd=Count('id'), valor=Sum('valor_estimado'))
-        .order_by('status')
+        .order_by('estagio__nome')
     )
 
     leads_sem_resp = LeadProspecto.objects.filter(
@@ -172,15 +173,15 @@ def _home_gerente_comercial(request):
     ).count()
 
     oportunidades_30d = Oportunidade.objects.filter(
-        criado_em__gte=janela_30d,
+        data_criacao__gte=janela_30d,
     ).count()
     fechadas_30d = Oportunidade.objects.filter(
-        status='ganha',
-        atualizado_em__gte=janela_30d,
+        estagio__is_final_ganho=True,
+        data_atualizacao__gte=janela_30d,
     ).count()
     valor_fechado_30d = Oportunidade.objects.filter(
-        status='ganha',
-        atualizado_em__gte=janela_30d,
+        estagio__is_final_ganho=True,
+        data_atualizacao__gte=janela_30d,
     ).aggregate(total=Sum('valor_estimado'))['total'] or 0
 
     return render(request, 'dashboard/home_gerente_comercial.html', {

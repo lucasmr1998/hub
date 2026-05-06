@@ -2677,13 +2677,14 @@ def relatorio_win_loss(request):
     dias = int(request.GET.get('dias', 90))
     desde = timezone.now() - timedelta(days=dias)
 
+    from django.db.models import Q
     qs = OportunidadeVenda.objects.filter(
-        atualizado_em__gte=desde,
-        status__in=['ganha', 'perdida'],
+        Q(estagio__is_final_ganho=True) | Q(estagio__is_final_perdido=True),
+        data_atualizacao__gte=desde,
     )
 
-    ganhas = qs.filter(status='ganha')
-    perdidas = qs.filter(status='perdida')
+    ganhas = qs.filter(estagio__is_final_ganho=True)
+    perdidas = qs.filter(estagio__is_final_perdido=True)
 
     breakdown_perda = (
         perdidas.values('motivo_perda_categoria')

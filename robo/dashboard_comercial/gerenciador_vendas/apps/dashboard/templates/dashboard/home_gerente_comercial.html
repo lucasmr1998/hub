@@ -31,7 +31,7 @@
       <tbody>
         {% for s in funil_status %}
           <tr>
-            <td style="padding: 12px; border-bottom: 1px solid var(--color-border); text-transform: capitalize;">{{ s.status }}</td>
+            <td style="padding: 12px; border-bottom: 1px solid var(--color-border); text-transform: capitalize;">{{ s.estagio__nome|default:"—" }}</td>
             <td style="padding: 12px; border-bottom: 1px solid var(--color-border); text-align: right;">{{ s.qtd }}</td>
             <td style="padding: 12px; border-bottom: 1px solid var(--color-border); text-align: right; font-weight: 600;">R$ {{ s.valor|default:"0"|floatformat:2 }}</td>
           </tr>
