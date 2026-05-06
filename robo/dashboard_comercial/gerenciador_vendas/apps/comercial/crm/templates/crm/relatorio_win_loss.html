@@ -9,9 +9,9 @@
   <h1 class="page-title">Win/Loss Analysis</h1>
   <p class="page-subtitle">Por que você ganha e por que você perde. Últimos {{ dias }} dias.</p>
   <div class="page-actions">
-    <form method="get" style="display: inline-flex; gap: 8px; align-items: center;">
-      <label style="font-size: 12px; color: var(--color-text-muted);">Período:</label>
-      <select name="dias" onchange="this.form.submit()" class="form-control" style="width: auto;">
+    <form method="get" style="display: inline-flex; gap: var(--sp-2); align-items: center;">
+      <label style="font-size: var(--fs-xs); color: var(--color-text-muted);">Período:</label>
+      <select name="dias" onchange="this.form.submit()" class="form-control" style="width: auto; height: 36px;">
         <option value="30" {% if dias == 30 %}selected{% endif %}>30 dias</option>
         <option value="90" {% if dias == 90 %}selected{% endif %}>90 dias</option>
         <option value="180" {% if dias == 180 %}selected{% endif %}>180 dias</option>
@@ -22,107 +22,119 @@
 </div>
 
 <style>
-  .winloss-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
-  .winloss-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 20px; }
-  .winloss-card.ganho { border-left: 4px solid #10B981; }
-  .winloss-card.perda { border-left: 4px solid #DC2626; }
-  .winloss-stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); margin-bottom: 6px; }
-  .winloss-stat-value { font-size: 32px; font-weight: 800; color: var(--color-text); }
-  .winloss-stat-sub { font-size: 12px; color: var(--color-text-muted); margin-top: 4px; }
-  .winloss-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .winloss-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-4); margin-bottom: var(--sp-6); }
+  @media (max-width: 768px) { .winloss-stats { grid-template-columns: 1fr; } }
+
+  .winloss-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
   @media (max-width: 900px) { .winloss-grid { grid-template-columns: 1fr; } }
-  .winloss-table { width: 100%; border-collapse: collapse; }
-  .winloss-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--color-border); font-size: 11px; text-transform: uppercase; color: var(--color-text-muted); }
-  .winloss-table td { padding: 12px; border-bottom: 1px solid var(--color-border); font-size: 14px; }
-  .winloss-bar-wrap { background: #F1F5F9; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 4px; }
-  .winloss-bar { height: 100%; }
-  .winloss-bar.ganho { background: #10B981; }
-  .winloss-bar.perda { background: #DC2626; }
+
+  .winloss-section { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden; }
+  .winloss-section-header { padding: var(--sp-4) var(--sp-5); border-bottom: 1px solid var(--color-border); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+  .winloss-section-header.ganho { background: linear-gradient(180deg, #ECFDF5 0%, #FFFFFF 100%); }
+  .winloss-section-header.perda { background: linear-gradient(180deg, #FEF2F2 0%, #FFFFFF 100%); }
+  .winloss-section-title { display: flex; align-items: center; gap: var(--sp-2); margin: 0; font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--color-text); }
+  .winloss-section-icon { width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; }
+  .winloss-section-icon.ganho { background: #10B981; color: white; }
+  .winloss-section-icon.perda { background: #DC2626; color: white; }
+  .winloss-section-count { font-size: var(--fs-xs); color: var(--color-text-muted); padding: 2px var(--sp-2); background: var(--color-surface-2, #F1F5F9); border-radius: 999px; }
+  .winloss-section-body { padding: var(--sp-4) var(--sp-5); }
+
+  .winloss-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; border-bottom: 1px solid var(--color-border); }
+  .winloss-row:last-child { border-bottom: none; }
+  .winloss-row-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .winloss-row-label { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--color-text); }
+  .winloss-row-meta { font-size: var(--fs-xs); color: var(--color-text-muted); }
+  .winloss-row-bar-wrap { background: #F1F5F9; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 6px; max-width: 280px; }
+  .winloss-row-bar { height: 100%; transition: width 200ms ease-out; }
+  .winloss-row-bar.ganho { background: #10B981; }
+  .winloss-row-bar.perda { background: #DC2626; }
+  .winloss-row-stats { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
+  .winloss-row-pct { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--color-text); }
+  .winloss-row-qtd { font-size: var(--fs-xs); color: var(--color-text-muted); }
+
+  .winloss-empty { padding: var(--sp-8) var(--sp-4); text-align: center; }
+  .winloss-empty-icon { font-size: 32px; color: var(--color-text-muted); opacity: 0.4; display: block; margin-bottom: var(--sp-3); }
+  .winloss-empty-text { font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0; }
+
+  .winloss-footnote { margin-top: var(--sp-6); padding: var(--sp-3) var(--sp-4); background: var(--color-surface-2, #F8FAFC); border-radius: var(--radius); font-size: var(--fs-xs); color: var(--color-text-muted); display: flex; gap: var(--sp-2); align-items: flex-start; }
 </style>
 
 <div class="winloss-stats">
-  <div class="winloss-card">
-    <div class="winloss-stat-label">Win rate</div>
-    <div class="winloss-stat-value">{{ win_rate }}%</div>
-    <div class="winloss-stat-sub">{{ total_ganhas }} de {{ total_ganhas|add:total_perdidas }} fechadas</div>
-  </div>
-  <div class="winloss-card ganho">
-    <div class="winloss-stat-label">Oportunidades ganhas</div>
-    <div class="winloss-stat-value">{{ total_ganhas }}</div>
-    <div class="winloss-stat-sub">R$ {{ valor_ganho|floatformat:2 }}</div>
-  </div>
-  <div class="winloss-card perda">
-    <div class="winloss-stat-label">Oportunidades perdidas</div>
-    <div class="winloss-stat-value">{{ total_perdidas }}</div>
-    <div class="winloss-stat-sub">R$ {{ valor_perdido|floatformat:2 }}</div>
-  </div>
+  {% include "components/stat_card.html" with label="Win rate" value=win_rate|stringformat:"s"|add:"%" icon="bi-trophy-fill" icon_variant="primary" footnote=total_ganhas|stringformat:"s"|add:" de "|add:total|stringformat:"s"|add:" fechadas" %}
+  {% include "components/stat_card.html" with label="Oportunidades ganhas" value=total_ganhas icon="bi-check-circle-fill" icon_variant="success" footnote="R$ "|add:valor_ganho|stringformat:"s" %}
+  {% include "components/stat_card.html" with label="Oportunidades perdidas" value=total_perdidas icon="bi-x-circle-fill" icon_variant="danger" footnote="R$ "|add:valor_perdido|stringformat:"s" %}
 </div>
 
 <div class="winloss-grid">
-  <div class="card">
-    <h2 style="margin: 0 0 16px; font-size: 18px; font-weight: 700;">Por que perdemos</h2>
-    {% if breakdown_perda %}
-      <table class="winloss-table">
-        <thead>
-          <tr>
-            <th>Motivo</th>
-            <th style="text-align: right;">Qtd</th>
-            <th style="text-align: right;">Valor</th>
-            <th style="text-align: right; width: 30%;">Share</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in breakdown_perda %}
-            <tr>
-              <td><strong>{{ item.label }}</strong></td>
-              <td style="text-align: right;">{{ item.qtd }}</td>
-              <td style="text-align: right;">R$ {{ item.valor|floatformat:0 }}</td>
-              <td style="text-align: right;">
-                <span style="font-weight: 600;">{{ item.percent }}%</span>
-                <div class="winloss-bar-wrap"><div class="winloss-bar perda" style="width: {{ item.percent }}%;"></div></div>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p style="color: var(--color-text-muted);">Nenhuma oportunidade perdida com motivo categorizado nesse período.</p>
-    {% endif %}
+  <div class="winloss-section">
+    <div class="winloss-section-header perda">
+      <h2 class="winloss-section-title">
+        <span class="winloss-section-icon perda"><i class="bi bi-graph-down-arrow"></i></span>
+        Por que perdemos
+      </h2>
+      {% if breakdown_perda %}<span class="winloss-section-count">{{ breakdown_perda|length }} motivo{{ breakdown_perda|length|pluralize:"s" }}</span>{% endif %}
+    </div>
+    <div class="winloss-section-body">
+      {% if breakdown_perda %}
+        {% for item in breakdown_perda %}
+          <div class="winloss-row">
+            <div class="winloss-row-info">
+              <span class="winloss-row-label">{{ item.label }}</span>
+              <span class="winloss-row-meta">{{ item.qtd }} oportunidade{{ item.qtd|pluralize:"s" }} · R$ {{ item.valor|floatformat:0 }}</span>
+              <div class="winloss-row-bar-wrap"><div class="winloss-row-bar perda" style="width: {{ item.percent }}%;"></div></div>
+            </div>
+            <div class="winloss-row-stats">
+              <span class="winloss-row-pct">{{ item.percent }}%</span>
+              <span class="winloss-row-qtd">do total</span>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="winloss-empty">
+          <i class="bi bi-graph-down-arrow winloss-empty-icon"></i>
+          <p class="winloss-empty-text">Nenhuma oportunidade perdida com motivo categorizado nesse período.</p>
+        </div>
+      {% endif %}
+    </div>
   </div>
 
-  <div class="card">
-    <h2 style="margin: 0 0 16px; font-size: 18px; font-weight: 700;">Por que ganhamos</h2>
-    {% if breakdown_ganho %}
-      <table class="winloss-table">
-        <thead>
-          <tr>
-            <th>Motivo</th>
-            <th style="text-align: right;">Qtd</th>
-            <th style="text-align: right;">Valor</th>
-            <th style="text-align: right; width: 30%;">Share</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in breakdown_ganho %}
-            <tr>
-              <td><strong>{{ item.label }}</strong></td>
-              <td style="text-align: right;">{{ item.qtd }}</td>
-              <td style="text-align: right;">R$ {{ item.valor|floatformat:0 }}</td>
-              <td style="text-align: right;">
-                <span style="font-weight: 600;">{{ item.percent }}%</span>
-                <div class="winloss-bar-wrap"><div class="winloss-bar ganho" style="width: {{ item.percent }}%;"></div></div>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p style="color: var(--color-text-muted);">Nenhuma oportunidade ganha com motivo categorizado nesse período.</p>
-    {% endif %}
+  <div class="winloss-section">
+    <div class="winloss-section-header ganho">
+      <h2 class="winloss-section-title">
+        <span class="winloss-section-icon ganho"><i class="bi bi-graph-up-arrow"></i></span>
+        Por que ganhamos
+      </h2>
+      {% if breakdown_ganho %}<span class="winloss-section-count">{{ breakdown_ganho|length }} motivo{{ breakdown_ganho|length|pluralize:"s" }}</span>{% endif %}
+    </div>
+    <div class="winloss-section-body">
+      {% if breakdown_ganho %}
+        {% for item in breakdown_ganho %}
+          <div class="winloss-row">
+            <div class="winloss-row-info">
+              <span class="winloss-row-label">{{ item.label }}</span>
+              <span class="winloss-row-meta">{{ item.qtd }} oportunidade{{ item.qtd|pluralize:"s" }} · R$ {{ item.valor|floatformat:0 }}</span>
+              <div class="winloss-row-bar-wrap"><div class="winloss-row-bar ganho" style="width: {{ item.percent }}%;"></div></div>
+            </div>
+            <div class="winloss-row-stats">
+              <span class="winloss-row-pct">{{ item.percent }}%</span>
+              <span class="winloss-row-qtd">do total</span>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="winloss-empty">
+          <i class="bi bi-graph-up-arrow winloss-empty-icon"></i>
+          <p class="winloss-empty-text">Nenhuma oportunidade ganha com motivo categorizado nesse período.</p>
+        </div>
+      {% endif %}
+    </div>
   </div>
 </div>
 
-<p style="margin-top: 24px; font-size: 12px; color: var(--color-text-muted);">
-  Oportunidades sem categoria de motivo aparecem como "Sem categoria". Ao mover oportunidade pra ganha/perdida, peça pro time selecionar o motivo categorizado pra alimentar este relatório.
-</p>
+<div class="winloss-footnote">
+  <i class="bi bi-info-circle" style="margin-top: 2px;"></i>
+  <span>
+    Oportunidades sem categoria de motivo aparecem como <em>"Sem categoria"</em>. Ao mover oportunidade pra <strong>ganha</strong>/<strong>perdida</strong>, peça pro time selecionar o motivo categorizado pra alimentar este relatório.
+  </span>
+</div>
 {% endblock %}
