@@ -60,7 +60,7 @@
 </style>
 
 <div class="winloss-stats">
-  {% include "components/stat_card.html" with label="Win rate" value=win_rate|stringformat:"s"|add:"%" icon="bi-trophy-fill" icon_variant="primary" footnote=total_ganhas|stringformat:"s"|add:" de "|add:total|stringformat:"s"|add:" fechadas" %}
+  {% include "components/stat_card.html" with label="Win rate" value=win_rate|stringformat:"s"|add:"%" icon="bi-trophy-fill" icon_variant="primary" footnote=total_ganhas|stringformat:"s"|add:" de "|add:total_fechadas|stringformat:"s"|add:" fechadas" %}
   {% include "components/stat_card.html" with label="Oportunidades ganhas" value=total_ganhas icon="bi-check-circle-fill" icon_variant="success" footnote="R$ "|add:valor_ganho|stringformat:"s" %}
   {% include "components/stat_card.html" with label="Oportunidades perdidas" value=total_perdidas icon="bi-x-circle-fill" icon_variant="danger" footnote="R$ "|add:valor_perdido|stringformat:"s" %}
 </div>

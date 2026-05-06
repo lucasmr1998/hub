@@ -2736,6 +2736,7 @@ def relatorio_win_loss(request):
         'desde': desde,
         'total_ganhas': total_ganhas,
         'total_perdidas': total_perdidas,
+        'total_fechadas': total,
         'win_rate': win_rate,
         'valor_ganho': valor_ganho,
         'valor_perdido': valor_perdido,
