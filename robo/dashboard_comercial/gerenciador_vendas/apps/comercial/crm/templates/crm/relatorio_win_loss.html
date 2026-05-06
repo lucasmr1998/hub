@@ -5,19 +5,23 @@
 
 {% block content %}
 <div class="page-header">
-  <div class="page-eyebrow">CRM · Relatórios</div>
-  <h1 class="page-title">Win/Loss Analysis</h1>
-  <p class="page-subtitle">Por que você ganha e por que você perde. Últimos {{ dias }} dias.</p>
-  <div class="page-actions">
-    <form method="get" style="display: inline-flex; gap: var(--sp-2); align-items: center;">
-      <label style="font-size: var(--fs-xs); color: var(--color-text-muted);">Período:</label>
-      <select name="dias" onchange="this.form.submit()" class="form-control" style="width: auto; height: 36px;">
-        <option value="30" {% if dias == 30 %}selected{% endif %}>30 dias</option>
-        <option value="90" {% if dias == 90 %}selected{% endif %}>90 dias</option>
-        <option value="180" {% if dias == 180 %}selected{% endif %}>180 dias</option>
-        <option value="365" {% if dias == 365 %}selected{% endif %}>1 ano</option>
-      </select>
-    </form>
+  <div class="page-header-top">
+    <div>
+      <div class="page-eyebrow">CRM · Relatórios</div>
+      <h1 class="page-title">Win/Loss Analysis</h1>
+      <p class="page-subtitle">Por que você ganha e por que você perde. Últimos {{ dias }} dias.</p>
+    </div>
+    <div class="page-actions">
+      <form method="get" style="display: inline-flex; gap: var(--sp-2); align-items: center;">
+        <label style="font-size: var(--fs-xs); color: var(--color-text-muted);">Período:</label>
+        <select name="dias" onchange="this.form.submit()" class="form-control" style="width: auto; height: 36px;">
+          <option value="30" {% if dias == 30 %}selected{% endif %}>30 dias</option>
+          <option value="90" {% if dias == 90 %}selected{% endif %}>90 dias</option>
+          <option value="180" {% if dias == 180 %}selected{% endif %}>180 dias</option>
+          <option value="365" {% if dias == 365 %}selected{% endif %}>1 ano</option>
+        </select>
+      </form>
+    </div>
   </div>
 </div>
 
