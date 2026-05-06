@@ -142,7 +142,7 @@ Uso em template que extende layout_app:
         <a href="/cs/clube/dashboard/participantes/" class="app-subnav-item {% if 'participante' in request.resolver_match.url_name or 'extrato_membro' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-people"></i><span>Membros</span>
         </a>
-        <a href="/crm/retencao/" class="app-subnav-item {% if 'retencao' in request.resolver_match.url_name %}is-active{% endif %}">
+        <a href="/cs/retencao/" class="app-subnav-item {% if 'retencao' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-shield-check"></i><span>Retencao</span>
         </a>
       </nav>

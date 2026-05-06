@@ -115,6 +115,11 @@ urlpatterns = [
     path('cs/parceiros/',   include('apps.cs.parceiros.urls')),
     path('cs/indicacoes/',  include('apps.cs.indicacoes.urls')),
     path('cs/carteirinha/', include('apps.cs.carteirinha.urls')),
+    path('cs/retencao/',    include('apps.cs.retencao.urls')),
+
+    # Redirect legado: /crm/retencao/ -> /cs/retencao/ (movido em 05/05/2026)
+    path('crm/retencao/', RedirectView.as_view(url='/cs/retencao/', permanent=False, query_string=True)),
+    path('crm/retencao/<path:resto>', RedirectView.as_view(url='/cs/retencao/%(resto)s', permanent=False, query_string=True)),
 
     # === Suporte ===
     path('suporte/', include('apps.suporte.urls')),

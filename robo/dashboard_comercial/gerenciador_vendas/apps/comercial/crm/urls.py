@@ -44,10 +44,8 @@ urlpatterns = [
     path('metas/criar/', views.api_meta_criar, name='api_meta_criar'),
 
     # Retenção
-    path('retencao/', views.retencao_view, name='retencao'),
-    path('retencao/scanner/', views.api_scanner_retencao, name='api_scanner_retencao'),
-    path('retencao/alertas/<int:pk>/tratar/', views.api_tratar_alerta, name='api_tratar_alerta'),
-    path('retencao/alertas/<int:pk>/resolver/', views.api_resolver_alerta, name='api_resolver_alerta'),
+    # Retenção movida pra apps.cs.retencao em 05/05/2026.
+    # URLs antigas redirecionam pra /cs/retencao/ via gerenciador_vendas/urls.py.
 
     # Segmentos
     path('segmentos/', views.segmentos_lista, name='segmentos_lista'),

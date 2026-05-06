@@ -1,0 +1,242 @@
+{% extends "sistema/base.html" %}
+
+{% block title %}Retencao de clientes — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Retencao de clientes</h1>
+      <p class="page-subtitle">Alertas de risco de churn e acoes de retencao.</p>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'crm:pipeline' %}" class="btn btn-secondary btn-sm"><i class="bi bi-kanban"></i> Pipeline</a>
+      <button class="btn btn-primary btn-sm" onclick="executarScanner(this)"><i class="bi bi-arrow-clockwise"></i> Executar scanner</button>
+    </div>
+  </div>
+</div>
+
+<div class="stats-grid-5" style="margin-bottom: var(--sp-4);">
+  {% include "components/stat_card.html" with label="Criticos" value=alertas_criticos|length icon="bi-exclamation-octagon" icon_variant="danger" %}
+  {% include "components/stat_card.html" with label="Alto risco" value=alertas_altos|length icon="bi-exclamation-triangle" icon_variant="warning" %}
+  {% include "components/stat_card.html" with label="Medio risco" value=alertas_medios|length icon="bi-info-circle" icon_variant="info" %}
+  {% include "components/stat_card.html" with label="Baixo risco" value=alertas_baixos|length icon="bi-check-circle" icon_variant="success" %}
+  {% include "components/stat_card.html" with label="Total ativo" value=alertas|length icon="bi-bell" %}
+</div>
+
+{% if alertas %}
+  <div class="card" style="padding: 0; overflow: hidden;">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-shield-exclamation" style="color: var(--color-danger);"></i> Alertas ativos</h3>
+      <span class="badge badge-primary badge-soft">{{ alertas|length }}</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Tipo de alerta</th>
+            <th>Risco</th>
+            <th>Score</th>
+            <th>Status</th>
+            <th>Responsavel</th>
+            <th>Detectado</th>
+            <th>Acoes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for alerta in alertas_criticos %}{% include "crm/_retencao_row.html" with alerta=alerta nivel="critico" nivel_label="Critico" cor_var="--color-danger" %}{% endfor %}
+          {% for alerta in alertas_altos %}{% include "crm/_retencao_row.html" with alerta=alerta nivel="alto" nivel_label="Alto" cor_var="--color-warning" %}{% endfor %}
+          {% for alerta in alertas_medios %}{% include "crm/_retencao_row.html" with alerta=alerta nivel="medio" nivel_label="Medio" cor_var="--color-info" %}{% endfor %}
+          {% for alerta in alertas_baixos %}{% include "crm/_retencao_row.html" with alerta=alerta nivel="baixo" nivel_label="Baixo" cor_var="--color-success" %}{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% else %}
+  <div class="card">
+    <div class="card-body" style="text-align: center; padding: var(--sp-10);">
+      <i class="bi bi-heart-pulse" style="font-size: 2.5rem; color: var(--color-text-muted); opacity: 0.3; display: block; margin-bottom: var(--sp-3);"></i>
+      <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0 0 var(--sp-4);">Nenhum alerta de retencao ativo. Execute o scanner pra detectar riscos de churn.</p>
+      <button class="btn btn-primary btn-sm" onclick="executarScanner(this)"><i class="bi bi-arrow-clockwise"></i> Executar scanner</button>
+    </div>
+  </div>
+{% endif %}
+
+{# Modal resolver #}
+<div class="modal-overlay" id="modal-resolver" style="display: none;">
+  <div class="modal-content" style="max-width: 440px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-check-circle" style="color: var(--color-success);"></i> Resolver alerta</h3>
+      <button class="modal-close" onclick="fecharModalResolver()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="alerta-id-resolver">
+      <div class="field">
+        <label class="field-label" for="acoes-tomadas">Acoes tomadas</label>
+        <div class="field-input-wrap">
+          <textarea id="acoes-tomadas" class="field-input" rows="4" style="height: auto; min-height: 90px; padding: var(--sp-2) var(--sp-3); resize: vertical;" placeholder="Descreva o que foi feito pra resolver o problema..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="fecharModalResolver()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmarResolver()"><i class="bi bi-check-lg"></i> Marcar como resolvido</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .stats-grid-5 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--sp-3);
+  }
+
+  .table-wrap { overflow-x: auto; }
+
+  .nivel-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+  }
+  .nivel-critico { background: var(--color-danger-soft); color: var(--color-danger); }
+  .nivel-alto { background: var(--color-warning-soft); color: var(--color-warning); }
+  .nivel-medio { background: var(--color-info-soft); color: var(--color-info); }
+  .nivel-baixo { background: var(--color-success-soft); color: var(--color-success); }
+
+  .tipo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+  }
+
+  .status-badge {
+    display: inline-flex;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+  }
+  .status-novo { background: var(--color-info-soft); color: var(--color-info); }
+  .status-em_tratamento { background: var(--color-warning-soft); color: var(--color-warning); }
+  .status-resolvido { background: var(--color-success-soft); color: var(--color-success); }
+
+  .score-wrap { display: flex; align-items: center; gap: var(--sp-2); }
+  .score-bar {
+    width: 60px;
+    height: 6px;
+    background: var(--color-surface);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .score-fill { height: 100%; border-radius: 99px; }
+  .score-txt {
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
+    min-width: 28px;
+    text-align: right;
+  }
+
+  .cliente-nome { font-weight: var(--fw-semibold); color: var(--color-text); font-size: var(--fs-sm); }
+  .cliente-tel { font-size: var(--fs-xs); color: var(--color-text-muted); }
+  .acao-btns { display: flex; gap: var(--sp-2); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+function tratarAlerta(pk, btn) {
+  fetch(`/crm/retencao/alertas/${pk}/tratar/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF },
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i>';
+      toast('Em tratamento', 'Alerta marcado pra tratamento', 'success');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      toast('Erro', d.erro || 'Erro ao tratar', 'danger');
+    }
+  });
+}
+
+function resolverAlerta(pk) {
+  document.getElementById('alerta-id-resolver').value = pk;
+  document.getElementById('acoes-tomadas').value = '';
+  document.getElementById('modal-resolver').style.display = 'flex';
+  document.getElementById('acoes-tomadas').focus();
+}
+
+function fecharModalResolver() {
+  document.getElementById('modal-resolver').style.display = 'none';
+}
+
+function confirmarResolver() {
+  const pk = document.getElementById('alerta-id-resolver').value;
+  const acoes = document.getElementById('acoes-tomadas').value;
+  fetch(`/crm/retencao/alertas/${pk}/resolver/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ acoes_tomadas: acoes }),
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      fecharModalResolver();
+      toast('Resolvido', 'Alerta marcado como resolvido', 'success');
+      setTimeout(() => location.reload(), 600);
+    } else {
+      toast('Erro', d.erro || 'Erro ao resolver', 'danger');
+    }
+  });
+}
+
+function executarScanner(btn) {
+  btn.disabled = true;
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Executando...';
+  fetch('{% url "retencao:api_scanner_retencao" %}', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF },
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      toast('Scanner concluido', `${d.criados} criados, ${d.atualizados} atualizados`, 'success');
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      btn.innerHTML = orig;
+      btn.disabled = false;
+      toast('Erro', d.erro || 'Erro no scanner', 'danger');
+    }
+  })
+  .catch(() => {
+    btn.innerHTML = orig;
+    btn.disabled = false;
+    toast('Erro', 'Falha na requisicao', 'danger');
+  });
+}
+
+document.getElementById('modal-resolver').addEventListener('click', function(e) {
+  if (e.target === this) fecharModalResolver();
+});
+</script>
+{% endblock %}
