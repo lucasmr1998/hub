@@ -144,8 +144,31 @@ Efeito colateral. Subtipo define o que faz. Se a acao falhar e houver saida `tip
 | `notificacao_sistema` | Cria `Notificacao` interna | `tipo_notificacao`, `destinatarios` |
 | `criar_tarefa` | Cria tarefa no CRM | `titulo`, `responsavel_id`, `prazo_horas` |
 | `mover_estagio` | Move oportunidade pra outro estagio do pipeline | `estagio` (slug) |
+| `check_viabilidade` | Consulta cobertura tecnica deterministicamente a partir de CEP. Cruza `CidadeViabilidade` + ViaCEP. Salva variaveis | `cep_var`, `variavel_saida`, `variavel_cidade`, `variavel_uf` |
 
 Template de `titulo`/`corpo`/`mensagem` aceita `{{lead_nome}}`, `{{oport_dados_custom_curso_interesse}}`, `{{var.X}}`, etc.
+
+### `check_viabilidade` (detalhe)
+
+Acao deterministica sem IA. Recebe CEP via variavel, consulta ViaCEP pra extrair cidade/UF, cruza com `CidadeViabilidade` do tenant.
+
+| Campo | Tipo | Default | Descricao |
+|---|---|---|---|
+| `cep_var` | str | `cep` | Nome da variavel onde esta o CEP (com ou sem prefixo `var.`) |
+| `variavel_saida` | str | `cobertura_status` | Variavel onde salva `cobertura_ok` ou `fora_cobertura` |
+| `variavel_cidade` | str | `cidade_detectada` | Variavel onde salva o nome da cidade do CEP |
+| `variavel_uf` | str | `uf_detectada` | Variavel onde salva a UF do CEP |
+
+**Comportamento:**
+1. CEP invalido (sem 8 digitos) → `fora_cobertura`
+2. CEP cadastrado diretamente em `CidadeViabilidade.cep` → `cobertura_ok`
+3. ViaCEP retorna cidade/UF + cidade existe em `CidadeViabilidade` → `cobertura_ok`
+4. ViaCEP falha ou cidade nao cadastrada → `fora_cobertura`
+
+**Usar com `condicao/campo_check`:**
+```json
+{ "campo": "var.cobertura_status", "operador": "igual", "valor": "cobertura_ok" }
+```
 
 ---
 
