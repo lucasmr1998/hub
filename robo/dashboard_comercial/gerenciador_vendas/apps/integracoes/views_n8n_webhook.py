@@ -21,6 +21,7 @@ from apps.sistema.models import Tenant
 from apps.sistema.utils import registrar_acao
 from apps.comercial.leads.models import LeadProspecto
 from apps.comercial.crm.models import OportunidadeVenda, Pipeline, PipelineEstagio
+from apps.comercial.viabilidade.models import CidadeViabilidade
 
 logger = logging.getLogger(__name__)
 
@@ -197,3 +198,92 @@ def receber_lead(request):
         'oportunidade_id': oportunidade.id,
         'ja_existia': ja_existia,
     }, status=status)
+
+
+def _normalizar_cidade(s):
+    """Lowercase + remove acentos basicos pra match case/acento-insensitivo."""
+    if not s:
+        return ''
+    import unicodedata
+    s = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('ascii')
+    return s.strip().lower()
+
+
+@csrf_exempt
+@require_POST
+def viabilidade_check(request):
+    """
+    Verifica se o tenant atende uma cidade/estado.
+
+    Body JSON:
+        tenant_slug: str  (obrigatorio)
+        cidade:      str  (obrigatorio)
+        estado:      str  (opcional — UF de 2 letras pra desambiguar)
+        cep:         str? (opcional — se informado, prioriza match por CEP)
+
+    Retorna:
+        200 {atendido: true,  cidade_match, estado, cep_match?}
+        200 {atendido: false, cidade_match: null, estado, cidades_atendidas: [...]}
+        400 payload invalido
+        401 secret invalido
+        404 tenant nao existe
+    """
+    if not _autorizado(request):
+        return JsonResponse({'sucesso': False, 'erro': 'Nao autorizado'}, status=401)
+
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'sucesso': False, 'erro': 'JSON invalido'}, status=400)
+
+    tenant_slug = (payload.get('tenant_slug') or '').strip()
+    cidade = (payload.get('cidade') or '').strip()
+    estado = (payload.get('estado') or '').strip().upper()
+    cep = (payload.get('cep') or '').strip()
+
+    if not tenant_slug or not cidade:
+        return JsonResponse({
+            'sucesso': False,
+            'erro': 'tenant_slug e cidade sao obrigatorios',
+        }, status=400)
+
+    tenant = Tenant.objects.filter(slug=tenant_slug, ativo=True).first()
+    if not tenant:
+        return JsonResponse({'sucesso': False, 'erro': f'Tenant {tenant_slug!r} nao encontrado'}, status=404)
+
+    qs = CidadeViabilidade.all_tenants.filter(tenant=tenant)
+    if estado:
+        qs = qs.filter(estado=estado)
+
+    cep_match = None
+    if cep:
+        cep_norm = ''.join(c for c in cep if c.isdigit())
+        if len(cep_norm) == 8:
+            cep_formatado = f'{cep_norm[:5]}-{cep_norm[5:]}'
+            cep_match_qs = qs.filter(cep__in=[cep_norm, cep_formatado]).first()
+            if cep_match_qs:
+                cep_match = cep_match_qs.cep
+
+    cidade_norm = _normalizar_cidade(cidade)
+    cidade_match_obj = None
+    for c in qs.iterator():
+        if _normalizar_cidade(c.cidade) == cidade_norm:
+            cidade_match_obj = c
+            break
+
+    atendido = bool(cep_match) or bool(cidade_match_obj)
+
+    response = {
+        'sucesso': True,
+        'tenant': tenant.slug,
+        'atendido': atendido,
+        'cidade_match': cidade_match_obj.cidade if cidade_match_obj else None,
+        'estado': estado or (cidade_match_obj.estado if cidade_match_obj else None),
+        'cep_match': cep_match,
+    }
+    if not atendido:
+        response['cidades_atendidas'] = list(
+            qs.values_list('cidade', 'estado').distinct().order_by('cidade')[:50]
+        )
+
+    return JsonResponse(response, status=200)
