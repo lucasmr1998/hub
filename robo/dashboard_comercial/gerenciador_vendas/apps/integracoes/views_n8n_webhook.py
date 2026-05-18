@@ -22,6 +22,7 @@ from apps.sistema.utils import registrar_acao
 from apps.comercial.leads.models import LeadProspecto
 from apps.comercial.crm.models import OportunidadeVenda, Pipeline, PipelineEstagio
 from apps.comercial.viabilidade.models import CidadeViabilidade
+from apps.inbox.models import CanalInbox, Conversa, Mensagem
 
 logger = logging.getLogger(__name__)
 
@@ -303,3 +304,180 @@ def viabilidade_check(request):
         )
 
     return JsonResponse(response, status=200)
+
+
+@csrf_exempt
+@require_POST
+def inbox_mensagem(request):
+    """
+    Registra mensagem no Inbox e garante Conversa + Lead + Oportunidade.
+
+    Body JSON:
+        tenant_slug:     str    (obrigatorio)
+        telefone:        str    (obrigatorio)
+        conteudo:        str    (obrigatorio — texto da mensagem)
+        direcao:         str    'recebida' (do cliente) | 'enviada' (do bot/agente)
+        canal_identif:   str?   identificador do canal (default: usa primeiro whatsapp do tenant)
+        nome_contato:    str?   nome do cliente (atualiza Lead se vier)
+        tipo_conteudo:   str?   'texto' (default), 'imagem', 'arquivo', etc.
+        arquivo_url:     str?   URL se conteudo for media
+        modo_atendimento:str?   bot | humano | finalizado_bot — atualiza a Conversa
+        dados_lead:      dict?  {cpf, data_nascimento, cidade, ...} pra atualizar Lead
+        msg_id_externo:  str?   ID do Wazapi pra dedup
+    """
+    if not _autorizado(request):
+        return JsonResponse({'sucesso': False, 'erro': 'Nao autorizado'}, status=401)
+
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'sucesso': False, 'erro': 'JSON invalido'}, status=400)
+
+    tenant_slug = (payload.get('tenant_slug') or '').strip()
+    telefone = (payload.get('telefone') or '').strip()
+    conteudo = payload.get('conteudo') or ''
+    direcao = (payload.get('direcao') or 'recebida').strip()
+
+    if not tenant_slug or not telefone or not conteudo:
+        return JsonResponse({'sucesso': False, 'erro': 'tenant_slug, telefone e conteudo obrigatorios'}, status=400)
+
+    tenant = Tenant.objects.filter(slug=tenant_slug, ativo=True).first()
+    if not tenant:
+        return JsonResponse({'sucesso': False, 'erro': f'Tenant {tenant_slug!r} nao encontrado'}, status=404)
+
+    nome_contato = (payload.get('nome_contato') or '').strip() or 'Lead WhatsApp'
+    telefone_norm = ''.join(c for c in telefone if c.isdigit())
+
+    with transaction.atomic():
+        # 1. Canal — usa o identificador se vier, senao primeiro whatsapp do tenant
+        canal_identif = (payload.get('canal_identif') or '').strip()
+        canal_qs = CanalInbox.all_tenants.filter(tenant=tenant, tipo='whatsapp', ativo=True)
+        if canal_identif:
+            canal = canal_qs.filter(identificador_canal=canal_identif).first() or canal_qs.first()
+        else:
+            canal = canal_qs.first()
+        if not canal:
+            return JsonResponse({'sucesso': False, 'erro': 'Nenhum canal whatsapp ativo no tenant'}, status=409)
+
+        # 2. Lead — find or create por telefone
+        lead = LeadProspecto.all_tenants.filter(
+            tenant=tenant, telefone__contains=telefone_norm[-9:]
+        ).first()
+        if not lead:
+            lead = LeadProspecto.objects.create(
+                tenant=tenant,
+                nome_razaosocial=nome_contato,
+                telefone=telefone,
+                origem='whatsapp_n8n',
+                canal_entrada='whatsapp',
+            )
+
+        # Atualiza nome se chegou
+        if payload.get('nome_contato') and lead.nome_razaosocial in ('', 'Lead WhatsApp'):
+            lead.nome_razaosocial = nome_contato
+            lead.save(update_fields=['nome_razaosocial'])
+
+        # Atualiza campos extras se dados_lead vier
+        dados_lead = payload.get('dados_lead') or {}
+        if dados_lead:
+            campos_map = {
+                'email': 'email', 'cep': 'cep', 'cidade': 'cidade', 'estado': 'estado',
+                'bairro': 'bairro', 'rua': 'rua', 'numero': 'numero_residencia',
+                'cpf': 'cpf_cnpj',
+            }
+            atualizou = False
+            for k_in, k_model in campos_map.items():
+                v = dados_lead.get(k_in)
+                if v and not getattr(lead, k_model, None):
+                    setattr(lead, k_model, v)
+                    atualizou = True
+            # data_nascimento parsing
+            raw_data = (dados_lead.get('data_nascimento') or '').strip()
+            if raw_data and not lead.data_nascimento:
+                from datetime import datetime
+                for fmt in ('%d/%m/%Y', '%Y-%m-%d', '%d-%m-%Y'):
+                    try:
+                        lead.data_nascimento = datetime.strptime(raw_data, fmt).date()
+                        atualizou = True
+                        break
+                    except ValueError:
+                        continue
+            if atualizou:
+                lead.save()
+
+        # 3. Oportunidade — find or create
+        oportunidade = OportunidadeVenda.all_tenants.filter(
+            tenant=tenant, lead=lead
+        ).exclude(estagio__is_final_ganho=True).exclude(estagio__is_final_perdido=True).first()
+        if not oportunidade:
+            pipeline = Pipeline.all_tenants.filter(tenant=tenant, padrao=True).first() or \
+                       Pipeline.all_tenants.filter(tenant=tenant).first()
+            estagio = None
+            if pipeline:
+                estagio = PipelineEstagio.all_tenants.filter(
+                    tenant=tenant, pipeline=pipeline
+                ).order_by('ordem').first()
+            if estagio:
+                oportunidade = OportunidadeVenda.objects.create(
+                    tenant=tenant, lead=lead, pipeline=pipeline, estagio=estagio,
+                    titulo=lead.nome_razaosocial[:255], origem_crm='automatico',
+                    dados_custom=dados_lead or {},
+                )
+
+        # 4. Conversa — find or create
+        conversa = Conversa.all_tenants.filter(
+            tenant=tenant, canal=canal, contato_telefone__contains=telefone_norm[-9:]
+        ).exclude(status__in=['resolvida', 'arquivada']).first()
+        ja_existia_conversa = bool(conversa)
+
+        if not conversa:
+            ultimo_numero = Conversa.all_tenants.filter(tenant=tenant).count()
+            conversa = Conversa.objects.create(
+                tenant=tenant, numero=ultimo_numero + 1, canal=canal, lead=lead,
+                contato_nome=lead.nome_razaosocial, contato_telefone=telefone,
+                contato_email=lead.email or '',
+                status='aberta', modo_atendimento='bot',
+                oportunidade=oportunidade,
+            )
+
+        # Atualiza modo se vier
+        modo = payload.get('modo_atendimento')
+        if modo and modo in dict(Conversa.MODO_ATENDIMENTO_CHOICES):
+            if conversa.modo_atendimento != modo:
+                conversa.modo_atendimento = modo
+                conversa.save(update_fields=['modo_atendimento'])
+
+        # 5. Mensagem — sempre cria
+        msg_id_ext = (payload.get('msg_id_externo') or '').strip()
+        # Dedup se vier msg_id
+        if msg_id_ext and Mensagem.all_tenants.filter(
+            tenant=tenant, conversa=conversa, identificador_externo=msg_id_ext
+        ).exists():
+            mensagem = Mensagem.all_tenants.filter(
+                tenant=tenant, conversa=conversa, identificador_externo=msg_id_ext
+            ).first()
+            mensagem_criada = False
+        else:
+            remetente_tipo = 'contato' if direcao == 'recebida' else 'bot'
+            mensagem = Mensagem.objects.create(
+                tenant=tenant, conversa=conversa,
+                remetente_tipo=remetente_tipo, remetente_nome=lead.nome_razaosocial if remetente_tipo == 'contato' else 'Vero Bot',
+                tipo_conteudo=(payload.get('tipo_conteudo') or 'texto'),
+                conteudo=conteudo[:5000],
+                arquivo_url=(payload.get('arquivo_url') or '')[:500],
+                identificador_externo=msg_id_ext,
+            )
+            mensagem_criada = True
+
+    status_code = 201 if not ja_existia_conversa else 200
+    return JsonResponse({
+        'sucesso': True,
+        'conversa_id': conversa.id,
+        'conversa_numero': conversa.numero,
+        'conversa_modo': conversa.modo_atendimento,
+        'lead_id': lead.id,
+        'oportunidade_id': oportunidade.id if oportunidade else None,
+        'mensagem_id': mensagem.id,
+        'mensagem_criada': mensagem_criada,
+        'conversa_ja_existia': ja_existia_conversa,
+    }, status=status_code)
