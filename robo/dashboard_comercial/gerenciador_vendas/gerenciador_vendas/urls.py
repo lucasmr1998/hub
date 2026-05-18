@@ -133,6 +133,9 @@ urlpatterns = [
     # Webhook publico do Resend (validado por assinatura HMAC)
     path('api/public/resend/', include('apps.marketing.emails.urls_public')),
 
+    # Webhooks publicos de N8N externo (orquestradores enviando leads pra Hubtrix)
+    path('api/public/n8n/', include('apps.integracoes.urls_n8n_public')),
+
     # === Assistente CRM (webhook WhatsApp) ===
     path('assistente/', include('apps.assistente.urls')),
 

@@ -1,0 +1,193 @@
+"""
+Webhook publico do N8N pra receber leads qualificados de fluxos externos
+(ex: orquestrador N8N do TR Carrion processa conversa WhatsApp -> chama aqui).
+
+Endpoint: POST /api/public/n8n/lead/
+Auth: header X-N8N-Webhook-Secret (env N8N_WEBHOOK_SECRET).
+Payload JSON minimo: {tenant_slug, telefone, nome_razaosocial}.
+
+Cria/atualiza LeadProspecto, cria OportunidadeVenda no pipeline padrao do tenant.
+"""
+import json
+import logging
+import os
+
+from django.db import transaction
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+
+from apps.sistema.models import Tenant
+from apps.sistema.utils import registrar_acao
+from apps.comercial.leads.models import LeadProspecto
+from apps.comercial.crm.models import OportunidadeVenda, Pipeline, PipelineEstagio
+
+logger = logging.getLogger(__name__)
+
+
+def _autorizado(request):
+    """Valida o shared secret no header."""
+    esperado = os.environ.get('N8N_WEBHOOK_SECRET', '')
+    recebido = request.headers.get('X-N8N-Webhook-Secret', '')
+    if not esperado:
+        logger.warning('N8N_WEBHOOK_SECRET nao configurado no ambiente. Rejeitando.')
+        return False
+    return recebido == esperado
+
+
+@csrf_exempt
+@require_POST
+def receber_lead(request):
+    """
+    Recebe lead qualificado de um fluxo N8N externo.
+
+    Body JSON esperado (campos opcionais marcados com ?):
+        tenant_slug:        str   - slug do tenant destino (obrigatorio)
+        telefone:           str   - E.164 ou nacional (obrigatorio)
+        nome_razaosocial:   str   - nome completo do lead (obrigatorio)
+        email:              str?  - email
+        cep:                str?  - CEP do endereco
+        cidade:             str?
+        estado:             str?  - UF
+        bairro:             str?
+        rua:                str?
+        numero:             str?  - numero da residencia
+        complemento:        str?
+        plano_interesse:    str?  - texto livre / nome do plano
+        observacoes:        str?  - observacoes adicionais (vai pra anotacao da oportunidade)
+        origem:             str?  - default "whatsapp_n8n"
+        canal_entrada:      str?  - default "whatsapp"
+        dados_extras:       dict? - JSON livre salvo em dados_custom
+
+    Retorna:
+        201 + {sucesso: true, lead_id, oportunidade_id} se criou
+        200 + {sucesso: true, lead_id, oportunidade_id, ja_existia: true} se ja existia
+        400 se payload invalido
+        401 se secret invalido
+        404 se tenant nao existe
+    """
+    if not _autorizado(request):
+        return JsonResponse({'sucesso': False, 'erro': 'Nao autorizado'}, status=401)
+
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'sucesso': False, 'erro': 'JSON invalido'}, status=400)
+
+    tenant_slug = (payload.get('tenant_slug') or '').strip()
+    telefone = (payload.get('telefone') or '').strip()
+    nome = (payload.get('nome_razaosocial') or '').strip()
+
+    erros = []
+    if not tenant_slug:
+        erros.append('tenant_slug obrigatorio')
+    if not telefone:
+        erros.append('telefone obrigatorio')
+    if not nome:
+        erros.append('nome_razaosocial obrigatorio')
+    if erros:
+        return JsonResponse({'sucesso': False, 'erros': erros}, status=400)
+
+    tenant = Tenant.objects.filter(slug=tenant_slug, ativo=True).first()
+    if not tenant:
+        return JsonResponse({'sucesso': False, 'erro': f'Tenant {tenant_slug!r} nao encontrado'}, status=404)
+
+    # Normaliza telefone (so digitos)
+    telefone_normalizado = ''.join(c for c in telefone if c.isdigit())
+
+    with transaction.atomic():
+        # Procura lead existente por telefone no tenant
+        lead = LeadProspecto.all_tenants.filter(
+            tenant=tenant, telefone__contains=telefone_normalizado[-9:]
+        ).first()
+
+        ja_existia = bool(lead)
+
+        if not lead:
+            lead = LeadProspecto.objects.create(
+                tenant=tenant,
+                nome_razaosocial=nome,
+                telefone=telefone,
+                email=payload.get('email') or '',
+                cep=payload.get('cep') or '',
+                cidade=payload.get('cidade') or '',
+                estado=payload.get('estado') or '',
+                bairro=payload.get('bairro') or '',
+                rua=payload.get('rua') or '',
+                numero_residencia=payload.get('numero') or '',
+                origem=payload.get('origem') or 'whatsapp_n8n',
+                canal_entrada=payload.get('canal_entrada') or 'whatsapp',
+            )
+        else:
+            # Atualiza campos vazios
+            campos_atualizaveis = {
+                'email': payload.get('email'),
+                'cep': payload.get('cep'),
+                'cidade': payload.get('cidade'),
+                'estado': payload.get('estado'),
+                'bairro': payload.get('bairro'),
+                'rua': payload.get('rua'),
+                'numero_residencia': payload.get('numero'),
+            }
+            atualizou = False
+            for campo, valor in campos_atualizaveis.items():
+                if valor and not getattr(lead, campo, None):
+                    setattr(lead, campo, valor)
+                    atualizou = True
+            if atualizou:
+                lead.save()
+
+        # Cria oportunidade se ainda nao existir uma aberta
+        oportunidade = OportunidadeVenda.all_tenants.filter(
+            tenant=tenant, lead=lead,
+        ).exclude(
+            estagio__is_final_ganho=True
+        ).exclude(
+            estagio__is_final_perdido=True
+        ).first()
+
+        if not oportunidade:
+            pipeline = Pipeline.all_tenants.filter(tenant=tenant, padrao=True).first()
+            if not pipeline:
+                pipeline = Pipeline.all_tenants.filter(tenant=tenant).first()
+            estagio = None
+            if pipeline:
+                estagio = PipelineEstagio.all_tenants.filter(
+                    tenant=tenant, pipeline=pipeline,
+                ).order_by('ordem').first()
+            plano = (payload.get('plano_interesse') or '').strip()
+            titulo = f'{nome} - {plano}' if plano else nome
+            obs = payload.get('observacoes') or ''
+            dados_extras = payload.get('dados_extras') or {}
+            if obs:
+                dados_extras['observacoes_n8n'] = obs[:2000]
+            oportunidade = OportunidadeVenda.objects.create(
+                tenant=tenant,
+                lead=lead,
+                pipeline=pipeline,
+                estagio=estagio,
+                titulo=titulo[:200],
+                plano_interesse=plano[:200] if plano else '',
+                dados_custom=dados_extras,
+                origem_crm='n8n_webhook',
+            )
+
+        # Log de auditoria
+        try:
+            registrar_acao(
+                'integracao', 'criar_lead' if not ja_existia else 'atualizar_lead', 'lead',
+                lead.id,
+                f'Lead via N8N webhook: {nome} ({telefone}). Oport #{oportunidade.id}.',
+                request=request,
+            )
+        except Exception:
+            pass
+
+    status = 200 if ja_existia else 201
+    return JsonResponse({
+        'sucesso': True,
+        'tenant': tenant.slug,
+        'lead_id': lead.id,
+        'oportunidade_id': oportunidade.id,
+        'ja_existia': ja_existia,
+    }, status=status)
