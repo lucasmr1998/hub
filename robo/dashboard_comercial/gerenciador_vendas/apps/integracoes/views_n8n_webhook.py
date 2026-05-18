@@ -104,6 +104,18 @@ def receber_lead(request):
 
         ja_existia = bool(lead)
 
+        # Parse data_nascimento se vier formato DD/MM/AAAA
+        from datetime import datetime
+        data_nasc = None
+        raw_data = (payload.get('data_nascimento') or '').strip()
+        if raw_data:
+            for fmt in ('%d/%m/%Y', '%Y-%m-%d', '%d-%m-%Y'):
+                try:
+                    data_nasc = datetime.strptime(raw_data, fmt).date()
+                    break
+                except ValueError:
+                    continue
+
         if not lead:
             lead = LeadProspecto.objects.create(
                 tenant=tenant,
@@ -116,6 +128,8 @@ def receber_lead(request):
                 bairro=payload.get('bairro') or '',
                 rua=payload.get('rua') or '',
                 numero_residencia=payload.get('numero') or '',
+                cpf_cnpj=payload.get('cpf') or '',
+                data_nascimento=data_nasc,
                 origem=payload.get('origem') or 'whatsapp_n8n',
                 canal_entrada=payload.get('canal_entrada') or 'whatsapp',
             )
@@ -129,6 +143,8 @@ def receber_lead(request):
                 'bairro': payload.get('bairro'),
                 'rua': payload.get('rua'),
                 'numero_residencia': payload.get('numero'),
+                'cpf_cnpj': payload.get('cpf'),
+                'data_nascimento': data_nasc,
             }
             atualizou = False
             for campo, valor in campos_atualizaveis.items():
