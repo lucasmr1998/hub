@@ -161,15 +161,21 @@ def receber_lead(request):
             dados_extras = payload.get('dados_extras') or {}
             if obs:
                 dados_extras['observacoes_n8n'] = obs[:2000]
+            if plano:
+                dados_extras['plano_interesse_texto'] = plano
+            if not estagio:
+                return JsonResponse({
+                    'sucesso': False,
+                    'erro': 'Tenant nao possui pipeline com estagios configurados',
+                }, status=409)
             oportunidade = OportunidadeVenda.objects.create(
                 tenant=tenant,
                 lead=lead,
                 pipeline=pipeline,
                 estagio=estagio,
-                titulo=titulo[:200],
-                plano_interesse=plano[:200] if plano else '',
+                titulo=titulo[:255],
                 dados_custom=dados_extras,
-                origem_crm='n8n_webhook',
+                origem_crm='automatico',
             )
 
         # Log de auditoria
