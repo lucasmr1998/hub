@@ -457,14 +457,17 @@ def inbox_mensagem(request):
         ja_existia_conversa = bool(conversa)
 
         if not conversa:
-            ultimo_numero = Conversa.all_tenants.filter(tenant=tenant).count()
-            conversa = Conversa.objects.create(
-                tenant=tenant, numero=ultimo_numero + 1, canal=canal, lead=lead,
+            # numero eh calculado pelo Conversa.save() — usa select_for_update
+            # + retry contra race (corrigido em 42e9101). Aqui passamos vazio e
+            # deixamos o save fazer o trabalho seguro.
+            conversa = Conversa(
+                tenant=tenant, canal=canal, lead=lead,
                 contato_nome=lead.nome_razaosocial, contato_telefone=telefone,
                 contato_email=lead.email or '',
                 status='aberta', modo_atendimento='bot',
                 oportunidade=oportunidade,
             )
+            conversa.save()
 
         # Atualiza modo se vier (validacao ja feita no inicio — Bug 2)
         modo = payload.get('modo_atendimento')
