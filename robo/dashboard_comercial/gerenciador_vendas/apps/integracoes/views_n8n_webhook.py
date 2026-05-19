@@ -585,5 +585,5 @@ def conversa_estado(request):
         'status': conversa.status,
         'agente_id': conversa.agente_id,
         'agente_nome': agente_nome,
-        'atualizado_em': conversa.atualizado_em.isoformat() if conversa.atualizado_em else None,
+        'atualizado_em': conversa.ultima_mensagem_em.isoformat() if conversa.ultima_mensagem_em else None,
     }, status=200)
