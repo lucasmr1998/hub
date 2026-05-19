@@ -8,7 +8,7 @@ import logging
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
@@ -43,12 +43,14 @@ def _get_fluxos_atendimento():
 
 @login_required
 def inbox_view(request):
+    if not getattr(request, 'tenant', None):
+        return HttpResponseForbidden('Tenant não identificado.')
     denied = _check_perm(request, 'inbox.ver_minhas')
     if denied: return denied
     agentes = User.objects.filter(is_active=True, perfil__tenant=request.tenant).order_by('first_name')
-    etiquetas = EtiquetaConversa.objects.all()
-    equipes = EquipeInbox.objects.filter(ativo=True)
-    filas = FilaInbox.objects.filter(ativo=True).select_related('equipe')
+    etiquetas = EtiquetaConversa.all_tenants.filter(tenant=request.tenant)
+    equipes = EquipeInbox.all_tenants.filter(tenant=request.tenant, ativo=True)
+    filas = FilaInbox.all_tenants.filter(tenant=request.tenant, ativo=True).select_related('equipe')
     # Status dos agentes
     from .models import PerfilAgenteInbox
     agentes_status = {}
@@ -906,7 +908,9 @@ def renderizar_resposta(conteudo, conversa, atendente=None):
 @login_required
 def api_etiquetas(request):
     """GET: Listar etiquetas disponíveis."""
-    etiquetas = EtiquetaConversa.objects.all()
+    if not getattr(request, 'tenant', None):
+        return JsonResponse({'error': 'Tenant não identificado.'}, status=403)
+    etiquetas = EtiquetaConversa.all_tenants.filter(tenant=request.tenant)
     data = [
         {'id': e.id, 'nome': e.nome, 'cor_hex': e.cor_hex}
         for e in etiquetas
@@ -929,9 +933,10 @@ def api_atualizar_status_agente(request):
     if novo_status not in ('online', 'ausente', 'offline'):
         return JsonResponse({'error': 'Status inválido'}, status=400)
 
-    perfil, _ = PerfilAgenteInbox.objects.get_or_create(
+    perfil, _ = PerfilAgenteInbox.all_tenants.get_or_create(
         user=request.user,
-        defaults={'tenant': getattr(request, 'tenant', None)}
+        tenant=request.tenant,
+        defaults={}
     )
     perfil.status = novo_status
     perfil.save(update_fields=['status', 'ultimo_status_em'])
@@ -1037,9 +1042,10 @@ def _processar_action_config(request, action, django_messages):
                 defaults={'cargo': cargo}
             )
             # Auto-criar perfil de agente
-            PerfilAgenteInbox.objects.get_or_create(
+            PerfilAgenteInbox.all_tenants.get_or_create(
                 user=user,
-                defaults={'tenant': equipe.tenant}
+                tenant=equipe.tenant,
+                defaults={}
             )
 
     elif action == 'remover_membro':

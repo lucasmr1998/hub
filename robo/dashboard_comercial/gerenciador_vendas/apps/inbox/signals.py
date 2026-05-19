@@ -141,8 +141,11 @@ def _enviar_mensagem_interativa_bot(tenant, conversa, texto, opcoes, nome_bot='H
                 from apps.inbox.providers import get_provider
                 provider = get_provider(canal)
                 provider.enviar_texto(telefone, texto_completo)
-            except Exception:
-                pass
+            except Exception as fallback_exc:
+                logger.warning(
+                    "Fallback de texto tambem falhou apos erro de mensagem interativa (telefone=%s): %s",
+                    telefone, fallback_exc,
+                )
 
     import threading
     thread = threading.Thread(target=_send_interativo, daemon=True)

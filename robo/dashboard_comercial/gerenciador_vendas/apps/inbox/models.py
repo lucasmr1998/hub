@@ -185,11 +185,32 @@ class Conversa(TenantMixin):
         return f"#{self.numero} {nome}"
 
     def save(self, *args, **kwargs):
-        if not self.numero:
-            from django.db.models import Max
-            ultimo = Conversa.all_tenants.filter(tenant=self.tenant).aggregate(Max('numero'))
-            self.numero = (ultimo['numero__max'] or 0) + 1
-        super().save(*args, **kwargs)
+        from django.db import transaction, IntegrityError
+
+        if self.numero:
+            super().save(*args, **kwargs)
+            return
+
+        max_tentativas = 3
+        for tentativa in range(max_tentativas):
+            try:
+                with transaction.atomic():
+                    ultimo_numero = (
+                        Conversa.all_tenants
+                        .select_for_update()
+                        .filter(tenant=self.tenant)
+                        .order_by('-numero')
+                        .values_list('numero', flat=True)
+                        .first()
+                    )
+                    self.numero = (ultimo_numero or 0) + 1
+                    super().save(*args, **kwargs)
+                return
+            except IntegrityError:
+                if tentativa == max_tentativas - 1:
+                    raise
+                self.numero = None
+                continue
 
 
 class Mensagem(TenantMixin):

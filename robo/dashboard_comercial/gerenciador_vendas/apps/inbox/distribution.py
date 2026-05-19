@@ -149,8 +149,8 @@ def _round_robin(fila, disponiveis):
 
     agente_id = user_ids[proximo_idx]
 
-    # Atualizar estado do round-robin
-    FilaInbox.all_tenants.filter(pk=fila.pk).update(ultimo_agente_id=agente_id)
+    # Atualizar estado do round-robin (filtro explicito de tenant: defesa-em-profundidade)
+    FilaInbox.all_tenants.filter(tenant=fila.tenant, pk=fila.pk).update(ultimo_agente_id=agente_id)
 
     perfil = next(p for p in disponiveis if p.user_id == agente_id)
     return perfil.user

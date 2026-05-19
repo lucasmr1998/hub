@@ -349,6 +349,31 @@ def inbox_mensagem(request):
     nome_contato = (payload.get('nome_contato') or '').strip() or 'Lead WhatsApp'
     telefone_norm = ''.join(c for c in telefone if c.isdigit())
 
+    # Validacao antecipada de modo_atendimento (Bug 2)
+    modo_in = payload.get('modo_atendimento')
+    if modo_in and modo_in not in dict(Conversa.MODO_ATENDIMENTO_CHOICES):
+        return JsonResponse(
+            {'sucesso': False, 'erro': 'modo_atendimento invalido. Aceitos: bot, humano, finalizado_bot'},
+            status=400,
+        )
+
+    # Validacao antecipada de tags (Bug 4)
+    if 'tags' in payload and not isinstance(payload.get('tags'), list):
+        return JsonResponse({'sucesso': False, 'erro': 'tags deve ser uma lista'}, status=400)
+
+    # Acumulador de avisos nao-bloqueantes
+    avisos = []
+
+    # Validacao basica de cpf em dados_lead (Bug 3) — ignora se invalido
+    _dados_lead_in = payload.get('dados_lead') or {}
+    if isinstance(_dados_lead_in, dict) and _dados_lead_in.get('cpf'):
+        _cpf_raw = str(_dados_lead_in.get('cpf'))
+        _cpf_digits = ''.join(c for c in _cpf_raw if c.isdigit())
+        if len(_cpf_digits) not in (11, 14):
+            avisos.append(f'cpf invalido ({len(_cpf_digits)} digitos); campo ignorado')
+            _dados_lead_in = {k: v for k, v in _dados_lead_in.items() if k != 'cpf'}
+            payload['dados_lead'] = _dados_lead_in
+
     with transaction.atomic():
         # 1. Canal — usa o identificador se vier, senao primeiro whatsapp do tenant
         canal_identif = (payload.get('canal_identif') or '').strip()
@@ -441,9 +466,9 @@ def inbox_mensagem(request):
                 oportunidade=oportunidade,
             )
 
-        # Atualiza modo se vier
+        # Atualiza modo se vier (validacao ja feita no inicio — Bug 2)
         modo = payload.get('modo_atendimento')
-        if modo and modo in dict(Conversa.MODO_ATENDIMENTO_CHOICES):
+        if modo:
             modo_mudou = (conversa.modo_atendimento != modo)
             if modo_mudou:
                 conversa.modo_atendimento = modo
@@ -496,8 +521,9 @@ def inbox_mensagem(request):
                     )
                     oportunidade.tags.add(tag_crm)
 
-        # 5. Mensagem — sempre cria
+        # 5. Mensagem — sempre cria (com dedup)
         msg_id_ext = (payload.get('msg_id_externo') or '').strip()
+        remetente_tipo = 'contato' if direcao == 'recebida' else 'bot'
         # Dedup se vier msg_id
         if msg_id_ext and Mensagem.all_tenants.filter(
             tenant=tenant, conversa=conversa, identificador_externo=msg_id_ext
@@ -507,19 +533,35 @@ def inbox_mensagem(request):
             ).first()
             mensagem_criada = False
         else:
-            remetente_tipo = 'contato' if direcao == 'recebida' else 'bot'
-            mensagem = Mensagem.objects.create(
-                tenant=tenant, conversa=conversa,
-                remetente_tipo=remetente_tipo, remetente_nome=lead.nome_razaosocial if remetente_tipo == 'contato' else 'Vero Bot',
-                tipo_conteudo=(payload.get('tipo_conteudo') or 'texto'),
-                conteudo=conteudo[:5000],
-                arquivo_url=(payload.get('arquivo_url') or '')[:500],
-                identificador_externo=msg_id_ext,
-            )
-            mensagem_criada = True
+            # Bug 1 — fallback de dedup por hash quando nao tem msg_id_externo
+            mensagem_dup = None
+            if not msg_id_ext:
+                from datetime import timedelta
+                from django.utils import timezone as _tz
+                limite = _tz.now() - timedelta(seconds=30)
+                mensagem_dup = Mensagem.all_tenants.filter(
+                    tenant=tenant, conversa=conversa,
+                    conteudo=conteudo[:5000],
+                    remetente_tipo=remetente_tipo,
+                    data_envio__gte=limite,
+                ).first()
+
+            if mensagem_dup:
+                mensagem = mensagem_dup
+                mensagem_criada = False
+            else:
+                mensagem = Mensagem.objects.create(
+                    tenant=tenant, conversa=conversa,
+                    remetente_tipo=remetente_tipo, remetente_nome=lead.nome_razaosocial if remetente_tipo == 'contato' else 'Vero Bot',
+                    tipo_conteudo=(payload.get('tipo_conteudo') or 'texto'),
+                    conteudo=conteudo[:5000],
+                    arquivo_url=(payload.get('arquivo_url') or '')[:500],
+                    identificador_externo=msg_id_ext,
+                )
+                mensagem_criada = True
 
     status_code = 201 if not ja_existia_conversa else 200
-    return JsonResponse({
+    resp = {
         'sucesso': True,
         'conversa_id': conversa.id,
         'conversa_numero': conversa.numero,
@@ -529,7 +571,10 @@ def inbox_mensagem(request):
         'mensagem_id': mensagem.id,
         'mensagem_criada': mensagem_criada,
         'conversa_ja_existia': ja_existia_conversa,
-    }, status=status_code)
+    }
+    if avisos:
+        resp['avisos'] = avisos
+    return JsonResponse(resp, status=status_code)
 
 
 @csrf_exempt
