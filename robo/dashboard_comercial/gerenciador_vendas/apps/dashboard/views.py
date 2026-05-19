@@ -322,9 +322,15 @@ def relatorios_view(request):
 
     try:
         # Estatísticas gerais
+        from apps.inbox.models import Conversa as _Conversa
         total_leads = LeadProspecto.objects.count()
         total_prospectos = Prospecto.objects.count()
-        total_atendimentos = HistoricoContato.objects.filter(status='fluxo_inicializado').count()
+        total_atendimentos = (
+            HistoricoContato.objects.filter(status='fluxo_inicializado').count()
+            + _Conversa.objects.filter(
+                modo_atendimento__in=['bot', 'humano', 'finalizado_bot']
+            ).count()
+        )
 
         taxa_conversao = (total_prospectos / total_leads * 100) if total_leads > 0 else 0
 
@@ -342,10 +348,11 @@ def relatorios_view(request):
         prospectos_7_dias  = Prospecto.objects.filter(data_criacao__gte=data_7_dias_atras).count()
         prospectos_30_dias = Prospecto.objects.filter(data_criacao__gte=data_30_dias_atras).count()
 
-        # Atendimentos por período
-        atendimentos_hoje    = HistoricoContato.objects.filter(data_hora_contato__date=hoje, status='fluxo_inicializado').count()
-        atendimentos_7_dias  = HistoricoContato.objects.filter(data_hora_contato__gte=data_7_dias_atras, status='fluxo_inicializado').count()
-        atendimentos_30_dias = HistoricoContato.objects.filter(data_hora_contato__gte=data_30_dias_atras, status='fluxo_inicializado').count()
+        # Atendimentos por período (inclui Conversas do N8N alem de HistoricoContato)
+        _conv_filter = _Conversa.objects.filter(modo_atendimento__in=['bot', 'humano', 'finalizado_bot'])
+        atendimentos_hoje    = HistoricoContato.objects.filter(data_hora_contato__date=hoje, status='fluxo_inicializado').count() + _conv_filter.filter(data_abertura__date=hoje).count()
+        atendimentos_7_dias  = HistoricoContato.objects.filter(data_hora_contato__gte=data_7_dias_atras, status='fluxo_inicializado').count() + _conv_filter.filter(data_abertura__gte=data_7_dias_atras).count()
+        atendimentos_30_dias = HistoricoContato.objects.filter(data_hora_contato__gte=data_30_dias_atras, status='fluxo_inicializado').count() + _conv_filter.filter(data_abertura__gte=data_30_dias_atras).count()
 
         # ── Dados reais do Hubsoft (ClienteHubsoft / ServicoClienteHubsoft) ──
         total_clientes_hubsoft  = ClienteHubsoft.objects.count()
@@ -705,9 +712,14 @@ def dashboard_data(request):
     """API para dados principais do dashboard"""
     try:
         # Cálculo das métricas conforme especificação:
-        # 1. ATENDIMENTOS = Sessoes de fluxo + historico com fluxo inicializado
+        # 1. ATENDIMENTOS = Sessoes de fluxo nativo + Conversas conduzidas por
+        #    fluxo externo (N8N) + historico com fluxo inicializado (fallback)
         from apps.comercial.atendimento.models import AtendimentoFluxo
+        from apps.inbox.models import Conversa as _Conversa
         atendimentos = AtendimentoFluxo.objects.count()
+        atendimentos += _Conversa.objects.filter(
+            modo_atendimento__in=['bot', 'humano', 'finalizado_bot']
+        ).count()
         if atendimentos == 0:
             atendimentos = HistoricoContato.objects.filter(status='fluxo_inicializado').count()
 
