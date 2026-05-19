@@ -198,6 +198,19 @@
             document.getElementById('teamSelect').value = data.equipe_id || '';
             document.getElementById('prioritySelect').value = data.prioridade || 'normal';
 
+            // Botao Resolver/Reabrir muda conforme status da conversa
+            state.currentConversaStatus = data.status || 'aberta';
+            const rb = document.getElementById('resolveBtn');
+            if (rb) {
+                if (state.currentConversaStatus === 'resolvida') {
+                    rb.textContent = 'Reabrir';
+                    rb.classList.add('is-reopened');
+                } else {
+                    rb.textContent = 'Resolver';
+                    rb.classList.remove('is-reopened');
+                }
+            }
+
             // Labels
             const chipDiv = document.getElementById('labelChips');
             if (data.etiquetas && data.etiquetas.length) {
@@ -557,10 +570,11 @@
             });
         });
 
-        // Resolve button group
+        // Resolve button group — alterna entre Resolver e Reabrir conforme status atual
         $('resolveBtn').addEventListener('click', () => {
             if (!state.currentConversaId) return;
-            fetchJSON('/inbox/api/conversas/' + state.currentConversaId + '/resolver/', { method: 'POST' })
+            const endpoint = state.currentConversaStatus === 'resolvida' ? '/reabrir/' : '/resolver/';
+            fetchJSON('/inbox/api/conversas/' + state.currentConversaId + endpoint, { method: 'POST' })
                 .then(() => { loadConversas(); loadConversaDetalhe(state.currentConversaId); loadMensagens(state.currentConversaId); });
         });
         $('resolveDropdown').addEventListener('click', () => {

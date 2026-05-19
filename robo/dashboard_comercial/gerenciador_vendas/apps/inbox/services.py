@@ -478,7 +478,10 @@ def atribuir_conversa(conversa, agente, atribuido_por=None):
 
 
 def resolver_conversa(conversa, user):
-    """Marca conversa como resolvida."""
+    """Marca conversa como resolvida (idempotente — no-op se ja resolvida)."""
+    if conversa.status == 'resolvida':
+        return conversa
+
     conversa.status = 'resolvida'
     conversa.data_resolucao = timezone.now()
     conversa.mensagens_nao_lidas = 0
