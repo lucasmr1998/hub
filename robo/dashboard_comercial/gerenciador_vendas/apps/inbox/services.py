@@ -300,15 +300,33 @@ def enviar_mensagem(conversa, conteudo, user, tipo_conteudo='texto',
     conversa.ultima_mensagem_preview = (conteudo or '')[:255]
     conversa.mensagens_nao_lidas = 0
 
+    update_fields = [
+        'ultima_mensagem_em', 'ultima_mensagem_preview',
+        'mensagens_nao_lidas', 'tempo_primeira_resposta_seg',
+    ]
+
     # Se estava aberta sem agente, atribuir automaticamente
-    if not conversa.agente:
+    if not conversa.agente_id:
         conversa.agente = user
         _vincular_agente_oportunidade(conversa, user)
+        update_fields.append('agente')
 
-    conversa.save(update_fields=[
-        'ultima_mensagem_em', 'ultima_mensagem_preview',
-        'mensagens_nao_lidas', 'tempo_primeira_resposta_seg', 'agente',
-    ])
+    # Quando agente responde, conversa vira humana — silencia o bot externo
+    if conversa.modo_atendimento != 'humano':
+        conversa.modo_atendimento = 'humano'
+        update_fields.append('modo_atendimento')
+
+    # Infere equipe do agente que esta respondendo, se vazia
+    if not conversa.equipe_id:
+        from apps.inbox.models import MembroEquipeInbox
+        membro = MembroEquipeInbox.all_tenants.filter(
+            tenant=conversa.tenant, user=user
+        ).select_related('equipe').first()
+        if membro:
+            conversa.equipe = membro.equipe
+            update_fields.append('equipe')
+
+    conversa.save(update_fields=update_fields)
 
     # Log de auditoria
     from apps.sistema.utils import registrar_acao
@@ -411,9 +429,32 @@ def _vincular_agente_oportunidade(conversa, agente):
 # ── Ações de conversa ──────────────────────────────────────────────────
 
 def atribuir_conversa(conversa, agente, atribuido_por=None):
-    """Atribui conversa a um agente e cria mensagem de sistema."""
+    """Atribui conversa a um agente e cria mensagem de sistema.
+
+    Side effects:
+      - modo_atendimento vira 'humano' (silencia bot externo)
+      - equipe inferida da primeira equipe do agente no tenant, se vazia
+    """
+    from apps.inbox.models import MembroEquipeInbox
+
     conversa.agente = agente
-    conversa.save(update_fields=['agente'])
+    updates = ['agente']
+
+    # Silencia o bot — quando agente entra, conversa fica em modo humano
+    if conversa.modo_atendimento != 'humano':
+        conversa.modo_atendimento = 'humano'
+        updates.append('modo_atendimento')
+
+    # Infere equipe do agente se ainda nao tem
+    if not conversa.equipe_id:
+        membro = MembroEquipeInbox.all_tenants.filter(
+            tenant=conversa.tenant, user=agente
+        ).select_related('equipe').first()
+        if membro:
+            conversa.equipe = membro.equipe
+            updates.append('equipe')
+
+    conversa.save(update_fields=updates)
     _vincular_agente_oportunidade(conversa, agente)
 
     nome_atribuidor = ''
