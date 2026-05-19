@@ -802,6 +802,14 @@
         loadConversas();
         loadRespostasRapidas();
         connectWebSocket();
+
+        // Abrir conversa especifica via ?conversa=<id> na URL
+        // (ex: notificacao redireciona pra /inbox/?conversa=189)
+        const params = new URLSearchParams(window.location.search);
+        const conversaId = parseInt(params.get('conversa') || '', 10);
+        if (conversaId && !isNaN(conversaId)) {
+            selectConversa(conversaId);
+        }
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
