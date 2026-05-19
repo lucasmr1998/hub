@@ -107,17 +107,32 @@
           </div>
         {% endif %}
         {% if oportunidade.dados_custom %}
-          <div class="detail-field">
+          {% with dados_extras_count=0 %}
+          <div class="detail-field" id="dadosExtrasField">
             <label>Dados personalizados</label>
-            <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div class="dados-extras-list">
               {% for key, value in oportunidade.dados_custom.items %}
-                <div style="display: flex; justify-content: space-between; font-size: var(--fs-sm); align-items: center;">
-                  <span style="color: var(--color-text-muted);">{{ key }}</span>
-                  <span class="editable" data-field="dados_custom.{{ key }}" style="font-weight: var(--fw-semibold);">{{ value }}</span>
-                </div>
+                {% if not key|slice:":12" == "atendimento_" and not key|slice:":1" == "_" %}
+                  <div class="dados-extra-chip">
+                    <span class="dados-extra-key">{{ key|cut:"_"|title }}</span>
+                    <span class="editable dados-extra-val" data-field="dados_custom.{{ key }}">{{ value }}</span>
+                  </div>
+                {% endif %}
               {% endfor %}
             </div>
           </div>
+          <style>
+            .dados-extras-list { display: grid; grid-template-columns: 1fr; gap: 6px; }
+            .dados-extra-chip {
+              display: flex; justify-content: space-between; align-items: center; gap: 8px;
+              padding: 6px 10px; background: var(--color-bg-subtle, #F8FAFC);
+              border: 1px solid var(--color-border, #E2E8F0); border-radius: 8px;
+              font-size: var(--fs-sm);
+            }
+            .dados-extra-key { color: var(--color-text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+            .dados-extra-val { font-weight: var(--fw-semibold); text-align: right; word-break: break-word; }
+          </style>
+          {% endwith %}
         {% endif %}
         {% if oportunidade.motivo_perda %}
           <div class="detail-field">
@@ -138,6 +153,7 @@
 
     {# Estado do Bot (N8N) — visivel quando a oportunidade veio de fluxo automatico #}
     {% if oportunidade.dados_custom.atendimento_estado %}
+      {% with raw_estado=oportunidade.dados_custom.atendimento_estado raw_dt=oportunidade.dados_custom.atendimento_atualizado_em %}
       <div class="card">
         <div class="card-header">
           <h3 class="card-title"><i class="bi bi-robot" style="color: var(--color-primary);"></i> Estado do bot</h3>
@@ -145,14 +161,30 @@
         <div class="card-body">
           <div class="detail-field">
             <label>Etapa atual</label>
-            <div class="value" style="font-weight: var(--fw-semibold);">{{ oportunidade.dados_custom.atendimento_estado }}</div>
+            <div class="value">
+              {% if raw_estado == 'concluido' %}
+                <span class="estado-bot-badge estado-bot-success"><i class="bi bi-check-circle-fill"></i> Cadastro concluído</span>
+              {% elif raw_estado == 'aguarda_humano' %}
+                <span class="estado-bot-badge estado-bot-warning"><i class="bi bi-person-raised-hand"></i> Aguardando atendente</span>
+              {% else %}
+                <span class="estado-bot-badge estado-bot-info"><i class="bi bi-hourglass-split"></i> {{ raw_estado|cut:"aguarda_"|cut:"_"|title }}</span>
+              {% endif %}
+            </div>
           </div>
-          {% if oportunidade.dados_custom.atendimento_atualizado_em %}
+          {% if raw_dt %}
             <div class="detail-field">
               <label>Atualizado em</label>
-              <div class="value" style="font-size: var(--fs-sm); color: var(--color-text-muted);">{{ oportunidade.dados_custom.atendimento_atualizado_em }}</div>
+              <div class="value" style="font-size: var(--fs-sm); color: var(--color-text-muted);">
+                {{ raw_dt|slice:"8:10" }}/{{ raw_dt|slice:"5:7" }} às {{ raw_dt|slice:"11:16" }}
+              </div>
             </div>
           {% endif %}
+          <style>
+            .estado-bot-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: var(--fw-semibold); }
+            .estado-bot-success { background: rgba(22, 163, 74, 0.1); color: var(--color-success, #16A34A); }
+            .estado-bot-warning { background: rgba(245, 158, 11, 0.1); color: var(--color-warning, #F59E0B); }
+            .estado-bot-info    { background: rgba(99, 102, 241, 0.1); color: var(--color-primary, #6366F1); }
+          </style>
           {% with conv=oportunidade.conversas.first %}
             {% if conv %}
               <div class="detail-field">
@@ -178,6 +210,7 @@
           {% endwith %}
         </div>
       </div>
+      {% endwith %}
     {% endif %}
 
     {# Dados do lead #}
