@@ -927,7 +927,7 @@ def sessoes_atendimento_view(request):
     if not fluxo_filter:
         conversas_bot = Conversa.objects.select_related('lead', 'oportunidade').filter(
             modo_atendimento__in=['bot', 'humano', 'finalizado_bot']
-        ).order_by('-criado_em')[:200]
+        ).order_by('-data_abertura')[:200]
 
         CAMPOS_ALVO = ['nome', 'email', 'cep', 'cidade', 'plano_interesse', 'cpf', 'data_nascimento', 'numero']
 
@@ -962,7 +962,7 @@ def sessoes_atendimento_view(request):
                 'status': card_status,
                 'status_label': card_status_label,
                 'nodo_label': nodo_label,
-                'data': c.criado_em,
+                'data': c.ultima_mensagem_em or c.data_abertura,
                 'progresso_pct': int(preenchidos * 100 / len(CAMPOS_ALVO)),
                 'questoes_resp': preenchidos,
                 'total_questoes': len(CAMPOS_ALVO),
