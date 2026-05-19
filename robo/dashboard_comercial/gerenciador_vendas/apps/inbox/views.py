@@ -919,31 +919,36 @@ def api_etiquetas(request):
 
 
 @login_required
-@require_http_methods(["POST"])
+@require_http_methods(["GET", "POST"])
 def api_atualizar_status_agente(request):
-    """POST: Atualizar status do agente (online/ausente/offline)."""
+    """
+    GET:  Retorna status atual do agente (cria perfil se nao existir).
+    POST: Atualiza status do agente (online/ausente/offline).
+    """
     from .models import PerfilAgenteInbox
-
-    try:
-        body = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'error': 'JSON inválido'}, status=400)
-
-    novo_status = body.get('status')
-    if novo_status not in ('online', 'ausente', 'offline'):
-        return JsonResponse({'error': 'Status inválido'}, status=400)
 
     perfil, _ = PerfilAgenteInbox.all_tenants.get_or_create(
         user=request.user,
         tenant=request.tenant,
         defaults={}
     )
-    perfil.status = novo_status
-    perfil.save(update_fields=['status', 'ultimo_status_em'])
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({'error': 'JSON inválido'}, status=400)
+
+        novo_status = body.get('status')
+        if novo_status not in ('online', 'ausente', 'offline'):
+            return JsonResponse({'error': 'Status inválido'}, status=400)
+
+        perfil.status = novo_status
+        perfil.save(update_fields=['status', 'ultimo_status_em'])
 
     return JsonResponse({
         'success': True,
-        'status': novo_status,
+        'status': perfil.status,
         'capacidade_maxima': perfil.capacidade_maxima,
         'conversas_abertas': perfil.conversas_abertas_count,
     })

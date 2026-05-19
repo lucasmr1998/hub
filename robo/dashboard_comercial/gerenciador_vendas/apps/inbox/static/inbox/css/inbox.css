@@ -551,3 +551,38 @@ body.inbox-page .sidebar { display: none; }
     .inbox-chat { position: fixed; left: 0; top: 52px; bottom: 0; width: 100%; z-index: 91; }
     .msg-bubble { max-width: 85%; }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   Pill de status do agente no Inbox (online/ausente/offline)
+   ════════════════════════════════════════════════════════════════════ */
+.inbox-agent-status-pill {
+    width: 100%; display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border: 1px solid var(--color-border, #e5e7eb);
+    background: var(--color-bg, #fff); border-radius: 8px; cursor: pointer;
+    font-size: 12px; font-weight: 500; color: var(--color-text, #1f2937);
+    transition: background 0.15s, border-color 0.15s;
+}
+.inbox-agent-status-pill:hover { background: var(--color-surface-2, #f3f4f6); }
+.inbox-agent-status-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: #9ca3af; flex-shrink: 0;
+}
+.inbox-agent-status-dot.is-online { background: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,0.15); }
+.inbox-agent-status-dot.is-ausente { background: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.15); }
+.inbox-agent-status-dot.is-offline { background: #9ca3af; }
+.inbox-agent-status-menu {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 50;
+    background: var(--color-bg, #fff); border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    padding: 4px;
+}
+.inbox-agent-status-opt {
+    width: 100%; display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; background: transparent; border: 0;
+    border-radius: 6px; cursor: pointer; font-size: 12px;
+    text-align: left; color: var(--color-text, #1f2937);
+}
+.inbox-agent-status-opt:hover { background: var(--color-surface-2, #f3f4f6); }
+.inbox-agent-status-opt .opt-hint {
+    margin-left: auto; font-size: 10px; color: var(--color-text-muted, #6b7280); font-weight: 400;
+}

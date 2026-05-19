@@ -37,6 +37,25 @@
                     <button class="ib-icon-btn" id="sortBtn" title="Ordenar"><i class="fas fa-arrow-down-short-wide"></i></button>
                 </div>
             </div>
+            <!-- Status do agente (online/ausente/offline) -->
+            <div class="inbox-agent-status-wrap" style="margin-bottom:6px; position:relative;">
+                <button class="inbox-agent-status-pill" id="agentStatusPill" type="button" title="Mudar status de atendimento">
+                    <span class="inbox-agent-status-dot" id="agentStatusDot"></span>
+                    <span id="agentStatusLabel">Carregando…</span>
+                    <i class="fas fa-chevron-down" style="font-size:10px;opacity:0.6;margin-left:auto;"></i>
+                </button>
+                <div class="inbox-agent-status-menu" id="agentStatusMenu" style="display:none;">
+                    <button class="inbox-agent-status-opt" data-status="online">
+                        <span class="inbox-agent-status-dot is-online"></span> Online <span class="opt-hint">recebe novas conversas</span>
+                    </button>
+                    <button class="inbox-agent-status-opt" data-status="ausente">
+                        <span class="inbox-agent-status-dot is-ausente"></span> Ausente <span class="opt-hint">pausa atribuicoes novas</span>
+                    </button>
+                    <button class="inbox-agent-status-opt" data-status="offline">
+                        <span class="inbox-agent-status-dot is-offline"></span> Offline <span class="opt-hint">nao recebe nada</span>
+                    </button>
+                </div>
+            </div>
             {% if user_is_admin %}
             <!-- Filtros por modo de atendimento (bot/humano) — admin -->
             <div class="inbox-assign-tabs" style="margin-bottom:4px;">
@@ -343,4 +362,60 @@
 {% block extra_js %}
 <script>window.AGENTES_STATUS = {{ agentes_status_json|safe }};</script>
 <script src="{% static 'inbox/js/inbox.js' %}?v=9"></script>
+<script>
+// Status do agente no Inbox (pill online/ausente/offline)
+(function() {
+    const URL_STATUS = "{% url 'inbox:api_status_agente' %}";
+    const pill = document.getElementById('agentStatusPill');
+    const menu = document.getElementById('agentStatusMenu');
+    const dot = document.getElementById('agentStatusDot');
+    const label = document.getElementById('agentStatusLabel');
+    if (!pill) return;
+
+    const LABEL = { online: 'Online', ausente: 'Ausente', offline: 'Offline' };
+
+    function aplicar(status) {
+        dot.className = 'inbox-agent-status-dot is-' + status;
+        label.textContent = LABEL[status] || status;
+    }
+
+    function getCsrf() {
+        return document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] || '';
+    }
+
+    // Carrega status atual
+    fetch(URL_STATUS).then(r => r.json()).then(d => {
+        if (d.success) aplicar(d.status);
+    }).catch(() => aplicar('offline'));
+
+    pill.addEventListener('click', e => {
+        e.stopPropagation();
+        menu.style.display = (menu.style.display === 'none') ? 'block' : 'none';
+    });
+
+    document.addEventListener('click', () => { menu.style.display = 'none'; });
+
+    menu.querySelectorAll('.inbox-agent-status-opt').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const novo = btn.dataset.status;
+            menu.style.display = 'none';
+            try {
+                const r = await fetch(URL_STATUS, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                    body: JSON.stringify({ status: novo }),
+                });
+                const d = await r.json();
+                if (d.success) {
+                    aplicar(d.status);
+                    if (typeof toast === 'function') toast('Status', 'Atualizado pra ' + LABEL[d.status], 'success');
+                }
+            } catch (err) {
+                if (typeof toast === 'function') toast('Erro', String(err), 'danger');
+            }
+        });
+    });
+})();
+</script>
 {% endblock %}
