@@ -469,6 +469,20 @@ def inbox_mensagem(request):
             )
             conversa.save()
 
+        # Sincroniza snapshot da Conversa com o Lead — campos contato_* sao
+        # snapshot e podem ficar com placeholder se a Conversa foi criada
+        # antes do Lead ter nome/email. Atualiza se mudou.
+        conv_updates = []
+        if lead.nome_razaosocial and lead.nome_razaosocial != 'Lead WhatsApp' and \
+           conversa.contato_nome in ('', 'Lead WhatsApp', None):
+            conversa.contato_nome = lead.nome_razaosocial
+            conv_updates.append('contato_nome')
+        if lead.email and not conversa.contato_email:
+            conversa.contato_email = lead.email
+            conv_updates.append('contato_email')
+        if conv_updates:
+            conversa.save(update_fields=conv_updates)
+
         # Atualiza modo se vier (validacao ja feita no inicio — Bug 2)
         modo = payload.get('modo_atendimento')
         if modo:
