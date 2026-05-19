@@ -528,3 +528,24 @@ def on_nota_mencao(sender, instance, created, **kwargs):
             )
     except Exception as exc:
         logger.error('Erro ao processar menção em nota: %s', exc)
+
+
+@receiver(post_save, sender='inbox.Conversa')
+def on_conversa_dispara_engine_pipeline(sender, instance, created, **kwargs):
+    """
+    Dispara o engine de regras do pipeline CRM quando a Conversa muda.
+
+    Necessario porque regras com condicao `conversa_modo` ou `conversa_atribuida`
+    so podem ser avaliadas apos a Conversa ser persistida — e os outros signals
+    do CRM (em LeadProspecto/HistoricoContato/ImagemLeadProspecto) podem rodar
+    ANTES do update da Conversa no mesmo request.
+    """
+    if getattr(instance, '_skip_rules_evaluation', False):
+        return
+    if not instance.oportunidade_id:
+        return
+    try:
+        from apps.comercial.crm.services.automacao_pipeline import processar_seguro
+        processar_seguro(oportunidade=instance.oportunidade)
+    except Exception as exc:
+        logger.error('Erro ao avaliar regras pipeline a partir de Conversa %s: %s', instance.pk, exc)
