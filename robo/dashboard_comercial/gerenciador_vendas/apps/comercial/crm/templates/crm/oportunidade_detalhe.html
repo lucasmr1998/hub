@@ -136,6 +136,50 @@
       </div>
     </div>
 
+    {# Estado do Bot (N8N) — visivel quando a oportunidade veio de fluxo automatico #}
+    {% if oportunidade.dados_custom.atendimento_estado %}
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title"><i class="bi bi-robot" style="color: var(--color-primary);"></i> Estado do bot</h3>
+        </div>
+        <div class="card-body">
+          <div class="detail-field">
+            <label>Etapa atual</label>
+            <div class="value" style="font-weight: var(--fw-semibold);">{{ oportunidade.dados_custom.atendimento_estado }}</div>
+          </div>
+          {% if oportunidade.dados_custom.atendimento_atualizado_em %}
+            <div class="detail-field">
+              <label>Atualizado em</label>
+              <div class="value" style="font-size: var(--fs-sm); color: var(--color-text-muted);">{{ oportunidade.dados_custom.atendimento_atualizado_em }}</div>
+            </div>
+          {% endif %}
+          {% with conv=oportunidade.conversas.first %}
+            {% if conv %}
+              <div class="detail-field">
+                <label>Modo de atendimento</label>
+                <div class="value">
+                  {% if conv.modo_atendimento == 'bot' %}
+                    <span style="color: var(--color-primary);"><i class="bi bi-robot"></i> Bot conduzindo</span>
+                  {% elif conv.modo_atendimento == 'humano' %}
+                    <span style="color: var(--color-warning);"><i class="bi bi-person-check"></i> Operador assumiu</span>
+                  {% elif conv.modo_atendimento == 'finalizado_bot' %}
+                    <span style="color: var(--color-success);"><i class="bi bi-check2-all"></i> Bot finalizou (fila)</span>
+                  {% else %}
+                    <span class="value-empty">{{ conv.modo_atendimento }}</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div style="margin-top: var(--sp-3);">
+                <a href="{% url 'inbox:inbox' %}?conversa={{ conv.id }}" class="btn btn-secondary btn-sm" style="width: 100%;">
+                  <i class="bi bi-chat-dots"></i> Abrir conversa no Inbox
+                </a>
+              </div>
+            {% endif %}
+          {% endwith %}
+        </div>
+      </div>
+    {% endif %}
+
     {# Dados do lead #}
     <div class="card">
       <div class="card-header">

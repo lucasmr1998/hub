@@ -530,3 +530,60 @@ def inbox_mensagem(request):
         'mensagem_criada': mensagem_criada,
         'conversa_ja_existia': ja_existia_conversa,
     }, status=status_code)
+
+
+@csrf_exempt
+def conversa_estado(request):
+    """
+    GET ?tenant_slug=<slug>&telefone=<numero>
+
+    Retorna o estado atual da conversa pra o N8N decidir se segue com o bot
+    ou se cala (operador humano assumiu).
+
+    Resposta:
+        {
+            existe: bool,
+            modo_atendimento: 'bot' | 'humano' | 'finalizado_bot' | null,
+            agente_id: int | null,
+            agente_nome: str | null,
+            atualizado_em: iso8601 | null,
+        }
+    """
+    if not _autorizado(request):
+        return JsonResponse({'sucesso': False, 'erro': 'Nao autorizado'}, status=401)
+
+    tenant_slug = (request.GET.get('tenant_slug') or '').strip()
+    telefone = (request.GET.get('telefone') or '').strip()
+    if not tenant_slug or not telefone:
+        return JsonResponse({'sucesso': False, 'erro': 'tenant_slug e telefone obrigatorios'}, status=400)
+
+    tenant = Tenant.objects.filter(slug=tenant_slug, ativo=True).first()
+    if not tenant:
+        return JsonResponse({'sucesso': False, 'erro': f'Tenant {tenant_slug!r} nao encontrado'}, status=404)
+
+    telefone_norm = ''.join(c for c in telefone if c.isdigit())
+    conversa = Conversa.all_tenants.filter(
+        tenant=tenant, contato_telefone__contains=telefone_norm[-9:]
+    ).exclude(status__in=['arquivada']).order_by('-id').first()
+
+    if not conversa:
+        return JsonResponse({
+            'sucesso': True, 'existe': False,
+            'modo_atendimento': None, 'agente_id': None, 'agente_nome': None,
+        }, status=200)
+
+    agente_nome = None
+    if conversa.agente_id:
+        full = (conversa.agente.get_full_name() or '').strip()
+        agente_nome = full or conversa.agente.username
+
+    return JsonResponse({
+        'sucesso': True,
+        'existe': True,
+        'conversa_id': conversa.id,
+        'modo_atendimento': conversa.modo_atendimento,
+        'status': conversa.status,
+        'agente_id': conversa.agente_id,
+        'agente_nome': agente_nome,
+        'atualizado_em': conversa.atualizado_em.isoformat() if conversa.atualizado_em else None,
+    }, status=200)
