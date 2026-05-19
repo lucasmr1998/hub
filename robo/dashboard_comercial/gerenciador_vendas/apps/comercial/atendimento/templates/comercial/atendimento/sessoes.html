@@ -51,31 +51,31 @@
     </div>
 </div>
 
-{% if sessoes %}
-{% for s in sessoes %}
-<a href="{% url 'comercial_atendimento:sessao_detalhe' s.id %}" class="sessao-card">
+{% if cards %}
+{% for s in cards %}
+<a href="{{ s.url }}" class="sessao-card">
     <div class="sessao-avatar" style="background:{% if s.status == 'completado' %}var(--success){% elif s.status == 'em_andamento' or s.status == 'iniciado' %}var(--primary){% elif s.status == 'pausado' %}var(--warning){% else %}var(--text-muted){% endif %};">
-        {% if s.status == 'completado' %}<i class="fas fa-check"></i>{% elif s.status == 'em_andamento' or s.status == 'iniciado' %}<i class="fas fa-comments"></i>{% elif s.status == 'pausado' %}<i class="fas fa-pause"></i>{% else %}<i class="fas fa-times"></i>{% endif %}
+        {% if s.is_n8n %}<i class="fas fa-robot"></i>{% elif s.status == 'completado' %}<i class="fas fa-check"></i>{% elif s.status == 'em_andamento' or s.status == 'iniciado' %}<i class="fas fa-comments"></i>{% elif s.status == 'pausado' %}<i class="fas fa-pause"></i>{% else %}<i class="fas fa-times"></i>{% endif %}
     </div>
     <div class="sessao-info">
-        <div class="sessao-nome">{{ s.lead.nome_razaosocial|default:"Lead desconhecido" }} <span class="badge badge-{% if s.status == 'completado' %}success{% elif s.status == 'em_andamento' or s.status == 'iniciado' %}info{% elif s.status == 'pausado' %}warning{% else %}muted{% endif %}" style="font-size:10px;">{{ s.get_status_display }}</span></div>
-        <div class="sessao-fluxo">{{ s.fluxo.nome }} {% if s.fluxo.modo_fluxo %}<span class="badge badge-primary" style="font-size:9px;">Visual</span>{% endif %}</div>
+        <div class="sessao-nome">{{ s.nome_lead }} <span class="badge badge-{% if s.status == 'completado' %}success{% elif s.status == 'em_andamento' or s.status == 'iniciado' %}info{% elif s.status == 'pausado' %}warning{% else %}muted{% endif %}" style="font-size:10px;">{{ s.status_label }}</span></div>
+        <div class="sessao-fluxo">{{ s.fluxo_nome }} {% if s.is_n8n %}<span class="badge badge-warning" style="font-size:9px;">N8N</span>{% elif s.is_visual %}<span class="badge badge-primary" style="font-size:9px;">Visual</span>{% endif %}</div>
         <div class="sessao-nodo">
-            {% if s.nodo_atual %}
-                Aguardando: <strong>{{ s.nodo_atual.configuracao.titulo|default:s.nodo_atual.get_tipo_display }}</strong>
+            {% if s.nodo_label %}
+                Aguardando: <strong>{{ s.nodo_label }}</strong>
             {% elif s.status == 'completado' %}
-                Finalizado {% if s.score_qualificacao %}(Score: {{ s.score_qualificacao }}){% endif %}
+                Finalizado {% if s.score %}(Score: {{ s.score }}){% endif %}
             {% else %}
-                Questao {{ s.questao_atual }}/{{ s.total_questoes }}
+                {{ s.questoes_resp }}/{{ s.total_questoes }} dados coletados
             {% endif %}
         </div>
     </div>
     <div class="sessao-meta">
-        <div class="sessao-data">{{ s.data_inicio|date:"d/m/Y H:i" }}</div>
+        <div class="sessao-data">{{ s.data|date:"d/m/Y H:i" }}</div>
         <div class="progress-bar-wrap">
-            <div class="progress-bar-fill" style="width:{{ s.get_progresso_percentual }}%;background:{% if s.status == 'completado' %}var(--success){% else %}var(--primary){% endif %};"></div>
+            <div class="progress-bar-fill" style="width:{{ s.progresso_pct }}%;background:{% if s.status == 'completado' %}var(--success){% else %}var(--primary){% endif %};"></div>
         </div>
-        <div style="font-size:10px;color:var(--text-light);">{{ s.questoes_respondidas }}/{{ s.total_questoes }} respostas</div>
+        <div style="font-size:10px;color:var(--text-light);">{{ s.questoes_resp }}/{{ s.total_questoes }} respostas</div>
     </div>
 </a>
 {% endfor %}

@@ -872,25 +872,111 @@ def _serializar_resultado(resultado):
 
 @login_required(login_url='sistema:login')
 def sessoes_atendimento_view(request):
-    """Tela de acompanhamento de sessoes ativas e historico."""
+    """Tela de acompanhamento de sessoes ativas e historico.
+
+    Agrega duas fontes:
+      - AtendimentoFluxo (motor nativo) — fluxos visuais/questoes do Hubtrix
+      - Conversa do Inbox em modo bot/humano/finalizado_bot — conversas
+        conduzidas por fluxo externo (N8N), espelhadas no Inbox.
+    """
+    from django.urls import reverse
+    from django.utils import timezone
+    from apps.inbox.models import Conversa
+
     status_filter = request.GET.get('status', '')
     fluxo_filter = request.GET.get('fluxo', '')
 
-    sessoes = AtendimentoFluxo.objects.select_related(
+    # 1. Sessoes nativas (motor proprio)
+    sessoes_nativas = AtendimentoFluxo.objects.select_related(
         'lead', 'fluxo', 'nodo_atual'
     ).order_by('-data_inicio')
 
     if status_filter == 'em_andamento':
-        sessoes = sessoes.filter(status__in=['iniciado', 'em_andamento', 'pausado'])
+        sessoes_nativas = sessoes_nativas.filter(status__in=['iniciado', 'em_andamento', 'pausado'])
     elif status_filter:
-        sessoes = sessoes.filter(status=status_filter)
+        sessoes_nativas = sessoes_nativas.filter(status=status_filter)
     if fluxo_filter:
-        sessoes = sessoes.filter(fluxo_id=fluxo_filter)
+        sessoes_nativas = sessoes_nativas.filter(fluxo_id=fluxo_filter)
+
+    cards = []
+    for s in sessoes_nativas[:200]:
+        nodo_label = None
+        if s.nodo_atual:
+            try:
+                nodo_label = (s.nodo_atual.configuracao or {}).get('titulo') or s.nodo_atual.get_tipo_display()
+            except Exception:
+                nodo_label = s.nodo_atual.get_tipo_display()
+        cards.append({
+            'tipo': 'nativa',
+            'url': reverse('comercial_atendimento:sessao_detalhe', args=[s.id]),
+            'nome_lead': s.lead.nome_razaosocial if s.lead else 'Lead desconhecido',
+            'fluxo_nome': s.fluxo.nome if s.fluxo else 'Sem fluxo',
+            'is_visual': bool(getattr(s.fluxo, 'modo_fluxo', None)),
+            'is_n8n': False,
+            'status': s.status,
+            'status_label': s.get_status_display(),
+            'nodo_label': nodo_label,
+            'data': s.data_inicio,
+            'progresso_pct': s.get_progresso_percentual() if hasattr(s, 'get_progresso_percentual') else 0,
+            'questoes_resp': s.questoes_respondidas or 0,
+            'total_questoes': s.total_questoes or 0,
+            'score': s.score_qualificacao,
+        })
+
+    # 2. Conversas conduzidas por fluxo externo (N8N) — so se nao tem filtro de fluxo nativo
+    if not fluxo_filter:
+        conversas_bot = Conversa.objects.select_related('lead', 'oportunidade').filter(
+            modo_atendimento__in=['bot', 'humano', 'finalizado_bot']
+        ).order_by('-criado_em')[:200]
+
+        CAMPOS_ALVO = ['nome', 'email', 'cep', 'cidade', 'plano_interesse', 'cpf', 'data_nascimento', 'numero']
+
+        for c in conversas_bot:
+            dc = (c.oportunidade.dados_custom or {}) if c.oportunidade_id else {}
+            preenchidos = sum(1 for k in CAMPOS_ALVO if dc.get(k))
+
+            if c.modo_atendimento == 'finalizado_bot':
+                card_status, card_status_label = 'completado', 'Bot finalizou'
+            elif c.modo_atendimento == 'humano':
+                card_status, card_status_label = 'em_andamento', 'Operador assumiu'
+            else:
+                card_status, card_status_label = 'em_andamento', 'Bot conduzindo'
+
+            # Aplica filtros do mesmo modo das nativas
+            if status_filter == 'em_andamento' and card_status not in ('iniciado', 'em_andamento', 'pausado'):
+                continue
+            if status_filter and status_filter != 'em_andamento' and card_status != status_filter:
+                continue
+
+            estado_raw = dc.get('atendimento_estado') or ''
+            nodo_label = estado_raw.replace('_', ' ').strip().capitalize() if estado_raw else None
+            nome_lead = c.contato_nome or (c.lead.nome_razaosocial if c.lead_id else 'Lead WhatsApp')
+
+            cards.append({
+                'tipo': 'bot_n8n',
+                'url': reverse('inbox:inbox') + f'?conversa={c.id}',
+                'nome_lead': nome_lead,
+                'fluxo_nome': 'Fluxo externo (N8N)',
+                'is_visual': True,
+                'is_n8n': True,
+                'status': card_status,
+                'status_label': card_status_label,
+                'nodo_label': nodo_label,
+                'data': c.criado_em,
+                'progresso_pct': int(preenchidos * 100 / len(CAMPOS_ALVO)),
+                'questoes_resp': preenchidos,
+                'total_questoes': len(CAMPOS_ALVO),
+                'score': None,
+            })
+
+    # 3. Ordena tudo por data desc e corta em 100
+    cards.sort(key=lambda c: c['data'] or timezone.now(), reverse=True)
+    cards = cards[:100]
 
     fluxos = FluxoAtendimento.objects.all().order_by('nome')
 
     context = {
-        'sessoes': sessoes[:100],
+        'cards': cards,
         'fluxos': fluxos,
         'status_filter': status_filter,
         'fluxo_filter': fluxo_filter,
