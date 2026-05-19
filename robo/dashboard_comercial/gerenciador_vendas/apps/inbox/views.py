@@ -261,12 +261,17 @@ def api_conversa_detalhe(request, pk):
 
 @login_required
 def api_mensagens(request, pk):
-    """GET: Mensagens de uma conversa (paginado)."""
+    """GET: Mensagens de uma conversa (paginado).
+
+    Retorna as `limit` mais RECENTES (offset conta a partir do fim).
+    Mensagens vem em ordem cronologica ASC pra renderizacao direta.
+    """
     conversa = _get_conversa(pk, request)
     offset = int(request.GET.get('offset', 0))
     limit = int(request.GET.get('limit', 50))
 
-    mensagens = conversa.mensagens.select_related('remetente_user').all()[offset:offset + limit]
+    qs = conversa.mensagens.select_related('remetente_user').order_by('-id')[offset:offset + limit]
+    mensagens = list(reversed(list(qs)))
     total = conversa.mensagens.count()
 
     data = MensagemOutputSerializer(mensagens, many=True).data
