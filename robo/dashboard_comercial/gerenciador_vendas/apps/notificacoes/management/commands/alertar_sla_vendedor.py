@@ -22,15 +22,14 @@ class Command(BaseCommand):
 
     def handle(self, *args, **opts):
         from apps.comercial.crm.models import OportunidadeVenda, PipelineEstagio
-        from apps.notificacoes.models import Notificacao, TipoNotificacao
-        from apps.sistema.models import Tenant
+        from apps.notificacoes.models import TipoNotificacao
+        from apps.notificacoes.services.notificacao_service import criar_notificacao
         from django.contrib.auth.models import User
 
         horas = opts['horas']
         dry = opts['dry_run']
         limite = timezone.now() - timedelta(hours=horas)
 
-        # Estagios "Aguardando Vendedor" (qualificacao tipo, slug aguardando-vendedor)
         estagios_alvo = PipelineEstagio.all_tenants.filter(
             slug='aguardando-vendedor', ativo=True
         )
@@ -40,7 +39,19 @@ class Command(BaseCommand):
 
         total = 0
         for estagio in estagios_alvo:
-            # Oportunidades nesse estagio ha mais de X horas
+            # Garante TipoNotificacao existe pro tenant (idempotente)
+            TipoNotificacao.all_tenants.get_or_create(
+                tenant=estagio.tenant, codigo='sla_aguardando_vendedor',
+                defaults={
+                    'nome': 'Lead aguardando vendedor (SLA)',
+                    'descricao': 'Lead em "Aguardando Vendedor" excedeu o SLA configurado',
+                    'icone': 'bi-clock-history',
+                    'cor': 'warning',
+                    'prioridade_padrao': 'alta',
+                    'ativo': True,
+                }
+            )
+
             ops = OportunidadeVenda.all_tenants.filter(
                 tenant=estagio.tenant,
                 estagio=estagio,
@@ -48,7 +59,6 @@ class Command(BaseCommand):
             )
 
             for op in ops:
-                # Evita duplicar: checa se ja notificou nas ultimas X horas
                 dados = op.dados_custom or {}
                 ultimo_alerta = dados.get('_sla_ultimo_alerta')
                 if ultimo_alerta:
@@ -56,47 +66,45 @@ class Command(BaseCommand):
                         from datetime import datetime
                         dt = datetime.fromisoformat(ultimo_alerta)
                         if (timezone.now() - dt) < timedelta(hours=horas):
-                            continue  # ja foi notificado recentemente
+                            continue
                     except (ValueError, TypeError):
                         pass
 
-                # Decide quem notifica: responsavel ou todos admins do tenant
                 destinatarios = []
                 if op.responsavel_id:
                     destinatarios = [op.responsavel]
                 else:
-                    # Notifica admins do tenant
                     destinatarios = list(User.objects.filter(
-                        is_active=True, is_superuser=False,
+                        is_active=True,
                         userpermissao__tenant=op.tenant
                     ).distinct()[:5])
 
+                titulo = f'Lead aguardando ha {horas}h+'
                 msg = (
-                    f'⏰ Lead {op.titulo!r} esta aguardando vendedor ha mais de {horas}h.\n'
+                    f'Lead {op.titulo!r} esta aguardando vendedor.\n'
                     f'Telefone: {op.lead.telefone if op.lead else "?"}\n'
                     f'Estagio: {estagio.nome}'
                 )
 
                 for user in destinatarios:
                     if dry:
-                        self.stdout.write(f'[DRY] Notificaria {user.username}: {msg[:80]}')
-                    else:
-                        tipo, _ = TipoNotificacao.all_tenants.get_or_create(
-                            tenant=op.tenant, codigo='sla_aguardando_vendedor',
-                            defaults={'nome': 'Lead aguardando vendedor (SLA)',
-                                      'descricao': 'Lead em "Aguardando Vendedor" excedeu SLA',
-                                      'icone': 'bi-clock-history',
-                                      'cor': 'warning'}
-                        )
-                        Notificacao.objects.create(
-                            tenant=op.tenant, tipo=tipo, user=user,
-                            titulo=f'Lead aguardando ha {horas}h+',
-                            mensagem=msg,
-                            link=f'/crm/oportunidades/{op.id}/',
-                        )
-                        total += 1
+                        self.stdout.write(f'[DRY] Notificaria {user.username}: {titulo}')
+                        continue
+                    criar_notificacao(
+                        tenant=op.tenant,
+                        codigo_tipo='sla_aguardando_vendedor',
+                        titulo=titulo,
+                        mensagem=msg,
+                        destinatario=user,
+                        url_acao=f'/crm/oportunidades/{op.id}/',
+                        dados_contexto={
+                            'oportunidade_id': op.id,
+                            'lead_id': op.lead_id,
+                            'horas_aguardando': horas,
+                        },
+                    )
+                    total += 1
 
-                # Marca como notificado
                 if not dry:
                     dados['_sla_ultimo_alerta'] = timezone.now().isoformat()
                     op.dados_custom = dados
