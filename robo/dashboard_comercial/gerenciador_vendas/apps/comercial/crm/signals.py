@@ -106,6 +106,7 @@ def verificar_conversao_historico(sender, instance, created, **kwargs):
         )
 
         HistoricoPipelineEstagio.objects.create(
+            tenant=oportunidade.tenant,
             oportunidade=oportunidade,
             estagio_anterior=estagio_anterior,
             estagio_novo=estagio_ganho,

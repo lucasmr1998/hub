@@ -253,6 +253,7 @@ def api_mover_oportunidade(request):
 
     # Registrar histórico
     HistoricoPipelineEstagio.objects.create(
+        tenant=oportunidade.tenant,
         oportunidade=oportunidade,
         estagio_anterior=estagio_anterior,
         estagio_novo=estagio_novo,
@@ -1885,6 +1886,7 @@ def webhook_hubsoft_contrato(request):
         estagio_anterior = oportunidade.estagio
         horas = (timezone.now() - oportunidade.data_entrada_estagio).total_seconds() / 3600
         HistoricoPipelineEstagio.objects.create(
+            tenant=oportunidade.tenant,
             oportunidade=oportunidade,
             estagio_anterior=estagio_anterior,
             estagio_novo=estagio_ativo,

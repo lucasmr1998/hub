@@ -169,6 +169,7 @@ def _mover_por_regra(oportunidade, estagio_destino, regra):
     regra_nome = regra.nome
 
     HistoricoPipelineEstagio.objects.create(
+        tenant=oportunidade.tenant,
         oportunidade=oportunidade,
         estagio_anterior=estagio_anterior,
         estagio_novo=estagio_destino,
