@@ -340,16 +340,18 @@
                 </div>
                 <div class="cfg-form-group" style="flex:1;">
                     <label>Conteúdo</label>
-                    <textarea name="conteudo" class="cfg-textarea" rows="2" required placeholder="Olá {{primeiro_nome}}! Como posso ajudar?"></textarea>
+                    <textarea name="conteudo" class="cfg-textarea" rows="2" required placeholder="{% verbatim %}Olá {{primeiro_nome}}! Como posso ajudar?{% endverbatim %}"></textarea>
                     <small style="display: block; margin-top: 6px; color: var(--text-muted, #64748B); font-size: 11px;">
                         <strong>Variáveis disponíveis:</strong>
-                        <code style="font-size:10px;">{{ "{{nome_cliente}}" }}</code>
-                        <code style="font-size:10px;">{{ "{{primeiro_nome}}" }}</code>
-                        <code style="font-size:10px;">{{ "{{telefone}}" }}</code>
-                        <code style="font-size:10px;">{{ "{{email}}" }}</code>
-                        <code style="font-size:10px;">{{ "{{atendente}}" }}</code>
-                        <code style="font-size:10px;">{{ "{{primeiro_nome_atendente}}" }}</code>
-                        <code style="font-size:10px;">{{ "{{empresa}}" }}</code>
+                        {% verbatim %}
+                        <code style="font-size:10px;">{{nome_cliente}}</code>
+                        <code style="font-size:10px;">{{primeiro_nome}}</code>
+                        <code style="font-size:10px;">{{telefone}}</code>
+                        <code style="font-size:10px;">{{email}}</code>
+                        <code style="font-size:10px;">{{atendente}}</code>
+                        <code style="font-size:10px;">{{primeiro_nome_atendente}}</code>
+                        <code style="font-size:10px;">{{empresa}}</code>
+                        {% endverbatim %}
                         — substituídas automaticamente ao usar a resposta
                     </small>
                 </div>
