@@ -448,6 +448,16 @@ def inbox_mensagem(request):
                 conversa.modo_atendimento = modo
                 conversa.save(update_fields=['modo_atendimento'])
 
+        # Atualiza Oportunidade.dados_custom com estado do atendimento — pra motor de automacoes
+        atendimento_estado = payload.get('atendimento_estado')
+        if atendimento_estado and oportunidade:
+            dc = dict(oportunidade.dados_custom or {})
+            dc['atendimento_estado'] = atendimento_estado
+            from django.utils import timezone as _tz
+            dc['atendimento_atualizado_em'] = _tz.now().isoformat()
+            oportunidade.dados_custom = dc
+            oportunidade.save(update_fields=['dados_custom'])
+
         # Tags — aplica em Conversa (etiquetas) E Oportunidade (tags)
         tags_in = payload.get('tags') or []
         if isinstance(tags_in, list) and tags_in:

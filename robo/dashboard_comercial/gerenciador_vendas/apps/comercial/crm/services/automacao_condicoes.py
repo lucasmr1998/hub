@@ -233,3 +233,72 @@ class CondicaoImagemStatus:
         if operador == 'nao_existe':
             return len(imagens) == 0
         return False
+
+
+@registrar
+class CondicaoConversaModo:
+    """
+    Checa o modo_atendimento da Conversa do Inbox vinculada a oportunidade.
+    Valores tipicos: 'bot', 'humano', 'finalizado_bot', 'assistente'.
+    """
+    slug = 'conversa_modo'
+    label = 'Modo da Conversa (bot/humano)'
+
+    def coletar_contexto(self, oportunidade, contexto):
+        from apps.inbox.models import Conversa
+        contexto['_conversa_modos'] = set(
+            Conversa.all_tenants
+            .filter(tenant=oportunidade.tenant, oportunidade_id=oportunidade.id)
+            .values_list('modo_atendimento', flat=True)
+        )
+
+    def avaliar(self, operador, valor, campo, contexto):
+        return comparar_conjunto(contexto.get('_conversa_modos', set()), operador, valor)
+
+
+@registrar
+class CondicaoConversaAtribuida:
+    """
+    Checa se a Conversa do Inbox vinculada a oportunidade tem agente atribuido.
+    """
+    slug = 'conversa_atribuida'
+    label = 'Conversa atribuida a agente'
+
+    def coletar_contexto(self, oportunidade, contexto):
+        from apps.inbox.models import Conversa
+        contexto['_conversa_atribuida'] = Conversa.all_tenants.filter(
+            tenant=oportunidade.tenant, oportunidade_id=oportunidade.id,
+            agente__isnull=False
+        ).exists()
+
+    def avaliar(self, operador, valor, campo, contexto):
+        atribuida = contexto.get('_conversa_atribuida', False)
+        if operador == 'existe':
+            return atribuida
+        if operador == 'nao_existe':
+            return not atribuida
+        if operador == 'igual':
+            return atribuida == bool(valor)
+        if operador == 'diferente':
+            return atribuida != bool(valor)
+        return False
+
+
+@registrar
+class CondicaoOportunidadeDadosCustom:
+    """
+    Checa chaves dentro de Oportunidade.dados_custom (JSONB).
+    O `campo` aponta pra chave dentro do JSONB.
+    """
+    slug = 'oportunidade_dados_custom'
+    label = 'Campo em dados_custom da Oportunidade'
+
+    def coletar_contexto(self, oportunidade, contexto):
+        contexto['_oportunidade_dados_custom'] = oportunidade.dados_custom or {}
+
+    def avaliar(self, operador, valor, campo, contexto):
+        dados = contexto.get('_oportunidade_dados_custom', {})
+        valor_atual = dados.get(campo) if campo else None
+        if isinstance(valor_atual, bool) or isinstance(valor, bool):
+            return comparar_bool(valor_atual, operador, valor)
+        return comparar_valor(valor_atual, operador, valor)
