@@ -1521,10 +1521,16 @@ def verificar_relacionamentos_api(request):
 # APIs DE CONSULTA (GET)
 # ============================================================================
 
+@login_required(login_url='sistema:login')
 def consultar_leads_api(request):
     """API GET de consulta sobre LeadProspecto com filtros e paginação."""
     if request.method != 'GET':
         return JsonResponse({'error': 'Método não permitido'}, status=405)
+
+    # Defensivo: sem tenant, nao retorna nada (evita vazar cross-tenant)
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        return JsonResponse({'error': 'Tenant nao identificado'}, status=403)
 
     try:
         page = int(request.GET.get('page', 1))
@@ -1540,7 +1546,8 @@ def consultar_leads_api(request):
         data_fim = request.GET.get('data_fim')        # formato YYYY-MM-DD
         ordering = request.GET.get('ordering')
 
-        qs = LeadProspecto.objects.all()
+        # Filtro explicito por tenant — nao confia so no TenantManager
+        qs = LeadProspecto.all_tenants.filter(tenant=tenant)
 
         if lead_id:
             qs = qs.filter(id=lead_id)

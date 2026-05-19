@@ -881,13 +881,19 @@ def sessoes_atendimento_view(request):
     """
     from django.urls import reverse
     from django.utils import timezone
+    from django.http import HttpResponseForbidden
     from apps.inbox.models import Conversa
+
+    # Defensivo: sem tenant no request, nao mostra nada — evita vazar cross-tenant
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        return HttpResponseForbidden('Tenant nao identificado.')
 
     status_filter = request.GET.get('status', '')
     fluxo_filter = request.GET.get('fluxo', '')
 
-    # 1. Sessoes nativas (motor proprio)
-    sessoes_nativas = AtendimentoFluxo.objects.select_related(
+    # 1. Sessoes nativas (motor proprio) — filtro explicito por tenant
+    sessoes_nativas = AtendimentoFluxo.all_tenants.filter(tenant=tenant).select_related(
         'lead', 'fluxo', 'nodo_atual'
     ).order_by('-data_inicio')
 
@@ -923,11 +929,12 @@ def sessoes_atendimento_view(request):
             'score': s.score_qualificacao,
         })
 
-    # 2. Conversas conduzidas por fluxo externo (N8N) — so se nao tem filtro de fluxo nativo
+    # 2. Conversas conduzidas por fluxo externo (N8N) — filtro explicito por tenant
     if not fluxo_filter:
-        conversas_bot = Conversa.objects.select_related('lead', 'oportunidade').filter(
-            modo_atendimento__in=['bot', 'humano', 'finalizado_bot']
-        ).order_by('-data_abertura')[:200]
+        conversas_bot = Conversa.all_tenants.filter(
+            tenant=tenant,
+            modo_atendimento__in=['bot', 'humano', 'finalizado_bot'],
+        ).select_related('lead', 'oportunidade').order_by('-data_abertura')[:200]
 
         CAMPOS_ALVO = ['nome', 'email', 'cep', 'cidade', 'plano_interesse', 'cpf', 'data_nascimento', 'numero']
 
@@ -973,7 +980,7 @@ def sessoes_atendimento_view(request):
     cards.sort(key=lambda c: c['data'] or timezone.now(), reverse=True)
     cards = cards[:100]
 
-    fluxos = FluxoAtendimento.objects.all().order_by('nome')
+    fluxos = FluxoAtendimento.all_tenants.filter(tenant=tenant).order_by('nome')
 
     context = {
         'cards': cards,
