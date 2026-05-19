@@ -22,7 +22,8 @@ from apps.sistema.utils import registrar_acao
 from apps.comercial.leads.models import LeadProspecto
 from apps.comercial.crm.models import OportunidadeVenda, Pipeline, PipelineEstagio
 from apps.comercial.viabilidade.models import CidadeViabilidade
-from apps.inbox.models import CanalInbox, Conversa, Mensagem
+from apps.inbox.models import CanalInbox, Conversa, Mensagem, EtiquetaConversa
+from apps.comercial.crm.models import TagCRM
 
 logger = logging.getLogger(__name__)
 
@@ -446,6 +447,27 @@ def inbox_mensagem(request):
             if conversa.modo_atendimento != modo:
                 conversa.modo_atendimento = modo
                 conversa.save(update_fields=['modo_atendimento'])
+
+        # Tags — aplica em Conversa (etiquetas) E Oportunidade (tags)
+        tags_in = payload.get('tags') or []
+        if isinstance(tags_in, list) and tags_in:
+            for tag_slug in tags_in:
+                tag_slug = str(tag_slug).strip().lower()
+                if not tag_slug:
+                    continue
+                # EtiquetaConversa
+                etiq, _ = EtiquetaConversa.objects.get_or_create(
+                    tenant=tenant, nome=tag_slug,
+                    defaults={'cor_hex': '#94a3b8'},
+                )
+                conversa.etiquetas.add(etiq)
+                # TagCRM (na Oportunidade)
+                if oportunidade:
+                    tag_crm, _ = TagCRM.objects.get_or_create(
+                        tenant=tenant, nome=tag_slug,
+                        defaults={'cor_hex': '#94a3b8'},
+                    )
+                    oportunidade.tags.add(tag_crm)
 
         # 5. Mensagem — sempre cria
         msg_id_ext = (payload.get('msg_id_externo') or '').strip()
