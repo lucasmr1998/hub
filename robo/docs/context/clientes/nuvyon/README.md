@@ -1,8 +1,8 @@
 # Nuvyon
 
-**Status:** Proposta enviada (a confirmar se já contratado)
+**Status:** ✅ Contratado — em implementação
 **Data de abertura da pasta:** 17/04/2026
-**Última atualização:** 18/04/2026
+**Última atualização:** 27/04/2026
 
 ---
 
@@ -83,9 +83,35 @@
 
 ## Configuração específica
 
-- **Tenant slug:** (a preencher — quando provisionado)
+- **Tenant slug:** `nuvyon`
+- **Módulos provisionados:** Comercial (tier `pro` = "Advanced" comercial) + Marketing (tier `start` = "Pro" comercial). CS não contratado.
+- **Provisionamento dev:** ✅ feito em 27/04/2026 (tenant id 10 no `aurora_dev`)
+- **Provisionamento produção:** ⏳ pendente — rodar os comandos da seção "Provisionamento" abaixo no console do EasyPanel
+- **Integração inbound Matrix:** `IntegracaoAPI` tipo `outro`, nome "Matrix Nuvyon". O `api_token` Bearer é gerado pelo comando `gerar_token_api` — **não fica versionado** (credencial). Token de dev e de produção são distintos.
 - **Domínio do painel:** (a preencher, se houver)
 - **Customizações feitas:** listar em [implementacoes/](implementacoes/)
+
+> ⚠️ **Mapeamento de tier:** o sistema Hubtrix só tem 3 tiers técnicos (`starter`, `start`, `pro`). O vocabulário comercial (Starter / Pro / Advanced) não bate 1:1. Convenção adotada: **"Advanced" comercial = `pro` técnico**; **"Pro" comercial = `start` técnico**. Por isso a Nuvyon foi provisionada com `plano_comercial='pro'` e `plano_marketing='start'`.
+
+### Provisionamento (comandos)
+
+Rodar no console do EasyPanel (produção) — `python manage.py` funciona direto no container do app.
+
+```bash
+# 1. Cria tenant + user admin + perfil + ConfiguracaoEmpresa
+python manage.py criar_tenant \
+    --nome "Nuvyon" --slug "nuvyon" --cnpj "53.309.518/0001-78" \
+    --modulos comercial,marketing \
+    --tier-comercial pro --tier-marketing start \
+    --admin-user admin_nuvyon --admin-email contato@nuvyon.com.br \
+    --admin-senha "<DEFINIR_SENHA_FORTE>"
+
+# 2. Gera o token de API inbound pro Matrix consumir as APIs Hubtrix
+python manage.py gerar_token_api \
+    --tenant nuvyon --nome "Matrix Nuvyon" --tipo outro
+```
+
+O passo 2 imprime o `API TOKEN`. Esse token vai no header `Authorization: Bearer <token>` de toda chamada do Matrix ao Hubtrix. Guardar em local seguro (gerenciador de senhas) — **não colar em doc versionada nem em chat**.
 
 ---
 
