@@ -188,7 +188,14 @@
 
     <div class="field" style="margin-top: var(--sp-3);">
       <label class="field-label">Planos oferecidos no bot</label>
-      <div class="check-grid" id="grid-planos">
+      {% if sgp_choices.planos %}
+        <div class="plano-search-bar">
+          <input type="text" class="field-input plano-search-input" data-target="grid-planos" placeholder="Buscar plano...">
+          <button type="button" class="plano-search-toggle" data-target="grid-planos">Só selecionados</button>
+          <span class="plano-search-count" data-target="grid-planos"></span>
+        </div>
+      {% endif %}
+      <div class="check-grid check-grid--lista" id="grid-planos">
         {% for c in sgp_choices.planos %}
           <label class="check-chip">
             <input type="checkbox" value="{{ c.id }}" {% if c.id in defaults_sgp.planos_permitidos %}checked{% endif %}>
@@ -338,7 +345,14 @@
 
     <div class="field" style="margin-top: var(--sp-3);">
       <label class="field-label">Planos oferecidos no bot</label>
-      <div class="check-grid" id="grid-hs-planos">
+      {% if hubsoft_choices.planos %}
+        <div class="plano-search-bar">
+          <input type="text" class="field-input plano-search-input" data-target="grid-hs-planos" placeholder="Buscar plano...">
+          <button type="button" class="plano-search-toggle" data-target="grid-hs-planos">Só selecionados</button>
+          <span class="plano-search-count" data-target="grid-hs-planos"></span>
+        </div>
+      {% endif %}
+      <div class="check-grid check-grid--lista" id="grid-hs-planos">
         {% for c in hubsoft_choices.planos %}
           <label class="check-chip">
             <input type="checkbox" value="{{ c.id }}" {% if c.id in defaults_hubsoft.planos_permitidos_hubsoft %}checked{% endif %}>
@@ -620,6 +634,21 @@
   .check-chip:hover { border-color: var(--color-primary); }
   .check-chip:has(input:checked) { background: var(--color-primary-soft); border-color: var(--color-primary); color: var(--color-primary); font-weight: var(--fw-semibold); }
   .check-chip input { margin: 0; }
+  .check-chip.is-hidden { display: none; }
+
+  /* Grids grandes (planos) — busca + scroll */
+  .check-grid--lista { max-height: 260px; overflow-y: auto; align-content: flex-start;
+    padding: 8px; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    background: var(--color-bg-subtle, #F8FAFC); }
+  .plano-search-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+  .plano-search-bar .plano-search-input { flex: 1; min-width: 200px; }
+  .plano-search-toggle { padding: 6px 12px; border: 1px solid var(--color-border);
+    border-radius: var(--radius-md); background: var(--color-bg); cursor: pointer;
+    font-size: var(--fs-xs); white-space: nowrap; transition: all var(--transition); }
+  .plano-search-toggle.active { background: var(--color-primary-soft);
+    border-color: var(--color-primary); color: var(--color-primary); font-weight: var(--fw-semibold); }
+  .plano-search-count { font-size: 11px; color: var(--color-text-muted); white-space: nowrap; }
+  .plano-search-empty { font-size: 12px; color: var(--color-text-muted); padding: 8px; }
   .log-row:hover { background: var(--color-bg-subtle, #f8f9fb); }
   .log-chevron { transition: transform 0.15s; font-size: 10px; }
   .log-row.is-open .log-chevron { transform: rotate(90deg); }
@@ -951,5 +980,71 @@ async function salvarModos() {
     toast('Pronto', d.message, 'success');
   } catch (e) { toast('Erro', String(e), 'danger'); }
 }
+
+// ── Busca + filtro nos grids grandes de planos ──────────────────────
+(function initPlanoSearch() {
+  document.querySelectorAll('.plano-search-input').forEach(function (input) {
+    const gridId = input.dataset.target;
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
+    const toggle = document.querySelector('.plano-search-toggle[data-target="' + gridId + '"]');
+    const countEl = document.querySelector('.plano-search-count[data-target="' + gridId + '"]');
+    const chips = Array.from(grid.querySelectorAll('.check-chip'));
+    let soSelecionados = false;
+
+    let vazioMsg = grid.querySelector('.plano-search-empty');
+    if (!vazioMsg) {
+      vazioMsg = document.createElement('p');
+      vazioMsg.className = 'plano-search-empty';
+      vazioMsg.style.display = 'none';
+      vazioMsg.textContent = 'Nenhum plano encontrado.';
+      grid.appendChild(vazioMsg);
+    }
+
+    function norm(s) {
+      return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    }
+
+    function aplicar() {
+      const termo = norm(input.value.trim());
+      let visiveis = 0;
+      chips.forEach(function (chip) {
+        const texto = norm(chip.textContent);
+        const cb = chip.querySelector('input');
+        const casaTexto = !termo || texto.includes(termo);
+        const casaSel = !soSelecionados || (cb && cb.checked);
+        const mostra = casaTexto && casaSel;
+        chip.classList.toggle('is-hidden', !mostra);
+        if (mostra) visiveis++;
+      });
+      vazioMsg.style.display = visiveis === 0 ? 'block' : 'none';
+    }
+
+    function atualizarContador() {
+      const total = chips.length;
+      const sel = chips.filter(function (c) {
+        const cb = c.querySelector('input');
+        return cb && cb.checked;
+      }).length;
+      if (countEl) countEl.textContent = sel + ' de ' + total + ' selecionados';
+    }
+
+    input.addEventListener('input', aplicar);
+    if (toggle) {
+      toggle.addEventListener('click', function () {
+        soSelecionados = !soSelecionados;
+        toggle.classList.toggle('active', soSelecionados);
+        aplicar();
+      });
+    }
+    grid.addEventListener('change', function (e) {
+      if (e.target && e.target.matches('input[type="checkbox"]')) {
+        atualizarContador();
+        if (soSelecionados) aplicar();
+      }
+    });
+    atualizarContador();
+  });
+})();
 </script>
 {% endblock %}
