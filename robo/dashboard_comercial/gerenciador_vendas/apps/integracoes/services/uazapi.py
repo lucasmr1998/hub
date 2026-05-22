@@ -277,6 +277,28 @@ class UazapiService:
             'messageId': message_id,
         })
 
+    # ── Download de midia ──
+
+    def baixar_midia(self, message_id):
+        """
+        Baixa a midia de uma mensagem via POST /message/download.
+        O Uazapi descriptografa e hospeda o arquivo; aqui pegamos os bytes.
+        Retorna (conteudo_bytes, mimetype) ou (None, None) em caso de falha.
+        """
+        data = self._post('/message/download', {'id': message_id})
+        file_url = (data or {}).get('fileURL') or ''
+        if not file_url:
+            return None, None
+        try:
+            resp = requests.get(file_url, timeout=30)
+        except requests.RequestException as e:
+            logger.warning(f'[Uazapi] download de midia falhou: {e}')
+            return None, None
+        if resp.status_code != 200 or not resp.content:
+            return None, None
+        mime = (data.get('mimetype') or resp.headers.get('content-type') or '')
+        return resp.content, mime.split(';')[0].strip()
+
     # ── Helpers ──
 
     @staticmethod

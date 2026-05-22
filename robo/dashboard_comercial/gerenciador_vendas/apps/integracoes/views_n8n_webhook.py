@@ -38,6 +38,79 @@ def _autorizado(request):
     return recebido == esperado
 
 
+def _sanitizar_conteudo_midia(conteudo, tipo_conteudo, arquivo_url, arquivo_nome):
+    """
+    Quando o conteudo chega como o objeto de midia do WhatsApp serializado em
+    JSON (acontece se o fluxo N8N pega message.content em vez de message.text),
+    extrai os campos uteis e devolve um conteudo legivel pro Inbox.
+
+    Retorna (conteudo, tipo_conteudo, arquivo_url, arquivo_nome).
+    """
+    texto = (conteudo or '').strip()
+    if not (texto.startswith('{') and texto.endswith('}')):
+        return conteudo, tipo_conteudo, arquivo_url, arquivo_nome
+    if not any(k in texto for k in ('"mimetype"', '"directPath"', '"URL"')):
+        return conteudo, tipo_conteudo, arquivo_url, arquivo_nome
+    try:
+        obj = json.loads(texto)
+    except (json.JSONDecodeError, ValueError):
+        return conteudo, tipo_conteudo, arquivo_url, arquivo_nome
+    if not isinstance(obj, dict):
+        return conteudo, tipo_conteudo, arquivo_url, arquivo_nome
+
+    mime = str(obj.get('mimetype') or '').lower()
+    nome = str(obj.get('title') or obj.get('fileName') or '').strip() or arquivo_nome
+    url = obj.get('URL') or obj.get('url') or arquivo_url or ''
+    if mime.startswith('image/'):
+        return '\U0001F4F7 Imagem', 'imagem', url, nome
+    if mime.startswith('audio/'):
+        return '\U0001F3A4 Audio', 'audio', url, nome
+    if mime.startswith('video/'):
+        return '\U0001F3A5 Video', 'video', url, nome
+    label = f'\U0001F4CE {nome}' if nome else '\U0001F4CE Documento'
+    return label, 'arquivo', url, nome
+
+
+def _ext_de_mime(mime):
+    """Extensao de arquivo a partir do mimetype."""
+    import mimetypes
+    mapa = {
+        'image/jpeg': '.jpg', 'image/jpg': '.jpg', 'image/png': '.png',
+        'image/webp': '.webp', 'image/gif': '.gif', 'application/pdf': '.pdf',
+        'audio/ogg': '.ogg', 'audio/mpeg': '.mp3', 'audio/mp4': '.m4a',
+        'video/mp4': '.mp4',
+    }
+    return mapa.get((mime or '').lower()) or mimetypes.guess_extension(mime or '') or '.bin'
+
+
+def _baixar_midia_uazapi(tenant, mensagem, message_id):
+    """
+    Baixa a midia decriptada do Uazapi (POST /message/download) e anexa ao
+    campo `arquivo` da Mensagem. Roda fora da transacao do webhook; qualquer
+    falha so deixa a mensagem sem o arquivo (degradacao graciosa).
+    """
+    try:
+        from apps.integracoes.models import IntegracaoAPI
+        from apps.integracoes.services.uazapi import UazapiService
+        from django.core.files.base import ContentFile
+
+        integ = IntegracaoAPI.objects.filter(
+            tenant=tenant, tipo='uazapi', ativa=True
+        ).first()
+        if not integ:
+            logger.info(f'Sem integracao uazapi ativa no tenant {tenant.slug}; midia nao baixada')
+            return
+        conteudo_bytes, mime = UazapiService(integracao=integ).baixar_midia(message_id)
+        if not conteudo_bytes:
+            return
+        nome_arq = f'{message_id}{_ext_de_mime(mime)}'
+        mensagem.arquivo.save(nome_arq, ContentFile(conteudo_bytes), save=False)
+        mensagem.arquivo_tamanho = len(conteudo_bytes)
+        mensagem.save(update_fields=['arquivo', 'arquivo_tamanho'])
+    except Exception as e:
+        logger.warning(f'Falha ao baixar midia {message_id} do Uazapi: {e}')
+
+
 @csrf_exempt
 @require_POST
 def receber_lead(request):
@@ -342,6 +415,12 @@ def inbox_mensagem(request):
     if not tenant_slug or not telefone or not conteudo:
         return JsonResponse({'sucesso': False, 'erro': 'tenant_slug, telefone e conteudo obrigatorios'}, status=400)
 
+    tipo_conteudo = (payload.get('tipo_conteudo') or 'texto').strip()
+    arquivo_url = (payload.get('arquivo_url') or '').strip()
+    arquivo_nome = (payload.get('arquivo_nome') or '').strip()
+    conteudo, tipo_conteudo, arquivo_url, arquivo_nome = _sanitizar_conteudo_midia(
+        conteudo, tipo_conteudo, arquivo_url, arquivo_nome)
+
     tenant = Tenant.objects.filter(slug=tenant_slug, ativo=True).first()
     if not tenant:
         return JsonResponse({'sucesso': False, 'erro': f'Tenant {tenant_slug!r} nao encontrado'}, status=404)
@@ -555,9 +634,11 @@ def inbox_mensagem(request):
             ).first()
             mensagem_criada = False
         else:
-            # Bug 1 — fallback de dedup por hash quando nao tem msg_id_externo
+            # Bug 1 — fallback de dedup por hash quando nao tem msg_id_externo.
+            # So pra texto: midia vira label generico ('Imagem') e o hash
+            # colidiria entre envios distintos.
             mensagem_dup = None
-            if not msg_id_ext:
+            if not msg_id_ext and tipo_conteudo == 'texto':
                 from datetime import timedelta
                 from django.utils import timezone as _tz
                 limite = _tz.now() - timedelta(seconds=30)
@@ -581,12 +662,20 @@ def inbox_mensagem(request):
                 mensagem = Mensagem.objects.create(
                     tenant=tenant, conversa=conversa,
                     remetente_tipo=remetente_tipo, remetente_nome=remetente_nome,
-                    tipo_conteudo=(payload.get('tipo_conteudo') or 'texto'),
+                    tipo_conteudo=tipo_conteudo,
                     conteudo=conteudo[:5000],
-                    arquivo_url=(payload.get('arquivo_url') or '')[:500],
+                    arquivo_url=arquivo_url[:500],
+                    arquivo_nome=arquivo_nome[:255],
                     identificador_externo=msg_id_ext,
                 )
                 mensagem_criada = True
+
+    # Midia: baixa o arquivo decriptado do Uazapi e armazena. Fora da
+    # transacao — IO de rede nao deve segurar lock de banco.
+    if (mensagem_criada and msg_id_ext
+            and tipo_conteudo in ('imagem', 'arquivo', 'audio', 'video')
+            and not mensagem.arquivo):
+        _baixar_midia_uazapi(tenant, mensagem, msg_id_ext)
 
     status_code = 201 if not ja_existia_conversa else 200
     resp = {

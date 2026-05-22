@@ -184,6 +184,20 @@ POST /api/v1/n8n/inbox/enviar/
 
 ---
 
+## Orquestrador Vero (TR Carrion) — coleta de documentos
+
+O fluxo `[Vero] Orquestrador Atendimento` coleta RG/CNH frente e verso no
+cadastro. A validacao (`ValidarImagemRGFrente/Verso`) aceita **foto (imagem)
+OU arquivo PDF** — a CNH digital (e-CNH) e PDF nato, exigir foto fisica era
+friccao desnecessaria.
+
+O node `Entrada` extrai `conteudo_inbox` (label limpo) e `tipo_midia` a partir
+do payload Uazapi, e nunca repassa o objeto de midia cru. O `RegistrarMsgCliente`
+envia esse label + `tipo_conteudo` + `arquivo_nome` pro
+`POST /api/public/n8n/inbox/mensagem/`, evitando JSON cru no balao do Inbox.
+
+---
+
 ## Respostas
 
 Todas as APIs retornam JSON com `success: true/false`. Em caso de erro:

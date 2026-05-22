@@ -87,6 +87,44 @@
         return t;
     }
 
+    // URLs .enc do WhatsApp sao criptografadas e nao abrem no navegador.
+    function midiaUsavel(url) {
+        return !!url && !/\.enc(\?|$)/i.test(url) && !/whatsapp\.net/i.test(url);
+    }
+
+    // Renderiza o corpo da mensagem conforme o tipo de conteudo.
+    function renderConteudo(m) {
+        const tipo = m.tipo_conteudo || 'texto';
+        const url = m.arquivo_url || '';
+        const usavel = midiaUsavel(url);
+        // Legenda real (ignora labels genericos tipo "📷 Imagem")
+        const legenda = /^[📷📎🎤🎥]/.test(m.conteudo || '') ? '' : (m.conteudo || '');
+        const cap = legenda ? `<div>${formatWA(legenda)}</div>` : '';
+
+        if (tipo === 'imagem') {
+            if (usavel) {
+                return `<div class="msg-media"><img src="${esc(url)}" class="msg-media-img" `
+                    + `loading="lazy" onclick="window.open(this.src,'_blank')" `
+                    + `onerror="this.outerHTML='📷 Imagem'"></div>` + cap;
+            }
+            return `<div class="msg-file"><i class="fas fa-image"></i> Imagem</div>` + cap;
+        }
+        if (tipo === 'audio') {
+            if (usavel) return `<audio controls src="${esc(url)}" class="msg-media-audio"></audio>`;
+            return `<div class="msg-file"><i class="fas fa-microphone"></i> Áudio</div>`;
+        }
+        if (tipo === 'video') {
+            if (usavel) return `<video controls src="${esc(url)}" class="msg-media-img"></video>` + cap;
+            return `<div class="msg-file"><i class="fas fa-video"></i> Vídeo</div>` + cap;
+        }
+        if (tipo === 'arquivo' || tipo === 'documento') {
+            const nome = m.arquivo_nome || (m.conteudo || '').replace(/^📎\s*/, '') || 'Documento';
+            const card = `<div class="msg-file"><i class="fas fa-file-alt"></i> <span>${esc(nome)}</span></div>`;
+            return usavel ? `<a href="${esc(url)}" target="_blank" class="msg-file-link">${card}</a>` : card;
+        }
+        return `<div>${formatWA(m.conteudo)}</div>`;
+    }
+
     // Safe getElementById — returns element or no-op proxy to avoid null crashes
     function $(id) {
         return document.getElementById(id) || { addEventListener: () => {}, style: {}, classList: { toggle: () => {}, add: () => {}, remove: () => {} }, value: '', textContent: '', innerHTML: '', dataset: {} };
@@ -313,8 +351,7 @@
 
             html += `<div class="msg-bubble ${t}">`;
             if (t === 'contato' || t === 'bot') html += `<div class="msg-sender">${esc(m.remetente_nome)}</div>`;
-            html += `<div>${formatWA(m.conteudo)}</div>`;
-            if (m.arquivo_url) html += `<div style="margin-top:4px;"><a href="${esc(m.arquivo_url)}" target="_blank" style="color:inherit;text-decoration:underline;font-size:12px;"><i class="fas fa-paperclip"></i> ${esc(m.arquivo_nome || 'Arquivo')}</a></div>`;
+            html += renderConteudo(m);
             html += `<div class="msg-time">${formatFullTime(m.data_envio)} <span class="msg-status">${statusIcon}</span></div>`;
             if (m.erro_envio) html += `<div style="font-size:10px;color:#ef4444;margin-top:2px;"><i class="fas fa-exclamation-triangle"></i> ${esc(m.erro_envio)}</div>`;
             html += '</div>';

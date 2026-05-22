@@ -1,10 +1,27 @@
+import os
 import uuid
 
+from django.conf import settings
+from django.core.files.storage import FileSystemStorage
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 
 from apps.sistema.mixins import TenantMixin
+
+
+class PrivateMidiaStorage(FileSystemStorage):
+    """
+    Storage privado pra midia do Inbox (RG/CNH/comprovantes = dado pessoal).
+    Fica FORA de MEDIA_ROOT, entao a rota aberta /media/ nao serve esses
+    arquivos. Acesso so via view auth-gated (apps.inbox.views.api_midia).
+    """
+    def __init__(self, *args, **kwargs):
+        kwargs['location'] = os.path.join(settings.BASE_DIR, 'private_media', 'inbox_midia')
+        super().__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        return ('apps.inbox.models.PrivateMidiaStorage', [], {})
 
 
 class CanalInbox(TenantMixin):
@@ -248,7 +265,12 @@ class Mensagem(TenantMixin):
         verbose_name="Tipo de Conteúdo"
     )
     conteudo = models.TextField(verbose_name="Conteúdo")
-    arquivo_url = models.URLField(blank=True, verbose_name="URL do Arquivo")
+    arquivo_url = models.URLField(max_length=500, blank=True, verbose_name="URL do Arquivo")
+    arquivo = models.FileField(
+        upload_to='%Y/%m/', storage=PrivateMidiaStorage(), blank=True, null=True,
+        verbose_name="Arquivo de Mídia",
+        help_text="Midia baixada do WhatsApp (servida via view auth-gated)."
+    )
     arquivo_nome = models.CharField(max_length=255, blank=True, verbose_name="Nome do Arquivo")
     arquivo_tamanho = models.PositiveIntegerField(null=True, blank=True, verbose_name="Tamanho (bytes)")
 

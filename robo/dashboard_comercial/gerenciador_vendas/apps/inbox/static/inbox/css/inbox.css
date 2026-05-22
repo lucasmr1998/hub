@@ -272,6 +272,20 @@ body.inbox-page .sidebar { display: none; }
 .msg-bubble.agente .msg-time { color: rgba(255,255,255,.7); }
 .msg-status { margin-left: 4px; }
 
+.msg-media { margin: 2px 0; }
+.msg-media-img {
+    max-width: 240px; max-height: 280px; border-radius: 8px;
+    cursor: pointer; display: block;
+}
+.msg-media-audio { max-width: 240px; height: 38px; display: block; }
+.msg-file {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; padding: 2px 0;
+}
+.msg-file i { font-size: 18px; opacity: .8; }
+.msg-file-link { color: inherit; text-decoration: none; }
+.msg-file-link:hover { text-decoration: underline; }
+
 .msg-date-sep {
     text-align: center; font-size: 11px; color: #94a3b8; padding: 10px 0;
     position: relative;

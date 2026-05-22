@@ -8,7 +8,7 @@ import logging
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden, FileResponse, Http404
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
@@ -285,6 +285,27 @@ def api_mensagens(request, pk):
         'offset': offset,
         'has_more': (offset + limit) < total,
     })
+
+
+@login_required
+def api_midia(request, pk, msg_id):
+    """
+    Serve a midia (imagem/PDF/audio) de uma mensagem.
+
+    LGPD: RG/CNH e comprovantes sao dado pessoal. O arquivo fica em storage
+    privado (PrivateMidiaStorage, fora de /media/) e so e servido aqui, com
+    login e escopo de tenant garantido por `_get_conversa`.
+    """
+    conversa = _get_conversa(pk, request)
+    mensagem = get_object_or_404(Mensagem, pk=msg_id, conversa=conversa)
+    if not mensagem.arquivo:
+        raise Http404('Mensagem sem arquivo')
+    import mimetypes
+    ct = mimetypes.guess_type(mensagem.arquivo.name)[0] or 'application/octet-stream'
+    resp = FileResponse(mensagem.arquivo.open('rb'), content_type=ct)
+    nome = mensagem.arquivo_nome or mensagem.arquivo.name.rsplit('/', 1)[-1]
+    resp['Content-Disposition'] = f'inline; filename="{nome}"'
+    return resp
 
 
 @login_required

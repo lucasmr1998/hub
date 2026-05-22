@@ -48,6 +48,7 @@ robo/dashboard_comercial/gerenciador_vendas/media/
 db_local.sqlite3
 staticfiles/
 media/
+private_media/
 
 # ── Logs ─────────────────────────────────────────────────
 *.log

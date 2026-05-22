@@ -76,8 +76,15 @@ class MensagemOutputSerializer(serializers.Serializer):
     remetente_user_id = serializers.IntegerField(source='remetente_user.id', default=None)
     tipo_conteudo = serializers.CharField()
     conteudo = serializers.CharField()
-    arquivo_url = serializers.CharField()
+    arquivo_url = serializers.SerializerMethodField()
     arquivo_nome = serializers.CharField()
+
+    def get_arquivo_url(self, obj):
+        """Midia armazenada no Hubtrix vai pela view auth-gated; senao usa a URL crua."""
+        if obj.arquivo:
+            from django.urls import reverse
+            return reverse('inbox:api_midia', args=[obj.conversa_id, obj.id])
+        return obj.arquivo_url or ''
     lida = serializers.BooleanField()
     data_envio = serializers.DateTimeField(format='iso-8601')
     data_entrega = serializers.DateTimeField(format='iso-8601')

@@ -24,6 +24,7 @@ urlpatterns = [
     path('api/conversas/', views.api_conversas, name='api_conversas'),
     path('api/conversas/<int:pk>/', views.api_conversa_detalhe, name='api_conversa_detalhe'),
     path('api/conversas/<int:pk>/mensagens/', views.api_mensagens, name='api_mensagens'),
+    path('api/conversas/<int:pk>/midia/<int:msg_id>/', views.api_midia, name='api_midia'),
     path('api/conversas/<int:conversa_id>/resumir/', views.api_resumir_conversa, name='api_resumir_conversa'),
     path('csat/', views.csat_dashboard, name='csat_dashboard'),
     path('api/avaliacoes/<int:avaliacao_id>/responder/', views.api_avaliacao_responder, name='api_avaliacao_responder'),

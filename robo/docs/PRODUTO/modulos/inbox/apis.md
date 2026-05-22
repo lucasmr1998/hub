@@ -14,6 +14,46 @@
 
 ---
 
+## Webhook publico do orquestrador N8N (Vero/TR Carrion)
+
+**Auth:** header `X-N8N-Webhook-Secret`
+**Arquivo:** `apps/integracoes/views_n8n_webhook.py` -> `inbox_mensagem`
+**URL:** `POST /api/public/n8n/inbox/mensagem/`
+
+Registra mensagem no Inbox e garante Conversa + Lead + Oportunidade. Campos:
+`tenant_slug`, `telefone`, `conteudo`, `direcao`, `tipo_conteudo`, `arquivo_url`,
+`arquivo_nome`, `modo_atendimento`, `dados_lead`, `msg_id_externo`.
+
+**Midia:** se o `conteudo` chegar como o objeto de midia do WhatsApp serializado
+em JSON (acontece quando o fluxo N8N pega `message.content` em vez de
+`message.text`), `_sanitizar_conteudo_midia` extrai `mimetype`/`title`/`URL` e
+grava um conteudo legivel (`📷 Imagem`, `📎 <arquivo>`) + `tipo_conteudo`.
+Defesa em profundidade: o fluxo N8N ja manda `conteudo_inbox` limpo, mas a
+sanitizacao garante que nenhum JSON cru vaze pro balao.
+
+**Armazenamento da midia (RG/CNH/comprovantes):**
+
+1. O fluxo N8N envia `msg_id_externo` (o `messageid` do WhatsApp).
+2. Pra mensagens de midia, `_baixar_midia_uazapi` chama
+   `POST /message/download` no Uazapi (que descriptografa e hospeda o arquivo),
+   baixa os bytes e salva no campo `Mensagem.arquivo`.
+3. `Mensagem.arquivo` usa `PrivateMidiaStorage` — fica em `private_media/`,
+   **fora de `MEDIA_ROOT`**, entao a rota aberta `/media/` nao serve esses
+   arquivos. Acesso so via `GET /inbox/api/conversas/<pk>/midia/<msg_id>/`
+   (`@login_required` + escopo de tenant). LGPD: documento de identidade e
+   dado pessoal, nunca em URL publica.
+4. `MensagemOutputSerializer.arquivo_url` aponta pra essa view quando ha
+   `arquivo`; o Inbox renderiza imagem/PDF inline.
+
+> URLs `.enc` do WhatsApp sao criptografadas e expiram. Por isso a midia e
+> baixada no momento do recebimento, nao sob demanda.
+>
+> **Infra:** `private_media/` precisa de volume persistente em producao, senao
+> os arquivos somem no rebuild. Backfill de mensagens antigas:
+> `python manage.py recuperar_midia_inbox`.
+
+---
+
 ## APIs internas (painel)
 
 **Auth:** `@login_required`
@@ -27,6 +67,7 @@
 | `/inbox/api/conversas/` | GET | Lista com filtros (status, agente, canal, busca) |
 | `/inbox/api/conversas/<pk>/` | GET | Detalhe com contexto (lead, CRM, notas) |
 | `/inbox/api/conversas/<pk>/mensagens/` | GET | Mensagens paginadas |
+| `/inbox/api/conversas/<pk>/midia/<msg_id>/` | GET | Serve a midia (imagem/PDF/audio) — auth + escopo de tenant |
 | `/inbox/api/conversas/<pk>/enviar/` | POST | Agente envia mensagem |
 | `/inbox/api/conversas/<pk>/atribuir/` | POST | Atribuir agente |
 | `/inbox/api/conversas/<pk>/resolver/` | POST | Resolver conversa |
