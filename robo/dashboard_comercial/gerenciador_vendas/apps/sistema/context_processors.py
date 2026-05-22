@@ -122,6 +122,6 @@ def _detectar_modulo_atual(request):
         return 'marketing'
     if url_name.startswith('relatorio'):
         return 'relatorios'
-    if '/configuracoes' in path or path.startswith('/perfil/'):
+    if '/configuracoes' in path or path.startswith('/perfil/') or path.startswith('/viabilidade/'):
         return 'configuracoes'
     return 'dashboard'
