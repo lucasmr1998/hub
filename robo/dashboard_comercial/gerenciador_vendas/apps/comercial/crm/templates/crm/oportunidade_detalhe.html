@@ -134,11 +134,25 @@
           </style>
           {% endwith %}
         {% endif %}
-        {% if oportunidade.motivo_perda %}
+        {% if oportunidade.estagio.is_final_perdido or oportunidade.motivo_perda_ref or oportunidade.motivo_perda %}
           <div class="detail-field">
             <label>Motivo da perda</label>
-            <div class="value" style="color: var(--color-danger);">{{ oportunidade.motivo_perda }}</div>
+            <div class="value">
+              <select id="motivoPerdaSelect" onchange="salvarMotivoPerda(this.value)"
+                      style="width: 100%; padding: 6px 8px; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--fs-sm);">
+                <option value="">— Nao definido —</option>
+                {% for m in motivos_perda %}
+                  <option value="{{ m.pk }}" {% if oportunidade.motivo_perda_ref_id == m.pk %}selected{% endif %}>{{ m.nome }}</option>
+                {% endfor %}
+              </select>
+            </div>
           </div>
+          {% if oportunidade.motivo_perda %}
+            <div class="detail-field">
+              <label>Detalhe (texto livre)</label>
+              <div class="value" style="color: var(--color-text-muted); font-size: var(--fs-sm);">{{ oportunidade.motivo_perda }}</div>
+            </div>
+          {% endif %}
         {% endif %}
 
         {# Produtos da oportunidade #}
@@ -993,6 +1007,25 @@ document.querySelectorAll('.editable').forEach(function(el) {
     });
   });
 });
+
+// Motivo de perda — select editavel
+function salvarMotivoPerda(valor) {
+  const sel = document.getElementById('motivoPerdaSelect');
+  if (sel) sel.disabled = true;
+  fetch('/crm/oportunidades/{{ oportunidade.pk }}/editar/', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+    body: JSON.stringify({ motivo_perda_ref: valor }),
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (sel) sel.disabled = false;
+    if (typeof toast === 'function') {
+      toast(d.success ? 'Salvo' : 'Erro', d.success ? 'Motivo de perda atualizado.' : 'Falha ao salvar.', d.success ? 'success' : 'danger');
+    }
+  })
+  .catch(() => { if (sel) sel.disabled = false; });
+}
 
 // Itens / produtos
 let _produtosCache = [];

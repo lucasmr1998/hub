@@ -496,6 +496,12 @@ def api_editar_oportunidade(request, pk):
             oport.dados_custom = custom
             if 'dados_custom' not in oport_atualizados:
                 oport_atualizados.append('dados_custom')
+        elif campo == 'motivo_perda_ref':
+            from .models import MotivoPerda
+            oport.motivo_perda_ref = (
+                MotivoPerda.objects.filter(pk=valor).first() if valor else None
+            )
+            oport_atualizados.append('motivo_perda_ref')
         elif campo in campos_oport and hasattr(oport, campo):
             if campo == 'valor_estimado' and not valor:
                 valor = None
@@ -545,6 +551,7 @@ def api_excluir_oportunidade(request, pk):
 
 @login_required
 def oportunidade_detalhe(request, pk):
+    from .models import MotivoPerda
     oportunidade = get_object_or_404(
         OportunidadeVenda.objects.select_related(
             'lead', 'estagio', 'responsavel', 'plano_interesse', 'criado_por'
@@ -633,6 +640,7 @@ def oportunidade_detalhe(request, pk):
         'vendedores': vendedores,
         'conversas_inbox': conversas_inbox,
         'mensagens_inbox': mensagens_inbox,
+        'motivos_perda': MotivoPerda.objects.filter(ativo=True).order_by('ordem', 'nome'),
         'page_title': f'CRM — {oportunidade.titulo or lead.nome_razaosocial}',
     }
     return render(request, 'crm/oportunidade_detalhe.html', context)
@@ -1305,12 +1313,43 @@ def configuracoes_crm(request):
             Pipeline.objects.filter(pk=pid).delete()
             return redirect('crm:configuracoes')
 
+        elif action == 'criar_motivo_perda':
+            from .models import MotivoPerda
+            nome = request.POST.get('nome', '').strip()
+            if nome and not MotivoPerda.objects.filter(nome=nome).exists():
+                ult = MotivoPerda.objects.order_by('-ordem').first()
+                MotivoPerda.objects.create(
+                    tenant=request.tenant, nome=nome,
+                    ordem=(ult.ordem + 1) if ult else 0,
+                )
+            return redirect('crm:configuracoes')
+
+        elif action == 'editar_motivo_perda':
+            from .models import MotivoPerda
+            mid = request.POST.get('motivo_id')
+            nome = request.POST.get('nome', '').strip()
+            motivo = MotivoPerda.objects.filter(pk=mid).first()
+            if motivo and nome:
+                motivo.nome = nome
+                motivo.ativo = request.POST.get('ativo') == 'on'
+                motivo.save(update_fields=['nome', 'ativo'])
+            return redirect('crm:configuracoes')
+
+        elif action == 'excluir_motivo_perda':
+            from .models import MotivoPerda
+            MotivoPerda.objects.filter(pk=request.POST.get('motivo_id')).delete()
+            return redirect('crm:configuracoes')
+
+    from .models import MotivoPerda
+    motivos_perda = MotivoPerda.objects.all().order_by('ordem', 'nome')
+
     context = {
         'config': config,
         'pipelines': pipelines,
         'pipeline_atual': pipeline_atual,
         'estagios': estagios,
         'equipes': equipes,
+        'motivos_perda': motivos_perda,
         'page_title': 'Configurações do CRM',
     }
     return render(request, 'crm/configuracoes_crm.html', context)
@@ -2573,7 +2612,7 @@ def relatorio_win_loss(request):
     perdidas = qs.filter(estagio__is_final_perdido=True)
 
     breakdown_perda = (
-        perdidas.values('motivo_perda_categoria')
+        perdidas.values('motivo_perda_ref', 'motivo_perda_ref__nome')
         .annotate(qtd=Count('id'), valor=Sum('valor_estimado'))
         .order_by('-qtd')
     )
@@ -2591,16 +2630,15 @@ def relatorio_win_loss(request):
     valor_ganho = ganhas.aggregate(total=Sum('valor_estimado'))['total'] or 0
     valor_perdido = perdidas.aggregate(total=Sum('valor_estimado'))['total'] or 0
 
-    # Mapas de label legíveis
-    perda_labels = dict(OportunidadeVenda.MOTIVO_PERDA_CHOICES)
+    # Mapa de label legível (ganho ainda usa choices fixas)
     ganho_labels = dict(OportunidadeVenda.MOTIVO_GANHO_CHOICES)
 
     breakdown_perda_lst = []
     for item in breakdown_perda:
-        cat = item['motivo_perda_categoria']
+        nome = item['motivo_perda_ref__nome']
         breakdown_perda_lst.append({
-            'categoria': cat,
-            'label': perda_labels.get(cat, 'Sem categoria') if cat else 'Sem categoria',
+            'categoria': item['motivo_perda_ref'],
+            'label': nome or 'Sem categoria',
             'qtd': item['qtd'],
             'valor': item['valor'] or 0,
             'percent': round(item['qtd'] / total_perdidas * 100, 1) if total_perdidas else 0,

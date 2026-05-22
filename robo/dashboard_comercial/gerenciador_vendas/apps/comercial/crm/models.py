@@ -158,6 +158,24 @@ class TagCRM(TenantMixin):
         return self.nome
 
 
+class MotivoPerda(TenantMixin):
+    """Motivo de perda de oportunidade — configuravel por tenant."""
+    nome = models.CharField(max_length=80, verbose_name="Motivo")
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    ordem = models.PositiveIntegerField(default=0, verbose_name="Ordem")
+    data_criacao = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'crm_motivos_perda'
+        verbose_name = "Motivo de Perda"
+        verbose_name_plural = "📉 Motivos de Perda"
+        ordering = ['ordem', 'nome']
+        unique_together = ('tenant', 'nome')
+
+    def __str__(self):
+        return self.nome
+
+
 # ============================================================================
 # OPORTUNIDADE (central do CRM)
 # ============================================================================
@@ -241,7 +259,12 @@ class OportunidadeVenda(TenantMixin):
     motivo_perda_categoria = models.CharField(
         max_length=30, choices=MOTIVO_PERDA_CHOICES,
         null=True, blank=True, db_index=True,
-        verbose_name="Categoria do motivo de perda",
+        verbose_name="Categoria do motivo de perda (legado)",
+    )
+    motivo_perda_ref = models.ForeignKey(
+        'MotivoPerda', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='oportunidades',
+        verbose_name="Motivo de perda",
     )
     motivo_ganho_categoria = models.CharField(
         max_length=30, choices=MOTIVO_GANHO_CHOICES,
