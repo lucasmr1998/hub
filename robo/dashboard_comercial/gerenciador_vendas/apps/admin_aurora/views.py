@@ -559,7 +559,7 @@ def backlog_view(request):
     })
 
 
-@login_required
+@superuser_required
 def config_recuperacao_senha_view(request):
     """Configuracao de recuperacao de senha (aurora-admin)."""
     from apps.sistema.models import ConfiguracaoRecuperacaoSenha
@@ -598,7 +598,7 @@ def config_recuperacao_senha_view(request):
     })
 
 
-@login_required(login_url='sistema:login')
+@superuser_required
 def config_assistente_view(request):
     """Configuracao do Assistente CRM (aurora-admin). Config global + por tenant."""
     from apps.assistente.models import ConfiguracaoAssistenteGlobal, ConfiguracaoAssistenteTenant, MensagemAssistente
@@ -658,7 +658,7 @@ def config_assistente_view(request):
     })
 
 
-@login_required(login_url='sistema:login')
+@staff_required
 def auditoria_view(request):
     """Dashboard de auditoria — quem fez o que, quando."""
     tenant_id = request.GET.get('tenant', '')

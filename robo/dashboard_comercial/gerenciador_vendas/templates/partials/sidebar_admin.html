@@ -25,9 +25,6 @@ O {% block sidebar %} redefinido tambem deve cuidar do item ativo via request.re
     </a>
 
     <div class="app-sidebar-admin-section">Tenants</div>
-    <a href="{% url 'admin_aurora:dashboard' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'tenant_detalhe' %}is-active{% endif %}">
-      <i class="bi bi-building"></i><span>Lista de tenants</span>
-    </a>
     <a href="{% url 'admin_aurora:criar_tenant' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'criar_tenant' %}is-active{% endif %}">
       <i class="bi bi-plus-circle"></i><span>Novo tenant</span>
     </a>
@@ -38,17 +35,6 @@ O {% block sidebar %} redefinido tambem deve cuidar do item ativo via request.re
     </a>
     <a href="{% url 'admin_aurora:config_assistente' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'config_assistente' %}is-active{% endif %}">
       <i class="bi bi-robot"></i><span>Assistente CRM</span>
-    </a>
-
-    <div class="app-sidebar-admin-section">Conteudo</div>
-    <a href="{% url 'admin_aurora:produto' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'produto' %}is-active{% endif %}">
-      <i class="bi bi-clipboard-check"></i><span>Status do produto</span>
-    </a>
-    <a href="{% url 'admin_aurora:docs' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'docs' %}is-active{% endif %}">
-      <i class="bi bi-book"></i><span>Docs</span>
-    </a>
-    <a href="{% url 'admin_aurora:backlog' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'backlog' %}is-active{% endif %}">
-      <i class="bi bi-list-task"></i><span>Backlog</span>
     </a>
 
     <div class="app-sidebar-admin-section">Sistema</div>

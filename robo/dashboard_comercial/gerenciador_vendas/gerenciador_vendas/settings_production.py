@@ -6,6 +6,9 @@ Configurações otimizadas para ambiente de produção
 from .settings import *
 import os
 
+# Daphne precisa estar antes de django.contrib.staticfiles
+INSTALLED_APPS = ['daphne'] + [app for app in INSTALLED_APPS if app != 'daphne']
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
