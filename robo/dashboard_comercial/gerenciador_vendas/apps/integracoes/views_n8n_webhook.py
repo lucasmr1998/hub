@@ -540,7 +540,12 @@ def inbox_mensagem(request):
 
         # 5. Mensagem — sempre cria (com dedup)
         msg_id_ext = (payload.get('msg_id_externo') or '').strip()
+        # remetente_tipo: 'recebida' -> contato; senao 'bot', exceto se o
+        # payload pedir explicitamente 'agente' (mensagem que um humano
+        # enviou direto pelo WhatsApp, fora do bot).
         remetente_tipo = 'contato' if direcao == 'recebida' else 'bot'
+        if direcao != 'recebida' and payload.get('remetente_tipo') == 'agente':
+            remetente_tipo = 'agente'
         # Dedup se vier msg_id
         if msg_id_ext and Mensagem.all_tenants.filter(
             tenant=tenant, conversa=conversa, identificador_externo=msg_id_ext
@@ -567,9 +572,15 @@ def inbox_mensagem(request):
                 mensagem = mensagem_dup
                 mensagem_criada = False
             else:
+                if remetente_tipo == 'contato':
+                    remetente_nome = lead.nome_razaosocial
+                elif remetente_tipo == 'agente':
+                    remetente_nome = 'Atendente'
+                else:
+                    remetente_nome = 'Vero Bot'
                 mensagem = Mensagem.objects.create(
                     tenant=tenant, conversa=conversa,
-                    remetente_tipo=remetente_tipo, remetente_nome=lead.nome_razaosocial if remetente_tipo == 'contato' else 'Vero Bot',
+                    remetente_tipo=remetente_tipo, remetente_nome=remetente_nome,
                     tipo_conteudo=(payload.get('tipo_conteudo') or 'texto'),
                     conteudo=conteudo[:5000],
                     arquivo_url=(payload.get('arquivo_url') or '')[:500],
