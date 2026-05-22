@@ -211,7 +211,7 @@
 
         wsSend({ action: 'join_conversa', conversa_id: id });
         loadConversaDetalhe(id);
-        loadMensagens(id);
+        loadMensagens(id, true);  // abriu a conversa -> rola pro fim
         loadRespostasRapidas();  // recarrega com variáveis renderizadas pra essa conversa
         if (!state.wsConnected) startMessagePoll(id);
     }
@@ -322,19 +322,26 @@
 
     // ── Mensagens ─────────────────────────────────────────────────────
 
-    function loadMensagens(id) {
+    function loadMensagens(id, forceScroll) {
         fetchJSON('/inbox/api/conversas/' + id + '/mensagens/').then(data => {
             if (data.error) return;
-            renderMensagens(data.mensagens || []);
+            renderMensagens(data.mensagens || [], forceScroll);
         });
     }
 
-    function renderMensagens(msgs) {
+    function renderMensagens(msgs, forceScroll) {
         const container = document.getElementById('messageList');
         if (!msgs.length) {
             container.innerHTML = '<div class="inbox-loading"><p>Nenhuma mensagem</p></div>';
             return;
         }
+
+        // Preserva a posicao do scroll. So rola pro fim se foi pedido
+        // explicitamente (abriu a conversa) ou se o usuario ja estava perto
+        // do fim — senao o polling jogaria a tela pra baixo enquanto le.
+        const prevTop = container.scrollTop;
+        const stickBottom = forceScroll ||
+            (container.scrollHeight - prevTop - container.clientHeight < 120);
 
         let html = '', lastDate = '';
         msgs.forEach(m => {
@@ -358,7 +365,19 @@
         });
 
         container.innerHTML = html;
-        container.scrollTop = container.scrollHeight;
+        if (stickBottom) {
+            container.scrollTop = container.scrollHeight;
+            // imagens carregam async e mudam a altura — re-fixa no fim.
+            container.querySelectorAll('img').forEach(img => {
+                if (!img.complete) {
+                    img.addEventListener('load', () => {
+                        container.scrollTop = container.scrollHeight;
+                    }, { once: true });
+                }
+            });
+        } else {
+            container.scrollTop = prevTop;
+        }
     }
 
     function startMessagePoll(id) {
@@ -495,7 +514,20 @@
 
     // ── Event Bindings ────────────────────────────────────────────────
 
+    // Faz o container do inbox preencher exatamente da sua posicao real ate o
+    // fim da viewport. Sem isso, o CSS usa calc(100vh - 52px) fixo; se a topbar
+    // tiver outra altura, a area de envio (botao Enviar) fica cortada embaixo.
+    function ajustarAlturaInbox() {
+        const c = document.getElementById('inboxApp');
+        if (!c) return;
+        const top = c.getBoundingClientRect().top + window.scrollY;
+        c.style.height = Math.max(240, window.innerHeight - top) + 'px';
+    }
+
     function init() {
+        ajustarAlturaInbox();
+        window.addEventListener('resize', ajustarAlturaInbox);
+
         // Modo tabs (Bot / Humano / Todas) — admin only
         document.querySelectorAll('.inbox-modo-tab').forEach(btn => {
             btn.addEventListener('click', () => {
