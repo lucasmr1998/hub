@@ -88,7 +88,9 @@ def api_conversas(request):
     if modo_filter == 'bot':
         qs = qs.filter(modo_atendimento='bot')
     elif modo_filter == 'humano':
-        qs = qs.filter(modo_atendimento='humano')
+        # "Humano" agrupa o que precisa de atendente: operador assumiu (humano)
+        # + bot finalizou e a conversa caiu pra fila/vendedor (finalizado_bot).
+        qs = qs.filter(modo_atendimento__in=['humano', 'finalizado_bot'])
     elif modo_filter == 'finalizado_bot':
         qs = qs.filter(modo_atendimento='finalizado_bot')
     # Se vazio, nao filtra por modo (ve tudo que a permissao permite)
