@@ -58,6 +58,35 @@ def _notificar_ws_nova_mensagem(conversa, mensagem):
         logger.debug("WebSocket notification skipped: %s", e)
 
 
+def _notificar_ws_conversa_alterada(conversa, changes=None):
+    """Notifica alteração de status/atribuição de conversa via WebSocket."""
+    try:
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+
+        channel_layer = get_channel_layer()
+        if not channel_layer:
+            return
+
+        payload = {
+            'type': 'conversa_atualizada',
+            'conversa_id': conversa.id,
+            'changes': changes or {},
+        }
+
+        if conversa.tenant_id:
+            async_to_sync(channel_layer.group_send)(
+                f'inbox_tenant_{conversa.tenant_id}', payload
+            )
+
+        async_to_sync(channel_layer.group_send)(
+            f'inbox_conversa_{conversa.id}', payload
+        )
+
+    except Exception as e:
+        logger.debug("WebSocket notification skipped: %s", e)
+
+
 # ── Utilidades ─────────────────────────────────────────────────────────
 
 def normalizar_telefone(telefone):
@@ -497,6 +526,8 @@ def resolver_conversa(conversa, user):
         conteudo=f"Conversa resolvida por {nome}",
     ).save()
 
+    _notificar_ws_conversa_alterada(conversa, {'status': 'resolvida'})
+
     return conversa
 
 
@@ -516,6 +547,8 @@ def reabrir_conversa(conversa, user):
         tipo_conteudo='sistema',
         conteudo=f"Conversa reaberta por {nome}",
     ).save()
+
+    _notificar_ws_conversa_alterada(conversa, {'status': 'aberta'})
 
     return conversa
 
