@@ -28,6 +28,8 @@ urlpatterns = [
 
     # Paginas de vendas e relatorios
     path('vendas/', views.vendas_view, name='vendas'),
+    path('vendas/crm/', views.vendas_crm_view, name='vendas_crm'),
+    path('api/vendas/crm/', views.api_oportunidades_vendas, name='api_oportunidades_vendas'),
     path('relatorios/', views.relatorios_view, name='relatorios'),
     path('relatorios/leads/', views.relatorio_leads_view, name='relatorio_leads'),
     path('relatorios/clientes/', views.relatorio_clientes_view, name='relatorio_clientes'),

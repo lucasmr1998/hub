@@ -782,23 +782,28 @@ def deletar_imagem_lead_api(request):
 def imagens_por_cliente_api(request):
     """
     GET /api/leads/imagens/por-cliente/?cliente_hubsoft_id=<id>
-    Retorna as imagens vinculadas ao lead relacionado ao ClienteHubsoft.
+    GET /api/leads/imagens/por-cliente/?lead_id=<id>
+    Retorna as imagens vinculadas ao lead (via ClienteHubsoft ou diretamente por lead_id).
     """
-    from apps.integracoes.models import ClienteHubsoft
-
-    cliente_id = request.GET.get('cliente_hubsoft_id')
-    if not cliente_id:
-        return JsonResponse({'error': 'Parâmetro obrigatório: cliente_hubsoft_id'}, status=400)
-
-    try:
-        cliente = ClienteHubsoft.objects.select_related('lead').get(pk=cliente_id)
-    except ClienteHubsoft.DoesNotExist:
-        return JsonResponse({'error': 'Cliente não encontrado'}, status=404)
-
-    lead = cliente.lead
-    if not lead:
-        return JsonResponse({'success': True, 'imagens': [], 'lead': None,
-                             'message': 'Cliente sem lead relacionado'})
+    lead_id_direto = request.GET.get('lead_id')
+    if lead_id_direto:
+        try:
+            lead = LeadProspecto.objects.get(pk=lead_id_direto)
+        except LeadProspecto.DoesNotExist:
+            return JsonResponse({'error': 'Lead não encontrado'}, status=404)
+    else:
+        from apps.integracoes.models import ClienteHubsoft
+        cliente_id = request.GET.get('cliente_hubsoft_id')
+        if not cliente_id:
+            return JsonResponse({'error': 'Parâmetro obrigatório: cliente_hubsoft_id ou lead_id'}, status=400)
+        try:
+            cliente = ClienteHubsoft.objects.select_related('lead').get(pk=cliente_id)
+        except ClienteHubsoft.DoesNotExist:
+            return JsonResponse({'error': 'Cliente não encontrado'}, status=404)
+        lead = cliente.lead
+        if not lead:
+            return JsonResponse({'success': True, 'imagens': [], 'lead': None,
+                                 'message': 'Cliente sem lead relacionado'})
 
     imagens = ImagemLeadProspecto.objects.filter(lead=lead).order_by('-data_criacao')
     imagens_data = [

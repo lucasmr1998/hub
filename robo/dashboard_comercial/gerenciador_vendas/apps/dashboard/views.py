@@ -9,7 +9,6 @@ from django.utils import timezone
 from django.db.models import Count, Sum, Avg, Q
 from django.db import models
 from datetime import datetime, timedelta
-from decimal import Decimal
 import json
 import logging
 import os
@@ -280,6 +279,147 @@ def _home_cs(request):
         contexto['membros_total'] = None
 
     return render(request, 'dashboard/home_cs.html', contexto)
+
+
+@login_required(login_url='sistema:login')
+def vendas_crm_view(request):
+    """Página de vendas nativa CRM — usa OportunidadeVenda, sem dependência de ERP."""
+    from apps.comercial.crm.models import Pipeline
+    pipelines = list(Pipeline.objects.values('id', 'nome').order_by('nome'))
+    context = {
+        'user': request.user,
+        'pipelines': pipelines,
+    }
+    return render(request, 'dashboard/vendas_crm.html', context)
+
+
+@login_required(login_url='sistema:login')
+def api_oportunidades_vendas(request):
+    """GET: Lista OportunidadeVenda com filtros e stats para a página /vendas/crm/."""
+    from apps.comercial.crm.models import OportunidadeVenda, PipelineEstagio
+    from apps.comercial.leads.models import ImagemLeadProspecto
+
+    qs = (
+        OportunidadeVenda.objects
+        .select_related('lead', 'estagio', 'estagio__pipeline', 'responsavel', 'plano_interesse')
+        .filter(ativo=True)
+    )
+
+    pipeline_id = request.GET.get('pipeline')
+    if pipeline_id:
+        qs = qs.filter(pipeline_id=pipeline_id)
+
+    estagio_id = request.GET.get('estagio')
+    if estagio_id:
+        qs = qs.filter(estagio_id=estagio_id)
+
+    responsavel_id = request.GET.get('responsavel')
+    if responsavel_id == 'me':
+        qs = qs.filter(responsavel=request.user)
+    elif responsavel_id:
+        qs = qs.filter(responsavel_id=responsavel_id)
+
+    status = request.GET.get('status')
+    if status == 'ganho':
+        qs = qs.filter(estagio__is_final_ganho=True)
+    elif status == 'perdido':
+        qs = qs.filter(estagio__is_final_perdido=True)
+    elif status == 'aberto':
+        qs = qs.filter(estagio__is_final_ganho=False, estagio__is_final_perdido=False)
+
+    doc_status = request.GET.get('doc_status')
+
+    busca = request.GET.get('search', '').strip()
+    if busca:
+        from django.db.models import Q as QQ
+        qs = qs.filter(
+            QQ(lead__nome_razaosocial__icontains=busca) |
+            QQ(lead__telefone__icontains=busca) |
+            QQ(lead__cpf__icontains=busca) |
+            QQ(titulo__icontains=busca)
+        )
+
+    total = qs.count()
+    ganhas = qs.filter(estagio__is_final_ganho=True).count()
+    perdidas = qs.filter(estagio__is_final_perdido=True).count()
+    abertas = total - ganhas - perdidas
+    valor_ganho = qs.filter(estagio__is_final_ganho=True).aggregate(
+        v=Sum('valor_estimado')
+    )['v'] or 0
+
+    page = int(request.GET.get('page', 1))
+    page_size = 50
+    offset = (page - 1) * page_size
+    oportunidades = list(qs.order_by('-data_criacao')[offset:offset + page_size])
+
+    lead_ids = [o.lead_id for o in oportunidades if o.lead_id]
+    imagens_por_lead = {}
+    for img in ImagemLeadProspecto.objects.filter(lead_id__in=lead_ids).values(
+        'lead_id', 'status_validacao'
+    ):
+        lid = img['lead_id']
+        if lid not in imagens_por_lead:
+            imagens_por_lead[lid] = {'total': 0, 'aprovados': 0, 'rejeitados': 0}
+        imagens_por_lead[lid]['total'] += 1
+        if img['status_validacao'] == ImagemLeadProspecto.STATUS_VALIDO:
+            imagens_por_lead[lid]['aprovados'] += 1
+        elif img['status_validacao'] == ImagemLeadProspecto.STATUS_REJEITADO:
+            imagens_por_lead[lid]['rejeitados'] += 1
+
+    def _doc_status(lead_id):
+        d = imagens_por_lead.get(lead_id)
+        if not d or d['total'] == 0:
+            return 'sem_docs'
+        if d['rejeitados'] > 0:
+            return 'rejeitado'
+        if d['aprovados'] == d['total']:
+            return 'validado'
+        return 'pendente'
+
+    resultado = []
+    for o in oportunidades:
+        lead = o.lead
+        ds = _doc_status(lead.id if lead else None)
+        if doc_status and ds != doc_status:
+            continue
+        resultado.append({
+            'id': o.id,
+            'titulo': o.titulo or (lead.nome_razaosocial if lead else ''),
+            'lead_id': lead.id if lead else None,
+            'lead_nome': lead.nome_razaosocial if lead else '',
+            'lead_telefone': lead.telefone if lead else '',
+            'lead_cpf': (lead.cpf or '') if lead else '',
+            'lead_email': (lead.email or '') if lead else '',
+            'url_pdf_conversa': (lead.url_pdf_conversa or '') if lead else '',
+            'html_conversa_path': (lead.html_conversa_path or '') if lead else '',
+            'pipeline_nome': o.estagio.pipeline.nome if o.estagio else '',
+            'estagio_id': o.estagio_id,
+            'estagio_nome': o.estagio.nome if o.estagio else '',
+            'estagio_cor': o.estagio.cor_hex if o.estagio else '#94a3b8',
+            'is_ganho': o.estagio.is_final_ganho if o.estagio else False,
+            'is_perdido': o.estagio.is_final_perdido if o.estagio else False,
+            'responsavel_nome': o.responsavel.get_full_name() or o.responsavel.username if o.responsavel else '—',
+            'plano_nome': o.plano_interesse.nome if o.plano_interesse else '—',
+            'valor_estimado': str(o.valor_estimado) if o.valor_estimado else '',
+            'data_criacao': o.data_criacao.isoformat(),
+            'data_entrada_estagio': o.data_entrada_estagio.isoformat() if o.data_entrada_estagio else '',
+            'doc_status': ds,
+            'docs': imagens_por_lead.get(lead.id if lead else None, {'total': 0, 'aprovados': 0, 'rejeitados': 0}),
+        })
+
+    return JsonResponse({
+        'oportunidades': resultado,
+        'total': total,
+        'paginas': max(1, (total + page_size - 1) // page_size),
+        'pagina_atual': page,
+        'stats': {
+            'total': total,
+            'abertas': abertas,
+            'ganhas': ganhas,
+            'perdidas': perdidas,
+            'valor_ganho': str(valor_ganho),
+        },
+    })
 
 
 @login_required(login_url='sistema:login')
