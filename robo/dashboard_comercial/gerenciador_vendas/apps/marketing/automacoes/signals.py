@@ -79,17 +79,21 @@ def on_oportunidade_movida(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender='leads.ImagemLeadProspecto')
 def on_docs_validados(sender, instance, created, **kwargs):
-    """Dispara evento 'docs_validados' quando todos os docs são aprovados."""
+    """Dispara evento 'docs_validados' quando todos os docs do lead são aprovados."""
+    from apps.comercial.leads.models import ImagemLeadProspecto
+
     if getattr(instance, '_skip_automacao', False):
         return
-    if instance.status != 'validado':
+    if instance.status_validacao != ImagemLeadProspecto.STATUS_VALIDO:
         return
 
     lead = instance.lead
-    # Verificar se TODOS os docs do lead estão validados
-    total_docs = lead.imagens.count()
-    docs_validados = lead.imagens.filter(status='validado').count()
-    if total_docs == 0 or docs_validados < total_docs:
+    todas = list(
+        ImagemLeadProspecto.all_tenants
+        .filter(lead_id=lead.pk)
+        .values_list('status_validacao', flat=True)
+    )
+    if not todas or not all(s == ImagemLeadProspecto.STATUS_VALIDO for s in todas):
         return
 
     from .engine import disparar_evento

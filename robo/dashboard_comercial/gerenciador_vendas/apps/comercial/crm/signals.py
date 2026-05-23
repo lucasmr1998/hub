@@ -186,41 +186,10 @@ def engine_apos_historico(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender='leads.ImagemLeadProspecto')
 def engine_apos_imagem(sender, instance, **kwargs):
-    """Reavalia regras quando uma imagem/documento muda de status."""
-    from apps.comercial.leads.models import ImagemLeadProspecto
-
+    """Reavalia regras de pipeline quando uma imagem/documento muda de status."""
     lead_id = getattr(instance, 'lead_id', None)
-    if not lead_id:
-        return
-
-    _disparar_engine(lead_id=lead_id)
-
-    # Disparar docs_validados quando TODOS os docs do lead estiverem válidos
-    if instance.status_validacao != ImagemLeadProspecto.STATUS_VALIDO:
-        return
-
-    todas = list(
-        ImagemLeadProspecto.all_tenants
-        .filter(lead_id=lead_id)
-        .values_list('status_validacao', flat=True)
-    )
-    if not todas or not all(s == ImagemLeadProspecto.STATUS_VALIDO for s in todas):
-        return
-
-    try:
-        lead = instance.lead
-        tenant = getattr(lead, 'tenant', None)
-        if not tenant:
-            return
-        from apps.marketing.automacoes.engine import disparar_evento
-        disparar_evento('docs_validados', {
-            'lead': lead,
-            'lead_id': lead_id,
-            'nome': lead.nome_razaosocial,
-            'telefone': lead.telefone,
-        }, tenant=tenant)
-    except Exception as e:
-        logger.error(f"[CRM] Erro ao disparar docs_validados para lead {lead_id}: {e}")
+    if lead_id:
+        _disparar_engine(lead_id=lead_id)
 
 
 def _conectar_signal_servico_hubsoft():
