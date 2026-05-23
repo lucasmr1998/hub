@@ -394,7 +394,7 @@ def api_oportunidades_vendas(request):
             'lead_id': lead.id if lead else None,
             'lead_nome': lead.nome_razaosocial if lead else '',
             'lead_telefone': lead.telefone if lead else '',
-            'lead_cpf': (lead.cpf or '') if lead else '',
+            'lead_cpf': (lead.cpf_cnpj or '') if lead else '',
             'lead_email': (lead.email or '') if lead else '',
             'url_pdf_conversa': (lead.url_pdf_conversa or '') if lead else '',
             'html_conversa_path': (lead.html_conversa_path or '') if lead else '',
