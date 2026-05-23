@@ -58,7 +58,7 @@ Condition Node (1 input, 2 outputs)
 
 ---
 
-## 8 tipos de acao
+## 9 tipos de acao
 
 | Tipo | O que faz | Config |
 |------|-----------|--------|
@@ -70,6 +70,9 @@ Condition Node (1 input, 2 outputs)
 | `atribuir_responsavel` | Atribui vendedor | Responsavel (auto round-robin) |
 | `dar_pontos` | Da pontos no Clube de Beneficios | Pontos + motivo |
 | `webhook` | Chama webhook externo | URL, metodo (GET/POST), headers |
+| `criar_venda` | Cria registro `Venda` para o lead | — (idempotente, nao duplica) |
+
+**Evento recomendado para `criar_venda`:** `docs_validados` — disparado automaticamente quando todos os documentos do lead sao validados (ver `apps/comercial/crm/signals.py`).
 
 Todas as acoes suportam variaveis de contexto: `{{lead_nome}}`, `{{lead_telefone}}`, `{{oportunidade_titulo}}`, etc.
 
