@@ -938,3 +938,60 @@ class RegraPipelineEstagio(TenantMixin):
 
     def __str__(self):
         return f"{self.estagio.nome} — {self.nome}"
+
+
+# ============================================================================
+# VENDA CONCRETIZADA
+# ============================================================================
+
+class Venda(TenantMixin):
+    """Registro de venda concretizada — criado quando documentos do lead são validados."""
+
+    STATUS_PENDENTE_ERP = 'pendente_erp'
+    STATUS_ENVIADO_ERP  = 'enviado_erp'
+    STATUS_ATIVO        = 'ativo'
+    STATUS_ERRO_ERP     = 'erro_erp'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDENTE_ERP, 'Pendente envio ERP'),
+        (STATUS_ENVIADO_ERP,  'Enviado ao ERP'),
+        (STATUS_ATIVO,        'Ativo'),
+        (STATUS_ERRO_ERP,     'Erro no envio'),
+    ]
+
+    oportunidade = models.ForeignKey(
+        OportunidadeVenda, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='vendas', verbose_name="Oportunidade",
+    )
+    lead = models.ForeignKey(
+        'leads.LeadProspecto', on_delete=models.CASCADE,
+        related_name='vendas', verbose_name="Lead",
+    )
+    plano = models.ForeignKey(
+        'cadastro.PlanoInternet', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='vendas', verbose_name="Plano contratado",
+    )
+    valor = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        verbose_name="Valor (R$)",
+    )
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDENTE_ERP,
+        db_index=True, verbose_name="Status ERP",
+    )
+    data_venda = models.DateTimeField(auto_now_add=True, verbose_name="Data da venda")
+    enviado_erp_em = models.DateTimeField(null=True, blank=True, verbose_name="Enviado ao ERP em")
+    erro_erp_msg = models.TextField(blank=True, verbose_name="Mensagem de erro ERP")
+    criado_por = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='vendas_criadas', verbose_name="Criado por",
+    )
+
+    class Meta:
+        db_table = 'crm_vendas'
+        verbose_name = "Venda"
+        verbose_name_plural = "💰 14. Vendas"
+        ordering = ['-data_venda']
+
+    def __str__(self):
+        return f"Venda #{self.pk} — {self.lead}"

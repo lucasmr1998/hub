@@ -7,7 +7,7 @@
   <div class="page-header-top">
     <div>
       <h1 class="page-title">Vendas</h1>
-      <p class="page-subtitle">Oportunidades e vendas do pipeline CRM.</p>
+      <p class="page-subtitle">Vendas concretizadas. Gerencie e envie para o ERP quando pronto.</p>
     </div>
   </div>
 </div>
@@ -17,11 +17,12 @@
     <option value="">Todos os pipelines</option>
     {% for p in pipelines %}<option value="{{ p.id }}">{{ p.nome }}</option>{% endfor %}
   </select>
-  <select id="filtroStatus" class="form-control" style="width: auto; min-width: 140px;">
-    <option value="">Todos os status</option>
-    <option value="aberto">Em andamento</option>
-    <option value="ganho">Ganho</option>
-    <option value="perdido">Perdido</option>
+  <select id="filtroStatusERP" class="form-control" style="width: auto; min-width: 160px;">
+    <option value="">Todos os status ERP</option>
+    <option value="pendente_erp">Pendente envio</option>
+    <option value="enviado_erp">Enviado ao ERP</option>
+    <option value="ativo">Ativo</option>
+    <option value="erro_erp">Erro no envio</option>
   </select>
   <select id="filtroDoc" class="form-control" style="width: auto; min-width: 160px;">
     <option value="">Qualquer doc</option>
@@ -34,16 +35,16 @@
 </div>
 
 <div class="stats-grid stats-grid-4" style="margin-bottom: var(--sp-4);">
-  {% include "components/stat_card.html" with label="Total" value="0" id="statTotal" icon="bi-people" %}
-  {% include "components/stat_card.html" with label="Em andamento" value="0" id="statAtivos" icon="bi-hourglass-split" %}
-  {% include "components/stat_card.html" with label="Ganhos" value="0" id="statServicos" icon="bi-check-circle" icon_variant="success" %}
-  {% include "components/stat_card.html" with label="Valor ganho" value="R$ 0" id="statAlteracoes" icon="bi-currency-dollar" icon_variant="info" %}
+  {% include "components/stat_card.html" with label="Total de vendas" value="0" id="statTotal" icon="bi-bag-check" %}
+  {% include "components/stat_card.html" with label="Pendente ERP" value="0" id="statPendente" icon="bi-hourglass-split" icon_variant="warning" %}
+  {% include "components/stat_card.html" with label="Enviado ao ERP" value="0" id="statEnviado" icon="bi-check-circle" icon_variant="success" %}
+  {% include "components/stat_card.html" with label="Valor total" value="R$ 0" id="statValor" icon="bi-currency-dollar" icon_variant="info" %}
 </div>
 
 <div class="card" style="padding: 0; overflow: hidden;">
   <div class="card-header">
-    <h3 class="card-title"><i class="bi bi-table"></i> Oportunidades</h3>
-    <span class="badge badge-primary badge-soft" id="contadorChip">0 oportunidade(s)</span>
+    <h3 class="card-title"><i class="bi bi-bag-check"></i> Vendas</h3>
+    <span class="badge badge-primary badge-soft" id="contadorChip">0 venda(s)</span>
   </div>
   <div class="table-wrap">
     <table id="clientesTable" class="data-table">
@@ -56,6 +57,7 @@
           <th>Responsavel</th>
           <th>Valor</th>
           <th>Data</th>
+          <th>Status ERP</th>
           <th>Documentacao</th>
           <th style="text-align: center;">Acao</th>
         </tr>
@@ -145,16 +147,18 @@
 <style>
   .table-wrap { overflow-x: auto; }
 
-  /* Column widths (8 colunas) */
+  /* Column widths (10 colunas) */
   #clientesTable { table-layout: fixed; }
-  #clientesTable th:nth-child(1), #clientesTable td:nth-child(1) { width: 16%; }
-  #clientesTable th:nth-child(2), #clientesTable td:nth-child(2) { width: 11%; }
-  #clientesTable th:nth-child(3), #clientesTable td:nth-child(3) { width: 15%; }
-  #clientesTable th:nth-child(4), #clientesTable td:nth-child(4) { width: 15%; }
-  #clientesTable th:nth-child(5), #clientesTable td:nth-child(5) { width: 11%; }
-  #clientesTable th:nth-child(6), #clientesTable td:nth-child(6) { width: 8%; }
-  #clientesTable th:nth-child(7), #clientesTable td:nth-child(7) { width: 14%; }
-  #clientesTable th:nth-child(8), #clientesTable td:nth-child(8) { width: 10%; text-align: center; }
+  #clientesTable th:nth-child(1), #clientesTable td:nth-child(1) { width: 14%; }
+  #clientesTable th:nth-child(2), #clientesTable td:nth-child(2) { width: 10%; }
+  #clientesTable th:nth-child(3), #clientesTable td:nth-child(3) { width: 12%; }
+  #clientesTable th:nth-child(4), #clientesTable td:nth-child(4) { width: 12%; }
+  #clientesTable th:nth-child(5), #clientesTable td:nth-child(5) { width: 9%; }
+  #clientesTable th:nth-child(6), #clientesTable td:nth-child(6) { width: 7%; }
+  #clientesTable th:nth-child(7), #clientesTable td:nth-child(7) { width: 9%; }
+  #clientesTable th:nth-child(8), #clientesTable td:nth-child(8) { width: 11%; }
+  #clientesTable th:nth-child(9), #clientesTable td:nth-child(9) { width: 10%; }
+  #clientesTable th:nth-child(10), #clientesTable td:nth-child(10) { width: 6%; text-align: center; }
 
   .cell-main {
     font-weight: var(--fw-semibold);
@@ -566,10 +570,12 @@
 {% block extra_js %}
 <script>
 const API_OPORTUNIDADES = '{% url "dashboard:api_oportunidades_vendas" %}';
+const API_ENVIAR_ERP_TPL = '{% url "dashboard:api_enviar_venda_erp" 0 %}'.replace('/0/', '/{id}/');
 const URL_LEADS = '{% url "comercial_leads:leads" %}';
+const TEM_INTEGRACAO_ERP = {{ tem_integracao_erp|yesno:"true,false" }};
 let page = 1;
 let search = '';
-let filtros = { pipeline: '', status: '', doc_status: '' };
+let filtros = { pipeline: '', status_erp: '', doc_status: '' };
 
 function mostrarLoading(v) { document.getElementById('loadingOverlay').style.display = v ? 'flex' : 'none'; }
 
@@ -647,7 +653,7 @@ async function carregarClientes() {
     renderizarTabela(data.oportunidades || []);
     renderPaginacao(data.pagina_atual || 1, data.paginas || 0);
     atualizarStats(data.stats || {});
-    document.getElementById('contadorChip').textContent = `${data.total || 0} oportunidade(s)`;
+    document.getElementById('contadorChip').textContent = `${data.total || 0} venda(s)`;
   } catch (e) {
     console.error('Erro:', e);
     toast('Erro', 'Erro ao carregar oportunidades: ' + e.message, 'danger');
@@ -657,19 +663,16 @@ async function carregarClientes() {
 }
 
 function atualizarStats(s) {
-  const byLabel = (label, val) => {
-    document.querySelectorAll('.stat-card').forEach(card => {
-      const l = card.querySelector('.stat-card-label');
-      if (l && l.textContent.trim().toLowerCase().includes(label.toLowerCase())) {
-        const v = card.querySelector('.stat-card-value');
-        if (v) v.textContent = val;
-      }
-    });
+  const byId = (id, val) => {
+    const card = document.getElementById(id);
+    if (!card) return;
+    const v = card.querySelector('.stat-card-value');
+    if (v) v.textContent = val;
   };
-  byLabel('total', s.total || 0);
-  byLabel('em andamento', s.abertas || 0);
-  byLabel('ganhos', s.ganhas || 0);
-  byLabel('valor ganho', s.valor_ganho ? formatarMoeda(s.valor_ganho) : 'R$ 0,00');
+  byId('statTotal', s.total || 0);
+  byId('statPendente', s.pendente_erp || 0);
+  byId('statEnviado', s.enviado_erp || 0);
+  byId('statValor', s.valor_total ? formatarMoeda(s.valor_total) : 'R$ 0,00');
 }
 
 let _timersAtivos = [];
@@ -748,11 +751,21 @@ function _renderDocStatusCrm(o) {
   return `<div class="doc-pills">${pills}</div>`;
 }
 
+function _erpStatusBadge(status, label) {
+  const map = {
+    pendente_erp: 'badge-yellow',
+    enviado_erp:  'badge-green',
+    ativo:        'badge-green',
+    erro_erp:     'badge-red',
+  };
+  return `<span class="${map[status] || 'badge-gray'}">${label || status}</span>`;
+}
+
 function renderizarTabela(oportunidades) {
   const tbody = document.querySelector('#clientesTable tbody');
   tbody.innerHTML = '';
   if (!oportunidades.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:var(--sp-10);color:var(--color-text-muted);"><i class="bi bi-inbox" style="font-size:1.5rem;display:block;margin-bottom:var(--sp-2);opacity:0.3;"></i>Nenhuma oportunidade encontrada</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:var(--sp-10);color:var(--color-text-muted);"><i class="bi bi-bag-x" style="font-size:1.5rem;display:block;margin-bottom:var(--sp-2);opacity:0.3;"></i>Nenhuma venda encontrada</td></tr>';
     return;
   }
 
@@ -760,13 +773,15 @@ function renderizarTabela(oportunidades) {
     const tr = document.createElement('tr');
     tr.style.cursor = 'pointer';
     tr.onclick = () => abrirDetalhe(o);
-    const nomeEsc = (o.lead_nome || o.titulo || '').replace(/'/g, "\\'");
-    const estagioColor = o.estagio_cor || '#94a3b8';
-    const ganhoClass = o.is_ganho ? 'badge-green' : (o.is_perdido ? 'badge-red' : 'badge-blue');
+    const nomeEsc = (o.lead_nome || '').replace(/'/g, "\\'");
+
+    const btnEnviarERP = TEM_INTEGRACAO_ERP && o.status_erp !== 'enviado_erp' && o.status_erp !== 'ativo'
+      ? `<button class="row-action" title="Enviar ao ERP" onclick="event.stopPropagation(); enviarParaERP(${o.id}, this)"><i class="bi bi-send"></i></button>`
+      : '';
 
     tr.innerHTML = `
       <td>
-        <span class="cell-main" title="${o.lead_nome}">${(o.lead_nome || o.titulo || '-').split(' ').slice(0, 2).join(' ')}</span>
+        <span class="cell-main" title="${o.lead_nome}">${(o.lead_nome || '-').split(' ').slice(0, 2).join(' ')}</span>
         <span class="cell-sub">${formatarCpfCnpj(o.lead_cpf)}</span>
       </td>
       <td>
@@ -779,9 +794,13 @@ function renderizarTabela(oportunidades) {
         <span class="cell-sub">${o.pipeline_nome || ''}</span>
       </td>
       <td><span class="cell-main">${o.responsavel_nome || '—'}</span></td>
-      <td>${o.valor_estimado ? formatarMoeda(o.valor_estimado) : '<span class="cell-sub">—</span>'}</td>
+      <td>${o.valor ? formatarMoeda(o.valor) : '<span class="cell-sub">—</span>'}</td>
       <td>
-        <span class="cell-main">${formatarDataCurta(o.data_criacao)}</span>
+        <span class="cell-main">${formatarDataCurta(o.data_venda)}</span>
+      </td>
+      <td onclick="event.stopPropagation();" id="erp-status-${o.id}">
+        ${_erpStatusBadge(o.status_erp, o.status_erp_label)}
+        ${o.erro_erp_msg ? `<span class="cell-sub" style="color:var(--color-danger);margin-top:2px;" title="${o.erro_erp_msg}"><i class="bi bi-exclamation-circle"></i> Erro</span>` : ''}
       </td>
       <td onclick="event.stopPropagation();">
         ${_renderDocStatusCrm(o)}
@@ -790,7 +809,8 @@ function renderizarTabela(oportunidades) {
         <div style="display: flex; gap: 4px; justify-content: center;">
           ${o.lead_id
             ? `<button class="row-action" title="Documentos" onclick="abrirDocumentos(${o.lead_id}, '${nomeEsc}')"><i class="bi bi-file-image"></i></button>
-               <button class="row-action" title="Conversa" onclick="abrirConversa(${o.lead_id}, '${nomeEsc}', '${(o.url_pdf_conversa || '').replace(/'/g, "\\'")}', '${(o.html_conversa_path || '').replace(/'/g, "\\'")}')"><i class="bi bi-chat-dots"></i></button>`
+               <button class="row-action" title="Conversa" onclick="abrirConversa(${o.lead_id}, '${nomeEsc}', '${(o.url_pdf_conversa || '').replace(/'/g, "\\'")}', '${(o.html_conversa_path || '').replace(/'/g, "\\'")}')"><i class="bi bi-chat-dots"></i></button>
+               ${btnEnviarERP}`
             : `<button class="row-action" disabled style="opacity:0.3;cursor:default;"><i class="bi bi-file-image"></i></button>`}
         </div>
       </td>
@@ -799,6 +819,28 @@ function renderizarTabela(oportunidades) {
   });
 
   _iniciarTimers();
+}
+
+async function enviarParaERP(vendaId, btn) {
+  const url = API_ENVIAR_ERP_TPL.replace('{id}', vendaId);
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-arrow-clockwise" style="animation: vendas-spin 1s linear infinite; display: inline-block;"></i>';
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': _getCsrf() },
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Erro no envio');
+    toast('ERP', 'Venda enviada com sucesso!', 'success');
+    const cell = document.getElementById(`erp-status-${vendaId}`);
+    if (cell) cell.innerHTML = _erpStatusBadge(data.status, data.status_label);
+    btn.style.display = 'none';
+  } catch (e) {
+    toast('Erro', e.message, 'danger');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-send"></i>';
+  }
 }
 
 function renderPaginacao(current, total) {
@@ -830,11 +872,15 @@ function renderPaginacao(current, total) {
 }
 
 function abrirDetalhe(o) {
-  document.getElementById('modalTitulo').textContent = o.lead_nome || o.titulo || 'Oportunidade';
+  document.getElementById('modalTitulo').textContent = o.lead_nome || 'Venda';
   const body = document.getElementById('modalBody');
-  const ganhoClass = o.is_ganho ? 'badge-green' : (o.is_perdido ? 'badge-red' : 'badge-blue');
-  const ganhoLabel = o.is_ganho ? 'Ganho' : (o.is_perdido ? 'Perdido' : 'Em andamento');
-  const nomeEsc = (o.lead_nome || o.titulo || '').replace(/'/g, "\\'");
+  const nomeEsc = (o.lead_nome || '').replace(/'/g, "\\'");
+
+  const btnEnviarModal = TEM_INTEGRACAO_ERP && o.status_erp !== 'enviado_erp' && o.status_erp !== 'ativo'
+    ? `<button class="btn btn-primary btn-sm" id="btnEnviarModal${o.id}" onclick="event.stopPropagation(); fecharModal(); enviarParaERP(${o.id}, document.getElementById('btnEnviarModal${o.id}'))">
+        <i class="bi bi-send"></i> Enviar ao ERP
+       </button>`
+    : '';
 
   body.innerHTML = `
     <div class="detail-section">
@@ -847,17 +893,23 @@ function abrirDetalhe(o) {
       </div>
     </div>
     <div class="detail-section">
-      <div class="section-title"><i class="bi bi-bar-chart-steps"></i> Oportunidade</div>
+      <div class="section-title"><i class="bi bi-bag-check"></i> Venda</div>
       <div class="detail-grid">
-        <div class="detail-item"><div class="detail-label">Pipeline</div><div class="detail-value">${o.pipeline_nome || '-'}</div></div>
-        <div class="detail-item"><div class="detail-label">Estagio</div><div class="detail-value">${o.estagio_nome || '-'}</div></div>
-        <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="${ganhoClass}">${ganhoLabel}</span></div></div>
-        <div class="detail-item"><div class="detail-label">Responsavel</div><div class="detail-value">${o.responsavel_nome || '—'}</div></div>
         <div class="detail-item"><div class="detail-label">Plano</div><div class="detail-value">${o.plano_nome || '—'}</div></div>
-        <div class="detail-item"><div class="detail-label">Valor estimado</div><div class="detail-value">${o.valor_estimado ? formatarMoeda(o.valor_estimado) : '—'}</div></div>
-        <div class="detail-item"><div class="detail-label">Criado em</div><div class="detail-value">${formatarData(o.data_criacao)}</div></div>
-        <div class="detail-item"><div class="detail-label">Entrada no estagio</div><div class="detail-value">${formatarData(o.data_entrada_estagio)}</div></div>
+        <div class="detail-item"><div class="detail-label">Valor</div><div class="detail-value">${o.valor ? formatarMoeda(o.valor) : '—'}</div></div>
+        <div class="detail-item"><div class="detail-label">Data da venda</div><div class="detail-value">${formatarData(o.data_venda)}</div></div>
+        <div class="detail-item"><div class="detail-label">Responsavel</div><div class="detail-value">${o.responsavel_nome || '—'}</div></div>
+        <div class="detail-item"><div class="detail-label">Pipeline / Estagio</div><div class="detail-value">${o.pipeline_nome ? o.pipeline_nome + ' &rsaquo; ' : ''}${o.estagio_nome || '—'}</div></div>
       </div>
+    </div>
+    <div class="detail-section">
+      <div class="section-title"><i class="bi bi-cloud-upload"></i> Status ERP</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value">${_erpStatusBadge(o.status_erp, o.status_erp_label)}</div></div>
+        ${o.enviado_erp_em ? `<div class="detail-item"><div class="detail-label">Enviado em</div><div class="detail-value">${formatarData(o.enviado_erp_em)}</div></div>` : ''}
+        ${o.erro_erp_msg ? `<div class="detail-item" style="border-left-color: var(--color-danger);"><div class="detail-label">Mensagem de erro</div><div class="detail-value" style="color: var(--color-danger); font-size: 11px;">${o.erro_erp_msg}</div></div>` : ''}
+      </div>
+      ${btnEnviarModal ? `<div style="margin-top: var(--sp-3);">${btnEnviarModal}</div>` : ''}
     </div>
     <div class="detail-section">
       <div class="section-title"><i class="bi bi-file-image"></i> Documentacao</div>
@@ -1055,11 +1107,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Filtros da página CRM
   const pipelineSel = document.getElementById('filtroPipeline');
-  const statusSel = document.getElementById('filtroStatus');
+  const statusERPSel = document.getElementById('filtroStatusERP');
   const docSel = document.getElementById('filtroDoc');
 
   if (pipelineSel) pipelineSel.addEventListener('change', e => { filtros.pipeline = e.target.value; page = 1; carregarClientes(); });
-  if (statusSel) statusSel.addEventListener('change', e => { filtros.status = e.target.value; page = 1; carregarClientes(); });
+  if (statusERPSel) statusERPSel.addEventListener('change', e => { filtros.status_erp = e.target.value; page = 1; carregarClientes(); });
   if (docSel) docSel.addEventListener('change', e => { filtros.doc_status = e.target.value; page = 1; carregarClientes(); });
 
   // Fechar modais ao clicar fora

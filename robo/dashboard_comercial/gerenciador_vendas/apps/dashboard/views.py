@@ -283,49 +283,56 @@ def _home_cs(request):
 
 @login_required(login_url='sistema:login')
 def vendas_crm_view(request):
-    """Página de vendas nativa CRM — usa OportunidadeVenda, sem dependência de ERP."""
+    """Página de vendas nativa CRM — fonte da verdade: model Venda."""
     from apps.comercial.crm.models import Pipeline
+    from apps.integracoes.models import IntegracaoAPI
+
     pipelines = list(Pipeline.objects.values('id', 'nome').order_by('nome'))
+    integracao_erp = IntegracaoAPI.objects.filter(
+        tenant=request.tenant, tipo__in=['hubsoft', 'sgp'], ativa=True
+    ).first()
     context = {
         'user': request.user,
         'pipelines': pipelines,
+        'tem_integracao_erp': bool(integracao_erp),
+        'integracao_erp_tipo': integracao_erp.tipo if integracao_erp else '',
     }
     return render(request, 'dashboard/vendas_crm.html', context)
 
 
 @login_required(login_url='sistema:login')
 def api_oportunidades_vendas(request):
-    """GET: Lista OportunidadeVenda com filtros e stats para a página /vendas/crm/."""
-    from apps.comercial.crm.models import OportunidadeVenda, PipelineEstagio
+    """GET: Lista Venda com filtros e stats para a página /vendas/crm/."""
+    from apps.comercial.crm.models import Venda
     from apps.comercial.leads.models import ImagemLeadProspecto
 
     qs = (
-        OportunidadeVenda.objects
-        .select_related('lead', 'estagio', 'estagio__pipeline', 'responsavel', 'plano_interesse')
-        .filter(ativo=True)
+        Venda.objects
+        .select_related(
+            'lead',
+            'oportunidade', 'oportunidade__estagio', 'oportunidade__estagio__pipeline',
+            'oportunidade__responsavel',
+            'plano',
+        )
     )
 
     pipeline_id = request.GET.get('pipeline')
     if pipeline_id:
-        qs = qs.filter(pipeline_id=pipeline_id)
+        qs = qs.filter(oportunidade__pipeline_id=pipeline_id)
 
     estagio_id = request.GET.get('estagio')
     if estagio_id:
-        qs = qs.filter(estagio_id=estagio_id)
+        qs = qs.filter(oportunidade__estagio_id=estagio_id)
 
     responsavel_id = request.GET.get('responsavel')
     if responsavel_id == 'me':
-        qs = qs.filter(responsavel=request.user)
+        qs = qs.filter(oportunidade__responsavel=request.user)
     elif responsavel_id:
-        qs = qs.filter(responsavel_id=responsavel_id)
+        qs = qs.filter(oportunidade__responsavel_id=responsavel_id)
 
-    status = request.GET.get('status')
-    if status == 'ganho':
-        qs = qs.filter(estagio__is_final_ganho=True)
-    elif status == 'perdido':
-        qs = qs.filter(estagio__is_final_perdido=True)
-    elif status == 'aberto':
-        qs = qs.filter(estagio__is_final_ganho=False, estagio__is_final_perdido=False)
+    status_erp = request.GET.get('status_erp')
+    if status_erp:
+        qs = qs.filter(status=status_erp)
 
     doc_status = request.GET.get('doc_status')
 
@@ -335,24 +342,21 @@ def api_oportunidades_vendas(request):
         qs = qs.filter(
             QQ(lead__nome_razaosocial__icontains=busca) |
             QQ(lead__telefone__icontains=busca) |
-            QQ(lead__cpf__icontains=busca) |
-            QQ(titulo__icontains=busca)
+            QQ(lead__cpf__icontains=busca)
         )
 
     total = qs.count()
-    ganhas = qs.filter(estagio__is_final_ganho=True).count()
-    perdidas = qs.filter(estagio__is_final_perdido=True).count()
-    abertas = total - ganhas - perdidas
-    valor_ganho = qs.filter(estagio__is_final_ganho=True).aggregate(
-        v=Sum('valor_estimado')
-    )['v'] or 0
+    pendente_erp = qs.filter(status=Venda.STATUS_PENDENTE_ERP).count()
+    enviado_erp = qs.filter(status=Venda.STATUS_ENVIADO_ERP).count()
+    erro_erp = qs.filter(status=Venda.STATUS_ERRO_ERP).count()
+    valor_total = qs.aggregate(v=Sum('valor'))['v'] or 0
 
     page = int(request.GET.get('page', 1))
     page_size = 50
     offset = (page - 1) * page_size
-    oportunidades = list(qs.order_by('-data_criacao')[offset:offset + page_size])
+    vendas = list(qs.order_by('-data_venda')[offset:offset + page_size])
 
-    lead_ids = [o.lead_id for o in oportunidades if o.lead_id]
+    lead_ids = [v.lead_id for v in vendas if v.lead_id]
     imagens_por_lead = {}
     for img in ImagemLeadProspecto.objects.filter(lead_id__in=lead_ids).values(
         'lead_id', 'status_validacao'
@@ -377,14 +381,16 @@ def api_oportunidades_vendas(request):
         return 'pendente'
 
     resultado = []
-    for o in oportunidades:
-        lead = o.lead
+    for v in vendas:
+        lead = v.lead
+        oport = v.oportunidade
+        estagio = oport.estagio if oport else None
         ds = _doc_status(lead.id if lead else None)
         if doc_status and ds != doc_status:
             continue
+        responsavel = oport.responsavel if oport else None
         resultado.append({
-            'id': o.id,
-            'titulo': o.titulo or (lead.nome_razaosocial if lead else ''),
+            'id': v.id,
             'lead_id': lead.id if lead else None,
             'lead_nome': lead.nome_razaosocial if lead else '',
             'lead_telefone': lead.telefone if lead else '',
@@ -392,17 +398,18 @@ def api_oportunidades_vendas(request):
             'lead_email': (lead.email or '') if lead else '',
             'url_pdf_conversa': (lead.url_pdf_conversa or '') if lead else '',
             'html_conversa_path': (lead.html_conversa_path or '') if lead else '',
-            'pipeline_nome': o.estagio.pipeline.nome if (o.estagio and o.estagio.pipeline) else '',
-            'estagio_id': o.estagio_id,
-            'estagio_nome': o.estagio.nome if o.estagio else '',
-            'estagio_cor': o.estagio.cor_hex if o.estagio else '#94a3b8',
-            'is_ganho': o.estagio.is_final_ganho if o.estagio else False,
-            'is_perdido': o.estagio.is_final_perdido if o.estagio else False,
-            'responsavel_nome': (o.responsavel.get_full_name() or o.responsavel.username) if o.responsavel else '—',
-            'plano_nome': o.plano_interesse.nome if o.plano_interesse else '—',
-            'valor_estimado': str(o.valor_estimado) if o.valor_estimado else '',
-            'data_criacao': o.data_criacao.isoformat(),
-            'data_entrada_estagio': o.data_entrada_estagio.isoformat() if o.data_entrada_estagio else '',
+            'oportunidade_id': oport.id if oport else None,
+            'pipeline_nome': estagio.pipeline.nome if (estagio and estagio.pipeline) else '',
+            'estagio_nome': estagio.nome if estagio else '',
+            'estagio_cor': estagio.cor_hex if estagio else '#94a3b8',
+            'responsavel_nome': (responsavel.get_full_name() or responsavel.username) if responsavel else '—',
+            'plano_nome': v.plano.nome if v.plano else '—',
+            'valor': str(v.valor) if v.valor else '',
+            'status_erp': v.status,
+            'status_erp_label': v.get_status_display(),
+            'erro_erp_msg': v.erro_erp_msg or '',
+            'data_venda': v.data_venda.isoformat(),
+            'enviado_erp_em': v.enviado_erp_em.isoformat() if v.enviado_erp_em else '',
             'doc_status': ds,
             'docs': imagens_por_lead.get(lead.id if lead else None, {'total': 0, 'aprovados': 0, 'rejeitados': 0}),
         })
@@ -414,12 +421,59 @@ def api_oportunidades_vendas(request):
         'pagina_atual': page,
         'stats': {
             'total': total,
-            'abertas': abertas,
-            'ganhas': ganhas,
-            'perdidas': perdidas,
-            'valor_ganho': str(valor_ganho),
+            'pendente_erp': pendente_erp,
+            'enviado_erp': enviado_erp,
+            'erro_erp': erro_erp,
+            'valor_total': str(valor_total),
         },
     })
+
+
+@login_required(login_url='sistema:login')
+def api_enviar_venda_erp(request, pk):
+    """POST: Envia uma Venda para o ERP do tenant."""
+    from django.views.decorators.http import require_POST
+    from django.utils import timezone as tz
+    from apps.comercial.crm.models import Venda
+    from apps.integracoes.models import IntegracaoAPI
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método não permitido'}, status=405)
+
+    try:
+        venda = Venda.objects.get(pk=pk)
+    except Venda.DoesNotExist:
+        return JsonResponse({'error': 'Venda não encontrada'}, status=404)
+
+    integ = IntegracaoAPI.objects.filter(
+        tenant=request.tenant, tipo__in=['hubsoft', 'sgp'], ativa=True
+    ).first()
+    if not integ:
+        return JsonResponse({'error': 'Nenhuma integração ERP ativa configurada'}, status=400)
+
+    if not integ.sync_permitido('enviar_lead'):
+        return JsonResponse({'error': 'Envio desativado nas configurações de integração'}, status=400)
+
+    try:
+        if integ.tipo == 'hubsoft':
+            from apps.integracoes.services.hubsoft import HubSoftService
+            service = HubSoftService(integ)
+            service.cadastrar_prospecto(venda.lead)
+        else:
+            from apps.integracoes.services.sgp import SGPService
+            service = SGPService(integ)
+            service.cadastrar_prospecto_para_lead(venda.lead)
+
+        venda.status = Venda.STATUS_ENVIADO_ERP
+        venda.enviado_erp_em = tz.now()
+        venda.erro_erp_msg = ''
+        venda.save(update_fields=['status', 'enviado_erp_em', 'erro_erp_msg'])
+        return JsonResponse({'ok': True, 'status': venda.status, 'status_label': venda.get_status_display()})
+    except Exception as e:
+        venda.status = Venda.STATUS_ERRO_ERP
+        venda.erro_erp_msg = str(e)
+        venda.save(update_fields=['status', 'erro_erp_msg'])
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @login_required(login_url='sistema:login')

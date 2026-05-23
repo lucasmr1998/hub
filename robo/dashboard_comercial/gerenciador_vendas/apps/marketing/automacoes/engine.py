@@ -463,6 +463,7 @@ def _get_executor(tipo):
         'dar_pontos': _acao_dar_pontos,
         'webhook': _acao_webhook,
         'criar_oportunidade': _acao_criar_oportunidade,
+        'criar_venda': _acao_criar_venda,
     }.get(tipo)
 
 
@@ -767,3 +768,27 @@ def _acao_criar_oportunidade(regra, acao, contexto):
         origem_crm='automatico',
     )
     return f'Oportunidade criada (pk={oport.pk})'
+
+
+def _acao_criar_venda(regra, acao, contexto):
+    """Cria registro de Venda concretizada para o lead (disparado por docs_validados)."""
+    from apps.comercial.crm.models import Venda, OportunidadeVenda
+
+    lead = contexto.get('lead')
+    if not lead or not hasattr(lead, 'pk'):
+        return 'Lead nao encontrado no contexto'
+
+    if Venda.objects.filter(tenant=regra.tenant, lead=lead).exists():
+        return f'Venda ja existe para lead {lead.pk}'
+
+    oport = OportunidadeVenda.objects.filter(tenant=regra.tenant, lead=lead).first()
+
+    Venda.objects.create(
+        tenant=regra.tenant,
+        lead=lead,
+        oportunidade=oport,
+        plano=oport.plano_interesse if oport else None,
+        valor=oport.valor_estimado if oport else None,
+        status=Venda.STATUS_PENDENTE_ERP,
+    )
+    return f'Venda criada para lead {lead.pk}'
