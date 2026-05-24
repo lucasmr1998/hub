@@ -778,18 +778,18 @@ def deletar_imagem_lead_api(request):
         return JsonResponse({'error': f'Imagem #{imagem_id} não encontrada'}, status=404)
 
 
-@csrf_exempt
-@api_token_required
 def imagens_por_cliente_api(request):
     """
     GET /api/leads/imagens/por-cliente/?cliente_hubsoft_id=<id>
     GET /api/leads/imagens/por-cliente/?lead_id=<id>
     Retorna as imagens vinculadas ao lead (via ClienteHubsoft ou diretamente por lead_id).
     """
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Não autenticado'}, status=401)
     lead_id_direto = request.GET.get('lead_id')
     if lead_id_direto:
         try:
-            lead = LeadProspecto.objects.get(pk=lead_id_direto)
+            lead = LeadProspecto.all_tenants.get(pk=lead_id_direto)
         except LeadProspecto.DoesNotExist:
             return JsonResponse({'error': 'Lead não encontrado'}, status=404)
     else:
