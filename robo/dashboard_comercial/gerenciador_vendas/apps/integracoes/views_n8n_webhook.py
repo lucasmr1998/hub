@@ -749,3 +749,66 @@ def conversa_estado(request):
         'agente_nome': agente_nome,
         'atualizado_em': conversa.ultima_mensagem_em.isoformat() if conversa.ultima_mensagem_em else None,
     }, status=200)
+
+
+@csrf_exempt
+@require_POST
+def registrar_imagem_lead(request):
+    """
+    Registra uma imagem/documento enviado pelo lead durante o fluxo do bot.
+
+    Body JSON:
+        tenant_slug:  str  - slug do tenant (obrigatorio)
+        lead_id:      int  - id do lead (obrigatorio)
+        link_url:     str  - URL da imagem/documento (obrigatorio)
+        descricao:    str? - descricao do documento (ex: 'RG frente', 'RG verso')
+
+    Retorna:
+        201 + {sucesso: true, imagem_id} se criou
+        400 se payload invalido
+        401 se secret invalido
+        404 se lead nao encontrado
+    """
+    if not _autorizado(request):
+        return JsonResponse({'sucesso': False, 'erro': 'Nao autorizado'}, status=401)
+
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'sucesso': False, 'erro': 'JSON invalido'}, status=400)
+
+    tenant_slug = (payload.get('tenant_slug') or '').strip()
+    lead_id = payload.get('lead_id')
+    link_url = (payload.get('link_url') or '').strip()
+    descricao = (payload.get('descricao') or '').strip()
+
+    erros = []
+    if not tenant_slug:
+        erros.append('tenant_slug obrigatorio')
+    if not lead_id:
+        erros.append('lead_id obrigatorio')
+    if not link_url:
+        erros.append('link_url obrigatorio')
+    if erros:
+        return JsonResponse({'sucesso': False, 'erros': erros}, status=400)
+
+    try:
+        tenant = Tenant.objects.get(slug=tenant_slug)
+    except Tenant.DoesNotExist:
+        return JsonResponse({'sucesso': False, 'erro': f'Tenant "{tenant_slug}" nao encontrado'}, status=404)
+
+    try:
+        lead = LeadProspecto.all_tenants.get(pk=lead_id, tenant=tenant)
+    except LeadProspecto.DoesNotExist:
+        return JsonResponse({'sucesso': False, 'erro': f'Lead {lead_id} nao encontrado'}, status=404)
+
+    from apps.comercial.leads.models import ImagemLeadProspecto
+    imagem = ImagemLeadProspecto.all_tenants.create(
+        tenant=tenant,
+        lead=lead,
+        link_url=link_url,
+        descricao=descricao or 'Documento enviado pelo bot',
+    )
+
+    logger.info('[N8N] Imagem registrada para lead %s (%s)', lead_id, descricao)
+    return JsonResponse({'sucesso': True, 'imagem_id': imagem.pk}, status=201)
