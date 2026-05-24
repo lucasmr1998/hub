@@ -168,36 +168,35 @@
     {# Estado do Bot (N8N) — visivel quando a oportunidade veio de fluxo automatico #}
     {% if oportunidade.dados_custom.atendimento_estado %}
       {% with raw_estado=oportunidade.dados_custom.atendimento_estado raw_dt=oportunidade.dados_custom.atendimento_atualizado_em %}
-      <div class="card">
+      <div class="card" id="cardEstadoBot" data-estado="{{ raw_estado }}" data-atualizado="{{ raw_dt|default:'' }}">
         <div class="card-header">
-          <h3 class="card-title"><i class="bi bi-robot" style="color: var(--color-primary);"></i> Estado do bot</h3>
+          <h3 class="card-title"><i class="bi bi-robot" style="color: var(--color-primary);"></i> Atendimento do bot</h3>
         </div>
         <div class="card-body">
-          <div class="detail-field">
-            <label>Etapa atual</label>
+          <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px;">
+            <strong id="botEtapaNome" style="font-size:14px;">—</strong>
+            <span id="botEtapaContador" style="font-size:12px; color:var(--color-text-muted); white-space:nowrap;"></span>
+          </div>
+          <div class="bot-progress-bar" style="margin-top:8px;"><div class="bot-progress-fill" id="botProgressFill"></div></div>
+          <div id="botEtapaDesc" style="font-size:12px; color:var(--color-text-muted); margin-top:8px; line-height:1.4;"></div>
+
+          <div class="detail-field" style="margin-top:14px;">
+            <label>Tempo nesta etapa</label>
             <div class="value">
-              {% if raw_estado == 'concluido' %}
-                <span class="estado-bot-badge estado-bot-success"><i class="bi bi-check-circle-fill"></i> Cadastro concluído</span>
-              {% elif raw_estado == 'aguarda_humano' %}
-                <span class="estado-bot-badge estado-bot-warning"><i class="bi bi-person-raised-hand"></i> Aguardando atendente</span>
-              {% else %}
-                <span class="estado-bot-badge estado-bot-info"><i class="bi bi-hourglass-split"></i> {{ raw_estado|cut:"aguarda_"|cut:"_"|title }}</span>
-              {% endif %}
+              <span class="bot-tempo-badge" id="botTempoBadge">—</span>
+              <div style="font-size:11px; color:var(--color-text-muted); margin-top:4px;" id="botTempoAbsoluto"></div>
             </div>
           </div>
-          {% if raw_dt %}
-            <div class="detail-field">
-              <label>Atualizado em</label>
-              <div class="value" style="font-size: var(--fs-sm); color: var(--color-text-muted);">
-                {{ raw_dt|slice:"8:10" }}/{{ raw_dt|slice:"5:7" }} às {{ raw_dt|slice:"11:16" }}
-              </div>
-            </div>
-          {% endif %}
+
           <style>
-            .estado-bot-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: var(--fw-semibold); }
-            .estado-bot-success { background: rgba(22, 163, 74, 0.1); color: var(--color-success, #16A34A); }
-            .estado-bot-warning { background: rgba(245, 158, 11, 0.1); color: var(--color-warning, #F59E0B); }
-            .estado-bot-info    { background: rgba(99, 102, 241, 0.1); color: var(--color-primary, #6366F1); }
+            .bot-progress-bar { height: 6px; background: var(--color-surface-alt, #e2e8f0); border-radius: 999px; overflow: hidden; }
+            .bot-progress-fill { height: 100%; width: 0; background: var(--color-primary); transition: width .3s ease; }
+            .bot-progress-fill.is-done { background: var(--color-success, #16A34A); }
+            .bot-tempo-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: var(--fw-semibold); }
+            .bot-tempo-verde    { background: rgba(22, 163, 74, .1);  color: #16A34A; }
+            .bot-tempo-amarelo  { background: rgba(245, 158, 11, .12); color: #B45309; }
+            .bot-tempo-vermelho { background: rgba(220, 38, 38, .12); color: #DC2626; }
+            .bot-tempo-neutro   { background: var(--color-surface-alt, #e2e8f0); color: var(--color-text-muted, #64748B); }
           </style>
           {% with conv=oportunidade.conversas.first %}
             {% if conv %}
@@ -222,6 +221,85 @@
               </div>
             {% endif %}
           {% endwith %}
+
+          <script>
+          (function () {
+            const card = document.getElementById('cardEstadoBot');
+            if (!card) return;
+            const estado = card.dataset.estado || '';
+            const atualizadoIso = card.dataset.atualizado || '';
+
+            // jornada principal — ordem importa
+            const ETAPAS = [
+              ['inicio',                    'Iniciando conversa',          'Bot apresentando o serviço.'],
+              ['aguarda_nome',              'Aguardando nome',             'Cliente precisa informar o nome.'],
+              ['aguarda_cep',               'Aguardando CEP',              'Cliente precisa enviar o CEP do imóvel.'],
+              ['aguarda_plano',             'Aguardando escolha do plano', 'Cliente precisa escolher um plano da lista.'],
+              ['aguarda_numero',            'Aguardando número',           'Cliente precisa informar o número da residência.'],
+              ['aguarda_complemento',       'Aguardando complemento',      'Cliente precisa enviar complemento ou responder "não".'],
+              ['aguarda_cpf',               'Aguardando CPF',              'Cliente precisa enviar o CPF.'],
+              ['aguarda_data_nasc',         'Aguardando data de nascimento', 'Cliente precisa enviar a data no formato dd/mm/aaaa.'],
+              ['aguarda_email',             'Aguardando email',            'Cliente precisa informar um email.'],
+              ['aguarda_doc_rg_frente',     'Aguardando frente do RG/CNH', 'Cliente precisa enviar foto ou PDF da frente do documento.'],
+              ['aguarda_doc_rg_verso',      'Aguardando verso do RG/CNH',  'Cliente precisa enviar foto ou PDF do verso.'],
+              ['aguarda_confirmacao_final', 'Aguardando confirmação',      'Cliente revisando os dados antes de confirmar.'],
+              ['concluido',                 'Cadastro concluído',          'Bot finalizou. Pronto pra vendedor processar.'],
+            ];
+            const LATERAIS = {
+              'aguarda_humano':        ['Aguardando atendente humano', 'Cliente pediu pra falar com pessoa.'],
+              'aguarda_pos_concluido': ['Pós-conclusão',                'Bot perguntando se precisa de mais algo.'],
+            };
+            const total = ETAPAS.length;
+            const idx = ETAPAS.findIndex(e => e[0] === estado);
+
+            let nome, desc, pct = 0, contador = '';
+            if (idx >= 0) {
+              nome = ETAPAS[idx][1]; desc = ETAPAS[idx][2];
+              pct = Math.round(((idx + 1) / total) * 100);
+              contador = `Etapa ${idx + 1} de ${total} · ${pct}%`;
+            } else if (LATERAIS[estado]) {
+              nome = LATERAIS[estado][0]; desc = LATERAIS[estado][1];
+            } else {
+              nome = estado || '—'; desc = '';
+            }
+
+            document.getElementById('botEtapaNome').textContent = nome;
+            document.getElementById('botEtapaDesc').textContent = desc;
+            document.getElementById('botEtapaContador').textContent = contador;
+            const fill = document.getElementById('botProgressFill');
+            fill.style.width = pct + '%';
+            if (estado === 'concluido') fill.classList.add('is-done');
+
+            function fmtMin(min) {
+              if (min < 1) return 'agora';
+              if (min < 60) return min + ' min';
+              const h = Math.floor(min / 60), m = min % 60;
+              if (h < 24) return m ? `${h}h ${m}min` : `${h}h`;
+              const d = Math.floor(h / 24), hr = h % 24;
+              return hr ? `${d}d ${hr}h` : `${d}d`;
+            }
+            function atualizarTempo() {
+              const badge = document.getElementById('botTempoBadge');
+              const abs = document.getElementById('botTempoAbsoluto');
+              if (!atualizadoIso) { badge.textContent = '—'; badge.className = 'bot-tempo-badge bot-tempo-neutro'; return; }
+              const dt = new Date(atualizadoIso);
+              if (isNaN(dt)) { badge.textContent = '—'; return; }
+              const min = Math.max(0, Math.round((Date.now() - dt) / 60000));
+              let cor;
+              if (estado === 'concluido' || LATERAIS[estado]) cor = 'neutro';
+              else if (min < 30)  cor = 'verde';
+              else if (min < 240) cor = 'amarelo';
+              else                cor = 'vermelho';
+              badge.textContent = 'há ' + fmtMin(min);
+              badge.className = 'bot-tempo-badge bot-tempo-' + cor;
+              abs.textContent = 'Última atualização: '
+                + dt.toLocaleDateString('pt-BR')
+                + ' às ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            }
+            atualizarTempo();
+            setInterval(atualizarTempo, 30000);
+          })();
+          </script>
         </div>
       </div>
       {% endwith %}
@@ -382,6 +460,19 @@
                     <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
                   </div>
                   <div class="tl-meta">#{{ item.numero }}{% if item.agente %} · por {{ item.agente }}{% endif %}</div>
+                {% elif item.tipo == 'venda_criada' %}
+                  <div class="tl-dot dot-venda"></div>
+                  <div class="tl-header">
+                    <div class="tl-title">
+                      <i class="bi bi-bag-check" style="color: var(--color-success); font-size: 12px;"></i>
+                      <strong>Venda criada</strong>
+                      {% if item.obj.plano %}<span style="color: var(--color-text-muted);">— {{ item.obj.plano.nome }}</span>{% endif %}
+                    </div>
+                    <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
+                  </div>
+                  <div class="tl-meta">
+                    {{ item.obj.get_status_display }}{% if item.obj.valor %} · R$ {{ item.obj.valor }}{% endif %}
+                  </div>
                 {% endif %}
               </div>
             {% endfor %}
