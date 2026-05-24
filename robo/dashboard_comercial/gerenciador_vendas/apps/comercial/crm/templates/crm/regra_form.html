@@ -7,7 +7,7 @@
   <div class="page-header-top">
     <div>
       <h1 class="page-title">{% if regra %}Editar regra{% else %}Nova regra{% endif %}</h1>
-      <p class="page-subtitle">Configure as condições que fazem uma oportunidade avançar pro estágio escolhido.</p>
+      <p class="page-subtitle">Configure as condições, o estágio destino (opcional) e as ações que serão executadas.</p>
     </div>
     <div class="page-actions">
       <a href="{% url 'crm:automacoes_pipeline' %}" class="btn btn-ghost btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
@@ -27,15 +27,16 @@
 
     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3);">
       <div class="field">
-        <label class="field-label">Estágio destino *</label>
+        <label class="field-label">Estágio destino <span style="color: var(--color-text-muted); font-weight: normal;">(opcional)</span></label>
         <div class="field-input-wrap">
-          <select name="estagio" class="field-input" required>
-            <option value="">Selecione...</option>
+          <select name="estagio" class="field-input">
+            <option value="">Nenhum — só executar ações</option>
             {% for e in estagios %}
               <option value="{{ e.pk }}" {% if regra and regra.estagio_id == e.pk %}selected{% elif not regra and estagio_preselecionado_id == e.pk %}selected{% endif %}>{{ e.pipeline.nome|default:"—" }} &middot; {{ e.nome }}</option>
             {% endfor %}
           </select>
         </div>
+        <div class="field-help">Se selecionado, move a oportunidade para esse estágio quando as condições baterem.</div>
       </div>
       <div class="field">
         <label class="field-label">Prioridade</label>
@@ -50,6 +51,24 @@
           <input type="checkbox" name="ativo" {% if not regra or regra.ativo %}checked{% endif %}> Ativa
         </label>
       </div>
+    </div>
+
+    <hr style="margin: var(--sp-5) 0; border: none; border-top: 1px solid var(--color-border);">
+
+    <h3 style="font-size: var(--fs-md); font-weight: var(--fw-bold); margin: 0 0 var(--sp-3);">Ações</h3>
+    <div style="display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-2);">
+      {% for acao in acoes_disponiveis %}
+        <label style="display: flex; align-items: flex-start; gap: var(--sp-2); cursor: pointer; padding: var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); {% if acao.tipo in acoes_selecionadas %}background: var(--color-primary-soft); border-color: var(--color-primary);{% endif %}">
+          <input type="checkbox" name="acao_tipo" value="{{ acao.tipo }}" {% if acao.tipo in acoes_selecionadas %}checked{% endif %} style="margin-top: 2px; flex-shrink: 0;">
+          <div>
+            <div style="font-weight: var(--fw-medium);"><i class="bi {{ acao.icon }}"></i> {{ acao.label }}</div>
+            <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">{{ acao.descricao }}</div>
+          </div>
+        </label>
+      {% endfor %}
+    </div>
+    <div style="font-size: var(--fs-xs); color: var(--color-text-muted); margin-bottom: var(--sp-4);">
+      As ações são executadas toda vez que as condições abaixo forem satisfeitas. Ao menos um estágio destino ou uma ação deve ser configurada.
     </div>
 
     <hr style="margin: var(--sp-5) 0; border: none; border-top: 1px solid var(--color-border);">

@@ -596,7 +596,10 @@ def oportunidade_detalhe(request, pk):
             conversa_id__in=conversa_ids
         ).order_by('data_envio')[:50]
 
-    # Timeline mesclada: estágios + contatos + conversas, ordenados por data
+    from apps.comercial.crm.models import Venda
+    vendas_oportunidade = Venda.objects.filter(oportunidade=oportunidade).select_related('plano').order_by('data_venda')
+
+    # Timeline mesclada: estágios + contatos + conversas + vendas, ordenados por data
     timeline_items = []
     for he in historico_estagios:
         timeline_items.append({
@@ -626,6 +629,12 @@ def oportunidade_detalhe(request, pk):
                 'numero': c.numero,
                 'agente': c.agente.get_full_name() or c.agente.username if c.agente else None,
             })
+    for v in vendas_oportunidade:
+        timeline_items.append({
+            'tipo': 'venda_criada',
+            'data': v.data_venda,
+            'obj': v,
+        })
     timeline_items.sort(key=lambda x: x['data'], reverse=True)
 
     context = {
@@ -2215,6 +2224,16 @@ from .services.automacao_constantes import (
     TIPOS_CONDICAO, OPERADORES, TIPOS_CONDICAO_DICT, OPERADORES_DICT,
 )
 
+ACOES_DISPONIVEIS = [
+    {
+        'tipo': 'criar_venda',
+        'label': 'Criar Venda',
+        'descricao': 'Cria um registro de Venda para o lead (idempotente — não duplica)',
+        'icon': 'bi-bag-check',
+    },
+]
+ACOES_DISPONIVEIS_DICT = {a['tipo']: a for a in ACOES_DISPONIVEIS}
+
 
 def _formatar_condicao(cond):
     """Formata uma condição em prosa pra exibir na UI."""
@@ -2271,6 +2290,7 @@ def automacoes_pipeline_view(request):
                     'prioridade': regra.prioridade,
                     'ativo': regra.ativo,
                     'condicoes_prosa': [_formatar_condicao(c) for c in (regra.condicoes or [])],
+                    'acoes_labels': [ACOES_DISPONIVEIS_DICT.get(a.get('tipo'), {}).get('label', a.get('tipo')) for a in (regra.acoes or [])],
                     'atualizado_em': regra.atualizado_em,
                     'total_disparos': getattr(regra, 'total_disparos', 0),
                     'ultima_execucao': getattr(regra, 'ultima_execucao', None),
@@ -2293,10 +2313,31 @@ def automacoes_pipeline_view(request):
             'total_regras': total_regras_pipe,
         })
 
+    # Regras de ação pura (sem estágio destino)
+    from .models import RegraPipelineEstagio
+    regras_acao_pura = []
+    for regra in RegraPipelineEstagio.objects.filter(estagio__isnull=True).order_by('prioridade'):
+        regras_acao_pura.append({
+            'id': regra.pk,
+            'nome': regra.nome,
+            'prioridade': regra.prioridade,
+            'ativo': regra.ativo,
+            'condicoes_prosa': [_formatar_condicao(c) for c in (regra.condicoes or [])],
+            'acoes_labels': [ACOES_DISPONIVEIS_DICT.get(a.get('tipo'), {}).get('label', a.get('tipo')) for a in (regra.acoes or [])],
+            'atualizado_em': regra.atualizado_em,
+            'total_disparos': getattr(regra, 'total_disparos', 0),
+            'ultima_execucao': getattr(regra, 'ultima_execucao', None),
+        })
+        total_regras += 1
+        if regra.ativo:
+            total_ativas += 1
+        total_disparos_global += regra.total_disparos or 0
+
     return render(request, 'crm/automacoes_pipeline.html', {
         'pipelines_ctx': pipelines_ctx,
         'pipelines_todos': pipelines_todos,
         'pipeline_filtro': pipeline_filtro,
+        'regras_acao_pura': regras_acao_pura,
         'total_regras': total_regras,
         'total_ativas': total_ativas,
         'total_disparos_global': total_disparos_global,
@@ -2340,13 +2381,21 @@ def _parse_condicoes_do_post(request):
 def _contexto_form_regra(regra=None, estagio_preselecionado=None):
     from .models import PipelineEstagio
     estagios = PipelineEstagio.objects.filter(ativo=True).order_by('ordem')
+    acoes_selecionadas = {a.get('tipo') for a in (regra.acoes or [])} if regra else set()
     return {
         'regra': regra,
         'estagios': estagios,
         'estagio_preselecionado_id': estagio_preselecionado,
         'tipos_condicao': TIPOS_CONDICAO,
         'operadores': OPERADORES,
+        'acoes_disponiveis': ACOES_DISPONIVEIS,
+        'acoes_selecionadas': acoes_selecionadas,
     }
+
+
+def _parse_acoes_do_post(request):
+    tipos = request.POST.getlist('acao_tipo')
+    return [{'tipo': t} for t in tipos if t.strip()]
 
 
 @login_required
@@ -2360,15 +2409,18 @@ def regra_pipeline_criar(request):
 
     if request.method == 'POST':
         estagio_id = request.POST.get('estagio')
-        estagio = PipelineEstagio.objects.filter(pk=estagio_id).first()
-        if not estagio:
-            return JsonResponse({'error': 'Estágio inválido'}, status=400)
+        estagio = PipelineEstagio.objects.filter(pk=estagio_id).first() if estagio_id else None
+        acoes = _parse_acoes_do_post(request)
+        if not estagio and not acoes:
+            return JsonResponse({'error': 'Selecione um estágio destino ou pelo menos uma ação'}, status=400)
 
         RegraPipelineEstagio.objects.create(
+            tenant=request.tenant,
             estagio=estagio,
             nome=request.POST.get('nome', '').strip() or 'Regra sem nome',
             prioridade=int(request.POST.get('prioridade') or 0),
             condicoes=_parse_condicoes_do_post(request),
+            acoes=acoes,
             ativo=bool(request.POST.get('ativo')),
         )
         return redirect('crm:automacoes_pipeline')
@@ -2395,13 +2447,16 @@ def regra_pipeline_editar(request, pk):
 
     if request.method == 'POST':
         estagio_id = request.POST.get('estagio')
-        estagio = PipelineEstagio.objects.filter(pk=estagio_id).first()
-        if estagio:
-            regra.estagio = estagio
+        estagio = PipelineEstagio.objects.filter(pk=estagio_id).first() if estagio_id else None
+        acoes = _parse_acoes_do_post(request)
+        if not estagio and not acoes:
+            return JsonResponse({'error': 'Selecione um estágio destino ou pelo menos uma ação'}, status=400)
+        regra.estagio = estagio
         regra.nome = request.POST.get('nome', regra.nome).strip() or regra.nome
         regra.prioridade = int(request.POST.get('prioridade') or regra.prioridade)
         regra.ativo = bool(request.POST.get('ativo'))
         regra.condicoes = _parse_condicoes_do_post(request)
+        regra.acoes = acoes
         regra.save()
         return redirect('crm:automacoes_pipeline')
 

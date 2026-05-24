@@ -10,5 +10,17 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "allow": [
+      "mcp__paper__get_screenshot",
+      "mcp__paper__get_children",
+      "mcp__paper__get_basic_info",
+      "mcp__paper__get_jsx",
+      "mcp__paper__get_font_family_info",
+      "mcp__paper__get_guide",
+      "mcp__claude_ai_Notion__notion-fetch",
+      "mcp__n8n-trcarrion__list_workflows"
+    ]
   }
 }

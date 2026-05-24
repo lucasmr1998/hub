@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 def processar_oportunidade(oportunidade):
     """
     Ponto de entrada chamado pelos signals.
-    Avalia regras e move a oportunidade se alguma bater.
+    Avalia regras de estágio (move oportunidade) e regras de ação (executa ações).
     """
     if oportunidade is None:
         return
@@ -38,16 +38,15 @@ def processar_oportunidade(oportunidade):
     if estagio.is_final_ganho or estagio.is_final_perdido:
         return
 
+    # 1. Regras com estágio destino → move oportunidade
     resultado = _avaliar_regras(oportunidade)
-    if resultado is None:
-        return
+    if resultado is not None:
+        estagio_destino, regra, _condicoes = resultado
+        if oportunidade.estagio_id != estagio_destino.pk:
+            _mover_por_regra(oportunidade, estagio_destino, regra)
 
-    estagio_destino, regra, _condicoes = resultado
-
-    if oportunidade.estagio_id == estagio_destino.pk:
-        return
-
-    _mover_por_regra(oportunidade, estagio_destino, regra)
+    # 2. Regras de ação pura (sem estágio destino)
+    _avaliar_e_executar_acoes(oportunidade)
 
 
 def processar_lead(lead_id):
@@ -215,6 +214,76 @@ def _mover_por_regra(oportunidade, estagio_destino, regra):
         )
     except Exception:
         pass
+
+
+# ============================================================================
+# AÇÕES
+# ============================================================================
+
+def _avaliar_e_executar_acoes(oportunidade):
+    """Avalia regras sem estágio destino e executa suas ações se condições batem."""
+    from apps.comercial.crm.models import RegraPipelineEstagio
+
+    tenant = oportunidade.tenant
+    if tenant is None:
+        return
+
+    contexto = _construir_contexto(oportunidade)
+
+    regras_acao = (
+        RegraPipelineEstagio.all_tenants
+        .filter(tenant=tenant, ativo=True, estagio__isnull=True)
+        .order_by('prioridade')
+    )
+
+    for regra in regras_acao:
+        if not (regra.acoes or []):
+            continue
+        if _regra_bate(regra, contexto):
+            _executar_acoes_regra(oportunidade, regra)
+
+
+def _executar_acoes_regra(oportunidade, regra):
+    """Executa a lista de ações de uma regra e atualiza métricas."""
+    acoes = regra.acoes or []
+    for acao in acoes:
+        tipo = acao.get('tipo')
+        executor = _EXECUTORES_ACAO.get(tipo)
+        if executor is None:
+            logger.warning("[Automacao Pipeline] Tipo de ação desconhecido: %s", tipo)
+            continue
+        try:
+            executor(oportunidade)
+        except Exception as exc:
+            logger.warning("[Automacao Pipeline] Falha ao executar ação %s: %s", tipo, exc)
+
+    try:
+        regra.total_disparos = (regra.total_disparos or 0) + 1
+        regra.ultima_execucao = timezone.now()
+        regra.save(update_fields=['total_disparos', 'ultima_execucao'])
+    except Exception as exc:
+        logger.warning("[Automacao Pipeline] Falha ao atualizar métricas da regra %s: %s", regra.pk, exc)
+
+
+def _acao_criar_venda(oportunidade):
+    from apps.comercial.crm.models import Venda
+    tenant = oportunidade.tenant
+    if Venda.all_tenants.filter(tenant=tenant, oportunidade=oportunidade).exists():
+        return
+    Venda.all_tenants.create(
+        tenant=tenant,
+        lead=oportunidade.lead,
+        oportunidade=oportunidade,
+        plano=getattr(oportunidade, 'plano_interesse', None),
+        valor=oportunidade.valor_estimado,
+        status=Venda.STATUS_PENDENTE_ERP,
+    )
+    logger.info("[Automacao Pipeline] Venda criada para oportunidade %s", oportunidade.pk)
+
+
+_EXECUTORES_ACAO = {
+    'criar_venda': _acao_criar_venda,
+}
 
 
 def processar_seguro(lead_id=None, oportunidade=None):

@@ -88,6 +88,7 @@
                   <th style="text-align: center; width: 70px;">Prio.</th>
                   <th>Nome</th>
                   <th>Condições (AND)</th>
+                  <th>Executa</th>
                   <th style="text-align: center; width: 90px;">Disparos</th>
                   <th style="text-align: center; width: 90px;">Status</th>
                   <th style="text-align: center; width: 150px;">Última execução</th>
@@ -106,6 +107,17 @@
                         </ul>
                       {% else %}
                         <span style="color: var(--color-text-muted); font-style: italic;">sem condições — regra nunca dispara</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if regra.acoes_labels %}
+                        <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                          {% for label in regra.acoes_labels %}
+                            <span style="font-size: var(--fs-xs); background: var(--color-primary-soft); color: var(--color-primary); padding: 2px 7px; border-radius: var(--radius-full);">{{ label }}</span>
+                          {% endfor %}
+                        </div>
+                      {% else %}
+                        <span style="color: var(--color-text-muted); font-size: var(--fs-xs);">—</span>
                       {% endif %}
                     </td>
                     <td style="text-align: center; font-weight: var(--fw-bold);">{{ regra.total_disparos }}</td>
@@ -161,6 +173,75 @@
     </div>
   </div>
 {% endfor %}
+
+{% if regras_acao_pura %}
+<details open style="margin-top: var(--sp-4);">
+  <summary style="font-size: var(--fs-md); font-weight: var(--fw-bold); cursor: pointer; padding: var(--sp-2) 0; list-style: none; display: flex; align-items: center; gap: var(--sp-2);">
+    <i class="bi bi-lightning-charge" style="color: var(--color-warning);"></i>
+    Regras de ação (sem movimento de estágio)
+    <span style="font-size: var(--fs-xs); font-weight: normal; color: var(--color-text-muted);">{{ regras_acao_pura|length }} regra{{ regras_acao_pura|length|pluralize }}</span>
+  </summary>
+  <div style="margin-top: var(--sp-3);">
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="text-align: center; width: 70px;">Prio.</th>
+            <th>Nome</th>
+            <th>Condições (AND)</th>
+            <th>Executa</th>
+            <th style="text-align: center; width: 90px;">Disparos</th>
+            <th style="text-align: center; width: 90px;">Status</th>
+            <th style="text-align: center; width: 150px;">Última execução</th>
+            <th style="text-align: center; width: 180px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for regra in regras_acao_pura %}
+            <tr>
+              <td style="text-align: center; font-weight: var(--fw-bold);">{{ regra.prioridade }}</td>
+              <td><strong>{{ regra.nome }}</strong></td>
+              <td>
+                {% if regra.condicoes_prosa %}
+                  <ul style="margin: 0; padding-left: 18px; font-size: var(--fs-sm);">
+                    {% for c in regra.condicoes_prosa %}<li>{{ c }}</li>{% endfor %}
+                  </ul>
+                {% else %}
+                  <span style="color: var(--color-text-muted); font-style: italic;">sem condições — regra nunca dispara</span>
+                {% endif %}
+              </td>
+              <td>
+                {% for label in regra.acoes_labels %}
+                  <span style="font-size: var(--fs-xs); background: var(--color-primary-soft); color: var(--color-primary); padding: 2px 7px; border-radius: var(--radius-full);">{{ label }}</span>
+                {% endfor %}
+              </td>
+              <td style="text-align: center; font-weight: var(--fw-bold);">{{ regra.total_disparos }}</td>
+              <td style="text-align: center;">
+                {% if regra.ativo %}
+                  {% include "components/badge.html" with variant="success" label="Ativa" size="sm" %}
+                {% else %}
+                  {% include "components/badge.html" with variant="danger" label="Inativa" size="sm" %}
+                {% endif %}
+              </td>
+              <td style="text-align: center; font-size: var(--fs-xs); color: var(--color-text-muted);">
+                {% if regra.ultima_execucao %}{{ regra.ultima_execucao|date:"d/m/Y H:i" }}{% else %}—{% endif %}
+              </td>
+              <td style="text-align: center; white-space: nowrap;">
+                <a href="{% url 'crm:regra_pipeline_editar' regra.id %}" class="btn btn-ghost btn-sm" title="Editar"><i class="bi bi-pencil"></i></a>
+                <button class="btn btn-ghost btn-sm" title="{% if regra.ativo %}Desativar{% else %}Ativar{% endif %}" onclick="toggleRegra({{ regra.id }})">
+                  <i class="bi {% if regra.ativo %}bi-pause{% else %}bi-play{% endif %}"></i>
+                </button>
+                <button class="btn btn-ghost-danger btn-sm" title="Excluir" onclick="excluirRegra({{ regra.id }}, '{{ regra.nome|escapejs }}')"><i class="bi bi-trash"></i></button>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</details>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_css %}

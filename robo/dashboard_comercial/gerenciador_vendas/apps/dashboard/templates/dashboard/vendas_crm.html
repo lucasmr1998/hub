@@ -798,7 +798,7 @@ function renderizarTabela(oportunidades) {
       <td>
         <span class="cell-main">${formatarDataCurta(o.data_venda)}</span>
       </td>
-      <td onclick="event.stopPropagation();" id="erp-status-${o.id}">
+      <td id="erp-status-${o.id}">
         ${_erpStatusBadge(o.status_erp, o.status_erp_label)}
         ${o.erro_erp_msg ? `<span class="cell-sub" style="color:var(--color-danger);margin-top:2px;" title="${o.erro_erp_msg}"><i class="bi bi-exclamation-circle"></i> Erro</span>` : ''}
       </td>

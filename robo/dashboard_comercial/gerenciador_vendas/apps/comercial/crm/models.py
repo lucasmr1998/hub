@@ -898,7 +898,9 @@ class RegraPipelineEstagio(TenantMixin):
         PipelineEstagio,
         on_delete=models.CASCADE,
         related_name='regras',
-        verbose_name="Estágio",
+        verbose_name="Estágio destino",
+        null=True, blank=True,
+        help_text="Estágio para onde a oportunidade será movida. Deixe em branco para regras de ação sem movimento de estágio.",
     )
     nome = models.CharField(
         max_length=150,
@@ -910,6 +912,12 @@ class RegraPipelineEstagio(TenantMixin):
         blank=True,
         verbose_name="Condições",
         help_text="Lista de condições AND: [{tipo, campo, operador, valor}, ...]",
+    )
+    acoes = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Ações adicionais",
+        help_text="Ações executadas quando a regra dispara: [{tipo: 'criar_venda'}, ...]",
     )
     ativo = models.BooleanField(default=True, verbose_name="Ativa")
     prioridade = models.PositiveIntegerField(
@@ -937,7 +945,8 @@ class RegraPipelineEstagio(TenantMixin):
         ordering = ['estagio__ordem', 'prioridade']
 
     def __str__(self):
-        return f"{self.estagio.nome} — {self.nome}"
+        estagio_str = self.estagio.nome if self.estagio else '(sem estágio)'
+        return f"{estagio_str} — {self.nome}"
 
 
 # ============================================================================

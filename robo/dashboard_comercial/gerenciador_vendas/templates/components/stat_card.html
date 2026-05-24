@@ -8,8 +8,9 @@ Params:
   icon: classe bi-* (opcional, icone no canto superior direito)
   icon_variant: primary (default) | success | warning | danger | info
   footnote: texto auxiliar embaixo (ex: "vs semana passada")
+  id: id HTML do elemento raiz (opcional, para atualizar via JS)
 {% endcomment %}
-<div class="stat-card">
+<div class="stat-card"{% if id %} id="{{ id }}"{% endif %}>
   <div class="stat-card-head">
     <span class="stat-card-label">{{ label }}</span>
     {% if icon %}
