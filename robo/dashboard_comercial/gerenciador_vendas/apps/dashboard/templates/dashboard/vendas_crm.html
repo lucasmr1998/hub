@@ -1225,15 +1225,12 @@ function _renderizarDocumentos(data) {
     const statusLabel = { valido: 'Aprovado', rejeitado: 'Rejeitado', pendente: 'Pendente' }[statusKey];
     const statusIcon = { valido: 'bi-check-circle', rejeitado: 'bi-x-circle', pendente: 'bi-clock' }[statusKey];
 
-    const isImagem = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(img.link_url);
-    const imgTag = isImagem
-      ? `<img class="doc-card-img" src="${img.link_url}" alt="${img.descricao || 'Documento'}"
+    const imgTag = `<img class="doc-card-img" src="${img.link_url}" alt="${img.descricao || 'Documento'}"
             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
             onclick="abrirLightbox('${img.link_url}')">`
-      : '';
     const placeholder = `
       <a href="${img.link_url}" target="_blank" class="doc-card-img-placeholder"
-         style="${isImagem ? 'display: none;' : ''}">
+         style="display: none;">
         <i class="bi bi-file-earmark"></i>
       </a>`;
 
