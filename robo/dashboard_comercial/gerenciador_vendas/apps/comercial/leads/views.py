@@ -736,18 +736,19 @@ def registrar_imagem_lead_api(request):
 
 
 @csrf_exempt
-@api_token_required
+@login_required
 def listar_imagens_lead_api(request):
     """Lista imagens de um LeadProspecto.  GET ?lead_id=1"""
     lead_id = request.GET.get('lead_id')
     if not lead_id:
         return JsonResponse({'error': 'Parâmetro obrigatório: lead_id'}, status=400)
 
-    imagens = ImagemLeadProspecto.objects.filter(lead_id=lead_id).order_by('-data_criacao')
+    imagens = ImagemLeadProspecto.all_tenants.filter(lead_id=lead_id).order_by('-data_criacao')
     data = [{
         'id': img.id,
         'link_url': img.link_url,
         'descricao': img.descricao,
+        'status_validacao': img.status_validacao,
         'data_criacao': img.data_criacao.isoformat(),
     } for img in imagens]
 
