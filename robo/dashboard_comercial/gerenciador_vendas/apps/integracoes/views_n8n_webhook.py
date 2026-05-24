@@ -802,11 +802,25 @@ def registrar_imagem_lead(request):
     except LeadProspecto.DoesNotExist:
         return JsonResponse({'sucesso': False, 'erro': f'Lead {lead_id} nao encontrado'}, status=404)
 
+    # Se a URL passada é do WhatsApp (expira), tenta usar o arquivo já hospedado
+    # que o webhook inbox_mensagem baixou via Uazapi e salvou em mensagem.arquivo
+    url_final = link_url
+    try:
+        from apps.inbox.models import Mensagem as InboxMensagem
+        from django.conf import settings as django_settings
+        msg = InboxMensagem.all_tenants.filter(
+            conversa__lead=lead, arquivo_url=link_url
+        ).exclude(arquivo='').first()
+        if msg and msg.arquivo:
+            url_final = django_settings.MEDIA_URL + str(msg.arquivo)
+    except Exception:
+        pass
+
     from apps.comercial.leads.models import ImagemLeadProspecto
     imagem = ImagemLeadProspecto.all_tenants.create(
         tenant=tenant,
         lead=lead,
-        link_url=link_url,
+        link_url=url_final,
         descricao=descricao or 'Documento enviado pelo bot',
     )
 
