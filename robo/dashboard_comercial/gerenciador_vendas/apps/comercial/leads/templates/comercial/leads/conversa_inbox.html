@@ -45,9 +45,16 @@
   .msg-arquivo { display: flex; align-items: center; gap: 6px; color: #374151; text-decoration: none; font-size: 12px; }
   .msg-arquivo:hover { text-decoration: underline; }
   .msg-audio { font-style: italic; color: #6b7280; font-size: 12px; }
+  @media print {
+    .header { position: static; }
+    .no-print { display: none !important; }
+  }
 </style>
 </head>
 <body>
+{% if request.GET.print %}
+<script>window.onload = function(){ window.print(); }</script>
+{% endif %}
 
 <div class="header">
   <div class="header-nome">{{ lead.nome_razaosocial }}</div>

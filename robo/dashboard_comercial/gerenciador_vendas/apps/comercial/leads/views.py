@@ -481,65 +481,10 @@ def visualizar_conversa_pdf(request, lead_id):
 
 @login_required
 def visualizar_conversa_pdf_inbox(request, lead_id):
-    import logging
-    import re
-    import base64
-    from django.template.loader import render_to_string
-
-    try:
-        lead = LeadProspecto.objects.get(id=lead_id)
-    except LeadProspecto.DoesNotExist:
-        raise Http404("Lead não encontrado")
-
-    from apps.inbox.models import Conversa as InboxConversa
-    conversas = list(
-        InboxConversa.all_tenants
-        .filter(lead=lead)
-        .prefetch_related('mensagens')
-        .order_by('id')
-    )
-    if not conversas:
-        raise Http404("Conversa não disponível para este lead")
-
-    # Substitui URLs de imagens privadas por data URIs base64 antes de gerar o PDF
-    html_str = render_to_string('comercial/leads/conversa_inbox.html', {
-        'lead': lead,
-        'conversas': conversas,
-    }, request=request)
-
-    def _substituir_imagens(html):
-        from apps.inbox.models import Mensagem as InboxMensagem, PrivateMidiaStorage
-        def _inline(m):
-            msg_id = int(m.group(1))
-            try:
-                msg = InboxMensagem.all_tenants.get(pk=msg_id)
-                if msg.arquivo:
-                    with PrivateMidiaStorage().open(msg.arquivo.name) as f:
-                        data = f.read()
-                    b64 = base64.b64encode(data).decode()
-                    return f'src="data:image/jpeg;base64,{b64}"'
-            except Exception:
-                pass
-            return 'src=""'
-        return re.sub(r'src="[^"]*?/inbox/api/conversas/\d+/midia/(\d+)/[^"]*?"', _inline, html)
-
-    html_str = _substituir_imagens(html_str)
-
-    try:
-        from io import BytesIO
-        from xhtml2pdf import pisa
-        buffer = BytesIO()
-        result = pisa.CreatePDF(html_str.encode('utf-8'), dest=buffer, encoding='utf-8')
-        if result.err:
-            raise Exception(f'xhtml2pdf errors: {result.err}')
-        pdf_bytes = buffer.getvalue()
-    except Exception as exc:
-        logging.getLogger(__name__).error("Erro ao gerar PDF inbox para lead %s: %s", lead_id, exc)
-        raise Http404("Erro ao gerar PDF da conversa")
-
-    response = HttpResponse(pdf_bytes, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="conversa_{lead_id}.pdf"'
-    return response
+    from django.shortcuts import redirect
+    from django.urls import reverse
+    url = reverse('comercial_leads:visualizar_conversa_lead', args=[lead_id])
+    return redirect(f'{url}?print=1')
 
 
 # ============================================================================
