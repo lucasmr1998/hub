@@ -17,6 +17,7 @@ urlpatterns = [
     path('api/campos-custom/<int:campo_id>/', views.api_campo_custom_detalhe, name='api_campo_custom_detalhe'),
     path('leads/<int:lead_id>/conversa/', views.visualizar_conversa_lead, name='visualizar_conversa_lead'),
     path('leads/<int:lead_id>/conversa/pdf/', views.visualizar_conversa_pdf, name='visualizar_conversa_pdf'),
+    path('leads/<int:lead_id>/conversa/pdf/inbox/', views.visualizar_conversa_pdf_inbox, name='visualizar_conversa_pdf_inbox'),
 
     # APIs de registro/update de leads
     path('api/leads/registrar/', views.registrar_lead_api, name='registrar_lead'),

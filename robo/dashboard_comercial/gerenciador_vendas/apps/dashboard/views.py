@@ -4,6 +4,7 @@
 # ============================================================================
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.db.models import Count, Sum, Avg, Q
@@ -404,7 +405,10 @@ def api_oportunidades_vendas(request):
             'lead_telefone': lead.telefone if lead else '',
             'lead_cpf': (lead.cpf_cnpj or '') if lead else '',
             'lead_email': (lead.email or '') if lead else '',
-            'url_pdf_conversa': (lead.url_pdf_conversa or '') if lead else '',
+            'url_pdf_conversa': (lead.url_pdf_conversa or (
+                reverse('comercial_leads:visualizar_conversa_pdf_inbox', args=[lead.id])
+                if lead.id in leads_com_inbox else ''
+            )) if lead else '',
             'html_conversa_path': (lead.html_conversa_path or ('inbox' if lead.id in leads_com_inbox else '')) if lead else '',
             'oportunidade_id': oport.id if oport else None,
             'pipeline_nome': estagio.pipeline.nome if (estagio and estagio.pipeline) else '',
