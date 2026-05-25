@@ -167,7 +167,7 @@ def widget_enviar(request, conversa_id):
     msg.save()
 
     conversa.ultima_mensagem_em = msg.data_envio
-    conversa.ultima_mensagem_preview = conteudo[:255]
+    conversa.ultima_mensagem_preview = services.preview_mensagem(conteudo, 'texto')
     conversa.mensagens_nao_lidas = (conversa.mensagens_nao_lidas or 0) + 1
 
     if conversa.status in ['resolvida', 'arquivada']:

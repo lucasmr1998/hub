@@ -674,8 +674,11 @@ def inbox_mensagem(request):
                 # mensagem: ordem (sobe pro topo via ultima_mensagem_em),
                 # preview (texto que aparece no card) e badge de nao-lidas
                 # quando a mensagem veio do cliente.
+                from apps.inbox.services import preview_mensagem
                 conversa.ultima_mensagem_em = mensagem.data_envio
-                conversa.ultima_mensagem_preview = (mensagem.conteudo or '')[:255]
+                conversa.ultima_mensagem_preview = preview_mensagem(
+                    mensagem.conteudo, mensagem.tipo_conteudo
+                )
                 campos_conv = ['ultima_mensagem_em', 'ultima_mensagem_preview']
                 if remetente_tipo == 'contato':
                     conversa.mensagens_nao_lidas = (conversa.mensagens_nao_lidas or 0) + 1

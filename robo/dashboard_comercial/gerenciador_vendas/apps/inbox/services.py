@@ -19,6 +19,27 @@ from .models import CanalInbox, Conversa, Mensagem
 logger = logging.getLogger(__name__)
 
 
+_PREVIEW_LABELS_MIDIA = {
+    'audio': '[audio]',
+    'imagem': '[imagem]',
+    'video': '[video]',
+    'arquivo': '[arquivo]',
+}
+
+
+def preview_mensagem(conteudo, tipo_conteudo='texto'):
+    """Calcula o preview da Conversa pra exibir na lista do Inbox.
+
+    Quando a mensagem e midia sem caption (conteudo vazio), usa um label
+    generico em vez de string vazia — caso contrario a lista mostra preview
+    em branco e a vendedora nao sabe que tem mensagem nova.
+    """
+    texto = (conteudo or '').strip()
+    if not texto:
+        texto = _PREVIEW_LABELS_MIDIA.get(tipo_conteudo, '')
+    return texto[:255]
+
+
 # ── WebSocket notifications ────────────────────────────────────────────
 
 def _notificar_ws_nova_mensagem(conversa, mensagem):
@@ -259,7 +280,7 @@ def receber_mensagem(telefone, nome, conteudo, tenant, tipo_conteudo='texto',
 
     # Atualizar conversa
     conversa.ultima_mensagem_em = mensagem.data_envio
-    conversa.ultima_mensagem_preview = (conteudo or '')[:255]
+    conversa.ultima_mensagem_preview = preview_mensagem(conteudo, tipo_conteudo)
     conversa.mensagens_nao_lidas = (conversa.mensagens_nao_lidas or 0) + 1
 
     # Se estava resolvida/arquivada, reabrir
@@ -326,7 +347,7 @@ def enviar_mensagem(conversa, conteudo, user, tipo_conteudo='texto',
 
     # Atualizar conversa
     conversa.ultima_mensagem_em = mensagem.data_envio
-    conversa.ultima_mensagem_preview = (conteudo or '')[:255]
+    conversa.ultima_mensagem_preview = preview_mensagem(conteudo, tipo_conteudo)
     conversa.mensagens_nao_lidas = 0
 
     update_fields = [
@@ -752,7 +773,7 @@ def receber_mensagem_widget(visitor_id, nome, conteudo, tenant, email='', telefo
 
     # Atualizar conversa
     conversa.ultima_mensagem_em = mensagem.data_envio
-    conversa.ultima_mensagem_preview = conteudo[:255]
+    conversa.ultima_mensagem_preview = preview_mensagem(conteudo, 'texto')
     conversa.mensagens_nao_lidas = (conversa.mensagens_nao_lidas or 0) + 1
     conversa.save(update_fields=[
         'ultima_mensagem_em', 'ultima_mensagem_preview', 'mensagens_nao_lidas',
