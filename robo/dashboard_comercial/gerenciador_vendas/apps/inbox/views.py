@@ -191,27 +191,44 @@ def api_conversa_detalhe(request, pk):
         }
 
     # Oportunidade CRM
-    if conversa.oportunidade:
-        op = conversa.oportunidade
-        data['oportunidade_info'] = {
+    def _serialize_op(op):
+        """Serializa oportunidade com info pra edicao inline no inbox."""
+        estagios = []
+        if op.pipeline_id:
+            from apps.comercial.crm.models import PipelineEstagio
+            for est in PipelineEstagio.objects.filter(pipeline=op.pipeline, ativo=True).order_by('ordem'):
+                estagios.append({
+                    'id': est.id,
+                    'nome': est.nome,
+                    'ordem': est.ordem,
+                    'is_final_ganho': est.is_final_ganho,
+                    'is_final_perdido': est.is_final_perdido,
+                })
+        tags = []
+        try:
+            for t in op.tags.all():
+                tags.append({'nome': t.nome, 'cor_hex': getattr(t, 'cor_hex', '#94a3b8')})
+        except Exception:
+            pass
+        return {
             'id': op.id,
             'titulo': op.titulo,
             'estagio': op.estagio.nome if op.estagio else '',
+            'estagio_id': op.estagio_id if op.estagio_id else None,
+            'pipeline_id': op.pipeline_id,
+            'estagios_disponiveis': estagios,
+            'tags': tags,
             'valor_estimado': str(op.valor_estimado) if op.valor_estimado else '0',
             'responsavel': op.responsavel.get_full_name() if op.responsavel else '',
         }
+
+    if conversa.oportunidade:
+        data['oportunidade_info'] = _serialize_op(conversa.oportunidade)
     elif conversa.lead:
-        # Tentar puxar oportunidade via lead
         try:
             op = conversa.lead.oportunidade_crm
             if op:
-                data['oportunidade_info'] = {
-                    'id': op.id,
-                    'titulo': op.titulo,
-                    'estagio': op.estagio.nome if op.estagio else '',
-                    'valor_estimado': str(op.valor_estimado) if op.valor_estimado else '0',
-                    'responsavel': op.responsavel.get_full_name() if op.responsavel else '',
-                }
+                data['oportunidade_info'] = _serialize_op(op)
         except Exception:
             pass
 

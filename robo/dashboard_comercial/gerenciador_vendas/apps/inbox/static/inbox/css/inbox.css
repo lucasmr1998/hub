@@ -478,6 +478,39 @@ body.inbox-page .sidebar { display: none; }
 .ctx-info-value { font-weight: 500; font-size: 12px; }
 .ctx-empty { font-size: 12px; color: #94a3b8; }
 
+/* Estagio editavel inline no Lead/CRM */
+.ctx-stage-row .ctx-stage-select {
+    border: 1px solid #e2e8f0; border-radius: 6px;
+    padding: 3px 6px; font-size: 12px; font-family: inherit;
+    background: #fff; cursor: pointer; color: #1e293b;
+    max-width: 60%;
+}
+.ctx-stage-row .ctx-stage-select:focus { outline: 2px solid #3b82f6; outline-offset: 1px; }
+.ctx-stage-row .ctx-stage-select:disabled { opacity: 0.6; cursor: wait; }
+
+/* Tags da oportunidade */
+.ctx-tags-row {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    padding: 6px 0; border-bottom: 1px solid #f1f5f9;
+}
+.ctx-tag-chip {
+    display: inline-flex; align-items: center;
+    padding: 2px 8px; border-radius: 999px;
+    font-size: 10px; font-weight: 600;
+    color: #fff; opacity: 0.9;
+}
+
+/* Atalho pro CRM */
+.ctx-crm-link {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    margin-top: 8px; padding: 6px 12px;
+    border: 1px solid #e2e8f0; border-radius: 8px;
+    background: #fff; color: #1e293b; text-decoration: none;
+    font-size: 12px; font-weight: 500;
+}
+.ctx-crm-link:hover { background: #f8fafc; color: #3b82f6; }
+.ctx-crm-link i { font-size: 10px; }
+
 /* Notes */
 .ctx-notes-list { max-height: 200px; overflow-y: auto; margin-bottom: 8px; }
 .ctx-note-item { padding: 6px 0; border-bottom: 1px solid #f1f5f9; }

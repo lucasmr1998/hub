@@ -42,6 +42,35 @@
         return fetch(url, { ...defaults, ...opts }).then(r => r.json()).catch(e => ({ error: e.message }));
     }
 
+    // Movimentar estagio da oportunidade direto do painel Lead/CRM do Inbox.
+    // Exposta no window porque o select usa onchange inline.
+    window.inboxMoverEstagio = function (selectEl) {
+        const opId = selectEl.dataset.opId;
+        const novoId = selectEl.value;
+        const current = selectEl.dataset.current;
+        if (!opId || !novoId || novoId === current) return;
+        const nomeNovo = selectEl.options[selectEl.selectedIndex].text;
+        selectEl.disabled = true;
+        fetchJSON('/crm/pipeline/mover/', {
+            method: 'POST',
+            body: JSON.stringify({
+                oportunidade_id: opId,
+                estagio_id: novoId,
+                motivo: 'Movido pelo Inbox',
+            }),
+        }).then(d => {
+            if (d && (d.ok || d.success)) {
+                selectEl.dataset.current = novoId;
+                if (typeof toast === 'function') toast('Estagio atualizado', 'Movido pra ' + nomeNovo, 'success');
+            } else {
+                selectEl.value = current;
+                const msg = (d && (d.erro || d.error)) || 'Falha ao mover estagio';
+                if (typeof toast === 'function') toast('Erro', msg, 'danger');
+                else alert(msg);
+            }
+        }).finally(() => { selectEl.disabled = false; });
+    };
+
     function formatTime(isoStr) {
         if (!isoStr) return '';
         const d = new Date(isoStr), now = new Date(), diff = now - d;
@@ -259,23 +288,42 @@
                 chipDiv.innerHTML = '';
             }
 
-            // Lead info
+            // Lead info + Oportunidade editavel (estagio + tags + atalho CRM)
             const leadDiv = document.getElementById('ctxLeadInfo');
             if (data.lead_info) {
                 const l = data.lead_info;
-                leadDiv.innerHTML = `
+                let html = `
                     <div class="ctx-info-row"><span class="ctx-info-label">Nome</span><span class="ctx-info-value">${esc(l.nome)}</span></div>
                     <div class="ctx-info-row"><span class="ctx-info-label">Origem</span><span class="ctx-info-value">${esc(l.origem)}</span></div>
                     <div class="ctx-info-row"><span class="ctx-info-label">Score</span><span class="ctx-info-value">${l.score || '—'}</span></div>
                 `;
                 if (data.oportunidade_info) {
                     const op = data.oportunidade_info;
-                    leadDiv.innerHTML += `
-                        <div class="ctx-info-row"><span class="ctx-info-label">CRM</span><span class="ctx-info-value">${esc(op.titulo)}</span></div>
-                        <div class="ctx-info-row"><span class="ctx-info-label">Estágio</span><span class="ctx-info-value">${esc(op.estagio)}</span></div>
+                    const estagiosList = op.estagios_disponiveis || [];
+                    let estagioCell;
+                    if (estagiosList.length) {
+                        const opts = estagiosList.map(e => {
+                            const sel = e.id === op.estagio_id ? ' selected' : '';
+                            return `<option value="${e.id}"${sel}>${esc(e.nome)}</option>`;
+                        }).join('');
+                        estagioCell = `<select class="ctx-stage-select" data-op-id="${op.id}" data-current="${op.estagio_id}" onchange="inboxMoverEstagio(this)">${opts}</select>`;
+                    } else {
+                        estagioCell = `<span class="ctx-info-value">${esc(op.estagio || '—')}</span>`;
+                    }
+                    const tagsHtml = (op.tags || []).map(t =>
+                        `<span class="ctx-tag-chip" style="background:${esc(t.cor_hex || '#94a3b8')};">${esc(t.nome)}</span>`
+                    ).join('');
+                    html += `
+                        <div class="ctx-info-row"><span class="ctx-info-label">Oport. #${op.id}</span><span class="ctx-info-value">${esc(op.titulo)}</span></div>
                         <div class="ctx-info-row"><span class="ctx-info-label">Valor</span><span class="ctx-info-value">R$ ${op.valor_estimado}</span></div>
+                        <div class="ctx-info-row ctx-stage-row"><span class="ctx-info-label">Estágio</span>${estagioCell}</div>
+                        ${tagsHtml ? `<div class="ctx-tags-row">${tagsHtml}</div>` : ''}
+                        <a class="ctx-crm-link" href="/crm/oportunidades/${op.id}/" target="_blank" rel="noopener">
+                            Abrir no CRM <i class="fas fa-external-link-alt"></i>
+                        </a>
                     `;
                 }
+                leadDiv.innerHTML = html;
             } else {
                 leadDiv.innerHTML = '<p class="ctx-empty">Lead não vinculado</p>';
             }
