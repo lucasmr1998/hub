@@ -42,6 +42,36 @@
         return fetch(url, { ...defaults, ...opts }).then(r => r.json()).catch(e => ({ error: e.message }));
     }
 
+    // Salva edicao inline de campo do Lead/CRM (nome do lead, titulo da oport)
+    // Exposta no window porque os inputs usam onblur inline.
+    window.inboxSalvarCampo = function (inputEl) {
+        const target = inputEl.dataset.editTarget;
+        const field = inputEl.dataset.field;
+        const val = (inputEl.value || '').trim();
+        const original = inputEl.dataset.original || '';
+        if (val === original) return;
+        if (!val) { inputEl.value = original; return; }
+        let url;
+        if (target === 'lead')      url = '/api/leads/' + inputEl.dataset.leadId + '/editar/';
+        else if (target === 'oport') url = '/crm/oportunidades/' + inputEl.dataset.opId + '/editar/';
+        else return;
+        inputEl.disabled = true;
+        fetchJSON(url, {
+            method: 'PUT',
+            body: JSON.stringify({ [field]: val }),
+        }).then(d => {
+            if (d && !d.error) {
+                inputEl.dataset.original = val;
+                if (typeof toast === 'function') toast('Atualizado', field + ': ' + val, 'success');
+            } else {
+                inputEl.value = original;
+                const msg = (d && d.error) || 'Falha ao atualizar';
+                if (typeof toast === 'function') toast('Erro', msg, 'danger');
+                else alert(msg);
+            }
+        }).finally(() => { inputEl.disabled = false; });
+    };
+
     // Movimentar estagio da oportunidade direto do painel Lead/CRM do Inbox.
     // Exposta no window porque o select usa onchange inline.
     window.inboxMoverEstagio = function (selectEl) {
@@ -293,7 +323,7 @@
             if (data.lead_info) {
                 const l = data.lead_info;
                 let html = `
-                    <div class="ctx-info-row"><span class="ctx-info-label">Nome</span><span class="ctx-info-value">${esc(l.nome)}</span></div>
+                    <div class="ctx-info-row"><span class="ctx-info-label">Nome</span><input class="ctx-editable-input ctx-info-value" data-edit-target="lead" data-lead-id="${l.id}" data-field="nome_razaosocial" data-original="${esc(l.nome)}" value="${esc(l.nome)}" onblur="inboxSalvarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}else if(event.key==='Escape'){this.value=this.dataset.original;this.blur();}"></div>
                     <div class="ctx-info-row"><span class="ctx-info-label">Origem</span><span class="ctx-info-value">${esc(l.origem)}</span></div>
                     <div class="ctx-info-row"><span class="ctx-info-label">Score</span><span class="ctx-info-value">${l.score || '—'}</span></div>
                 `;
@@ -314,7 +344,7 @@
                         `<span class="ctx-tag-chip" style="background:${esc(t.cor_hex || '#94a3b8')};">${esc(t.nome)}</span>`
                     ).join('');
                     html += `
-                        <div class="ctx-info-row"><span class="ctx-info-label">Oport. #${op.id}</span><span class="ctx-info-value">${esc(op.titulo)}</span></div>
+                        <div class="ctx-info-row"><span class="ctx-info-label">Oport. #${op.id}</span><input class="ctx-editable-input ctx-info-value" data-edit-target="oport" data-op-id="${op.id}" data-field="titulo" data-original="${esc(op.titulo)}" value="${esc(op.titulo)}" onblur="inboxSalvarCampo(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}else if(event.key==='Escape'){this.value=this.dataset.original;this.blur();}"></div>
                         <div class="ctx-info-row"><span class="ctx-info-label">Valor</span><span class="ctx-info-value">R$ ${op.valor_estimado}</span></div>
                         <div class="ctx-info-row ctx-stage-row"><span class="ctx-info-label">Estágio</span>${estagioCell}</div>
                         ${tagsHtml ? `<div class="ctx-tags-row">${tagsHtml}</div>` : ''}

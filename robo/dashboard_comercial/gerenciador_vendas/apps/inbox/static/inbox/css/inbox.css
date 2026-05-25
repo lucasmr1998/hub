@@ -478,6 +478,21 @@ body.inbox-page .sidebar { display: none; }
 .ctx-info-value { font-weight: 500; font-size: 12px; }
 .ctx-empty { font-size: 12px; color: #94a3b8; }
 
+/* Inputs editaveis inline (nome lead, titulo oport) — invisiveis ate hover/focus */
+.ctx-editable-input {
+    border: 1px solid transparent;
+    background: transparent;
+    font: inherit; color: inherit;
+    padding: 2px 6px; border-radius: 4px;
+    max-width: 60%;
+    text-align: right;
+    box-sizing: border-box;
+    cursor: text;
+}
+.ctx-editable-input:hover { background: #f8fafc; border-color: #e2e8f0; }
+.ctx-editable-input:focus { background: #fff; border-color: #3b82f6; outline: none; text-align: left; }
+.ctx-editable-input:disabled { opacity: 0.6; cursor: wait; }
+
 /* Estagio editavel inline no Lead/CRM */
 .ctx-stage-row .ctx-stage-select {
     border: 1px solid #e2e8f0; border-radius: 6px;
