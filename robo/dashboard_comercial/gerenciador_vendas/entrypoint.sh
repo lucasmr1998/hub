@@ -3,6 +3,16 @@ set -e
 
 echo "=== Hubtrix Deploy ==="
 
+# 0. Garantir libs do WeasyPrint (necessario enquanto EasyPanel usa cache de image)
+if ! python -c "import weasyprint" 2>/dev/null; then
+    echo "[0/4] Instalando dependencias WeasyPrint..."
+    apt-get update -qq && apt-get install -y --no-install-recommends \
+        libpango-1.0-0 libpangoft2-1.0-0 libpangocairo-1.0-0 \
+        libcairo2 libgdk-pixbuf-xlib-2.0-0 libgdk-pixbuf2.0-bin \
+        libglib2.0-0 libharfbuzz0b fonts-dejavu-core \
+        && rm -rf /var/lib/apt/lists/*
+fi
+
 # 1. Rodar migrations
 echo "[1/4] Aplicando migrations..."
 python manage.py migrate --noinput
