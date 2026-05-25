@@ -15,7 +15,7 @@ import json
 import traceback
 import logging
 
-from apps.sistema.decorators import api_token_required, user_tem_funcionalidade
+from apps.sistema.decorators import api_token_required, api_token_or_login_required, user_tem_funcionalidade
 from apps.sistema.utils import auditar
 from apps.sistema.utils import (
     _parse_json_request,
@@ -1550,9 +1550,15 @@ def verificar_relacionamentos_api(request):
 # APIs DE CONSULTA (GET)
 # ============================================================================
 
-@login_required(login_url='sistema:login')
+@api_token_or_login_required
 def consultar_leads_api(request):
-    """API GET de consulta sobre LeadProspecto com filtros e paginação."""
+    """API GET de consulta sobre LeadProspecto com filtros e paginacao.
+
+    Aceita auth por sessao (UI interna de /leads/) OU Bearer token
+    (integracoes externas tipo Matrix/N8N — ex.: consulta de lead por telefone
+    no inicio do fluxo de atendimento). O `request.tenant` eh garantido em
+    ambos os caminhos.
+    """
     if request.method != 'GET':
         return JsonResponse({'error': 'Método não permitido'}, status=405)
 

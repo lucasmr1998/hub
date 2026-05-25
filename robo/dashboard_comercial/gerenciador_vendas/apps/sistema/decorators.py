@@ -77,6 +77,25 @@ def api_token_required(view_func):
     return wrapper
 
 
+def api_token_or_login_required(view_func):
+    """Aceita auth por Bearer token (integracoes externas tipo Matrix/N8N) OU
+    sessao Django (UI interna). Util pra endpoints consumidos por ambos.
+
+    Se tem header `Authorization: Bearer ...` -> valida como token (mesma logica
+    do api_token_required). Senao, exige usuario autenticado por sessao. O
+    `request.tenant` ja eh setado pelo TenantMiddleware no caminho de sessao,
+    e pelo api_token_required no caminho de token.
+    """
+    @functools.wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if request.META.get('HTTP_AUTHORIZATION', '').startswith('Bearer '):
+            return api_token_required(view_func)(request, *args, **kwargs)
+        if request.user.is_authenticated:
+            return view_func(request, *args, **kwargs)
+        return JsonResponse({'error': 'Autenticacao obrigatoria (Bearer token ou sessao)'}, status=401)
+    return wrapper
+
+
 def permissao_required(modulo, papel_minimo=None):
     """
     Decorator que verifica se o usuário tem acesso ao módulo e papel mínimo.
