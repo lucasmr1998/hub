@@ -101,10 +101,10 @@ class LeadProspecto(TenantMixin):
     )
 
     status_api = models.CharField(
-        max_length=20,
+        max_length=50,
         default='pendente',
         verbose_name="Status API",
-        help_text="Status do processamento na API"
+        help_text="Status do processamento na API (ex: pendente, processamento_manual, aguardando_assinatura, cliente)"
     )
 
     # Identificador no Hubsoft para cruzamento automático com Prospecto
