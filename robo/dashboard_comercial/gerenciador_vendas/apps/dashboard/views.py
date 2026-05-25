@@ -357,6 +357,14 @@ def api_oportunidades_vendas(request):
     vendas = list(qs.order_by('-data_venda')[offset:offset + page_size])
 
     lead_ids = [v.lead_id for v in vendas if v.lead_id]
+
+    from apps.inbox.models import Conversa as InboxConversa
+    leads_com_inbox = set(
+        InboxConversa.all_tenants.filter(lead_id__in=lead_ids)
+        .values_list('lead_id', flat=True)
+        .distinct()
+    )
+
     imagens_por_lead = {}
     for img in ImagemLeadProspecto.objects.filter(lead_id__in=lead_ids).values(
         'lead_id', 'status_validacao'
@@ -397,7 +405,7 @@ def api_oportunidades_vendas(request):
             'lead_cpf': (lead.cpf_cnpj or '') if lead else '',
             'lead_email': (lead.email or '') if lead else '',
             'url_pdf_conversa': (lead.url_pdf_conversa or '') if lead else '',
-            'html_conversa_path': (lead.html_conversa_path or '') if lead else '',
+            'html_conversa_path': (lead.html_conversa_path or ('inbox' if lead.id in leads_com_inbox else '')) if lead else '',
             'oportunidade_id': oport.id if oport else None,
             'pipeline_nome': estagio.pipeline.nome if (estagio and estagio.pipeline) else '',
             'estagio_nome': estagio.nome if estagio else '',

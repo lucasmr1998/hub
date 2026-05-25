@@ -389,7 +389,11 @@ def api_campo_custom_detalhe(request, campo_id):
 @login_required
 @xframe_options_sameorigin
 def visualizar_conversa_lead(request, lead_id):
-    """Serve o HTML da conversa do atendimento gerado para um LeadProspecto."""
+    """Serve o HTML da conversa do atendimento para um LeadProspecto.
+
+    Matrix: serve arquivo HTML pré-gerado (lead.html_conversa_path).
+    Inbox nativo: renderiza mensagens do inbox dinamicamente.
+    """
     import os
 
     try:
@@ -397,22 +401,33 @@ def visualizar_conversa_lead(request, lead_id):
     except LeadProspecto.DoesNotExist:
         raise Http404("Lead não encontrado")
 
-    if not lead.html_conversa_path:
+    # Caminho Matrix: HTML pré-gerado em media/
+    if lead.html_conversa_path:
+        base_dir = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
+            'media'
+        )
+        full_path = os.path.join(base_dir, lead.html_conversa_path)
+        if os.path.exists(full_path):
+            with open(full_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return HttpResponse(content, content_type='text/html; charset=utf-8')
+
+    # Caminho Inbox nativo: renderizar dinamicamente a partir das mensagens
+    from apps.inbox.models import Conversa as InboxConversa
+    conversas = (
+        InboxConversa.all_tenants
+        .filter(lead=lead)
+        .prefetch_related('mensagens')
+        .order_by('id')
+    )
+    if not conversas.exists():
         raise Http404("Conversa não disponível para este lead")
 
-    base_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
-        'media'
-    )
-    full_path = os.path.join(base_dir, lead.html_conversa_path)
-
-    if not os.path.exists(full_path):
-        raise Http404("Arquivo da conversa não encontrado")
-
-    with open(full_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-
-    return HttpResponse(content, content_type='text/html; charset=utf-8')
+    return render(request, 'comercial/leads/conversa_inbox.html', {
+        'lead': lead,
+        'conversas': conversas,
+    })
 
 
 @login_required
