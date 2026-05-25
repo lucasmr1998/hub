@@ -215,10 +215,51 @@ def _criar_log_sistema(nivel, modulo, mensagem, dados_extras=None, request=None)
         logger.warning("Erro ao criar log: %s", str(e))
 
 
+import re as _re
+_AUDITAR_REDACT_RE = _re.compile(
+    r'("(?:cpf_cnpj|cpf|rg|password|senha|api_token|token|secret|client_secret|api_key)"\s*:\s*)"[^"]*"',
+    _re.IGNORECASE,
+)
+_AUDITAR_MAX = 4000  # bytes por payload (caber em LogSistema com folga)
+
+
+def _auditar_redact(text):
+    """Substitui valores de campos sensiveis por [REDACTED]. JSON-aware."""
+    if not isinstance(text, str):
+        return text
+    return _AUDITAR_REDACT_RE.sub(r'\1"[REDACTED]"', text)
+
+
+def _auditar_payload_req(request):
+    """Captura body do request com PII redacted e truncado."""
+    try:
+        if request.method not in ('POST', 'PUT', 'PATCH', 'DELETE'):
+            return None
+        raw = request.body.decode('utf-8', errors='replace')[:_AUDITAR_MAX]
+        return _auditar_redact(raw)
+    except Exception:
+        return None
+
+
+def _auditar_payload_resp(content):
+    """Captura body da response com PII redacted e truncado."""
+    try:
+        s = content.decode('utf-8', errors='replace')[:_AUDITAR_MAX] if content else ''
+        return _auditar_redact(s)
+    except Exception:
+        return None
+
+
 def auditar(categoria, acao, entidade):
     """
-    Decorator que registra log de auditoria automaticamente apos views POST/PUT/DELETE.
-    Registra apenas se a resposta for sucesso (status < 400).
+    Decorator que registra log de auditoria apos views POST/PUT/DELETE.
+
+    Loga TANTO sucesso QUANTO erros (status >= 400) — sucessos vao com nivel
+    INFO, erros 4xx com WARNING e 5xx com ERROR.
+
+    Inclui em dados_extras: status_code, payload_req (body do request) e
+    payload_resp (body da response). Ambos com PII sensivel redacted
+    (cpf_cnpj, rg, password, token, etc.) e truncados em 4000 chars.
 
     Uso:
         @auditar('crm', 'criar', 'nota')
@@ -228,17 +269,47 @@ def auditar(categoria, acao, entidade):
     def decorator(view_func):
         @functools.wraps(view_func)
         def wrapper(request, *args, **kwargs):
+            payload_req = _auditar_payload_req(request)
             response = view_func(request, *args, **kwargs)
-            if hasattr(response, 'status_code') and response.status_code < 400:
+            try:
+                import json as _json
+                status = getattr(response, 'status_code', 0)
+                content = response.content if hasattr(response, 'content') else b''
+                payload_resp = _auditar_payload_resp(content)
+                eid = None
+                msg_default = f'{acao} {entidade}'
+                msg = msg_default
+                if status < 400:
+                    try:
+                        data = _json.loads(content) if content else {}
+                        eid = data.get('id') or data.get('pk') or (args[0] if args else None)
+                        msg = data.get('message', data.get('mensagem', msg_default))
+                    except Exception:
+                        pass
+                    nivel = 'INFO'
+                else:
+                    eid = args[0] if args else None
+                    msg = f'ERRO {status} em {acao} {entidade}'
+                    nivel = 'WARNING' if status < 500 else 'ERROR'
+
+                dados_extras = {
+                    'status_code': status,
+                    'metodo': request.method,
+                    'payload_req': payload_req,
+                    'payload_resp': payload_resp,
+                }
+                registrar_acao(
+                    categoria, acao, entidade, eid, str(msg)[:200],
+                    request=request, dados_extras=dados_extras, nivel=nivel,
+                )
+            except Exception as e:
+                logger.warning('auditar fallback: %s', str(e))
                 try:
-                    import json as _json
-                    data = _json.loads(response.content) if response.content else {}
-                    eid = data.get('id') or data.get('pk') or (args[0] if args else None)
-                    msg = data.get('message', data.get('mensagem', f'{acao} {entidade}'))
-                    registrar_acao(categoria, acao, entidade, eid, str(msg)[:200], request=request)
+                    registrar_acao(categoria, acao, entidade,
+                                   args[0] if args else None,
+                                   f'{acao} {entidade}', request=request)
                 except Exception:
-                    registrar_acao(categoria, acao, entidade, args[0] if args else None,
-                                  f'{acao} {entidade}', request=request)
+                    pass
             return response
         return wrapper
     return decorator
