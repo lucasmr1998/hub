@@ -199,7 +199,7 @@
         {% for c in sgp_choices.planos %}
           <label class="check-chip">
             <input type="checkbox" value="{{ c.id }}" {% if c.id in defaults_sgp.planos_permitidos %}checked{% endif %}>
-            <span>{{ c.label }}</span>
+            <span>{{ c.label }} <small class="chip-id-erp">#{{ c.id }}</small></span>
           </label>
         {% endfor %}
       </div>
@@ -226,7 +226,7 @@
           {% for c in sgp_choices.dias_vencimento %}
             <label class="check-chip">
               <input type="checkbox" value="{{ c.id }}" {% if c.id in defaults_sgp.dias_vencimento_permitidos %}checked{% endif %}>
-              <span>{{ c.label }}</span>
+              <span>{{ c.label }} <small class="chip-id-erp">#{{ c.id }}</small></span>
             </label>
           {% endfor %}
         </div>
@@ -356,7 +356,7 @@
         {% for c in hubsoft_choices.planos %}
           <label class="check-chip">
             <input type="checkbox" value="{{ c.id }}" {% if c.id in defaults_hubsoft.planos_permitidos_hubsoft %}checked{% endif %}>
-            <span>{{ c.label }}</span>
+            <span>{{ c.label }} <small class="chip-id-erp">#{{ c.id }}</small></span>
           </label>
         {% endfor %}
       </div>
@@ -371,7 +371,7 @@
         {% for c in hubsoft_choices.vencimentos %}
           <label class="check-chip">
             <input type="checkbox" value="{{ c.id }}" {% if c.id in defaults_hubsoft.dias_vencimento_permitidos_hubsoft %}checked{% endif %}>
-            <span>{{ c.label }}</span>
+            <span>{{ c.label }} <small class="chip-id-erp">#{{ c.id }}</small></span>
           </label>
         {% endfor %}
       </div>
@@ -635,6 +635,8 @@
   .check-chip:has(input:checked) { background: var(--color-primary-soft); border-color: var(--color-primary); color: var(--color-primary); font-weight: var(--fw-semibold); }
   .check-chip input { margin: 0; }
   .check-chip.is-hidden { display: none; }
+  .chip-id-erp { color: var(--color-text-muted); font-size: 10px; font-weight: var(--fw-normal); font-family: monospace; opacity: 0.7; margin-left: 4px; }
+  .check-chip:has(input:checked) .chip-id-erp { color: var(--color-primary); opacity: 0.9; }
 
   /* Grids grandes (planos) — busca + scroll */
   .check-grid--lista { max-height: 260px; overflow-y: auto; align-content: flex-start;
