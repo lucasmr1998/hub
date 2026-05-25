@@ -7,11 +7,12 @@ from django.db.models import Q, Count
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .models import IntegracaoAPI, LogIntegracao, ClienteHubsoft, ServicoClienteHubsoft, ClienteSGP
 from apps.comercial.leads.models import ImagemLeadProspecto, LeadProspecto
-from apps.sistema.decorators import user_tem_funcionalidade
+from apps.sistema.decorators import api_token_required, user_tem_funcionalidade
 
 logger = logging.getLogger(__name__)
 
@@ -142,11 +143,14 @@ def _cliente_hubsoft_para_dict(c, incluir_lead_docs=True):
     }
 
 
+@csrf_exempt
+@api_token_required
 def api_lead_hubsoft_status(request):
     """
     Consulta se o lead (ID interno Rob-Vendas) virou cliente no Hubsoft.
 
     GET ?lead_id=<int>
+    Authorization: Bearer <token>   (token vinculado a IntegracaoAPI do tenant)
 
     Resposta:
       - eh_cliente_hubsoft: true se existir ClienteHubsoft vinculado (FK lead)
@@ -156,6 +160,13 @@ def api_lead_hubsoft_status(request):
     """
     if request.method != 'GET':
         return JsonResponse({'success': False, 'error': 'Use GET'}, status=405)
+
+    # Defensivo: api_token_required deve setar request.tenant via IntegracaoAPI;
+    # tokens globais (N8N_API_TOKEN/WEBHOOK_SECRET_TOKEN) nao setam tenant, e
+    # sem tenant nao podemos garantir isolamento — recusa.
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        return JsonResponse({'success': False, 'error': 'Tenant nao identificado pelo token'}, status=403)
 
     raw = request.GET.get('lead_id', '').strip()
     if not raw:
@@ -169,6 +180,7 @@ def api_lead_hubsoft_status(request):
     except ValueError:
         return JsonResponse({'success': False, 'error': 'lead_id inválido'}, status=400)
 
+    # .objects = TenantManager — filtra por tenant via thread-local.
     try:
         lead = LeadProspecto.objects.get(pk=lead_pk)
     except LeadProspecto.DoesNotExist:
