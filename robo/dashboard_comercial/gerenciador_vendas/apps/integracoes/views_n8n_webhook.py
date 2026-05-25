@@ -670,6 +670,28 @@ def inbox_mensagem(request):
                 )
                 mensagem_criada = True
 
+                # Atualiza Conversa pra a lista do Inbox refletir a nova
+                # mensagem: ordem (sobe pro topo via ultima_mensagem_em),
+                # preview (texto que aparece no card) e badge de nao-lidas
+                # quando a mensagem veio do cliente.
+                conversa.ultima_mensagem_em = mensagem.data_envio
+                conversa.ultima_mensagem_preview = (mensagem.conteudo or '')[:255]
+                campos_conv = ['ultima_mensagem_em', 'ultima_mensagem_preview']
+                if remetente_tipo == 'contato':
+                    conversa.mensagens_nao_lidas = (conversa.mensagens_nao_lidas or 0) + 1
+                    campos_conv.append('mensagens_nao_lidas')
+                conversa.save(update_fields=campos_conv)
+
+    # Notifica Inbox aberto via WebSocket pra atualizacao em tempo real
+    # (lista sobe automaticamente + push de nova mensagem na conversa).
+    # Fora da transacao porque eh IO de rede.
+    if mensagem_criada:
+        try:
+            from apps.inbox.services import _notificar_ws_nova_mensagem
+            _notificar_ws_nova_mensagem(conversa, mensagem)
+        except Exception as ws_err:
+            logger.warning(f'Falha ao notificar WS sobre nova mensagem: {ws_err}')
+
     # Midia: baixa o arquivo decriptado do Uazapi e armazena. Fora da
     # transacao — IO de rede nao deve segurar lock de banco.
     if (mensagem_criada and msg_id_ext
