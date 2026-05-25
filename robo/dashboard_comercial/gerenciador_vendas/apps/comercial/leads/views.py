@@ -525,6 +525,46 @@ def registrar_lead_api(request):
         payload = {k: v for k, v in data.items() if k in allowed}
         lead = LeadProspecto.objects.create(**payload)
 
+        # Auto-criar Oportunidade se o tenant tiver a flag ConfiguracaoCRM.
+        # criar_oportunidade_automatico ligada (default=True). Falhas aqui
+        # nao bloqueiam a criacao do lead — so logam um aviso.
+        oportunidade_id = None
+        try:
+            from apps.comercial.crm.models import (
+                ConfiguracaoCRM, Pipeline, PipelineEstagio, OportunidadeVenda,
+            )
+            tenant = getattr(request, 'tenant', None)
+            if tenant:
+                config = ConfiguracaoCRM.objects.filter(tenant=tenant).first()
+                if config and config.criar_oportunidade_automatico:
+                    pipeline = (
+                        config.pipeline_padrao
+                        or Pipeline.objects.filter(padrao=True, ativo=True).first()
+                        or Pipeline.objects.filter(ativo=True).first()
+                    )
+                    if pipeline:
+                        estagio = (
+                            config.estagio_inicial_padrao
+                            or PipelineEstagio.objects.filter(pipeline=pipeline).order_by('ordem').first()
+                        )
+                        if estagio:
+                            oport = OportunidadeVenda.objects.create(
+                                tenant=tenant,
+                                lead=lead,
+                                pipeline=pipeline,
+                                estagio=estagio,
+                                titulo=lead.nome_razaosocial[:255],
+                                origem_crm='automatico',
+                            )
+                            oportunidade_id = oport.id
+        except Exception as e:
+            _criar_log_sistema(
+                nivel='WARNING', modulo='registrar_lead_api',
+                mensagem=f'Lead {lead.id} criado mas auto-criacao de Oportunidade falhou: {e}',
+                dados_extras={'lead_id': lead.id, 'erro': str(e)},
+                request=request,
+            )
+
         # Log de sucesso
         _criar_log_sistema(
             nivel='INFO',
@@ -532,6 +572,7 @@ def registrar_lead_api(request):
             mensagem=f'Lead registrado com sucesso - ID: {lead.id}',
             dados_extras={
                 'lead_id': lead.id,
+                'oportunidade_id': oportunidade_id,
                 'nome': lead.nome_razaosocial,
                 'telefone': lead.telefone,
                 'origem': lead.origem,
@@ -545,7 +586,12 @@ def registrar_lead_api(request):
                        f'Lead criado: {lead.nome_razaosocial}', request=request,
                        dados_extras={'origem': lead.origem, 'telefone': lead.telefone})
 
-        return JsonResponse({'success': True, 'id': lead.id, 'lead': _serialize_instance(lead)}, status=201)
+        return JsonResponse({
+            'success': True,
+            'id': lead.id,
+            'lead': _serialize_instance(lead),
+            'oportunidade_id': oportunidade_id,
+        }, status=201)
     except Exception as e:
         # Log de erro
         _criar_log_sistema(
