@@ -481,13 +481,9 @@ def visualizar_conversa_pdf(request, lead_id):
 
 @login_required
 def visualizar_conversa_pdf_inbox(request, lead_id):
-    """Gera PDF da conversa inbox nativo sob demanda via WeasyPrint.
-
-    Usa url_fetcher customizado para servir imagens privadas direto do disco,
-    sem precisar de requests HTTP autenticadas durante a geração do PDF.
-    """
     import logging
     import re
+    import base64
     from django.template.loader import render_to_string
 
     try:
@@ -505,36 +501,38 @@ def visualizar_conversa_pdf_inbox(request, lead_id):
     if not conversas:
         raise Http404("Conversa não disponível para este lead")
 
+    # Substitui URLs de imagens privadas por data URIs base64 antes de gerar o PDF
     html_str = render_to_string('comercial/leads/conversa_inbox.html', {
         'lead': lead,
         'conversas': conversas,
     }, request=request)
 
-    base_url = request.build_absolute_uri('/')
-
-    def _url_fetcher(url):
-        from weasyprint import default_url_fetcher
-        m = re.search(r'/inbox/api/conversas/\d+/midia/(\d+)/', url)
-        if m:
+    def _substituir_imagens(html):
+        from apps.inbox.models import Mensagem as InboxMensagem, PrivateMidiaStorage
+        def _inline(m):
             msg_id = int(m.group(1))
             try:
-                from apps.inbox.models import Mensagem as InboxMensagem, PrivateMidiaStorage
                 msg = InboxMensagem.all_tenants.get(pk=msg_id)
                 if msg.arquivo:
                     with PrivateMidiaStorage().open(msg.arquivo.name) as f:
                         data = f.read()
-                    return {'content': data, 'mime_type': 'image/jpeg'}
+                    b64 = base64.b64encode(data).decode()
+                    return f'src="data:image/jpeg;base64,{b64}"'
             except Exception:
                 pass
-            return {'content': b'', 'mime_type': 'image/jpeg'}
-        return default_url_fetcher(url)
+            return 'src=""'
+        return re.sub(r'src="[^"]*?/inbox/api/conversas/\d+/midia/(\d+)/[^"]*?"', _inline, html)
+
+    html_str = _substituir_imagens(html_str)
 
     try:
-        logging.getLogger('weasyprint').setLevel(logging.ERROR)
-        logging.getLogger('fontTools').setLevel(logging.ERROR)
-        from weasyprint import HTML as WeasyHTML
-        pdf_bytes = WeasyHTML(string=html_str, base_url=base_url, url_fetcher=_url_fetcher).write_pdf()
-        pdf_bytes = pdf_bytes.replace(b'%\xf0\x9f\x96\xa4', b'%\xe2\xe3\xcf\xd3', 1)
+        from io import BytesIO
+        from xhtml2pdf import pisa
+        buffer = BytesIO()
+        result = pisa.CreatePDF(html_str.encode('utf-8'), dest=buffer, encoding='utf-8')
+        if result.err:
+            raise Exception(f'xhtml2pdf errors: {result.err}')
+        pdf_bytes = buffer.getvalue()
     except Exception as exc:
         logging.getLogger(__name__).error("Erro ao gerar PDF inbox para lead %s: %s", lead_id, exc)
         raise Http404("Erro ao gerar PDF da conversa")
