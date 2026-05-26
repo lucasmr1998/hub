@@ -248,12 +248,13 @@ def _executar_acoes_regra(oportunidade, regra):
     acoes = regra.acoes or []
     for acao in acoes:
         tipo = acao.get('tipo')
+        config = acao.get('config') or {}
         executor = _EXECUTORES_ACAO.get(tipo)
         if executor is None:
             logger.warning("[Automacao Pipeline] Tipo de ação desconhecido: %s", tipo)
             continue
         try:
-            executor(oportunidade)
+            executor(oportunidade, config)
         except Exception as exc:
             logger.warning("[Automacao Pipeline] Falha ao executar ação %s: %s", tipo, exc)
 
@@ -265,7 +266,7 @@ def _executar_acoes_regra(oportunidade, regra):
         logger.warning("[Automacao Pipeline] Falha ao atualizar métricas da regra %s: %s", regra.pk, exc)
 
 
-def _acao_criar_venda(oportunidade):
+def _acao_criar_venda(oportunidade, config):
     from apps.comercial.crm.models import Venda
     tenant = oportunidade.tenant
     if Venda.all_tenants.filter(tenant=tenant, oportunidade=oportunidade).exists():
@@ -281,8 +282,38 @@ def _acao_criar_venda(oportunidade):
     logger.info("[Automacao Pipeline] Venda criada para oportunidade %s", oportunidade.pk)
 
 
+def _acao_atribuir_agente(oportunidade, config):
+    """Atribui a oportunidade e a conversa vinculada a um usuario.
+
+    Nao rouba lead de outra vendedora: se ja tem responsavel, pula.
+    """
+    from apps.comercial.crm.models import OportunidadeVenda
+    from apps.inbox.models import Conversa
+
+    user_id = config.get('user_id')
+    if not user_id:
+        logger.warning("[Automacao Pipeline] atribuir_agente sem user_id (oport=%s)", oportunidade.pk)
+        return
+
+    if oportunidade.responsavel_id:
+        return
+
+    OportunidadeVenda.all_tenants.filter(pk=oportunidade.pk).update(responsavel_id=user_id)
+    n_conv = Conversa.all_tenants.filter(
+        tenant=oportunidade.tenant,
+        oportunidade_id=oportunidade.pk,
+        agente__isnull=True,
+    ).update(agente_id=user_id)
+
+    logger.info(
+        "[Automacao Pipeline] Atribuido user=%s a oport=%s (+ %s conversas)",
+        user_id, oportunidade.pk, n_conv,
+    )
+
+
 _EXECUTORES_ACAO = {
     'criar_venda': _acao_criar_venda,
+    'atribuir_agente': _acao_atribuir_agente,
 }
 
 
