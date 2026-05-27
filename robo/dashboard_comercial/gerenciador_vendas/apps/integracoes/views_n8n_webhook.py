@@ -570,8 +570,13 @@ def inbox_mensagem(request):
                 conversa.modo_atendimento = modo
                 conversa.save(update_fields=['modo_atendimento'])
 
-            # Quando bot termina ou cliente pede humano → atribui fila + distribui
-            if modo in ('finalizado_bot', 'humano') and modo_mudou and not conversa.agente_id:
+            # Quando bot termina ou cliente pede humano → atribui fila + distribui.
+            # Nao depende mais de modo_mudou: o default de Conversa.modo_atendimento
+            # eh 'humano', entao se o N8N manda 'humano' na primeira chamada,
+            # modo_mudou=False e a fila nunca era atribuida — conversa ficava
+            # invisivel pras vendedoras (filtro do Inbox exige fila da equipe).
+            # Guard mudou pra `not conversa.fila_id` — idempotente.
+            if modo in ('finalizado_bot', 'humano') and not conversa.fila_id:
                 from apps.inbox.models import FilaInbox
                 fila = FilaInbox.all_tenants.filter(
                     tenant=tenant, ativo=True
@@ -580,11 +585,12 @@ def inbox_mensagem(request):
                     conversa.fila = fila
                     conversa.equipe = fila.equipe
                     conversa.save(update_fields=['fila', 'equipe'])
-                    try:
-                        from apps.inbox.distribution import distribuir_conversa
-                        distribuir_conversa(conversa, tenant)
-                    except Exception as e:
-                        logger.error(f'Erro distribuindo conversa {conversa.id}: {e}')
+                    if not conversa.agente_id:
+                        try:
+                            from apps.inbox.distribution import distribuir_conversa
+                            distribuir_conversa(conversa, tenant)
+                        except Exception as e:
+                            logger.error(f'Erro distribuindo conversa {conversa.id}: {e}')
 
         # Atualiza Oportunidade.dados_custom com estado do atendimento — pra motor de automacoes
         atendimento_estado = payload.get('atendimento_estado')
