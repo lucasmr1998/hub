@@ -366,7 +366,22 @@ def enviar_mensagem(conversa, conteudo, user, tipo_conteudo='texto',
         conversa.modo_atendimento = 'humano'
         update_fields.append('modo_atendimento')
 
-    # Infere equipe do agente que esta respondendo, se vazia
+    # Atribui fila padrao se ainda nao tem — sem isso, conversa fica
+    # invisivel pras outras vendedoras da equipe (filtro do Inbox exige
+    # fila da equipe pra mostrar conversa nao-atribuida).
+    if not conversa.fila_id:
+        from apps.inbox.models import FilaInbox
+        fila = FilaInbox.all_tenants.filter(
+            tenant=conversa.tenant, ativo=True,
+        ).order_by('-prioridade').first()
+        if fila:
+            conversa.fila = fila
+            update_fields.append('fila')
+            if not conversa.equipe_id and fila.equipe_id:
+                conversa.equipe = fila.equipe
+                update_fields.append('equipe')
+
+    # Infere equipe do agente que esta respondendo, se ainda vazia
     if not conversa.equipe_id:
         from apps.inbox.models import MembroEquipeInbox
         membro = MembroEquipeInbox.all_tenants.filter(
