@@ -290,88 +290,88 @@ Com subnav:
     <script>
       window.HUB_SIDEBAR_MODULES = {
         dashboard: { title: 'Dashboard', groups: [
-          { section: null, items: [{ icon: 'bi-graph-up', label: 'Visao Geral' }] }
+          { section: null, items: [{ icon: 'bi-graph-up', label: 'Visao Geral', url: '/' }] }
         ]},
         comercial: { title: 'Comercial', groups: [
-          { section: null, items: [{ icon: 'bi-graph-up-arrow', label: 'Dashboard' }] },
+          { section: null, items: [{ icon: 'bi-graph-up-arrow', label: 'Dashboard', url: '/crm/desempenho/' }] },
           { section: 'CRM', items: [
-            { icon: 'bi-kanban', label: 'Pipeline' },
-            { icon: 'bi-cart-check', label: 'Vendas' },
-            { icon: 'bi-check2-square', label: 'Tarefas' },
+            { icon: 'bi-kanban', label: 'Pipeline', url: '/crm/' },
+            { icon: 'bi-cart-check', label: 'Vendas', url: '/vendas/' },
+            { icon: 'bi-check2-square', label: 'Tarefas', url: '/crm/tarefas/' },
           ]},
           { section: 'Configuracoes CRM', items: [
-            { icon: 'bi-sliders', label: 'Configuracoes' },
-            { icon: 'bi-box-seam', label: 'Produtos' },
-            { icon: 'bi-people', label: 'Equipes' },
-            { icon: 'bi-bullseye', label: 'Metas' },
+            { icon: 'bi-sliders', label: 'Configuracoes', url: '/crm/configuracoes/' },
+            { icon: 'bi-box-seam', label: 'Produtos', url: '/crm/produtos/' },
+            { icon: 'bi-people', label: 'Equipes', url: '/crm/equipes/' },
+            { icon: 'bi-bullseye', label: 'Metas', url: '/crm/metas/' },
           ]},
         ]},
         marketing: { title: 'Marketing', groups: [
           { section: 'Aquisicao', items: [
-            { icon: 'bi-person-plus', label: 'Leads' },
-            { icon: 'bi-globe', label: 'Landing Page' },
+            { icon: 'bi-person-plus', label: 'Leads', url: '/leads/' },
+            { icon: 'bi-globe', label: 'Landing Page', url: '/configuracoes/campanhas/' },
           ]},
           { section: 'Campanhas', items: [
-            { icon: 'bi-megaphone', label: 'Campanhas' },
-            { icon: 'bi-funnel', label: 'Segmentos' },
+            { icon: 'bi-megaphone', label: 'Campanhas', url: '/marketing/emails/' },
+            { icon: 'bi-funnel', label: 'Segmentos', url: '/marketing/segmentos/' },
           ]},
-          { section: 'Automacao', items: [{ icon: 'bi-robot', label: 'Automacoes' }] },
+          { section: 'Automacao', items: [{ icon: 'bi-robot', label: 'Automacoes', url: '/marketing/automacoes/' }] },
         ]},
         atendimento: { title: 'Atendimento', groups: [
-          { section: null, items: [{ icon: 'bi-graph-up-arrow', label: 'Dashboard' }] },
+          { section: null, items: [{ icon: 'bi-graph-up-arrow', label: 'Dashboard', url: '/inbox/' }] },
           { section: 'Atendimentos', items: [
-            { icon: 'bi-chat-dots', label: 'Inbox' },
-            { icon: 'bi-ticket-detailed', label: 'Tickets' },
+            { icon: 'bi-chat-dots', label: 'Inbox', url: '/inbox/' },
+            { icon: 'bi-ticket-detailed', label: 'Tickets', url: '/suporte/' },
           ]},
           { section: 'Automacao', items: [
-            { icon: 'bi-diagram-3', label: 'Fluxos' },
-            { icon: 'bi-headset', label: 'Sessoes' },
-            { icon: 'bi-journal-text', label: 'Conhecimento' },
-            { icon: 'bi-question-circle', label: 'Perguntas IA' },
+            { icon: 'bi-diagram-3', label: 'Fluxos', url: '/configuracoes/fluxos/' },
+            { icon: 'bi-headset', label: 'Sessoes', url: '/configuracoes/sessoes/' },
+            { icon: 'bi-journal-text', label: 'Conhecimento', url: '/suporte/conhecimento/' },
+            { icon: 'bi-question-circle', label: 'Perguntas IA', url: '/configuracoes/sessoes/' },
           ]},
-          { section: 'Configuracoes', items: [{ icon: 'bi-sliders', label: 'Canais e Equipes' }] },
+          { section: 'Configuracoes', items: [{ icon: 'bi-sliders', label: 'Canais e Equipes', url: '/inbox/configuracoes/' }] },
         ]},
         cs: { title: 'Customer Success', groups: [
           { section: null, items: [
-            { icon: 'bi-speedometer2', label: 'Dashboard' },
-            { icon: 'bi-people', label: 'Clientes' },
+            { icon: 'bi-speedometer2', label: 'Dashboard', url: '/cs/clube/dashboard/' },
+            { icon: 'bi-people', label: 'Clientes', url: '/cs/clube/dashboard/participantes/' },
           ]},
           { section: 'Fidelizacao', items: [
-            { icon: 'bi-share', label: 'Indicacoes' },
-            { icon: 'bi-shop', label: 'Parceiros' },
-            { icon: 'bi-ticket-perforated', label: 'Cupons' },
-            { icon: 'bi-bullseye', label: 'Roleta' },
+            { icon: 'bi-share', label: 'Indicacoes', url: '/cs/indicacoes/dashboard/indicacoes/' },
+            { icon: 'bi-shop', label: 'Parceiros', url: '/cs/parceiros/dashboard/parceiros/' },
+            { icon: 'bi-ticket-perforated', label: 'Cupons', url: '/cs/parceiros/dashboard/cupons/' },
+            { icon: 'bi-bullseye', label: 'Roleta', url: '/cs/clube/dashboard/giros/' },
           ]},
           { section: 'Configuracoes', items: [
-            { icon: 'bi-image', label: 'Banners' },
-            { icon: 'bi-person-vcard', label: 'Carteirinhas' },
-            { icon: 'bi-layers', label: 'Niveis e XP' },
+            { icon: 'bi-image', label: 'Banners', url: '/cs/clube/dashboard/banners/' },
+            { icon: 'bi-person-vcard', label: 'Carteirinhas', url: '/cs/carteirinha/dashboard/carteirinha/' },
+            { icon: 'bi-layers', label: 'Niveis e XP', url: '/cs/clube/dashboard/gamificacao/' },
           ]},
         ]},
         relatorios: { title: 'Relatorios', groups: [
           { section: 'Funil comercial', items: [
-            { icon: 'bi-person-plus', label: 'Leads' },
-            { icon: 'bi-people', label: 'Clientes' },
-            { icon: 'bi-arrow-repeat', label: 'Conversoes' },
+            { icon: 'bi-person-plus', label: 'Leads', url: '/relatorios/leads/' },
+            { icon: 'bi-people', label: 'Clientes', url: '/relatorios/clientes/' },
+            { icon: 'bi-arrow-repeat', label: 'Conversoes', url: '/relatorios/conversoes/' },
           ]},
           { section: 'Atendimento', items: [
-            { icon: 'bi-headset', label: 'Atendimentos' },
-            { icon: 'bi-activity', label: 'Analise de Atendimentos' },
+            { icon: 'bi-headset', label: 'Atendimentos', url: '/relatorios/atendimentos/' },
+            { icon: 'bi-activity', label: 'Analise de Atendimentos', url: '/relatorios/atendimentos/' },
           ]},
         ]},
         configuracoes: { title: 'Configuracoes', groups: [
           { section: 'Geral', items: [
-            { icon: 'bi-sliders', label: 'Painel' },
-            { icon: 'bi-people', label: 'Usuarios' },
+            { icon: 'bi-sliders', label: 'Painel', url: '/configuracoes/' },
+            { icon: 'bi-people', label: 'Usuarios', url: '/configuracoes/usuarios/' },
           ]},
           { section: 'Produtos', items: [
-            { icon: 'bi-wifi', label: 'Planos' },
-            { icon: 'bi-calendar-event', label: 'Vencimentos' },
+            { icon: 'bi-wifi', label: 'Planos', url: '/configuracoes/' },
+            { icon: 'bi-calendar-event', label: 'Vencimentos', url: '/configuracoes/' },
           ]},
           { section: 'Sistema', items: [
-            { icon: 'bi-plug', label: 'Integracoes' },
-            { icon: 'bi-bell', label: 'Notificacoes' },
-            { icon: 'bi-list-ul', label: 'Logs' },
+            { icon: 'bi-plug', label: 'Integracoes', url: '/configuracoes/integracoes/' },
+            { icon: 'bi-bell', label: 'Notificacoes', url: '/configuracoes/notificacoes/' },
+            { icon: 'bi-list-ul', label: 'Logs', url: '/configuracoes/' },
           ]},
         ]},
       };
@@ -397,7 +397,7 @@ Com subnav:
         body.innerHTML = mod.groups.map(g => {
           const section = g.section ? `<div class="app-subnav-section">${g.section}</div>` : '';
           const items = g.items.map(it => `
-            <a href="#" class="app-subnav-item${it.active ? ' is-active' : ''}">
+            <a href="${it.url || '#'}" class="app-subnav-item${it.active ? ' is-active' : ''}">
               <i class="bi ${it.icon}"></i><span>${it.label}</span>
             </a>
           `).join('');
