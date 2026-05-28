@@ -289,13 +289,22 @@ def receber_lead(request):
                 'id_plano_rp', 'status_api', 'cpf_cnpj', 'email', 'cep',
                 'cidade', 'estado', 'bairro', 'rua', 'numero_residencia',
             }
-            mudou_lead = False
+            campos_ok = []
             for campo, valor in lead_campos.items():
-                if campo in CAMPOS_PERMITIDOS and valor not in (None, ''):
+                if campo not in CAMPOS_PERMITIDOS or valor in (None, ''):
+                    continue
+                # Coage conforme o tipo do campo; ignora valor invalido em vez
+                # de derrubar a request (ex: id_plano_rp eh int).
+                try:
+                    field = LeadProspecto._meta.get_field(campo)
+                    if field.get_internal_type() in ('IntegerField', 'BigIntegerField', 'PositiveIntegerField'):
+                        valor = int(valor)
                     setattr(lead, campo, valor)
-                    mudou_lead = True
-            if mudou_lead:
-                lead.save()
+                    campos_ok.append(campo)
+                except (ValueError, TypeError) as exc:
+                    logger.warning(f'[receber_lead] campo {campo}={valor!r} invalido: {exc}')
+            if campos_ok:
+                lead.save(update_fields=campos_ok)
 
         hist_status = (payload.get('historico_status') or '').strip()
         if hist_status:
