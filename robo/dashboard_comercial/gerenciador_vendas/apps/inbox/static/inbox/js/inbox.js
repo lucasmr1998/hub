@@ -277,6 +277,7 @@
         document.getElementById('messageList').style.display = 'flex';
         document.getElementById('inputArea').style.display = 'block';
         document.getElementById('inboxSidebar')?.classList.add('hidden-mobile');
+        document.getElementById('inboxChat')?.classList.add('show-mobile');
 
         wsSend({ action: 'join_conversa', conversa_id: id });
         loadConversaDetalhe(id);
@@ -823,6 +824,7 @@
         // Back (mobile)
         $('chatBackBtn').addEventListener('click', () => {
             document.getElementById('inboxSidebar')?.classList.remove('hidden-mobile');
+            document.getElementById('inboxChat')?.classList.remove('show-mobile');
             $('emptyState').style.display = 'flex';
             $('chatHeader').style.display = 'none';
             $('messageList').style.display = 'none';

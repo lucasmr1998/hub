@@ -610,7 +610,8 @@ body.inbox-page .sidebar { display: none; }
     .inbox-sidebar { position: fixed; left: 0; top: 52px; bottom: 0; width: 100%; z-index: 90; }
     .inbox-sidebar.hidden-mobile { display: none; }
     .chat-back-btn { display: block; }
-    .inbox-chat { position: fixed; left: 0; top: 52px; bottom: 0; width: 100%; z-index: 91; }
+    .inbox-chat { display: none; position: fixed; left: 0; top: 52px; bottom: 0; width: 100%; z-index: 91; }
+    .inbox-chat.show-mobile { display: flex; flex-direction: column; }
     .msg-bubble { max-width: 85%; }
 }
 
