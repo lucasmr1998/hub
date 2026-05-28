@@ -270,6 +270,42 @@ def receber_lead(request):
                 origem_crm='automatico',
             )
 
+        # Sinais extras pro motor de pipeline (usado pela Nuvyon: o bot N8N
+        # reporta progresso a cada etapa). Dirigem as regras de automacao.
+        tags_in = payload.get('tags') or []
+        if isinstance(tags_in, list):
+            for tag_nome in tags_in:
+                tag_nome = str(tag_nome).strip()
+                if not tag_nome:
+                    continue
+                tag, _ = TagCRM.all_tenants.get_or_create(
+                    tenant=tenant, nome=tag_nome, defaults={'cor_hex': '#94a3b8'},
+                )
+                oportunidade.tags.add(tag)
+
+        lead_campos = payload.get('lead_campos') or {}
+        if isinstance(lead_campos, dict) and lead_campos:
+            CAMPOS_PERMITIDOS = {
+                'id_plano_rp', 'status_api', 'cpf_cnpj', 'email', 'cep',
+                'cidade', 'estado', 'bairro', 'rua', 'numero_residencia',
+            }
+            mudou_lead = False
+            for campo, valor in lead_campos.items():
+                if campo in CAMPOS_PERMITIDOS and valor not in (None, ''):
+                    setattr(lead, campo, valor)
+                    mudou_lead = True
+            if mudou_lead:
+                lead.save()
+
+        hist_status = (payload.get('historico_status') or '').strip()
+        if hist_status:
+            from apps.comercial.leads.models import HistoricoContato
+            HistoricoContato.objects.create(
+                tenant=tenant, lead=lead, telefone=telefone,
+                status=hist_status,
+                nome_contato=nome or lead.nome_razaosocial,
+            )
+
         # Log de auditoria
         try:
             registrar_acao(
@@ -281,12 +317,27 @@ def receber_lead(request):
         except Exception:
             pass
 
+    # Re-avalia as regras de pipeline com os sinais aplicados (fora da
+    # transacao — o motor faz seus proprios saves/IO).
+    try:
+        from apps.comercial.crm.services.automacao_pipeline import processar_seguro
+        processar_seguro(oportunidade=oportunidade)
+    except Exception as exc:
+        logger.warning(f'[receber_lead] Falha ao reavaliar regras: {exc}')
+
     status = 200 if ja_existia else 201
+    # Recarrega pra refletir movimento de estagio feito pelo motor
+    try:
+        oportunidade.refresh_from_db(fields=['estagio'])
+    except Exception:
+        pass
     return JsonResponse({
         'sucesso': True,
         'tenant': tenant.slug,
         'lead_id': lead.id,
         'oportunidade_id': oportunidade.id,
+        'estagio_id': oportunidade.estagio_id,
+        'estagio_nome': oportunidade.estagio.nome if oportunidade.estagio_id else None,
         'ja_existia': ja_existia,
     }, status=status)
 
