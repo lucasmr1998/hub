@@ -131,6 +131,14 @@
         return p.length >= 2 ? (p[0][0] + p[p.length-1][0]).toUpperCase() : p[0][0].toUpperCase();
     }
 
+    // Nome curto do agente: primeiro nome + inicial do sobrenome (ex: "Flavia M.")
+    function nomeAgenteCurto(name) {
+        if (!name) return '';
+        const p = name.trim().split(/\s+/);
+        if (p.length < 2) return p[0];
+        return p[0] + ' ' + p[1][0].toUpperCase() + '.';
+    }
+
     function esc(s) {
         const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
     }
@@ -236,7 +244,7 @@
                     <div class="conv-top">
                         <span class="conv-inbox-label">${esc(canalLabel)}</span>
                         ${c.modo_atendimento === 'bot' ? '<span class="conv-inbox-label" style="background:#f3e8ff;color:#6b21a8;"><i class="fas fa-robot" style="font-size:9px;margin-right:2px;"></i>Bot</span>' : ''}
-                        ${c.agente_nome ? `<span class="conv-agent-name">${_agenteStatusDot(c.agente_id)}${esc(c.agente_nome)}</span>` : ''}
+                        ${c.agente_nome ? `<span class="conv-agent-name">${_agenteStatusDot(c.agente_id)}${esc(nomeAgenteCurto(c.agente_nome))}</span>` : ''}
                     </div>
                     <div class="conv-name">${esc(c.contato_nome || c.contato_telefone || '#' + c.numero)}</div>
                     <div class="conv-preview">
