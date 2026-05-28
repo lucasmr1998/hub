@@ -614,6 +614,13 @@ body.inbox-page .sidebar { display: none; }
     .msg-bubble { max-width: 85%; }
 }
 
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+    @media (max-width: 768px) {
+        .inbox-chat { padding-bottom: env(safe-area-inset-bottom); }
+        .inbox-sidebar { padding-bottom: env(safe-area-inset-bottom); }
+    }
+}
+
 /* ════════════════════════════════════════════════════════════════════
    Pill de status do agente no Inbox (online/ausente/offline)
    ════════════════════════════════════════════════════════════════════ */
