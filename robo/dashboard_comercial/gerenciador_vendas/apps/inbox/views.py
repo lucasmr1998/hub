@@ -131,14 +131,6 @@ def api_conversas(request):
     else:
         qs = qs.exclude(status__in=['arquivada', 'resolvida'])
 
-    agente_filter = request.GET.get('agente')
-    if agente_filter == 'me':
-        qs = qs.filter(agente=request.user)
-    elif agente_filter == 'unassigned':
-        qs = qs.filter(agente__isnull=True)
-    elif agente_filter:
-        qs = qs.filter(agente_id=agente_filter)
-
     canal_filter = request.GET.get('canal')
     if canal_filter:
         qs = qs.filter(canal__tipo=canal_filter)
@@ -155,6 +147,24 @@ def api_conversas(request):
             Q(numero__icontains=busca)
         )
 
+    # Contagens das abas (Minhas/Nao atribuidas/Todas) — calculadas sobre o
+    # mesmo escopo de visibilidade/filtros, ANTES de aplicar o filtro de aba.
+    # Assim "Minhas" = atribuidas a MIM (nao "qualquer agente"), batendo com
+    # o que cada aba realmente lista quando clicada.
+    counts = {
+        'todas': qs.count(),
+        'minhas': qs.filter(agente=request.user).count(),
+        'nao_atribuidas': qs.filter(agente__isnull=True).count(),
+    }
+
+    agente_filter = request.GET.get('agente')
+    if agente_filter == 'me':
+        qs = qs.filter(agente=request.user)
+    elif agente_filter == 'unassigned':
+        qs = qs.filter(agente__isnull=True)
+    elif agente_filter:
+        qs = qs.filter(agente_id=agente_filter)
+
     ordem = request.GET.get('ordem', 'desc')
     if ordem == 'asc':
         qs = qs.order_by('ultima_mensagem_em')
@@ -163,7 +173,7 @@ def api_conversas(request):
 
     conversas = qs[:100]
     data = ConversaOutputSerializer(conversas, many=True).data
-    return JsonResponse({'conversas': data})
+    return JsonResponse({'conversas': data, 'counts': counts})
 
 
 @login_required

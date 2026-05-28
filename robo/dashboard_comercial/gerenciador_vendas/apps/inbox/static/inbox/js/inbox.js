@@ -203,18 +203,20 @@
             if (data.error) return;
             state.conversas = data.conversas || [];
             renderConversaList();
-            updateCounts();
+            updateCounts(data.counts);
         });
     }
 
-    function updateCounts() {
-        const all = state.conversas.length;
-        document.getElementById('countAll').textContent = all;
-        // Counts are approximate from current loaded list
-        const mine = state.conversas.filter(c => c.agente_id).length;
-        const unassigned = state.conversas.filter(c => !c.agente_id).length;
-        document.getElementById('countMine').textContent = mine;
-        document.getElementById('countUnassigned').textContent = unassigned;
+    function updateCounts(counts) {
+        // Usa as contagens autoritativas do backend (Minhas = atribuidas a mim,
+        // nao "qualquer agente"). Fallback pro tamanho da lista se nao vierem.
+        if (counts) {
+            document.getElementById('countAll').textContent = counts.todas;
+            document.getElementById('countMine').textContent = counts.minhas;
+            document.getElementById('countUnassigned').textContent = counts.nao_atribuidas;
+        } else {
+            document.getElementById('countAll').textContent = state.conversas.length;
+        }
     }
 
     function renderConversaList() {
