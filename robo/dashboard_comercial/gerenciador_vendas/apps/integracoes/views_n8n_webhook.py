@@ -628,21 +628,34 @@ def inbox_mensagem(request):
                 conversa.modo_atendimento = modo
                 conversa.save(update_fields=['modo_atendimento'])
 
-            # Quando bot termina ou cliente pede humano → atribui fila + distribui
+            # Quando bot termina ou cliente pede humano: regras de cidade PRIMEIRO,
+            # depois fila/round-robin. A regra de roteamento por cidade (ex: Palhoca
+            # -> Flavia) tem prioridade sobre a distribuicao generica da fila.
             if modo in ('finalizado_bot', 'humano') and modo_mudou and not conversa.agente_id:
-                from apps.inbox.models import FilaInbox
-                fila = FilaInbox.all_tenants.filter(
-                    tenant=tenant, ativo=True
-                ).order_by('-prioridade').first()
-                if fila:
-                    conversa.fila = fila
-                    conversa.equipe = fila.equipe
-                    conversa.save(update_fields=['fila', 'equipe'])
+                # 1. Regras de cidade via processar_seguro — a acao atribuir_agente
+                #    sobrescreve o agente da conversa quando a cidade casa.
+                if oportunidade:
                     try:
-                        from apps.inbox.distribution import distribuir_conversa
-                        distribuir_conversa(conversa, tenant)
+                        from apps.comercial.crm.services.automacao_pipeline import processar_seguro
+                        processar_seguro(oportunidade=oportunidade)
+                        conversa.refresh_from_db(fields=['agente'])
                     except Exception as e:
-                        logger.error(f'Erro distribuindo conversa {conversa.id}: {e}')
+                        logger.error(f'Erro avaliando regras de cidade p/ conversa {conversa.id}: {e}')
+                # 2. Fallback: round-robin da fila se nenhuma regra de cidade atribuiu.
+                if not conversa.agente_id:
+                    from apps.inbox.models import FilaInbox
+                    fila = FilaInbox.all_tenants.filter(
+                        tenant=tenant, ativo=True
+                    ).order_by('-prioridade').first()
+                    if fila:
+                        conversa.fila = fila
+                        conversa.equipe = fila.equipe
+                        conversa.save(update_fields=['fila', 'equipe'])
+                        try:
+                            from apps.inbox.distribution import distribuir_conversa
+                            distribuir_conversa(conversa, tenant)
+                        except Exception as e:
+                            logger.error(f'Erro distribuindo conversa {conversa.id}: {e}')
 
         # Atualiza Oportunidade.dados_custom com estado do atendimento — pra motor de automacoes
         atendimento_estado = payload.get('atendimento_estado')
