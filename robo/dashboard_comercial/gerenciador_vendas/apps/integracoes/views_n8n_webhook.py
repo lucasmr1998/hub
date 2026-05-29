@@ -38,6 +38,35 @@ def _autorizado(request):
     return recebido == esperado
 
 
+def _transferir_para_fila(conversa, tenant, oportunidade=None):
+    """Transfere a conversa pra fila: regras de cidade PRIMEIRO (processar_seguro,
+    ex: Palhoca->Flavia), depois round-robin da fila como fallback. So atribui se
+    ainda nao tem agente."""
+    if conversa.agente_id:
+        return
+    if oportunidade:
+        try:
+            from apps.comercial.crm.services.automacao_pipeline import processar_seguro
+            processar_seguro(oportunidade=oportunidade)
+            conversa.refresh_from_db(fields=['agente'])
+        except Exception as e:
+            logger.error(f'Erro avaliando regras de cidade p/ conversa {conversa.id}: {e}')
+    if not conversa.agente_id:
+        from apps.inbox.models import FilaInbox
+        fila = FilaInbox.all_tenants.filter(
+            tenant=tenant, ativo=True
+        ).order_by('-prioridade').first()
+        if fila:
+            conversa.fila = fila
+            conversa.equipe = fila.equipe
+            conversa.save(update_fields=['fila', 'equipe'])
+            try:
+                from apps.inbox.distribution import distribuir_conversa
+                distribuir_conversa(conversa, tenant)
+            except Exception as e:
+                logger.error(f'Erro distribuindo conversa {conversa.id}: {e}')
+
+
 def _sanitizar_conteudo_midia(conteudo, tipo_conteudo, arquivo_url, arquivo_nome):
     """
     Quando o conteudo chega como o objeto de midia do WhatsApp serializado em
@@ -629,33 +658,9 @@ def inbox_mensagem(request):
                 conversa.save(update_fields=['modo_atendimento'])
 
             # Quando bot termina ou cliente pede humano: regras de cidade PRIMEIRO,
-            # depois fila/round-robin. A regra de roteamento por cidade (ex: Palhoca
-            # -> Flavia) tem prioridade sobre a distribuicao generica da fila.
+            # depois fila/round-robin (ver _transferir_para_fila).
             if modo in ('finalizado_bot', 'humano') and modo_mudou and not conversa.agente_id:
-                # 1. Regras de cidade via processar_seguro — a acao atribuir_agente
-                #    sobrescreve o agente da conversa quando a cidade casa.
-                if oportunidade:
-                    try:
-                        from apps.comercial.crm.services.automacao_pipeline import processar_seguro
-                        processar_seguro(oportunidade=oportunidade)
-                        conversa.refresh_from_db(fields=['agente'])
-                    except Exception as e:
-                        logger.error(f'Erro avaliando regras de cidade p/ conversa {conversa.id}: {e}')
-                # 2. Fallback: round-robin da fila se nenhuma regra de cidade atribuiu.
-                if not conversa.agente_id:
-                    from apps.inbox.models import FilaInbox
-                    fila = FilaInbox.all_tenants.filter(
-                        tenant=tenant, ativo=True
-                    ).order_by('-prioridade').first()
-                    if fila:
-                        conversa.fila = fila
-                        conversa.equipe = fila.equipe
-                        conversa.save(update_fields=['fila', 'equipe'])
-                        try:
-                            from apps.inbox.distribution import distribuir_conversa
-                            distribuir_conversa(conversa, tenant)
-                        except Exception as e:
-                            logger.error(f'Erro distribuindo conversa {conversa.id}: {e}')
+                _transferir_para_fila(conversa, tenant, oportunidade)
 
         # Atualiza Oportunidade.dados_custom com estado do atendimento — pra motor de automacoes
         atendimento_estado = payload.get('atendimento_estado')
@@ -845,6 +850,52 @@ def conversa_estado(request):
         'agente_nome': agente_nome,
         'atualizado_em': conversa.ultima_mensagem_em.isoformat() if conversa.ultima_mensagem_em else None,
     }, status=200)
+
+
+@csrf_exempt
+@require_POST
+def transferir_fila(request):
+    """Transfere a conversa de um telefone pra fila humana (regras de cidade
+    primeiro, depois round-robin). Usado pelo follow-up ao esgotar os toques.
+
+    Body JSON: {tenant_slug, telefone}. Auth: X-N8N-Webhook-Secret.
+    """
+    if not _autorizado(request):
+        return JsonResponse({'sucesso': False, 'erro': 'Nao autorizado'}, status=401)
+    try:
+        payload = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'sucesso': False, 'erro': 'JSON invalido'}, status=400)
+
+    tenant_slug = (payload.get('tenant_slug') or '').strip()
+    telefone = (payload.get('telefone') or '').strip()
+    if not tenant_slug or not telefone:
+        return JsonResponse({'sucesso': False, 'erro': 'tenant_slug e telefone obrigatorios'}, status=400)
+
+    tenant = Tenant.objects.filter(slug=tenant_slug, ativo=True).first()
+    if not tenant:
+        return JsonResponse({'sucesso': False, 'erro': f'Tenant {tenant_slug!r} nao encontrado'}, status=404)
+
+    telefone_norm = ''.join(c for c in telefone if c.isdigit())
+    conversa = Conversa.all_tenants.filter(
+        tenant=tenant, contato_telefone__contains=telefone_norm[-9:]
+    ).exclude(status__in=['arquivada', 'resolvida']).select_related('oportunidade').order_by('-id').first()
+    if not conversa:
+        return JsonResponse({'sucesso': False, 'erro': 'Conversa nao encontrada'}, status=404)
+
+    if conversa.agente_id:
+        return JsonResponse({'sucesso': True, 'ja_atribuida': True, 'agente_id': conversa.agente_id})
+
+    if conversa.modo_atendimento != 'finalizado_bot':
+        conversa.modo_atendimento = 'finalizado_bot'
+        conversa.save(update_fields=['modo_atendimento'])
+
+    _transferir_para_fila(conversa, tenant, conversa.oportunidade)
+    conversa.refresh_from_db(fields=['agente', 'fila'])
+    return JsonResponse({
+        'sucesso': True, 'conversa_id': conversa.id,
+        'agente_id': conversa.agente_id, 'fila_id': conversa.fila_id,
+    })
 
 
 @csrf_exempt
