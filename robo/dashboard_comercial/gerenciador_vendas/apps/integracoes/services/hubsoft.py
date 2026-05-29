@@ -61,6 +61,11 @@ class HubsoftService:
     ENDPOINT_CLIENTE_ATENDIMENTO = '/api/v1/integracao/cliente/atendimento'
     ENDPOINT_CLIENTE_OS = '/api/v1/integracao/cliente/ordem_servico'
 
+    # Atendimento / OS — abertura e agendamento (camada Matrix/agendamento)
+    ENDPOINT_ATENDIMENTO_CREATE = '/api/v1/integracao/atendimento'
+    ENDPOINT_OS_HORARIOS_AGENDA = '/api/v1/integracao/ordem_servico/horarios_disponiveis_agenda'
+    ENDPOINT_OS_AGENDAR = '/api/v1/integracao/ordem_servico/agendar'
+
     # Operacional / suporte
     ENDPOINT_EXTRATO_CONEXAO = '/api/v1/integracao/cliente/extrato_conexao'
     ENDPOINT_SOLICITAR_DESCONEXAO_TPL = '/api/v1/integracao/cliente/solicitar_desconexao/{id_cliente_servico}'
@@ -1223,6 +1228,112 @@ class HubsoftService:
                 f"HubSoft retornou erro em /cliente/ordem_servico: {resposta}"
             )
         return resposta.get('ordens_servico') or resposta.get('ordem_servico') or []
+
+    # ------------------------------------------------------------------
+    # Abertura / agendamento de OS (camada que substitui o apimatrix)
+    # ------------------------------------------------------------------
+
+    def abrir_atendimento_os(
+        self, *,
+        id_cliente_servico,
+        descricao: str,
+        nome: str,
+        telefone: str,
+        email: str = None,
+        id_tipo_atendimento=None,
+        id_atendimento_status=None,
+        id_usuario_responsavel=None,
+        abrir_os: bool = True,
+        id_tipo_ordem_servico=None,
+        status_os: str = None,
+        ids_tecnicos: list = None,
+        id_disponibilidade=None,
+        parametros: dict = None,
+        lead=None,
+    ) -> dict:
+        """Abre atendimento no HubSoft (POST /atendimento) e, com abrir_os=True,
+        abre a OS na mesma chamada. Retorna o objeto `atendimento` (com
+        `id_atendimento` e `ordens_servico[]`).
+        """
+        payload = {
+            'id_cliente_servico': id_cliente_servico,
+            'descricao': descricao,
+            'nome': nome,
+            'telefone': self._somente_numeros(telefone),
+        }
+        if email:
+            payload['email'] = email
+        if id_tipo_atendimento is not None:
+            payload['id_tipo_atendimento'] = id_tipo_atendimento
+        if id_atendimento_status is not None:
+            payload['id_atendimento_status'] = id_atendimento_status
+        if id_usuario_responsavel is not None:
+            payload['id_usuario_responsavel'] = id_usuario_responsavel
+        if parametros:
+            payload['parametros'] = parametros
+        if abrir_os:
+            payload['abrir_os'] = True
+            pos = {}
+            if id_tipo_ordem_servico is not None:
+                pos['id_tipo_ordem_servico'] = id_tipo_ordem_servico
+            if status_os:
+                pos['status'] = status_os
+            if ids_tecnicos:
+                pos['ids_tecnicos'] = [str(t) for t in ids_tecnicos]
+            if id_disponibilidade is not None:
+                pos['id_disponibilidade'] = id_disponibilidade
+            if pos:
+                payload['parametros_ordem_servico'] = pos
+
+        resposta = self._post(self.ENDPOINT_ATENDIMENTO_CREATE, json=payload, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft rejeitou abertura de atendimento/OS: {resposta}"
+            )
+        return resposta.get('atendimento') or {}
+
+    def consultar_horarios_agenda(
+        self, *,
+        id_agenda_ordem_servico=None,
+        descricao: str = None,
+        data_inicio: str = None,
+        dias: int = 1,
+        lead=None,
+    ) -> dict:
+        """Consulta horarios disponiveis numa agenda de OS.
+
+        Informe `id_agenda_ordem_servico` OU `descricao` da agenda. `data_inicio`
+        no formato YYYY-MM-DD. Retorna o bloco `horarios` (datas -> horarios ->
+        tecnicos) cru do HubSoft.
+        """
+        if not id_agenda_ordem_servico and not descricao:
+            raise HubsoftServiceError('consultar_horarios_agenda: informe id_agenda_ordem_servico ou descricao.')
+        params = {}
+        if id_agenda_ordem_servico is not None:
+            params['id_agenda_ordem_servico'] = id_agenda_ordem_servico
+        if descricao:
+            params['descricao'] = descricao
+        if data_inicio:
+            params['data_inicio'] = data_inicio
+        if dias:
+            params['dias'] = int(dias)
+        resposta = self._get(self.ENDPOINT_OS_HORARIOS_AGENDA, params=params, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft erro em horarios_disponiveis_agenda: {resposta}"
+            )
+        return resposta.get('horarios') or {}
+
+    def agendar_os(self, id_ordem_servico, *, lead=None) -> dict:
+        """Agenda uma OS que esta aguardando agendamento (POST /ordem_servico/agendar)."""
+        resposta = self._post(
+            self.ENDPOINT_OS_AGENDAR, json={'id_ordem_servico': int(id_ordem_servico)}, lead=lead,
+        )
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft erro ao agendar OS {id_ordem_servico}: {resposta}"
+            )
+        return resposta
 
     def _params_busca_cliente(self, cpf_cnpj=None, id_cliente=None, codigo_cliente=None) -> dict:
         """Helper compartilhado: monta busca/termo_busca pra endpoints de cliente."""
