@@ -229,13 +229,11 @@ def receber_lead(request):
             if atualizou:
                 lead.save()
 
-        # Cria oportunidade se ainda nao existir uma aberta
+        # lead_id e unico: o lead tem no maximo UMA oportunidade. Buscar qualquer
+        # uma (inclusive em estagio final) evita tentar criar uma segunda e violar
+        # a constraint unique(lead_id).
         oportunidade = OportunidadeVenda.all_tenants.filter(
             tenant=tenant, lead=lead,
-        ).exclude(
-            estagio__is_final_ganho=True
-        ).exclude(
-            estagio__is_final_perdido=True
         ).first()
 
         if not oportunidade:
@@ -570,10 +568,10 @@ def inbox_mensagem(request):
             if atualizou:
                 lead.save()
 
-        # 3. Oportunidade — find or create
+        # 3. Oportunidade — find or create (lead_id e unico: reusa qualquer existente)
         oportunidade = OportunidadeVenda.all_tenants.filter(
             tenant=tenant, lead=lead
-        ).exclude(estagio__is_final_ganho=True).exclude(estagio__is_final_perdido=True).first()
+        ).first()
         if not oportunidade:
             pipeline = Pipeline.all_tenants.filter(tenant=tenant, padrao=True).first() or \
                        Pipeline.all_tenants.filter(tenant=tenant).first()

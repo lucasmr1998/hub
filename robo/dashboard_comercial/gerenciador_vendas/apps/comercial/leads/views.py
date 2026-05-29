@@ -548,13 +548,18 @@ def registrar_lead_api(request):
                             or PipelineEstagio.objects.filter(pipeline=pipeline).order_by('ordem').first()
                         )
                         if estagio:
-                            oport = OportunidadeVenda.objects.create(
-                                tenant=tenant,
+                            # get_or_create: o signal post_save de LeadProspecto pode
+                            # ja ter criado a oportunidade (lead qualificado). lead_id e
+                            # unico, entao criar de novo violaria a constraint.
+                            oport, _ = OportunidadeVenda.objects.get_or_create(
                                 lead=lead,
-                                pipeline=pipeline,
-                                estagio=estagio,
-                                titulo=lead.nome_razaosocial[:255],
-                                origem_crm='automatico',
+                                defaults={
+                                    'tenant': tenant,
+                                    'pipeline': pipeline,
+                                    'estagio': estagio,
+                                    'titulo': lead.nome_razaosocial[:255],
+                                    'origem_crm': 'automatico',
+                                },
                             )
                             oportunidade_id = oport.id
         except Exception as e:
