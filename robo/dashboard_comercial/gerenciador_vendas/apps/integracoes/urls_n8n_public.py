@@ -14,4 +14,7 @@ urlpatterns = [
 
     # Matrix / agendamento de OS (camada que substitui o apimatrix externo)
     path('matrix/datas-sem-domingo/', views_matrix_os.consultar_datas_sem_domingo, name='matrix_datas_sem_domingo'),
+    path('matrix/consultar-agenda/', views_matrix_os.consultar_agenda, name='matrix_consultar_agenda'),
+    path('matrix/abrir-atendimento/', views_matrix_os.abrir_atendimento, name='matrix_abrir_atendimento'),
+    path('matrix/abrir-os/', views_matrix_os.abrir_os, name='matrix_abrir_os'),
 ]

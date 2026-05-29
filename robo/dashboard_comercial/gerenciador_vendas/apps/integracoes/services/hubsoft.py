@@ -65,6 +65,7 @@ class HubsoftService:
     ENDPOINT_ATENDIMENTO_CREATE = '/api/v1/integracao/atendimento'
     ENDPOINT_OS_HORARIOS_AGENDA = '/api/v1/integracao/ordem_servico/horarios_disponiveis_agenda'
     ENDPOINT_OS_AGENDAR = '/api/v1/integracao/ordem_servico/agendar'
+    ENDPOINT_OS_ABRIR = '/api/v1/integracao/ordem_servico/abrir_os'
 
     # Operacional / suporte
     ENDPOINT_EXTRATO_CONEXAO = '/api/v1/integracao/cliente/extrato_conexao'
@@ -1334,6 +1335,58 @@ class HubsoftService:
                 f"HubSoft erro ao agendar OS {id_ordem_servico}: {resposta}"
             )
         return resposta
+
+    def abrir_os(
+        self, *,
+        id_atendimento,
+        id_agenda_ordem_servico=None,
+        id_tipo_ordem_servico=None,
+        data_inicio_programado: str = None,
+        data_termino_programado: str = None,
+        hora_inicio_programado: str = None,
+        hora_termino_programado: str = None,
+        status: str = None,
+        descricao_servico: str = None,
+        tecnicos: list = None,
+        disponibilidade: list = None,
+        lead=None,
+    ) -> dict:
+        """Abre uma OS a partir de um atendimento existente
+        (POST /ordem_servico/abrir_os?id_atendimento=), ja com o slot escolhido.
+
+        `tecnicos`: lista de ids -> vira {"0": {"id": x}, ...}
+        `disponibilidade`: lista de prefixos (ex: ["manha"]) -> vira {"0": "manha", ...}
+        Retorna o objeto `ordem_servico`.
+        """
+        body = {}
+        if id_agenda_ordem_servico is not None:
+            body['id_agenda_ordem_servico'] = id_agenda_ordem_servico
+        if id_tipo_ordem_servico is not None:
+            body['id_tipo_ordem_servico'] = id_tipo_ordem_servico
+        if data_inicio_programado:
+            body['data_inicio_programado'] = data_inicio_programado
+        if data_termino_programado:
+            body['data_termino_programado'] = data_termino_programado
+        if hora_inicio_programado:
+            body['hora_inicio_programado'] = hora_inicio_programado
+        if hora_termino_programado:
+            body['hora_termino_programado'] = hora_termino_programado
+        if status:
+            body['status'] = status
+        if descricao_servico:
+            body['descricao_servico'] = descricao_servico
+        if tecnicos:
+            body['tecnicos'] = {str(i): {'id': int(t)} for i, t in enumerate(tecnicos)}
+        if disponibilidade:
+            body['disponibilidade'] = {str(i): str(d) for i, d in enumerate(disponibilidade)}
+
+        endpoint = f'{self.ENDPOINT_OS_ABRIR}?id_atendimento={int(id_atendimento)}'
+        resposta = self._post(endpoint, json=body, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft rejeitou abrir_os (atendimento {id_atendimento}): {resposta}"
+            )
+        return resposta.get('ordem_servico') or {}
 
     def _params_busca_cliente(self, cpf_cnpj=None, id_cliente=None, codigo_cliente=None) -> dict:
         """Helper compartilhado: monta busca/termo_busca pra endpoints de cliente."""
