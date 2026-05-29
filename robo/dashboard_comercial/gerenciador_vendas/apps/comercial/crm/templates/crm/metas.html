@@ -36,7 +36,7 @@
             <div class="meta-card" data-pqt="{{ pqt }}" data-pval="{{ pval }}">
               <div class="meta-card-header">
                 <div>
-                  <div class="meta-card-title">{{ meta.vendedor.get_full_name|default:meta.vendedor.username }}</div>
+                  <div class="meta-card-title">{% if meta.vendedor %}{{ meta.vendedor.get_full_name|default:meta.vendedor.username }}{% else %}— Sem vendedor —{% endif %}</div>
                   <div class="meta-card-sub">{{ meta.get_periodo_display }} — {{ meta.data_inicio|date:"d/m/Y" }} a {{ meta.data_fim|date:"d/m/Y" }}</div>
                 </div>
                 <span class="meta-tipo-badge meta-tipo-individual">Individual</span>
@@ -84,7 +84,7 @@
 
               <div class="meta-actions">
                 <button class="btn btn-secondary btn-sm" onclick="editarMeta({{ meta.pk }})"><i class="bi bi-pencil"></i> Editar</button>
-                <button class="btn btn-ghost btn-sm btn-ghost-danger" onclick="excluirMeta({{ meta.pk }}, '{{ meta.vendedor.get_full_name|default:meta.vendedor.username|escapejs }}')"><i class="bi bi-trash"></i></button>
+                <button class="btn btn-ghost btn-sm btn-ghost-danger" onclick="excluirMeta({{ meta.pk }}, '{% if meta.vendedor %}{{ meta.vendedor.get_full_name|default:meta.vendedor.username|escapejs }}{% else %}Sem vendedor{% endif %}')"><i class="bi bi-trash"></i></button>
               </div>
             </div>
           {% endwith %}
@@ -112,7 +112,7 @@
             <div class="meta-card" data-pqt="{{ pqt }}" data-pval="{{ pval }}">
               <div class="meta-card-header">
                 <div>
-                  <div class="meta-card-title">{{ meta.equipe.nome }}</div>
+                  <div class="meta-card-title">{% if meta.equipe %}{{ meta.equipe.nome }}{% else %}— Sem equipe —{% endif %}</div>
                   <div class="meta-card-sub">{{ meta.get_periodo_display }} — {{ meta.data_inicio|date:"d/m/Y" }} a {{ meta.data_fim|date:"d/m/Y" }}</div>
                 </div>
                 <span class="meta-tipo-badge meta-tipo-equipe">Equipe</span>
@@ -150,7 +150,7 @@
 
               <div class="meta-actions">
                 <button class="btn btn-secondary btn-sm" onclick="editarMeta({{ meta.pk }})"><i class="bi bi-pencil"></i> Editar</button>
-                <button class="btn btn-ghost btn-sm btn-ghost-danger" onclick="excluirMeta({{ meta.pk }}, '{{ meta.equipe.nome|escapejs }}')"><i class="bi bi-trash"></i></button>
+                <button class="btn btn-ghost btn-sm btn-ghost-danger" onclick="excluirMeta({{ meta.pk }}, '{% if meta.equipe %}{{ meta.equipe.nome|escapejs }}{% else %}Sem equipe{% endif %}')"><i class="bi bi-trash"></i></button>
               </div>
             </div>
           {% endwith %}

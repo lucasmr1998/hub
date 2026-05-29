@@ -1191,9 +1191,13 @@ def api_meta_criar(request):
     except (KeyError, ValueError):
         return JsonResponse({'ok': False, 'erro': 'Datas inválidas'}, status=400)
 
-    if meta.tipo == 'individual' and data.get('vendedor_id'):
+    if meta.tipo == 'individual':
+        if not data.get('vendedor_id'):
+            return JsonResponse({'ok': False, 'erro': 'Selecione um vendedor para a meta individual.'}, status=400)
         meta.vendedor = get_object_or_404(User, pk=data['vendedor_id'])
-    elif meta.tipo == 'equipe' and data.get('equipe_id'):
+    else:
+        if not data.get('equipe_id'):
+            return JsonResponse({'ok': False, 'erro': 'Selecione uma equipe para a meta de equipe.'}, status=400)
         meta.equipe = get_object_or_404(EquipeVendas, pk=data['equipe_id'])
 
     meta.save()
@@ -1881,11 +1885,15 @@ def api_meta_salvar(request):
 
     if meta.tipo == 'individual':
         vid = request.POST.get('vendedor_id')
-        meta.vendedor = get_object_or_404(AuthUser, pk=vid) if vid else None
+        if not vid:
+            return JsonResponse({'ok': False, 'erro': 'Selecione um vendedor para a meta individual.'}, status=400)
+        meta.vendedor = get_object_or_404(AuthUser, pk=vid)
         meta.equipe = None
     else:
         eid = request.POST.get('equipe_id')
-        meta.equipe = get_object_or_404(EquipeVendas, pk=eid) if eid else None
+        if not eid:
+            return JsonResponse({'ok': False, 'erro': 'Selecione uma equipe para a meta de equipe.'}, status=400)
+        meta.equipe = get_object_or_404(EquipeVendas, pk=eid)
         meta.vendedor = None
 
     meta.save()
