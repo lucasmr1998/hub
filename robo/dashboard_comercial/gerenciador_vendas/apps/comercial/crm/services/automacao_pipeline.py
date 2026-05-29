@@ -285,7 +285,11 @@ def _acao_criar_venda(oportunidade, config):
 def _acao_atribuir_agente(oportunidade, config):
     """Atribui a oportunidade e a conversa vinculada a um usuario.
 
-    Nao rouba lead de outra vendedora: se ja tem responsavel, pula.
+    Nao rouba lead de outra vendedora: se a oportunidade ja tem responsavel, pula
+    (por isso a reivindicacao so acontece uma vez, no primeiro match). Quando
+    reivindica, a conversa vinculada e atribuida a este usuario MESMO que a fila
+    ja tenha auto-distribuido para outro agente: a regra de roteamento por cidade
+    tem prioridade sobre a distribuicao automatica da fila.
     """
     from apps.comercial.crm.models import OportunidadeVenda
     from apps.inbox.models import Conversa
@@ -302,7 +306,6 @@ def _acao_atribuir_agente(oportunidade, config):
     n_conv = Conversa.all_tenants.filter(
         tenant=oportunidade.tenant,
         oportunidade_id=oportunidade.pk,
-        agente__isnull=True,
     ).update(agente_id=user_id)
 
     logger.info(
