@@ -30,6 +30,7 @@ urlpatterns = [
     path('api/avaliacoes/<int:avaliacao_id>/responder/', views.api_avaliacao_responder, name='api_avaliacao_responder'),
     path('api/conversas/<int:pk>/enviar/', views.api_enviar_mensagem, name='api_enviar_mensagem'),
     path('api/conversas/<int:pk>/atribuir/', views.api_atribuir, name='api_atribuir'),
+    path('api/conversas/<int:pk>/assumir/', views.api_assumir, name='api_assumir'),
     path('api/conversas/<int:pk>/resolver/', views.api_resolver, name='api_resolver'),
     path('api/conversas/<int:pk>/reabrir/', views.api_reabrir, name='api_reabrir'),
     path('api/conversas/<int:pk>/ticket/', views.api_criar_ticket, name='api_criar_ticket'),

@@ -355,11 +355,17 @@ def enviar_mensagem(conversa, conteudo, user, tipo_conteudo='texto',
         'mensagens_nao_lidas', 'tempo_primeira_resposta_seg',
     ]
 
-    # Se estava aberta sem agente, atribuir automaticamente
+    # Bloqueia envio se conversa ainda não foi assumida pelo agente
+    if conversa.agente_id and not conversa.assumida:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Assuma a conversa antes de responder.")
+
+    # Se estava aberta sem agente, atribuir e assumir automaticamente
     if not conversa.agente_id:
         conversa.agente = user
+        conversa.assumida = True
         _vincular_agente_oportunidade(conversa, user)
-        update_fields.append('agente')
+        update_fields.extend(['agente', 'assumida'])
 
     # Quando agente responde, conversa vira humana — silencia o bot externo
     if conversa.modo_atendimento != 'humano':
@@ -503,7 +509,8 @@ def atribuir_conversa(conversa, agente, atribuido_por=None):
     from apps.inbox.models import MembroEquipeInbox
 
     conversa.agente = agente
-    updates = ['agente']
+    conversa.assumida = False  # novo agente precisa assumir explicitamente
+    updates = ['agente', 'assumida']
 
     # Silencia o bot — quando agente entra, conversa fica em modo humano
     if conversa.modo_atendimento != 'humano':
@@ -539,6 +546,33 @@ def atribuir_conversa(conversa, agente, atribuido_por=None):
         ),
     ).save()
 
+    return conversa
+
+
+def assumir_conversa(conversa, agente):
+    """Agente assume explicitamente a conversa — libera histórico e input.
+
+    Regras:
+    - Se já assumida por outro agente: levanta ValueError
+    - Se não atribuída: atribui ao agente que está assumindo
+    - Seta assumida=True
+    """
+    if conversa.assumida and conversa.agente_id and conversa.agente_id != agente.pk:
+        raise ValueError("Conversa já assumida por outro agente.")
+
+    updates = ['assumida']
+
+    if not conversa.agente_id:
+        conversa.agente = agente
+        _vincular_agente_oportunidade(conversa, agente)
+        updates.append('agente')
+
+    if conversa.modo_atendimento != 'humano':
+        conversa.modo_atendimento = 'humano'
+        updates.append('modo_atendimento')
+
+    conversa.assumida = True
+    conversa.save(update_fields=updates)
     return conversa
 
 
@@ -709,9 +743,10 @@ def transferir_conversa(conversa, transferido_por, para_agente=None,
     if para_agente:
         historico.para_agente = para_agente
         conversa.agente = para_agente
+        conversa.assumida = False  # destino precisa assumir
         nome_destino = para_agente.get_full_name() or para_agente.username
         msg_parts.append(f"para {nome_destino}")
-        conversa.save(update_fields=['agente'])
+        conversa.save(update_fields=['agente', 'assumida'])
         _vincular_agente_oportunidade(conversa, para_agente)
 
     elif para_fila:

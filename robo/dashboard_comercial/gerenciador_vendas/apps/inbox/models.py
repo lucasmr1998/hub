@@ -219,6 +219,10 @@ class Conversa(TenantMixin):
     )
     data_arquivamento = models.DateTimeField(null=True, blank=True, verbose_name="Data de Arquivamento")
     metadata = models.JSONField(default=dict, blank=True, verbose_name="Metadata")
+    assumida = models.BooleanField(
+        default=False, verbose_name="Assumida",
+        help_text="Agente abriu e aceitou atender explicitamente. Falso = só direcionada, histórico bloqueado."
+    )
 
     class Meta:
         db_table = 'inbox_conversas'

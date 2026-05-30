@@ -353,14 +353,19 @@ def api_enviar_mensagem(request, pk):
     if not conteudo:
         return JsonResponse({'error': 'Conteúdo obrigatório'}, status=400)
 
-    mensagem = services.enviar_mensagem(
-        conversa=conversa,
-        conteudo=conteudo,
-        user=request.user,
-        tipo_conteudo=body.get('tipo_conteudo', 'texto'),
-        arquivo_url=body.get('arquivo_url', ''),
-        arquivo_nome=body.get('arquivo_nome', ''),
-    )
+    try:
+        mensagem = services.enviar_mensagem(
+            conversa=conversa,
+            conteudo=conteudo,
+            user=request.user,
+            tipo_conteudo=body.get('tipo_conteudo', 'texto'),
+            arquivo_url=body.get('arquivo_url', ''),
+            arquivo_nome=body.get('arquivo_nome', ''),
+        )
+    except Exception as e:
+        if 'Assuma a conversa' in str(e):
+            return JsonResponse({'error': 'Assuma a conversa antes de responder.', 'code': 'nao_assumida'}, status=403)
+        raise
 
     return JsonResponse({
         'success': True,
@@ -388,6 +393,19 @@ def api_atribuir(request, pk):
     services.atribuir_conversa(conversa, agente, atribuido_por=request.user)
 
     return JsonResponse({'success': True, 'agente_nome': agente.get_full_name() or agente.username})
+
+
+@login_required
+@require_http_methods(["POST"])
+@auditar('inbox', 'assumir', 'conversa')
+def api_assumir(request, pk):
+    """POST: Agente assume a conversa — libera histórico e input."""
+    conversa = _get_conversa(pk, request)
+    try:
+        services.assumir_conversa(conversa, request.user)
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=409)
+    return JsonResponse({'success': True, 'assumida': True})
 
 
 @login_required

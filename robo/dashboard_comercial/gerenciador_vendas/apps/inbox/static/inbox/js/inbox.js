@@ -266,6 +266,21 @@
 
     // ── Selecionar conversa ───────────────────────────────────────────
 
+    function _aplicarEstadoAssumida(assumida) {
+        const banner = document.getElementById('assumirBanner');
+        const input = document.getElementById('inputArea');
+        const msgs = document.getElementById('messageList');
+        if (assumida) {
+            banner.style.display = 'none';
+            input.style.display = 'block';
+            msgs.style.display = 'flex';
+        } else {
+            banner.style.display = 'flex';
+            input.style.display = 'none';
+            msgs.style.display = 'none';
+        }
+    }
+
     function selectConversa(id) {
         state.currentConversaId = id;
         document.querySelectorAll('.conv-card').forEach(el => {
@@ -274,6 +289,7 @@
 
         document.getElementById('emptyState').style.display = 'none';
         document.getElementById('chatHeader').style.display = 'flex';
+        document.getElementById('assumirBanner').style.display = 'none';
         document.getElementById('messageList').style.display = 'flex';
         document.getElementById('inputArea').style.display = 'block';
         document.getElementById('inboxSidebar')?.classList.add('hidden-mobile');
@@ -281,8 +297,8 @@
 
         wsSend({ action: 'join_conversa', conversa_id: id });
         loadConversaDetalhe(id);
-        loadMensagens(id, true);  // abriu a conversa -> rola pro fim
-        loadRespostasRapidas();  // recarrega com variáveis renderizadas pra essa conversa
+        loadMensagens(id, true);
+        loadRespostasRapidas();
         if (!state.wsConnected) startMessagePoll(id);
     }
 
@@ -318,6 +334,9 @@
                     rb.classList.remove('is-reopened');
                 }
             }
+
+            // Estado assumida — controla banner + visibilidade histórico e input
+            _aplicarEstadoAssumida(data.assumida !== false);
 
             // Labels
             const chipDiv = document.getElementById('labelChips');
@@ -817,6 +836,21 @@
             fetchJSON('/inbox/api/conversas/' + state.currentConversaId + '/atualizar/', {
                 method: 'POST', body: JSON.stringify({ prioridade: this.value }),
             });
+        });
+
+        // Assumir conversa
+        $('assumirBtn').addEventListener('click', () => {
+            if (!state.currentConversaId) return;
+            fetchJSON('/inbox/api/conversas/' + state.currentConversaId + '/assumir/', { method: 'POST' })
+                .then(data => {
+                    if (data.success) {
+                        _aplicarEstadoAssumida(true);
+                        loadConversaDetalhe(state.currentConversaId);
+                        loadMensagens(state.currentConversaId, true);
+                    } else {
+                        alert(data.error || 'Não foi possível assumir a conversa.');
+                    }
+                });
         });
 
         // Etiquetas
