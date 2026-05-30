@@ -10,15 +10,8 @@
 {% block content %}
 <script>
     document.body.classList.add('inbox-page');
-    // Esconder sidebar de ícones (nav.app-sidebar — não tem ID, getElementById falhava antes)
-    var appSidebar = document.querySelector('.app-sidebar');
-    if (appSidebar) appSidebar.style.display = 'none';
-    // Zerar margem e padding do conteúdo principal
-    var appMain = document.querySelector('.app-main');
-    if (appMain) appMain.style.marginLeft = '0';
-    var appMainInner = document.querySelector('.app-main-inner');
-    if (appMainInner) appMainInner.style.padding = '0';
-    // Compat legado
+    var sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.style.display = 'none';
     var main = document.querySelector('.main-content');
     if (main) { main.style.padding = '0'; main.style.marginLeft = '0'; }
 </script>
