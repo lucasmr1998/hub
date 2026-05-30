@@ -137,20 +137,27 @@ def selecionar_agente(fila, tenant):
 
 
 def _round_robin(fila, disponiveis):
-    """Seleciona proximo agente em ciclo circular."""
+    """Seleciona proximo agente em ciclo circular com lock para evitar race condition."""
+    from django.db import transaction
+
     user_ids = [p.user_id for p in disponiveis]
 
-    ultimo_id = fila.ultimo_agente_id
-    if ultimo_id and ultimo_id in user_ids:
-        idx = user_ids.index(ultimo_id)
-        proximo_idx = (idx + 1) % len(user_ids)
-    else:
-        proximo_idx = 0
+    with transaction.atomic():
+        fila_locked = FilaInbox.all_tenants.select_for_update().filter(
+            tenant=fila.tenant, pk=fila.pk
+        ).first()
+        if not fila_locked:
+            return disponiveis[0].user
 
-    agente_id = user_ids[proximo_idx]
+        ultimo_id = fila_locked.ultimo_agente_id
+        if ultimo_id and ultimo_id in user_ids:
+            idx = user_ids.index(ultimo_id)
+            proximo_idx = (idx + 1) % len(user_ids)
+        else:
+            proximo_idx = 0
 
-    # Atualizar estado do round-robin (filtro explicito de tenant: defesa-em-profundidade)
-    FilaInbox.all_tenants.filter(tenant=fila.tenant, pk=fila.pk).update(ultimo_agente_id=agente_id)
+        agente_id = user_ids[proximo_idx]
+        FilaInbox.all_tenants.filter(tenant=fila.tenant, pk=fila.pk).update(ultimo_agente_id=agente_id)
 
     perfil = next(p for p in disponiveis if p.user_id == agente_id)
     return perfil.user

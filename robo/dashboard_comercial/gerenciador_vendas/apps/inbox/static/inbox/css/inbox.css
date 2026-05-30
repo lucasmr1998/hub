@@ -5,6 +5,9 @@
 body.inbox-page { overflow: hidden; }
 body.inbox-page .main-content { padding: 0; margin-left: 0; overflow: hidden; }
 body.inbox-page .sidebar { display: none; }
+body.inbox-page .app-sidebar { display: none; }
+body.inbox-page .app-main { margin-left: 0 !important; }
+body.inbox-page .app-main-inner { padding: 0 !important; }
 .main-content:has(.inbox-container) { padding: 0; margin-left: 0; overflow: hidden; }
 
 .inbox-container {

@@ -600,15 +600,51 @@
         }
     }
 
+    function _notificarNovaMsg(conversaId) {
+        // Som de notificação
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.15, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.3);
+        } catch (_) {}
+
+        // Notificação do browser (se permitida)
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('Nova mensagem — Hubtrix', { body: 'Você tem uma nova mensagem no Inbox.', icon: '/static/sistema/img/logo.png' });
+        } else if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        // Badge no título da página
+        document.title = '● ' + document.title.replace(/^● /, '');
+    }
+
     function handleWsMessage(data) {
         if (data.type === 'nova_mensagem') {
             loadConversas();
-            if (data.conversa_id === state.currentConversaId) loadMensagens(state.currentConversaId);
+            if (data.conversa_id === state.currentConversaId) {
+                loadMensagens(state.currentConversaId);
+            } else {
+                _notificarNovaMsg(data.conversa_id);
+            }
         } else if (data.type === 'conversa_atualizada') {
             loadConversas();
             if (data.conversa_id === state.currentConversaId) loadConversaDetalhe(state.currentConversaId);
         }
     }
+
+    // Remove badge do título ao focar na aba
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) document.title = document.title.replace(/^● /, '');
+    });
 
     function wsSend(data) {
         if (state.ws && state.wsConnected) state.ws.send(JSON.stringify(data));

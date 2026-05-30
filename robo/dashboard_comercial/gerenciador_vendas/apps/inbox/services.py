@@ -8,6 +8,7 @@ Chamado pelas views (painel) e APIs (N8N/webhook).
 import logging
 import re
 import threading
+import time
 
 import requests
 from django.utils import timezone
@@ -210,6 +211,16 @@ def receber_mensagem(telefone, nome, conteudo, tenant, tipo_conteudo='texto',
             logger.info("[Inbox] Lead recriado para conversa sem lead: %s", lead.nome_razaosocial)
         conversa.lead = lead
         conversa.save(update_fields=['lead'])
+
+    if not conversa:
+        # Dedup cross-canal: mesmo lead com conversa ativa em canal diferente
+        lead_tmp = buscar_lead_por_telefone(fone, tenant)
+        if lead_tmp:
+            conversa = Conversa.all_tenants.filter(
+                tenant=tenant,
+                lead=lead_tmp,
+                status__in=['aberta', 'pendente'],
+            ).exclude(canal=canal).order_by('-ultima_mensagem_em').first()
 
     if not conversa:
         nova_conversa = True
@@ -419,26 +430,28 @@ def _enviar_webhook_async(conversa, mensagem):
     canal = conversa.canal
 
     def _send():
-        try:
-            if canal.provedor and canal.integracao:
-                # Usa provider abstraction (Uazapi, Evolution, Twilio, etc)
-                from apps.inbox.providers import get_provider
-                provider = get_provider(canal)
-                result = provider.enviar_mensagem(conversa, mensagem)
-                msg_id = provider.extrair_msg_id(result)
-                if msg_id:
-                    Mensagem.all_tenants.filter(pk=mensagem.pk).update(
-                        identificador_externo=msg_id
-                    )
-                logger.info("[Provider:%s] Mensagem enviada para %s", canal.provedor, conversa.contato_telefone)
-            else:
-                # Fallback: webhook genérico (N8N, etc)
-                _enviar_via_webhook_legado(conversa, mensagem)
-        except Exception as e:
-            logger.error("Erro ao enviar mensagem via %s: %s", canal.provedor or 'webhook', e)
-            Mensagem.all_tenants.filter(pk=mensagem.pk).update(
-                erro_envio=str(e)[:500]
-            )
+        _RETRY_DELAYS = [2, 5, 10]
+        last_exc = None
+        for attempt in range(len(_RETRY_DELAYS) + 1):
+            try:
+                if canal.provedor and canal.integracao:
+                    from apps.inbox.providers import get_provider
+                    provider = get_provider(canal)
+                    result = provider.enviar_mensagem(conversa, mensagem)
+                    msg_id = provider.extrair_msg_id(result)
+                    if msg_id:
+                        Mensagem.all_tenants.filter(pk=mensagem.pk).update(identificador_externo=msg_id)
+                    logger.info("[Provider:%s] Mensagem enviada para %s (tentativa %d)", canal.provedor, conversa.contato_telefone, attempt + 1)
+                else:
+                    _enviar_via_webhook_legado(conversa, mensagem)
+                return  # sucesso
+            except Exception as e:
+                last_exc = e
+                if attempt < len(_RETRY_DELAYS):
+                    logger.warning("[Inbox] Falha ao enviar (tentativa %d/%d): %s — retry em %ds", attempt + 1, len(_RETRY_DELAYS) + 1, e, _RETRY_DELAYS[attempt])
+                    time.sleep(_RETRY_DELAYS[attempt])
+        logger.error("Erro ao enviar mensagem após %d tentativas: %s", len(_RETRY_DELAYS) + 1, last_exc)
+        Mensagem.all_tenants.filter(pk=mensagem.pk).update(erro_envio=str(last_exc)[:500])
 
     thread = threading.Thread(target=_send, daemon=True)
     thread.start()
@@ -604,6 +617,28 @@ def resolver_conversa(conversa, user, motivo=None):
     ).save()
 
     _notificar_ws_conversa_alterada(conversa, {'status': 'resolvida'})
+
+    # CSAT automático — criar registro e enviar mensagem de avaliação ao contato
+    try:
+        from .models import AvaliacaoAtendimento
+        if conversa.agente_id and not AvaliacaoAtendimento.objects.filter(conversa=conversa).exists():
+            AvaliacaoAtendimento.objects.create(
+                tenant=conversa.tenant,
+                conversa=conversa,
+                data_envio=timezone.now(),
+            )
+            msg_csat = Mensagem(
+                tenant=conversa.tenant,
+                conversa=conversa,
+                remetente_tipo='bot',
+                remetente_nome='Sistema',
+                tipo_conteudo='texto',
+                conteudo='Obrigado pelo contato! Como você avalia nosso atendimento? Responda com uma nota de 1 a 5 (1 = ruim, 5 = excelente).',
+            )
+            msg_csat.save()
+            _enviar_webhook_async(conversa, msg_csat)
+    except Exception:
+        pass  # CSAT não bloqueia o encerramento
 
     return conversa
 
