@@ -96,6 +96,39 @@ class EtiquetaConversa(TenantMixin):
         return self.nome
 
 
+class MotivoEncerramento(TenantMixin):
+    """Motivo pelo qual uma conversa foi encerrada (resolvida).
+    Lista configuravel por tenant. Motivos com `sistema=True` (ex: o
+    `codigo=auto_inatividade` usado pelo encerramento automatico) nao podem
+    ser apagados pela UI."""
+    CODIGO_AUTO = 'auto_inatividade'
+
+    nome = models.CharField(max_length=80, verbose_name="Nome")
+    cor_hex = models.CharField(max_length=7, default='#667eea', verbose_name="Cor")
+    codigo = models.CharField(
+        max_length=40, blank=True, default='',
+        verbose_name="Código interno",
+        help_text="Identificador estável para motivos de sistema (vazio para os criados pelo tenant)"
+    )
+    sistema = models.BooleanField(
+        default=False, editable=False, verbose_name="Motivo de sistema",
+        help_text="Motivos de sistema não podem ser apagados pela UI"
+    )
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    ordem = models.PositiveIntegerField(default=0, verbose_name="Ordem")
+    criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+
+    class Meta:
+        db_table = 'inbox_motivos_encerramento'
+        verbose_name = "Motivo de encerramento"
+        verbose_name_plural = "Motivos de encerramento"
+        ordering = ['ordem', 'nome']
+        unique_together = [['tenant', 'nome']]
+
+    def __str__(self):
+        return self.nome
+
+
 class Conversa(TenantMixin):
     STATUS_CHOICES = [
         ('aberta', 'Aberta'),
@@ -179,6 +212,11 @@ class Conversa(TenantMixin):
 
     data_abertura = models.DateTimeField(auto_now_add=True, verbose_name="Data de Abertura")
     data_resolucao = models.DateTimeField(null=True, blank=True, verbose_name="Data de Resolução")
+    motivo_encerramento = models.ForeignKey(
+        'MotivoEncerramento', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='conversas', verbose_name="Motivo de encerramento"
+    )
     data_arquivamento = models.DateTimeField(null=True, blank=True, verbose_name="Data de Arquivamento")
     metadata = models.JSONField(default=dict, blank=True, verbose_name="Metadata")
 
@@ -673,6 +711,24 @@ class ConfiguracaoInbox(TenantMixin):
         default=True, verbose_name="Atribuir ao responder",
         help_text="Auto-atribuir agente quando responde conversa sem agente"
     )
+
+    # Encerramento automático por inatividade
+    encerramento_auto_ativo = models.BooleanField(
+        default=False, verbose_name="Encerrar atendimentos inativos automaticamente",
+        help_text="Encerra conversas humanas (aberta/pendente) sem resposta há X horas"
+    )
+    encerramento_auto_horas = models.PositiveIntegerField(
+        default=48, verbose_name="Horas de inatividade para encerrar"
+    )
+    encerramento_auto_aviso_ativo = models.BooleanField(
+        default=True, verbose_name="Avisar o contato ao encerrar"
+    )
+    encerramento_auto_aviso_texto = models.TextField(
+        blank=True,
+        default="Encerramos este atendimento por inatividade. Se precisar de algo, é só chamar que a gente continua.",
+        verbose_name="Mensagem de encerramento automático"
+    )
+
     data_atualizacao = models.DateTimeField(auto_now=True)
 
     class Meta:

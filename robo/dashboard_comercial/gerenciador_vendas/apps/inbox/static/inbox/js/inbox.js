@@ -729,11 +729,26 @@
         });
 
         // Resolve button group — alterna entre Resolver e Reabrir conforme status atual
+        const reloadAfterResolve = () => {
+            loadConversas();
+            loadConversaDetalhe(state.currentConversaId);
+            loadMensagens(state.currentConversaId);
+        };
+        const abrirModalMotivo = () => {
+            const sel = $('resolveMotivoSelect');
+            if (sel) sel.value = '';
+            $('resolveMotivoModal').style.display = 'flex';
+        };
+        const fecharModalMotivo = () => { $('resolveMotivoModal').style.display = 'none'; };
+
         $('resolveBtn').addEventListener('click', () => {
             if (!state.currentConversaId) return;
-            const endpoint = state.currentConversaStatus === 'resolvida' ? '/reabrir/' : '/resolver/';
-            fetchJSON('/inbox/api/conversas/' + state.currentConversaId + endpoint, { method: 'POST' })
-                .then(() => { loadConversas(); loadConversaDetalhe(state.currentConversaId); loadMensagens(state.currentConversaId); });
+            if (state.currentConversaStatus === 'resolvida') {
+                fetchJSON('/inbox/api/conversas/' + state.currentConversaId + '/reabrir/', { method: 'POST' })
+                    .then(reloadAfterResolve);
+            } else {
+                abrirModalMotivo();
+            }
         });
         $('resolveDropdown').addEventListener('click', () => {
             const menu = $('resolveMenu');
@@ -742,18 +757,32 @@
         document.querySelectorAll('#resolveMenu button').forEach(btn => {
             btn.addEventListener('click', () => {
                 const action = btn.dataset.action;
-                let endpoint = '';
-                if (action === 'resolver') endpoint = '/resolver/';
-                else if (action === 'pendente') endpoint = '/resolver/';
-                else if (action === 'reabrir') endpoint = '/reabrir/';
-
-                if (endpoint) {
-                    fetchJSON('/inbox/api/conversas/' + state.currentConversaId + endpoint, { method: 'POST' })
-                        .then(() => { loadConversas(); loadConversaDetalhe(state.currentConversaId); loadMensagens(state.currentConversaId); });
-                }
                 $('resolveMenu').style.display = 'none';
+                if (action === 'reabrir') {
+                    fetchJSON('/inbox/api/conversas/' + state.currentConversaId + '/reabrir/', { method: 'POST' })
+                        .then(reloadAfterResolve);
+                } else if (action === 'resolver' || action === 'pendente') {
+                    abrirModalMotivo();
+                }
             });
         });
+
+        // Modal motivo: confirm/cancel
+        ['resolveMotivoCancel', 'resolveMotivoClose'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('click', fecharModalMotivo);
+        });
+        const motivoConfirmBtn = document.getElementById('resolveMotivoConfirm');
+        if (motivoConfirmBtn) {
+            motivoConfirmBtn.addEventListener('click', () => {
+                if (!state.currentConversaId) return;
+                const motivoId = $('resolveMotivoSelect').value || null;
+                const body = motivoId ? JSON.stringify({ motivo_id: parseInt(motivoId) }) : JSON.stringify({});
+                fetchJSON('/inbox/api/conversas/' + state.currentConversaId + '/resolver/', {
+                    method: 'POST', body,
+                }).then(() => { fecharModalMotivo(); reloadAfterResolve(); });
+            });
+        }
 
         // Agent select
         $('agentSelect').addEventListener('change', function() {

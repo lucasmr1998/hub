@@ -356,11 +356,38 @@
         </div>
     </div>
 </div>
+
+<div class="modal-overlay" id="resolveMotivoModal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Resolver conversa</h3>
+            <button class="modal-close" id="resolveMotivoClose"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <label>Motivo do encerramento</label>
+            <select id="resolveMotivoSelect" class="modal-input">
+                <option value="">Sem motivo</option>
+                {% for m in motivos_encerramento %}
+                <option value="{{ m.id }}">{{ m.nome }}</option>
+                {% endfor %}
+            </select>
+            {% if not motivos_encerramento %}
+            <p style="color:#6b7280;font-size:12px;margin-top:8px;">
+                Nenhum motivo cadastrado. Cadastre em Configurações → Encerramento.
+            </p>
+            {% endif %}
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" id="resolveMotivoCancel">Cancelar</button>
+            <button class="btn-primary" id="resolveMotivoConfirm">Resolver</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>window.AGENTES_STATUS = {{ agentes_status_json|safe }};</script>
-<script src="{% static 'inbox/js/inbox.js' %}?v=10"></script>
+<script src="{% static 'inbox/js/inbox.js' %}?v=11"></script>
 <script>
 // Status do agente no Inbox (pill online/ausente/offline)
 (function() {

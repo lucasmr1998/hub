@@ -542,29 +542,69 @@ def atribuir_conversa(conversa, agente, atribuido_por=None):
     return conversa
 
 
-def resolver_conversa(conversa, user):
-    """Marca conversa como resolvida (idempotente — no-op se ja resolvida)."""
+def resolver_conversa(conversa, user, motivo=None):
+    """Marca conversa como resolvida (idempotente — no-op se ja resolvida).
+    user pode ser None em encerramentos de sistema (ex: por inatividade).
+    motivo: MotivoEncerramento opcional (preenche Conversa.motivo_encerramento)."""
     if conversa.status == 'resolvida':
         return conversa
 
     conversa.status = 'resolvida'
     conversa.data_resolucao = timezone.now()
     conversa.mensagens_nao_lidas = 0
-    conversa.save(update_fields=['status', 'data_resolucao', 'mensagens_nao_lidas'])
+    update_fields = ['status', 'data_resolucao', 'mensagens_nao_lidas']
+    if motivo is not None:
+        conversa.motivo_encerramento = motivo
+        update_fields.append('motivo_encerramento')
+    conversa.save(update_fields=update_fields)
 
-    nome = user.get_full_name() or user.username
+    nome = (user.get_full_name() or user.username) if user else 'Sistema'
+    motivo_sufixo = f" · {motivo.nome}" if motivo else ''
     Mensagem(
         tenant=conversa.tenant,
         conversa=conversa,
         remetente_tipo='sistema',
         remetente_nome='Sistema',
         tipo_conteudo='sistema',
-        conteudo=f"Conversa resolvida por {nome}",
+        conteudo=f"Conversa resolvida por {nome}{motivo_sufixo}",
     ).save()
 
     _notificar_ws_conversa_alterada(conversa, {'status': 'resolvida'})
 
     return conversa
+
+
+def encerrar_por_inatividade(conversa):
+    """Encerra (resolve) por inatividade: se aviso configurado, envia a mensagem
+    pelo canal (via webhook) e marca o motivo de sistema 'auto_inatividade'.
+    Idempotente — se ja resolvida, no-op."""
+    from apps.inbox.models import ConfiguracaoInbox, MotivoEncerramento
+
+    if conversa.status == 'resolvida':
+        return conversa
+
+    cfg = ConfiguracaoInbox.all_tenants.filter(tenant=conversa.tenant).first()
+    aviso_texto = (cfg.encerramento_auto_aviso_texto or '').strip() if cfg else ''
+    aviso_on = bool(cfg and cfg.encerramento_auto_aviso_ativo and aviso_texto)
+
+    if aviso_on:
+        msg = Mensagem(
+            tenant=conversa.tenant, conversa=conversa,
+            remetente_tipo='sistema', remetente_nome='Sistema',
+            tipo_conteudo='texto', conteudo=aviso_texto,
+        )
+        msg.save()
+        conversa.ultima_mensagem_em = msg.data_envio
+        conversa.ultima_mensagem_preview = preview_mensagem(aviso_texto, 'texto')
+        conversa.save(update_fields=['ultima_mensagem_em', 'ultima_mensagem_preview'])
+        _enviar_webhook_async(conversa, msg)
+        _notificar_ws_nova_mensagem(conversa, msg)
+
+    motivo = MotivoEncerramento.all_tenants.filter(
+        tenant=conversa.tenant, codigo=MotivoEncerramento.CODIGO_AUTO
+    ).first()
+
+    return resolver_conversa(conversa, user=None, motivo=motivo)
 
 
 def reabrir_conversa(conversa, user):

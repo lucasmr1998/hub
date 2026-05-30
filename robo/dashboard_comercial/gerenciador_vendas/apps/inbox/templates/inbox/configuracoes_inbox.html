@@ -97,6 +97,7 @@
     <a class="config-tab" data-tab="faq"><i class="fas fa-question-circle"></i> FAQ</a>
     <a class="config-tab" data-tab="widget"><i class="fas fa-comment-dots"></i> Widget</a>
     <a class="config-tab" data-tab="geral"><i class="fas fa-sliders-h"></i> Geral</a>
+    <a class="config-tab" data-tab="encerramento"><i class="fas fa-flag-checkered"></i> Encerramento</a>
 </div>
 
 {% if messages %}
@@ -717,6 +718,89 @@
                 <div style="margin-top:12px;">
                     <button type="submit" class="btn-sm btn-primary-sm">Salvar</button>
                 </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ TAB: Encerramento ═══ -->
+<div class="config-section" id="tab-encerramento">
+    <div class="cfg-card">
+        <div class="cfg-card-header">Encerramento automático por inatividade</div>
+        <div class="cfg-card-body">
+            <p style="color:#6b7280;font-size:13px;margin-top:0;">
+                Encerra automaticamente conversas em modo <strong>humano</strong> (status aberta ou pendente)
+                que ficaram sem mensagem nova por X horas. Conversas em modo <em>bot</em> não são tocadas.
+            </p>
+            <form method="post">{% csrf_token %}
+                <input type="hidden" name="action" value="salvar_encerramento_auto">
+
+                <div class="cfg-check">
+                    <input type="checkbox" name="encerramento_auto_ativo" id="cfg_enc_ativo"
+                           {% if config.encerramento_auto_ativo %}checked{% endif %}>
+                    <label for="cfg_enc_ativo">Ativar encerramento automático</label>
+                </div>
+
+                <div class="cfg-form-group" style="margin-top:12px;max-width:220px;">
+                    <label>Horas de inatividade até encerrar</label>
+                    <input type="number" name="encerramento_auto_horas" class="cfg-input" min="1"
+                           value="{{ config.encerramento_auto_horas|default:48 }}">
+                </div>
+
+                <div class="cfg-check" style="margin-top:12px;">
+                    <input type="checkbox" name="encerramento_auto_aviso_ativo" id="cfg_enc_aviso"
+                           {% if config.encerramento_auto_aviso_ativo %}checked{% endif %}>
+                    <label for="cfg_enc_aviso">Avisar o contato pelo canal antes de encerrar</label>
+                </div>
+
+                <div class="cfg-form-group" style="margin-top:12px;">
+                    <label>Mensagem de encerramento</label>
+                    <textarea name="encerramento_auto_aviso_texto" class="cfg-input" rows="3"
+                              placeholder="Ex: Encerramos por inatividade. Se precisar, é só chamar.">{{ config.encerramento_auto_aviso_texto }}</textarea>
+                </div>
+
+                <div style="margin-top:12px;">
+                    <button type="submit" class="btn-sm btn-primary-sm">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="cfg-card" style="margin-top:16px;">
+        <div class="cfg-card-header">Motivos de encerramento</div>
+        <div class="cfg-card-body">
+            <p style="color:#6b7280;font-size:13px;margin-top:0;">
+                Lista de motivos disponíveis ao resolver uma conversa (manual ou automático).
+            </p>
+            {% for m in motivos_encerramento %}
+            <div class="cfg-row">
+                <div class="cfg-row-info">
+                    <span class="cfg-row-name"><span class="color-dot" style="background:{{ m.cor_hex }}"></span> {{ m.nome }}
+                        {% if m.sistema %}<span class="badge" style="background:#e5e7eb;color:#4b5563;font-size:10px;margin-left:6px;padding:2px 6px;border-radius:4px;">Sistema</span>{% endif %}
+                        {% if not m.ativo %}<span class="badge" style="background:#fee2e2;color:#991b1b;font-size:10px;margin-left:6px;padding:2px 6px;border-radius:4px;">Inativo</span>{% endif %}
+                    </span>
+                </div>
+                {% if not m.sistema %}
+                <form method="post" onsubmit="return confirm('Excluir motivo &quot;{{ m.nome }}&quot;?');">{% csrf_token %}
+                    <input type="hidden" name="action" value="excluir_motivo">
+                    <input type="hidden" name="motivo_id" value="{{ m.id }}">
+                    <button type="submit" class="btn-icon danger"><i class="fas fa-trash"></i></button>
+                </form>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <form method="post" class="cfg-form-inline">{% csrf_token %}
+                <input type="hidden" name="action" value="criar_motivo">
+                <div class="cfg-form-group">
+                    <label>Nome</label>
+                    <input type="text" name="nome" class="cfg-input" required placeholder="Sem retorno">
+                </div>
+                <div class="cfg-form-group">
+                    <label>Cor</label>
+                    <input type="color" name="cor_hex" value="#667eea" style="height:34px;border:none;cursor:pointer;">
+                </div>
+                <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-plus"></i> Criar</button>
             </form>
         </div>
     </div>

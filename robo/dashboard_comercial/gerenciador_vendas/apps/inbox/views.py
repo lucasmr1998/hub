@@ -17,7 +17,7 @@ from .models import (
     Conversa, Mensagem, RespostaRapida, EtiquetaConversa, NotaInternaConversa,
     EquipeInbox, MembroEquipeInbox, PerfilAgenteInbox,
     FilaInbox, RegraRoteamento, HorarioAtendimento, ConfiguracaoInbox, CanalInbox,
-    CategoriaFAQ, ArtigoFAQ, WidgetConfig,
+    CategoriaFAQ, ArtigoFAQ, WidgetConfig, MotivoEncerramento,
 )
 from .serializers import ConversaOutputSerializer, MensagemOutputSerializer
 from . import services
@@ -64,6 +64,7 @@ def inbox_view(request):
         'filas': filas,
         'user_is_admin': user_tem_funcionalidade(request, 'inbox.ver_todas'),
         'agentes_status_json': json.dumps(agentes_status),
+        'motivos_encerramento': MotivoEncerramento.objects.filter(ativo=True, sistema=False).order_by('ordem', 'nome'),
     })
 
 
@@ -392,15 +393,26 @@ def api_atribuir(request, pk):
 @login_required
 @require_http_methods(["POST"])
 def api_resolver(request, pk):
-    """POST: Resolver conversa."""
+    """POST: Resolver conversa. Body opcional: {motivo_id: <int>}."""
     denied = _check_perm(request, 'inbox.resolver')
     if denied: return denied
     conversa = _get_conversa(pk, request)
-    services.resolver_conversa(conversa, request.user)
+
+    motivo = None
+    try:
+        body = json.loads(request.body or '{}')
+        motivo_id = body.get('motivo_id')
+        if motivo_id:
+            motivo = MotivoEncerramento.objects.filter(pk=motivo_id, ativo=True).first()
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    services.resolver_conversa(conversa, request.user, motivo=motivo)
     from apps.sistema.utils import registrar_acao
+    sufixo = f' (motivo: {motivo.nome})' if motivo else ''
     registrar_acao('inbox', 'resolver', 'conversa', conversa.pk,
-                   f'Conversa resolvida: {conversa.contato_nome}', request=request)
-    return JsonResponse({'success': True})
+                   f'Conversa resolvida: {conversa.contato_nome}{sufixo}', request=request)
+    return JsonResponse({'success': True, 'motivo_id': motivo.id if motivo else None})
 
 
 @login_required
@@ -1046,6 +1058,7 @@ def configuracoes_inbox(request):
         'filas': FilaInbox.objects.select_related('equipe').prefetch_related('regras'),
         'respostas': RespostaRapida.objects.all(),
         'etiquetas_list': EtiquetaConversa.objects.all(),
+        'motivos_encerramento': MotivoEncerramento.objects.all(),
         'canais': CanalInbox.objects.select_related('integracao').all(),
         'integracoes_disponiveis': IntegracaoAPI.objects.filter(tipo__in=['uazapi', 'evolution', 'meta_cloud', 'twilio_whatsapp']),
         'fluxos_atendimento': _get_fluxos_atendimento(),
@@ -1280,6 +1293,41 @@ def _processar_action_config(request, action, django_messages):
         config.atribuir_ao_responder = request.POST.get('atribuir_ao_responder') == 'on'
         config.save()
         django_messages.success(request, 'Configurações salvas.')
+
+    # ── Encerramento automatico ────────────────────────────────────
+    elif action == 'salvar_encerramento_auto':
+        config = ConfiguracaoInbox.get_config()
+        config.encerramento_auto_ativo = request.POST.get('encerramento_auto_ativo') == 'on'
+        try:
+            horas = int(request.POST.get('encerramento_auto_horas') or 48)
+        except (TypeError, ValueError):
+            horas = 48
+        config.encerramento_auto_horas = max(1, horas)
+        config.encerramento_auto_aviso_ativo = request.POST.get('encerramento_auto_aviso_ativo') == 'on'
+        config.encerramento_auto_aviso_texto = request.POST.get('encerramento_auto_aviso_texto', '').strip()
+        config.save()
+        django_messages.success(request, 'Encerramento automático salvo.')
+
+    elif action == 'criar_motivo':
+        nome = request.POST.get('nome', '').strip()
+        if nome:
+            if MotivoEncerramento.objects.filter(nome__iexact=nome).exists():
+                django_messages.warning(request, f'Motivo "{nome}" já existe.')
+            else:
+                MotivoEncerramento(
+                    nome=nome,
+                    cor_hex=request.POST.get('cor_hex', '#667eea'),
+                ).save()
+                django_messages.success(request, f'Motivo "{nome}" criado.')
+
+    elif action == 'excluir_motivo':
+        pk = request.POST.get('motivo_id')
+        motivo = MotivoEncerramento.objects.filter(pk=pk).first()
+        if motivo and motivo.sistema:
+            django_messages.warning(request, 'Motivo de sistema não pode ser excluído.')
+        elif motivo:
+            motivo.delete()
+            django_messages.success(request, 'Motivo excluído.')
 
     # ── FAQ ────────────────────────────────────────────────────────
     elif action == 'criar_categoria_faq':
