@@ -1,0 +1,103 @@
+{% extends "admin_aurora/base_admin.html" %}
+
+{% block title %}Cron Jobs{% endblock %}
+{% block topbar_title %}Cron Jobs{% endblock %}
+
+{% block topbar_actions %}
+  {% if dispatcher_saudavel %}
+    {% include "components/badge.html" with variant="success" label="Dispatcher saudavel" dot=True %}
+  {% else %}
+    {% include "components/badge.html" with variant="danger" label="Dispatcher inativo" dot=True %}
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% if not dispatcher_saudavel %}
+  <div style="background:#fee2e2;border:1px solid #fca5a5;color:#7f1d1d;padding:12px 16px;border-radius:8px;margin-bottom:16px;">
+    <strong>Atencao:</strong> o dispatcher central nao executa ha mais de 3min.
+    {% if ultima_exec_dispatcher %}
+      Ultima execucao: {{ ultima_exec_dispatcher.inicio|date:"d/m/Y H:i:s" }}.
+    {% else %}
+      Nenhuma execucao registrada ainda.
+    {% endif %}
+    Cheque o service <code>hub-dispatcher</code> no Easypanel.
+  </div>
+{% endif %}
+
+<div class="admin-stats-grid" style="margin-bottom:16px;">
+  {% include "components/stat_card.html" with label="Jobs ativos" value=kpis.jobs_ativos icon="bi-play-circle" icon_variant="success" %}
+  {% include "components/stat_card.html" with label="Jobs total" value=kpis.jobs_total icon="bi-list-task" icon_variant="primary" %}
+  {% include "components/stat_card.html" with label="Execucoes (24h)" value=kpis.execucoes_24h icon="bi-clock-history" icon_variant="primary" %}
+  {% if kpis.erros_24h > 0 %}
+    {% include "components/stat_card.html" with label="Erros (24h)" value=kpis.erros_24h icon="bi-exclamation-triangle" icon_variant="danger" %}
+  {% else %}
+    {% include "components/stat_card.html" with label="Erros (24h)" value=kpis.erros_24h icon="bi-shield-check" icon_variant="success" %}
+  {% endif %}
+</div>
+
+<div class="admin-section-label">Jobs cadastrados</div>
+
+<table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;font-size:13px;">
+  <thead style="background:#f9fafb;color:#6b7280;">
+    <tr>
+      <th style="text-align:left;padding:10px 14px;font-weight:600;">Nome</th>
+      <th style="text-align:left;padding:10px 14px;font-weight:600;">Schedule</th>
+      <th style="text-align:left;padding:10px 14px;font-weight:600;">Command</th>
+      <th style="text-align:left;padding:10px 14px;font-weight:600;">Ultimo run</th>
+      <th style="text-align:left;padding:10px 14px;font-weight:600;">Status</th>
+      <th style="text-align:center;padding:10px 14px;font-weight:600;">Ativo</th>
+      <th style="text-align:right;padding:10px 14px;font-weight:600;">Acoes</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for j in jobs %}
+    <tr style="border-top:1px solid #e5e7eb;{% if not j.ativo %}opacity:0.55;{% endif %}">
+      <td style="padding:10px 14px;">
+        <a href="{% url 'cron:detalhe' j.pk %}" style="color:#111827;font-weight:600;text-decoration:none;">{{ j.nome }}</a>
+        {% if j.descricao %}<div style="color:#6b7280;font-size:11px;margin-top:2px;">{{ j.descricao|truncatechars:80 }}</div>{% endif %}
+      </td>
+      <td style="padding:10px 14px;">
+        <code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:11px;">{{ j.schedule }}</code>
+        <div style="color:#6b7280;font-size:11px;margin-top:2px;">{{ j.schedule_humano }}</div>
+      </td>
+      <td style="padding:10px 14px;">
+        <code style="font-size:11px;color:#4b5563;">manage.py {{ j.command }}{% if j.args %} {{ j.args|truncatechars:40 }}{% endif %}</code>
+      </td>
+      <td style="padding:10px 14px;color:#4b5563;">{{ j.last_run_human }}</td>
+      <td style="padding:10px 14px;">
+        {% if j.last_status == 'success' %}
+          {% include "components/badge.html" with variant="success" label="OK" dot=True %}
+        {% elif j.last_status == 'erro' %}
+          {% include "components/badge.html" with variant="danger" label="Erro" dot=True %}
+        {% elif j.last_status == 'timeout' %}
+          {% include "components/badge.html" with variant="warning" label="Timeout" dot=True %}
+        {% elif j.last_status == 'running' %}
+          {% include "components/badge.html" with variant="primary" label="Rodando" dot=True %}
+        {% else %}
+          {% include "components/badge.html" with variant="neutral" label="Nunca" %}
+        {% endif %}
+      </td>
+      <td style="padding:10px 14px;text-align:center;">
+        <form method="post" action="{% url 'cron:toggle' j.pk %}" style="display:inline;">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'cron:lista' %}">
+          <button type="submit" style="background:none;border:1px solid #d1d5db;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;">
+            {% if j.ativo %}<i class="bi bi-pause-circle"></i> Pausar{% else %}<i class="bi bi-play-circle"></i> Ativar{% endif %}
+          </button>
+        </form>
+      </td>
+      <td style="padding:10px 14px;text-align:right;">
+        <a href="{% url 'cron:detalhe' j.pk %}" style="color:#2563eb;text-decoration:none;font-size:12px;">Detalhes →</a>
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="7" style="padding:20px;text-align:center;color:#6b7280;">Nenhum CronJob cadastrado.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<div style="margin-top:16px;color:#6b7280;font-size:12px;">
+  <i class="bi bi-info-circle"></i>
+  Novos jobs sao cadastrados via Django admin (<code>/admin/cron/cronjob/</code>) ou data migration.
+</div>
+{% endblock %}

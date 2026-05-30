@@ -101,6 +101,7 @@ urlpatterns = [
 
     # === Apps com prefixo proprio ===
     path('aurora-admin/', include('apps.admin_aurora.urls')),
+    path('aurora-admin/cron/', include('apps.cron.urls_admin')),
     path('configuracoes/integracoes/', include('apps.integracoes.urls')),
     # Redirect legado: /integracoes/* -> /configuracoes/integracoes/*
     path('integracoes/<path:resto>', RedirectView.as_view(url='/configuracoes/integracoes/%(resto)s', permanent=False, query_string=True)),

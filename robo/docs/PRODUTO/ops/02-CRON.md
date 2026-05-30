@@ -1,13 +1,49 @@
 # 15. Servicos Periodicos e Cron Jobs
 
-**Ultima atualizacao:** 06/04/2026
-**Status:** ✅ Em producao
+**Ultima atualizacao:** 30/05/2026
+**Status:** ✅ **Dispatcher central em deploy** — ver [dispatcher-cron.md](dispatcher-cron.md)
+
+> **Mudanca de arquitetura (30/05/2026):** abandonado o desenho de "1 cron por job no host" (que nunca foi implementado em Easypanel). Adotado **1 unico cron** que dispara o `dispatcher_cron` (apps/cron), que le os jobs da tabela `cron_jobs` no banco e despacha cada um na hora certa. Painel de gestao em `/aurora-admin/cron/`.
+>
+> Doc da nova arquitetura: **[dispatcher-cron.md](dispatcher-cron.md)**.
+> O conteudo abaixo descreve o estado **anterior** (legado) e o gap descoberto em 30/05/2026 — mantido como referencia historica.
 
 ---
 
-## Visao Geral
+## ⚠️ Estado real em prod (forensics 30/05/2026, ANTES do dispatcher)
 
-O sistema utiliza servicos periodicos para processar automacoes, sincronizar dados com HubSoft, mover leads no CRM e executar delays dos fluxos de atendimento. Nao usa Celery. Tudo roda via **crontab** (Linux) ou **Task Scheduler** (Windows) + **systemd timer** para o sync HubSoft.
+A doc descreve a configuracao **ideal** (Linux VPS com crontab/systemd). O ambiente real (Easypanel/Docker) **nao implementa nenhum scheduler**:
+
+- `Dockerfile`/`entrypoint.sh`: rodam migrate + seeds + collectstatic + nginx + daphne. **Sem cron daemon, sem supervisor, sem worker.**
+- `docker-compose.yml`: 3 servicos (web + db + nginx). **Sem sidecar de cron.**
+- Os `.timer`/`.service` em `apps/integracoes/systemd/` sao para VPS, **nao aplicados no Easypanel**.
+- N8N tem 28 workflows ativos, mas apenas 3-4 com `scheduleTrigger`, **nenhum cobrindo os management commands do Hubtrix**.
+- `.github/workflows/ci.yml` so tem CI de PR/push — **sem `schedule:`**.
+
+Forensics em tabelas de log (30/05/2026):
+
+| Job | Ultimo registro | Diagnostico |
+|---|---|---|
+| `executar_automacoes_cron` (motor marketing) | 27/04/2026 | **morto ha ~1 mes** |
+| `executar_recontato` (recontato Hubtrix) | 07/05/2026 (atendimento_log_fluxo) | **morto ha ~3 semanas** |
+| `sincronizar_clientes` (HubSoft) | 21/05/2026 (logs_integracao) | **morto ha 9 dias** |
+| `notificar_sla_*`, `alertar_sla_vendedor` | nunca | **nunca rodou** |
+| `mover_perdidos`, `taguear_leads` | (verificar via crm_historico_estagio) | provavelmente parado |
+
+**O que mantem o sistema funcional em prod hoje:**
+- Vero N8N (webhook-triggered, nao cron) atende WhatsApp da TR Carrion.
+- Agentes humanos clicam no inbox manualmente.
+- Audit log (`log_sistema`) registra por gatilho de view (nao cron).
+
+**Implicacao:** features que dependem de cron estao **silently degraded**. Ex: o `encerrar_inativos` (deploy de 30/05/2026) esta em prod mas nao executa ate cron ser resolvido.
+
+---
+
+## Visao Geral (desenho ideal — NAO refletindo a realidade atual)
+
+O sistema utiliza servicos periodicos para processar automacoes, sincronizar dados com HubSoft, mover leads no CRM e executar delays dos fluxos de atendimento. Nao usa Celery. Tudo deveria rodar via **crontab** (Linux) ou **Task Scheduler** (Windows) + **systemd timer** para o sync HubSoft.
+
+⚠️ Em producao (Easypanel/Docker) essa configuracao **NAO esta aplicada**. Solucao pendente.
 
 ---
 

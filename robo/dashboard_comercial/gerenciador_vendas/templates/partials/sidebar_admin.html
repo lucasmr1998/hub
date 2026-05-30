@@ -41,6 +41,9 @@ O {% block sidebar %} redefinido tambem deve cuidar do item ativo via request.re
     <a href="{% url 'admin_aurora:logs' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'logs' %}is-active{% endif %}">
       <i class="bi bi-file-earmark-text"></i><span>Logs</span>
     </a>
+    <a href="{% url 'cron:lista' %}" class="app-sidebar-admin-item {% if request.resolver_match.namespace == 'cron' %}is-active{% endif %}">
+      <i class="bi bi-clock-history"></i><span>Cron Jobs</span>
+    </a>
     <a href="{% url 'admin_aurora:auditoria' %}" class="app-sidebar-admin-item {% if request.resolver_match.url_name == 'auditoria' %}is-active{% endif %}">
       <i class="bi bi-shield-check"></i><span>Auditoria</span>
     </a>

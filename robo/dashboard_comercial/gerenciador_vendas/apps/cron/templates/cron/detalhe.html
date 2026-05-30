@@ -1,0 +1,133 @@
+{% extends "admin_aurora/base_admin.html" %}
+
+{% block title %}{{ job.nome }} — Cron{% endblock %}
+{% block topbar_title %}Cron · {{ job.nome }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'cron:lista' %}" style="font-size:var(--fs-xs);color:var(--color-text-muted);text-decoration:none;">
+    <i class="bi bi-arrow-left"></i> Voltar
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="admin-stats-grid" style="margin-bottom:16px;">
+  {% include "components/stat_card.html" with label="Execucoes (50 ult.)" value=stats.total icon="bi-clock-history" icon_variant="primary" %}
+  {% include "components/stat_card.html" with label="Sucessos" value=stats.sucessos icon="bi-check-circle" icon_variant="success" %}
+  {% if stats.erros > 0 %}
+    {% include "components/stat_card.html" with label="Erros" value=stats.erros icon="bi-exclamation-triangle" icon_variant="danger" %}
+  {% else %}
+    {% include "components/stat_card.html" with label="Erros" value=stats.erros icon="bi-shield-check" icon_variant="success" %}
+  {% endif %}
+  {% include "components/stat_card.html" with label="Duracao media (s)" value=stats.dur_media|default:"-" icon="bi-stopwatch" icon_variant="primary" %}
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+
+  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;">
+    <div style="font-weight:600;font-size:13px;color:#374151;margin-bottom:12px;">Configuracao</div>
+    <form method="post" action="{% url 'cron:editar' job.pk %}">
+      {% csrf_token %}
+      <div style="margin-bottom:10px;">
+        <label style="display:block;font-size:11px;color:#6b7280;margin-bottom:3px;">Schedule (cron)</label>
+        <input type="text" name="schedule" value="{{ job.schedule }}" style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;font-family:monospace;font-size:12px;">
+        <div style="font-size:10px;color:#9ca3af;margin-top:2px;">{{ job.schedule_humano }}</div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="display:block;font-size:11px;color:#6b7280;margin-bottom:3px;">Command</label>
+        <input type="text" value="{{ job.command }}" disabled style="width:100%;padding:6px 10px;border:1px solid #e5e7eb;background:#f9fafb;border-radius:4px;font-family:monospace;font-size:12px;color:#6b7280;">
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="display:block;font-size:11px;color:#6b7280;margin-bottom:3px;">Args</label>
+        <input type="text" name="args" value="{{ job.args }}" placeholder="(sem args)" style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;font-family:monospace;font-size:12px;">
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="display:block;font-size:11px;color:#6b7280;margin-bottom:3px;">Timeout (s)</label>
+        <input type="number" name="timeout_segundos" value="{{ job.timeout_segundos }}" min="10" style="width:120px;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;">
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="display:block;font-size:11px;color:#6b7280;margin-bottom:3px;">Descricao</label>
+        <textarea name="descricao" rows="2" style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;">{{ job.descricao }}</textarea>
+      </div>
+      <button type="submit" style="padding:6px 12px;background:#2563eb;color:#fff;border:0;border-radius:4px;cursor:pointer;font-size:12px;">Salvar</button>
+    </form>
+  </div>
+
+  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;">
+    <div style="font-weight:600;font-size:13px;color:#374151;margin-bottom:12px;">Acoes</div>
+    <div style="margin-bottom:10px;">
+      <strong>Estado:</strong>
+      {% if job.ativo %}
+        {% include "components/badge.html" with variant="success" label="Ativo" dot=True %}
+      {% else %}
+        {% include "components/badge.html" with variant="neutral" label="Pausado" %}
+      {% endif %}
+    </div>
+    <div style="margin-bottom:10px;">
+      <strong>Ultimo run:</strong>
+      {% if job.last_run_at %}
+        {{ job.last_run_at|date:"d/m/Y H:i:s" }} ({{ job.last_status }})
+      {% else %}
+        nunca
+      {% endif %}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <form method="post" action="{% url 'cron:toggle' job.pk %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" style="padding:6px 12px;background:{% if job.ativo %}#f59e0b{% else %}#10b981{% endif %};color:#fff;border:0;border-radius:4px;cursor:pointer;font-size:12px;">
+          {% if job.ativo %}<i class="bi bi-pause-circle"></i> Pausar{% else %}<i class="bi bi-play-circle"></i> Ativar{% endif %}
+        </button>
+      </form>
+      <form method="post" action="{% url 'cron:run_now' job.pk %}" style="display:inline;" onsubmit="return confirm('Executar agora? Vai bloquear ate terminar (timeout {{ job.timeout_segundos }}s).');">
+        {% csrf_token %}
+        <button type="submit" style="padding:6px 12px;background:#7c3aed;color:#fff;border:0;border-radius:4px;cursor:pointer;font-size:12px;">
+          <i class="bi bi-lightning"></i> Executar agora
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<div class="admin-section-label">Historico de execucoes (ultimas {{ stats.total }})</div>
+
+<table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;font-size:12px;">
+  <thead style="background:#f9fafb;color:#6b7280;">
+    <tr>
+      <th style="text-align:left;padding:8px 12px;font-weight:600;">Inicio</th>
+      <th style="text-align:left;padding:8px 12px;font-weight:600;">Status</th>
+      <th style="text-align:right;padding:8px 12px;font-weight:600;">Duracao</th>
+      <th style="text-align:left;padding:8px 12px;font-weight:600;">RC</th>
+      <th style="text-align:left;padding:8px 12px;font-weight:600;">Por</th>
+      <th style="text-align:left;padding:8px 12px;font-weight:600;">Output</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for e in execucoes %}
+    <tr style="border-top:1px solid #e5e7eb;">
+      <td style="padding:8px 12px;color:#374151;">{{ e.inicio|date:"d/m H:i:s" }}</td>
+      <td style="padding:8px 12px;">
+        {% if e.status == 'success' %}{% include "components/badge.html" with variant="success" label="OK" %}
+        {% elif e.status == 'erro' %}{% include "components/badge.html" with variant="danger" label="Erro" %}
+        {% elif e.status == 'timeout' %}{% include "components/badge.html" with variant="warning" label="Timeout" %}
+        {% elif e.status == 'running' %}{% include "components/badge.html" with variant="primary" label="Rodando" %}
+        {% endif %}
+      </td>
+      <td style="padding:8px 12px;text-align:right;color:#4b5563;">{% if e.duracao_segundos %}{{ e.duracao_segundos }}s{% else %}-{% endif %}</td>
+      <td style="padding:8px 12px;color:#4b5563;">{% if e.return_code is not None %}{{ e.return_code }}{% else %}-{% endif %}</td>
+      <td style="padding:8px 12px;color:#6b7280;font-size:11px;">{{ e.disparado_por }}</td>
+      <td style="padding:8px 12px;">
+        {% if e.stdout or e.stderr %}
+          <details>
+            <summary style="cursor:pointer;color:#2563eb;font-size:11px;">ver</summary>
+            {% if e.stdout %}<pre style="background:#f3f4f6;padding:8px;border-radius:4px;font-size:10px;max-height:200px;overflow:auto;margin:4px 0;">{{ e.stdout }}</pre>{% endif %}
+            {% if e.stderr %}<pre style="background:#fef2f2;color:#7f1d1d;padding:8px;border-radius:4px;font-size:10px;max-height:200px;overflow:auto;margin:4px 0;">{{ e.stderr }}</pre>{% endif %}
+          </details>
+        {% else %}-{% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" style="padding:16px;text-align:center;color:#6b7280;">Nenhuma execucao registrada ainda.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
