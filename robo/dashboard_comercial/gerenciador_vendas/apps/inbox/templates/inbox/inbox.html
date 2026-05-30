@@ -95,13 +95,6 @@
             <p>Escolha uma conversa na lista para começar a atender</p>
         </div>
 
-        <!-- Banner: conversa não assumida -->
-        <div id="assumirBanner" style="display:none; align-items:center; justify-content:center; gap:12px; padding:16px; background:#fef9c3; border-bottom:1px solid #fde68a; font-size:13px; color:#92400e;">
-            <i class="fas fa-lock"></i>
-            <span>Esta conversa está aguardando ser assumida.</span>
-            <button id="assumirBtn" style="padding:6px 16px; background:#f59e0b; color:#fff; border:0; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer;">Assumir</button>
-        </div>
-
         <!-- Header do chat -->
         <div class="inbox-chat-header" id="chatHeader" style="display:none;">
             <div class="chat-header-info">
@@ -126,6 +119,14 @@
                 <button class="ib-icon-btn" id="transferBtn" title="Transferir"><i class="fas fa-share"></i></button>
                 <button class="ib-icon-btn" id="toggleContextBtn" title="Info do contato"><i class="fas fa-times"></i></button>
             </div>
+        </div>
+
+        <!-- Estado: conversa não assumida (aparece no lugar das mensagens) -->
+        <div id="assumirBanner" class="inbox-empty-state" style="display:none; flex-direction:column; gap:12px;">
+            <div class="empty-icon"><i class="fas fa-lock"></i></div>
+            <h3>Conversa aguardando ser assumida</h3>
+            <p>Assuma para ver o histórico e responder.</p>
+            <button id="assumirBtn" style="margin-top:4px; padding:10px 28px; background:#f59e0b; color:#fff; border:0; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;">Assumir conversa</button>
         </div>
 
         <!-- Mensagens -->

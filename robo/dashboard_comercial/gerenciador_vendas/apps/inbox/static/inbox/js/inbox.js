@@ -268,17 +268,11 @@
 
     function _aplicarEstadoAssumida(assumida) {
         const banner = document.getElementById('assumirBanner');
-        const input = document.getElementById('inputArea');
-        const msgs = document.getElementById('messageList');
-        if (assumida) {
-            banner.style.display = 'none';
-            input.style.display = 'block';
-            msgs.style.display = 'flex';
-        } else {
-            banner.style.display = 'flex';
-            input.style.display = 'none';
-            msgs.style.display = 'none';
-        }
+        const input  = document.getElementById('inputArea');
+        const msgs   = document.getElementById('messageList');
+        banner.style.display = assumida ? 'none' : 'flex';
+        msgs.style.display   = assumida ? 'flex'  : 'none';
+        input.style.display  = assumida ? 'block' : 'none';
     }
 
     function selectConversa(id) {
