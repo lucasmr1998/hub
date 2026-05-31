@@ -589,10 +589,37 @@ def assumir_conversa(conversa, agente):
     return conversa
 
 
+def _invalidar_vero_session(telefone, tenant_slug=None):
+    """Chama o webhook N8N 'Reset Vero Session' (apaga a row de `vero_session`
+    desse telefone no banco do Vero). Sincrono com timeout 5s — falha silenciosa.
+
+    Por que sincrono: quando o `resolver_conversa` roda via subprocess do
+    dispatcher_cron (ex: encerrar_inativos), threads daemon sao mortas com
+    o processo. Chamar sincrono garante que o reset chega antes de retornar.
+
+    Configuravel via env var `VERO_RESET_WEBHOOK_URL`. Se vazia, no-op."""
+    from django.conf import settings
+    import os
+    url = getattr(settings, 'VERO_RESET_WEBHOOK_URL', None) or os.environ.get('VERO_RESET_WEBHOOK_URL', '')
+    if not url or not telefone:
+        return
+    try:
+        requests.post(url, json={
+            'telefone': telefone,
+            'tenant_slug': tenant_slug or '',
+        }, timeout=5)
+    except Exception as e:
+        logger.warning('falha invalidando vero session (telefone=%s): %s', telefone, e)
+
+
 def resolver_conversa(conversa, user, motivo=None):
     """Marca conversa como resolvida (idempotente — no-op se ja resolvida).
     user pode ser None em encerramentos de sistema (ex: por inatividade).
-    motivo: MotivoEncerramento opcional (preenche Conversa.motivo_encerramento)."""
+    motivo: MotivoEncerramento opcional (preenche Conversa.motivo_encerramento).
+
+    Side effect: ao encerrar, dispara `_invalidar_vero_session` pro telefone
+    da conversa (Hubtrix vira fonte da verdade: encerrou aqui -> Vero esquece
+    o estado antigo daquele cliente)."""
     if conversa.status == 'resolvida':
         return conversa
 
@@ -639,6 +666,13 @@ def resolver_conversa(conversa, user, motivo=None):
             _enviar_webhook_async(conversa, msg_csat)
     except Exception:
         pass  # CSAT não bloqueia o encerramento
+
+    # Sinaliza Vero pra apagar a session do telefone — bot atende do zero
+    # na proxima mensagem do mesmo cliente. Sincrono, timeout 5s, falha silenciosa.
+    _invalidar_vero_session(
+        conversa.contato_telefone,
+        conversa.tenant.slug if conversa.tenant_id else None,
+    )
 
     return conversa
 

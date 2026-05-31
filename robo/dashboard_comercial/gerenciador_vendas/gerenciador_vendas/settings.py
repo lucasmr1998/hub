@@ -415,3 +415,17 @@ LOGGING = {
         },
     },
 }
+
+# ──────────────────────────────────────────────────────────────────────
+# Integracao com Vero (bot N8N) — reset de session ao encerrar conversa
+# ──────────────────────────────────────────────────────────────────────
+# Hubtrix eh fonte da verdade do estado da conversa. Quando uma conversa eh
+# encerrada (resolver_conversa), Hubtrix chama esse webhook do N8N que apaga
+# a row em `vero_session` correspondente ao telefone — garante que a proxima
+# mensagem do mesmo cliente comece do zero no bot, em vez de cair em estado
+# "fantasma" da conversa anterior.
+# Endpoint do workflow [Hubtrix] Reset Vero Session (id rZg9qdCXKgp2Tu8z).
+VERO_RESET_WEBHOOK_URL = os.environ.get(
+    'VERO_RESET_WEBHOOK_URL',
+    'https://automation-n8n.v4riem.easypanel.host/webhook/vero-reset',
+)
