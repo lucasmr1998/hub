@@ -50,6 +50,16 @@ def _data_iso(data_br):
         return timezone.localdate().strftime('%Y-%m-%d')
 
 
+def _coerce_lista(v):
+    # Matrix as vezes manda string ('manha') ou int (258) onde o service espera lista.
+    # enumerate(string) explode em chars, entao normalizamos aqui.
+    if v is None or v == '':
+        return None
+    if isinstance(v, (list, tuple)):
+        return list(v)
+    return [v]
+
+
 def _slots_do_turno(horarios, data_iso, turno):
     """Extrai os horarios da agenda HubSoft para uma data/turno -> formato do Matrix:
     [{"horario": "HH:MM:SS", "tecnicos": [{"id": N}, ...]}, ...]
@@ -138,7 +148,7 @@ def consultar_agenda(request):
             data_inicio=data_iso, dias=1,
         )
     except HubsoftServiceError as e:
-        return JsonResponse({'status': 'error', 'msg': str(e)[:300]}, status=502)
+        return JsonResponse({'status': 'error', 'msg': str(e)[:300]}, status=400)
 
     return JsonResponse({'status': 'success', 'dados': {
         'id_agenda_ordem_servico': id_agenda,
@@ -173,7 +183,7 @@ def abrir_atendimento(request):
             abrir_os=False,
         )
     except HubsoftServiceError as e:
-        return JsonResponse({'status': 'error', 'msg': str(e)[:300]}, status=502)
+        return JsonResponse({'status': 'error', 'msg': str(e)[:300]}, status=400)
     return JsonResponse({'status': 'success', 'atendimento': atendimento})
 
 
@@ -196,9 +206,10 @@ def abrir_os(request):
     if not data.get('id_atendimento'):
         return JsonResponse({'status': 'error', 'msg': 'id_atendimento obrigatorio'}, status=400)
 
-    tecnicos = data.get('tecnicos')
+    tecnicos = _coerce_lista(data.get('tecnicos'))
     if not tecnicos and data.get('id_tecnico'):
         tecnicos = [data['id_tecnico']]
+    disponibilidade = _coerce_lista(data.get('disponibilidade'))
     try:
         ordem = HubsoftService(integracao).abrir_os(
             id_atendimento=data['id_atendimento'],
@@ -210,8 +221,8 @@ def abrir_os(request):
             hora_termino_programado=data.get('hora_termino_programado'),
             status=data.get('status') or cfg.get('status_os') or 'pendente',
             tecnicos=tecnicos,
-            disponibilidade=data.get('disponibilidade'),
+            disponibilidade=disponibilidade,
         )
     except HubsoftServiceError as e:
-        return JsonResponse({'status': 'error', 'msg': str(e)[:300]}, status=502)
+        return JsonResponse({'status': 'error', 'msg': str(e)[:300]}, status=400)
     return JsonResponse({'status': 'success', 'ordem_servico': ordem})
