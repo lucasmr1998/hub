@@ -30,8 +30,14 @@ echo "[3/4] Coletando static files..."
 python manage.py collectstatic --noinput || true
 
 # 4. Iniciar nginx como proxy reverso (porta 8000 → Daphne 8001)
-echo "[4/4] Iniciando servidores..."
+echo "[4/5] Iniciando servidores..."
 nginx
+
+# 5. Dispatcher de cron jobs em background (apps/cron — ver dispatcher-cron.md)
+# Loop que dispara dispatcher_cron a cada 60s. Pra desligar, basta matar o
+# processo (ou desabilitar individualmente cada CronJob em /aurora-admin/cron/).
+echo "[5/5] Iniciando dispatcher de cron jobs em background..."
+python manage.py dispatcher_loop --intervalo 60 &
 
 echo "=== Deploy concluido ==="
 

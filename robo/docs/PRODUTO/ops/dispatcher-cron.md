@@ -54,20 +54,28 @@ Parser de cron: aceita `*`, `N`, `*/N`, `N-M`, `N,M,P` em cada campo. Dia-da-sem
 
 ---
 
-## Como rodar em prod (Easypanel)
+## Como rodar em prod
 
-**1 service** do tipo `Cron Job` no projeto `projetos`:
+**Roda dentro do proprio container do service `hub`**, como processo em
+background ao lado do daphne. O `entrypoint.sh` sobe um `dispatcher_loop` em
+background:
 
-| Campo | Valor |
-|---|---|
-| Nome | `hub-dispatcher` |
-| Image | Reusa a imagem do service `hub` (mesma build) |
-| Schedule | `* * * * *` (a cada 1 minuto) |
-| Comando | `python manage.py dispatcher_cron` |
-| Env vars | Mesmas do service `hub` (DB_*, SECRET_KEY, etc.) |
-| Cwd | `/app` |
+```bash
+python manage.py dispatcher_loop --intervalo 60 &
+exec daphne ...
+```
 
-Esse single cron substitui todos os 6+ crons que a doc antiga listava — o dispatcher cuida.
+O `dispatcher_loop` (apps/cron/management/commands/dispatcher_loop.py) e um
+wrapper que chama `dispatcher_cron` a cada N segundos num loop infinito.
+Cada iteracao e isolada (exception nao mata o loop).
+
+**Por que nao um service Easypanel separado:** simplicidade operacional. 1
+service, 1 deploy, 1 conjunto de env vars. O advisory lock do
+`dispatcher_cron` ja protege contra duplicacao caso o hub tenha multiplas
+replicas no futuro.
+
+**Pra desligar:** ou mata o processo no container, ou desabilita cada
+`CronJob` individualmente no painel `/aurora-admin/cron/`.
 
 ---
 
