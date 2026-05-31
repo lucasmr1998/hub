@@ -20,6 +20,13 @@ HOOKS = {
 python scripts/verificar_docs.py --staged
 exit 0
 ''',
+    'pre-push': '''#!/bin/sh
+# Pre-push: bloqueia push se houver migrations untracked ou com parent
+# ausente. Sistema em prod auto-aplica migrate no rebuild — parent faltando
+# derruba container (incidente 31/05/2026).
+# Bypass: git push --no-verify
+python scripts/check_migrations_safety.py
+''',
 }
 
 
