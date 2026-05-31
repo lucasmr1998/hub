@@ -575,6 +575,34 @@ def api_integracao_editar(request, pk):
 
 
 @login_required
+@require_http_methods(["POST"])
+def api_integracao_gerar_token(request, pk):
+    """Gera um novo access_token aleatorio (UUID 64 chars hex) pra integracao e
+    salva. Util pra integracoes com auth via Bearer (ex: Matrix chamando os
+    endpoints publicos /matrix/* do Hubtrix). Retorna o token gerado pra ser
+    copiado pelo admin — nao fica armazenado em mais lugar nenhum alem do banco.
+    """
+    import uuid as _uuid
+    try:
+        integ = IntegracaoAPI.objects.get(pk=pk)
+        novo = _uuid.uuid4().hex + _uuid.uuid4().hex  # 64 chars
+        # Mesma logica do api_integracao_editar pro Uazapi (salva em configuracoes_extras.token)
+        if integ.tipo == 'uazapi':
+            extras = integ.configuracoes_extras or {}
+            extras['token'] = novo
+            integ.configuracoes_extras = extras
+            integ.save(update_fields=['configuracoes_extras'])
+        else:
+            integ.access_token = novo
+            integ.save(update_fields=['access_token'])
+        return JsonResponse({'success': True, 'token': novo})
+    except IntegracaoAPI.DoesNotExist:
+        return JsonResponse({'error': 'Integração não encontrada'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
 @require_http_methods(["DELETE"])
 def api_integracao_excluir(request, pk):
     """Excluir integração."""

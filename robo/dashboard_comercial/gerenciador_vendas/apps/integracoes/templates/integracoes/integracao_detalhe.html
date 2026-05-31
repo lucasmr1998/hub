@@ -101,9 +101,11 @@
         <div class="field">
           <label class="field-label">Token / API Key</label>
           <div class="field-input-wrap" style="position: relative;">
-            <input class="field-input" id="cred-token" type="password" value="{{ integracao.access_token|default:integracao.api_key }}" placeholder="Deixe em branco pra manter">
-            <button type="button" class="btn btn-ghost btn-sm" onclick="toggleToken()" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%);"><i class="bi bi-eye" id="token-eye"></i></button>
+            <input class="field-input" id="cred-token" type="password" value="{{ integracao.access_token|default:integracao.api_key }}" placeholder="Deixe em branco pra manter" style="padding-right: 92px;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="toggleToken()" style="position: absolute; right: 60px; top: 50%; transform: translateY(-50%);" title="Mostrar/ocultar"><i class="bi bi-eye" id="token-eye"></i></button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="gerarToken()" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%);" title="Gerar novo token e salvar">Gerar</button>
           </div>
+          <small class="field-help" style="display:block;margin-top:4px;color:var(--color-text-muted);">Pra integracoes com auth Bearer (ex: Matrix). Gerar substitui o token atual e ja salva — copia automatico pro clipboard.</small>
         </div>
       {% endif %}
     </div>
@@ -836,6 +838,38 @@ function getCsrf() {
 }
 
 function toggleToken() { toggleField('cred-token', 'token-eye'); }
+
+function gerarToken() {
+  if (!confirm('Gerar novo token? O token atual sera substituido imediatamente em prod. Use isso quando configurando Matrix/N8N/qualquer cliente externo.')) return;
+  const url = "{% url 'integracoes:api_integracao_gerar_token' integracao.id %}";
+  const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value
+    || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+  fetch(url, {method: 'POST', headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/json'}})
+    .then(r => r.json())
+    .then(d => {
+      if (d.success && d.token) {
+        const inp = document.getElementById('cred-token');
+        inp.type = 'text';
+        inp.value = d.token;
+        document.getElementById('token-eye').className = 'bi bi-eye-slash';
+        // tenta copiar pro clipboard
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(d.token).then(
+            () => { if (typeof toast === 'function') toast('Token gerado', 'Copiado pro clipboard. Cole onde precisar.', 'success'); else alert('Token gerado e copiado pro clipboard.'); },
+            () => { if (typeof toast === 'function') toast('Token gerado', 'Copie manualmente do campo.', 'warning'); else alert('Token gerado, copie do campo.'); }
+          );
+        } else {
+          inp.select();
+          if (typeof toast === 'function') toast('Token gerado', 'Selecionado no campo, copie com Ctrl+C.', 'info');
+          else alert('Token gerado. Copie do campo com Ctrl+C.');
+        }
+      } else {
+        const msg = (d && d.error) || 'Falha ao gerar token';
+        if (typeof toast === 'function') toast('Erro', msg, 'danger'); else alert(msg);
+      }
+    })
+    .catch(e => { if (typeof toast === 'function') toast('Erro', String(e), 'danger'); else alert(String(e)); });
+}
 function toggleField(inpId, eyeId) {
   const inp = document.getElementById(inpId);
   const eye = document.getElementById(eyeId);
