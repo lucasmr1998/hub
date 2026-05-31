@@ -32,5 +32,8 @@ RUN SECRET_KEY=build-only-dummy-key-not-used-in-runtime-xxxxxxxxxxx \
 # Porta
 EXPOSE 8000
 
-# Comando de inicializacao
-CMD ["sh", "-c", "python manage.py migrate --noinput --settings=gerenciador_vendas.settings && gunicorn gerenciador_vendas.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120"]
+# Comando de inicializacao:
+# 1) migrate (foreground, falha = container nao sobe)
+# 2) dispatcher_loop em background (apps/cron — dispara CronJobs a cada 60s)
+# 3) gunicorn em foreground (PID 1 do container)
+CMD ["sh", "-c", "python manage.py migrate --noinput --settings=gerenciador_vendas.settings && { python manage.py dispatcher_loop --intervalo 60 --settings=gerenciador_vendas.settings & } && gunicorn gerenciador_vendas.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120"]
