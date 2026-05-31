@@ -2,6 +2,7 @@
 from django.urls import path
 from . import views_n8n_webhook
 from . import views_matrix_os
+from . import views_conhecimento
 
 app_name = 'integracoes_n8n_public'
 
@@ -18,4 +19,7 @@ urlpatterns = [
     path('matrix/consultar-agenda/', views_matrix_os.consultar_agenda, name='matrix_consultar_agenda'),
     path('matrix/abrir-atendimento/', views_matrix_os.abrir_atendimento, name='matrix_abrir_atendimento'),
     path('matrix/abrir-os/', views_matrix_os.abrir_os, name='matrix_abrir_os'),
+
+    # Base de conhecimento (registro de duvidas / busca)
+    path('conhecimento/registrar-pergunta/', views_conhecimento.registrar_pergunta, name='n8n_registrar_pergunta'),
 ]

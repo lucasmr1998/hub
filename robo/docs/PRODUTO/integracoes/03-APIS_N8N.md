@@ -321,6 +321,51 @@ Filtrar por tenant + endpoint (`/api/v1/integracao/atendimento`, etc.).
 
 ---
 
+## Base de conhecimento — registro de duvidas (Matrix / agentes LLM)
+
+Quando um bot externo (Matrix, N8N agente LLM) recebe uma pergunta que nao
+consegue responder, deve **registrar a duvida** pra alimentar a curadoria da
+base de conhecimento. As perguntas viram registros em `PerguntaSemResposta`
+(tabela `suporte_perguntas_sem_resposta`) — depois um humano transforma em
+artigo via `/suporte/conhecimento/perguntas/`.
+
+**`POST /api/public/n8n/conhecimento/registrar-pergunta/`**
+
+Body JSON:
+```json
+{
+  "pergunta": "qual o valor do plano 500MB?",
+  "lead_id": 462,         // opcional — vincula a um lead
+  "conversa_id": 312      // opcional — vincula a uma conversa do Inbox
+}
+```
+
+Resposta `200`:
+```json
+{
+  "status": "success",
+  "criada": true,         // true = nova; false = incrementou ocorrencias de uma similar
+  "pergunta_id": 28,
+  "ocorrencias": 3
+}
+```
+
+**Deduplicacao.** O endpoint nao cria duplicata: extrai o **primeiro termo
+significativo** (>=3 chars, fora das stop-words PT) da pergunta e busca
+`PerguntaSemResposta` pendente do mesmo tenant cujo texto contenha esse
+termo. Se acha, incrementa `ocorrencias`; senao, cria nova. Lead/conversa
+sao atualizados na existente se ela ainda nao tinha.
+
+> **Limite v1:** dedup por "primeiro termo significativo" e primitivo —
+> "quanto custa X" e "qual valor Y" nao sao detectados como similares. Em v2
+> (com embeddings) substituimos por similaridade semantica.
+
+Erros:
+- `400` — `pergunta` ausente / menor que 3 chars / tenant nao resolvido.
+- `401` — token ausente/invalido.
+
+---
+
 ## Orquestrador Vero (TR Carrion) — coleta de documentos
 
 O fluxo `[Vero] Orquestrador Atendimento` coleta RG/CNH frente e verso no
