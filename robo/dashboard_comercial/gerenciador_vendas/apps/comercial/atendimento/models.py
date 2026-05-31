@@ -2196,3 +2196,62 @@ class ToolCustomizada(TenantMixin):
 
     def __str__(self):
         return f"{self.nome} ({self.tenant})"
+
+
+class MotivoErroResposta(TenantMixin):
+    """Telemetria de fricao no fluxo do bot: bot perguntou X, cliente respondeu Y errado.
+
+    Diferente de PerguntaSemResposta (suporte) — la o cliente PERGUNTA livre e o bot
+    nao sabe. Aqui o bot PERGUNTA e o cliente erra a resposta. Alimenta calibracao
+    do fluxo (ajuste de copy, validacao, exemplos).
+    """
+    pergunta_bot = models.TextField(
+        verbose_name="Pergunta do bot",
+        help_text="Texto da pergunta que o bot fez ao cliente (ex: 'qual seu CPF?')",
+    )
+    resposta_cliente = models.TextField(
+        verbose_name="Resposta do cliente",
+        help_text="O que o cliente respondeu (e o bot considerou invalido)",
+    )
+    no_fluxo = models.CharField(
+        max_length=100, blank=True, default='',
+        verbose_name="No do fluxo",
+        help_text="Nome/slug do node do bot quando o erro ocorreu (ex: 'ColetaCPF')",
+    )
+    canal = models.CharField(
+        max_length=30, blank=True, default='',
+        verbose_name="Canal",
+        help_text="whatsapp / chat / sms / etc",
+    )
+    lead = models.ForeignKey(
+        'leads.LeadProspecto', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='erros_resposta', verbose_name="Lead",
+    )
+    conversa = models.ForeignKey(
+        'inbox.Conversa', on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name="Conversa",
+    )
+    solucao = models.TextField(
+        blank=True, default='', verbose_name="Solucao",
+        help_text="Como o erro foi resolvido (preenchido pelo curador)",
+    )
+    resolvido = models.BooleanField(default=False, verbose_name="Resolvido")
+    ocorrencias = models.PositiveIntegerField(
+        default=1, verbose_name="Ocorrencias",
+        help_text="Quantas vezes essa mesma combinacao (pergunta_bot, resposta_cliente) aconteceu",
+    )
+    criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    resolvido_em = models.DateTimeField(null=True, blank=True, verbose_name="Resolvido em")
+
+    class Meta:
+        db_table = 'atendimento_motivo_erro_resposta'
+        verbose_name = "Motivo de Erro em Resposta"
+        verbose_name_plural = "Motivos de Erro em Respostas"
+        ordering = ['-ocorrencias', '-criado_em']
+        indexes = [
+            models.Index(fields=['tenant', 'resolvido', '-criado_em'], name='merr_t_resv_dt_idx'),
+            models.Index(fields=['tenant', 'no_fluxo'], name='merr_t_node_idx'),
+        ]
+
+    def __str__(self):
+        return f'[{self.no_fluxo or "?"}] {self.pergunta_bot[:40]} → {self.resposta_cliente[:30]}'

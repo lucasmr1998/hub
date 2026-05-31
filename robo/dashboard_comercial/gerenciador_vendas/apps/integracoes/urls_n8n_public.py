@@ -22,4 +22,7 @@ urlpatterns = [
 
     # Base de conhecimento (registro de duvidas / busca)
     path('conhecimento/registrar-pergunta/', views_conhecimento.registrar_pergunta, name='n8n_registrar_pergunta'),
+
+    # Telemetria de erros de resposta no fluxo do bot
+    path('atendimento/registrar-erro-resposta/', views_conhecimento.registrar_erro_resposta, name='n8n_registrar_erro_resposta'),
 ]

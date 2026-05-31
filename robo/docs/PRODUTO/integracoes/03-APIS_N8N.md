@@ -366,6 +366,54 @@ Erros:
 
 ---
 
+## Atendimento — telemetria de erros de resposta no fluxo do bot
+
+Distinto de `/conhecimento/registrar-pergunta/`: la captura **duvida livre do
+cliente** (lacuna na base de conhecimento). Aqui captura **fricao no fluxo
+da maquina de estados** — bot perguntou X, cliente respondeu Y errado.
+Alimenta calibracao do fluxo (copy, validacao, exemplos).
+
+**Modelo:** `MotivoErroResposta` em `apps.comercial.atendimento`. Substitui o
+INSERT direto na tabela externa `motivo-erro` (Postgres `atendimento-ai`)
+que os flows antigos do Matrix usam. Migrar pra ca centraliza no Hubtrix
+(multi-tenant, painel, metricas).
+
+**`POST /api/public/n8n/atendimento/registrar-erro-resposta/`**
+
+Body JSON:
+```json
+{
+  "pergunta_bot": "qual seu CPF?",
+  "resposta_cliente": "12345",
+  "no_fluxo": "ColetaCPF",     // opcional — nome/slug do node do bot
+  "canal": "whatsapp",          // opcional — origem
+  "lead_id": 462,               // opcional
+  "conversa_id": 312            // opcional
+}
+```
+
+Resposta `200`:
+```json
+{
+  "status": "success",
+  "criada": true,
+  "erro_id": 17,
+  "ocorrencias": 1
+}
+```
+
+**Deduplicacao:** combinacao **exata** (case-insensitive, whitespace trimado)
+de `(pergunta_bot, resposta_cliente, no_fluxo?)` no mesmo tenant, com
+`resolvido=False`. Mesma combinacao volta → incrementa `ocorrencias`. Como
+as duas strings sao curtas e estruturadas (pergunta vem do bot, resposta
+e curta), match exato e o criterio certo aqui.
+
+Erros:
+- `400` — `pergunta_bot` ou `resposta_cliente` ausentes/vazios.
+- `401` — token ausente/invalido.
+
+---
+
 ## Orquestrador Vero (TR Carrion) — coleta de documentos
 
 O fluxo `[Vero] Orquestrador Atendimento` coleta RG/CNH frente e verso no
