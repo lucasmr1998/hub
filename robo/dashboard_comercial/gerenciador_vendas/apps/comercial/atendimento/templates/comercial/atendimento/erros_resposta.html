@@ -1,0 +1,210 @@
+{% extends "sistema/base.html" %}
+
+{% block title %}Erros de resposta do bot — Atendimento{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Erros de resposta do bot</h1>
+      <p class="page-subtitle">Quando o bot perguntou algo e o cliente respondeu com algo invalido. Use pra ajustar copy, validacao ou exemplos do fluxo.</p>
+    </div>
+  </div>
+</div>
+
+<div class="stats-grid stats-grid-2" style="margin-bottom: var(--sp-4);">
+  {% include "components/stat_card.html" with label="Pendentes" value=total_pendentes icon="bi-exclamation-triangle" icon_variant="warning" %}
+  {% include "components/stat_card.html" with label="Resolvidos" value=total_resolvidos icon="bi-check-circle" icon_variant="success" %}
+</div>
+
+<div class="card filter-row-card" style="margin-bottom: var(--sp-4);">
+  <div class="filter-row">
+    <a href="?status=pendentes" class="filter-btn {% if status_filtro == 'pendentes' %}is-active{% endif %}">Pendentes</a>
+    <a href="?status=resolvidos" class="filter-btn {% if status_filtro == 'resolvidos' %}is-active{% endif %}">Resolvidos</a>
+    <a href="?status=todos" class="filter-btn {% if status_filtro == 'todos' %}is-active{% endif %}">Todos</a>
+    {% if nos_disponiveis %}
+      <form method="get" class="filter-search" style="max-width: 220px;">
+        <input type="hidden" name="status" value="{{ status_filtro }}">
+        <select name="no_fluxo" class="field-input" onchange="this.form.submit()">
+          <option value="">Todos os nos</option>
+          {% for n in nos_disponiveis %}
+            <option value="{{ n }}" {% if n == no_fluxo_filtro %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    {% endif %}
+    <form method="get" class="filter-search">
+      <input type="hidden" name="status" value="{{ status_filtro }}">
+      <input type="hidden" name="no_fluxo" value="{{ no_fluxo_filtro }}">
+      <div class="field-input-wrap">
+        <i class="bi bi-search field-icon"></i>
+        <input type="text" name="q" class="field-input" placeholder="Buscar..." value="{{ busca }}">
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if erros %}
+  <div class="pergunta-list">
+    {% for e in erros %}
+      <div class="card pergunta-card" id="erro-{{ e.pk }}">
+        <div class="card-body">
+          <div class="pergunta-row">
+            <div class="pergunta-body">
+              <div class="pergunta-texto">
+                <span class="bot-prefix">Bot:</span> {{ e.pergunta_bot }}
+              </div>
+              <div class="resposta-cliente">
+                <span class="cliente-prefix">Cliente:</span> {{ e.resposta_cliente }}
+              </div>
+              <div class="pergunta-meta">
+                {% if e.ocorrencias > 1 %}<span class="ocorrencias-badge">{{ e.ocorrencias }}x</span>{% endif %}
+                {% if e.resolvido %}
+                  {% include "components/badge.html" with variant="success" label="Resolvido" size="sm" icon="bi-check" %}
+                {% endif %}
+                {% if e.no_fluxo %}<span><i class="bi bi-diagram-3"></i> {{ e.no_fluxo }}</span>{% endif %}
+                {% if e.canal %}<span><i class="bi bi-chat"></i> {{ e.canal }}</span>{% endif %}
+                {% if e.lead %}<span><i class="bi bi-person"></i> {{ e.lead.nome_razaosocial }}</span>{% endif %}
+                <span><i class="bi bi-clock"></i> {{ e.criado_em|date:"d/m/Y H:i" }}</span>
+              </div>
+              {% if e.solucao %}
+                <div class="solucao-box">
+                  <i class="bi bi-lightbulb"></i> {{ e.solucao }}
+                </div>
+              {% endif %}
+            </div>
+            <div class="pergunta-actions">
+              {% if not e.resolvido %}
+                <button class="btn btn-primary btn-sm" onclick="resolverErro({{ e.pk }})" title="Resolver"><i class="bi bi-check-lg"></i> Resolver</button>
+              {% else %}
+                <button class="btn btn-ghost btn-sm" onclick="reabrirErro({{ e.pk }})" title="Reabrir"><i class="bi bi-arrow-counterclockwise"></i> Reabrir</button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card">
+    <div class="card-body" style="text-align: center; padding: var(--sp-10);">
+      <i class="bi bi-check-circle" style="font-size: 3rem; color: var(--color-success); opacity: 0.5; display: block; margin-bottom: var(--sp-3);"></i>
+      <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0;">Nenhum erro {% if status_filtro == 'pendentes' %}pendente{% elif status_filtro == 'resolvidos' %}resolvido{% endif %}.</p>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .stats-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--sp-3); }
+
+  .filter-row-card { padding: var(--sp-3) var(--sp-4); }
+  .filter-row { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+  .filter-btn {
+    padding: 6px 14px;
+    border-radius: var(--radius);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text-muted);
+    text-decoration: none;
+    transition: background var(--transition), color var(--transition), border-color var(--transition);
+  }
+  .filter-btn:hover { color: var(--color-text); }
+  .filter-btn.is-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+  .filter-search { margin-left: auto; max-width: 260px; flex: 1; min-width: 180px; }
+
+  .pergunta-list { display: flex; flex-direction: column; gap: var(--sp-2); }
+  .pergunta-card { transition: box-shadow var(--transition); }
+  .pergunta-card:hover { box-shadow: var(--shadow-sm); }
+  .pergunta-row { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-3); }
+  .pergunta-body { flex: 1; min-width: 0; }
+  .pergunta-texto {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text);
+    margin-bottom: 4px;
+    line-height: 1.4;
+  }
+  .resposta-cliente {
+    font-size: var(--fs-sm);
+    color: var(--color-text);
+    margin-bottom: 6px;
+    line-height: 1.4;
+    padding-left: var(--sp-3);
+    border-left: 2px solid var(--color-border);
+  }
+  .bot-prefix { color: var(--color-text-muted); font-weight: var(--fw-bold); font-size: var(--fs-xs); }
+  .cliente-prefix { color: var(--color-warning); font-weight: var(--fw-bold); font-size: var(--fs-xs); }
+
+  .pergunta-meta {
+    display: flex;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+    align-items: center;
+  }
+  .pergunta-meta span { display: flex; align-items: center; gap: 4px; }
+
+  .ocorrencias-badge {
+    background: var(--color-warning-soft);
+    color: var(--color-warning);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: var(--fw-bold);
+  }
+
+  .solucao-box {
+    margin-top: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--color-success-soft);
+    color: var(--color-success);
+    border-radius: var(--radius);
+    font-size: var(--fs-xs);
+  }
+
+  .pergunta-actions { display: flex; gap: 4px; flex-shrink: 0; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getCsrf() { const c = document.cookie.match(/csrftoken=([^;]+)/); return c ? c[1] : ''; }
+
+function resolverErro(id) {
+  const solucao = prompt('Solucao (opcional — descricao do que foi feito pra resolver):');
+  if (solucao === null) return; // cancelado
+  fetch(`/atendimento/erros-resposta/${id}/resolver/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+    body: JSON.stringify({ solucao: solucao }),
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      toast('Resolvido', d.message, 'success');
+      document.getElementById('erro-' + id).remove();
+    } else { toast('Erro', d.error || 'Erro', 'danger'); }
+  });
+}
+
+function reabrirErro(id) {
+  fetch(`/atendimento/erros-resposta/${id}/reabrir/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': getCsrf() },
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      toast('Reaberto', d.message, 'info');
+      setTimeout(() => location.reload(), 500);
+    } else { toast('Erro', d.error || 'Erro', 'danger'); }
+  });
+}
+</script>
+{% endblock %}

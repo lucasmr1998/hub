@@ -88,4 +88,9 @@ urlpatterns = [
     # APIs de gerenciamento de questoes
     path('api/configuracoes/questoes/', views.api_questoes_fluxo_gerencia, name='api_questoes_fluxo_gerencia'),
     path('api/configuracoes/questoes/duplicar/', views.api_duplicar_questao_fluxo, name='api_duplicar_questao_fluxo'),
+
+    # Telemetria — erros de resposta do cliente no fluxo do bot
+    path('atendimento/erros-resposta/', views.erros_resposta, name='erros_resposta'),
+    path('atendimento/erros-resposta/<int:pk>/resolver/', views.api_erro_resolver, name='api_erro_resolver'),
+    path('atendimento/erros-resposta/<int:pk>/reabrir/', views.api_erro_reabrir, name='api_erro_reabrir'),
 ]

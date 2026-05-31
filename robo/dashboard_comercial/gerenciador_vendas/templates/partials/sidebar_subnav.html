@@ -115,8 +115,14 @@ Uso em template que extende layout_app:
         <a href="/configuracoes/fluxos/" class="app-subnav-item {% if 'fluxo' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-diagram-3"></i><span>Fluxos</span>
         </a>
-        <a href="/suporte/conhecimento/" class="app-subnav-item {% if 'conhecimento' in request.resolver_match.url_name %}is-active{% endif %}">
+        <a href="/suporte/conhecimento/" class="app-subnav-item {% if 'conhecimento' in request.resolver_match.url_name and 'pergunta' not in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-journal-text"></i><span>Conhecimento</span>
+        </a>
+        <a href="/suporte/conhecimento/perguntas/" class="app-subnav-item {% if 'pergunta' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-question-circle"></i><span>Perguntas sem resposta</span>
+        </a>
+        <a href="/atendimento/erros-resposta/" class="app-subnav-item {% if 'erro_resposta' in request.resolver_match.url_name or 'erros_resposta' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-exclamation-triangle"></i><span>Erros de resposta</span>
         </a>
       </nav>
       {% if is_superuser or perm.acesso_configuracoes %}

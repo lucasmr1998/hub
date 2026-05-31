@@ -1127,3 +1127,81 @@ def sessao_fluxo_visual_view(request, atendimento_id):
         context['conexoes_db'] = '[]'
 
     return render(request, 'comercial/atendimento/sessao_fluxo_visual.html', context)
+
+
+# ============================================================================
+# MOTIVO ERRO RESPOSTA — telemetria de fricao no fluxo do bot
+# ============================================================================
+
+@login_required
+def erros_resposta(request):
+    """Tela de gestao de erros de resposta do cliente em fluxos do bot."""
+    from apps.comercial.atendimento.models import MotivoErroResposta
+
+    status_filtro = request.GET.get('status', 'pendentes')
+    busca = request.GET.get('q', '').strip()
+    no_fluxo_filtro = request.GET.get('no_fluxo', '').strip()
+
+    qs = MotivoErroResposta.objects.all()
+    if status_filtro == 'pendentes':
+        qs = qs.filter(resolvido=False)
+    elif status_filtro == 'resolvidos':
+        qs = qs.filter(resolvido=True)
+    if busca:
+        qs = qs.filter(
+            models.Q(pergunta_bot__icontains=busca)
+            | models.Q(resposta_cliente__icontains=busca)
+        )
+    if no_fluxo_filtro:
+        qs = qs.filter(no_fluxo__iexact=no_fluxo_filtro)
+
+    total_pendentes = MotivoErroResposta.objects.filter(resolvido=False).count()
+    total_resolvidos = MotivoErroResposta.objects.filter(resolvido=True).count()
+
+    nos_disponiveis = (
+        MotivoErroResposta.objects.values_list('no_fluxo', flat=True)
+        .exclude(no_fluxo='').distinct().order_by('no_fluxo')[:20]
+    )
+
+    context = {
+        'erros': qs[:100],
+        'status_filtro': status_filtro,
+        'busca': busca,
+        'no_fluxo_filtro': no_fluxo_filtro,
+        'total_pendentes': total_pendentes,
+        'total_resolvidos': total_resolvidos,
+        'nos_disponiveis': list(nos_disponiveis),
+    }
+    return render(request, 'comercial/atendimento/erros_resposta.html', context)
+
+
+@login_required
+@require_http_methods(['POST'])
+def api_erro_resolver(request, pk):
+    """Marca erro como resolvido (com solucao opcional)."""
+    from apps.comercial.atendimento.models import MotivoErroResposta
+    from django.shortcuts import get_object_or_404
+    from django.utils import timezone
+
+    erro = get_object_or_404(MotivoErroResposta, pk=pk)
+    data = json.loads(request.body) if request.body else {}
+    erro.resolvido = True
+    erro.resolvido_em = timezone.now()
+    if data.get('solucao'):
+        erro.solucao = data['solucao']
+    erro.save(update_fields=['resolvido', 'resolvido_em', 'solucao'])
+    return JsonResponse({'success': True, 'message': 'Erro marcado como resolvido.'})
+
+
+@login_required
+@require_http_methods(['POST'])
+def api_erro_reabrir(request, pk):
+    """Volta erro pra pendente."""
+    from apps.comercial.atendimento.models import MotivoErroResposta
+    from django.shortcuts import get_object_or_404
+
+    erro = get_object_or_404(MotivoErroResposta, pk=pk)
+    erro.resolvido = False
+    erro.resolvido_em = None
+    erro.save(update_fields=['resolvido', 'resolvido_em'])
+    return JsonResponse({'success': True, 'message': 'Erro reaberto.'})
