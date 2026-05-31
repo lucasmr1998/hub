@@ -187,6 +187,10 @@ def api_conversa_detalhe(request, pk):
 
     data = ConversaOutputSerializer(conversa).data
 
+    # Admin e supervisor veem histórico sem precisar assumir
+    if request.user.is_superuser or request.user.has_perm('inbox.ver_todas'):
+        data['assumida'] = True
+
     # Contexto do lead
     if conversa.lead:
         lead = conversa.lead
@@ -352,6 +356,11 @@ def api_enviar_mensagem(request, pk):
     conteudo = body.get('conteudo', '').strip()
     if not conteudo:
         return JsonResponse({'error': 'Conteúdo obrigatório'}, status=400)
+
+    # Admin/supervisor podem responder sem assumir — assumem automaticamente
+    if conversa.agente_id and not conversa.assumida:
+        if request.user.is_superuser or request.user.has_perm('inbox.ver_todas'):
+            services.assumir_conversa(conversa, request.user)
 
     try:
         mensagem = services.enviar_mensagem(
