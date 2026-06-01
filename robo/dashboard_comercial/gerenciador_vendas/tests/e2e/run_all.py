@@ -21,6 +21,9 @@ HEADLESS = os.environ.get("E2E_HEADLESS", "true").lower() != "false"
 
 SUITES = [
     "inbox_claiming",
+    "atendimento_inbox",
+    "atendimento_fluxos",
+    "atendimento_suporte",
 ]
 
 def main():
