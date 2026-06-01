@@ -128,6 +128,13 @@ def pipeline_view(request):
          ]},
     ]
 
+    # T1 — Motivos de perda + flags pra o modal do Kanban
+    from .models import MotivoPerda
+    motivos_perda = list(MotivoPerda.objects.filter(ativo=True).order_by('ordem', 'nome').values('id', 'nome'))
+    cfg_crm = ConfiguracaoCRM.get_config()
+    motivo_perda_obrigatorio = bool(cfg_crm and cfg_crm.motivo_perda_obrigatorio)
+    motivo_perda_pede_concorrente = bool(cfg_crm and cfg_crm.motivo_perda_pede_concorrente)
+
     context = {
         'estagios': estagios,
         'vendedores': vendedores,
@@ -135,6 +142,9 @@ def pipeline_view(request):
         'pipelines': pipelines,
         'pipeline_atual': pipeline_atual,
         'filter_fields': filter_fields,
+        'motivos_perda_json': json.dumps(motivos_perda, ensure_ascii=False),
+        'motivo_perda_obrigatorio': motivo_perda_obrigatorio,
+        'motivo_perda_pede_concorrente': motivo_perda_pede_concorrente,
         'page_title': f'Pipeline: {pipeline_atual.nome}' if pipeline_atual else 'Pipeline CRM',
     }
     return render(request, 'crm/pipeline.html', context)

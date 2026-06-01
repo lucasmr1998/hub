@@ -49,6 +49,7 @@
       <div class="kanban-column"
            id="col-{{ estagio.pk }}"
            data-estagio-id="{{ estagio.pk }}"
+           data-is-final-perdido="{% if estagio.is_final_perdido %}1{% else %}0{% endif %}"
            ondragover="onDragOver(event)"
            ondragleave="onDragLeave(event)"
            ondrop="onDrop(event, {{ estagio.pk }})">
@@ -138,6 +139,43 @@
 {# Context menu global #}
 <div class="card-context-menu" id="globalContextMenu">
   <div id="contextMenuItems"></div>
+</div>
+
+{# T1 — Modal de motivo de perda #}
+<div id="modal-motivo-perda" class="mp-overlay" style="display:none;">
+  <div class="mp-box">
+    <div class="mp-head">
+      <h3 class="mp-title">Por que essa oportunidade foi perdida?</h3>
+      <button type="button" class="mp-close" onclick="fecharMotivoPerda(true)">&times;</button>
+    </div>
+    <div class="mp-body">
+      <div class="field">
+        <label class="field-label">Motivo</label>
+        <div class="field-input-wrap">
+          <select id="mp-motivo-ref" class="field-input">
+            <option value="">-- selecione um motivo --</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" id="mp-field-concorrente" style="display:none; margin-top: var(--sp-3);">
+        <label class="field-label">Qual concorrente?</label>
+        <div class="field-input-wrap">
+          <input type="text" id="mp-concorrente" class="field-input" placeholder="Nome do concorrente que o cliente escolheu" maxlength="100">
+        </div>
+      </div>
+      <div class="field" style="margin-top: var(--sp-3);">
+        <label class="field-label">Observacao (opcional)</label>
+        <textarea id="mp-obs" class="field-input" rows="2" placeholder="Detalhes uteis pra entender o caso"></textarea>
+      </div>
+    </div>
+    <div class="mp-foot">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="fecharMotivoPerda(true)">Cancelar</button>
+      {% if not motivo_perda_obrigatorio %}
+        <button type="button" class="btn btn-ghost btn-sm" onclick="confirmarMotivoPerda(true)">Pular sem motivo</button>
+      {% endif %}
+      <button type="button" class="btn btn-primary btn-sm" onclick="confirmarMotivoPerda(false)"><i class="bi bi-check-lg"></i> Confirmar</button>
+    </div>
+  </div>
 </div>
 
 {% csrf_token %}
@@ -480,6 +518,15 @@
   }
   .context-menu-item:hover { background: var(--color-primary-soft); color: var(--color-primary); }
   .context-menu-sep { height: 1px; background: var(--color-border); margin: 2px 0; }
+
+  /* T1 — Modal motivo de perda */
+  .mp-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+  .mp-box { background: var(--color-surface); border-radius: var(--radius-lg); width: 90%; max-width: 480px; display: flex; flex-direction: column; box-shadow: var(--shadow-lg); }
+  .mp-head { padding: var(--sp-4); border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; }
+  .mp-title { margin: 0; font-size: var(--fs-md); font-weight: var(--fw-bold); }
+  .mp-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--color-text-muted); }
+  .mp-body { padding: var(--sp-4); }
+  .mp-foot { padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end; gap: var(--sp-2); }
 
   /* Bot state indicator no card — pill com fundo sutil pra distinguir do resto */
   .card-bot {
@@ -932,12 +979,90 @@ function onDrop(e, estagioNovoId) {
   _draggedFromEstagio = null;
 }
 
+// T1 — config de motivos de perda injetada pelo view
+const MOTIVOS_PERDA = {{ motivos_perda_json|safe }};
+const MOTIVO_PERDA_OBRIGATORIO = {% if motivo_perda_obrigatorio %}true{% else %}false{% endif %};
+const MOTIVO_PERDA_PEDE_CONCORRENTE = {% if motivo_perda_pede_concorrente %}true{% else %}false{% endif %};
+let _motivoCtx = null;  // { opId, estagioId, callback }
+
+function estagioEhPerdido(estagioId) {
+  const col = document.querySelector(`[data-estagio-id="${estagioId}"]`);
+  return col && col.dataset.isFinalPerdido === '1';
+}
+
+function abrirModalMotivoPerda(opId, estagioId) {
+  _motivoCtx = { opId, estagioId };
+  const sel = document.getElementById('mp-motivo-ref');
+  sel.innerHTML = '<option value="">-- selecione um motivo --</option>'
+    + MOTIVOS_PERDA.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+  sel.value = '';
+  document.getElementById('mp-concorrente').value = '';
+  document.getElementById('mp-obs').value = '';
+  document.getElementById('mp-field-concorrente').style.display = 'none';
+  document.getElementById('modal-motivo-perda').style.display = 'flex';
+
+  sel.onchange = function() {
+    if (!MOTIVO_PERDA_PEDE_CONCORRENTE) return;
+    const opt = sel.options[sel.selectedIndex];
+    const nome = (opt ? opt.text : '').toLowerCase();
+    const ehConcorrente = nome.includes('concorr');
+    document.getElementById('mp-field-concorrente').style.display = ehConcorrente ? 'block' : 'none';
+  };
+}
+
+function fecharMotivoPerda(reverterMove) {
+  document.getElementById('modal-motivo-perda').style.display = 'none';
+  if (reverterMove && _motivoCtx) {
+    // Recarrega pra reverter o card no Kanban visual
+    carregarPipeline();
+  }
+  _motivoCtx = null;
+}
+
+function confirmarMotivoPerda(pular) {
+  if (!_motivoCtx) return;
+  const ctx = _motivoCtx;
+  const motivoRefId = document.getElementById('mp-motivo-ref').value;
+  const concorrente = document.getElementById('mp-concorrente').value.trim();
+  const obs = document.getElementById('mp-obs').value.trim();
+
+  if (!pular && !motivoRefId && !obs) {
+    toast('Atencao', 'Selecione um motivo ou preencha uma observacao.', 'warning');
+    return;
+  }
+  if (!pular && MOTIVO_PERDA_PEDE_CONCORRENTE) {
+    const sel = document.getElementById('mp-motivo-ref');
+    const nome = (sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : '').toLowerCase();
+    if (nome.includes('concorr') && !concorrente) {
+      toast('Atencao', 'Informe qual concorrente.', 'warning');
+      return;
+    }
+  }
+
+  document.getElementById('modal-motivo-perda').style.display = 'none';
+  _motivoCtx = null;
+  _executarMoverOportunidade(ctx.opId, ctx.estagioId, {
+    motivo_perda_ref_id: motivoRefId || null,
+    motivo_perda: obs || null,
+    concorrente_perdido: concorrente || null,
+  });
+}
+
 function moverOportunidade(opId, estagioId) {
+  if (estagioEhPerdido(estagioId)) {
+    abrirModalMotivoPerda(opId, estagioId);
+    return;
+  }
+  _executarMoverOportunidade(opId, estagioId, {});
+}
+
+function _executarMoverOportunidade(opId, estagioId, extras) {
   mostrarLoader(true);
+  const body = Object.assign({ oportunidade_id: opId, estagio_id: estagioId }, extras || {});
   fetch('{% url "crm:api_mover_oportunidade" %}', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-    body: JSON.stringify({ oportunidade_id: opId, estagio_id: estagioId }),
+    body: JSON.stringify(body),
   })
   .then(r => r.json())
   .then(data => {
@@ -945,7 +1070,13 @@ function moverOportunidade(opId, estagioId) {
       carregarPipeline();
       toast('Movida', 'Oportunidade movida com sucesso', 'success');
     } else {
-      toast('Erro', data.erro || 'Erro ao mover', 'danger');
+      if (data.codigo === 'motivo_perda_obrigatorio') {
+        // Configuracao mudou enquanto user nao tinha selecionado motivo — reabre modal
+        toast('Atencao', data.erro, 'warning');
+        carregarPipeline();
+      } else {
+        toast('Erro', data.erro || 'Erro ao mover', 'danger');
+      }
       mostrarLoader(false);
     }
   })
