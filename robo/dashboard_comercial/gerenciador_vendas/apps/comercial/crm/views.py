@@ -1429,6 +1429,9 @@ def api_salvar_config(request):
     config.criar_oportunidade_automatico = bool(request.POST.get('criar_oportunidade_automatico'))
     config.notificar_responsavel_nova_oportunidade = bool(request.POST.get('notificar_responsavel_nova_oportunidade'))
     config.notificar_sla_breach = bool(request.POST.get('notificar_sla_breach'))
+    # T8 — Motivos de Perda: flags de obrigatoriedade
+    config.motivo_perda_obrigatorio = bool(request.POST.get('motivo_perda_obrigatorio'))
+    config.motivo_perda_pede_concorrente = bool(request.POST.get('motivo_perda_pede_concorrente'))
     estagio_id = request.POST.get('estagio_inicial_padrao_id')
     config.estagio_inicial_padrao = PipelineEstagio.objects.filter(pk=estagio_id).first() if estagio_id else None
     w1 = request.POST.get('webhook_n8n_nova_oportunidade', '').strip()

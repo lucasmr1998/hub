@@ -191,6 +191,19 @@
             Alertar ao vencer SLA do estagio
           </label>
 
+          <div class="cfg-section-title"><i class="bi bi-x-circle"></i> Motivos de perda</div>
+          <label class="chk-inline chk-block">
+            <input type="checkbox" name="motivo_perda_obrigatorio" {% if config.motivo_perda_obrigatorio %}checked{% endif %}>
+            Exigir motivo ao mover oportunidade pra "Perdida"
+          </label>
+          <small style="display:block; color: var(--color-text-muted); margin: -4px 0 var(--sp-2) 26px; font-size: var(--fs-xs);">
+            Quando ativo, backend rejeita salvar sem motivo. Vendedor precisa escolher no Kanban e no detalhe.
+          </small>
+          <label class="chk-inline chk-block">
+            <input type="checkbox" name="motivo_perda_pede_concorrente" {% if config.motivo_perda_pede_concorrente %}checked{% endif %}>
+            Pedir "qual concorrente?" quando motivo for relacionado a Concorrente
+          </label>
+
           <div class="cfg-section-title"><i class="bi bi-shuffle"></i> Distribuicao de oportunidades</div>
           <div class="field">
             <label class="field-label">Modo de distribuicao</label>
@@ -568,7 +581,7 @@ fetch('{% url "crm:api_pipeline_dados" %}')
 document.getElementById('form-config').addEventListener('submit', function(e) {
   e.preventDefault();
   const fd = new FormData(this);
-  ['criar_oportunidade_automatico', 'notificar_responsavel_nova_oportunidade', 'notificar_sla_breach']
+  ['criar_oportunidade_automatico', 'notificar_responsavel_nova_oportunidade', 'notificar_sla_breach', 'motivo_perda_obrigatorio', 'motivo_perda_pede_concorrente']
     .forEach(n => { if (!fd.has(n)) fd.set(n, ''); });
   fetch(this.action, { method: 'POST', body: fd })
     .then(r => r.json())
