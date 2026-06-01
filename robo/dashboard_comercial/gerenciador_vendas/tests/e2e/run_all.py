@@ -24,6 +24,15 @@ SUITES = [
     "atendimento_inbox",
     "atendimento_fluxos",
     "atendimento_suporte",
+    "sistema",
+    "dashboard",
+    "leads",
+    "crm",
+    "cs",
+    "marketing",
+    "integracoes",
+    "workspace_mod",
+    "aurora_admin",
 ]
 
 def main():
