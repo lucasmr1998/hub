@@ -690,6 +690,9 @@ def oportunidade_detalhe(request, pk):
         'conversas_inbox': conversas_inbox,
         'mensagens_inbox': mensagens_inbox,
         'motivos_perda': MotivoPerda.objects.filter(ativo=True).order_by('ordem', 'nome'),
+        'motivo_perda_obrigatorio': bool(ConfiguracaoCRM.get_config() and ConfiguracaoCRM.get_config().motivo_perda_obrigatorio),
+        'motivo_perda_pede_concorrente': bool(ConfiguracaoCRM.get_config() and ConfiguracaoCRM.get_config().motivo_perda_pede_concorrente),
+        'estagios_perdidos_ids_json': json.dumps(list(estagios.filter(is_final_perdido=True).values_list('id', flat=True))),
         'page_title': f'CRM — {oportunidade.titulo or lead.nome_razaosocial}',
     }
     return render(request, 'crm/oportunidade_detalhe.html', context)

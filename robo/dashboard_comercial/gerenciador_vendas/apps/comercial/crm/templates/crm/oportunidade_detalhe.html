@@ -576,15 +576,37 @@
       <div class="field">
         <label class="field-label" for="sel-estagio">Estagio destino</label>
         <div class="field-input-wrap">
-          <select id="sel-estagio" class="field-input">
+          <select id="sel-estagio" class="field-input" onchange="onMudancaEstagioDestino()">
             {% for e in estagios %}
-              <option value="{{ e.pk }}" {% if e.pk == oportunidade.estagio.pk %}selected{% endif %}>{{ e.nome }}</option>
+              <option value="{{ e.pk }}" data-is-final-perdido="{% if e.is_final_perdido %}1{% else %}0{% endif %}" {% if e.pk == oportunidade.estagio.pk %}selected{% endif %}>{{ e.nome }}</option>
             {% endfor %}
           </select>
         </div>
       </div>
+
+      {# T3 — Campos extras visiveis SOMENTE quando estagio destino e is_final_perdido #}
+      <div id="bloco-motivo-perda" style="display:none; margin-top: var(--sp-3);">
+        <div class="field">
+          <label class="field-label" for="sel-motivo-perda-ref">Motivo de perda{% if motivo_perda_obrigatorio %} <span style="color: var(--color-danger);">*</span>{% endif %}</label>
+          <div class="field-input-wrap">
+            <select id="sel-motivo-perda-ref" class="field-input" onchange="onMudancaMotivoPerda()">
+              <option value="">-- selecione --</option>
+              {% for m in motivos_perda %}
+                <option value="{{ m.pk }}">{{ m.nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="field" id="bloco-concorrente" style="display:none; margin-top: var(--sp-3);">
+          <label class="field-label" for="input-concorrente">Qual concorrente?</label>
+          <div class="field-input-wrap">
+            <input type="text" id="input-concorrente" class="field-input" placeholder="Nome do concorrente" maxlength="100">
+          </div>
+        </div>
+      </div>
+
       <div class="field" style="margin-top: var(--sp-3);">
-        <label class="field-label" for="motivo-estagio">Motivo (opcional)</label>
+        <label class="field-label" for="motivo-estagio">Observacao (opcional)</label>
         <div class="field-input-wrap">
           <textarea id="motivo-estagio" class="field-input" rows="3" style="height: auto; min-height: 80px; padding: var(--sp-2) var(--sp-3); resize: vertical;" placeholder="Motivo da mudanca..."></textarea>
         </div>
@@ -965,7 +987,7 @@ function excluirOportunidade() {
   .catch(() => toast('Erro', 'Erro de conexao', 'danger'));
 }
 
-function abrirModalEstagio()  { document.getElementById('modal-estagio').style.display = 'flex'; }
+function abrirModalEstagio()  { document.getElementById('modal-estagio').style.display = 'flex'; onMudancaEstagioDestino(); }
 function abrirModalVendedor() { document.getElementById('modal-vendedor').style.display = 'flex'; }
 function fecharModal(id)      { document.getElementById(id).style.display = 'none'; }
 
@@ -973,14 +995,69 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
 });
 
+// T3 — config motivo de perda injetada
+const MOTIVO_PERDA_OBRIGATORIO = {% if motivo_perda_obrigatorio %}true{% else %}false{% endif %};
+const MOTIVO_PERDA_PEDE_CONCORRENTE = {% if motivo_perda_pede_concorrente %}true{% else %}false{% endif %};
+
+function onMudancaEstagioDestino() {
+  const sel = document.getElementById('sel-estagio');
+  const opt = sel.options[sel.selectedIndex];
+  const ehPerdido = opt && opt.dataset.isFinalPerdido === '1';
+  document.getElementById('bloco-motivo-perda').style.display = ehPerdido ? 'block' : 'none';
+  if (!ehPerdido) {
+    document.getElementById('bloco-concorrente').style.display = 'none';
+  } else {
+    onMudancaMotivoPerda();
+  }
+}
+
+function onMudancaMotivoPerda() {
+  if (!MOTIVO_PERDA_PEDE_CONCORRENTE) return;
+  const sel = document.getElementById('sel-motivo-perda-ref');
+  const opt = sel.options[sel.selectedIndex];
+  const nome = (opt ? opt.text : '').toLowerCase();
+  document.getElementById('bloco-concorrente').style.display = nome.includes('concorr') ? 'block' : 'none';
+}
+
 async function confirmarMoverEstagio() {
   const estagio_id = document.getElementById('sel-estagio').value;
   const motivo = document.getElementById('motivo-estagio').value.trim();
+
+  // T3 — Se estagio destino e final perdido, adiciona campos extras
+  const selEst = document.getElementById('sel-estagio');
+  const optEst = selEst.options[selEst.selectedIndex];
+  const ehPerdido = optEst && optEst.dataset.isFinalPerdido === '1';
+
+  let motivo_perda_ref_id = null;
+  let concorrente_perdido = null;
+  if (ehPerdido) {
+    motivo_perda_ref_id = document.getElementById('sel-motivo-perda-ref').value || null;
+    concorrente_perdido = document.getElementById('input-concorrente').value.trim() || null;
+
+    if (MOTIVO_PERDA_OBRIGATORIO && !motivo_perda_ref_id && !motivo) {
+      toast('Atencao', 'Selecione um motivo ou descreva no campo observacao.', 'warning');
+      return;
+    }
+    if (MOTIVO_PERDA_PEDE_CONCORRENTE && motivo_perda_ref_id) {
+      const selM = document.getElementById('sel-motivo-perda-ref');
+      const nome = (selM.options[selM.selectedIndex] ? selM.options[selM.selectedIndex].text : '').toLowerCase();
+      if (nome.includes('concorr') && !concorrente_perdido) {
+        toast('Atencao', 'Informe qual concorrente.', 'warning');
+        return;
+      }
+    }
+  }
+
+  const body = { oportunidade_id: OP_PK, estagio_id, motivo };
+  if (motivo_perda_ref_id) body.motivo_perda_ref_id = motivo_perda_ref_id;
+  if (motivo) body.motivo_perda = motivo;
+  if (concorrente_perdido) body.concorrente_perdido = concorrente_perdido;
+
   try {
     const res = await fetch(URLS.mover, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body: JSON.stringify({ oportunidade_id: OP_PK, estagio_id, motivo }),
+      body: JSON.stringify(body),
     });
     const data = await res.json();
     if (data.ok) {
