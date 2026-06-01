@@ -13,6 +13,7 @@ urlpatterns = [
     path('inbox/mensagem/', views_n8n_webhook.inbox_mensagem, name='n8n_inbox_mensagem'),
     path('conversa/estado/', views_n8n_webhook.conversa_estado, name='n8n_conversa_estado'),
     path('conversa/transferir-fila/', views_n8n_webhook.transferir_fila, name='n8n_transferir_fila'),
+    path('conversa/status-por-telefone/', views_n8n_webhook.consultar_status_conversa, name='n8n_conversa_status_por_telefone'),
 
     # Matrix / agendamento de OS (camada que substitui o apimatrix externo)
     path('matrix/datas-sem-domingo/', views_matrix_os.consultar_datas_sem_domingo, name='matrix_datas_sem_domingo'),

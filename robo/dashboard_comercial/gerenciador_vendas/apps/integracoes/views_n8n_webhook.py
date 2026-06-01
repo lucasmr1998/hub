@@ -975,3 +975,70 @@ def registrar_imagem_lead(request):
 
     logger.info('[N8N] Imagem registrada para lead %s (%s)', lead_id, descricao)
     return JsonResponse({'sucesso': True, 'imagem_id': imagem.pk}, status=201)
+
+
+@csrf_exempt
+@require_POST
+def consultar_status_conversa(request):
+    """Retorna o status da conversa ATIVA de um telefone, pra workflows N8N
+    decidirem se devem enviar mensagem automatica (ex: follow-up so dispara
+    se conversa ainda esta com bot/sem agente).
+
+    Body JSON:
+        tenant_slug (obrigatorio)
+        telefone    (obrigatorio)
+
+    Resposta:
+        {
+          'achou': True/False,
+          'conversa_id': int,
+          'modo_atendimento': 'bot'|'humano'|'finalizado_bot',
+          'status': 'aberta'|'pendente'|'resolvida',
+          'assumida': bool,
+          'agente_id': int|None,
+          'eh_humano_assumida': bool   # atalho: True se modo='humano' E assumida=True
+        }
+    """
+    if not _autorizado(request):
+        return JsonResponse({'sucesso': False, 'erro': 'Nao autorizado'}, status=401)
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'sucesso': False, 'erro': 'JSON invalido'}, status=400)
+
+    tenant_slug = (payload.get('tenant_slug') or '').strip()
+    telefone = (payload.get('telefone') or '').strip()
+    if not tenant_slug or not telefone:
+        return JsonResponse({'sucesso': False, 'erro': 'tenant_slug e telefone obrigatorios'}, status=400)
+
+    tenant = Tenant.objects.filter(slug=tenant_slug, ativo=True).first()
+    if not tenant:
+        return JsonResponse({'sucesso': False, 'erro': f'Tenant {tenant_slug!r} nao encontrado'}, status=404)
+
+    telefone_norm = ''.join(c for c in telefone if c.isdigit())
+    if not telefone_norm:
+        return JsonResponse({'sucesso': False, 'erro': 'telefone sem digitos'}, status=400)
+
+    conversa = (
+        Conversa.all_tenants
+        .filter(tenant=tenant, contato_telefone__contains=telefone_norm[-9:])
+        .order_by('-ultima_mensagem_em', '-data_abertura')
+        .first()
+    )
+    if not conversa:
+        return JsonResponse({
+            'sucesso': True,
+            'achou': False,
+            'eh_humano_assumida': False,
+        })
+    eh_humano_assumida = bool(conversa.modo_atendimento == 'humano' and conversa.assumida)
+    return JsonResponse({
+        'sucesso': True,
+        'achou': True,
+        'conversa_id': conversa.pk,
+        'modo_atendimento': conversa.modo_atendimento,
+        'status': conversa.status,
+        'assumida': conversa.assumida,
+        'agente_id': conversa.agente_id,
+        'eh_humano_assumida': eh_humano_assumida,
+    })
