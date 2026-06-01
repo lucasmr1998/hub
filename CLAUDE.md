@@ -89,6 +89,13 @@ Antes de implementar qualquer funcionalidade, **consultar os documentos existent
 - `robo/docs/context/reunioes/` — decisoes tomadas em sessoes anteriores
 - `robo/docs/context/tarefas/` — backlog e tarefas concluidas
 
+### Cópia na nuvem (Workspace) e rastreabilidade
+
+Os docs de `robo/docs/` também vivem na nuvem, no módulo **Workspace** (Drive de documentos, tenant Aurora HQ), como cópia viva colaborativa. A pasta `robo/docs/` **continua sendo a fonte versionada** (e o que se lê antes de codar); a nuvem é a cópia editável compartilhada.
+
+- **Subir/sincronizar:** `python manage.py importar_docs_drive` (idempotente; suporta `.md`, `.pdf`, `.pptx`, `.json`, `.sql`; flags `--apenas-md`, `--apenas-binarios`, `--base-url`).
+- **Estado de sync:** o command gera `robo/docs/_SYNC_NUVEM.md` (legível) e `robo/docs/.sync_nuvem.json` mostrando, por arquivo, se já está na nuvem e o link. O `hub.html` exibe um badge nuvem/local por documento a partir desse manifesto.
+
 ### Hub de documentos
 O arquivo `robo/exports/hub.html` e o gestor visual unificado. **Rodar automaticamente** sempre que um `.md` for criado ou modificado:
 
@@ -321,17 +328,29 @@ Antes de cada resposta, fazer esta pergunta: **"o que o usuario esta pedindo?"**
 
 | Tema | Agente | Exemplos |
 |------|--------|----------|
-| Codigo, arquitetura, stack, scripts, migrations, debug | **Tech Lead** | refatorar engine.py, quebrar script, fix de bug, performance, Django |
-| Funcionalidade, fluxo de usuario, escopo de feature, priorizacao | **PM** | "como deveria funcionar X", decidir cortes de escopo, definir MVP |
-| Posicionamento, mensagem de mercado, canais, entregas para cliente | **PMM** | deck, one-pager, como descrever produto, comparacao com concorrente |
-| Precificacao, margens, ROI, unit economics | **CFO** | precos, margens, CAC, LTV, pricing de plano |
-| Vendas, objecoes, parceiros, discovery | **Head de Vendas** | script de venda, resposta a objecao, treinamento de parceiro |
-| Texto comercial: emails, WhatsApp, social, copy | **Copywriter** | escrever mensagem, ajustar tom, template de email |
-| Automacoes, segmentacao, reguas de relacionamento | **CRM e Automacao** | regra de trigger, segmento, jornada |
-| Seguranca, LGPD, auth, permissoes | **Seguranca** | vulnerabilidade, politica de senha, escopo de permissao |
-| Testes, qualidade, QA | **QA** | casos de teste, estrategia de teste, regressao |
-| Organizacao de arquivos/pastas do projeto (quando NAO e codigo) | **PM** | como organizar docs, hierarquia de pastas de conteudo |
-| Conversa geral, pergunta direta, favor pontual | **Assistente** | "que horas sao", "me explica X" |
+| Codigo, arquitetura, stack, scripts, migrations, debug | **Tech Lead** | refatorar engine.py, fix de bug, performance, Django |
+| Infraestrutura, CI/CD, deploy, monitoramento | **DevOps** | configurar pipeline, escalar servidor, logs de producao |
+| Funcionalidade, fluxo de usuario, escopo de feature, priorizacao | **PM** | "como deveria funcionar X", cortes de escopo, MVP |
+| Posicionamento, mensagem de mercado, canais, GTM | **PMM** | deck, one-pager, comparacao com concorrente |
+| Experiencia do usuario, jornada, usabilidade, interface | **UX Designer** | fluxo de tela, friction points, consistencia visual |
+| Roadmap, estrategia de produto, criterios de sucesso | **CPO** | priorizar entre modulos, definir OKRs de produto |
+| Precificacao, margens, ROI, unit economics | **CFO** | precos, CAC, LTV, pricing de plano, runway |
+| Visao estrategica, alocacao de recursos entre areas | **CEO** | priorizar entre produto vs comercial, decisoes de empresa |
+| Estrategia de marketing, branding, canais de aquisicao | **CMO** | posicionar a marca, escolher canais, budget de marketing |
+| Vendas, objecoes, parceiros, pipeline comercial | **Head de Vendas** | script de venda, resposta a objecao, metas de MRR |
+| Customer Success, onboarding, churn, health score | **CS Manager** | prevencao de churn, upsell, onboarding de cliente novo |
+| Parcerias, revendas, modelos de comissao | **Parcerias** | negociar com HubSoft, estrutura de revenda |
+| Texto comercial: emails, WhatsApp, social, copy | **Copywriter** | escrever mensagem, template de email, script WhatsApp |
+| Conteudo editorial, blog, SEO, comunidade | **Conteudo** | calendario editorial, artigo de blog, post LinkedIn |
+| Automacoes, segmentacao, regras de relacionamento, N8N | **CRM e Automacao** | trigger de automacao, segmento, jornada, fluxo N8N |
+| Growth, experimentos de conversao, aquisicao por canal | **Growth** | hipotese de teste, otimizacao de funil, CAC por canal |
+| Midia paga, campanhas, ROAS, trafego | **Performance** | gestao de Google Ads, Meta Ads, testes A/B de anuncio |
+| RevOps, integracao entre areas, comissoes, processos | **RevOps** | integrar Marketing-Vendas-CS, automatizar processo de vendas |
+| Seguranca, LGPD, auth, permissoes, vulnerabilidades | **Seguranca** | auditoria de codigo, politica de senha, compliance |
+| Legal, contratos, DPA, conformidade regulatoria | **Legal** | contrato SaaS, clausula de privacidade, LGPD |
+| Testes, qualidade, QA, Playwright, regressao | **QA** | estrategia de teste, Playwright E2E, casos de teste |
+| Organizacao de arquivos/pastas do projeto (quando NAO e codigo) | **PM** | organizar docs, hierarquia de pastas de conteudo |
+| Conversa geral, pergunta direta, favor pontual | **Assistente** | "me explica X", pergunta rapida sem categoria clara |
 
 ### Casos de fronteira (NAO default em Tech Lead)
 
