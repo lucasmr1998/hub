@@ -110,6 +110,10 @@ def _detectar_modulo_atual(request):
 
     if path.startswith('/aurora-admin/'):
         return 'admin'
+    # Dashboards de modulos acessados via menu Dashboard ficam no submenu Dashboard.
+    # url_name='dashboard' em inbox/marketing/etc. mantem o submenu estavel.
+    if url_name == 'dashboard' and not path.startswith('/aurora-admin/'):
+        return 'dashboard'
     if path.startswith('/workspace/'):
         return 'workspace'
     if path.startswith('/cs/'):

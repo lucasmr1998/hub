@@ -33,7 +33,17 @@ Uso em template que extende layout_app:
       </button>
     </div>
 
-    {% if modulo_atual == 'comercial' %}
+    {% if modulo_atual == 'dashboard' %}
+      <nav class="app-subnav-list">
+        <a href="/dashboard/" class="app-subnav-item {% if '/inbox/' not in request.path and '/marketing/' not in request.path %}is-active{% endif %}">
+          <i class="bi bi-speedometer2"></i><span>Visao geral</span>
+        </a>
+        <a href="/inbox/dashboard/" class="app-subnav-item {% if '/inbox/dashboard' in request.path %}is-active{% endif %}">
+          <i class="bi bi-chat-dots"></i><span>Atendimento</span>
+        </a>
+      </nav>
+
+    {% elif modulo_atual == 'comercial' %}
       <nav class="app-subnav-list">
         <a href="/crm/desempenho/" class="app-subnav-item {% if request.resolver_match.url_name == 'desempenho' %}is-active{% endif %}">
           <i class="bi bi-graph-up-arrow"></i><span>Desempenho</span>
