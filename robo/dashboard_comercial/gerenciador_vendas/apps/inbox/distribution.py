@@ -13,7 +13,7 @@ from django.utils import timezone
 from .models import (
     Conversa, Mensagem, FilaInbox, RegraRoteamento,
     PerfilAgenteInbox, MembroEquipeInbox, HorarioAtendimento,
-    ConfiguracaoInbox,
+    ConfiguracaoInbox, HistoricoTransferencia,
 )
 
 logger = logging.getLogger(__name__)
@@ -207,6 +207,19 @@ def distribuir_conversa(conversa, tenant):
             # Vincular agente como responsavel da oportunidade do lead
             from .services import _vincular_agente_oportunidade
             _vincular_agente_oportunidade(conversa, agente)
+
+            # v3 — Historico de atribuicao automatica inicial
+            HistoricoTransferencia(
+                tenant=tenant,
+                conversa=conversa,
+                tipo='atribuicao_inicial',
+                de_agente=None,
+                para_agente=agente,
+                de_equipe=None,
+                para_equipe=fila.equipe,
+                para_fila=fila,
+                motivo=f'auto: distribuicao {fila.modo_distribuicao}',
+            ).save()
 
             nome = agente.get_full_name() or agente.username
             Mensagem(

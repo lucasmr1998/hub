@@ -42,6 +42,10 @@ urlpatterns = [
     path('api/etiquetas/', views.api_etiquetas, name='api_etiquetas'),
     path('api/agente/status/', views.api_atualizar_status_agente, name='api_status_agente'),
 
+    # Sugestoes IA de preenchimento de campos do Lead (v1, manual via botao no balao)
+    path('api/mensagens/<int:msg_id>/sugerir-campos/', views.api_sugerir_campos, name='api_sugerir_campos'),
+    path('api/leads/<int:lead_id>/aplicar-sugestoes/', views.api_aplicar_sugestoes, name='api_aplicar_sugestoes'),
+
     # Configurações e Dashboard
     path('configuracoes/', views.configuracoes_inbox, name='configuracoes'),
     path('dashboard/', views.dashboard_inbox, name='dashboard'),

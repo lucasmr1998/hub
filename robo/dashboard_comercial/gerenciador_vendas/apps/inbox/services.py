@@ -375,6 +375,9 @@ def enviar_mensagem(conversa, conteudo, user, tipo_conteudo='texto',
     if not conversa.agente_id:
         conversa.agente = user
         conversa.assumida = True
+        if not conversa.data_assumida:
+            conversa.data_assumida = timezone.now()
+            update_fields.append('data_assumida')
         _vincular_agente_oportunidade(conversa, user)
         update_fields.extend(['agente', 'assumida'])
 
@@ -585,6 +588,9 @@ def assumir_conversa(conversa, agente):
         updates.append('modo_atendimento')
 
     conversa.assumida = True
+    if not conversa.data_assumida:
+        conversa.data_assumida = timezone.now()
+        updates.append('data_assumida')
     conversa.save(update_fields=updates)
     return conversa
 
@@ -868,6 +874,7 @@ def transferir_conversa(conversa, transferido_por, para_agente=None,
     historico = HistoricoTransferencia(
         tenant=conversa.tenant,
         conversa=conversa,
+        tipo='transferir_manual',
         de_agente=conversa.agente,
         de_equipe=conversa.equipe,
         transferido_por=transferido_por,

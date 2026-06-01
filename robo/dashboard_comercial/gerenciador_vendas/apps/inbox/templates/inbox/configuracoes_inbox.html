@@ -279,6 +279,41 @@
                     </div>
                 </form>
             </div>
+
+            <!-- Inatividade do atendente (v3) -->
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+                <div style="font-size:12px;color:var(--text-light);margin-bottom:8px;"><i class="fas fa-user-clock" style="margin-right:4px;"></i>Inatividade do atendente</div>
+                <form method="post">{% csrf_token %}
+                    <input type="hidden" name="action" value="salvar_inatividade_fila">
+                    <input type="hidden" name="fila_id" value="{{ fila.id }}">
+
+                    <label style="display:block;font-size:12px;margin-bottom:6px;">
+                        <input type="checkbox" name="realocar_inativo_ativo" {% if fila.realocar_inativo_ativo %}checked{% endif %} style="margin-right:6px;">
+                        Realocar quando atendente não assumir
+                    </label>
+                    <div style="display:flex;gap:8px;margin-bottom:10px;padding-left:18px;">
+                        <div style="flex:1;">
+                            <label style="font-size:11px;color:var(--text-muted);display:block;">Minutos sem assumir</label>
+                            <input type="number" min="1" name="tempo_max_sem_assumir_min" value="{{ fila.tempo_max_sem_assumir_min|default:10 }}" class="cfg-input" style="padding:4px 6px;font-size:12px;width:80px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:11px;color:var(--text-muted);display:block;">Máx. realocações</label>
+                            <input type="number" min="0" name="max_realocacoes" value="{{ fila.max_realocacoes|default:2 }}" class="cfg-input" style="padding:4px 6px;font-size:12px;width:80px;">
+                        </div>
+                    </div>
+
+                    <label style="display:block;font-size:12px;margin-bottom:6px;">
+                        <input type="checkbox" name="alerta_admin_inativo_ativo" {% if fila.alerta_admin_inativo_ativo %}checked{% endif %} style="margin-right:6px;">
+                        Notificar administrador quando atendente assumir e não responder
+                    </label>
+                    <div style="padding-left:18px;margin-bottom:10px;">
+                        <label style="font-size:11px;color:var(--text-muted);display:block;">Minutos sem responder após assumir</label>
+                        <input type="number" min="1" name="tempo_max_sem_responder_min" value="{{ fila.tempo_max_sem_responder_min|default:30 }}" class="cfg-input" style="padding:4px 6px;font-size:12px;width:80px;">
+                    </div>
+
+                    <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-save"></i> Salvar Inatividade</button>
+                </form>
+            </div>
         </div>
     </div>
     {% endfor %}

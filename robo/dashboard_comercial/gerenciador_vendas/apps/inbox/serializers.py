@@ -57,7 +57,12 @@ class ConversaOutputSerializer(serializers.Serializer):
     data_resolucao = serializers.DateTimeField(format='iso-8601')
     modo_atendimento = serializers.CharField()
     assumida = serializers.BooleanField()
+    alerta_inatividade = serializers.SerializerMethodField()
+    realocacoes_count = serializers.IntegerField()
     etiquetas = serializers.SerializerMethodField()
+
+    def get_alerta_inatividade(self, obj):
+        return bool((obj.metadata or {}).get('alerta_inatividade_em'))
 
     def get_agente_nome(self, obj):
         if obj.agente:

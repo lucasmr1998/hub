@@ -339,6 +339,13 @@ SPECTACULAR_SETTINGS = {
 N8N_WEBHOOK_URL = os.environ.get('N8N_WEBHOOK_URL', 'https://n8n.aurora.consulteplus.com/webhook/notifications')
 N8N_API_KEY = os.environ.get('N8N_API_KEY', '')
 
+# Webhook do workflow [Hubtrix] Extrair Campos do Texto.
+# Workflow versionado em robo/docs/context/n8n-workflows/hubtrix_extrair_campos_v1.json
+N8N_WEBHOOK_EXTRAIR_CAMPOS_URL = os.environ.get(
+    'N8N_WEBHOOK_EXTRAIR_CAMPOS_URL',
+    'https://automation-n8n.v4riem.easypanel.host/webhook/extrair-campos-hubtrix',
+)
+
 # Notification Settings
 NOTIFICATION_MAX_RETRIES = 3
 NOTIFICATION_RETRY_DELAYS = [2, 4, 8]  # minutos (exponential backoff)

@@ -22,6 +22,7 @@
         messagePollTimer: null,
         ws: null,
         wsConnected: false,
+        iaCards: {},  // map msgId -> { sugestoes, lead_id } pra sobreviver ao polling
     };
 
     // Status dos agentes (injetado pelo template)
@@ -238,12 +239,13 @@
             const isActive = c.id === state.currentConversaId;
             const canalLabel = c.canal_tipo === 'whatsapp' ? 'WhatsApp' : c.canal_tipo;
             return `
-            <div class="conv-card ${isActive ? 'active' : ''}" data-id="${c.id}">
+            <div class="conv-card ${isActive ? 'active' : ''} ${c.alerta_inatividade ? 'has-alerta' : ''}" data-id="${c.id}">
                 <div class="conv-avatar" style="background:${c.canal_tipo === 'whatsapp' ? '#25D366' : '#3b82f6'}">${getInitials(c.contato_nome)}</div>
                 <div class="conv-body">
                     <div class="conv-top">
                         <span class="conv-inbox-label">${esc(canalLabel)}</span>
                         ${c.modo_atendimento === 'bot' ? '<span class="conv-inbox-label" style="background:#f3e8ff;color:#6b21a8;"><i class="fas fa-robot" style="font-size:9px;margin-right:2px;"></i>Bot</span>' : ''}
+                        ${c.alerta_inatividade ? '<span class="conv-inbox-label" style="background:#fee2e2;color:#991b1b;"><i class="fas fa-exclamation-triangle" style="font-size:9px;margin-right:2px;"></i>Inativo</span>' : ''}
                         ${c.agente_nome ? `<span class="conv-agent-name">${_agenteStatusDot(c.agente_id)}${esc(nomeAgenteCurto(c.agente_nome))}</span>` : ''}
                     </div>
                     <div class="conv-name">${esc(c.contato_nome || c.contato_telefone || '#' + c.numero)}</div>
@@ -387,13 +389,15 @@
             // Ticket
             const ticketInfo = document.getElementById('ticketInfo');
             const ticketBtn = document.getElementById('createTicketBtn');
-            if (data.ticket_info) {
-                ticketInfo.style.display = 'block';
-                ticketInfo.innerHTML = `<div class="ctx-info-row"><span class="ctx-info-label">#${data.ticket_info.numero}</span><span class="ctx-info-value">${esc(data.ticket_info.titulo)}</span></div>`;
-                ticketBtn.style.display = 'none';
-            } else {
-                ticketInfo.style.display = 'none';
-                ticketBtn.style.display = 'inline-flex';
+            if (ticketInfo && ticketBtn) {
+                if (data.ticket_info) {
+                    ticketInfo.style.display = 'block';
+                    ticketInfo.innerHTML = `<div class="ctx-info-row"><span class="ctx-info-label">#${data.ticket_info.numero}</span><span class="ctx-info-value">${esc(data.ticket_info.titulo)}</span></div>`;
+                    ticketBtn.style.display = 'none';
+                } else {
+                    ticketInfo.style.display = 'none';
+                    ticketBtn.style.display = 'inline-flex';
+                }
             }
 
             // Conversas anteriores
@@ -460,15 +464,23 @@
                     : '<i class="fas fa-check"></i>';
             }
 
-            html += `<div class="msg-bubble ${t}">`;
+            html += `<div class="msg-bubble ${t}" data-msg-id="${m.id}">`;
             if (t === 'contato' || t === 'bot') html += `<div class="msg-sender">${esc(m.remetente_nome)}</div>`;
             html += renderConteudo(m);
             html += `<div class="msg-time">${formatFullTime(m.data_envio)} <span class="msg-status">${statusIcon}</span></div>`;
             if (m.erro_envio) html += `<div style="font-size:10px;color:#ef4444;margin-top:2px;"><i class="fas fa-exclamation-triangle"></i> ${esc(m.erro_envio)}</div>`;
-            html += '</div>';
+            if (t === 'contato' && (m.conteudo || '').trim().length > 3) {
+                html += `<button type="button" class="msg-ia-btn" data-msg-id="${m.id}" title="Sugerir campos para preenchimento via IA">
+                    <i class="fas fa-magic"></i> Extrair dados
+                </button>`;
+            }
+            html += `</div>`;
+            html += `<div class="ia-suggest-slot" data-slot-msg="${m.id}"></div>`;
         });
 
         container.innerHTML = html;
+        // Restaura cards IA abertos que sobreviveram ao polling
+        _rerenderAllIACards();
         if (stickBottom) {
             container.scrollTop = container.scrollHeight;
             // imagens carregam async e mudam a altura — re-fixa no fim.
@@ -482,6 +494,198 @@
         } else {
             container.scrollTop = prevTop;
         }
+    }
+
+    // ── Sugestoes IA de campos (v1, manual) ───────────────────────────
+
+    function _findSlot(msgId) {
+        return document.querySelector(`.ia-suggest-slot[data-slot-msg="${msgId}"]`);
+    }
+
+    function extrairCamposIA(msgId) {
+        const slot = _findSlot(msgId);
+        const btn = document.querySelector(`.msg-ia-btn[data-msg-id="${msgId}"]`);
+        if (!slot) return;
+        // Toggle: se ja tem card aberto, fecha
+        if (state.iaCards[msgId]) {
+            delete state.iaCards[msgId];
+            slot.innerHTML = '';
+            return;
+        }
+        state.iaCards[msgId] = { loading: true };
+        slot.innerHTML = '<div class="ia-card ia-loading"><i class="fas fa-spinner fa-spin"></i> Analisando mensagem...</div>';
+        if (btn) btn.disabled = true;
+
+        fetchJSON(`/inbox/api/mensagens/${msgId}/sugerir-campos/`, { method: 'POST', body: '{}' })
+            .then(d => {
+                const b = document.querySelector(`.msg-ia-btn[data-msg-id="${msgId}"]`);
+                if (b) b.disabled = false;
+                if (d.error) {
+                    state.iaCards[msgId] = { error: d.error };
+                } else {
+                    state.iaCards[msgId] = {
+                        sugestoes: d.sugestoes || [],
+                        rejeitadas: d.rejeitadas || [],
+                        lead_id: d.lead_id,
+                    };
+                }
+                _rerenderIACard(msgId);
+            })
+            .catch(err => {
+                const b = document.querySelector(`.msg-ia-btn[data-msg-id="${msgId}"]`);
+                if (b) b.disabled = false;
+                state.iaCards[msgId] = { error: String(err) };
+                _rerenderIACard(msgId);
+            });
+    }
+
+    function _rerenderIACard(msgId) {
+        const slot = _findSlot(msgId);
+        if (!slot) return;
+        const st = state.iaCards[msgId];
+        if (!st) { slot.innerHTML = ''; return; }
+        if (st.loading) {
+            slot.innerHTML = '<div class="ia-card ia-loading"><i class="fas fa-spinner fa-spin"></i> Analisando mensagem...</div>';
+            return;
+        }
+        if (st.error) {
+            slot.innerHTML = `<div class="ia-card ia-error"><i class="fas fa-exclamation-triangle"></i> ${esc(st.error)}</div>`;
+            return;
+        }
+        renderCardSugestoes(slot, st, msgId);
+    }
+
+    function _rerenderAllIACards() {
+        Object.keys(state.iaCards).forEach(mid => _rerenderIACard(parseInt(mid)));
+    }
+
+    const CAMPO_LABELS = {
+        nome_razaosocial: 'Nome',
+        cpf_cnpj: 'CPF/CNPJ',
+        email: 'E-mail',
+        data_nascimento: 'Nascimento',
+        rg: 'RG',
+        cep: 'CEP',
+        cidade: 'Cidade',
+        estado: 'UF',
+    };
+
+    const MOTIVO_REJEICAO_LABELS = {
+        'cpf checksum': 'CPF com dígitos verificadores inválidos — confirme com o cliente',
+        'cpf/cnpj tamanho': 'CPF/CNPJ não tem o tamanho esperado',
+        'cep tamanho': 'CEP precisa ter 8 dígitos',
+        'regex email': 'Formato de e-mail inválido',
+        'regex data_nascimento': 'Data fora do formato esperado',
+        'regex estado': 'UF deve ter 2 letras maiúsculas',
+        'confianca <0.7': 'Baixa confiança da IA',
+        'trecho nao bate no texto': 'Trecho não confere com a mensagem',
+        'campo invalido': 'Campo fora do catálogo',
+        'sem trecho_origem': 'IA não citou o trecho de origem',
+        'valor curto': 'Valor muito curto',
+    };
+    function _labelMotivo(m) { return MOTIVO_REJEICAO_LABELS[m] || m; }
+
+    function renderCardSugestoes(slot, st, msgId) {
+        const sugs = st.sugestoes || [];
+        const rejs = st.rejeitadas || [];
+        const leadId = st.lead_id;
+        if (!sugs.length && !rejs.length) {
+            slot.innerHTML = `<div class="ia-card ia-empty"><i class="fas fa-info-circle"></i> Nenhum campo identificado nesta mensagem. <span class="ia-card-close" data-msg-close="${msgId}">×</span></div>`;
+            return;
+        }
+        if (sugs.length && !leadId) {
+            slot.innerHTML = `<div class="ia-card ia-error"><i class="fas fa-exclamation-triangle"></i> Conversa sem lead vinculado — nao da pra aplicar.</div>`;
+            return;
+        }
+        let html = `<div class="ia-card">
+            <div class="ia-card-head"><i class="fas fa-magic"></i> ${sugs.length} dado(s) identificado(s)${rejs.length ? ` · ${rejs.length} a verificar` : ''} <span class="ia-card-close" data-msg-close="${msgId}">×</span></div>
+            <div class="ia-card-body">`;
+        sugs.forEach((s, i) => {
+            const label = CAMPO_LABELS[s.campo] || s.campo;
+            const conf = Math.round(s.confianca * 100);
+            const checked = (st.unchecked && st.unchecked.includes(i)) ? '' : 'checked';
+            html += `<label class="ia-sug-item">
+                <input type="checkbox" class="ia-sug-check" data-i="${i}" data-msg="${msgId}" ${checked}>
+                <div class="ia-sug-info">
+                    <span class="ia-sug-label">${esc(label)}:</span>
+                    <span class="ia-sug-valor">${esc(s.valor)}</span>
+                    <span class="ia-sug-trecho" title="Trecho original">"${esc(s.trecho_origem)}"</span>
+                    <span class="ia-sug-conf">${conf}%</span>
+                </div>
+            </label>`;
+        });
+        html += `</div>`;
+
+        if (rejs.length) {
+            html += `<div class="ia-card-rejeitadas">
+                <div class="ia-rej-head"><i class="fas fa-exclamation-triangle"></i> Identificado mas rejeitado pelo validador (confirme manualmente):</div>`;
+            rejs.forEach(r => {
+                const label = CAMPO_LABELS[r.campo] || r.campo;
+                const motivos = (r.motivos || []).map(_labelMotivo).join(' · ');
+                html += `<div class="ia-rej-item">
+                    <span class="ia-rej-label">${esc(label)}:</span>
+                    <span class="ia-rej-valor">${esc(r.valor || '')}</span>
+                    ${r.trecho_origem ? `<span class="ia-sug-trecho">"${esc(r.trecho_origem)}"</span>` : ''}
+                    <div class="ia-rej-motivo">${esc(motivos)}</div>
+                </div>`;
+            });
+            html += `</div>`;
+        }
+
+        if (sugs.length && leadId) {
+            html += `<div class="ia-card-actions">
+                <button type="button" class="ia-btn ia-btn-primary" data-apply="${msgId}">
+                    <i class="fas fa-check"></i> Aplicar selecionados no Lead
+                </button>
+                <button type="button" class="ia-btn ia-btn-ghost" data-cancel="${msgId}">Cancelar</button>
+            </div>`;
+        } else {
+            html += `<div class="ia-card-actions">
+                <button type="button" class="ia-btn ia-btn-ghost" data-cancel="${msgId}">Fechar</button>
+            </div>`;
+        }
+        html += `</div>`;
+        slot.innerHTML = html;
+    }
+
+    function aplicarSugestoesIA(msgId) {
+        const slot = _findSlot(msgId);
+        const st = state.iaCards[msgId];
+        if (!slot || !st || !st.sugestoes) return;
+        const sugs = st.sugestoes;
+        const leadId = st.lead_id;
+        const checks = slot.querySelectorAll('.ia-sug-check');
+        const selecionadas = [];
+        checks.forEach(c => { if (c.checked) selecionadas.push({campo: sugs[+c.dataset.i].campo, valor: sugs[+c.dataset.i].valor}); });
+        if (!selecionadas.length) {
+            delete state.iaCards[msgId];
+            slot.innerHTML = '';
+            return;
+        }
+
+        const applyBtn = slot.querySelector('[data-apply]');
+        if (applyBtn) { applyBtn.disabled = true; applyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aplicando...'; }
+
+        fetchJSON(`/inbox/api/leads/${leadId}/aplicar-sugestoes/`, {
+            method: 'POST', body: JSON.stringify({sugestoes: selecionadas}),
+        }).then(d => {
+            if (d.error) {
+                state.iaCards[msgId] = { error: 'Aplicar: ' + d.error };
+                _rerenderIACard(msgId);
+                return;
+            }
+            const okN = (d.aplicados || []).length;
+            const igN = (d.ignorados || []).length;
+            delete state.iaCards[msgId];
+            const s = _findSlot(msgId);
+            if (s) s.innerHTML = `<div class="ia-card ia-success"><i class="fas fa-check-circle"></i> ${okN} campo(s) atualizado(s) no Lead${igN ? ` (${igN} ignorado(s))` : ''}.</div>`;
+            if (typeof loadConversaDetalhe === 'function' && state.currentConversaId) {
+                loadConversaDetalhe(state.currentConversaId);
+            }
+        }).catch(err => {
+            state.iaCards[msgId] = { error: String(err) };
+            _rerenderIACard(msgId);
+        });
     }
 
     function startMessagePoll(id) {
@@ -667,6 +871,21 @@
     function init() {
         ajustarAlturaInbox();
         window.addEventListener('resize', ajustarAlturaInbox);
+
+        // Delegation pros botoes de sugestoes IA dentro de #messageList
+        const msgList = document.getElementById('messageList');
+        if (msgList) {
+            msgList.addEventListener('click', function(e) {
+                const ext = e.target.closest('.msg-ia-btn');
+                if (ext) { e.stopPropagation(); extrairCamposIA(parseInt(ext.dataset.msgId)); return; }
+                const apply = e.target.closest('[data-apply]');
+                if (apply) { e.stopPropagation(); aplicarSugestoesIA(parseInt(apply.dataset.apply)); return; }
+                const cancel = e.target.closest('[data-cancel]');
+                if (cancel) { e.stopPropagation(); const mid = parseInt(cancel.dataset.cancel); delete state.iaCards[mid]; const slot = _findSlot(mid); if (slot) slot.innerHTML = ''; return; }
+                const close = e.target.closest('[data-msg-close]');
+                if (close) { e.stopPropagation(); const mid = parseInt(close.dataset.msgClose); delete state.iaCards[mid]; const slot = _findSlot(mid); if (slot) slot.innerHTML = ''; return; }
+            });
+        }
 
         // Modo tabs (Bot / Humano / Todas) — admin only
         document.querySelectorAll('.inbox-modo-tab').forEach(btn => {

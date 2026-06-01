@@ -223,6 +223,14 @@ class Conversa(TenantMixin):
         default=False, verbose_name="Assumida",
         help_text="Agente abriu e aceitou atender explicitamente. Falso = só direcionada, histórico bloqueado."
     )
+    data_assumida = models.DateTimeField(
+        null=True, blank=True, verbose_name="Assumida em",
+        help_text="Timestamp do momento em que o agente assumiu (clicou Assumir OU enviou primeira mensagem)"
+    )
+    realocacoes_count = models.PositiveIntegerField(
+        default=0, verbose_name="Realocacoes automaticas",
+        help_text="Quantas vezes essa conversa foi realocada automaticamente por inatividade (v3)"
+    )
 
     class Meta:
         db_table = 'inbox_conversas'
@@ -578,6 +586,31 @@ class FilaInbox(TenantMixin):
         verbose_name="Mensagem fora do horário",
         help_text="Mensagem enviada automaticamente quando fora do horário da fila"
     )
+
+    # v3 — Realocacao automatica por inatividade (atendente nao assumiu)
+    realocar_inativo_ativo = models.BooleanField(
+        default=False, verbose_name="Realocar quando atendente nao assume",
+        help_text="Quando ativo, conversa atribuida mas nao assumida em X min e reatribuida pra outro agente online."
+    )
+    tempo_max_sem_assumir_min = models.PositiveIntegerField(
+        default=10, verbose_name="Minutos sem assumir para realocar",
+        help_text="So aplica se 'Realocar quando atendente nao assume' estiver ativo."
+    )
+    max_realocacoes = models.PositiveIntegerField(
+        default=2, verbose_name="Maximo de realocacoes por conversa",
+        help_text="Apos esse limite, conversa vai pra fila sem agente (status=pendente) ate alguem assumir manualmente."
+    )
+
+    # v3 — Alerta ao admin quando atendente assumiu mas nao responde
+    alerta_admin_inativo_ativo = models.BooleanField(
+        default=False, verbose_name="Notificar admin quando atendente assumir e nao responder",
+        help_text="Quando ativo, admin recebe notificacao se atendente assumiu e nao responde a ultima msg do contato em Y min."
+    )
+    tempo_max_sem_responder_min = models.PositiveIntegerField(
+        default=30, verbose_name="Minutos sem responder para alertar admin",
+        help_text="So aplica se 'Notificar admin' estiver ativo."
+    )
+
     criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
 
     class Meta:
@@ -631,9 +664,22 @@ class RegraRoteamento(TenantMixin):
 
 
 class HistoricoTransferencia(TenantMixin):
+    TIPO_CHOICES = [
+        ('atribuicao_inicial', 'Atribuicao inicial'),
+        ('transferir_manual', 'Transferencia manual'),
+        ('realocar_inativo', 'Realocacao por inatividade'),
+        ('alerta_admin', 'Alerta de inatividade'),
+        ('liberar', 'Conversa liberada'),
+    ]
+
     conversa = models.ForeignKey(
         Conversa, on_delete=models.CASCADE,
         related_name='transferencias', verbose_name="Conversa"
+    )
+    tipo = models.CharField(
+        max_length=30, choices=TIPO_CHOICES,
+        default='transferir_manual', verbose_name="Tipo",
+        help_text="Tipo do evento de atribuicao/transferencia"
     )
     de_agente = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,

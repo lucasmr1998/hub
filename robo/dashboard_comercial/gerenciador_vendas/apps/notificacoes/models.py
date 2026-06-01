@@ -20,6 +20,7 @@ class TipoNotificacao(TenantMixin):
         ('conversa_recebida', 'Nova Conversa Recebida'),
         ('conversa_transferida', 'Conversa Transferida'),
         ('mensagem_recebida', 'Nova Mensagem'),
+        ('inatividade_atendente', 'Atendente Sem Resposta'),
         # CRM
         ('tarefa_vencendo', 'Tarefa Próxima do Vencimento'),
         ('tarefa_atribuida', 'Tarefa Atribuída'),

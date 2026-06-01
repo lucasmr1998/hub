@@ -24,6 +24,8 @@ Modulo de conversas em tempo real estilo Chatwoot/Intercom. Permite que agentes 
 | [websocket.md](websocket.md) | InboxConsumer + groups + actions em tempo real |
 | [widget-chat.md](widget-chat.md) | Chat widget embeddable (3 abas + FAQ) |
 | [interface.md](interface.md) | Dashboard + configuracoes + sidebar + management commands |
+| [sugestoes-ia.md](sugestoes-ia.md) | Sugestoes IA de campos do Lead (v1 manual, workflow N8N) |
+| [reatribuicao-inatividade.md](reatribuicao-inatividade.md) | Realocacao auto + alerta admin por inatividade do atendente (v3) |
 
 ---
 

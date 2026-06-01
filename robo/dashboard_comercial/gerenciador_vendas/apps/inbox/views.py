@@ -1358,6 +1358,25 @@ def _processar_action_config(request, action, django_messages):
             fila.save(update_fields=['mensagem_fora_horario'])
             django_messages.success(request, f'Horarios da fila "{fila.nome}" salvos.')
 
+    elif action == 'salvar_inatividade_fila':
+        fila_id = request.POST.get('fila_id')
+        fila = FilaInbox.objects.filter(pk=fila_id).first()
+        if fila:
+            def _int(v, default):
+                try: return max(0, int(v))
+                except (TypeError, ValueError): return default
+            fila.realocar_inativo_ativo = request.POST.get('realocar_inativo_ativo') == 'on'
+            fila.tempo_max_sem_assumir_min = _int(request.POST.get('tempo_max_sem_assumir_min'), 10)
+            fila.max_realocacoes = _int(request.POST.get('max_realocacoes'), 2)
+            fila.alerta_admin_inativo_ativo = request.POST.get('alerta_admin_inativo_ativo') == 'on'
+            fila.tempo_max_sem_responder_min = _int(request.POST.get('tempo_max_sem_responder_min'), 30)
+            fila.save(update_fields=[
+                'realocar_inativo_ativo', 'tempo_max_sem_assumir_min',
+                'max_realocacoes', 'alerta_admin_inativo_ativo',
+                'tempo_max_sem_responder_min',
+            ])
+            django_messages.success(request, f'Inatividade da fila "{fila.nome}" salva.')
+
     # ── Config Geral ───────────────────────────────────────────────
     elif action == 'salvar_config':
         config = ConfiguracaoInbox.get_config()
@@ -1591,3 +1610,84 @@ def dashboard_inbox(request):
         'page_title': 'Central de Atendimento',
     }
     return render(request, 'inbox/dashboard_inbox.html', context)
+
+
+# ── Sugestoes IA de campos (v1, disparo manual) ────────────────────────
+
+@login_required
+@require_http_methods(["POST"])
+def api_sugerir_campos(request, msg_id):
+    """Dispara extracao de campos via N8N pra UMA mensagem do cliente.
+
+    Retorna lista de sugestoes validadas (campo, valor, trecho_origem, confianca).
+    Nao persiste — apenas devolve pro frontend renderizar o card.
+    """
+    from .services_ia_extracao import extrair_campos, ExtracaoError
+
+    try:
+        mensagem = Mensagem.objects.select_related('conversa', 'conversa__tenant', 'conversa__lead').get(pk=msg_id)
+    except Mensagem.DoesNotExist:
+        return JsonResponse({'error': 'Mensagem nao encontrada'}, status=404)
+
+    if mensagem.conversa.tenant_id != request.tenant.id:
+        return HttpResponseForbidden('Mensagem de outro tenant')
+
+    if mensagem.remetente_tipo != 'contato':
+        return JsonResponse({'error': 'Sugestoes so disponiveis em mensagens do contato'}, status=400)
+
+    try:
+        resultado = extrair_campos(mensagem)
+    except ExtracaoError as exc:
+        return JsonResponse({'error': str(exc)}, status=502)
+    except Exception as exc:
+        logger.exception('Erro inesperado extraindo campos da msg %s', msg_id)
+        return JsonResponse({'error': f'Erro inesperado: {exc}'}, status=500)
+
+    from apps.sistema.utils import registrar_acao
+    registrar_acao(
+        'inbox', 'sugerir_campos', 'mensagem', mensagem.id,
+        f'{resultado["total_validadas"]}/{resultado["total_brutas"]} sugestoes validadas',
+        request=request,
+    )
+
+    return JsonResponse({
+        'mensagem_id': mensagem.id,
+        'lead_id': mensagem.conversa.lead_id,
+        **resultado,
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+@auditar('inbox', 'aplicar_sugestoes_ia', 'lead')
+def api_aplicar_sugestoes(request, lead_id):
+    """Aplica sugestoes selecionadas pelo vendedor no LeadProspecto.
+
+    Body: {"sugestoes": [{"campo": "...", "valor": "..."}]}
+    """
+    from apps.comercial.leads.models import LeadProspecto
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'JSON invalido'}, status=400)
+
+    sugestoes = data.get('sugestoes', [])
+    if not isinstance(sugestoes, list) or not sugestoes:
+        return JsonResponse({'error': 'Lista de sugestoes vazia'}, status=400)
+
+    try:
+        lead = LeadProspecto.objects.get(pk=lead_id)
+    except LeadProspecto.DoesNotExist:
+        return JsonResponse({'error': 'Lead nao encontrado'}, status=404)
+
+    if lead.tenant_id != request.tenant.id:
+        return HttpResponseForbidden('Lead de outro tenant')
+
+    from .services_ia_extracao import aplicar_sugestoes
+    resultado = aplicar_sugestoes(lead, sugestoes, usuario=request.user)
+
+    return JsonResponse({
+        'lead_id': lead.id,
+        **resultado,
+    })
