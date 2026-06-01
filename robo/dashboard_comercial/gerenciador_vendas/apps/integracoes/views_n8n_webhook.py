@@ -950,16 +950,18 @@ def registrar_imagem_lead(request):
         return JsonResponse({'sucesso': False, 'erro': f'Lead {lead_id} nao encontrado'}, status=404)
 
     # Se a URL passada é do WhatsApp (expira), tenta usar o arquivo já hospedado
-    # que o webhook inbox_mensagem baixou via Uazapi e salvou em mensagem.arquivo
+    # que o webhook inbox_mensagem baixou via Uazapi e salvou em mensagem.arquivo.
+    # O arquivo vive em volume privado (private_media/inbox_midia/), então não dá
+    # pra montar URL como MEDIA_URL + path — precisa apontar pro endpoint inbox
+    # que serve mídia autenticada.
     url_final = link_url
     try:
         from apps.inbox.models import Mensagem as InboxMensagem
-        from django.conf import settings as django_settings
         msg = InboxMensagem.all_tenants.filter(
             conversa__lead=lead, arquivo_url=link_url
         ).exclude(arquivo='').first()
-        if msg and msg.arquivo:
-            url_final = django_settings.MEDIA_URL + str(msg.arquivo)
+        if msg and msg.arquivo and msg.conversa_id:
+            url_final = f'/inbox/api/conversas/{msg.conversa_id}/midia/{msg.pk}/'
     except Exception:
         pass
 
