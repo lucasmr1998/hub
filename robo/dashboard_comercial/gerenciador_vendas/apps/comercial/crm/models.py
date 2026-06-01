@@ -856,6 +856,18 @@ class ConfiguracaoCRM(TenantMixin):
         help_text="Quantas oportunidades o preview de regra avalia. Aumentar dá amostra maior mas deixa mais lento.",
     )
 
+    # Motivo de Perda — controle de obrigatoriedade
+    motivo_perda_obrigatorio = models.BooleanField(
+        default=False,
+        verbose_name="Motivo de perda obrigatório",
+        help_text="Quando ativo, exige preenchimento do motivo ao mover oportunidade para o estágio 'Perdida'. Backend rejeita salvar sem motivo.",
+    )
+    motivo_perda_pede_concorrente = models.BooleanField(
+        default=True,
+        verbose_name="Pedir 'qual concorrente?' quando motivo for Concorrente",
+        help_text="Quando motivo escolhido for relacionado a concorrente, exibe campo extra para identificar qual.",
+    )
+
     data_atualizacao = models.DateTimeField(auto_now=True)
 
     class Meta:
