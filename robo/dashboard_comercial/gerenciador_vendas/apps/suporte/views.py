@@ -805,3 +805,41 @@ def api_pergunta_ignorar(request, pk):
     pergunta.save(update_fields=['status'])
 
     return JsonResponse({'success': True, 'message': 'Pergunta ignorada.'})
+
+
+@login_required
+def api_sugerir_artigos(request, pk):
+    """Sugere artigos da base de conhecimento que podem responder a pergunta.
+
+    GET /suporte/conhecimento/perguntas/<pk>/sugerir-artigos/
+
+    Retorna ate 5 artigos relevantes (busca RAG via pgvector) + URL pra criar
+    novo artigo a partir da pergunta caso nenhum sirva.
+    """
+    from .models import PerguntaSemResposta
+    from .services import buscar_artigos
+
+    pergunta = get_object_or_404(PerguntaSemResposta, pk=pk)
+    resultados = buscar_artigos(pergunta.tenant, pergunta.pergunta, k=5)
+
+    artigos = [
+        {
+            'id': r['artigo'].id,
+            'titulo': r['artigo'].titulo,
+            'resumo': r['artigo'].resumo or '',
+            'slug': r['artigo'].slug,
+            'distancia': r['distancia'],
+            'similaridade_pct': round((1 - r['distancia']) * 100, 1),
+        }
+        for r in resultados
+    ]
+    return JsonResponse({
+        'success': True,
+        'pergunta_texto': pergunta.pergunta,
+        'pergunta_id': pergunta.id,
+        'artigos': artigos,
+        'criar_artigo_url': (
+            '/suporte/conhecimento/gerenciar/?criar=1'
+            f'&pergunta={pergunta.pergunta[:200]}&pergunta_id={pergunta.id}'
+        ),
+    })

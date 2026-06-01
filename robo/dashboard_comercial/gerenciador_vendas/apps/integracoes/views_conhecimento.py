@@ -1,8 +1,8 @@
 """Endpoints publicos /api/public/n8n/conhecimento/* — base de conhecimento.
 
 Permitem que bots externos (Matrix, N8N agente LLM) registrem perguntas sem
-resposta e (futuramente) busquem na base de conhecimento. Autenticam por
-Bearer token via api_token_required → request.tenant.
+resposta E busquem na base de conhecimento (RAG via pgvector). Autenticam
+por Bearer token via api_token_required -> request.tenant.
 """
 import logging
 
@@ -147,4 +147,76 @@ def registrar_erro_resposta(request):
         'criada': criada,
         'erro_id': obj.id,
         'ocorrencias': obj.ocorrencias,
+    })
+
+
+@csrf_exempt
+@require_POST
+@api_token_required
+def buscar_conhecimento(request):
+    """POST /api/public/n8n/conhecimento/buscar/
+
+    Body JSON:
+      {
+        "pergunta": "qual o valor do plano 500MB?",   # obrigatorio
+        "k": 5,                  # opcional, default 5
+        "distancia_max": 0.5     # opcional, default 0.5
+      }
+
+    Resposta `200`:
+      {
+        "status": "success",
+        "encontrou": true,
+        "artigos": [
+          {
+            "id": 12,
+            "titulo": "Tabela de planos residenciais",
+            "resumo": "Planos a partir de R$ 89/mes ...",
+            "conteudo": "...",
+            "tags": ["planos","preco"],
+            "url": "/suporte/conhecimento/artigo/tabela-planos/",
+            "distancia": 0.18
+          }
+        ]
+      }
+    """
+    from apps.sistema.utils import _parse_json_request
+    from apps.suporte.services import buscar_artigos
+
+    data = _parse_json_request(request) or {}
+    pergunta = (data.get('pergunta') or '').strip()
+    if not pergunta:
+        return JsonResponse({'status': 'error', 'msg': 'pergunta obrigatoria'}, status=400)
+
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        return JsonResponse({'status': 'error', 'msg': 'tenant nao resolvido'}, status=401)
+
+    try:
+        k = max(1, min(int(data.get('k', 5)), 20))
+    except (ValueError, TypeError):
+        k = 5
+    try:
+        dist_max = float(data.get('distancia_max', 0.5))
+    except (ValueError, TypeError):
+        dist_max = 0.5
+
+    resultados = buscar_artigos(tenant, pergunta, k=k, distancia_max=dist_max)
+    artigos = [
+        {
+            'id': r['artigo'].id,
+            'titulo': r['artigo'].titulo,
+            'resumo': r['artigo'].resumo or '',
+            'conteudo': r['artigo'].conteudo or '',
+            'tags': r['artigo'].tags_lista,
+            'url': f'/suporte/conhecimento/artigo/{r["artigo"].slug}/',
+            'distancia': r['distancia'],
+        }
+        for r in resultados
+    ]
+
+    return JsonResponse({
+        'status': 'success',
+        'encontrou': bool(artigos),
+        'artigos': artigos,
     })

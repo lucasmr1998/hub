@@ -76,3 +76,51 @@ def registrar_pergunta_sem_resposta(*, tenant, pergunta: str, lead=None, convers
         tenant=tenant, pergunta=pergunta, lead=lead, conversa=conversa,
     )
     return nova, True
+
+
+# ============================================================================
+# BUSCA DE CONHECIMENTO (RAG via pgvector)
+# ============================================================================
+
+def buscar_artigos(tenant, pergunta: str, k: int = 5, distancia_max: float = 0.5):
+    """Busca top-K artigos da base de conhecimento mais relevantes pra `pergunta`.
+
+    Usa pgvector com distancia cosseno (`<=>`). Filtra por tenant + publicado=True.
+    Ignora artigos sem embedding (ainda nao processados pelo backfill/signal).
+
+    Args:
+        tenant: instancia Tenant.
+        pergunta: texto livre.
+        k: numero max de resultados.
+        distancia_max: corta resultados acima desse limiar de distancia cosseno
+            (0 = identico, 2 = oposto). 0.5 ja e bem permissivo; 0.3 e mais
+            preciso. Default 0.5 pra nao deixar buscas voltarem vazias logo de
+            cara em bases pequenas.
+
+    Returns:
+        list[dict] com {artigo: ArtigoConhecimento, distancia: float}.
+        Lista vazia se nao houver match relevante OU se nao conseguir gerar
+        embedding da pergunta (sem credencial OpenAI).
+    """
+    from pgvector.django import CosineDistance
+    from apps.suporte.models import ArtigoConhecimento
+    from apps.sistema.services.embeddings import gerar_embedding
+
+    if not pergunta or len(pergunta.strip()) < 3:
+        return []
+
+    emb_pergunta = gerar_embedding(pergunta, tenant=tenant)
+    if emb_pergunta is None:
+        logger.warning('buscar_artigos: nao gerou embedding da pergunta')
+        return []
+
+    qs = (
+        ArtigoConhecimento.all_tenants
+        .filter(tenant=tenant, publicado=True)
+        .exclude(embedding__isnull=True)
+        .annotate(distancia=CosineDistance('embedding', emb_pergunta))
+        .filter(distancia__lte=distancia_max)
+        .order_by('distancia')[:k]
+    )
+
+    return [{'artigo': a, 'distancia': float(a.distancia)} for a in qs]

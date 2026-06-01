@@ -366,6 +366,67 @@ Erros:
 
 ---
 
+## Base de conhecimento — busca RAG (`/conhecimento/buscar/`)
+
+Permite que agentes LLM externos consultem a base de conhecimento do tenant
+**por similaridade semantica** antes de gerar resposta. Cliente pergunta
+"vocês têm plano de 1 giga?" e o endpoint acha o artigo "Tabela de planos
+residenciais" mesmo que o artigo nao tenha a string "1 giga" literal.
+
+**Stack:** pgvector (extension Postgres) + OpenAI text-embedding-3-small
+(1536 dim). Distancia cosseno via operador `<=>` com indice HNSW.
+
+**Credenciais OpenAI:** cada tenant pode ter sua `IntegracaoAPI tipo=openai`
+ativa. Se nao tiver, usa a chave da Aurora HQ como fallback. Custo:
+$0.0001/pergunta (text-embedding-3-small).
+
+**`POST /api/public/n8n/conhecimento/buscar/`**
+
+Body JSON:
+```json
+{
+  "pergunta": "qual o valor do plano 500MB?",
+  "k": 5,                  // opcional, default 5, max 20
+  "distancia_max": 0.5     // opcional, default 0.5 (0=identico, 2=oposto)
+}
+```
+
+Resposta `200`:
+```json
+{
+  "status": "success",
+  "encontrou": true,
+  "artigos": [
+    {
+      "id": 12,
+      "titulo": "Tabela de planos residenciais",
+      "resumo": "Planos a partir de R$ 89/mes ...",
+      "conteudo": "...",
+      "tags": ["planos","preco"],
+      "url": "/suporte/conhecimento/artigo/tabela-planos/",
+      "distancia": 0.18
+    }
+  ]
+}
+```
+
+Se nenhum artigo tem `distancia <= distancia_max`, retorna `encontrou=false`
+e `artigos=[]`. Ai o agente sabe que e uma duvida "fora da base" e deve
+chamar `/conhecimento/registrar-pergunta/`.
+
+**Sem credencial OpenAI (do tenant nem da Aurora):** retorna `artigos=[]`
+sem erro. O bot trata como "nao tem base configurada" e segue normalmente.
+
+**Indice:** HNSW `(m=16, ef_construction=64)` em
+`suporte_artigos_conhecimento.embedding`. Performance: <50ms p99 ate ~10k
+artigos por tenant.
+
+**Backfill / regeracao:** signal `post_save` em `ArtigoConhecimento` regera
+o embedding sempre que `titulo/conteudo/tags/resumo` mudam. Pra povoamento
+inicial: `python manage.py backfill_embeddings_artigos --tenant <slug>`.
+
+---
+
 ## Atendimento — telemetria de erros de resposta no fluxo do bot
 
 Distinto de `/conhecimento/registrar-pergunta/`: la captura **duvida livre do

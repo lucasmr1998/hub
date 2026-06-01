@@ -23,4 +23,5 @@ urlpatterns = [
     path('conhecimento/perguntas/', views.perguntas_sem_resposta, name='perguntas_sem_resposta'),
     path('conhecimento/perguntas/<int:pk>/resolver/', views.api_pergunta_resolver, name='api_pergunta_resolver'),
     path('conhecimento/perguntas/<int:pk>/ignorar/', views.api_pergunta_ignorar, name='api_pergunta_ignorar'),
+    path('conhecimento/perguntas/<int:pk>/sugerir-artigos/', views.api_sugerir_artigos, name='api_sugerir_artigos'),
 ]

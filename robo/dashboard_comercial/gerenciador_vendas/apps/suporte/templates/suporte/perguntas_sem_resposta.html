@@ -58,8 +58,7 @@
             </div>
             {% if p.status == 'pendente' %}
               <div class="pergunta-actions">
-                <button class="btn btn-ghost btn-sm btn-ghost-success" onclick="window.location.href='{% url 'suporte:gerenciar_conhecimento' %}?criar=1&pergunta={{ p.pergunta|urlencode }}&pergunta_id={{ p.pk }}'" title="Criar artigo"><i class="bi bi-plus-lg"></i></button>
-                <button class="btn btn-primary btn-sm" onclick="resolverPergunta({{ p.pk }})" title="Resolver"><i class="bi bi-check-lg"></i> Resolver</button>
+                <button class="btn btn-primary btn-sm" onclick="abrirSugestoes({{ p.pk }})" title="Resolver com sugestoes"><i class="bi bi-check-lg"></i> Resolver</button>
                 <button class="btn btn-ghost btn-sm" onclick="ignorarPergunta({{ p.pk }})" title="Ignorar"><i class="bi bi-x-lg"></i></button>
               </div>
             {% endif %}
@@ -76,6 +75,32 @@
     </div>
   </div>
 {% endif %}
+
+<!-- Modal de sugestoes de artigo -->
+<div id="modal-sugestoes" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 class="modal-title">Sugestoes pra resolver</h3>
+      <button class="modal-close" onclick="fecharSugestoes()">&times;</button>
+    </div>
+    <div class="modal-body-sug">
+      <div class="pergunta-original" id="modal-pergunta-texto"></div>
+      <div id="modal-loading" style="text-align:center; padding: var(--sp-5);">
+        <i class="bi bi-hourglass-split"></i> Buscando na base...
+      </div>
+      <div id="modal-sugestoes-lista" style="display:none;"></div>
+      <div id="modal-sem-sugestoes" style="display:none; padding: var(--sp-4); text-align:center;">
+        <i class="bi bi-info-circle" style="font-size: 2rem; color: var(--color-text-muted); display:block; margin-bottom: var(--sp-2);"></i>
+        <p style="margin: 0; color: var(--color-text-muted);">Nenhum artigo da base parece responder essa pergunta.</p>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-sm" onclick="fecharSugestoes()">Cancelar</button>
+      <button class="btn btn-ghost btn-sm" id="btn-resolver-sem-artigo" onclick="resolverSemArtigo()">Resolver sem vincular</button>
+      <a href="#" id="btn-criar-artigo" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Criar artigo novo</a>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_css %}
@@ -132,6 +157,40 @@
   }
 
   .pergunta-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+  /* Modal de sugestoes */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 1000; display: flex; align-items: center; justify-content: center;
+  }
+  .modal-box {
+    background: var(--color-surface); border-radius: var(--radius-lg);
+    width: 90%; max-width: 720px; max-height: 90vh; display: flex; flex-direction: column;
+    box-shadow: var(--shadow-lg);
+  }
+  .modal-head { padding: var(--sp-4); border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; }
+  .modal-title { margin: 0; font-size: var(--fs-md); font-weight: var(--fw-bold); }
+  .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--color-text-muted); }
+  .modal-body-sug { padding: var(--sp-4); overflow-y: auto; flex: 1; }
+  .pergunta-original {
+    padding: var(--sp-3); background: var(--color-bg); border-radius: var(--radius);
+    margin-bottom: var(--sp-3); font-size: var(--fs-sm); font-weight: var(--fw-semibold);
+    border-left: 3px solid var(--color-primary);
+  }
+  .sugestao-item {
+    padding: var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius);
+    margin-bottom: var(--sp-2); display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-2);
+    cursor: pointer; transition: border-color var(--transition);
+  }
+  .sugestao-item:hover { border-color: var(--color-primary); }
+  .sugestao-info { flex: 1; min-width: 0; }
+  .sugestao-titulo { font-size: var(--fs-sm); font-weight: var(--fw-semibold); margin-bottom: 4px; }
+  .sugestao-resumo { font-size: var(--fs-xs); color: var(--color-text-muted); line-height: 1.4; }
+  .sugestao-similaridade {
+    padding: 4px 10px; background: var(--color-success-soft); color: var(--color-success);
+    border-radius: 12px; font-size: 11px; font-weight: var(--fw-bold); white-space: nowrap;
+  }
+  .modal-foot { padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end; gap: var(--sp-2); }
 </style>
 {% endblock %}
 
@@ -139,8 +198,78 @@
 <script>
 function getCsrf() { const c = document.cookie.match(/csrftoken=([^;]+)/); return c ? c[1] : ''; }
 
-function resolverPergunta(id) {
-  fetch(`/suporte/conhecimento/perguntas/${id}/resolver/`, {
+let _perguntaAtualId = null;
+
+function abrirSugestoes(id) {
+  _perguntaAtualId = id;
+  document.getElementById('modal-loading').style.display = 'block';
+  document.getElementById('modal-sugestoes-lista').style.display = 'none';
+  document.getElementById('modal-sem-sugestoes').style.display = 'none';
+  document.getElementById('modal-pergunta-texto').textContent = '';
+  document.getElementById('modal-sugestoes').style.display = 'flex';
+
+  fetch(`/suporte/conhecimento/perguntas/${id}/sugerir-artigos/`)
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('modal-loading').style.display = 'none';
+      document.getElementById('modal-pergunta-texto').textContent = d.pergunta_texto || '';
+      document.getElementById('btn-criar-artigo').href = d.criar_artigo_url || '#';
+
+      const lista = document.getElementById('modal-sugestoes-lista');
+      if (!d.artigos || !d.artigos.length) {
+        document.getElementById('modal-sem-sugestoes').style.display = 'block';
+        return;
+      }
+      lista.innerHTML = d.artigos.map(a => `
+        <div class="sugestao-item" onclick="vincularArtigo(${a.id})">
+          <div class="sugestao-info">
+            <div class="sugestao-titulo">${escapeHtml(a.titulo)}</div>
+            <div class="sugestao-resumo">${escapeHtml(a.resumo || '')}</div>
+          </div>
+          <span class="sugestao-similaridade">${a.similaridade_pct}% similar</span>
+        </div>
+      `).join('');
+      lista.style.display = 'block';
+    })
+    .catch(e => {
+      document.getElementById('modal-loading').style.display = 'none';
+      toast('Erro', 'Falha ao buscar sugestoes: ' + e, 'danger');
+    });
+}
+
+function fecharSugestoes() {
+  document.getElementById('modal-sugestoes').style.display = 'none';
+  _perguntaAtualId = null;
+}
+
+function escapeHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function vincularArtigo(artigoId) {
+  if (!_perguntaAtualId) return;
+  fetch(`/suporte/conhecimento/perguntas/${_perguntaAtualId}/resolver/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+    body: JSON.stringify({ artigo_id: artigoId }),
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      toast('Vinculado', 'Pergunta resolvida e vinculada ao artigo.', 'success');
+      const el = document.getElementById('pergunta-' + _perguntaAtualId);
+      if (el) el.remove();
+      fecharSugestoes();
+    } else {
+      toast('Erro', d.error || 'Erro', 'danger');
+    }
+  });
+}
+
+function resolverSemArtigo() {
+  if (!_perguntaAtualId) return;
+  fetch(`/suporte/conhecimento/perguntas/${_perguntaAtualId}/resolver/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
     body: JSON.stringify({}),
@@ -149,7 +278,9 @@ function resolverPergunta(id) {
   .then(d => {
     if (d.success) {
       toast('Resolvida', d.message, 'success');
-      document.getElementById('pergunta-' + id).remove();
+      const el = document.getElementById('pergunta-' + _perguntaAtualId);
+      if (el) el.remove();
+      fecharSugestoes();
     } else {
       toast('Erro', d.error || 'Erro', 'danger');
     }

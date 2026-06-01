@@ -20,8 +20,9 @@ urlpatterns = [
     path('matrix/abrir-atendimento/', views_matrix_os.abrir_atendimento, name='matrix_abrir_atendimento'),
     path('matrix/abrir-os/', views_matrix_os.abrir_os, name='matrix_abrir_os'),
 
-    # Base de conhecimento (registro de duvidas / busca)
+    # Base de conhecimento (registro de duvidas / busca RAG)
     path('conhecimento/registrar-pergunta/', views_conhecimento.registrar_pergunta, name='n8n_registrar_pergunta'),
+    path('conhecimento/buscar/', views_conhecimento.buscar_conhecimento, name='n8n_buscar_conhecimento'),
 
     # Telemetria de erros de resposta no fluxo do bot
     path('atendimento/registrar-erro-resposta/', views_conhecimento.registrar_erro_resposta, name='n8n_registrar_erro_resposta'),

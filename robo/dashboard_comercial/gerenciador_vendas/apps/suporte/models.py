@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from pgvector.django import VectorField, HnswIndex
 
 from apps.sistema.mixins import TenantMixin
 
@@ -261,12 +262,28 @@ class ArtigoConhecimento(TenantMixin):
     criado_em = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
     atualizado_em = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
 
+    # Embedding pra busca semantica (RAG). Gerado a partir de titulo+tags+resumo+conteudo
+    # via OpenAI text-embedding-3-small (1536 dim). Recalculado por signal post_save
+    # quando titulo/conteudo/tags/resumo mudam. None pra artigos ainda nao processados.
+    embedding = VectorField(dimensions=1536, null=True, blank=True, verbose_name="Embedding")
+    embedding_atualizado_em = models.DateTimeField(
+        null=True, blank=True, verbose_name="Embedding atualizado em",
+    )
+
     class Meta:
         db_table = 'suporte_artigos_conhecimento'
         verbose_name = "Artigo (Base de Conhecimento)"
         verbose_name_plural = "Artigos (Base de Conhecimento)"
         ordering = ['-destaque', '-atualizado_em']
         unique_together = [['tenant', 'slug']]
+        indexes = [
+            HnswIndex(
+                name='artigo_emb_hnsw_idx',
+                fields=['embedding'],
+                m=16, ef_construction=64,
+                opclasses=['vector_cosine_ops'],
+            ),
+        ]
 
     def __str__(self):
         return self.titulo
@@ -276,6 +293,18 @@ class ArtigoConhecimento(TenantMixin):
         if not self.tags:
             return []
         return [t.strip() for t in self.tags.split(',') if t.strip()]
+
+    def texto_pra_embedding(self) -> str:
+        """Texto canonico usado pra gerar o embedding do artigo.
+        Combina titulo + tags + resumo + conteudo, nessa ordem de peso semantico."""
+        partes = [self.titulo or '']
+        if self.tags:
+            partes.append(f'tags: {self.tags}')
+        if self.resumo:
+            partes.append(self.resumo)
+        if self.conteudo:
+            partes.append(self.conteudo)
+        return '\n\n'.join(p for p in partes if p)
 
 
 # ============================================================================
