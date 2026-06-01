@@ -246,6 +246,24 @@ def api_mover_oportunidade(request):
     if oportunidade.estagio_id == estagio_novo_id:
         return JsonResponse({'ok': True, 'mensagem': 'Sem mudança de estágio'})
 
+    # T2 — Validacao: se estagio destino e final de perda + config exige motivo,
+    # rejeita 400 sem motivo. Aceita motivo via body do request ou ja persistido.
+    motivo_perda_ref_id = data.get('motivo_perda_ref_id') or None
+    motivo_perda_texto = (data.get('motivo_perda') or '').strip()
+    concorrente_perdido = (data.get('concorrente_perdido') or '').strip()
+
+    if estagio_novo.is_final_perdido:
+        config = ConfiguracaoCRM.get_config()
+        if config and config.motivo_perda_obrigatorio:
+            tem_motivo_body = bool(motivo_perda_ref_id) or bool(motivo_perda_texto)
+            tem_motivo_persistido = bool(oportunidade.motivo_perda_ref_id) or bool((oportunidade.motivo_perda or '').strip())
+            if not tem_motivo_body and not tem_motivo_persistido:
+                return JsonResponse({
+                    'ok': False,
+                    'erro': 'Motivo de perda e obrigatorio para mover ao estagio Perdida (configuracao do CRM).',
+                    'codigo': 'motivo_perda_obrigatorio',
+                }, status=400)
+
     # Calcular tempo no estágio atual
     horas_no_estagio = (timezone.now() - oportunidade.data_entrada_estagio).total_seconds() / 3600
 
@@ -273,6 +291,18 @@ def api_mover_oportunidade(request):
         oportunidade.data_fechamento_real = timezone.now()
         campos.append('data_fechamento_real')
         _atualizar_meta_venda(oportunidade, request.user)
+
+    # T2 — Se foi pra estagio de perda e veio motivo no body, persiste tambem
+    if estagio_novo.is_final_perdido:
+        if motivo_perda_ref_id:
+            oportunidade.motivo_perda_ref_id = motivo_perda_ref_id
+            campos.append('motivo_perda_ref')
+        if motivo_perda_texto:
+            oportunidade.motivo_perda = motivo_perda_texto
+            campos.append('motivo_perda')
+        if concorrente_perdido:
+            oportunidade.concorrente_perdido = concorrente_perdido
+            campos.append('concorrente_perdido')
 
     oportunidade.save(update_fields=campos)
 
