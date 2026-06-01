@@ -331,7 +331,7 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
                 email=conversa.contato_email or '',
                 origem='widget' if canal == 'widget' else 'outros',
                 canal_entrada=canal,
-                status_api='pendente',
+                status_api=LeadProspecto.status_api_inicial(instance.tenant),
             )
             lead._skip_automacao = True
             lead._skip_segmento = True

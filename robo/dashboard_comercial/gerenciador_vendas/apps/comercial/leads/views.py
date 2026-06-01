@@ -162,7 +162,7 @@ def api_lead_criar(request):
     ]
     payload = {k: data[k] for k in campos_permitidos if data.get(k)}
     payload['origem'] = data.get('origem') or 'manual'
-    payload['status_api'] = 'pendente'
+    payload['status_api'] = LeadProspecto.status_api_inicial(getattr(request, 'tenant', None))
     payload['responsavel'] = request.user
 
     try:

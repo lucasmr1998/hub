@@ -873,12 +873,13 @@ class CadastroCliente(TenantMixin):
                 _id_dia_vencimento = self.vencimento_selecionado.descricao
 
             lead = LeadProspecto.objects.create(
+                tenant=self.tenant,
                 nome_razaosocial=self.nome_completo,
                 email=self.email,
                 telefone=self.telefone,
                 valor=_valor,
                 origem=self.origem_cadastro,
-                status_api='pendente',
+                status_api=LeadProspecto.status_api_inicial(self.tenant),
                 cpf_cnpj=self.cpf,
                 rg=self.rg,
                 endereco=f"{self.endereco}, {self.numero} - {self.bairro}",

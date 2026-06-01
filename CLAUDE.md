@@ -73,6 +73,23 @@ Nao comecar feature nova enquanto houver bug critico aberto no produto em produc
 - **`vendas_web` esta morto.** Removido do INSTALLED_APPS. Nao referenciar.
 - **Secrets em variaveis de ambiente.** Nenhuma credencial hardcoded.
 
+### Integracoes por tenant (CRITICO)
+
+Quando o usuario falar sobre uma integracao externa (HubSoft, SGP, Uazapi, etc.) e perguntar "ja fizemos X?", "quantos leads foram?", "esta funcionando?", **considerar SOMENTE os tenants que tem essa integracao ATIVA**. Tenants sem integracao cadastrada nao contam pro raciocinio.
+
+Como verificar antes de responder:
+```sql
+SELECT t.slug FROM integracoes_api i JOIN sistema_tenant t ON t.id=i.tenant_id
+WHERE i.tipo='<tipo>' AND i.ativa=TRUE AND t.ativo=TRUE;
+```
+
+Estado atual (01/06/2026, prod):
+- **HubSoft:** so **nuvyon** (e `aurora-hq` com `nome='teste'` que ignora). Nao confundir com tenants tipo tr-carrion, fatepifaespi ou demo, que NAO tem integracao HubSoft.
+- **SGP (inSystem):** so `gigamax` no dev (nao em prod ainda).
+- **Uazapi:** aurora-hq e fatepifaespi.
+
+Numeros agregados ("194 leads pendentes em prod") sem o filtro acima sao **enganosos** e devem ser evitados. Sempre apresentar dado por tenant com integracao ATIVA daquele tipo. Ver [[feedback-validar-dado-no-db]].
+
 ### Escrita
 - **Nao usar traco/hifen** como elemento de pontuacao em frases e textos de marketing. Usar ponto, virgula ou reescrever.
 

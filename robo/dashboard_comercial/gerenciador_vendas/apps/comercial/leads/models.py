@@ -18,6 +18,9 @@ class LeadProspecto(TenantMixin):
         ('rejeitado', 'Rejeitado'),
         ('aguardando_retry', 'Aguardando Retry'),
         ('processamento_manual', 'Processamento Manual'),
+        # Tenant sem integracao ERP ativa — lead NAO deve ser processado por cron.
+        # Setado automaticamente na criacao quando IntegracaoAPI hubsoft/sgp ativa nao existe.
+        ('sem_integracao', 'Sem integracao ERP'),
     ]
 
     ORIGEM_CHOICES = [
@@ -491,6 +494,28 @@ class LeadProspecto(TenantMixin):
 
     def __str__(self):
         return f"{self.nome_razaosocial} - {self.email}"
+
+    @staticmethod
+    def status_api_inicial(tenant):
+        """Status_api default na criacao do lead, conforme integracao ERP do tenant.
+
+        Retorna 'pendente' se o tenant tem IntegracaoAPI tipo hubsoft/sgp ATIVA
+        E ConfiguracaoEmpresa.enviar_leads_integracao=True apontando pra ela.
+        Caso contrario, retorna 'sem_integracao' — lead nao deve entrar no cron
+        processar_pendentes nem ser enviado pra nenhum ERP.
+
+        Uso: LeadProspecto(..., status_api=LeadProspecto.status_api_inicial(tenant))
+        """
+        if not tenant:
+            return 'sem_integracao'
+        try:
+            from apps.integracoes.models import IntegracaoAPI
+            tem_integ = IntegracaoAPI.all_tenants.filter(
+                tenant=tenant, tipo__in=['hubsoft', 'sgp'], ativa=True,
+            ).exists()
+            return 'pendente' if tem_integ else 'sem_integracao'
+        except Exception:
+            return 'sem_integracao'
 
     def get_status_api_display(self):  # compatível com chamadas existentes
         from apps.sistema.models import StatusConfiguravel

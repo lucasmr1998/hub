@@ -1931,7 +1931,7 @@ def criar_lead_n8n(request):
             estado=data.get('estado'),
             cep=data.get('cep'),
             observacoes=data.get('observacoes'),
-            status_api='pendente'
+            status_api=LeadProspecto.status_api_inicial(getattr(request, 'tenant', None)),
         )
         
         # Criar histórico de contato se fornecidos dados

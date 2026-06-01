@@ -205,7 +205,7 @@ def receber_mensagem(telefone, nome, conteudo, tenant, tipo_conteudo='texto',
                 telefone=fone,
                 origem='whatsapp' if canal_tipo == 'whatsapp' else 'outros',
                 canal_entrada=canal_tipo,
-                status_api='pendente',
+                status_api=LeadProspecto.status_api_inicial(tenant),
             )
             lead.save()
             logger.info("[Inbox] Lead recriado para conversa sem lead: %s", lead.nome_razaosocial)
@@ -236,7 +236,7 @@ def receber_mensagem(telefone, nome, conteudo, tenant, tipo_conteudo='texto',
                 origem='whatsapp' if canal_tipo == 'whatsapp' else 'outros',
                 canal_entrada=canal_tipo,
                 tipo_entrada='receptivo',
-                status_api='pendente',
+                status_api=LeadProspecto.status_api_inicial(tenant),
             )
             lead._skip_crm_signal = True
             lead._skip_automacao = True

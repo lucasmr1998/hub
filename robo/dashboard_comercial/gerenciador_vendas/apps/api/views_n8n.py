@@ -618,7 +618,7 @@ class CampanhaDeteccaoAPIView(N8NAPIMixin, APIView):
                 nome_razaosocial=f'Lead {telefone}',
                 telefone=telefone,
                 origem=origem,
-                status_api='pendente',
+                status_api=LeadProspecto.status_api_inicial(getattr(request, 'tenant', None)),
             )
             lead.save()
             lead_criado = True
