@@ -759,6 +759,38 @@
                               placeholder="Ex: Encerramos por inatividade. Se precisar, é só chamar.">{{ config.encerramento_auto_aviso_texto }}</textarea>
                 </div>
 
+                {# T149 — Fechar oportunidade vinculada ao encerrar conversa automaticamente #}
+                <div class="cfg-form-group" style="margin-top:18px;border-top:1px solid #e5e7eb;padding-top:14px;">
+                    <label style="display:flex;align-items:center;gap:8px;">
+                        <input type="checkbox" name="encerramento_auto_fecha_oportunidade" id="cfg_enc_op"
+                               {% if config.encerramento_auto_fecha_oportunidade %}checked{% endif %}>
+                        <strong>Fechar oportunidade vinculada junto</strong>
+                    </label>
+                    <small style="display:block;color:#6b7280;margin-top:4px;">
+                        Quando ativo, ao encerrar conversa por inatividade move a oportunidade do CRM pro estágio escolhido (tipicamente "Perdida").
+                    </small>
+                </div>
+                <div class="cfg-form-group" style="margin-top:8px;">
+                    <label>Estágio destino da oportunidade</label>
+                    <select name="encerramento_auto_oportunidade_estagio_id" class="cfg-input">
+                        <option value="">— nenhum —</option>
+                        {% for est in estagios_crm %}
+                            <option value="{{ est.pk }}" {% if config.encerramento_auto_oportunidade_estagio_id == est.pk %}selected{% endif %}>
+                                {{ est.nome }}{% if est.is_final_perdido %} (Perdido){% elif est.is_final_ganho %} (Ganho){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="cfg-form-group" style="margin-top:8px;">
+                    <label>Motivo de perda (se estágio destino for Perdida)</label>
+                    <select name="encerramento_auto_motivo_perda_ref_id" class="cfg-input">
+                        <option value="">— nenhum —</option>
+                        {% for m in motivos_perda_crm %}
+                            <option value="{{ m.pk }}" {% if config.encerramento_auto_motivo_perda_ref_id == m.pk %}selected{% endif %}>{{ m.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
                 <div style="margin-top:12px;">
                     <button type="submit" class="btn-sm btn-primary-sm">Salvar</button>
                 </div>

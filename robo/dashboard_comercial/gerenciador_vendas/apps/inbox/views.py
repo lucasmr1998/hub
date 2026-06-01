@@ -1120,9 +1120,30 @@ def configuracoes_inbox(request):
         'usuarios': User.objects.filter(is_active=True, perfil__tenant=request.tenant).order_by('first_name'),
         'dias_semana': HorarioAtendimento.DIA_CHOICES,
         'modos_distribuicao': FilaInbox.MODO_DISTRIBUICAO_CHOICES,
+        # T149 — selects do encerramento auto fechar oportunidade
+        'estagios_crm': _safe_load_estagios_crm(),
+        'motivos_perda_crm': _safe_load_motivos_perda_crm(),
         'page_title': 'Configurações do Inbox',
     }
     return render(request, 'inbox/configuracoes_inbox.html', context)
+
+
+def _safe_load_estagios_crm():
+    """Carrega estágios CRM ativos do tenant atual pra UI de config inbox. Falha silencioso."""
+    try:
+        from apps.comercial.crm.models import PipelineEstagio
+        return list(PipelineEstagio.objects.filter(ativo=True).order_by('pipeline_id', 'ordem'))
+    except Exception:
+        return []
+
+
+def _safe_load_motivos_perda_crm():
+    """Carrega motivos de perda ativos do tenant atual pra UI de config inbox. Falha silencioso."""
+    try:
+        from apps.comercial.crm.models import MotivoPerda
+        return list(MotivoPerda.objects.filter(ativo=True).order_by('ordem', 'nome'))
+    except Exception:
+        return []
 
 
 def _processar_action_config(request, action, django_messages):
@@ -1354,6 +1375,12 @@ def _processar_action_config(request, action, django_messages):
         config.encerramento_auto_horas = max(1, horas)
         config.encerramento_auto_aviso_ativo = request.POST.get('encerramento_auto_aviso_ativo') == 'on'
         config.encerramento_auto_aviso_texto = request.POST.get('encerramento_auto_aviso_texto', '').strip()
+        # T149 — campos de fechar oportunidade junto
+        config.encerramento_auto_fecha_oportunidade = request.POST.get('encerramento_auto_fecha_oportunidade') == 'on'
+        op_estagio_raw = (request.POST.get('encerramento_auto_oportunidade_estagio_id') or '').strip()
+        op_motivo_raw = (request.POST.get('encerramento_auto_motivo_perda_ref_id') or '').strip()
+        config.encerramento_auto_oportunidade_estagio_id = int(op_estagio_raw) if op_estagio_raw else None
+        config.encerramento_auto_motivo_perda_ref_id = int(op_motivo_raw) if op_motivo_raw else None
         config.save()
         django_messages.success(request, 'Encerramento automático salvo.')
 
