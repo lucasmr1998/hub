@@ -420,23 +420,45 @@ def api_assumir(request, pk):
 @login_required
 @require_http_methods(["POST"])
 def api_resolver(request, pk):
-    """POST: Resolver conversa. Body opcional: {motivo_id: <int>}."""
+    """POST: Resolver conversa. Body opcional: {
+        motivo_id: <int>,                            // MotivoEncerramento da conversa
+        oportunidade_estagio_id: <int>,              // T148: tambem move opp vinculada
+        oportunidade_motivo_perda_ref_id: <int>,
+        oportunidade_motivo_perda_texto: <str>,
+        oportunidade_concorrente: <str>
+    }."""
     denied = _check_perm(request, 'inbox.resolver')
     if denied: return denied
     conversa = _get_conversa(pk, request)
 
     motivo = None
+    op_estagio_id = None
+    op_motivo_perda_ref_id = None
+    op_motivo_perda_texto = None
+    op_concorrente = None
     try:
         body = json.loads(request.body or '{}')
         motivo_id = body.get('motivo_id')
         if motivo_id:
             motivo = MotivoEncerramento.objects.filter(pk=motivo_id, ativo=True).first()
+        op_estagio_id = body.get('oportunidade_estagio_id') or None
+        op_motivo_perda_ref_id = body.get('oportunidade_motivo_perda_ref_id') or None
+        op_motivo_perda_texto = (body.get('oportunidade_motivo_perda_texto') or '').strip() or None
+        op_concorrente = (body.get('oportunidade_concorrente') or '').strip() or None
     except (json.JSONDecodeError, ValueError):
         pass
 
-    services.resolver_conversa(conversa, request.user, motivo=motivo)
+    services.resolver_conversa(
+        conversa, request.user, motivo=motivo,
+        oportunidade_estagio_id=op_estagio_id,
+        oportunidade_motivo_perda_ref_id=op_motivo_perda_ref_id,
+        oportunidade_motivo_perda_texto=op_motivo_perda_texto,
+        oportunidade_concorrente=op_concorrente,
+    )
     from apps.sistema.utils import registrar_acao
     sufixo = f' (motivo: {motivo.nome})' if motivo else ''
+    if op_estagio_id:
+        sufixo += f' + oportunidade movida pro estagio {op_estagio_id}'
     registrar_acao('inbox', 'resolver', 'conversa', conversa.pk,
                    f'Conversa resolvida: {conversa.contato_nome}{sufixo}', request=request)
     return JsonResponse({'success': True, 'motivo_id': motivo.id if motivo else None})

@@ -733,6 +733,27 @@ class ConfiguracaoInbox(TenantMixin):
         verbose_name="Mensagem de encerramento automático"
     )
 
+    # T149 — Ao encerrar conversa por inatividade, opcionalmente mover oportunidade
+    # vinculada (Conversa.oportunidade) pra estagio configurado. Default off
+    # mantem comportamento anterior (so resolve conversa, nao toca oportunidade).
+    encerramento_auto_fecha_oportunidade = models.BooleanField(
+        default=False,
+        verbose_name="Fechar oportunidade junto ao encerrar conversa automaticamente",
+        help_text="Quando ativo, ao encerrar conversa por inatividade move a oportunidade vinculada pro estágio escolhido (tipicamente Perdida)."
+    )
+    encerramento_auto_oportunidade_estagio = models.ForeignKey(
+        'crm.PipelineEstagio', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='+',
+        verbose_name="Estágio destino da oportunidade",
+        help_text="Pra onde mover a oportunidade vinculada quando a conversa for encerrada por inatividade."
+    )
+    encerramento_auto_motivo_perda_ref = models.ForeignKey(
+        'crm.MotivoPerda', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='+',
+        verbose_name="Motivo de perda (se estágio destino for Perdida)",
+        help_text="Se o estágio destino for de perda (is_final_perdido), motivo a ser registrado."
+    )
+
     data_atualizacao = models.DateTimeField(auto_now=True)
 
     class Meta:

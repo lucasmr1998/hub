@@ -612,10 +612,22 @@ def _invalidar_vero_session(telefone, tenant_slug=None):
         logger.warning('falha invalidando vero session (telefone=%s): %s', telefone, e)
 
 
-def resolver_conversa(conversa, user, motivo=None):
+def resolver_conversa(conversa, user, motivo=None, *,
+                       oportunidade_estagio_id=None,
+                       oportunidade_motivo_perda_ref_id=None,
+                       oportunidade_motivo_perda_texto=None,
+                       oportunidade_concorrente=None):
     """Marca conversa como resolvida (idempotente — no-op se ja resolvida).
     user pode ser None em encerramentos de sistema (ex: por inatividade).
     motivo: MotivoEncerramento opcional (preenche Conversa.motivo_encerramento).
+
+    T148/T149 — Params opcionais pra mover a oportunidade vinculada (Conversa.oportunidade)
+    na mesma operacao:
+      oportunidade_estagio_id: id do PipelineEstagio destino (Ganha/Perdida/Negociacao)
+      oportunidade_motivo_perda_ref_id: id do MotivoPerda (se estagio destino e perdido)
+      oportunidade_motivo_perda_texto: observacao livre
+      oportunidade_concorrente: nome do concorrente (se motivo for "Concorrente")
+    Se conversa nao tem oportunidade vinculada, params sao ignorados.
 
     Side effect: ao encerrar, dispara `_invalidar_vero_session` pro telefone
     da conversa (Hubtrix vira fonte da verdade: encerrou aqui -> Vero esquece
@@ -674,6 +686,48 @@ def resolver_conversa(conversa, user, motivo=None):
         conversa.tenant.slug if conversa.tenant_id else None,
     )
 
+    # T148/T149 — Se solicitado, move oportunidade vinculada
+    if oportunidade_estagio_id and conversa.oportunidade_id:
+        try:
+            from apps.comercial.crm.models import OportunidadeVenda, PipelineEstagio
+            from django.utils import timezone as _tz
+            op = OportunidadeVenda.all_tenants.filter(
+                tenant=conversa.tenant, pk=conversa.oportunidade_id, ativo=True,
+            ).first()
+            estagio_destino = PipelineEstagio.all_tenants.filter(
+                tenant=conversa.tenant, pk=oportunidade_estagio_id,
+            ).first()
+            if op and estagio_destino and op.estagio_id != estagio_destino.id:
+                # Idempotente: se ja esta em estagio final (ganho ou perdido), no-op
+                if not (op.estagio and (op.estagio.is_final_ganho or op.estagio.is_final_perdido)):
+                    campos = ['estagio', 'data_entrada_estagio', 'probabilidade', 'data_atualizacao']
+                    op.estagio = estagio_destino
+                    op.data_entrada_estagio = _tz.now()
+                    op.probabilidade = estagio_destino.probabilidade_padrao
+                    if estagio_destino.is_final_ganho and not op.data_fechamento_real:
+                        op.data_fechamento_real = _tz.now()
+                        campos.append('data_fechamento_real')
+                    if estagio_destino.is_final_perdido:
+                        if oportunidade_motivo_perda_ref_id:
+                            op.motivo_perda_ref_id = oportunidade_motivo_perda_ref_id
+                            campos.append('motivo_perda_ref')
+                        if oportunidade_motivo_perda_texto:
+                            op.motivo_perda = oportunidade_motivo_perda_texto
+                            campos.append('motivo_perda')
+                        if oportunidade_concorrente:
+                            op.concorrente_perdido = oportunidade_concorrente
+                            campos.append('concorrente_perdido')
+                        # Origem rastreavel: humano se user definido, bot se chamado por sistema (cron)
+                        op.motivo_perda_origem = 'humano' if user else 'bot'
+                        campos.append('motivo_perda_origem')
+                    op.save(update_fields=campos)
+                    logger.info(
+                        'resolver_conversa: oportunidade #%s movida pra estagio "%s" via resolucao da conversa #%s',
+                        op.pk, estagio_destino.nome, conversa.pk,
+                    )
+        except Exception as e:
+            logger.exception('resolver_conversa: falha ao mover oportunidade vinculada: %s', e)
+
     return conversa
 
 
@@ -707,7 +761,21 @@ def encerrar_por_inatividade(conversa):
         tenant=conversa.tenant, codigo=MotivoEncerramento.CODIGO_AUTO
     ).first()
 
-    return resolver_conversa(conversa, user=None, motivo=motivo)
+    # T149 — se config ativa, repassa params pra resolver_conversa mover oportunidade junto
+    op_estagio_id = None
+    op_motivo_perda_ref_id = None
+    if (cfg and cfg.encerramento_auto_fecha_oportunidade
+            and cfg.encerramento_auto_oportunidade_estagio_id
+            and conversa.oportunidade_id):
+        op_estagio_id = cfg.encerramento_auto_oportunidade_estagio_id
+        op_motivo_perda_ref_id = cfg.encerramento_auto_motivo_perda_ref_id
+
+    return resolver_conversa(
+        conversa, user=None, motivo=motivo,
+        oportunidade_estagio_id=op_estagio_id,
+        oportunidade_motivo_perda_ref_id=op_motivo_perda_ref_id,
+        oportunidade_motivo_perda_texto='Encerrado automaticamente por inatividade da conversa.' if op_estagio_id else None,
+    )
 
 
 def reabrir_conversa(conversa, user):
