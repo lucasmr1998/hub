@@ -190,8 +190,9 @@ def api_conversa_detalhe(request, pk):
 
     data = ConversaOutputSerializer(conversa).data
 
-    # Admin e supervisor veem histórico sem precisar assumir
-    if request.user.is_superuser or request.user.has_perm('inbox.ver_todas'):
+    # Admin e supervisor veem histórico sem precisar assumir.
+    # Usa user_tem_funcionalidade (sistema custom), nao has_perm (Django auth_permission)
+    if request.user.is_superuser or user_tem_funcionalidade(request, 'inbox.ver_todas'):
         data['assumida'] = True
 
     # Contexto do lead
