@@ -266,6 +266,17 @@ class OportunidadeVenda(TenantMixin):
         null=True, blank=True, related_name='oportunidades',
         verbose_name="Motivo de perda",
     )
+    MOTIVO_PERDA_ORIGEM_CHOICES = [
+        ('humano', 'Humano (vendedor/operador)'),
+        ('llm_backfill', 'LLM — backfill historico'),
+        ('bot', 'Bot (captura automatica no fluxo)'),
+    ]
+    motivo_perda_origem = models.CharField(
+        max_length=20, choices=MOTIVO_PERDA_ORIGEM_CHOICES,
+        default='humano', blank=True,
+        verbose_name="Origem do motivo de perda",
+        help_text="De onde veio o motivo: preenchimento humano, backfill por LLM, ou captura automatica via bot.",
+    )
     motivo_ganho_categoria = models.CharField(
         max_length=30, choices=MOTIVO_GANHO_CHOICES,
         null=True, blank=True, db_index=True,
