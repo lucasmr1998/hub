@@ -356,6 +356,35 @@
                 Nenhum motivo cadastrado. Cadastre em Configurações → Encerramento.
             </p>
             {% endif %}
+
+            {# T148 — bloco aparece se a conversa atual tem oportunidade vinculada #}
+            <div id="resolveOpBlock" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid #e5e7eb;">
+                <label style="font-weight:600;">Atualizar oportunidade vinculada?</label>
+                <p style="color:#6b7280;font-size:12px;margin:4px 0 10px;" id="resolveOpInfo">
+                    Esta conversa tem oportunidade no CRM.
+                </p>
+                <select id="resolveOpEstagio" class="modal-input">
+                    <option value="">Manter estágio atual</option>
+                    {% for est in estagios_crm %}
+                    <option value="{{ est.pk }}" data-perdido="{% if est.is_final_perdido %}1{% else %}0{% endif %}">
+                        Mover para → {{ est.nome }}{% if est.is_final_perdido %} (Perdida){% elif est.is_final_ganho %} (Ganho){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+                <div id="resolveOpPerdaFields" style="display:none;margin-top:10px;">
+                    <label style="font-size:13px;">Motivo de perda</label>
+                    <select id="resolveOpMotivoPerda" class="modal-input">
+                        <option value="">— selecione —</option>
+                        {% for mp in motivos_perda_crm %}
+                        <option value="{{ mp.pk }}">{{ mp.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <label style="font-size:13px;margin-top:8px;display:block;">Concorrente (se aplicável)</label>
+                    <input type="text" id="resolveOpConcorrente" class="modal-input" placeholder="Nome do concorrente">
+                    <label style="font-size:13px;margin-top:8px;display:block;">Observação</label>
+                    <textarea id="resolveOpObs" class="modal-input" rows="2" placeholder="Detalhes do encerramento (opcional)"></textarea>
+                </div>
+            </div>
         </div>
         <div class="modal-footer">
             <button class="btn-cancel" id="resolveMotivoCancel">Cancelar</button>
@@ -367,7 +396,7 @@
 
 {% block extra_js %}
 <script>window.AGENTES_STATUS = {{ agentes_status_json|safe }};</script>
-<script src="{% static 'inbox/js/inbox.js' %}?v=11"></script>
+<script src="{% static 'inbox/js/inbox.js' %}?v=12"></script>
 <script>
 // Status do agente no Inbox (pill online/ausente/offline)
 (function() {

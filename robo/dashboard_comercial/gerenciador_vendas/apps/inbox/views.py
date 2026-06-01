@@ -65,6 +65,9 @@ def inbox_view(request):
         'user_is_admin': user_tem_funcionalidade(request, 'inbox.ver_todas'),
         'agentes_status_json': json.dumps(agentes_status),
         'motivos_encerramento': MotivoEncerramento.objects.filter(ativo=True, sistema=False).order_by('ordem', 'nome'),
+        # T148 — selects do bloco "oportunidade vinculada" no modal de resolver conversa
+        'estagios_crm': _safe_load_estagios_crm(),
+        'motivos_perda_crm': _safe_load_motivos_perda_crm(),
     })
 
 

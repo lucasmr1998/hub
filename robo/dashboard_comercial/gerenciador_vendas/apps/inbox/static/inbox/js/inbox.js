@@ -318,6 +318,8 @@
 
             // Botao Resolver/Reabrir muda conforme status da conversa
             state.currentConversaStatus = data.status || 'aberta';
+            // T148 — guardar oportunidade vinculada pra decidir se mostra bloco no modal de resolver
+            state.currentConversaOportunidadeId = (data.oportunidade_info && data.oportunidade_info.id) || null;
             const rb = document.getElementById('resolveBtn');
             if (rb) {
                 if (state.currentConversaStatus === 'resolvida') {
@@ -786,9 +788,30 @@
         const abrirModalMotivo = () => {
             const sel = $('resolveMotivoSelect');
             if (sel) sel.value = '';
+            // T148 — reset bloco oportunidade
+            const opEstagio = $('resolveOpEstagio');
+            if (opEstagio) opEstagio.value = '';
+            const opMP = $('resolveOpMotivoPerda'); if (opMP) opMP.value = '';
+            const opCon = $('resolveOpConcorrente'); if (opCon) opCon.value = '';
+            const opObs = $('resolveOpObs'); if (opObs) opObs.value = '';
+            const opPerda = $('resolveOpPerdaFields'); if (opPerda) opPerda.style.display = 'none';
+            // Bloco visivel so se conversa atual tem oportunidade
+            const opBlock = $('resolveOpBlock');
+            if (opBlock) opBlock.style.display = state.currentConversaOportunidadeId ? 'block' : 'none';
             $('resolveMotivoModal').style.display = 'flex';
         };
         const fecharModalMotivo = () => { $('resolveMotivoModal').style.display = 'none'; };
+
+        // T148 — Mostra/oculta campos de perda conforme estagio destino
+        const opEstagioSel = document.getElementById('resolveOpEstagio');
+        if (opEstagioSel) {
+            opEstagioSel.addEventListener('change', () => {
+                const opt = opEstagioSel.options[opEstagioSel.selectedIndex];
+                const ehPerdido = opt && opt.dataset.perdido === '1';
+                const perdaFields = document.getElementById('resolveOpPerdaFields');
+                if (perdaFields) perdaFields.style.display = ehPerdido ? 'block' : 'none';
+            });
+        }
 
         $('resolveBtn').addEventListener('click', () => {
             if (!state.currentConversaId) return;
@@ -825,10 +848,28 @@
         if (motivoConfirmBtn) {
             motivoConfirmBtn.addEventListener('click', () => {
                 if (!state.currentConversaId) return;
+                const payload = {};
                 const motivoId = $('resolveMotivoSelect').value || null;
-                const body = motivoId ? JSON.stringify({ motivo_id: parseInt(motivoId) }) : JSON.stringify({});
+                if (motivoId) payload.motivo_id = parseInt(motivoId);
+
+                // T148 — Campos opcionais de oportunidade (so se conversa tem opp e user escolheu estagio)
+                if (state.currentConversaOportunidadeId) {
+                    const opEstagioId = $('resolveOpEstagio')?.value || null;
+                    if (opEstagioId) {
+                        payload.oportunidade_estagio_id = parseInt(opEstagioId);
+                        const opt = $('resolveOpEstagio').options[$('resolveOpEstagio').selectedIndex];
+                        if (opt && opt.dataset.perdido === '1') {
+                            const mpId = $('resolveOpMotivoPerda')?.value || null;
+                            const conc = $('resolveOpConcorrente')?.value.trim() || null;
+                            const obs = $('resolveOpObs')?.value.trim() || null;
+                            if (mpId) payload.oportunidade_motivo_perda_ref_id = parseInt(mpId);
+                            if (conc) payload.oportunidade_concorrente = conc;
+                            if (obs) payload.oportunidade_motivo_perda_texto = obs;
+                        }
+                    }
+                }
                 fetchJSON('/inbox/api/conversas/' + state.currentConversaId + '/resolver/', {
-                    method: 'POST', body,
+                    method: 'POST', body: JSON.stringify(payload),
                 }).then(() => { fecharModalMotivo(); reloadAfterResolve(); });
             });
         }
