@@ -20,7 +20,13 @@ logger = logging.getLogger(__name__)
 CAMPOS_PERMITIDOS = {
     'nome_razaosocial', 'cpf_cnpj', 'email', 'data_nascimento',
     'rg', 'cep', 'cidade', 'estado',
+    # v1.1
+    'nome_mae',     # vai pra dados_custom (LeadProspecto nao tem field dedicado)
+    'endereco',     # TextField — rua + numero + bairro fundidos
+    'observacoes',  # TextField
 }
+
+CAMPOS_DADOS_CUSTOM = {'nome_mae'}  # campos que aplicam em dados_custom (JSON), nao em campo direto
 
 
 class ExtracaoError(Exception):
@@ -130,6 +136,8 @@ def aplicar_sugestoes(lead, sugestoes: list[dict], usuario=None) -> dict[str, An
 
     aplicados = []
     ignorados = []
+    fields_dir = []  # campos direto no LeadProspecto pra update_fields
+    dados_custom_changed = False
 
     for s in sugestoes:
         if not isinstance(s, dict):
@@ -166,10 +174,20 @@ def aplicar_sugestoes(lead, sugestoes: list[dict], usuario=None) -> dict[str, An
         else:
             valor_norm = str(valor).strip()
 
-        setattr(lead, campo, valor_norm)
+        if campo in CAMPOS_DADOS_CUSTOM:
+            dc = dict(lead.dados_custom or {})
+            dc[campo] = str(valor_norm)
+            lead.dados_custom = dc
+            dados_custom_changed = True
+        else:
+            setattr(lead, campo, valor_norm)
+            fields_dir.append(campo)
         aplicados.append({'campo': campo, 'valor': str(valor_norm)})
 
     if aplicados:
-        lead.save(update_fields=[a['campo'] for a in aplicados] + ['data_atualizacao'])
+        update_fields = fields_dir + ['data_atualizacao']
+        if dados_custom_changed:
+            update_fields.append('dados_custom')
+        lead.save(update_fields=list(set(update_fields)))
 
     return {'aplicados': aplicados, 'ignorados': ignorados}

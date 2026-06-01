@@ -1068,6 +1068,28 @@ def api_atualizar_status_agente(request):
     })
 
 
+@login_required
+@require_http_methods(["POST"])
+def api_agente_heartbeat(request):
+    """Recebe ping do navegador do agente — atualiza ultimo_heartbeat.
+
+    Frontend chama a cada ~60s enquanto tela do inbox esta aberta.
+    Se status atual e offline, promove pra online (agente abriu a tela = ativo).
+    """
+    from .models import PerfilAgenteInbox
+
+    perfil, _ = PerfilAgenteInbox.all_tenants.get_or_create(
+        user=request.user, tenant=request.tenant, defaults={'status': 'online'},
+    )
+    update_fields = ['ultimo_heartbeat', 'ultimo_status_em']
+    perfil.ultimo_heartbeat = timezone.now()
+    if perfil.status == 'offline':
+        perfil.status = 'online'
+        update_fields.append('status')
+    perfil.save(update_fields=update_fields)
+    return JsonResponse({'ok': True, 'status': perfil.status})
+
+
 # ── Configurações ──────────────────────────────────────────────────
 
 @login_required

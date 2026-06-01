@@ -568,6 +568,9 @@
         cep: 'CEP',
         cidade: 'Cidade',
         estado: 'UF',
+        nome_mae: 'Nome da mãe',
+        endereco: 'Endereço',
+        observacoes: 'Observações',
     };
 
     const MOTIVO_REJEICAO_LABELS = {
@@ -871,6 +874,14 @@
     function init() {
         ajustarAlturaInbox();
         window.addEventListener('resize', ajustarAlturaInbox);
+
+        // Heartbeat — pinga o backend a cada 60s pra manter agente "online"
+        // Cron marca offline quem nao pinga ha >5min
+        function _ping() {
+            try { fetchJSON('/inbox/api/agente/heartbeat/', { method: 'POST', body: '{}' }); } catch (e) {}
+        }
+        _ping();
+        setInterval(_ping, 60000);
 
         // Delegation pros botoes de sugestoes IA dentro de #messageList
         const msgList = document.getElementById('messageList');

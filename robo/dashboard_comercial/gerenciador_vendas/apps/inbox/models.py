@@ -533,6 +533,10 @@ class PerfilAgenteInbox(TenantMixin):
         help_text="Máximo de conversas abertas simultâneas"
     )
     ultimo_status_em = models.DateTimeField(auto_now=True, verbose_name="Último status em")
+    ultimo_heartbeat = models.DateTimeField(
+        null=True, blank=True, verbose_name="Último heartbeat",
+        help_text="Timestamp do último ping do navegador do agente. Se ficar antigo (>5min), cron marca offline."
+    )
 
     class Meta:
         db_table = 'inbox_perfis_agente'

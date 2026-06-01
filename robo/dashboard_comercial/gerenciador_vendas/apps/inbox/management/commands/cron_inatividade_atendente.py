@@ -34,10 +34,12 @@ class Command(BaseCommand):
         parser.add_argument('--dry-run', action='store_true', help='Simula sem agir')
         parser.add_argument('--tenant', type=str, default=None, help='So um tenant (slug)')
         parser.add_argument('--fila-id', type=int, default=None, help='So uma fila (id)')
+        parser.add_argument('--heartbeat-timeout-min', type=int, default=5,
+                            help='Minutos sem heartbeat para marcar agente offline')
 
     def handle(self, *args, **opts):
         from apps.sistema.models import Tenant
-        from apps.inbox.models import Conversa, FilaInbox, Mensagem
+        from apps.inbox.models import Conversa, FilaInbox, Mensagem, PerfilAgenteInbox
         from apps.inbox.distribution import verificar_horario_fila
         from apps.inbox.services_inatividade import (
             realocar_conversa_inativa, alertar_admin_inatividade,
@@ -46,6 +48,7 @@ class Command(BaseCommand):
         dry = opts['dry_run']
         slug = opts['tenant']
         fila_id = opts['fila_id']
+        heartbeat_timeout = opts['heartbeat_timeout_min']
 
         tenants = Tenant.objects.filter(ativo=True)
         if slug:
@@ -58,7 +61,31 @@ class Command(BaseCommand):
         total_realocadas = 0
         total_alertadas = 0
         total_skipped = 0
+        total_offline_auto = 0
         agora = timezone.now()
+
+        # ─── HEARTBEAT: marca offline quem nao pingou ha mais do limite ───
+        # Roda ANTES dos niveis A/B porque selecao de "outro agente online"
+        # depende desse status estar correto.
+        limite_hb = agora - timedelta(minutes=heartbeat_timeout)
+        perfis_stale = PerfilAgenteInbox.objects.filter(status='online').filter(
+            ultimo_heartbeat__isnull=False, ultimo_heartbeat__lt=limite_hb,
+        )
+        # Tambem inclui quem nunca pingou + status_em antigo (compat com tela antiga sem heartbeat)
+        # Se ultimo_heartbeat null E ultimo_status_em antigo, considera abandonado
+        perfis_sem_hb = PerfilAgenteInbox.objects.filter(status='online').filter(
+            ultimo_heartbeat__isnull=True, ultimo_status_em__lt=limite_hb,
+        )
+        for p in list(perfis_stale) + list(perfis_sem_hb):
+            if dry:
+                self.stdout.write(
+                    f'  [DRY] marcaria offline: user={p.user_id} '
+                    f'last_hb={p.ultimo_heartbeat} status_em={p.ultimo_status_em}'
+                )
+            else:
+                p.status = 'offline'
+                p.save(update_fields=['status', 'ultimo_status_em'])
+            total_offline_auto += 1
 
         for tenant in tenants:
             filas_qs = FilaInbox.all_tenants.filter(tenant=tenant, ativo=True)
@@ -157,6 +184,7 @@ class Command(BaseCommand):
                             ))
 
         self.stdout.write(self.style.SUCCESS(
-            f'\nConcluido: realocadas={total_realocadas}  alertadas={total_alertadas}  '
+            f'\nConcluido: offline_auto={total_offline_auto}  '
+            f'realocadas={total_realocadas}  alertadas={total_alertadas}  '
             f'ja_alertadas={total_skipped}'
         ))
