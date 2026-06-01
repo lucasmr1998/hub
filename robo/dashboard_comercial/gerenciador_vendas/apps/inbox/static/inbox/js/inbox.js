@@ -822,23 +822,6 @@
                 abrirModalMotivo();
             }
         });
-        $('resolveDropdown').addEventListener('click', () => {
-            const menu = $('resolveMenu');
-            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-        });
-        document.querySelectorAll('#resolveMenu button').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const action = btn.dataset.action;
-                $('resolveMenu').style.display = 'none';
-                if (action === 'reabrir') {
-                    fetchJSON('/inbox/api/conversas/' + state.currentConversaId + '/reabrir/', { method: 'POST' })
-                        .then(reloadAfterResolve);
-                } else if (action === 'resolver' || action === 'pendente') {
-                    abrirModalMotivo();
-                }
-            });
-        });
-
         // Modal motivo: confirm/cancel
         ['resolveMotivoCancel', 'resolveMotivoClose'].forEach(id => {
             const el = document.getElementById(id);
@@ -1083,8 +1066,6 @@
         document.addEventListener('click', e => {
             const dd = document.getElementById('quickResponseDropdown');
             if (dd && !dd.contains(e.target)) dd.style.display = 'none';
-            const rm = document.getElementById('resolveMenu');
-            if (rm && !rm.contains(e.target) && !e.target.closest('.chat-resolve-group')) rm.style.display = 'none';
             const fd = document.getElementById('filterDropdown');
             if (fd && !fd.contains(e.target) && !e.target.closest('#filterMenuBtn')) fd.style.display = 'none';
             const ep = document.getElementById('emojiPicker');

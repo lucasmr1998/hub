@@ -108,12 +108,6 @@
             <div class="chat-header-actions">
                 <div class="chat-resolve-group">
                     <button class="chat-resolve-btn" id="resolveBtn">Resolver</button>
-                    <button class="chat-resolve-dropdown" id="resolveDropdown"><i class="fas fa-chevron-down"></i></button>
-                    <div class="chat-resolve-menu" id="resolveMenu" style="display:none;">
-                        <button data-action="resolver"><i class="fas fa-check"></i> Resolver</button>
-                        <button data-action="pendente"><i class="fas fa-clock"></i> Marcar pendente</button>
-                        <button data-action="reabrir"><i class="fas fa-redo"></i> Reabrir</button>
-                    </div>
                 </div>
                 <button class="ib-icon-btn" id="resumirBtn" title="Resumir conversa com IA"><i class="fas fa-magic"></i></button>
                 <button class="ib-icon-btn" id="transferBtn" title="Transferir"><i class="fas fa-share"></i></button>
@@ -396,7 +390,7 @@
 
 {% block extra_js %}
 <script>window.AGENTES_STATUS = {{ agentes_status_json|safe }};</script>
-<script src="{% static 'inbox/js/inbox.js' %}?v=12"></script>
+<script src="{% static 'inbox/js/inbox.js' %}?v=13"></script>
 <script>
 // Status do agente no Inbox (pill online/ausente/offline)
 (function() {
