@@ -475,6 +475,51 @@ Erros:
 
 ---
 
+## CRM — encerrar oportunidade com motivo (bot/automacao)
+
+Bot externo (Matrix, N8N agente LLM) pode mover oportunidade pra estagio
+`is_final_perdido` e classificar o motivo automaticamente, baseado na
+ultima mensagem do cliente. Usa OpenAI gpt-4o-mini.
+
+**`POST /api/public/n8n/crm/oportunidade/<pk>/encerrar-com-motivo/`**
+
+Body JSON:
+```json
+{
+  "ultima_mensagem_cliente": "muito caro, fica pra proxima",
+  "estagio_perdida_id": 42                              // opcional
+}
+```
+
+Resposta `200`:
+```json
+{
+  "status": "success",
+  "motivo_classificado": "Preco",
+  "motivo_id": 3,
+  "confidence": 0.86,
+  "oportunidade_id": 58,
+  "estagio": "Perdida"
+}
+```
+
+**Comportamento:**
+- Classifica entre `MotivoPerda` ativos do tenant. Se `confidence < 0.5`,
+  cai em "Outro" + observacao livre (nao trava o fluxo).
+- Se LLM falhar (sem chave / API erro), igual: cai em "Outro" + msg crua.
+- `motivo_perda_origem='bot'` em 100% das escritas (permite rollback seletivo).
+- **Idempotente**: se ja foi encerrada com motivo, retorna o atual sem
+  classificar de novo.
+- `estagio_perdida_id` opcional: sem ele, pega o primeiro `is_final_perdido`
+  ativo do tenant (ordenado por `ordem desc`).
+
+Erros:
+- `400` — `ultima_mensagem_cliente` ausente / tenant sem estagio is_final_perdido
+- `401` — token ausente/invalido
+- `404` — oportunidade nao encontrada no tenant
+
+---
+
 ## Orquestrador Vero (TR Carrion) — coleta de documentos
 
 O fluxo `[Vero] Orquestrador Atendimento` coleta RG/CNH frente e verso no

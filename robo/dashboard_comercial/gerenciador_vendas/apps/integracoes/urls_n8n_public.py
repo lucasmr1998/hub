@@ -26,4 +26,7 @@ urlpatterns = [
 
     # Telemetria de erros de resposta no fluxo do bot
     path('atendimento/registrar-erro-resposta/', views_conhecimento.registrar_erro_resposta, name='n8n_registrar_erro_resposta'),
+
+    # CRM — captura automatica de motivo de perda via bot (T5)
+    path('crm/oportunidade/<int:pk>/encerrar-com-motivo/', views_conhecimento.encerrar_oportunidade_com_motivo, name='n8n_encerrar_oportunidade_com_motivo'),
 ]

@@ -220,3 +220,129 @@ def buscar_conhecimento(request):
         'encontrou': bool(artigos),
         'artigos': artigos,
     })
+
+
+@csrf_exempt
+@require_POST
+@api_token_required
+def encerrar_oportunidade_com_motivo(request, pk):
+    """POST /api/public/n8n/crm/oportunidade/<pk>/encerrar-com-motivo/
+
+    Permite que bot externo (Matrix, N8N agente LLM) encerre uma oportunidade
+    movendo-a pro estagio is_final_perdido + classifica motivo automaticamente
+    via LLM com base na ultima mensagem do cliente.
+
+    Body JSON:
+      {
+        "ultima_mensagem_cliente": "muito caro, fica pra proxima",  # obrigatorio
+        "estagio_perdida_id": 42,   # opcional. Se omitido, pega 1o is_final_perdido do pipeline padrao
+      }
+
+    Resposta `200`:
+      {"status":"success","motivo_classificado":"Preco","motivo_id":3,
+       "confidence":0.86,"oportunidade_id":58,"estagio":"Perdida"}
+
+    Politica:
+      - motivo_perda_origem='bot' (rastreio).
+      - Se confidence < 0.5 ou LLM falhar -> usa motivo "Outro" + texto livre
+        com a mensagem original e nao bloqueia (objetivo: nao travar fluxo).
+      - Idempotente: se ja foi encerrada com motivo, retorna o motivo atual.
+    """
+    from apps.sistema.utils import _parse_json_request
+    from apps.comercial.crm.models import OportunidadeVenda, MotivoPerda, PipelineEstagio
+    from apps.sistema.services.embeddings import _resolver_api_key
+    import requests as _req
+    import json as _json
+
+    data = _parse_json_request(request) or {}
+    ultima_msg = (data.get('ultima_mensagem_cliente') or '').strip()
+    if not ultima_msg:
+        return JsonResponse({'status': 'error', 'msg': 'ultima_mensagem_cliente obrigatoria'}, status=400)
+
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        return JsonResponse({'status': 'error', 'msg': 'tenant nao resolvido'}, status=401)
+
+    op = OportunidadeVenda.all_tenants.filter(tenant=tenant, pk=pk, ativo=True).first()
+    if not op:
+        return JsonResponse({'status': 'error', 'msg': 'oportunidade nao encontrada'}, status=404)
+
+    # Idempotente: ja encerrada com motivo
+    if op.motivo_perda_ref_id and op.estagio and op.estagio.is_final_perdido:
+        return JsonResponse({
+            'status': 'success', 'idempotente': True,
+            'motivo_classificado': op.motivo_perda_ref.nome if op.motivo_perda_ref else None,
+            'motivo_id': op.motivo_perda_ref_id,
+            'oportunidade_id': op.pk,
+        })
+
+    # Resolve estagio_perdida
+    estagio_id = data.get('estagio_perdida_id')
+    if estagio_id:
+        estagio_perdida = PipelineEstagio.all_tenants.filter(tenant=tenant, pk=estagio_id, is_final_perdido=True).first()
+    else:
+        estagio_perdida = PipelineEstagio.all_tenants.filter(
+            tenant=tenant, is_final_perdido=True, ativo=True,
+        ).order_by('-ordem').first()
+    if not estagio_perdida:
+        return JsonResponse({'status': 'error', 'msg': 'tenant nao tem estagio is_final_perdido cadastrado'}, status=400)
+
+    motivos = list(MotivoPerda.all_tenants.filter(tenant=tenant, ativo=True).order_by('ordem', 'nome').values('id', 'nome'))
+    outros_id = next((m['id'] for m in motivos if m['nome'].lower() == 'outro'), None)
+
+    motivo_id_final = outros_id
+    motivo_nome_final = 'Outro'
+    confidence = 0.0
+    justificativa = f'Mensagem do cliente: {ultima_msg[:200]}'
+
+    # Classifica via OpenAI
+    api_key = _resolver_api_key(tenant)
+    if api_key and motivos:
+        opcoes_txt = '\n'.join([f"  - id={m['id']}: {m['nome']}" for m in motivos])
+        try:
+            r = _req.post(
+                'https://api.openai.com/v1/chat/completions',
+                headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                json={
+                    'model': 'gpt-4o-mini',
+                    'messages': [
+                        {'role': 'system', 'content':
+                            'Voce classifica motivo de perda de oportunidade comercial a partir de UMA mensagem '
+                            'do cliente. Retorne JSON {motivo_id, motivo_nome, justificativa, confidence}. Se '
+                            'incerto, use motivo_id=null e confidence baixo.\n\nMotivos:\n' + opcoes_txt
+                        },
+                        {'role': 'user', 'content': ultima_msg},
+                    ],
+                    'response_format': {'type': 'json_object'},
+                    'temperature': 0.1,
+                },
+                timeout=30,
+            )
+            if r.status_code == 200:
+                resp = _json.loads(r.json()['choices'][0]['message']['content'])
+                confidence = float(resp.get('confidence') or 0.0)
+                if confidence >= 0.5 and resp.get('motivo_id'):
+                    candidato_id = resp.get('motivo_id')
+                    if any(m['id'] == candidato_id for m in motivos):
+                        motivo_id_final = candidato_id
+                        motivo_nome_final = next((m['nome'] for m in motivos if m['id'] == candidato_id), motivo_nome_final)
+                        justificativa = (resp.get('justificativa') or '').strip()[:400]
+        except Exception as e:
+            logger.exception('classify motivo via LLM falhou: %s', e)
+
+    obs = f'[BOT conf={confidence:.2f}] {justificativa}'
+    OportunidadeVenda.all_tenants.filter(pk=op.pk).update(
+        estagio=estagio_perdida,
+        motivo_perda_ref_id=motivo_id_final,
+        motivo_perda=obs,
+        motivo_perda_origem='bot',
+    )
+
+    return JsonResponse({
+        'status': 'success',
+        'motivo_classificado': motivo_nome_final,
+        'motivo_id': motivo_id_final,
+        'confidence': confidence,
+        'oportunidade_id': op.pk,
+        'estagio': estagio_perdida.nome,
+    })
