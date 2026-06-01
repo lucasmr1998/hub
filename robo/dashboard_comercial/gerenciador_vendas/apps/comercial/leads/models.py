@@ -173,11 +173,11 @@ class LeadProspecto(TenantMixin):
     )
 
     numero_residencia = models.CharField(
-        max_length=20,
+        max_length=100,
         null=True,
         blank=True,
         verbose_name="Número da Residência",
-        help_text="Número do endereço"
+        help_text="Número do endereço (pode conter texto livre, ex: 'Quadra 15 casa 3')"
     )
 
     bairro = models.CharField(

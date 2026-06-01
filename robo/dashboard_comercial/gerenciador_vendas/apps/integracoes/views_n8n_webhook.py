@@ -581,7 +581,14 @@ def inbox_mensagem(request):
             for k_in, k_model in campos_map.items():
                 v = dados_lead.get(k_in)
                 if v and not getattr(lead, k_model, None):
-                    setattr(lead, k_model, v)
+                    # Sanitiza tamanho — N8N/Vero envia dados livres, pode estourar max_length.
+                    # Trunca defensivamente pra evitar StringDataRightTruncation 500.
+                    field = LeadProspecto._meta.get_field(k_model)
+                    max_len = getattr(field, 'max_length', None)
+                    v_str = str(v).strip()
+                    if max_len and len(v_str) > max_len:
+                        v_str = v_str[:max_len]
+                    setattr(lead, k_model, v_str)
                     atualizou = True
             # data_nascimento parsing
             raw_data = (dados_lead.get('data_nascimento') or '').strip()
