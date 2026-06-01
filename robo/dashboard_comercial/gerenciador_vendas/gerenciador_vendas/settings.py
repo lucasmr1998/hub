@@ -129,6 +129,8 @@ MIDDLEWARE = [
     'apps.sistema.middleware.PermissaoMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Observabilidade de webhooks N8N (audit log + alerta 5xx)
+    'apps.integracoes.middleware.WebhookN8NObservabilityMiddleware',
 ]
 
 # Configurações de Segurança

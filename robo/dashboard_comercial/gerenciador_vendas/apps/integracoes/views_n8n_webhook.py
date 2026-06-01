@@ -602,7 +602,18 @@ def inbox_mensagem(request):
                     except ValueError:
                         continue
             if atualizou:
-                lead.save()
+                # FAILSAFE — lead.save() falhando NUNCA pode derrubar o registro
+                # da mensagem. A mensagem em si eh PRIORIDADE. Logamos o erro
+                # e seguimos. Aviso vai pro caller via 'avisos' na resposta.
+                try:
+                    lead.save()
+                except Exception as save_exc:
+                    logger.error(
+                        '[N8N inbox] lead.save() falhou (lead pk=%s tenant=%s): %s — '
+                        'mensagem sera registrada mesmo assim',
+                        getattr(lead, 'pk', None), tenant_slug, save_exc,
+                    )
+                    avisos.append(f'lead nao atualizado: {type(save_exc).__name__}')
 
         # 3. Oportunidade — find or create (lead_id e unico: reusa qualquer existente)
         oportunidade = OportunidadeVenda.all_tenants.filter(

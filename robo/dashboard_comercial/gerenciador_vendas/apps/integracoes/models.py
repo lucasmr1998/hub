@@ -4,6 +4,10 @@ from django.utils import timezone
 from apps.sistema.encrypted_fields import EncryptedCharField, EncryptedTextField
 from apps.sistema.mixins import TenantMixin
 
+# Audit log dos webhooks publicos N8N (registro/alerta de 500) — declarado em
+# models_audit.py pra organizar; importa aqui pro Django registrar.
+from .models_audit import LogWebhookN8N  # noqa: F401
+
 
 class IntegracaoAPI(TenantMixin):
     """

@@ -66,7 +66,7 @@ class LeadProspecto(TenantMixin):
     )
     telefone = models.CharField(
         validators=[telefone_validator],
-        max_length=17,
+        max_length=20,
         verbose_name="Telefone",
         help_text="Telefone de contato"
     )
@@ -196,15 +196,15 @@ class LeadProspecto(TenantMixin):
     )
 
     estado = models.CharField(
-        max_length=2,
+        max_length=20,
         null=True,
         blank=True,
         verbose_name="Estado",
-        help_text="UF do estado"
+        help_text="UF do estado (sigla 2 letras ou nome curto)"
     )
 
     cep = models.CharField(
-        max_length=10,
+        max_length=12,
         null=True,
         blank=True,
         verbose_name="CEP"
