@@ -69,6 +69,9 @@ urlpatterns = [
     path('automacoes-pipeline/<int:pk>/duplicar/', views.regra_pipeline_duplicar, name='regra_pipeline_duplicar'),
     path('automacoes-pipeline/<int:pk>/preview/', views.regra_pipeline_preview, name='regra_pipeline_preview'),
 
+    # Motivos de Perda — tela dedicada (T7)
+    path('motivos-perda/', views.motivos_perda_lista, name='motivos_perda_lista'),
+
     # Configurações
     path('configuracoes/', views.configuracoes_crm, name='configuracoes'),
     path('configuracoes/salvar/', views.api_salvar_config, name='api_salvar_config'),

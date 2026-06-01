@@ -51,11 +51,20 @@ Uso em template que extende layout_app:
           <i class="bi bi-check2-square"></i><span>Tarefas</span>
         </a>
       </nav>
+      <div class="app-subnav-section">Relatorios</div>
+      <nav class="app-subnav-list">
+        <a href="/crm/relatorios/win-loss/" class="app-subnav-item {% if 'win_loss' in request.resolver_match.url_name or 'relatorio_win_loss' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-bar-chart-line"></i><span>Win/Loss</span>
+        </a>
+      </nav>
       {% if is_superuser or perm.acesso_configuracoes %}
         <div class="app-subnav-section">Configuracoes CRM</div>
         <nav class="app-subnav-list">
           <a href="/crm/configuracoes/" class="app-subnav-item {% if request.resolver_match.url_name == 'configuracoes' and '/crm/' in request.path %}is-active{% endif %}">
             <i class="bi bi-sliders"></i><span>Configuracoes</span>
+          </a>
+          <a href="/crm/motivos-perda/" class="app-subnav-item {% if 'motivos_perda' in request.resolver_match.url_name %}is-active{% endif %}">
+            <i class="bi bi-x-circle"></i><span>Motivos de perda</span>
           </a>
           <a href="/crm/automacoes-pipeline/" class="app-subnav-item {% if 'automacoes_pipeline' in request.resolver_match.url_name %}is-active{% endif %}">
             <i class="bi bi-diagram-3"></i><span>Automacoes</span>

@@ -335,43 +335,16 @@
   </div>
 </div>
 
-{# ── Motivos de perda ───────────────────────────────────────────── #}
+{# ── Motivos de perda — agora em tela dedicada ──────────────────── #}
 <div class="card" style="margin-bottom: var(--sp-4); padding: 0;">
   <div class="card-header">
     <h3 class="card-title"><i class="bi bi-graph-down-arrow" style="color: var(--color-primary);"></i> Motivos de perda</h3>
   </div>
   <div class="card-body">
     <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0 0 var(--sp-3);">
-      Lista que o vendedor escolhe ao marcar uma oportunidade como perdida. Usada nos relatorios de win/loss.
+      Movido pra tela dedicada com mais informacao (contador de uso por motivo, relatorio Win/Loss linkado).
     </p>
-
-    {% for m in motivos_perda %}
-      <form method="post" class="motivo-row">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="editar_motivo_perda">
-        <input type="hidden" name="motivo_id" value="{{ m.pk }}">
-        <input type="text" name="nome" class="field-input" value="{{ m.nome }}" style="flex: 1;">
-        <label class="motivo-ativo"><input type="checkbox" name="ativo" {% if m.ativo %}checked{% endif %}> Ativo</label>
-        <button type="submit" class="btn btn-ghost btn-sm" title="Salvar"><i class="bi bi-check-lg"></i></button>
-        <button type="submit" form="del-motivo-{{ m.pk }}" class="btn btn-ghost btn-sm btn-ghost-danger"
-                onclick="return confirm('Excluir o motivo {{ m.nome|escapejs }}?');" title="Excluir"><i class="bi bi-trash"></i></button>
-      </form>
-      <form method="post" id="del-motivo-{{ m.pk }}" style="display: none;">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="excluir_motivo_perda">
-        <input type="hidden" name="motivo_id" value="{{ m.pk }}">
-      </form>
-    {% empty %}
-      <p style="font-size: var(--fs-sm); color: var(--color-text-muted);">Nenhum motivo cadastrado.</p>
-    {% endfor %}
-
-    <form method="post" class="motivo-row" style="margin-top: var(--sp-3);">
-      {% csrf_token %}
-      <input type="hidden" name="action" value="criar_motivo_perda">
-      <input type="text" name="nome" class="field-input" placeholder="Novo motivo de perda" style="flex: 1;" required>
-      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Adicionar</button>
-    </form>
-  </div>
+    <a href="{% url 'crm:motivos_perda_lista' %}" class="btn btn-primary btn-sm"><i class="bi bi-arrow-right-circle"></i> Abrir gerenciamento de Motivos de Perda</a>
 </div>
 {% endblock %}
 

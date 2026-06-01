@@ -1,0 +1,116 @@
+{% extends "sistema/base.html" %}
+
+{% block title %}Motivos de Perda — CRM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Motivos de Perda</h1>
+      <p class="page-subtitle">Lista que o vendedor escolhe ao marcar uma oportunidade como perdida. Alimenta o relatorio de win/loss.</p>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'crm:relatorio_win_loss' %}" class="btn btn-ghost btn-sm"><i class="bi bi-bar-chart-line"></i> Ver relatorio Win/Loss</a>
+    </div>
+  </div>
+</div>
+
+<div class="stats-grid stats-grid-2" style="margin-bottom: var(--sp-4);">
+  {% include "components/stat_card.html" with label="Motivos ativos" value=total_ativos icon="bi-check-circle" icon_variant="success" %}
+  {% include "components/stat_card.html" with label="Usos nos ultimos 12 meses" value=uso_12m icon="bi-graph-down" icon_variant="warning" %}
+</div>
+
+{% if messages %}
+  {% for m in messages %}
+    <div class="alert alert-{{ m.tags|default:'info' }}" style="margin-bottom: var(--sp-3);">{{ m }}</div>
+  {% endfor %}
+{% endif %}
+
+<div class="card" style="margin-bottom: var(--sp-4);">
+  <div class="card-body">
+    <form method="post" class="motivo-form-novo">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="criar">
+      <div class="field-input-wrap" style="flex: 1;">
+        <i class="bi bi-plus-circle field-icon"></i>
+        <input type="text" name="nome" class="field-input" placeholder="Novo motivo de perda (ex: Preco, Concorrente, Sem viabilidade...)" required maxlength="100">
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Adicionar</button>
+    </form>
+  </div>
+</div>
+
+{% if motivos %}
+  <div class="motivo-lista">
+    {% for m in motivos %}
+      <div class="card motivo-card">
+        <div class="card-body">
+          <form method="post" class="motivo-row">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="editar">
+            <input type="hidden" name="motivo_id" value="{{ m.pk }}">
+
+            <div class="motivo-info">
+              <input type="text" name="nome" class="field-input motivo-nome" value="{{ m.nome }}" maxlength="100">
+              <div class="motivo-meta">
+                <label class="motivo-ativo">
+                  <input type="checkbox" name="ativo" {% if m.ativo %}checked{% endif %}>
+                  Ativo
+                </label>
+                {% if m.qtd_oportunidades %}
+                  <span class="usage-badge"><i class="bi bi-link-45deg"></i> {{ m.qtd_oportunidades }} oportunidade{{ m.qtd_oportunidades|pluralize }}</span>
+                {% else %}
+                  <span class="usage-badge usage-zero">sem uso</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="motivo-actions">
+              <button type="submit" class="btn btn-ghost btn-sm" title="Salvar"><i class="bi bi-check-lg"></i> Salvar</button>
+              <button type="submit" form="del-{{ m.pk }}" class="btn btn-ghost btn-sm btn-ghost-danger"
+                onclick="return confirm('Excluir o motivo &quot;{{ m.nome|escapejs }}&quot;?{% if m.qtd_oportunidades %} {{ m.qtd_oportunidades }} oportunidade(s) ficarao sem motivo associado.{% endif %}');"
+                title="Excluir"><i class="bi bi-trash"></i></button>
+            </div>
+          </form>
+          <form method="post" id="del-{{ m.pk }}" style="display: none;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="excluir">
+            <input type="hidden" name="motivo_id" value="{{ m.pk }}">
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card">
+    <div class="card-body" style="text-align: center; padding: var(--sp-10);">
+      <i class="bi bi-list-task" style="font-size: 3rem; color: var(--color-text-muted); opacity: 0.4; display: block; margin-bottom: var(--sp-3);"></i>
+      <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0;">Nenhum motivo cadastrado ainda. Crie o primeiro acima.</p>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .stats-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--sp-3); }
+
+  .motivo-form-novo { display: flex; gap: var(--sp-2); align-items: center; }
+
+  .motivo-lista { display: flex; flex-direction: column; gap: var(--sp-2); }
+  .motivo-card { transition: box-shadow var(--transition); }
+  .motivo-card:hover { box-shadow: var(--shadow-sm); }
+  .motivo-row { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); margin: 0; }
+  .motivo-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .motivo-nome { font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+  .motivo-meta { display: flex; gap: var(--sp-3); align-items: center; font-size: var(--fs-xs); color: var(--color-text-muted); }
+  .motivo-ativo { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+  .usage-badge {
+    padding: 2px 10px; background: var(--color-info-soft); color: var(--color-info);
+    border-radius: 10px; font-size: 11px; font-weight: var(--fw-bold);
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .usage-badge.usage-zero { background: var(--color-bg-2, var(--color-bg)); color: var(--color-text-muted); }
+  .motivo-actions { display: flex; gap: 4px; flex-shrink: 0; }
+</style>
+{% endblock %}

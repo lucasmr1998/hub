@@ -2764,3 +2764,87 @@ def relatorio_win_loss(request):
         'breakdown_ganho': breakdown_ganho_lst,
         'page_title': 'Win/Loss Analysis',
     })
+
+
+# ============================================================================
+# T7 — Tela dedicada de Motivos de Perda
+# ============================================================================
+
+@login_required
+def motivos_perda_lista(request):
+    """CRUD dedicado de MotivoPerda em /crm/motivos-perda/."""
+    from .models import MotivoPerda, OportunidadeVenda
+    from django.db.models import Count
+    from django.contrib import messages
+    from django.shortcuts import redirect
+
+    denied = _check_perm(request, 'comercial.configurar_pipeline')
+    if denied:
+        return denied
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'criar':
+            nome = (request.POST.get('nome') or '').strip()
+            if nome and not MotivoPerda.objects.filter(nome=nome).exists():
+                ult = MotivoPerda.objects.order_by('-ordem').first()
+                MotivoPerda.objects.create(
+                    tenant=request.tenant, nome=nome,
+                    ordem=(ult.ordem + 1) if ult else 1,
+                )
+                messages.success(request, f'Motivo "{nome}" criado.')
+            elif nome:
+                messages.warning(request, f'Motivo "{nome}" ja existe.')
+            return redirect('crm:motivos_perda_lista')
+
+        elif action == 'editar':
+            mid = request.POST.get('motivo_id')
+            nome = (request.POST.get('nome') or '').strip()
+            ativo = bool(request.POST.get('ativo'))
+            motivo = MotivoPerda.objects.filter(pk=mid).first()
+            if motivo and nome:
+                motivo.nome = nome
+                motivo.ativo = ativo
+                motivo.save(update_fields=['nome', 'ativo'])
+                messages.success(request, f'Motivo "{nome}" atualizado.')
+            return redirect('crm:motivos_perda_lista')
+
+        elif action == 'excluir':
+            mid = request.POST.get('motivo_id')
+            motivo = MotivoPerda.objects.filter(pk=mid).first()
+            if motivo:
+                em_uso = OportunidadeVenda.objects.filter(motivo_perda_ref=motivo).count()
+                nome = motivo.nome
+                motivo.delete()
+                if em_uso:
+                    messages.warning(
+                        request,
+                        f'Motivo "{nome}" excluido. {em_uso} oportunidade(s) tinha(m) esse '
+                        f'motivo - agora aparecem sem motivo cadastrado.'
+                    )
+                else:
+                    messages.success(request, f'Motivo "{nome}" excluido.')
+            return redirect('crm:motivos_perda_lista')
+
+    # GET — lista com contagem de uso
+    motivos = (
+        MotivoPerda.objects.all()
+        .annotate(qtd_oportunidades=Count('oportunidades'))
+        .order_by('ordem', 'nome')
+    )
+    total_ativos = MotivoPerda.objects.filter(ativo=True).count()
+    # uso ultimos 12m (oportunidades atualizadas)
+    from datetime import timedelta
+    desde = timezone.now() - timedelta(days=365)
+    uso_12m = (
+        OportunidadeVenda.objects
+        .filter(motivo_perda_ref__isnull=False, data_atualizacao__gte=desde)
+        .count()
+    )
+
+    return render(request, 'crm/motivos_perda.html', {
+        'motivos': motivos,
+        'total_ativos': total_ativos,
+        'uso_12m': uso_12m,
+        'page_title': 'Motivos de Perda',
+    })
