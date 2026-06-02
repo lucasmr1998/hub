@@ -924,12 +924,13 @@ def registrar_imagem_lead(request):
 
     Body JSON:
         tenant_slug:  str  - slug do tenant (obrigatorio)
-        lead_id:      int  - id do lead (obrigatorio)
+        lead_id:      int  - id do lead (opcional se telefone for enviado)
+        telefone:     str  - telefone do lead (fallback quando lead_id ausente)
         link_url:     str  - URL da imagem/documento (obrigatorio)
         descricao:    str? - descricao do documento (ex: 'RG frente', 'RG verso')
 
     Retorna:
-        201 + {sucesso: true, imagem_id} se criou
+        201 + {sucesso: true, imagem_id, lead_id} se criou
         400 se payload invalido
         401 se secret invalido
         404 se lead nao encontrado
@@ -944,14 +945,15 @@ def registrar_imagem_lead(request):
 
     tenant_slug = (payload.get('tenant_slug') or '').strip()
     lead_id = payload.get('lead_id')
+    telefone = (payload.get('telefone') or '').strip()
     link_url = (payload.get('link_url') or '').strip()
     descricao = (payload.get('descricao') or '').strip()
 
     erros = []
     if not tenant_slug:
         erros.append('tenant_slug obrigatorio')
-    if not lead_id:
-        erros.append('lead_id obrigatorio')
+    if not lead_id and not telefone:
+        erros.append('lead_id ou telefone obrigatorio')
     if not link_url:
         erros.append('link_url obrigatorio')
     if erros:
@@ -962,10 +964,28 @@ def registrar_imagem_lead(request):
     except Tenant.DoesNotExist:
         return JsonResponse({'sucesso': False, 'erro': f'Tenant "{tenant_slug}" nao encontrado'}, status=404)
 
-    try:
-        lead = LeadProspecto.all_tenants.get(pk=lead_id, tenant=tenant)
-    except LeadProspecto.DoesNotExist:
-        return JsonResponse({'sucesso': False, 'erro': f'Lead {lead_id} nao encontrado'}, status=404)
+    lead = None
+    if lead_id:
+        try:
+            lead = LeadProspecto.all_tenants.get(pk=lead_id, tenant=tenant)
+        except LeadProspecto.DoesNotExist:
+            lead = None
+
+    if lead is None and telefone:
+        tel_normalizado = ''.join(ch for ch in telefone if ch.isdigit())
+        if tel_normalizado:
+            lead = (
+                LeadProspecto.all_tenants
+                .filter(tenant=tenant, telefone__contains=tel_normalizado[-9:])
+                .order_by('-id')
+                .first()
+            )
+
+    if lead is None:
+        return JsonResponse({
+            'sucesso': False,
+            'erro': f'Lead nao encontrado (lead_id={lead_id}, telefone={telefone})',
+        }, status=404)
 
     # Se a URL passada é do WhatsApp (expira), tenta usar o arquivo já hospedado
     # que o webhook inbox_mensagem baixou via Uazapi e salvou em mensagem.arquivo.
@@ -991,8 +1011,8 @@ def registrar_imagem_lead(request):
         descricao=descricao or 'Documento enviado pelo bot',
     )
 
-    logger.info('[N8N] Imagem registrada para lead %s (%s)', lead_id, descricao)
-    return JsonResponse({'sucesso': True, 'imagem_id': imagem.pk}, status=201)
+    logger.info('[N8N] Imagem registrada para lead %s (%s)', lead.id, descricao)
+    return JsonResponse({'sucesso': True, 'imagem_id': imagem.pk, 'lead_id': lead.id}, status=201)
 
 
 @csrf_exempt
