@@ -1,0 +1,20 @@
+# Credenciais e segredos — NUNCA commitar
+.env
+.env.*
+!.env.example
+
+# Venv local
+myenv/
+
+# Caches Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Screenshots de execucao e arquivos temporarios
+screenshots/
+temp_chrome_profiles/
+*.png
+
+# Logs locais
+*.log
