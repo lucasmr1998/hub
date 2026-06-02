@@ -668,17 +668,31 @@ def inbox_mensagem(request):
             conversa.save(update_fields=conv_updates)
 
         # Atualiza modo se vier (validacao ja feita no inicio — Bug 2)
+        # CRITICO: nunca regredir 'humano' -> 'bot' a partir do webhook
+        # do Vero. Isso destrava o bot pra responder por cima do agente
+        # humano (caso Michele 02/06/2026 — bot mandou 4 msgs depois da
+        # Kelle ter assumido). Se a conversa ja esta em 'humano' OU tem
+        # agente atribuido, o webhook NAO pode rebaixar o modo.
         modo = payload.get('modo_atendimento')
         if modo:
-            modo_mudou = (conversa.modo_atendimento != modo)
-            if modo_mudou:
-                conversa.modo_atendimento = modo
-                conversa.save(update_fields=['modo_atendimento'])
+            modo_atual = conversa.modo_atendimento
+            tem_agente = bool(conversa.agente_id)
+            quer_voltar_pra_bot = (modo == 'bot' and (modo_atual == 'humano' or tem_agente))
+            if quer_voltar_pra_bot:
+                logger.warning(
+                    '[N8N inbox] Tentativa de regredir modo humano->bot bloqueada '
+                    '(conv=%s tenant=%s agente_id=%s). Mantendo modo=%s.',
+                    conversa.id, tenant.slug, conversa.agente_id, modo_atual,
+                )
+                avisos.append('modo_atendimento mantido humano (agente atribuido)')
+            else:
+                modo_mudou = (modo_atual != modo)
+                if modo_mudou:
+                    conversa.modo_atendimento = modo
+                    conversa.save(update_fields=['modo_atendimento'])
 
-            # Quando bot termina ou cliente pede humano: regras de cidade PRIMEIRO,
-            # depois fila/round-robin (ver _transferir_para_fila).
-            if modo in ('finalizado_bot', 'humano') and modo_mudou and not conversa.agente_id:
-                _transferir_para_fila(conversa, tenant, oportunidade)
+                if modo in ('finalizado_bot', 'humano') and (modo_atual != modo) and not conversa.agente_id:
+                    _transferir_para_fila(conversa, tenant, oportunidade)
 
         # Atualiza Oportunidade.dados_custom com estado do atendimento — pra motor de automacoes
         atendimento_estado = payload.get('atendimento_estado')
