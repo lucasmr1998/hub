@@ -202,7 +202,14 @@ def distribuir_conversa(conversa, tenant):
         agente = selecionar_agente(fila, tenant)
         if agente:
             conversa.agente = agente
-            conversa.save(update_fields=['fila', 'equipe', 'agente'])
+            update_fields = ['fila', 'equipe', 'agente']
+            # CRITICO: atribuir agente sempre silencia o bot (regra invariante:
+            # agente atribuido = bot calado). Sem isso, o Vero responderia
+            # por cima do agente humano (caso Michele 02/06/2026).
+            if conversa.modo_atendimento != 'humano':
+                conversa.modo_atendimento = 'humano'
+                update_fields.append('modo_atendimento')
+            conversa.save(update_fields=update_fields)
 
             # Vincular agente como responsavel da oportunidade do lead
             from .services import _vincular_agente_oportunidade

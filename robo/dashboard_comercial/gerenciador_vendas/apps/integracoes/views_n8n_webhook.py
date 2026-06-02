@@ -842,6 +842,10 @@ def conversa_estado(request):
             agente_id: int | null,
             agente_nome: str | null,
             atualizado_em: iso8601 | null,
+            bot_pode_atuar: bool,   # flag canonico — o Vero DEVE checar este,
+                                    # nao o modo_atendimento isolado. True so
+                                    # se modo='bot' E agente_id=None E status
+                                    # nao for resolvida/arquivada.
         }
     """
     if not _autorizado(request):
@@ -865,12 +869,22 @@ def conversa_estado(request):
         return JsonResponse({
             'sucesso': True, 'existe': False,
             'modo_atendimento': None, 'agente_id': None, 'agente_nome': None,
+            'bot_pode_atuar': True,
         }, status=200)
 
     agente_nome = None
     if conversa.agente_id:
         full = (conversa.agente.get_full_name() or '').strip()
         agente_nome = full or conversa.agente.username
+
+    # Regra invariante: agente atribuido = bot calado, sem excecao.
+    # Tambem cala se modo nao for 'bot' (humano/finalizado_bot) ou se
+    # conversa ja foi resolvida.
+    bot_pode_atuar = bool(
+        conversa.modo_atendimento == 'bot'
+        and conversa.agente_id is None
+        and conversa.status not in ('resolvida', 'arquivada')
+    )
 
     return JsonResponse({
         'sucesso': True,
@@ -881,6 +895,7 @@ def conversa_estado(request):
         'agente_id': conversa.agente_id,
         'agente_nome': agente_nome,
         'atualizado_em': conversa.ultima_mensagem_em.isoformat() if conversa.ultima_mensagem_em else None,
+        'bot_pode_atuar': bot_pode_atuar,
     }, status=200)
 
 
