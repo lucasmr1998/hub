@@ -1432,6 +1432,33 @@ class HubsoftService:
 
         # Defaults da integração — fallback quando o lead não traz o id específico.
         extras = self.integracao.configuracoes_extras or {}
+        cache = (extras.get('cache') or {})
+
+        def _id_valido_ou_default(lead_id, default_id, cache_chave, item_id_key):
+            """Retorna o ID do lead se for valido no catalogo cacheado, senao
+            cai pro default da integracao. Resolve o caso onde o Matrix manda
+            IDs desatualizados (ex: HubSoft renumera vendedor entre dias).
+
+            cache_chave: nome do array em configuracoes_extras.cache
+            item_id_key: nome da chave do id dentro de cada item do array
+
+            Se o cache esta vazio, mantem o comportamento antigo (sem guard).
+            """
+            try:
+                lead_id_int = int(lead_id) if lead_id else None
+            except (ValueError, TypeError):
+                lead_id_int = None
+            itens = cache.get(cache_chave) or []
+            if lead_id_int and itens:
+                ids_validos = {int(it.get(item_id_key)) for it in itens if it.get(item_id_key) is not None}
+                if lead_id_int not in ids_validos:
+                    logger.warning(
+                        '[HubSoft] %s=%s do lead %s nao existe no catalogo (%s itens). '
+                        'Usando default=%s da IntegracaoAPI.',
+                        item_id_key, lead_id_int, getattr(lead, 'pk', '?'), len(itens), default_id,
+                    )
+                    lead_id_int = None
+            return lead_id_int or (int(default_id) if default_id else None)
 
         plano_id = lead.id_plano_rp or extras.get('plano_id_padrao') or 0
         payload['servico'] = {
@@ -1439,27 +1466,30 @@ class HubsoftService:
             'valor': float(lead.valor) if lead.valor else 0,
         }
 
-        vendedor_id = lead.id_vendedor_rp or extras.get('vendedor_id_padrao')
+        vendedor_id = _id_valido_ou_default(
+            lead.id_vendedor_rp, extras.get('vendedor_id_padrao'),
+            cache_chave='vendedores', item_id_key='id',
+        )
         if vendedor_id:
-            payload['id_vendedor'] = int(vendedor_id)
+            payload['id_vendedor'] = vendedor_id
 
         venc_id = lead.id_dia_vencimento or extras.get('dia_vencimento_id_padrao')
         if venc_id:
             payload['id_vencimento'] = int(venc_id)
 
-        origem_id = lead.id_origem or extras.get('id_origem_padrao')
+        origem_id = _id_valido_ou_default(
+            lead.id_origem, extras.get('id_origem_padrao'),
+            cache_chave='origens_cliente', item_id_key='id_origem_cliente',
+        )
         if origem_id:
-            try:
-                payload['id_origem_cliente'] = int(origem_id)
-            except (ValueError, TypeError):
-                pass
+            payload['id_origem_cliente'] = origem_id
 
-        origem_servico_id = lead.id_origem_servico or extras.get('id_origem_servico_padrao')
+        origem_servico_id = _id_valido_ou_default(
+            lead.id_origem_servico, extras.get('id_origem_servico_padrao'),
+            cache_chave='origens_contato', item_id_key='id_origem_contato',
+        )
         if origem_servico_id:
-            try:
-                payload['id_origem_servico'] = int(origem_servico_id)
-            except (ValueError, TypeError):
-                pass
+            payload['id_origem_servico'] = origem_servico_id
 
         payload['id_externo'] = str(lead.pk)
         return payload
