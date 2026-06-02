@@ -817,10 +817,11 @@ def listar_imagens_lead_api(request):
     if not lead_id:
         return JsonResponse({'error': 'Parâmetro obrigatório: lead_id'}, status=400)
 
+    from .utils import resolver_link_interno_imagem
     imagens = ImagemLeadProspecto.all_tenants.filter(lead_id=lead_id).order_by('-data_criacao')
     data = [{
         'id': img.id,
-        'link_url': img.link_url,
+        'link_url': resolver_link_interno_imagem(img),
         'descricao': img.descricao,
         'status_validacao': img.status_validacao,
         'data_criacao': img.data_criacao.isoformat(),
@@ -880,11 +881,12 @@ def imagens_por_cliente_api(request):
             return JsonResponse({'success': True, 'imagens': [], 'lead': None,
                                  'message': 'Cliente sem lead relacionado'})
 
+    from .utils import resolver_link_interno_imagem
     imagens = ImagemLeadProspecto.objects.filter(lead=lead).order_by('-data_criacao')
     imagens_data = [
         {
             'id':                   img.pk,
-            'link_url':             img.link_url,
+            'link_url':             resolver_link_interno_imagem(img),
             'descricao':            img.descricao,
             'status_validacao':     img.status_validacao,
             'observacao_validacao': img.observacao_validacao,

@@ -1016,11 +1016,12 @@ def registrar_imagem_lead(request):
             'erro': f'Lead nao encontrado (lead_id={lead_id}, telefone={telefone})',
         }, status=404)
 
-    # Se a URL passada é do WhatsApp (expira), tenta usar o arquivo já hospedado
-    # que o webhook inbox_mensagem baixou via Uazapi e salvou em mensagem.arquivo.
-    # O arquivo vive em volume privado (private_media/inbox_midia/), então não dá
-    # pra montar URL como MEDIA_URL + path — precisa apontar pro endpoint inbox
-    # que serve mídia autenticada.
+    # Resolve link_url pra path interno autenticado antes de salvar — URLs
+    # externas (whatsapp/uazapi) expiram em horas e quebram preview na UI.
+    # Bug recorrente corrigido em 02/06/2026 (44 imagens broken em prod).
+    # Estrategia: bate Mensagem.arquivo_url == link_url no mesmo lead; se
+    # nao casar, deixa o link externo (a UI tem fallback na leitura via
+    # utils.resolver_link_interno_imagem).
     url_final = link_url
     try:
         from apps.inbox.models import Mensagem as InboxMensagem
@@ -1029,8 +1030,18 @@ def registrar_imagem_lead(request):
         ).exclude(arquivo='').first()
         if msg and msg.arquivo and msg.conversa_id:
             url_final = f'/inbox/api/conversas/{msg.conversa_id}/midia/{msg.pk}/'
-    except Exception:
-        pass
+        else:
+            # Fallback: se nao bateu por arquivo_url, pega a Mensagem imagem
+            # mais recente do lead que tenha arquivo salvo. N8N geralmente
+            # registra a img logo depois do webhook inbox_mensagem baixar.
+            msg_recente = InboxMensagem.all_tenants.filter(
+                conversa__lead=lead,
+                tipo_conteudo__in=('imagem', 'arquivo', 'documento'),
+            ).exclude(arquivo='').order_by('-data_envio').first()
+            if msg_recente and msg_recente.arquivo and msg_recente.conversa_id:
+                url_final = f'/inbox/api/conversas/{msg_recente.conversa_id}/midia/{msg_recente.pk}/'
+    except Exception as resolve_exc:
+        logger.warning('[N8N lead/imagem] resolver link interno falhou: %s', resolve_exc)
 
     from apps.comercial.leads.models import ImagemLeadProspecto
     imagem = ImagemLeadProspecto.all_tenants.create(
