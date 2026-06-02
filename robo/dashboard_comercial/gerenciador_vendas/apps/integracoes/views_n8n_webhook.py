@@ -1050,6 +1050,15 @@ def consultar_status_conversa(request):
             'eh_humano_assumida': False,
         })
     eh_humano_assumida = bool(conversa.modo_atendimento == 'humano' and conversa.assumida)
+    tem_agente_atribuido = bool(conversa.agente_id)
+    # nao_disparar_bot: TRUE se humano de alguma forma ja entrou na conversa.
+    # Cron de follow-up deve descartar se este flag for True (mais conservador
+    # que so eh_humano_assumida — atribuicao automatica sem assumir tambem conta).
+    nao_disparar_bot = bool(
+        eh_humano_assumida
+        or tem_agente_atribuido
+        or conversa.modo_atendimento == 'humano'
+    )
     return JsonResponse({
         'sucesso': True,
         'achou': True,
@@ -1059,4 +1068,6 @@ def consultar_status_conversa(request):
         'assumida': conversa.assumida,
         'agente_id': conversa.agente_id,
         'eh_humano_assumida': eh_humano_assumida,
+        'tem_agente_atribuido': tem_agente_atribuido,
+        'nao_disparar_bot': nao_disparar_bot,
     })

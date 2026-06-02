@@ -369,15 +369,24 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
                     resultado = processar_resposta_visual(ativo, instance.conteudo)
                 logger.info("Resposta processada no fluxo: atendimento=%s, resultado=%s", ativo.id, resultado.get('tipo') if resultado else 'None')
             else:
+                # NUNCA iniciar fluxo bot se humano ja assumiu a conversa.
+                # Evita bug: bot interferir/sobrescrever modo apos agente entrar.
+                if conversa.modo_atendimento == 'humano':
+                    logger.info(
+                        "Conversa #%s ja em modo humano — nao inicia fluxo bot",
+                        conversa.id,
+                    )
+                    return  # importante: nao processar o resto do bot path
                 # Tentar iniciar novo fluxo (prioriza fluxo vinculado ao canal)
                 canal_inbox = conversa.canal if conversa.canal_id else None
                 fluxo_do_canal = canal_inbox.fluxo if canal_inbox and canal_inbox.fluxo_id else None
                 atendimento, resultado = iniciar_por_canal(lead, canal, tenant=instance.tenant, fluxo_forcado=fluxo_do_canal)
                 if atendimento:
                     logger.info("Fluxo atendimento iniciado: atendimento=%s, canal=%s", atendimento.id, canal)
-                    # Marcar conversa como atendida pelo bot
-                    conversa.modo_atendimento = 'bot'
-                    conversa.save(update_fields=['modo_atendimento'])
+                    # So marca 'bot' se ainda nao era humano (preserva estado humano)
+                    if conversa.modo_atendimento != 'humano':
+                        conversa.modo_atendimento = 'bot'
+                        conversa.save(update_fields=['modo_atendimento'])
 
             # Enviar resposta do bot de volta no inbox
             if resultado and resultado.get('tipo') == 'questao':

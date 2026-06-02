@@ -246,7 +246,7 @@
                         <span class="conv-inbox-label">${esc(canalLabel)}</span>
                         ${c.modo_atendimento === 'bot' ? '<span class="conv-inbox-label" style="background:#f3e8ff;color:#6b21a8;"><i class="fas fa-robot" style="font-size:9px;margin-right:2px;"></i>Bot</span>' : ''}
                         ${c.alerta_inatividade ? '<span class="conv-inbox-label" style="background:#fee2e2;color:#991b1b;"><i class="fas fa-exclamation-triangle" style="font-size:9px;margin-right:2px;"></i>Inativo</span>' : ''}
-                        ${c.agente_nome ? `<span class="conv-agent-name">${_agenteStatusDot(c.agente_id)}${esc(nomeAgenteCurto(c.agente_nome))}</span>` : ''}
+                        ${c.agente_nome && c.modo_atendimento !== 'bot' ? `<span class="conv-agent-name">${_agenteStatusDot(c.agente_id)}${esc(nomeAgenteCurto(c.agente_nome))}</span>` : ''}
                     </div>
                     <div class="conv-name">${esc(c.contato_nome || c.contato_telefone || '#' + c.numero)}</div>
                     <div class="conv-preview">
