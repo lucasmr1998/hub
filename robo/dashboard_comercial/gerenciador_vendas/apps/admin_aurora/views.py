@@ -54,7 +54,23 @@ def _user_can_access_tenant(user, tenant_id):
 
 @superuser_required
 def dashboard_view(request):
-    """Dashboard principal do admin Aurora. Somente superusers."""
+    """Dashboard de monitoramento do admin Aurora. Tarefa Workspace #150.
+
+    Pagina principal — visao geral operacional de TUDO importante:
+    tenants, CronJobs, alertas, leads por status, HubSoft, webhooks N8N,
+    inbox, erros recentes. Foco em ver problemas em qualquer cliente.
+    """
+    from django.db.models import Count
+    from apps.comercial.leads.models import LeadProspecto
+    from apps.cron.models import CronJob, ExecucaoCron
+    from apps.sistema.models_alertas import AlertaSistema
+    from apps.integracoes.models import IntegracaoAPI, LogIntegracao, ClienteHubsoft
+
+    agora = timezone.now()
+    h24 = agora - timedelta(hours=24)
+    h1 = agora - timedelta(hours=1)
+
+    # === TENANTS ===
     tenants = Tenant.objects.all()
     total_tenants = tenants.count()
     ativos = tenants.filter(ativo=True).count()
@@ -65,31 +81,137 @@ def dashboard_view(request):
         trial_fim__gte=date.today(),
     ).count()
 
-    from apps.comercial.leads.models import LeadProspecto
     tenant_data = []
     for t in tenants.order_by('-ativo', 'nome'):
         leads = LeadProspecto.all_tenants.filter(tenant=t).count()
         users = PerfilUsuario.objects.filter(tenant=t).count()
         config = ConfiguracaoEmpresa.all_tenants.filter(tenant=t, ativo=True).first()
         tenant_data.append({
-            'tenant': t,
-            'leads': leads,
-            'users': users,
-            'config': config,
+            'tenant': t, 'leads': leads, 'users': users, 'config': config,
         })
 
-    erros_recentes = LogSistema.all_tenants.filter(
-        nivel__in=['ERROR', 'CRITICAL'],
-        data_criacao__gte=timezone.now() - timedelta(hours=24),
+    # === CRONJOBS ===
+    crons = list(CronJob.objects.order_by('nome'))
+    cron_falhas_24h = ExecucaoCron.objects.filter(
+        inicio__gte=h24, status='error',
+    ).count()
+    cron_execucoes_24h = ExecucaoCron.objects.filter(inicio__gte=h24).count()
+
+    # === ALERTAS ===
+    alertas_24h = AlertaSistema.objects.filter(criado_em__gte=h24).count()
+    alertas_pendentes = AlertaSistema.objects.filter(
+        criado_em__gte=h24, enviado_em__isnull=True, suprimido=False, erro_envio='',
+    ).count()
+    alertas_recentes = list(
+        AlertaSistema.objects.select_related('tenant')
+        .order_by('-criado_em')[:5]
+    )
+
+    # === LEADS por status (todos os tenants) ===
+    leads_por_status = list(
+        LeadProspecto.all_tenants.values('status_api')
+        .annotate(total=Count('id')).order_by('-total')
+    )
+
+    # Leads travados em erro ha > 1h
+    leads_travados = LeadProspecto.all_tenants.filter(
+        status_api__in=['erro', 'cpf_invalido', 'vendedor_invalido', 'regra_negocio', 'incompleto'],
+        data_atualizacao__lt=h1,
     ).count()
 
+    # === HUBSOFT (so Nuvyon hoje) ===
+    hubsoft_24h = LogIntegracao.objects.filter(
+        data_criacao__gte=h24, integracao__tipo='hubsoft',
+    )
+    hs_ok = hubsoft_24h.filter(sucesso=True).count()
+    hs_erro = hubsoft_24h.filter(sucesso=False).count()
+
+    # === CLIENTES HUBSOFT ===
+    cli_hubsoft_total = ClienteHubsoft.all_tenants.count()
+    cli_hubsoft_24h = ClienteHubsoft.all_tenants.filter(
+        data_sync__gte=h24,
+    ).count()
+
+    # === WEBHOOKS N8N ===
+    webhooks_24h_total = 0
+    webhooks_5xx = 0
+    try:
+        from apps.integracoes.models_audit import LogWebhookN8N
+        webhooks_24h = LogWebhookN8N.objects.filter(criado_em__gte=h24)
+        webhooks_24h_total = webhooks_24h.count()
+        webhooks_5xx = webhooks_24h.filter(status_code__gte=500).count()
+    except ImportError:
+        pass
+
+    # === INBOX (conversas abertas) ===
+    inbox_conversas_abertas = 0
+    inbox_pendentes_humano = 0
+    try:
+        from apps.inbox.models import Conversa
+        inbox_conversas_abertas = Conversa.all_tenants.filter(
+            status='aberta',
+        ).count()
+        inbox_pendentes_humano = Conversa.all_tenants.filter(
+            status='aberta', modo_atendimento='humano', agente__isnull=True,
+        ).count()
+    except ImportError:
+        pass
+
+    # === Erros nas ultimas 24h por modulo ===
+    erros_por_modulo = list(
+        LogSistema.all_tenants.filter(
+            nivel__in=['ERROR', 'CRITICAL'], data_criacao__gte=h24,
+        ).values('modulo').annotate(total=Count('id')).order_by('-total')[:10]
+    )
+    erros_recentes = LogSistema.all_tenants.filter(
+        nivel__in=['ERROR', 'CRITICAL'], data_criacao__gte=h24,
+    ).count()
+
+    # === Integracoes ativas por tipo ===
+    integ_por_tipo = list(
+        IntegracaoAPI.all_tenants.filter(ativa=True)
+        .values('tipo').annotate(total=Count('id')).order_by('tipo')
+    )
+
     return render(request, 'admin_aurora/dashboard.html', {
-        'total_tenants': total_tenants,
-        'ativos': ativos,
-        'em_trial': em_trial,
-        'trials_expirando': trials_expirando,
-        'erros_recentes': erros_recentes,
+        # Tenants
+        'total_tenants': total_tenants, 'ativos': ativos,
+        'em_trial': em_trial, 'trials_expirando': trials_expirando,
         'tenant_data': tenant_data,
+
+        # Cron
+        'crons': crons,
+        'cron_falhas_24h': cron_falhas_24h,
+        'cron_execucoes_24h': cron_execucoes_24h,
+
+        # Alertas
+        'alertas_24h': alertas_24h,
+        'alertas_pendentes': alertas_pendentes,
+        'alertas_recentes': alertas_recentes,
+
+        # Leads
+        'leads_por_status': leads_por_status,
+        'leads_travados': leads_travados,
+
+        # HubSoft
+        'hs_ok_24h': hs_ok, 'hs_erro_24h': hs_erro,
+        'cli_hubsoft_total': cli_hubsoft_total,
+        'cli_hubsoft_24h': cli_hubsoft_24h,
+
+        # Webhooks N8N
+        'webhooks_24h_total': webhooks_24h_total,
+        'webhooks_5xx': webhooks_5xx,
+
+        # Inbox
+        'inbox_conversas_abertas': inbox_conversas_abertas,
+        'inbox_pendentes_humano': inbox_pendentes_humano,
+
+        # Erros
+        'erros_recentes': erros_recentes,
+        'erros_por_modulo': erros_por_modulo,
+
+        # Integracoes
+        'integ_por_tipo': integ_por_tipo,
     })
 
 
