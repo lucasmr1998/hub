@@ -204,3 +204,15 @@ def integracao_envia_lead(integracao) -> bool:
     if 'enviar_lead' not in modos:
         return True
     return str(modos.get('enviar_lead', '')).lower() == 'ativado'
+
+
+def integracao_converte_prospect_em_cliente(integracao) -> bool:
+    """Le `extras.modos_sync.converter_prospect_cliente` da IntegracaoAPI.
+    Controla se o bot Selenium (etapa 2 — prospect HubSoft -> cliente) deve
+    rodar pra esse tenant. Default False (precisa explicitamente habilitar,
+    porque envolve UI scraping que pode ter regressao quando HubSoft muda
+    layout). Pra Nuvyon hoje, ativar manualmente apos validar o bot.
+    """
+    extras = (integracao.configuracoes_extras or {}) if integracao else {}
+    modos = extras.get('modos_sync') or {}
+    return str(modos.get('converter_prospect_cliente', '')).lower() == 'ativado'
