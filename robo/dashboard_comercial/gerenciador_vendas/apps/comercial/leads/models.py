@@ -21,6 +21,14 @@ class LeadProspecto(TenantMixin):
         # Tenant sem integracao ERP ativa — lead NAO deve ser processado por cron.
         # Setado automaticamente na criacao quando IntegracaoAPI hubsoft/sgp ativa nao existe.
         ('sem_integracao', 'Sem integracao ERP'),
+        # Pre-flight validation falhou — lead nao pode ir pra HubSoft enquanto
+        # faltar dado/estiver invalido. Operador precisa corrigir.
+        ('incompleto', 'Incompleto (falta dado)'),
+        ('cpf_invalido', 'CPF invalido'),
+        ('duplicado_no_tenant', 'CPF duplicado (ja virou prospect)'),
+        # Erros estruturados do HubSoft (cadastrar_prospecto rejeitou)
+        ('vendedor_invalido', 'id_vendedor nao existe no catalogo HubSoft'),
+        ('regra_negocio', 'Regra de negocio HubSoft (plano/cidade/UN)'),
     ]
 
     ORIGEM_CHOICES = [

@@ -75,6 +75,20 @@ class Command(BaseCommand):
                 logger.debug('[%s] ConfiguracaoEmpresa.enviar_leads_integracao=False ou integracao_leads_id mismatch — pulado', tenant.slug)
                 continue
 
+            # 3b) Sub-flag granular modos_sync.enviar_lead (alem da global).
+            # Permite desligar lead sem mexer na ConfiguracaoEmpresa.
+            from apps.comercial.leads.utils import (
+                integracao_envia_lead,
+                validar_lead_pronto_para_prospect,
+            )
+            if not integracao_envia_lead(integracao):
+                total_pulado_config_off += 1
+                logger.info(
+                    '[%s] extras.modos_sync.enviar_lead=desativado — pulado',
+                    tenant.slug,
+                )
+                continue
+
             # 4) Leads pendentes DESSE tenant
             qs = LeadProspecto.all_tenants.filter(
                 tenant=tenant, status_api='pendente',
@@ -97,23 +111,53 @@ class Command(BaseCommand):
                 continue
 
             service = HubsoftService(integracao)
+            total_pulado_preflight = 0
             for lead in leads:
                 self.stdout.write(f'  Processando lead#{lead.pk} {lead.nome_razaosocial!r}... ', ending='')
+
+                # PRE-FLIGHT CHECK: bloqueia leads invalidos ANTES de gastar
+                # request HubSoft (que retornaria erro generico mascarado).
+                status_pre, motivo = validar_lead_pronto_para_prospect(lead, integracao)
+                if status_pre != 'pendente':
+                    LeadProspecto.all_tenants.filter(pk=lead.pk).update(
+                        status_api=status_pre,
+                        motivo_rejeicao=motivo[:500],
+                    )
+                    self.stdout.write(self.style.WARNING(f'PULADO ({status_pre}): {motivo[:150]}'))
+                    total_pulado_preflight += 1
+                    continue
+
                 try:
                     resposta = service.cadastrar_prospecto(lead)
                     id_prospecto = resposta.get('prospecto', {}).get('id_prospecto')
-                    campos_update = {'status_api': 'processado'}
+                    campos_update = {'status_api': 'processado', 'motivo_rejeicao': None}
                     if id_prospecto:
                         campos_update['id_hubsoft'] = str(id_prospecto)
                     LeadProspecto.all_tenants.filter(pk=lead.pk).update(**campos_update)
                     self.stdout.write(self.style.SUCCESS(f'OK (id_prospecto={id_prospecto})'))
                     total_ok += 1
                 except HubsoftServiceError as exc:
-                    LeadProspecto.all_tenants.filter(pk=lead.pk).update(status_api='erro')
-                    self.stdout.write(self.style.ERROR(f'ERRO: {str(exc)[:200]}'))
+                    # Categoriza pela mensagem do HubSoft
+                    msg = str(exc).lower()
+                    if 'cpf' in msg and ('invalido' in msg or 'inválido' in msg):
+                        novo_status = 'cpf_invalido'
+                    elif 'vendedor' in msg and ('invalido' in msg or 'inválido' in msg):
+                        novo_status = 'vendedor_invalido'
+                    elif 'plano' in msg or 'unidade' in msg or 'cidade' in msg or 'origem' in msg:
+                        novo_status = 'regra_negocio'
+                    else:
+                        novo_status = 'erro'
+                    LeadProspecto.all_tenants.filter(pk=lead.pk).update(
+                        status_api=novo_status,
+                        motivo_rejeicao=str(exc)[:500],
+                    )
+                    self.stdout.write(self.style.ERROR(f'ERRO ({novo_status}): {str(exc)[:200]}'))
                     total_erro += 1
                 except Exception as exc:
-                    LeadProspecto.all_tenants.filter(pk=lead.pk).update(status_api='erro')
+                    LeadProspecto.all_tenants.filter(pk=lead.pk).update(
+                        status_api='erro',
+                        motivo_rejeicao=f'inesperado: {type(exc).__name__}: {str(exc)[:400]}',
+                    )
                     self.stdout.write(self.style.ERROR(f'ERRO INESPERADO: {str(exc)[:200]}'))
                     logger.exception('Erro ao processar lead pk=%s', lead.pk)
                     total_erro += 1

@@ -83,10 +83,15 @@ SELECT t.slug FROM integracoes_api i JOIN sistema_tenant t ON t.id=i.tenant_id
 WHERE i.tipo='<tipo>' AND i.ativa=TRUE AND t.ativo=TRUE;
 ```
 
-Estado atual (01/06/2026, prod):
-- **HubSoft:** so **nuvyon** (e `aurora-hq` com `nome='teste'` que ignora). Nao confundir com tenants tipo tr-carrion, fatepifaespi ou demo, que NAO tem integracao HubSoft.
+Estado atual (03/06/2026, prod):
+- **HubSoft:** **a UNICA empresa em prod usando HubSoft hoje e a `nuvyon`**. (`aurora-hq` tem registro com `nome='teste'` — ignorar). TR Carrion, FATEPI, Demo, Gigamax, Megalink: NAO tem integracao HubSoft. Pipeline de leads HubSoft (cadastrar_prospecto + bot Selenium de conversao) e construido sob medida pra Nuvyon hoje — qualquer regra/cron/fix HubSoft deve se preocupar so com nuvyon ate outro cliente entrar.
 - **SGP (inSystem):** so `gigamax` no dev (nao em prod ainda).
 - **Uazapi:** aurora-hq e fatepifaespi.
+
+Importante NAO confundir ferramentas por tenant:
+- **Nuvyon:** leads chegam via **Matrix** (sistema externo dela), webhook -> Hubtrix -> HubSoft (cadastrar_prospecto API) -> bot Selenium converte em cliente. **Nao usa Vero**.
+- **TR Carrion:** usa **Vero** (bot N8N de WhatsApp do Hubtrix). Nao usa HubSoft.
+- **FATEPI:** usa **editor nativo do Hubtrix** (sem bot externo, sem HubSoft).
 
 Numeros agregados ("194 leads pendentes em prod") sem o filtro acima sao **enganosos** e devem ser evitados. Sempre apresentar dado por tenant com integracao ATIVA daquele tipo. Ver [[feedback-validar-dado-no-db]].
 
