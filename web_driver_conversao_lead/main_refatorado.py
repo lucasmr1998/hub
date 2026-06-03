@@ -42,6 +42,10 @@ DB_CONFIG_DJANGO = None
 # salvar_prospecto pra incluir tenant_id no INSERT/UPDATE.
 TENANT_CONFIG: ConfigTenant | None = None
 
+# Modo passo-a-passo: pausa antes de cada etapa esperando ENTER no terminal.
+# Util pra debugar/remapear XPaths quando a UI HubSoft muda entre tenants.
+STEP_DEBUG: bool = False
+
 class ProspectoProcessor:
     def __init__(self):
         # Conexões separadas para permitir replicação sem quebrar o fluxo atual
@@ -174,11 +178,13 @@ class ProspectoProcessor:
                     status_db = "erro"  # Força status como erro
                     resultado = "falha"  # Força resultado como falha
                 
+                # Schema do Hubtrix nao tem data_atualizacao em prospectos
+                # (so data_criacao e data_processamento). Usa data_processamento
+                # como timestamp mais recente.
                 cursor.execute("""
                     UPDATE prospectos SET
                         nome_prospecto = %s,
                         status = %s,
-                        data_atualizacao = %s,
                         data_processamento = %s,
                         tentativas_processamento = %s,
                         erro_processamento = %s,
@@ -186,7 +192,7 @@ class ProspectoProcessor:
                         resultado_processamento = %s
                     WHERE id = %s
                 """, (
-                    nome_prospecto, status_db, datetime.datetime.now(), datetime.datetime.now(),
+                    nome_prospecto, status_db, datetime.datetime.now(),
                     self.tentativa_atual, erro, tempo_processamento, resultado, id_existente
                 ))
                 
@@ -212,15 +218,15 @@ class ProspectoProcessor:
                 cursor.execute("""
                     INSERT INTO prospectos (
                         nome_prospecto, id_prospecto_hubsoft, status,
-                        data_criacao, data_atualizacao, data_processamento,
+                        data_criacao, data_processamento,
                         tentativas_processamento, erro_processamento,
                         tempo_processamento, resultado_processamento,
                         tenant_id, lead_id
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING id
                 """, (
                     nome_prospecto, id_prospecto_hubsoft, status_db,
-                    datetime.datetime.now(), datetime.datetime.now(), datetime.datetime.now(),
+                    datetime.datetime.now(), datetime.datetime.now(),
                     self.tentativa_atual, erro, tempo_processamento, resultado,
                     tenant_id, lead_id_resolvido,
                 ))
@@ -348,7 +354,15 @@ class ProspectoProcessor:
             return None
 
 def print_etapa_header(numero, titulo, descricao=""):
-    """Imprime cabeçalho formatado de uma etapa"""
+    """Imprime cabeçalho formatado de uma etapa. Em modo --step-debug, pausa
+    ANTES do header esperando ENTER pra inspecao manual no navegador."""
+    if STEP_DEBUG:
+        try:
+            input(f"\n⏸️  [STEP-DEBUG] Pause ANTES de ETAPA {numero}: {titulo}. "
+                  f"Inspecione o navegador e tecle ENTER pra continuar (ou Ctrl+C pra abortar)... ")
+        except (EOFError, KeyboardInterrupt):
+            print("\n🛑 Abortado pelo usuario no step-debug.")
+            raise
     print("\n" + "="*80)
     print(f"🔹 ETAPA {numero}: {titulo}")
     if descricao:
@@ -370,7 +384,447 @@ def print_sucesso_etapa(numero, tempo_etapa=None):
         print(f"   ✅ ETAPA {numero} concluída com sucesso")
     print("="*80)
 
-def main(nome_filtro=None, id_prospecto=None, texto_boleto_digital=None, texto_varejo=None, texto_banco_itau=None, tenant_slug=None):
+def _executar_wizard_nuvyon(processor, driver, wait, dry_run, headless, nome_filtro, id_prospecto, coletar_dom=False):
+    """Executa as 7 etapas do wizard `Adicionar Cliente` do HubSoft Nuvyon.
+
+    Estrutura validada via DOM (web_driver_conversao_lead/dom_capturado/):
+      step1 Cadastro:  set grupo_cliente=RESIDENCIAL + genero=MASCULINO
+      step2 Enderecoo:  ja pre-preenchido, so avancar
+      step3 Plano:     selecionar endereco_instalacao + vendedor=hubtrix + data_venda=hoje
+      step4 Contrato:  sem campos, so avancar
+      step5 Cobranca:  Forma=Sicredi - Nuvyion, vencimento=9, tipo=Postecipada (Pos-Pago)
+      step6 Pacotes:   sem campos, so avancar
+      step7 OS:        clicar SALVAR (a menos que dry_run=True)
+    """
+    # Snapshot DOM em pontos-chave (ativo com coletar_dom=True). Sobrescreve
+    # os arquivos dom_capturado/stepN.html da rodada anterior — captura agora
+    # eh POS-fill (depois das interacoes), reflete o estado real do Angular.
+    import pathlib
+    _snap_dir = pathlib.Path('dom_capturado') if coletar_dom else None
+    if _snap_dir:
+        _snap_dir.mkdir(exist_ok=True)
+
+    def snapshot(slug: str):
+        if not _snap_dir:
+            return
+        try:
+            dialog = driver.find_element(By.XPATH, "//hubsoft-cliente-wizard")
+            html = dialog.get_attribute('outerHTML')
+            f = _snap_dir / f"{slug}.html"
+            f.write_text(html, encoding='utf-8')
+            print(f"      📸 snapshot {f.name} ({len(html):,} bytes)")
+        except Exception as e:
+            print(f"      ⚠️ snapshot {slug} falhou: {e}")
+
+    def goto_step(n: int):
+        """Clica no nav <li name='stepN'> do wizard (estavel, sem texto acentuado)."""
+        for xp in [f"//li[@name='step{n}']//button", f"//li[@name='step{n}']"]:
+            try:
+                el = driver.find_element(By.XPATH, xp)
+                driver.execute_script("arguments[0].click();", el)
+                time.sleep(2)
+                return True
+            except Exception:
+                continue
+        # Fallback Angular direto
+        try:
+            driver.execute_script(
+                f"angular.element(document.querySelector('hubsoft-cliente-wizard'))"
+                f".scope().vm.gotoStep(null,'step{n}');"
+                f"angular.element(document.querySelector('hubsoft-cliente-wizard')).scope().$apply();"
+            )
+            time.sleep(2)
+            return True
+        except Exception:
+            return False
+
+    def open_select_by_name(name: str):
+        """Abre o md-select pelo atributo name= (acentos OK no XPath)."""
+        xp = f"//md-select[@name='{name}']"
+        el = wait.until(EC.element_to_be_clickable((By.XPATH, xp)))
+        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", el)
+        time.sleep(0.5)
+        driver.execute_script("arguments[0].click();", el)
+        time.sleep(1.5)
+        return el
+
+    def click_option_by_text(texto: str, exato: bool = False):
+        """Clica no md-option cujo .md-text contem (ou e exatamente) `texto`."""
+        if exato:
+            xp = f"//md-option//div[@class='md-text ng-binding' and normalize-space(text())='{texto}']/.."
+        else:
+            xp = f"//md-option//div[contains(@class,'md-text') and contains(normalize-space(text()),'{texto}')]/.."
+        opt = wait.until(EC.element_to_be_clickable((By.XPATH, xp)))
+        driver.execute_script("arguments[0].click();", opt)
+        time.sleep(0.7)
+
+    def fechar_dropdown():
+        """ESC pra fechar dropdown multi-select. Usa ActionChains pra robustez."""
+        try:
+            driver.switch_to.active_element.send_keys(Keys.ESCAPE)
+        except Exception:
+            try:
+                ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+            except Exception:
+                pass
+        time.sleep(0.7)
+
+    def listar_opcoes_visiveis() -> list:
+        """Util de debug — lista textos das md-option visiveis na tela."""
+        try:
+            els = driver.find_elements(By.XPATH, "//md-option//div[contains(@class,'md-text')]")
+            return [(el.text or '').strip() for el in els if (el.text or '').strip()]
+        except Exception:
+            return []
+
+    # === STEP 1: CADASTRO ===
+    print("\n   📋 STEP 1 CADASTRO: rg + grupo_cliente=RESIDENCIAL + genero=MASCULINO")
+
+    # Carrega rg do lead via DB Hubtrix (conexao do processor — primary)
+    rg_lead = ''
+    try:
+        cur = processor.conn.cursor()
+        cur.execute(
+            "SELECT rg FROM leads_prospectos WHERE id_hubsoft=%s AND tenant_id=%s LIMIT 1",
+            (str(id_prospecto), TENANT_CONFIG.tenant_id if TENANT_CONFIG else None),
+        )
+        row = cur.fetchone()
+        cur.close()
+        rg_lead = (row[0] or '').strip() if row else ''
+    except Exception as e:
+        print(f"      ⚠️ Falha ao consultar rg do lead: {e}")
+
+    if rg_lead:
+        try:
+            rg_input = wait.until(EC.element_to_be_clickable(
+                (By.XPATH, "//input[@name='rg']")
+            ))
+            driver.execute_script("arguments[0].scrollIntoView({block:'center'});", rg_input)
+            rg_input.clear()
+            rg_input.send_keys(rg_lead)
+            rg_input.send_keys(Keys.TAB)
+            time.sleep(0.5)
+            print(f"      ✓ rg={rg_lead}")
+        except Exception as e:
+            print(f"      ❌ Falha ao preencher rg: {e}")
+            raise Exception(f"step1: nao foi possivel preencher RG ({rg_lead})")
+    else:
+        raise Exception(
+            f"Lead com id_hubsoft={id_prospecto} esta sem RG no Hubtrix. "
+            "RG e obrigatorio no wizard Nuvyon — preencha leads_prospectos.rg antes de rodar o bot."
+        )
+
+    open_select_by_name('grupo_cliente')
+    click_option_by_text('RESIDENCIAL', exato=True)
+    fechar_dropdown()
+    print("      ✓ grupo_cliente=RESIDENCIAL marcado")
+
+    open_select_by_name('genero')
+    click_option_by_text('MASCULINO', exato=True)
+    print("      ✓ genero=MASCULINO setado")
+
+    snapshot('step1_pos_fill')
+    processor.salvar_prospecto(nome_filtro, id_prospecto, "WIZARD_TELA1")
+
+    # === STEP 2: ENDEREÇO === (já pré-preenchido pelo prospect)
+    print("\n   📋 STEP 2 ENDEREÇO: pré-preenchido, só avançar")
+    if not goto_step(2):
+        raise Exception("Falha ao navegar pra step2 Endereço")
+    time.sleep(2)
+    snapshot('step2_pos_load')
+
+    # === STEP 3: PLANO ===
+    print("\n   📋 STEP 3 PLANO: endereco_instalacao + vendedor=hubtrix + data_venda=hoje")
+    if not goto_step(3):
+        raise Exception("Falha ao navegar pra step3 Plano")
+    time.sleep(2)
+    snapshot('step3_pre_fill')
+
+    # Endereço de instalação (única opção). Estrategia: clicar de verdade na
+    # md-option (dispara ng-change nativo → vm.carregaUnidadeNegocio() async).
+    # Usa aria-owns pra achar o container real do dropdown (Angular Material
+    # move pra <body> quando abre).
+    try:
+        # Pega aria-owns ANTES de abrir
+        sel_el = driver.find_element(By.XPATH, "//md-select[@name='cliente_servico_endereco_instalacao']")
+        owns = sel_el.get_attribute('aria-owns') or ''
+        open_select_by_name('cliente_servico_endereco_instalacao')
+        try:
+            xp_opt = f"//div[@id='{owns}']//md-option[1]" if owns else "//md-option"
+            primeira = wait.until(EC.element_to_be_clickable((By.XPATH, xp_opt)))
+            driver.execute_script("arguments[0].click();", primeira)
+            time.sleep(3)  # carregaUnidadeNegocio() AJAX
+            print(f"      ✓ endereco_instalacao clicado de verdade (container={owns})")
+        except Exception as e:
+            # Fallback: seta diretamente via Angular scope
+            print(f"      ⚠️ click falhou ({type(e).__name__}); tentando via Angular scope")
+            try:
+                # Importante: NG-CHANGE original do select dispara:
+                #   vm.verificaPromocoesDisponiveis(); vm.carregaUnidadeNegocio();
+                #   vm.validadorStep(vm.currentNavItem); vm.PermiteAtualizacaoCoords(...)
+                # Como estamos pulando o click, precisamos chamar essas funcoes
+                # MANUAL pra que cascade Angular dispare (em especial a UN, que
+                # eh a fonte de `formas_cobranca` no step5).
+                driver.execute_script("""
+                    var sel = document.querySelector('md-select[name="cliente_servico_endereco_instalacao"]');
+                    var scope = angular.element(sel).scope();
+                    if (scope.vm.cliente.cliente_endereco_numeros && scope.vm.cliente.cliente_endereco_numeros.length) {
+                        scope.vm.cliente.cliente_servico_endereco_instalacao = scope.vm.cliente.cliente_endereco_numeros[0];
+                        // Cascade do ng-change original:
+                        try { scope.vm.verificaPromocoesDisponiveis(); } catch(e){}
+                        try { scope.vm.carregaUnidadeNegocio(); } catch(e){}
+                        try { scope.vm.validadorStep(scope.vm.currentNavItem); } catch(e){}
+                        scope.$apply();
+                    }
+                """)
+                time.sleep(2.5)  # aguarda carregaUnidadeNegocio() (AJAX) terminar
+                fechar_dropdown()
+                print("      ✓ endereco_instalacao setado via Angular + cascade ng-change")
+            except Exception as e2:
+                print(f"      ❌ Angular fallback falhou: {e2}")
+                fechar_dropdown()
+    except Exception as e:
+        print(f"      ⚠️ Falha ao abrir endereco_instalacao: {e}")
+
+    # Vendedor = hubtrix
+    try:
+        open_select_by_name('vendedor')
+        click_option_by_text('hubtrix', exato=False)
+        print("      ✓ vendedor=hubtrix")
+    except Exception as e:
+        print(f"      ⚠️ Falha ao setar vendedor: {e}")
+        opcoes = listar_opcoes_visiveis()
+        if opcoes:
+            print(f"      Opcoes visiveis: {opcoes[:10]}")
+        fechar_dropdown()
+
+    # data_venda — md-datepicker tem input filho; setar via JS é mais confiavel
+    try:
+        from datetime import datetime as _dt
+        hoje_br = _dt.now().strftime('%d/%m/%Y')
+        # Datepicker em md-datepicker[name=data_venda]; busca o input dentro
+        dp_input = driver.find_element(
+            By.XPATH, "//md-datepicker[@name='data_venda']//input"
+        )
+        dp_input.clear()
+        dp_input.send_keys(hoje_br)
+        dp_input.send_keys(Keys.TAB)
+        time.sleep(0.5)
+        print(f"      ✓ data_venda={hoje_br}")
+    except Exception as e:
+        print(f"      ⚠️ Falha ao setar data_venda: {e}")
+
+    snapshot('step3_pos_fill')
+    processor.salvar_prospecto(nome_filtro, id_prospecto, "WIZARD_SELECOES")
+
+    # === STEP 4: CONTRATO === (sem campos obrigatórios)
+    print("\n   📋 STEP 4 CONTRATO: sem campos, só avançar")
+    if not goto_step(4):
+        raise Exception("Falha ao navegar pra step4 Contrato")
+    time.sleep(2)
+    snapshot('step4_pos_load')
+
+    # === STEP 5: COBRANÇA ===
+    print("\n   📋 STEP 5 COBRANÇA: Forma=Sicredi - Nuvyion, vencimento=9, tipo=Postecipada")
+    if not goto_step(5):
+        raise Exception("Falha ao navegar pra step5 Cobrança")
+    time.sleep(2)
+    snapshot('step5_pre_fill')
+
+    # Forma de Cobranca: componente custom <hubsoft-select-virtual-repeat> com
+    # AJAX lazy load via vm.unidade_negocio.formas_cobranca. Lista popula
+    # apos request async — bot precisa fazer polling ate `formas_cobranca`
+    # ter itens antes de tentar setar via Angular scope.
+    forma_cobranca_skipped = False
+    # FIX 1: limpa qualquer md-list-item residual ANTES de abrir (sobras de
+    # selects anteriores no DOM podem ser pegas pelo polling).
+    try:
+        fechar_dropdown()
+        time.sleep(0.5)
+    except Exception:
+        pass
+
+    # Abre dropdown pra disparar md-on-open (fnOnOpen) que carrega a lista.
+    try:
+        open_select_by_name('Forma de Cobrança')
+        print("      ✓ Forma de Cobrança aberto — fnOnOpen() disparado")
+    except Exception as e:
+        print(f"      ⚠️ Nao consegui abrir Forma de Cobrança: {e}")
+
+    # FIX 2: espera MINIMA antes de procurar (md-on-open dispara load AJAX
+    # da UN; mesmo cacheado leva 1-2s pra renderizar o md-list-item REAL).
+    time.sleep(2.0)
+
+    print("      ⏳ Aguardando md-list-item com 'SICREDI' aparecer no DOM...")
+    max_wait = 30
+    poll_interval = 0.5
+    inicio_poll = time.time()
+    sicredi_el = None
+    while time.time() - inicio_poll < max_wait:
+        try:
+            # XPath mais especifico: md-list-item DENTRO do md-select-menu
+            # que está ABERTO (aria-hidden=false) — evita residuais.
+            candidatos = driver.find_elements(
+                By.XPATH,
+                "//md-select-menu//md-list-item[contains(translate(normalize-space(.),"
+                "'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),"
+                "'SICREDI')]"
+            )
+            if candidatos:
+                sicredi_el = candidatos[-1]  # ultimo (mais provavel ser o atual)
+                break
+        except Exception:
+            pass
+        time.sleep(poll_interval)
+    tempo_espera = time.time() - inicio_poll
+
+    if sicredi_el:
+        try:
+            driver.execute_script("arguments[0].scrollIntoView({block:'center'});", sicredi_el)
+            time.sleep(0.5)
+            # FIX 3: click REAL via ActionChains (dispara ng-click do Angular).
+            # JS execute_script.click() nao dispara handlers Angular sintetizados.
+            try:
+                ActionChains(driver).move_to_element(sicredi_el).click().perform()
+                time.sleep(1.5)
+            except Exception:
+                # Fallback: JS click + dispatch event explicito
+                driver.execute_script("""
+                    var el = arguments[0];
+                    el.click();
+                    var evt = new MouseEvent('click', {bubbles:true, cancelable:true, view:window});
+                    el.dispatchEvent(evt);
+                """, sicredi_el)
+                time.sleep(1.5)
+
+            # VERIFICACAO: o md-select pai agora deve mostrar valor selecionado.
+            verif = driver.execute_script("""
+                var sel = document.querySelector('md-select[name="Forma de Cobrança"]');
+                if (!sel) return {ok: false, err: 'select sumiu'};
+                // md-select-value contem o label do escolhido (ou placeholder)
+                var val = sel.querySelector('md-select-value');
+                var txt = val ? (val.innerText || val.textContent || '').trim() : '';
+                var placeholder = val && val.classList.contains('md-select-placeholder');
+                return {
+                    ok: !placeholder && txt.length > 0 && txt.toUpperCase().indexOf('SICREDI') !== -1,
+                    texto: txt,
+                    placeholder: placeholder
+                };
+            """)
+            if verif.get('ok'):
+                print(f"      ✓ Forma de Cobrança=SICREDI confirmado ({tempo_espera:.1f}s busca + click). UI mostra: {verif['texto']!r}")
+            else:
+                print(f"      ⚠️ Click feito mas UI nao confirmou: {verif}")
+                forma_cobranca_skipped = True
+        except Exception as e:
+            print(f"      ❌ Falha ao clicar em SICREDI: {e}")
+            forma_cobranca_skipped = True
+            fechar_dropdown()
+    else:
+        print(f"      ⚠️  md-list-item SICREDI nao apareceu em {max_wait}s — pulando")
+        forma_cobranca_skipped = True
+        fechar_dropdown()
+
+    # Vencimento = 9 (do prospect)
+    try:
+        open_select_by_name('vencimento')
+        click_option_by_text('9', exato=True)
+        print("      ✓ vencimento=9")
+    except Exception as e:
+        print(f"      ⚠️ Falha em vencimento: {e}")
+        fechar_dropdown()
+
+    # Tipo cobranca = Postecipada (Pós-Pago)
+    try:
+        open_select_by_name('tipo_cobranca')
+        time.sleep(1.5)
+        click_option_by_text('Postecipada', exato=False)
+        print("      ✓ tipo_cobranca=Postecipada (Pós-Pago)")
+    except Exception as e:
+        print(f"      ⚠️ Falha em tipo_cobranca: {e}")
+        print(f"      Opcoes visiveis: {listar_opcoes_visiveis()[:10]}")
+        fechar_dropdown()
+
+    snapshot('step5_pos_fill')
+
+    # === STEP 6: PACOTES === (skip)
+    print("\n   📋 STEP 6 PACOTES: sem campos, só avançar")
+    if not goto_step(6):
+        raise Exception("Falha ao navegar pra step6 Pacotes")
+    time.sleep(2)
+    snapshot('step6_pos_load')
+
+    # === STEP 7: ORDEM DE SERVIÇO + SALVAR ===
+    print("\n   📋 STEP 7 OS: navegar e clicar SALVAR")
+    if not goto_step(7):
+        raise Exception("Falha ao navegar pra step7 OS")
+    time.sleep(3)
+    snapshot('step7_pos_load')
+
+    # Botao SALVAR: a estrutura pode ser md-dialog-actions na parte inferior
+    # do dialog. XPath relativo (em vez do absoluto de 9 niveis).
+    print("      ⏳ Procurando botao SALVAR / FINALIZAR / CONCLUIR...")
+    botao_salvar = None
+    for xp in [
+        "//hubsoft-cliente-wizard//md-dialog-actions//button[contains(translate(.,'salvar','SALVAR'),'SALVAR')]",
+        "//hubsoft-cliente-wizard//md-dialog-actions//button[contains(translate(.,'finalizar','FINALIZAR'),'FINALIZAR')]",
+        "//hubsoft-cliente-wizard//md-dialog-actions//button[contains(translate(.,'concluir','CONCLUIR'),'CONCLUIR')]",
+        "//md-dialog-actions//button[last()]",  # fallback: ultimo botao da barra de acoes
+    ]:
+        try:
+            botao_salvar = wait.until(EC.element_to_be_clickable((By.XPATH, xp)))
+            print(f"      ✓ Botao SALVAR encontrado via {xp[:60]}")
+            break
+        except Exception:
+            continue
+
+    if not botao_salvar:
+        raise Exception("Botao SALVAR nao encontrado em step7")
+
+    if dry_run:
+        print("\n" + "🛑"*40)
+        print("🛑 DRY-RUN ATIVO — Botao SALVAR LOCALIZADO mas NAO clicado.")
+        print(f"🛑 Prospecto {id_prospecto} NAO foi convertido em cliente.")
+        print("🛑 Pra fazer a conversao real: rode SEM --dry-run.")
+        print("🛑"*40)
+        processor.salvar_prospecto(nome_filtro, id_prospecto, "WIZARD_TELA2",
+                                   "DRY-RUN: parou antes do clique final", "dry_run")
+        if not headless:
+            print("\n👁️  Navegador permanece aberto por 30s pra inspecao visual...")
+            time.sleep(30)
+        return
+
+    # Se Forma de Cobranca foi pulada, NAO clica SALVAR (Angular vai impedir
+    # ou HubSoft vai retornar erro). Deixa o navegador aberto pro operador
+    # completar manual (escolher Sicredi + clicar Salvar).
+    if forma_cobranca_skipped:
+        print("\n" + "🟡"*40)
+        print("🟡 WIZARD PARCIAL — Bot completou 6 de 7 campos.")
+        print(f"🟡 Prospecto {id_prospecto}: precisa do operador completar 'Forma de Cobrança'")
+        print("🟡 + clicar SALVAR. Os ~95% do trabalho foi feito.")
+        print("🟡"*40)
+        processor.salvar_prospecto(
+            nome_filtro, id_prospecto,
+            "WIZARD_TELA2",
+            "Bot completou wizard exceto Forma de Cobrança — operador finaliza manual",
+            "parcial",
+        )
+        if not headless:
+            print("\n👁️  Navegador permanece aberto por 60s pro operador finalizar...")
+            time.sleep(60)
+        return
+
+    driver.execute_script("arguments[0].click();", botao_salvar)
+    print("      ✅ SALVAR clicado!")
+    time.sleep(5)
+
+    processor.salvar_prospecto(nome_filtro, id_prospecto, "CONCLUIDO", None, "sucesso")
+    print("\n" + "🎉"*40)
+    print(f"✨ SUCESSO! Prospecto {id_prospecto} convertido em cliente.")
+    print("🎉"*40)
+
+
+def main(nome_filtro=None, id_prospecto=None, texto_boleto_digital=None, texto_varejo=None, texto_banco_itau=None, tenant_slug=None, dry_run=False, step_debug=False, coletar_dom=False):
     """
     Função principal que automatiza a conversão de prospectos em clientes.
 
@@ -384,7 +838,8 @@ def main(nome_filtro=None, id_prospecto=None, texto_boleto_digital=None, texto_v
             usuario + senha decryptados de IntegracaoAPI desse tenant. Default
             via env DEFAULT_TENANT_SLUG.
     """
-    global TENANT_CONFIG
+    global TENANT_CONFIG, STEP_DEBUG
+    STEP_DEBUG = bool(step_debug)
     tenant_slug = tenant_slug or os.environ.get('DEFAULT_TENANT_SLUG', 'nuvyon')
     try:
         TENANT_CONFIG = carregar_config(tenant_slug)
@@ -721,337 +1176,31 @@ def main(nome_filtro=None, id_prospecto=None, texto_boleto_digital=None, texto_v
             
             processor.salvar_prospecto(nome_filtro, id_prospecto, "WIZARD_INICIADO")
             print("✅ ETAPA 5: Wizard de conversão iniciado com sucesso")
-            
+
         except Exception as e:
             erro_detalhado = f"ETAPA 5 - ERRO CONVERSÃO: {str(e)}"
             print(f"❌ {erro_detalhado}")
             processor.capturar_screenshot_erro(driver, "converter", "ETAPA5")
             processor.salvar_prospecto(nome_filtro, id_prospecto, "ERRO_CONVERTER", erro_detalhado)
             raise
-        
-        # ETAPA 6: Wizard - Primeira tela
+
+        # ETAPA 6: Wizard Nuvyon (steps 1-7 do Adicionar Cliente)
+        # Substitui as antigas etapas 6-10 (4 telas Megalink) pela estrutura
+        # real do HubSoft Nuvyon (7 abas Angular). Ver _executar_wizard_nuvyon.
         try:
-            print("📋 ETAPA 6: Preenchendo wizard (1/4)...")
-            
-            # Selecionar opção no campo md-select (Boleto Digital)
-            print(f"🔽 Selecionando opção '{texto_boleto_digital}' no campo...")
-            md_select_campo = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[5]/md-dialog/md-dialog-content/div/hubsoft-cliente-wizard/div[1]/div/hubsoft-accordion/div[2]/hubsoft-accordion-content/div/form/div/div[6]/md-input-container[1]/md-select")))
-            driver.execute_script("arguments[0].click();", md_select_campo)
-            time.sleep(1)
-            
-            # Buscar a opção que contém o texto especificado
-            if texto_boleto_digital:
-                xpath_boleto = f"//md-option[contains(., '{texto_boleto_digital}')]"
-                opcao_campo = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_boleto)))
-                print(f"✅ Opção '{texto_boleto_digital}' encontrada")
-            else:
-                # Fallback: primeira opção se não especificado
-                opcao_campo = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[7]/md-select-menu/md-content/md-option[1]")))
-                print("⚠️ Usando primeira opção (padrão)")
-            
-            driver.execute_script("arguments[0].click();", opcao_campo)
-            time.sleep(1)
-            
-            # Primeiro botão
-            primeiro_botao = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[5]/md-dialog/md-dialog-content/div/hubsoft-cliente-wizard/div[2]/md-dialog-actions/div[2]/button")))
-            driver.execute_script("arguments[0].click();", primeiro_botao)
-            time.sleep(2)
-            
-            # Segundo botão
-            segundo_botao = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[5]/md-dialog/md-dialog-content/div/hubsoft-cliente-wizard/div[2]/md-dialog-actions/div[2]/button")))
-            driver.execute_script("arguments[0].click();", segundo_botao)
-            time.sleep(3)
-            
-            processor.salvar_prospecto(nome_filtro, id_prospecto, "WIZARD_TELA1")
-            print("✅ ETAPA 6: Primeira tela do wizard concluída com sucesso")
-            
+            inicio_etapa = time.time()
+            print_etapa_header(6, "WIZARD NUVYON (7 steps)",
+                               "Cadastro -> Endereco -> Plano -> Contrato -> Cobranca -> Pacotes -> OS")
+            _executar_wizard_nuvyon(processor, driver, wait, dry_run, headless,
+                                    nome_filtro, id_prospecto, coletar_dom=coletar_dom)
+            tempo_etapa = time.time() - inicio_etapa
+            print_sucesso_etapa(6, tempo_etapa)
+
         except Exception as e:
-            erro_detalhado = f"ETAPA 6 - ERRO WIZARD TELA 1: {str(e)}"
-            print(f"❌ {erro_detalhado}")
-            processor.capturar_screenshot_erro(driver, "wizard1", "ETAPA6")
+            erro_detalhado = f"ETAPA 6 - ERRO WIZARD NUVYON: {str(e)}"
+            print(f"\n   ERRO: {erro_detalhado}")
+            processor.capturar_screenshot_erro(driver, "wizard_nuvyon", "ETAPA6")
             processor.salvar_prospecto(nome_filtro, id_prospecto, "ERRO_WIZARD1", erro_detalhado)
-            raise
-        
-        # ETAPA 7: Wizard - Seleções
-        try:
-            inicio_etapa = time.time()
-            print_etapa_header(7, "WIZARD - SELEÇÕES (ENDEREÇO E GRUPO)",
-                             "Selecionando endereço e grupo de cliente")
-            
-            # Aguardar a página carregar completamente
-            time.sleep(2)
-            
-            # Primeiro md-select (Endereço - geralmente só tem uma opção)
-            print_elemento_buscado(
-                tipo_elemento="md-select (Endereço)",
-                localizador="/html/body/div[5]/.../md-select",
-                metodo="By.XPATH",
-                acao="Abrir dropdown de endereços"
-            )
-            md_select1 = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[5]/md-dialog/md-dialog-content/div/hubsoft-cliente-wizard/div[1]/div/div/form/div/md-input-container/md-select")))
-            driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", md_select1)
-            time.sleep(1)
-            driver.execute_script("arguments[0].click();", md_select1)
-            print("   ✅ Dropdown de endereço aberto")
-            time.sleep(2)
-            
-            # Aguardar menu abrir e selecionar a primeira (e geralmente única) opção
-            # IMPORTANTE: O menu abre em div[7], não em md-select-menu
-            print_elemento_buscado(
-                tipo_elemento="md-option (Endereço)",
-                localizador="/html/body/div[7]/md-select-menu/md-content/md-option",
-                metodo="By.XPATH",
-                acao="Selecionar endereço (única opção disponível)"
-            )
-            md_option1 = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[7]/md-select-menu/md-content/md-option")))
-            print("   ✅ Opção de endereço encontrada")
-            
-            driver.execute_script("arguments[0].click();", md_option1)
-            print("   ✅ Endereço selecionado")
-            time.sleep(2)
-            
-            # Segundo md-select (Grupo de Cliente - Varejo)
-            print_elemento_buscado(
-                tipo_elemento="md-select (Grupo Cliente)",
-                localizador="/html/body/div[5]/.../md-select",
-                metodo="By.XPATH",
-                acao="Abrir dropdown de grupos de cliente"
-            )
-            md_select2 = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[5]/md-dialog/md-dialog-content/div/hubsoft-cliente-wizard/div[1]/div/div/form/div/div[2]/md-input-container[2]/md-select")))
-            driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", md_select2)
-            time.sleep(1)
-            driver.execute_script("arguments[0].click();", md_select2)
-            print("   ✅ Dropdown de grupo aberto")
-            time.sleep(2)
-            
-            if texto_varejo:
-                # O menu abre em div[8] quando é o segundo dropdown
-                # Buscar pela opção que contém exatamente o texto "Varejo"
-                print_elemento_buscado(
-                    tipo_elemento="md-option (Grupo)",
-                    localizador=f"//div[8]//md-option[.//div[contains(@class, 'md-text') and normalize-space(text())='{texto_varejo}']]",
-                    metodo="By.XPATH",
-                    acao=f"Selecionar grupo '{texto_varejo}'"
-                )
-                # XPath testado e funcionando - busca md-option com div.md-text contendo texto exato
-                xpath_varejo = f"//div[8]//md-option[.//div[contains(@class, 'md-text') and normalize-space(text())='{texto_varejo}']]"
-                
-                # Aguardar o elemento estar presente e clicável
-                print(f"   ⏳ Aguardando opção '{texto_varejo}' ficar clicável...")
-                opcao_varejo = wait.until(EC.element_to_be_clickable((By.XPATH, xpath_varejo)))
-                print(f"   ✅ Opção '{texto_varejo}' encontrada e clicável")
-            else:
-                # Fallback: primeira opção
-                opcao_varejo = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[8]/md-select-menu/md-content/md-option[1]")))
-                print("   ⚠️ Usando primeira opção (padrão)")
-            
-            # Usar JavaScript para garantir o clique
-            driver.execute_script("arguments[0].scrollIntoView({behavior: 'instant', block: 'center'});", opcao_varejo)
-            time.sleep(0.5)
-            driver.execute_script("arguments[0].click();", opcao_varejo)
-            print("   ✅ Grupo selecionado")
-            time.sleep(3)  # Aumentar tempo de espera após seleção
-            
-            # Primeiro clique no botão Avançar (após selecionar Grupo)
-            print_elemento_buscado(
-                tipo_elemento="Button (Avançar 1)",
-                localizador="/html/body/div[5]/.../button",
-                metodo="By.XPATH",
-                acao="Avançar após seleção de grupo"
-            )
-            print("   ⏳ Aguardando botão aparecer...")
-            time.sleep(2)  # Aguardar botão aparecer
-            botao_avancar1 = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[5]/md-dialog/md-dialog-content/div/hubsoft-cliente-wizard/div[2]/md-dialog-actions/div[2]/button")))
-            driver.execute_script("arguments[0].click();", botao_avancar1)
-            print("   ✅ Primeiro avançar clicado")
-            time.sleep(3)
-            
-            # Segundo clique no botão Avançar
-            print_elemento_buscado(
-                tipo_elemento="Button (Avançar 2)",
-                localizador="/html/body/div[5]/.../button",
-                metodo="By.XPATH",
-                acao="Avançar segunda vez"
-            )
-            print("   ⏳ Aguardando botão aparecer novamente...")
-            time.sleep(2)  # Aguardar botão aparecer novamente
-            botao_avancar2 = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[5]/md-dialog/md-dialog-content/div/hubsoft-cliente-wizard/div[2]/md-dialog-actions/div[2]/button")))
-            driver.execute_script("arguments[0].click();", botao_avancar2)
-            print("   ✅ Segundo avançar clicado")
-            time.sleep(3)
-            
-            processor.salvar_prospecto(nome_filtro, id_prospecto, "WIZARD_SELECOES")
-            tempo_etapa = time.time() - inicio_etapa
-            print_sucesso_etapa(7, tempo_etapa)
-            
-        except Exception as e:
-            erro_detalhado = f"ETAPA 7 - ERRO WIZARD SELEÇÕES: {str(e)}"
-            print(f"\n   ❌ {erro_detalhado}")
-            processor.capturar_screenshot_erro(driver, "wizard_selecoes", "ETAPA7")
-            processor.salvar_prospecto(nome_filtro, id_prospecto, "ERRO_WIZARD_SELECOES", erro_detalhado)
-            raise
-        
-        # ETAPA 8: Wizard - Seleção do Banco
-        try:
-            inicio_etapa = time.time()
-            print_etapa_header(8, "WIZARD - SELEÇÃO DE BANCO",
-                             "Selecionando banco para cobrança")
-            
-            # md-select (Banco para cobrança)
-            print_elemento_buscado(
-                tipo_elemento="hubsoft-select-virtual-repeat (Banco)",
-                localizador="/html/body/div[5]/.../md-select",
-                metodo="By.XPATH",
-                acao="Abrir dropdown de bancos"
-            )
-            print("   ⏳ Aguardando campo de banco aparecer...")
-            time.sleep(3)  # Aguardar tela carregar completamente
-            
-            md_select_banco = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[5]/md-dialog/md-dialog-content/div/hubsoft-cliente-wizard/div[1]/div/form/div[1]/div/hubsoft-select-virtual-repeat/md-input-container/md-select")))
-            driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", md_select_banco)
-            time.sleep(1)
-            driver.execute_script("arguments[0].click();", md_select_banco)
-            print("   ✅ Dropdown de banco aberto")
-            time.sleep(3)  # Aguardar menu abrir e carregar opções
-            
-            if texto_banco_itau:
-                # Tentar múltiplas estratégias para encontrar o botão
-                print(f"   🔍 Buscando banco '{texto_banco_itau}'...")
-                
-                # Estratégia 1: Buscar em qualquer div com virtual-repeat
-                xpaths_to_try = [
-                    f"//button[@aria-label='{texto_banco_itau}']",  # Simples e direto
-                    f"//div[8]//button[@aria-label='{texto_banco_itau}']",  # Com div[8]
-                    f"//md-virtual-repeat-container//button[@aria-label='{texto_banco_itau}']",  # Dentro do container virtual
-                    f"//md-select-menu//button[@aria-label='{texto_banco_itau}']",  # Dentro do menu
-                ]
-                
-                opcao_banco = None
-                for i, xpath in enumerate(xpaths_to_try, 1):
-                    try:
-                        print(f"   🧪 Tentativa {i}: {xpath[:60]}...")
-                        opcao_banco = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
-                        print(f"   ✅ Encontrado com tentativa {i}!")
-                        break
-                    except Exception as e:
-                        print(f"   ❌ Tentativa {i} falhou")
-                        if i == len(xpaths_to_try):
-                            # Última tentativa falhou, listar o que tem disponível
-                            print("   📋 Listando botões disponíveis:")
-                            try:
-                                todos_botoes = driver.find_elements(By.XPATH, "//button[@aria-label]")
-                                for btn in todos_botoes[:10]:  # Mostrar até 10
-                                    label = btn.get_attribute("aria-label")
-                                    print(f"      - {label}")
-                            except:
-                                pass
-                            raise
-                
-                if opcao_banco:
-                    print(f"   ✅ Banco '{texto_banco_itau}' encontrado e clicável")
-                else:
-                    raise Exception(f"Não foi possível encontrar o banco '{texto_banco_itau}'")
-            else:
-                # Fallback: primeiro banco disponível
-                opcao_banco = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[@aria-label]")))
-                print("   ⚠️ Usando primeiro banco (padrão)")
-            
-            # Usar JavaScript para garantir o clique
-            driver.execute_script("arguments[0].scrollIntoView({behavior: 'instant', block: 'center'});", opcao_banco)
-            time.sleep(0.5)
-            driver.execute_script("arguments[0].click();", opcao_banco)
-            print("   ✅ Banco selecionado")
-            time.sleep(3)
-            
-            processor.salvar_prospecto(nome_filtro, id_prospecto, "WIZARD_TELA2")
-            tempo_etapa = time.time() - inicio_etapa
-            print_sucesso_etapa(8, tempo_etapa)
-            
-        except Exception as e:
-            erro_detalhado = f"ETAPA 8 - ERRO SELEÇÃO BANCO: {str(e)}"
-            print(f"\n   ❌ {erro_detalhado}")
-            processor.capturar_screenshot_erro(driver, "selecao_banco", "ETAPA8")
-            processor.salvar_prospecto(nome_filtro, id_prospecto, "ERRO_WIZARD2", erro_detalhado)
-            raise
-        
-        # ETAPA 9: Wizard - Próxima tela
-        try:
-            inicio_etapa = time.time()
-            print_etapa_header(9, "WIZARD - PENÚLTIMA TELA",
-                             "Avançando para finalização")
-            
-            # Primeiro botão Avançar
-            print_elemento_buscado(
-                tipo_elemento="Button (Avançar)",
-                localizador="/html/body/div[5]/.../button",
-                metodo="By.XPATH",
-                acao="Avançar para próxima tela"
-            )
-            print("   ⏳ Aguardando botão aparecer...")
-            time.sleep(2)
-            proximo_botao = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[5]/md-dialog/md-dialog-content/div/hubsoft-cliente-wizard/div[2]/md-dialog-actions/div[2]/button")))
-            driver.execute_script("arguments[0].click();", proximo_botao)
-            print("   ✅ Avançado")
-            time.sleep(3)
-            
-            tempo_etapa = time.time() - inicio_etapa
-            print_sucesso_etapa(9, tempo_etapa)
-            
-        except Exception as e:
-            erro_detalhado = f"ETAPA 9 - ERRO PENÚLTIMA TELA: {str(e)}"
-            print(f"\n   ❌ {erro_detalhado}")
-            processor.capturar_screenshot_erro(driver, "penultima_tela", "ETAPA9")
-            raise
-        
-        # ETAPA 10: Finalização
-        try:
-            inicio_etapa = time.time()
-            print_etapa_header(10, "FINALIZAÇÃO",
-                             "Salvando e finalizando conversão do prospecto")
-            
-            # Botão Avançar final
-            print_elemento_buscado(
-                tipo_elemento="Button (Avançar)",
-                localizador="/html/body/div[5]/.../button",
-                metodo="By.XPATH",
-                acao="Avançar para tela de salvar"
-            )
-            print("   ⏳ Aguardando botão aparecer...")
-            time.sleep(2)
-            botao_avancar_final = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[5]/md-dialog/md-dialog-content/div/hubsoft-cliente-wizard/div[2]/md-dialog-actions/div[2]/button")))
-            driver.execute_script("arguments[0].click();", botao_avancar_final)
-            print("   ✅ Avançado para tela de salvar")
-            time.sleep(3)
-            
-            # Botão SALVAR
-            print_elemento_buscado(
-                tipo_elemento="Button (SALVAR)",
-                localizador="/html/body/div[5]/.../div/button",
-                metodo="By.XPATH",
-                acao="Salvar conversão do prospecto"
-            )
-            print("   ⏳ Aguardando botão SALVAR aparecer...")
-            time.sleep(2)
-            botao_salvar = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[5]/md-dialog/md-dialog-content/div/hubsoft-cliente-wizard/div[2]/md-dialog-actions/div[2]/div/button")))
-            driver.execute_script("arguments[0].click();", botao_salvar)
-            print("   ✅ Conversão salva!")
-            time.sleep(3)
-            
-            processor.salvar_prospecto(nome_filtro, id_prospecto, "CONCLUIDO", None, "sucesso")
-            
-            tempo_total = int(time.time() - processor.start_time)
-            tempo_etapa = time.time() - inicio_etapa
-            print_sucesso_etapa(10, tempo_etapa)
-            
-            print("\n" + "🎉"*40)
-            print(f"✨ SUCESSO TOTAL! Prospecto convertido em {tempo_total}s ✨")
-            print("🎉"*40)
-            
-        except Exception as e:
-            erro_detalhado = f"ETAPA 10 - ERRO FINALIZAÇÃO: {str(e)}"
-            print(f"\n   ❌ {erro_detalhado}")
-            processor.capturar_screenshot_erro(driver, "finalizacao", "ETAPA10")
-            processor.salvar_prospecto(nome_filtro, id_prospecto, "ERRO_FINALIZACAO", erro_detalhado)
             raise
         
     except Exception as e:
@@ -1082,6 +1231,15 @@ if __name__ == "__main__":
     cli.add_argument('--grupo', default='Varejo', help='Grupo de cliente (ex: Varejo)')
     cli.add_argument('--banco', default='BANCO ITAU', help='Banco de cobranca')
     cli.add_argument('--no-headless', action='store_true', help='Modo navegador visivel')
+    cli.add_argument('--dry-run', action='store_true',
+                     help='Roda o wizard completo mas NAO clica em SALVAR no final '
+                          '(valida fluxo sem criar cliente real no HubSoft)')
+    cli.add_argument('--step-debug', action='store_true',
+                     help='Pausa antes de cada ETAPA esperando ENTER no terminal '
+                          '(util pra remapear XPaths em UIs HubSoft diferentes)')
+    cli.add_argument('--coletar-dom', action='store_true',
+                     help='Abre o wizard, navega pelas abas e salva outerHTML de '
+                          'cada uma em dom_capturado/. Nao faz conversao real.')
     args, _ = cli.parse_known_args()
 
     main(
@@ -1091,4 +1249,7 @@ if __name__ == "__main__":
         texto_varejo=args.grupo,
         texto_banco_itau=args.banco,
         tenant_slug=args.tenant,
+        dry_run=args.dry_run,
+        step_debug=args.step_debug,
+        coletar_dom=args.coletar_dom,
     )
