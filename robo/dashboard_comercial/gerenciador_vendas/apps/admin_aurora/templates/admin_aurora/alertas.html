@@ -84,7 +84,15 @@
       <span class="badge badge-primary badge-soft">{{ alertas|length }} mostrado(s)</span>
     </div>
     <div class="table-wrap" style="overflow-x: auto;">
-      <table class="data-table">
+      <table class="data-table" style="table-layout: fixed; width: 100%;">
+        <colgroup>
+          <col style="width: 56px;">
+          <col style="width: 180px;">
+          <col>
+          <col style="width: 110px;">
+          <col style="width: 150px;">
+          <col style="width: 110px;">
+        </colgroup>
         <thead>
           <tr>
             <th>#</th>
@@ -98,20 +106,20 @@
         <tbody>
           {% for a in alertas %}
             <tr>
-              <td style="font-family: monospace;">{{ a.id }}</td>
-              <td><span class="badge badge-primary badge-soft">{{ a.get_tipo_display }}</span></td>
-              <td>
+              <td style="font-family: monospace; vertical-align: top;">{{ a.id }}</td>
+              <td style="vertical-align: top;"><span class="badge badge-primary badge-soft" style="white-space: normal; line-height: 1.2;">{{ a.get_tipo_display }}</span></td>
+              <td style="vertical-align: top; min-width: 0;">
                 <details>
-                  <summary style="cursor:pointer; font-weight: var(--fw-semibold);">{{ a.titulo }}</summary>
-                  <pre style="background:#1e1e1e; color:#d4d4d4; padding:8px; border-radius:6px; font-size:11px; margin-top:8px; white-space: pre-wrap; max-height: 240px; overflow:auto;">{{ a.mensagem }}{% if a.dados_extras %}
+                  <summary style="cursor:pointer; font-weight: var(--fw-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ a.titulo }}</summary>
+                  <pre style="background:#1e1e1e; color:#d4d4d4; padding:8px; border-radius:6px; font-size:11px; margin-top:8px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-height: 240px; overflow:auto; max-width: 100%;">{{ a.mensagem }}{% if a.dados_extras %}
 
 # Dados extras:
 {{ a.dados_extras }}{% endif %}</pre>
                 </details>
               </td>
-              <td>{% if a.tenant %}<span class="badge badge-secondary badge-soft">{{ a.tenant.slug }}</span>{% else %}<span style="color: var(--color-text-muted);">—</span>{% endif %}</td>
-              <td style="font-size: var(--fs-xs); color: var(--color-text-muted); white-space: nowrap;">{{ a.criado_em|date:"d/m/Y H:i:s" }}</td>
-              <td>
+              <td style="vertical-align: top;">{% if a.tenant %}<span class="badge badge-secondary badge-soft">{{ a.tenant.slug }}</span>{% else %}<span style="color: var(--color-text-muted);">—</span>{% endif %}</td>
+              <td style="font-size: var(--fs-xs); color: var(--color-text-muted); white-space: nowrap; vertical-align: top;">{{ a.criado_em|date:"d/m/Y H:i:s" }}</td>
+              <td style="vertical-align: top;">
                 {% if a.enviado_em %}
                   <span class="badge" style="background: var(--color-success-soft); color: var(--color-success);"><i class="bi bi-check-circle"></i> Enviado</span>
                 {% elif a.suprimido %}
