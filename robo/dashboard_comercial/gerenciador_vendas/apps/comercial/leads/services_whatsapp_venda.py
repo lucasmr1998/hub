@@ -108,41 +108,56 @@ def montar_texto_venda(lead) -> str:
 
 
 def _coletar_documentos(lead) -> list[dict]:
-    """Pra cada imagem do lead, busca o URL EXTERNO original (uazapi/whatsapp)
-    via Mensagem.arquivo_url. Esse URL eh acessivel pela uazapi sem auth Django.
+    """Pra cada imagem do lead, le o blob de Mensagem.arquivo (storage privado)
+    e devolve como data URI base64. A uazapi aceita data URI no campo `file`
+    do /send/media, entao nao precisamos expor /media/ publico nem furar a
+    auth-gate de PII (RG/CNH).
 
-    Retorna lista de {url, descricao}. Pula imagens onde nao acha URL externa.
+    Retorna lista de {url, descricao}. Pula imagens onde nao acha blob legivel.
     """
+    import base64
+    import mimetypes
     from apps.inbox.models import Mensagem
     docs = []
     for img in lead.imagens.order_by('id'):
-        # Tenta achar a Mensagem original pelo arquivo path (ja foi pareada via
-        # utils.resolver_link_interno_imagem no 5c0b14f)
-        url_externo = None
         link = img.link_url or ''
-        if link.startswith('http'):
-            url_externo = link
-        elif link.startswith('/inbox/api/conversas/'):
-            # extrai mensagem_id do path: /inbox/api/conversas/<C>/midia/<M>/
+        msg = None
+        if link.startswith('/inbox/api/conversas/'):
             try:
-                partes = link.rstrip('/').split('/')
-                msg_id = int(partes[-1])
+                msg_id = int(link.rstrip('/').split('/')[-1])
                 msg = Mensagem.all_tenants.filter(pk=msg_id).first()
-                if msg and msg.arquivo_url:
-                    url_externo = msg.arquivo_url
             except (ValueError, IndexError):
                 pass
 
-        if not url_externo:
+        if not msg or not msg.arquivo:
             logger.warning(
-                'Lead %s: imagem #%s sem URL externa acessivel — pulado',
+                'Lead %s: imagem #%s sem Mensagem.arquivo no storage privado — pulado',
                 lead.id, img.id,
             )
             continue
 
+        try:
+            with msg.arquivo.open('rb') as fh:
+                raw = fh.read()
+        except Exception as e:
+            logger.warning(
+                'Lead %s: falha lendo arquivo da Mensagem %s: %s',
+                lead.id, msg.id, e,
+            )
+            continue
+
+        nome = msg.arquivo.name or ''
+        mime, _ = mimetypes.guess_type(nome)
+        if not mime:
+            mime = 'image/jpeg'
+        b64 = base64.b64encode(raw).decode('ascii')
+        data_uri = f'data:{mime};base64,{b64}'
+
         docs.append({
-            'url': url_externo,
+            'url': data_uri,
             'descricao': img.descricao or 'Documento',
+            'mime': mime,
+            'tamanho': len(raw),
         })
     return docs
 
@@ -190,17 +205,27 @@ def enviar_venda_whatsapp(lead, telefone_destino: str) -> dict:
         logger.error(resultado['motivo'])
         return resultado
 
-    # 2) Documentos
+    # 2) Documentos (data URI base64, lido do storage privado)
     docs = _coletar_documentos(lead)
     for d in docs:
         try:
-            uaz.enviar_imagem(telefone_destino, d['url'], legenda=d['descricao'])
+            mime = d.get('mime') or ''
+            if mime.startswith('image/'):
+                uaz.enviar_midia(telefone_destino, d['url'], tipo='image',
+                                 legenda=d['descricao'])
+            else:
+                # PDF, etc.
+                nome = d['descricao']
+                if mime == 'application/pdf' and not nome.lower().endswith('.pdf'):
+                    nome += '.pdf'
+                uaz.enviar_midia(telefone_destino, d['url'], tipo='document',
+                                 nome_arquivo=nome)
             resultado['docs_enviados'] += 1
         except Exception as e:
             resultado['docs_falharam'] += 1
             logger.warning(
-                'Lead %s: falha enviar doc %r: %s',
-                lead.id, d['descricao'], e,
+                'Lead %s: falha enviar doc %r (%s bytes, %s): %s',
+                lead.id, d['descricao'], d.get('tamanho'), d.get('mime'), e,
             )
 
     resultado['ok'] = True
