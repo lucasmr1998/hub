@@ -193,6 +193,12 @@ def validar_lead_pronto_para_prospect(lead, integracao=None) -> tuple[str, str]:
     return ('pendente', '')
 
 
+# Convencao do model IntegracaoAPI: SYNC_MODOS = {automatico, manual, desativado}.
+# sync_habilitado() == True quando == 'automatico'. Aceitamos tambem 'ativado'
+# por compat com leitura humana (operadores que setaram errado antes).
+_VALORES_SYNC_ATIVO = {'automatico', 'ativado'}
+
+
 def integracao_envia_lead(integracao) -> bool:
     """Le `extras.modos_sync.enviar_lead` da IntegracaoAPI. Retorna True se
     cliente tem essa sub-flag ATIVADA (granular, alem da flag global
@@ -203,7 +209,7 @@ def integracao_envia_lead(integracao) -> bool:
     modos = extras.get('modos_sync') or {}
     if 'enviar_lead' not in modos:
         return True
-    return str(modos.get('enviar_lead', '')).lower() == 'ativado'
+    return str(modos.get('enviar_lead', '')).lower() in _VALORES_SYNC_ATIVO
 
 
 def integracao_converte_prospect_em_cliente(integracao) -> bool:
@@ -215,4 +221,4 @@ def integracao_converte_prospect_em_cliente(integracao) -> bool:
     """
     extras = (integracao.configuracoes_extras or {}) if integracao else {}
     modos = extras.get('modos_sync') or {}
-    return str(modos.get('converter_prospect_cliente', '')).lower() == 'ativado'
+    return str(modos.get('converter_prospect_cliente', '')).lower() in _VALORES_SYNC_ATIVO
