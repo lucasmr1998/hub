@@ -2314,3 +2314,34 @@ def api_importar_csv_executar(request):
         'erros': erros[:50],
         'total_processado': len(dados),
     })
+
+
+@csrf_exempt
+@login_required
+@require_http_methods(['POST'])
+def enviar_venda_whatsapp_api(request, lead_id):
+    """Envia resumo da venda + documentos do lead pelo WhatsApp via uazapi.
+
+    POST /api/leads/<lead_id>/enviar-venda-whatsapp/
+    Body opcional: {"telefone": "55XX..."} — se ausente, default e o numero
+    de teste do Lucas (53981521653). Apenas pra superuser ou agente atribuido.
+
+    Tarefa Workspace #151.
+    """
+    from apps.comercial.leads.services_whatsapp_venda import enviar_venda_whatsapp
+
+    try:
+        lead = LeadProspecto.all_tenants.get(pk=lead_id, tenant=request.tenant)
+    except LeadProspecto.DoesNotExist:
+        return JsonResponse({'error': 'Lead nao encontrado neste tenant'}, status=404)
+
+    payload = _parse_json_request(request) or {}
+    telefone = (payload.get('telefone') or '53981521653').strip()
+
+    result = enviar_venda_whatsapp(lead, telefone)
+    status_http = 200 if result.get('ok') else 400
+    return JsonResponse({
+        'lead_id': lead.id,
+        'destino': telefone,
+        **result,
+    }, status=status_http)

@@ -74,3 +74,57 @@ def gerar_pdf_quando_documentos_validados(sender, instance: ImagemLeadProspecto,
                 lead.pk,
                 exc,
             )
+
+
+@receiver(post_save, sender=ImagemLeadProspecto)
+def enviar_venda_whatsapp_quando_documentos_validados(sender, instance: ImagemLeadProspecto, **kwargs):
+    """Quando TODOS docs do lead validados, manda resumo da venda por WhatsApp.
+
+    Tarefa Workspace #151. Por enquanto:
+    - Hardcoded telefone destino = 53981521653 (Lucas, teste)
+    - Aplica so pra TR Carrion (tenant slug = 'tr-carrion') — depois generaliza
+    - Idempotente: se ja foi enviado uma vez (lead.dados_custom.venda_whatsapp_enviada),
+      pula
+    """
+    if instance.status_validacao != ImagemLeadProspecto.STATUS_VALIDO:
+        return
+
+    lead = instance.lead
+
+    # Idempotencia: nao reenvia
+    if (lead.dados_custom or {}).get('venda_whatsapp_enviada'):
+        return
+
+    # Confere se TODAS imagens validas
+    todas = list(lead.imagens.values_list('status_validacao', flat=True))
+    if not todas or not all(s == ImagemLeadProspecto.STATUS_VALIDO for s in todas):
+        return
+
+    # Escopo: so TR Carrion por enquanto (telefone teste do Lucas)
+    if getattr(lead.tenant, 'slug', '') != 'tr-carrion':
+        return
+
+    TELEFONE_DESTINO_TESTE = '53981521653'
+
+    try:
+        from apps.comercial.leads.services_whatsapp_venda import enviar_venda_whatsapp
+        result = enviar_venda_whatsapp(lead, TELEFONE_DESTINO_TESTE)
+        logger.info(
+            '[venda_whatsapp] lead=%s ok=%s texto=%s docs_ok=%s docs_falha=%s motivo=%s',
+            lead.id, result.get('ok'), result.get('texto_enviado'),
+            result.get('docs_enviados'), result.get('docs_falharam'),
+            result.get('motivo'),
+        )
+        if result.get('ok'):
+            # Marca idempotencia
+            dc = dict(lead.dados_custom or {})
+            dc['venda_whatsapp_enviada'] = True
+            from django.utils import timezone as _tz
+            dc['venda_whatsapp_enviada_em'] = _tz.now().isoformat()
+            lead.dados_custom = dc
+            lead.save(update_fields=['dados_custom'])
+    except Exception as exc:
+        logger.error(
+            '[venda_whatsapp] Erro ao enviar venda whatsapp (lead %s): %s',
+            lead.pk, exc,
+        )

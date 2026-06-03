@@ -59,4 +59,9 @@ urlpatterns = [
     path('leads/importar/', views.importar_csv_view, name='importar_csv'),
     path('api/leads/importar/preview/', views.api_importar_csv_preview, name='api_importar_csv_preview'),
     path('api/leads/importar/executar/', views.api_importar_csv_executar, name='api_importar_csv_executar'),
+
+    # Envio de venda (texto + documentos) por WhatsApp via uazapi.
+    # Disparo manual ou automatico via signal post-validacao (#151).
+    path('api/leads/<int:lead_id>/enviar-venda-whatsapp/', views.enviar_venda_whatsapp_api,
+         name='enviar_venda_whatsapp'),
 ]
