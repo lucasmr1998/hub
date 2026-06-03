@@ -768,3 +768,109 @@ def api_toggle_usuario(request):
 
     status = 'ativado' if user.is_active else 'desativado'
     return JsonResponse({'success': True, 'message': f'Usuario {user.username} {status}.'})
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Alertas do sistema — tarefa Workspace #152
+# ─────────────────────────────────────────────────────────────────────────
+
+@superuser_required
+def alertas_view(request):
+    """Lista alertas do sistema (historico + filtros)."""
+    from apps.sistema.models_alertas import AlertaSistema, AlertaConfig
+
+    qs = AlertaSistema.objects.all().select_related('tenant')
+
+    # Filtros
+    tipo = request.GET.get('tipo', '').strip()
+    apenas_enviados = request.GET.get('enviados') == '1'
+    apenas_suprimidos = request.GET.get('suprimidos') == '1'
+    tenant_slug = request.GET.get('tenant', '').strip()
+
+    if tipo:
+        qs = qs.filter(tipo=tipo)
+    if apenas_enviados:
+        qs = qs.filter(enviado_em__isnull=False)
+    if apenas_suprimidos:
+        qs = qs.filter(suprimido=True)
+    if tenant_slug:
+        qs = qs.filter(tenant__slug=tenant_slug)
+
+    # Paginacao basica
+    alertas = list(qs[:200])
+
+    # Stats
+    from datetime import timedelta
+    h24 = timezone.now() - timedelta(hours=24)
+    stats = {
+        'total': AlertaSistema.objects.count(),
+        'ultimas_24h': AlertaSistema.objects.filter(criado_em__gte=h24).count(),
+        'suprimidos_24h': AlertaSistema.objects.filter(criado_em__gte=h24, suprimido=True).count(),
+        'enviados_24h': AlertaSistema.objects.filter(criado_em__gte=h24, enviado_em__isnull=False).count(),
+    }
+    # Por tipo nas ultimas 24h
+    from django.db.models import Count
+    por_tipo = list(AlertaSistema.objects.filter(criado_em__gte=h24)
+                    .values('tipo').annotate(total=Count('id'))
+                    .order_by('-total'))
+
+    config = AlertaConfig.get_solo()
+
+    return render(request, 'admin_aurora/alertas.html', {
+        'alertas': alertas,
+        'stats': stats,
+        'por_tipo': por_tipo,
+        'tipos_choices': AlertaSistema.TIPO_CHOICES,
+        'filtros': {
+            'tipo': tipo, 'enviados': apenas_enviados,
+            'suprimidos': apenas_suprimidos, 'tenant': tenant_slug,
+        },
+        'config': config,
+    })
+
+
+@superuser_required
+def alertas_config_view(request):
+    """Configurar telefone destino, janela dedup, etc."""
+    from apps.sistema.models_alertas import AlertaConfig
+
+    config = AlertaConfig.get_solo()
+    if request.method == 'POST':
+        config.telefone_destino = (request.POST.get('telefone_destino') or '').strip()
+        try:
+            config.janela_dedup_minutos = int(request.POST.get('janela_dedup_minutos') or 5)
+        except ValueError:
+            config.janela_dedup_minutos = 5
+        config.enviar_whatsapp = request.POST.get('enviar_whatsapp') == 'on'
+        tipos = request.POST.getlist('tipos_ativos')
+        config.tipos_ativos = tipos
+        config.save()
+        from django.contrib import messages
+        messages.success(request, 'Configuracao salva.')
+        return redirect('admin_aurora:alertas_config')
+
+    from apps.sistema.models_alertas import AlertaSistema
+    return render(request, 'admin_aurora/alertas_config.html', {
+        'config': config,
+        'tipos_choices': AlertaSistema.TIPO_CHOICES,
+    })
+
+
+@superuser_required
+@require_POST
+def alertas_teste_view(request):
+    """Dispara alerta de teste pra validar envio."""
+    from apps.sistema.services_alertas import disparar_alerta
+    alerta = disparar_alerta(
+        tipo='outro',
+        titulo='Alerta de TESTE',
+        mensagem='Esse e um disparo manual pra validar o envio uazapi do sistema de alertas.',
+        dedup_key=f'teste:{timezone.now().isoformat()}',  # nunca dedupada
+    )
+    return JsonResponse({
+        'success': bool(alerta.enviado_em),
+        'alerta_id': alerta.id,
+        'enviado_em': alerta.enviado_em.isoformat() if alerta.enviado_em else None,
+        'erro_envio': alerta.erro_envio,
+        'suprimido': alerta.suprimido,
+    })

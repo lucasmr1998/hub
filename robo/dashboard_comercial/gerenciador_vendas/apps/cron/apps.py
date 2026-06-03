@@ -18,3 +18,7 @@ class CronConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'apps.cron'
     verbose_name = 'Cron Dispatcher'
+
+    def ready(self):
+        # Importa signals (alertar_quando_cron_falha) — tarefa Workspace #152
+        from apps.cron import signals  # noqa: F401

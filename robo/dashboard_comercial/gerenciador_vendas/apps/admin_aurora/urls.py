@@ -29,4 +29,9 @@ urlpatterns = [
     path('produto/', views.produto_view, name='produto'),
     path('docs/', views.docs_view, name='docs'),
     path('backlog/', views.backlog_view, name='backlog'),
+
+    # Alertas do sistema (tarefa Workspace #152) — historico + config
+    path('alertas/', views.alertas_view, name='alertas'),
+    path('alertas/config/', views.alertas_config_view, name='alertas_config'),
+    path('alertas/teste/', views.alertas_teste_view, name='alertas_teste'),
 ]

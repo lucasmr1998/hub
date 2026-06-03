@@ -777,3 +777,8 @@ class CodigoRecuperacaoSenha(models.Model):
     def bloqueado(self):
         config = ConfiguracaoRecuperacaoSenha.get_config()
         return self.tentativas >= config.max_tentativas
+
+
+# Modelos de Alertas do sistema (tarefa Workspace #152) — em arquivo separado
+# pra nao inflar este modulo. Re-export pra Django registrar.
+from apps.sistema.models_alertas import AlertaSistema, AlertaConfig  # noqa: E402,F401

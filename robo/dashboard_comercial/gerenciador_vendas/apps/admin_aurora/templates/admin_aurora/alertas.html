@@ -1,0 +1,149 @@
+{% extends "admin_aurora/base_admin.html" %}
+
+{% block title %}Alertas do Sistema{% endblock %}
+{% block topbar_title %}Alertas do Sistema{% endblock %}
+
+{% block content %}
+  <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0 0 var(--sp-4);">
+    Alertas operacionais disparados via uazapi. Envia WhatsApp para
+    <strong>{{ config.telefone_destino }}</strong>
+    com janela dedup de {{ config.janela_dedup_minutos }} min.
+    <a href="{% url 'admin_aurora:alertas_config' %}" style="color: var(--color-primary);">Configurar →</a>
+  </p>
+
+  {# Stats #}
+  <div class="stats-grid stats-grid-4" style="margin-bottom: var(--sp-4);">
+    <div class="stat-card">
+      <div class="stat-card-label">Total</div>
+      <div class="stat-card-value">{{ stats.total }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Últimas 24h</div>
+      <div class="stat-card-value">{{ stats.ultimas_24h }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Enviados (24h)</div>
+      <div class="stat-card-value" style="color: var(--color-success);">{{ stats.enviados_24h }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Suprimidos dedup (24h)</div>
+      <div class="stat-card-value" style="color: var(--color-text-muted);">{{ stats.suprimidos_24h }}</div>
+    </div>
+  </div>
+
+  {# Distribuicao por tipo (24h) #}
+  {% if por_tipo %}
+  <div class="card" style="margin-bottom: var(--sp-4);">
+    <div class="card-header"><h3 class="card-title">Tipos de alerta nas últimas 24h</h3></div>
+    <div class="card-body">
+      <div style="display: flex; gap: var(--sp-2); flex-wrap: wrap;">
+        {% for item in por_tipo %}
+          <span class="badge badge-primary badge-soft">{{ item.tipo }} ({{ item.total }})</span>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Filtros + acoes #}
+  <div class="card" style="margin-bottom: var(--sp-4);">
+    <div class="card-body">
+      <form method="get" style="display:flex; gap: var(--sp-3); align-items:flex-end; flex-wrap:wrap;">
+        <div class="field" style="margin:0; flex:1; min-width:200px;">
+          <label class="field-label" for="f-tipo">Tipo</label>
+          <div class="field-input-wrap">
+            <select id="f-tipo" class="field-input" name="tipo">
+              <option value="">Todos</option>
+              {% for k, label in tipos_choices %}
+                <option value="{{ k }}" {% if filtros.tipo == k %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="field" style="margin:0; flex:1; min-width:180px;">
+          <label class="field-label" for="f-tenant">Tenant (slug)</label>
+          <div class="field-input-wrap">
+            <input id="f-tenant" class="field-input" type="text" name="tenant"
+                   value="{{ filtros.tenant }}" placeholder="ex: nuvyon">
+          </div>
+        </div>
+        <div class="field" style="margin:0;">
+          <label class="checkbox"><input type="checkbox" name="enviados" value="1" {% if filtros.enviados %}checked{% endif %}> Apenas enviados</label>
+          <label class="checkbox"><input type="checkbox" name="suprimidos" value="1" {% if filtros.suprimidos %}checked{% endif %}> Apenas suprimidos</label>
+        </div>
+        <button class="btn btn-primary" type="submit"><i class="bi bi-funnel"></i> Filtrar</button>
+        <button type="button" class="btn btn-secondary" onclick="dispararAlertaTeste()"><i class="bi bi-send"></i> Disparar teste</button>
+      </form>
+    </div>
+  </div>
+
+  {# Lista #}
+  <div class="card" style="padding: 0;">
+    <div class="card-header">
+      <h3 class="card-title"><i class="bi bi-bell"></i> Histórico</h3>
+      <span class="badge badge-primary badge-soft">{{ alertas|length }} mostrado(s)</span>
+    </div>
+    <div class="table-wrap" style="overflow-x: auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Tipo</th>
+            <th>Título</th>
+            <th>Tenant</th>
+            <th>Criado em</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in alertas %}
+            <tr>
+              <td style="font-family: monospace;">{{ a.id }}</td>
+              <td><span class="badge badge-primary badge-soft">{{ a.get_tipo_display }}</span></td>
+              <td>
+                <details>
+                  <summary style="cursor:pointer; font-weight: var(--fw-semibold);">{{ a.titulo }}</summary>
+                  <pre style="background:#1e1e1e; color:#d4d4d4; padding:8px; border-radius:6px; font-size:11px; margin-top:8px; white-space: pre-wrap; max-height: 240px; overflow:auto;">{{ a.mensagem }}{% if a.dados_extras %}
+
+# Dados extras:
+{{ a.dados_extras }}{% endif %}</pre>
+                </details>
+              </td>
+              <td>{% if a.tenant %}<span class="badge badge-secondary badge-soft">{{ a.tenant.slug }}</span>{% else %}<span style="color: var(--color-text-muted);">—</span>{% endif %}</td>
+              <td style="font-size: var(--fs-xs); color: var(--color-text-muted); white-space: nowrap;">{{ a.criado_em|date:"d/m/Y H:i:s" }}</td>
+              <td>
+                {% if a.enviado_em %}
+                  <span class="badge" style="background: var(--color-success-soft); color: var(--color-success);"><i class="bi bi-check-circle"></i> Enviado</span>
+                {% elif a.suprimido %}
+                  <span class="badge" style="background: var(--color-text-muted); color: white;"><i class="bi bi-dash-circle"></i> Suprimido</span>
+                {% elif a.erro_envio %}
+                  <span class="badge" style="background: var(--color-danger-soft); color: var(--color-danger);" title="{{ a.erro_envio }}"><i class="bi bi-x-circle"></i> Falhou</span>
+                {% else %}
+                  <span class="badge badge-secondary badge-soft">Pendente</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" style="text-align: center; padding: var(--sp-6); color: var(--color-text-muted);">Sem alertas com esses filtros.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    function dispararAlertaTeste() {
+      fetch('{% url "admin_aurora:alertas_teste" %}', {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+      }).then(r => r.json()).then(d => {
+        if (d.success) {
+          alert('Alerta de teste #' + d.alerta_id + ' enviado para o WhatsApp em ' + d.enviado_em);
+          location.reload();
+        } else {
+          alert('Falha ao enviar alerta de teste: ' + (d.erro_envio || 'erro desconhecido'));
+        }
+      }).catch(e => alert('Erro: ' + e));
+    }
+  </script>
+{% endblock %}

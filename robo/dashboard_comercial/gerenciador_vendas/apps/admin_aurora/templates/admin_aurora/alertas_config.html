@@ -1,0 +1,65 @@
+{% extends "admin_aurora/base_admin.html" %}
+
+{% block title %}Config Alertas{% endblock %}
+{% block topbar_title %}Configuração de Alertas{% endblock %}
+
+{% block content %}
+  <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0 0 var(--sp-4);">
+    Onde envia, quando dedupa e quais tipos disparam. Ver histórico em
+    <a href="{% url 'admin_aurora:alertas' %}" style="color: var(--color-primary);">/aurora-admin/alertas/</a>.
+  </p>
+
+  <div class="card" style="max-width: 720px;">
+    <div class="card-body">
+      <form method="post" style="display: flex; flex-direction: column; gap: var(--sp-3);">
+        {% csrf_token %}
+
+        <div class="field">
+          <label class="field-label" for="telefone_destino">Telefone WhatsApp destino</label>
+          <div class="field-input-wrap">
+            <input id="telefone_destino" name="telefone_destino" class="field-input"
+                   value="{{ config.telefone_destino }}" placeholder="55XXXXXXXXXXX">
+          </div>
+          <small style="color: var(--color-text-muted);">Sem espaço, sem parênteses. Ex: 5553981521653</small>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="janela_dedup_minutos">Janela dedup (minutos)</label>
+          <div class="field-input-wrap">
+            <input id="janela_dedup_minutos" name="janela_dedup_minutos" type="number" min="1" max="120"
+                   class="field-input" value="{{ config.janela_dedup_minutos }}">
+          </div>
+          <small style="color: var(--color-text-muted);">Mesma chave dentro da janela não reenvia WhatsApp (só cria registro suprimido).</small>
+        </div>
+
+        <div class="field">
+          <label class="checkbox">
+            <input type="checkbox" name="enviar_whatsapp" {% if config.enviar_whatsapp %}checked{% endif %}>
+            Enviar WhatsApp (desligar deixa só histórico no admin)
+          </label>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Tipos de alerta ativos</label>
+          <small style="color: var(--color-text-muted); display: block; margin-bottom: var(--sp-2);">
+            Deixe TODOS desmarcados pra ativar TUDO. Marque tipos pra restringir.
+          </small>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-2);">
+            {% for k, label in tipos_choices %}
+              <label class="checkbox">
+                <input type="checkbox" name="tipos_ativos" value="{{ k }}"
+                       {% if k in config.tipos_ativos %}checked{% endif %}>
+                {{ label }}
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div style="display: flex; gap: var(--sp-2); margin-top: var(--sp-3);">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Salvar</button>
+          <a href="{% url 'admin_aurora:alertas' %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
