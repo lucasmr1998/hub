@@ -348,19 +348,26 @@ class HubsoftService:
             if svc.get('data_atualizacao'):
                 campos_servico['data_atualizacao_servico'] = _make_aware_svc(svc['data_atualizacao'])
 
+            # Multi-tenant: setar tenant herdado do cliente (mesmo bug que
+            # afetou ClienteHubsoft em 1b8132d). Sem isso, svc fica tenant=None
+            # e a pagina /vendas/ filtra fora ("Sem servico" mesmo com dados).
+            campos_servico['tenant'] = cliente.tenant
             try:
-                servico_existente = ServicoClienteHubsoft.objects.get(id_cliente_servico=id_cs)
+                servico_existente = ServicoClienteHubsoft.all_tenants.get(
+                    tenant=cliente.tenant, id_cliente_servico=id_cs,
+                )
                 alteracoes_svc = self._detectar_alteracoes_servico(servico_existente, campos_servico)
                 todas_alteracoes.extend(alteracoes_svc)
             except ServicoClienteHubsoft.DoesNotExist:
                 pass
 
-            ServicoClienteHubsoft.objects.update_or_create(
+            ServicoClienteHubsoft.all_tenants.update_or_create(
+                tenant=cliente.tenant,
                 id_cliente_servico=id_cs,
                 defaults=campos_servico,
             )
 
-        removidos = ServicoClienteHubsoft.objects.filter(
+        removidos = ServicoClienteHubsoft.all_tenants.filter(
             cliente=cliente,
         ).exclude(id_cliente_servico__in=ids_encontrados)
         for svc_rem in removidos:
