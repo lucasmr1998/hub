@@ -228,8 +228,18 @@ class HubsoftService:
         if dados.get('data_atualizacao'):
             campos_cliente['data_atualizacao_hubsoft'] = _make_aware(dados['data_atualizacao'])
 
+        # Multi-tenant: filtra por tenant da integracao (= tenant do lead).
+        # Garante que dois tenants com o mesmo id_cliente HubSoft (improvavel
+        # mas possivel) nao se misturem. Tambem garante que o INSERT cria
+        # ClienteHubsoft com tenant_id preenchido (era None antes — bug).
+        tenant_obj = self.integracao.tenant if getattr(self, 'integracao', None) else None
+        if lead and not tenant_obj:
+            tenant_obj = lead.tenant
+
         try:
-            cliente_existente = ClienteHubsoft.objects.get(id_cliente=id_cliente)
+            cliente_existente = ClienteHubsoft.all_tenants.get(
+                tenant=tenant_obj, id_cliente=id_cliente,
+            )
         except ClienteHubsoft.DoesNotExist:
             cliente_existente = None
 
@@ -239,8 +249,11 @@ class HubsoftService:
 
         if lead:
             campos_cliente['lead'] = lead
+        if tenant_obj:
+            campos_cliente['tenant'] = tenant_obj
 
-        cliente, created = ClienteHubsoft.objects.update_or_create(
+        cliente, created = ClienteHubsoft.all_tenants.update_or_create(
+            tenant=tenant_obj,
             id_cliente=id_cliente,
             defaults=campos_cliente,
         )
@@ -248,7 +261,7 @@ class HubsoftService:
         alteracoes_servicos = self._sincronizar_servicos(cliente, dados.get('servicos') or [])
         todas_alteracoes = alteracoes + alteracoes_servicos
 
-        ClienteHubsoft.objects.filter(pk=cliente.pk).update(
+        ClienteHubsoft.all_tenants.filter(pk=cliente.pk).update(
             houve_alteracao=bool(todas_alteracoes) and not created,
         )
 
@@ -266,7 +279,7 @@ class HubsoftService:
                 'data': timezone.now().isoformat(),
                 'alteracoes': todas_alteracoes,
             })
-            ClienteHubsoft.objects.filter(pk=cliente.pk).update(
+            ClienteHubsoft.all_tenants.filter(pk=cliente.pk).update(
                 historico_alteracoes=historico,
                 houve_alteracao=True,
             )
