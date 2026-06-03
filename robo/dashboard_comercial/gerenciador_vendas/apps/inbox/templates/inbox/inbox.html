@@ -4,7 +4,7 @@
 {% block title %}Inbox — Hubtrix{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'inbox/css/inbox.css' %}?v=20">
+<link rel="stylesheet" href="{% static 'inbox/css/inbox.css' %}?v=21">
 {% endblock %}
 
 {% block content %}
@@ -15,7 +15,7 @@
     var main = document.querySelector('.main-content');
     if (main) { main.style.padding = '0'; main.style.marginLeft = '0'; }
 </script>
-<div class="inbox-container" id="inboxApp">
+<div class="inbox-container" id="inboxApp" data-user-id="{{ request.user.id }}">
 
     <!-- ═══════════════════════════════════════════════════════════════
          PAINEL ESQUERDO: Lista de Conversas
@@ -115,12 +115,21 @@
             </div>
         </div>
 
-        <!-- Estado: conversa não assumida (aparece no lugar das mensagens) -->
+        <!-- Estado: conversa não assumida pelo dono (esconde mensagens ate clicar Assumir) -->
         <div id="assumirBanner" class="inbox-empty-state" style="display:none; flex-direction:column; gap:12px;">
             <div class="empty-icon"><i class="fas fa-lock"></i></div>
             <h3>Conversa aguardando ser assumida</h3>
             <p>Assuma para ver o histórico e responder.</p>
             <button id="assumirBtn" style="margin-top:4px; padding:10px 28px; background:#f59e0b; color:#fff; border:0; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;">Assumir conversa</button>
+        </div>
+
+        <!-- Estado: admin visualizando conversa nao-assumida (msgs visiveis, input bloqueado) -->
+        <div id="viewerBanner" style="display:none; padding:12px 16px; background:#f3f4f6; border-top:1px solid #e5e7eb; align-items:center; justify-content:space-between; gap:12px;">
+            <div style="display:flex; align-items:center; gap:8px; color:#6b7280; font-size:13px;">
+                <i class="fas fa-eye"></i>
+                <span>Você está visualizando. Clique em Assumir para responder<span id="viewerAgenteHint"></span>.</span>
+            </div>
+            <button id="viewerAssumirBtn" style="padding:8px 20px; background:#3b82f6; color:#fff; border:0; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap;">Assumir conversa</button>
         </div>
 
         <!-- Mensagens -->
@@ -390,7 +399,7 @@
 
 {% block extra_js %}
 <script>window.AGENTES_STATUS = {{ agentes_status_json|safe }};</script>
-<script src="{% static 'inbox/js/inbox.js' %}?v=20"></script>
+<script src="{% static 'inbox/js/inbox.js' %}?v=21"></script>
 <script>
 // Status do agente no Inbox (pill online/ausente/offline)
 (function() {

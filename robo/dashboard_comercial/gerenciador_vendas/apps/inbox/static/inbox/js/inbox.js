@@ -268,13 +268,36 @@
 
     // ── Selecionar conversa ───────────────────────────────────────────
 
-    function _aplicarEstadoAssumida(assumida) {
+    function _aplicarEstadoAssumida(assumida, podeVisualizar, agenteAtualNome) {
         const banner = document.getElementById('assumirBanner');
+        const viewer = document.getElementById('viewerBanner');
         const input  = document.getElementById('inputArea');
         const msgs   = document.getElementById('messageList');
-        banner.style.display = assumida ? 'none' : 'flex';
-        msgs.style.display   = assumida ? 'flex'  : 'none';
-        input.style.display  = assumida ? 'block' : 'none';
+        if (assumida) {
+            // Estado normal: dono assumiu, input liberado
+            banner.style.display = 'none';
+            if (viewer) viewer.style.display = 'none';
+            msgs.style.display = 'flex';
+            input.style.display = 'block';
+        } else if (podeVisualizar) {
+            // Modo visualizar: admin abriu conv nao-assumida, ve msgs mas nao envia
+            banner.style.display = 'none';
+            msgs.style.display = 'flex';
+            input.style.display = 'none';
+            if (viewer) {
+                viewer.style.display = 'flex';
+                const hint = document.getElementById('viewerAgenteHint');
+                if (hint) {
+                    hint.textContent = agenteAtualNome ? ` (atribuída a ${agenteAtualNome})` : '';
+                }
+            }
+        } else {
+            // Estado pendente: dono ainda nao assumiu, esconde tudo
+            banner.style.display = 'flex';
+            if (viewer) viewer.style.display = 'none';
+            msgs.style.display = 'none';
+            input.style.display = 'none';
+        }
     }
 
     function selectConversa(id) {
@@ -333,8 +356,16 @@
                 }
             }
 
-            // Estado assumida — controla banner + visibilidade histórico e input
-            _aplicarEstadoAssumida(data.assumida !== false);
+            // Estado assumida — controla banner/viewer + visibilidade historico e input
+            // pode_visualizar=true significa admin/supervisor pode ver msgs mesmo
+            // sem assumir; o input continua bloqueado ate clicar Assumir.
+            state.currentConversaAgenteId = data.agente_id || null;
+            state.currentConversaAgenteNome = data.agente_nome || '';
+            _aplicarEstadoAssumida(
+                data.assumida === true,
+                data.pode_visualizar === true,
+                data.agente_nome || ''
+            );
 
             // Labels
             const chipDiv = document.getElementById('labelChips');
@@ -1122,20 +1153,31 @@
             });
         });
 
-        // Assumir conversa
-        $('assumirBtn').addEventListener('click', () => {
+        // Assumir conversa — handler unico pros dois botoes (banner amarelo e viewer azul).
+        // Se a conv estiver atribuida a OUTRO usuario, pede confirmacao antes
+        // de transferir. Backend gera msg sistema de auditoria automaticamente.
+        function _assumirComConfirmacao() {
             if (!state.currentConversaId) return;
+            const appRoot = document.getElementById('inboxApp');
+            const currentUserId = appRoot ? parseInt(appRoot.dataset.userId) : null;
+            const agenteId = state.currentConversaAgenteId;
+            const agenteNome = state.currentConversaAgenteNome || 'outro agente';
+            if (agenteId && currentUserId && agenteId !== currentUserId) {
+                if (!confirm(`Esta conversa está atribuída a ${agenteNome}. Assumir mesmo assim? A transferência será registrada na timeline.`)) return;
+            }
             fetchJSON('/inbox/api/conversas/' + state.currentConversaId + '/assumir/', { method: 'POST' })
                 .then(data => {
                     if (data.success) {
-                        _aplicarEstadoAssumida(true);
                         loadConversaDetalhe(state.currentConversaId);
                         loadMensagens(state.currentConversaId, true);
                     } else {
                         alert(data.error || 'Não foi possível assumir a conversa.');
                     }
                 });
-        });
+        }
+        $('assumirBtn').addEventListener('click', _assumirComConfirmacao);
+        const vBtn = $('viewerAssumirBtn');
+        if (vBtn) vBtn.addEventListener('click', _assumirComConfirmacao);
 
         // Etiquetas
         $('labelSelect').addEventListener('change', function() {

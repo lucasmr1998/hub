@@ -568,19 +568,20 @@ def atribuir_conversa(conversa, agente, atribuido_por=None):
 
 
 def assumir_conversa(conversa, agente):
-    """Agente assume explicitamente a conversa — libera histórico e input.
+    """Agente assume a conversa — libera input e (eventualmente) transfere de outro dono.
 
     Regras:
-    - Se já assumida por outro agente: levanta ValueError
-    - Se não atribuída: atribui ao agente que está assumindo
-    - Seta assumida=True
+    - Se nao atribuida: atribui ao agente que esta assumindo
+    - Se atribuida ao proprio agente: so seta assumida=True (caso comum)
+    - Se atribuida a OUTRO agente: TRANSFERE, gera msg sistema de auditoria e
+      reseta data_assumida pro novo dono
+    - Sempre seta assumida=True
     """
-    if conversa.assumida and conversa.agente_id and conversa.agente_id != agente.pk:
-        raise ValueError("Conversa já assumida por outro agente.")
+    dono_anterior = conversa.agente if conversa.agente_id and conversa.agente_id != agente.pk else None
 
     updates = ['assumida']
 
-    if not conversa.agente_id:
+    if not conversa.agente_id or dono_anterior:
         conversa.agente = agente
         _vincular_agente_oportunidade(conversa, agente)
         updates.append('agente')
@@ -590,10 +591,27 @@ def assumir_conversa(conversa, agente):
         updates.append('modo_atendimento')
 
     conversa.assumida = True
-    if not conversa.data_assumida:
+    # Quando ha transferencia, reseta data_assumida pro novo dono
+    if dono_anterior or not conversa.data_assumida:
         conversa.data_assumida = timezone.now()
-        updates.append('data_assumida')
+        if 'data_assumida' not in updates:
+            updates.append('data_assumida')
+
     conversa.save(update_fields=updates)
+
+    # Log de transferencia como msg sistema (visivel na timeline da conversa)
+    if dono_anterior:
+        nome_anterior = dono_anterior.get_full_name() or dono_anterior.username
+        nome_novo = agente.get_full_name() or agente.username
+        Mensagem.objects.create(
+            tenant=conversa.tenant,
+            conversa=conversa,
+            remetente_tipo='sistema',
+            remetente_nome='Sistema',
+            tipo_conteudo='sistema',
+            conteudo=f'Conversa assumida por {nome_novo} (anteriormente de {nome_anterior})',
+        )
+
     return conversa
 
 

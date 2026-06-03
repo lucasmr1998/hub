@@ -190,10 +190,17 @@ def api_conversa_detalhe(request, pk):
 
     data = ConversaOutputSerializer(conversa).data
 
-    # Admin e supervisor veem histórico sem precisar assumir.
-    # Usa user_tem_funcionalidade (sistema custom), nao has_perm (Django auth_permission)
-    if request.user.is_superuser or user_tem_funcionalidade(request, 'inbox.ver_todas'):
-        data['assumida'] = True
+    # Admin e supervisor podem VISUALIZAR conversa sem assumir (read-only).
+    # Mandamos o flag separado em vez de mentir `assumida` — frontend usa pra
+    # liberar visualizacao mas manter input bloqueado ate o admin clicar Assumir.
+    # (Bug antigo: setavamos data['assumida']=True aqui, UI liberava input,
+    # admin enviava, mas o backend rejeitava no enviar_mensagem → mensagem
+    # fantasma sem chegar no cliente. Ref: bug 03/06/2026.)
+    pode_visualizar_sem_assumir = (
+        request.user.is_superuser
+        or user_tem_funcionalidade(request, 'inbox.ver_todas')
+    )
+    data['pode_visualizar'] = pode_visualizar_sem_assumir
 
     # Contexto do lead
     if conversa.lead:
@@ -361,10 +368,12 @@ def api_enviar_mensagem(request, pk):
     if not conteudo:
         return JsonResponse({'error': 'Conteúdo obrigatório'}, status=400)
 
-    # Admin/supervisor podem responder sem assumir — assumem automaticamente
-    if conversa.agente_id and not conversa.assumida:
-        if request.user.is_superuser or request.user.has_perm('inbox.ver_todas'):
-            services.assumir_conversa(conversa, request.user)
+    # Sem auto-assumir. Admin/supervisor que abre a conversa em modo
+    # visualizacao precisa clicar Assumir explicitamente antes de enviar.
+    # (Antes, este bloco tentava auto-assumir via request.user.has_perm —
+    # mas esse usa Django auth_permission, nao o sistema custom de
+    # funcionalidades. Resultado: nunca acionava, mensagem caia no
+    # enviar_mensagem que rejeitava com 403, e a msg ficava fantasma.)
 
     try:
         mensagem = services.enviar_mensagem(
@@ -412,13 +421,16 @@ def api_atribuir(request, pk):
 @require_http_methods(["POST"])
 @auditar('inbox', 'assumir', 'conversa')
 def api_assumir(request, pk):
-    """POST: Agente assume a conversa — libera histórico e input."""
+    """POST: Agente assume a conversa — libera input. Aceita transferencia
+    de outro dono (gera msg sistema de auditoria na timeline)."""
     conversa = _get_conversa(pk, request)
-    try:
-        services.assumir_conversa(conversa, request.user)
-    except ValueError as e:
-        return JsonResponse({'error': str(e)}, status=409)
-    return JsonResponse({'success': True, 'assumida': True})
+    dono_anterior_id = conversa.agente_id if conversa.agente_id and conversa.agente_id != request.user.pk else None
+    services.assumir_conversa(conversa, request.user)
+    return JsonResponse({
+        'success': True,
+        'assumida': True,
+        'transferida_de': dono_anterior_id,
+    })
 
 
 @login_required
