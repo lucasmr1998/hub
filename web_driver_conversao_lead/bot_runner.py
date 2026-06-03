@@ -27,7 +27,6 @@ Env vars (em runtime do container, NAO arquivo .env):
 """
 from __future__ import annotations
 
-import json
 import os
 import sys
 import time
@@ -183,6 +182,11 @@ def processar_todos():
             print(f'>>> lead {lead["id"]} {lead["nome_razaosocial"]!r} id_hs={lead["id_hubsoft"]}', flush=True)
             sucesso, erro = processar_lead(conn, lead)
             bc_prev = (lead['dados_custom'] or {}).get('bot_conversao') or {}
+            # DRY_RUN: nao incrementa tentativas (do contrario marca 'manual' em 3 ciclos
+            # sem ter executado nada). So loga.
+            if DRY_RUN:
+                print(f'    [DRY_RUN] sem alterar dados_custom (lead {lead["id"]})', flush=True)
+                continue
             tentativas = int(bc_prev.get('tentativas') or 0) + 1
             patch = {
                 'tentativas': tentativas,
