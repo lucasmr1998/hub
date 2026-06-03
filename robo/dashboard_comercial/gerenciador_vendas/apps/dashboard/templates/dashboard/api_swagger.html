@@ -91,7 +91,48 @@
         <p>Documentação interativa e completa da API</p>
     </div>
 
+    <div style="max-width: 900px; margin: 16px auto; padding: 0 16px;">
+      <input id="apiSearchInput" type="search"
+             placeholder="🔍 Filtrar endpoints (ex: leads, hubsoft, n8n, conversa...)"
+             style="width:100%; padding:12px 16px; font-size:15px; border:2px solid #ddd; border-radius:8px; outline:none;"
+             oninput="filterApiEndpoints(this.value)">
+      <div id="apiSearchHint" style="color:#888; font-size:12px; margin-top:4px;">
+        Use Ctrl+K pra focar no filtro. Clique em qualquer endpoint pra copiar a URL.
+      </div>
+    </div>
+
     <div class="info-cards">
+        <div class="info-card" data-section="hubsoft-pipeline" style="border-left: 4px solid #ff6b35;">
+            <h3>🆕 Pipeline HubSoft (Nuvyon — junho 2026)</h3>
+            <p>Endpoints novos do fluxo Lead → Prospect → Cliente HubSoft. Hoje só Nuvyon usa em prod. Auth via header <code>X-N8N-Webhook-Secret</code>.</p>
+            <ul class="endpoints-list">
+                <li class="method-post" onclick="copyEndpoint(this)" title="Click pra copiar URL">POST /api/public/n8n/inbox/mensagem/</li>
+                <li class="method-post" onclick="copyEndpoint(this)" title="Click pra copiar URL">POST /api/public/n8n/lead/imagem/</li>
+                <li class="method-get"  onclick="copyEndpoint(this)" title="Click pra copiar URL">GET /api/public/n8n/conversa/estado/</li>
+                <li class="method-post" onclick="copyEndpoint(this)" title="Click pra copiar URL">POST /api/public/n8n/conversa/status-por-telefone/</li>
+                <li class="method-post" onclick="copyEndpoint(this)" title="Click pra copiar URL">POST /api/public/n8n/conversa/transferir-fila/</li>
+                <li class="method-post" onclick="copyEndpoint(this)" title="Click pra copiar URL">POST /api/public/n8n/lead/extrair-campos/</li>
+            </ul>
+            <details style="margin-top: 8px;">
+                <summary style="cursor:pointer; color: #ff6b35; font-weight: 600;">Ver curls prontos</summary>
+                <pre style="background:#1e1e1e; color:#d4d4d4; padding:12px; border-radius:6px; overflow:auto; font-size:12px;">
+# Consultar estado da conversa (Vero usa pra saber se deve atuar)
+curl 'https://app.hubtrix.com.br/api/public/n8n/conversa/estado/?tenant_slug=nuvyon&telefone=5511999999999' \
+  -H 'X-N8N-Webhook-Secret: $SECRET'
+
+# Registrar imagem (RG) do lead
+curl -X POST 'https://app.hubtrix.com.br/api/public/n8n/lead/imagem/' \
+  -H 'X-N8N-Webhook-Secret: $SECRET' -H 'Content-Type: application/json' \
+  -d '{"tenant_slug":"nuvyon","telefone":"5511999999999","link_url":"https://...","descricao":"RG frente"}'
+
+# Status pra follow-up (so dispara bot se conversa estiver em modo bot E sem agente)
+curl -X POST 'https://app.hubtrix.com.br/api/public/n8n/conversa/status-por-telefone/' \
+  -H 'X-N8N-Webhook-Secret: $SECRET' -H 'Content-Type: application/json' \
+  -d '{"tenant_slug":"tr-carrion","telefone":"5511999999999"}'
+                </pre>
+            </details>
+        </div>
+
         <div class="info-card">
             <h3>📋 APIs Públicas (Registro/Atualização)</h3>
             <p>Endpoints para criar e atualizar dados. Não requerem autenticação.</p>
@@ -1742,6 +1783,62 @@
                 }
             });
         };
+    </script>
+
+    <script>
+      // Filtro client-side dos endpoints (cards + linhas li).
+      function filterApiEndpoints(query) {
+        const q = (query || '').trim().toLowerCase();
+        // Esconde cards inteiros que nao tenham nenhum endpoint matching;
+        // dentro de cada card, destaca/oculta linhas <li>.
+        document.querySelectorAll('.info-card').forEach(card => {
+          let matchesNoCard = 0;
+          card.querySelectorAll('li').forEach(li => {
+            const txt = li.textContent.toLowerCase();
+            const match = !q || txt.includes(q);
+            li.style.display = match ? '' : 'none';
+            if (match) matchesNoCard++;
+          });
+          // Esconde card inteiro se nenhuma li bate
+          const titulo = card.querySelector('h3');
+          const tituloMatch = titulo && titulo.textContent.toLowerCase().includes(q);
+          if (q && matchesNoCard === 0 && !tituloMatch) {
+            card.style.display = 'none';
+          } else {
+            card.style.display = '';
+          }
+        });
+      }
+
+      // Click em endpoint copia "<METODO> <URL>" pro clipboard.
+      function copyEndpoint(el) {
+        const txt = el.textContent.trim();
+        // Extrai metodo + path
+        navigator.clipboard.writeText(txt).then(() => {
+          const original = el.style.background;
+          el.style.background = '#d4edda';
+          el.title = 'Copiado!';
+          setTimeout(() => { el.style.background = original; el.title = 'Click pra copiar URL'; }, 800);
+        }).catch(err => console.error('Falha ao copiar:', err));
+      }
+
+      // Ctrl+K foca no filtro
+      document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+          e.preventDefault();
+          const inp = document.getElementById('apiSearchInput');
+          if (inp) { inp.focus(); inp.select(); }
+        }
+      });
+
+      // Faz todas as <li> antigas ficarem clicaveis tambem (mesmo sem onclick inline)
+      window.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.info-card li:not([onclick])').forEach(li => {
+          li.style.cursor = 'pointer';
+          li.title = 'Click pra copiar URL';
+          li.addEventListener('click', () => copyEndpoint(li));
+        });
+      });
     </script>
 </body>
 </html>
