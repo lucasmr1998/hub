@@ -338,6 +338,13 @@ def enviar_mensagem(conversa, conteudo, user, tipo_conteudo='texto',
 
     Retorna mensagem.
     """
+    # Bloqueia envio se conversa atribuida a alguem mas ainda nao assumida.
+    # Roda ANTES do save pra nao deixar mensagem fantasma no DB (era bug que
+    # fazia UI mostrar a msg como enviada mas WhatsApp nunca receber).
+    if conversa.agente_id and not conversa.assumida:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Assuma a conversa antes de responder.")
+
     mensagem = Mensagem(
         tenant=conversa.tenant,
         conversa=conversa,
@@ -365,11 +372,6 @@ def enviar_mensagem(conversa, conteudo, user, tipo_conteudo='texto',
         'ultima_mensagem_em', 'ultima_mensagem_preview',
         'mensagens_nao_lidas', 'tempo_primeira_resposta_seg',
     ]
-
-    # Bloqueia envio se conversa ainda não foi assumida pelo agente
-    if conversa.agente_id and not conversa.assumida:
-        from django.core.exceptions import PermissionDenied
-        raise PermissionDenied("Assuma a conversa antes de responder.")
 
     # Se estava aberta sem agente, atribuir e assumir automaticamente
     if not conversa.agente_id:

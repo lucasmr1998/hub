@@ -76,9 +76,14 @@ class UazapiProvider(BaseProvider):
         return self._service.enviar_audio(telefone, url)
 
     def extrair_msg_id(self, result):
-        if isinstance(result, dict):
-            return result.get('key', {}).get('id', '')
-        return ''
+        if not isinstance(result, dict):
+            return ''
+        # Formato uazapi real: messageid no nivel raiz (ou id, que e duplicata)
+        msgid = result.get('messageid') or result.get('id')
+        if msgid:
+            return msgid
+        # Fallback formato Baileys/legacy: result['key']['id']
+        return (result.get('key') or {}).get('id', '')
 
     # ── Métodos extras Uazapi ──
 
