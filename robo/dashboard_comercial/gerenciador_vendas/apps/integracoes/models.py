@@ -446,6 +446,13 @@ class ServicoClienteHubsoft(TenantMixin):
     data_cadastro_servico = models.CharField(max_length=50, blank=True, default='', verbose_name="Data Cadastro")
     data_atualizacao_servico = models.DateTimeField(null=True, blank=True, verbose_name="Última Atualização")
 
+    # --- Contrato (gerado via HubSoft /adicionar_contrato) --------------------
+    id_cliente_servico_contrato = models.IntegerField(
+        null=True, blank=True, db_index=True,
+        verbose_name="ID Contrato HubSoft",
+        help_text="ID do contrato gerado via /api/v1/integracao/cliente/contrato/adicionar_contrato. Preenchido pela acao de automacao gerar_contrato_hubsoft.",
+    )
+
     # --- Autenticação PPPoE ---------------------------------------------------
     id_cliente_servico_autenticacao = models.IntegerField(null=True, blank=True, verbose_name="ID Autenticação")
     login = models.CharField(max_length=100, blank=True, default='', verbose_name="Login PPPoE")

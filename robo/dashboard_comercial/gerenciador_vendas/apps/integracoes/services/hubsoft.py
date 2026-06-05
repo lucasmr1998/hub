@@ -33,6 +33,8 @@ class HubsoftService:
     ENDPOINT_CLIENTE = '/api/v1/integracao/cliente'
     ENDPOINT_CONTRATO_ANEXO_TPL = '/api/v1/integracao/cliente/contrato/adicionar_anexo_contrato/{id_contrato}'
     ENDPOINT_CONTRATO_ACEITAR = '/api/v1/integracao/cliente/contrato/aceitar_contrato'
+    ENDPOINT_CONTRATO_CRIAR = '/api/v1/integracao/cliente/contrato/adicionar_contrato'
+    ENDPOINT_CFG_MODELO_CONTRATO = '/api/v1/integracao/configuracao/modelo_contrato'
 
     # Catálogos de configuração
     ENDPOINT_CFG_SERVICO = '/api/v1/integracao/configuracao/servico'
@@ -454,6 +456,53 @@ class HubsoftService:
                 f"HubSoft rejeitou anexo de contrato {id_contrato}: {resposta}"
             )
         return resposta
+
+    def criar_contrato(
+        self,
+        *,
+        id_cliente_servico: int,
+        id_contrato_modelo: int,
+        id_empresa: int,
+        autorizacao_nome: str,
+        autorizacao_cpf: str,
+        informacao_adicional: str = '',
+        lead=None,
+    ) -> dict:
+        """Gera contrato no HubSoft via POST /adicionar_contrato.
+
+        Retorna o payload completo da HubSoft. O id retornado fica em
+        `id_cliente_servico_contrato` no resultado (campo principal usado
+        depois em anexar_arquivos_contrato e aceitar_contrato).
+
+        Args:
+            id_cliente_servico: id do servico ja existente (ServicoClienteHubsoft.id_cliente_servico)
+            id_contrato_modelo: id do template/modelo de contrato (consultar via listar_modelos_contrato)
+            id_empresa: id da empresa HubSoft (matriz/filial)
+            autorizacao_nome: nome do titular (geralmente lead.nome_razaosocial)
+            autorizacao_cpf: CPF do titular (geralmente lead.cpf_cnpj normalizado)
+            informacao_adicional: texto livre pro registro (opcional)
+        """
+        payload = {
+            'id_cliente_servico': int(id_cliente_servico),
+            'id_contrato': int(id_contrato_modelo),
+            'id_empresa': int(id_empresa),
+            'autorizacao_nome': (autorizacao_nome or '').strip(),
+            'autorizacao_cpf': ''.join(ch for ch in (autorizacao_cpf or '') if ch.isdigit()),
+            'informacao_adicional': informacao_adicional or 'Contrato gerado via Hubtrix.',
+        }
+        resposta = self._post(self.ENDPOINT_CONTRATO_CRIAR, json=payload, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft rejeitou criacao de contrato pro servico {id_cliente_servico}: {resposta}"
+            )
+        return resposta
+
+    def listar_modelos_contrato(self, *, lead=None) -> list[dict]:
+        """Catalogo de modelos de contrato disponiveis pro tenant HubSoft.
+        Retorna lista de dicts com id_contrato, descricao, id_empresa, etc.
+        """
+        resposta = self._request('GET', self.ENDPOINT_CFG_MODELO_CONTRATO, lead=lead)
+        return resposta.get('modelos_contrato') or []
 
     def aceitar_contrato(self, id_contrato: int, *, observacao: str = '', lead=None) -> dict:
         """Marca contrato como aceito no HubSoft."""

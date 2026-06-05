@@ -314,9 +314,125 @@ def _acao_atribuir_agente(oportunidade, config):
     )
 
 
+def _acao_gerar_contrato_hubsoft(oportunidade, config):
+    """Gera contrato no HubSoft + anexa documentos + aceita — atomico.
+
+    Trigger tipico: condicao `imagem_status todas_iguais documentos_validos`.
+    Reusa HubsoftService + a logica de anexar/aceitar ja em contrato_service.
+
+    Configuracao de qual modelo/empresa usar:
+    - IntegracaoAPI.configuracoes_extras['hubsoft']['id_contrato_modelo'] (default 236 = Nuvyon)
+    - IntegracaoAPI.configuracoes_extras['hubsoft']['id_empresa_padrao'] (default 74 = Nuvyon matriz)
+
+    Idempotente: se ja tem id_cliente_servico_contrato no servico, pula criacao
+    e tenta direto anexar+aceitar.
+    """
+    from apps.comercial.cadastro.services.contrato_service import (
+        _coletar_arquivos_lead, _obter_hubsoft_service,
+    )
+    from apps.integracoes.services.hubsoft import HubsoftServiceError
+
+    lead = oportunidade.lead
+    if not lead:
+        logger.warning("[gerar_contrato] oport=%s sem lead vinculado", oportunidade.pk)
+        return
+
+    if getattr(lead, 'contrato_aceito', False) and getattr(lead, 'anexos_contrato_enviados', False):
+        logger.info("[gerar_contrato] lead=%s ja tem contrato aceito + anexos enviados, pula", lead.pk)
+        return
+
+    cliente_hubsoft = lead.clientes_hubsoft.first()
+    if not cliente_hubsoft:
+        logger.warning("[gerar_contrato] lead=%s ainda nao virou cliente HubSoft", lead.pk)
+        return
+
+    servico = cliente_hubsoft.servicos.first()
+    if not servico:
+        logger.warning("[gerar_contrato] cliente HubSoft %s sem servicos", cliente_hubsoft.pk)
+        return
+
+    try:
+        hubsoft_service = _obter_hubsoft_service(tenant=lead.tenant)
+    except Exception as exc:
+        logger.error("[gerar_contrato] sem HubsoftService: %s", exc)
+        return
+
+    extras = (hubsoft_service.integracao.configuracoes_extras or {}).get('hubsoft', {})
+    id_contrato_modelo = config.get('id_contrato_modelo') or extras.get('id_contrato_modelo')
+    id_empresa = config.get('id_empresa') or extras.get('id_empresa_padrao')
+    if not id_contrato_modelo or not id_empresa:
+        logger.error(
+            "[gerar_contrato] config ausente: id_contrato_modelo=%s id_empresa=%s. "
+            "Defina em IntegracaoAPI.configuracoes_extras['hubsoft'] ou na config da acao.",
+            id_contrato_modelo, id_empresa,
+        )
+        return
+
+    # 1) Criar contrato (se ainda nao tem)
+    id_contrato = servico.id_cliente_servico_contrato
+    if not id_contrato:
+        try:
+            resp = hubsoft_service.criar_contrato(
+                id_cliente_servico=servico.id_cliente_servico,
+                id_contrato_modelo=int(id_contrato_modelo),
+                id_empresa=int(id_empresa),
+                autorizacao_nome=lead.nome_razaosocial or '',
+                autorizacao_cpf=lead.cpf_cnpj or '',
+                informacao_adicional='Contrato gerado via automacao Hubtrix (regra pipeline).',
+                lead=lead,
+            )
+            id_contrato = (
+                (resp.get('data') or {}).get('id_cliente_servico_contrato')
+                or resp.get('id_cliente_servico_contrato')
+                or (resp.get('contrato') or {}).get('id_cliente_servico_contrato')
+            )
+            if not id_contrato:
+                logger.error("[gerar_contrato] HubSoft criou mas nao retornou id. Resp: %s", resp)
+                return
+            servico.id_cliente_servico_contrato = int(id_contrato)
+            servico.save(update_fields=['id_cliente_servico_contrato'])
+            logger.info("[gerar_contrato] criado contrato %s pro servico %s (lead %s)",
+                        id_contrato, servico.id_cliente_servico, lead.pk)
+        except HubsoftServiceError as exc:
+            logger.error("[gerar_contrato] criar_contrato falhou (lead=%s): %s", lead.pk, exc)
+            return
+
+    # 2) Anexar arquivos
+    if not lead.anexos_contrato_enviados:
+        try:
+            arquivos = _coletar_arquivos_lead(lead)
+            if arquivos:
+                hubsoft_service.anexar_arquivos_contrato(id_contrato, arquivos, lead=lead)
+                lead.anexos_contrato_enviados = True
+                lead.save(update_fields=['anexos_contrato_enviados'])
+                logger.info("[gerar_contrato] %d arquivo(s) anexado(s) ao contrato %s (lead %s)",
+                            len(arquivos), id_contrato, lead.pk)
+            else:
+                logger.warning("[gerar_contrato] lead=%s sem arquivos pra anexar", lead.pk)
+        except HubsoftServiceError as exc:
+            logger.error("[gerar_contrato] anexar_arquivos_contrato falhou (lead=%s): %s", lead.pk, exc)
+            # nao para aqui — ainda tenta aceitar
+
+    # 3) Aceitar contrato
+    if not lead.contrato_aceito:
+        try:
+            hubsoft_service.aceitar_contrato(
+                id_contrato,
+                observacao='Contrato aceito automaticamente apos validacao de documentos.',
+                lead=lead,
+            )
+            lead.contrato_aceito = True
+            lead.data_aceite_contrato = timezone.now()
+            lead.save(update_fields=['contrato_aceito', 'data_aceite_contrato'])
+            logger.info("[gerar_contrato] contrato %s aceito (lead %s)", id_contrato, lead.pk)
+        except HubsoftServiceError as exc:
+            logger.error("[gerar_contrato] aceitar_contrato falhou (lead=%s): %s", lead.pk, exc)
+
+
 _EXECUTORES_ACAO = {
     'criar_venda': _acao_criar_venda,
     'atribuir_agente': _acao_atribuir_agente,
+    'gerar_contrato_hubsoft': _acao_gerar_contrato_hubsoft,
 }
 
 

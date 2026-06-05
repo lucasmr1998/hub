@@ -88,15 +88,69 @@ def buscar_id_contrato(id_cliente_servico: int, *, integracao=None) -> int | Non
         return None
 
 
-def _obter_hubsoft_service():
-    """Retorna instancia de HubsoftService usando a integracao ativa do tipo hubsoft."""
+def _obter_hubsoft_service(*, tenant=None):
+    """Retorna instancia de HubsoftService usando a integracao ativa do tipo hubsoft.
+
+    Args:
+        tenant: opcional. Se passado, filtra explicitamente por esse tenant
+            (uso em contexto de signal/automacao sem request). Sem tenant,
+            usa o TenantManager default (= tenant atual do request).
+    """
     from apps.integracoes.models import IntegracaoAPI
     from apps.integracoes.services.hubsoft import HubsoftService
 
-    integracao = IntegracaoAPI.objects.filter(tipo="hubsoft", ativa=True).first()
+    if tenant is not None:
+        integracao = IntegracaoAPI.all_tenants.filter(tenant=tenant, tipo="hubsoft", ativa=True).first()
+    else:
+        integracao = IntegracaoAPI.objects.filter(tipo="hubsoft", ativa=True).first()
     if not integracao:
         raise RuntimeError("Nenhuma integracao HubSoft ativa encontrada.")
     return HubsoftService(integracao)
+
+
+def _coletar_arquivos_lead(lead) -> list[tuple[str, bytes, str]]:
+    """Monta lista de (nome, bytes, content_type) com imagens validadas + PDF da conversa.
+    Reutilizado tanto pelo signal legado quanto pela acao de automacao gerar_contrato_hubsoft.
+    """
+    from apps.comercial.leads.models import ImagemLeadProspecto
+
+    arquivos: list[tuple[str, bytes, str]] = []
+    erros_download = 0
+
+    imagens_validas = lead.imagens.filter(
+        status_validacao=ImagemLeadProspecto.STATUS_VALIDO
+    )
+    for imagem in imagens_validas:
+        conteudo, content_type = _baixar_imagem(imagem.link_url)
+        if conteudo is None:
+            erros_download += 1
+            continue
+        url_path = imagem.link_url.rstrip("/").split("/")[-1]
+        if "." not in url_path:
+            ext = content_type.split("/")[-1] if "/" in content_type else "jpg"
+            url_path = f"documento_{imagem.pk}.{ext}"
+        descricao_prefix = imagem.descricao.replace(" ", "_")[:30] if imagem.descricao else "doc"
+        arquivos.append((f"{descricao_prefix}_{url_path}", conteudo, content_type))
+
+    # PDF da conversa
+    if lead.html_conversa_path:
+        media_root = getattr(settings, "MEDIA_ROOT", None)
+        if not media_root:
+            base_dir = getattr(settings, "BASE_DIR", None)
+            media_root = os.path.join(str(base_dir), "media") if base_dir else "/tmp"
+        caminho_html = os.path.join(media_root, lead.html_conversa_path)
+        if os.path.exists(caminho_html):
+            try:
+                from weasyprint import HTML as WeasyHTML
+                pdf_bytes = WeasyHTML(filename=caminho_html).write_pdf()
+                pdf_bytes = pdf_bytes.replace(b"%\xf0\x9f\x96\xa4", b"%\xe2\xe3\xcf\xd3", 1)
+                arquivos.append((f"conversa_atendimento_{lead.pk}.pdf", pdf_bytes, "application/pdf"))
+            except Exception as exc:
+                logger.error("Erro ao converter HTML para PDF (lead %s): %s", lead.pk, exc)
+
+    if erros_download:
+        logger.warning("[coletar_arquivos] lead=%s tinha %d erros de download de imagem", lead.pk, erros_download)
+    return arquivos
 
 
 def _baixar_imagem(url: str) -> tuple[bytes, str] | tuple[None, None]:
