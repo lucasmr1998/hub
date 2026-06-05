@@ -2449,15 +2449,20 @@ def _contexto_form_regra(regra=None, estagio_preselecionado=None):
     from .models import PipelineEstagio
     estagios = PipelineEstagio.objects.filter(ativo=True).order_by('ordem')
     acoes_selecionadas = {a.get('tipo') for a in (regra.acoes or [])} if regra else set()
-    # Mapa linear {"<tipo>__<campo>": valor} pra usar direto no template
+    # Mapa linear {"<tipo>__<campo>": valor} pra usar direto no template.
+    # Le tanto da estrutura aninhada (`acao.config[campo]`, padrao do engine)
+    # quanto do nivel superior (fallback retrocompat).
     acoes_extras_flat = {}
     if regra:
         for a in (regra.acoes or []):
             tipo = a.get('tipo', '')
-            for k, v in a.items():
-                if k == 'tipo':
-                    continue
+            config = a.get('config') or {}
+            for k, v in config.items():
                 acoes_extras_flat[f'{tipo}__{k}'] = v
+            for k, v in a.items():
+                if k in ('tipo', 'config'):
+                    continue
+                acoes_extras_flat.setdefault(f'{tipo}__{k}', v)
     return {
         'regra': regra,
         'estagios': estagios,
@@ -2473,7 +2478,9 @@ def _contexto_form_regra(regra=None, estagio_preselecionado=None):
 def _parse_acoes_do_post(request):
     """Monta lista de acoes a partir do POST. Pra acoes com campos extras
     (definidos em ACOES_DISPONIVEIS_DICT[tipo]['campos_extras']), captura os
-    valores dos inputs nomeados `acao_<tipo>__<campo>`.
+    valores dos inputs nomeados `acao_<tipo>__<campo>` e os coloca dentro
+    de `acao['config']` (estrutura esperada pelo engine em
+    apps.comercial.crm.services.automacao_pipeline._executar_acoes_regra).
     """
     tipos = request.POST.getlist('acao_tipo')
     acoes = []
@@ -2483,6 +2490,7 @@ def _parse_acoes_do_post(request):
             continue
         acao = {'tipo': t}
         meta = ACOES_DISPONIVEIS_DICT.get(t, {})
+        config = {}
         for campo in meta.get('campos_extras', []):
             nome = campo['name']
             valor = request.POST.get(f'acao_{t}__{nome}', '').strip()
@@ -2493,7 +2501,9 @@ def _parse_acoes_do_post(request):
                     valor = int(valor)
                 except (ValueError, TypeError):
                     continue
-            acao[nome] = valor
+            config[nome] = valor
+        if config:
+            acao['config'] = config
         acoes.append(acao)
     return acoes
 
