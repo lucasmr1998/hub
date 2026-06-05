@@ -1,4 +1,5 @@
 {% extends "sistema/base.html" %}
+{% load crm_extras %}
 
 {% block title %}{% if regra %}Editar{% else %}Nova{% endif %} regra — Automações do Pipeline{% endblock %}
 
@@ -58,13 +59,31 @@
     <h3 style="font-size: var(--fs-md); font-weight: var(--fw-bold); margin: 0 0 var(--sp-3);">Ações</h3>
     <div style="display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-2);">
       {% for acao in acoes_disponiveis %}
-        <label style="display: flex; align-items: flex-start; gap: var(--sp-2); cursor: pointer; padding: var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); {% if acao.tipo in acoes_selecionadas %}background: var(--color-primary-soft); border-color: var(--color-primary);{% endif %}">
-          <input type="checkbox" name="acao_tipo" value="{{ acao.tipo }}" {% if acao.tipo in acoes_selecionadas %}checked{% endif %} style="margin-top: 2px; flex-shrink: 0;">
-          <div>
-            <div style="font-weight: var(--fw-medium);"><i class="bi {{ acao.icon }}"></i> {{ acao.label }}</div>
-            <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">{{ acao.descricao }}</div>
-          </div>
-        </label>
+        <div style="border: 1px solid var(--color-border); border-radius: var(--radius-md); {% if acao.tipo in acoes_selecionadas %}background: var(--color-primary-soft); border-color: var(--color-primary);{% endif %}">
+          <label style="display: flex; align-items: flex-start; gap: var(--sp-2); cursor: pointer; padding: var(--sp-3);">
+            <input type="checkbox" name="acao_tipo" value="{{ acao.tipo }}" {% if acao.tipo in acoes_selecionadas %}checked{% endif %} onchange="document.getElementById('acao-extras-{{ acao.tipo }}')?.style.setProperty('display', this.checked ? 'grid' : 'none');" style="margin-top: 2px; flex-shrink: 0;">
+            <div>
+              <div style="font-weight: var(--fw-medium);"><i class="bi {{ acao.icon }}"></i> {{ acao.label }}</div>
+              <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">{{ acao.descricao }}</div>
+            </div>
+          </label>
+          {% if acao.campos_extras %}
+            <div id="acao-extras-{{ acao.tipo }}" style="display: {% if acao.tipo in acoes_selecionadas %}grid{% else %}none{% endif %}; grid-template-columns: 1fr 1fr; gap: var(--sp-3); padding: var(--sp-3); border-top: 1px dashed var(--color-border);">
+              {% for campo in acao.campos_extras %}
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <label style="font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--color-text-muted);">{{ campo.label }}</label>
+                  {% with chave=acao.tipo|add:"__"|add:campo.name %}
+                  <input type="{{ campo.type }}" name="acao_{{ acao.tipo }}__{{ campo.name }}"
+                         value="{{ acoes_extras_flat|get_item:chave }}"
+                         placeholder="{{ campo.help }}"
+                         style="padding: var(--sp-2); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--fs-sm);">
+                  {% endwith %}
+                  <small style="font-size: var(--fs-xxs); color: var(--color-text-muted);">{{ campo.help }}</small>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
       {% endfor %}
     </div>
     <div style="font-size: var(--fs-xs); color: var(--color-text-muted); margin-bottom: var(--sp-4);">

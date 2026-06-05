@@ -2285,6 +2285,19 @@ ACOES_DISPONIVEIS = [
         'descricao': 'Cria um registro de Venda para o lead (idempotente — não duplica)',
         'icon': 'bi-bag-check',
     },
+    {
+        'tipo': 'gerar_contrato_hubsoft',
+        'label': 'Gerar Contrato HubSoft',
+        'descricao': 'Cria + anexa documentos + aceita contrato no HubSoft. Atomico.',
+        'icon': 'bi-file-earmark-text',
+        'campos_extras': [
+            {'name': 'id_contrato_modelo', 'label': 'ID Modelo Contrato', 'type': 'number', 'help': 'ID do template no HubSoft (consulte /configuracao/modelo_contrato)'},
+            {'name': 'id_empresa', 'label': 'ID Empresa', 'type': 'number', 'help': 'ID da empresa HubSoft (matriz/filial)'},
+            {'name': 'autorizacao_nome', 'label': 'Nome do Autorizador', 'type': 'text', 'help': 'Vazio = usa lead.nome_razaosocial'},
+            {'name': 'autorizacao_cpf', 'label': 'CPF do Autorizador', 'type': 'text', 'help': 'Vazio = usa lead.cpf_cnpj'},
+            {'name': 'informacao_adicional', 'label': 'Observação no contrato', 'type': 'text', 'help': 'Texto livre que vai no contrato'},
+        ],
+    },
 ]
 ACOES_DISPONIVEIS_DICT = {a['tipo']: a for a in ACOES_DISPONIVEIS}
 
@@ -2436,6 +2449,15 @@ def _contexto_form_regra(regra=None, estagio_preselecionado=None):
     from .models import PipelineEstagio
     estagios = PipelineEstagio.objects.filter(ativo=True).order_by('ordem')
     acoes_selecionadas = {a.get('tipo') for a in (regra.acoes or [])} if regra else set()
+    # Mapa linear {"<tipo>__<campo>": valor} pra usar direto no template
+    acoes_extras_flat = {}
+    if regra:
+        for a in (regra.acoes or []):
+            tipo = a.get('tipo', '')
+            for k, v in a.items():
+                if k == 'tipo':
+                    continue
+                acoes_extras_flat[f'{tipo}__{k}'] = v
     return {
         'regra': regra,
         'estagios': estagios,
@@ -2444,12 +2466,36 @@ def _contexto_form_regra(regra=None, estagio_preselecionado=None):
         'operadores': OPERADORES,
         'acoes_disponiveis': ACOES_DISPONIVEIS,
         'acoes_selecionadas': acoes_selecionadas,
+        'acoes_extras_flat': acoes_extras_flat,
     }
 
 
 def _parse_acoes_do_post(request):
+    """Monta lista de acoes a partir do POST. Pra acoes com campos extras
+    (definidos em ACOES_DISPONIVEIS_DICT[tipo]['campos_extras']), captura os
+    valores dos inputs nomeados `acao_<tipo>__<campo>`.
+    """
     tipos = request.POST.getlist('acao_tipo')
-    return [{'tipo': t} for t in tipos if t.strip()]
+    acoes = []
+    for t in tipos:
+        t = t.strip()
+        if not t:
+            continue
+        acao = {'tipo': t}
+        meta = ACOES_DISPONIVEIS_DICT.get(t, {})
+        for campo in meta.get('campos_extras', []):
+            nome = campo['name']
+            valor = request.POST.get(f'acao_{t}__{nome}', '').strip()
+            if not valor:
+                continue
+            if campo.get('type') == 'number':
+                try:
+                    valor = int(valor)
+                except (ValueError, TypeError):
+                    continue
+            acao[nome] = valor
+        acoes.append(acao)
+    return acoes
 
 
 @login_required
