@@ -1,0 +1,5451 @@
+{
+  "updatedAt": "2026-05-28T14:09:53.478Z",
+  "createdAt": "2026-05-28T13:17:56.354Z",
+  "id": "q60Omy70nfmGgBQt",
+  "name": "[Megalink] Nuvyion| Atendimento Fixo | 1.2 copy",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nuvyion",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -6800,
+        1744
+      ],
+      "id": "4bf8d909-fd1d-44ec-bf2c-96f7c5871935",
+      "name": "QuestionValidator",
+      "webhookId": "3a58b42b-cb40-482e-87f9-4ff843e708f6"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b9165ad3-8be4-400c-84d5-fffff73f4f8c",
+              "name": "question",
+              "value": "={{ $json.body.question }}",
+              "type": "string"
+            },
+            {
+              "id": "dbb7049a-0dca-47c1-ae33-82d6561be12e",
+              "name": "answer",
+              "value": "={{ $json.body.answer}}",
+              "type": "string"
+            },
+            {
+              "id": "5b79f811-d6f9-4c8f-9732-a8fb97a7a14c",
+              "name": "cellphone",
+              "value": "={{ $json.body.cellphone}}",
+              "type": "string"
+            },
+            {
+              "id": "7d915f52-b30e-4f86-a854-17a3945930e6",
+              "name": "id",
+              "value": "={{ $json.body.id }}",
+              "type": "string"
+            },
+            {
+              "id": "3ffb3e72-b348-4e53-b4c5-b7f625aec012",
+              "name": "dontValidate",
+              "value": "={{ $json.body.dontValidate ?? false }}",
+              "type": "boolean"
+            },
+            {
+              "id": "9e56f071-19bf-4fbe-9355-6fd267e6b8bb",
+              "name": "grupoNotificacao",
+              "value": "+55 53 9950-9717",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -6576,
+        1760
+      ],
+      "id": "deb0825b-2fec-4e08-8f27-88c843c3dbee",
+      "name": "Entrada"
+    },
+    {
+      "parameters": {
+        "content": "## Problem\nConverting leads to sales in hubsoft\n## Solution\nChatbot that will be connected to a service like Matrix\n## Purpose of this workflow\n* Be a validator of the question/answer flow\n## Reasoning\nWe don't want our system to be restricted by a specific chatbot app, so the business logic should generally come from our own workflow. \n## Challenges\n* Input validation (which requires other sources, such as CEP validators and resources from the company we are providing the service to)",
+        "height": 420,
+        "width": 540,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -7632,
+        1584
+      ],
+      "id": "b22b7abe-e906-48ff-b070-c1e08c2a5f53",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "\n### Recebe uma pergunta e resposta, retorna se é valido",
+        "height": 80,
+        "width": 536,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -7632,
+        2128
+      ],
+      "id": "c39334be-65ca-473c-b6e5-81590bf415af",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "\n### Recebe um session id para continuação de uma conversa (se for a primeira conversa ele também espera um 'conversationFlow' para saber o que perguntar o usuário?)",
+        "height": 80,
+        "width": 520,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2416,
+        6496
+      ],
+      "id": "5c205b75-7ba5-4924-b84c-5f6146a7c090",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "\n### Recebe um session id para continuação de uma conversa, e um formId para que o AI saiba que perguntas estarão sendo usadas.",
+        "height": 80,
+        "width": 520,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2416,
+        6896
+      ],
+      "id": "37ac10a6-514d-486f-8aba-6f08f7017018",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "path": "10231042-5678-4592-b43c-183a57fc8bb2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2240,
+        6624
+      ],
+      "id": "4b53530b-ee85-4039-a256-8f47d90769e9",
+      "name": "Webhook",
+      "webhookId": "10231042-5678-4592-b43c-183a57fc8bb2"
+    },
+    {
+      "parameters": {
+        "path": "eb687a27-b67c-4de3-9826-6c4ba53c7a72",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2240,
+        7024
+      ],
+      "id": "a5e17fba-b1ce-4797-84ff-ba003a4f3e95",
+      "name": "Webhook1",
+      "webhookId": "eb687a27-b67c-4de3-9826-6c4ba53c7a72"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a12ef1f3-91f7-45d3-8bd4-1028134a42be",
+              "name": "sessionId",
+              "value": "={{ $json.body.sessionId }}",
+              "type": "string"
+            },
+            {
+              "id": "9803bece-d053-4d72-aa44-7923fde075ab",
+              "name": "conversationFlow",
+              "value": "={{ $json.body.conversationFlow }}",
+              "type": "string"
+            },
+            {
+              "id": "3e320909-99a1-4813-af8d-38b75ffe8c78",
+              "name": "",
+              "value": "={{ $json.body.conversationFlow }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2016,
+        6624
+      ],
+      "id": "b7609dcd-6961-4a19-bb3b-cccd22747245",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "content": "Banco de dados: Postgresql",
+        "height": 80,
+        "width": 260
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -7632,
+        2032
+      ],
+      "id": "86f21eaf-8603-4dce-b204-9733f887b803",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "ALTER TABLE prospectos\nADD CONSTRAINT prospectos_telefone_unique UNIQUE (telefone);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -2096,
+        848
+      ],
+      "id": "2199b6e4-1b0f-4503-9f70-3d39c2f767f9",
+      "name": "Constraint prospectos"
+    },
+    {
+      "parameters": {
+        "operation": "deleteTable",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "cidade_atendida",
+          "mode": "list",
+          "cachedResultName": "cidade_atendida"
+        },
+        "deleteCommand": "drop",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -2288,
+        672
+      ],
+      "id": "0d106565-8a76-4a47-8ac9-8fd72eb28f7a",
+      "name": "Apagar Tabela"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list",
+          "cachedResultName": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "prospectos",
+          "mode": "list",
+          "cachedResultName": "prospectos"
+        },
+        "returnAll": true,
+        "options": {
+          "connectionTimeout": 30
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -2080,
+        672
+      ],
+      "id": "19bb5fb1-b3d5-473b-afbd-7274ac9a6f76",
+      "name": "Ler tabela"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 544,
+        "width": 520,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2384,
+        624
+      ],
+      "id": "9afafd80-ec57-46a8-9668-8a695e69c3c9",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 520,
+        "width": 1120,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -6912,
+        1504
+      ],
+      "id": "e93e3cd9-2a60-402e-a2f1-0ecdabf47d53",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "102b2685-02ff-44ce-9def-45d58485ca80",
+              "name": "question",
+              "value": "={{ $node['Entrada'].json['question'] }}",
+              "type": "string"
+            },
+            {
+              "id": "a81f4641-921a-4660-9d61-bcd3b7e09ad1",
+              "name": "answer",
+              "value": "={{ $node['Entrada'].json['answer'] }}",
+              "type": "string"
+            },
+            {
+              "id": "d7ce42e6-738e-40f1-a799-4454a7312fcd",
+              "name": "validations",
+              "value": "={{ JSON.parse($json.json_resultado).validations }}",
+              "type": "string"
+            },
+            {
+              "id": "f56c9b43-f075-4123-9a0d-f2d7a67a2236",
+              "name": "expectedFormats",
+              "value": "={{ JSON.parse($json.json_resultado).expectedFormats }}",
+              "type": "string"
+            },
+            {
+              "id": "3938faaa-8c92-463c-8f4b-f32797fa7ec0",
+              "name": "exceptions",
+              "value": "={{ JSON.parse($json.json_resultado).exceptions }}",
+              "type": "string"
+            },
+            {
+              "id": "a01fe2dd-4913-41c0-8c6e-90ae7440c342",
+              "name": "examples",
+              "value": "={{ JSON.parse($json.json_resultado).examples }}",
+              "type": "string"
+            },
+            {
+              "id": "fa51db55-44c8-4c12-9dc0-732092b66673",
+              "name": "isDataNascimento",
+              "value": "={{ JSON.parse($json.json_resultado).isDataNascimento }}",
+              "type": "string"
+            },
+            {
+              "id": "6ae98706-46f1-47d7-8bc8-7286a0715159",
+              "name": "isImagem",
+              "value": "={{ JSON.parse($json.json_resultado).isImagem }}",
+              "type": "boolean"
+            },
+            {
+              "id": "8177942e-1d2d-43f8-8f4e-0c3b32974f9b",
+              "name": "isEmail",
+              "value": "={{ JSON.parse($json.json_resultado).isEmail }}",
+              "type": "string"
+            },
+            {
+              "id": "d254271c-2dbf-4efc-92d9-98f70151ea5a",
+              "name": "isCPF",
+              "value": "={{ JSON.parse($json.json_resultado).isCPF }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {
+          "ignoreConversionErrors": true
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1120,
+        1776
+      ],
+      "id": "9b06e80a-0bab-4d77-9f79-030386bc08bf",
+      "name": "FilterValidatorType"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.megalinktelecom.hubsoft.com.br/oauth/token",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"client_id\": \"76\",\n  \"client_secret\": \"hv3K6SXp7p7g2eNznxUXJphgsgzfQUHnyuch2XaS\",\n  \"username\": \"rdstation@megalinkinternet.com.br\",\n  \"password\": \"XMa3Nz6YwLA5*w\",\n  \"grant_type\": \"password\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6416,
+        -3136
+      ],
+      "id": "939e9427-de1a-41bf-9c5a-91646dc9c7e4",
+      "name": "TokenHubsoft"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 520,
+        "width": 960
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2496,
+        5520
+      ],
+      "id": "962a8b96-27f5-4f1e-af81-f58b9512410c",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "url": "https://megacadastro.megalinkpiaui.com.br/api/leads/registrar/",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2208,
+        5696
+      ],
+      "id": "4f902c19-27e5-4c16-a88a-705b2ae25f59",
+      "name": "CreateLead"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0de01c31-8a14-4864-ab00-101536b3eada",
+              "leftValue": "={{ $json.dontValidate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -6384,
+        1760
+      ],
+      "id": "9be1c725-2263-4526-830c-91cfbf9a4a8a",
+      "name": "skipValidation?"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -6144,
+        1648
+      ],
+      "id": "9dbfc0b4-b357-455a-bd3a-9db5651dbd5a",
+      "name": "Respond to Webhook2"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "76359e82-f51e-4ff9-86bc-94aa17728893",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2432,
+        5696
+      ],
+      "id": "f55d43a5-ad2a-4aff-8dcb-7c23dccef0a3",
+      "name": "RegisterLead",
+      "webhookId": "76359e82-f51e-4ff9-86bc-94aa17728893"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE cidade_atendida (\n    id SERIAL PRIMARY KEY,\n    nome_cidade VARCHAR(255) NOT NULL\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -2288,
+        848
+      ],
+      "id": "dca7ba24-6471-4a33-abfd-6f4b4ca8cbb5",
+      "name": "Criar Tabela CidadeAtendida"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE cidade_atendida (\n    id SERIAL PRIMARY KEY,\n    nome_cidade VARCHAR(255) NOT NULL,\n    time_de_atendimento VARCHAR(255),\n   id_agenda INTEGER\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -2288,
+        1024
+      ],
+      "id": "265ea324-92e2-4311-a900-257d38a1d0c8",
+      "name": "Criar Tabela CidadeAtendida1"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 520,
+        "width": 1776
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2496,
+        6144
+      ],
+      "id": "508763bc-3da9-468b-8295-370d10bc122c",
+      "name": "Sticky Note15"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "e5cc730b-79d0-4438-b598-9d8874efcb2f",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2464,
+        6336
+      ],
+      "id": "8430459f-c1ba-4843-adcb-4f7872208b86",
+      "name": "UpdateCidadesWebhook",
+      "webhookId": "e5cc730b-79d0-4438-b598-9d8874efcb2f"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cfbcdfe4-56c8-4825-acde-d9b730611145",
+              "leftValue": "={{ $json.remover_antigos }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1952,
+        6336
+      ],
+      "id": "5b36d4e2-a6c9-4608-a2b0-a0107a5fe374",
+      "name": "DeveriaApagarAntigos?"
+    },
+    {
+      "parameters": {
+        "operation": "deleteTable",
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list",
+          "cachedResultName": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "cidade_atendida",
+          "mode": "list",
+          "cachedResultName": "cidade_atendida"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1520,
+        6208
+      ],
+      "id": "a5d1e096-4d7e-4134-be3b-d4e9c247cea7",
+      "name": "DeletarCidades"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "cidade_atendida",
+          "mode": "list",
+          "cachedResultName": "cidade_atendida"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id_agenda": "={{ $json.cidade.id_agenda }}",
+            "nome_cidade": "={{ $json.cidade.nome }}",
+            "time_de_atendimento": "={{ $json.cidade.time }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "nome_cidade",
+              "displayName": "nome_cidade",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "time_de_atendimento",
+              "displayName": "time_de_atendimento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "id_agenda",
+              "displayName": "id_agenda",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -944,
+        6368
+      ],
+      "id": "41babeb9-4602-455b-b1dd-08b138abb5e8",
+      "name": "AdicionarCidades"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6d441318-8122-4d0b-b419-b6e0901bf8f1",
+              "name": "cidades",
+              "value": "={{ $json.body.cidades }}",
+              "type": "array"
+            },
+            {
+              "id": "6dec9494-4ca0-48e7-bfb8-ce65d19a2d7a",
+              "name": "remover_antigos",
+              "value": "={{ $json.body.remover_antigos }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {
+          "ignoreConversionErrors": true
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2272,
+        6352
+      ],
+      "id": "c36c0696-224f-452e-9af6-ce16d80b4979",
+      "name": "EntradaUpdateCidades"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "cidades",
+        "options": {
+          "destinationFieldName": "cidade"
+        }
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -1248,
+        6352
+      ],
+      "id": "1bacff9b-660c-4a83-8641-9d07a1376981",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "url": "https://api.megalinktelecom.hubsoft.com.br/api/v1/integracao/cliente/financeiro",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "termo_busca",
+              "value": "05356595042"
+            },
+            {
+              "name": "busca",
+              "value": "cpf_cnpj"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6672,
+        -3168
+      ],
+      "id": "14a7ea3d-0732-434b-8363-33bd9e49ee4b",
+      "name": "HTTP Request8",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.megalinktelecom.hubsoft.com.br/oauth/token",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"client_id\": \"76\",\n  \"client_secret\": \"hv3K6SXp7p7g2eNznxUXJphgsgzfQUHnyuch2XaS\",\n  \"username\": \"rdstation@megalinkinternet.com.br\",\n  \"password\": \"XMa3Nz6YwLA5*w\",\n  \"grant_type\": \"password\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6496,
+        -2960
+      ],
+      "id": "4e41eb77-90a6-48bd-b329-2e8618459882",
+      "name": "TokenHubsoft1"
+    },
+    {
+      "parameters": {
+        "url": "https://api.megalinktelecom.hubsoft.com.br/api/v1/integracao/cliente/financeiro",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "termo_busca",
+              "value": "36734059855"
+            },
+            {
+              "name": "busca",
+              "value": "cpf_cnpj"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6752,
+        -3008
+      ],
+      "id": "af837649-9450-4d70-9352-6323a758c15d",
+      "name": "HTTP Request",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.megalinktelecom.hubsoft.com.br/oauth/token",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"client_id\": \"76\",\n  \"client_secret\": \"hv3K6SXp7p7g2eNznxUXJphgsgzfQUHnyuch2XaS\",\n  \"username\": \"rdstation@megalinkinternet.com.br\",\n  \"password\": \"XMa3Nz6YwLA5*w\",\n  \"grant_type\": \"password\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6576,
+        -2800
+      ],
+      "id": "cbe06ba5-516d-4be5-9fa6-934dfd583aa3",
+      "name": "TokenHubsoft2"
+    },
+    {
+      "parameters": {
+        "url": "https://api.megalinktelecom.hubsoft.com.br/api/v1/integracao/cliente/financeiro",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "termo_busca",
+              "value": "60165728370"
+            },
+            {
+              "name": "busca",
+              "value": "cpf_cnpj"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6880,
+        -2816
+      ],
+      "id": "dd7628a5-a2dc-43c4-8170-ad35df7d25a7",
+      "name": "HTTP Request1",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1b32aea3-1f59-4e3f-b709-e86f9d44598c",
+              "name": "client",
+              "value": "={{ $json.faturas.last()['cliente'] }}",
+              "type": "object"
+            },
+            {
+              "id": "4fff6af0-26bf-4549-b6d3-d4b4a2adf316",
+              "name": "hasBilling",
+              "value": "={{ $json.faturas.find(item => item.quitado === false)  !== undefined}}",
+              "type": "string"
+            },
+            {
+              "id": "fca77273-ecde-4ce8-af47-fe72be650b41",
+              "name": "",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6992,
+        -3088
+      ],
+      "id": "0ba4c087-fe6a-43a2-8b40-879f0585b50a",
+      "name": "TesteCancelado"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1b32aea3-1f59-4e3f-b709-e86f9d44598c",
+              "name": "client",
+              "value": "={{ $json.faturas.last()['cliente'] }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6880,
+        -3264
+      ],
+      "id": "df38bd2f-81fe-44e8-931f-d13fa1301d32",
+      "name": "NãoExiste?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1b32aea3-1f59-4e3f-b709-e86f9d44598c",
+              "name": "client",
+              "value": "={{ $json.faturas.last()['cliente'] }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7072,
+        -2928
+      ],
+      "id": "17ec1e65-91fc-440e-b4f7-19671ccbe89d",
+      "name": "ServiçoHabilitado"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1b32aea3-1f59-4e3f-b709-e86f9d44598c",
+              "name": "isAClient",
+              "value": "={{ $json.status_client === 'ATIVO'}}",
+              "type": "string"
+            },
+            {
+              "id": "f660ecc0-aef6-4fb4-b2e0-89d36c75a357",
+              "name": "hasCancelled",
+              "value": "={{ $json.status_client  }}",
+              "type": "string"
+            },
+            {
+              "id": "7e2bc488-5ad0-4f4c-896b-899a8258e5d7",
+              "name": "hasBilling",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        8288,
+        -2496
+      ],
+      "id": "4343752e-8045-4eef-81c0-048c1793c301",
+      "name": "TesteCancelado1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1b32aea3-1f59-4e3f-b709-e86f9d44598c",
+              "name": "status_client",
+              "value": "={{\n$json.client === undefined ?\n \"NAO_CLIENTE\"\n: $json.client.status === \"Cancelado\" ? \n\"CANCELADO\" : \"ATIVO\"\n}}",
+              "type": "object"
+            },
+            {
+              "id": "7153f3c4-c5cb-4ff0-b85b-8b1a2e31c6ed",
+              "name": "",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        8112,
+        -2496
+      ],
+      "id": "5a30743a-a153-4d66-9b3b-c171b4b0a5c3",
+      "name": "TesteCancelado2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1b32aea3-1f59-4e3f-b709-e86f9d44598c",
+              "name": "client",
+              "value": "={{ $json.faturas.last()['cliente'] }}",
+              "type": "object"
+            },
+            {
+              "id": "4fff6af0-26bf-4549-b6d3-d4b4a2adf316",
+              "name": "hasBilling",
+              "value": "={{ $json.faturas.find(item => item.quitado === false)  !== undefined}}",
+              "type": "string"
+            },
+            {
+              "id": "fca77273-ecde-4ce8-af47-fe72be650b41",
+              "name": "",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7936,
+        -2496
+      ],
+      "id": "d88ac602-12e2-4f4f-9b70-9bf7ac4c3946",
+      "name": "TesteCancelado3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.megalinktelecom.hubsoft.com.br/oauth/token",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"client_id\": \"76\",\n  \"client_secret\": \"hv3K6SXp7p7g2eNznxUXJphgsgzfQUHnyuch2XaS\",\n  \"username\": \"rdstation@megalinkinternet.com.br\",\n  \"password\": \"XMa3Nz6YwLA5*w\",\n  \"grant_type\": \"password\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2528,
+        2784
+      ],
+      "id": "4f0337d1-58ab-4098-bab6-a7226349f166",
+      "name": "TokenHubsoft3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.megalinktelecom.hubsoft.com.br/oauth/token",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"client_id\": \"76\",\n  \"client_secret\": \"hv3K6SXp7p7g2eNznxUXJphgsgzfQUHnyuch2XaS\",\n  \"username\": \"rdstation@megalinkinternet.com.br\",\n  \"password\": \"XMa3Nz6YwLA5*w\",\n  \"grant_type\": \"password\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6944,
+        -2656
+      ],
+      "id": "06e84638-94eb-4604-8df3-3e4d37768bc7",
+      "name": "TokenHubsoft4"
+    },
+    {
+      "parameters": {
+        "url": "https://api.megalinktelecom.hubsoft.com.br/api/v1/integracao/cliente/financeiro",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "termo_busca",
+              "value": "60165728370"
+            },
+            {
+              "name": "busca",
+              "value": "cpf_cnpj"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7696,
+        -2464
+      ],
+      "id": "7cd6714b-185f-4061-a108-2034f42f4762",
+      "name": "HTTP Request3",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://api.megalinktelecom.hubsoft.com.br/api/v1/integracao/cliente",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "busca",
+              "value": "cpf_cnpj"
+            },
+            {
+              "name": "termo_busca",
+              "value": "=60165728370"
+            },
+            {
+              "name": "inativo",
+              "value": "todos"
+            },
+            {
+              "name": "cancelado",
+              "value": "sim"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7168,
+        -2624
+      ],
+      "id": "ae071811-af15-4510-b72a-d811fec4fb81",
+      "name": "Consulta dados cliente3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1b32aea3-1f59-4e3f-b709-e86f9d44598c",
+              "name": "isAClient",
+              "value": "={{ $json.status_client === 'ATIVO'}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7776,
+        -2688
+      ],
+      "id": "4762b42d-3ec6-484e-91e4-fbcffbb913de",
+      "name": "TesteCancelado4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1b32aea3-1f59-4e3f-b709-e86f9d44598c",
+              "name": "status_client",
+              "value": "={{\n$json.client === undefined ?\n \"NAO_CLIENTE\" : \"ATIVO\"\n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7600,
+        -2688
+      ],
+      "id": "5de820b6-f82d-4a47-b01b-40b882da1036",
+      "name": "TesteCancelado5"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1b32aea3-1f59-4e3f-b709-e86f9d44598c",
+              "name": "client",
+              "value": "={{ $json.clientes[0] }}",
+              "type": "object"
+            },
+            {
+              "id": "4fff6af0-26bf-4549-b6d3-d4b4a2adf316",
+              "name": "hasBilling",
+              "value": "={{ $json.faturas.find(item => item.quitado === false)  !== undefined}}",
+              "type": "string"
+            },
+            {
+              "id": "fca77273-ecde-4ce8-af47-fe72be650b41",
+              "name": "",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7424,
+        -2688
+      ],
+      "id": "72d042f6-921c-4cf7-a220-085d406757c3",
+      "name": "TesteCancelado6"
+    },
+    {
+      "parameters": {
+        "content": "## Testes\n",
+        "height": 1120,
+        "width": 2464,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        6000,
+        -3360
+      ],
+      "id": "ed45589a-2d2d-498c-b42d-52d0853616e4",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## FAQ Model",
+        "height": 544,
+        "width": 520,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1728,
+        192
+      ],
+      "id": "8e27ce34-048b-4a35-9054-359a193aa8a2",
+      "name": "Sticky Note16"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE pergunta (\n    id SERIAL PRIMARY KEY,\n    pergunta VARCHAR(255) NOT NULL,\n    resposta VARCHAR(255) NOT NULL\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -1664,
+        288
+      ],
+      "id": "d183f4b0-4a07-483a-a420-5234e111189a",
+      "name": "Criar Tabela CidadeAtendida2"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 360,
+        "width": 704,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1360,
+        1696
+      ],
+      "id": "e75b3e5c-ee4a-423e-8362-865c99c4ac1f",
+      "name": "Sticky Note17"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 368
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        1696
+      ],
+      "id": "3a35ac32-f0d0-42dc-84dc-a17319bea7ac",
+      "name": "Sticky Note30"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "cidade_atendida",
+          "mode": "list",
+          "cachedResultName": "cidade_atendida"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nome_cidade": "={{ $json.nome_cidade }}",
+            "time_de_atendimento": "={{ $json.cidades_flaysi.includes($json.nome_cidade) ? \"Flaysi\" : \"Franklin\" }}"
+          },
+          "matchingColumns": [
+            "nome_cidade"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "nome_cidade",
+              "displayName": "nome_cidade",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "time_de_atendimento",
+              "displayName": "time_de_atendimento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id_agenda",
+              "displayName": "id_agenda",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -960,
+        6800
+      ],
+      "id": "84b41031-c546-4cf8-9694-87186d3e2477",
+      "name": "AtualizarTimeCidades"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6ce64405-4686-4c35-9902-11cf8ca3cff4",
+              "name": "cidades_flaysi",
+              "value": "[\"Bom Jesus\", \"Palmeira do Piauí\", \"Cristino Castro\", \"Santaluz\", \"Redenção do Gurguéia\", \"Monte Alegre do Piauí\", \"Gilbués\", \"São Gonçalo do Gurguéia\", \"Currais\"]",
+              "type": "array"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1232,
+        6816
+      ],
+      "id": "215666b6-50dc-426b-a570-a4b97e7e8cd5",
+      "name": "Edit Fields4"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "cidade_atendida",
+          "mode": "list",
+          "cachedResultName": "cidade_atendida"
+        },
+        "returnAll": true,
+        "where": {
+          "values": [
+            {
+              "column": "time_de_atendimento",
+              "condition": "IS NULL"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1520,
+        6800
+      ],
+      "id": "b785694a-f614-4d6b-848e-35e030bda387",
+      "name": "AtualizarTimeCidades1"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 272,
+        "width": 576,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        704,
+        1552
+      ],
+      "id": "c0f09775-a310-473b-8ce5-19e1dbf8c05c",
+      "name": "Sticky Note19"
+    },
+    {
+      "parameters": {
+        "content": "# IMAGEM",
+        "height": 112,
+        "width": 448,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        704,
+        1408
+      ],
+      "id": "0f5088d1-2b47-4b1a-93f0-9c46477b5dd4",
+      "name": "Sticky Note23"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "54d6c1f0-8ab1-4623-9fd9-bac01288f8a6",
+              "name": "response",
+              "value": "={{ \n{\n'answerIsCorrect': $json.answerIsCorrect,\n'errorMessage': ($json.answerIsCorrect == true) ? '' : 'O conteúdo enviado não é um arquivo de imagem.'\n}\n}}",
+              "type": "object"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        1632
+      ],
+      "id": "3a2b1eca-d4c5-444e-8500-8d2050d062f4",
+      "name": "Edit Fields16"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f4923418-5a47-4f08-82e2-89c9c5afcd72",
+              "name": "answerIsCorrect",
+              "value": "={{ ['png', 'jpeg', 'jpg'].some(item => $json.answer.endsWith(item)) }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        816,
+        1632
+      ],
+      "id": "de69d36f-151f-4c6b-9e6b-5e4407ae9893",
+      "name": "Edit Fields9"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items\nfor (const item of $input.all()) {\n\n  const dateString = item.json.answer;\n\n  // Initialize new fields\n  item.json.isOver18 = false;\n  item.json.validationError = null;\n\n  // 1. Check if input exists\n  if (!dateString) {\n    item.json.validationError = \"Input field 'answer' is missing or empty.\";\n    continue;\n  }\n\n  // 2. Check for exact dd/mm/yyyy format\n  const regex = /^\\d{2}\\/\\d{2}\\/\\d{4}$/;\n  if (!regex.test(dateString)) {\n    item.json.validationError = \"Invalid date format. Expected dd/mm/yyyy.\";\n    continue;\n  }\n\n  // 3. Parse the date string\n  const parts = dateString.split('/');\n  const day = parseInt(parts[0], 10);\n  const month = parseInt(parts[1], 10) - 1; // JavaScript months are 0-indexed (0-11)\n  const year = parseInt(parts[2], 10);\n\n  // 3.5 Validate if the year is within a reasonable range\n  const today = new Date();\n  if (year < 1900 || year > today.getFullYear()) {\n    item.json.validationError = `Invalid year. Expected a year between 1900 and ${today.getFullYear()}.`;\n    continue;\n  }\n\n  // 4. Validate if the created date is a real calendar date\n  // This catches invalid dates like 31/02/2000, which JS would \"roll over\"\n  const birthDate = new Date(year, month, day);\n  if (birthDate.getFullYear() !== year || birthDate.getMonth() !== month || birthDate.getDate() !== day) {\n    item.json.validationError = \"Invalid calendar date (e.g., 31/02/2000).\";\n    continue;\n  }\n\n  // 5. Calculate the cutoff date (18 years ago from today)\n  const cutoffDate = new Date(\n    today.getFullYear() - 18,\n    today.getMonth(),\n    today.getDate()\n  );\n\n  // 6. Perform the age validation\n  // If the birthdate is on or before the cutoff date, they are 18 or older.\n  item.json.isOver18 = (birthDate <= cutoffDate);\n\n  // 7. Clean up validationError field if no error occurred\n  if (item.json.validationError === null) {\n    delete item.json.validationError;\n  }\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        1104
+      ],
+      "id": "9f091a23-5dc2-4786-ba2a-de00b2c3c23b",
+      "name": "ValidarDataDeNascimento"
+    },
+    {
+      "parameters": {
+        "content": "# DATA DE NASCIMENTO",
+        "height": 112,
+        "width": 448,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        704,
+        880
+      ],
+      "id": "e8f6d7db-e690-4438-8d72-a9e708dbb601",
+      "name": "Sticky Note22"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "54d6c1f0-8ab1-4623-9fd9-bac01288f8a6",
+              "name": "response",
+              "value": "={{ \n{\n'answerIsCorrect': $json.answerIsCorrect,\n'errorMessage': $json.errorMessage\n}\n}}",
+              "type": "object"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1296,
+        1104
+      ],
+      "id": "3c1a5874-a00b-4f8c-b1ae-3a0b5ff4e518",
+      "name": "Edit Fields17"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "acfef6b9-c741-400c-9d10-1d4dbad6ff23",
+              "name": "errorMessage",
+              "value": "={{ $json.validationError\n? \n\"A data fornecida foi formatada de forma incorreta. O formato de data deve estar como dd/mm/YYYY\" :\n$json.isOver18 ? \"\" : \"A data fornecida indica que você não é maior de idade. Por favor insira uma data de nascimento válida para uma pessoa que seja maior de 18 anos.\" }}",
+              "type": "string"
+            },
+            {
+              "id": "361d0856-6728-438c-a6b4-6412e9b56d01",
+              "name": "answerIsCorrect",
+              "value": "={{   $json.validationError == null \n&& $json.isOver18 }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1072,
+        1104
+      ],
+      "id": "efc298ee-b46a-46cf-80ea-0dd0e5aefded",
+      "name": "GenerateErrorMessage"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 336,
+        "width": 784,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        704,
+        1024
+      ],
+      "id": "f6b330c2-8383-4dc7-8e33-86659f9f7bb5",
+      "name": "Sticky Note18"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a14da3a5-c3c0-43c7-8225-f484c339e700",
+              "name": "response",
+              "value": "={{ JSON.parse($json.output) }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1152,
+        2608
+      ],
+      "id": "d57e0de0-b194-46ee-83f6-04a5bf4e3bf3",
+      "name": "ResultadoValidacao"
+    },
+    {
+      "parameters": {
+        "content": "# VALIDADOR",
+        "height": 112,
+        "width": 448,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        720,
+        2384
+      ],
+      "id": "9512be71-a051-4179-974b-eb4835e9cbe7",
+      "name": "Sticky Note24"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Pergunta: {{ $json.question }}\nResposta do Usuário: {{ $json.answer }}\n\nInstruções de Validação e Formatação:\n\n1.  Regras de Validação: {{ $json.validations }}\n2. Não esqueça que se a resposta não fizer sentido para a pergunta ela deve ser recusada.\n3.  Exemplos válidos: {{ $json.examples }}",
+        "options": {
+          "systemMessage": "=Você é um assistente de IA especialista em processar e formatar respostas de formulários. Sua função é receber uma entrada de texto do usuário, analisá-la para entender o valor, e retornar esse valor em um formato padronizado (JSON). \n\nSua resposta deve ser sempre um JSON com os campos answerIsCorrect, formattedValue e errorMessage.\n\n### Regras de Processamento e Formatação:\n\n1. SE A ENTRADA PODE SER INTERPRETADA E FORMATADA CORRETAMENTE (VÁLIDA):\n   - answerIsCorrect deve ser true.\n   - errorMessage deve ser vazio (\"\").\n\n   Exemplos:\n     - Pergunta: 'Qual é a sua cidade?'\n     - Entrada Usuário: 'Porto Alegre' ou 'Poa' ou 'porto alegre rs'\n     - Retorno:\n       json\n       {\n         \"answerIsCorrect\": true,\n         \"errorMessage\": \"\"\n       }\n       \n     - Pergunta: 'Quantos clientes ativos sua empresa possui?'\n     - Entrada Usuário: 'cerca de 100' ou 'cem' ou '100 clientes'\n     - Retorno:\n       json\n       {\n         \"answerIsCorrect\": true,\n         \"errorMessage\": \"\"\n       }\n       \n     - Pergunta: 'Qual o seu mês de nascimento?'\n     - Entrada Usuário: 'março' ou 'Mar'\n     - Retorno:\n       json\n       {\n         \"answerIsCorrect\": true,\n         \"errorMessage\": \"\"\n       }\n\n     - Pergunta: 'Qual a sua data de nascimento?'\n     - Entrada Usuário: '26/11/2003'\n     - Retorno:\n       json\n       {\n         \"answerIsCorrect\": true,\n         \"errorMessage\": \"\"\n       }\n\n       \n\n2. SE A ENTRADA É COMPLETAMENTE INVÁLIDA OU AMBÍGUA PARA A PERGUNTA (INVÁLIDA):\n   - answerIsCorrect deve ser false.\n   - errorMessage deve conter uma explicação clara do erro e, sempre que possível, uma sugestão de como o usuário pode reformular a entrada para que ela seja aceita.\n\n   Exemplos:\n     - Pergunta: 'Qual o seu mês de nascimento?'\n     - Entrada Usuário: 'Segunda-feira'\n     - Retorno:\n       json\n       {\n         \"answerIsCorrect\": false,\n         \"errorMessage\": \"A entrada 'Segunda-feira' não é um mês válido. Por favor, insira um mês (ex: Janeiro, Março, Julho).\"\n       }\n       \n     - Pergunta: 'Qual o ticket médio mensal por cliente (R$)?'\n     - Entrada Usuário: 'muito bom'\n     - Retorno:\n       json\n       {\n         \"answerIsCorrect\": false,\n         \"errorMessage\": \"A resposta 'muito bom' não representa um valor monetário. Por favor, insira um número (ex: 150.00, R$ 200, duzentos e cinquenta).\"\n       }\n     - Pergunta: 'Qual a sua data de nascimento?'\n     - Entrada Usuário: '26.11.2003'\n     - Retorno:\n       json\n       {\n         \"answerIsCorrect\": false,\n         \"errorMessage\": \"A data '26.11.2003' está mal formatada. Por favor digite no formato dd/mm/yyyy, como '26/11/2003'\"\n       }\nPara CPF, pode aceitar valores não formatados."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        816,
+        2592
+      ],
+      "id": "519efc70-2ece-4ce7-908f-20940e920bfa",
+      "name": "Validator1",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "68a5c60b-918e-4a4d-9fe6-b3503438256e",
+              "leftValue": "={{ $node['FilterValidatorType'].json['isCPF'] }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "aad936c8-8d8c-4b9b-bdd9-21fa98950b16",
+              "leftValue": "={{ $json.response.answerIsCorrect }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1440,
+        2608
+      ],
+      "id": "7c2bdd57-0949-422d-8bb0-b6fefb98434f",
+      "name": "HasValidCPFToSearch?1",
+      "alwaysOutputData": false,
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 472,
+        "width": 1152,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        720,
+        2528
+      ],
+      "id": "cf8b6cc4-0df4-43c5-aa9d-d7f9f7d3b931",
+      "name": "Sticky Note25"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "038c7a3e-9380-4dcb-8b46-d84a7788dfff",
+              "name": "response",
+              "value": "={{ $node['ResultadoValidacao'].json['response'] }}",
+              "type": "object"
+            },
+            {
+              "id": "959d223a-9cd9-42a9-ba07-201fdc67a5e6",
+              "name": "isAClient",
+              "value": "={{ $json.isAClient }}",
+              "type": "boolean"
+            },
+            {
+              "id": "f85dcd34-ce48-454d-8e52-ab3f36b9642d",
+              "name": "useClientInfo",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3584,
+        2784
+      ],
+      "id": "7f68a068-e1a0-4280-93f1-aff96f70c4cf",
+      "name": "Edit Fields18"
+    },
+    {
+      "parameters": {
+        "url": "https://api.megalinktelecom.hubsoft.com.br/api/v1/integracao/cliente",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "busca",
+              "value": "cpf_cnpj"
+            },
+            {
+              "name": "termo_busca",
+              "value": "={{ $node['Entrada'].json['answer'].replaceAll('.', '').replaceAll('-', '')}}"
+            },
+            {
+              "name": "cancelado",
+              "value": "sim"
+            },
+            {
+              "name": "inativo",
+              "value": "todos"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2752,
+        2784
+      ],
+      "id": "c94e5b49-3542-4062-a012-8e05f4f96a4f",
+      "name": "Consulta dados cliente"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1b32aea3-1f59-4e3f-b709-e86f9d44598c",
+              "name": "isAClient",
+              "value": "={{ $json.status_client === 'ATIVO'}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3344,
+        2784
+      ],
+      "id": "02c130c1-ba92-4eee-ba8c-5a73a7951369",
+      "name": "TesteCancelado7"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1b32aea3-1f59-4e3f-b709-e86f9d44598c",
+              "name": "status_client",
+              "value": "={{\n$json.client == undefined ?\n \"NAO_CLIENTE\" : \"ATIVO\"\n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3168,
+        2784
+      ],
+      "id": "0922c911-ab9a-4833-9e1c-ef8737c4fd99",
+      "name": "TesteCancelado8"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1b32aea3-1f59-4e3f-b709-e86f9d44598c",
+              "name": "client",
+              "value": "={{ $json.clientes[0] }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2992,
+        2784
+      ],
+      "id": "2ea1234a-a5b0-4e3f-9f01-de0e447b164e",
+      "name": "TesteCancelado9"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 336,
+        "width": 1248,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2480,
+        2672
+      ],
+      "id": "b81452c5-ba7d-48d4-a5d7-af4fac53b1ce",
+      "name": "Sticky Note27"
+    },
+    {
+      "parameters": {
+        "content": "# CPF",
+        "height": 112,
+        "width": 448,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2480,
+        2528
+      ],
+      "id": "61b6b177-880f-46b1-9eee-7c9158ba2da8",
+      "name": "Sticky Note31"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dbb7049a-0dca-47c1-ae33-82d6561be12e",
+              "name": "answerIsCorrect",
+              "value": "={{ $json.response.answerIsCorrect }}",
+              "type": "string"
+            },
+            {
+              "id": "95d9fa66-c66d-4f68-9ebe-32919f531783",
+              "name": "errorMessage",
+              "value": "={{ $json.response.errorMessage}}",
+              "type": "string"
+            },
+            {
+              "id": "30b36ab0-bde4-4a8d-9a35-b29f0eda1c65",
+              "name": "hasCancelledService",
+              "value": "={{ $json.hasCancelledService }}",
+              "type": "string"
+            },
+            {
+              "id": "780e7396-2817-48a7-a75c-978f57f7a9a0",
+              "name": "isAClient",
+              "value": "={{ $json.isAClient }}",
+              "type": "string"
+            },
+            {
+              "id": "f30706ff-1670-4a60-96c0-94aea8be7aff",
+              "name": "hasBilling",
+              "value": "={{ $json.hasBilling ?? false}}",
+              "type": "boolean"
+            },
+            {
+              "id": "9de7cd60-d642-435b-b072-1e78816275f5",
+              "name": "useClientInfo",
+              "value": "={{ $json.useClientInfo ?? false }}",
+              "type": "boolean"
+            },
+            {
+              "id": "9ccdc123-0c28-46d0-a532-1704c9a575d4",
+              "name": "cellphone",
+              "value": "={{ $node['Entrada'].json['cellphone'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4272,
+        1184
+      ],
+      "id": "494d9558-721c-4fc4-8b38-4c1dbfa2c786",
+      "name": "Retorno Padrão de Resposta"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        6560,
+        1936
+      ],
+      "id": "1fb955ac-6d85-4337-9e20-cb4036798063",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://robovendas.megalinkpiaui.com.br/api/leads/atualizar/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "termo_busca",
+              "value": "telefone"
+            },
+            {
+              "name": "busca",
+              "value": "={{$node['Entrada'].json['cellphone']}}"
+            },
+            {
+              "name": "status_api",
+              "value": "cliente"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7024,
+        1920
+      ],
+      "id": "1c1d4a14-0d86-4169-b415-be65f74f230f",
+      "name": "UpdateCellphone1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ac9c505f-d1cf-4883-9283-55d62c66fa31",
+              "leftValue": "={{ $json.isAClient }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6784,
+        1936
+      ],
+      "id": "bf1bdbe7-05ce-4979-b1b1-7a577dc8c8ce",
+      "name": "If4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "aa14b461-9e44-478b-a8d4-74fbaf45e29e",
+              "leftValue": "={{ $json.useClientInfo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4480,
+        1344
+      ],
+      "id": "ac5db1bb-cd42-4a51-b8ae-541b6b572daa",
+      "name": "hasClientInfo1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8ac22612-817a-4e59-857a-75725f5bcc79",
+              "name": "answerIsCorrect",
+              "value": "={{ $json.answerIsCorrect }}",
+              "type": "boolean"
+            },
+            {
+              "id": "e861955b-8140-480d-ad8e-661d5b7eb655",
+              "name": "errorMessage",
+              "value": "={{ $json.errorMessage }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4720,
+        1280
+      ],
+      "id": "f3c993e8-f8d7-4def-813a-874499e57c72",
+      "name": "Edit Fields19"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6ab3dfa3-9832-4138-92a1-f4cbc9370ba5",
+              "name": "answerIsCorrect",
+              "value": "={{ $json.answerIsCorrect }}",
+              "type": "boolean"
+            },
+            {
+              "id": "88fd1c4f-6491-4347-9cbf-f7a87f6164b2",
+              "name": "errorMessage",
+              "value": "={{ $json.errorMessage }}",
+              "type": "string"
+            },
+            {
+              "id": "8075c630-16c0-4261-8860-1615a996d8ba",
+              "name": "hasCancelledService",
+              "value": "={{ $json.hasCancelledService }}",
+              "type": "boolean"
+            },
+            {
+              "id": "9bc23f87-5e27-4a8f-87f3-dc2cda33ea9d",
+              "name": "isAClient",
+              "value": "={{ $json.isAClient }}",
+              "type": "boolean"
+            },
+            {
+              "id": "0d7bdf62-d397-4929-917d-2eb98ce49737",
+              "name": "hasBilling",
+              "value": "={{ $json.hasBilling }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {
+          "ignoreConversionErrors": true
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4720,
+        1440
+      ],
+      "id": "2f56732c-4f71-41bd-92da-e473d3c768e4",
+      "name": "Edit Fields20"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "Megalink - MCV",
+        "remoteJid": "+55 53 9950-9717",
+        "messageText": "=answrIsCorrect=false, \n{{$node[\"Entrada\"].json['question']}}\n{{$node[\"Entrada\"].json['answer']}}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        6192,
+        1184
+      ],
+      "id": "3b457931-0b7b-45b4-a074-cbf147af72ae",
+      "name": "Enviar texto",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 768,
+        "width": 1360,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        4000,
+        864
+      ],
+      "id": "a3be1efc-fa23-4ef5-bac8-9a13c20bd5cd",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "# CEP",
+        "height": 112,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        -832
+      ],
+      "id": "b4984233-4c12-4150-afd1-47d746eadc0f",
+      "name": "Sticky Note20"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3936,
+        -544
+      ],
+      "id": "2000efdb-90ac-4d65-8558-5cc4278f48b0",
+      "name": "Respond to Webhook CEP5"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e8db442a-ab68-414c-97a4-eef94d4d2668",
+              "name": "answerIsCorrect",
+              "value": "=false",
+              "type": "string"
+            },
+            {
+              "id": "5c78ae25-4f77-4768-a265-00ef6dad68fa",
+              "name": "errorMessage",
+              "value": "Este CEP não existe, tente novamente.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3712,
+        -544
+      ],
+      "id": "149bee72-ab32-4096-91ae-10e8735eb3a2",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 520,
+        "width": 1176,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        -704
+      ],
+      "id": "802ccf95-9f67-4865-b4d9-47d98acf38e5",
+      "name": "Sticky Note32"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "34d772b5-23bc-4a8b-b0f1-89d790fe488d",
+              "leftValue": "={{ $json.cep}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3488,
+        -496
+      ],
+      "id": "e7f67306-a427-4183-a827-19409fc20bb6",
+      "name": "Confirm1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        3200,
+        -480
+      ],
+      "id": "b6308da1-faae-4985-8b01-4d1c4f98e5d7",
+      "name": "NoCorrectCEPResponse?1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "957226a5-2fb1-4778-aa42-04c728c6410e",
+              "leftValue": "={{ $json.needsCEP }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1968,
+        -512
+      ],
+      "id": "7b3b51d4-4933-4662-a439-08cf8e8d8862",
+      "name": "DoesntNeedCEP?1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a90e1e62-4bb8-4467-8033-0bed4332f540",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "1625b673-509d-4381-bf8f-54277851654d",
+              "leftValue": "={{ $json.erro }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3200,
+        -240
+      ],
+      "id": "3c65ef93-6037-4d2b-9685-a8e637038003",
+      "name": "CheckErrorCEP1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a6f19e80-b20a-4e0c-8cb9-644e31932655",
+              "name": "estado",
+              "value": "={{ $json.state }}",
+              "type": "string"
+            },
+            {
+              "id": "fa3cb5e6-1af7-41c7-962b-902c1f9a8d0f",
+              "name": "localidade",
+              "value": "={{ $json.city }}",
+              "type": "string"
+            },
+            {
+              "id": "8bf66d2e-a6f0-42db-beee-ef222412a5e2",
+              "name": "logradouro",
+              "value": "={{ $json.street }}",
+              "type": "string"
+            },
+            {
+              "id": "49c38ffc-af1f-4e82-952a-ee95c2d025e7",
+              "name": "bairro",
+              "value": "={{ $json.neighborhood }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2960,
+        -240
+      ],
+      "id": "cb9c3298-9b7f-4efc-8317-cd7e330e62bc",
+      "name": "Edit Fields10"
+    },
+    {
+      "parameters": {
+        "url": "=https://viacep.com.br/ws/{{ $json.answer }}/json/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2800,
+        -480
+      ],
+      "id": "855c1ddc-984b-4132-8189-e9b29c1d7cdb",
+      "name": "ViaCEP1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://brasilapi.com.br/api/cep/v1/{{ $json.answer }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        -288
+      ],
+      "id": "8e51a82b-0e9b-4d37-b56f-0fa3a105317d",
+      "name": "BrasilAPI1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 952,
+        "width": 2200,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        -704
+      ],
+      "id": "383c9539-0faf-4e6f-889c-68357eb871f9",
+      "name": "Sticky Note33"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        4608,
+        -448
+      ],
+      "id": "461c8e9f-2cf2-4dc3-b239-e6c4a096d9fb",
+      "name": "Respond to Webhook CEP2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "50144d83-c020-458f-a2c3-3d131b134c67",
+              "name": "=time",
+              "value": "={{\n$json.time_de_atendimento ??\n[\"Bom Jesus\", \"Palmeira do Piauí\", \"Cristino Castro\", \"Santaluz\", \"Redenção do Gurguéia\", \"Monte Alegre do Piauí\", \"Gilbués\", \"São Gonçalo do Gurguéia\", \"Currais\"].includes( $json.localidade) ? 'Flaysi' : 'Franklin' }}",
+              "type": "string"
+            },
+            {
+              "id": "be4cfca2-7886-4e1e-8469-ae6f2afb7020",
+              "name": "answerIsCorrect",
+              "value": "true",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4368,
+        -448
+      ],
+      "id": "f5f028c9-eb57-4dbe-b48e-28ea39e0f765",
+      "name": "Edit Fields8"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "cidade_atendida",
+          "mode": "list",
+          "cachedResultName": "cidade_atendida"
+        },
+        "where": {
+          "values": [
+            {
+              "column": "nome_cidade",
+              "value": "={{ $json.localidade }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3616,
+        -224
+      ],
+      "id": "90a2fe5f-f6fe-4f52-a4ac-eb2d4f0b879f",
+      "name": "SelecionarCidade1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1b8f6a7d-2abb-416a-876c-061421ab6c00",
+              "leftValue": "={{ $json.nome_cidade }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3840,
+        -224
+      ],
+      "id": "c3a9e1d3-ec55-4dc8-9858-0b051ec271e7",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        4608,
+        -240
+      ],
+      "id": "4c272e3f-093b-4e8a-ae43-f03b52f5c9e2",
+      "name": "Respond to Webhook CEP4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "50144d83-c020-458f-a2c3-3d131b134c67",
+              "name": "=givesServiceToCity",
+              "value": "false",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4368,
+        -256
+      ],
+      "id": "3521dfe2-cf82-4bfb-bf09-2f263b3edab9",
+      "name": "Edit Fields21"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "useDataOfInput": 2
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        4128,
+        -352
+      ],
+      "id": "8f7bf355-0124-41a9-bb18-96eaec529fcb",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "motivo-erro",
+          "mode": "list",
+          "cachedResultName": "motivo-erro"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "pergunta_relacionada": "= {{ $node['Entrada'].json['question'] }}",
+            "resposta_usuario": "={{ $node['Entrada'].json['answer'] }}",
+            "aceito/resolvido": false
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "pergunta_relacionada",
+              "displayName": "pergunta_relacionada",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "resposta_usuario",
+              "displayName": "resposta_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "solucao",
+              "displayName": "solucao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "aceito/resolvido",
+              "displayName": "aceito/resolvido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        6192,
+        1344
+      ],
+      "id": "0528e9ac-945e-482c-b6fd-cfce37f98370",
+      "name": "SalvarDuvida1"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 272,
+        "width": 576,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        704,
+        2032
+      ],
+      "id": "edde8f02-b00e-4a4e-9b47-18e4777ee1f3",
+      "name": "Sticky Note34"
+    },
+    {
+      "parameters": {
+        "content": "# EMAIL",
+        "height": 112,
+        "width": 448,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        704,
+        1888
+      ],
+      "id": "e2a27401-cc1c-48a4-a212-8a630654f8c6",
+      "name": "Sticky Note35"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ JSON.parse($json.json_resultado).needsCEP ?? false }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "ad8030fc-61c6-4bf4-b1dc-4e849bd141a3"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CEP"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "bc06520b-d3a8-4e6f-abfd-8a34d25eeef5",
+                    "leftValue": "={{ $json.isDataNascimento ?? false}}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DATE"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "eea4cf92-9549-47d0-93f8-e790b92766be",
+                    "leftValue": "={{ $json.isImagem ?? false}}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "IMAGE"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "8fb702e3-a113-49cf-b6fe-749f4901d130",
+                    "leftValue": "={{ $json.isEmail ?? false}}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "EMAIL"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -288,
+        1792
+      ],
+      "id": "13d963ae-2538-414d-ae75-ef28a8787d05",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items\nfor (const item of $input.all()) {\n  \n  // Get the email string from the 'answer' field and trim whitespace\n  const emailString = item.json.answer ? item.json.answer.trim() : null;\n  \n  // Initialize new fields\n  item.json.isValidEmail = false;\n  item.json.validationError = null;\n\n  // 1. Check if input exists\n  if (!emailString) {\n    item.json.validationError = \"Input field 'answer' is missing or empty.\";\n    continue; // Skip to the next item\n  }\n\n  // 2. Check for a valid email format using a robust regex\n  // This regex is widely used (based on RFC 5322) and covers most\n  // valid email formats, including less common ones.\n  const regex = /^(([^<>()[\\]\\\\.,;:\\s@\"]+(\\.[^<>()[\\]\\\\.,;:\\s@\"]+)*)|(\".+\"))@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\])|(([a-zA-Z\\-0-9]+\\.)+[a-zA-Z]{2,}))$/;\n\n  if (!regex.test(emailString)) {\n    item.json.validationError = \"Invalid email format.\";\n    continue; // Skip to the next item\n  }\n\n  // 3. If all checks pass, mark as valid\n  // If it passed the regex, it's a validly formatted email.\n  item.json.isValidEmail = true;\n\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        2112
+      ],
+      "id": "4a71b7c2-6cac-423a-85eb-67df3780f8a5",
+      "name": "ValidarEmail"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ed8e1a3c-3fad-4c5f-9d12-1a5ade663829",
+              "name": "response",
+              "value": "={{  { 'answerIsCorrect': $json.isValidEmail, 'errorMessage': ($json.isValidEmail == true) ? '' : 'Este email está incorreto.' } }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1008,
+        2112
+      ],
+      "id": "08b2d238-26dc-4468-8b41-6259c477e0fe",
+      "name": "FormatarEmailResposta"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 272,
+        "width": 896,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        384,
+        3312
+      ],
+      "id": "05d31547-f383-4df9-a9ab-53b79a496665",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 512,
+        "width": 784
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        5360,
+        976
+      ],
+      "id": "2d0d6915-af69-4f2a-9fa3-5161c51e6a93",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "# RESPOSTA ERRADA REAÇÕES",
+        "height": 112,
+        "width": 784,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        5360,
+        864
+      ],
+      "id": "7ef40f48-bbb3-4937-a77e-5239c5cf0d54",
+      "name": "Sticky Note38"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://automation-n8n.v4riem.easypanel.host/webhook/2d88270c-9110-4070-8123-acbcb8ffeedb-Precisa-Atendimento-Humano123",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "question",
+              "value": "={{ $node['Entrada'].json['question'] }}"
+            },
+            {
+              "name": "answer",
+              "value": "={{ $node['Entrada'].json['answer'] }}"
+            },
+            {
+              "name": "cellphone",
+              "value": "={{ $node['Entrada'].json['cellphone'] }}"
+            },
+            {
+              "name": "empresa",
+              "value": "MEGALINK"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5728,
+        1536
+      ],
+      "id": "ad2cba42-05cf-43ed-8a1a-09c4a4b07ca7",
+      "name": "Checar Se AtendimentoHumano",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "05920ed8-8915-47b1-a0de-71457a6061d2",
+              "leftValue": "={{ $json.answerIsCorrect }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5264,
+        1280
+      ],
+      "id": "fa92da55-6a80-4be4-8949-30ae45b0bb20",
+      "name": "RespostaÉErrada"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "602f51f1-d69f-4a7e-a676-ca1b12058719",
+              "leftValue": "={{ $json.needsReception }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5984,
+        1536
+      ],
+      "id": "d1aff6ee-f9e2-45b3-9783-904457a13901",
+      "name": "AtendimentoHumano?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b6c00690-2c5a-47ac-ade4-02940a544a2e",
+              "name": "answerIsCorrect",
+              "value": "={{ $node['Retorno Padrão de Resposta'].json['answerIsCorrect'] }}",
+              "type": "string"
+            },
+            {
+              "id": "85c7eeaa-7f5e-442d-8161-743d54121811",
+              "name": "errorMessage",
+              "value": "={{ $node['Retorno Padrão de Resposta'].json['errorMessage'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6160,
+        1712
+      ],
+      "id": "021450d3-04ba-465d-bf43-1f3990bdb215",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-2024-05-13",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-2024-05-13"
+        },
+        "options": {
+          "responseFormat": "json_object"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1136,
+        3408
+      ],
+      "id": "89eb756f-9a69-4fe3-98d2-e37c8f69ce79",
+      "name": "Validação Key"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop por todos os itens que entram no nó\nfor (const item of $input.all()) {\n  let data;\n  \n  // 1. Tenta extrair o objeto de dentro da string 'json_resultado'\n  try {\n    // Se json_resultado já for objeto, ele usa direto. Se for string, faz o parse.\n    data = (typeof item.json.json_resultado === 'string') \n           ? JSON.parse(item.json.json_resultado) \n           : item.json.json_resultado;\n  } catch (e) {\n    data = {};\n  }\n\n  // 2. Busca o valor do CEP (está na chave 'input' dentro do JSON)\n  const rawAnswer = data.input || \"\";\n  // Remove tudo que não for número (limpeza preventiva)\n  const cepString = String(rawAnswer).replace(/\\D/g, \"\"); \n\n  // 3. Inicializa as variáveis de saída no item\n  item.json.isValidCep = false;\n  item.json.validationError = null;\n  item.json.formattedCep = null;\n\n  // 4. REGEX CORRIGIDA: \\d{8} verifica se existem exatamente 8 dígitos numéricos\n  const cepRegex = /^\\d{8}$/;\n  const isValid = cepRegex.test(cepString);\n\n  if (isValid) {\n    item.json.isValidCep = true;\n    // Formata para o padrão 00000-000\n    item.json.formattedCep = cepString.replace(/(\\d{5})(\\d{3})/, \"$1-$2\");\n  } else {\n    item.json.isValidCep = false;\n    item.json.validationError = \"CEP Inválido ou mal formatado\";\n  }\n}\n\n// Retorna os itens processados\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        -512
+      ],
+      "id": "810ce8f4-d108-421e-8e58-de01eac226c5",
+      "name": "ValidarCEP"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5b1642a5-541a-4539-ab76-2a40445d4595",
+              "name": "needsCEP",
+              "value": "={{ $json.isValidCep }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {
+          "ignoreConversionErrors": true
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1680,
+        -512
+      ],
+      "id": "54909558-86a3-4e6f-9c97-b7696dfff136",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2e6866d8-b98a-4819-ad07-19112f243d96",
+              "name": "response",
+              "value": "{answerIsCorrect: false, errorMessage: \"CEP Inválido! Tente novamente.\"}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2320,
+        -672
+      ],
+      "id": "ec7b2e24-390c-45b7-a442-bb07531da0c6",
+      "name": "Edit Fields5"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 712,
+        "width": 2992,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -5136,
+        1568
+      ],
+      "id": "60a812dd-c87a-4731-be4c-57c3e505b170",
+      "name": "Sticky Note21"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=A pergunta dada foi:\n{{ $node['EntradaTypeValidation'].json['question'] }}\nE a resposta do usuário foi:\n{{ $node['EntradaTypeValidation'].json['answer'] }} ",
+        "options": {
+          "systemMessage": "=Você é um assistente de IA especialista em validar respostas de formulários. Sua resposta deve ser sempre um JSON. Você deve analisar a pergunta para entender o tipo de resposta esperada.\n\n\n### 1. Regra de Validação Geral \nUse seu conhecimento para identificar o tipo de resposta esperada. \n\n* Quando a pergunta for sobre CEP, retorne este JSON especial para verificação externa:\n    {\n      \"needsCEP\": true,\n      \"input\": \"O-CEP-FORMATADO-AQUI\"\n    }\n\n* Quando a pergunta não é sobre CEP, retorne:\n    - Exemplo:\n        - Pergunta: 'Qual é a sua cidade? \n    - Retorno:\n        { \n          \"validations\": \"Verificar se a entrada é realmente uma cidade\", \n          \"expectedFormats\": \"Apenas texto\",\n\"examples\": \"Rio Grande, Pelotas\",\n          \"exceptions\": \"\",\n        }\n\nExemplo 2:\n        - Pergunta: 'Qual é a sua data de nascimento? \n    - Retorno:\n        { \n          \"validations\": \"Verificar se a entrada é uma data de nascimento, e se o usuário é maior de idade\", \n          \"expectedFormats\": \"dd/mm/yyyy\",\n\"examples\": \"10/10/2004, 08/02/2005\",\n          \"exceptions\": \"\",\n        }\n\nSempre informe estes 4 campos, mesmo para casos em que devem estar vazios. Validations explica como validar, expectedFormats explica em qual formato ele deve estar, e exceptions são exemplos especifícos a parte que não encaixam em expectedFormats mas ainda são valores válidos.\nVocê é um assistente de IA especialista em validar respostas de formulários. Sua resposta deve ser sempre um JSON. Você deve analisar a pergunta para entender o tipo de resposta esperada.\n\n\n## 2. Caso de atendimento\nSe na resposta o usuário estiver pedindo por atendimento humano EXPLICITAMENTE, invés da validar a resposta ele deve ser redirecionado. Para isso, retorne:\n{\n\"needsReception\": true\n}\n\n## 3. Para CPF\nPara CPFs, além de gerar a estrutura comum de validations, também gere um campo 'isCPF'.\nExemplo:\n        - Pergunta: 'Você pode me informar o seu CPF?' \n    - Retorno:\n        { \n          \"validations\": \"Verificar se a entrada é um CPF\", \n          \"expectedFormats\": \"XXX.XXX.XXX-XX\",\n\"examples\": \"053.565.950-42\",\n          \"exceptions\": \"\",\n          \"isCPF\": \"true\"\n        }\n\n## 4. Para data de nascimento.\nPara perguntas que envolvam perguntar a data de nascimento do usuário, retorna um campo 'isDataNascimento'. \nExemplo:\n        - Pergunta: 'Qual é sua data de nascimento?'\n        - Resposta: '26/11/2003'\n    - Retorno:\n        { \n          \"isDataNascimento\": true\n}\n\n## 5. Para imagens\nSEMPRE que a pergunta for sobre imagem, retorne apenas o campo 'isImagem' como true.\n        - Pergunta: 'Forneça a sua imagem de identidade:'\n        - Resposta: 'arquivo.png'\n    - Retorno:\n        { \n          \"isImagem\": true\n}\n\n# 6. Para Emails\nSEMPRE que a pergunta for sobre email, retorne apenas o campo 'isEmail' como true.\n        - Pergunta: 'Qual é o seu email?'\n        - Resposta: 'email'\n    - Retorno:\n        { \n          \"isEmail\": true\n}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -3184,
+        1856
+      ],
+      "id": "3c2adac5-8ed3-48bf-97b1-9b5067c77619",
+      "name": "ValidationType1",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a14da3a5-c3c0-43c7-8225-f484c339e700",
+              "name": "response",
+              "value": "={{ JSON.parse($json.output) }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2832,
+        1808
+      ],
+      "id": "696b62ee-30cd-40d4-999d-46cd71b3c693",
+      "name": "Output  JSONValidatorType3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e975610b-3cf3-48a1-8e0f-9406f1454be3",
+              "name": "question",
+              "value": "={{ $json.question }}",
+              "type": "string"
+            },
+            {
+              "id": "7f9183a8-f160-431e-bf13-59538a2f8b09",
+              "name": "answer",
+              "value": "={{ $json.answer }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4736,
+        1744
+      ],
+      "id": "6c553579-b58f-4390-b505-15ed9d419edb",
+      "name": "EntradaTypeValidation"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tipo_validacao_quick_table",
+          "mode": "list",
+          "cachedResultName": "tipo_validacao_quick_table"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "descricao": "={{$node['EntradaTypeValidation'].json['question']}}",
+            "json_resultado": "={{ $json.response }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "descricao",
+              "displayName": "descricao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "json_resultado",
+              "displayName": "json_resultado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2624,
+        1808
+      ],
+      "id": "43f8dfe2-f474-4221-a2d2-0f18c751151f",
+      "name": "Insert rows in a table1",
+      "credentials": {
+        "postgres": {
+          "id": "D1gBpoW6iTQCJYXW",
+          "name": "wifeed"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tipo_validacao_quick_table",
+          "mode": "list",
+          "cachedResultName": "tipo_validacao_quick_table"
+        },
+        "limit": 1,
+        "where": {
+          "values": [
+            {
+              "column": "descricao",
+              "value": "={{ $json.question }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -4432,
+        1744
+      ],
+      "id": "3e60db3e-e380-4140-848a-692d8e933264",
+      "name": "Select rows from a table",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "D1gBpoW6iTQCJYXW",
+          "name": "wifeed"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b4dd6c06-4061-4f6c-8b38-ce40ad9e2289",
+              "leftValue": "={{$json.foundItem}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -3536,
+        1744
+      ],
+      "id": "808a66c7-d524-42d1-9dab-011414b971ed",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of $input.all()) {\n  item.json.foundItem = item.json.json_resultado != null && \n    item.json.json_resultado != undefined; \n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3776,
+        1712
+      ],
+      "id": "1c1f0870-5f8d-4dfe-9c18-010574d17f71",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "content": "# TIPO DE VALIDADAÇÃO",
+        "height": 112,
+        "width": 448,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -5056,
+        1376
+      ],
+      "id": "3ee67225-4cf3-4d0a-be8d-b941414db048",
+      "name": "Sticky Note26"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {
+          "responseFormat": "json_object"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -2672,
+        2144
+      ],
+      "id": "7c9d157c-3755-46df-b863-d64b2fb4a5c8",
+      "name": "Tipo de Pergunta Key"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfab19cd-6f9c-45f7-bd30-6c0ce34c9524",
+              "name": "json_resultado",
+              "value": "={{ $json.json_resultado }}",
+              "type": "string"
+            },
+            {
+              "id": "a0b44398-cffa-4543-8217-53f4e6ea5dcc",
+              "name": "json_cep",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4032,
+        1728
+      ],
+      "id": "517a1904-769d-4def-813c-abb19f4746eb",
+      "name": "Edit Fields6"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.json_resultado }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        11024,
+        800
+      ],
+      "id": "fb90aad0-c291-469e-afa4-f3caee999dd8",
+      "name": "Respond to Webhook4"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 520,
+        "width": 1488,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        6592,
+        592
+      ],
+      "id": "46338fde-c7cb-4b20-a990-a057ff1fafd8",
+      "name": "Sticky Note28"
+    },
+    {
+      "parameters": {
+        "content": "# DÚVIDA?",
+        "height": 112,
+        "width": 448,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        6592,
+        448
+      ],
+      "id": "b0cdb3f5-4cad-4176-94c5-d6b977e145d2",
+      "name": "Sticky Note29"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "pergunta",
+          "mode": "list",
+          "cachedResultName": "pergunta"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "pergunta": "={{ $node['EntradaDuvidas'].json['question'] }}",
+            "resposta": "={{ $node['EntradaDuvidas'].json['answer'] }}",
+            "telefone": "={{ $node['EntradaDuvidas'].json['cellphone'] }}",
+            "empresa": "={{ $node['EntradaDuvidas'].json['empresa'] }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "pergunta",
+              "displayName": "pergunta",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resposta",
+              "displayName": "resposta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "empresa",
+              "displayName": "empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        7904,
+        640
+      ],
+      "id": "67102eef-dfec-4502-8cbb-b50b0feae2c9",
+      "name": "SalvarDuvida"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=A mensagem do usuário foi:\n{{ $json.answer }}",
+        "options": {
+          "systemMessage": "=Se na resposta o usuário estiver fazendo uma pergunta retorne como resultado:\n{\n\"isAQuestion\": true\n}\n\n \n\nExemplo de uma NÃO pergunta:\n20/10/2000\n\nSua resposta deve ser:\n{\n\"isAQuestion\": false\n}\n\nExemplo correto:\nA instalação é de graça?\nSua resposta deve ser:\n{\n\"isAQuestion\": true\n}\n\nSe o usuário pedir para 'esperar', como em 'Só um momento', não é uma pergunta.\nPedir por ajuda não conta como fazer uma pergunta."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        7120,
+        720
+      ],
+      "id": "854d6c24-9aa4-4d5e-ac76-48b2389f6365",
+      "name": "Perguntando?1",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a14da3a5-c3c0-43c7-8225-f484c339e700",
+              "name": "response",
+              "value": "={{ JSON.parse($json.output) }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7456,
+        720
+      ],
+      "id": "ad2d3ff7-acd7-4817-bf41-e4f38eb5e95c",
+      "name": "Output  JSONValidatorType"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c9904299-9bd3-4e30-95b0-c1a06802715d",
+              "leftValue": "={{ $json.response.isAQuestion }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7664,
+        720
+      ],
+      "id": "201f0c8e-3a0f-42c9-8b6c-d630d942f0a1",
+      "name": "É Uma Pergunta?1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a2859488-67ea-429e-8bde-62759b45ed1d",
+              "name": "answer",
+              "value": "={{ $node['Entrada'].json['answer'] }}",
+              "type": "string"
+            },
+            {
+              "id": "fbccbb2f-012b-4f0a-85a2-797afff7ba41",
+              "name": "question",
+              "value": "={{ $node['Entrada'].json['question'] }}",
+              "type": "string"
+            },
+            {
+              "id": "e0dd3fc8-2e11-43be-8634-ba12a8fe9a1a",
+              "name": "cellphone",
+              "value": "={{ $node['Entrada'].json['cellphone'] }}",
+              "type": "string"
+            },
+            {
+              "id": "987e166f-2cee-4103-9a61-7b7a2da7fdd3",
+              "name": "empresa",
+              "value": "=MEGALINK",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6752,
+        768
+      ],
+      "id": "fb941f1f-e8cf-4426-bbde-48c7f3f13469",
+      "name": "EntradaDuvidas"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        7120,
+        928
+      ],
+      "id": "901573c8-f51d-4564-8449-bdc083f8a870",
+      "name": "Identificar Duvida Key"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 712,
+        "width": 2992,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        8336,
+        592
+      ],
+      "id": "3527d813-a526-46ee-a839-65992bb3e55e",
+      "name": "Sticky Note39"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=A pergunta dada foi:\n{{ $node['EntradaTypeValidation1'].json['question'] }}\nE a resposta do usuário foi:\n{{ $node['EntradaTypeValidation1'].json['answer'] }} ",
+        "options": {
+          "systemMessage": "=Você é um assistente de IA especialista em validar respostas de formulários. Sua resposta deve ser sempre um JSON. Você deve analisar a pergunta para entender o tipo de resposta esperada.\n\n\n### 1. Regra de Validação Geral \nUse seu conhecimento para identificar o tipo de resposta esperada. \n\n* Quando a pergunta for sobre CEP, retorne este JSON especial para verificação externa:\n    {\n      \"needsCEP\": true,\n      \"input\": \"O-CEP-FORMATADO-AQUI\"\n    }\n\n* Quando a pergunta não é sobre CEP, retorne:\n    - Exemplo:\n        - Pergunta: 'Qual é a sua cidade? \n    - Retorno:\n        { \n          \"validations\": \"Verificar se a entrada é realmente uma cidade\", \n          \"expectedFormats\": \"Apenas texto\",\n\"examples\": \"Rio Grande, Pelotas\",\n          \"exceptions\": \"\",\n        }\n\nExemplo 2:\n        - Pergunta: 'Qual é a sua data de nascimento? \n    - Retorno:\n        { \n          \"validations\": \"Verificar se a entrada é uma data de nascimento, e se o usuário é maior de idade\", \n          \"expectedFormats\": \"dd/mm/yyyy\",\n\"examples\": \"10/10/2004, 08/02/2005\",\n          \"exceptions\": \"\",\n        }\n\nSempre informe estes 4 campos, mesmo para casos em que devem estar vazios. Validations explica como validar, expectedFormats explica em qual formato ele deve estar, e exceptions são exemplos especifícos a parte que não encaixam em expectedFormats mas ainda são valores válidos.\nVocê é um assistente de IA especialista em validar respostas de formulários. Sua resposta deve ser sempre um JSON. Você deve analisar a pergunta para entender o tipo de resposta esperada.\n\n\n## 2. Caso de atendimento\nSe na resposta o usuário estiver pedindo por atendimento humano EXPLICITAMENTE, invés da validar a resposta ele deve ser redirecionado. Para isso, retorne:\n{\n\"needsReception\": true\n}\n\n## 3. Para CPF\nPara CPFs, além de gerar a estrutura comum de validations, também gere um campo 'isCPF'.\nExemplo:\n        - Pergunta: 'Você pode me informar o seu CPF?' \n    - Retorno:\n        { \n          \"validations\": \"Verificar se a entrada é um CPF\", \n          \"expectedFormats\": \"XXX.XXX.XXX-XX\",\n\"examples\": \"053.565.950-42\",\n          \"exceptions\": \"\",\n          \"isCPF\": \"true\"\n        }\n\n## 4. Para data de nascimento.\nPara perguntas que envolvam perguntar a data de nascimento do usuário, retorna um campo 'isDataNascimento'. \nExemplo:\n        - Pergunta: 'Qual é sua data de nascimento?'\n        - Resposta: '26/11/2003'\n    - Retorno:\n        { \n          \"isDataNascimento\": true\n}\n\n## 5. Para imagens\nSEMPRE que a pergunta for sobre imagem, retorne apenas o campo 'isImagem' como true.\n        - Pergunta: 'Forneça a sua imagem de identidade:'\n        - Resposta: 'arquivo.png'\n    - Retorno:\n        { \n          \"isImagem\": true\n}\n\n# 6. Para Emails\nSEMPRE que a pergunta for sobre email, retorne apenas o campo 'isEmail' como true.\n        - Pergunta: 'Qual é o seu email?'\n        - Resposta: 'email'\n    - Retorno:\n        { \n          \"isEmail\": true\n}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        10208,
+        928
+      ],
+      "id": "5bad07d4-4bee-4d43-ab49-5d24d0f793c4",
+      "name": "ValidationType",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a14da3a5-c3c0-43c7-8225-f484c339e700",
+              "name": "response",
+              "value": "={{ JSON.parse($json.output) }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        10560,
+        880
+      ],
+      "id": "46161080-41d4-4670-bba3-46221ab43753",
+      "name": "Output  JSONValidatorType4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e975610b-3cf3-48a1-8e0f-9406f1454be3",
+              "name": "question",
+              "value": "={{ $json.body.question }}",
+              "type": "string"
+            },
+            {
+              "id": "7f9183a8-f160-431e-bf13-59538a2f8b09",
+              "name": "answer",
+              "value": "={{ $json.body.answer }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        8656,
+        816
+      ],
+      "id": "7cef1159-0cce-4a2e-ad41-94304c968718",
+      "name": "EntradaTypeValidation1"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tipo_validacao_quick_table",
+          "mode": "list",
+          "cachedResultName": "tipo_validacao_quick_table"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "descricao": "={{$node['EntradaTypeValidation1'].json['question']}}",
+            "json_resultado": "={{ $json.response }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "descricao",
+              "displayName": "descricao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "json_resultado",
+              "displayName": "json_resultado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        10768,
+        880
+      ],
+      "id": "f993a35b-47ab-459c-a7e5-ec3f8769b3b0",
+      "name": "Insert rows in a table"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tipo_validacao_quick_table",
+          "mode": "list",
+          "cachedResultName": "tipo_validacao_quick_table"
+        },
+        "limit": 1,
+        "where": {
+          "values": [
+            {
+              "column": "descricao",
+              "value": "={{ $json.question }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        8960,
+        816
+      ],
+      "id": "2d6ead84-3f2c-4628-a1e5-9ee7876c9cbc",
+      "name": "Select rows from a table1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b4dd6c06-4061-4f6c-8b38-ce40ad9e2289",
+              "leftValue": "={{$json.foundItem}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        9888,
+        800
+      ],
+      "id": "7c6f5a6e-fc0c-446d-b72f-72034a22d820",
+      "name": "If5"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfab19cd-6f9c-45f7-bd30-6c0ce34c9524",
+              "name": "json_resultado",
+              "value": "={{ $json.json_resultado }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        9360,
+        800
+      ],
+      "id": "fd998285-4cf7-4621-be57-7fc543f710de",
+      "name": "Edit Fields7"
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of $input.all()) {\n  item.json.foundItem = item.json.json_resultado != null && \n    item.json.json_resultado != undefined; \n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9616,
+        784
+      ],
+      "id": "b49c4c7c-913d-4846-8e53-59a763313bd2",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "content": "# TIPO DE VALIDADAÇÃO",
+        "height": 112,
+        "width": 448,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        8336,
+        448
+      ],
+      "id": "af5daa83-7ccb-4e75-acb7-71ff72d86d36",
+      "name": "Sticky Note40"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {
+          "responseFormat": "json_object"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        10144,
+        1120
+      ],
+      "id": "c48194e4-2dff-414c-bf66-f4646ae9748a",
+      "name": "Tipo de Pergunta Key1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "a1846f19-2d4c-49fa-8292-f6baa9de6602",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        8448,
+        816
+      ],
+      "id": "3de22416-8576-4aaf-aa1a-e4a942f977b5",
+      "name": "CheckTypeWebhook",
+      "webhookId": "a1846f19-2d4c-49fa-8292-f6baa9de6602"
+    }
+  ],
+  "connections": {
+    "QuestionValidator": {
+      "main": [
+        [
+          {
+            "node": "Entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entrada": {
+      "main": [
+        [
+          {
+            "node": "skipValidation?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FilterValidatorType": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "skipValidation?": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "EntradaTypeValidation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook2": {
+      "main": [
+        []
+      ]
+    },
+    "RegisterLead": {
+      "main": [
+        [
+          {
+            "node": "CreateLead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UpdateCidadesWebhook": {
+      "main": [
+        [
+          {
+            "node": "EntradaUpdateCidades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeveriaApagarAntigos?": {
+      "main": [
+        [
+          {
+            "node": "DeletarCidades",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeletarCidades": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EntradaUpdateCidades": {
+      "main": [
+        [
+          {
+            "node": "DeveriaApagarAntigos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "AdicionarCidades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TokenHubsoft": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request8": {
+      "main": [
+        [
+          {
+            "node": "NãoExiste?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TokenHubsoft1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "TesteCancelado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TokenHubsoft2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "ServiçoHabilitado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TesteCancelado2": {
+      "main": [
+        [
+          {
+            "node": "TesteCancelado1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TesteCancelado3": {
+      "main": [
+        [
+          {
+            "node": "TesteCancelado2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TokenHubsoft3": {
+      "main": [
+        [
+          {
+            "node": "Consulta dados cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TokenHubsoft4": {
+      "main": [
+        [
+          {
+            "node": "Consulta dados cliente3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        []
+      ]
+    },
+    "TesteCancelado5": {
+      "main": [
+        [
+          {
+            "node": "TesteCancelado4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TesteCancelado6": {
+      "main": [
+        [
+          {
+            "node": "TesteCancelado5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consulta dados cliente3": {
+      "main": [
+        [
+          {
+            "node": "TesteCancelado6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields4": {
+      "main": [
+        [
+          {
+            "node": "AtualizarTimeCidades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AtualizarTimeCidades1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields9": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ValidarDataDeNascimento": {
+      "main": [
+        [
+          {
+            "node": "GenerateErrorMessage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GenerateErrorMessage": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields17",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ResultadoValidacao": {
+      "main": [
+        [
+          {
+            "node": "HasValidCPFToSearch?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validator1": {
+      "main": [
+        [
+          {
+            "node": "ResultadoValidacao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consulta dados cliente": {
+      "main": [
+        [
+          {
+            "node": "TesteCancelado9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TesteCancelado7": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields18",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TesteCancelado8": {
+      "main": [
+        [
+          {
+            "node": "TesteCancelado7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TesteCancelado9": {
+      "main": [
+        [
+          {
+            "node": "TesteCancelado8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HasValidCPFToSearch?1": {
+      "main": [
+        [
+          {
+            "node": "TokenHubsoft3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retorno Padrão de Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retorno Padrão de Resposta": {
+      "main": [
+        [
+          {
+            "node": "hasClientInfo1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook1": {
+      "main": [
+        [
+          {
+            "node": "If4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If4": {
+      "main": [
+        [
+          {
+            "node": "UpdateCellphone1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "hasClientInfo1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields20",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields19",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields19": {
+      "main": [
+        [
+          {
+            "node": "RespostaÉErrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields20": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields18": {
+      "main": [
+        [
+          {
+            "node": "Retorno Padrão de Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields16": {
+      "main": [
+        [
+          {
+            "node": "Retorno Padrão de Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields17": {
+      "main": [
+        [
+          {
+            "node": "Retorno Padrão de Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook CEP5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NoCorrectCEPResponse?1": {
+      "main": [
+        [
+          {
+            "node": "Confirm1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DoesntNeedCEP?1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ViaCEP1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "BrasilAPI1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CheckErrorCEP1": {
+      "main": [
+        [
+          {
+            "node": "SelecionarCidade1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Edit Fields10": {
+      "main": [
+        [
+          {
+            "node": "CheckErrorCEP1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "NoCorrectCEPResponse?1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "ViaCEP1": {
+      "main": [
+        [
+          {
+            "node": "CheckErrorCEP1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "NoCorrectCEPResponse?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BrasilAPI1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields8": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook CEP2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SelecionarCidade1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields21",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields21": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook CEP4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "ValidarCEP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ValidarDataDeNascimento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields9",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ValidarEmail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validator1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ValidarEmail": {
+      "main": [
+        [
+          {
+            "node": "FormatarEmailResposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FormatarEmailResposta": {
+      "main": [
+        [
+          {
+            "node": "Retorno Padrão de Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RespostaÉErrada": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SalvarDuvida1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Checar Se AtendimentoHumano",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "EntradaDuvidas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checar Se AtendimentoHumano": {
+      "main": [
+        [
+          {
+            "node": "AtendimentoHumano?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AtendimentoHumano?": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validação Key": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Validator1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ValidarCEP": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "DoesntNeedCEP?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields5": {
+      "main": [
+        [
+          {
+            "node": "Retorno Padrão de Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ValidationType1": {
+      "main": [
+        [
+          {
+            "node": "Output  JSONValidatorType3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Output  JSONValidatorType3": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EntradaTypeValidation": {
+      "main": [
+        [
+          {
+            "node": "Select rows from a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table1": {
+      "main": [
+        [
+          {
+            "node": "FilterValidatorType",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows from a table": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "FilterValidatorType",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ValidationType1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo de Pergunta Key": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "ValidationType1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields6": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perguntando?1": {
+      "main": [
+        [
+          {
+            "node": "Output  JSONValidatorType",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Output  JSONValidatorType": {
+      "main": [
+        [
+          {
+            "node": "É Uma Pergunta?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Uma Pergunta?1": {
+      "main": [
+        [
+          {
+            "node": "SalvarDuvida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EntradaDuvidas": {
+      "main": [
+        [
+          {
+            "node": "Perguntando?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identificar Duvida Key": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Perguntando?1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ValidationType": {
+      "main": [
+        [
+          {
+            "node": "Output  JSONValidatorType4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Output  JSONValidatorType4": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EntradaTypeValidation1": {
+      "main": [
+        [
+          {
+            "node": "Select rows from a table1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows from a table1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If5": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ValidationType",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields7": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "If5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo de Pergunta Key1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "ValidationType",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CheckTypeWebhook": {
+      "main": [
+        [
+          {
+            "node": "EntradaTypeValidation1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "QuestionValidator": [
+      {
+        "json": {
+          "headers": {
+            "host": "automation-n8n.v4riem.easypanel.host",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 OPR/129.0.0.0",
+            "content-length": "102",
+            "accept": "*/*",
+            "content-type": "application/json",
+            "x-forwarded-for": "200.225.58.21",
+            "x-forwarded-host": "automation-n8n.v4riem.easypanel.host",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "975b46b5294b",
+            "x-real-ip": "200.225.58.21",
+            "accept-encoding": "gzip"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "question": "Você pode me passar o CEP do local?",
+            "answer": "65690-970",
+            "cellphone": "34999999999"
+          },
+          "webhookUrl": "https://automation-n8n.v4riem.easypanel.host/webhook/atendimento-v2",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "versionId": "4d12c169-996b-4667-9203-37a036ebe86b",
+  "activeVersionId": null,
+  "versionCounter": 7,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-05-28T13:17:56.369Z",
+      "createdAt": "2026-05-28T13:17:56.369Z",
+      "role": "workflow:owner",
+      "workflowId": "q60Omy70nfmGgBQt",
+      "projectId": "tMovt7T6zJ7SXTgp",
+      "project": {
+        "updatedAt": "2025-06-03T13:42:49.268Z",
+        "createdAt": "2025-06-03T13:39:27.940Z",
+        "id": "tMovt7T6zJ7SXTgp",
+        "name": "Lucas Rodrigues <marketing@consulteplus.com.br>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "f10c1b65-9b83-4860-ae70-d0ffc3d86d69"
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2025-09-24T15:34:11.044Z",
+      "createdAt": "2025-09-24T15:34:11.044Z",
+      "id": "P0VK8wXmoTSbYqbl",
+      "name": "Em uso"
+    }
+  ],
+  "activeVersion": null
+}

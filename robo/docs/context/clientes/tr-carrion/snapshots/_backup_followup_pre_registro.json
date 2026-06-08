@@ -1,0 +1,538 @@
+{
+  "updatedAt": "2026-05-30T22:26:40.477Z",
+  "createdAt": "2026-05-19T13:05:30.033Z",
+  "id": "tYckyds4TqPpFOWd",
+  "name": "[Vero] Follow-up Abandonados D+2h",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -128,
+        240
+      ],
+      "id": "schedule-followup",
+      "name": "A cada 30min"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT telefone, nodo_atual, dados, atualizado_em\nFROM vero_session\nWHERE atualizado_em < NOW() - INTERVAL '5 minutes'\n  AND atualizado_em > NOW() - INTERVAL '7 days'\n  AND atualizado_em > '2026-05-30 12:53:59.605182+00:00'  -- corte_ativacao\n  AND nodo_atual NOT IN ('inicio', 'concluido', 'aguarda_humano')\n  AND COALESCE((dados->>'_followup_count')::int, 0) < 2\n  AND (dados->>'_followup_enviado_em' IS NULL\n       OR (dados->>'_followup_enviado_em')::timestamp < NOW() - INTERVAL '10 minutes')\nLIMIT 50;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        0
+      ],
+      "id": "query-stale",
+      "name": "Buscar Stale",
+      "credentials": {
+        "postgres": {
+          "id": "tvjxTZBUAfRi1NgL",
+          "name": "Postgres account 7"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://consulteplus.uazapi.com/send/text",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": {{ JSON.stringify($json.telefone) }},\n  \"text\": \"Oi! 😊 Vi que voce começou um cadastro com a gente. Quer continuar de onde parou? É rapidinho!\",\n  \"linkPreview\": false\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        0
+      ],
+      "id": "enviar-followup",
+      "name": "Enviar Followup",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "qdWluYpx0ExpQ6kX",
+          "name": "Uazapi TR Carrion"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE vero_session\nSET dados = jsonb_set(\n      jsonb_set(COALESCE(dados, '{}'::jsonb),\n                '{_followup_enviado_em}', to_jsonb(NOW()::text), true),\n      '{_followup_count}',\n      to_jsonb(COALESCE((dados->>'_followup_count')::int, 0) + 1), true)\nWHERE telefone = '{{ $('Buscar Stale').item.json.telefone }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        720,
+        0
+      ],
+      "id": "marca-enviado",
+      "name": "Marcar Enviado",
+      "credentials": {
+        "postgres": {
+          "id": "tvjxTZBUAfRi1NgL",
+          "name": "Postgres account 7"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT telefone, dados\nFROM vero_session\nWHERE atualizado_em < NOW() - INTERVAL '5 minutes'\n  AND atualizado_em > NOW() - INTERVAL '7 days'\n  AND atualizado_em > '2026-05-30 14:53:59.605182+00:00'  -- corte_ativacao\n  AND nodo_atual NOT IN ('inicio', 'concluido', 'aguarda_humano')\n  AND COALESCE((dados->>'_followup_count')::int, 0) >= 2\n  AND (dados->>'_followup_enviado_em')::timestamp < NOW() - INTERVAL '10 minutes'\nLIMIT 50;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        240,
+        480
+      ],
+      "id": "fe628a34-0e91-466f-820a-ea4df5f096e4",
+      "name": "Buscar Esgotados",
+      "credentials": {
+        "postgres": {
+          "id": "tvjxTZBUAfRi1NgL",
+          "name": "Postgres account 7"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.hubtrix.com.br/api/public/n8n/conversa/transferir-fila/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Webhook-Secret",
+              "value": "1TDwKubueobLDJEMYmxVAmnkp5jTzbs9R-C9FW3B1OY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tenant_slug\": \"tr-carrion\",\n  \"telefone\": {{ JSON.stringify($json.telefone) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        464,
+        480
+      ],
+      "id": "baeccb76-d435-475a-a9d9-e562c9fa5558",
+      "name": "Transferir Fila"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE vero_session SET nodo_atual = 'aguarda_humano'\nWHERE telefone = '{{ $('Buscar Esgotados').item.json.telefone }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        688,
+        480
+      ],
+      "id": "203056a2-fa53-419f-a974-ec7710f03841",
+      "name": "Marcar Aguarda Humano",
+      "credentials": {
+        "postgres": {
+          "id": "tvjxTZBUAfRi1NgL",
+          "name": "Postgres account 7"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "A cada 30min": {
+      "main": [
+        [
+          {
+            "node": "Buscar Stale",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Buscar Esgotados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Stale": {
+      "main": [
+        [
+          {
+            "node": "Enviar Followup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Followup": {
+      "main": [
+        [
+          {
+            "node": "Marcar Enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Esgotados": {
+      "main": [
+        [
+          {
+            "node": "Transferir Fila",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transferir Fila": {
+      "main": [
+        [
+          {
+            "node": "Marcar Aguarda Humano",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": {
+    "node:A cada 30min": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": null,
+  "pinData": {},
+  "versionId": "9ce31045-30d5-4ce9-af51-fdeb015f6651",
+  "activeVersionId": "9ce31045-30d5-4ce9-af51-fdeb015f6651",
+  "versionCounter": 28,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-05-19T13:05:30.035Z",
+      "createdAt": "2026-05-19T13:05:30.035Z",
+      "role": "workflow:owner",
+      "workflowId": "tYckyds4TqPpFOWd",
+      "projectId": "tMovt7T6zJ7SXTgp",
+      "project": {
+        "updatedAt": "2025-06-03T13:42:49.268Z",
+        "createdAt": "2025-06-03T13:39:27.940Z",
+        "id": "tMovt7T6zJ7SXTgp",
+        "name": "Lucas Rodrigues <marketing@consulteplus.com.br>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "f10c1b65-9b83-4860-ae70-d0ffc3d86d69"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-05-30T22:26:47.000Z",
+    "createdAt": "2026-05-30T22:26:39.932Z",
+    "versionId": "9ce31045-30d5-4ce9-af51-fdeb015f6651",
+    "workflowId": "tYckyds4TqPpFOWd",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "minutes"
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          -128,
+          240
+        ],
+        "id": "schedule-followup",
+        "name": "A cada 30min"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT telefone, nodo_atual, dados, atualizado_em\nFROM vero_session\nWHERE atualizado_em < NOW() - INTERVAL '5 minutes'\n  AND atualizado_em > NOW() - INTERVAL '7 days'\n  AND atualizado_em > '2026-05-30 12:53:59.605182+00:00'  -- corte_ativacao\n  AND nodo_atual NOT IN ('inicio', 'concluido', 'aguarda_humano')\n  AND COALESCE((dados->>'_followup_count')::int, 0) < 2\n  AND (dados->>'_followup_enviado_em' IS NULL\n       OR (dados->>'_followup_enviado_em')::timestamp < NOW() - INTERVAL '10 minutes')\nLIMIT 50;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          240,
+          0
+        ],
+        "id": "query-stale",
+        "name": "Buscar Stale",
+        "credentials": {
+          "postgres": {
+            "id": "tvjxTZBUAfRi1NgL",
+            "name": "Postgres account 7"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://consulteplus.uazapi.com/send/text",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"number\": {{ JSON.stringify($json.telefone) }},\n  \"text\": \"Oi! 😊 Vi que voce começou um cadastro com a gente. Quer continuar de onde parou? É rapidinho!\",\n  \"linkPreview\": false\n}",
+          "options": {
+            "timeout": 10000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          480,
+          0
+        ],
+        "id": "enviar-followup",
+        "name": "Enviar Followup",
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "qdWluYpx0ExpQ6kX",
+            "name": "Uazapi TR Carrion"
+          }
+        },
+        "continueOnFail": true,
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "UPDATE vero_session\nSET dados = jsonb_set(\n      jsonb_set(COALESCE(dados, '{}'::jsonb),\n                '{_followup_enviado_em}', to_jsonb(NOW()::text), true),\n      '{_followup_count}',\n      to_jsonb(COALESCE((dados->>'_followup_count')::int, 0) + 1), true)\nWHERE telefone = '{{ $('Buscar Stale').item.json.telefone }}';",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          720,
+          0
+        ],
+        "id": "marca-enviado",
+        "name": "Marcar Enviado",
+        "credentials": {
+          "postgres": {
+            "id": "tvjxTZBUAfRi1NgL",
+            "name": "Postgres account 7"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT telefone, dados\nFROM vero_session\nWHERE atualizado_em < NOW() - INTERVAL '5 minutes'\n  AND atualizado_em > NOW() - INTERVAL '7 days'\n  AND atualizado_em > '2026-05-30 14:53:59.605182+00:00'  -- corte_ativacao\n  AND nodo_atual NOT IN ('inicio', 'concluido', 'aguarda_humano')\n  AND COALESCE((dados->>'_followup_count')::int, 0) >= 2\n  AND (dados->>'_followup_enviado_em')::timestamp < NOW() - INTERVAL '10 minutes'\nLIMIT 50;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.5,
+        "position": [
+          240,
+          480
+        ],
+        "id": "fe628a34-0e91-466f-820a-ea4df5f096e4",
+        "name": "Buscar Esgotados",
+        "credentials": {
+          "postgres": {
+            "id": "tvjxTZBUAfRi1NgL",
+            "name": "Postgres account 7"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://app.hubtrix.com.br/api/public/n8n/conversa/transferir-fila/",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-N8N-Webhook-Secret",
+                "value": "1TDwKubueobLDJEMYmxVAmnkp5jTzbs9R-C9FW3B1OY"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"tenant_slug\": \"tr-carrion\",\n  \"telefone\": {{ JSON.stringify($json.telefone) }}\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          464,
+          480
+        ],
+        "id": "baeccb76-d435-475a-a9d9-e562c9fa5558",
+        "name": "Transferir Fila"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "UPDATE vero_session SET nodo_atual = 'aguarda_humano'\nWHERE telefone = '{{ $('Buscar Esgotados').item.json.telefone }}';",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.5,
+        "position": [
+          688,
+          480
+        ],
+        "id": "203056a2-fa53-419f-a974-ec7710f03841",
+        "name": "Marcar Aguarda Humano",
+        "credentials": {
+          "postgres": {
+            "id": "tvjxTZBUAfRi1NgL",
+            "name": "Postgres account 7"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "A cada 30min": {
+        "main": [
+          [
+            {
+              "node": "Buscar Stale",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Buscar Esgotados",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Buscar Stale": {
+        "main": [
+          [
+            {
+              "node": "Enviar Followup",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Enviar Followup": {
+        "main": [
+          [
+            {
+              "node": "Marcar Enviado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Buscar Esgotados": {
+        "main": [
+          [
+            {
+              "node": "Transferir Fila",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Transferir Fila": {
+        "main": [
+          [
+            {
+              "node": "Marcar Aguarda Humano",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Lucas Rodrigues",
+    "name": "Version 9ce31045",
+    "description": "",
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-05-30T22:26:47.704Z",
+        "id": 271,
+        "workflowId": "tYckyds4TqPpFOWd",
+        "versionId": "9ce31045-30d5-4ce9-af51-fdeb015f6651",
+        "event": "activated",
+        "userId": "f10c1b65-9b83-4860-ae70-d0ffc3d86d69"
+      }
+    ]
+  }
+}

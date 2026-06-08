@@ -1,0 +1,190 @@
+{
+  "_meta": {
+    "provider": "Matrix Brasil (Chatbots & IA)",
+    "doc_source": "Postman Collection v2.1.0 - exporter 38602602",
+    "captured_at": "2026-06-07",
+    "note": "Resumo estruturado dos endpoints. Para a collection Postman completa (com exemplos de body/response/erros), exportar do Postman e salvar como 'Chatbots-IA-API.postman_collection.json' nesta pasta. Ver Chatbots-IA-API.postman_collection.json.README.md."
+  },
+  "auth": {
+    "v1": { "header": "Authorization", "value_format": "<api-key-raw>" },
+    "v2": { "header": "Authorization", "value_format": "Bearer <jwt>", "obtain_via": "POST /rest/v2/authuser" }
+  },
+  "base_url_format": "https://{tenant}.matrixdobrasil.ai",
+  "versions": {
+    "v1": {
+      "atendimento": [
+        { "method": "GET",  "path": "/rest/v1/atendimento",            "desc": "Obter dados de um atendimento (codigo_atendimento)" },
+        { "method": "GET",  "path": "/rest/v1/getAtendimentoContato",  "desc": "Lista atendimentos de um contato" },
+        { "method": "POST", "path": "/rest/v1/atendimento",            "desc": "Gerar novo atendimento" },
+        { "method": "POST", "path": "/rest/v1/mensagem",               "desc": "Envia msg em atendimento existente" },
+        { "method": "POST", "path": "/rest/v1/transferirHumano",       "desc": "Transferir bot -> humano" },
+        { "method": "POST", "path": "/rest/v1/callbackFlowMsg",        "desc": "Msg em atendimento de flow" },
+        { "method": "POST", "path": "/rest/v1/mensagemInteg",          "desc": "DEPRECADO (2023-12-31)" },
+        { "method": "POST", "path": "/rest/v1/checaUltimoLogin",       "desc": "Dias desde ultimo atendimento" },
+        { "method": "GET",  "path": "/rest/v1/getDadosUltimoAtendimento", "desc": "Dados do ultimo atendimento por filtros" },
+        { "method": "POST", "path": "/rest/v1/mensagemAlt",            "desc": "DEPRECADO (2023-12-31)" },
+        { "method": "POST", "path": "/rest/v1/agendamentoContato",     "desc": "Agenda atendimento data/hora" }
+      ],
+      "contato": [
+        { "method": "PUT",  "path": "/rest/v1/contato", "desc": "Alterar contato" },
+        { "method": "POST", "path": "/rest/v1/contato", "desc": "Criar contato" }
+      ],
+      "blacklist": [
+        { "method": "GET",    "path": "/rest/v1/blacklist", "desc": "Listar" },
+        { "method": "PUT",    "path": "/rest/v1/blacklist", "desc": "Alterar" },
+        { "method": "POST",   "path": "/rest/v1/blacklist", "desc": "Criar" },
+        { "method": "DELETE", "path": "/rest/v1/blacklist", "desc": "Remover" }
+      ],
+      "relatorios": [
+        { "method": "GET", "path": "/rest/v1/RelPesqAnalitico", "desc": "Pesquisa analitico" },
+        { "method": "GET", "path": "/rest/v1/relAtAnalitico",   "desc": "Atendimento analitico" },
+        { "method": "GET", "path": "/rest/v1/consultaJanelaSessao", "desc": "Contatos com janela WhatsApp aberta" },
+        { "method": "GET", "path": "/rest/v1/relAgenteLogin",  "desc": "Login de agentes" },
+        { "method": "GET", "path": "/rest/v1/relAgentePausa",  "desc": "Pausas de agentes" },
+        { "method": "GET", "path": "/rest/v1/relAtendimentoMonitoramentoPalavra", "desc": "Monitoramento de palavras-chave" },
+        { "method": "GET", "path": "/rest/v1/exportMulti",     "desc": "Export multiplo" },
+        { "method": "GET", "path": "/rest/v1/logsExportacao",  "desc": "Logs de exportacao" },
+        { "method": "GET", "path": "/rest/v1/relAnaliticoContatos", "desc": "Contatos analitico" },
+        { "method": "GET", "path": "/rest/v1/relFlowAnalitico", "desc": "Flow analitico" },
+        { "method": "GET", "path": "/rest/v1/relCuradoriaAnalitico", "desc": "Curadoria analitico" },
+        { "method": "GET", "path": "/rest/v1/relAtendimentoAnaliticoExportacao", "desc": "Atend. analitico (export)" },
+        { "method": "GET", "path": "/rest/v1/relAnaliticoRetencao", "desc": "Retencao analitico" },
+        { "method": "GET", "path": "/rest/v1/relPesquisa",     "desc": "Pesquisa (resumo)" },
+        { "method": "GET", "path": "/rest/v1/relProdutividadePorData", "desc": "Produtividade por data" },
+        { "method": "GET", "path": "/rest/v1/relPausasAgendadas", "desc": "Pausas agendadas" },
+        { "method": "GET", "path": "/rest/v1/tme", "desc": "TME por servico" },
+        { "method": "GET", "path": "/rest/v1/tmeAtendimento", "desc": "TME por atendimento" },
+        { "method": "GET", "path": "/rest/v1/tablegeneric", "desc": "Tabela generica (com filtros por coluna)" },
+        { "method": "GET", "path": "/rest/v1/relEstatisticoTags", "desc": "Estatistico de tags" }
+      ],
+      "hsm": [
+        { "method": "POST", "path": "/rest/v1/sendHsm",     "desc": "Disparar template HSM (WhatsApp)" },
+        { "method": "GET",  "path": "/rest/v1/hsmEnviadas", "desc": "Status de HSMs disparados" }
+      ],
+      "agente": [
+        { "method": "POST", "path": "/rest/v1/agente/servico/{agenteId}", "desc": "Add/remove servicos" },
+        { "method": "POST", "path": "/rest/v1/agente",                    "desc": "Criar agente" },
+        { "method": "POST", "path": "/rest/v1/deslogarAgente",            "desc": "Deslogar agente" },
+        { "method": "GET",  "path": "/rest/v1/agente/{login}",            "desc": "ID por login" },
+        { "method": "PUT",  "path": "/rest/v1/agenteResetSenha",          "desc": "Reset senha" },
+        { "method": "GET",  "path": "/rest/v1/agentesOnline",             "desc": "Agentes online" },
+        { "method": "GET",  "path": "/rest/v1/agentes",                   "desc": "Listar agentes (filtros)" }
+      ],
+      "conta": [
+        { "method": "GET", "path": "/rest/v1/getDataContaServCanal", "desc": "Volumes conta/servico/canal" }
+      ],
+      "optin": [
+        { "method": "POST", "path": "/rest/v1/optin", "desc": "Registrar opt-in" }
+      ]
+    },
+    "v2": {
+      "agentes": [
+        { "method": "POST", "path": "/rest/v2/agente/servico/{agenteId}", "desc": "Add/remove servicos" },
+        { "method": "POST", "path": "/rest/v2/agente",                    "desc": "Criar agente" },
+        { "method": "POST", "path": "/rest/v2/deslogarAgente",            "desc": "Deslogar agente" },
+        { "method": "GET",  "path": "/rest/v2/agente/{login}",            "desc": "ID por login" },
+        { "method": "PUT",  "path": "/rest/v2/agenteResetSenha",          "desc": "Reset senha" },
+        { "method": "GET",  "path": "/rest/v2/agentesOnline",             "desc": "Agentes online" },
+        { "method": "GET",  "path": "/rest/v2/agentes",                   "desc": "Listar agentes (filtros)" }
+      ],
+      "atendimento": [
+        { "method": "POST", "path": "/rest/v2/agendamentoContato",    "desc": "Agendar atendimento" },
+        { "method": "POST", "path": "/rest/v2/transferirHumano",      "desc": "Bot -> humano" },
+        { "method": "POST", "path": "/rest/v2/finalizaAtendimento",   "desc": "Finalizar" },
+        { "method": "GET",  "path": "/rest/v2/atendimento",           "desc": "Consultar dados" },
+        { "method": "POST", "path": "/rest/v2/atendimento",           "desc": "Gerar novo" },
+        { "method": "GET",  "path": "/rest/v2/getDadosUltimoAtendimento", "desc": "Ultimo atendimento" },
+        { "method": "GET",  "path": "/rest/v2/canais",                "desc": "Listar canais" },
+        { "method": "GET",  "path": "/rest/v2/statusAtendimentos",    "desc": "Listar status" },
+        { "method": "POST", "path": "/rest/v2/transferirFlow",        "desc": "Transferir entre flows" },
+        { "method": "POST", "path": "/rest/v2/mensagemAlt",           "desc": "DEPRECADO (2023-12-31)" },
+        { "method": "POST", "path": "/rest/v2/mensagem",              "desc": "Envia msg em atendimento" },
+        { "method": "GET",  "path": "/rest/v2/mensagemIntencoes",     "desc": "Info de intencao das mensagens" },
+        { "method": "POST", "path": "/rest/v2/mensagemInteg",         "desc": "DEPRECADO (2023-12-31)" },
+        { "method": "GET",  "path": "/rest/v2/getAtendimentoContato", "desc": "Lista atendimentos do contato" }
+      ],
+      "autenticacao": [
+        { "method": "POST", "path": "/rest/v2/authuser", "desc": "Login -> JWT (1h)" }
+      ],
+      "blocklist": [
+        { "method": "GET",    "path": "/rest/v2/blocklist", "desc": "Listar" },
+        { "method": "PUT",    "path": "/rest/v2/blocklist", "desc": "Alterar" },
+        { "method": "POST",   "path": "/rest/v2/blocklist", "desc": "Criar" },
+        { "method": "DELETE", "path": "/rest/v2/blocklist", "desc": "Remover" }
+      ],
+      "canais_envio": [
+        { "method": "POST", "path": "/rest/v2/sendSms",          "desc": "Disparar SMS" },
+        { "method": "POST", "path": "/rest/v2/dialogoWhatsapp",  "desc": "Disparar HSM/livre WhatsApp" }
+      ],
+      "catalogo": [
+        { "method": "GET", "path": "/rest/v2/catalogo",       "desc": "Listar catalogos" },
+        { "method": "GET", "path": "/rest/v2/itensCatalogo",  "desc": "Listar itens de catalogo" }
+      ],
+      "contato": [
+        { "method": "PUT",  "path": "/rest/v2/contato", "desc": "Alterar" },
+        { "method": "POST", "path": "/rest/v2/contato", "desc": "Criar" },
+        { "method": "GET",  "path": "/rest/v2/contato", "desc": "Consultar dados completos" }
+      ],
+      "destino": [
+        { "method": "POST", "path": "/rest/v2/destino", "desc": "Define destino canal/conta" }
+      ],
+      "exportacao": [
+        { "method": "GET", "path": "/rest/v2/exportMulti", "desc": "Export multiplo" }
+      ],
+      "flow_utilitarios": [
+        { "method": "POST", "path": "/rest/v2/checaTrocaSenha",   "desc": "Dias desde troca de senha" },
+        { "method": "POST", "path": "/rest/v2/checaUltimoLogin",  "desc": "Dias desde ultimo atendimento" },
+        { "method": "POST", "path": "/rest/v2/alteraSenhaFlow",   "desc": "Alterar senha via flow" },
+        { "method": "POST", "path": "/rest/v2/callbackFlowMsg",   "desc": "Msg em flow" },
+        { "method": "GET",  "path": "/rest/v2/AlertaAtivo",       "desc": "Alerta ativo da conta" }
+      ],
+      "grupos": [
+        { "method": "POST", "path": "/rest/v2/msgGrupo",        "desc": "Msg em grupo" },
+        { "method": "POST", "path": "/rest/v2/workplaceGroup",  "desc": "Publica em grupo Workplace" }
+      ],
+      "hsm": [
+        { "method": "POST", "path": "/rest/v2/sendHsm",     "desc": "Disparar template HSM" },
+        { "method": "GET",  "path": "/rest/v2/hsmEnviadas", "desc": "Status de HSMs" }
+      ],
+      "integracao_voz": [
+        { "method": "POST", "path": "/rest/v2/gravacoesVoz",            "desc": "Upload gravacao" },
+        { "method": "POST", "path": "/rest/v2/atualizaStatusChamadaVoz","desc": "Atualizar status chamada" }
+      ],
+      "janela_sessao": [
+        { "method": "GET", "path": "/rest/v2/consultaJanelaSessao", "desc": "Contatos com janela 24h aberta" }
+      ],
+      "logs": [
+        { "method": "GET", "path": "/rest/v2/logsExportacao", "desc": "Logs de exportacao" }
+      ],
+      "relatorios": [
+        { "method": "GET", "path": "/rest/v2/relAgenteLogin", "desc": "Login agentes" },
+        { "method": "GET", "path": "/rest/v2/relAgentePausa", "desc": "Pausas agentes" },
+        { "method": "GET", "path": "/rest/v2/relPausasAgendadas", "desc": "Pausas agendadas" },
+        { "method": "GET", "path": "/rest/v2/relProdutividadePorData", "desc": "Produtividade" },
+        { "method": "GET", "path": "/rest/v2/relAtAnalitico", "desc": "Atendimento analitico" },
+        { "method": "GET", "path": "/rest/v2/relAtendimentoAnaliticoExportacao", "desc": "Atend. analitico (export)" },
+        { "method": "GET", "path": "/rest/v2/relAnaliticoRetencao", "desc": "Retencao" },
+        { "method": "GET", "path": "/rest/v2/tme", "desc": "TME servico" },
+        { "method": "GET", "path": "/rest/v2/tmeAtendimento", "desc": "TME atendimento" },
+        { "method": "GET", "path": "/rest/v2/relAtendimentoMonitoramentoPalavra", "desc": "Monitoramento palavras" },
+        { "method": "GET", "path": "/rest/v2/getDataContaServCanal", "desc": "Conta/servico/canal" },
+        { "method": "GET", "path": "/rest/v2/relAtEstatistico", "desc": "Estatistico" },
+        { "method": "GET", "path": "/rest/v2/relAnaliticoContatos", "desc": "Contatos analitico" },
+        { "method": "GET", "path": "/rest/v2/relFlowAnalitico", "desc": "Flow analitico" },
+        { "method": "GET", "path": "/rest/v2/relCuradoriaAnalitico", "desc": "Curadoria" },
+        { "method": "GET", "path": "/rest/v2/RelRequisicoes", "desc": "Requisicoes HTTP do flow" },
+        { "method": "GET", "path": "/rest/v2/RelVariaveisAtendimento", "desc": "Variaveis de atendimento" },
+        { "method": "GET", "path": "/rest/v2/reportEventosAnaliticoMensagens", "desc": "Eventos analiticos de msgs" },
+        { "method": "GET", "path": "/rest/v2/RelPesqAnalitico", "desc": "Pesquisa analitico" },
+        { "method": "GET", "path": "/rest/v2/relPesquisa", "desc": "Pesquisa (resumo)" },
+        { "method": "GET", "path": "/rest/v2/relEstatisticoTags", "desc": "Estatistico de tags" }
+      ],
+      "tabela_generica": [
+        { "method": "GET", "path": "/rest/v2/tablegeneric", "desc": "Tabela generica" }
+      ],
+      "optin": [
+        { "method": "POST", "path": "/rest/v2/optin", "desc": "Registrar opt-in" }
+      ]
+    }
+  }
+}

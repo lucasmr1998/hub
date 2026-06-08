@@ -32,8 +32,10 @@ myenv/
 *.postman_collection.json
 
 # ── Media uploads (devem viver em volume bind, nao em git) ─
-workspace/
-robo/dashboard_comercial/gerenciador_vendas/workspace/anexos/
+# Ancorado: ignora so o dump de media no root (MEDIA_ROOT do settings_local) e o
+# do projeto, sem pegar a doc (robo/docs/PRODUTO/modulos/workspace/) nem templates.
+/workspace/
+robo/dashboard_comercial/gerenciador_vendas/workspace/
 robo/dashboard_comercial/gerenciador_vendas/media/
 
 # ── Backups pontuais de dados de producao ────────────────
@@ -78,3 +80,5 @@ prod/
 # ── Dumps e configs locais ────────────────────────────────
 *.sql
 .claude/settings.local.json
+workspace/
+dump_*.sql

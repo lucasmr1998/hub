@@ -17,15 +17,17 @@ Modulo de conversas em tempo real estilo Chatwoot/Intercom. Permite que agentes 
 
 | Arquivo | Conteudo |
 |---------|----------|
+| **[atendimento-fluxo-completo.md](atendimento-fluxo-completo.md)** | **⭐ Visao consolidada — modelo, fluxo, cron, gaps. Comecar por aqui** |
 | [models.md](models.md) | 17 models + campos importantes de Conversa + indices |
 | [services.md](services.md) | services.py + modo atendimento (bot vs humano) + signals |
-| [distribuicao.md](distribuicao.md) | Engine de distribuicao + horarios por fila |
+| [distribuicao.md](distribuicao.md) | Engine de distribuicao + horarios por fila (resumo curto) |
 | [apis.md](apis.md) | Webhook N8N + APIs internas + APIs publicas do widget |
 | [websocket.md](websocket.md) | InboxConsumer + groups + actions em tempo real |
 | [widget-chat.md](widget-chat.md) | Chat widget embeddable (3 abas + FAQ) |
 | [interface.md](interface.md) | Dashboard + configuracoes + sidebar + management commands |
 | [sugestoes-ia.md](sugestoes-ia.md) | Sugestoes IA de campos do Lead (v1 manual, workflow N8N) |
 | [reatribuicao-inatividade.md](reatribuicao-inatividade.md) | Realocacao auto + alerta admin por inatividade do atendente (v3) |
+| [assumir-conversa.md](assumir-conversa.md) | Fluxo de assumir vs visualizar (3 estados) |
 
 ---
 

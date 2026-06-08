@@ -1,0 +1,178 @@
+{
+  "updatedAt": "2026-05-19T13:05:30.033Z",
+  "createdAt": "2026-05-19T13:05:30.033Z",
+  "id": "tYckyds4TqPpFOWd",
+  "name": "[Vero] Follow-up Abandonados D+2h",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "schedule-followup",
+      "name": "A cada 30min"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT telefone, nodo_atual, dados, atualizado_em\nFROM vero_session\nWHERE atualizado_em < NOW() - INTERVAL '2 hours'\n  AND atualizado_em > NOW() - INTERVAL '7 days'\n  AND nodo_atual NOT IN ('inicio', 'concluido', 'aguarda_humano')\n  AND (dados->>'_followup_enviado_em' IS NULL\n       OR (dados->>'_followup_enviado_em')::timestamp < NOW() - INTERVAL '24 hours')\nLIMIT 50;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        0
+      ],
+      "id": "query-stale",
+      "name": "Buscar Stale",
+      "credentials": {
+        "postgres": {
+          "id": "tvjxTZBUAfRi1NgL",
+          "name": "Postgres account 7"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://consulteplus.uazapi.com/send/text",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": {{ JSON.stringify($json.telefone) }},\n  \"text\": \"Oi! 😊 Vi que voce começou um cadastro com a gente. Quer continuar de onde parou? É rapidinho!\",\n  \"linkPreview\": false\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        0
+      ],
+      "id": "enviar-followup",
+      "name": "Enviar Followup",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "qdWluYpx0ExpQ6kX",
+          "name": "Uazapi TR Carrion"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE vero_session\nSET dados = jsonb_set(COALESCE(dados, '{}'::jsonb),\n                      '{_followup_enviado_em}',\n                      to_jsonb(NOW()::text), true)\nWHERE telefone = '{{ $json.telefone }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        720,
+        0
+      ],
+      "id": "marca-enviado",
+      "name": "Marcar Enviado",
+      "credentials": {
+        "postgres": {
+          "id": "tvjxTZBUAfRi1NgL",
+          "name": "Postgres account 7"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "A cada 30min": {
+      "main": [
+        [
+          {
+            "node": "Buscar Stale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Stale": {
+      "main": [
+        [
+          {
+            "node": "Enviar Followup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Followup": {
+      "main": [
+        [
+          {
+            "node": "Marcar Enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "0ba6065a-c4b5-4a55-9b4b-946b74f356cd",
+  "activeVersionId": null,
+  "versionCounter": 1,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-05-19T13:05:30.035Z",
+      "createdAt": "2026-05-19T13:05:30.035Z",
+      "role": "workflow:owner",
+      "workflowId": "tYckyds4TqPpFOWd",
+      "projectId": "tMovt7T6zJ7SXTgp",
+      "project": {
+        "updatedAt": "2025-06-03T13:42:49.268Z",
+        "createdAt": "2025-06-03T13:39:27.940Z",
+        "id": "tMovt7T6zJ7SXTgp",
+        "name": "Lucas Rodrigues <marketing@consulteplus.com.br>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "f10c1b65-9b83-4860-ae70-d0ffc3d86d69"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}
