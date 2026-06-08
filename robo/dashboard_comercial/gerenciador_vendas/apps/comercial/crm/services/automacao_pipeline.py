@@ -450,7 +450,7 @@ def _acao_enviar_venda_whatsapp(oportunidade, config):
         return
 
     try:
-        result = enviar_venda_whatsapp(lead, telefone)
+        result = enviar_venda_whatsapp(lead, telefone, oportunidade=oportunidade)
         logger.info(
             "[Automacao Pipeline] Venda WhatsApp lead=%s telefone=%s ok=%s docs=%s motivo=%s",
             lead.pk, telefone, result.get('ok'),

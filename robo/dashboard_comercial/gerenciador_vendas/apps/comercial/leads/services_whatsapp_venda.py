@@ -44,7 +44,134 @@ def _formatar_tel(tel: str) -> str:
     return tel or ''
 
 
-def montar_texto_venda(lead) -> str:
+def _resolver_plano(lead, oportunidade) -> tuple[str, str]:
+    """Busca dado de plano em multiplas fontes pra preencher o resumo da venda.
+
+    Ordem de busca:
+    1. oportunidade.plano_interesse (campo direto)
+    2. oportunidade.dados_custom['plano_interesse_texto']
+    3. oportunidade.dados_custom['plano_id'] (ID Vero tipo 'A1', 'B3')
+    4. Parse heuristico da conversa: procura mensagem do cliente respondendo "N"
+       (1-8) apos o bot ter listado planos numerados
+    5. lead.dados_custom['plano_interesse'] / ['plano_texto']
+
+    Retorna (texto, valor_str). Vazio quando nao acha.
+    """
+    # 1, 2, 3 — Oportunidade
+    if oportunidade is not None:
+        txt = (getattr(oportunidade, 'plano_interesse', '') or '').strip()
+        if txt:
+            return txt, ''
+        dc = (oportunidade.dados_custom or {}) if hasattr(oportunidade, 'dados_custom') else {}
+        if dc.get('plano_interesse_texto'):
+            return str(dc['plano_interesse_texto']).strip(), str(dc.get('plano_valor_pix', '') or '').strip()
+        if dc.get('plano_id'):
+            return f"ID Vero {dc['plano_id']}", ''
+
+    # 5 — lead.dados_custom
+    ldc = (lead.dados_custom or {}) if hasattr(lead, 'dados_custom') else {}
+    if ldc.get('plano_interesse') or ldc.get('plano_texto'):
+        return str(ldc.get('plano_interesse') or ldc.get('plano_texto')).strip(), \
+               str(ldc.get('plano_valor', '') or '').strip()
+
+    # 4 — Parse heuristico da conversa
+    try:
+        plano_parse = _parsear_plano_da_conversa(lead)
+        if plano_parse:
+            return plano_parse  # (texto, valor)
+    except Exception as e:
+        logger.debug('parse plano da conversa falhou (lead %s): %s', lead.id, e)
+
+    return '', ''
+
+
+def _parsear_plano_da_conversa(lead) -> tuple[str, str] | None:
+    """Procura no historico de Mensagens:
+       - Bot lista planos numerados ('1️⃣ 550 Mega + Wi-Fi 6\\n💰 R$ 97,90 ...')
+       - Cliente responde "1" (ou "1 " ou similar)
+       Retorna (texto_do_plano, valor) ou None se nao achar.
+    """
+    import re
+    from apps.inbox.models import Mensagem, Conversa
+
+    conv = Conversa.all_tenants.filter(lead=lead).order_by('-data_abertura').first()
+    if not conv:
+        return None
+    msgs = list(
+        Mensagem.all_tenants.filter(conversa=conv).order_by('data_envio')
+    )
+    if not msgs:
+        return None
+
+    # Encontra a ultima msg do bot que lista planos numerados (1, 2, 3, ...)
+    NUM_EMOJIS = {
+        '1️⃣': 1, '2️⃣': 2, '3️⃣': 3, '4️⃣': 4,
+        '5️⃣': 5, '6️⃣': 6, '7️⃣': 7, '8️⃣': 8,
+        '9️⃣': 9,
+    }
+
+    catalogo: dict[int, dict] = {}  # numero -> {label, valor}
+    idx_catalogo = -1
+    for i, m in enumerate(msgs):
+        if m.remetente_tipo == 'contato':
+            continue
+        conteudo = m.conteudo or ''
+        if not any(e in conteudo for e in NUM_EMOJIS):
+            continue
+        cat = _extrair_catalogo_planos(conteudo, NUM_EMOJIS)
+        if cat:
+            catalogo = cat
+            idx_catalogo = i
+
+    if not catalogo:
+        return None
+
+    # Procura escolha do cliente apos o catalogo
+    for m in msgs[idx_catalogo + 1:]:
+        if m.remetente_tipo != 'contato':
+            continue
+        resp = (m.conteudo or '').strip()
+        match = re.match(r'^\s*(\d)\s*$', resp)
+        if match:
+            n = int(match.group(1))
+            if n in catalogo:
+                return catalogo[n]['label'], catalogo[n]['valor']
+    return None
+
+
+def _extrair_catalogo_planos(conteudo: str, num_emojis: dict) -> dict:
+    """Parsea bloco do bot com lista numerada:
+       '1️⃣ 550 Mega + Wi-Fi 6\\n💰 R$ 97,90 no PIX recorrente ou debito em conta\\n📄 R$ 107,90 no boleto\\n\\n2️⃣ ...'
+       Retorna {1: {label, valor}, 2: {...}, ...}
+    """
+    import re
+    catalogo = {}
+    # Quebra por linhas com emoji numerico
+    linhas = conteudo.split('\n')
+    i = 0
+    while i < len(linhas):
+        linha = linhas[i]
+        n_atual = None
+        for emoji, n in num_emojis.items():
+            if linha.lstrip().startswith(emoji):
+                n_atual = n
+                label = linha.replace(emoji, '').strip()
+                break
+        if n_atual is None:
+            i += 1
+            continue
+        # Valor (R$ ...) na proxima linha
+        valor = ''
+        if i + 1 < len(linhas):
+            m_val = re.search(r'R\$\s*(\d+[.,]\d{2})', linhas[i + 1])
+            if m_val:
+                valor = m_val.group(1)
+        catalogo[n_atual] = {'label': label, 'valor': valor}
+        i += 1
+    return catalogo
+
+
+def montar_texto_venda(lead, oportunidade=None) -> str:
     """Texto formatado da venda pra enviar via WhatsApp."""
     linhas = []
     linhas.append('🎉 *NOVA VENDA FECHADA*')
@@ -81,17 +208,15 @@ def montar_texto_venda(lead) -> str:
     linhas.append('')
 
     linhas.append('*📡 PLANO*')
-    if getattr(lead, 'plano_interesse', None):
-        linhas.append(f'Plano: {lead.plano_interesse}')
-    elif lead.id_plano_rp:
-        linhas.append(f'Plano ID: {lead.id_plano_rp}')
-    if lead.valor:
-        try:
-            linhas.append(f'Valor: R$ {float(lead.valor):.2f}'.replace('.', ','))
-        except Exception:
-            pass
+    plano_texto, plano_valor = _resolver_plano(lead, oportunidade)
+    if plano_texto:
+        linhas.append(f'Plano: {plano_texto}')
+    if plano_valor:
+        linhas.append(f'Valor: R$ {plano_valor}')
     if lead.id_dia_vencimento:
         linhas.append(f'Vencimento: dia {lead.id_dia_vencimento}')
+    if not plano_texto and not plano_valor:
+        linhas.append('_Consultar conversa do cliente_')
     linhas.append('')
 
     # Snippet HubSoft (se ja virou prospect/cliente)
@@ -162,12 +287,14 @@ def _coletar_documentos(lead) -> list[dict]:
     return docs
 
 
-def enviar_venda_whatsapp(lead, telefone_destino: str) -> dict:
+def enviar_venda_whatsapp(lead, telefone_destino: str, oportunidade=None) -> dict:
     """Envia resumo da venda + documentos pelo WhatsApp.
 
     Args:
         lead: instancia de LeadProspecto
         telefone_destino: numero do destinatario (sera normalizado pra 55XXXXXX)
+        oportunidade: OportunidadeVenda relacionada (opcional). Se nao passado,
+            busca a primeira do lead. Usado pra extrair dados do plano.
 
     Returns:
         dict com {ok: bool, texto_enviado: bool, docs_enviados: int,
@@ -195,9 +322,19 @@ def enviar_venda_whatsapp(lead, telefone_destino: str) -> dict:
         logger.error(resultado['motivo'])
         return resultado
 
+    # Recupera oportunidade do lead se nao veio (pra ler plano)
+    if oportunidade is None:
+        try:
+            from apps.comercial.crm.models import OportunidadeVenda
+            oportunidade = OportunidadeVenda.all_tenants.filter(
+                tenant=lead.tenant, lead=lead,
+            ).order_by('-id').first()
+        except Exception as e:
+            logger.debug('falha ao buscar oportunidade lead %s: %s', lead.id, e)
+
     # 1) Texto formatado
     try:
-        texto = montar_texto_venda(lead)
+        texto = montar_texto_venda(lead, oportunidade=oportunidade)
         uaz.enviar_texto(telefone_destino, texto)
         resultado['texto_enviado'] = True
     except Exception as e:
