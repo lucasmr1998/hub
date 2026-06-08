@@ -4,7 +4,7 @@
 {% block topbar_title %}Novo tenant{% endblock %}
 
 {% block topbar_actions %}
-  <a href="{% url 'admin_aurora:dashboard' %}" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+  {% include "components/button.html" with variant="secondary" size="sm" href=request.session.dashboard_back|default:"/aurora-admin/" icon="bi-arrow-left" label="Voltar" %}
 {% endblock %}
 
 {% block content %}
@@ -13,33 +13,26 @@
       <i class="bi bi-exclamation-triangle"></i>
       <div>
         <strong>Corrija os erros abaixo:</strong>
-        <ul style="margin: 4px 0 0 20px;">
+        <ul class="admin-alert-list">
           {% for erro in erros %}<li>{{ erro }}</li>{% endfor %}
         </ul>
       </div>
     </div>
   {% endif %}
 
-  <div class="card" style="max-width: 720px;">
+  <div class="card form-narrow">
     <div class="card-header">
       <h3 class="card-title"><i class="bi bi-building"></i> Dados do provedor</h3>
     </div>
     <div class="card-body">
       <form method="post" action="">
         {% csrf_token %}
-        <div class="admin-form-grid" style="margin-bottom: var(--sp-4);">
-          <div class="field">
-            <label class="field-label" for="nome">Nome do provedor <span class="field-required">*</span></label>
-            <div class="field-input-wrap"><input id="nome" name="nome" class="field-input" type="text" value="{{ form.nome|default:'' }}" placeholder="Ex: Megalink Telecom" required></div>
-          </div>
-          <div class="field">
-            <label class="field-label" for="cnpj">CNPJ</label>
-            <div class="field-input-wrap"><input id="cnpj" name="cnpj" class="field-input" type="text" value="{{ form.cnpj|default:'' }}" placeholder="00.000.000/0000-00"></div>
-            <p class="field-helper">Opcional</p>
-          </div>
+        <div class="admin-form-grid page-section">
+          {% include "components/input.html" with name="nome" label="Nome do provedor" value=form.nome placeholder="Ex: Megalink Telecom" required=True %}
+          {% include "components/input.html" with name="cnpj" label="CNPJ" value=form.cnpj placeholder="00.000.000/0000-00" helper="Opcional" %}
         </div>
 
-        <div class="field" style="margin-bottom: var(--sp-4);">
+        <div class="field page-section">
           <label class="field-label" for="plano">Plano</label>
           <div class="field-input-wrap">
             <select id="plano" name="plano" class="field-input">
@@ -50,34 +43,27 @@
           </div>
         </div>
 
-        <h4 style="font-size: var(--fs-md); font-weight: var(--fw-semibold); margin: var(--sp-6) 0 var(--sp-4); padding-top: var(--sp-4); border-top: 1px solid var(--color-border);">
+        <h4 class="form-section-title">
           <i class="bi bi-person-badge"></i> Administrador do provedor
         </h4>
 
-        <div class="admin-form-grid" style="margin-bottom: var(--sp-4);">
-          <div class="field">
-            <label class="field-label" for="username">Username <span class="field-required">*</span></label>
-            <div class="field-input-wrap"><input id="username" name="username" class="field-input" type="text" value="{{ form.username|default:'' }}" placeholder="admin" required></div>
-          </div>
-          <div class="field">
-            <label class="field-label" for="email">Email <span class="field-required">*</span></label>
-            <div class="field-input-wrap"><input id="email" name="email" class="field-input" type="email" value="{{ form.email|default:'' }}" placeholder="admin@provedor.com.br" required></div>
-          </div>
+        <div class="admin-form-grid page-section">
+          {% include "components/input.html" with name="username" label="Username" value=form.username placeholder="admin" required=True %}
+          {% include "components/input.html" with name="email" label="Email" type="email" value=form.email placeholder="admin@provedor.com.br" required=True %}
         </div>
 
-        <div class="field" style="margin-bottom: var(--sp-4);">
-          <label class="field-label" for="senha">Senha <span class="field-required">*</span></label>
-          <div class="field-input-wrap"><input id="senha" name="senha" class="field-input" type="password" placeholder="Minimo 8 caracteres" required></div>
+        <div class="page-section">
+          {% include "components/input.html" with name="senha" label="Senha" type="password" placeholder="Minimo 8 caracteres" required=True %}
         </div>
 
-        <label class="admin-checkbox-label" style="margin-bottom: var(--sp-5);">
+        <label class="admin-checkbox-label">
           <input type="checkbox" name="trial" {% if form.trial %}checked{% endif %}>
           Iniciar com trial de 14 dias
         </label>
 
-        <div style="display:flex; gap: var(--sp-2); padding-top: var(--sp-4); border-top: 1px solid var(--color-border);">
-          <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Criar provedor</button>
-          <a href="{% url 'admin_aurora:dashboard' %}" class="btn btn-secondary">Cancelar</a>
+        <div class="form-actions form-actions-divider">
+          {% include "components/button.html" with variant="primary" type="submit" icon="bi-plus-lg" label="Criar provedor" %}
+          <a href="{% url 'admin_aurora:dashboard' %}" class="btn btn-secondary"><span>Cancelar</span></a>
         </div>
       </form>
     </div>
@@ -86,29 +72,24 @@
 
 {% block extra_css %}
 <style>
+  .form-narrow { max-width: 720px; }
+  .page-section { margin-bottom: var(--sp-4); }
   .admin-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
-  .admin-alert {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--sp-2);
-    padding: var(--sp-3) var(--sp-4);
-    border-radius: var(--radius);
-    font-size: var(--fs-sm);
-    margin-bottom: var(--sp-4);
-  }
+  .form-section-title { font-size: var(--fs-md); font-weight: var(--fw-semibold);
+                        margin: var(--sp-6) 0 var(--sp-4); padding-top: var(--sp-4);
+                        border-top: 1px solid var(--color-border); }
+  .form-actions { display: flex; gap: var(--sp-2); }
+  .form-actions-divider { padding-top: var(--sp-4); border-top: 1px solid var(--color-border); }
+  .admin-alert { display: flex; align-items: flex-start; gap: var(--sp-2);
+                 padding: var(--sp-3) var(--sp-4); border-radius: var(--radius);
+                 font-size: var(--fs-sm); margin-bottom: var(--sp-4); }
   .admin-alert-success { background: var(--color-success-soft); color: #166534; }
   .admin-alert-danger  { background: var(--color-danger-soft);  color: #991b1b; }
   .admin-alert i { font-size: 1rem; margin-top: 2px; }
-  .admin-checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-    font-size: var(--fs-sm);
-    cursor: pointer;
-  }
-  .admin-checkbox-label input[type="checkbox"] {
-    width: 16px; height: 16px;
-    accent-color: var(--color-primary);
-  }
+  .admin-alert-list { margin: 4px 0 0 20px; }
+  .admin-checkbox-label { display: flex; align-items: center; gap: var(--sp-2);
+                          font-size: var(--fs-sm); cursor: pointer; margin-bottom: var(--sp-5); }
+  .admin-checkbox-label input[type="checkbox"] { width: 16px; height: 16px;
+                                                  accent-color: var(--color-primary); }
 </style>
 {% endblock %}

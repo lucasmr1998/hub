@@ -4,62 +4,62 @@
 {% block topbar_title %}Logs do sistema{% endblock %}
 
 {% block topbar_actions %}
-  <label class="admin-checkbox-label" style="font-size: var(--fs-xs); margin: 0;">
+  <label class="admin-checkbox-label admin-checkbox-xs">
     <input type="checkbox" id="auto-refresh"> Auto-refresh (30s)
   </label>
 {% endblock %}
 
 {% block content %}
   {# Filtros #}
-  <div class="card" style="margin-bottom: var(--sp-4);">
+  <div class="card page-section">
     <div class="card-body">
-      <form method="get" action="{% url 'admin_aurora:logs' %}" style="display:flex; gap: var(--sp-3); align-items:flex-end; flex-wrap:wrap;">
-        <div class="field" style="margin:0; width: 240px;">
+      <form method="get" action="{% url 'admin_aurora:logs' %}" class="filters-form">
+        <div class="field field-w-240">
           <label class="field-label" for="q-busca">Busca</label>
           <div class="field-input-wrap">
             <i class="bi bi-search field-icon field-icon-left"></i>
             <input id="q-busca" class="field-input has-icon-left" type="text" name="q" value="{{ busca }}" placeholder="Buscar na mensagem...">
           </div>
         </div>
-        <div class="field" style="margin:0; width: 200px;">
+        <div class="field field-w-200">
           <label class="field-label" for="q-modulo">Modulo</label>
           <div class="field-input-wrap">
             <input id="q-modulo" class="field-input" type="text" name="modulo" value="{{ modulo }}" placeholder="Ex: comercial, sistema...">
           </div>
         </div>
         {% if nivel %}<input type="hidden" name="nivel" value="{{ nivel }}">{% endif %}
-        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Filtrar</button>
+        {% include "components/button.html" with variant="primary" size="sm" type="submit" icon="bi-funnel" label="Filtrar" %}
         {% if busca or modulo or nivel %}
-          <a href="{% url 'admin_aurora:logs' %}" class="btn btn-secondary btn-sm"><i class="bi bi-x-lg"></i> Limpar</a>
+          <a href="{% url 'admin_aurora:logs' %}" class="btn btn-secondary btn-sm"><i class="bi bi-x-lg"></i> <span>Limpar</span></a>
         {% endif %}
       </form>
     </div>
   </div>
 
   {# Filtros por nivel (pills) #}
-  <div class="tabs tabs-pills" style="margin-bottom: var(--sp-4);">
+  <div class="tabs tabs-pills page-section">
     <a href="{% url 'admin_aurora:logs' %}{% if busca %}?q={{ busca }}{% endif %}{% if modulo %}{% if busca %}&{% else %}?{% endif %}modulo={{ modulo }}{% endif %}"
-       class="tabs-item{% if not nivel %} is-active{% endif %}" style="text-decoration:none;">
+       class="tabs-item{% if not nivel %} is-active{% endif %}">
       <span>Todos</span>
     </a>
     <a href="{% url 'admin_aurora:logs' %}?nivel=DEBUG{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
-       class="tabs-item{% if nivel == 'DEBUG' %} is-active{% endif %}" style="text-decoration:none;">
+       class="tabs-item{% if nivel == 'DEBUG' %} is-active{% endif %}">
       <span>DEBUG</span>{% if level_counts.DEBUG %}<span class="tabs-item-badge">{{ level_counts.DEBUG }}</span>{% endif %}
     </a>
     <a href="{% url 'admin_aurora:logs' %}?nivel=INFO{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
-       class="tabs-item{% if nivel == 'INFO' %} is-active{% endif %}" style="text-decoration:none;">
+       class="tabs-item tabs-item-link{% if nivel == 'INFO' %} is-active{% endif %}">
       <span>INFO</span>{% if level_counts.INFO %}<span class="tabs-item-badge">{{ level_counts.INFO }}</span>{% endif %}
     </a>
     <a href="{% url 'admin_aurora:logs' %}?nivel=WARNING{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
-       class="tabs-item{% if nivel == 'WARNING' %} is-active{% endif %}" style="text-decoration:none;">
+       class="tabs-item{% if nivel == 'WARNING' %} is-active{% endif %}">
       <span>WARNING</span>{% if level_counts.WARNING %}<span class="tabs-item-badge">{{ level_counts.WARNING }}</span>{% endif %}
     </a>
     <a href="{% url 'admin_aurora:logs' %}?nivel=ERROR{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
-       class="tabs-item{% if nivel == 'ERROR' %} is-active{% endif %}" style="text-decoration:none;">
+       class="tabs-item{% if nivel == 'ERROR' %} is-active{% endif %}">
       <span>ERROR</span>{% if level_counts.ERROR %}<span class="tabs-item-badge">{{ level_counts.ERROR }}</span>{% endif %}
     </a>
     <a href="{% url 'admin_aurora:logs' %}?nivel=CRITICAL{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
-       class="tabs-item{% if nivel == 'CRITICAL' %} is-active{% endif %}" style="text-decoration:none;">
+       class="tabs-item{% if nivel == 'CRITICAL' %} is-active{% endif %}">
       <span>CRITICAL</span>{% if level_counts.CRITICAL %}<span class="tabs-item-badge">{{ level_counts.CRITICAL }}</span>{% endif %}
     </a>
   </div>
@@ -88,7 +88,7 @@
             <td>{{ log.modulo|default:"—" }}</td>
             <td>{{ log.tenant|default:"—" }}</td>
             <td>{{ log.usuario|default:"—" }}</td>
-            <td style="max-width: 400px; word-break: break-word; font-size: var(--fs-xs);">{{ log.mensagem }}</td>
+            <td class="log-msg-cell">{{ log.mensagem }}</td>
           </tr>
         {% empty %}
           <tr>
@@ -104,24 +104,26 @@
     </table>
   </div>
 
-  <p style="margin-top: var(--sp-3); font-size: var(--fs-xs); color: var(--color-text-muted); text-align: right;">
+  <p class="log-footer-note">
     Exibindo ate 200 registros mais recentes.
   </p>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-  .admin-checkbox-label {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--sp-2);
-    font-size: var(--fs-sm);
-    cursor: pointer;
-  }
-  .admin-checkbox-label input[type="checkbox"] {
-    width: 14px; height: 14px;
-    accent-color: var(--color-primary);
-  }
+  .page-section { margin-bottom: var(--sp-4); }
+  .filters-form { display: flex; gap: var(--sp-3); align-items: flex-end; flex-wrap: wrap; }
+  .filters-form .field { margin: 0; }
+  .field-w-240 { width: 240px; }
+  .field-w-200 { width: 200px; }
+  .tabs-item-link, .tabs-item { text-decoration: none; }
+  .log-msg-cell { max-width: 400px; word-break: break-word; font-size: var(--fs-xs); }
+  .log-footer-note { margin-top: var(--sp-3); font-size: var(--fs-xs); color: var(--color-text-muted); text-align: right; }
+  .admin-checkbox-label { display: inline-flex; align-items: center; gap: var(--sp-2);
+                          font-size: var(--fs-sm); cursor: pointer; }
+  .admin-checkbox-xs { font-size: var(--fs-xs); margin: 0; }
+  .admin-checkbox-label input[type="checkbox"] { width: 14px; height: 14px;
+                                                  accent-color: var(--color-primary); }
 </style>
 {% endblock %}
 

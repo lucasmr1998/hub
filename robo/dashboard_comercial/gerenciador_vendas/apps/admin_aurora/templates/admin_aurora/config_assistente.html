@@ -5,19 +5,19 @@
 
 {% block content %}
   {# Config global #}
-  <div class="card" style="border-left: 3px solid var(--color-primary); margin-bottom: var(--sp-5);">
+  <div class="card card-primary-rule page-section-lg">
     <div class="card-header">
       <div>
         <h3 class="card-title"><i class="bi bi-globe"></i> Configuracao global</h3>
         <p class="card-subtitle">Numero WhatsApp da Hubtrix (compartilhado por todos os tenants)</p>
       </div>
-      <label class="admin-checkbox-label" style="margin:0;">
+      <label class="admin-checkbox-label admin-checkbox-flush">
         <input type="checkbox" id="globalAtivo" {% if config_global.ativo %}checked{% endif %} onchange="salvarGlobal()">
         <span id="globalAtivoLabel">{% if config_global.ativo %}Ativo{% else %}Inativo{% endif %}</span>
       </label>
     </div>
     <div class="card-body">
-      <div class="admin-form-grid" style="margin-bottom: var(--sp-3);">
+      <div class="admin-form-grid page-section">
         <div class="field">
           <label class="field-label">Numero WhatsApp (Uazapi)</label>
           <div class="field-input-wrap">
@@ -32,17 +32,17 @@
         <div class="field">
           {% if config_global.webhook_url %}
             <label class="field-label">Webhook URL</label>
-            <code style="font-size: var(--fs-xs); background: var(--color-surface-2); padding: var(--sp-2) var(--sp-3); border-radius: var(--radius); display: block; word-break: break-all;">{{ config_global.webhook_url }}</code>
+            <code class="code-block-inline">{{ config_global.webhook_url }}</code>
           {% else %}
             <label class="field-label">Webhook</label>
-            <p style="color: var(--color-warning); font-size: var(--fs-xs); margin: 0;">Selecione uma integracao WhatsApp.</p>
+            <p class="text-warning text-xs m-0">Selecione uma integracao WhatsApp.</p>
           {% endif %}
         </div>
       </div>
 
       <details>
-        <summary style="font-size: var(--fs-xs); color: var(--color-text-muted); cursor: pointer; font-weight: var(--fw-semibold);">Mensagens personalizadas</summary>
-        <div class="admin-form-grid" style="margin-top: var(--sp-3);">
+        <summary class="muted-summary">Mensagens personalizadas</summary>
+        <div class="admin-form-grid mt-3">
           <div class="field">
             <label class="field-label">Boas-vindas (use {nome})</label>
             <div class="field-input-wrap"><input id="globalBoasVindas" class="field-input" type="text" value="{{ config_global.mensagem_boas_vindas }}" onchange="salvarGlobal()"></div>
@@ -57,16 +57,16 @@
   </div>
 
   {# Por tenant #}
-  <h2 style="font-size: var(--fs-lg); font-weight: var(--fw-bold); margin: var(--sp-6) 0 var(--sp-3);">Configuracao por tenant</h2>
+  <h2 class="section-h2">Configuracao por tenant</h2>
 
   {% for item in configs_tenant %}
-    <div class="card" id="tenant-{{ item.tenant.pk }}" style="margin-bottom: var(--sp-3);">
+    <div class="card page-section-sm" id="tenant-{{ item.tenant.pk }}">
       <div class="card-header">
         <div>
           <h3 class="card-title">{{ item.tenant.nome }}</h3>
           <p class="card-subtitle">{{ item.total_msgs }} mensagens processadas</p>
         </div>
-        <label class="admin-checkbox-label" style="margin:0;">
+        <label class="admin-checkbox-label admin-checkbox-flush">
           <input type="checkbox" class="tenantAtivo" data-tenant="{{ item.tenant.pk }}" {% if item.config.ativo %}checked{% endif %} onchange="salvarTenant({{ item.tenant.pk }})">
           <span>{% if item.config.ativo %}Ativo{% else %}Inativo{% endif %}</span>
         </label>
@@ -92,24 +92,34 @@
       </div>
     </div>
   {% empty %}
-    <p style="color: var(--color-text-muted); font-size: var(--fs-sm);">Nenhum tenant cadastrado.</p>
+    <p class="text-muted text-sm">Nenhum tenant cadastrado.</p>
   {% endfor %}
 {% endblock %}
 
 {% block extra_css %}
 <style>
   .admin-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
-  .admin-checkbox-label {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--sp-2);
-    font-size: var(--fs-sm);
-    cursor: pointer;
-  }
-  .admin-checkbox-label input[type="checkbox"] {
-    width: 16px; height: 16px;
-    accent-color: var(--color-primary);
-  }
+  .page-section { margin-bottom: var(--sp-4); }
+  .page-section-lg { margin-bottom: var(--sp-5); }
+  .page-section-sm { margin-bottom: var(--sp-3); }
+  .card-primary-rule { border-left: 3px solid var(--color-primary); }
+  .section-h2 { font-size: var(--fs-lg); font-weight: var(--fw-bold); margin: var(--sp-6) 0 var(--sp-3); }
+  .code-block-inline { font-size: var(--fs-xs); background: var(--color-surface-2);
+                       padding: var(--sp-2) var(--sp-3); border-radius: var(--radius);
+                       display: block; word-break: break-all; }
+  .muted-summary { font-size: var(--fs-xs); color: var(--color-text-muted);
+                   cursor: pointer; font-weight: var(--fw-semibold); }
+  .text-warning { color: var(--color-warning); }
+  .text-muted { color: var(--color-text-muted); }
+  .text-xs { font-size: var(--fs-xs); }
+  .text-sm { font-size: var(--fs-sm); }
+  .m-0 { margin: 0; }
+  .mt-3 { margin-top: var(--sp-3); }
+  .admin-checkbox-label { display: inline-flex; align-items: center; gap: var(--sp-2);
+                          font-size: var(--fs-sm); cursor: pointer; }
+  .admin-checkbox-flush { margin: 0; }
+  .admin-checkbox-label input[type="checkbox"] { width: 16px; height: 16px;
+                                                  accent-color: var(--color-primary); }
 </style>
 {% endblock %}
 

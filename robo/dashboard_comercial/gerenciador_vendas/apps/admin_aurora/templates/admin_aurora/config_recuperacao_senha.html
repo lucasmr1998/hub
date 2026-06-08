@@ -4,7 +4,7 @@
 {% block topbar_title %}Recuperacao de senha{% endblock %}
 
 {% block topbar_actions %}
-  <a href="{% url 'admin_aurora:dashboard' %}" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+  <a href="{% url 'admin_aurora:dashboard' %}" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left"></i> <span>Voltar</span></a>
 {% endblock %}
 
 {% block content %}
@@ -21,44 +21,32 @@
     {% csrf_token %}
 
     {# Email #}
-    <div class="card" style="margin-bottom: var(--sp-4);">
+    <div class="card page-section">
       <div class="card-header">
         <h3 class="card-title">
-          <label class="admin-checkbox-label" style="margin:0;">
+          <label class="admin-checkbox-label admin-checkbox-flush">
             <input type="checkbox" name="email_ativo" id="emailAtivo" {% if config.email_ativo %}checked{% endif %} onclick="document.getElementById('emailFields').style.display=this.checked?'block':'none';">
-            <i class="bi bi-envelope" style="color: var(--color-info);"></i>
+            <i class="bi bi-envelope text-info"></i>
             Recuperacao por email
           </label>
         </h3>
       </div>
       <div class="card-body">
-        <div id="emailFields" style="display:{% if config.email_ativo %}block{% else %}none{% endif %};">
-          <div class="admin-form-grid" style="grid-template-columns: 2fr 1fr; margin-bottom: var(--sp-3);">
-            <div class="field">
-              <label class="field-label">SMTP Host</label>
-              <div class="field-input-wrap"><input class="field-input" type="text" name="smtp_host" value="{{ config.smtp_host }}" placeholder="smtp.gmail.com"></div>
-            </div>
-            <div class="field">
-              <label class="field-label">Porta</label>
-              <div class="field-input-wrap"><input class="field-input" type="number" name="smtp_porta" value="{{ config.smtp_porta }}" placeholder="587"></div>
-            </div>
+        <div id="emailFields" {% if not config.email_ativo %}class="hidden"{% endif %}>
+          <div class="admin-form-grid form-grid-2-1 page-section">
+            {% include "components/input.html" with name="smtp_host" label="SMTP Host" value=config.smtp_host placeholder="smtp.gmail.com" %}
+            {% include "components/input.html" with name="smtp_porta" label="Porta" type="number" value=config.smtp_porta placeholder="587" %}
           </div>
-          <div class="admin-form-grid" style="margin-bottom: var(--sp-3);">
-            <div class="field">
-              <label class="field-label">Usuario SMTP</label>
-              <div class="field-input-wrap"><input class="field-input" type="text" name="smtp_usuario" value="{{ config.smtp_usuario }}" placeholder="seu@email.com"></div>
-            </div>
+          <div class="admin-form-grid page-section">
+            {% include "components/input.html" with name="smtp_usuario" label="Usuario SMTP" value=config.smtp_usuario placeholder="seu@email.com" %}
             <div class="field">
               <label class="field-label">Senha SMTP</label>
               <div class="field-input-wrap"><input class="field-input" type="password" name="smtp_senha" placeholder="{% if config.smtp_senha %}(salva){% else %}Senha{% endif %}"></div>
             </div>
           </div>
-          <div class="admin-form-grid" style="grid-template-columns: 1fr auto;">
-            <div class="field">
-              <label class="field-label">Email remetente</label>
-              <div class="field-input-wrap"><input class="field-input" type="email" name="email_remetente" value="{{ config.email_remetente }}" placeholder="noreply@hubtrix.com.br"></div>
-            </div>
-            <label class="admin-checkbox-label" style="padding-bottom: 4px;">
+          <div class="admin-form-grid form-grid-1-auto">
+            {% include "components/input.html" with name="email_remetente" label="Email remetente" type="email" value=config.email_remetente placeholder="noreply@hubtrix.com.br" %}
+            <label class="admin-checkbox-label admin-checkbox-end">
               <input type="checkbox" name="smtp_tls" {% if config.smtp_tls %}checked{% endif %}>
               Usar TLS
             </label>
@@ -68,21 +56,21 @@
     </div>
 
     {# WhatsApp #}
-    <div class="card" style="margin-bottom: var(--sp-4);">
+    <div class="card page-section">
       <div class="card-header">
         <h3 class="card-title">
-          <label class="admin-checkbox-label" style="margin:0;">
+          <label class="admin-checkbox-label admin-checkbox-flush">
             <input type="checkbox" name="whatsapp_ativo" id="whatsappAtivo" {% if config.whatsapp_ativo %}checked{% endif %} onclick="document.getElementById('whatsappFields').style.display=this.checked?'block':'none';">
-            <i class="bi bi-whatsapp" style="color:#25D366;"></i>
+            <i class="bi bi-whatsapp text-whatsapp"></i>
             Recuperacao por WhatsApp
           </label>
         </h3>
       </div>
       <div class="card-body">
-        <div id="whatsappFields" style="display:{% if config.whatsapp_ativo %}block{% else %}none{% endif %};">
+        <div id="whatsappFields" {% if not config.whatsapp_ativo %}class="hidden"{% endif %}>
           <div class="field">
             <label class="field-label">Integracao WhatsApp (Uazapi)</label>
-            <div class="field-input-wrap" style="max-width: 420px;">
+            <div class="field-input-wrap select-narrow">
               <select class="field-input" name="whatsapp_integracao">
                 <option value="">Nenhuma</option>
                 {% for i in integracoes %}
@@ -97,52 +85,43 @@
     </div>
 
     {# Geral #}
-    <div class="card" style="margin-bottom: var(--sp-4);">
+    <div class="card page-section">
       <div class="card-header"><h3 class="card-title"><i class="bi bi-gear"></i> Configuracoes gerais</h3></div>
       <div class="card-body">
         <div class="admin-form-grid">
-          <div class="field">
-            <label class="field-label">Expiracao do codigo (minutos)</label>
-            <div class="field-input-wrap"><input class="field-input" type="number" name="codigo_expiracao_minutos" value="{{ config.codigo_expiracao_minutos }}" min="1" max="60"></div>
-          </div>
-          <div class="field">
-            <label class="field-label">Max tentativas por codigo</label>
-            <div class="field-input-wrap"><input class="field-input" type="number" name="max_tentativas" value="{{ config.max_tentativas }}" min="1" max="10"></div>
-          </div>
+          {% include "components/input.html" with name="codigo_expiracao_minutos" label="Expiracao do codigo (minutos)" type="number" value=config.codigo_expiracao_minutos %}
+          {% include "components/input.html" with name="max_tentativas" label="Max tentativas por codigo" type="number" value=config.max_tentativas %}
         </div>
       </div>
     </div>
 
-    <div style="display:flex; justify-content:flex-end;">
-      <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Salvar</button>
+    <div class="form-actions-end">
+      {% include "components/button.html" with variant="primary" type="submit" icon="bi-save" label="Salvar" %}
     </div>
   </form>
 {% endblock %}
 
 {% block extra_css %}
 <style>
+  .page-section { margin-bottom: var(--sp-4); }
   .admin-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
-  .admin-alert {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-    padding: var(--sp-3) var(--sp-4);
-    border-radius: var(--radius);
-    font-size: var(--fs-sm);
-    margin-bottom: var(--sp-4);
-  }
+  .form-grid-2-1 { grid-template-columns: 2fr 1fr; }
+  .form-grid-1-auto { grid-template-columns: 1fr auto; }
+  .hidden { display: none; }
+  .text-info { color: var(--color-info); }
+  .text-whatsapp { color: #25D366; }
+  .select-narrow { max-width: 420px; }
+  .admin-alert { display: flex; align-items: center; gap: var(--sp-2);
+                 padding: var(--sp-3) var(--sp-4); border-radius: var(--radius);
+                 font-size: var(--fs-sm); margin-bottom: var(--sp-4); }
   .admin-alert-success { background: var(--color-success-soft); color: #166534; }
   .admin-alert-danger  { background: var(--color-danger-soft);  color: #991b1b; }
-  .admin-checkbox-label {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--sp-2);
-    font-size: var(--fs-sm);
-    cursor: pointer;
-  }
-  .admin-checkbox-label input[type="checkbox"] {
-    width: 16px; height: 16px;
-    accent-color: var(--color-primary);
-  }
+  .admin-checkbox-label { display: inline-flex; align-items: center; gap: var(--sp-2);
+                          font-size: var(--fs-sm); cursor: pointer; }
+  .admin-checkbox-flush { margin: 0; }
+  .admin-checkbox-end { padding-bottom: 4px; }
+  .admin-checkbox-label input[type="checkbox"] { width: 16px; height: 16px;
+                                                  accent-color: var(--color-primary); }
+  .form-actions-end { display: flex; justify-content: flex-end; }
 </style>
 {% endblock %}

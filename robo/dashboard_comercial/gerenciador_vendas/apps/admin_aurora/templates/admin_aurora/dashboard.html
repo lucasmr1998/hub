@@ -20,26 +20,26 @@
     {% endif %}
   </div>
 
-  {# === ALERTAS RECENTES (destaque vermelho se tem) === #}
+  {# === ALERTAS RECENTES === #}
   {% if alertas_recentes %}
-    <div class="card" style="margin-top: var(--sp-4); border-left: 4px solid var(--color-danger);">
+    <div class="card card-danger-rule page-section">
       <div class="card-header">
-        <h2 class="card-title"><i class="bi bi-bell-fill" style="color: var(--color-danger);"></i> Alertas recentes</h2>
+        <h2 class="card-title"><i class="bi bi-bell-fill text-danger"></i> Alertas recentes</h2>
         <div class="card-actions">
-          <a href="{% url 'admin_aurora:alertas' %}" class="btn btn-secondary btn-sm">Ver todos ({{ alertas_24h }} em 24h)</a>
+          <a href="{% url 'admin_aurora:alertas' %}" class="btn btn-secondary btn-sm"><span>Ver todos ({{ alertas_24h }} em 24h)</span></a>
         </div>
       </div>
-      <div class="card-body" style="padding: 0;">
-        <table class="table" style="margin: 0;">
+      <div class="card-body card-body-flush">
+        <table class="table table-flush">
           <thead><tr><th>Tipo</th><th>Título</th><th>Tenant</th><th>Quando</th><th>Status</th></tr></thead>
           <tbody>
             {% for a in alertas_recentes %}
               <tr>
-                <td><span class="badge badge-primary badge-soft">{{ a.get_tipo_display }}</span></td>
+                <td>{% include "components/badge.html" with variant="primary" label=a.get_tipo_display %}</td>
                 <td>{{ a.titulo|truncatechars:80 }}</td>
                 <td>{% if a.tenant %}{{ a.tenant.slug }}{% else %}—{% endif %}</td>
-                <td style="font-size: var(--fs-xs);">{{ a.criado_em|date:"d/m H:i" }}</td>
-                <td>{% if a.enviado_em %}<span style="color: var(--color-success);">✓ Enviado</span>{% elif a.suprimido %}<span style="color: var(--color-text-muted);">Suprimido</span>{% elif a.erro_envio %}<span style="color: var(--color-danger);">Falhou</span>{% else %}Pendente{% endif %}</td>
+                <td class="td-meta">{{ a.criado_em|date:"d/m H:i" }}</td>
+                <td>{% if a.enviado_em %}<span class="text-success">✓ Enviado</span>{% elif a.suprimido %}<span class="text-muted">Suprimido</span>{% elif a.erro_envio %}<span class="text-danger">Falhou</span>{% else %}Pendente{% endif %}</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -49,30 +49,36 @@
   {% endif %}
 
   {# === GRID DE MONITORAMENTO === #}
-  <h2 style="margin-top: var(--sp-6); margin-bottom: var(--sp-3); font-size: var(--fs-lg);"><i class="bi bi-speedometer2"></i> Monitoramento</h2>
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-6);">
+  <h2 class="section-h2"><i class="bi bi-speedometer2"></i> Monitoramento</h2>
+  <div class="monitor-grid">
 
     {# CRONS #}
     <div class="card">
-      <div class="card-header"><h3 class="card-title"><i class="bi bi-arrow-clockwise"></i> CronJobs</h3>{% if cron_falhas_24h > 0 %}<span class="badge" style="background: var(--color-danger-soft); color: var(--color-danger);">{{ cron_falhas_24h }} falha{{ cron_falhas_24h|pluralize }}</span>{% endif %}</div>
-      <div class="card-body" style="font-size: var(--fs-sm);">
+      <div class="card-header">
+        <h3 class="card-title"><i class="bi bi-arrow-clockwise"></i> CronJobs</h3>
+        {% if cron_falhas_24h > 0 %}{% include "components/badge.html" with variant="danger" label=cron_falhas_24h|stringformat:"s"|add:" falha"|add:cron_falhas_24h|pluralize %}{% endif %}
+      </div>
+      <div class="card-body card-body-sm">
         <div>Execuções 24h: <strong>{{ cron_execucoes_24h }}</strong></div>
-        <div>Falhas 24h: <strong style="color: {% if cron_falhas_24h > 0 %}var(--color-danger){% else %}var(--color-success){% endif %};">{{ cron_falhas_24h }}</strong></div>
-        <div style="margin-top: var(--sp-2);">Ativos:
+        <div>Falhas 24h: <strong class="{% if cron_falhas_24h > 0 %}text-danger{% else %}text-success{% endif %}">{{ cron_falhas_24h }}</strong></div>
+        <div class="mt-2">Ativos:
           {% for c in crons %}{% if c.ativo %}
-            <div style="font-size: var(--fs-xs); color: var(--color-text-muted); margin-top: 2px;">• {{ c.nome }} <code>{{ c.schedule }}</code> {% if c.last_status == 'success' %}<span style="color: var(--color-success);">✓</span>{% elif c.last_status == 'error' %}<span style="color: var(--color-danger);">✗</span>{% endif %}</div>
+            <div class="cron-item">• {{ c.nome }} <code>{{ c.schedule }}</code> {% if c.last_status == 'success' %}<span class="text-success">✓</span>{% elif c.last_status == 'error' %}<span class="text-danger">✗</span>{% endif %}</div>
           {% endif %}{% endfor %}
         </div>
-        <a href="/aurora-admin/cron/" class="btn btn-secondary btn-sm" style="margin-top: var(--sp-2);">Detalhes →</a>
+        <a href="/aurora-admin/cron/" class="btn btn-secondary btn-sm mt-2"><span>Detalhes →</span></a>
       </div>
     </div>
 
     {# LEADS POR STATUS #}
     <div class="card">
-      <div class="card-header"><h3 class="card-title"><i class="bi bi-people"></i> Leads</h3>{% if leads_travados > 0 %}<span class="badge" style="background: var(--color-warning-soft); color: var(--color-warning);">{{ leads_travados }} travado{{ leads_travados|pluralize }} >1h</span>{% endif %}</div>
-      <div class="card-body" style="font-size: var(--fs-sm);">
+      <div class="card-header">
+        <h3 class="card-title"><i class="bi bi-people"></i> Leads</h3>
+        {% if leads_travados > 0 %}{% include "components/badge.html" with variant="warning" label=leads_travados|stringformat:"s"|add:" travado"|add:leads_travados|pluralize|add:" >1h" %}{% endif %}
+      </div>
+      <div class="card-body card-body-sm">
         {% for item in leads_por_status %}
-          <div style="display: flex; justify-content: space-between; padding: 2px 0;">
+          <div class="kv-row">
             <span>{{ item.status_api|default:"—" }}</span>
             <strong>{{ item.total }}</strong>
           </div>
@@ -83,8 +89,8 @@
     {# HUBSOFT #}
     <div class="card">
       <div class="card-header"><h3 class="card-title">🏢 HubSoft (Nuvyon)</h3></div>
-      <div class="card-body" style="font-size: var(--fs-sm);">
-        <div>Chamadas API 24h: OK=<strong style="color: var(--color-success);">{{ hs_ok_24h }}</strong> / Erro=<strong style="color: {% if hs_erro_24h > 0 %}var(--color-danger){% else %}var(--color-success){% endif %};">{{ hs_erro_24h }}</strong></div>
+      <div class="card-body card-body-sm">
+        <div>Chamadas API 24h: OK=<strong class="text-success">{{ hs_ok_24h }}</strong> / Erro=<strong class="{% if hs_erro_24h > 0 %}text-danger{% else %}text-success{% endif %}">{{ hs_erro_24h }}</strong></div>
         <div>Clientes sincronizados: <strong>{{ cli_hubsoft_total }}</strong></div>
         <div>Sync nas 24h: <strong>{{ cli_hubsoft_24h }}</strong></div>
       </div>
@@ -92,44 +98,47 @@
 
     {# WEBHOOKS N8N #}
     <div class="card">
-      <div class="card-header"><h3 class="card-title"><i class="bi bi-arrow-left-right"></i> Webhooks N8N</h3>{% if webhooks_5xx > 0 %}<span class="badge" style="background: var(--color-danger-soft); color: var(--color-danger);">{{ webhooks_5xx }} × 5xx</span>{% endif %}</div>
-      <div class="card-body" style="font-size: var(--fs-sm);">
+      <div class="card-header">
+        <h3 class="card-title"><i class="bi bi-arrow-left-right"></i> Webhooks N8N</h3>
+        {% if webhooks_5xx > 0 %}{% include "components/badge.html" with variant="danger" label=webhooks_5xx|stringformat:"s"|add:" × 5xx" %}{% endif %}
+      </div>
+      <div class="card-body card-body-sm">
         <div>Total 24h: <strong>{{ webhooks_24h_total }}</strong></div>
-        <div>Com erro 5xx: <strong style="color: {% if webhooks_5xx > 0 %}var(--color-danger){% else %}var(--color-success){% endif %};">{{ webhooks_5xx }}</strong></div>
+        <div>Com erro 5xx: <strong class="{% if webhooks_5xx > 0 %}text-danger{% else %}text-success{% endif %}">{{ webhooks_5xx }}</strong></div>
       </div>
     </div>
 
     {# INBOX #}
     <div class="card">
       <div class="card-header"><h3 class="card-title"><i class="bi bi-chat-dots"></i> Inbox</h3></div>
-      <div class="card-body" style="font-size: var(--fs-sm);">
+      <div class="card-body card-body-sm">
         <div>Conversas abertas: <strong>{{ inbox_conversas_abertas }}</strong></div>
-        <div>Sem agente atribuído: <strong style="color: {% if inbox_pendentes_humano > 0 %}var(--color-warning){% else %}var(--color-text-muted);{% endif %};">{{ inbox_pendentes_humano }}</strong></div>
+        <div>Sem agente atribuído: <strong class="{% if inbox_pendentes_humano > 0 %}text-warning{% else %}text-muted{% endif %}">{{ inbox_pendentes_humano }}</strong></div>
       </div>
     </div>
 
     {# ERROS POR MODULO #}
     <div class="card">
       <div class="card-header"><h3 class="card-title"><i class="bi bi-bug"></i> Erros por módulo (24h)</h3></div>
-      <div class="card-body" style="font-size: var(--fs-sm);">
+      <div class="card-body card-body-sm">
         {% for item in erros_por_modulo %}
-          <div style="display: flex; justify-content: space-between; padding: 2px 0;">
+          <div class="kv-row">
             <span>{{ item.modulo|default:"(sem modulo)" }}</span>
-            <strong style="color: var(--color-danger);">{{ item.total }}</strong>
+            <strong class="text-danger">{{ item.total }}</strong>
           </div>
         {% empty %}
-          <div style="color: var(--color-success);">✓ Sem erros nas últimas 24h</div>
+          <div class="text-success">✓ Sem erros nas últimas 24h</div>
         {% endfor %}
-        <a href="{% url 'admin_aurora:logs' %}" class="btn btn-secondary btn-sm" style="margin-top: var(--sp-2);">Ver logs →</a>
+        <a href="{% url 'admin_aurora:logs' %}" class="btn btn-secondary btn-sm mt-2"><span>Ver logs →</span></a>
       </div>
     </div>
 
     {# INTEGRACOES #}
     <div class="card">
       <div class="card-header"><h3 class="card-title"><i class="bi bi-plug"></i> Integrações ativas</h3></div>
-      <div class="card-body" style="font-size: var(--fs-sm);">
+      <div class="card-body card-body-sm">
         {% for item in integ_por_tipo %}
-          <div style="display: flex; justify-content: space-between; padding: 2px 0;">
+          <div class="kv-row">
             <span>{{ item.tipo }}</span>
             <strong>{{ item.total }}</strong>
           </div>
@@ -153,7 +162,7 @@
         <input type="text" id="searchTenant" placeholder="Buscar tenant..." oninput="filtrarTenants()" class="admin-search-input">
       </div>
     </div>
-    <div class="table-wrap" style="border:none; border-radius:0;">
+    <div class="table-wrap table-wrap-flush">
       <table class="table" id="tenantTable">
         <thead>
           <tr>
@@ -170,8 +179,8 @@
           {% for item in tenant_data %}
             <tr class="tenant-row">
               <td>
-                <div style="font-weight: var(--fw-semibold);">{{ item.tenant.nome }}</div>
-                <div style="font-size: var(--fs-xs); color: var(--color-text-muted);">{{ item.tenant.slug }}</div>
+                <div class="cell-title">{{ item.tenant.nome }}</div>
+                <div class="cell-sub">{{ item.tenant.slug }}</div>
               </td>
               <td>
                 {% if item.tenant.plano_comercial == 'pro' %}
@@ -183,20 +192,17 @@
                 {% endif %}
               </td>
               <td>
-                <div style="display: inline-flex; gap: 4px; flex-wrap: wrap;">
+                <div class="badge-cluster-inline">
                   {% if item.tenant.modulo_comercial %}{% include "components/badge.html" with variant="success" label="Comercial" %}{% endif %}
                   {% if item.tenant.modulo_marketing %}{% include "components/badge.html" with variant="info" label="Marketing" %}{% endif %}
                   {% if item.tenant.modulo_cs %}{% include "components/badge.html" with variant="warning" label="CS" %}{% endif %}
                 </div>
               </td>
-              <td style="font-weight: var(--fw-semibold);">{{ item.leads }}</td>
+              <td class="cell-num">{{ item.leads }}</td>
               <td>{{ item.users }}</td>
               <td>
                 {% if item.tenant.em_trial %}
-                  <span class="badge badge-warning badge-soft">
-                    <span class="badge-dot"></span>
-                    Trial ate {{ item.tenant.trial_fim|date:"d/m" }}
-                  </span>
+                  {% include "components/badge.html" with variant="warning" dot=True label="Trial ate "|add:item.tenant.trial_fim|date:"d/m" %}
                 {% elif item.tenant.ativo %}
                   {% include "components/badge.html" with variant="success" label="Ativo" dot=True %}
                 {% else %}
@@ -227,41 +233,41 @@
 
 {% block extra_css %}
 <style>
-  .admin-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: var(--sp-4);
-    margin-bottom: var(--sp-6);
-  }
-  .admin-alert {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-    padding: var(--sp-3) var(--sp-4);
-    background: var(--color-warning-soft);
-    color: #92400e;
-    border-radius: var(--radius);
-    font-size: var(--fs-sm);
-    margin-bottom: var(--sp-6);
-  }
+  .admin-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                      gap: var(--sp-4); margin-bottom: var(--sp-6); }
+  .monitor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                  gap: var(--sp-3); margin-bottom: var(--sp-6); }
+  .page-section { margin-top: var(--sp-4); }
+  .section-h2 { margin-top: var(--sp-6); margin-bottom: var(--sp-3); font-size: var(--fs-lg); }
+  .card-danger-rule { border-left: 4px solid var(--color-danger); }
+  .card-body-flush { padding: 0; }
+  .card-body-sm { font-size: var(--fs-sm); }
+  .table-flush { margin: 0; }
+  .table-wrap-flush { border: none; border-radius: 0; }
+  .badge-cluster-inline { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+  .kv-row { display: flex; justify-content: space-between; padding: 2px 0; }
+  .cron-item { font-size: var(--fs-xs); color: var(--color-text-muted); margin-top: 2px; }
+  .td-meta { font-size: var(--fs-xs); }
+  .text-success { color: var(--color-success); }
+  .text-danger { color: var(--color-danger); }
+  .text-warning { color: var(--color-warning); }
+  .text-muted { color: var(--color-text-muted); }
+  .mt-2 { margin-top: var(--sp-2); }
+  .cell-title { font-weight: var(--fw-semibold); }
+  .cell-sub { font-size: var(--fs-xs); color: var(--color-text-muted); }
+  .cell-num { font-weight: var(--fw-semibold); }
+  .admin-alert { display: flex; align-items: center; gap: var(--sp-2);
+                 padding: var(--sp-3) var(--sp-4); background: var(--color-warning-soft);
+                 color: #92400e; border-radius: var(--radius);
+                 font-size: var(--fs-sm); margin-bottom: var(--sp-6); }
   .admin-alert i { font-size: 1rem; }
-  .admin-search-input {
-    height: 32px;
-    padding: 0 var(--sp-3);
-    border: 1px solid var(--color-border-strong);
-    border-radius: var(--radius);
-    background: var(--color-bg);
-    font-family: var(--font-sans);
-    font-size: var(--fs-xs);
-    color: var(--color-text);
-    width: 220px;
-    outline: none;
-    transition: border-color var(--transition), box-shadow var(--transition);
-  }
-  .admin-search-input:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
-  }
+  .admin-search-input { height: 32px; padding: 0 var(--sp-3);
+                        border: 1px solid var(--color-border-strong); border-radius: var(--radius);
+                        background: var(--color-bg); font-family: var(--font-sans);
+                        font-size: var(--fs-xs); color: var(--color-text); width: 220px;
+                        outline: none; transition: border-color var(--transition), box-shadow var(--transition); }
+  .admin-search-input:focus { border-color: var(--color-primary);
+                              box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); }
 </style>
 {% endblock %}
 

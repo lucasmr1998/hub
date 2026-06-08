@@ -4,41 +4,29 @@
 {% block topbar_title %}Alertas do Sistema{% endblock %}
 
 {% block content %}
-  <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0 0 var(--sp-4);">
+  <p class="page-subtitle">
     Alertas operacionais disparados via uazapi. Envia WhatsApp para
     <strong>{{ config.telefone_destino }}</strong>
     com janela dedup de {{ config.janela_dedup_minutos }} min.
-    <a href="{% url 'admin_aurora:alertas_config' %}" style="color: var(--color-primary);">Configurar →</a>
+    <a href="{% url 'admin_aurora:alertas_config' %}">Configurar →</a>
   </p>
 
   {# Stats #}
-  <div class="stats-grid stats-grid-4" style="margin-bottom: var(--sp-4);">
-    <div class="stat-card">
-      <div class="stat-card-label">Total</div>
-      <div class="stat-card-value">{{ stats.total }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-label">Últimas 24h</div>
-      <div class="stat-card-value">{{ stats.ultimas_24h }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-label">Enviados (24h)</div>
-      <div class="stat-card-value" style="color: var(--color-success);">{{ stats.enviados_24h }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-label">Suprimidos dedup (24h)</div>
-      <div class="stat-card-value" style="color: var(--color-text-muted);">{{ stats.suprimidos_24h }}</div>
-    </div>
+  <div class="stats-grid stats-grid-4 page-section">
+    {% include "components/stat_card.html" with label="Total" value=stats.total icon="bi-bell" %}
+    {% include "components/stat_card.html" with label="Últimas 24h" value=stats.ultimas_24h icon="bi-clock-history" %}
+    {% include "components/stat_card.html" with label="Enviados (24h)" value=stats.enviados_24h icon="bi-check-circle" icon_variant="success" %}
+    {% include "components/stat_card.html" with label="Suprimidos dedup (24h)" value=stats.suprimidos_24h icon="bi-dash-circle" icon_variant="info" %}
   </div>
 
   {# Distribuicao por tipo (24h) #}
   {% if por_tipo %}
-  <div class="card" style="margin-bottom: var(--sp-4);">
+  <div class="card page-section">
     <div class="card-header"><h3 class="card-title">Tipos de alerta nas últimas 24h</h3></div>
     <div class="card-body">
-      <div style="display: flex; gap: var(--sp-2); flex-wrap: wrap;">
+      <div class="badge-cluster">
         {% for item in por_tipo %}
-          <span class="badge badge-primary badge-soft">{{ item.tipo }} ({{ item.total }})</span>
+          {% include "components/badge.html" with variant="primary" label=item.tipo|add:" ("|add:item.total|stringformat:"s"|add:")" %}
         {% endfor %}
       </div>
     </div>
@@ -46,10 +34,10 @@
   {% endif %}
 
   {# Filtros + acoes #}
-  <div class="card" style="margin-bottom: var(--sp-4);">
+  <div class="card page-section">
     <div class="card-body">
-      <form method="get" style="display:flex; gap: var(--sp-3); align-items:flex-end; flex-wrap:wrap;">
-        <div class="field" style="margin:0; flex:1; min-width:200px;">
+      <form method="get" class="filters-form">
+        <div class="field field-grow">
           <label class="field-label" for="f-tipo">Tipo</label>
           <div class="field-input-wrap">
             <select id="f-tipo" class="field-input" name="tipo">
@@ -60,38 +48,38 @@
             </select>
           </div>
         </div>
-        <div class="field" style="margin:0; flex:1; min-width:180px;">
+        <div class="field field-grow">
           <label class="field-label" for="f-tenant">Tenant (slug)</label>
           <div class="field-input-wrap">
             <input id="f-tenant" class="field-input" type="text" name="tenant"
                    value="{{ filtros.tenant }}" placeholder="ex: nuvyon">
           </div>
         </div>
-        <div class="field" style="margin:0;">
+        <div class="field">
           <label class="checkbox"><input type="checkbox" name="enviados" value="1" {% if filtros.enviados %}checked{% endif %}> Apenas enviados</label>
           <label class="checkbox"><input type="checkbox" name="suprimidos" value="1" {% if filtros.suprimidos %}checked{% endif %}> Apenas suprimidos</label>
         </div>
-        <button class="btn btn-primary" type="submit"><i class="bi bi-funnel"></i> Filtrar</button>
-        <button type="button" class="btn btn-secondary" onclick="dispararAlertaTeste()"><i class="bi bi-send"></i> Disparar teste</button>
+        {% include "components/button.html" with variant="primary" type="submit" icon="bi-funnel" label="Filtrar" %}
+        <button type="button" class="btn btn-secondary" onclick="dispararAlertaTeste()"><i class="bi bi-send"></i> <span>Disparar teste</span></button>
       </form>
     </div>
   </div>
 
   {# Lista #}
-  <div class="card" style="padding: 0;">
+  <div class="card card-flush">
     <div class="card-header">
       <h3 class="card-title"><i class="bi bi-bell"></i> Histórico</h3>
-      <span class="badge badge-primary badge-soft">{{ alertas|length }} mostrado(s)</span>
+      {% include "components/badge.html" with variant="primary" label=alertas|length|stringformat:"s"|add:" mostrado(s)" %}
     </div>
-    <div class="table-wrap" style="overflow-x: auto;">
-      <table class="data-table" style="table-layout: fixed; width: 100%;">
+    <div class="table-wrap">
+      <table class="data-table data-table-fixed">
         <colgroup>
-          <col style="width: 56px;">
-          <col style="width: 180px;">
+          <col class="col-w-56">
+          <col class="col-w-180">
           <col>
-          <col style="width: 110px;">
-          <col style="width: 150px;">
-          <col style="width: 110px;">
+          <col class="col-w-110">
+          <col class="col-w-150">
+          <col class="col-w-110">
         </colgroup>
         <thead>
           <tr>
@@ -106,33 +94,33 @@
         <tbody>
           {% for a in alertas %}
             <tr>
-              <td style="font-family: monospace; vertical-align: top;">{{ a.id }}</td>
-              <td style="vertical-align: top;"><span class="badge badge-primary badge-soft" style="white-space: normal; line-height: 1.2;">{{ a.get_tipo_display }}</span></td>
-              <td style="vertical-align: top; min-width: 0;">
+              <td class="td-mono td-top">{{ a.id }}</td>
+              <td class="td-top">{% include "components/badge.html" with variant="primary" label=a.get_tipo_display %}</td>
+              <td class="td-top td-min-zero">
                 <details>
-                  <summary style="cursor:pointer; font-weight: var(--fw-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ a.titulo }}</summary>
-                  <pre style="background:#1e1e1e; color:#d4d4d4; padding:8px; border-radius:6px; font-size:11px; margin-top:8px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-height: 240px; overflow:auto; max-width: 100%;">{{ a.mensagem }}{% if a.dados_extras %}
+                  <summary class="alert-summary">{{ a.titulo }}</summary>
+                  <pre class="alert-payload">{{ a.mensagem }}{% if a.dados_extras %}
 
 # Dados extras:
 {{ a.dados_extras }}{% endif %}</pre>
                 </details>
               </td>
-              <td style="vertical-align: top;">{% if a.tenant %}<span class="badge badge-secondary badge-soft">{{ a.tenant.slug }}</span>{% else %}<span style="color: var(--color-text-muted);">—</span>{% endif %}</td>
-              <td style="font-size: var(--fs-xs); color: var(--color-text-muted); white-space: nowrap; vertical-align: top;">{{ a.criado_em|date:"d/m/Y H:i:s" }}</td>
-              <td style="vertical-align: top;">
+              <td class="td-top">{% if a.tenant %}{% include "components/badge.html" with variant="neutral" label=a.tenant.slug %}{% else %}<span class="td-muted">—</span>{% endif %}</td>
+              <td class="td-top td-meta">{{ a.criado_em|date:"d/m/Y H:i:s" }}</td>
+              <td class="td-top">
                 {% if a.enviado_em %}
-                  <span class="badge" style="background: var(--color-success-soft); color: var(--color-success);"><i class="bi bi-check-circle"></i> Enviado</span>
+                  {% include "components/badge.html" with variant="success" icon="bi-check-circle" label="Enviado" %}
                 {% elif a.suprimido %}
-                  <span class="badge" style="background: var(--color-text-muted); color: white;"><i class="bi bi-dash-circle"></i> Suprimido</span>
+                  {% include "components/badge.html" with variant="neutral" icon="bi-dash-circle" label="Suprimido" %}
                 {% elif a.erro_envio %}
-                  <span class="badge" style="background: var(--color-danger-soft); color: var(--color-danger);" title="{{ a.erro_envio }}"><i class="bi bi-x-circle"></i> Falhou</span>
+                  {% include "components/badge.html" with variant="danger" icon="bi-x-circle" label="Falhou" %}
                 {% else %}
-                  <span class="badge badge-secondary badge-soft">Pendente</span>
+                  {% include "components/badge.html" with variant="warning" label="Pendente" %}
                 {% endif %}
               </td>
             </tr>
           {% empty %}
-            <tr><td colspan="6" style="text-align: center; padding: var(--sp-6); color: var(--color-text-muted);">Sem alertas com esses filtros.</td></tr>
+            <tr><td colspan="6" class="empty-row">Sem alertas com esses filtros.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -154,4 +142,33 @@
       }).catch(e => alert('Erro: ' + e));
     }
   </script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Classes utilitarias usadas em todas as paginas aurora-admin
+     (mantidas locais por enquanto — promover pra base do DS futuramente). */
+  .page-subtitle { font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0 0 var(--sp-4); }
+  .page-section { margin-bottom: var(--sp-4); }
+  .card-flush { padding: 0; }
+  .badge-cluster { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+  .filters-form { display: flex; gap: var(--sp-3); align-items: flex-end; flex-wrap: wrap; }
+  .field-grow { margin: 0; flex: 1; min-width: 200px; }
+  .filters-form .field { margin: 0; }
+  .table-wrap { overflow-x: auto; }
+  .data-table-fixed { table-layout: fixed; width: 100%; }
+  .col-w-56  { width: 56px; }
+  .col-w-110 { width: 110px; }
+  .col-w-150 { width: 150px; }
+  .col-w-180 { width: 180px; }
+  .td-mono { font-family: monospace; }
+  .td-top { vertical-align: top; }
+  .td-min-zero { min-width: 0; }
+  .td-meta { font-size: var(--fs-xs); color: var(--color-text-muted); white-space: nowrap; }
+  .td-muted { color: var(--color-text-muted); }
+  .empty-row { text-align: center; padding: var(--sp-6); color: var(--color-text-muted); }
+  .alert-summary { cursor: pointer; font-weight: var(--fw-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .alert-payload { background: #1e1e1e; color: #d4d4d4; padding: 8px; border-radius: 6px; font-size: 11px; margin-top: 8px;
+                   white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; max-height: 240px; overflow: auto; max-width: 100%; }
+</style>
 {% endblock %}
