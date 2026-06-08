@@ -2298,6 +2298,15 @@ ACOES_DISPONIVEIS = [
             {'name': 'informacao_adicional', 'label': 'Observação no contrato', 'type': 'text', 'help': 'Texto livre que vai no contrato'},
         ],
     },
+    {
+        'tipo': 'enviar_venda_whatsapp',
+        'label': 'Enviar Venda por WhatsApp',
+        'descricao': 'Envia resumo da venda + fotos dos documentos pelo WhatsApp (via uazapi). Idempotente — não reenvia.',
+        'icon': 'bi-whatsapp',
+        'campos_extras': [
+            {'name': 'telefone_destino', 'label': 'Telefone destino', 'type': 'text', 'help': 'Formato DDI+DDD+numero, só dígitos. Ex: 5553981521653'},
+        ],
+    },
 ]
 ACOES_DISPONIVEIS_DICT = {a['tipo']: a for a in ACOES_DISPONIVEIS}
 

@@ -429,10 +429,42 @@ def _acao_gerar_contrato_hubsoft(oportunidade, config):
             logger.error("[gerar_contrato] aceitar_contrato falhou (lead=%s): %s", lead.pk, exc)
 
 
+def _acao_enviar_venda_whatsapp(oportunidade, config):
+    """Manda resumo da venda + documentos por WhatsApp.
+
+    Config:
+      - telefone_destino: numero WhatsApp (formato 5553981521653, so digitos com DDI+DDD)
+
+    Idempotente via `lead.dados_custom['venda_whatsapp_enviada']` (gerenciada no service).
+    """
+    from apps.comercial.leads.services_whatsapp_venda import enviar_venda_whatsapp
+
+    lead = oportunidade.lead
+    if not lead:
+        logger.warning("[enviar_venda_whatsapp] sem lead (oport=%s)", oportunidade.pk)
+        return
+
+    telefone = (config or {}).get('telefone_destino', '').strip()
+    if not telefone:
+        logger.warning("[enviar_venda_whatsapp] telefone_destino vazio (lead=%s)", lead.pk)
+        return
+
+    try:
+        result = enviar_venda_whatsapp(lead, telefone)
+        logger.info(
+            "[Automacao Pipeline] Venda WhatsApp lead=%s telefone=%s ok=%s docs=%s motivo=%s",
+            lead.pk, telefone, result.get('ok'),
+            result.get('docs_enviados'), result.get('motivo'),
+        )
+    except Exception as exc:
+        logger.error("[enviar_venda_whatsapp] falha (lead=%s): %s", lead.pk, exc)
+
+
 _EXECUTORES_ACAO = {
     'criar_venda': _acao_criar_venda,
     'atribuir_agente': _acao_atribuir_agente,
     'gerar_contrato_hubsoft': _acao_gerar_contrato_hubsoft,
+    'enviar_venda_whatsapp': _acao_enviar_venda_whatsapp,
 }
 
 
