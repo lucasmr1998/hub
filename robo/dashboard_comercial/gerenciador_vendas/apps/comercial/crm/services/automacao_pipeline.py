@@ -244,8 +244,13 @@ def _avaliar_e_executar_acoes(oportunidade):
 
 
 def _executar_acoes_regra(oportunidade, regra):
-    """Executa a lista de ações de uma regra e atualiza métricas."""
+    """Executa a lista de ações de uma regra e atualiza métricas.
+
+    Contrato das actions: retornar True se efetivou (rodou de fato), False
+    se pulou por idempotência. None = compatibilidade legada (conta como efetivo).
+    """
     acoes = regra.acoes or []
+    houve_acao_efetiva = False
     for acao in acoes:
         tipo = acao.get('tipo')
         config = acao.get('config') or {}
@@ -254,23 +259,31 @@ def _executar_acoes_regra(oportunidade, regra):
             logger.warning("[Automacao Pipeline] Tipo de ação desconhecido: %s", tipo)
             continue
         try:
-            executor(oportunidade, config)
+            ret = executor(oportunidade, config)
+            # Action retornou False => pulou idempotente; True/None => efetivou
+            if ret is not False:
+                houve_acao_efetiva = True
         except Exception as exc:
             logger.warning("[Automacao Pipeline] Falha ao executar ação %s: %s", tipo, exc)
 
     try:
+        update_fields = ['total_disparos', 'ultima_execucao']
         regra.total_disparos = (regra.total_disparos or 0) + 1
         regra.ultima_execucao = timezone.now()
-        regra.save(update_fields=['total_disparos', 'ultima_execucao'])
+        if houve_acao_efetiva:
+            regra.total_acoes_efetivas = (regra.total_acoes_efetivas or 0) + 1
+            update_fields.append('total_acoes_efetivas')
+        regra.save(update_fields=update_fields)
     except Exception as exc:
         logger.warning("[Automacao Pipeline] Falha ao atualizar métricas da regra %s: %s", regra.pk, exc)
 
 
 def _acao_criar_venda(oportunidade, config):
+    """Retorna True se criou Venda nova, False se ja existia (idempotente)."""
     from apps.comercial.crm.models import Venda
     tenant = oportunidade.tenant
     if Venda.all_tenants.filter(tenant=tenant, oportunidade=oportunidade).exists():
-        return
+        return False
     Venda.all_tenants.create(
         tenant=tenant,
         lead=oportunidade.lead,
@@ -280,6 +293,7 @@ def _acao_criar_venda(oportunidade, config):
         status=Venda.STATUS_PENDENTE_ERP,
     )
     logger.info("[Automacao Pipeline] Venda criada para oportunidade %s", oportunidade.pk)
+    return True
 
 
 def _acao_atribuir_agente(oportunidade, config):
@@ -297,10 +311,10 @@ def _acao_atribuir_agente(oportunidade, config):
     user_id = config.get('user_id')
     if not user_id:
         logger.warning("[Automacao Pipeline] atribuir_agente sem user_id (oport=%s)", oportunidade.pk)
-        return
+        return False
 
     if oportunidade.responsavel_id:
-        return
+        return False  # ja tem responsavel — idempotente
 
     OportunidadeVenda.all_tenants.filter(pk=oportunidade.pk).update(responsavel_id=user_id)
     n_conv = Conversa.all_tenants.filter(
@@ -312,6 +326,7 @@ def _acao_atribuir_agente(oportunidade, config):
         "[Automacao Pipeline] Atribuido user=%s a oport=%s (+ %s conversas)",
         user_id, oportunidade.pk, n_conv,
     )
+    return True
 
 
 def _acao_gerar_contrato_hubsoft(oportunidade, config):
@@ -335,27 +350,27 @@ def _acao_gerar_contrato_hubsoft(oportunidade, config):
     lead = oportunidade.lead
     if not lead:
         logger.warning("[gerar_contrato] oport=%s sem lead vinculado", oportunidade.pk)
-        return
+        return False
 
     if getattr(lead, 'contrato_aceito', False) and getattr(lead, 'anexos_contrato_enviados', False):
         logger.info("[gerar_contrato] lead=%s ja tem contrato aceito + anexos enviados, pula", lead.pk)
-        return
+        return False  # idempotente: tudo ja feito
 
     cliente_hubsoft = lead.clientes_hubsoft.first()
     if not cliente_hubsoft:
         logger.warning("[gerar_contrato] lead=%s ainda nao virou cliente HubSoft", lead.pk)
-        return
+        return False
 
     servico = cliente_hubsoft.servicos.first()
     if not servico:
         logger.warning("[gerar_contrato] cliente HubSoft %s sem servicos", cliente_hubsoft.pk)
-        return
+        return False
 
     try:
         hubsoft_service = _obter_hubsoft_service(tenant=lead.tenant)
     except Exception as exc:
         logger.error("[gerar_contrato] sem HubsoftService: %s", exc)
-        return
+        return False
 
     extras = (hubsoft_service.integracao.configuracoes_extras or {}).get('hubsoft', {})
     id_contrato_modelo = config.get('id_contrato_modelo') or extras.get('id_contrato_modelo')
@@ -366,7 +381,7 @@ def _acao_gerar_contrato_hubsoft(oportunidade, config):
             "Defina em IntegracaoAPI.configuracoes_extras['hubsoft'] ou na config da acao.",
             id_contrato_modelo, id_empresa,
         )
-        return
+        return False
 
     # 1) Criar contrato (se ainda nao tem)
     id_contrato = servico.id_cliente_servico_contrato
@@ -388,14 +403,14 @@ def _acao_gerar_contrato_hubsoft(oportunidade, config):
             )
             if not id_contrato:
                 logger.error("[gerar_contrato] HubSoft criou mas nao retornou id. Resp: %s", resp)
-                return
+                return False
             servico.id_cliente_servico_contrato = int(id_contrato)
             servico.save(update_fields=['id_cliente_servico_contrato'])
             logger.info("[gerar_contrato] criado contrato %s pro servico %s (lead %s)",
                         id_contrato, servico.id_cliente_servico, lead.pk)
         except HubsoftServiceError as exc:
             logger.error("[gerar_contrato] criar_contrato falhou (lead=%s): %s", lead.pk, exc)
-            return
+            return False
 
     # 2) Anexar arquivos
     if not lead.anexos_contrato_enviados:
@@ -428,6 +443,9 @@ def _acao_gerar_contrato_hubsoft(oportunidade, config):
         except HubsoftServiceError as exc:
             logger.error("[gerar_contrato] aceitar_contrato falhou (lead=%s): %s", lead.pk, exc)
 
+    # Chegou aqui: criou/anexou/aceitou algo efetivamente
+    return True
+
 
 def _acao_enviar_venda_whatsapp(oportunidade, config):
     """Manda resumo da venda + documentos por WhatsApp.
@@ -442,12 +460,12 @@ def _acao_enviar_venda_whatsapp(oportunidade, config):
     lead = oportunidade.lead
     if not lead:
         logger.warning("[enviar_venda_whatsapp] sem lead (oport=%s)", oportunidade.pk)
-        return
+        return False
 
     telefone = (config or {}).get('telefone_destino', '').strip()
     if not telefone:
         logger.warning("[enviar_venda_whatsapp] telefone_destino vazio (lead=%s)", lead.pk)
-        return
+        return False
 
     try:
         result = enviar_venda_whatsapp(lead, telefone, oportunidade=oportunidade)
@@ -456,8 +474,13 @@ def _acao_enviar_venda_whatsapp(oportunidade, config):
             lead.pk, telefone, result.get('ok'),
             result.get('docs_enviados'), result.get('motivo'),
         )
+        # Idempotente: motivo comeca com 'ja enviado' => nao efetivou
+        if (result.get('motivo') or '').startswith('ja enviado'):
+            return False
+        return bool(result.get('ok'))
     except Exception as exc:
         logger.error("[enviar_venda_whatsapp] falha (lead=%s): %s", lead.pk, exc)
+        return False
 
 
 _EXECUTORES_ACAO = {

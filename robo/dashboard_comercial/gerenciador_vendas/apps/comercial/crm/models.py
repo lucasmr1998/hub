@@ -950,8 +950,13 @@ class RegraPipelineEstagio(TenantMixin):
     )
     total_disparos = models.PositiveIntegerField(
         default=0,
-        verbose_name="Total de disparos",
-        help_text="Quantas vezes a regra já moveu uma oportunidade",
+        verbose_name="Total de avaliações com match",
+        help_text="Quantas vezes as condições da regra bateram (mesmo que a ação tenha pulado por idempotência)",
+    )
+    total_acoes_efetivas = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Total de ações efetivas",
+        help_text="Quantas vezes a ação rodou de fato (criou Venda, enviou WhatsApp, etc — exclui pulos idempotentes)",
     )
     ultima_execucao = models.DateTimeField(
         null=True, blank=True,
