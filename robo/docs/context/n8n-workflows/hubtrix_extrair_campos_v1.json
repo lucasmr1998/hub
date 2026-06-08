@@ -1,0 +1,78 @@
+{
+  "name": "[Hubtrix] Extrair Campos do Texto",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "extrair-campos-hubtrix",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "hubtrix-extrair-campos"
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// Recebe payload do Hubtrix: { texto, mensagem_id, tenant_slug, lead_id }\nconst body = items[0].json.body || items[0].json;\nconst texto = (body.texto || '').toString();\n\nif (!texto.trim()) {\n  return [{json: {erro: 'texto vazio', sugestoes: []}}];\n}\n\nconst systemPrompt = `Voce e um extrator de dados de cadastro a partir de mensagens curtas de WhatsApp/chat brasileiro. Sua tarefa: identificar quais campos do CATALOGO estao presentes no TEXTO e extrair o valor normalizado.\n\nCATALOGO DE CAMPOS DISPONIVEIS:\n- nome_razaosocial: nome completo do titular (pessoa fisica ou razao social)\n- cpf_cnpj: 11 digitos (CPF) ou 14 (CNPJ); pode vir com mascara\n- email: endereco de e-mail\n- data_nascimento: formato ISO YYYY-MM-DD (converta o que vier)\n- rg: documento RG (numeros + letra)\n- cep: 8 digitos brasileiros (pode vir com hifen)\n- cidade: nome da cidade\n- estado: UF (2 letras maiusculas)\n\nREGRAS OBRIGATORIAS:\n1. So extraia campos que tenham EVIDENCIA DIRETA no texto. NUNCA invente.\n2. Para cada campo, devolva o trecho ORIGINAL do texto (\"trecho_origem\") que originou a extracao.\n3. O trecho_origem DEVE aparecer literalmente no texto (case-insensitive).\n4. Confianca 0.0 a 1.0:\n   - 0.95+ quando inequivoco (ex: CPF formato 000.000.000-00)\n   - 0.7-0.9 quando provavel por contexto/posicao\n   - Abaixo de 0.7 NAO inclua\n5. Normalize: nome em Title Case; CPF so digitos; data em ISO; UF maiuscula; CEP so digitos.\n6. Em caso de duvida, OMITA o campo. Falso negativo e melhor que falso positivo.\n\nTEXTO:\n\"\"\"\n${texto}\n\"\"\"\n\nResponda EXCLUSIVAMENTE com JSON valido no formato:\n{\"sugestoes\": [{\"campo\": \"...\", \"valor\": \"...\", \"trecho_origem\": \"...\", \"confianca\": 0.95}]}`;\n\nreturn [{json: {\n  texto,\n  mensagem_id: body.mensagem_id,\n  tenant_slug: body.tenant_slug,\n  lead_id: body.lead_id,\n  system_prompt: systemPrompt,\n}}];"
+      },
+      "id": "monta-prompt",
+      "name": "Monta Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"temperature\": 0,\n  \"response_format\": {\"type\": \"json_object\"},\n  \"messages\": [\n    {\"role\": \"system\", \"content\": $json.system_prompt}\n  ]\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "openai-call",
+      "name": "OpenAI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// Valida saida da OpenAI: parseia JSON, checa trecho_origem in texto, regex/checksum por campo\nconst ctx = $('Monta Prompt').first().json;\nconst texto = (ctx.texto || '').toLowerCase();\n\nlet sugestoesBrutas = [];\ntry {\n  const content = items[0].json.choices?.[0]?.message?.content || '{}';\n  const parsed = JSON.parse(content);\n  sugestoesBrutas = parsed.sugestoes || [];\n} catch (e) {\n  return [{json: {erro: 'falha parse openai', detalhe: String(e), sugestoes: []}}];\n}\n\nfunction cpfValido(raw) {\n  const cpf = String(raw).replace(/\\D/g, '');\n  if (cpf.length !== 11 || /^(\\d)\\1+$/.test(cpf)) return false;\n  let soma = 0;\n  for (let i = 0; i < 9; i++) soma += parseInt(cpf[i]) * (10 - i);\n  let d1 = 11 - (soma % 11); if (d1 > 9) d1 = 0;\n  if (d1 !== parseInt(cpf[9])) return false;\n  soma = 0;\n  for (let i = 0; i < 10; i++) soma += parseInt(cpf[i]) * (11 - i);\n  let d2 = 11 - (soma % 11); if (d2 > 9) d2 = 0;\n  return d2 === parseInt(cpf[10]);\n}\n\nconst REGEX = {\n  email: /^[\\w.+-]+@[\\w-]+\\.[\\w.-]+$/,\n  cep: /^\\d{8}$/,\n  data_nascimento: /^\\d{4}-\\d{2}-\\d{2}$/,\n  estado: /^[A-Z]{2}$/,\n};\n\nconst CAMPOS_PERMITIDOS = new Set(['nome_razaosocial','cpf_cnpj','email','data_nascimento','rg','cep','cidade','estado']);\n\nconst validadas = [];\nconst rejeitadas = [];\n\nfor (const s of sugestoesBrutas) {\n  const motivos = [];\n  if (!s.campo || !CAMPOS_PERMITIDOS.has(s.campo)) motivos.push('campo invalido');\n  if (!s.trecho_origem) motivos.push('sem trecho_origem');\n  if (!s.valor) motivos.push('sem valor');\n  if (typeof s.confianca !== 'number' || s.confianca < 0.7) motivos.push('confianca <0.7');\n  if (s.trecho_origem && !texto.includes(String(s.trecho_origem).toLowerCase())) motivos.push('trecho nao bate no texto');\n\n  if (motivos.length === 0) {\n    let valorNorm = s.valor;\n    if (s.campo === 'cpf_cnpj') {\n      const limpo = String(valorNorm).replace(/\\D/g, '');\n      if (limpo.length === 11) {\n        if (!cpfValido(limpo)) { motivos.push('cpf checksum'); }\n        else valorNorm = limpo;\n      } else if (limpo.length === 14) {\n        valorNorm = limpo;\n      } else {\n        motivos.push('cpf/cnpj tamanho');\n      }\n    } else if (s.campo === 'cep') {\n      const limpo = String(valorNorm).replace(/\\D/g, '');\n      if (limpo.length !== 8) motivos.push('cep tamanho');\n      else valorNorm = limpo;\n    } else if (REGEX[s.campo]) {\n      const ok = REGEX[s.campo].test(String(valorNorm));\n      if (!ok) motivos.push(`regex ${s.campo}`);\n    } else {\n      if (String(valorNorm).trim().length < 2) motivos.push('valor curto');\n    }\n    if (motivos.length === 0) {\n      validadas.push({campo: s.campo, valor: valorNorm, trecho_origem: s.trecho_origem, confianca: s.confianca});\n      continue;\n    }\n  }\n  rejeitadas.push({...s, motivos});\n}\n\nreturn [{json: {\n  sugestoes: validadas,\n  total_brutas: sugestoesBrutas.length,\n  total_validadas: validadas.length,\n  rejeitadas,\n  contexto: {mensagem_id: ctx.mensagem_id, lead_id: ctx.lead_id, tenant_slug: ctx.tenant_slug}\n}}];"
+      },
+      "id": "valida-filtra",
+      "name": "Valida e Filtra",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {"main": [[{"node": "Monta Prompt", "type": "main", "index": 0}]]},
+    "Monta Prompt": {"main": [[{"node": "OpenAI", "type": "main", "index": 0}]]},
+    "OpenAI": {"main": [[{"node": "Valida e Filtra", "type": "main", "index": 0}]]},
+    "Valida e Filtra": {"main": [[{"node": "Respond", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1"}
+}
