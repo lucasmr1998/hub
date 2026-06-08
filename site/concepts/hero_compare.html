@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hubtrix — Hero compare (A vs C)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: #FAFAF9; color: #252020; padding: 40px 20px; -webkit-font-smoothing: antialiased; }
+    .wrap { max-width: 1280px; margin: 0 auto; }
+    .header { margin-bottom: 32px; }
+    .h1 { font-family: 'Inter Tight', sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 8px; }
+    .sub { color: #475569; font-size: 15px; margin: 0; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 1024px) { .grid { grid-template-columns: 1fr; } }
+    .card { background: white; border: 1px solid #E2E8F0; border-radius: 16px; padding: 24px; }
+    .label { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #252020; margin-bottom: 6px; }
+    .h2 { font-family: 'Inter Tight', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 8px; }
+    .desc { font-size: 13px; color: #475569; margin: 0 0 20px; line-height: 1.55; }
+    .slot { width: 100%; max-width: 640px; aspect-ratio: 640 / 480; }
+    .slot svg { width: 100%; height: 100%; display: block; }
+    .footer { margin-top: 32px; text-align: center; color: #94A3B8; font-size: 13px; }
+    .footer a { color: #475569; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <h1 class="h1">Hero compare — qual SVG vai pro site?</h1>
+      <p class="sub">Comparação dos conceitos A (chat copiloto em ação) e C (orquestração). Ambos no formato 640×480 do slot do hero.</p>
+    </div>
+
+    <div class="grid">
+
+      <!-- ============ A — CHAT COPILOTO ============ -->
+      <div class="card">
+        <span class="label">Conceito A</span>
+        <h2 class="h2">Chat copiloto em ação</h2>
+        <p class="desc">Conta uma história em 5 segundos: cliente pergunta, copiloto analisa e sugere, atendente confirma. Diferencia visualmente a IA (card estruturado com checklist) dos humanos (bolhas simples).</p>
+        <div class="slot">
+          <svg viewBox="0 0 640 480" xmlns="http://www.w3.org/2000/svg" fill="none">
+            <!-- Card background -->
+            <rect width="640" height="480" rx="20" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+
+            <!-- Header bar -->
+            <g transform="translate(28, 28)">
+              <!-- Hubtrix mark -->
+              <rect width="22" height="22" rx="5" fill="#252020"/>
+              <text x="11" y="16" fill="white" font-family="Inter Tight, sans-serif" font-size="14" font-weight="800" text-anchor="middle" letter-spacing="-0.05em">h</text>
+              <circle cx="18" cy="18" r="2.5" fill="#E76F51"/>
+
+              <text x="34" y="16" fill="#252020" font-family="Inter, sans-serif" font-size="13" font-weight="600">Hubtrix Copiloto</text>
+
+              <!-- Status -->
+              <circle cx="170" cy="11" r="3.5" fill="#10B981"/>
+              <text x="180" y="15" fill="#475569" font-family="Inter, sans-serif" font-size="11">Ativo · monitorando atendimento</text>
+            </g>
+
+            <!-- Divider -->
+            <line x1="28" y1="68" x2="612" y2="68" stroke="#E2E8F0"/>
+
+            <!-- Cliente message -->
+            <g transform="translate(28, 90)">
+              <text x="0" y="0" fill="#94A3B8" font-family="Inter, sans-serif" font-size="10" font-weight="500" letter-spacing="0.04em">CLIENTE · 14:32</text>
+              <g transform="translate(0, 10)">
+                <rect width="340" height="56" rx="14" fill="#F1F5F9"/>
+                <text x="20" y="24" fill="#252020" font-family="Inter, sans-serif" font-size="13.5">Oi, quero contratar 600MB pra</text>
+                <text x="20" y="42" fill="#252020" font-family="Inter, sans-serif" font-size="13.5">minha casa. Atende lá no Norte?</text>
+              </g>
+            </g>
+
+            <!-- Copiloto card -->
+            <g transform="translate(28, 180)">
+              <text x="0" y="0" fill="#E76F51" font-family="Inter, sans-serif" font-size="10" font-weight="700" letter-spacing="0.06em">✦ COPILOTO HUBTRIX · 14:32</text>
+
+              <g transform="translate(0, 10)">
+                <!-- Card with sienna left bar -->
+                <rect width="584" height="200" rx="14" fill="#FFFFFF" stroke="#FED7AA" stroke-width="1.5"/>
+                <rect width="4" height="200" rx="2" fill="#E76F51"/>
+
+                <!-- Section title -->
+                <text x="22" y="28" fill="#252020" font-family="Inter Tight, sans-serif" font-size="14" font-weight="700">Sugestão pra esse lead</text>
+                <text x="22" y="44" fill="#94A3B8" font-family="Inter, sans-serif" font-size="11">Análise em 0.4s · 12 sinais cruzados</text>
+
+                <!-- Check 1 -->
+                <g transform="translate(22, 64)">
+                  <circle cx="8" cy="8" r="8" fill="#10B981"/>
+                  <path d="M5 8.2 L7 10 L11 6" stroke="white" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                  <text x="26" y="12" fill="#252020" font-family="Inter, sans-serif" font-size="13">Viabilidade <tspan font-weight="600">OK</tspan> — CTO Norte 23 disponível, 78% de capacidade</text>
+                </g>
+
+                <!-- Check 2 -->
+                <g transform="translate(22, 94)">
+                  <circle cx="8" cy="8" r="8" fill="#10B981"/>
+                  <path d="M5 8.2 L7 10 L11 6" stroke="white" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                  <text x="26" y="12" fill="#252020" font-family="Inter, sans-serif" font-size="13">Plano combo recomendado: <tspan font-weight="600">600MB + Streaming · R$ 119/mês</tspan></text>
+                </g>
+
+                <!-- Check 3 -->
+                <g transform="translate(22, 124)">
+                  <circle cx="8" cy="8" r="8" fill="#10B981"/>
+                  <path d="M5 8.2 L7 10 L11 6" stroke="white" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                  <text x="26" y="12" fill="#252020" font-family="Inter, sans-serif" font-size="13">Distribuir para <tspan font-weight="600">Marina</tspan> — especialista em residencial Norte</text>
+                </g>
+
+                <!-- Action button -->
+                <g transform="translate(22, 152)">
+                  <rect width="148" height="32" rx="8" fill="#252020"/>
+                  <text x="74" y="20" fill="white" font-family="Inter, sans-serif" font-size="12" font-weight="600" text-anchor="middle">Aplicar sugestão</text>
+
+                  <text x="160" y="20" fill="#94A3B8" font-family="Inter, sans-serif" font-size="11">ou edite manualmente</text>
+                </g>
+              </g>
+            </g>
+
+            <!-- Atendente reply -->
+            <g transform="translate(292, 408)">
+              <text x="320" y="0" fill="#94A3B8" font-family="Inter, sans-serif" font-size="10" font-weight="500" letter-spacing="0.04em" text-anchor="end">MARINA · 14:33</text>
+              <g transform="translate(0, 10)">
+                <rect width="320" height="40" rx="14" fill="#252020"/>
+                <text x="20" y="25" fill="white" font-family="Inter, sans-serif" font-size="13">Show, já tô contatando agora 👍</text>
+              </g>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <!-- ============ C — ORQUESTRAÇÃO ============ -->
+      <div class="card">
+        <span class="label">Conceito C</span>
+        <h2 class="h2">Orquestração</h2>
+        <p class="desc">Hubtrix no centro orquestrando todos os pontos de contato. Lead entra de um lado, vira cliente fiel do outro. Mais conceitual e abstrato, comunica "tudo conectado".</p>
+        <div class="slot">
+          <svg viewBox="0 0 640 480" xmlns="http://www.w3.org/2000/svg" fill="none">
+            <!-- Background -->
+            <rect width="640" height="480" rx="20" fill="#FAFAF9" stroke="#E2E8F0" stroke-width="1"/>
+
+            <!-- Subtle grid backdrop -->
+            <defs>
+              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <circle cx="1" cy="1" r="1" fill="#E2E8F0"/>
+              </pattern>
+            </defs>
+            <rect width="640" height="480" rx="20" fill="url(#grid)" opacity="0.5"/>
+
+            <!-- Connection lines (dashed) -->
+            <g stroke="#CBD5E1" stroke-width="1.5" stroke-dasharray="4 5" opacity="0.8">
+              <line x1="320" y1="240" x2="120" y2="120"/>
+              <line x1="320" y1="240" x2="520" y2="120"/>
+              <line x1="320" y1="240" x2="120" y2="360"/>
+              <line x1="320" y1="240" x2="520" y2="360"/>
+              <line x1="320" y1="240" x2="320" y2="78"/>
+              <line x1="320" y1="240" x2="320" y2="402"/>
+            </g>
+
+            <!-- Animated pulse -->
+            <circle cx="320" cy="240" r="50" fill="none" stroke="#E76F51" stroke-width="1.5" opacity="0.4">
+              <animate attributeName="r" values="50;75;50" dur="3s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0.4;0;0.4" dur="3s" repeatCount="indefinite"/>
+            </circle>
+
+            <!-- Central hub -->
+            <g transform="translate(320, 240)">
+              <circle cx="0" cy="0" r="50" fill="white" stroke="#E2E8F0" stroke-width="1.5"/>
+              <rect x="-22" y="-22" width="44" height="44" rx="10" fill="#252020"/>
+              <text x="0" y="9" fill="white" font-family="Inter Tight, sans-serif" font-size="32" font-weight="800" text-anchor="middle" letter-spacing="-0.05em">h</text>
+              <circle cx="14" cy="14" r="5" fill="#E76F51"/>
+            </g>
+
+            <!-- Hub label -->
+            <text x="320" y="318" fill="#252020" font-family="Inter Tight, sans-serif" font-size="13" font-weight="700" text-anchor="middle">Copiloto Hubtrix</text>
+            <text x="320" y="335" fill="#94A3B8" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">decide · prioriza · executa</text>
+
+            <!-- ===== Nodes ===== -->
+
+            <!-- Site (top center) -->
+            <g transform="translate(320, 78)">
+              <circle cx="0" cy="0" r="28" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+              <circle cx="0" cy="0" r="13" fill="none" stroke="#475569" stroke-width="1.5"/>
+              <line x1="-13" y1="0" x2="13" y2="0" stroke="#475569" stroke-width="1.2"/>
+              <path d="M0 -13 Q-7 0 0 13 Q7 0 0 -13" fill="none" stroke="#475569" stroke-width="1.2"/>
+              <text x="0" y="50" fill="#475569" font-family="Inter, sans-serif" font-size="11" font-weight="600" text-anchor="middle">Site</text>
+            </g>
+
+            <!-- WhatsApp (top-left) -->
+            <g transform="translate(120, 120)">
+              <circle cx="0" cy="0" r="28" fill="#25D366"/>
+              <path d="M-7 -8 L7 -8 Q11 -8 11 -4 L11 4 Q11 8 7 8 L0 8 L-5 12 L-3 8 L-7 8 Q-11 8 -11 4 L-11 -4 Q-11 -8 -7 -8" fill="white"/>
+              <text x="0" y="50" fill="#475569" font-family="Inter, sans-serif" font-size="11" font-weight="600" text-anchor="middle">WhatsApp</text>
+            </g>
+
+            <!-- HubSoft / ERP (top-right) -->
+            <g transform="translate(520, 120)">
+              <rect x="-28" y="-28" width="56" height="56" rx="14" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+              <rect x="-14" y="-12" width="28" height="6" rx="1.5" fill="#252020"/>
+              <rect x="-14" y="-3" width="28" height="6" rx="1.5" fill="#94A3B8"/>
+              <rect x="-14" y="6" width="20" height="6" rx="1.5" fill="#94A3B8"/>
+              <text x="0" y="50" fill="#475569" font-family="Inter, sans-serif" font-size="11" font-weight="600" text-anchor="middle">ERP do ISP</text>
+            </g>
+
+            <!-- Instagram (bottom-left) -->
+            <g transform="translate(120, 360)">
+              <rect x="-28" y="-28" width="56" height="56" rx="16" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+              <rect x="-14" y="-14" width="28" height="28" rx="7" fill="none" stroke="#E1306C" stroke-width="2"/>
+              <circle cx="0" cy="0" r="6" fill="none" stroke="#E1306C" stroke-width="2"/>
+              <circle cx="9" cy="-9" r="1.8" fill="#E1306C"/>
+              <text x="0" y="50" fill="#475569" font-family="Inter, sans-serif" font-size="11" font-weight="600" text-anchor="middle">Instagram</text>
+            </g>
+
+            <!-- E-mail (bottom-right) -->
+            <g transform="translate(520, 360)">
+              <circle cx="0" cy="0" r="28" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+              <rect x="-13" y="-9" width="26" height="18" rx="2.5" fill="none" stroke="#475569" stroke-width="1.5"/>
+              <path d="M-13 -9 L0 2 L13 -9" stroke="#475569" stroke-width="1.5" fill="none"/>
+              <text x="0" y="50" fill="#475569" font-family="Inter, sans-serif" font-size="11" font-weight="600" text-anchor="middle">E-mail</text>
+            </g>
+
+            <!-- Pipeline CRM (bottom-center) -->
+            <g transform="translate(320, 402)">
+              <rect x="-28" y="-22" width="56" height="44" rx="10" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+              <rect x="-20" y="-14" width="10" height="28" rx="2" fill="#FED7AA"/>
+              <rect x="-5" y="-14" width="10" height="22" rx="2" fill="#E76F51"/>
+              <rect x="10" y="-14" width="10" height="16" rx="2" fill="#252020"/>
+              <text x="0" y="46" fill="#475569" font-family="Inter, sans-serif" font-size="11" font-weight="600" text-anchor="middle">Pipeline CRM</text>
+            </g>
+
+            <!-- Lead enters (left arrow) -->
+            <g transform="translate(28, 232)">
+              <text x="0" y="-2" fill="#94A3B8" font-family="Inter, sans-serif" font-size="10" font-weight="700" letter-spacing="0.08em">LEAD ENTRA</text>
+              <path d="M0 12 L60 12" stroke="#E76F51" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 4"/>
+              <path d="M52 6 L62 12 L52 18" stroke="#E76F51" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            </g>
+
+            <!-- Cliente fiel (right arrow) -->
+            <g transform="translate(550, 232)">
+              <path d="M0 12 L60 12" stroke="#10B981" stroke-width="2" stroke-linecap="round"/>
+              <path d="M52 6 L62 12 L52 18" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <text x="0" y="32" fill="#94A3B8" font-family="Inter, sans-serif" font-size="10" font-weight="700" letter-spacing="0.08em">CLIENTE FIEL</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="footer">
+      <p>Os dois SVGs são vetoriais e escalam pra qualquer tamanho. <a href="../index_preto.html">← voltar pro site live</a></p>
+    </div>
+  </div>
+</body>
+</html>

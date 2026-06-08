@@ -1,0 +1,266 @@
+{
+  "name": "[Vero] Orquestrador Atendimento",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vero-orquestrador",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-1200, 0],
+      "id": "wh-1",
+      "name": "Webhook Wazapi",
+      "webhookId": "vero-orq-001"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "a1", "name": "telefone", "value": "={{ $json.body.phone || $json.body.from || $json.body.telefone }}", "type": "string" },
+            { "id": "a2", "name": "mensagem", "value": "={{ $json.body.message || $json.body.text || $json.body.body || '' }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-980, 0],
+      "id": "set-1",
+      "name": "Entrada"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, telefone, nodo_atual, vars FROM vero_session WHERE telefone = '{{ $json.telefone }}'\nUNION ALL\nSELECT NULL, '{{ $json.telefone }}', 'inicio', '{}'::jsonb\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-760, 0],
+      "id": "pg-load",
+      "name": "Load Session"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 2 }, "conditions": [{ "id": "c1", "leftValue": "={{ $json.nodo_atual }}", "rightValue": "inicio", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "inicio" },
+            { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 2 }, "conditions": [{ "id": "c2", "leftValue": "={{ $json.nodo_atual }}", "rightValue": "aguarda_nome", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "aguarda_nome" },
+            { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 2 }, "conditions": [{ "id": "c3", "leftValue": "={{ $json.nodo_atual }}", "rightValue": "aguarda_cep", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "aguarda_cep" },
+            { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 2 }, "conditions": [{ "id": "c4", "leftValue": "={{ $json.nodo_atual }}", "rightValue": "aguarda_plano", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "aguarda_plano" },
+            { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 2 }, "conditions": [{ "id": "c5", "leftValue": "={{ $json.nodo_atual }}", "rightValue": "aguarda_email", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "renameOutput": true, "outputKey": "aguarda_email" }
+          ]
+        },
+        "options": { "fallbackOutput": "extra" }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [-540, 0],
+      "id": "switch-1",
+      "name": "Por Nodo Atual"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "m1", "name": "resposta_bot", "value": "Oi! Tudo bem? 😊 Sou da Vero Internet. Pra começar, qual o seu nome?", "type": "string" },
+            { "id": "m2", "name": "proximo_nodo", "value": "aguarda_nome", "type": "string" },
+            { "id": "m3", "name": "novas_vars", "value": "={{ $node['Load Session'].json.vars }}", "type": "object" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-260, -380],
+      "id": "step-inicio",
+      "name": "Step Inicio"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "n1", "name": "resposta_bot", "value": "=Prazer, {{ $node['Entrada'].json.mensagem }}! 😊\nMe manda seu CEP, por favor?", "type": "string" },
+            { "id": "n2", "name": "proximo_nodo", "value": "aguarda_cep", "type": "string" },
+            { "id": "n3", "name": "novas_vars", "value": "={{ Object.assign({}, $node['Load Session'].json.vars, { nome: $node['Entrada'].json.mensagem }) }}", "type": "object" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-260, -200],
+      "id": "step-nome",
+      "name": "Step Aguarda Nome"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "c1", "name": "resposta_bot", "value": "Perfeito! 😊 Qual plano você tem interesse? Temos de 600Mb, 1GB e 1.5GB. Pode me dizer qual mais te chama atenção?", "type": "string" },
+            { "id": "c2", "name": "proximo_nodo", "value": "aguarda_plano", "type": "string" },
+            { "id": "c3", "name": "novas_vars", "value": "={{ Object.assign({}, $node['Load Session'].json.vars, { cep: $node['Entrada'].json.mensagem }) }}", "type": "object" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-260, -20],
+      "id": "step-cep",
+      "name": "Step Aguarda CEP"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "p1", "name": "resposta_bot", "value": "Ótima escolha! 👍 Pra fechar a contratação, me passa seu email, por favor?", "type": "string" },
+            { "id": "p2", "name": "proximo_nodo", "value": "aguarda_email", "type": "string" },
+            { "id": "p3", "name": "novas_vars", "value": "={{ Object.assign({}, $node['Load Session'].json.vars, { plano_interesse: $node['Entrada'].json.mensagem }) }}", "type": "object" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-260, 160],
+      "id": "step-plano",
+      "name": "Step Aguarda Plano"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "e1", "name": "resposta_bot", "value": "Perfeito! ✅ Seus dados foram registrados e em breve um consultor da Vero entra em contato pra finalizar a contratação. Obrigado!", "type": "string" },
+            { "id": "e2", "name": "proximo_nodo", "value": "concluido", "type": "string" },
+            { "id": "e3", "name": "novas_vars", "value": "={{ Object.assign({}, $node['Load Session'].json.vars, { email: $node['Entrada'].json.mensagem }) }}", "type": "object" },
+            { "id": "e4", "name": "deve_enviar_hubtrix", "value": "=true", "type": "boolean" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-260, 340],
+      "id": "step-email",
+      "name": "Step Aguarda Email (Final)"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO vero_session (telefone, nodo_atual, vars, atualizado_em)\nVALUES ('{{ $node['Entrada'].json.telefone }}', '{{ $json.proximo_nodo }}', '{{ JSON.stringify($json.novas_vars) }}'::jsonb, NOW())\nON CONFLICT (telefone) DO UPDATE\nSET nodo_atual = EXCLUDED.nodo_atual, vars = EXCLUDED.vars, atualizado_em = NOW();",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [80, 0],
+      "id": "pg-save",
+      "name": "Save Session"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.WAZAPI_URL }}/sendText",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.WAZAPI_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $node['Entrada'].json.telefone }}\",\n  \"message\": {{ JSON.stringify($node['Step Inicio'].json.resposta_bot || $node['Step Aguarda Nome'].json.resposta_bot || $node['Step Aguarda CEP'].json.resposta_bot || $node['Step Aguarda Plano'].json.resposta_bot || $node['Step Aguarda Email (Final)'].json.resposta_bot) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [320, -100],
+      "id": "wazapi-send",
+      "name": "Enviar Wazapi"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 2 },
+          "conditions": [
+            { "id": "ifh", "leftValue": "={{ $node['Step Aguarda Email (Final)'].json.deve_enviar_hubtrix }}", "rightValue": "", "operator": { "type": "boolean", "operation": "true", "singleValue": true } }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [320, 100],
+      "id": "if-finalizou",
+      "name": "Finalizou?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HUBTRIX_URL }}/api/public/n8n/lead/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-N8N-Webhook-Secret", "value": "={{ $env.HUBTRIX_N8N_WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tenant_slug\": \"tr-carrion\",\n  \"telefone\": \"{{ $node['Entrada'].json.telefone }}\",\n  \"nome_razaosocial\": \"{{ $node['Step Aguarda Email (Final)'].json.novas_vars.nome }}\",\n  \"email\": \"{{ $node['Step Aguarda Email (Final)'].json.novas_vars.email }}\",\n  \"cep\": \"{{ $node['Step Aguarda Email (Final)'].json.novas_vars.cep }}\",\n  \"plano_interesse\": \"{{ $node['Step Aguarda Email (Final)'].json.novas_vars.plano_interesse }}\",\n  \"origem\": \"whatsapp_vero_n8n\",\n  \"canal_entrada\": \"whatsapp\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [540, 100],
+      "id": "hubtrix-send",
+      "name": "Enviar Lead Hubtrix"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "ok",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [760, -100],
+      "id": "respond-1",
+      "name": "Respond OK"
+    }
+  ],
+  "connections": {
+    "Webhook Wazapi": { "main": [[{ "node": "Entrada", "type": "main", "index": 0 }]] },
+    "Entrada": { "main": [[{ "node": "Load Session", "type": "main", "index": 0 }]] },
+    "Load Session": { "main": [[{ "node": "Por Nodo Atual", "type": "main", "index": 0 }]] },
+    "Por Nodo Atual": {
+      "main": [
+        [{ "node": "Step Inicio", "type": "main", "index": 0 }],
+        [{ "node": "Step Aguarda Nome", "type": "main", "index": 0 }],
+        [{ "node": "Step Aguarda CEP", "type": "main", "index": 0 }],
+        [{ "node": "Step Aguarda Plano", "type": "main", "index": 0 }],
+        [{ "node": "Step Aguarda Email (Final)", "type": "main", "index": 0 }],
+        [{ "node": "Step Inicio", "type": "main", "index": 0 }]
+      ]
+    },
+    "Step Inicio": { "main": [[{ "node": "Save Session", "type": "main", "index": 0 }]] },
+    "Step Aguarda Nome": { "main": [[{ "node": "Save Session", "type": "main", "index": 0 }]] },
+    "Step Aguarda CEP": { "main": [[{ "node": "Save Session", "type": "main", "index": 0 }]] },
+    "Step Aguarda Plano": { "main": [[{ "node": "Save Session", "type": "main", "index": 0 }]] },
+    "Step Aguarda Email (Final)": { "main": [[{ "node": "Save Session", "type": "main", "index": 0 }]] },
+    "Save Session": { "main": [[{ "node": "Enviar Wazapi", "type": "main", "index": 0 }, { "node": "Finalizou?", "type": "main", "index": 0 }]] },
+    "Enviar Wazapi": { "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]] },
+    "Finalizou?": { "main": [[{ "node": "Enviar Lead Hubtrix", "type": "main", "index": 0 }], []] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "",
+  "meta": { "templateCredsSetupCompleted": false },
+  "id": "",
+  "tags": []
+}

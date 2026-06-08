@@ -1,0 +1,2312 @@
+[
+  {
+    "model": "sistema.perfilpermissao",
+    "pk": 57,
+    "fields": {
+      "tenant": 9,
+      "nome": "Admin",
+      "descricao": "Acesso completo a todos os modulos. Criado automaticamente pelo setup do tenant.",
+      "criado_em": "2026-04-24 01:24:55.550505+00:00",
+      "funcionalidades": []
+    }
+  },
+  {
+    "model": "sistema.permissaousuario",
+    "pk": 18,
+    "fields": {
+      "user": 19,
+      "tenant": 9,
+      "perfil": 57
+    }
+  },
+  {
+    "model": "integracoes.integracaoapi",
+    "pk": 12,
+    "fields": {
+      "tenant": 9,
+      "api_token": "",
+      "nome": "Hubsoft",
+      "tipo": "hubsoft",
+      "base_url": "https://api.megalinktelecom.hubsoft.com.br",
+      "client_id": "76",
+      "client_secret": "hv3K6SXp7p7g2eNznxUXJphgsgzfQUHnyuch2XaS",
+      "username": "rdstation@megalinkinternet.com.br",
+      "password": "XMa3Nz6YwLA5*w",
+      "grant_type": "password",
+      "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI3NiIsImp0aSI6IjUzM2E3MjUxOWE2YTA1MTQyZTZjNDZkNTIxN2I1YWE3ZjI1ZDE1ZGYyNTdjNTJiZGEwNzZhMjk0ZTU2ZDUwN2FjYzY2YTFmYWFmNTM3MWU4IiwiaWF0IjoxNzc3MjQ3MTE2LjU3OTU0MiwibmJmIjoxNzc3MjQ3MTE2LjU3OTU0OCwiZXhwIjoxNzc5ODM5MTE2LjU0NjkzMywic3ViIjoiMTQxMSIsInNjb3BlcyI6W119.SzUDhFR_D8h-tSwZ39f38ZoegrPsdYhMi8HqyvpbwWiMNtCK5i4-VLxlyK13O1vZL7KhRJT5wIkHE-Afh0QNPpPNnZWUKKWVNWgtqEHExYzUc3KU3BazwPJOgXf3PaNr7MgJsdNsgpuT2s5UZd-00la9-qoxEd0Q6SxPBor94WNRWXDG3O9luKqGoB906qsrITDWmAVNPTnKJ7VcogCEMQP3kIwXRkIYgwzlhuVYydeR5s8WI4yIDRoINtt_YA6wTJzxuwaE2Ao5qA6vctvhwVfDZXjELQPNMIayV9zVIzCOlyLi1QAhQ2kIfccYq95mUsrTwCFszN6p5IroHSidaybJ-1VWpfcw3Z8lxKazByRRpVS_MDKXVeu78VNbV7PjmhUL4quvLjFZGCeOYgDE-qCWZA_s0uQlwTnBaX5k_OcqWoQyHKvmhVIzXCvAyu4lnO-_e5CECJzhGd7wzKFXb0V6TvZODyu97N7R7annR1Hk9fIr6EHIEyBPeHyEBskQ2AQ5lBgaq3qGfO0JLKDwsjG_3BC3km5hCCZkMg2zkSk-uqYLXZ-a9D1PmsDsPc8qowb-zUFCNJyOEV6Z46UmGbUe5WfBeD_cD8wtt8j8XDLX-BhSWqazSOzsMZeSXOVJeJXNetx2u3kSv_pcB773zfHD6pmj9YWlefXLo2FL9G8",
+      "token_expira_em": "2026-05-26 23:44:16.711518+00:00",
+      "api_key": "",
+      "ativa": true,
+      "configuracoes_extras": {
+        "cache": {
+          "vendedores": [
+            {
+              "id": 1770,
+              "name": " Francisco Samuel da Silva Lima"
+            },
+            {
+              "id": 1767,
+              "name": " Johab da Costa Oliveira"
+            },
+            {
+              "id": 1753,
+              "name": " Luiz Edward Gomes de França"
+            },
+            {
+              "id": 1647,
+              "name": "ADILENE SILVA MORAES\t"
+            },
+            {
+              "id": 1187,
+              "name": "ADRIANA CRISTINA DE SOUSA"
+            },
+            {
+              "id": 903,
+              "name": "ADRIANA LICELIA DOLORES PORTELA E SILVA"
+            },
+            {
+              "id": 907,
+              "name": "AILTON FERREIRA DOS SANTOS"
+            },
+            {
+              "id": 1715,
+              "name": "ANA KAROLYNE DE SOUSA MELO XAVIER"
+            },
+            {
+              "id": 1451,
+              "name": "ANTONIO MIKAEL SILVA GALENO"
+            },
+            {
+              "id": 1408,
+              "name": "API Buzzlead "
+            },
+            {
+              "id": 1681,
+              "name": "AUTOMACAO_FINANCEIRO"
+            },
+            {
+              "id": 1470,
+              "name": "Alice Loianne Santos Oliveira "
+            },
+            {
+              "id": 1484,
+              "name": "Alisson Elson Alves Carneiro "
+            },
+            {
+              "id": 1521,
+              "name": "Amanda Vitória de Carvalho Fontes"
+            },
+            {
+              "id": 1740,
+              "name": "Ana Cassia Silva Cruz"
+            },
+            {
+              "id": 1691,
+              "name": "Ana Cristina dos Santos\t"
+            },
+            {
+              "id": 1752,
+              "name": "Ana Karoline Fernandes Lima"
+            },
+            {
+              "id": 1483,
+              "name": "Ana Paula da Silva Santos"
+            },
+            {
+              "id": 1694,
+              "name": "Andreza de Brito Oliveira"
+            },
+            {
+              "id": 1766,
+              "name": "Aniela de Brito Oliveira"
+            },
+            {
+              "id": 1747,
+              "name": "Antonio Igor borges Bezerra"
+            },
+            {
+              "id": 1100,
+              "name": "BRENDO PEREIRA DA SILVA COSTA"
+            },
+            {
+              "id": 928,
+              "name": "BRUNO AZEVEDO DE MORAIS"
+            },
+            {
+              "id": 1492,
+              "name": "Brenda da Silva Carvalho"
+            },
+            {
+              "id": 1306,
+              "name": "Bruna Sousa Rodrigues da Silva"
+            },
+            {
+              "id": 1188,
+              "name": "CAUANA MONTEIRO CAVALCANTE"
+            },
+            {
+              "id": 934,
+              "name": "CESAR VINICIUS ALVES VIANA"
+            },
+            {
+              "id": 1716,
+              "name": "CLEBERSON VINICIUS DA SILVA"
+            },
+            {
+              "id": 1680,
+              "name": "CRISTIANO TÉRCIO LOPES DA COSTA"
+            },
+            {
+              "id": 1237,
+              "name": "Camila Lijó"
+            },
+            {
+              "id": 1473,
+              "name": "Cezário Rodrigues Farias Neto"
+            },
+            {
+              "id": 1546,
+              "name": "Clara de Morais Furtado"
+            },
+            {
+              "id": 1590,
+              "name": "Cláudio Roberto Bos"
+            },
+            {
+              "id": 935,
+              "name": "DALCIONE ARAÚJO SOUSA"
+            },
+            {
+              "id": 937,
+              "name": "DANIEL MATHEUS DA SILVA MATOS"
+            },
+            {
+              "id": 1764,
+              "name": "DANIEL MIRANDA FERREIRA"
+            },
+            {
+              "id": 1385,
+              "name": "DARLAN VELOZO"
+            },
+            {
+              "id": 940,
+              "name": "DAVI PEREIRA DE SOUZA"
+            },
+            {
+              "id": 941,
+              "name": "DAVID RODRIGUES COSTA"
+            },
+            {
+              "id": 939,
+              "name": "Danny Sullivan da Silva Rodrigues "
+            },
+            {
+              "id": 1698,
+              "name": "Davi Roberto de Melo"
+            },
+            {
+              "id": 1441,
+              "name": "Dayanne Cristina do Nascimento"
+            },
+            {
+              "id": 1589,
+              "name": "Domingos Vieira Santiago Neto\t"
+            },
+            {
+              "id": 1730,
+              "name": "Douglas Freitas da Silva"
+            },
+            {
+              "id": 947,
+              "name": "ELAYNE RODRIGUES DE SOUSA"
+            },
+            {
+              "id": 954,
+              "name": "EVA SANTOS"
+            },
+            {
+              "id": 955,
+              "name": "Elani Marciano Da Silva"
+            },
+            {
+              "id": 1469,
+              "name": "Elenildo Francisco"
+            },
+            {
+              "id": 1552,
+              "name": "Elismar Lima Soares "
+            },
+            {
+              "id": 1482,
+              "name": "Emanuelle da Silva Torres"
+            },
+            {
+              "id": 1519,
+              "name": "Emanuely Araújo Martins da Silva"
+            },
+            {
+              "id": 1330,
+              "name": "Erick Sousa"
+            },
+            {
+              "id": 1582,
+              "name": "Eryck Peterson Ferreira da Silva"
+            },
+            {
+              "id": 956,
+              "name": "FABIOLA CUSTODIO DA SILVA FEITOSA"
+            },
+            {
+              "id": 1230,
+              "name": "FERNANDA LUZIA PEREIRA DA COSTA"
+            },
+            {
+              "id": 1676,
+              "name": "FERNANDO HENRIQUE DA ROCHA CUNHA JR"
+            },
+            {
+              "id": 962,
+              "name": "FRANCISCA DANIELA DE SOUSA"
+            },
+            {
+              "id": 963,
+              "name": "FRANCISCA DE FATIMA GONÇALVES DE MOURA"
+            },
+            {
+              "id": 964,
+              "name": "FRANCISCA RAIANNE MATOS MIRANDA"
+            },
+            {
+              "id": 1407,
+              "name": "Fernando Roberto Dos Santos"
+            },
+            {
+              "id": 1528,
+              "name": "Fleury Soares da Silva Rocha"
+            },
+            {
+              "id": 1523,
+              "name": "Francilda Barbosa da Silva Pereira"
+            },
+            {
+              "id": 974,
+              "name": "GUSTAVO LEMOS DE SOUSA"
+            },
+            {
+              "id": 975,
+              "name": "GUTEMBERG CASSIANO DO CARMO SILVA"
+            },
+            {
+              "id": 1768,
+              "name": "Gabriel Silva da Costa"
+            },
+            {
+              "id": 1276,
+              "name": "Guilhermina Alves"
+            },
+            {
+              "id": 978,
+              "name": "HILTON KILSON COSTA LIMA"
+            },
+            {
+              "id": 1632,
+              "name": "Harllan dos Santos Bezerra "
+            },
+            {
+              "id": 983,
+              "name": "ILZES INNAYRA SOUSA SILVA"
+            },
+            {
+              "id": 1633,
+              "name": "Ícaro Rubinho do Amaral "
+            },
+            {
+              "id": 1279,
+              "name": "Igor marley Soares da Silva"
+            },
+            {
+              "id": 1685,
+              "name": "Inácio Valdenilson leal "
+            },
+            {
+              "id": 1646,
+              "name": "Isabelle Soares de Oliveira"
+            },
+            {
+              "id": 1311,
+              "name": "Israel Silva Sabino Sampaio"
+            },
+            {
+              "id": 990,
+              "name": "JAILSON CAMPELO DOS PASSOS"
+            },
+            {
+              "id": 1000,
+              "name": "JÉSSICA JADI DA SILVA MOREIRA"
+            },
+            {
+              "id": 1186,
+              "name": "JOÃO PAULO PIEROT E SILVA"
+            },
+            {
+              "id": 1004,
+              "name": "JOAO PEDRO BATISTA BARBOSA"
+            },
+            {
+              "id": 1013,
+              "name": "JOSÉ RAMON  DA SILVA RODRIGUES"
+            },
+            {
+              "id": 1444,
+              "name": "Joanaizes Reges Rodrigues Gonçalves"
+            },
+            {
+              "id": 1509,
+              "name": "Joanice Teixeira de Araújo"
+            },
+            {
+              "id": 1667,
+              "name": "João Victor"
+            },
+            {
+              "id": 1021,
+              "name": "João Vyctor Santos Souza"
+            },
+            {
+              "id": 1406,
+              "name": "José Douglas Da Silva Rodrigues"
+            },
+            {
+              "id": 1692,
+              "name": "José Giliard da Luz "
+            },
+            {
+              "id": 1474,
+              "name": "José Raimundo Coutinho Mourão "
+            },
+            {
+              "id": 1023,
+              "name": "KALINE FORTES RAULINO"
+            },
+            {
+              "id": 1024,
+              "name": "KALINE HORRANA PEREIRA DA SILVA"
+            },
+            {
+              "id": 1025,
+              "name": "KAROLINE APARECIDA CASTELO BRANCO LIMA"
+            },
+            {
+              "id": 1669,
+              "name": "Kaline Maria Batista Flores"
+            },
+            {
+              "id": 1557,
+              "name": "Keverson Wilfred Alves da Silva"
+            },
+            {
+              "id": 1765,
+              "name": "Kleber Conceição da Silva"
+            },
+            {
+              "id": 1031,
+              "name": "LILIANE MEIRELA DA SILVA SOUSA"
+            },
+            {
+              "id": 1713,
+              "name": "LOJA - TIMON"
+            },
+            {
+              "id": 1242,
+              "name": "LOJA MONSENHOR GIL"
+            },
+            {
+              "id": 1754,
+              "name": "LOUYSE DA SILVA SANTOS"
+            },
+            {
+              "id": 1431,
+              "name": "Leila  Ribeiro dos Santos da Costa"
+            },
+            {
+              "id": 1241,
+              "name": "Loja São João"
+            },
+            {
+              "id": 1592,
+              "name": "Lourival Sobrinho Alencar Cavalcante"
+            },
+            {
+              "id": 1756,
+              "name": "Lucas Ferreira de Sousa"
+            },
+            {
+              "id": 1673,
+              "name": "Lucas de Mello"
+            },
+            {
+              "id": 1244,
+              "name": "Luma Lima de Oliveira"
+            },
+            {
+              "id": 1503,
+              "name": "Luna Gabriela Bento da Silva"
+            },
+            {
+              "id": 1045,
+              "name": "MARCIO BERNARDINO DA SILVA"
+            },
+            {
+              "id": 1245,
+              "name": "MARIA CLARA OLIVEIRA MARQUES"
+            },
+            {
+              "id": 1058,
+              "name": "MARIA MAÍSA CARVALHO DOS SANTOS"
+            },
+            {
+              "id": 1051,
+              "name": "MARINA DA COSTA CRUZ"
+            },
+            {
+              "id": 1052,
+              "name": "MATEUS RENEY NUNES DA SILVA"
+            },
+            {
+              "id": 1615,
+              "name": "MATHEUS FERREIRA MOURA"
+            },
+            {
+              "id": 1056,
+              "name": "MAYARA LIMA DE OLIVEIRA"
+            },
+            {
+              "id": 1688,
+              "name": "Manoel Barbosa do Nascimento silva"
+            },
+            {
+              "id": 1063,
+              "name": "Marcelo Ferreira Meneses"
+            },
+            {
+              "id": 1614,
+              "name": "Maria Alice de Oliveira"
+            },
+            {
+              "id": 1524,
+              "name": "Maria Helena de  Moura"
+            },
+            {
+              "id": 1736,
+              "name": "Maria da Consolação Feitosa Barbosa"
+            },
+            {
+              "id": 1631,
+              "name": "Mariana Bezerra"
+            },
+            {
+              "id": 1301,
+              "name": "Marina Lima Souza"
+            },
+            {
+              "id": 1778,
+              "name": "Maycon Douglas Cardoso Leal"
+            },
+            {
+              "id": 1448,
+              "name": "NAYRA FERNANDA DA COSTA BARNABÉ"
+            },
+            {
+              "id": 1391,
+              "name": "Natália Atanazio"
+            },
+            {
+              "id": 1163,
+              "name": "OPERACIONAL - BACKBONE"
+            },
+            {
+              "id": 1069,
+              "name": "PAULA RAYANE GOMES DE SANTANA"
+            },
+            {
+              "id": 1168,
+              "name": "PAULO HENRIQUE CARVALHO SILVA"
+            },
+            {
+              "id": 1617,
+              "name": "PEDRO WALPABLONDY SOARES"
+            },
+            {
+              "id": 1556,
+              "name": "Pedro Paulo Costa Brito\t"
+            },
+            {
+              "id": 1080,
+              "name": "RAFAEL SANTANA DA SILVA"
+            },
+            {
+              "id": 1085,
+              "name": "RICARDO DA SILVA SOUSA"
+            },
+            {
+              "id": 1087,
+              "name": "RODRIGO SANTOS RODRIGUES"
+            },
+            {
+              "id": 1463,
+              "name": "Raimundo José Ribeiro De Sousa Neto"
+            },
+            {
+              "id": 1445,
+              "name": "Ranyelly Fontes da luz Lemos Moura"
+            },
+            {
+              "id": 1755,
+              "name": "Ricardo Douglas Paixão Do Nascimento"
+            },
+            {
+              "id": 1517,
+              "name": "Rita de Cassia"
+            },
+            {
+              "id": 1332,
+              "name": "Robert Barroso Pereira da Silva "
+            },
+            {
+              "id": 1654,
+              "name": "Robô Conversão"
+            },
+            {
+              "id": 1550,
+              "name": "Robson Nunes Da Costa "
+            },
+            {
+              "id": 1313,
+              "name": "Rodrigo Alves Moreira"
+            },
+            {
+              "id": 1464,
+              "name": "Rousimere de Sousa Alves"
+            },
+            {
+              "id": 1094,
+              "name": "SAMARA DE ALMEIDA MATOS"
+            },
+            {
+              "id": 1097,
+              "name": "STEFANI FERREIRA DE SOUSA"
+            },
+            {
+              "id": 1495,
+              "name": "Samara Izabelle Lima Do nascimento"
+            },
+            {
+              "id": 1435,
+              "name": "Samuel do Nascimento Barbosa"
+            },
+            {
+              "id": 1352,
+              "name": "Sivanilson de Sousa Araujo"
+            },
+            {
+              "id": 1113,
+              "name": "TARCIANY RODRIGUES FERREIRA"
+            },
+            {
+              "id": 1594,
+              "name": "Tarsio Felipe Alves Rodrigues"
+            },
+            {
+              "id": 1583,
+              "name": "Thiago José de Sousa Cunha "
+            },
+            {
+              "id": 1486,
+              "name": "Tiago de Jesus Filho "
+            },
+            {
+              "id": 1124,
+              "name": "VALTER HENRIQUE RODRIGUES DE ARAÚJO"
+            },
+            {
+              "id": 1129,
+              "name": "VIVIANE MACEDO BARROS"
+            },
+            {
+              "id": 1613,
+              "name": "Venda-Automática"
+            },
+            {
+              "id": 1618,
+              "name": "Venda-Automática-Matrix"
+            },
+            {
+              "id": 1627,
+              "name": "Vitoria Cruz Sousa Silva"
+            },
+            {
+              "id": 1132,
+              "name": "WANDERLYM MENDES MOURA"
+            },
+            {
+              "id": 1133,
+              "name": "WANDERSON DOS SANTOS LOPES"
+            },
+            {
+              "id": 1135,
+              "name": "WENDEL DA SILVA"
+            },
+            {
+              "id": 1558,
+              "name": "Warlem dos Reis  "
+            },
+            {
+              "id": 1555,
+              "name": "Washington Luiz Vieira Santiago Junior"
+            },
+            {
+              "id": 1642,
+              "name": "Weslei Rodrigues Pereira "
+            },
+            {
+              "id": 1616,
+              "name": "Yanna Karollyny Barbosa Coelho de Resende"
+            },
+            {
+              "id": 1220,
+              "name": "Yarlos da Costa Pereira"
+            },
+            {
+              "id": 1588,
+              "name": "matrix"
+            }
+          ],
+          "tipos_servico": [
+            {
+              "ativo": true,
+              "display": "Desconto Buzzlead (Não Gera Bloqueio)",
+              "bloquear": false,
+              "descricao": "Desconto Buzzlead",
+              "id_tipo_servico": 81
+            },
+            {
+              "ativo": true,
+              "display": "Desconto Reconquista (Não Gera Bloqueio)",
+              "bloquear": false,
+              "descricao": "Desconto Reconquista",
+              "id_tipo_servico": 84
+            },
+            {
+              "ativo": true,
+              "display": "EQUIPAMENTO NÃO RECUPERADO",
+              "bloquear": true,
+              "descricao": "EQUIPAMENTO NÃO RECUPERADO",
+              "id_tipo_servico": 22
+            },
+            {
+              "ativo": true,
+              "display": "Locação de Bloco IP /24",
+              "bloquear": true,
+              "descricao": "Locação de Bloco IP /24",
+              "id_tipo_servico": 24
+            },
+            {
+              "ativo": true,
+              "display": "Multa Contratual",
+              "bloquear": true,
+              "descricao": "Multa Contratual",
+              "id_tipo_servico": 21
+            },
+            {
+              "ativo": true,
+              "display": "Ordem de Serviço",
+              "bloquear": true,
+              "descricao": "Ordem de Serviço",
+              "id_tipo_servico": 6
+            },
+            {
+              "ativo": true,
+              "display": "PARCERIA ENERGIA (Não Gera Bloqueio)",
+              "bloquear": false,
+              "descricao": "PARCERIA ENERGIA",
+              "id_tipo_servico": 96
+            },
+            {
+              "ativo": true,
+              "display": "PARCERIAS (Não Gera Bloqueio)",
+              "bloquear": false,
+              "descricao": "PARCERIAS",
+              "id_tipo_servico": 23
+            },
+            {
+              "ativo": true,
+              "display": "Renegociação",
+              "bloquear": true,
+              "descricao": "Renegociação",
+              "id_tipo_servico": 9
+            },
+            {
+              "ativo": true,
+              "display": "Renegociação Mês Seguinte",
+              "bloquear": true,
+              "descricao": "Renegociação Mês Seguinte",
+              "id_tipo_servico": 98
+            },
+            {
+              "ativo": true,
+              "display": "Serviço de Comunicação e Multimídia",
+              "bloquear": true,
+              "descricao": "Serviço de Comunicação e Multimídia",
+              "id_tipo_servico": 4
+            },
+            {
+              "ativo": true,
+              "display": "Serviço de Valor Adicionado",
+              "bloquear": true,
+              "descricao": "Serviço de Valor Adicionado",
+              "id_tipo_servico": 5
+            },
+            {
+              "ativo": true,
+              "display": "Taxa de Boleto",
+              "bloquear": true,
+              "descricao": "Taxa de Boleto",
+              "id_tipo_servico": 8
+            },
+            {
+              "ativo": true,
+              "display": "Taxa de Instalação",
+              "bloquear": true,
+              "descricao": "Taxa de Instalação",
+              "id_tipo_servico": 7
+            }
+          ],
+          "grupos_cliente": [
+            {
+              "ativo": true,
+              "descricao": "Boleto Digital",
+              "id_grupo_cliente": 63
+            },
+            {
+              "ativo": true,
+              "descricao": "Carnê Impresso",
+              "id_grupo_cliente": 62
+            },
+            {
+              "ativo": true,
+              "descricao": "Carteira Diamante",
+              "id_grupo_cliente": 125
+            },
+            {
+              "ativo": true,
+              "descricao": "Carteira Ouro",
+              "id_grupo_cliente": 127
+            },
+            {
+              "ativo": true,
+              "descricao": "Carteira Platina",
+              "id_grupo_cliente": 126
+            },
+            {
+              "ativo": true,
+              "descricao": "Carteira Prata",
+              "id_grupo_cliente": 128
+            },
+            {
+              "ativo": true,
+              "descricao": "teste",
+              "id_grupo_cliente": 136
+            },
+            {
+              "ativo": false,
+              "descricao": "(*) Antivirus\n",
+              "id_grupo_cliente": 26
+            },
+            {
+              "ativo": false,
+              "descricao": "(*) Bittrainers + 2 Planos",
+              "id_grupo_cliente": 23
+            },
+            {
+              "ativo": false,
+              "descricao": "(*) Deezer + 2 Planos",
+              "id_grupo_cliente": 25
+            },
+            {
+              "ativo": false,
+              "descricao": "(*) M+ Vantagens +2 Planos",
+              "id_grupo_cliente": 20
+            },
+            {
+              "ativo": false,
+              "descricao": "(+) Antivirus +2 Planos",
+              "id_grupo_cliente": 27
+            },
+            {
+              "ativo": false,
+              "descricao": "(+) Cardapio",
+              "id_grupo_cliente": 28
+            },
+            {
+              "ativo": false,
+              "descricao": "(+) Uol ",
+              "id_grupo_cliente": 30
+            },
+            {
+              "ativo": false,
+              "descricao": "(+) Wifi Duo",
+              "id_grupo_cliente": 31
+            },
+            {
+              "ativo": false,
+              "descricao": "*Pacote|M+ Vantagens",
+              "id_grupo_cliente": 35
+            },
+            {
+              "ativo": false,
+              "descricao": "14321510",
+              "id_grupo_cliente": 109
+            },
+            {
+              "ativo": false,
+              "descricao": "33101418",
+              "id_grupo_cliente": 110
+            },
+            {
+              "ativo": false,
+              "descricao": "Bittrainers",
+              "id_grupo_cliente": 22
+            },
+            {
+              "ativo": false,
+              "descricao": "Cardapio + 2 Planos",
+              "id_grupo_cliente": 29
+            },
+            {
+              "ativo": false,
+              "descricao": "Carnê E-Mail",
+              "id_grupo_cliente": 96
+            },
+            {
+              "ativo": false,
+              "descricao": "Contrato Corporativo - Link Dedicado",
+              "id_grupo_cliente": 37
+            },
+            {
+              "ativo": false,
+              "descricao": "Cortesia Colaborador - Isento",
+              "id_grupo_cliente": 46
+            },
+            {
+              "ativo": false,
+              "descricao": "Deezer",
+              "id_grupo_cliente": 24
+            },
+            {
+              "ativo": false,
+              "descricao": "Empresarial",
+              "id_grupo_cliente": 18
+            },
+            {
+              "ativo": false,
+              "descricao": "Orgão Público",
+              "id_grupo_cliente": 36
+            },
+            {
+              "ativo": false,
+              "descricao": "Pacote M+ Vantagens",
+              "id_grupo_cliente": 19
+            },
+            {
+              "ativo": false,
+              "descricao": "Pacote M+ Vantagens EXTRA",
+              "id_grupo_cliente": 21
+            },
+            {
+              "ativo": false,
+              "descricao": "Parceria ITTV",
+              "id_grupo_cliente": 43
+            },
+            {
+              "ativo": false,
+              "descricao": "Prefeitura",
+              "id_grupo_cliente": 117
+            },
+            {
+              "ativo": false,
+              "descricao": "Rede Neutra",
+              "id_grupo_cliente": 49
+            },
+            {
+              "ativo": false,
+              "descricao": "Varejo",
+              "id_grupo_cliente": 17
+            },
+            {
+              "ativo": false,
+              "descricao": "Varejo Colaborador - Desconto\t",
+              "id_grupo_cliente": 45
+            },
+            {
+              "ativo": false,
+              "descricao": "Varejo Parentesco\t",
+              "id_grupo_cliente": 44
+            },
+            {
+              "ativo": false,
+              "descricao": "Watch | HBO MAX",
+              "id_grupo_cliente": 40
+            },
+            {
+              "ativo": false,
+              "descricao": "Watch | Noggin + Paramount",
+              "id_grupo_cliente": 38
+            },
+            {
+              "ativo": false,
+              "descricao": "Watch | Uol",
+              "id_grupo_cliente": 39
+            },
+            {
+              "ativo": false,
+              "descricao": "Wifi Basic",
+              "id_grupo_cliente": 34
+            },
+            {
+              "ativo": false,
+              "descricao": "Wifi Duo Gratis\n",
+              "id_grupo_cliente": 32
+            },
+            {
+              "ativo": false,
+              "descricao": "Wifi Premium",
+              "id_grupo_cliente": 33
+            }
+          ],
+          "servico_status": [
+            {
+              "prefixo": "agendado_para_instalacao",
+              "descricao": "Agendado para Instalação",
+              "id_servico_status": 3
+            },
+            {
+              "prefixo": "aguardando_assinatura_contrato",
+              "descricao": "Aguardando Assinatura de Contrato",
+              "id_servico_status": 4
+            },
+            {
+              "prefixo": "aguardando_configuracao",
+              "descricao": "Aguardando Configuração",
+              "id_servico_status": 5
+            },
+            {
+              "prefixo": "aguardando_instalacao",
+              "descricao": "Aguardando Instalação",
+              "id_servico_status": 6
+            },
+            {
+              "prefixo": "aguardando_liberacao_ti",
+              "descricao": "Aguardando Liberação de TI",
+              "id_servico_status": 7
+            },
+            {
+              "prefixo": "aguardando_migracao",
+              "descricao": "Aguardando Migração",
+              "id_servico_status": 8
+            },
+            {
+              "prefixo": "aguardando_reativacao",
+              "descricao": "Aguardando Reativação (Habilitar)",
+              "id_servico_status": 28
+            },
+            {
+              "prefixo": "cancelado",
+              "descricao": "Cancelado",
+              "id_servico_status": 9
+            },
+            {
+              "prefixo": "inativo",
+              "descricao": "Inativo",
+              "id_servico_status": 10
+            },
+            {
+              "prefixo": "servico_habilitado",
+              "descricao": "Serviço Habilitado",
+              "id_servico_status": 11
+            },
+            {
+              "prefixo": "suspenso_parcialmente",
+              "descricao": "Suspenso Parcialmente",
+              "id_servico_status": 12
+            },
+            {
+              "prefixo": "suspenso_pedido_cliente",
+              "descricao": "Suspenso a Pedido do Cliente",
+              "id_servico_status": 13
+            },
+            {
+              "prefixo": "suspenso_debito",
+              "descricao": "Suspenso por Débito",
+              "id_servico_status": 14
+            },
+            {
+              "prefixo": "franquia_excedida",
+              "descricao": "Utilização de Franquia Excedida",
+              "id_servico_status": 15
+            }
+          ],
+          "origens_cliente": [],
+          "origens_contato": [
+            {
+              "descricao": "Matrix",
+              "id_origem_contato": 88
+            },
+            {
+              "descricao": "Native",
+              "id_origem_contato": 16
+            }
+          ],
+          "motivos_contratacao": [],
+          "servicos_tecnologia": [
+            {
+              "descricao": "FIBRA",
+              "id_servico_tecnologia": 18
+            },
+            {
+              "descricao": "PARCERIA ENERGIA",
+              "id_servico_tecnologia": 96
+            },
+            {
+              "descricao": "REDE -  ORA",
+              "id_servico_tecnologia": 83
+            },
+            {
+              "descricao": "REDE - DIRECT",
+              "id_servico_tecnologia": 84
+            },
+            {
+              "descricao": "REDE - G3 TELECOM",
+              "id_servico_tecnologia": 85
+            },
+            {
+              "descricao": "REDE NEUTRA",
+              "id_servico_tecnologia": 82
+            },
+            {
+              "descricao": "TELEFONIA",
+              "id_servico_tecnologia": 19
+            },
+            {
+              "descricao": "TV",
+              "id_servico_tecnologia": 22
+            },
+            {
+              "descricao": "Tecnologia Padrão",
+              "id_servico_tecnologia": 4
+            }
+          ]
+        }
+      },
+      "data_criacao": "2026-04-26 23:45:09.649304+00:00",
+      "data_atualizacao": "2026-04-26 23:45:09.649304+00:00"
+    }
+  },
+  {
+    "model": "integracoes.integracaoapi",
+    "pk": 11,
+    "fields": {
+      "tenant": 9,
+      "api_token": "",
+      "nome": "SGP Gigamax (teste local)",
+      "tipo": "sgp",
+      "base_url": "https://gigamax.sgp.net.br",
+      "client_id": "aurora",
+      "client_secret": "",
+      "username": "",
+      "password": "",
+      "grant_type": "token_app",
+      "access_token": "db69bdfd-6581-44c4-abf2-5b237cc92526",
+      "token_expira_em": null,
+      "api_key": "",
+      "ativa": true,
+      "configuracoes_extras": {
+        "cache": {
+          "pops": [
+            {
+              "id": 135,
+              "pop": "Alta Vista - Elesbão Veloso-PI"
+            },
+            {
+              "id": 24,
+              "pop": "Aroazes-PI"
+            },
+            {
+              "id": 22,
+              "pop": "Barriga - Tanque do Piauí-PI"
+            },
+            {
+              "id": 16,
+              "pop": "Buriti do Castelo - São Felix do Piauí-PI"
+            },
+            {
+              "id": 9,
+              "pop": "Capim Pubo - Elesbão Veloso-PI"
+            },
+            {
+              "id": 1,
+              "pop": "Elesbão Veloso-PI"
+            },
+            {
+              "id": 13,
+              "pop": "Francinópolis-PI"
+            },
+            {
+              "id": 14,
+              "pop": "Jardina - Elesbão Veloso-PI"
+            },
+            {
+              "id": 17,
+              "pop": "Malhada Vermelha - Francinópolis-PI"
+            },
+            {
+              "id": 15,
+              "pop": "Mocambo - Elesbão Veloso-PI"
+            },
+            {
+              "id": 4,
+              "pop": "Mosquiada - Elesbão Veloso-PI"
+            },
+            {
+              "id": 23,
+              "pop": "Santa Cruz dos Milagres-PI"
+            },
+            {
+              "id": 100141,
+              "pop": "Santana - União-PI"
+            },
+            {
+              "id": 134,
+              "pop": "São Felix do Piauí-PI"
+            },
+            {
+              "id": 20,
+              "pop": "Tabuleiro Grande - Elesbão Veloso-PI"
+            },
+            {
+              "id": 21,
+              "pop": "Tabuleta - Valença do Piauí-PI"
+            },
+            {
+              "id": 19,
+              "pop": "Tanque do Piauí-PI"
+            },
+            {
+              "id": 136,
+              "pop": "Timon-MA"
+            },
+            {
+              "id": 10,
+              "pop": "Varzea Alegre - Elesbão Veloso-PI"
+            },
+            {
+              "id": 8,
+              "pop": "Várzea Grande-PI"
+            }
+          ],
+          "portadores": [
+            {
+              "id": 5,
+              "descricao": "Banco Bradesco",
+              "codigo_banco": "237 - Banco Bradesco"
+            },
+            {
+              "id": 1,
+              "descricao": "Cobrança local",
+              "codigo_banco": "999 - Cobrança Sistema LOCAL"
+            },
+            {
+              "id": 4,
+              "descricao": "Efí by Gerencianet PJ",
+              "codigo_banco": "364 - GerenciaNet"
+            },
+            {
+              "id": 7,
+              "descricao": "Cora API",
+              "codigo_banco": "998 - Conta Digital Cora"
+            },
+            {
+              "id": 6,
+              "descricao": "Banco do Brasil",
+              "codigo_banco": "001 - Banco do Brasil"
+            },
+            {
+              "id": 110,
+              "descricao": "Sicoob",
+              "codigo_banco": "756 - Sicoob"
+            },
+            {
+              "id": 100124,
+              "descricao": "CONTA ATRATIVA TELECOM",
+              "codigo_banco": "G07 - Asaas"
+            },
+            {
+              "id": 100123,
+              "descricao": "ASAAS UNIAO - Conta 3058051-8",
+              "codigo_banco": "G07 - Asaas"
+            }
+          ],
+          "vendedores": [
+            {
+              "id": 2,
+              "cpf": "01385477342",
+              "nome": "Cícero Portela",
+              "email": ""
+            },
+            {
+              "id": 4,
+              "cpf": "00519594371",
+              "nome": "Daniel Rodrigues de Sousa",
+              "email": "daniel_alfatec@hotmail.com"
+            },
+            {
+              "id": 6,
+              "cpf": "05208169355",
+              "nome": "Fátima Hellen",
+              "email": ""
+            },
+            {
+              "id": 1,
+              "cpf": "60460921320",
+              "nome": "Jessyca Cavalcante",
+              "email": ""
+            },
+            {
+              "id": 3,
+              "cpf": "07920773342",
+              "nome": "Marcos Luziel",
+              "email": ""
+            }
+          ]
+        },
+        "pop_id_padrao": 1,
+        "plano_id_padrao": 8,
+        "planos_permitidos": [
+          8
+        ],
+        "portador_id_padrao": 1,
+        "vendedor_id_padrao": 1,
+        "dia_vencimento_padrao": 5,
+        "forma_cobranca_id_padrao": 6,
+        "precadastro_ativar_padrao": 0,
+        "dias_vencimento_permitidos": [
+          5
+        ],
+        "formas_cobranca_permitidas": [
+          6
+        ]
+      },
+      "data_criacao": "2026-04-24 01:06:24.652508+00:00",
+      "data_atualizacao": "2026-04-24 01:06:24.652508+00:00"
+    }
+  },
+  {
+    "model": "crm.configuracaocrm",
+    "pk": 5,
+    "fields": {
+      "tenant": 9,
+      "sla_alerta_horas_padrao": 48,
+      "criar_oportunidade_automatico": true,
+      "score_minimo_auto_criacao": 7,
+      "pipeline_padrao": null,
+      "estagio_inicial_padrao": null,
+      "notificar_responsavel_nova_oportunidade": true,
+      "notificar_sla_breach": true,
+      "webhook_n8n_nova_oportunidade": null,
+      "webhook_n8n_mudanca_estagio": null,
+      "webhook_n8n_tarefa_vencida": null,
+      "distribuicao_modo": "desativado",
+      "distribuicao_equipe": null,
+      "distribuicao_ultimo_vendedor_id": null,
+      "preview_regras_max": 500,
+      "data_atualizacao": "2026-04-24 17:20:15.153129+00:00"
+    }
+  },
+  {
+    "model": "crm.opcaovencimentocrm",
+    "pk": 2,
+    "fields": {
+      "tenant": 9,
+      "dia": 5,
+      "descricao": "",
+      "id_externo": "1",
+      "dados_erp": {
+        "id_sgp": 1,
+        "origem_erp": "sgp"
+      },
+      "ativo": true,
+      "ordem": 5
+    }
+  },
+  {
+    "model": "crm.opcaovencimentocrm",
+    "pk": 3,
+    "fields": {
+      "tenant": 9,
+      "dia": 10,
+      "descricao": "",
+      "id_externo": "2",
+      "dados_erp": {
+        "id_sgp": 2,
+        "origem_erp": "sgp"
+      },
+      "ativo": true,
+      "ordem": 10
+    }
+  },
+  {
+    "model": "crm.opcaovencimentocrm",
+    "pk": 4,
+    "fields": {
+      "tenant": 9,
+      "dia": 15,
+      "descricao": "",
+      "id_externo": "3",
+      "dados_erp": {
+        "id_sgp": 3,
+        "origem_erp": "sgp"
+      },
+      "ativo": true,
+      "ordem": 15
+    }
+  },
+  {
+    "model": "crm.opcaovencimentocrm",
+    "pk": 5,
+    "fields": {
+      "tenant": 9,
+      "dia": 20,
+      "descricao": "",
+      "id_externo": "4",
+      "dados_erp": {
+        "id_sgp": 4,
+        "origem_erp": "sgp"
+      },
+      "ativo": true,
+      "ordem": 20
+    }
+  },
+  {
+    "model": "crm.opcaovencimentocrm",
+    "pk": 6,
+    "fields": {
+      "tenant": 9,
+      "dia": 25,
+      "descricao": "",
+      "id_externo": "5",
+      "dados_erp": {
+        "id_sgp": 5,
+        "origem_erp": "sgp"
+      },
+      "ativo": true,
+      "ordem": 25
+    }
+  },
+  {
+    "model": "crm.opcaovencimentocrm",
+    "pk": 7,
+    "fields": {
+      "tenant": 9,
+      "dia": 30,
+      "descricao": "",
+      "id_externo": "8",
+      "dados_erp": {
+        "id_sgp": 8,
+        "origem_erp": "sgp"
+      },
+      "ativo": true,
+      "ordem": 30
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 4,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - FIBRA 1 GIGA + TV ONLINE",
+      "descricao": "",
+      "codigo": "4",
+      "categoria": "plano",
+      "preco": "119.90",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "4",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.364211+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.369388+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 5,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - FIBRA 1 GIGA + TV ONLINE + CAMERA WIFI",
+      "descricao": "",
+      "codigo": "100265",
+      "categoria": "plano",
+      "preco": "129.90",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "100265",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.374489+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.372894+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 6,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - FIBRA 1 GIGA + TV ONLINE + CAMERA WIFI - UNIÃO",
+      "descricao": "",
+      "codigo": "100256",
+      "categoria": "plano",
+      "preco": "139.90",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "100256",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.378049+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.374683+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 7,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - FIBRA 1 GIGA + TV ONLINE + IP FIXO",
+      "descricao": "",
+      "codigo": "18",
+      "categoria": "plano",
+      "preco": "199.90",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "18",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.381332+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.377638+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 8,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - FIBRA 320 MB",
+      "descricao": "",
+      "codigo": "8",
+      "categoria": "plano",
+      "preco": "69.90",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "8",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.383848+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.379383+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 9,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - FIBRA 420 MB",
+      "descricao": "",
+      "codigo": "215",
+      "categoria": "plano",
+      "preco": "79.90",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "215",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.388211+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.382345+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 10,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - FIBRA 500 MB + TV ONLINE",
+      "descricao": "",
+      "codigo": "3",
+      "categoria": "plano",
+      "preco": "89.90",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "3",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.392297+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.384853+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 11,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - FIBRA 600 MB + TV ONLINE",
+      "descricao": "",
+      "codigo": "16",
+      "categoria": "plano",
+      "preco": "99.90",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "16",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.396337+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.387397+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 12,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - FIBRA 800 MB + TV ONLINE",
+      "descricao": "",
+      "codigo": "30",
+      "categoria": "plano",
+      "preco": "109.90",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "30",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.399368+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.390402+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 13,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - FIBRA 900 MB + TV ONLINE",
+      "descricao": "",
+      "codigo": "6",
+      "categoria": "plano",
+      "preco": "149.90",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "6",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.402873+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.392065+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 14,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - FIBRA 950 MB + TV ONLINE",
+      "descricao": "",
+      "codigo": "37",
+      "categoria": "plano",
+      "preco": "189.90",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "37",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.405574+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.395044+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 17,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - LINK DEDICADO 2 GIGA",
+      "descricao": "",
+      "codigo": "25",
+      "categoria": "plano",
+      "preco": "4305.00",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "25",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.412288+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.402835+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 15,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - LINK DEDICADO 200 MB",
+      "descricao": "",
+      "codigo": "44",
+      "categoria": "plano",
+      "preco": "130.00",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "44",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.408094+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.397166+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 16,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - LINK DEDICADO 200 MB + IP FIXO",
+      "descricao": "",
+      "codigo": "40",
+      "categoria": "plano",
+      "preco": "96.90",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "40",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.410290+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.399394+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 18,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - LINK DEDICADO 420 MB",
+      "descricao": "",
+      "codigo": "52",
+      "categoria": "plano",
+      "preco": "160.00",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "52",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.414094+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.404824+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 19,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - LINK DEDICADO 500 MB",
+      "descricao": "",
+      "codigo": "208",
+      "categoria": "plano",
+      "preco": "170.00",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "208",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.417156+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.406918+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 20,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - LINK DEDICADO 600 MB",
+      "descricao": "",
+      "codigo": "212",
+      "categoria": "plano",
+      "preco": "180.00",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "212",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.419750+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.408994+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 21,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - LINK DEDICADO 800 MB",
+      "descricao": "",
+      "codigo": "41",
+      "categoria": "plano",
+      "preco": "735.05",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "41",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.422272+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.411718+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 23,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - PLANO CORPORATIVO 400 MB",
+      "descricao": "",
+      "codigo": "223",
+      "categoria": "plano",
+      "preco": "290.00",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "223",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.429255+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.416245+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 24,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - PLANO CORPORATIVO 600 MB",
+      "descricao": "",
+      "codigo": "45",
+      "categoria": "plano",
+      "preco": "300.00",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "45",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.432794+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.417748+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 25,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - PLANO CORPORATIVO 700 MB",
+      "descricao": "",
+      "codigo": "100266",
+      "categoria": "plano",
+      "preco": "350.00",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "100266",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.435590+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.420276+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 26,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - PLANO CORPORATIVO 800 MB",
+      "descricao": "",
+      "codigo": "51",
+      "categoria": "plano",
+      "preco": "400.00",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "51",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.438022+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.423340+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 27,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - PLANO SETOR PUBLICO 400 MB",
+      "descricao": "",
+      "codigo": "10",
+      "categoria": "plano",
+      "preco": "250.00",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "10",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.440028+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.426362+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 28,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - PLANO SETOR PUBLICO 500 MB",
+      "descricao": "",
+      "codigo": "213",
+      "categoria": "plano",
+      "preco": "237.75",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "213",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.441046+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.429034+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 29,
+    "fields": {
+      "tenant": 9,
+      "nome": "Fibra - PLANO SETOR PUBLICO 600 MB",
+      "descricao": "",
+      "codigo": "43",
+      "categoria": "plano",
+      "preco": "275.00",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "43",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.443053+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.431490+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 30,
+    "fields": {
+      "tenant": 9,
+      "nome": "Rádio - RURAL PLANO 100 MB",
+      "descricao": "",
+      "codigo": "29",
+      "categoria": "plano",
+      "preco": "120.00",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "29",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.446582+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.433481+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 31,
+    "fields": {
+      "tenant": 9,
+      "nome": "Rádio - RURAL PLANO 200 MB",
+      "descricao": "",
+      "codigo": "28",
+      "categoria": "plano",
+      "preco": "150.00",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "28",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.449617+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.436520+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 32,
+    "fields": {
+      "tenant": 9,
+      "nome": "Rádio - RURAL PLANO 300 MB",
+      "descricao": "",
+      "codigo": "22",
+      "categoria": "plano",
+      "preco": "190.00",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "22",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "internet",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.451774+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.438531+00:00"
+    }
+  },
+  {
+    "model": "crm.produtoservico",
+    "pk": 22,
+    "fields": {
+      "tenant": 9,
+      "nome": "TV - PLANO CDNTV",
+      "descricao": "",
+      "codigo": "1",
+      "categoria": "plano",
+      "preco": "0.00",
+      "recorrencia": "mensal",
+      "ativo": true,
+      "ordem": 0,
+      "destaque": "",
+      "id_externo": "1",
+      "dados_erp": {
+        "gateway": {
+          "id": "",
+          "descricao": "",
+          "gateway_id": ""
+        },
+        "tipo_sgp": "tv",
+        "origem_erp": "sgp",
+        "observacao_sgp": ""
+      },
+      "plano_internet": null,
+      "data_criacao": "2026-04-24 01:06:25.426214+00:00",
+      "data_atualizacao": "2026-04-26 15:57:41.414380+00:00"
+    }
+  },
+  {
+    "model": "clube.roletaconfig",
+    "pk": 1,
+    "fields": {
+      "tenant": 9,
+      "custo_giro": 10,
+      "xp_por_giro": 5,
+      "nome_clube": "Clube MegaLink",
+      "limite_giros_por_membro": 0,
+      "periodo_limite": "total"
+    }
+  }
+]

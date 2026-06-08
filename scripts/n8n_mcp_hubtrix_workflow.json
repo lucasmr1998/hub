@@ -1,0 +1,264 @@
+{
+  "name": "Hubtrix MCP — N8N Management",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "f95975fc-9616-4da7-b118-d9040ce5830ab"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 1,
+      "position": [-200, 0],
+      "id": "mcp-trigger-001",
+      "name": "MCP Server Trigger",
+      "webhookId": "f95975fc-9616-4da7-b118-d9040ce5830ab"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Lista todos os workflows do N8N (com id, nome, status ativo/inativo). Use quando perguntarem quais workflows existem, ou pra descobrir o ID de um workflow especifico antes de chamar outras tools.",
+        "method": "GET",
+        "url": "https://automation-n8n.v4riem.easypanel.host/api/v1/workflows",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "sendQuery": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [200, -300],
+      "id": "tool-list-workflows",
+      "name": "list_workflows"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Pega o JSON completo de um workflow especifico do N8N. Use pra inspecionar a estrutura (nodos, conexoes, configuracoes). Requer o parametro workflowId (obtido via list_workflows).",
+        "method": "GET",
+        "url": "https://automation-n8n.v4riem.easypanel.host/api/v1/workflows/{workflowId}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "workflowId",
+              "description": "O ID do workflow a ser lido (ex: PeEAQN6y5ihbzXWF). Obrigatorio.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [200, -150],
+      "id": "tool-get-workflow",
+      "name": "get_workflow"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Cria um workflow novo no N8N. Recebe o JSON completo via parametro workflowJson (deve conter ao menos: name, nodes, connections). Retorna o workflow criado com novo ID. Comeca DESATIVADO — use activate_workflow depois.",
+        "method": "POST",
+        "url": "https://automation-n8n.v4riem.easypanel.host/api/v1/workflows",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{workflowJson}",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "workflowJson",
+              "description": "JSON completo do workflow a ser criado. Deve ser um objeto JSON valido contendo name (string), nodes (array), connections (object). Pode incluir settings, staticData. NAO incluir id (sera gerado pelo n8n).",
+              "type": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [200, 0],
+      "id": "tool-create-workflow",
+      "name": "create_workflow"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Atualiza um workflow existente no N8N. Recebe workflowId (path) e workflowJson (body completo: name, nodes, connections). Substitui completamente. Pra ajustes pontuais, use get_workflow primeiro, modifique o JSON, depois chame esta tool.",
+        "method": "PUT",
+        "url": "https://automation-n8n.v4riem.easypanel.host/api/v1/workflows/{workflowId}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{workflowJson}",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "workflowId",
+              "description": "ID do workflow a ser atualizado",
+              "type": "string"
+            },
+            {
+              "name": "workflowJson",
+              "description": "JSON completo do workflow atualizado. Deve conter name, nodes, connections. NAO incluir o id no body — vai na URL.",
+              "type": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [200, 150],
+      "id": "tool-update-workflow",
+      "name": "update_workflow"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Ativa um workflow no N8N (deixa rodando, escutando triggers). Use depois de criar um workflow novo. Requer workflowId.",
+        "method": "POST",
+        "url": "https://automation-n8n.v4riem.easypanel.host/api/v1/workflows/{workflowId}/activate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "workflowId",
+              "description": "ID do workflow a ativar",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [200, 300],
+      "id": "tool-activate-workflow",
+      "name": "activate_workflow"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Lista as ultimas execucoes de um workflow N8N (pra debug). Mostra status (success/error), inputs, outputs. Use pra investigar problemas em fluxos rodando. Recebe workflowId obrigatorio e limit opcional.",
+        "method": "GET",
+        "url": "https://automation-n8n.v4riem.easypanel.host/api/v1/executions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "workflowId",
+              "value": "{workflowId}"
+            },
+            {
+              "name": "limit",
+              "value": "{limit}"
+            },
+            {
+              "name": "includeData",
+              "value": "true"
+            }
+          ]
+        },
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "workflowId",
+              "description": "ID do workflow cujas execucoes vai listar",
+              "type": "string"
+            },
+            {
+              "name": "limit",
+              "description": "Quantas execucoes retornar (default 10, max 100)",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [200, 450],
+      "id": "tool-get-executions",
+      "name": "get_executions"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "list_workflows": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_workflow": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_workflow": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update_workflow": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "activate_workflow": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_executions": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "",
+  "tags": []
+}
