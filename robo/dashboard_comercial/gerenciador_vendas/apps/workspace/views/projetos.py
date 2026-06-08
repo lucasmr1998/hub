@@ -18,7 +18,7 @@ def _pode_editar(request, projeto):
         return True
     is_owner = (
         projeto.responsavel_id == request.user.id
-        or any(t.responsavel_id == request.user.id for t in projeto.tarefas.all()[:1])
+        or projeto.tarefas.filter(responsavel_id=request.user.id).exists()
     )
     if is_owner and user_tem_funcionalidade(request, 'workspace.editar_proprios'):
         return True

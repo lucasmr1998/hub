@@ -15,12 +15,29 @@ from datetime import datetime
 WORKSPACE   = Path(__file__).parent.parent
 OUTPUT_PATH = WORKSPACE / "robo" / "exports" / "hub.html"
 
+DOCS_ROOT    = WORKSPACE / "robo" / "docs"
 INCLUDE_ROOTS = [
-    (WORKSPACE / "robo" / "docs",                "Documentacao"),
+    (DOCS_ROOT,                                  "Documentacao"),
 ]
 ROOT_FILES   = [WORKSPACE / "CLAUDE.md"]
 IGNORE_FILES = {"TEMPLATE.MD"}
-TAREFAS_PATH = WORKSPACE / "robo" / "docs" / "context" / "tarefas"
+TAREFAS_PATH = DOCS_ROOT / "context" / "tarefas"
+
+# Manifesto de sync com a nuvem (gerado por manage.py importar_docs_drive).
+# rel_path -> {"status": "sincronizado"|"local-apenas", "url": ...}
+SYNC_MAP = {}
+
+
+def load_sync_map():
+    """Le robo/docs/.sync_nuvem.json. Ausente = mapa vazio (badges desligados)."""
+    p = DOCS_ROOT / ".sync_nuvem.json"
+    if not p.exists():
+        return {}
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+        return {e["arquivo"]: e for e in data.get("arquivos", [])}
+    except Exception:
+        return {}
 
 
 # ── Docs ──────────────────────────────────────────────────────────────────────
@@ -40,7 +57,17 @@ def build_doc_node(path):
     if path.is_file():
         if path.suffix.lower() != ".md" or path.name.upper() in IGNORE_FILES:
             return None
-        return {"t": "f", "n": doc_name(path.stem), "fn": path.name, "c": read_md(path)}
+        node = {"t": "f", "n": doc_name(path.stem), "fn": path.name, "c": read_md(path)}
+        try:
+            rel = path.relative_to(DOCS_ROOT).as_posix()
+        except ValueError:
+            rel = None
+        if rel and rel in SYNC_MAP:
+            e = SYNC_MAP[rel]
+            node["sy"] = 1 if e.get("status") == "sincronizado" else 0
+            if e.get("url"):
+                node["u"] = e["url"]
+        return node
     if path.is_dir():
         dirs  = sorted(p for p in path.iterdir() if p.is_dir())
         files = sorted(p for p in path.iterdir() if p.is_file())
@@ -405,7 +432,14 @@ function buildTree(nodes, container, depth) {
     } else if (node.t === 'f') {
       const row = document.createElement('div');
       row.className = 'si' + (depth === 0 ? ' si-root' : '');
-      row.innerHTML = `<i class="si-icon bi bi-file-earmark-text"></i><span>${node.n}</span>`;
+      let badge = '';
+      if (node.sy === 1) {
+        const onclick = node.u ? `event.stopPropagation();window.open('${node.u}','_blank')` : 'event.stopPropagation()';
+        badge = `<i class="bi bi-cloud-check-fill" title="Na nuvem (abrir)" onclick="${onclick}" style="margin-left:auto;color:#34d399;font-size:.72rem;cursor:pointer;"></i>`;
+      } else if (node.sy === 0) {
+        badge = `<i class="bi bi-hdd" title="Apenas local" style="margin-left:auto;color:#64748b;font-size:.66rem;"></i>`;
+      }
+      row.innerHTML = `<i class="si-icon bi bi-file-earmark-text"></i><span>${node.n}</span>${badge}`;
       row.onclick = (e) => { e.stopPropagation(); openDoc(node, row); };
       container.appendChild(row);
       allFiles.push({ node, el: row });
@@ -789,6 +823,8 @@ renderSummary();
 
 
 def generate():
+    global SYNC_MAP
+    SYNC_MAP  = load_sync_map()
     doc_tree = build_doc_tree()
     tasks    = collect_tasks()
     now      = datetime.now().strftime("%d/%m/%Y %H:%M")

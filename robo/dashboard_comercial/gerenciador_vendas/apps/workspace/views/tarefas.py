@@ -39,12 +39,20 @@ def minhas(request):
     prioridade = request.GET.get('prioridade', '').strip()
     busca = request.GET.get('q', '').strip()
 
+    # 'todas' expoe tarefas de todos os usuarios do tenant: exige editar_todos.
+    # Sem permissao, degrada pra 'minhas' (nao quebra bookmark) e avisa.
+    if escopo == 'todas' and not (
+        request.user.is_superuser or user_tem_funcionalidade(request, 'workspace.editar_todos')
+    ):
+        messages.warning(request, 'Voce nao tem permissao pra ver todas as tarefas. Mostrando apenas as suas.')
+        escopo = 'minhas'
+
     if escopo == 'minhas':
         qs = qs.filter(responsavel=request.user)
     elif escopo == 'criadas':
         # Tarefas em projetos onde sou responsavel
         qs = qs.filter(projeto__responsavel=request.user)
-    # escopo == 'todas': sem filtro adicional (precisa editar_todos pra fazer sentido)
+    # escopo == 'todas': sem filtro adicional (ja validado acima)
 
     if status:
         qs = qs.filter(status=status)

@@ -80,5 +80,5 @@ prod/
 # ── Dumps e configs locais ────────────────────────────────
 *.sql
 .claude/settings.local.json
-workspace/
 dump_*.sql
+web_driver_conversao_lead/dom_capturado/

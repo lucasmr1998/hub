@@ -17,6 +17,7 @@ Regras (modulo → doc esperado):
     apps/cs/                     → robo/docs/PRODUTO/modulos/cs/
     apps/integracoes/            → robo/docs/PRODUTO/integracoes/
     apps/assistente/             → robo/docs/PRODUTO/modulos/assistente-crm/
+    apps/workspace/              → robo/docs/PRODUTO/modulos/workspace/
 
 Exit code:
     0 - tudo ok ou aviso apenas
@@ -38,6 +39,7 @@ REGRAS = [
     ('apps/cs/', ['robo/docs/PRODUTO/modulos/cs/']),
     ('apps/integracoes/', ['robo/docs/PRODUTO/integracoes/']),
     ('apps/assistente/', ['robo/docs/PRODUTO/modulos/assistente-crm/']),
+    ('apps/workspace/', ['robo/docs/PRODUTO/modulos/workspace/']),
 ]
 
 

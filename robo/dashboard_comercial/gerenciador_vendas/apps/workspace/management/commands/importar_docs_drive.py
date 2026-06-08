@@ -1,23 +1,50 @@
 """
-Importa todos os MD de robo/docs/ pro Workspace, organizados como Drive de empresa.
+Importa todos os docs de robo/docs/ pro Workspace, organizados como Drive de empresa.
+
+Suporta .md (conteudo no banco), .pdf/.pptx (arquivo no media volume) e .json/.sql
+(conteudo no banco como bloco de codigo).
 
 Estrutura nova: por time, nao mirror do filesystem. Numeracao na raiz forca ordem
 visual (Executivo no topo, Tarefas/Reunioes/Agentes no rodape).
 
 Filesystem continua fonte da verdade. Re-rodar sincroniza (idempotente via slug).
+Ao final gera um manifesto de sync (robo/docs/_SYNC_NUVEM.md + .sync_nuvem.json)
+mapeando cada arquivo local -> doc na nuvem + link, ou marcando como "local-apenas".
 
 Uso:
     python manage.py importar_docs_drive [--tenant 'Aurora HQ'] [--clear] [--dry-run]
+        [--apenas-md | --apenas-binarios] [--base-url https://app.hubtrix.com.br]
+        [--no-manifest]
 """
+import json
 import re
 from pathlib import Path
 
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.utils import timezone
 from django.utils.text import slugify
 
 from apps.sistema.models import Tenant
 from apps.workspace.models import Documento, PastaDocumento
+
+
+# Extensoes suportadas e como cada uma vira Documento.
+# formato 'markdown' = conteudo no banco; 'pdf'/'link' = bytes no Documento.arquivo.
+EXT_MARKDOWN = '.md'
+EXT_CONFIG = {
+    '.md':   {'formato': 'markdown', 'modo': 'md'},
+    '.pdf':  {'formato': 'pdf',      'modo': 'arquivo'},
+    '.pptx': {'formato': 'link',     'modo': 'arquivo'},  # sem viewer: download via template
+    '.json': {'formato': 'markdown', 'modo': 'codigo', 'lang': 'json'},
+    '.sql':  {'formato': 'markdown', 'modo': 'codigo', 'lang': 'sql'},
+}
+EXTENSOES = set(EXT_CONFIG)
+
+# Arquivos de manifesto gerados por este command (nunca importar a si mesmos).
+MANIFESTO_JSON = '.sync_nuvem.json'
+MANIFESTO_MD = '_SYNC_NUVEM.md'
 
 
 # ============================================================================
@@ -163,6 +190,17 @@ class Command(BaseCommand):
         parser.add_argument('--dry-run', action='store_true')
         parser.add_argument('--clear', action='store_true')
         parser.add_argument('--root', help='Default: robo/docs (auto-resolve)')
+        parser.add_argument('--apenas-md', action='store_true',
+            help='So importa .md (conteudo no banco, dispensa media volume)')
+        parser.add_argument('--apenas-binarios', action='store_true',
+            help='So importa .pdf/.pptx/.json/.sql (precisa do media volume)')
+        parser.add_argument('--base-url', default='https://app.hubtrix.com.br',
+            help='Base URL pros links do manifesto de sync')
+        parser.add_argument('--no-manifest', action='store_true',
+            help='Nao gerar o manifesto de sync ao final')
+        parser.add_argument('--manifesto-apenas', action='store_true',
+            help='Nao importa nada: so consulta o banco (read-only) e gera o manifesto. '
+                 'Use apontando pro banco de prod pra ver o que ja esta la.')
 
     def handle(self, *args, **opts):
         # Resolver root
@@ -181,11 +219,27 @@ class Command(BaseCommand):
 
         dry = opts.get('dry_run')
         clear = opts.get('clear')
+        apenas_md = opts.get('apenas_md')
+        apenas_bin = opts.get('apenas_binarios')
+        base_url = (opts.get('base_url') or '').rstrip('/')
+        if apenas_md and apenas_bin:
+            raise CommandError('Use --apenas-md OU --apenas-binarios, nao os dois.')
 
         self.stdout.write(self.style.NOTICE(f'Raiz: {root}'))
         self.stdout.write(self.style.NOTICE(f'Tenant: {tenant.nome}'))
+        if apenas_md:
+            self.stdout.write(self.style.NOTICE('(apenas .md)'))
+        if apenas_bin:
+            self.stdout.write(self.style.NOTICE('(apenas binarios: .pdf/.pptx/.json/.sql)'))
         if dry:
             self.stdout.write(self.style.WARNING('(dry-run — nao grava)'))
+
+        # Modo so-manifesto: nao importa nada, so le o banco e escreve o manifesto.
+        # Seguro apontar pro banco de prod (read-only no DB).
+        if opts.get('manifesto_apenas'):
+            self.stdout.write(self.style.NOTICE('(so-manifesto — nao importa, le o banco)'))
+            self._gerar_manifesto(root, tenant, base_url)
+            return
 
         with transaction.atomic():
             if clear and not dry:
@@ -219,7 +273,21 @@ class Command(BaseCommand):
             ignorados = 0
             stats_por_raiz = {}
 
-            for f in sorted(root.rglob('*.md')):
+            arquivos = sorted(
+                p for p in root.rglob('*')
+                if p.is_file() and p.suffix.lower() in EXTENSOES
+                and p.name not in (MANIFESTO_JSON, MANIFESTO_MD)
+            )
+
+            for f in arquivos:
+                ext = f.suffix.lower()
+                eh_md = ext == EXT_MARKDOWN
+                # Respeita filtros --apenas-md / --apenas-binarios
+                if eh_md and apenas_bin:
+                    continue
+                if not eh_md and apenas_md:
+                    continue
+
                 rel = f.relative_to(root).as_posix()
                 resultado = self._rotear(rel)
                 if not resultado:
@@ -228,34 +296,22 @@ class Command(BaseCommand):
                     continue
 
                 dest_pasta_path, categoria = resultado
-
-                # Garante hierarquia de pastas no Drive ate dest_pasta_path
                 pasta_obj = self._garantir_pasta(tenant, dest_pasta_path, pastas_cache, dry)
 
-                # Cria documento
-                conteudo = f.read_text(encoding='utf-8', errors='replace')
-                titulo = self._extrair_titulo(conteudo, f.name)
-                resumo = self._extrair_resumo(conteudo)
                 slug_doc = slugify(rel.replace('/', '-'))[:200]
                 if not slug_doc:
                     ignorados += 1
                     continue
 
-                if dry:
+                if eh_md:
+                    created = self._processar_md(f, rel, tenant, pasta_obj, categoria, slug_doc, dry)
+                else:
+                    created = self._processar_binario(f, ext, tenant, pasta_obj, categoria, slug_doc, dry)
+
+                if created:
                     criados += 1
                 else:
-                    _, created = Documento.all_tenants.update_or_create(
-                        tenant=tenant, slug=slug_doc,
-                        defaults={
-                            'titulo': titulo, 'categoria': categoria,
-                            'conteudo': conteudo, 'resumo': resumo,
-                            'pasta': pasta_obj, 'visivel_agentes': True, 'ordem': 0,
-                        },
-                    )
-                    if created:
-                        criados += 1
-                    else:
-                        atualizados += 1
+                    atualizados += 1
 
                 # Stats: agrupar por pasta raiz
                 raiz_nome = dest_pasta_path.split('/')[0]
@@ -273,9 +329,11 @@ class Command(BaseCommand):
 
             if dry:
                 transaction.set_rollback(True)
-                self.stdout.write(self.style.WARNING('\nDry-run: nada gravado.'))
+                self.stdout.write(self.style.WARNING('\nDry-run: nada gravado (manifesto nao gerado).'))
             else:
                 self.stdout.write(self.style.SUCCESS('\nDrive importado.'))
+                if not opts.get('no_manifest'):
+                    self._gerar_manifesto(root, tenant, base_url)
 
     # ── Helpers ────────────────────────────────────────────────────────────
 
@@ -328,6 +386,164 @@ class Command(BaseCommand):
             cache[path_acumulado] = pasta
             pai = pasta
         return pai
+
+    # ── Processadores por tipo ───────────────────────────────────────────────
+
+    def _processar_md(self, f, rel, tenant, pasta_obj, categoria, slug_doc, dry):
+        conteudo = f.read_text(encoding='utf-8', errors='replace')
+        titulo = self._extrair_titulo(conteudo, f.name)
+        resumo = self._extrair_resumo(conteudo)
+        if dry:
+            return True
+        _, created = Documento.all_tenants.update_or_create(
+            tenant=tenant, slug=slug_doc,
+            defaults={
+                'titulo': titulo, 'categoria': categoria, 'formato': 'markdown',
+                'conteudo': conteudo, 'resumo': resumo,
+                'pasta': pasta_obj, 'visivel_agentes': True, 'ordem': 0,
+            },
+        )
+        return created
+
+    def _processar_binario(self, f, ext, tenant, pasta_obj, categoria, slug_doc, dry):
+        cfg = EXT_CONFIG[ext]
+        titulo = self._titulo_de_arquivo(f.name)
+        resumo = f'Arquivo {ext.lstrip(".")} importado de {f.name}'
+
+        if cfg['modo'] == 'codigo':
+            # json/sql: conteudo legivel como bloco de codigo no banco
+            raw = f.read_text(encoding='utf-8', errors='replace')
+            if ext == '.json':
+                raw = self._json_pretty(raw)
+            conteudo = f"```{cfg['lang']}\n{raw}\n```"
+            if dry:
+                return True
+            _, created = Documento.all_tenants.update_or_create(
+                tenant=tenant, slug=slug_doc,
+                defaults={
+                    'titulo': titulo, 'categoria': categoria, 'formato': cfg['formato'],
+                    'conteudo': conteudo, 'resumo': resumo,
+                    'pasta': pasta_obj, 'visivel_agentes': True, 'ordem': 0,
+                },
+            )
+            return created
+
+        # modo 'arquivo' (pdf/pptx): bytes vao pro Documento.arquivo (media volume)
+        if dry:
+            return True
+        doc, created = Documento.all_tenants.update_or_create(
+            tenant=tenant, slug=slug_doc,
+            defaults={
+                'titulo': titulo, 'categoria': categoria, 'formato': cfg['formato'],
+                'resumo': resumo, 'pasta': pasta_obj,
+                'visivel_agentes': True, 'ordem': 0,
+            },
+        )
+        # Idempotencia de bytes: so (re)grava se ausente ou nome/tamanho diferem
+        if self._precisa_regravar_arquivo(doc, f):
+            doc.arquivo.save(f.name, ContentFile(f.read_bytes()), save=True)
+        return created
+
+    def _precisa_regravar_arquivo(self, doc, f):
+        # Compara por TAMANHO, nao por nome: o storage trunca/randomiza o nome
+        # quando o path passa de 100 chars, entao nome nunca bate e re-gravaria
+        # a cada run (duplicando no media). Tamanho igual = mesmo arquivo.
+        if not doc.arquivo:
+            return True
+        try:
+            return doc.arquivo.size != f.stat().st_size
+        except (OSError, ValueError):
+            return True
+
+    def _titulo_de_arquivo(self, filename):
+        base = Path(filename).stem
+        return (base.replace('-', ' ').replace('_', ' ').strip()[:200]) or filename
+
+    def _json_pretty(self, raw):
+        try:
+            return json.dumps(json.loads(raw), ensure_ascii=False, indent=2)
+        except (ValueError, TypeError):
+            return raw
+
+    # ── Manifesto de sync ─────────────────────────────────────────────────────
+
+    def _gerar_manifesto(self, root, tenant, base_url):
+        """Caminha os arquivos locais, mapeia pro doc na nuvem (slug deterministico)
+        e escreve manifesto (json + md). Reflete o estado real da nuvem, mesmo
+        apos runs parciais (--apenas-md / --apenas-binarios)."""
+        agora = timezone.now().isoformat(timespec='seconds')
+        entradas = []
+        arquivos = sorted(
+            p for p in root.rglob('*')
+            if p.is_file() and p.suffix.lower() in EXTENSOES
+            and p.name not in (MANIFESTO_JSON, MANIFESTO_MD)
+        )
+        for f in arquivos:
+            rel = f.relative_to(root).as_posix()
+            resultado = self._rotear(rel)
+            pasta_path = resultado[0] if resultado else ''
+            slug_doc = slugify(rel.replace('/', '-'))[:200]
+            doc = (
+                Documento.all_tenants.filter(tenant=tenant, slug=slug_doc).first()
+                if slug_doc else None
+            )
+            if doc:
+                entradas.append({
+                    'arquivo': rel, 'status': 'sincronizado',
+                    'documento_id': doc.pk, 'documento_slug': doc.slug,
+                    'categoria': doc.categoria, 'formato': doc.formato,
+                    'pasta': pasta_path,
+                    'url': f'{base_url}/workspace/documentos/{doc.pk}/',
+                })
+            else:
+                entradas.append({
+                    'arquivo': rel, 'status': 'local-apenas',
+                    'documento_id': None, 'documento_slug': slug_doc,
+                    'categoria': '', 'formato': '', 'pasta': pasta_path, 'url': '',
+                })
+
+        sincronizados = sum(1 for e in entradas if e['status'] == 'sincronizado')
+        local_apenas = len(entradas) - sincronizados
+        payload = {
+            'gerado_em': agora, 'tenant': tenant.nome, 'base_url': base_url,
+            'total': len(entradas), 'sincronizados': sincronizados,
+            'local_apenas': local_apenas, 'arquivos': entradas,
+        }
+        (root / MANIFESTO_JSON).write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8',
+        )
+        (root / MANIFESTO_MD).write_text(self._manifesto_md(payload), encoding='utf-8')
+        self.stdout.write(self.style.SUCCESS(
+            f'Manifesto: {sincronizados} na nuvem, {local_apenas} local-apenas '
+            f'-> {MANIFESTO_MD}'
+        ))
+
+    def _manifesto_md(self, payload):
+        linhas = [
+            '# Sincronizacao com a nuvem (Workspace)',
+            '',
+            f"Gerado em {payload['gerado_em']} para o tenant **{payload['tenant']}**.",
+            '',
+            f"- Total de arquivos: **{payload['total']}**",
+            f"- Sincronizados na nuvem: **{payload['sincronizados']}**",
+            f"- Apenas local (ainda nao enviados): **{payload['local_apenas']}**",
+            '',
+            '> Fonte viva colaborativa: Workspace. A pasta `robo/docs/` segue como fonte versionada.',
+            '> Re-rode `python manage.py importar_docs_drive` para atualizar este manifesto.',
+            '',
+            '| Arquivo | Status | Categoria | Link na nuvem |',
+            '|---------|--------|-----------|---------------|',
+        ]
+        for e in payload['arquivos']:
+            if e['status'] == 'sincronizado':
+                link = f"[abrir]({e['url']})"
+                cat = e['categoria'] or 'outro'
+            else:
+                link = 'sem link'
+                cat = 'sem'
+            linhas.append(f"| `{e['arquivo']}` | {e['status']} | {cat} | {link} |")
+        linhas.append('')
+        return '\n'.join(linhas)
 
     def _extrair_titulo(self, conteudo, fallback_filename):
         body = conteudo

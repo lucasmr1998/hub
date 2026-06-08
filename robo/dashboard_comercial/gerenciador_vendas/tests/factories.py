@@ -471,3 +471,62 @@ class ExecucaoPendenteFactory(factory.django.DjangoModelFactory):
     status = 'pendente'
     contexto_json = factory.LazyFunction(dict)
     tenant = factory.SubFactory(TenantFactory)
+
+
+# ──────────────────────────────────────────────
+# Factories — Workspace
+# ──────────────────────────────────────────────
+
+from apps.workspace.models import (
+    Projeto, Etapa, Tarefa, Documento, PastaDocumento,
+)
+
+
+class ProjetoFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Projeto
+
+    tenant = factory.SubFactory(TenantFactory)
+    nome = factory.Sequence(lambda n: f'Projeto {n}')
+    status = 'em_andamento'
+
+
+class EtapaFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Etapa
+
+    tenant = factory.SubFactory(TenantFactory)
+    projeto = factory.SubFactory(ProjetoFactory)
+    nome = factory.Sequence(lambda n: f'Etapa {n}')
+    ordem = factory.Sequence(lambda n: n)
+
+
+class TarefaFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Tarefa
+
+    tenant = factory.SubFactory(TenantFactory)
+    projeto = factory.SubFactory(ProjetoFactory)
+    titulo = factory.Sequence(lambda n: f'Tarefa {n}')
+    status = 'pendente'
+
+
+class PastaDocumentoFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = PastaDocumento
+
+    tenant = factory.SubFactory(TenantFactory)
+    nome = factory.Sequence(lambda n: f'Pasta {n}')
+    slug = factory.Sequence(lambda n: f'pasta-{n}')
+
+
+class DocumentoFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Documento
+
+    tenant = factory.SubFactory(TenantFactory)
+    titulo = factory.Sequence(lambda n: f'Documento {n}')
+    slug = factory.Sequence(lambda n: f'documento-{n}')
+    categoria = 'outro'
+    formato = 'markdown'
+    conteudo = '# Conteudo de teste'

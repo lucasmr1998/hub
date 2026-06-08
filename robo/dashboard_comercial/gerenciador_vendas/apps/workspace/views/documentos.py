@@ -240,8 +240,9 @@ def pasta_criar(request):
 @login_required
 def pasta_editar(request, pk):
     pasta = get_object_or_404(PastaDocumento, pk=pk)
-    if not user_tem_funcionalidade(request, 'workspace.editar_proprios'):
-        return HttpResponseForbidden()
+    # Pasta nao tem dono (criado_por); editar exige editar_todos, igual a excluir.
+    if not user_tem_funcionalidade(request, 'workspace.editar_todos'):
+        return HttpResponseForbidden('Editar pasta exige permissao de editar todos.')
     tenant = getattr(request, 'tenant', None)
     if request.method == 'POST':
         form = PastaForm(request.POST, instance=pasta, tenant=tenant)

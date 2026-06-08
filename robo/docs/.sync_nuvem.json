@@ -1,0 +1,3580 @@
+{
+  "gerado_em": "2026-05-31T21:20:01+00:00",
+  "tenant": "Aurora HQ",
+  "base_url": "http://localhost:8001",
+  "total": 357,
+  "sincronizados": 356,
+  "local_apenas": 1,
+  "arquivos": [
+    {
+      "arquivo": "AGENTES/comercial/cs.md",
+      "status": "sincronizado",
+      "documento_id": 666,
+      "documento_slug": "agentes-comercial-csmd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Comercial",
+      "url": "http://localhost:8001/workspace/documentos/666/"
+    },
+    {
+      "arquivo": "AGENTES/comercial/head_vendas.md",
+      "status": "sincronizado",
+      "documento_id": 667,
+      "documento_slug": "agentes-comercial-head_vendasmd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Comercial",
+      "url": "http://localhost:8001/workspace/documentos/667/"
+    },
+    {
+      "arquivo": "AGENTES/comercial/parcerias.md",
+      "status": "sincronizado",
+      "documento_id": 668,
+      "documento_slug": "agentes-comercial-parceriasmd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Comercial",
+      "url": "http://localhost:8001/workspace/documentos/668/"
+    },
+    {
+      "arquivo": "AGENTES/executivo/ceo.md",
+      "status": "sincronizado",
+      "documento_id": 669,
+      "documento_slug": "agentes-executivo-ceomd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Executivo",
+      "url": "http://localhost:8001/workspace/documentos/669/"
+    },
+    {
+      "arquivo": "AGENTES/executivo/cfo.md",
+      "status": "sincronizado",
+      "documento_id": 670,
+      "documento_slug": "agentes-executivo-cfomd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Executivo",
+      "url": "http://localhost:8001/workspace/documentos/670/"
+    },
+    {
+      "arquivo": "AGENTES/executivo/cmo.md",
+      "status": "sincronizado",
+      "documento_id": 671,
+      "documento_slug": "agentes-executivo-cmomd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Executivo",
+      "url": "http://localhost:8001/workspace/documentos/671/"
+    },
+    {
+      "arquivo": "AGENTES/executivo/cpo.md",
+      "status": "sincronizado",
+      "documento_id": 672,
+      "documento_slug": "agentes-executivo-cpomd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Executivo",
+      "url": "http://localhost:8001/workspace/documentos/672/"
+    },
+    {
+      "arquivo": "AGENTES/executivo/cto.md",
+      "status": "sincronizado",
+      "documento_id": 673,
+      "documento_slug": "agentes-executivo-ctomd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Executivo",
+      "url": "http://localhost:8001/workspace/documentos/673/"
+    },
+    {
+      "arquivo": "AGENTES/marketing/conteudo.md",
+      "status": "sincronizado",
+      "documento_id": 674,
+      "documento_slug": "agentes-marketing-conteudomd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Marketing",
+      "url": "http://localhost:8001/workspace/documentos/674/"
+    },
+    {
+      "arquivo": "AGENTES/marketing/copy.md",
+      "status": "sincronizado",
+      "documento_id": 675,
+      "documento_slug": "agentes-marketing-copymd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Marketing",
+      "url": "http://localhost:8001/workspace/documentos/675/"
+    },
+    {
+      "arquivo": "AGENTES/marketing/crm_automacao.md",
+      "status": "sincronizado",
+      "documento_id": 676,
+      "documento_slug": "agentes-marketing-crm_automacaomd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Marketing",
+      "url": "http://localhost:8001/workspace/documentos/676/"
+    },
+    {
+      "arquivo": "AGENTES/marketing/growth.md",
+      "status": "sincronizado",
+      "documento_id": 677,
+      "documento_slug": "agentes-marketing-growthmd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Marketing",
+      "url": "http://localhost:8001/workspace/documentos/677/"
+    },
+    {
+      "arquivo": "AGENTES/marketing/performance.md",
+      "status": "sincronizado",
+      "documento_id": 678,
+      "documento_slug": "agentes-marketing-performancemd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Marketing",
+      "url": "http://localhost:8001/workspace/documentos/678/"
+    },
+    {
+      "arquivo": "AGENTES/operacoes/legal.md",
+      "status": "sincronizado",
+      "documento_id": 679,
+      "documento_slug": "agentes-operacoes-legalmd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Operacoes",
+      "url": "http://localhost:8001/workspace/documentos/679/"
+    },
+    {
+      "arquivo": "AGENTES/operacoes/revops.md",
+      "status": "sincronizado",
+      "documento_id": 680,
+      "documento_slug": "agentes-operacoes-revopsmd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Operacoes",
+      "url": "http://localhost:8001/workspace/documentos/680/"
+    },
+    {
+      "arquivo": "AGENTES/produto/pm.md",
+      "status": "sincronizado",
+      "documento_id": 681,
+      "documento_slug": "agentes-produto-pmmd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Produto",
+      "url": "http://localhost:8001/workspace/documentos/681/"
+    },
+    {
+      "arquivo": "AGENTES/produto/pmm.md",
+      "status": "sincronizado",
+      "documento_id": 682,
+      "documento_slug": "agentes-produto-pmmmd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Produto",
+      "url": "http://localhost:8001/workspace/documentos/682/"
+    },
+    {
+      "arquivo": "AGENTES/produto/ux.md",
+      "status": "sincronizado",
+      "documento_id": 683,
+      "documento_slug": "agentes-produto-uxmd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Produto",
+      "url": "http://localhost:8001/workspace/documentos/683/"
+    },
+    {
+      "arquivo": "AGENTES/README.md",
+      "status": "sincronizado",
+      "documento_id": 684,
+      "documento_slug": "agentes-readmemd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA",
+      "url": "http://localhost:8001/workspace/documentos/684/"
+    },
+    {
+      "arquivo": "AGENTES/tech/data.md",
+      "status": "sincronizado",
+      "documento_id": 685,
+      "documento_slug": "agentes-tech-datamd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Tech",
+      "url": "http://localhost:8001/workspace/documentos/685/"
+    },
+    {
+      "arquivo": "AGENTES/tech/devops.md",
+      "status": "sincronizado",
+      "documento_id": 686,
+      "documento_slug": "agentes-tech-devopsmd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Tech",
+      "url": "http://localhost:8001/workspace/documentos/686/"
+    },
+    {
+      "arquivo": "AGENTES/tech/qa.md",
+      "status": "sincronizado",
+      "documento_id": 687,
+      "documento_slug": "agentes-tech-qamd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Tech",
+      "url": "http://localhost:8001/workspace/documentos/687/"
+    },
+    {
+      "arquivo": "AGENTES/tech/seguranca.md",
+      "status": "sincronizado",
+      "documento_id": 688,
+      "documento_slug": "agentes-tech-segurancamd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Tech",
+      "url": "http://localhost:8001/workspace/documentos/688/"
+    },
+    {
+      "arquivo": "AGENTES/tech/tech_lead.md",
+      "status": "sincronizado",
+      "documento_id": 689,
+      "documento_slug": "agentes-tech-tech_leadmd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "11. Agentes IA/Tech",
+      "url": "http://localhost:8001/workspace/documentos/689/"
+    },
+    {
+      "arquivo": "BRAND/07-TOM_DE_VOZ.md",
+      "status": "sincronizado",
+      "documento_id": 690,
+      "documento_slug": "brand-07-tom_de_vozmd",
+      "categoria": "regras",
+      "formato": "markdown",
+      "pasta": "03. Marketing/Brand",
+      "url": "http://localhost:8001/workspace/documentos/690/"
+    },
+    {
+      "arquivo": "BRAND/08-BRANDBOOK.md",
+      "status": "sincronizado",
+      "documento_id": 691,
+      "documento_slug": "brand-08-brandbookmd",
+      "categoria": "regras",
+      "formato": "markdown",
+      "pasta": "03. Marketing/Brand",
+      "url": "http://localhost:8001/workspace/documentos/691/"
+    },
+    {
+      "arquivo": "BRAND/09-GUIA_APLICACAO.md",
+      "status": "sincronizado",
+      "documento_id": 692,
+      "documento_slug": "brand-09-guia_aplicacaomd",
+      "categoria": "regras",
+      "formato": "markdown",
+      "pasta": "03. Marketing/Brand",
+      "url": "http://localhost:8001/workspace/documentos/692/"
+    },
+    {
+      "arquivo": "BRAND/10-SESSAO_PAPER_26-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 693,
+      "documento_slug": "brand-10-sessao_paper_26-04-2026md",
+      "categoria": "regras",
+      "formato": "markdown",
+      "pasta": "03. Marketing/Brand",
+      "url": "http://localhost:8001/workspace/documentos/693/"
+    },
+    {
+      "arquivo": "BRAND/11-HOME_SPEC_26-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 694,
+      "documento_slug": "brand-11-home_spec_26-04-2026md",
+      "categoria": "regras",
+      "formato": "markdown",
+      "pasta": "03. Marketing/Brand",
+      "url": "http://localhost:8001/workspace/documentos/694/"
+    },
+    {
+      "arquivo": "context/clientes/fatepi/implementacoes/fluxo_atendimento_v3.md",
+      "status": "sincronizado",
+      "documento_id": 695,
+      "documento_slug": "context-clientes-fatepi-implementacoes-fluxo_atendimento_v3md",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Fatepi/Faespi/Implementacoes",
+      "url": "http://localhost:8001/workspace/documentos/695/"
+    },
+    {
+      "arquivo": "context/clientes/fatepi/implementacoes/migrate_zumbis_v3_23-04-2026.sql",
+      "status": "sincronizado",
+      "documento_id": 1014,
+      "documento_slug": "context-clientes-fatepi-implementacoes-migrate_zumbis_v3_23-04-2026sql",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Fatepi/Faespi/Implementacoes",
+      "url": "http://localhost:8001/workspace/documentos/1014/"
+    },
+    {
+      "arquivo": "context/clientes/fatepi/implementacoes/prompts_corrigidos_23-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 696,
+      "documento_slug": "context-clientes-fatepi-implementacoes-prompts_corrigidos_23-04-2026md",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Fatepi/Faespi/Implementacoes",
+      "url": "http://localhost:8001/workspace/documentos/696/"
+    },
+    {
+      "arquivo": "context/clientes/gigamax/integracoes.md",
+      "status": "sincronizado",
+      "documento_id": 697,
+      "documento_slug": "context-clientes-gigamax-integracoesmd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Gigamax",
+      "url": "http://localhost:8001/workspace/documentos/697/"
+    },
+    {
+      "arquivo": "context/clientes/gigamax/README.md",
+      "status": "sincronizado",
+      "documento_id": 698,
+      "documento_slug": "context-clientes-gigamax-readmemd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Gigamax",
+      "url": "http://localhost:8001/workspace/documentos/698/"
+    },
+    {
+      "arquivo": "context/clientes/nuvyon/implementacoes/[Megalink] Matrix _ Atendimento Fixo _ 1.1 (2).json",
+      "status": "sincronizado",
+      "documento_id": 1015,
+      "documento_slug": "context-clientes-nuvyon-implementacoes-megalink-matrix-_-atendimento-fixo-_-11-2json",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Nuvyon/Implementacoes",
+      "url": "http://localhost:8001/workspace/documentos/1015/"
+    },
+    {
+      "arquivo": "context/clientes/nuvyon/implementacoes/checklist_fluxo_atendimento.md",
+      "status": "sincronizado",
+      "documento_id": 699,
+      "documento_slug": "context-clientes-nuvyon-implementacoes-checklist_fluxo_atendimentomd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Nuvyon/Implementacoes",
+      "url": "http://localhost:8001/workspace/documentos/699/"
+    },
+    {
+      "arquivo": "context/clientes/nuvyon/implementacoes/checklist_onboarding.md",
+      "status": "sincronizado",
+      "documento_id": 700,
+      "documento_slug": "context-clientes-nuvyon-implementacoes-checklist_onboardingmd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Nuvyon/Implementacoes",
+      "url": "http://localhost:8001/workspace/documentos/700/"
+    },
+    {
+      "arquivo": "context/clientes/nuvyon/implementacoes/flow_103_hubtrix_v1.json",
+      "status": "sincronizado",
+      "documento_id": 1016,
+      "documento_slug": "context-clientes-nuvyon-implementacoes-flow_103_hubtrix_v1json",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Nuvyon/Implementacoes",
+      "url": "http://localhost:8001/workspace/documentos/1016/"
+    },
+    {
+      "arquivo": "context/clientes/nuvyon/implementacoes/flow_103_hubtrix_v2.json",
+      "status": "sincronizado",
+      "documento_id": 1017,
+      "documento_slug": "context-clientes-nuvyon-implementacoes-flow_103_hubtrix_v2json",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Nuvyon/Implementacoes",
+      "url": "http://localhost:8001/workspace/documentos/1017/"
+    },
+    {
+      "arquivo": "context/clientes/nuvyon/implementacoes/flow_103_hubtrix_v3.json",
+      "status": "sincronizado",
+      "documento_id": 1018,
+      "documento_slug": "context-clientes-nuvyon-implementacoes-flow_103_hubtrix_v3json",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Nuvyon/Implementacoes",
+      "url": "http://localhost:8001/workspace/documentos/1018/"
+    },
+    {
+      "arquivo": "context/clientes/nuvyon/implementacoes/flow_103_hubtrix_v4.json",
+      "status": "sincronizado",
+      "documento_id": 1019,
+      "documento_slug": "context-clientes-nuvyon-implementacoes-flow_103_hubtrix_v4json",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Nuvyon/Implementacoes",
+      "url": "http://localhost:8001/workspace/documentos/1019/"
+    },
+    {
+      "arquivo": "context/clientes/nuvyon/implementacoes/flow_103_hubtrix_v5.json",
+      "status": "sincronizado",
+      "documento_id": 1020,
+      "documento_slug": "context-clientes-nuvyon-implementacoes-flow_103_hubtrix_v5json",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Nuvyon/Implementacoes",
+      "url": "http://localhost:8001/workspace/documentos/1020/"
+    },
+    {
+      "arquivo": "context/clientes/nuvyon/implementacoes/flow_103_hubtrix_v6.json",
+      "status": "sincronizado",
+      "documento_id": 1021,
+      "documento_slug": "context-clientes-nuvyon-implementacoes-flow_103_hubtrix_v6json",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Nuvyon/Implementacoes",
+      "url": "http://localhost:8001/workspace/documentos/1021/"
+    },
+    {
+      "arquivo": "context/clientes/nuvyon/implementacoes/flow_103_hubtrix_v7.json",
+      "status": "sincronizado",
+      "documento_id": 1022,
+      "documento_slug": "context-clientes-nuvyon-implementacoes-flow_103_hubtrix_v7json",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Nuvyon/Implementacoes",
+      "url": "http://localhost:8001/workspace/documentos/1022/"
+    },
+    {
+      "arquivo": "context/clientes/nuvyon/implementacoes/flow_103_hubtrix_v8.json",
+      "status": "local-apenas",
+      "documento_id": null,
+      "documento_slug": "context-clientes-nuvyon-implementacoes-flow_103_hubtrix_v8json",
+      "categoria": "",
+      "formato": "",
+      "pasta": "08. Clientes/Nuvyon/Implementacoes",
+      "url": ""
+    },
+    {
+      "arquivo": "context/clientes/nuvyon/implementacoes/flow_228_new_flow_comercial_-_v7.json",
+      "status": "sincronizado",
+      "documento_id": 1023,
+      "documento_slug": "context-clientes-nuvyon-implementacoes-flow_228_new_flow_comercial_-_v7json",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Nuvyon/Implementacoes",
+      "url": "http://localhost:8001/workspace/documentos/1023/"
+    },
+    {
+      "arquivo": "context/clientes/nuvyon/implementacoes/flow_nuvyon_atendimento_v1.json",
+      "status": "sincronizado",
+      "documento_id": 1024,
+      "documento_slug": "context-clientes-nuvyon-implementacoes-flow_nuvyon_atendimento_v1json",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Nuvyon/Implementacoes",
+      "url": "http://localhost:8001/workspace/documentos/1024/"
+    },
+    {
+      "arquivo": "context/clientes/nuvyon/implementacoes/fluxo_matrix_hubtrix.md",
+      "status": "sincronizado",
+      "documento_id": 701,
+      "documento_slug": "context-clientes-nuvyon-implementacoes-fluxo_matrix_hubtrixmd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Nuvyon/Implementacoes",
+      "url": "http://localhost:8001/workspace/documentos/701/"
+    },
+    {
+      "arquivo": "context/clientes/nuvyon/implementacoes/n8n_nuvyon_atendimento_fixo.json",
+      "status": "sincronizado",
+      "documento_id": 1025,
+      "documento_slug": "context-clientes-nuvyon-implementacoes-n8n_nuvyon_atendimento_fixojson",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Nuvyon/Implementacoes",
+      "url": "http://localhost:8001/workspace/documentos/1025/"
+    },
+    {
+      "arquivo": "context/clientes/nuvyon/README.md",
+      "status": "sincronizado",
+      "documento_id": 702,
+      "documento_slug": "context-clientes-nuvyon-readmemd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "08. Clientes/Nuvyon",
+      "url": "http://localhost:8001/workspace/documentos/702/"
+    },
+    {
+      "arquivo": "context/diagnostico_nodos_fluxo_17-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 703,
+      "documento_slug": "context-diagnostico_nodos_fluxo_17-04-2026md",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "01. Executivo/Decisoes",
+      "url": "http://localhost:8001/workspace/documentos/703/"
+    },
+    {
+      "arquivo": "context/palestra_ia_empresarios.md",
+      "status": "sincronizado",
+      "documento_id": 704,
+      "documento_slug": "context-palestra_ia_empresariosmd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "01. Executivo/Decisoes",
+      "url": "http://localhost:8001/workspace/documentos/704/"
+    },
+    {
+      "arquivo": "context/plano_consolidacao_17-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 705,
+      "documento_slug": "context-plano_consolidacao_17-04-2026md",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "01. Executivo/Decisoes",
+      "url": "http://localhost:8001/workspace/documentos/705/"
+    },
+    {
+      "arquivo": "context/reunioes/admin_aurora_planos_29-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 706,
+      "documento_slug": "context-reunioes-admin_aurora_planos_29-03-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/706/"
+    },
+    {
+      "arquivo": "context/reunioes/analise_fluxo_n8n_consultoria_06-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 707,
+      "documento_slug": "context-reunioes-analise_fluxo_n8n_consultoria_06-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/707/"
+    },
+    {
+      "arquivo": "context/reunioes/aurora_primeiro_cliente_31-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 708,
+      "documento_slug": "context-reunioes-aurora_primeiro_cliente_31-03-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/708/"
+    },
+    {
+      "arquivo": "context/reunioes/brand_design_system_27-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 709,
+      "documento_slug": "context-reunioes-brand_design_system_27-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/709/"
+    },
+    {
+      "arquivo": "context/reunioes/componentes_ds_novos_20-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 710,
+      "documento_slug": "context-reunioes-componentes_ds_novos_20-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/710/"
+    },
+    {
+      "arquivo": "context/reunioes/gtm_esteira_comercial_27-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 711,
+      "documento_slug": "context-reunioes-gtm_esteira_comercial_27-03-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/711/"
+    },
+    {
+      "arquivo": "context/reunioes/gtm_fundacao_26-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 712,
+      "documento_slug": "context-reunioes-gtm_fundacao_26-03-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/712/"
+    },
+    {
+      "arquivo": "context/reunioes/gtm_precificacao_26-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 713,
+      "documento_slug": "context-reunioes-gtm_precificacao_26-03-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/713/"
+    },
+    {
+      "arquivo": "context/reunioes/gtm_visao_geral_27-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 714,
+      "documento_slug": "context-reunioes-gtm_visao_geral_27-03-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/714/"
+    },
+    {
+      "arquivo": "context/reunioes/inbox_atendimento_suporte_03-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 715,
+      "documento_slug": "context-reunioes-inbox_atendimento_suporte_03-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/715/"
+    },
+    {
+      "arquivo": "context/reunioes/migracao_ds_marketing_20-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 716,
+      "documento_slug": "context-reunioes-migracao_ds_marketing_20-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/716/"
+    },
+    {
+      "arquivo": "context/reunioes/multi_tenancy_29-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 717,
+      "documento_slug": "context-reunioes-multi_tenancy_29-03-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/717/"
+    },
+    {
+      "arquivo": "context/reunioes/paridade_hubsoft_27-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 718,
+      "documento_slug": "context-reunioes-paridade_hubsoft_27-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/718/"
+    },
+    {
+      "arquivo": "context/reunioes/pauta_implementacao_nuvyon_21-05-2026.md",
+      "status": "sincronizado",
+      "documento_id": 1026,
+      "documento_slug": "context-reunioes-pauta_implementacao_nuvyon_21-05-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/1026/"
+    },
+    {
+      "arquivo": "context/reunioes/planejamento_migracao_crm_20-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 719,
+      "documento_slug": "context-reunioes-planejamento_migracao_crm_20-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/719/"
+    },
+    {
+      "arquivo": "context/reunioes/polimento_ui_integracoes_27-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 720,
+      "documento_slug": "context-reunioes-polimento_ui_integracoes_27-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/720/"
+    },
+    {
+      "arquivo": "context/reunioes/refatoracao_apps_29-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 721,
+      "documento_slug": "context-reunioes-refatoracao_apps_29-03-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/721/"
+    },
+    {
+      "arquivo": "context/reunioes/seguranca_criticos_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 722,
+      "documento_slug": "context-reunioes-seguranca_criticos_30-03-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/722/"
+    },
+    {
+      "arquivo": "context/reunioes/sessao_09-10-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 723,
+      "documento_slug": "context-reunioes-sessao_09-10-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/723/"
+    },
+    {
+      "arquivo": "context/reunioes/sessao_10-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 724,
+      "documento_slug": "context-reunioes-sessao_10-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/724/"
+    },
+    {
+      "arquivo": "context/reunioes/sessao_10-04-2026_parte2.md",
+      "status": "sincronizado",
+      "documento_id": 725,
+      "documento_slug": "context-reunioes-sessao_10-04-2026_parte2md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/725/"
+    },
+    {
+      "arquivo": "context/reunioes/sessao_completa_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 726,
+      "documento_slug": "context-reunioes-sessao_completa_30-03-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/726/"
+    },
+    {
+      "arquivo": "context/reunioes/sessao_dev_ajustes_01-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 727,
+      "documento_slug": "context-reunioes-sessao_dev_ajustes_01-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/727/"
+    },
+    {
+      "arquivo": "context/reunioes/sessao_dev_automacoes_03-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 728,
+      "documento_slug": "context-reunioes-sessao_dev_automacoes_03-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/728/"
+    },
+    {
+      "arquivo": "context/reunioes/sessao_dev_completa_06-07-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 729,
+      "documento_slug": "context-reunioes-sessao_dev_completa_06-07-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/729/"
+    },
+    {
+      "arquivo": "context/reunioes/sessao_dev_fatepi_07-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 730,
+      "documento_slug": "context-reunioes-sessao_dev_fatepi_07-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/730/"
+    },
+    {
+      "arquivo": "context/reunioes/sessao_dev_fatepi_parte2_08-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 731,
+      "documento_slug": "context-reunioes-sessao_dev_fatepi_parte2_08-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/731/"
+    },
+    {
+      "arquivo": "context/reunioes/sessao_dev_fluxos_ia_09-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 732,
+      "documento_slug": "context-reunioes-sessao_dev_fluxos_ia_09-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/732/"
+    },
+    {
+      "arquivo": "context/reunioes/sessao_dev_nos_ia_08-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 733,
+      "documento_slug": "context-reunioes-sessao_dev_nos_ia_08-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/733/"
+    },
+    {
+      "arquivo": "context/reunioes/sessao_doc_e_estrategia_testes_23-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 734,
+      "documento_slug": "context-reunioes-sessao_doc_e_estrategia_testes_23-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/734/"
+    },
+    {
+      "arquivo": "context/reunioes/sessao_fatepi_v3_fixes_23-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 735,
+      "documento_slug": "context-reunioes-sessao_fatepi_v3_fixes_23-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/735/"
+    },
+    {
+      "arquivo": "context/reunioes/sessao_intensiva_11-12-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 736,
+      "documento_slug": "context-reunioes-sessao_intensiva_11-12-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/736/"
+    },
+    {
+      "arquivo": "context/reunioes/sessao_intensiva_13-14-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 737,
+      "documento_slug": "context-reunioes-sessao_intensiva_13-14-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/737/"
+    },
+    {
+      "arquivo": "context/reunioes/sessao_paleta_v2_e_proposta_28-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 738,
+      "documento_slug": "context-reunioes-sessao_paleta_v2_e_proposta_28-04-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/738/"
+    },
+    {
+      "arquivo": "context/reunioes/tech_refatoracao_29-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 739,
+      "documento_slug": "context-reunioes-tech_refatoracao_29-03-2026md",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/739/"
+    },
+    {
+      "arquivo": "context/reunioes/TEMPLATE.md",
+      "status": "sincronizado",
+      "documento_id": 740,
+      "documento_slug": "context-reunioes-templatemd",
+      "categoria": "sessao",
+      "formato": "markdown",
+      "pasta": "09. Reunioes",
+      "url": "http://localhost:8001/workspace/documentos/740/"
+    },
+    {
+      "arquivo": "context/tarefas/apis_agentes_ia_07-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 741,
+      "documento_slug": "context-tarefas-apis_agentes_ia_07-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas",
+      "url": "http://localhost:8001/workspace/documentos/741/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/api_health_25-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 742,
+      "documento_slug": "context-tarefas-backlog-api_health_25-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/742/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/assistente_crm_whatsapp_12-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 743,
+      "documento_slug": "context-tarefas-backlog-assistente_crm_whatsapp_12-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/743/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/biblioteca_templates_17-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 744,
+      "documento_slug": "context-tarefas-backlog-biblioteca_templates_17-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/744/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/cs_nps_retencao_26-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 745,
+      "documento_slug": "context-tarefas-backlog-cs_nps_retencao_26-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/745/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/dark_mode_10-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 746,
+      "documento_slug": "context-tarefas-backlog-dark_mode_10-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/746/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/dashboard_views_por_area_26-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 747,
+      "documento_slug": "context-tarefas-backlog-dashboard_views_por_area_26-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/747/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/dashboards_jornada_consumidor_17-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 748,
+      "documento_slug": "context-tarefas-backlog-dashboards_jornada_consumidor_17-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/748/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/discovery_sgp_gigamax_23-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 749,
+      "documento_slug": "context-tarefas-backlog-discovery_sgp_gigamax_23-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/749/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/email_envio_tracking_19-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 751,
+      "documento_slug": "context-tarefas-backlog-email_envio_tracking_19-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/751/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/expansao_canais_inbound_17-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 752,
+      "documento_slug": "context-tarefas-backlog-expansao_canais_inbound_17-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/752/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/grupos_provedores_26-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 753,
+      "documento_slug": "context-tarefas-backlog-grupos_provedores_26-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/753/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/home_personalizada_por_perfil_17-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 754,
+      "documento_slug": "context-tarefas-backlog-home_personalizada_por_perfil_17-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/754/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/inbox_acoes_hubsoft_26-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 755,
+      "documento_slug": "context-tarefas-backlog-inbox_acoes_hubsoft_26-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/755/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/lgpd_privacidade_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 756,
+      "documento_slug": "context-tarefas-backlog-lgpd_privacidade_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/756/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/mapeamento_campos_erp_26-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 757,
+      "documento_slug": "context-tarefas-backlog-mapeamento_campos_erp_26-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/757/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/materiais_vendas_visual_27-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 758,
+      "documento_slug": "context-tarefas-backlog-materiais_vendas_visual_27-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/758/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/migrar_gestao_megaroleta_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 759,
+      "documento_slug": "context-tarefas-backlog-migrar_gestao_megaroleta_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/759/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/modal_criar_lead_24-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 760,
+      "documento_slug": "context-tarefas-backlog-modal_criar_lead_24-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/760/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/notificacoes_cron_jobs_11-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 761,
+      "documento_slug": "context-tarefas-backlog-notificacoes_cron_jobs_11-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/761/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/operacao_interna_hubtrix_17-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 762,
+      "documento_slug": "context-tarefas-backlog-operacao_interna_hubtrix_17-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/762/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/paginacao_tabelas_restantes_24-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 763,
+      "documento_slug": "context-tarefas-backlog-paginacao_tabelas_restantes_24-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/763/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/pos_ativacao_27-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 764,
+      "documento_slug": "context-tarefas-backlog-pos_ativacao_27-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/764/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/processo_suporte_cobranca_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 765,
+      "documento_slug": "context-tarefas-backlog-processo_suporte_cobranca_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/765/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/README.md",
+      "status": "sincronizado",
+      "documento_id": 1027,
+      "documento_slug": "context-tarefas-backlog-readmemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/1027/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/refatorar_assistente_inbox_14-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 766,
+      "documento_slug": "context-tarefas-backlog-refatorar_assistente_inbox_14-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/766/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/resiliencia_integracoes_erp_17-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 767,
+      "documento_slug": "context-tarefas-backlog-resiliencia_integracoes_erp_17-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/767/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/respostas_rapidas_variaveis_10-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 768,
+      "documento_slug": "context-tarefas-backlog-respostas_rapidas_variaveis_10-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/768/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/site_comercial_hubtrix_17-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 769,
+      "documento_slug": "context-tarefas-backlog-site_comercial_hubtrix_17-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/769/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/textos_reguas_jornada_27-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 770,
+      "documento_slug": "context-tarefas-backlog-textos_reguas_jornada_27-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/770/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/timeout_por_no_10-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 771,
+      "documento_slug": "context-tarefas-backlog-timeout_por_no_10-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/771/"
+    },
+    {
+      "arquivo": "context/tarefas/backlog/workspace_implementacao_29-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 772,
+      "documento_slug": "context-tarefas-backlog-workspace_implementacao_29-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Backlog",
+      "url": "http://localhost:8001/workspace/documentos/772/"
+    },
+    {
+      "arquivo": "context/tarefas/campos_customizaveis_leads_06-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 773,
+      "documento_slug": "context-tarefas-campos_customizaveis_leads_06-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas",
+      "url": "http://localhost:8001/workspace/documentos/773/"
+    },
+    {
+      "arquivo": "context/tarefas/email_builder_06-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 774,
+      "documento_slug": "context-tarefas-email_builder_06-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas",
+      "url": "http://localhost:8001/workspace/documentos/774/"
+    },
+    {
+      "arquivo": "context/tarefas/fatepi_system_prompt.md",
+      "status": "sincronizado",
+      "documento_id": 775,
+      "documento_slug": "context-tarefas-fatepi_system_promptmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas",
+      "url": "http://localhost:8001/workspace/documentos/775/"
+    },
+    {
+      "arquivo": "context/tarefas/fatepi_tools_n8n.md",
+      "status": "sincronizado",
+      "documento_id": 776,
+      "documento_slug": "context-tarefas-fatepi_tools_n8nmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas",
+      "url": "http://localhost:8001/workspace/documentos/776/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/admin_aurora_29-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 777,
+      "documento_slug": "context-tarefas-finalizadas-admin_aurora_29-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/777/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/admin_aurora_tenant_check_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 778,
+      "documento_slug": "context-tarefas-finalizadas-admin_aurora_tenant_check_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/778/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/admin_render_value_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 779,
+      "documento_slug": "context-tarefas-finalizadas-admin_render_value_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/779/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/allowed_hosts_producao_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 780,
+      "documento_slug": "context-tarefas-finalizadas-allowed_hosts_producao_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/780/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/api_leads_tags_21-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 781,
+      "documento_slug": "context-tarefas-finalizadas-api_leads_tags_21-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/781/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/api_perm_skip_paths_22-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 782,
+      "documento_slug": "context-tarefas-finalizadas-api_perm_skip_paths_22-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/782/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/api_response_dados_sensiveis_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 783,
+      "documento_slug": "context-tarefas-finalizadas-api_response_dados_sensiveis_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/783/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/api_rest_framework_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 784,
+      "documento_slug": "context-tarefas-finalizadas-api_rest_framework_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/784/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/apps_cs_nps_retencao_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 785,
+      "documento_slug": "context-tarefas-finalizadas-apps_cs_nps_retencao_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/785/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/aurora_suporte_crm_interno_31-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 786,
+      "documento_slug": "context-tarefas-finalizadas-aurora_suporte_crm_interno_31-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/786/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/autenticacao_endpoints_api_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 787,
+      "documento_slug": "context-tarefas-finalizadas-autenticacao_endpoints_api_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/787/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/automacao_pipeline_crm_21-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 788,
+      "documento_slug": "context-tarefas-finalizadas-automacao_pipeline_crm_21-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/788/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/automacao_pipeline_preview_configuravel_21-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 789,
+      "documento_slug": "context-tarefas-finalizadas-automacao_pipeline_preview_configuravel_21-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/789/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/automacao_pipeline_registry_extensivel_21-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 790,
+      "documento_slug": "context-tarefas-finalizadas-automacao_pipeline_registry_extensivel_21-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/790/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/automacoes_refatoracao_completa_03-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 791,
+      "documento_slug": "context-tarefas-finalizadas-automacoes_refatoracao_completa_03-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/791/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/catalogo_nodos_atendimento_23-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 792,
+      "documento_slug": "context-tarefas-finalizadas-catalogo_nodos_atendimento_23-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/792/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/ci_gate_engine_py_23-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 793,
+      "documento_slug": "context-tarefas-finalizadas-ci_gate_engine_py_23-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/793/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/cicd_pipeline_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 794,
+      "documento_slug": "context-tarefas-finalizadas-cicd_pipeline_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/794/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/clube_auth_tenant_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 795,
+      "documento_slug": "context-tarefas-finalizadas-clube_auth_tenant_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/795/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/cobertura_testes_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 796,
+      "documento_slug": "context-tarefas-finalizadas-cobertura_testes_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/796/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/contrato_termos_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 797,
+      "documento_slug": "context-tarefas-finalizadas-contrato_termos_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/797/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/conversao_trial_27-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 798,
+      "documento_slug": "context-tarefas-finalizadas-conversao_trial_27-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/798/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/credencial_hubsoft_hardcoded_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 799,
+      "documento_slug": "context-tarefas-finalizadas-credencial_hubsoft_hardcoded_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/799/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/criar_logo_26-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 800,
+      "documento_slug": "context-tarefas-finalizadas-criar_logo_26-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/800/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/criptografia_credenciais_db_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 801,
+      "documento_slug": "context-tarefas-finalizadas-criptografia_credenciais_db_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/801/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/crm_dropdown_pipeline_03-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 802,
+      "documento_slug": "context-tarefas-finalizadas-crm_dropdown_pipeline_03-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/802/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/crm_parceiro_27-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 803,
+      "documento_slug": "context-tarefas-finalizadas-crm_parceiro_27-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/803/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/crm_seletor_pipeline_03-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 804,
+      "documento_slug": "context-tarefas-finalizadas-crm_seletor_pipeline_03-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/804/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/crm_troca_pipeline_ajax_03-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 805,
+      "documento_slug": "context-tarefas-finalizadas-crm_troca_pipeline_ajax_03-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/805/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/csp_unsafe_inline_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 806,
+      "documento_slug": "context-tarefas-finalizadas-csp_unsafe_inline_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/806/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/csrf_endpoints_seguranca_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 807,
+      "documento_slug": "context-tarefas-finalizadas-csrf_endpoints_seguranca_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/807/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/deploy_multitenancy_29-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 808,
+      "documento_slug": "context-tarefas-finalizadas-deploy_multitenancy_29-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/808/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/docker_containerizacao_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 809,
+      "documento_slug": "context-tarefas-finalizadas-docker_containerizacao_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/809/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/docker_healthcheck_31-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 810,
+      "documento_slug": "context-tarefas-finalizadas-docker_healthcheck_31-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/810/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/dropdown_notificacoes_topbar_24-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 1028,
+      "documento_slug": "context-tarefas-finalizadas-dropdown_notificacoes_topbar_24-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/1028/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/encerrar_zumbis_v3_fatepi_23-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 811,
+      "documento_slug": "context-tarefas-finalizadas-encerrar_zumbis_v3_fatepi_23-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/811/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/exemplo_automacao_c02_23-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 812,
+      "documento_slug": "context-tarefas-finalizadas-exemplo_automacao_c02_23-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/812/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/exemplo_fluxo_ia_fatepi_23-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 813,
+      "documento_slug": "context-tarefas-finalizadas-exemplo_fluxo_ia_fatepi_23-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/813/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/fatepi_v3_deploy_e_validacao_23-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 814,
+      "documento_slug": "context-tarefas-finalizadas-fatepi_v3_deploy_e_validacao_23-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/814/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/fix_prompts_fatepi_v3_23-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 815,
+      "documento_slug": "context-tarefas-finalizadas-fix_prompts_fatepi_v3_23-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/815/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/fix_resolver_campo_contextologado_23-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 816,
+      "documento_slug": "context-tarefas-finalizadas-fix_resolver_campo_contextologado_23-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/816/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/fix_spa_navigation_js_31-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 817,
+      "documento_slug": "context-tarefas-finalizadas-fix_spa_navigation_js_31-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/817/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/fixture_fluxo_real_e2e_23-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 818,
+      "documento_slug": "context-tarefas-finalizadas-fixture_fluxo_real_e2e_23-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/818/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/fluxo_v3_fatepi_fixes_23-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 819,
+      "documento_slug": "context-tarefas-finalizadas-fluxo_v3_fatepi_fixes_23-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/819/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/https_cookies_seguranca_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 820,
+      "documento_slug": "context-tarefas-finalizadas-https_cookies_seguranca_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/820/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/idor_apis_tenant_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 821,
+      "documento_slug": "context-tarefas-finalizadas-idor_apis_tenant_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/821/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/implementacao_aurora_05-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 822,
+      "documento_slug": "context-tarefas-finalizadas-implementacao_aurora_05-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/822/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/implementacao_fatepi_09-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 823,
+      "documento_slug": "context-tarefas-finalizadas-implementacao_fatepi_09-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/823/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/importacao_leads_csv_10-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 824,
+      "documento_slug": "context-tarefas-finalizadas-importacao_leads_csv_10-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/824/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/linting_qualidade_codigo_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 825,
+      "documento_slug": "context-tarefas-finalizadas-linting_qualidade_codigo_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/825/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/logging_pii_filter_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 826,
+      "documento_slug": "context-tarefas-finalizadas-logging_pii_filter_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/826/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/logs_execucao_editor_10-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 827,
+      "documento_slug": "context-tarefas-finalizadas-logs_execucao_editor_10-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/827/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/materiais_vendas_26-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 828,
+      "documento_slug": "context-tarefas-finalizadas-materiais_vendas_26-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/828/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/melhorias_editor_visual.md",
+      "status": "sincronizado",
+      "documento_id": 829,
+      "documento_slug": "context-tarefas-finalizadas-melhorias_editor_visualmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/829/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/mensagens_botao_uazapi_10-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 830,
+      "documento_slug": "context-tarefas-finalizadas-mensagens_botao_uazapi_10-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/830/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/migracao_megaroleta_29-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 831,
+      "documento_slug": "context-tarefas-finalizadas-migracao_megaroleta_29-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/831/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/migracao_models_apps_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 832,
+      "documento_slug": "context-tarefas-finalizadas-migracao_models_apps_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/832/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/modulo_automacoes_01-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 833,
+      "documento_slug": "context-tarefas-finalizadas-modulo_automacoes_01-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/833/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/modulo_inbox_atendimento_03-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 834,
+      "documento_slug": "context-tarefas-finalizadas-modulo_inbox_atendimento_03-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/834/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/modulo_marketing_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 835,
+      "documento_slug": "context-tarefas-finalizadas-modulo_marketing_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/835/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/monitoramento_admin_aurora_31-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 836,
+      "documento_slug": "context-tarefas-finalizadas-monitoramento_admin_aurora_31-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/836/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/monitoramento_logging_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 837,
+      "documento_slug": "context-tarefas-finalizadas-monitoramento_logging_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/837/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/multi_tenancy_29-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 838,
+      "documento_slug": "context-tarefas-finalizadas-multi_tenancy_29-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/838/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/notificacoes_tempo_real_10-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 839,
+      "documento_slug": "context-tarefas-finalizadas-notificacoes_tempo_real_10-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/839/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/padronizar_frontend_cs_29-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 840,
+      "documento_slug": "context-tarefas-finalizadas-padronizar_frontend_cs_29-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/840/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/paridade_integracao_hubsoft_26-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 841,
+      "documento_slug": "context-tarefas-finalizadas-paridade_integracao_hubsoft_26-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/841/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/permissoes_usuario_05-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 842,
+      "documento_slug": "context-tarefas-finalizadas-permissoes_usuario_05-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/842/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/pii_logs_print_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 843,
+      "documento_slug": "context-tarefas-finalizadas-pii_logs_print_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/843/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/produtos_servicos_crm_10-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 844,
+      "documento_slug": "context-tarefas-finalizadas-produtos_servicos_crm_10-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/844/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/rate_limiting_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 845,
+      "documento_slug": "context-tarefas-finalizadas-rate_limiting_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/845/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/recuperacao_pos_trial_27-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 846,
+      "documento_slug": "context-tarefas-finalizadas-recuperacao_pos_trial_27-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/846/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/recuperacao_senha_10-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 847,
+      "documento_slug": "context-tarefas-finalizadas-recuperacao_senha_10-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/847/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/refatoracao_apps_29-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 848,
+      "documento_slug": "context-tarefas-finalizadas-refatoracao_apps_29-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/848/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/refatoracao_vendas_web_29-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 849,
+      "documento_slug": "context-tarefas-finalizadas-refatoracao_vendas_web_29-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/849/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/reguas_automacao_implementar_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 850,
+      "documento_slug": "context-tarefas-finalizadas-reguas_automacao_implementar_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/850/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/renomear_hubtrix_10-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 851,
+      "documento_slug": "context-tarefas-finalizadas-renomear_hubtrix_10-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/851/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/segmentos_mover_marketing_03-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 852,
+      "documento_slug": "context-tarefas-finalizadas-segmentos_mover_marketing_03-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/852/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/segmentos_pagina_regras_03-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 853,
+      "documento_slug": "context-tarefas-finalizadas-segmentos_pagina_regras_03-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/853/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/segmentos_signal_auto_03-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 854,
+      "documento_slug": "context-tarefas-finalizadas-segmentos_signal_auto_03-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/854/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/seguranca_credenciais_29-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 855,
+      "documento_slug": "context-tarefas-finalizadas-seguranca_credenciais_29-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/855/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/signal_pre_delete_nodo_23-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 856,
+      "documento_slug": "context-tarefas-finalizadas-signal_pre_delete_nodo_23-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/856/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/tenant_mixin_crm_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 857,
+      "documento_slug": "context-tarefas-finalizadas-tenant_mixin_crm_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/857/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/testes_isolamento_tenant_29-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 858,
+      "documento_slug": "context-tarefas-finalizadas-testes_isolamento_tenant_29-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/858/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/tool_base_conhecimento_ia_10-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 859,
+      "documento_slug": "context-tarefas-finalizadas-tool_base_conhecimento_ia_10-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/859/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/treinamento_parceiro_26-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 860,
+      "documento_slug": "context-tarefas-finalizadas-treinamento_parceiro_26-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/860/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/unificar_produtos_catalogo_12-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 861,
+      "documento_slug": "context-tarefas-finalizadas-unificar_produtos_catalogo_12-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/861/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/upload_isolamento_tenant_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 862,
+      "documento_slug": "context-tarefas-finalizadas-upload_isolamento_tenant_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/862/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/upload_validacao_tipo_tamanho_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 863,
+      "documento_slug": "context-tarefas-finalizadas-upload_validacao_tipo_tamanho_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/863/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/user_tenant_filter_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 864,
+      "documento_slug": "context-tarefas-finalizadas-user_tenant_filter_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/864/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/validacao_fluxo_10-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 865,
+      "documento_slug": "context-tarefas-finalizadas-validacao_fluxo_10-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/865/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/validacao_oportunidade_fluxo_10-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 866,
+      "documento_slug": "context-tarefas-finalizadas-validacao_oportunidade_fluxo_10-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/866/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/webhook_validacao_token_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 867,
+      "documento_slug": "context-tarefas-finalizadas-webhook_validacao_token_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/867/"
+    },
+    {
+      "arquivo": "context/tarefas/finalizadas/xss_mark_safe_30-03-2026.md",
+      "status": "sincronizado",
+      "documento_id": 868,
+      "documento_slug": "context-tarefas-finalizadas-xss_mark_safe_30-03-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas/Finalizadas",
+      "url": "http://localhost:8001/workspace/documentos/868/"
+    },
+    {
+      "arquivo": "context/tarefas/login_email_07-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 869,
+      "documento_slug": "context-tarefas-login_email_07-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas",
+      "url": "http://localhost:8001/workspace/documentos/869/"
+    },
+    {
+      "arquivo": "context/tarefas/prompt_agente_pedro_fatepi.md",
+      "status": "sincronizado",
+      "documento_id": 870,
+      "documento_slug": "context-tarefas-prompt_agente_pedro_fatepimd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas",
+      "url": "http://localhost:8001/workspace/documentos/870/"
+    },
+    {
+      "arquivo": "context/tarefas/README.md",
+      "status": "sincronizado",
+      "documento_id": 1029,
+      "documento_slug": "context-tarefas-readmemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas",
+      "url": "http://localhost:8001/workspace/documentos/1029/"
+    },
+    {
+      "arquivo": "context/tarefas/TEMPLATE.md",
+      "status": "sincronizado",
+      "documento_id": 871,
+      "documento_slug": "context-tarefas-templatemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "10. Tarefas",
+      "url": "http://localhost:8001/workspace/documentos/871/"
+    },
+    {
+      "arquivo": "GTM/00-CHECKLIST_GTM.md",
+      "status": "sincronizado",
+      "documento_id": 872,
+      "documento_slug": "gtm-00-checklist_gtmmd",
+      "categoria": "estrategia",
+      "formato": "markdown",
+      "pasta": "01. Executivo/Estrategia",
+      "url": "http://localhost:8001/workspace/documentos/872/"
+    },
+    {
+      "arquivo": "GTM/00-README.md",
+      "status": "sincronizado",
+      "documento_id": 873,
+      "documento_slug": "gtm-00-readmemd",
+      "categoria": "contexto",
+      "formato": "markdown",
+      "pasta": "01. Executivo/Estrategia",
+      "url": "http://localhost:8001/workspace/documentos/873/"
+    },
+    {
+      "arquivo": "GTM/01-PESQUISA_MERCADO.md",
+      "status": "sincronizado",
+      "documento_id": 874,
+      "documento_slug": "gtm-01-pesquisa_mercadomd",
+      "categoria": "estrategia",
+      "formato": "markdown",
+      "pasta": "03. Marketing/Pesquisa de mercado",
+      "url": "http://localhost:8001/workspace/documentos/874/"
+    },
+    {
+      "arquivo": "GTM/02-ICP.md",
+      "status": "sincronizado",
+      "documento_id": 875,
+      "documento_slug": "gtm-02-icpmd",
+      "categoria": "estrategia",
+      "formato": "markdown",
+      "pasta": "03. Marketing/Pesquisa de mercado",
+      "url": "http://localhost:8001/workspace/documentos/875/"
+    },
+    {
+      "arquivo": "GTM/03-CONCORRENTES.md",
+      "status": "sincronizado",
+      "documento_id": 876,
+      "documento_slug": "gtm-03-concorrentesmd",
+      "categoria": "estrategia",
+      "formato": "markdown",
+      "pasta": "03. Marketing/Pesquisa de mercado",
+      "url": "http://localhost:8001/workspace/documentos/876/"
+    },
+    {
+      "arquivo": "GTM/04-PROPOSTA_VALOR.md",
+      "status": "sincronizado",
+      "documento_id": 877,
+      "documento_slug": "gtm-04-proposta_valormd",
+      "categoria": "estrategia",
+      "formato": "markdown",
+      "pasta": "03. Marketing/Posicionamento",
+      "url": "http://localhost:8001/workspace/documentos/877/"
+    },
+    {
+      "arquivo": "GTM/05-POSICIONAMENTO.md",
+      "status": "sincronizado",
+      "documento_id": 878,
+      "documento_slug": "gtm-05-posicionamentomd",
+      "categoria": "estrategia",
+      "formato": "markdown",
+      "pasta": "03. Marketing/Posicionamento",
+      "url": "http://localhost:8001/workspace/documentos/878/"
+    },
+    {
+      "arquivo": "GTM/06-MENSAGENS_CHAVE.md",
+      "status": "sincronizado",
+      "documento_id": 879,
+      "documento_slug": "gtm-06-mensagens_chavemd",
+      "categoria": "estrategia",
+      "formato": "markdown",
+      "pasta": "03. Marketing/Mensagens-chave",
+      "url": "http://localhost:8001/workspace/documentos/879/"
+    },
+    {
+      "arquivo": "GTM/07-CANAIS.md",
+      "status": "sincronizado",
+      "documento_id": 880,
+      "documento_slug": "gtm-07-canaismd",
+      "categoria": "estrategia",
+      "formato": "markdown",
+      "pasta": "03. Marketing/Canais",
+      "url": "http://localhost:8001/workspace/documentos/880/"
+    },
+    {
+      "arquivo": "GTM/08-PRECIFICACAO.md",
+      "status": "sincronizado",
+      "documento_id": 881,
+      "documento_slug": "gtm-08-precificacaomd",
+      "categoria": "estrategia",
+      "formato": "markdown",
+      "pasta": "04. Comercial/Precificacao",
+      "url": "http://localhost:8001/workspace/documentos/881/"
+    },
+    {
+      "arquivo": "GTM/09-ENABLEMENT.md",
+      "status": "sincronizado",
+      "documento_id": 882,
+      "documento_slug": "gtm-09-enablementmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "04. Comercial/Enablement",
+      "url": "http://localhost:8001/workspace/documentos/882/"
+    },
+    {
+      "arquivo": "GTM/10-ROADMAP_GTM.md",
+      "status": "sincronizado",
+      "documento_id": 883,
+      "documento_slug": "gtm-10-roadmap_gtmmd",
+      "categoria": "roadmap",
+      "formato": "markdown",
+      "pasta": "04. Comercial/Enablement",
+      "url": "http://localhost:8001/workspace/documentos/883/"
+    },
+    {
+      "arquivo": "GTM/11-MATERIAIS_LANCAMENTO.md",
+      "status": "sincronizado",
+      "documento_id": 884,
+      "documento_slug": "gtm-11-materiais_lancamentomd",
+      "categoria": "entrega",
+      "formato": "markdown",
+      "pasta": "03. Marketing/Lancamentos",
+      "url": "http://localhost:8001/workspace/documentos/884/"
+    },
+    {
+      "arquivo": "GTM/12-FLUXO_COMERCIAL.md",
+      "status": "sincronizado",
+      "documento_id": 885,
+      "documento_slug": "gtm-12-fluxo_comercialmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "04. Comercial/Fluxo comercial",
+      "url": "http://localhost:8001/workspace/documentos/885/"
+    },
+    {
+      "arquivo": "GTM/13-DIAGNOSTICO.md",
+      "status": "sincronizado",
+      "documento_id": 886,
+      "documento_slug": "gtm-13-diagnosticomd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "04. Comercial/Diagnostico",
+      "url": "http://localhost:8001/workspace/documentos/886/"
+    },
+    {
+      "arquivo": "GTM/cases/case_provedor_regional_30k.md",
+      "status": "sincronizado",
+      "documento_id": 887,
+      "documento_slug": "gtm-cases-case_provedor_regional_30kmd",
+      "categoria": "relatorio",
+      "formato": "markdown",
+      "pasta": "04. Comercial/Cases",
+      "url": "http://localhost:8001/workspace/documentos/887/"
+    },
+    {
+      "arquivo": "GTM/posicionamento/jtbd_01_marketing.md",
+      "status": "sincronizado",
+      "documento_id": 888,
+      "documento_slug": "gtm-posicionamento-jtbd_01_marketingmd",
+      "categoria": "estrategia",
+      "formato": "markdown",
+      "pasta": "03. Marketing/Posicionamento",
+      "url": "http://localhost:8001/workspace/documentos/888/"
+    },
+    {
+      "arquivo": "GTM/posicionamento/jtbd_02_comercial.md",
+      "status": "sincronizado",
+      "documento_id": 889,
+      "documento_slug": "gtm-posicionamento-jtbd_02_comercialmd",
+      "categoria": "estrategia",
+      "formato": "markdown",
+      "pasta": "03. Marketing/Posicionamento",
+      "url": "http://localhost:8001/workspace/documentos/889/"
+    },
+    {
+      "arquivo": "GTM/posicionamento/jtbd_03_cs.md",
+      "status": "sincronizado",
+      "documento_id": 890,
+      "documento_slug": "gtm-posicionamento-jtbd_03_csmd",
+      "categoria": "estrategia",
+      "formato": "markdown",
+      "pasta": "03. Marketing/Posicionamento",
+      "url": "http://localhost:8001/workspace/documentos/890/"
+    },
+    {
+      "arquivo": "GTM/posicionamento/README.md",
+      "status": "sincronizado",
+      "documento_id": 891,
+      "documento_slug": "gtm-posicionamento-readmemd",
+      "categoria": "estrategia",
+      "formato": "markdown",
+      "pasta": "03. Marketing/Posicionamento",
+      "url": "http://localhost:8001/workspace/documentos/891/"
+    },
+    {
+      "arquivo": "GTM/propostas/proposta_comercial_v2_28-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 892,
+      "documento_slug": "gtm-propostas-proposta_comercial_v2_28-04-2026md",
+      "categoria": "entrega",
+      "formato": "markdown",
+      "pasta": "04. Comercial/Propostas",
+      "url": "http://localhost:8001/workspace/documentos/892/"
+    },
+    {
+      "arquivo": "GTM/propostas/proposta_hubtrix_foco_starter.pdf",
+      "status": "sincronizado",
+      "documento_id": 1030,
+      "documento_slug": "gtm-propostas-proposta_hubtrix_foco_starterpdf",
+      "categoria": "entrega",
+      "formato": "pdf",
+      "pasta": "04. Comercial/Propostas",
+      "url": "http://localhost:8001/workspace/documentos/1030/"
+    },
+    {
+      "arquivo": "GTM/propostas/proposta_hubtrix_v3_05-05-2026.md",
+      "status": "sincronizado",
+      "documento_id": 1031,
+      "documento_slug": "gtm-propostas-proposta_hubtrix_v3_05-05-2026md",
+      "categoria": "entrega",
+      "formato": "markdown",
+      "pasta": "04. Comercial/Propostas",
+      "url": "http://localhost:8001/workspace/documentos/1031/"
+    },
+    {
+      "arquivo": "GTM/propostas/proposta_hubtrix_v3_05-05-2026.pdf",
+      "status": "sincronizado",
+      "documento_id": 1032,
+      "documento_slug": "gtm-propostas-proposta_hubtrix_v3_05-05-2026pdf",
+      "categoria": "entrega",
+      "formato": "pdf",
+      "pasta": "04. Comercial/Propostas",
+      "url": "http://localhost:8001/workspace/documentos/1032/"
+    },
+    {
+      "arquivo": "OPERACIONAL/contratos/contrato_grupo_magister_01-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 893,
+      "documento_slug": "operacional-contratos-contrato_grupo_magister_01-04-2026md",
+      "categoria": "regras",
+      "formato": "markdown",
+      "pasta": "05. Operacoes/Contratos",
+      "url": "http://localhost:8001/workspace/documentos/893/"
+    },
+    {
+      "arquivo": "OPERACIONAL/contratos/contrato_grupo_magister_01-04-2026.pdf",
+      "status": "sincronizado",
+      "documento_id": 1033,
+      "documento_slug": "operacional-contratos-contrato_grupo_magister_01-04-2026pdf",
+      "categoria": "regras",
+      "formato": "pdf",
+      "pasta": "05. Operacoes/Contratos",
+      "url": "http://localhost:8001/workspace/documentos/1033/"
+    },
+    {
+      "arquivo": "OPERACIONAL/implementacao_aurora_05-04-2026.md",
+      "status": "sincronizado",
+      "documento_id": 894,
+      "documento_slug": "operacional-implementacao_aurora_05-04-2026md",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "05. Operacoes",
+      "url": "http://localhost:8001/workspace/documentos/894/"
+    },
+    {
+      "arquivo": "OPERACIONAL/implementacao_cliente.md",
+      "status": "sincronizado",
+      "documento_id": 895,
+      "documento_slug": "operacional-implementacao_clientemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "05. Operacoes",
+      "url": "http://localhost:8001/workspace/documentos/895/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/apresentacao/auroraisp_pitch_deck.pptx",
+      "status": "sincronizado",
+      "documento_id": 1034,
+      "documento_slug": "operacional-materiais-apresentacao-auroraisp_pitch_deckpptx",
+      "categoria": "entrega",
+      "formato": "link",
+      "pasta": "04. Comercial/Apresentacoes",
+      "url": "http://localhost:8001/workspace/documentos/1034/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/apresentacao/battle_card_concorrentes.md",
+      "status": "sincronizado",
+      "documento_id": 896,
+      "documento_slug": "operacional-materiais-apresentacao-battle_card_concorrentesmd",
+      "categoria": "entrega",
+      "formato": "markdown",
+      "pasta": "04. Comercial/Apresentacoes",
+      "url": "http://localhost:8001/workspace/documentos/896/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/apresentacao/case_anonimo.md",
+      "status": "sincronizado",
+      "documento_id": 897,
+      "documento_slug": "operacional-materiais-apresentacao-case_anonimomd",
+      "categoria": "entrega",
+      "formato": "markdown",
+      "pasta": "04. Comercial/Apresentacoes",
+      "url": "http://localhost:8001/workspace/documentos/897/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/apresentacao/demo_deck_apoio_estrutura.md",
+      "status": "sincronizado",
+      "documento_id": 898,
+      "documento_slug": "operacional-materiais-apresentacao-demo_deck_apoio_estruturamd",
+      "categoria": "entrega",
+      "formato": "markdown",
+      "pasta": "04. Comercial/Apresentacoes",
+      "url": "http://localhost:8001/workspace/documentos/898/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/apresentacao/demo_deck_parceiro_estrutura.md",
+      "status": "sincronizado",
+      "documento_id": 899,
+      "documento_slug": "operacional-materiais-apresentacao-demo_deck_parceiro_estruturamd",
+      "categoria": "entrega",
+      "formato": "markdown",
+      "pasta": "04. Comercial/Apresentacoes",
+      "url": "http://localhost:8001/workspace/documentos/899/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/apresentacao/one_pager_estrutura.md",
+      "status": "sincronizado",
+      "documento_id": 900,
+      "documento_slug": "operacional-materiais-apresentacao-one_pager_estruturamd",
+      "categoria": "entrega",
+      "formato": "markdown",
+      "pasta": "04. Comercial/Apresentacoes",
+      "url": "http://localhost:8001/workspace/documentos/900/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/apresentacao/pitch_deck_estrutura.md",
+      "status": "sincronizado",
+      "documento_id": 901,
+      "documento_slug": "operacional-materiais-apresentacao-pitch_deck_estruturamd",
+      "categoria": "entrega",
+      "formato": "markdown",
+      "pasta": "04. Comercial/Apresentacoes",
+      "url": "http://localhost:8001/workspace/documentos/901/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/apresentacao/pre_demo_deck_estrutura.md",
+      "status": "sincronizado",
+      "documento_id": 902,
+      "documento_slug": "operacional-materiais-apresentacao-pre_demo_deck_estruturamd",
+      "categoria": "entrega",
+      "formato": "markdown",
+      "pasta": "04. Comercial/Apresentacoes",
+      "url": "http://localhost:8001/workspace/documentos/902/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/fluxos/crm_parceiro.md",
+      "status": "sincronizado",
+      "documento_id": 903,
+      "documento_slug": "operacional-materiais-fluxos-crm_parceiromd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "05. Operacoes/Reguas e fluxos",
+      "url": "http://localhost:8001/workspace/documentos/903/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/juridico/contrato_saas.md",
+      "status": "sincronizado",
+      "documento_id": 904,
+      "documento_slug": "operacional-materiais-juridico-contrato_saasmd",
+      "categoria": "regras",
+      "formato": "markdown",
+      "pasta": "05. Operacoes/Juridico",
+      "url": "http://localhost:8001/workspace/documentos/904/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/juridico/politica_privacidade.md",
+      "status": "sincronizado",
+      "documento_id": 905,
+      "documento_slug": "operacional-materiais-juridico-politica_privacidademd",
+      "categoria": "regras",
+      "formato": "markdown",
+      "pasta": "05. Operacoes/Juridico",
+      "url": "http://localhost:8001/workspace/documentos/905/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/juridico/termos_de_uso.md",
+      "status": "sincronizado",
+      "documento_id": 906,
+      "documento_slug": "operacional-materiais-juridico-termos_de_usomd",
+      "categoria": "regras",
+      "formato": "markdown",
+      "pasta": "05. Operacoes/Juridico",
+      "url": "http://localhost:8001/workspace/documentos/906/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/propostas/template_proposta_comercial.md",
+      "status": "sincronizado",
+      "documento_id": 907,
+      "documento_slug": "operacional-materiais-propostas-template_proposta_comercialmd",
+      "categoria": "entrega",
+      "formato": "markdown",
+      "pasta": "04. Comercial/Propostas",
+      "url": "http://localhost:8001/workspace/documentos/907/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/reguas/regua_recuperacao_pos_trial_estrutura.md",
+      "status": "sincronizado",
+      "documento_id": 908,
+      "documento_slug": "operacional-materiais-reguas-regua_recuperacao_pos_trial_estruturamd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "05. Operacoes/Reguas e fluxos",
+      "url": "http://localhost:8001/workspace/documentos/908/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/reguas/regua_trial_estrutura.md",
+      "status": "sincronizado",
+      "documento_id": 909,
+      "documento_slug": "operacional-materiais-reguas-regua_trial_estruturamd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "05. Operacoes/Reguas e fluxos",
+      "url": "http://localhost:8001/workspace/documentos/909/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/scripts_vendas/diagnostico_whatsapp.md",
+      "status": "sincronizado",
+      "documento_id": 910,
+      "documento_slug": "operacional-materiais-scripts_vendas-diagnostico_whatsappmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "04. Comercial/Scripts de venda",
+      "url": "http://localhost:8001/workspace/documentos/910/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/treinamento_parceiro/modulo_01_visao_geral.md",
+      "status": "sincronizado",
+      "documento_id": 911,
+      "documento_slug": "operacional-materiais-treinamento_parceiro-modulo_01_visao_geralmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "05. Operacoes/Treinamento de parceiros",
+      "url": "http://localhost:8001/workspace/documentos/911/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/treinamento_parceiro/modulo_02_comercial.md",
+      "status": "sincronizado",
+      "documento_id": 912,
+      "documento_slug": "operacional-materiais-treinamento_parceiro-modulo_02_comercialmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "05. Operacoes/Treinamento de parceiros",
+      "url": "http://localhost:8001/workspace/documentos/912/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/treinamento_parceiro/modulo_03_marketing_cs.md",
+      "status": "sincronizado",
+      "documento_id": 913,
+      "documento_slug": "operacional-materiais-treinamento_parceiro-modulo_03_marketing_csmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "05. Operacoes/Treinamento de parceiros",
+      "url": "http://localhost:8001/workspace/documentos/913/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/treinamento_parceiro/modulo_04_precificacao_roi.md",
+      "status": "sincronizado",
+      "documento_id": 914,
+      "documento_slug": "operacional-materiais-treinamento_parceiro-modulo_04_precificacao_roimd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "05. Operacoes/Treinamento de parceiros",
+      "url": "http://localhost:8001/workspace/documentos/914/"
+    },
+    {
+      "arquivo": "OPERACIONAL/materiais/treinamento_parceiro/modulo_05_objecoes_fechamento.md",
+      "status": "sincronizado",
+      "documento_id": 915,
+      "documento_slug": "operacional-materiais-treinamento_parceiro-modulo_05_objecoes_fechamentomd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "05. Operacoes/Treinamento de parceiros",
+      "url": "http://localhost:8001/workspace/documentos/915/"
+    },
+    {
+      "arquivo": "PRODUTO/core/00-STATUS.md",
+      "status": "sincronizado",
+      "documento_id": 916,
+      "documento_slug": "produto-core-00-statusmd",
+      "categoria": "regras",
+      "formato": "markdown",
+      "pasta": "02. Produto/Core",
+      "url": "http://localhost:8001/workspace/documentos/916/"
+    },
+    {
+      "arquivo": "PRODUTO/core/01-ROADMAP.md",
+      "status": "sincronizado",
+      "documento_id": 917,
+      "documento_slug": "produto-core-01-roadmapmd",
+      "categoria": "regras",
+      "formato": "markdown",
+      "pasta": "02. Produto/Core",
+      "url": "http://localhost:8001/workspace/documentos/917/"
+    },
+    {
+      "arquivo": "PRODUTO/core/02-TESTES.md",
+      "status": "sincronizado",
+      "documento_id": 918,
+      "documento_slug": "produto-core-02-testesmd",
+      "categoria": "regras",
+      "formato": "markdown",
+      "pasta": "02. Produto/Core",
+      "url": "http://localhost:8001/workspace/documentos/918/"
+    },
+    {
+      "arquivo": "PRODUTO/core/03-PERMISSOES.md",
+      "status": "sincronizado",
+      "documento_id": 919,
+      "documento_slug": "produto-core-03-permissoesmd",
+      "categoria": "regras",
+      "formato": "markdown",
+      "pasta": "02. Produto/Core",
+      "url": "http://localhost:8001/workspace/documentos/919/"
+    },
+    {
+      "arquivo": "PRODUTO/IA-E-ANALYTICS-2026-05.md",
+      "status": "sincronizado",
+      "documento_id": 1035,
+      "documento_slug": "produto-ia-e-analytics-2026-05md",
+      "categoria": "regras",
+      "formato": "markdown",
+      "pasta": "02. Produto",
+      "url": "http://localhost:8001/workspace/documentos/1035/"
+    },
+    {
+      "arquivo": "PRODUTO/integracoes/01-HUBSOFT.md",
+      "status": "sincronizado",
+      "documento_id": 920,
+      "documento_slug": "produto-integracoes-01-hubsoftmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Integracoes",
+      "url": "http://localhost:8001/workspace/documentos/920/"
+    },
+    {
+      "arquivo": "PRODUTO/integracoes/02-INTEGRACOES.md",
+      "status": "sincronizado",
+      "documento_id": 921,
+      "documento_slug": "produto-integracoes-02-integracoesmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Integracoes",
+      "url": "http://localhost:8001/workspace/documentos/921/"
+    },
+    {
+      "arquivo": "PRODUTO/integracoes/03-APIS_N8N.md",
+      "status": "sincronizado",
+      "documento_id": 922,
+      "documento_slug": "produto-integracoes-03-apis_n8nmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Integracoes",
+      "url": "http://localhost:8001/workspace/documentos/922/"
+    },
+    {
+      "arquivo": "PRODUTO/integracoes/04-GUIA-NOVA-INTEGRACAO-ERP.md",
+      "status": "sincronizado",
+      "documento_id": 923,
+      "documento_slug": "produto-integracoes-04-guia-nova-integracao-erpmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Integracoes",
+      "url": "http://localhost:8001/workspace/documentos/923/"
+    },
+    {
+      "arquivo": "PRODUTO/integracoes/05-SGP.md",
+      "status": "sincronizado",
+      "documento_id": 924,
+      "documento_slug": "produto-integracoes-05-sgpmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Integracoes",
+      "url": "http://localhost:8001/workspace/documentos/924/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/assistente-crm/configuracao.md",
+      "status": "sincronizado",
+      "documento_id": 925,
+      "documento_slug": "produto-modulos-assistente-crm-configuracaomd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Assistente Crm",
+      "url": "http://localhost:8001/workspace/documentos/925/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/assistente-crm/README.md",
+      "status": "sincronizado",
+      "documento_id": 926,
+      "documento_slug": "produto-modulos-assistente-crm-readmemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Assistente Crm",
+      "url": "http://localhost:8001/workspace/documentos/926/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/assistente-crm/tools.md",
+      "status": "sincronizado",
+      "documento_id": 927,
+      "documento_slug": "produto-modulos-assistente-crm-toolsmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Assistente Crm",
+      "url": "http://localhost:8001/workspace/documentos/927/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/atendimento/endpoints.md",
+      "status": "sincronizado",
+      "documento_id": 928,
+      "documento_slug": "produto-modulos-atendimento-endpointsmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Atendimento",
+      "url": "http://localhost:8001/workspace/documentos/928/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/atendimento/engine.md",
+      "status": "sincronizado",
+      "documento_id": 929,
+      "documento_slug": "produto-modulos-atendimento-enginemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Atendimento",
+      "url": "http://localhost:8001/workspace/documentos/929/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/atendimento/exemplo-fluxo-ia.md",
+      "status": "sincronizado",
+      "documento_id": 930,
+      "documento_slug": "produto-modulos-atendimento-exemplo-fluxo-iamd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Atendimento",
+      "url": "http://localhost:8001/workspace/documentos/930/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/atendimento/integracao-inbox.md",
+      "status": "sincronizado",
+      "documento_id": 931,
+      "documento_slug": "produto-modulos-atendimento-integracao-inboxmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Atendimento",
+      "url": "http://localhost:8001/workspace/documentos/931/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/atendimento/models.md",
+      "status": "sincronizado",
+      "documento_id": 932,
+      "documento_slug": "produto-modulos-atendimento-modelsmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Atendimento",
+      "url": "http://localhost:8001/workspace/documentos/932/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/atendimento/README.md",
+      "status": "sincronizado",
+      "documento_id": 933,
+      "documento_slug": "produto-modulos-atendimento-readmemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Atendimento",
+      "url": "http://localhost:8001/workspace/documentos/933/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/atendimento/recontato-automatico.md",
+      "status": "sincronizado",
+      "documento_id": 934,
+      "documento_slug": "produto-modulos-atendimento-recontato-automaticomd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Atendimento",
+      "url": "http://localhost:8001/workspace/documentos/934/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/atendimento/sessoes.md",
+      "status": "sincronizado",
+      "documento_id": 935,
+      "documento_slug": "produto-modulos-atendimento-sessoesmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Atendimento",
+      "url": "http://localhost:8001/workspace/documentos/935/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/atendimento/simulador.md",
+      "status": "sincronizado",
+      "documento_id": 936,
+      "documento_slug": "produto-modulos-atendimento-simuladormd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Atendimento",
+      "url": "http://localhost:8001/workspace/documentos/936/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/atendimento/tipos-de-nodo.md",
+      "status": "sincronizado",
+      "documento_id": 937,
+      "documento_slug": "produto-modulos-atendimento-tipos-de-nodomd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Atendimento",
+      "url": "http://localhost:8001/workspace/documentos/937/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/comando/README.md",
+      "status": "sincronizado",
+      "documento_id": 938,
+      "documento_slug": "produto-modulos-comando-readmemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Comando",
+      "url": "http://localhost:8001/workspace/documentos/938/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/comercial/cadastro.md",
+      "status": "sincronizado",
+      "documento_id": 939,
+      "documento_slug": "produto-modulos-comercial-cadastromd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Comercial",
+      "url": "http://localhost:8001/workspace/documentos/939/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/comercial/crm/automacoes-pipeline.md",
+      "status": "sincronizado",
+      "documento_id": 940,
+      "documento_slug": "produto-modulos-comercial-crm-automacoes-pipelinemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Comercial/Crm",
+      "url": "http://localhost:8001/workspace/documentos/940/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/comercial/crm/equipes.md",
+      "status": "sincronizado",
+      "documento_id": 941,
+      "documento_slug": "produto-modulos-comercial-crm-equipesmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Comercial/Crm",
+      "url": "http://localhost:8001/workspace/documentos/941/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/comercial/crm/metas.md",
+      "status": "sincronizado",
+      "documento_id": 942,
+      "documento_slug": "produto-modulos-comercial-crm-metasmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Comercial/Crm",
+      "url": "http://localhost:8001/workspace/documentos/942/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/comercial/crm/oportunidades.md",
+      "status": "sincronizado",
+      "documento_id": 943,
+      "documento_slug": "produto-modulos-comercial-crm-oportunidadesmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Comercial/Crm",
+      "url": "http://localhost:8001/workspace/documentos/943/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/comercial/crm/pipeline.md",
+      "status": "sincronizado",
+      "documento_id": 944,
+      "documento_slug": "produto-modulos-comercial-crm-pipelinemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Comercial/Crm",
+      "url": "http://localhost:8001/workspace/documentos/944/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/comercial/crm/produtos.md",
+      "status": "sincronizado",
+      "documento_id": 945,
+      "documento_slug": "produto-modulos-comercial-crm-produtosmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Comercial/Crm",
+      "url": "http://localhost:8001/workspace/documentos/945/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/comercial/crm/README.md",
+      "status": "sincronizado",
+      "documento_id": 946,
+      "documento_slug": "produto-modulos-comercial-crm-readmemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Comercial/Crm",
+      "url": "http://localhost:8001/workspace/documentos/946/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/comercial/crm/retencao.md",
+      "status": "sincronizado",
+      "documento_id": 947,
+      "documento_slug": "produto-modulos-comercial-crm-retencaomd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Comercial/Crm",
+      "url": "http://localhost:8001/workspace/documentos/947/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/comercial/crm/segmentos.md",
+      "status": "sincronizado",
+      "documento_id": 948,
+      "documento_slug": "produto-modulos-comercial-crm-segmentosmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Comercial/Crm",
+      "url": "http://localhost:8001/workspace/documentos/948/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/comercial/crm/tarefas-notas.md",
+      "status": "sincronizado",
+      "documento_id": 949,
+      "documento_slug": "produto-modulos-comercial-crm-tarefas-notasmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Comercial/Crm",
+      "url": "http://localhost:8001/workspace/documentos/949/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/comercial/crm/vendas.md",
+      "status": "sincronizado",
+      "documento_id": 1036,
+      "documento_slug": "produto-modulos-comercial-crm-vendasmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Comercial/Crm",
+      "url": "http://localhost:8001/workspace/documentos/1036/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/comercial/leads.md",
+      "status": "sincronizado",
+      "documento_id": 950,
+      "documento_slug": "produto-modulos-comercial-leadsmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Comercial",
+      "url": "http://localhost:8001/workspace/documentos/950/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/comercial/README.md",
+      "status": "sincronizado",
+      "documento_id": 951,
+      "documento_slug": "produto-modulos-comercial-readmemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Comercial",
+      "url": "http://localhost:8001/workspace/documentos/951/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/comercial/viabilidade.md",
+      "status": "sincronizado",
+      "documento_id": 952,
+      "documento_slug": "produto-modulos-comercial-viabilidademd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Comercial",
+      "url": "http://localhost:8001/workspace/documentos/952/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/cs/carteirinha.md",
+      "status": "sincronizado",
+      "documento_id": 953,
+      "documento_slug": "produto-modulos-cs-carteirinhamd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Cs",
+      "url": "http://localhost:8001/workspace/documentos/953/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/cs/clube/area-membro.md",
+      "status": "sincronizado",
+      "documento_id": 954,
+      "documento_slug": "produto-modulos-cs-clube-area-membromd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Cs/Clube",
+      "url": "http://localhost:8001/workspace/documentos/954/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/cs/clube/area-publica.md",
+      "status": "sincronizado",
+      "documento_id": 955,
+      "documento_slug": "produto-modulos-cs-clube-area-publicamd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Cs/Clube",
+      "url": "http://localhost:8001/workspace/documentos/955/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/cs/clube/gamificacao.md",
+      "status": "sincronizado",
+      "documento_id": 956,
+      "documento_slug": "produto-modulos-cs-clube-gamificacaomd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Cs/Clube",
+      "url": "http://localhost:8001/workspace/documentos/956/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/cs/clube/README.md",
+      "status": "sincronizado",
+      "documento_id": 957,
+      "documento_slug": "produto-modulos-cs-clube-readmemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Cs/Clube",
+      "url": "http://localhost:8001/workspace/documentos/957/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/cs/clube/roleta.md",
+      "status": "sincronizado",
+      "documento_id": 958,
+      "documento_slug": "produto-modulos-cs-clube-roletamd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Cs/Clube",
+      "url": "http://localhost:8001/workspace/documentos/958/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/cs/indicacoes.md",
+      "status": "sincronizado",
+      "documento_id": 959,
+      "documento_slug": "produto-modulos-cs-indicacoesmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Cs",
+      "url": "http://localhost:8001/workspace/documentos/959/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/cs/nps.md",
+      "status": "sincronizado",
+      "documento_id": 960,
+      "documento_slug": "produto-modulos-cs-npsmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Cs",
+      "url": "http://localhost:8001/workspace/documentos/960/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/cs/parceiros.md",
+      "status": "sincronizado",
+      "documento_id": 961,
+      "documento_slug": "produto-modulos-cs-parceirosmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Cs",
+      "url": "http://localhost:8001/workspace/documentos/961/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/cs/README.md",
+      "status": "sincronizado",
+      "documento_id": 962,
+      "documento_slug": "produto-modulos-cs-readmemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Cs",
+      "url": "http://localhost:8001/workspace/documentos/962/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/cs/retencao.md",
+      "status": "sincronizado",
+      "documento_id": 963,
+      "documento_slug": "produto-modulos-cs-retencaomd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Cs",
+      "url": "http://localhost:8001/workspace/documentos/963/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/fluxos/editor-visual.md",
+      "status": "sincronizado",
+      "documento_id": 964,
+      "documento_slug": "produto-modulos-fluxos-editor-visualmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Fluxos",
+      "url": "http://localhost:8001/workspace/documentos/964/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/fluxos/endpoints.md",
+      "status": "sincronizado",
+      "documento_id": 965,
+      "documento_slug": "produto-modulos-fluxos-endpointsmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Fluxos",
+      "url": "http://localhost:8001/workspace/documentos/965/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/fluxos/integracao-ia.md",
+      "status": "sincronizado",
+      "documento_id": 966,
+      "documento_slug": "produto-modulos-fluxos-integracao-iamd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Fluxos",
+      "url": "http://localhost:8001/workspace/documentos/966/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/fluxos/nodos.md",
+      "status": "sincronizado",
+      "documento_id": 967,
+      "documento_slug": "produto-modulos-fluxos-nodosmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Fluxos",
+      "url": "http://localhost:8001/workspace/documentos/967/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/fluxos/README.md",
+      "status": "sincronizado",
+      "documento_id": 968,
+      "documento_slug": "produto-modulos-fluxos-readmemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Fluxos",
+      "url": "http://localhost:8001/workspace/documentos/968/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/fluxos/variaveis-contexto.md",
+      "status": "sincronizado",
+      "documento_id": 969,
+      "documento_slug": "produto-modulos-fluxos-variaveis-contextomd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Fluxos",
+      "url": "http://localhost:8001/workspace/documentos/969/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/inbox/apis.md",
+      "status": "sincronizado",
+      "documento_id": 970,
+      "documento_slug": "produto-modulos-inbox-apismd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Inbox",
+      "url": "http://localhost:8001/workspace/documentos/970/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/inbox/distribuicao.md",
+      "status": "sincronizado",
+      "documento_id": 971,
+      "documento_slug": "produto-modulos-inbox-distribuicaomd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Inbox",
+      "url": "http://localhost:8001/workspace/documentos/971/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/inbox/interface.md",
+      "status": "sincronizado",
+      "documento_id": 972,
+      "documento_slug": "produto-modulos-inbox-interfacemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Inbox",
+      "url": "http://localhost:8001/workspace/documentos/972/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/inbox/models.md",
+      "status": "sincronizado",
+      "documento_id": 973,
+      "documento_slug": "produto-modulos-inbox-modelsmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Inbox",
+      "url": "http://localhost:8001/workspace/documentos/973/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/inbox/README.md",
+      "status": "sincronizado",
+      "documento_id": 974,
+      "documento_slug": "produto-modulos-inbox-readmemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Inbox",
+      "url": "http://localhost:8001/workspace/documentos/974/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/inbox/services.md",
+      "status": "sincronizado",
+      "documento_id": 975,
+      "documento_slug": "produto-modulos-inbox-servicesmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Inbox",
+      "url": "http://localhost:8001/workspace/documentos/975/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/inbox/websocket.md",
+      "status": "sincronizado",
+      "documento_id": 976,
+      "documento_slug": "produto-modulos-inbox-websocketmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Inbox",
+      "url": "http://localhost:8001/workspace/documentos/976/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/inbox/widget-chat.md",
+      "status": "sincronizado",
+      "documento_id": 977,
+      "documento_slug": "produto-modulos-inbox-widget-chatmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Inbox",
+      "url": "http://localhost:8001/workspace/documentos/977/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/marketing/automacoes/editor-visual.md",
+      "status": "sincronizado",
+      "documento_id": 978,
+      "documento_slug": "produto-modulos-marketing-automacoes-editor-visualmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Marketing/Automacoes",
+      "url": "http://localhost:8001/workspace/documentos/978/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/marketing/automacoes/endpoints.md",
+      "status": "sincronizado",
+      "documento_id": 979,
+      "documento_slug": "produto-modulos-marketing-automacoes-endpointsmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Marketing/Automacoes",
+      "url": "http://localhost:8001/workspace/documentos/979/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/marketing/automacoes/engine.md",
+      "status": "sincronizado",
+      "documento_id": 980,
+      "documento_slug": "produto-modulos-marketing-automacoes-enginemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Marketing/Automacoes",
+      "url": "http://localhost:8001/workspace/documentos/980/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/marketing/automacoes/exemplo-automacao.md",
+      "status": "sincronizado",
+      "documento_id": 981,
+      "documento_slug": "produto-modulos-marketing-automacoes-exemplo-automacaomd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Marketing/Automacoes",
+      "url": "http://localhost:8001/workspace/documentos/981/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/marketing/automacoes/models.md",
+      "status": "sincronizado",
+      "documento_id": 982,
+      "documento_slug": "produto-modulos-marketing-automacoes-modelsmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Marketing/Automacoes",
+      "url": "http://localhost:8001/workspace/documentos/982/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/marketing/automacoes/README.md",
+      "status": "sincronizado",
+      "documento_id": 983,
+      "documento_slug": "produto-modulos-marketing-automacoes-readmemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Marketing/Automacoes",
+      "url": "http://localhost:8001/workspace/documentos/983/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/marketing/automacoes/reguas-padrao.md",
+      "status": "sincronizado",
+      "documento_id": 984,
+      "documento_slug": "produto-modulos-marketing-automacoes-reguas-padraomd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Marketing/Automacoes",
+      "url": "http://localhost:8001/workspace/documentos/984/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/marketing/automacoes/signals.md",
+      "status": "sincronizado",
+      "documento_id": 985,
+      "documento_slug": "produto-modulos-marketing-automacoes-signalsmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Marketing/Automacoes",
+      "url": "http://localhost:8001/workspace/documentos/985/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/marketing/campanhas.md",
+      "status": "sincronizado",
+      "documento_id": 986,
+      "documento_slug": "produto-modulos-marketing-campanhasmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Marketing",
+      "url": "http://localhost:8001/workspace/documentos/986/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/marketing/emails-dominios-remetentes.md",
+      "status": "sincronizado",
+      "documento_id": 998,
+      "documento_slug": "produto-modulos-marketing-emails-dominios-remetentesmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Marketing",
+      "url": "http://localhost:8001/workspace/documentos/998/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/marketing/README.md",
+      "status": "sincronizado",
+      "documento_id": 987,
+      "documento_slug": "produto-modulos-marketing-readmemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Marketing",
+      "url": "http://localhost:8001/workspace/documentos/987/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/marketing/segmentos.md",
+      "status": "sincronizado",
+      "documento_id": 988,
+      "documento_slug": "produto-modulos-marketing-segmentosmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Marketing",
+      "url": "http://localhost:8001/workspace/documentos/988/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/suporte/README.md",
+      "status": "sincronizado",
+      "documento_id": 989,
+      "documento_slug": "produto-modulos-suporte-readmemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Suporte",
+      "url": "http://localhost:8001/workspace/documentos/989/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/suporte/tickets.md",
+      "status": "sincronizado",
+      "documento_id": 990,
+      "documento_slug": "produto-modulos-suporte-ticketsmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Suporte",
+      "url": "http://localhost:8001/workspace/documentos/990/"
+    },
+    {
+      "arquivo": "PRODUTO/modulos/workspace/README.md",
+      "status": "sincronizado",
+      "documento_id": 991,
+      "documento_slug": "produto-modulos-workspace-readmemd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Modulos/Workspace",
+      "url": "http://localhost:8001/workspace/documentos/991/"
+    },
+    {
+      "arquivo": "PRODUTO/ops/01-DEPLOY.md",
+      "status": "sincronizado",
+      "documento_id": 992,
+      "documento_slug": "produto-ops-01-deploymd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Operacao tecnica",
+      "url": "http://localhost:8001/workspace/documentos/992/"
+    },
+    {
+      "arquivo": "PRODUTO/ops/02-CRON.md",
+      "status": "sincronizado",
+      "documento_id": 993,
+      "documento_slug": "produto-ops-02-cronmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Operacao tecnica",
+      "url": "http://localhost:8001/workspace/documentos/993/"
+    },
+    {
+      "arquivo": "PRODUTO/ops/03-NOTIFICACOES.md",
+      "status": "sincronizado",
+      "documento_id": 994,
+      "documento_slug": "produto-ops-03-notificacoesmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Operacao tecnica",
+      "url": "http://localhost:8001/workspace/documentos/994/"
+    },
+    {
+      "arquivo": "PRODUTO/ops/04-CRIPTOGRAFIA.md",
+      "status": "sincronizado",
+      "documento_id": 995,
+      "documento_slug": "produto-ops-04-criptografiamd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Operacao tecnica",
+      "url": "http://localhost:8001/workspace/documentos/995/"
+    },
+    {
+      "arquivo": "PRODUTO/ops/dispatcher-cron.md",
+      "status": "sincronizado",
+      "documento_id": 1037,
+      "documento_slug": "produto-ops-dispatcher-cronmd",
+      "categoria": "processo",
+      "formato": "markdown",
+      "pasta": "02. Produto/Operacao tecnica",
+      "url": "http://localhost:8001/workspace/documentos/1037/"
+    },
+    {
+      "arquivo": "PRODUTO/README.md",
+      "status": "sincronizado",
+      "documento_id": 996,
+      "documento_slug": "produto-readmemd",
+      "categoria": "regras",
+      "formato": "markdown",
+      "pasta": "02. Produto",
+      "url": "http://localhost:8001/workspace/documentos/996/"
+    },
+    {
+      "arquivo": "PRODUTO/VISAO.md",
+      "status": "sincronizado",
+      "documento_id": 997,
+      "documento_slug": "produto-visaomd",
+      "categoria": "estrategia",
+      "formato": "markdown",
+      "pasta": "01. Executivo/Estrategia",
+      "url": "http://localhost:8001/workspace/documentos/997/"
+    }
+  ]
+}
