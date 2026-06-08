@@ -307,6 +307,16 @@ def enviar_venda_whatsapp(lead, telefone_destino: str, oportunidade=None) -> dic
         'docs_enviados': 0, 'docs_falharam': 0,
     }
 
+    # IDEMPOTENCIA: nao reenvia se ja foi disparado pra esse lead
+    flag_ja = (lead.dados_custom or {}).get('venda_whatsapp_enviada')
+    if flag_ja:
+        resultado['ok'] = True
+        resultado['motivo'] = 'ja enviado anteriormente em ' + str(
+            (lead.dados_custom or {}).get('venda_whatsapp_enviada_em', '?')
+        )
+        logger.info('[venda_whatsapp] lead=%s pulado (idempotente)', lead.id)
+        return resultado
+
     integracao = IntegracaoAPI.all_tenants.filter(
         tenant=lead.tenant, tipo='uazapi', ativa=True,
     ).first()
@@ -366,4 +376,18 @@ def enviar_venda_whatsapp(lead, telefone_destino: str, oportunidade=None) -> dic
             )
 
     resultado['ok'] = True
+
+    # IDEMPOTENCIA: marca flag pra nao reenviar
+    try:
+        from django.utils import timezone as _tz
+        dc = dict(lead.dados_custom or {})
+        dc['venda_whatsapp_enviada'] = True
+        dc['venda_whatsapp_enviada_em'] = _tz.now().isoformat()
+        dc['venda_whatsapp_telefone_destino'] = telefone_destino
+        lead.dados_custom = dc
+        lead.save(update_fields=['dados_custom'])
+        logger.info('[venda_whatsapp] lead=%s flag idempotencia gravada', lead.id)
+    except Exception as e:
+        logger.error('[venda_whatsapp] lead=%s falha ao gravar flag idempotencia: %s', lead.id, e)
+
     return resultado
