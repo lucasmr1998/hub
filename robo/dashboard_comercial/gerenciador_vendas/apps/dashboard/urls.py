@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import RedirectView
 from . import views
 
 app_name = 'dashboard'
@@ -27,8 +28,10 @@ urlpatterns = [
     path('api/dashboard/funil/insights/', views.dashboard_funil_insights, name='dashboard_funil_insights'),
 
     # Paginas de vendas e relatorios
-    path('vendas/', views.vendas_view, name='vendas'),
-    path('vendas/crm/', views.vendas_crm_view, name='vendas_crm'),
+    # /vendas/ = pagina unificada (Venda + enriquecimento HubSoft).
+    # /vendas/crm/ redireciona pra /vendas/ (compat de links/bookmarks).
+    path('vendas/', views.vendas_crm_view, name='vendas'),
+    path('vendas/crm/', RedirectView.as_view(pattern_name='dashboard:vendas', permanent=False), name='vendas_crm'),
     path('api/vendas/crm/', views.api_oportunidades_vendas, name='api_oportunidades_vendas'),
     path('api/vendas/crm/<int:pk>/enviar-erp/', views.api_enviar_venda_erp, name='api_enviar_venda_erp'),
     path('relatorios/', views.relatorios_view, name='relatorios'),

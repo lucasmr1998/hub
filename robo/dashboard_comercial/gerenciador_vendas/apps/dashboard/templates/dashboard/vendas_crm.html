@@ -57,7 +57,7 @@
           <th>Responsavel</th>
           <th>Valor</th>
           <th>Data</th>
-          <th>Status ERP</th>
+          <th>Status</th>
           <th>Documentacao</th>
           <th style="text-align: center;">Acao</th>
         </tr>
@@ -761,6 +761,26 @@ function _erpStatusBadge(status, label) {
   return `<span class="${map[status] || 'badge-gray'}">${label || status}</span>`;
 }
 
+// Status de ciclo de vida unificado (Venda + HubSoft). Ver doc vendas.md.
+function _cicloBadge(o) {
+  const map = {
+    registrada:            'badge-gray',
+    enviado_erp:           'badge-yellow',
+    cliente_criado:        'badge-yellow',
+    aguardando_instalacao: 'badge-yellow',
+    ativo:                 'badge-green',
+    cancelado:             'badge-red',
+    suspenso:              'badge-red',
+    erro_erp:              'badge-red',
+  };
+  const cls = map[o.status_ciclo] || 'badge-gray';
+  let html = `<span class="${cls}">${o.status_ciclo_label || o.status_ciclo || '-'}</span>`;
+  if (o.hubsoft && o.hubsoft.cliente && o.hubsoft.cliente.codigo_cliente) {
+    html += `<span class="cell-sub" style="display:block;margin-top:2px;"><i class="bi bi-hdd-network"></i> Cliente ${o.hubsoft.cliente.codigo_cliente}</span>`;
+  }
+  return html;
+}
+
 function renderizarTabela(oportunidades) {
   const tbody = document.querySelector('#clientesTable tbody');
   tbody.innerHTML = '';
@@ -799,7 +819,7 @@ function renderizarTabela(oportunidades) {
         <span class="cell-main">${formatarDataCurta(o.data_venda)}</span>
       </td>
       <td id="erp-status-${o.id}">
-        ${_erpStatusBadge(o.status_erp, o.status_erp_label)}
+        ${_cicloBadge(o)}
         ${o.erro_erp_msg ? `<span class="cell-sub" style="color:var(--color-danger);margin-top:2px;" title="${o.erro_erp_msg}"><i class="bi bi-exclamation-circle"></i> Erro</span>` : ''}
       </td>
       <td onclick="event.stopPropagation();">
@@ -833,9 +853,8 @@ async function enviarParaERP(vendaId, btn) {
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'Erro no envio');
     toast('ERP', 'Venda enviada com sucesso!', 'success');
-    const cell = document.getElementById(`erp-status-${vendaId}`);
-    if (cell) cell.innerHTML = _erpStatusBadge(data.status, data.status_label);
     btn.style.display = 'none';
+    carregarClientes();  // recarrega pra refletir o ciclo de vida atualizado
   } catch (e) {
     toast('Erro', e.message, 'danger');
     btn.disabled = false;
@@ -905,7 +924,7 @@ function abrirDetalhe(o) {
     <div class="detail-section">
       <div class="section-title"><i class="bi bi-cloud-upload"></i> Status ERP</div>
       <div class="detail-grid">
-        <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value">${_erpStatusBadge(o.status_erp, o.status_erp_label)}</div></div>
+        <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value">${_cicloBadge(o)}</div></div>
         ${o.enviado_erp_em ? `<div class="detail-item"><div class="detail-label">Enviado em</div><div class="detail-value">${formatarData(o.enviado_erp_em)}</div></div>` : ''}
         ${o.erro_erp_msg ? `<div class="detail-item" style="border-left-color: var(--color-danger);"><div class="detail-label">Mensagem de erro</div><div class="detail-value" style="color: var(--color-danger); font-size: 11px;">${o.erro_erp_msg}</div></div>` : ''}
       </div>

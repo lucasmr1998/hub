@@ -389,6 +389,38 @@ def api_oportunidades_vendas(request):
             return 'validado'
         return 'pendente'
 
+    # ── Enriquecimento HubSoft (LEFT JOIN por lead) ──
+    from apps.integracoes.models import ClienteHubsoft, ServicoClienteHubsoft
+    clientes_hs = {
+        c.lead_id: c
+        for c in ClienteHubsoft.objects.filter(lead_id__in=lead_ids, tenant=request.tenant)
+    }
+    servicos_hs = {}
+    if clientes_hs:
+        for srv in ServicoClienteHubsoft.objects.filter(
+            cliente_id__in=[c.id for c in clientes_hs.values()], tenant=request.tenant
+        ).order_by('id'):
+            servicos_hs.setdefault(srv.cliente_id, srv)  # serviço principal (primeiro)
+
+    def _status_ciclo(venda, cli, srv):
+        """Ciclo de vida unificado: Venda.status + status do serviço HubSoft."""
+        pref = ((srv.status_prefixo if srv else '') or '').lower()
+        if 'habilitado' in pref:
+            return ('ativo', 'Ativo / Instalado')
+        if 'aguardando_inst' in pref:
+            return ('aguardando_instalacao', 'Aguardando instalação')
+        if 'cancel' in pref:
+            return ('cancelado', 'Cancelado')
+        if 'suspen' in pref:
+            return ('suspenso', 'Suspenso')
+        if cli:
+            return ('cliente_criado', 'Cliente criado no ERP')
+        if venda.status == Venda.STATUS_ERRO_ERP:
+            return ('erro_erp', 'Erro no ERP')
+        if venda.status == Venda.STATUS_ENVIADO_ERP:
+            return ('enviado_erp', 'Enviada ao ERP')
+        return ('registrada', 'Registrada')
+
     resultado = []
     for v in vendas:
         lead = v.lead
@@ -398,6 +430,23 @@ def api_oportunidades_vendas(request):
         if doc_status and ds != doc_status:
             continue
         responsavel = oport.responsavel if oport else None
+        cli_hs = clientes_hs.get(lead.id) if lead else None
+        srv_hs = servicos_hs.get(cli_hs.id) if cli_hs else None
+        ciclo_cod, ciclo_label = _status_ciclo(v, cli_hs, srv_hs)
+        hubsoft = None
+        if cli_hs:
+            hubsoft = {
+                'cliente': {
+                    'codigo_cliente': cli_hs.codigo_cliente,
+                    'ativo': cli_hs.ativo,
+                },
+                'servico': ({
+                    'id_cliente_servico': srv_hs.id_cliente_servico,
+                    'status': srv_hs.status,
+                    'status_prefixo': srv_hs.status_prefixo,
+                    'valor': str(srv_hs.valor) if srv_hs.valor else '',
+                } if srv_hs else None),
+            }
         resultado.append({
             'id': v.id,
             'lead_id': lead.id if lead else None,
@@ -424,6 +473,9 @@ def api_oportunidades_vendas(request):
             'enviado_erp_em': v.enviado_erp_em.isoformat() if v.enviado_erp_em else '',
             'doc_status': ds,
             'docs': imagens_por_lead.get(lead.id if lead else None, {'total': 0, 'aprovados': 0, 'rejeitados': 0}),
+            'hubsoft': hubsoft,
+            'status_ciclo': ciclo_cod,
+            'status_ciclo_label': ciclo_label,
         })
 
     return JsonResponse({
