@@ -1,6 +1,7 @@
 import logging
+import re
 
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 from apps.comercial.leads.models import LeadProspecto
@@ -16,6 +17,31 @@ def _obter_integracao_hubsoft():
 def _obter_integracao_sgp(tenant):
     from apps.integracoes.models import IntegracaoAPI
     return IntegracaoAPI.objects.filter(tipo='sgp', ativa=True, tenant=tenant).first()
+
+
+@receiver(pre_save, sender=LeadProspecto)
+def preencher_rg_com_cpf_hubsoft(sender, instance, **kwargs):
+    """RG = CPF para tenants com HubSoft ativo.
+
+    O fluxo da Matrix nao coleta RG, mas o HubSoft (e o pre-flight
+    `validar_lead_pronto_para_prospect`) exige o campo. Preenche `rg` com os
+    digitos do CPF quando `rg` esta vazio e ha CPF, SOMENTE para tenants que
+    tem integracao HubSoft ativa (hoje so a Nuvyon). Nunca sobrescreve um RG
+    ja preenchido. Ver robo/docs/PRODUTO/integracoes/05-PIPELINE-HUBSOFT-NUVYON.md.
+    """
+    if not instance.cpf_cnpj or (instance.rg or '').strip():
+        return
+    if not getattr(instance, 'tenant_id', None):
+        return
+    from apps.integracoes.models import IntegracaoAPI
+    tem_hubsoft = IntegracaoAPI.objects.filter(
+        tenant_id=instance.tenant_id, tipo='hubsoft', ativa=True,
+    ).exists()
+    if not tem_hubsoft:
+        return
+    digitos = re.sub(r'\D', '', instance.cpf_cnpj)
+    if digitos:
+        instance.rg = digitos
 
 
 @receiver(post_save, sender=LeadProspecto)

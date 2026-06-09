@@ -88,7 +88,7 @@ Implementado em `apps/comercial/leads/utils.py::validar_lead_pronto_para_prospec
 
 **Campos obrigatorios validados:** `nome_razaosocial`, `cpf_cnpj`, `telefone`, `email`, `cep`, `numero_residencia`, `rg`, `data_nascimento`.
 
-> **Importante:** `rg` e obrigatorio no HubSoft Nuvyon. Matrix nao manda RG hoje — operador completa via admin do Hubtrix antes do cron processar.
+> **Importante:** `rg` e obrigatorio no HubSoft Nuvyon e o Matrix nao manda RG. **Desde 09/06 ha uma regra automatica que preenche `rg = cpf` (so digitos) quando `rg` esta vazio**, via signal `pre_save` em `apps/integracoes/signals.py::preencher_rg_com_cpf_hubsoft`. Aplica-se **somente a tenants com integracao HubSoft ativa** (hoje so Nuvyon) e **nunca sobrescreve** um RG ja preenchido. O HubSoft aceita o CPF no campo RG (validado: prospecto 22758). Isso destrava o pre-flight do cron. Obs: o caminho via signal de envio nem exige RG — o lead 463 converteu com RG vazio.
 
 ---
 
