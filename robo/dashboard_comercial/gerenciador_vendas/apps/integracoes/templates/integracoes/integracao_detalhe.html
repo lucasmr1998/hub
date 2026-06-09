@@ -442,6 +442,7 @@
         <button class="btn btn-primary btn-sm" onclick="hsFinanceiro('listar_faturas', true)"><i class="bi bi-receipt"></i> Faturas em aberto</button>
         <button class="btn btn-ghost btn-sm" onclick="hsFinanceiro('listar_faturas', false)"><i class="bi bi-list-ul"></i> Todas as faturas</button>
         <button class="btn btn-ghost btn-sm" onclick="hsFinanceiro('listar_renegociacoes')"><i class="bi bi-handshake"></i> Renegociacoes</button>
+        <button class="btn btn-primary btn-sm" onclick="hsAcaoCpf('consultar_cliente')"><i class="bi bi-person-vcard"></i> Consultar cliente</button>
         <button class="btn btn-ghost btn-sm" onclick="hsAcaoCpf('listar_atendimentos')"><i class="bi bi-headset"></i> Atendimentos</button>
         <button class="btn btn-ghost btn-sm" onclick="hsAcaoCpf('listar_os')"><i class="bi bi-tools"></i> Ordens de servico</button>
       </div>
@@ -518,6 +519,19 @@
         <button class="btn btn-ghost btn-sm" onclick="hsOp('suspender', 'SUSPENDER servico?', 'suspenso_debito')" style="color: var(--color-danger);"><i class="bi bi-pause-fill"></i> Suspender</button>
         <button class="btn btn-ghost btn-sm" onclick="hsOp('habilitar', 'Reabilitar servico?', 'Habilitado via sandbox')"><i class="bi bi-play-fill"></i> Habilitar</button>
         <button class="btn btn-ghost btn-sm" onclick="hsOp('ativar', 'ATIVAR servico (pos-instalacao)?')"><i class="bi bi-check-circle"></i> Ativar</button>
+      </div>
+    </div>
+
+    <h4 style="margin: var(--sp-5) 0 var(--sp-2); font-size: var(--fs-sm); font-weight: var(--fw-semibold);"><i class="bi bi-file-earmark-text"></i> Contrato</h4>
+    <div class="form-row-2" style="margin-top: var(--sp-2);">
+      <div class="field">
+        <label class="field-label">id_cliente_servico_contrato</label>
+        <div class="field-input-wrap">
+          <input type="text" class="field-input" id="hs-contrato-id" placeholder="id do contrato (via Consultar cliente)" />
+        </div>
+      </div>
+      <div class="field" style="display: flex; gap: 6px; align-items: flex-end;">
+        <button class="btn btn-ghost btn-sm" onclick="hsAceitarContrato()"><i class="bi bi-file-earmark-check"></i> Aceitar contrato</button>
       </div>
     </div>
 
@@ -707,6 +721,13 @@ async function hsOp(acao, msgConfirm, extra) {
   if (acao === 'suspender') payload.tipo_suspensao = extra;
   if (acao === 'habilitar') payload.motivo = extra;
   await hsExecutar(acao, payload);
+}
+
+async function hsAceitarContrato() {
+  const id = (document.getElementById('hs-contrato-id').value || '').trim();
+  if (!id) { toast('Aviso', 'Informe o id_cliente_servico_contrato.', 'warning'); return; }
+  if (!confirm(`Marcar contrato como ACEITO no HubSoft?\n\nid_cliente_servico_contrato = ${id}`)) return;
+  await hsExecutar('aceitar_contrato', { id_cliente_servico_contrato: id });
 }
 
 async function hsAcaoCpf(acao) {
