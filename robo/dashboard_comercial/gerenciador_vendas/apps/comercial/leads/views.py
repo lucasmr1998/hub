@@ -747,6 +747,27 @@ def atualizar_lead_api(request):
 # APIs DE IMAGENS DE LEADS
 # ============================================================================
 
+def _reescrever_host_matrix(url, lead):
+    """Reescreve o HOST de uma URL do Matrix pro dominio do Matrix do tenant.
+    Corrige URLs com subdominio que nao resolve (ex: nuvyon.matrixdobrasil.ai
+    -> artelecomprovedor.matrixdobrasil.ai). So mexe em hosts *.matrixdobrasil.ai
+    e mantem scheme + path. Dominio vem de LeadProspecto._matrix_base_url()."""
+    try:
+        from urllib.parse import urlparse, urlunparse
+        base = lead._matrix_base_url() if lead else ''
+        if not base:
+            return url
+        base_host = urlparse(base).netloc
+        p = urlparse(url)
+        if not base_host or not p.netloc or not p.netloc.endswith('matrixdobrasil.ai'):
+            return url
+        if p.netloc == base_host:
+            return url
+        return urlunparse((p.scheme or 'https', base_host, p.path, p.params, p.query, p.fragment))
+    except Exception:
+        return url
+
+
 @csrf_exempt
 @api_token_required
 def registrar_imagem_lead_api(request):
@@ -785,6 +806,7 @@ def registrar_imagem_lead_api(request):
         url = item.get('link_url', '').strip() if isinstance(item, dict) else str(item).strip()
         if not url:
             continue
+        url = _reescrever_host_matrix(url, lead)
         descricao = item.get('descricao', '') if isinstance(item, dict) else ''
         img = ImagemLeadProspecto.objects.create(
             lead=lead,

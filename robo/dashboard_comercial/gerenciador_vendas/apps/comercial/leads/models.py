@@ -446,7 +446,26 @@ class LeadProspecto(TenantMixin):
         help_text="Campos personalizados definidos pelo tenant",
     )
 
-    PDF_BASE_URL = 'https://megalink.matrixdobrasil.ai/atendimento/export-to-pdf/id/{codigo}/protocolo/{protocolo}'
+    # Path do export de PDF da conversa no Matrix. O DOMINIO vem do Matrix do
+    # tenant (multi-tenant) — nunca hardcoded. Ver _matrix_base_url().
+    PDF_PATH = '/atendimento/export-to-pdf/id/{codigo}/protocolo/{protocolo}'
+
+    def _matrix_base_url(self):
+        """Dominio do Matrix do tenant (usado na URL do PDF da conversa e das
+        imagens). Prioridade: base_url da IntegracaoAPI 'Matrix' do tenant ->
+        setting MATRIX_PDF_BASE_URL. Nunca usa dominio fixo (residuo Megalink)."""
+        from apps.integracoes.models import IntegracaoAPI
+        integ = (
+            IntegracaoAPI.objects
+            .filter(tenant_id=self.tenant_id, ativa=True, nome__icontains='matrix')
+            .exclude(tipo='hubsoft')
+            .first()
+        )
+        base = (integ.base_url if integ else '') or ''
+        if not base:
+            from django.conf import settings
+            base = getattr(settings, 'MATRIX_PDF_BASE_URL', '') or ''
+        return base.rstrip('/')
 
     def gerar_url_pdf(self):
         """
@@ -464,7 +483,11 @@ class LeadProspecto(TenantMixin):
         if not contato:
             return None
 
-        url = self.PDF_BASE_URL.format(
+        base = self._matrix_base_url()
+        if not base:
+            return None
+
+        url = base + self.PDF_PATH.format(
             codigo=contato.codigo_atendimento,
             protocolo=contato.protocolo_atendimento,
         )
