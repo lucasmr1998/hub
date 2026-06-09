@@ -447,13 +447,13 @@ class LeadProspecto(TenantMixin):
     )
 
     # Path do export de PDF da conversa no Matrix. O DOMINIO vem do Matrix do
-    # tenant (multi-tenant) — nunca hardcoded. Ver _matrix_pdf_base().
+    # tenant (multi-tenant) — nunca hardcoded. Ver _matrix_base_url().
     PDF_PATH = '/atendimento/export-to-pdf/id/{codigo}/protocolo/{protocolo}'
 
-    def _matrix_pdf_base(self):
-        """Dominio do Matrix do tenant pra montar a URL do PDF da conversa.
-        Prioridade: base_url da IntegracaoAPI 'Matrix' do tenant -> setting
-        MATRIX_PDF_BASE_URL. Nunca usa dominio fixo (residuo Megalink)."""
+    def _matrix_base_url(self):
+        """Dominio do Matrix do tenant (usado na URL do PDF da conversa e das
+        imagens). Prioridade: base_url da IntegracaoAPI 'Matrix' do tenant ->
+        setting MATRIX_PDF_BASE_URL. Nunca usa dominio fixo (residuo Megalink)."""
         from apps.integracoes.models import IntegracaoAPI
         integ = (
             IntegracaoAPI.objects
@@ -483,7 +483,7 @@ class LeadProspecto(TenantMixin):
         if not contato:
             return None
 
-        base = self._matrix_pdf_base()
+        base = self._matrix_base_url()
         if not base:
             return None
 
