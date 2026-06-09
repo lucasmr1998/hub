@@ -1158,7 +1158,7 @@ def api_integracao_financeiro_sandbox(request, pk):
         'viabilidade_coords', 'viabilidade_endereco',
         'solicitar_desconexao', 'reset_mac', 'reset_phy',
         'desbloqueio_confianca', 'suspender', 'habilitar', 'ativar',
-        'aceitar_contrato',
+        'aceitar_contrato', 'listar_modelos_contrato',
     }
     if not cpf and acao not in acoes_sem_cpf:
         return JsonResponse({'error': 'cpf_cnpj eh obrigatorio.'}, status=400)
@@ -1242,6 +1242,30 @@ def api_integracao_financeiro_sandbox(request, pk):
             # id_cliente_servico e id_cliente_servico_contrato (necessario pro aceite de contrato).
             r = svc.consultar_cliente(cpf)
             return JsonResponse({'success': True, 'acao': acao, 'resultado': r})
+        elif acao == 'listar_modelos_contrato':
+            # Catalogo de modelos de contrato do tenant HubSoft (pra achar id_contrato_modelo + id_empresa).
+            modelos = svc.listar_modelos_contrato()
+            return JsonResponse({'success': True, 'acao': acao, 'total': len(modelos), 'modelos': modelos})
+        elif acao == 'criar_contrato':
+            # Cria o contrato no HubSoft pro servico (POST adicionar_contrato). O nome do
+            # titular vem da consulta por CPF. O id retornado (id_cliente_servico_contrato)
+            # eh usado depois no aceite.
+            id_cs = data.get('id_cliente_servico')
+            id_modelo = data.get('id_contrato_modelo')
+            id_empresa = data.get('id_empresa')
+            if not (id_cs and id_modelo and id_empresa):
+                return JsonResponse({'error': 'id_cliente_servico, id_contrato_modelo e id_empresa obrigatorios.'}, status=400)
+            clientes = (svc.consultar_cliente(cpf).get('clientes') or []) if cpf else []
+            nome = (clientes[0].get('nome_razaosocial') if clientes else '') or ''
+            r = svc.criar_contrato(
+                id_cliente_servico=int(id_cs),
+                id_contrato_modelo=int(id_modelo),
+                id_empresa=int(id_empresa),
+                autorizacao_nome=nome,
+                autorizacao_cpf=cpf,
+                informacao_adicional=data.get('informacao_adicional') or 'Contrato gerado via sandbox Hubtrix.',
+            )
+            return JsonResponse({'success': True, 'acao': acao, 'resposta': r})
         elif acao == 'aceitar_contrato':
             # Marca o contrato como aceito no HubSoft. Recebe id_cliente_servico_contrato
             # (obtido via consultar_cliente). Libera a abertura de OS (servico sai de
@@ -1253,7 +1277,7 @@ def api_integracao_financeiro_sandbox(request, pk):
             return JsonResponse({'success': True, 'acao': acao, 'resposta': r})
         else:
             return JsonResponse({
-                'error': 'acao invalida. Permitidos: consultar_cliente, aceitar_contrato, listar_faturas, listar_renegociacoes, extrato_conexao, planos_por_cep, listar_atendimentos, listar_os, viabilidade_coords, viabilidade_endereco, solicitar_desconexao, reset_mac, reset_phy, desbloqueio_confianca, suspender, habilitar, ativar.'
+                'error': 'acao invalida. Permitidos: consultar_cliente, listar_modelos_contrato, criar_contrato, aceitar_contrato, listar_faturas, listar_renegociacoes, extrato_conexao, planos_por_cep, listar_atendimentos, listar_os, viabilidade_coords, viabilidade_endereco, solicitar_desconexao, reset_mac, reset_phy, desbloqueio_confianca, suspender, habilitar, ativar.'
             }, status=400)
     except HubsoftServiceError as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=502)
