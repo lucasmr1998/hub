@@ -78,6 +78,27 @@ def enviar_lead_para_integracao(sender, instance, **kwargs):
         logger.debug('Integracao %s nao suportada para envio de leads.', integracao.tipo)
 
 
+def _reconciliar_venda_com_prospecto(lead_id, tenant_id):
+    """Fase 2 — reconciliacao Venda <-> HubSoft: quando o prospecto e criado no
+    ERP (o lead ganha id_hubsoft), avanca a Venda do lead de
+    pendente_erp/erro_erp -> enviado_erp. Idempotente. Ver
+    robo/docs/PRODUTO/modulos/comercial/crm/vendas.md.
+    """
+    try:
+        from django.utils import timezone
+        from apps.comercial.crm.models import Venda
+        Venda.all_tenants.filter(
+            tenant_id=tenant_id, lead_id=lead_id,
+            status__in=[Venda.STATUS_PENDENTE_ERP, Venda.STATUS_ERRO_ERP],
+        ).update(
+            status=Venda.STATUS_ENVIADO_ERP,
+            enviado_erp_em=timezone.now(),
+            erro_erp_msg='',
+        )
+    except Exception as exc:
+        logger.warning('Reconciliacao Venda<->prospecto falhou (lead %s): %s', lead_id, exc)
+
+
 def _enviar_lead_hubsoft(instance, integracao):
     from apps.integracoes.services.hubsoft import HubsoftService, HubsoftServiceError
     try:
@@ -89,6 +110,8 @@ def _enviar_lead_hubsoft(instance, integracao):
         if id_prospecto:
             campos_update['id_hubsoft'] = str(id_prospecto)
         LeadProspecto.objects.filter(pk=instance.pk).update(**campos_update)
+        if id_prospecto:
+            _reconciliar_venda_com_prospecto(instance.pk, instance.tenant_id)
 
         logger.info(
             "Lead '%s' (pk=%s) cadastrado no Hubsoft com id_prospecto=%s",

@@ -206,13 +206,13 @@ Venda registrada → Contrato assinado → OS aberta (instalação) → Cliente 
 
 > Tenant **sem** integração ERP (ex: TR Carrion): `hubsoft` null e `lead.id_hubsoft` vazio → cai pra `Venda.status` (ver DECIDIR #3).
 
-### Reconciliação Venda ↔ HubSoft (Fase 2 — a implementar)
+### Reconciliação Venda ↔ HubSoft (Fase 2 — implementado 09/06)
 
 **Problema observado (09/06, lead 542):** a `Venda` (id 40) ficou `erro_erp` (do 1º disparo, que falhou no `id_origem_servico`) mesmo **após o prospecto ser criado com sucesso** (`id_hubsoft=22758`) num reprocessamento. O reprocessamento atualizou o **lead** (`status_api`, `id_hubsoft`), **não a Venda** — não há reconciliação.
 
 A regra de `status_ciclo` (#5 acima) **já contorna isso na LEITURA** (deriva de `lead.id_hubsoft`), mas a **fonte** (`Venda.status`) continua errada.
 
-**Fix da fonte:** quando o prospecto é criado (`lead.id_hubsoft` setado + `status_api='processado'`), atualizar a `Venda` daquele lead: `pendente_erp`/`erro_erp` → **`enviado_erp`** + `enviado_erp_em`. Ponto de implementação: em `_enviar_lead_hubsoft` (signal) e no `processar_pendentes` (cron), logo após gravar o `id_hubsoft` no lead, fazer o mesmo `update` na `Venda` (se existir). Idempotente. Quando o cliente é sincronizado (`ClienteHubsoft`), avançar pra `ativo`.
+**Fix da fonte (implementado):** helper `_reconciliar_venda_com_prospecto(lead_id, tenant_id)` em `apps/integracoes/signals.py` — quando o prospecto é criado (`lead.id_hubsoft` setado), avança a `Venda` do lead de `pendente_erp`/`erro_erp` → **`enviado_erp`** + `enviado_erp_em`. Chamado em `_enviar_lead_hubsoft` (signal) e em `processar_pendentes` (cron), logo após gravar o `id_hubsoft`. Idempotente (só toca `pendente_erp`/`erro_erp`). **Pendente:** avançar pra `ativo` quando o `ClienteHubsoft` é sincronizado (fica pro `sincronizar_cliente`).
 
 **Colunas da página:** Cliente · Contato · Plano · Valor · **Status (ciclo)** · Documentação · Data · Ação.
 
