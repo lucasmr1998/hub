@@ -1158,6 +1158,7 @@ def api_integracao_financeiro_sandbox(request, pk):
         'viabilidade_coords', 'viabilidade_endereco',
         'solicitar_desconexao', 'reset_mac', 'reset_phy',
         'desbloqueio_confianca', 'suspender', 'habilitar', 'ativar',
+        'aceitar_contrato',
     }
     if not cpf and acao not in acoes_sem_cpf:
         return JsonResponse({'error': 'cpf_cnpj eh obrigatorio.'}, status=400)
@@ -1236,9 +1237,23 @@ def api_integracao_financeiro_sandbox(request, pk):
             else:  # ativar
                 r = svc.ativar_servico(id_cs)
             return JsonResponse({'success': True, 'acao': acao, 'resposta': r})
+        elif acao == 'consultar_cliente':
+            # Consulta dados do cliente por CPF/CNPJ. Inclui servicos com
+            # id_cliente_servico e id_cliente_servico_contrato (necessario pro aceite de contrato).
+            r = svc.consultar_cliente(cpf)
+            return JsonResponse({'success': True, 'acao': acao, 'resultado': r})
+        elif acao == 'aceitar_contrato':
+            # Marca o contrato como aceito no HubSoft. Recebe id_cliente_servico_contrato
+            # (obtido via consultar_cliente). Libera a abertura de OS (servico sai de
+            # "Aguardando Assinatura de Contrato").
+            id_contrato = data.get('id_cliente_servico_contrato')
+            if not id_contrato:
+                return JsonResponse({'error': 'id_cliente_servico_contrato obrigatorio.'}, status=400)
+            r = svc.aceitar_contrato(int(id_contrato), observacao=data.get('observacao') or 'Aceite via sandbox Hubtrix.')
+            return JsonResponse({'success': True, 'acao': acao, 'resposta': r})
         else:
             return JsonResponse({
-                'error': 'acao invalida. Permitidos: listar_faturas, listar_renegociacoes, extrato_conexao, planos_por_cep, listar_atendimentos, listar_os, viabilidade_coords, viabilidade_endereco, solicitar_desconexao, reset_mac, reset_phy, desbloqueio_confianca, suspender, habilitar, ativar.'
+                'error': 'acao invalida. Permitidos: consultar_cliente, aceitar_contrato, listar_faturas, listar_renegociacoes, extrato_conexao, planos_por_cep, listar_atendimentos, listar_os, viabilidade_coords, viabilidade_endereco, solicitar_desconexao, reset_mac, reset_phy, desbloqueio_confianca, suspender, habilitar, ativar.'
             }, status=400)
     except HubsoftServiceError as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=502)
