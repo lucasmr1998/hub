@@ -81,3 +81,129 @@ O botão "Enviar ao ERP" aparece na tabela e no modal somente se o tenant tiver 
 - A `api_oportunidades_vendas` continua com o mesmo nome de URL por compatibilidade com o template
 - `OportunidadeVenda` continua existindo e sendo gerenciada separadamente no pipeline CRM
 - A `/vendas/` (sem `/crm/`) é a página legada que espelha o HubSoft — mantida para tenants com integração ativa que precisam ver clientes já cadastrados no ERP
+
+---
+
+## PROPOSTA DE DESIGN — Venda unificada (Venda como fonte da verdade + sync HubSoft opcional)
+
+> **Status:** proposta (08/06/2026). Ainda não implementado. Decisões em aberto marcadas com **[DECIDIR]**.
+> **Origem:** investigação do lead 541/opp 705 (Nuvyon) — ver [[automacoes-pipeline]]. Hoje existem **duas páginas** de "vendas" que confundem: `/vendas/` (espelho HubSoft) e `/vendas/crm/` (`crm_vendas`). Para a Nuvyon, a venda só aparecia no espelho HubSoft (cliente cod 59955, lead 463) e **não havia `Venda` em `crm_vendas`** — porque a Nuvyon não tem a regra `criar_venda` configurada.
+
+### Problema
+
+São **dois estágios da mesma jornada** tratados como entidades separadas:
+
+| | `/vendas/crm/` (`crm_vendas`) | `/vendas/` (HubSoft) |
+|---|---|---|
+| Representa | venda registrada no nosso funil | cliente efetivado no ERP (pós-conversão) |
+| Fonte da verdade | Hubtrix | HubSoft (espelho via `sincronizar_cliente`) |
+| Quem usa hoje | TR Carrion (sem HubSoft) | Nuvyon (pipeline HubSoft) |
+
+Resultado: a mesma "venda" cai em páginas diferentes dependendo do tenant, e nenhuma das duas mostra o ciclo completo.
+
+### Modelo-alvo
+
+`Venda` (`crm_vendas`) vira **fonte única da verdade**; HubSoft vira **downstream opcional por tenant**:
+
+```
+Venda confirmada (gatilho canônico — ver [DECIDIR #1])
+   │
+   ├─ SEMPRE cria Venda no crm_vendas            ← fonte da verdade (todos os tenants)
+   │
+   └─ SE IntegracaoAPI HubSoft/SGP ativa no tenant:
+        ├─ push pro ERP (cadastrar_prospecto / contrato)
+        ├─ status: pendente_erp → enviado_erp
+        └─ reconciliação (sync ERP → Venda): enviado_erp → ativo | erro_erp
+```
+
+A página `/vendas/` passa a ser **uma só**: lista `crm_vendas` e, quando há integração, enriquece com o status do HubSoft (`clientes_hubsoft`/`servicos_cliente_hubsoft`, ligados por `lead_id`). O model `Venda` **já foi desenhado pra isso** — o enum `status` (`pendente_erp/enviado_erp/ativo/erro_erp`) comprova a intenção de "criar local → sincronizar com ERP".
+
+### O que já existe vs o que falta
+
+| Peça | Estado |
+|---|---|
+| Model `Venda` com status de ERP | ✅ existe |
+| Ação `criar_venda` (cria em `pendente_erp`) | ✅ existe |
+| `api_enviar_venda_erp` (push manual ao ERP) | ✅ existe |
+| `cadastrar_prospecto` / `sincronizar_cliente` HubSoft | ✅ existe (hoje por signal no lead, **soltos** da `Venda`) |
+| **`Venda` orquestrar o push pro ERP** (pendente_erp → enviado_erp automático) | ❌ falta |
+| **Reconciliação ERP → Venda** (sync atualiza `Venda.status`, não só `clientes_hubsoft`) | ❌ falta |
+| **Gatilho único de "venda confirmada"** consistente entre tenants | ❌ falta (TR Carrion usa `imagem existe`, frouxo; Nuvyon não tem) |
+| Página `/vendas/` unificada (LEFT JOIN Venda ↔ cliente HubSoft) | ❌ falta |
+
+> **Divergência doc↔prod observada:** esta doc dizia que `criar_venda` dispara em `docs_validados` (todas as imagens válidas). Em produção, a regra do TR Carrion (#7) dispara em `imagem_status existe` (qualquer imagem) — frouxo demais (1278 disparos, 2 efetivas). O gatilho canônico precisa ser redefinido (DECIDIR #1).
+
+### Decisões em aberto
+
+- **[DECIDIDO 08/06] Gatilho canônico = finalização do atendimento** ("finalizamos sua contratação").
+  - **Mapeamento técnico:** `HistoricoContato.status = 'fluxo_finalizado'` — gravado pelo fluxo Matrix via `POST /api/historicos/registrar/` ao finalizar a contratação. Há tipo de condição `historico_status` no motor.
+  - **Guard recomendado:** combinar com `id_plano_rp existe` (ou plano definido) pra não criar venda em fluxo finalizado sem contratação real.
+  - **Side-benefit:** desacopla a venda da tag "Assinado" (que hoje quebra por nó mal configurado na Matrix apontando pra `/api/leads/atualizar/`). O lead 541 teve `fluxo_finalizado` (histórico #409) — com este gatilho, **teria gerado venda apesar do 400**.
+  - Descartadas: (b) estágio `is_final_ganho` e (c) `docs_validados`. Abandonar o `imagem existe` atual do TR Carrion.
+- **[DECIDIR #2]** A `Venda` orquestra o push pro HubSoft (criar Venda → dispara prospecto/contrato), ou mantém `cadastrar_prospecto` por signal e só **vincula**? *Recomendação:* Venda orquestra, pra ter um dono único do fluxo.
+- **[DECIDIR #3]** Tenants **sem** ERP (TR Carrion): status local sem estados de ERP (ex: `concluida`) ou reaproveitar `ativo`?
+- **[DECIDIR #4]** Backfill: criar `Venda` retroativa para clientes HubSoft já existentes sem `Venda` (ex: cod 59955 / lead 463, Nuvyon) pra a página unificada ficar consistente com o histórico.
+
+### Página unificada (esboço)
+
+Uma `/vendas/` única, por lead/oportunidade, com **status de ciclo de vida** derivado das duas fontes:
+
+```
+Venda registrada → Contrato assinado → OS aberta (instalação) → Cliente ativo
+ (fluxo_finalizado)    (pós-venda)          (pós-venda)           (servico ATIVO via sync)
+```
+
+> **Ordenação do ciclo (decidido 08/06):** a **Venda** é registrada no "finalizamos sua contratação" (`fluxo_finalizado`). **Contrato assinado** e **abertura de OS/instalação** são etapas **PÓS-venda** (downstream) — **nunca** pré-condição pra criar a Venda. Por isso o gate atual da Nuvyon (regra #19 exigindo "docs validados" antes da venda) está **invertido**: documentos/contrato/OS vêm depois. No modelo unificado, esses passos só **avançam o status** de uma Venda que já existe; não a criam.
+
+- LEFT JOIN `crm_vendas` ↔ `clientes_hubsoft` em `lead_id` (e `servicos_cliente_hubsoft` p/ status do serviço).
+- Trata os dois lados como opcionais: mostra o que existir (tenant sem ERP só tem o lado CRM; cliente que veio direto do ERP ganha `Venda` via backfill).
+- Colunas: Cliente, Contato, Plano, Valor, **Status (ciclo de vida)**, Documentação, Data, Ação.
+
+### Fases de implementação (sugerida)
+
+1. **Gatilho canônico** (DECIDIR #1) — uma regra/sinal único de "venda confirmada" cria a `Venda`.
+2. **Orquestração do push** (DECIDIR #2) — `Venda` em `pendente_erp` + tenant com ERP ativo → envia; status → `enviado_erp`.
+3. **Reconciliação** — `sincronizar_cliente` (ou cron) atualiza `Venda.status` → `ativo`/`erro_erp` a partir do HubSoft.
+4. **Página unificada** — junta as duas views numa só com o status de ciclo de vida.
+5. **Backfill** (DECIDIR #4) — `Venda` retroativa pros clientes HubSoft órfãos.
+
+### Página unificada — especificação (decidido 09/06)
+
+**Decisão de espinha:** **(A) `Venda` é a espinha**; a página faz LEFT JOIN com HubSoft por `lead_id`. Backfill cria `Venda` retroativa pros clientes HubSoft órfãos.
+
+- **Escopo do backfill (prod, 09/06):** clientes HubSoft sem `Venda` = **21** → **`nuvyon`: 1** (real, cod 59955 / lead 463) + **`demo`: 20** (tenant de teste). Ou seja, **1 registro real**. Trivial.
+
+**Views atuais (a unificar):**
+- `vendas_crm_view` → `dashboard/vendas_crm.html`, dados via `api_oportunidades_vendas` (lista `Venda`). Docstring já diz *"fonte da verdade: model Venda"*.
+- `vendas_view` → `dashboard/vendas.html`, lista `ClienteHubsoft`/`ServicoClienteHubsoft`.
+
+**Plano:** `/vendas/` passa a ser a página unificada (template novo); `/vendas/crm/` **redireciona** pra `/vendas/`. Uma view, um template, um endpoint AJAX.
+
+**Contrato da API unificada** (evolução de `api_oportunidades_vendas`): por `Venda`, retornar também o bloco HubSoft quando `ClienteHubsoft`/`ServicoClienteHubsoft` existir pro mesmo `lead_id`:
+```
+{
+  venda: { id, lead, oportunidade, plano, valor, status, data_venda, criado_por },
+  hubsoft: {            # null se tenant sem integração ou sem cliente ainda
+    cliente: { codigo_cliente, ativo },
+    servico: { id_cliente_servico, status, status_prefixo, valor }
+  },
+  status_ciclo: "<derivado>"   # ver tabela abaixo
+}
+```
+
+**Status de ciclo de vida (derivado de `Venda.status` + `ServicoClienteHubsoft.status_prefixo`):**
+
+| Condição | status_ciclo |
+|---|---|
+| `Venda.status = pendente_erp` | **Registrada** (aguardando envio ao ERP) |
+| `Venda.status = enviado_erp` e sem `ClienteHubsoft` | **Enviada ao ERP** |
+| `ClienteHubsoft` existe + serviço `aguardando_instalacao` | **Cliente criado — aguardando instalação** |
+| serviço `servico_habilitado` | **Ativo / Instalado** |
+| serviço `cancel*` / `suspen*` | **Cancelado / Suspenso** |
+| `Venda.status = erro_erp` | **Erro no ERP** (mostrar `erro_erp_msg`) |
+
+> Tenant **sem** integração ERP (ex: TR Carrion): bloco `hubsoft` sempre `null`; `status_ciclo` deriva só de `Venda.status` (ver DECIDIR #3 — status local tipo "Concluída").
+
+**Colunas da página:** Cliente · Contato · Plano · Valor · **Status (ciclo)** · Documentação · Data · Ação.
+
+**Ordem de implementação da página:** (1) endpoint unificado com o JOIN + `status_ciclo`; (2) template novo reaproveitando os cards/tabela; (3) redirect de `/vendas/crm/`; (4) remover o template/endpoint antigo do espelho HubSoft.
