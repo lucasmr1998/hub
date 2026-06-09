@@ -415,6 +415,13 @@ def api_oportunidades_vendas(request):
             return ('suspenso', 'Suspenso')
         if cli:
             return ('cliente_criado', 'Cliente criado no ERP')
+        # Prospecto criado no ERP: o lead ja tem id_hubsoft. Reflete o estado
+        # real mesmo que a Venda.status esteja defasada (ex: erro_erp antigo
+        # apos o prospecto ter sido criado num reprocessamento). Ver
+        # reconciliacao (Fase 2) em robo/docs/.../crm/vendas.md.
+        lead = getattr(venda, 'lead', None)
+        if lead is not None and (getattr(lead, 'id_hubsoft', '') or '').strip():
+            return ('prospecto_criado', 'Prospecto criado no ERP')
         if venda.status == Venda.STATUS_ERRO_ERP:
             return ('erro_erp', 'Erro no ERP')
         if venda.status == Venda.STATUS_ENVIADO_ERP:
