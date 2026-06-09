@@ -191,18 +191,28 @@ Venda registrada → Contrato assinado → OS aberta (instalação) → Cliente 
 }
 ```
 
-**Status de ciclo de vida (derivado de `Venda.status` + `ServicoClienteHubsoft.status_prefixo`):**
+**Status de ciclo de vida** — derivado do **estado REAL no HubSoft** (`lead.id_hubsoft` / `ClienteHubsoft` / serviço), com `Venda.status` como **fallback**. Implementado em `_status_ciclo` (`dashboard/views.py`). A prioridade pelo estado real é proposital: a `Venda.status` pode estar **defasada** (ex: `erro_erp` antigo mesmo após o prospecto já ter sido criado num reprocessamento — lead 542).
 
-| Condição | status_ciclo |
-|---|---|
-| `Venda.status = pendente_erp` | **Registrada** (aguardando envio ao ERP) |
-| `Venda.status = enviado_erp` e sem `ClienteHubsoft` | **Enviada ao ERP** |
-| `ClienteHubsoft` existe + serviço `aguardando_instalacao` | **Cliente criado — aguardando instalação** |
-| serviço `servico_habilitado` | **Ativo / Instalado** |
-| serviço `cancel*` / `suspen*` | **Cancelado / Suspenso** |
-| `Venda.status = erro_erp` | **Erro no ERP** (mostrar `erro_erp_msg`) |
+| Prioridade | Condição | status_ciclo |
+|---|---|---|
+| 1 | serviço `servico_habilitado` | **Ativo / Instalado** |
+| 2 | serviço `aguardando_instalacao` | **Aguardando instalação** |
+| 3 | serviço `cancel*` / `suspen*` | **Cancelado / Suspenso** |
+| 4 | `ClienteHubsoft` existe | **Cliente criado no ERP** |
+| 5 | **`lead.id_hubsoft` setado** (prospecto criado) | **Prospecto criado no ERP** ← sobrepõe `Venda.status` defasada |
+| 6 | `Venda.status = erro_erp` (e sem `id_hubsoft`) | **Erro no ERP** |
+| 7 | `Venda.status = enviado_erp` | **Enviada ao ERP** |
+| 8 | resto (`pendente_erp`) | **Registrada** |
 
-> Tenant **sem** integração ERP (ex: TR Carrion): bloco `hubsoft` sempre `null`; `status_ciclo` deriva só de `Venda.status` (ver DECIDIR #3 — status local tipo "Concluída").
+> Tenant **sem** integração ERP (ex: TR Carrion): `hubsoft` null e `lead.id_hubsoft` vazio → cai pra `Venda.status` (ver DECIDIR #3).
+
+### Reconciliação Venda ↔ HubSoft (Fase 2 — a implementar)
+
+**Problema observado (09/06, lead 542):** a `Venda` (id 40) ficou `erro_erp` (do 1º disparo, que falhou no `id_origem_servico`) mesmo **após o prospecto ser criado com sucesso** (`id_hubsoft=22758`) num reprocessamento. O reprocessamento atualizou o **lead** (`status_api`, `id_hubsoft`), **não a Venda** — não há reconciliação.
+
+A regra de `status_ciclo` (#5 acima) **já contorna isso na LEITURA** (deriva de `lead.id_hubsoft`), mas a **fonte** (`Venda.status`) continua errada.
+
+**Fix da fonte:** quando o prospecto é criado (`lead.id_hubsoft` setado + `status_api='processado'`), atualizar a `Venda` daquele lead: `pendente_erp`/`erro_erp` → **`enviado_erp`** + `enviado_erp_em`. Ponto de implementação: em `_enviar_lead_hubsoft` (signal) e no `processar_pendentes` (cron), logo após gravar o `id_hubsoft` no lead, fazer o mesmo `update` na `Venda` (se existir). Idempotente. Quando o cliente é sincronizado (`ClienteHubsoft`), avançar pra `ativo`.
 
 **Colunas da página:** Cliente · Contato · Plano · Valor · **Status (ciclo)** · Documentação · Data · Ação.
 
