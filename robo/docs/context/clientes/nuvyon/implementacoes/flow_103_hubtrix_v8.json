@@ -143,7 +143,7 @@
           ]
         },
         "body": {
-          "body": "{\n    \"nome_razaosocial\": \"{#CONTATO.NOME}\",\n    \"telefone\": \"{#CONTATO.TELEFONE}\",\n    \"origem\": \"whatsapp\",\n    \"canal_entrada\": \"whatsapp\",\n    \"tipo_entrada\": \"contato_whatsapp\",\n     \"status_api\": \"processamento_manual\",\n     \"id_vendedor_rp\": 1618,\n      \"id_origem\": \"106\",\n     \"id_origem_servico\": \"74\"\n}"
+          "body": "{\n    \"nome_razaosocial\": \"{#CONTATO.NOME}\",\n    \"telefone\": \"{#CONTATO.TELEFONE}\",\n    \"origem\": \"whatsapp\",\n    \"canal_entrada\": \"whatsapp\",\n    \"tipo_entrada\": \"contato_whatsapp\",\n     \"status_api\": \"processamento_manual\",\n     \"id_vendedor_rp\": 743,\n      \"id_origem\": \"15\",\n     \"id_origem_servico\": \"74\"\n}"
         },
         "store": {
           "filter": 0,
@@ -352,7 +352,7 @@
           ]
         },
         "body": {
-          "body": "{\n    \"nome_razaosocial\": \"{#CONTATO.NOME}\",\n    \"telefone\": \"{#CONTATO.TELEFONE}\",\n    \"origem\": \"whatsapp\",\n    \"canal_entrada\": \"whatsapp\",\n    \"tipo_entrada\": \"contato_whatsapp\",\n     \"status_api\": \"processamento_manual\",\n     \"id_vendedor_rp\": 1618,\n      \"id_origem\": \"106\",\n     \"id_origem_servico\": \"74\"\n}"
+          "body": "{\n    \"nome_razaosocial\": \"{#CONTATO.NOME}\",\n    \"telefone\": \"{#CONTATO.TELEFONE}\",\n    \"origem\": \"whatsapp\",\n    \"canal_entrada\": \"whatsapp\",\n    \"tipo_entrada\": \"contato_whatsapp\",\n     \"status_api\": \"processamento_manual\",\n     \"id_vendedor_rp\": 743,\n      \"id_origem\": \"15\",\n     \"id_origem_servico\": \"74\"\n}"
         },
         "store": {
           "filter": 0,
@@ -6352,7 +6352,7 @@
           ]
         },
         "body": {
-          "body": "{\n    \"nome_razaosocial\": \"{#CONTATO.NOME}\",\n    \"telefone\": \"{#CONTATO.TELEFONE}\",\n    \"origem\": \"whatsapp\",\n    \"canal_entrada\": \"whatsapp\",\n    \"tipo_entrada\": \"contato_whatsapp\",\n     \"status_api\": \"processamento_manual\",\n     \"id_vendedor_rp\": 1618,\n      \"id_origem\": \"106\",\n     \"id_origem_servico\": \"74\"\n}"
+          "body": "{\n    \"nome_razaosocial\": \"{#CONTATO.NOME}\",\n    \"telefone\": \"{#CONTATO.TELEFONE}\",\n    \"origem\": \"whatsapp\",\n    \"canal_entrada\": \"whatsapp\",\n    \"tipo_entrada\": \"contato_whatsapp\",\n     \"status_api\": \"processamento_manual\",\n     \"id_vendedor_rp\": 743,\n      \"id_origem\": \"15\",\n     \"id_origem_servico\": \"74\"\n}"
         },
         "store": {
           "filter": 0,
@@ -11410,7 +11410,7 @@
       "data": {
         "api": {
           "identifier": "api_28",
-          "url": "{#url_api}/api/leads/atualizar/",
+          "url": "{#url_api}/api/leads/tags/",
           "method": 1,
           "async": 0,
           "async_condition": "",
