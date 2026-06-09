@@ -134,6 +134,9 @@ class Command(BaseCommand):
                     if id_prospecto:
                         campos_update['id_hubsoft'] = str(id_prospecto)
                     LeadProspecto.all_tenants.filter(pk=lead.pk).update(**campos_update)
+                    if id_prospecto:
+                        from apps.integracoes.signals import _reconciliar_venda_com_prospecto
+                        _reconciliar_venda_com_prospecto(lead.pk, lead.tenant_id)
                     self.stdout.write(self.style.SUCCESS(f'OK (id_prospecto={id_prospecto})'))
                     total_ok += 1
                 except HubsoftServiceError as exc:
