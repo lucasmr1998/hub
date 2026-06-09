@@ -140,11 +140,15 @@ Wizard Nuvyon = 7 steps (`<li name='step1..step7'>`):
 | 2 Endereco | Avanca (pre-preenchido pelo CEP) |
 | 3 Plano | Click no endereco_instalacao (dispara `vm.carregaUnidadeNegocio()`), vendedor=hubtrix, data_venda=hoje |
 | 4 Contrato | Avanca (sem campos) |
-| 5 Cobranca | Forma=SICREDI - NUVYON (polling DOM ate md-list-item aparecer, click via ActionChains), vencimento=9, tipo=Postecipada |
+| 5 Cobranca | Forma=SICREDI - NUVYON (polling DOM ate md-list-item aparecer, click via ActionChains), **vencimento lido do lead** (`id_dia_vencimento` -> dia), tipo=Postecipada |
 | 6 Pacotes | Avanca (sem campos) |
 | 7 OS | Click SALVAR |
 
 > **Por que `<hubsoft-select-virtual-repeat>` precisou polling DOM:** componente Angular custom tem isolated scope e usa `md-virtual-repeat-container` com lazy load via `md-on-open="vm.fnOnOpen()"`. Setar via `scope.vm.unidade_negocio.formas_cobranca` nao funciona (path errado). Estrategia que funciona: abrir, esperar `<md-list-item>` aparecer no DOM, clicar via ActionChains (mouse real — disparar ng-click nativo).
+
+> **⚠️ `DRY_RUN` (env do `bot_runner.py`) — NAO confundir com a flag `--dry-run` do conversor.** Com `DRY_RUN=1` no container, o `bot_runner` **trava o lead em `dados_custom.bot_conversao.status='tentando'` (seta `lock_em`) e retorna sem chamar o conversor** — nunca converte, e o lock preso faz parecer "hang". **Em prod tem que ser `DRY_RUN=0`** pra converter de verdade. (Diagnostico de 09/06: o bot estava em DRY_RUN=1, o que mascarou tudo como "Selenium travado".)
+
+> **Vencimento (corrigido 09/06):** o step 5 lia `vencimento=9` **fixo** (residuo Megalink), ignorando a escolha do cliente. Agora le `id_dia_vencimento` do lead e mapeia pro dia. **Mapa Nuvyon (do flow Matrix v8, nos `red_*venc*`):** `id 4=dia 10`, `id 5=dia 15`, `id 6=dia 20`, `id 9=dia 5`. Implementado em `main_refatorado.py` step 5 (`VENCIMENTO_ID_PARA_DIA`).
 
 ---
 

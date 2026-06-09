@@ -392,7 +392,7 @@ def _executar_wizard_nuvyon(processor, driver, wait, dry_run, headless, nome_fil
       step2 Enderecoo:  ja pre-preenchido, so avancar
       step3 Plano:     selecionar endereco_instalacao + vendedor=hubtrix + data_venda=hoje
       step4 Contrato:  sem campos, so avancar
-      step5 Cobranca:  Forma=Sicredi - Nuvyion, vencimento=9, tipo=Postecipada (Pos-Pago)
+      step5 Cobranca:  Forma=Sicredi - Nuvyion, vencimento=do lead (id_dia_vencimento), tipo=Postecipada (Pos-Pago)
       step6 Pacotes:   sem campos, so avancar
       step7 OS:        clicar SALVAR (a menos que dry_run=True)
     """
@@ -625,7 +625,7 @@ def _executar_wizard_nuvyon(processor, driver, wait, dry_run, headless, nome_fil
     snapshot('step4_pos_load')
 
     # === STEP 5: COBRANÇA ===
-    print("\n   📋 STEP 5 COBRANÇA: Forma=Sicredi - Nuvyion, vencimento=9, tipo=Postecipada")
+    print("\n   📋 STEP 5 COBRANÇA: Forma=Sicredi - Nuvyion, vencimento=do lead, tipo=Postecipada")
     if not goto_step(5):
         raise Exception("Falha ao navegar pra step5 Cobrança")
     time.sleep(2)
@@ -725,11 +725,31 @@ def _executar_wizard_nuvyon(processor, driver, wait, dry_run, headless, nome_fil
         forma_cobranca_skipped = True
         fechar_dropdown()
 
-    # Vencimento = 9 (do prospect)
+    # Vencimento: le id_dia_vencimento do lead e mapeia pro DIA, em vez de fixar 9.
+    # Mapa id->dia extraido do flow Matrix v8 da Nuvyon (nos red_*venc*).
+    VENCIMENTO_ID_PARA_DIA = {4: '10', 5: '15', 6: '20', 9: '5'}
+    dia_venc = None
     try:
-        open_select_by_name('vencimento')
-        click_option_by_text('9', exato=True)
-        print("      ✓ vencimento=9")
+        _cur = processor.conn.cursor()
+        _cur.execute(
+            "SELECT id_dia_vencimento FROM leads_prospectos WHERE id_hubsoft=%s AND tenant_id=%s LIMIT 1",
+            (str(id_prospecto), TENANT_CONFIG.tenant_id if TENANT_CONFIG else None),
+        )
+        _row = _cur.fetchone()
+        _cur.close()
+        if _row and _row[0] is not None:
+            dia_venc = VENCIMENTO_ID_PARA_DIA.get(int(_row[0]))
+            if dia_venc is None:
+                print(f"      ⚠️ id_dia_vencimento={_row[0]} sem mapeamento Nuvyon — vencimento nao alterado")
+    except Exception as e:
+        print(f"      ⚠️ Falha ao ler id_dia_vencimento: {e}")
+    try:
+        if dia_venc:
+            open_select_by_name('vencimento')
+            click_option_by_text(dia_venc, exato=True)
+            print(f"      ✓ vencimento={dia_venc} (do lead, id_dia_vencimento)")
+        else:
+            print("      ⚠️ vencimento nao mapeado — mantendo o que veio do prospecto")
     except Exception as e:
         print(f"      ⚠️ Falha em vencimento: {e}")
         fechar_dropdown()
