@@ -911,7 +911,7 @@ def imagens_por_cliente_api(request):
 
 
 @csrf_exempt
-@api_token_required
+@api_token_or_login_required
 @auditar('leads', 'validar', 'imagem')
 def validar_imagem_api(request):
     """
