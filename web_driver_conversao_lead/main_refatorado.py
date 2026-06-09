@@ -193,7 +193,8 @@ class ProspectoProcessor:
                     WHERE id = %s
                 """, (
                     nome_prospecto, status_db, datetime.datetime.now(),
-                    self.tentativa_atual, erro, tempo_processamento, resultado, id_existente
+                    self.tentativa_atual, erro, tempo_processamento,
+                    Json(resultado) if resultado is not None else None, id_existente
                 ))
                 
                 print(f"🔄 Atualizando prospecto ID {id_existente}: {status_atual} -> {status_db} (Tentativa {self.tentativa_atual})")
@@ -221,14 +222,15 @@ class ProspectoProcessor:
                         data_criacao, data_processamento,
                         tentativas_processamento, erro_processamento,
                         tempo_processamento, resultado_processamento,
-                        tenant_id, lead_id
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        prioridade, tenant_id, lead_id
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING id
                 """, (
                     nome_prospecto, id_prospecto_hubsoft, status_db,
                     datetime.datetime.now(), datetime.datetime.now(),
-                    self.tentativa_atual, erro, tempo_processamento, resultado,
-                    tenant_id, lead_id_resolvido,
+                    self.tentativa_atual, erro, tempo_processamento,
+                    Json(resultado) if resultado is not None else None,
+                    1, tenant_id, lead_id_resolvido,
                 ))
                 self.current_prospecto_id = cursor.fetchone()[0]
                 
