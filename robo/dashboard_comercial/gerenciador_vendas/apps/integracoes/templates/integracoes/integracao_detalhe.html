@@ -523,15 +523,30 @@
     </div>
 
     <h4 style="margin: var(--sp-5) 0 var(--sp-2); font-size: var(--fs-sm); font-weight: var(--fw-semibold);"><i class="bi bi-file-earmark-text"></i> Contrato</h4>
+    <p style="margin: 0 0 var(--sp-2); font-size: 11px; color: var(--color-text-muted);">
+      Usa o CPF do campo acima. Fluxo: <strong>Listar modelos</strong> &rarr; <strong>Criar contrato</strong> &rarr; <strong>Aceitar contrato</strong>.
+    </p>
+    <div style="margin-bottom: var(--sp-2);">
+      <button class="btn btn-ghost btn-sm" onclick="hsListarModelos()"><i class="bi bi-list-check"></i> Listar modelos de contrato</button>
+    </div>
     <div class="form-row-2" style="margin-top: var(--sp-2);">
       <div class="field">
-        <label class="field-label">id_cliente_servico_contrato</label>
-        <div class="field-input-wrap">
-          <input type="text" class="field-input" id="hs-contrato-id" placeholder="id do contrato (via Consultar cliente)" />
+        <label class="field-label">Criar contrato &mdash; id_cliente_servico / id_contrato_modelo / id_empresa</label>
+        <div class="field-input-wrap" style="display: flex; gap: 6px;">
+          <input type="text" class="field-input" id="hs-contrato-servico" placeholder="id_cliente_servico" />
+          <input type="text" class="field-input" id="hs-contrato-modelo" placeholder="id_contrato_modelo" />
+          <input type="text" class="field-input" id="hs-contrato-empresa" placeholder="id_empresa" />
+          <button class="btn btn-ghost btn-sm" onclick="hsCriarContrato()"><i class="bi bi-file-earmark-plus"></i> Criar</button>
         </div>
       </div>
-      <div class="field" style="display: flex; gap: 6px; align-items: flex-end;">
-        <button class="btn btn-ghost btn-sm" onclick="hsAceitarContrato()"><i class="bi bi-file-earmark-check"></i> Aceitar contrato</button>
+    </div>
+    <div class="form-row-2" style="margin-top: var(--sp-2);">
+      <div class="field">
+        <label class="field-label">id_cliente_servico_contrato (aceite)</label>
+        <div class="field-input-wrap" style="display: flex; gap: 6px;">
+          <input type="text" class="field-input" id="hs-contrato-id" placeholder="id do contrato (de Criar / Consultar)" />
+          <button class="btn btn-ghost btn-sm" onclick="hsAceitarContrato()"><i class="bi bi-file-earmark-check"></i> Aceitar</button>
+        </div>
       </div>
     </div>
 
@@ -721,6 +736,21 @@ async function hsOp(acao, msgConfirm, extra) {
   if (acao === 'suspender') payload.tipo_suspensao = extra;
   if (acao === 'habilitar') payload.motivo = extra;
   await hsExecutar(acao, payload);
+}
+
+async function hsListarModelos() {
+  await hsExecutar('listar_modelos_contrato', {});
+}
+
+async function hsCriarContrato() {
+  const cpf = (document.getElementById('hs-fin-cpf').value || '').trim();
+  const idcs = (document.getElementById('hs-contrato-servico').value || '').trim();
+  const modelo = (document.getElementById('hs-contrato-modelo').value || '').trim();
+  const empresa = (document.getElementById('hs-contrato-empresa').value || '').trim();
+  if (!cpf) { toast('Aviso', 'Informe o CPF no campo acima (titular do contrato).', 'warning'); return; }
+  if (!idcs || !modelo || !empresa) { toast('Aviso', 'Informe id_cliente_servico, id_contrato_modelo e id_empresa.', 'warning'); return; }
+  if (!confirm(`Criar contrato no HubSoft?\n\nid_cliente_servico = ${idcs}\nid_contrato_modelo = ${modelo}\nid_empresa = ${empresa}`)) return;
+  await hsExecutar('criar_contrato', { cpf_cnpj: cpf, id_cliente_servico: idcs, id_contrato_modelo: modelo, id_empresa: empresa });
 }
 
 async function hsAceitarContrato() {
