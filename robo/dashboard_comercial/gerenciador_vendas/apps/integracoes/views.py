@@ -1238,9 +1238,9 @@ def api_integracao_financeiro_sandbox(request, pk):
                 r = svc.ativar_servico(id_cs)
             return JsonResponse({'success': True, 'acao': acao, 'resposta': r})
         elif acao == 'consultar_cliente':
-            # Consulta dados do cliente por CPF/CNPJ. Inclui servicos com
-            # id_cliente_servico e id_cliente_servico_contrato (necessario pro aceite de contrato).
-            r = svc.consultar_cliente(cpf)
+            # Consulta por CPF/CNPJ COM contratos (incluir_contrato=sim), pra trazer o
+            # id_cliente_servico_contrato de cada servico (necessario pro aceite de contrato).
+            r = svc.consultar_cliente(cpf, incluir_contrato=True)
             return JsonResponse({'success': True, 'acao': acao, 'resultado': r})
         elif acao == 'listar_modelos_contrato':
             # Catalogo de modelos de contrato do tenant HubSoft (pra achar id_contrato_modelo + id_empresa).
@@ -1280,4 +1280,8 @@ def api_integracao_financeiro_sandbox(request, pk):
                 'error': 'acao invalida. Permitidos: consultar_cliente, listar_modelos_contrato, criar_contrato, aceitar_contrato, listar_faturas, listar_renegociacoes, extrato_conexao, planos_por_cep, listar_atendimentos, listar_os, viabilidade_coords, viabilidade_endereco, solicitar_desconexao, reset_mac, reset_phy, desbloqueio_confianca, suspender, habilitar, ativar.'
             }, status=400)
     except HubsoftServiceError as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=502)
+        # 400 (nao 5xx) de proposito: o EasyPanel intercepta 5xx e troca o body por HTML,
+        # quebrando o JSON.parse do front ("Unexpected token '<'"). Mesmo padrao dos wrappers de OS.
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'{type(e).__name__}: {e}'}, status=400)

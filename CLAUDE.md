@@ -15,6 +15,7 @@ Uma feature so e considerada **pronta** quando TODOS os itens abaixo foram cumpr
 
 - [ ] Codigo funcional com teste manual/automatizado passando
 - [ ] Documentacao em `robo/docs/PRODUTO/` atualizada (modulo correspondente)
+- [ ] `execution-log.md` do modulo atualizado (o que foi feito + status)
 - [ ] Nenhum `print`, `console.log` ou comentario de debug deixado no codigo
 - [ ] Imports/variaveis nao utilizados removidos
 - [ ] Deploy validado com teste real em producao (se aplicavel)
@@ -188,6 +189,17 @@ Estrutura hierarquica em `robo/docs/PRODUTO/`:
 - `modulos/cs/` — Clube, parceiros, indicacoes, carteirinha, NPS, retencao
 
 Indice completo em `robo/docs/PRODUTO/README.md`.
+
+### Execution log (por modulo)
+
+Cada modulo mantem um `execution-log.md` na sua pasta de doc (`robo/docs/PRODUTO/<modulo>/execution-log.md`; criar se nao existir). E a trilha do que foi **executado** no modulo. Complementa as reunioes: reuniao e o resumo da conversa, execution-log e o que foi feito, decidido e o que ficou pendente.
+
+- **Consultar antes:** ao retomar trabalho num modulo, ler o `execution-log.md` dele pra saber o que ja foi feito, o estado atual e o que ficou `pending`/`blocked`.
+- **Quando atualizar:** ao concluir uma unidade de trabalho relevante (fix, PR, investigacao, decisao de arquitetura, bloqueio). Nao para cada micro-passo.
+- **Onde:** no modulo do lado dominante do trabalho. Se for cross-module, registrar no dominante e referenciar o(s) outro(s).
+- **Formato:** append no fim (entrada mais nova embaixo). Cabecalho `## AAAA-MM-DD — <titulo curto>` + bullets `Acao / Decisao / Output (PRs, arquivos) / Status`. Status: `completed` / `pending` / `blocked`.
+- **Bloqueios:** registrar com `blocked`, o que esta esperando (ex: resposta de fornecedor) e a memoria relacionada, se houver.
+- **Modulos:** os mesmos de `PRODUTO/` (`integracoes/`, `ops/`, `modulos/<funcional>/`).
 
 ---
 

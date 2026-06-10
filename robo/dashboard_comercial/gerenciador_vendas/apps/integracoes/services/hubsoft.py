@@ -145,10 +145,17 @@ class HubsoftService:
     # Cliente
     # ------------------------------------------------------------------
 
-    def consultar_cliente(self, cpf_cnpj: str, lead=None) -> dict:
-        """Consulta cliente no HubSoft por CPF/CNPJ."""
+    def consultar_cliente(self, cpf_cnpj: str, lead=None, incluir_contrato: bool = False) -> dict:
+        """Consulta cliente no HubSoft por CPF/CNPJ.
+
+        incluir_contrato=True adiciona `incluir_contrato=sim` na query, trazendo os
+        contratos do servico na resposta (necessario pra obter o
+        id_cliente_servico_contrato usado no aceite de contrato).
+        """
         cpf_limpo = self._somente_numeros(cpf_cnpj)
         params = {'busca': 'cpf_cnpj', 'termo_busca': cpf_limpo}
+        if incluir_contrato:
+            params['incluir_contrato'] = 'sim'
         resposta = self._get(self.ENDPOINT_CLIENTE, params=params, lead=lead)
 
         if resposta.get('status') != 'success':
