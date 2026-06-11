@@ -2299,6 +2299,15 @@ ACOES_DISPONIVEIS = [
         ],
     },
     {
+        'tipo': 'assinar_contrato_hubsoft',
+        'label': 'Assinar Contrato HubSoft',
+        'descricao': 'Aceita o contrato ja existente do cliente no HubSoft (consulta com incluir_contrato + aceite). Nao cria contrato. Use com trigger "documentos validados".',
+        'icon': 'bi-file-earmark-check',
+        'campos_extras': [
+            {'name': 'ativar_servico_apos_aceite', 'label': 'Ativar servico apos aceite', 'type': 'text', 'help': 'Digite "sim" pra ativar o servico apos o aceite (testar destravar OS). Vazio = nao.'},
+        ],
+    },
+    {
         'tipo': 'enviar_venda_whatsapp',
         'label': 'Enviar Venda por WhatsApp',
         'descricao': 'Envia resumo da venda + fotos dos documentos pelo WhatsApp (via uazapi). Idempotente — não reenvia.',
