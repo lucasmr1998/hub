@@ -75,6 +75,32 @@ O registry detecta automaticamente — a UI do editor, o admin Django e o JSON d
 
 ---
 
+## Ações de automação
+
+Além de mover a oportunidade de estágio, uma regra pode executar **ações** (campo `acoes` no `RegraPipelineEstagio`, JSON array). Cada ação é `{tipo, config}`. O dispatcher `_EXECUTORES_ACAO` (`automacao_pipeline.py`) resolve o `tipo` numa função `(oportunidade, config) -> bool` (True = efetivou, False = pulou por idempotência).
+
+> Regra **só com ação** (sem mover estágio): deixe `estagio = null`. Regra que move estágio executa as ações no mesmo disparo.
+
+| Ação (`tipo`) | O que faz | Config |
+|---|---|---|
+| `criar_venda` | Cria registro de Venda pro lead (idempotente) | — |
+| `atribuir_agente` | Atribui um agente à oportunidade | — |
+| `gerar_contrato_hubsoft` | Cria + anexa docs + aceita contrato no HubSoft (atômico). **Quebra "já existe" se o contrato é auto-criado** (caso Nuvyon) | `id_contrato_modelo`, `id_empresa`, ... |
+| `assinar_contrato_hubsoft` | **Aceita o contrato JÁ EXISTENTE**: consulta com `incluir_contrato=sim` → pega o `id_cliente_servico_contrato` → `aceitar_contrato`. **Não cria** contrato. Pro Nuvyon (contrato auto-criado pelo HubSoft) | `ativar_servico_apos_aceite` ("sim" = chama `ativar_servico` após o aceite, pra testar destravar a OS) |
+| `enviar_venda_whatsapp` | Envia resumo da venda + docs por WhatsApp (uazapi) | `telefone_destino` |
+
+### Como adicionar uma ação nova
+
+1. Escreva `_acao_<tipo>(oportunidade, config) -> bool` em `automacao_pipeline.py` (True se efetivou, False se pulou).
+2. Registre em `_EXECUTORES_ACAO`.
+3. Adicione um dict em `ACOES_DISPONIVEIS` (`crm/views.py`) com `tipo/label/descricao/icon` (+ `campos_extras` opcional `{name,label,type,help}`) — o form de regras renderiza sozinho.
+
+**Trigger típico pro contrato:** condição `imagem_status / todas_iguais / documentos_validos` (dispara quando todas as imagens do lead são validadas).
+
+> ⚠️ **Aceitar o contrato pode não mover o status do serviço** de "aguardando assinatura" (visto no lead 544). O `assinar_contrato_hubsoft` tem o flag `ativar_servico_apos_aceite` pra testar a ativação, mas `ativar_servico` é "pós-instalação" no HubSoft, então pode não ser o passo certo. A transição do serviço (assinatura -> instalação) ainda é ponto a confirmar com o HubSoft.
+
+---
+
 ## Exemplo de regra (formato JSON armazenado em `condicoes`)
 
 ```json

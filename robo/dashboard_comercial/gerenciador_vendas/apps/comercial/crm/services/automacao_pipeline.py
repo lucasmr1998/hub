@@ -447,6 +447,117 @@ def _acao_gerar_contrato_hubsoft(oportunidade, config):
     return True
 
 
+def _extrair_id_contrato(resp, id_cliente_servico):
+    """Extrai id_cliente_servico_contrato da resposta de consultar_cliente
+    (incluir_contrato=True), casando pelo id_cliente_servico do servico.
+    Fallback: primeiro contrato de qualquer servico do cliente."""
+    clientes = (resp or {}).get('clientes') or []
+    for cli in clientes:
+        for sv in (cli.get('servicos') or []):
+            if str(sv.get('id_cliente_servico')) == str(id_cliente_servico):
+                for ctr in (sv.get('contratos') or []):
+                    cid = ctr.get('id_cliente_servico_contrato')
+                    if cid:
+                        return cid
+    for cli in clientes:
+        for sv in (cli.get('servicos') or []):
+            for ctr in (sv.get('contratos') or []):
+                cid = ctr.get('id_cliente_servico_contrato')
+                if cid:
+                    return cid
+    return None
+
+
+def _acao_assinar_contrato_hubsoft(oportunidade, config):
+    """Assina (aceita) o contrato JA EXISTENTE do lead no HubSoft.
+
+    Diferente de gerar_contrato_hubsoft: NAO cria o contrato (no Nuvyon ele e
+    auto-criado pelo HubSoft junto com o cliente/servico — adicionar_contrato
+    devolve "ja existe"). Resolve o id via consultar_cliente(incluir_contrato=True)
+    e chama aceitar_contrato.
+
+    Trigger tipico: condicao `imagem_status todas_iguais documentos_validos`.
+
+    config opcional:
+    - ativar_servico_apos_aceite ("sim"): apos o aceite, chama ativar_servico pra
+      tentar mover o servico de "aguardando assinatura" (aceitar sozinho pode nao
+      mover o status do servico — ver lead 544). Use pra testar se destrava a OS.
+
+    Idempotente: se lead.contrato_aceito ja True, pula. Retorna True se aceitou.
+    """
+    from apps.comercial.cadastro.services.contrato_service import _obter_hubsoft_service
+    from apps.integracoes.services.hubsoft import HubsoftServiceError
+
+    lead = oportunidade.lead
+    if not lead:
+        logger.warning("[assinar_contrato] oport=%s sem lead", oportunidade.pk)
+        return False
+    if getattr(lead, 'contrato_aceito', False):
+        logger.info("[assinar_contrato] lead=%s ja tem contrato aceito, pula", lead.pk)
+        return False
+
+    cliente_hubsoft = lead.clientes_hubsoft.first()
+    if not cliente_hubsoft:
+        logger.info("[assinar_contrato] lead=%s ainda nao virou cliente HubSoft", lead.pk)
+        return False
+    servico = cliente_hubsoft.servicos.first()
+    if not servico:
+        logger.info("[assinar_contrato] cliente %s sem servicos", cliente_hubsoft.pk)
+        return False
+
+    try:
+        hubsoft_service = _obter_hubsoft_service(tenant=lead.tenant)
+    except Exception as exc:
+        logger.error("[assinar_contrato] sem HubsoftService: %s", exc)
+        return False
+
+    # 1) Resolve o id do contrato (ja salvo, ou via consulta com incluir_contrato)
+    id_contrato = servico.id_cliente_servico_contrato
+    if not id_contrato:
+        try:
+            resp = hubsoft_service.consultar_cliente(
+                lead.cpf_cnpj, lead=lead, incluir_contrato=True,
+            )
+        except HubsoftServiceError as exc:
+            logger.error("[assinar_contrato] consultar_cliente falhou (lead=%s): %s", lead.pk, exc)
+            return False
+        id_contrato = _extrair_id_contrato(resp, servico.id_cliente_servico)
+        if id_contrato:
+            servico.id_cliente_servico_contrato = int(id_contrato)
+            servico.save(update_fields=['id_cliente_servico_contrato'])
+    if not id_contrato:
+        logger.warning("[assinar_contrato] lead=%s: contrato nao encontrado na consulta", lead.pk)
+        return False
+
+    # 2) Aceita o contrato
+    try:
+        hubsoft_service.aceitar_contrato(
+            int(id_contrato),
+            observacao='Contrato aceito automaticamente apos validacao de documentos.',
+            lead=lead,
+        )
+    except HubsoftServiceError as exc:
+        logger.error("[assinar_contrato] aceitar_contrato falhou (lead=%s, contrato=%s): %s",
+                     lead.pk, id_contrato, exc)
+        return False
+
+    lead.contrato_aceito = True
+    lead.data_aceite_contrato = timezone.now()
+    lead.save(update_fields=['contrato_aceito', 'data_aceite_contrato'])
+    logger.info("[assinar_contrato] contrato %s aceito (lead %s)", id_contrato, lead.pk)
+
+    # 3) Opcional: ativar servico (aceite sozinho pode nao mover o status — testar)
+    if str((config or {}).get('ativar_servico_apos_aceite', '')).lower() in ('sim', 'true', '1', 'on'):
+        try:
+            hubsoft_service.ativar_servico(int(servico.id_cliente_servico))
+            logger.info("[assinar_contrato] servico %s ativado (lead %s)",
+                        servico.id_cliente_servico, lead.pk)
+        except HubsoftServiceError as exc:
+            logger.warning("[assinar_contrato] ativar_servico falhou (lead=%s): %s", lead.pk, exc)
+
+    return True
+
+
 def _acao_enviar_venda_whatsapp(oportunidade, config):
     """Manda resumo da venda + documentos por WhatsApp.
 
@@ -487,6 +598,7 @@ _EXECUTORES_ACAO = {
     'criar_venda': _acao_criar_venda,
     'atribuir_agente': _acao_atribuir_agente,
     'gerar_contrato_hubsoft': _acao_gerar_contrato_hubsoft,
+    'assinar_contrato_hubsoft': _acao_assinar_contrato_hubsoft,
     'enviar_venda_whatsapp': _acao_enviar_venda_whatsapp,
 }
 
