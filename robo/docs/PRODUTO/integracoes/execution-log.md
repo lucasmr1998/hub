@@ -48,3 +48,12 @@ Registro cronológico do que foi executado no módulo de integrações (ação, 
 - **Arquivos**: `apps/integracoes/services/hubsoft.py`, `apps/integracoes/views.py`.
 - **Próximo**: deploy → Sandbox → "Consultar cliente" (vem o id do contrato) → "Aceitar contrato" → abrir OS no 544.
 - **Status**: completed (código); pending deploy + teste 544.
+
+## 2026-06-11 — OS abre end-to-end (gabriela); nó do 544; bugs do bot
+
+- **WIN — abertura de OS funciona de ponta a ponta**: pro gabriela (lead 548, cliente 60035, serviço 109047), `abrir-atendimento` + `abrir-os` via wrappers (token) → **OS 245261 criada** ("ATIVACAO RES FIBRA", status pendente, agendada 12/06 07:00, técnico 221). Confirma que a camada de OS funciona quando o serviço está em "Aguardando Instalação". (OS é real — cancelar no painel se for só teste.)
+- **Nó do 544 (ainda aberto)**: serviço 108931 preso em "Aguardando Assinatura de Contrato" → OS trava. O contrato foi **aceito via API** (`aceitar_contrato` 178542, "1 contrato aceito com sucesso"), mas **o aceite via API NÃO move o status do serviço**. Curioso: gabriela tem `contrato_aceito=False` (local) e a OS abriu; 544 tem `contrato_aceito=True` e trava → quem decide é o **status do serviço no HubSoft**, não o flag local. Hipótese: assinar o contrato na conversão (wizard) move o serviço; aceitar via API depois, não. Pendente: confirmar como o gabriela foi convertido (bot só? manual?) + achar o que transiciona o serviço (assinar no step 4? "Ativar/Habilitar serviço"? painel?).
+- **Bug bot — falso sucesso**: `web_driver_conversao_lead/main_refatorado.py:839-845` clica SALVAR + `time.sleep(5)` + declara "✨ SUCESSO" **sem verificar** se o HubSoft converteu. Lead 548 ficou "Não convertido" no HubSoft mas o bot reportou sucesso. Fix: verificar a conversão real pós-SALVAR (capturar erro/modal + confirmar) antes de marcar sucesso.
+- **Bot não redeployado (PR #7)**: erros `null value in column prioridade` + `invalid input syntax for type json ('sucesso')` no `salvar_prospecto`. O código atual TEM o fix (prioridade=1 linha 233, `Json()` linhas 197/232), mas o `hubtrix_bot_nuvyion` roda versão antiga. **Falta redeploy do bot.**
+- **Status stale no /vendas/**: `_status_ciclo` (dashboard/views.py:405) lê `servico.status_prefixo` (espelho local), congelado em 09/06 (`sincronizar_servicos` off) → mostra "instalação" quando o real é "assinatura". A tela de lead mostra o real. Fix: ligar/rodar `sincronizar_servicos` ou unificar a fonte.
+- **Status**: OS = completed (validado no gabriela). Nó 544 + bugs do bot + sync stale = pending.
