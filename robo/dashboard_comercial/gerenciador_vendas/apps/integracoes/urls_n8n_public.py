@@ -1,5 +1,6 @@
 """URLs publicas (sem login) — webhooks de N8N externo e endpoints do Matrix."""
 from django.urls import path
+from . import views
 from . import views_n8n_webhook
 from . import views_matrix_os
 from . import views_conhecimento
@@ -9,6 +10,11 @@ app_name = 'integracoes_n8n_public'
 urlpatterns = [
     path('lead/', views_n8n_webhook.receber_lead, name='n8n_receber_lead'),
     path('lead/imagem/', views_n8n_webhook.registrar_imagem_lead, name='n8n_registrar_imagem_lead'),
+    # Status HubSoft do lead (polling do flow Matrix). Mesma view do mount
+    # /configuracoes/ (que e protegido por login) — aqui exposta no mount
+    # token-auth pra o flow conseguir ler o JSON do gate (eh_cliente_hubsoft,
+    # documentacao_validada). Sem isso o polling recebia a pagina de login (HTML).
+    path('lead/hubsoft-status/', views.api_lead_hubsoft_status, name='n8n_lead_hubsoft_status'),
     path('viabilidade/', views_n8n_webhook.viabilidade_check, name='n8n_viabilidade'),
     path('inbox/mensagem/', views_n8n_webhook.inbox_mensagem, name='n8n_inbox_mensagem'),
     path('conversa/estado/', views_n8n_webhook.conversa_estado, name='n8n_conversa_estado'),
