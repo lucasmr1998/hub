@@ -2390,7 +2390,7 @@
       "data": {
         "api": {
           "identifier": "api_21",
-          "url": "{#url_api}/integracoes/api/lead/hubsoft-status/?lead_id={#id_lead}",
+          "url": "{#url_api}/api/public/n8n/lead/hubsoft-status/?lead_id={#id_lead}",
           "method": 4,
           "async": 0,
           "async_condition": "",
@@ -9826,7 +9826,7 @@
       "data": {
         "api": {
           "identifier": "api_21",
-          "url": "{#url_api}/integracoes/api/lead/hubsoft-status/?lead_id={#id_lead}",
+          "url": "{#url_api}/api/public/n8n/lead/hubsoft-status/?lead_id={#id_lead}",
           "method": 4,
           "async": 0,
           "async_condition": "",
@@ -9891,7 +9891,7 @@
       "data": {
         "api": {
           "identifier": "api_21",
-          "url": "{#url_api}/integracoes/api/lead/hubsoft-status/?lead_id={#id_lead}",
+          "url": "{#url_api}/api/public/n8n/lead/hubsoft-status/?lead_id={#id_lead}",
           "method": 4,
           "async": 0,
           "async_condition": "",
