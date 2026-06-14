@@ -16,6 +16,9 @@
   </div>
 </div>
 
+{% include 'crm/_config_tabs.html' with config_tab_ativa='automacoes' %}
+
+
 <div class="stats-grid stats-grid-4" style="margin-bottom: var(--sp-4);">
   {% include "components/stat_card.html" with label="Regras totais" value=total_regras icon="bi-diagram-3" %}
   {% include "components/stat_card.html" with label="Regras ativas" value=total_ativas icon="bi-check-circle" icon_variant="success" %}

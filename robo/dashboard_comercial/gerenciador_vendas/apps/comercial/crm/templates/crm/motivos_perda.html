@@ -15,6 +15,9 @@
   </div>
 </div>
 
+{% include 'crm/_config_tabs.html' with config_tab_ativa='motivos_perda' %}
+
+
 <div class="stats-grid stats-grid-2" style="margin-bottom: var(--sp-4);">
   {% include "components/stat_card.html" with label="Motivos ativos" value=total_ativos icon="bi-check-circle" icon_variant="success" %}
   {% include "components/stat_card.html" with label="Usos nos ultimos 12 meses" value=uso_12m icon="bi-graph-down" icon_variant="warning" %}

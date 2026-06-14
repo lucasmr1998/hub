@@ -16,6 +16,9 @@
   </div>
 </div>
 
+{% include 'crm/_config_tabs.html' with config_tab_ativa='metas' %}
+
+
 <div class="stats-grid stats-grid-4" style="margin-bottom: var(--sp-4);">
   {% include "components/stat_card.html" with label="Metas ativas" value=metas_ativas|length icon="bi-bullseye" %}
   {% include "components/stat_card.html" with label="Acima de 80%" value="—" icon="bi-person-check" icon_variant="success" %}

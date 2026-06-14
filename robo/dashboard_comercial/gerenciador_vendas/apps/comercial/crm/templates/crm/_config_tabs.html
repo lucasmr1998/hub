@@ -1,0 +1,47 @@
+{% comment %}
+Tabs de navegacao das paginas de configuracao do CRM.
+
+Cada pagina filha de /crm/configuracoes/* inclui este partial com a variavel
+`config_tab_ativa` definida (ex: 'geral', 'equipes', 'metas', 'produtos',
+'automacoes', 'motivos_perda').
+
+Visual segue o padrao do Atendimento (inbox/configuracoes_inbox.html).
+{% endcomment %}
+<style>
+.crm-config-tabs {
+  display: flex; gap: 4px; margin-bottom: var(--sp-5); flex-wrap: wrap;
+  padding: 6px; background: var(--color-surface-subtle, #f8fafc); border-radius: 10px;
+  border: 1px solid var(--color-border, #e2e8f0);
+}
+.crm-config-tab {
+  padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500;
+  color: var(--color-text-muted, #64748b); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 8px; transition: all .15s;
+}
+.crm-config-tab:hover { background: rgba(0,0,0,.04); color: var(--color-text, #1e293b); }
+.crm-config-tab.is-active {
+  background: var(--color-text, #1e293b); color: #fff;
+}
+.crm-config-tab.is-active:hover { background: var(--color-text, #1e293b); color: #fff; }
+</style>
+
+<div class="crm-config-tabs">
+  <a href="{% url 'crm:configuracoes' %}" class="crm-config-tab {% if config_tab_ativa == 'geral' %}is-active{% endif %}">
+    <i class="bi bi-sliders"></i> Geral
+  </a>
+  <a href="{% url 'crm:equipes' %}" class="crm-config-tab {% if config_tab_ativa == 'equipes' %}is-active{% endif %}">
+    <i class="bi bi-people"></i> Equipes
+  </a>
+  <a href="{% url 'crm:metas' %}" class="crm-config-tab {% if config_tab_ativa == 'metas' %}is-active{% endif %}">
+    <i class="bi bi-bullseye"></i> Metas
+  </a>
+  <a href="{% url 'crm:produtos' %}" class="crm-config-tab {% if config_tab_ativa == 'produtos' %}is-active{% endif %}">
+    <i class="bi bi-box-seam"></i> Produtos
+  </a>
+  <a href="{% url 'crm:automacoes_pipeline' %}" class="crm-config-tab {% if config_tab_ativa == 'automacoes' %}is-active{% endif %}">
+    <i class="bi bi-diagram-3"></i> Automacoes
+  </a>
+  <a href="{% url 'crm:motivos_perda_lista' %}" class="crm-config-tab {% if config_tab_ativa == 'motivos_perda' %}is-active{% endif %}">
+    <i class="bi bi-x-circle"></i> Motivos de perda
+  </a>
+</div>
