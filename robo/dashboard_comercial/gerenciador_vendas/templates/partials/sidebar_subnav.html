@@ -69,24 +69,25 @@ Uso em template que extende layout_app:
         </a>
       </nav>
       {% if is_superuser or perm.acesso_configuracoes %}
+        <div class="app-subnav-section">Configuracoes</div>
         <nav class="app-subnav-list">
           <a href="/crm/configuracoes/" class="app-subnav-item {% if request.resolver_match.url_name == 'configuracoes' and '/crm/' in request.path %}is-active{% endif %}">
-            <i class="bi bi-sliders"></i><span>Configuracoes</span>
-          </a>
-          <a href="/crm/motivos-perda/" class="app-subnav-item {% if 'motivos_perda' in request.resolver_match.url_name %}is-active{% endif %}">
-            <i class="bi bi-x-circle"></i><span>Motivos de perda</span>
-          </a>
-          <a href="/crm/automacoes-pipeline/" class="app-subnav-item {% if 'automacoes_pipeline' in request.resolver_match.url_name %}is-active{% endif %}">
-            <i class="bi bi-diagram-3"></i><span>Automacoes</span>
-          </a>
-          <a href="/crm/produtos/" class="app-subnav-item {% if 'produto' in request.resolver_match.url_name %}is-active{% endif %}">
-            <i class="bi bi-box-seam"></i><span>Produtos</span>
+            <i class="bi bi-sliders"></i><span>Geral</span>
           </a>
           <a href="/crm/equipes/" class="app-subnav-item {% if request.resolver_match.url_name == 'equipes' %}is-active{% endif %}">
             <i class="bi bi-people"></i><span>Equipes</span>
           </a>
           <a href="/crm/metas/" class="app-subnav-item {% if 'meta' in request.resolver_match.url_name %}is-active{% endif %}">
             <i class="bi bi-bullseye"></i><span>Metas</span>
+          </a>
+          <a href="/crm/produtos/" class="app-subnav-item {% if 'produto' in request.resolver_match.url_name %}is-active{% endif %}">
+            <i class="bi bi-box-seam"></i><span>Produtos</span>
+          </a>
+          <a href="/crm/automacoes-pipeline/" class="app-subnav-item {% if 'automacoes_pipeline' in request.resolver_match.url_name %}is-active{% endif %}">
+            <i class="bi bi-diagram-3"></i><span>Automacoes</span>
+          </a>
+          <a href="/crm/motivos-perda/" class="app-subnav-item {% if 'motivos_perda' in request.resolver_match.url_name %}is-active{% endif %}">
+            <i class="bi bi-x-circle"></i><span>Motivos de perda</span>
           </a>
         </nav>
       {% endif %}
