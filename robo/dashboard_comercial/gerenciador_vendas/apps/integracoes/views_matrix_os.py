@@ -196,9 +196,18 @@ def abrir_os(request):
     hora_inicio_programado, hora_termino_programado, id_tecnico|tecnicos, disponibilidade.
     id_tipo_os / status / id_agenda vem da config os_matrix (com override pelo body).
     Resposta: {"ordem_servico": {...}}.
+
+    Persistencia: cada chamada gera 1 OrdemServicoTentativa (painel
+    /integracoes/ordens-servico/). Retries pro mesmo id_atendimento sao agrupados
+    sob o mesmo grupo_tentativas_id.
     """
+    import time
+    import uuid
     from apps.sistema.utils import _parse_json_request
     from apps.integracoes.services.hubsoft import HubsoftService, HubsoftServiceError
+    from apps.integracoes.services.hubsoft_errors import categorizar_falha_hubsoft
+    from apps.integracoes.models import OrdemServicoTentativa, ServicoClienteHubsoft
+
     integracao, cfg = _hubsoft_e_config(request)
     if not integracao:
         return JsonResponse({'status': 'error', 'msg': 'Integracao HubSoft nao configurada'}, status=400)
@@ -210,9 +219,61 @@ def abrir_os(request):
     if not tecnicos and data.get('id_tecnico'):
         tecnicos = [data['id_tecnico']]
     disponibilidade = _coerce_lista(data.get('disponibilidade'))
+
+    # Resolve grupo de tentativas: reusa se houver anterior pro mesmo atendimento
+    id_atend = data.get('id_atendimento')
+    try:
+        id_atend_int = int(id_atend) if id_atend is not None else None
+    except (TypeError, ValueError):
+        id_atend_int = None
+    ultima = None
+    if id_atend_int is not None:
+        ultima = (
+            OrdemServicoTentativa.all_tenants
+            .filter(tenant=integracao.tenant, id_atendimento_hubsoft=id_atend_int)
+            .order_by('-tentativa_numero').first()
+        )
+    grupo_id = ultima.grupo_tentativas_id if ultima else uuid.uuid4()
+    tentativa_num = (ultima.tentativa_numero + 1) if ultima else 1
+
+    # Tenta resolver servico/cliente/lead a partir do id_cliente_servico (se vier)
+    id_cli_serv = data.get('id_cliente_servico')
+    servico = cliente_hs = lead = None
+    if id_cli_serv:
+        servico = (
+            ServicoClienteHubsoft.all_tenants
+            .filter(tenant=integracao.tenant, id_cliente_servico=id_cli_serv)
+            .select_related('cliente').first()
+        )
+        if servico:
+            cliente_hs = servico.cliente
+            lead = getattr(cliente_hs, 'lead', None) if cliente_hs else None
+
+    # Cria a tentativa com status=pendente
+    tentativa = OrdemServicoTentativa(
+        tenant=integracao.tenant,
+        grupo_tentativas_id=grupo_id,
+        tentativa_numero=tentativa_num,
+        id_atendimento_hubsoft=id_atend_int,
+        integracao=integracao,
+        lead=lead,
+        cliente_hubsoft=cliente_hs,
+        servico=servico,
+        status='pendente',
+        payload_enviado=data,
+        data_inicio_programado=data.get('data_inicio_programado') or None,
+        hora_inicio_programado=data.get('hora_inicio_programado') or None,
+        data_termino_programado=data.get('data_termino_programado') or None,
+        hora_termino_programado=data.get('hora_termino_programado') or None,
+        id_tecnico=(tecnicos[0] if tecnicos else None),
+        cidade=(lead.cidade if lead and lead.cidade else ''),
+        origem='matrix',
+    )
+
+    t0 = time.monotonic()
     try:
         ordem = HubsoftService(integracao).abrir_os(
-            id_atendimento=data['id_atendimento'],
+            id_atendimento=id_atend,
             id_agenda_ordem_servico=data.get('id_agenda_ordem_servico') or cfg.get('id_agenda_ordem_servico'),
             id_tipo_ordem_servico=data.get('id_tipo_ordem_servico') or cfg.get('id_tipo_os'),
             data_inicio_programado=data.get('data_inicio_programado'),
@@ -223,6 +284,18 @@ def abrir_os(request):
             tecnicos=tecnicos,
             disponibilidade=disponibilidade,
         )
+        tentativa.status = 'sucesso'
+        tentativa.resposta_hubsoft = ordem if isinstance(ordem, dict) else {'raw': str(ordem)[:2000]}
+        if isinstance(ordem, dict):
+            tentativa.id_ordem_servico_hubsoft = ordem.get('id_ordem_servico') or ordem.get('id')
+        tentativa.duracao_ms = int((time.monotonic() - t0) * 1000)
+        tentativa.save()
+        return JsonResponse({'status': 'success', 'ordem_servico': ordem})
     except HubsoftServiceError as e:
-        return JsonResponse({'status': 'error', 'msg': str(e)[:300]}, status=400)
-    return JsonResponse({'status': 'success', 'ordem_servico': ordem})
+        msg = str(e)
+        tentativa.status = 'falha'
+        tentativa.motivo_falha_mensagem = msg[:2000]
+        tentativa.motivo_falha_categoria = categorizar_falha_hubsoft(msg)
+        tentativa.duracao_ms = int((time.monotonic() - t0) * 1000)
+        tentativa.save()
+        return JsonResponse({'status': 'error', 'msg': msg[:300]}, status=400)

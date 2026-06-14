@@ -16,6 +16,8 @@ Documentacao das integracoes externas do Hubtrix. Tem duas camadas:
 | Pipeline contrato HubSoft Nuvyon (regra `gerar_contrato_hubsoft`) | [05-PIPELINE-HUBSOFT-NUVYON.md](05-PIPELINE-HUBSOFT-NUVYON.md) |
 | SGP (inSystem) — Gigamax | [05-SGP.md](05-SGP.md) |
 | Deploy bot Selenium Nuvyon (EasyPanel) | [06-DEPLOY-BOT-NUVYON.md](06-DEPLOY-BOT-NUVYON.md) |
+| Painel de Ordens de Servico (tentativas via Matrix) | [07-ORDENS-SERVICO.md](07-ORDENS-SERVICO.md) |
+| Painel de Contratos (tentativas de criar/aceitar contrato HubSoft) | [08-CONTRATOS.md](08-CONTRATOS.md) |
 
 ## Referencia tecnica de API
 

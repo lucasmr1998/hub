@@ -346,6 +346,9 @@ def _acao_gerar_contrato_hubsoft(oportunidade, config):
         _coletar_arquivos_lead, _obter_hubsoft_service,
     )
     from apps.integracoes.services.hubsoft import HubsoftServiceError
+    from apps.integracoes.services.contrato_tracking import (
+        iniciar_tentativa, marcar_sucesso, marcar_falha, marcar_pulado_idempotente,
+    )
 
     lead = oportunidade.lead
     if not lead:
@@ -371,6 +374,9 @@ def _acao_gerar_contrato_hubsoft(oportunidade, config):
     except Exception as exc:
         logger.error("[gerar_contrato] sem HubsoftService: %s", exc)
         return False
+
+    # Inicia tracking da tentativa (persiste resultado no fim)
+    tentativa, _t0 = iniciar_tentativa(oportunidade, 'gerar', hubsoft_service)
 
     extras = (hubsoft_service.integracao.configuracoes_extras or {}).get('hubsoft', {})
     id_contrato_modelo = config.get('id_contrato_modelo') or extras.get('id_contrato_modelo')
@@ -403,6 +409,7 @@ def _acao_gerar_contrato_hubsoft(oportunidade, config):
             )
             if not id_contrato:
                 logger.error("[gerar_contrato] HubSoft criou mas nao retornou id. Resp: %s", resp)
+                marcar_falha(tentativa, _t0, Exception('HubSoft criou mas nao retornou id_contrato'), etapa='criar')
                 return False
             servico.id_cliente_servico_contrato = int(id_contrato)
             servico.save(update_fields=['id_cliente_servico_contrato'])
@@ -410,9 +417,12 @@ def _acao_gerar_contrato_hubsoft(oportunidade, config):
                         id_contrato, servico.id_cliente_servico, lead.pk)
         except HubsoftServiceError as exc:
             logger.error("[gerar_contrato] criar_contrato falhou (lead=%s): %s", lead.pk, exc)
+            marcar_falha(tentativa, _t0, exc, etapa='criar')
             return False
 
     # 2) Anexar arquivos
+    arquivos_anexados = []
+    erro_anexar = None
     if not lead.anexos_contrato_enviados:
         try:
             arquivos = _coletar_arquivos_lead(lead)
@@ -420,15 +430,21 @@ def _acao_gerar_contrato_hubsoft(oportunidade, config):
                 hubsoft_service.anexar_arquivos_contrato(id_contrato, arquivos, lead=lead)
                 lead.anexos_contrato_enviados = True
                 lead.save(update_fields=['anexos_contrato_enviados'])
+                arquivos_anexados = [
+                    {'nome': a[0], 'tamanho_bytes': len(a[1]) if a[1] else 0, 'mime': a[2] if len(a) > 2 else ''}
+                    for a in arquivos
+                ]
                 logger.info("[gerar_contrato] %d arquivo(s) anexado(s) ao contrato %s (lead %s)",
                             len(arquivos), id_contrato, lead.pk)
             else:
                 logger.warning("[gerar_contrato] lead=%s sem arquivos pra anexar", lead.pk)
         except HubsoftServiceError as exc:
             logger.error("[gerar_contrato] anexar_arquivos_contrato falhou (lead=%s): %s", lead.pk, exc)
+            erro_anexar = exc
             # nao para aqui — ainda tenta aceitar
 
     # 3) Aceitar contrato
+    erro_aceitar = None
     if not lead.contrato_aceito:
         try:
             hubsoft_service.aceitar_contrato(
@@ -442,6 +458,17 @@ def _acao_gerar_contrato_hubsoft(oportunidade, config):
             logger.info("[gerar_contrato] contrato %s aceito (lead %s)", id_contrato, lead.pk)
         except HubsoftServiceError as exc:
             logger.error("[gerar_contrato] aceitar_contrato falhou (lead=%s): %s", lead.pk, exc)
+            erro_aceitar = exc
+
+    # Finalizar tentativa
+    tentativa.anexos_enviados = arquivos_anexados
+    if erro_aceitar:
+        marcar_falha(tentativa, _t0, erro_aceitar, etapa='aceitar')
+    elif erro_anexar:
+        # Aceitou mas o anexo falhou — sucesso parcial (categorizamos como falha pra ficar visivel)
+        marcar_falha(tentativa, _t0, erro_anexar, etapa='anexar')
+    else:
+        marcar_sucesso(tentativa, _t0, resposta={'id_cliente_servico_contrato': id_contrato}, etapa='completo', id_contrato=id_contrato)
 
     # Chegou aqui: criou/anexou/aceitou algo efetivamente
     return True
@@ -487,6 +514,9 @@ def _acao_assinar_contrato_hubsoft(oportunidade, config):
     """
     from apps.comercial.cadastro.services.contrato_service import _obter_hubsoft_service
     from apps.integracoes.services.hubsoft import HubsoftServiceError
+    from apps.integracoes.services.contrato_tracking import (
+        iniciar_tentativa, marcar_sucesso, marcar_falha,
+    )
 
     lead = oportunidade.lead
     if not lead:
@@ -511,6 +541,8 @@ def _acao_assinar_contrato_hubsoft(oportunidade, config):
         logger.error("[assinar_contrato] sem HubsoftService: %s", exc)
         return False
 
+    tentativa, _t0 = iniciar_tentativa(oportunidade, 'assinar', hubsoft_service)
+
     # 1) Resolve o id do contrato (ja salvo, ou via consulta com incluir_contrato)
     id_contrato = servico.id_cliente_servico_contrato
     if not id_contrato:
@@ -520,6 +552,7 @@ def _acao_assinar_contrato_hubsoft(oportunidade, config):
             )
         except HubsoftServiceError as exc:
             logger.error("[assinar_contrato] consultar_cliente falhou (lead=%s): %s", lead.pk, exc)
+            marcar_falha(tentativa, _t0, exc, etapa='criar')  # consulta antes de aceitar
             return False
         id_contrato = _extrair_id_contrato(resp, servico.id_cliente_servico)
         if id_contrato:
@@ -527,6 +560,7 @@ def _acao_assinar_contrato_hubsoft(oportunidade, config):
             servico.save(update_fields=['id_cliente_servico_contrato'])
     if not id_contrato:
         logger.warning("[assinar_contrato] lead=%s: contrato nao encontrado na consulta", lead.pk)
+        marcar_falha(tentativa, _t0, Exception('Contrato nao encontrado na consulta HubSoft'), etapa='criar')
         return False
 
     # 2) Aceita o contrato
@@ -539,12 +573,16 @@ def _acao_assinar_contrato_hubsoft(oportunidade, config):
     except HubsoftServiceError as exc:
         logger.error("[assinar_contrato] aceitar_contrato falhou (lead=%s, contrato=%s): %s",
                      lead.pk, id_contrato, exc)
+        marcar_falha(tentativa, _t0, exc, etapa='aceitar')
         return False
 
     lead.contrato_aceito = True
     lead.data_aceite_contrato = timezone.now()
     lead.save(update_fields=['contrato_aceito', 'data_aceite_contrato'])
     logger.info("[assinar_contrato] contrato %s aceito (lead %s)", id_contrato, lead.pk)
+
+    marcar_sucesso(tentativa, _t0, resposta={'id_cliente_servico_contrato': id_contrato},
+                   etapa='aceitar', id_contrato=id_contrato)
 
     # 3) Opcional: ativar servico (aceite sozinho pode nao mover o status — testar)
     if str((config or {}).get('ativar_servico_apos_aceite', '')).lower() in ('sim', 'true', '1', 'on'):

@@ -27,9 +27,13 @@ Lead chega (WhatsApp/Site/Instagram)
 
 | Arquivo | Sub-app | Descricao |
 |---------|---------|-----------|
+| [marketing-suite.md](marketing-suite.md) | — | **Visao integrada** de todos os sub-apps (capta → nutri → converte → atribui) |
 | [campanhas.md](campanhas.md) | `campanhas/` | Campanhas de trafego + deteccao automatica por palavra-chave |
 | [segmentos.md](segmentos.md) | (`crm/` + URLs `marketing/`) | Agrupamento dinamico de leads |
 | [automacoes/](automacoes/) | `automacoes/` | Engine completo de automacoes + editor visual |
+| [emails-dominios-remetentes.md](emails-dominios-remetentes.md) | `emails/` | Dominios de envio (DNS Resend SPF/DKIM/DMARC), remetentes, webhook |
+| [emails-templates-renderer.md](emails-templates-renderer.md) | `emails/` | Editor visual de blocos + renderer JSON→HTML (12 tipos de bloco) |
+| [landing-pages.md](landing-pages.md) | `landing_pages/` (futuro) | 📋 Discovery — plano de implementacao de LP por tenant |
 
 ---
 
@@ -66,8 +70,8 @@ Automacoes ──timeline──▶ CRM/Lead (api_lead_timeline)
 
 | Metrica | Valor |
 |---------|-------|
-| Sub-apps | 3 (campanhas, automacoes, segmentos) |
-| Models | 11 (2 campanhas + 7 automacoes + 2 segmentos) |
+| Sub-apps | 4 (campanhas, automacoes, segmentos, emails) + 1 planejado (landing_pages) |
+| Models | 16 (2 campanhas + 7 automacoes + 2 segmentos + 5 emails) |
 | Views | 22 funcoes |
 | Templates | 9 |
 | APIs | 22 endpoints |

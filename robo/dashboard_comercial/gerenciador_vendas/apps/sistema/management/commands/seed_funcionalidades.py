@@ -55,6 +55,11 @@ FUNCIONALIDADES = [
     ('marketing', 'marketing.ver_automacoes', 'Ver Automacoes', 'Visualizar lista de automacoes e historico', 5),
     ('marketing', 'marketing.gerenciar_automacoes', 'Gerenciar Automacoes', 'Criar, editar e configurar automacoes', 6),
     ('marketing', 'marketing.configurar', 'Configurar Marketing', 'Landing page, ativar/desativar automacoes', 7),
+    # Integracoes
+    ('configuracoes', 'integracoes.ver_ordens_servico', 'Ver Ordens de Servico', 'Painel de OS abertas via Matrix', 10),
+    ('configuracoes', 'integracoes.gerenciar_ordens_servico', 'Gerenciar Ordens de Servico', 'Re-tentar e resolver manualmente OS', 11),
+    ('configuracoes', 'integracoes.ver_contratos', 'Ver Contratos', 'Painel de tentativas de criar/aceitar contrato HubSoft', 12),
+    ('configuracoes', 'integracoes.gerenciar_contratos', 'Gerenciar Contratos', 'Re-tentar tentativas de contrato', 13),
 ]
 
 

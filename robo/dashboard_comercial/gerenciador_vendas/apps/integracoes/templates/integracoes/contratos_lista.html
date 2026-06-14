@@ -1,0 +1,112 @@
+{% extends "layouts/layout_app.html" %}
+
+{% block title %}Contratos — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Contratos</h1>
+      <p class="page-subtitle">Tentativas de criar e aceitar contratos no HubSoft via engine de automacao.</p>
+    </div>
+  </div>
+</div>
+
+<div class="kpi-grid kpi-grid-4" style="margin-bottom: var(--sp-6);">
+  {% include "components/stat_card.html" with label="Total hoje" value=kpi_total icon="bi-list-check" icon_variant="primary" footnote="tentativas registradas" %}
+  {% include "components/stat_card.html" with label="Sucessos" value=kpi_sucessos icon="bi-check-circle" icon_variant="success" footnote="contratos aceitos" %}
+  {% include "components/stat_card.html" with label="Falhas" value=kpi_falhas icon="bi-x-circle" icon_variant="danger" footnote="rejeicoes HubSoft" %}
+  {% include "components/stat_card.html" with label="Taxa de sucesso" value=kpi_taxa_sucesso|stringformat:"s"|add:"%" icon="bi-graph-up" icon_variant="info" footnote="sucessos / total" %}
+</div>
+
+{% if kpi_top_motivos %}
+<div class="card" style="margin-bottom: var(--sp-6);">
+  <div class="card-header">
+    <h3 class="card-title"><i class="bi bi-exclamation-triangle" style="color: var(--color-danger);"></i> Motivos mais comuns de falha (hoje)</h3>
+  </div>
+  <div class="card-body" style="display: flex; gap: var(--sp-3); flex-wrap: wrap;">
+    {% for m in kpi_top_motivos %}
+      {% include "components/badge.html" with variant="danger" style="soft" label=m.motivo_falha_categoria|default:"outro"|add:" ("|add:m.n|stringformat:"s"|add:")" %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Tentativas</h3>
+    <form method="get" class="filter-bar" style="display: flex; gap: var(--sp-3); flex-wrap: wrap;">
+      <select name="status" class="field-input" style="max-width: 180px;">
+        <option value="">Todos status</option>
+        <option value="sucesso" {% if filtro_status == 'sucesso' %}selected{% endif %}>Sucesso</option>
+        <option value="falha" {% if filtro_status == 'falha' %}selected{% endif %}>Falha</option>
+        <option value="pulado_idempotente" {% if filtro_status == 'pulado_idempotente' %}selected{% endif %}>Pulado</option>
+        <option value="pendente" {% if filtro_status == 'pendente' %}selected{% endif %}>Pendente</option>
+      </select>
+      <select name="acao" class="field-input" style="max-width: 160px;">
+        <option value="">Todas acoes</option>
+        <option value="gerar" {% if filtro_acao == 'gerar' %}selected{% endif %}>Gerar</option>
+        <option value="assinar" {% if filtro_acao == 'assinar' %}selected{% endif %}>Assinar</option>
+      </select>
+      <input type="text" name="lead" value="{{ filtro_lead }}" placeholder="ID ou nome do lead" class="field-input" style="max-width: 200px;">
+      <input type="date" name="data_de" value="{{ filtro_data_de }}" class="field-input" style="max-width: 160px;">
+      <input type="date" name="data_ate" value="{{ filtro_data_ate }}" class="field-input" style="max-width: 160px;">
+      {% include "components/button.html" with variant="primary" type="submit" label="Filtrar" icon="bi-funnel" %}
+      <a href="{% url 'integracoes:contratos_lista' %}" class="btn btn-secondary btn-sm">Limpar</a>
+    </form>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if page_obj.object_list %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Hora</th>
+          <th>Acao</th>
+          <th>Lead</th>
+          <th>CPF</th>
+          <th>Servico HubSoft</th>
+          <th>Etapa</th>
+          <th>Tentativa</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in page_obj.object_list %}
+        <tr>
+          <td>{{ t.criado_em|date:"d/m H:i" }}</td>
+          <td>{{ t.get_acao_display }}</td>
+          <td>{{ t.lead.nome_razaosocial|default:t.lead.telefone|default:"—" }}</td>
+          <td>{{ t.lead.cpf_cnpj|default:"—" }}</td>
+          <td>{{ t.id_cliente_servico|default:"—" }}</td>
+          <td>{{ t.get_etapa_display|default:"—" }}</td>
+          <td>{{ t.tentativa_numero }}</td>
+          <td>
+            {% if t.status == 'sucesso' %}
+              {% include "components/badge.html" with variant="success" label="Sucesso" icon="bi-check-circle" %}
+            {% elif t.status == 'falha' %}
+              {% include "components/badge.html" with variant="danger" label=t.motivo_falha_categoria|default:"falha" icon="bi-x-circle" %}
+            {% elif t.status == 'pulado_idempotente' %}
+              {% include "components/badge.html" with variant="neutral" label="Pulado" icon="bi-skip-forward" %}
+            {% else %}
+              {% include "components/badge.html" with variant="warning" label="Pendente" icon="bi-hourglass" %}
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'integracoes:contratos_detalhe' grupo_id=t.grupo_tentativas_id %}" class="btn btn-secondary btn-sm">Detalhe</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      {% include "components/empty_state.html" with icon="bi-file-earmark-text" title="Nenhuma tentativa de contrato" subtitle="Quando o engine de automacao disparar a acao de contrato, as tentativas aparecem aqui." %}
+    {% endif %}
+  </div>
+  {% if is_paginated %}
+    <div class="card-footer">
+      {% include "components/pagination.html" with page_obj=page_obj %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -65,3 +65,26 @@ Registro cronológico do que foi executado no módulo de integrações (ação, 
 - **Fix**: expor a **mesma view** (`api_lead_hubsoft_status`, que já tem `@api_token_required`) no mount **token-auth** `/api/public/n8n/` → nova rota `GET /api/public/n8n/lead/hubsoft-status/?lead_id=<id>`. Não mexe na rota antiga (o UI logado segue usando). Arquivo: `apps/integracoes/urls_n8n_public.py`.
 - **Lado Matrix (Lucas)**: trocar a URL do `api_21` no flow de `{#url_api}/integracoes/api/lead/hubsoft-status/?lead_id={#id_lead}` para `{#url_api}/api/public/n8n/lead/hubsoft-status/?lead_id={#id_lead}`.
 - **Status**: completed (código + doc); pending deploy + trocar URL no flow + teste e2e (o flow avançar pro turno).
+
+## 2026-06-14 — Painel de Ordens de Serviço (Nuvyon)
+
+- **Ações**: Criado painel `/configuracoes/integracoes/ordens-servico/` que registra cada tentativa de `abrir-os/` via Matrix com payload + resposta HubSoft + motivo de falha categorizado. Lista paginada com filtros (status, cidade, técnico, datas), KPIs do dia (total/sucesso/falha/taxa/top 3 motivos), detalhe agrupado por `id_atendimento_hubsoft` com histórico de tentativas, botão "Re-tentar" com modal (ajusta slot/técnico).
+- **Motivação**: `abrir-os/` com 71% de erro (5 falhas / 2 sucessos em 7d) sem visibilidade. Resolve o gargalo + habilita evolução futura (conciliação automática).
+- **Arquivos novos**: `apps/integracoes/models_os.py` (model `OrdemServicoTentativa`), `migrations/0015_ordemservicotentativa.py`, `services/hubsoft_errors.py` (categorizador regex), `views_ordens_servico.py` (lista/detalhe/retentar), 2 templates, 2 funcionalidades novas em `seed_funcionalidades.py`.
+- **Patch**: `views_matrix_os.abrir_os` agora persiste tentativa antes/depois da chamada HubSoft. Resposta JSON pro Matrix **inalterada** (contrato preservado). Categorização cobre `tecnico_ocupado`/`slot_indisponivel`/`data_invalida`/`id_invalido`/`outro`.
+- **Permissões**: `integracoes.ver_ordens_servico` (atendente) e `integracoes.gerenciar_ordens_servico` (gerente/admin para re-tentar).
+- **Doc**: [07-ORDENS-SERVICO.md](07-ORDENS-SERVICO.md). Sub-nav provisório em Sistema/Integrações (localização final pendente decisão).
+- **Status**: completed local. **Pending**: deploy prod, rodar `seed_funcionalidades` em prod, atribuir funcionalidades aos perfis do tenant Nuvyon.
+
+## 2026-06-14 — Painel de Contratos (Nuvyon)
+
+- **Ações**: Painel `/configuracoes/integracoes/contratos/` espelha o de OS, agora pra tentativas de **criar/aceitar contrato HubSoft** via engine de automação. Captura cada execução das ações `_acao_gerar_contrato_hubsoft` (cria + anexa docs + aceita) e `_acao_assinar_contrato_hubsoft` (só aceita) — payload, resposta HubSoft, motivo de falha categorizado, qual etapa parou (criar/anexar/aceitar).
+- **Modelo + migration**: `ContratoTentativa(TenantMixin)` em `apps/integracoes/models_contrato.py` + migration `0016_contratotentativa.py`. Granularidade: 1 tentativa = 1 execução de ação. Campos: grupo_id (UUID), tentativa_numero, ação (`gerar`/`assinar`), etapa (`criar`/`anexar`/`aceitar`/`completo`), status (`sucesso`/`falha`/`pendente`/`pulado_idempotente`), motivo categoria + 8 categorias específicas de contrato.
+- **Patches engine**: `_acao_gerar_contrato_hubsoft` e `_acao_assinar_contrato_hubsoft` em `automacao_pipeline.py` agora usam helpers de tracking (`services/contrato_tracking.py`). Cada subtarefa do `gerar` (criar/anexar/aceitar) marca a etapa correta. Anexos guardam snapshot de metadados (nome/tamanho/mime).
+- **Categorizador**: estendido `services/hubsoft_errors.py` com `categorizar_falha_contrato` (8 categorias: `contrato_ja_existe`, `cliente_sem_servico`, `modelo_nao_encontrado`, `documento_rejeitado`, `dados_invalidos`, `token_expirado`, `cliente_inexistente`, `outro`).
+- **Views/URLs**: `views_contratos_tentativas.py` com lista + KPIs + detalhe + retentar. URLs em `/configuracoes/integracoes/contratos/`. Retentar delega pra própria ação do engine (mantém idempotência: se lead já tem `contrato_aceito=True`, retorna sem chamar HubSoft).
+- **Templates**: 2 novos (lista + detalhe), reusam design system.
+- **Permissões**: `integracoes.ver_contratos` (atendente) + `integracoes.gerenciar_contratos` (gerente/admin para re-tentar). Adicionadas em `seed_funcionalidades.py`.
+- **Sub-nav**: entrada "Contratos" ao lado de "Ordens de Serviço" em Sistema/Integrações.
+- **Doc**: [08-CONTRATOS.md](08-CONTRATOS.md). README atualizado.
+- **Status**: completed local. **Pending**: deploy prod, `seed_funcionalidades` em prod, atribuir funcionalidades aos perfis.

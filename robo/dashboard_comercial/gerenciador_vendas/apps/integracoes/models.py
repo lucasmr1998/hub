@@ -8,6 +8,12 @@ from apps.sistema.mixins import TenantMixin
 # models_audit.py pra organizar; importa aqui pro Django registrar.
 from .models_audit import LogWebhookN8N  # noqa: F401
 
+# Tentativas de abertura de OS via Matrix (painel /integracoes/ordens-servico/)
+from .models_os import OrdemServicoTentativa  # noqa: F401
+
+# Tentativas de criar/aceitar contrato HubSoft (painel /integracoes/contratos/)
+from .models_contrato import ContratoTentativa  # noqa: F401
+
 
 class IntegracaoAPI(TenantMixin):
     """
