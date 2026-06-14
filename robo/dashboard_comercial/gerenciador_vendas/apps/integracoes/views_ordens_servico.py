@@ -84,6 +84,14 @@ def lista_ordens_servico(request):
         .order_by('-n')[:3]
     )
 
+    filter_fields = [
+        {'type': 'select', 'label': 'Status', 'name': 'status', 'value': status_filtro,
+         'options': [('', 'Todos'), ('sucesso', 'Sucesso'), ('falha', 'Falha'), ('pendente', 'Pendente')]},
+        {'type': 'text', 'label': 'Tecnico (id ou nome)', 'name': 'tecnico', 'value': tecnico_filtro, 'placeholder': 'ex: 139'},
+        {'type': 'date', 'label': 'A partir de', 'name': 'data_de', 'value': data_de},
+        {'type': 'date', 'label': 'Ate', 'name': 'data_ate', 'value': data_ate},
+    ]
+
     return render(request, 'integracoes/ordens_servico_lista.html', {
         'page_obj': page_obj,
         'paginator': paginator,
@@ -99,6 +107,7 @@ def lista_ordens_servico(request):
         'filtro_tecnico': tecnico_filtro,
         'filtro_data_de': data_de,
         'filtro_data_ate': data_ate,
+        'filter_fields': filter_fields,
         'pode_gerenciar': _checar_gerenciar(request),
     })
 

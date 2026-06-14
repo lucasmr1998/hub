@@ -1,4 +1,4 @@
-{% extends "layouts/layout_app.html" %}
+{% extends "sistema/base.html" %}
 
 {% block title %}Ordens de Servico — Hubtrix{% endblock %}
 
@@ -12,45 +12,34 @@
   </div>
 </div>
 
-<div class="kpi-grid kpi-grid-4" style="margin-bottom: var(--sp-6);">
+{% include "components/list_filters.html" with fields=filter_fields search_placeholder="Buscar por cidade ou tecnico..." search_name="cidade" search_value=filtro_cidade clear_url=request.path collapsed=True %}
+
+<div class="stats-grid stats-grid-4" style="margin-bottom: var(--sp-4);">
   {% include "components/stat_card.html" with label="Total hoje" value=kpi_total icon="bi-list-check" icon_variant="primary" footnote="tentativas registradas" %}
-  {% include "components/stat_card.html" with label="Sucessos" value=kpi_sucessos icon="bi-check-circle" icon_variant="success" footnote="OS abertas com exito" %}
-  {% include "components/stat_card.html" with label="Falhas" value=kpi_falhas icon="bi-x-circle" icon_variant="danger" footnote="rejeicoes do HubSoft" %}
+  {% include "components/stat_card.html" with label="Sucessos" value=kpi_sucessos icon="bi-check-circle" icon_variant="success" footnote="OS abertas" %}
+  {% include "components/stat_card.html" with label="Falhas" value=kpi_falhas icon="bi-x-circle" icon_variant="danger" footnote="rejeicoes" %}
   {% include "components/stat_card.html" with label="Taxa de sucesso" value=kpi_taxa_sucesso|stringformat:"s"|add:"%" icon="bi-graph-up" icon_variant="info" footnote="sucessos / total" %}
 </div>
 
 {% if kpi_top_motivos %}
-<div class="card" style="margin-bottom: var(--sp-6);">
+<div class="card" style="margin-bottom: var(--sp-4);">
   <div class="card-header">
     <h3 class="card-title"><i class="bi bi-exclamation-triangle" style="color: var(--color-danger);"></i> Motivos mais comuns de falha (hoje)</h3>
   </div>
-  <div class="card-body" style="display: flex; gap: var(--sp-3); flex-wrap: wrap;">
+  <div class="card-body" style="display: flex; gap: var(--sp-2); flex-wrap: wrap;">
     {% for m in kpi_top_motivos %}
-      {% include "components/badge.html" with variant="danger" style="soft" label=m.motivo_falha_categoria|default:"outro"|add:" ("|add:m.n|stringformat:"s"|add:")" %}
+      <span class="badge badge-danger badge-soft">{{ m.motivo_falha_categoria|default:"outro" }} ({{ m.n }})</span>
     {% endfor %}
   </div>
 </div>
 {% endif %}
 
-<div class="card">
+<div class="card" style="padding: 0; overflow: hidden;">
   <div class="card-header">
-    <h3 class="card-title">Tentativas</h3>
-    <form method="get" class="filter-bar" style="display: flex; gap: var(--sp-3); flex-wrap: wrap;">
-      <select name="status" class="field-input" style="max-width: 160px;">
-        <option value="">Todos status</option>
-        <option value="sucesso" {% if filtro_status == 'sucesso' %}selected{% endif %}>Sucesso</option>
-        <option value="falha" {% if filtro_status == 'falha' %}selected{% endif %}>Falha</option>
-        <option value="pendente" {% if filtro_status == 'pendente' %}selected{% endif %}>Pendente</option>
-      </select>
-      <input type="text" name="cidade" value="{{ filtro_cidade }}" placeholder="Cidade" class="field-input" style="max-width: 160px;">
-      <input type="text" name="tecnico" value="{{ filtro_tecnico }}" placeholder="ID ou nome do tecnico" class="field-input" style="max-width: 200px;">
-      <input type="date" name="data_de" value="{{ filtro_data_de }}" class="field-input" style="max-width: 160px;">
-      <input type="date" name="data_ate" value="{{ filtro_data_ate }}" class="field-input" style="max-width: 160px;">
-      {% include "components/button.html" with variant="primary" type="submit" label="Filtrar" icon="bi-funnel" %}
-      <a href="{% url 'integracoes:ordens_servico_lista' %}" class="btn btn-secondary btn-sm">Limpar</a>
-    </form>
+    <h3 class="card-title"><i class="bi bi-table"></i> Tentativas</h3>
+    <span class="badge badge-primary badge-soft">{{ paginator.count }} tentativa{{ paginator.count|pluralize }}</span>
   </div>
-  <div class="card-body" style="padding: 0;">
+  <div class="table-wrap">
     {% if page_obj.object_list %}
     <table class="data-table">
       <thead>
@@ -63,7 +52,7 @@
           <th>Slot</th>
           <th>Tentativa</th>
           <th>Status</th>
-          <th></th>
+          <th style="text-align: center;">Acao</th>
         </tr>
       </thead>
       <tbody>
@@ -83,14 +72,14 @@
           <td>{{ t.tentativa_numero }}</td>
           <td>
             {% if t.status == 'sucesso' %}
-              {% include "components/badge.html" with variant="success" label="Sucesso" icon="bi-check-circle" %}
+              <span class="badge badge-success badge-soft"><i class="bi bi-check-circle"></i> Sucesso</span>
             {% elif t.status == 'falha' %}
-              {% include "components/badge.html" with variant="danger" label=t.motivo_falha_categoria|default:"falha" icon="bi-x-circle" %}
+              <span class="badge badge-danger badge-soft"><i class="bi bi-x-circle"></i> {{ t.motivo_falha_categoria|default:"falha" }}</span>
             {% else %}
-              {% include "components/badge.html" with variant="warning" label="Pendente" icon="bi-hourglass" %}
+              <span class="badge badge-warning badge-soft"><i class="bi bi-hourglass"></i> Pendente</span>
             {% endif %}
           </td>
-          <td>
+          <td style="text-align: center;">
             <a href="{% url 'integracoes:ordens_servico_detalhe' grupo_id=t.grupo_tentativas_id %}" class="btn btn-secondary btn-sm">Detalhe</a>
           </td>
         </tr>
@@ -98,12 +87,24 @@
       </tbody>
     </table>
     {% else %}
-      {% include "components/empty_state.html" with icon="bi-inbox" title="Nenhuma tentativa encontrada" subtitle="Quando o Matrix abrir uma OS, as tentativas vao aparecer aqui." %}
+      <div style="padding: var(--sp-10); text-align: center; color: var(--color-text-muted);">
+        <i class="bi bi-inbox" style="font-size: 2rem; display: block; margin-bottom: var(--sp-3);"></i>
+        <p><strong>Nenhuma tentativa encontrada</strong></p>
+        <p style="font-size: 13px;">Quando o Matrix abrir uma OS, as tentativas vao aparecer aqui.</p>
+      </div>
     {% endif %}
   </div>
   {% if is_paginated %}
-    <div class="card-footer">
-      {% include "components/pagination.html" with page_obj=page_obj %}
+    <div class="pagination">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if filtro_status %}&status={{ filtro_status }}{% endif %}{% if filtro_cidade %}&cidade={{ filtro_cidade }}{% endif %}{% if filtro_tecnico %}&tecnico={{ filtro_tecnico }}{% endif %}" class="btn btn-secondary btn-sm">Anterior</a>
+      {% endif %}
+      <span style="margin: 0 var(--sp-3); color: var(--color-text-muted);">
+        Pagina {{ page_obj.number }} de {{ paginator.num_pages }}
+      </span>
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if filtro_status %}&status={{ filtro_status }}{% endif %}{% if filtro_cidade %}&cidade={{ filtro_cidade }}{% endif %}{% if filtro_tecnico %}&tecnico={{ filtro_tecnico }}{% endif %}" class="btn btn-secondary btn-sm">Proxima</a>
+      {% endif %}
     </div>
   {% endif %}
 </div>

@@ -81,6 +81,16 @@ def lista_contratos(request):
         .order_by('-n')[:3]
     )
 
+    filter_fields = [
+        {'type': 'select', 'label': 'Status', 'name': 'status', 'value': status_filtro,
+         'options': [('', 'Todos'), ('sucesso', 'Sucesso'), ('falha', 'Falha'),
+                     ('pulado_idempotente', 'Pulado'), ('pendente', 'Pendente')]},
+        {'type': 'select', 'label': 'Acao', 'name': 'acao', 'value': acao_filtro,
+         'options': [('', 'Todas'), ('gerar', 'Gerar'), ('assinar', 'Assinar')]},
+        {'type': 'date', 'label': 'A partir de', 'name': 'data_de', 'value': data_de},
+        {'type': 'date', 'label': 'Ate', 'name': 'data_ate', 'value': data_ate},
+    ]
+
     return render(request, 'integracoes/contratos_lista.html', {
         'page_obj': page_obj,
         'paginator': paginator,
@@ -97,6 +107,7 @@ def lista_contratos(request):
         'filtro_lead': lead_filtro,
         'filtro_data_de': data_de,
         'filtro_data_ate': data_ate,
+        'filter_fields': filter_fields,
         'pode_gerenciar': _checar_gerenciar(request),
     })
 

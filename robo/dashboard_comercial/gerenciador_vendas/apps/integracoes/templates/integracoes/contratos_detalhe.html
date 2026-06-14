@@ -1,4 +1,4 @@
-{% extends "layouts/layout_app.html" %}
+{% extends "sistema/base.html" %}
 
 {% block title %}Contrato — Lead #{{ primeira.lead_id|default:"" }} — Hubtrix{% endblock %}
 
@@ -6,9 +6,7 @@
 <div class="page-header">
   <div class="page-header-top">
     <div>
-      <h1 class="page-title">
-        Contrato — {{ primeira.get_acao_display }}
-      </h1>
+      <h1 class="page-title">Contrato — {{ primeira.get_acao_display }}</h1>
       <p class="page-subtitle">
         {{ tentativas|length }} tentativa{{ tentativas|length|pluralize }} •
         Lead: {{ primeira.lead.nome_razaosocial|default:primeira.lead.telefone|default:"sem lead" }} •
@@ -19,45 +17,43 @@
     <div class="page-actions">
       <a href="{% url 'integracoes:contratos_lista' %}" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
       {% if pode_gerenciar %}
-        <button type="button" class="btn btn-primary btn-sm" onclick="abrirModal('modal-retentar-contrato')"><i class="bi bi-arrow-repeat"></i> Re-tentar</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="abrirModalRetentar()"><i class="bi bi-arrow-repeat"></i> Re-tentar</button>
       {% endif %}
     </div>
   </div>
 </div>
 
-<div class="card">
+<div class="card" style="padding: 0; overflow: hidden;">
   <div class="card-header">
-    <h3 class="card-title">Tentativas (ordem cronologica)</h3>
+    <h3 class="card-title"><i class="bi bi-clock-history"></i> Tentativas (ordem cronologica)</h3>
   </div>
   <div class="card-body">
     {% for t in tentativas %}
-      <details class="accordion-item" {% if forloop.last %}open{% endif %}>
-        <summary class="accordion-summary">
-          <span style="display:inline-flex; align-items:center; gap:var(--sp-2);">
-            <strong>#{{ t.tentativa_numero }}</strong>
-            {% if t.status == 'sucesso' %}
-              {% include "components/badge.html" with variant="success" label="Sucesso" icon="bi-check-circle" %}
-            {% elif t.status == 'falha' %}
-              {% include "components/badge.html" with variant="danger" label=t.motivo_falha_categoria|default:"falha" icon="bi-x-circle" %}
-            {% elif t.status == 'pulado_idempotente' %}
-              {% include "components/badge.html" with variant="neutral" label="Pulado (idempotente)" icon="bi-skip-forward" %}
-            {% else %}
-              {% include "components/badge.html" with variant="warning" label="Pendente" icon="bi-hourglass" %}
-            {% endif %}
-            <span style="color: var(--color-text-muted); font-size: 13px;">
-              {{ t.criado_em|date:"d/m/Y H:i:s" }} • {{ t.duracao_ms }}ms • origem: {{ t.get_origem_display }}
-              {% if t.etapa %} • etapa: {{ t.get_etapa_display }}{% endif %}
-              {% if t.usuario_retry %} • por {{ t.usuario_retry.username }}{% endif %}
-            </span>
+      <details class="accordion-item" {% if forloop.last %}open{% endif %} style="margin-bottom: var(--sp-3); border: 1px solid var(--color-border); border-radius: 6px;">
+        <summary style="padding: var(--sp-3); cursor: pointer; display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap;">
+          <strong>#{{ t.tentativa_numero }}</strong>
+          {% if t.status == 'sucesso' %}
+            <span class="badge badge-success badge-soft"><i class="bi bi-check-circle"></i> Sucesso</span>
+          {% elif t.status == 'falha' %}
+            <span class="badge badge-danger badge-soft"><i class="bi bi-x-circle"></i> {{ t.motivo_falha_categoria|default:"falha" }}</span>
+          {% elif t.status == 'pulado_idempotente' %}
+            <span class="badge badge-neutral badge-soft"><i class="bi bi-skip-forward"></i> Pulado (idempotente)</span>
+          {% else %}
+            <span class="badge badge-warning badge-soft"><i class="bi bi-hourglass"></i> Pendente</span>
+          {% endif %}
+          <span style="color: var(--color-text-muted); font-size: 13px;">
+            {{ t.criado_em|date:"d/m/Y H:i:s" }} • {{ t.duracao_ms }}ms • {{ t.get_origem_display }}
+            {% if t.etapa %} • etapa: {{ t.get_etapa_display }}{% endif %}
+            {% if t.usuario_retry %} • por {{ t.usuario_retry.username }}{% endif %}
           </span>
         </summary>
-        <div class="accordion-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); padding-top: var(--sp-3);">
+        <div style="padding: var(--sp-3); border-top: 1px solid var(--color-border); display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4);">
           <div>
-            <h4 style="margin: 0 0 var(--sp-2);">Payload enviado</h4>
-            <pre style="background: var(--color-surface-subtle); padding: var(--sp-3); border-radius: 6px; font-size: 12px; overflow-x: auto;">{{ t.payload_enviado|pprint }}</pre>
+            <h4 style="margin: 0 0 var(--sp-2); font-size: 13px; font-weight: 600; text-transform: uppercase; color: var(--color-text-muted);">Payload enviado</h4>
+            <pre style="background: var(--color-surface-subtle); padding: var(--sp-3); border-radius: 6px; font-size: 12px; overflow-x: auto; margin: 0;">{{ t.payload_enviado|pprint }}</pre>
             {% if t.anexos_enviados %}
-              <h4 style="margin: var(--sp-3) 0 var(--sp-2);">Anexos</h4>
-              <ul style="font-size: 13px;">
+              <h4 style="margin: var(--sp-3) 0 var(--sp-2); font-size: 13px; font-weight: 600; text-transform: uppercase; color: var(--color-text-muted);">Anexos</h4>
+              <ul style="font-size: 13px; margin: 0; padding-left: var(--sp-4);">
                 {% for a in t.anexos_enviados %}
                   <li>{{ a.nome }} ({{ a.tamanho_bytes }} bytes, {{ a.mime }})</li>
                 {% endfor %}
@@ -65,19 +61,19 @@
             {% endif %}
           </div>
           <div>
-            <h4 style="margin: 0 0 var(--sp-2);">
+            <h4 style="margin: 0 0 var(--sp-2); font-size: 13px; font-weight: 600; text-transform: uppercase; color: var(--color-text-muted);">
               {% if t.status == 'sucesso' %}Resposta HubSoft{% else %}Erro retornado{% endif %}
             </h4>
             {% if t.status == 'sucesso' %}
-              <pre style="background: var(--color-surface-subtle); padding: var(--sp-3); border-radius: 6px; font-size: 12px; overflow-x: auto;">{{ t.resposta_hubsoft|pprint }}</pre>
+              <pre style="background: var(--color-surface-subtle); padding: var(--sp-3); border-radius: 6px; font-size: 12px; overflow-x: auto; margin: 0;">{{ t.resposta_hubsoft|pprint }}</pre>
               {% if t.id_cliente_servico_contrato %}
-                <p style="margin-top: var(--sp-2);"><strong>ID do contrato:</strong> {{ t.id_cliente_servico_contrato }}</p>
+                <p style="margin-top: var(--sp-2); font-size: 13px;"><strong>ID do contrato:</strong> {{ t.id_cliente_servico_contrato }}</p>
               {% endif %}
             {% elif t.status == 'falha' %}
-              <p style="color: var(--color-danger);"><strong>Categoria:</strong> {{ t.get_motivo_falha_categoria_display|default:"—" }}</p>
-              <pre style="background: #fef2f2; padding: var(--sp-3); border-radius: 6px; font-size: 12px; overflow-x: auto;">{{ t.motivo_falha_mensagem|default:"(sem mensagem)" }}</pre>
+              <p style="margin: 0 0 var(--sp-2); font-size: 13px;"><strong>Categoria:</strong> {{ t.get_motivo_falha_categoria_display|default:"—" }}</p>
+              <pre style="background: #fef2f2; color: #991b1b; padding: var(--sp-3); border-radius: 6px; font-size: 12px; overflow-x: auto; margin: 0;">{{ t.motivo_falha_mensagem|default:"(sem mensagem)" }}</pre>
             {% else %}
-              <p style="color: var(--color-text-muted);">{{ t.motivo_falha_mensagem|default:"—" }}</p>
+              <p style="color: var(--color-text-muted); margin: 0;">{{ t.motivo_falha_mensagem|default:"—" }}</p>
             {% endif %}
           </div>
         </div>
@@ -87,50 +83,51 @@
 </div>
 
 {% if pode_gerenciar %}
-<div id="modal-retentar-contrato" class="modal-overlay" role="dialog" aria-modal="true" hidden>
-  <div class="modal modal-md">
+<div id="modalRetentar" class="modal-overlay" style="display: none;">
+  <div class="modal-content" style="max-width: 480px;">
     <div class="modal-header">
-      <h3 class="modal-title">Re-tentar contrato</h3>
-      <button type="button" class="modal-close" onclick="fecharModal('modal-retentar-contrato')"><i class="bi bi-x-lg"></i></button>
+      <h3 class="modal-title"><i class="bi bi-arrow-repeat" style="color: var(--color-primary);"></i> Re-tentar contrato</h3>
+      <button class="modal-close" onclick="fecharModalRetentar()"><i class="bi bi-x-lg"></i></button>
     </div>
     <div class="modal-body">
-      <p>Re-executar a acao <strong>{{ primeira.get_acao_display }}</strong> pra esse lead. Se o lead ja tem contrato aceito, sera pulada por idempotencia.</p>
-      <div id="retentar-resultado-contrato" style="margin-top: var(--sp-3);"></div>
+      <p>Re-executar a acao <strong>{{ primeira.get_acao_display }}</strong> para esse lead. Se o lead ja tem contrato aceito, sera pulada por idempotencia.</p>
+      <div id="retentar-resultado" style="margin-top: var(--sp-3);"></div>
     </div>
     <div class="modal-footer">
-      <button type="button" class="btn btn-secondary" onclick="fecharModal('modal-retentar-contrato')">Cancelar</button>
-      <button type="button" class="btn btn-primary" id="btn-confirmar-retentar-contrato" onclick="executarRetentarContrato()">Re-tentar agora</button>
+      <button class="btn btn-secondary btn-sm" onclick="fecharModalRetentar()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="btnConfirmarRetentar" onclick="executarRetentar()"><i class="bi bi-check-lg"></i> Re-tentar agora</button>
     </div>
   </div>
 </div>
 
 <script>
-function executarRetentarContrato() {
-  const btn = document.getElementById('btn-confirmar-retentar-contrato');
-  const resultadoDiv = document.getElementById('retentar-resultado-contrato');
-  btn.disabled = true;
-  btn.textContent = 'Enviando...';
-  resultadoDiv.innerHTML = '';
+function abrirModalRetentar() { document.getElementById('modalRetentar').style.display = 'flex'; }
+function fecharModalRetentar() { document.getElementById('modalRetentar').style.display = 'none'; }
+
+function executarRetentar() {
+  const btn = document.getElementById('btnConfirmarRetentar');
+  const out = document.getElementById('retentar-resultado');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  out.innerHTML = '';
 
   fetch('{% url "integracoes:contratos_retentar" grupo_id=grupo_id %}', {
     method: 'POST',
     headers: {'X-CSRFToken': document.cookie.split('csrftoken=')[1]?.split(';')[0] || ''},
   })
   .then(r => r.json())
-  .then(data => {
-    if (data.ok) {
-      resultadoDiv.innerHTML = '<div style="padding: var(--sp-3); background: #ecfdf5; color: #065f46; border-radius: 6px;">' + (data.status === 'pulado_idempotente' ? 'Pulado por idempotencia.' : 'Sucesso!') + ' Recarregando...</div>';
-      setTimeout(() => window.location.reload(), 1500);
+  .then(d => {
+    if (d.ok) {
+      const msg = d.status === 'pulado_idempotente' ? 'Pulado por idempotencia.' : 'Sucesso!';
+      out.innerHTML = '<div class="badge badge-success badge-soft">' + msg + ' Recarregando...</div>';
+      setTimeout(() => window.location.reload(), 1200);
     } else {
-      resultadoDiv.innerHTML = '<div style="padding: var(--sp-3); background: #fef2f2; color: #991b1b; border-radius: 6px;"><strong>' + (data.categoria || 'Falha') + ':</strong> ' + (data.msg || data.error || 'Falha desconhecida') + '</div>';
-      btn.disabled = false;
-      btn.textContent = 'Re-tentar agora';
+      out.innerHTML = '<div class="badge badge-danger badge-soft">' + (d.categoria || 'Falha') + ': ' + (d.msg || d.error || 'falha desconhecida') + '</div>';
+      btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> Re-tentar agora';
     }
   })
   .catch(err => {
-    resultadoDiv.innerHTML = '<div style="padding: var(--sp-3); background: #fef2f2; color: #991b1b; border-radius: 6px;">Erro de rede: ' + err + '</div>';
-    btn.disabled = false;
-    btn.textContent = 'Re-tentar agora';
+    out.innerHTML = '<div class="badge badge-danger badge-soft">Erro: ' + err + '</div>';
+    btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> Re-tentar agora';
   });
 }
 </script>
