@@ -1,7 +1,8 @@
 from django.urls import path
 from . import views
-from . import views_ordens_servico
-from . import views_contratos_tentativas
+
+# Nota: rotas dos paineis comerciais (Ordens de Servico + Contratos) foram
+# movidas pra apps/integracoes/urls_comercial.py, montadas em /comercial/...
 
 app_name = 'integracoes'
 
@@ -9,16 +10,6 @@ urlpatterns = [
     # Página de gerenciamento
     path('', views.integracoes_view, name='integracoes'),
     path('saude/', views.saude_integracoes_view, name='saude_integracoes'),
-
-    # Painel de Ordens de Servico (tentativas de OS via Matrix)
-    path('ordens-servico/', views_ordens_servico.lista_ordens_servico, name='ordens_servico_lista'),
-    path('ordens-servico/<uuid:grupo_id>/', views_ordens_servico.detalhe_ordem_servico, name='ordens_servico_detalhe'),
-    path('ordens-servico/<uuid:grupo_id>/retentar/', views_ordens_servico.retentar_ordem_servico, name='ordens_servico_retentar'),
-
-    # Painel de Contratos (tentativas de criar/aceitar contrato HubSoft via engine de automacao)
-    path('contratos/', views_contratos_tentativas.lista_contratos, name='contratos_lista'),
-    path('contratos/<uuid:grupo_id>/', views_contratos_tentativas.detalhe_contrato, name='contratos_detalhe'),
-    path('contratos/<uuid:grupo_id>/retentar/', views_contratos_tentativas.retentar_contrato, name='contratos_retentar'),
     path('churn-score/', views.configuracao_churn_score_view, name='configuracao_churn_score'),
     path('<int:pk>/', views.integracao_detalhe, name='integracao_detalhe'),
     path('<int:pk>/api/defaults/', views.api_integracao_defaults, name='api_integracao_defaults'),

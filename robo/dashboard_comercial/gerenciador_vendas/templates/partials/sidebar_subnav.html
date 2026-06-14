@@ -60,6 +60,12 @@ Uso em template que extende layout_app:
         <a href="/crm/tarefas/" class="app-subnav-item {% if 'tarefa' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-check2-square"></i><span>Tarefas</span>
         </a>
+        <a href="/comercial/ordens-servico/" class="app-subnav-item {% if 'ordens_servico' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-tools"></i><span>Ordens de Servico</span>
+        </a>
+        <a href="/comercial/contratos/" class="app-subnav-item {% if 'contratos' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-file-earmark-text"></i><span>Contratos</span>
+        </a>
       </nav>
       <div class="app-subnav-section">Relatorios</div>
       <nav class="app-subnav-list">
@@ -285,12 +291,6 @@ Uso em template que extende layout_app:
       <nav class="app-subnav-list">
         <a href="/configuracoes/integracoes/" class="app-subnav-item {% if 'integracao' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-plug"></i><span>Integracoes</span>
-        </a>
-        <a href="/configuracoes/integracoes/ordens-servico/" class="app-subnav-item {% if 'ordens_servico' in request.resolver_match.url_name %}is-active{% endif %}">
-          <i class="bi bi-tools"></i><span>Ordens de Servico</span>
-        </a>
-        <a href="/configuracoes/integracoes/contratos/" class="app-subnav-item {% if 'contratos' in request.resolver_match.url_name %}is-active{% endif %}">
-          <i class="bi bi-file-earmark-text"></i><span>Contratos</span>
         </a>
         <a href="/viabilidade/cidades/" class="app-subnav-item {% if 'cidade' in request.resolver_match.url_name and '/viabilidade/' in request.path %}is-active{% endif %}">
           <i class="bi bi-geo-alt"></i><span>Viabilidade tecnica</span>

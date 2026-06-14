@@ -15,7 +15,7 @@
       </p>
     </div>
     <div class="page-actions">
-      <a href="{% url 'integracoes:contratos_lista' %}" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+      <a href="{% url 'integracoes_comercial:contratos_lista' %}" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
       {% if pode_gerenciar %}
         <button type="button" class="btn btn-primary btn-sm" onclick="abrirModalRetentar()"><i class="bi bi-arrow-repeat"></i> Re-tentar</button>
       {% endif %}
@@ -110,7 +110,7 @@ function executarRetentar() {
   btn.disabled = true; btn.textContent = 'Enviando...';
   out.innerHTML = '';
 
-  fetch('{% url "integracoes:contratos_retentar" grupo_id=grupo_id %}', {
+  fetch('{% url "integracoes_comercial:contratos_retentar" grupo_id=grupo_id %}', {
     method: 'POST',
     headers: {'X-CSRFToken': document.cookie.split('csrftoken=')[1]?.split(';')[0] || ''},
   })
