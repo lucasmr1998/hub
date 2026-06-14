@@ -56,9 +56,6 @@ Uso em template que extende layout_app:
         <a href="/crm/tarefas/" class="app-subnav-item {% if 'tarefa' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-check2-square"></i><span>Tarefas</span>
         </a>
-        <a href="/crm/automacoes-pipeline/" class="app-subnav-item {% if 'automacoes_pipeline' in request.resolver_match.url_name or 'regra_pipeline' in request.resolver_match.url_name %}is-active{% endif %}">
-          <i class="bi bi-diagram-3"></i><span>Automacoes</span>
-        </a>
       </nav>
       <nav class="app-subnav-list">
         <a href="/vendas/" class="app-subnav-item {% if request.resolver_match.url_name == 'vendas' %}is-active{% endif %}">
@@ -76,6 +73,9 @@ Uso em template que extende layout_app:
         <nav class="app-subnav-list">
           <a href="/crm/configuracoes/" class="app-subnav-item {% if request.resolver_match.url_name == 'configuracoes' or request.resolver_match.url_name == 'equipes' or 'meta' in request.resolver_match.url_name or 'produto' in request.resolver_match.url_name or 'motivos_perda' in request.resolver_match.url_name %}is-active{% endif %}">
             <i class="bi bi-sliders"></i><span>CRM, equipes e metas</span>
+          </a>
+          <a href="/crm/automacoes-pipeline/" class="app-subnav-item {% if 'automacoes_pipeline' in request.resolver_match.url_name or 'regra_pipeline' in request.resolver_match.url_name %}is-active{% endif %}">
+            <i class="bi bi-diagram-3"></i><span>Automacoes</span>
           </a>
         </nav>
       {% endif %}
