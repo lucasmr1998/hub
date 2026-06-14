@@ -49,7 +49,7 @@ Uso em template que extende layout_app:
           <i class="bi bi-graph-up-arrow"></i><span>Desempenho</span>
         </a>
       </nav>
-      <div class="app-subnav-divider"></div>
+      <div class="app-subnav-section">Operacao</div>
       <nav class="app-subnav-list">
         <a href="/crm/" class="app-subnav-item {% if request.resolver_match.url_name == 'pipeline' or request.resolver_match.url_name == 'pipeline_view' or 'oportunidade' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-kanban"></i><span>Pipeline</span>
@@ -58,7 +58,7 @@ Uso em template que extende layout_app:
           <i class="bi bi-check2-square"></i><span>Tarefas</span>
         </a>
       </nav>
-      <div class="app-subnav-divider"></div>
+      <div class="app-subnav-section">Acompanhamento</div>
       <nav class="app-subnav-list">
         <a href="/vendas/" class="app-subnav-item {% if request.resolver_match.url_name == 'vendas' %}is-active{% endif %}">
           <i class="bi bi-cash-coin"></i><span>Vendas</span>
