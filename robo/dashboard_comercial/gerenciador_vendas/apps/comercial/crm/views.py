@@ -516,12 +516,17 @@ def api_editar_oportunidade(request, pk):
         return JsonResponse({'error': 'JSON invalido'}, status=400)
 
     campos_oport = [
-        'titulo', 'valor_estimado', 'prioridade', 'motivo_perda',
-        'motivo_perda_categoria', 'motivo_ganho_categoria', 'concorrente_perdido',
+        'titulo', 'valor_estimado', 'probabilidade', 'prioridade',
+        'origem_crm', 'data_fechamento_previsto',
+        'motivo_perda', 'motivo_perda_categoria',
+        'motivo_ganho_categoria', 'concorrente_perdido',
     ]
     campos_lead = [
-        'nome_razaosocial', 'email', 'telefone', 'cpf_cnpj', 'cidade', 'estado',
-        'cep', 'rua', 'numero_residencia', 'bairro', 'empresa', 'observacoes',
+        'nome_razaosocial', 'email', 'telefone', 'cpf_cnpj', 'rg',
+        'data_nascimento',
+        'cidade', 'estado', 'cep', 'rua', 'numero_residencia', 'bairro',
+        'empresa', 'observacoes', 'origem', 'canal_entrada',
+        'score_qualificacao',
     ]
 
     oport_atualizados = []
@@ -543,11 +548,15 @@ def api_editar_oportunidade(request, pk):
             )
             oport_atualizados.append('motivo_perda_ref')
         elif campo in campos_oport and hasattr(oport, campo):
-            if campo == 'valor_estimado' and not valor:
+            if campo in ('valor_estimado', 'probabilidade') and not valor:
+                valor = None
+            if campo == 'data_fechamento_previsto' and not valor:
                 valor = None
             setattr(oport, campo, valor)
             oport_atualizados.append(campo)
         elif campo in campos_lead and oport.lead and hasattr(oport.lead, campo):
+            if campo in ('data_nascimento', 'score_qualificacao') and not valor:
+                valor = None
             setattr(oport.lead, campo, valor)
             lead_atualizados.append(campo)
 
@@ -639,7 +648,30 @@ def oportunidade_detalhe(request, pk):
     from apps.comercial.crm.models import Venda
     vendas_oportunidade = Venda.objects.filter(oportunidade=oportunidade).select_related('plano').order_by('data_venda')
 
-    # Timeline mesclada: estágios + contatos + conversas + vendas, ordenados por data
+    # OS e Contratos do lead (pos-venda)
+    os_tentativas = []
+    contrato_tentativas = []
+    try:
+        from apps.integracoes.models import OrdemServicoTentativa, ContratoTentativa
+        os_tentativas = list(OrdemServicoTentativa.objects.filter(
+            lead=lead,
+        ).order_by('-criado_em')[:10])
+        contrato_tentativas = list(ContratoTentativa.objects.filter(
+            lead=lead,
+        ).order_by('-criado_em')[:10])
+    except Exception:
+        pass
+
+    # Proxima tarefa pendente (ordena por vencimento mais proximo)
+    from django.db.models import F
+    proxima_tarefa = oportunidade.tarefas.filter(
+        status__in=['pendente', 'em_andamento', 'vencida'],
+    ).select_related('responsavel').order_by(
+        F('data_vencimento').asc(nulls_last=True),
+        '-prioridade',
+    ).first() if hasattr(oportunidade, 'tarefas') else None
+
+    # Timeline mesclada: estágios + contatos + conversas + vendas + OS + contratos
     timeline_items = []
     for he in historico_estagios:
         timeline_items.append({
@@ -675,7 +707,106 @@ def oportunidade_detalhe(request, pk):
             'data': v.data_venda,
             'obj': v,
         })
+    for t in os_tentativas:
+        timeline_items.append({
+            'tipo': 'os',
+            'data': t.criado_em,
+            'obj': t,
+        })
+    for t in contrato_tentativas:
+        timeline_items.append({
+            'tipo': 'contrato',
+            'data': t.criado_em,
+            'obj': t,
+        })
+    for log in logs_automacao:
+        timeline_items.append({
+            'tipo': 'automacao',
+            'data': log.data_execucao,
+            'obj': log,
+        })
+    # Tarefas concluidas/pendentes tambem entram
+    for tarefa in oportunidade.tarefas.all() if hasattr(oportunidade, 'tarefas') else []:
+        timeline_items.append({
+            'tipo': 'tarefa',
+            'data': tarefa.data_conclusao or tarefa.data_vencimento or tarefa.data_criacao,
+            'obj': tarefa,
+        })
+    # Notas tambem
+    for nota in oportunidade.notas.select_related('autor').all():
+        timeline_items.append({
+            'tipo': 'nota',
+            'data': nota.data_criacao,
+            'obj': nota,
+        })
     timeline_items.sort(key=lambda x: x['data'], reverse=True)
+
+    # Estagios do mesmo pipeline da oportunidade (pra stage progress bar)
+    estagios_pipeline = []
+    cta_proximo = None
+    cta_ganho = None
+    cta_perdido = None
+    if oportunidade.estagio_id:
+        estagios_pipeline = list(PipelineEstagio.objects.filter(
+            pipeline=oportunidade.estagio.pipeline, ativo=True,
+        ).order_by('ordem'))
+        # CTA "Avancar": proximo estagio na ordem, nao-final
+        estagio_atual_idx = next(
+            (i for i, e in enumerate(estagios_pipeline) if e.pk == oportunidade.estagio_id),
+            -1,
+        )
+        if estagio_atual_idx >= 0:
+            for e in estagios_pipeline[estagio_atual_idx + 1:]:
+                if not e.is_final_ganho and not e.is_final_perdido:
+                    cta_proximo = e
+                    break
+        # CTA "Marcar venda/perda": estagios finais do pipeline
+        for e in estagios_pipeline:
+            if e.is_final_ganho and not cta_ganho:
+                cta_ganho = e
+            if e.is_final_perdido and not cta_perdido:
+                cta_perdido = e
+        # Se ja esta num estagio final, nao oferecer o mesmo
+        if oportunidade.estagio.is_final_ganho:
+            cta_ganho = None
+        if oportunidade.estagio.is_final_perdido:
+            cta_perdido = None
+
+    # Anexos do lead — consolidando DocumentoLead + anexos de contratos
+    anexos = []
+    try:
+        from apps.comercial.cadastro.models import DocumentoLead
+        for d in DocumentoLead.objects.filter(lead=lead).order_by('-data_upload')[:20]:
+            anexos.append({
+                'tipo': 'documento_lead',
+                'nome': d.nome_arquivo or d.get_tipo_documento_display(),
+                'rotulo_tipo': d.get_tipo_documento_display(),
+                'status': d.status,
+                'status_display': d.get_status_display(),
+                'tamanho_bytes': d.tamanho_arquivo,
+                'data': d.data_upload,
+                'pk': d.pk,
+                'url': d.get_imagem_url_data() if d.formato_arquivo in ('jpg', 'jpeg', 'png', 'webp') else None,
+            })
+    except Exception:
+        pass
+    # Anexos enviados nas tentativas de contrato
+    for ct in contrato_tentativas:
+        if ct.anexos_enviados:
+            for a in ct.anexos_enviados:
+                anexos.append({
+                    'tipo': 'contrato_anexo',
+                    'nome': a.get('nome', '(sem nome)'),
+                    'rotulo_tipo': 'Anexo de contrato',
+                    'status': 'enviado' if ct.status == 'sucesso' else 'tentativa',
+                    'status_display': ct.get_status_display(),
+                    'tamanho_bytes': a.get('tamanho_bytes', 0),
+                    'data': ct.criado_em,
+                    'pk': None,
+                    'url': None,
+                    'contrato_grupo_id': ct.grupo_tentativas_id,
+                })
+    anexos.sort(key=lambda x: x['data'], reverse=True)
 
     context = {
         'oportunidade': oportunidade,
@@ -686,9 +817,17 @@ def oportunidade_detalhe(request, pk):
         'logs_automacao': logs_automacao,
         'timeline_items': timeline_items,
         'estagios': estagios,
+        'estagios_pipeline': estagios_pipeline,
         'vendedores': vendedores,
         'conversas_inbox': conversas_inbox,
         'mensagens_inbox': mensagens_inbox,
+        'os_tentativas': os_tentativas,
+        'contrato_tentativas': contrato_tentativas,
+        'proxima_tarefa': proxima_tarefa,
+        'anexos': anexos,
+        'cta_proximo': cta_proximo,
+        'cta_ganho': cta_ganho,
+        'cta_perdido': cta_perdido,
         'motivos_perda': MotivoPerda.objects.filter(ativo=True).order_by('ordem', 'nome'),
         'motivo_perda_obrigatorio': bool(ConfiguracaoCRM.get_config() and ConfiguracaoCRM.get_config().motivo_perda_obrigatorio),
         'motivo_perda_pede_concorrente': bool(ConfiguracaoCRM.get_config() and ConfiguracaoCRM.get_config().motivo_perda_pede_concorrente),

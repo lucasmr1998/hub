@@ -5,7 +5,7 @@
 
 {% block content %}
 
-<div class="page-header">
+<div class="page-header op-header">
   <div class="page-header-top">
     <div class="op-header-lead">
       <div class="op-avatar">{{ lead.nome_razaosocial|first|upper|default:'?' }}</div>
@@ -24,22 +24,113 @@
       </div>
     </div>
     <div class="page-actions">
-      <span class="estagio-badge" style="background: {{ oportunidade.estagio.cor_hex }};">
-        {{ oportunidade.estagio.nome }}
-      </span>
       {% if oportunidade.prioridade %}
         <span class="prioridade-badge prio-{{ oportunidade.prioridade }}">{{ oportunidade.get_prioridade_display }}</span>
       {% endif %}
-      <button class="btn btn-primary btn-sm" onclick="abrirModalEstagio()"><i class="bi bi-arrow-right"></i> Mover estagio</button>
-      {% if lead.telefone %}
-        <a href="https://wa.me/{{ lead.telefone|cut:'+' }}" target="_blank" class="btn btn-secondary btn-sm" title="WhatsApp"><i class="bi bi-whatsapp" style="color: var(--color-success);"></i></a>
+      {# CTA contextual primario: Avancar (nao-final) #}
+      {% if cta_proximo %}
+        <button class="btn btn-primary btn-sm" onclick="moverParaEstagioRapido({{ cta_proximo.pk }})"><i class="bi bi-arrow-right"></i> Avancar pra {{ cta_proximo.nome }}</button>
+      {% else %}
+        <button class="btn btn-primary btn-sm" onclick="abrirModalEstagio()"><i class="bi bi-arrow-right"></i> Mover estagio</button>
+      {% endif %}
+      {% if cta_ganho %}
+        <button class="btn btn-sm btn-cta-ganho" onclick="moverParaEstagioRapido({{ cta_ganho.pk }})" title="Marcar venda — move pra {{ cta_ganho.nome }}"><i class="bi bi-check2-circle"></i> Marcar venda</button>
+      {% endif %}
+      {% if cta_perdido %}
+        <button class="btn btn-sm btn-cta-perdido" onclick="moverParaEstagioRapido({{ cta_perdido.pk }})" title="Marcar perda — move pra {{ cta_perdido.nome }}"><i class="bi bi-x-circle"></i> Marcar perda</button>
       {% endif %}
       {% if user_funcs is None or 'comercial.excluir_oportunidade' in user_funcs %}
         <button class="btn btn-ghost btn-sm btn-ghost-danger" onclick="excluirOportunidade()" title="Excluir oportunidade"><i class="bi bi-trash"></i></button>
       {% endif %}
     </div>
   </div>
+
+  {# Stage progress bar — todos os estagios do pipeline com indicador do atual #}
+  {% if estagios_pipeline %}
+    <div class="op-stage-bar" role="list">
+      {% for e in estagios_pipeline %}
+        <div class="op-stage-step
+            {% if e.pk == oportunidade.estagio.pk %}is-current{% endif %}
+            {% if e.is_final_ganho %}is-ganho{% endif %}
+            {% if e.is_final_perdido %}is-perdido{% endif %}"
+          role="listitem"
+          {% if e.pk != oportunidade.estagio.pk %}
+            onclick="moverParaEstagioRapido({{ e.pk }})" style="cursor: pointer;"
+            title="Mover para {{ e.nome }}"
+          {% endif %}>
+          <span class="op-stage-step-label">{{ e.nome }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {# Resumo numerico + quick actions #}
+  <div class="op-header-summary">
+    <div class="op-summary-cols">
+      <div class="op-summary-item">
+        <label>Valor</label>
+        <strong class="editable op-summary-value" data-field="valor_estimado">{% if oportunidade.valor_estimado %}R$ {{ oportunidade.valor_estimado }}{% endif %}</strong>
+      </div>
+      <div class="op-summary-item">
+        <label>Probabilidade</label>
+        <strong>{{ oportunidade.probabilidade }}%</strong>
+      </div>
+      <div class="op-summary-item">
+        <label>Responsavel</label>
+        <strong>
+          {% if oportunidade.responsavel %}
+            {{ oportunidade.responsavel.get_full_name|default:oportunidade.responsavel.username }}
+          {% else %}
+            <span class="value-empty">Sem dono</span>
+          {% endif %}
+          <button class="op-inline-pencil" onclick="abrirModalVendedor()" title="Trocar responsavel"><i class="bi bi-pencil"></i></button>
+        </strong>
+      </div>
+      <div class="op-summary-item">
+        <label>No estagio ha</label>
+        <strong>{{ oportunidade.data_entrada_estagio|timesince }}</strong>
+      </div>
+    </div>
+    <div class="op-quick-actions">
+      <button class="btn btn-ghost btn-sm" onclick="abrirModalTarefa()"><i class="bi bi-check2-square"></i> Tarefa</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.querySelector('.tab-btn[data-panel=tab-notas]').click(); document.getElementById('nota-texto').focus();"><i class="bi bi-sticky"></i> Nota</button>
+      {% if lead.telefone %}
+        <a href="https://wa.me/{{ lead.telefone|cut:'+' }}" target="_blank" class="btn btn-ghost btn-sm"><i class="bi bi-whatsapp"></i> WhatsApp</a>
+      {% endif %}
+      {% with conv=oportunidade.conversas.first %}
+        {% if conv %}
+          <a href="{% url 'inbox:inbox' %}?conversa={{ conv.id }}" class="btn btn-ghost btn-sm"><i class="bi bi-chat-dots"></i> Conversa</a>
+        {% endif %}
+      {% endwith %}
+    </div>
+  </div>
 </div>
+
+{# Card "Proxima acao" — so quando ha tarefa pendente #}
+{% if proxima_tarefa %}
+  <div class="op-next-action {% if proxima_tarefa.status == 'vencida' %}is-vencida{% endif %}">
+    <div class="op-next-icon">
+      <i class="bi {% if proxima_tarefa.status == 'vencida' %}bi-exclamation-triangle{% else %}bi-clock-history{% endif %}"></i>
+    </div>
+    <div class="op-next-body">
+      <div class="op-next-meta">
+        <strong>{{ proxima_tarefa.get_tipo_display }}</strong>
+        {% if proxima_tarefa.data_vencimento %}
+          {% if proxima_tarefa.status == 'vencida' %}
+            <span class="op-next-when is-vencida">Vencida ha {{ proxima_tarefa.data_vencimento|timesince }}</span>
+          {% else %}
+            <span class="op-next-when">Vence em {{ proxima_tarefa.data_vencimento|timeuntil }} ({{ proxima_tarefa.data_vencimento|date:"d/m H:i" }})</span>
+          {% endif %}
+        {% endif %}
+        {% if proxima_tarefa.responsavel %} · {{ proxima_tarefa.responsavel.get_full_name|default:proxima_tarefa.responsavel.username }}{% endif %}
+      </div>
+      <div class="op-next-title">{{ proxima_tarefa.titulo }}</div>
+    </div>
+    <div class="op-next-actions">
+      <button class="btn btn-secondary btn-sm" onclick="concluirTarefa({{ proxima_tarefa.pk }})"><i class="bi bi-check2"></i> Concluir</button>
+    </div>
+  </div>
+{% endif %}
 
 <div class="detalhe-grid">
   {# Sidebar #}
@@ -48,6 +139,7 @@
     <div class="card">
       <div class="card-header">
         <h3 class="card-title"><i class="bi bi-briefcase" style="color: var(--color-primary);"></i> Oportunidade</h3>
+        <button class="card-action-link" onclick="abrirModalEditarOp()" title="Ver todos os campos"><i class="bi bi-pencil-square"></i> Editar</button>
       </div>
       <div class="card-body">
         <div class="detail-field">
@@ -60,27 +152,8 @@
           <div class="prob-bar"><div class="prob-fill" style="width: {{ oportunidade.probabilidade }}%;"></div></div>
         </div>
         <div class="detail-field">
-          <label>Responsavel</label>
-          <div class="value">
-            {% if oportunidade.responsavel %}
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <i class="bi bi-person-circle" style="color: var(--color-primary);"></i>
-                <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ oportunidade.responsavel.get_full_name|default:oportunidade.responsavel.username }}</span>
-                <button class="btn btn-ghost btn-sm" onclick="abrirModalVendedor()" title="Trocar responsavel" style="padding: 2px 6px; flex-shrink: 0;"><i class="bi bi-pencil"></i></button>
-              </div>
-            {% else %}
-              <span class="value-empty">Nao atribuido</span>
-              <button class="btn btn-secondary btn-sm" style="margin-top: 6px;" onclick="abrirModalVendedor()"><i class="bi bi-person-plus"></i> Atribuir</button>
-            {% endif %}
-          </div>
-        </div>
-        <div class="detail-field">
           <label>Origem CRM</label>
           <div class="value">{{ oportunidade.get_origem_crm_display }}</div>
-        </div>
-        <div class="detail-field">
-          <label>Entrada no estagio</label>
-          <div class="value">{{ oportunidade.data_entrada_estagio|date:"d/m/Y H:i" }}</div>
         </div>
         {% if oportunidade.data_fechamento_previsto %}
           <div class="detail-field">
@@ -88,6 +161,10 @@
             <div class="value">{{ oportunidade.data_fechamento_previsto|date:"d/m/Y" }}</div>
           </div>
         {% endif %}
+        <div class="detail-field">
+          <label>Entrada no estagio</label>
+          <div class="value">{{ oportunidade.data_entrada_estagio|date:"d/m/Y H:i" }}</div>
+        </div>
         {% if oportunidade.data_fechamento_real %}
           <div class="detail-field">
             <label>Fechamento real</label>
@@ -309,6 +386,7 @@
     <div class="card">
       <div class="card-header">
         <h3 class="card-title"><i class="bi bi-person" style="color: var(--color-primary);"></i> Dados do lead</h3>
+        <button class="card-action-link" onclick="abrirModalEditarLead()" title="Ver todos os campos"><i class="bi bi-pencil-square"></i> Editar</button>
       </div>
       <div class="card-body">
         <div class="detail-field"><label>Email</label><div class="value"><span class="editable" data-field="email">{{ lead.email|default:"" }}</span></div></div>
@@ -354,6 +432,111 @@
       </div>
     </div>
 
+    {# O.S. (ordens de servico) — pos-venda #}
+    {% if os_tentativas %}
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title"><i class="bi bi-tools" style="color: var(--color-warning);"></i> O.S. <span class="card-count">({{ os_tentativas|length }})</span></h3>
+          <a href="{% url 'integracoes_comercial:ordens_servico_lista' %}" class="card-action-link" title="Ver todas"><i class="bi bi-box-arrow-up-right"></i></a>
+        </div>
+        <div class="card-body">
+          {% for t in os_tentativas|slice:":5" %}
+            <a href="{% url 'integracoes_comercial:ordens_servico_detalhe' grupo_id=t.grupo_tentativas_id %}" class="op-os-item">
+              <div class="op-os-line">
+                <strong>OS #{{ t.id_ordem_servico_hubsoft|default:t.id_atendimento_hubsoft|default:"—" }}</strong>
+                {% if t.status == 'sucesso' %}
+                  <span class="badge-mini badge-success"><i class="bi bi-check-circle"></i> Sucesso</span>
+                {% elif t.status == 'falha' %}
+                  <span class="badge-mini badge-danger"><i class="bi bi-x-circle"></i> {{ t.motivo_falha_categoria|default:"falha" }}</span>
+                {% else %}
+                  <span class="badge-mini badge-warning"><i class="bi bi-hourglass"></i> Pendente</span>
+                {% endif %}
+              </div>
+              <div class="op-os-meta">
+                {{ t.criado_em|date:"d/m H:i" }}
+                {% if t.tecnico_nome %} · {{ t.tecnico_nome }}{% endif %}
+                {% if t.cidade %} · {{ t.cidade }}{% endif %}
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {# Contratos — pos-venda #}
+    {% if contrato_tentativas %}
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title"><i class="bi bi-file-earmark-text" style="color: var(--color-info);"></i> Contratos <span class="card-count">({{ contrato_tentativas|length }})</span></h3>
+          <a href="{% url 'integracoes_comercial:contratos_lista' %}" class="card-action-link" title="Ver todos"><i class="bi bi-box-arrow-up-right"></i></a>
+        </div>
+        <div class="card-body">
+          {% for t in contrato_tentativas|slice:":5" %}
+            <a href="{% url 'integracoes_comercial:contratos_detalhe' grupo_id=t.grupo_tentativas_id %}" class="op-os-item">
+              <div class="op-os-line">
+                <strong>{{ t.get_acao_display }}</strong>
+                {% if t.status == 'sucesso' %}
+                  <span class="badge-mini badge-success"><i class="bi bi-check-circle"></i> Aceito</span>
+                {% elif t.status == 'falha' %}
+                  <span class="badge-mini badge-danger"><i class="bi bi-x-circle"></i> {{ t.motivo_falha_categoria|default:"falha" }}</span>
+                {% elif t.status == 'pulado_idempotente' %}
+                  <span class="badge-mini badge-neutral"><i class="bi bi-skip-forward"></i> Pulado</span>
+                {% else %}
+                  <span class="badge-mini badge-warning"><i class="bi bi-hourglass"></i> Pendente</span>
+                {% endif %}
+              </div>
+              <div class="op-os-meta">
+                {{ t.criado_em|date:"d/m H:i" }}
+                {% if t.id_cliente_servico_contrato %} · #{{ t.id_cliente_servico_contrato }}{% endif %}
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {# Anexos / Documentos #}
+    {% if anexos %}
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title"><i class="bi bi-paperclip" style="color: var(--color-text-muted);"></i> Documentos <span class="card-count">({{ anexos|length }})</span></h3>
+        </div>
+        <div class="card-body">
+          {% for a in anexos|slice:":8" %}
+            <div class="op-anexo-item">
+              <div class="op-anexo-icon">
+                {% if a.tipo == 'documento_lead' %}
+                  <i class="bi bi-file-earmark-image"></i>
+                {% else %}
+                  <i class="bi bi-file-earmark-text"></i>
+                {% endif %}
+              </div>
+              <div class="op-anexo-body">
+                <div class="op-anexo-name">{{ a.nome|truncatechars:38 }}</div>
+                <div class="op-anexo-meta">
+                  {{ a.rotulo_tipo }}
+                  {% if a.tamanho_bytes %} · {{ a.tamanho_bytes|filesizeformat }}{% endif %}
+                  · {{ a.data|date:"d/m" }}
+                </div>
+              </div>
+              {% if a.status == 'aprovado' or a.status == 'enviado' %}
+                <span class="badge-mini badge-success" title="{{ a.status_display }}"><i class="bi bi-check-circle"></i></span>
+              {% elif a.status == 'rejeitado' %}
+                <span class="badge-mini badge-danger" title="{{ a.status_display }}"><i class="bi bi-x-circle"></i></span>
+              {% elif a.status == 'em_analise' %}
+                <span class="badge-mini badge-warning" title="{{ a.status_display }}"><i class="bi bi-hourglass"></i></span>
+              {% endif %}
+            </div>
+          {% endfor %}
+          {% if anexos|length > 8 %}
+            <div style="text-align: center; padding-top: 6px; font-size: 11px; color: var(--color-text-muted);">
+              +{{ anexos|length|add:"-8" }} mais
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+
     {# Hubsoft #}
     {% if cliente_hubsoft %}
       <div class="card">
@@ -390,19 +573,15 @@
   <div class="main-col">
     <div class="card" style="overflow: visible;">
       <div class="tabs-nav">
-        <button class="tab-btn is-active" onclick="switchTab(this, 'tab-timeline')">
+        <button class="tab-btn is-active" data-panel="tab-timeline" onclick="switchTab(this, 'tab-timeline')">
           <i class="bi bi-activity"></i> Timeline
           <span class="tab-count">{{ timeline_items|length }}</span>
         </button>
-        <button class="tab-btn" onclick="switchTab(this, 'tab-notas')">
+        <button class="tab-btn" data-panel="tab-notas" onclick="switchTab(this, 'tab-notas')">
           <i class="bi bi-sticky"></i> Notas
           <span class="tab-count" id="notas-count">{{ oportunidade.notas.count }}</span>
         </button>
-        <button class="tab-btn" onclick="switchTab(this, 'tab-historico')">
-          <i class="bi bi-clock-history"></i> Hist. estagios
-          <span class="tab-count">{{ historico_estagios|length }}</span>
-        </button>
-        <button class="tab-btn" onclick="switchTab(this, 'tab-conversas')">
+        <button class="tab-btn" data-panel="tab-conversas" onclick="switchTab(this, 'tab-conversas')">
           <i class="bi bi-whatsapp"></i> Conversas
           <span class="tab-count">{{ mensagens_inbox|length }}</span>
         </button>
@@ -410,10 +589,22 @@
 
       {# Timeline #}
       <div id="tab-timeline" class="tab-panel is-active">
+        {# Chips de filtro #}
+        <div class="tl-filter-chips">
+          <button class="tl-chip is-active" data-filter="all">Tudo</button>
+          <button class="tl-chip" data-filter="nota">Notas</button>
+          <button class="tl-chip" data-filter="conversa">Conversas</button>
+          <button class="tl-chip" data-filter="estagio">Estagios</button>
+          <button class="tl-chip" data-filter="tarefa">Tarefas</button>
+          <button class="tl-chip" data-filter="os">O.S.</button>
+          <button class="tl-chip" data-filter="contrato">Contratos</button>
+          <button class="tl-chip" data-filter="venda">Vendas</button>
+          <button class="tl-chip" data-filter="automacao">Automacoes</button>
+        </div>
         {% if timeline_items %}
           <div class="timeline">
             {% for item in timeline_items %}
-              <div class="tl-item">
+              <div class="tl-item" data-tipo="{% if item.tipo == 'conversa_aberta' or item.tipo == 'conversa_resolvida' %}conversa{% elif item.tipo == 'venda_criada' %}venda{% elif item.tipo == 'contato' %}contato{% else %}{{ item.tipo }}{% endif %}">
                 {% if item.tipo == 'contato' %}
                   <div class="tl-dot {% if item.obj.converteu_venda %}dot-venda{% elif item.obj.sucesso %}dot-contato{% elif item.obj.status == 'chamada_perdida' or item.obj.status == 'nao_atendeu' %}dot-perdido{% else %}dot-contato{% endif %}"></div>
                   <div class="tl-header">
@@ -473,6 +664,94 @@
                   <div class="tl-meta">
                     {{ item.obj.get_status_display }}{% if item.obj.valor %} · R$ {{ item.obj.valor }}{% endif %}
                   </div>
+                {% elif item.tipo == 'os' %}
+                  <div class="tl-dot {% if item.obj.status == 'sucesso' %}dot-venda{% elif item.obj.status == 'falha' %}dot-perdido{% else %}dot-contato{% endif %}"></div>
+                  <div class="tl-header">
+                    <div class="tl-title">
+                      <i class="bi bi-tools" style="color: var(--color-warning); font-size: 12px;"></i>
+                      {% if item.obj.status == 'sucesso' %}
+                        <strong>O.S. aberta</strong>
+                        {% if item.obj.id_ordem_servico_hubsoft %} <span style="color: var(--color-text-muted);">#{{ item.obj.id_ordem_servico_hubsoft }}</span>{% endif %}
+                      {% elif item.obj.status == 'falha' %}
+                        <span style="color: var(--color-danger);">Falha ao abrir O.S.</span>
+                      {% else %}
+                        Tentativa de O.S.
+                      {% endif %}
+                    </div>
+                    <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
+                  </div>
+                  {% if item.obj.status == 'falha' and item.obj.motivo_falha_mensagem %}
+                    <p class="tl-body" style="color: var(--color-danger);">{{ item.obj.motivo_falha_mensagem|truncatechars:160 }}</p>
+                  {% endif %}
+                  <div class="tl-meta">
+                    {% if item.obj.tecnico_nome %}{{ item.obj.tecnico_nome }}{% endif %}
+                    {% if item.obj.data_inicio_programado %} · {{ item.obj.data_inicio_programado|date:"d/m" }} {{ item.obj.hora_inicio_programado|time:"H:i" }}{% endif %}
+                    · <a href="{% url 'integracoes_comercial:ordens_servico_detalhe' grupo_id=item.obj.grupo_tentativas_id %}">ver detalhe</a>
+                  </div>
+                {% elif item.tipo == 'contrato' %}
+                  <div class="tl-dot {% if item.obj.status == 'sucesso' %}dot-venda{% elif item.obj.status == 'falha' %}dot-perdido{% else %}dot-estagio{% endif %}"></div>
+                  <div class="tl-header">
+                    <div class="tl-title">
+                      <i class="bi bi-file-earmark-text" style="color: var(--color-info); font-size: 12px;"></i>
+                      {% if item.obj.status == 'sucesso' %}
+                        <strong>Contrato — {{ item.obj.get_acao_display }}</strong>
+                      {% elif item.obj.status == 'falha' %}
+                        <span style="color: var(--color-danger);">Falha — {{ item.obj.get_acao_display }}</span>
+                      {% elif item.obj.status == 'pulado_idempotente' %}
+                        <span style="color: var(--color-text-muted);">Pulado (idempotente) — {{ item.obj.get_acao_display }}</span>
+                      {% else %}
+                        Tentativa de contrato
+                      {% endif %}
+                    </div>
+                    <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
+                  </div>
+                  {% if item.obj.status == 'falha' and item.obj.motivo_falha_mensagem %}
+                    <p class="tl-body" style="color: var(--color-danger);">{{ item.obj.motivo_falha_mensagem|truncatechars:160 }}</p>
+                  {% endif %}
+                  <div class="tl-meta">
+                    {% if item.obj.id_cliente_servico_contrato %}#{{ item.obj.id_cliente_servico_contrato }} · {% endif %}
+                    <a href="{% url 'integracoes_comercial:contratos_detalhe' grupo_id=item.obj.grupo_tentativas_id %}">ver detalhe</a>
+                  </div>
+                {% elif item.tipo == 'tarefa' %}
+                  <div class="tl-dot {% if item.obj.status == 'concluida' %}dot-venda{% elif item.obj.status == 'vencida' %}dot-perdido{% else %}dot-nota{% endif %}"></div>
+                  <div class="tl-header">
+                    <div class="tl-title">
+                      <i class="bi bi-check2-square" style="color: var(--color-warning); font-size: 12px;"></i>
+                      {{ item.obj.get_tipo_display }}: <strong>{{ item.obj.titulo|truncatechars:60 }}</strong>
+                    </div>
+                    <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
+                  </div>
+                  {% if item.obj.descricao %}<p class="tl-body">{{ item.obj.descricao|truncatechars:200 }}</p>{% endif %}
+                  <div class="tl-meta">
+                    {{ item.obj.get_status_display }}
+                    {% if item.obj.responsavel %} · {{ item.obj.responsavel.get_full_name|default:item.obj.responsavel.username }}{% endif %}
+                    {% if item.obj.status != 'concluida' and item.obj.status != 'cancelada' %}
+                      · <a href="javascript:void(0)" onclick="concluirTarefa({{ item.obj.pk }})">marcar concluida</a>
+                    {% endif %}
+                  </div>
+                {% elif item.tipo == 'nota' %}
+                  <div class="tl-dot dot-nota"></div>
+                  <div class="tl-header">
+                    <div class="tl-title">
+                      <i class="bi bi-sticky" style="color: var(--color-warning); font-size: 12px;"></i>
+                      Nota ({{ item.obj.get_tipo_display }})
+                    </div>
+                    <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
+                  </div>
+                  <p class="tl-body">{{ item.obj.conteudo|truncatechars:240 }}</p>
+                  <div class="tl-meta">{{ item.obj.autor.get_full_name|default:item.obj.autor.username }}</div>
+                {% elif item.tipo == 'automacao' %}
+                  <div class="tl-dot {% if item.obj.status == 'erro' %}dot-perdido{% else %}dot-estagio{% endif %}"></div>
+                  <div class="tl-header">
+                    <div class="tl-title">
+                      <i class="bi bi-lightning-charge" style="color: var(--color-primary); font-size: 12px;"></i>
+                      Automacao: <strong>{{ item.obj.regra.nome|truncatechars:60 }}</strong>
+                    </div>
+                    <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
+                  </div>
+                  {% if item.obj.acao %}<p class="tl-body">Acao: {{ item.obj.acao.get_tipo_display|default:item.obj.acao }}</p>{% endif %}
+                  {% if item.obj.resultado %}<p class="tl-body" {% if item.obj.status == 'erro' %}style="color: var(--color-danger);"{% endif %}>{{ item.obj.resultado|truncatechars:200 }}</p>{% endif %}
+                  <div class="tl-meta">{{ item.obj.get_status_display }}{% if item.obj.nodo %} · nodo: {{ item.obj.nodo.nome|default:'?' }}{% endif %}</div>
                 {% endif %}
               </div>
             {% endfor %}
@@ -514,35 +793,6 @@
             <div class="empty-state"><i class="bi bi-sticky"></i> Nenhuma nota ainda. Adicione a primeira acima.</div>
           {% endfor %}
         </div>
-      </div>
-
-      {# Historico estagios #}
-      <div id="tab-historico" class="tab-panel">
-        {% if historico_estagios %}
-          <div class="timeline">
-            {% for he in historico_estagios %}
-              <div class="tl-item">
-                <div class="tl-dot {% if he.estagio_novo.is_final_ganho %}dot-venda{% elif he.estagio_novo.is_final_perdido %}dot-perdido{% else %}dot-estagio{% endif %}"></div>
-                <div class="tl-header">
-                  <div class="tl-title">
-                    <span class="estagio-badge" style="background: {{ he.estagio_novo.cor_hex }}; font-size: 11px; padding: 2px 8px;">{{ he.estagio_novo.nome }}</span>
-                  </div>
-                  <span class="tl-date">{{ he.data_transicao|date:"d/m/Y H:i" }}</span>
-                </div>
-                {% if he.estagio_anterior %}
-                  <p class="tl-body"><i class="bi bi-arrow-right" style="color: var(--color-text-muted); font-size: 11px;"></i> Veio de: <strong>{{ he.estagio_anterior.nome }}</strong></p>
-                {% endif %}
-                {% if he.motivo %}<p class="tl-body">{{ he.motivo }}</p>{% endif %}
-                <div class="tl-meta">
-                  {% if he.movido_por %}<i class="bi bi-person" style="font-size: 10px;"></i> {{ he.movido_por.get_full_name|default:he.movido_por.username }}{% endif %}
-                  {% if he.tempo_no_estagio_horas %} · Ficou {{ he.tempo_no_estagio_horas|floatformat:0 }}h no estagio anterior{% endif %}
-                </div>
-              </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="empty-state"><i class="bi bi-clock-history"></i> Nenhuma transicao registrada.</div>
-        {% endif %}
       </div>
 
       {# Conversas #}
@@ -642,6 +892,231 @@
     <div class="modal-footer">
       <button class="btn btn-secondary btn-sm" onclick="fecharModal('modal-vendedor')">Cancelar</button>
       <button class="btn btn-primary btn-sm" onclick="confirmarVendedor()"><i class="bi bi-check-lg"></i> Atribuir</button>
+    </div>
+  </div>
+</div>
+
+{# Modal editar oportunidade completa #}
+<div class="modal-overlay" id="modal-editar-op" style="display: none;">
+  <div class="modal-content modal-form-large">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-pencil-square" style="color: var(--color-primary);"></i> Editar oportunidade</h3>
+      <button class="modal-close" onclick="fecharModal('modal-editar-op')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <form id="form-editar-op" onsubmit="event.preventDefault(); salvarFormOp();">
+        <div class="form-section">
+          <h4 class="form-section-title">Negocio</h4>
+          <div class="form-grid-2">
+            <div class="field">
+              <label class="field-label">Titulo</label>
+              <div class="field-input-wrap"><input name="titulo" type="text" class="field-input" value="{{ oportunidade.titulo|default:'' }}"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">Valor estimado (R$)</label>
+              <div class="field-input-wrap"><input name="valor_estimado" type="number" step="0.01" class="field-input" value="{{ oportunidade.valor_estimado|default:'' }}"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">Probabilidade (%)</label>
+              <div class="field-input-wrap"><input name="probabilidade" type="number" min="0" max="100" class="field-input" value="{{ oportunidade.probabilidade|default:'' }}"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">Prioridade</label>
+              <div class="field-input-wrap">
+                <select name="prioridade" class="field-input">
+                  <option value="baixa" {% if oportunidade.prioridade == 'baixa' %}selected{% endif %}>Baixa</option>
+                  <option value="normal" {% if oportunidade.prioridade == 'normal' %}selected{% endif %}>Normal</option>
+                  <option value="alta" {% if oportunidade.prioridade == 'alta' %}selected{% endif %}>Alta</option>
+                  <option value="urgente" {% if oportunidade.prioridade == 'urgente' %}selected{% endif %}>Urgente</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label">Origem CRM</label>
+              <div class="field-input-wrap"><input name="origem_crm" type="text" class="field-input" value="{{ oportunidade.origem_crm|default:'' }}"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">Fechamento previsto</label>
+              <div class="field-input-wrap"><input name="data_fechamento_previsto" type="date" class="field-input" value="{{ oportunidade.data_fechamento_previsto|date:'Y-m-d' }}"></div>
+            </div>
+          </div>
+        </div>
+        {% if oportunidade.estagio.is_final_perdido or oportunidade.motivo_perda %}
+        <div class="form-section">
+          <h4 class="form-section-title">Perda</h4>
+          <div class="field">
+            <label class="field-label">Observacao / motivo livre</label>
+            <div class="field-input-wrap"><textarea name="motivo_perda" rows="2" class="field-input">{{ oportunidade.motivo_perda|default:'' }}</textarea></div>
+          </div>
+          <div class="field">
+            <label class="field-label">Concorrente (se perdido para concorrencia)</label>
+            <div class="field-input-wrap"><input name="concorrente_perdido" type="text" class="field-input" value="{{ oportunidade.concorrente_perdido|default:'' }}"></div>
+          </div>
+        </div>
+        {% endif %}
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="fecharModal('modal-editar-op')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="salvarFormOp()"><i class="bi bi-check-lg"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+{# Modal editar lead completo #}
+<div class="modal-overlay" id="modal-editar-lead" style="display: none;">
+  <div class="modal-content modal-form-large">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-person-lines-fill" style="color: var(--color-primary);"></i> Editar lead</h3>
+      <button class="modal-close" onclick="fecharModal('modal-editar-lead')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <form id="form-editar-lead" onsubmit="event.preventDefault(); salvarFormLead();">
+        <div class="form-section">
+          <h4 class="form-section-title">Identificacao</h4>
+          <div class="form-grid-2">
+            <div class="field">
+              <label class="field-label">Nome / Razao social</label>
+              <div class="field-input-wrap"><input name="nome_razaosocial" type="text" class="field-input" value="{{ lead.nome_razaosocial|default:'' }}"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">Email</label>
+              <div class="field-input-wrap"><input name="email" type="email" class="field-input" value="{{ lead.email|default:'' }}"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">Telefone</label>
+              <div class="field-input-wrap"><input name="telefone" type="text" class="field-input" value="{{ lead.telefone|default:'' }}"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">CPF / CNPJ</label>
+              <div class="field-input-wrap"><input name="cpf_cnpj" type="text" class="field-input" value="{{ lead.cpf_cnpj|default:'' }}"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">RG</label>
+              <div class="field-input-wrap"><input name="rg" type="text" class="field-input" value="{{ lead.rg|default:'' }}"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">Data de nascimento</label>
+              <div class="field-input-wrap"><input name="data_nascimento" type="date" class="field-input" value="{{ lead.data_nascimento|date:'Y-m-d' }}"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">Empresa</label>
+              <div class="field-input-wrap"><input name="empresa" type="text" class="field-input" value="{{ lead.empresa|default:'' }}"></div>
+            </div>
+          </div>
+        </div>
+        <div class="form-section">
+          <h4 class="form-section-title">Endereco</h4>
+          <div class="form-grid-2">
+            <div class="field">
+              <label class="field-label">CEP</label>
+              <div class="field-input-wrap"><input name="cep" type="text" class="field-input" value="{{ lead.cep|default:'' }}"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">Rua</label>
+              <div class="field-input-wrap"><input name="rua" type="text" class="field-input" value="{{ lead.rua|default:'' }}"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">Numero</label>
+              <div class="field-input-wrap"><input name="numero_residencia" type="text" class="field-input" value="{{ lead.numero_residencia|default:'' }}"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">Bairro</label>
+              <div class="field-input-wrap"><input name="bairro" type="text" class="field-input" value="{{ lead.bairro|default:'' }}"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">Cidade</label>
+              <div class="field-input-wrap"><input name="cidade" type="text" class="field-input" value="{{ lead.cidade|default:'' }}"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">Estado (UF)</label>
+              <div class="field-input-wrap"><input name="estado" type="text" maxlength="2" class="field-input" value="{{ lead.estado|default:'' }}"></div>
+            </div>
+          </div>
+        </div>
+        <div class="form-section">
+          <h4 class="form-section-title">Origem &amp; qualificacao</h4>
+          <div class="form-grid-2">
+            <div class="field">
+              <label class="field-label">Origem</label>
+              <div class="field-input-wrap"><input name="origem" type="text" class="field-input" value="{{ lead.origem|default:'' }}"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">Canal de entrada</label>
+              <div class="field-input-wrap"><input name="canal_entrada" type="text" class="field-input" value="{{ lead.canal_entrada|default:'' }}"></div>
+            </div>
+            <div class="field">
+              <label class="field-label">Score (0-10)</label>
+              <div class="field-input-wrap"><input name="score_qualificacao" type="number" min="0" max="10" class="field-input" value="{{ lead.score_qualificacao|default:'' }}"></div>
+            </div>
+          </div>
+        </div>
+        <div class="form-section">
+          <h4 class="form-section-title">Observacoes</h4>
+          <div class="field">
+            <div class="field-input-wrap"><textarea name="observacoes" rows="3" class="field-input">{{ lead.observacoes|default:'' }}</textarea></div>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="fecharModal('modal-editar-lead')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="salvarFormLead()"><i class="bi bi-check-lg"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+{# Modal nova tarefa #}
+<div class="modal-overlay" id="modal-tarefa" style="display: none;">
+  <div class="modal-content" style="max-width: 480px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-check2-square" style="color: var(--color-primary);"></i> Nova tarefa</h3>
+      <button class="modal-close" onclick="fecharModal('modal-tarefa')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="field-label">Tipo</label>
+        <div class="field-input-wrap">
+          <select id="tarefa-tipo" class="field-input">
+            <option value="followup">Follow-up</option>
+            <option value="ligacao">Ligacao</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="email">E-mail</option>
+            <option value="visita">Visita</option>
+            <option value="proposta">Proposta</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-top: var(--sp-3);">
+        <label class="field-label">Titulo</label>
+        <div class="field-input-wrap"><input id="tarefa-titulo" type="text" class="field-input" placeholder="Ex: Confirmar interesse no plano 600M"></div>
+      </div>
+      <div class="form-grid-2" style="margin-top: var(--sp-3);">
+        <div class="field">
+          <label class="field-label">Vencimento</label>
+          <div class="field-input-wrap"><input id="tarefa-vencimento" type="datetime-local" class="field-input"></div>
+        </div>
+        <div class="field">
+          <label class="field-label">Prioridade</label>
+          <div class="field-input-wrap">
+            <select id="tarefa-prioridade" class="field-input">
+              <option value="normal" selected>Normal</option>
+              <option value="alta">Alta</option>
+              <option value="urgente">Urgente</option>
+              <option value="baixa">Baixa</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="field" style="margin-top: var(--sp-3);">
+        <label class="field-label">Descricao (opcional)</label>
+        <div class="field-input-wrap"><textarea id="tarefa-descricao" class="field-input" rows="2"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="fecharModal('modal-tarefa')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="salvarTarefa()"><i class="bi bi-check-lg"></i> Criar tarefa</button>
     </div>
   </div>
 </div>
@@ -945,6 +1420,162 @@
   .chat-msg-sistema { align-self: center; background: var(--color-surface); color: var(--color-text-muted); font-size: 11px; text-align: center; max-width: 90%; }
   .chat-msg-author { font-size: 11px; font-weight: var(--fw-semibold); margin-bottom: 2px; opacity: 0.7; }
   .chat-msg-time { font-size: 10px; margin-top: 4px; text-align: right; opacity: 0.6; }
+
+  /* === Header v2: stage bar + summary + quick actions === */
+  .op-header { padding-bottom: var(--sp-3); }
+  .op-stage-bar {
+    display: flex; align-items: stretch; gap: 0;
+    margin-top: var(--sp-3); border-radius: 6px; overflow: hidden;
+    background: var(--color-surface-subtle, #F8FAFC);
+    border: 1px solid var(--color-border);
+  }
+  .op-stage-step {
+    flex: 1; padding: 10px 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: var(--fw-semibold);
+    color: var(--color-text-muted);
+    border-right: 1px solid var(--color-border);
+    background: transparent;
+    transition: background var(--transition), color var(--transition);
+    position: relative;
+    text-align: center;
+  }
+  .op-stage-step:last-child { border-right: 0; }
+  .op-stage-step:hover:not(.is-current) { background: rgba(0,0,0,.03); color: var(--color-text); }
+  .op-stage-step.is-current {
+    background: var(--color-primary); color: #fff;
+  }
+  .op-stage-step.is-current.is-ganho { background: var(--color-success); }
+  .op-stage-step.is-current.is-perdido { background: var(--color-danger); }
+  .op-stage-step-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+  .op-header-summary {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4);
+    margin-top: var(--sp-3); padding-top: var(--sp-3);
+    border-top: 1px solid var(--color-border);
+    flex-wrap: wrap;
+  }
+  .op-summary-cols { display: flex; gap: var(--sp-4); flex-wrap: wrap; }
+  .op-summary-item { display: flex; flex-direction: column; }
+  .op-summary-item label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--color-text-muted); font-weight: var(--fw-semibold);
+  }
+  .op-summary-item strong { font-size: 14px; color: var(--color-text); margin-top: 2px; display: inline-flex; align-items: center; gap: 6px; }
+  .op-summary-value:not(:empty) { color: var(--color-success); }
+  .op-inline-pencil { background: none; border: 0; padding: 2px; cursor: pointer; color: var(--color-text-muted); }
+  .op-inline-pencil:hover { color: var(--color-primary); }
+  .op-quick-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* Card "Proxima acao" */
+  .op-next-action {
+    display: flex; align-items: center; gap: var(--sp-3);
+    margin-bottom: var(--sp-4); padding: 12px 16px;
+    background: var(--color-warning-soft, #FEF3C7); border-radius: 8px;
+    border-left: 4px solid var(--color-warning, #F59E0B);
+  }
+  .op-next-action.is-vencida {
+    background: var(--color-danger-soft, #FEE2E2); border-left-color: var(--color-danger, #DC2626);
+  }
+  .op-next-icon { font-size: 22px; color: var(--color-warning); flex-shrink: 0; }
+  .op-next-action.is-vencida .op-next-icon { color: var(--color-danger); }
+  .op-next-body { flex: 1; min-width: 0; }
+  .op-next-meta { font-size: 12px; color: var(--color-text-muted); }
+  .op-next-meta .op-next-when { font-weight: var(--fw-semibold); }
+  .op-next-meta .op-next-when.is-vencida { color: var(--color-danger); }
+  .op-next-title { font-size: 14px; color: var(--color-text); font-weight: var(--fw-semibold); margin-top: 2px; }
+  .op-next-actions { flex-shrink: 0; }
+
+  /* Card header "Editar" link */
+  .card-header { display: flex; align-items: center; justify-content: space-between; }
+  .card-action-link {
+    background: none; border: 0; padding: 4px 8px; cursor: pointer;
+    font-size: 12px; color: var(--color-primary); font-weight: var(--fw-semibold);
+    text-decoration: none; border-radius: 4px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .card-action-link:hover { background: var(--color-primary-soft); }
+  .card-count { color: var(--color-text-muted); font-weight: var(--fw-normal); font-size: 13px; }
+
+  /* O.S./Contratos items na sidebar */
+  .op-os-item {
+    display: block; padding: 8px 10px; border-radius: 6px;
+    background: var(--color-bg); border: 1px solid var(--color-border);
+    margin-bottom: 6px; text-decoration: none; color: inherit;
+    transition: background var(--transition), border-color var(--transition);
+  }
+  .op-os-item:hover { background: var(--color-surface); border-color: var(--color-primary); }
+  .op-os-line { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 13px; color: var(--color-text); }
+  .op-os-meta { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
+  .badge-mini {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 7px; border-radius: 10px;
+    font-size: 10px; font-weight: var(--fw-semibold);
+    white-space: nowrap;
+  }
+  .badge-mini i { font-size: 10px; }
+  .badge-success { background: var(--color-success-soft); color: var(--color-success); }
+  .badge-danger  { background: var(--color-danger-soft); color: var(--color-danger); }
+  .badge-warning { background: var(--color-warning-soft); color: var(--color-warning); }
+  .badge-neutral { background: var(--color-surface); color: var(--color-text-muted); }
+
+  /* Timeline filter chips */
+  .tl-filter-chips {
+    display: flex; gap: 6px; padding: 12px 16px 0;
+    flex-wrap: wrap; border-bottom: 1px solid var(--color-border);
+    padding-bottom: 12px;
+  }
+  .tl-chip {
+    background: var(--color-surface-subtle, #F8FAFC);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-size: 12px; font-weight: var(--fw-semibold);
+    padding: 4px 10px; border-radius: 16px;
+    cursor: pointer; transition: all var(--transition);
+  }
+  .tl-chip:hover { background: var(--color-surface); color: var(--color-text); }
+  .tl-chip.is-active {
+    background: var(--color-text, #1e293b); color: #fff; border-color: var(--color-text, #1e293b);
+  }
+  .tl-item.is-hidden { display: none; }
+
+  /* CTA contextual ganho/perda */
+  .btn-cta-ganho {
+    background: var(--color-success, #16A34A); color: #fff; border-color: var(--color-success, #16A34A);
+  }
+  .btn-cta-ganho:hover { background: #15803d; border-color: #15803d; color: #fff; }
+  .btn-cta-perdido {
+    background: var(--color-bg); color: var(--color-danger, #DC2626);
+    border: 1px solid var(--color-danger, #DC2626);
+  }
+  .btn-cta-perdido:hover { background: var(--color-danger-soft, #FEE2E2); color: var(--color-danger); }
+
+  /* Anexos */
+  .op-anexo-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 6px;
+    background: var(--color-bg); border: 1px solid var(--color-border);
+    margin-bottom: 6px;
+  }
+  .op-anexo-icon { font-size: 18px; color: var(--color-text-muted); flex-shrink: 0; }
+  .op-anexo-body { flex: 1; min-width: 0; }
+  .op-anexo-name { font-size: 13px; font-weight: var(--fw-semibold); color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .op-anexo-meta { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
+
+  /* Modais form large */
+  .modal-form-large { max-width: 720px; width: 95vw; }
+  .modal-form-large .modal-body { max-height: 70vh; overflow-y: auto; }
+  .form-section { margin-bottom: var(--sp-4); }
+  .form-section:last-child { margin-bottom: 0; }
+  .form-section-title {
+    font-size: 11px; font-weight: var(--fw-semibold);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    margin: 0 0 var(--sp-2) 0;
+    padding-bottom: 6px; border-bottom: 1px solid var(--color-border);
+  }
+  .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+  @media (max-width: 600px) { .form-grid-2 { grid-template-columns: 1fr; } }
 </style>
 {% endblock %}
 
@@ -1326,5 +1957,141 @@ function removerItem(id) {
 }
 
 carregarItens();
+
+// === Modais editar oportunidade / lead (completos) ===
+const URL_EDITAR_OP = "{% url 'crm:api_editar_oportunidade' oportunidade.pk %}";
+
+function abrirModalEditarOp() { document.getElementById('modal-editar-op').style.display = 'flex'; }
+function abrirModalEditarLead() { document.getElementById('modal-editar-lead').style.display = 'flex'; }
+function abrirModalTarefa() { document.getElementById('modal-tarefa').style.display = 'flex'; }
+
+async function salvarFormOp() {
+  const form = document.getElementById('form-editar-op');
+  const data = Object.fromEntries(new FormData(form).entries());
+  try {
+    const res = await fetch(URL_EDITAR_OP, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify(data),
+    });
+    const d = await res.json();
+    if (d.success) {
+      toast('Salvo', 'Oportunidade atualizada', 'success');
+      fecharModal('modal-editar-op');
+      setTimeout(() => location.reload(), 600);
+    } else {
+      toast('Erro', d.error || 'Falha ao salvar', 'danger');
+    }
+  } catch { toast('Erro', 'Falha na requisicao', 'danger'); }
+}
+
+async function salvarFormLead() {
+  const form = document.getElementById('form-editar-lead');
+  const data = Object.fromEntries(new FormData(form).entries());
+  try {
+    const res = await fetch(URL_EDITAR_OP, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify(data),
+    });
+    const d = await res.json();
+    if (d.success) {
+      toast('Salvo', 'Lead atualizado', 'success');
+      fecharModal('modal-editar-lead');
+      setTimeout(() => location.reload(), 600);
+    } else {
+      toast('Erro', d.error || 'Falha ao salvar', 'danger');
+    }
+  } catch { toast('Erro', 'Falha na requisicao', 'danger'); }
+}
+
+// === Mover estagio rapido (click direto na stage bar) ===
+async function moverParaEstagioRapido(estagioId) {
+  // Se for estagio final perdido, abrir modal pra capturar motivo
+  const sel = document.getElementById('sel-estagio');
+  if (sel) {
+    const opt = Array.from(sel.options).find(o => parseInt(o.value) === estagioId);
+    if (opt && opt.dataset.isFinalPerdido === '1') {
+      sel.value = estagioId;
+      abrirModalEstagio();
+      return;
+    }
+  }
+  try {
+    const res = await fetch(URLS.mover, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ oportunidade_id: OP_PK, estagio_id: estagioId, motivo: '' }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      toast('Atualizado', 'Estagio movido', 'success');
+      setTimeout(() => location.reload(), 600);
+    } else {
+      toast('Erro', data.erro || 'Erro', 'danger');
+    }
+  } catch { toast('Erro', 'Falha na requisicao', 'danger'); }
+}
+
+// === Nova tarefa ===
+async function salvarTarefa() {
+  const titulo = document.getElementById('tarefa-titulo').value.trim();
+  if (!titulo) { toast('Aviso', 'Informe um titulo.', 'warning'); return; }
+  const payload = {
+    oportunidade_id: OP_PK,
+    tipo: document.getElementById('tarefa-tipo').value,
+    titulo,
+    descricao: document.getElementById('tarefa-descricao').value.trim(),
+    prioridade: document.getElementById('tarefa-prioridade').value,
+    data_vencimento: document.getElementById('tarefa-vencimento').value || null,
+  };
+  try {
+    const res = await fetch("{% url 'crm:api_tarefa_criar' %}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify(payload),
+    });
+    const d = await res.json();
+    if (d.ok || d.success) {
+      toast('Criada', 'Tarefa adicionada', 'success');
+      fecharModal('modal-tarefa');
+      setTimeout(() => location.reload(), 600);
+    } else {
+      toast('Erro', d.erro || d.error || 'Falha', 'danger');
+    }
+  } catch { toast('Erro', 'Falha na requisicao', 'danger'); }
+}
+
+async function concluirTarefa(pk) {
+  if (!confirm('Marcar essa tarefa como concluida?')) return;
+  try {
+    const res = await fetch(`/crm/tarefas/${pk}/concluir/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ resultado: '' }),
+    });
+    const d = await res.json();
+    if (d.ok || d.success) {
+      toast('Concluida', 'Tarefa marcada como concluida', 'success');
+      setTimeout(() => location.reload(), 600);
+    } else {
+      toast('Erro', d.erro || d.error || 'Falha', 'danger');
+    }
+  } catch { toast('Erro', 'Falha na requisicao', 'danger'); }
+}
+
+// === Chips de filtro na timeline ===
+document.querySelectorAll('.tl-chip').forEach(chip => {
+  chip.addEventListener('click', function() {
+    document.querySelectorAll('.tl-chip').forEach(c => c.classList.remove('is-active'));
+    this.classList.add('is-active');
+    const filter = this.dataset.filter;
+    document.querySelectorAll('#tab-timeline .tl-item').forEach(item => {
+      const tipo = item.dataset.tipo || '';
+      const hide = filter !== 'all' && tipo !== filter;
+      item.classList.toggle('is-hidden', hide);
+    });
+  });
+});
 </script>
 {% endblock %}
