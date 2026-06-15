@@ -31,3 +31,16 @@ Registro cronológico do que foi executado no módulo comercial (ação, decisã
 - **Risco aberto**: aceitar o contrato pode não mover o serviço de "aguardando assinatura" (lead 544). O flag `ativar_servico` é experimental (é "pós-instalação", pode não ser o passo certo). A transição assinatura→instalação no HubSoft segue a confirmar.
 - **Arquivos**: `apps/comercial/crm/services/automacao_pipeline.py`, `apps/comercial/crm/views.py`, doc `automacoes-pipeline.md`.
 - **Status**: completed (código + doc); pending deploy + criar a regra na UI + teste e2e.
+
+## 2026-06-15 — Redesign da página de detalhe da oportunidade (padrão HubSpot/RD)
+
+- **Ações**: reformulação completa de `/crm/oportunidades/<id>/` em três frentes:
+  - **Header**: stage progress bar horizontal com todos os estágios do pipeline (click move; final perdido abre modal); resumo numérico inline (valor editável, prob, dono, tempo); quick actions (Tarefa/Nota/WhatsApp/Conversa); **CTAs contextuais** (Avançar pra próximo · Marcar venda · Marcar perda) calculados pela view baseado no estágio atual e nos flags `is_final_ganho`/`is_final_perdido` do pipeline.
+  - **Sidebar**: cards reorganizados na ordem Oportunidade → Bot → Lead → O.S. → Contratos → Documentos → Hubsoft. Cards Oportunidade e Dados do lead ganham botão "Editar" abrindo modal completo com todos os campos agrupados (Identificação, Endereço, Origem/qualificação, Observações). Novos cards: O.S. consolidando `OrdemServicoTentativa.filter(lead=...)`, Contratos consolidando `ContratoTentativa.filter(lead=...)`, Documentos consolidando `DocumentoLead` + anexos de `ContratoTentativa`.
+  - **Timeline**: virou feed único filtrável (chips: Tudo/Notas/Conversas/Estagios/Tarefas/O.S./Contratos/Vendas/Automacoes). Eventos novos: tipo `os` (OrdemServicoTentativa), `contrato` (ContratoTentativa), `tarefa` (TarefaCRM), `nota` (NotaInterna), `automacao` (LogExecucao do motor de automação). Aba "Hist. estágios" removida (consolidada no chip "Estágios").
+- **Modais novos**: Editar oportunidade completa, Editar lead completo, Nova tarefa.
+- **API**: `api_editar_oportunidade` estendida pra aceitar `probabilidade`, `data_fechamento_previsto`, `origem_crm`, `rg`, `data_nascimento`, `origem`, `canal_entrada`, `score_qualificacao`.
+- **Motivo**: tela antiga era um amontoado de cards sem hierarquia. User pediu paridade visual com HubSpot/RD pra dar visão completa da oportunidade (pré + pós-venda) sem o vendedor precisar sair pra outros módulos. Inspirado em opção C (híbrida) aprovada antes da implementação.
+- **Validação**: `manage.py check` ok; render real da op #189 (nuvyon-dev) → HTTP 200, 164 KB. User logou em 15/06 e aprovou ("gostei mto da versão nova").
+- **Arquivos**: `apps/comercial/crm/views.py`, `apps/comercial/crm/templates/crm/oportunidade_detalhe.html`, doc `crm/oportunidades.md`.
+- **Status**: completed (código + doc + commit `7ac7fb0`); pending push pra origin/main e deploy prod.
