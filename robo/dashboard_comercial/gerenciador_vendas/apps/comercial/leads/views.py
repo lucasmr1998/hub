@@ -1345,6 +1345,25 @@ def registrar_historico_api(request):
             payload['lead_id'] = data['lead_id']
         contato = HistoricoContato.objects.create(**payload)
 
+        # Se o payload trouxer codigo_atendimento (Matrix), persiste na
+        # oportunidade do lead pra sync de vendedor saber qual atendimento consultar.
+        codigo_atendimento = data.get('codigo_atendimento')
+        lead_id_pra_oport = data.get('lead_id') or (data.get('lead') if isinstance(data.get('lead'), int) else None)
+        if codigo_atendimento and lead_id_pra_oport:
+            try:
+                from apps.comercial.crm.models import OportunidadeVenda
+                oport = OportunidadeVenda.all_tenants.filter(lead_id=lead_id_pra_oport).first()
+                if oport:
+                    dc = dict(oport.dados_custom or {})
+                    if dc.get('id_atendimento_matrix') != str(codigo_atendimento):
+                        dc['id_atendimento_matrix'] = str(codigo_atendimento)
+                        if data.get('protocolo_atendimento'):
+                            dc['protocolo_matrix'] = data['protocolo_atendimento']
+                        oport.dados_custom = dc
+                        oport.save(update_fields=['dados_custom', 'data_atualizacao'])
+            except Exception:
+                pass  # nao bloqueia o registro do historico
+
         # Log de sucesso
         _criar_log_sistema(
             nivel='INFO',

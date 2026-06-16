@@ -42,7 +42,7 @@
       </thead>
       <tbody id="usersTableBody">
         {% for user in users %}
-          <tr data-user-id="{{ user.id }}" data-perfil-id="{% if user.perm and user.perm.perfil %}{{ user.perm.perfil.id }}{% endif %}">
+          <tr data-user-id="{{ user.id }}" data-perfil-id="{% if user.perm and user.perm.perfil %}{{ user.perm.perfil.id }}{% endif %}" data-login-matrix="{% if user.perfil %}{{ user.perfil.login_matrix|default:'' }}{% endif %}">
             <td>
               <div style="display: flex; align-items: center; gap: var(--sp-3);">
                 <div class="user-avatar-sm">{{ user.first_name|first|default:user.username|first|upper }}</div>
@@ -126,6 +126,11 @@
           </div>
           <p class="field-helper">Define quais modulos o usuario tem acesso. Gerencie perfis na aba "Perfis".</p>
         </div>
+        <div class="field" style="margin-bottom: var(--sp-3);">
+          <label class="field-label"><i class="bi bi-chat-dots"></i> Login Matrix Brasil</label>
+          <div class="field-input-wrap"><input class="field-input" type="text" id="loginMatrix" name="login_matrix" placeholder="Ex: joyce, AnaP, caio.resende"></div>
+          <p class="field-helper">Login do agente no Matrix Brasil. Usado pelo cron de sync pra atribuir automaticamente a oportunidade ao mesmo vendedor que pegou o atendimento la.</p>
+        </div>
         <label style="display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm); cursor: pointer;">
           <input type="checkbox" id="isActive" name="is_active" checked style="width: 16px; height: 16px; accent-color: var(--color-primary);">
           Usuario ativo
@@ -199,6 +204,7 @@
     document.getElementById('lastName').value = parts.slice(1).join(' ') || '';
     document.getElementById('password').value = '';
     document.getElementById('perfilId').value = row.dataset.perfilId || '';
+    document.getElementById('loginMatrix').value = row.dataset.loginMatrix || '';
     const badgeText = (row.querySelector('.badge')?.textContent || '').trim();
     document.getElementById('isActive').checked = badgeText !== 'Inativo';
     clearAlerts();
@@ -221,6 +227,7 @@
       email: fd.get('email'), first_name: fd.get('first_name'), last_name: fd.get('last_name'),
       password: fd.get('password'), is_active: fd.get('is_active') === 'on',
       groups: [], perfil_id: perfilVal ? parseInt(perfilVal) : null,
+      login_matrix: (fd.get('login_matrix') || '').trim() || null,
     };
     const url = isEditMode ? `/api/configuracoes/usuarios/${currentUser}/` : '/api/configuracoes/usuarios/';
     fetch(url, { method: isEditMode ? 'PUT' : 'POST', headers, body: JSON.stringify(data) })

@@ -502,8 +502,15 @@ def api_usuarios_criar(request):
 
         # Criar PerfilUsuario se não existir
         from apps.sistema.models import PerfilUsuario, PermissaoUsuario, PerfilPermissao
+        login_matrix = (data.get('login_matrix') or '').strip() or None
         if not hasattr(user, 'perfil'):
-            PerfilUsuario.objects.create(user=user, tenant=request.tenant, senha_temporaria=True)
+            PerfilUsuario.objects.create(
+                user=user, tenant=request.tenant, senha_temporaria=True,
+                login_matrix=login_matrix,
+            )
+        elif login_matrix is not None:
+            user.perfil.login_matrix = login_matrix
+            user.perfil.save(update_fields=['login_matrix'])
 
         # Atribuir perfil de permissão
         perfil_id = data.get('perfil_id')
@@ -605,7 +612,7 @@ def api_usuarios_editar(request, user_id):
                     pass
 
         # Atualizar perfil de permissão
-        from apps.sistema.models import PermissaoUsuario, PerfilPermissao
+        from apps.sistema.models import PermissaoUsuario, PerfilPermissao, PerfilUsuario
         perfil_id = data.get('perfil_id')
         if perfil_id is not None:
             perfil_perm = PerfilPermissao.objects.filter(pk=perfil_id, tenant=request.tenant).first() if perfil_id else None
@@ -613,6 +620,14 @@ def api_usuarios_editar(request, user_id):
                 user=user,
                 defaults={'tenant': request.tenant, 'perfil': perfil_perm},
             )
+
+        # Atualizar login_matrix do PerfilUsuario
+        if 'login_matrix' in data:
+            login_matrix = (data.get('login_matrix') or '').strip() or None
+            pu = PerfilUsuario.objects.filter(user=user, tenant=request.tenant).first()
+            if pu:
+                pu.login_matrix = login_matrix
+                pu.save(update_fields=['login_matrix'])
 
         return JsonResponse({
             'success': True,
