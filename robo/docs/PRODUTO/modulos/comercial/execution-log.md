@@ -113,3 +113,62 @@ Proposta de design (pra futura sessao):
 - **Detalhe da oportunidade** ganha card "Outras oportunidades da mesma conta".
 
 Estimativa: ~6-8h de trabalho. Riscos: migracao de dados existentes (precisa heuristica de deduplicacao); impactar templates que usam `lead.empresa` direto.
+
+## 2026-06-16 — Sessao Nuvyon: gate de campos obrigatorios por estagio + sync vendedor Matrix Brasil
+
+Sessao longa entregando 4 grandes features pra Nuvyon. Resumo das entregas:
+
+### 1. Campos obrigatorios por estagio (Feature 1)
+
+- **Model**: `PipelineEstagio.campos_obrigatorios` (JSONField list) — migration `crm/0022`
+- **Helper**: `services/requisitos_estagio.py` com `CAMPOS_DISPONIVEIS` (20 campos do Lead+Oportunidade agrupados em 5 modulos) e `campos_faltando(oport, estagio)`
+- **Gate API**: `api_mover_oportunidade` retorna `HTTP 400` com `{codigo: 'campos_obrigatorios_faltando', campos_faltando: [{codigo, label}]}`
+- **Gate Engine**: `_mover_por_regra` silenciosamente nao move quando faltam campos (regra pode bater de novo depois)
+- **UI**: modal Editar Estagio em `/crm/configuracoes/` ganha secao com checkboxes agrupados por modulo. Persistido via `POST /configuracoes/estagios/<pk>/campos-obrigatorios/`
+- **Feedback no detalhe da oportunidade**: toast `Bloqueado: Faltam campos: X, Y, Z` no modal Mover + CTAs rapidos
+
+Substitui a regra antiga `tag=Comercial` que deixava Eva avancar pra "Dados Completos" sem CPF/CEP/email. Doc atualizada em `crm/pipeline.md`.
+
+### 2. Permissao granular de edicao de valor estimado
+
+- Nova funcionalidade `comercial.editar_valor_oportunidade` (seed atualizado, rodado em prod via `manage.py seed_funcionalidades`)
+- `api_editar_oportunidade` so aceita `valor_estimado` e `probabilidade` se user tem permissao ou eh superuser
+- Template gateia o `.editable` + adiciona icone de cadeado quando bloqueado
+- Aplicado tanto no header summary quanto no card Oportunidade da sidebar
+
+### 3. Stage bar responsiva (detalhe da oportunidade)
+
+- Media queries em 1200px (estagio atual ganha `flex: 2.5` pra destacar quando ha muitos estagios) e 900px (`overflow-x: auto` + min-width fixo por step → scroll horizontal no mobile)
+
+### 4. Sync de vendedor Matrix Brasil → Hubtrix
+
+- `MatrixBrasilService` em `apps/integracoes/services/matrix_brasil.py` (v1 raw token)
+- Campo `PerfilUsuario.login_matrix` (migration `sistema/0012`) — match por string contra `login_agente` retornado pelo Matrix
+- Management command `sync_vendedores_matrix --tenant=nuvyon`: filtra leads com `dados_custom['id_atendimento_matrix']`, sem responsavel, ultimos 7d; consulta Matrix; atribui automaticamente
+- `registrar_historico_api` agora salva `codigo_atendimento` do payload no `OportunidadeVenda.dados_custom['id_atendimento_matrix']` — eh o link Hubtrix↔Matrix
+- UI: campo "Login Matrix Brasil" no modal de Editar Usuario em `/configuracoes/usuarios/`
+- CronJob `sync_vendedores_matrix_nuvyon` ativo, schedule `* * * * *` (cada 1min), timeout 300s
+- 11 vendedores Nuvyon mapeados (3 ainda aguardam email institucional pra serem criados como User Hubtrix)
+- Validacao em prod: op 761 (Kamily, sem responsavel) atribuida automatic pra `victoria.schiavelli` via login `filialcb`. Op 759 (Jose Carlos) ja tinha `flavia.almeida` manualmente — sync respeitou.
+
+Detalhamento em [`docs/context/clientes/nuvyon/sync-vendedor-matrix.md`](../../../context/clientes/nuvyon/sync-vendedor-matrix.md). Doc da API Matrix em `docs/PRODUTO/integracoes/apis/matrix/`.
+
+### 5. Tela de automacoes pipeline — refinamentos (sessao anterior, finalizada hoje)
+
+- Health indicators por regra (verde / amarelo / vermelho / nodata / off baseado em janela 30d)
+- View alternada "Lista plana" via toggle `?view=lista` — `data-table` com todas as regras ordenadas por health critico
+- Templates de regra pre-prontos (6 modelos: Docs validados→Assinar, Docs validados→Gerar, Lead respondeu, Venda pos-venda WhatsApp, Sem contato 72h, Em branco) — JS pre-popula campos
+- Filtros migrados pro `list_filters` padrao DS
+
+### Limpeza de dados Nuvyon
+
+- 16 leads de teste (id<591, exceto Eva e Bruno) deletados em transacao atomica via Django ORM — 392 registros relacionados foram em cascade. Eva (591) e Bruno (589) preservados.
+- Token Matrix Brasil atualizado em `IntegracaoAPI #20` (armazenado encriptado Fernet)
+
+### 12 vendedores Nuvyon criados via SSH+Django shell
+
+Senha temporaria padrao `Nuvyon@2026` (com `senha_temporaria=True`). Danielle Akemy como Admin, demais como Vendedor. Mapeamento `login_matrix` ja populado pra 11 (Danielle eh admin e nao atende).
+
+Pendencias: 3 logins Matrix (Letícia/`caconde`, Nicole/`nicole`, Nicoly/`nicolyaraujo`) aguardam email institucional Nuvyon pra User Hubtrix ser criado. Feature 2 (criar prospecto HubSoft + converter) ainda na fila.
+
+Status: completed + deployado em prod (commits `d4cbd3c`, `88dd40d`, `e3f2de0`, `805e7bd`).

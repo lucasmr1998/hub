@@ -117,3 +117,12 @@ Tabela referencia usada em varios endpoints:
 
 **Versao da collection:** capturada em 2026-06-07 (Postman exporter 38602602).
 **Origem:** [Chatbots-IA-API.postman_collection.json](Chatbots-IA-API.postman_collection.json) — substituir esse arquivo quando o provider publicar versao nova; atualizar esta linha com a data.
+
+---
+
+## Clientes Hubtrix que consomem essa API
+
+| Cliente | Arquivo | Pra que |
+|---|---|---|
+| `MatrixBrasilService` (16/06/2026) | `apps/integracoes/services/matrix_brasil.py` | Sync de vendedor — Hubtrix puxa `login_agente` por `codigo_atendimento` pra atribuir `OportunidadeVenda.responsavel` automaticamente. Detalhe em [`docs/context/clientes/nuvyon/sync-vendedor-matrix.md`](../../../../context/clientes/nuvyon/sync-vendedor-matrix.md) |
+| `buscar_dados_atendimento` (legado) | `apps/comercial/atendimento/services/atendimento_service.py` | Gera HTML do historico de mensagens pra um lead. Usa env var `MATRIX_API_TOKEN` global (nao multi-tenant) — em desuso pra novas integracoes |

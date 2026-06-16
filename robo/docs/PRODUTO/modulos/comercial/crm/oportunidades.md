@@ -125,7 +125,9 @@ Layout segue padrao HubSpot/RD (hibrido), validado em 15/06/2026.
 
 **Permissoes**
 - `comercial.excluir_oportunidade` controla botao "Excluir" no header
-- Sem gate granular para edicao de campos hoje — todos editam tudo
+- `comercial.editar_valor_oportunidade` (adicionada em 16/06) gateia edicao inline dos campos financeiros: `valor_estimado` e `probabilidade`. Sem essa permissao, o `.editable` desses campos eh removido no template e a `api_editar_oportunidade` rejeita o campo. Superuser bypassa. Cadeado visual no label sinaliza usuario sem permissao.
+
+**Stage bar responsiva** — media queries em 1200px (estagios estreitos com `is-current` flex maior pra destacar atual) e 900px (overflow-x: auto + min-width fixo nos steps pra rolar horizontal em mobile). Resolve "estoura com pipeline 8+ estagios".
 
 ---
 
