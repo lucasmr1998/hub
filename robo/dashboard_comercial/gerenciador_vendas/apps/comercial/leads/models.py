@@ -327,6 +327,26 @@ class LeadProspecto(TenantMixin):
         help_text="Score de 1 a 10 baseado na qualificação do lead"
     )
 
+    SCORE_STATUS_CHOICES = [
+        ('nao_consultado', 'Nao consultado'),
+        ('pendente',       'Pendente'),
+        ('aprovado',       'Aprovado'),
+        ('reprovado',      'Reprovado'),
+    ]
+    score_status = models.CharField(
+        max_length=20,
+        choices=SCORE_STATUS_CHOICES,
+        default='nao_consultado',
+        db_index=True,
+        verbose_name='Score externo',
+        help_text='Resultado da analise de score externa (binario). Usado como gate para abrir OS e assinar contrato no HubSoft.',
+    )
+    score_atualizado_em = models.DateTimeField(null=True, blank=True, verbose_name='Score atualizado em')
+    score_atualizado_por = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='+', verbose_name='Score atualizado por',
+    )
+
     tentativas_contato = models.PositiveIntegerField(
         default=0,
         verbose_name="Tentativas de Contato",

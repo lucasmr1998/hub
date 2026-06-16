@@ -526,7 +526,7 @@ def api_editar_oportunidade(request, pk):
         'data_nascimento',
         'cidade', 'estado', 'cep', 'rua', 'numero_residencia', 'bairro',
         'empresa', 'observacoes', 'origem', 'canal_entrada',
-        'score_qualificacao',
+        'score_qualificacao', 'score_status',
     ]
 
     oport_atualizados = []
@@ -557,6 +557,13 @@ def api_editar_oportunidade(request, pk):
         elif campo in campos_lead and oport.lead and hasattr(oport.lead, campo):
             if campo in ('data_nascimento', 'score_qualificacao') and not valor:
                 valor = None
+            if campo == 'score_status':
+                valor_atual = getattr(oport.lead, 'score_status', 'nao_consultado')
+                if valor != valor_atual:
+                    oport.lead.score_atualizado_em = timezone.now()
+                    oport.lead.score_atualizado_por = request.user if request.user.is_authenticated else None
+                    if 'score_atualizado_em' not in lead_atualizados:
+                        lead_atualizados.extend(['score_atualizado_em', 'score_atualizado_por'])
             setattr(oport.lead, campo, valor)
             lead_atualizados.append(campo)
 

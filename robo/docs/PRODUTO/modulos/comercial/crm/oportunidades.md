@@ -127,3 +127,36 @@ Layout segue padrao HubSpot/RD (hibrido), validado em 15/06/2026.
 - `comercial.excluir_oportunidade` controla botao "Excluir" no header
 - Sem gate granular para edicao de campos hoje — todos editam tudo
 
+---
+
+## Score externo (gate para HubSoft)
+
+Campo `LeadProspecto.score_status` (`nao_consultado / pendente / aprovado / reprovado`) + `score_atualizado_em` + `score_atualizado_por`. Usado como **trava dupla** (engine + executor) pra evitar que leads sem score aprovado disparem contrato/OS no HubSoft.
+
+**UI** — secao "Score externo" no card "Dados do lead" da pagina de detalhe da oportunidade. Botoes:
+- Aprovar (verde, gate aberto)
+- Reprovar (vermelho, lead nao avanca)
+- Reabrir analise (volta a `pendente`)
+
+Salva via PUT `/crm/oportunidades/<pk>/editar/` (`api_editar_oportunidade`). Audit automatico em `score_atualizado_em` + `score_atualizado_por` quando o status muda.
+
+**Engine de automacao (nivel 1)** — tipo de condicao novo registrado em `apps/comercial/crm/services/automacao_condicoes.py`:
+- slug: `score_externo`
+- operadores: `igual`, `diferente`
+- coletor: le `oportunidade.lead.score_status`
+
+Regras que tenham acoes `gerar_contrato_hubsoft`, `assinar_contrato_hubsoft` ou `abrir_os_hubsoft` devem incluir condicao `score_externo igual aprovado`. A **migration `crm/0021_score_externo_gate_nuvyon.py`** adiciona automaticamente essa condicao em todas as regras ativas do tenant Nuvyon que tenham essas acoes — idempotente (nao duplica).
+
+**Executor (nivel 2 — defensivo)** — Trava redundante dentro do codigo das acoes pra cobrir caminhos que pulam a engine (retentar manual, signals diretos, chamada Matrix direta):
+- `_acao_gerar_contrato_hubsoft` em `apps/comercial/crm/services/automacao_pipeline.py:332` — early return se `lead.score_status != 'aprovado'`
+- `_acao_assinar_contrato_hubsoft` em `apps/comercial/crm/services/automacao_pipeline.py:505` — idem
+- `abrir_os` em `apps/integracoes/views_matrix_os.py:193` — retorna **HTTP 409** `{motivo: 'score_bloqueado', score_status}` quando bloqueia. Garante que mesmo se o Matrix chamar direto, o HubSoft nao recebe a chamada
+
+Combinacao protege contra:
+- Fluxo normal (engine + executor)
+- Retentar manual no painel `/comercial/contratos/` e `/comercial/ordens-servico/` (executor)
+- Endpoint Matrix `/api/public/n8n/matrix/abrir-os/` (executor)
+- Regras criadas no futuro sem condicao de score (executor)
+
+**Por que binario** — operador da Nuvyon faz a analise externa e marca aprovado/reprovado no Hubtrix. Sem score numerico (decisao deliberada para simplificar o fluxo).
+

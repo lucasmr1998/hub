@@ -249,6 +249,18 @@ def abrir_os(request):
             cliente_hs = servico.cliente
             lead = getattr(cliente_hs, 'lead', None) if cliente_hs else None
 
+    # Trava defensiva: score externo precisa estar aprovado pra abrir OS.
+    # Bloqueia mesmo se a chamada vier direto do Matrix (fora da engine do CRM).
+    if lead is not None:
+        score = getattr(lead, 'score_status', 'nao_consultado')
+        if score != 'aprovado':
+            return JsonResponse({
+                'status': 'error',
+                'msg': f'Lead bloqueado por score externo (status={score}). Aguardando aprovacao manual.',
+                'motivo': 'score_bloqueado',
+                'score_status': score,
+            }, status=409)
+
     # Cria a tentativa com status=pendente
     tentativa = OrdemServicoTentativa(
         tenant=integracao.tenant,

@@ -302,3 +302,24 @@ class CondicaoOportunidadeDadosCustom:
         if isinstance(valor_atual, bool) or isinstance(valor, bool):
             return comparar_bool(valor_atual, operador, valor)
         return comparar_valor(valor_atual, operador, valor)
+
+
+@registrar
+class CondicaoScoreExterno:
+    """
+    Score externo do lead (analise de credito manual feita fora do Hubtrix).
+    Resultado binario: nao_consultado / pendente / aprovado / reprovado.
+    Usado como gate para abrir OS e assinar contrato no HubSoft.
+
+    Operadores: igual, diferente. `valor` esperado tipicamente 'aprovado'.
+    """
+    slug = 'score_externo'
+    label = 'Score externo (analise de credito)'
+
+    def coletar_contexto(self, oportunidade, contexto):
+        lead = getattr(oportunidade, 'lead', None)
+        contexto['_score_status'] = getattr(lead, 'score_status', 'nao_consultado') if lead else 'nao_consultado'
+
+    def avaliar(self, operador, valor, campo, contexto):
+        atual = contexto.get('_score_status', 'nao_consultado')
+        return comparar_valor(atual, operador, valor)

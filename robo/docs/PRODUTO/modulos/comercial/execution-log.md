@@ -44,3 +44,16 @@ Registro cronológico do que foi executado no módulo comercial (ação, decisã
 - **Validação**: `manage.py check` ok; render real da op #189 (nuvyon-dev) → HTTP 200, 164 KB. User logou em 15/06 e aprovou ("gostei mto da versão nova").
 - **Arquivos**: `apps/comercial/crm/views.py`, `apps/comercial/crm/templates/crm/oportunidade_detalhe.html`, doc `crm/oportunidades.md`.
 - **Status**: completed (código + doc + commit `7ac7fb0`); pending push pra origin/main e deploy prod.
+
+## 2026-06-15 — Score externo como gate para HubSoft (Nuvyon)
+
+- **Ações**: nova etapa "Análise — Doc & Score" no pipeline da Nuvyon ganha gating pra impedir contratos/OS pra leads sem score aprovado.
+  - **Model**: `LeadProspecto` ganha `score_status` (choices `nao_consultado/pendente/aprovado/reprovado`, default `nao_consultado`, db_index), `score_atualizado_em`, `score_atualizado_por`. Migration `leads/0007`.
+  - **UI**: secao "Score externo" no card "Dados do lead" do detalhe da oportunidade — chip de status + botoes Aprovar/Reprovar/Reabrir. Salva via `PUT /crm/oportunidades/<pk>/editar/`. Audit automatico em `score_atualizado_em/por` quando muda.
+  - **Engine (nivel 1)**: tipo de condicao `score_externo` registrado em `automacao_condicoes.py` via decorator `@registrar` — entra automatico em `TIPOS_CONDICAO` (lazy registry).
+  - **Executor (nivel 2 — defensivo)**: `_acao_gerar_contrato_hubsoft` e `_acao_assinar_contrato_hubsoft` retornam False se `lead.score_status != 'aprovado'`. Endpoint `/api/public/n8n/matrix/abrir-os/` (`views_matrix_os.abrir_os`) retorna **HTTP 409** com `motivo='score_bloqueado'` quando lead resolvido tem score nao-aprovado. Garante que retentativa manual, signals e chamadas diretas Matrix tambem sao bloqueadas.
+  - **Migration A1**: `crm/0021_score_externo_gate_nuvyon.py` adiciona condicao `score_externo igual aprovado` em todas as regras ativas do tenant `nuvyon` que tenham acoes de contrato/OS HubSoft. Idempotente (nao duplica). Reversivel (`reverse_code` remove a condicao).
+- **Motivo**: a engine hoje so olha pra documento; lead com doc valido mas score reprovado estaria gerando contrato HubSoft + agendamento de OS desnecessarios. Score eh marcado manualmente pelo operador (binario aprovado/reprovado). Decisao C (engine + executor) pra cobrir todos os caminhos. Decisao A1 (migration que adiciona nas regras existentes) pra subir ja operacional.
+- **Validação**: `manage.py check` ok. Migration aplicada local. Smoke test do tipo de condicao: `avaliar(igual, aprovado)` retorna False com `score=nao_consultado` e True com `score=aprovado`. Template renderiza HTTP 200 com a secao Score visivel.
+- **Arquivos**: `apps/comercial/leads/models.py` + migration 0007; `apps/comercial/crm/views.py`; `apps/comercial/crm/services/automacao_condicoes.py`; `apps/comercial/crm/services/automacao_pipeline.py`; `apps/integracoes/views_matrix_os.py`; `apps/comercial/crm/templates/crm/oportunidade_detalhe.html`; `apps/comercial/crm/migrations/0021_score_externo_gate_nuvyon.py`; doc `crm/oportunidades.md`.
+- **Status**: completed (local); pending commit + push + deploy prod + smoke real com lead da Nuvyon.

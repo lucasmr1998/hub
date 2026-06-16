@@ -355,6 +355,13 @@ def _acao_gerar_contrato_hubsoft(oportunidade, config):
         logger.warning("[gerar_contrato] oport=%s sem lead vinculado", oportunidade.pk)
         return False
 
+    # Trava defensiva: score externo precisa estar aprovado pra gerar contrato.
+    # Protege fluxos que pulam a engine (retentativa manual, signals, etc).
+    score = getattr(lead, 'score_status', 'nao_consultado')
+    if score != 'aprovado':
+        logger.info("[gerar_contrato] lead=%s bloqueado por score=%s (esperado: aprovado)", lead.pk, score)
+        return False
+
     if getattr(lead, 'contrato_aceito', False) and getattr(lead, 'anexos_contrato_enviados', False):
         logger.info("[gerar_contrato] lead=%s ja tem contrato aceito + anexos enviados, pula", lead.pk)
         return False  # idempotente: tudo ja feito
@@ -522,6 +529,13 @@ def _acao_assinar_contrato_hubsoft(oportunidade, config):
     if not lead:
         logger.warning("[assinar_contrato] oport=%s sem lead", oportunidade.pk)
         return False
+
+    # Trava defensiva: score externo precisa estar aprovado pra assinar.
+    score = getattr(lead, 'score_status', 'nao_consultado')
+    if score != 'aprovado':
+        logger.info("[assinar_contrato] lead=%s bloqueado por score=%s (esperado: aprovado)", lead.pk, score)
+        return False
+
     if getattr(lead, 'contrato_aceito', False):
         logger.info("[assinar_contrato] lead=%s ja tem contrato aceito, pula", lead.pk)
         return False

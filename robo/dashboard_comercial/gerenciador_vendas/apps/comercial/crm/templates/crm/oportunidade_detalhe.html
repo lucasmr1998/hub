@@ -408,6 +408,41 @@
             </span>
           </div>
         </div>
+
+        {# Score externo — gate para abrir OS / assinar contrato HubSoft #}
+        <div class="detail-field score-externo-block">
+          <label>Score externo</label>
+          <div class="value">
+            <div class="score-row">
+              {% if lead.score_status == 'aprovado' %}
+                <span class="badge-mini badge-success"><i class="bi bi-check-circle"></i> Aprovado</span>
+              {% elif lead.score_status == 'reprovado' %}
+                <span class="badge-mini badge-danger"><i class="bi bi-x-circle"></i> Reprovado</span>
+              {% elif lead.score_status == 'pendente' %}
+                <span class="badge-mini badge-warning"><i class="bi bi-hourglass"></i> Pendente</span>
+              {% else %}
+                <span class="badge-mini badge-neutral"><i class="bi bi-dash-circle"></i> Nao consultado</span>
+              {% endif %}
+            </div>
+            {% if lead.score_atualizado_em %}
+              <div class="score-meta">
+                por {{ lead.score_atualizado_por.get_full_name|default:lead.score_atualizado_por.username|default:"sistema" }}
+                — {{ lead.score_atualizado_em|date:"d/m/Y H:i" }}
+              </div>
+            {% endif %}
+            <div class="score-actions">
+              {% if lead.score_status != 'aprovado' %}
+                <button class="btn btn-ghost btn-sm score-btn-aprovar" onclick="marcarScore('aprovado')"><i class="bi bi-check2"></i> Aprovar</button>
+              {% endif %}
+              {% if lead.score_status != 'reprovado' %}
+                <button class="btn btn-ghost btn-sm score-btn-reprovar" onclick="marcarScore('reprovado')"><i class="bi bi-x"></i> Reprovar</button>
+              {% endif %}
+              {% if lead.score_status != 'nao_consultado' and lead.score_status != 'pendente' %}
+                <button class="btn btn-ghost btn-sm" onclick="marcarScore('pendente')" title="Reabrir analise"><i class="bi bi-arrow-counterclockwise"></i></button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
         <div class="detail-field">
           <label>Documentacao</label>
           <div class="value">
@@ -1539,6 +1574,16 @@
   }
   .tl-item.is-hidden { display: none; }
 
+  /* Score externo */
+  .score-externo-block { margin-top: var(--sp-2); padding-top: var(--sp-3); border-top: 1px dashed var(--color-border); }
+  .score-row { display: flex; align-items: center; gap: 8px; }
+  .score-meta { font-size: 11px; color: var(--color-text-muted); margin-top: 4px; }
+  .score-actions { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+  .score-btn-aprovar { color: var(--color-success); }
+  .score-btn-aprovar:hover { background: var(--color-success-soft); }
+  .score-btn-reprovar { color: var(--color-danger); }
+  .score-btn-reprovar:hover { background: var(--color-danger-soft); }
+
   /* CTA contextual ganho/perda */
   .btn-cta-ganho {
     background: var(--color-success, #16A34A); color: #fff; border-color: var(--color-success, #16A34A);
@@ -2076,6 +2121,26 @@ async function concluirTarefa(pk) {
       setTimeout(() => location.reload(), 600);
     } else {
       toast('Erro', d.erro || d.error || 'Falha', 'danger');
+    }
+  } catch { toast('Erro', 'Falha na requisicao', 'danger'); }
+}
+
+// === Score externo ===
+async function marcarScore(novoStatus) {
+  const labels = {aprovado: 'aprovar', reprovado: 'reprovar', pendente: 'reabrir analise de'};
+  if (!confirm(`Tem certeza que deseja ${labels[novoStatus]} o score desse lead?`)) return;
+  try {
+    const res = await fetch(URL_EDITAR_OP, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ score_status: novoStatus }),
+    });
+    const d = await res.json();
+    if (d.success) {
+      toast('Salvo', 'Score atualizado', 'success');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      toast('Erro', d.error || 'Falha', 'danger');
     }
   } catch { toast('Erro', 'Falha na requisicao', 'danger'); }
 }
