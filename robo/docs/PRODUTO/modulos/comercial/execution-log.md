@@ -74,3 +74,42 @@ Itens nao implementados (evolucao futura): view alternada "lista plana paginada"
 Arquivos: `apps/comercial/crm/templates/crm/automacoes_pipeline.html`; `apps/comercial/crm/views.py:automacoes_pipeline_view`; doc `crm/automacoes-pipeline.md`.
 
 Status: completed + deployado em prod.
+
+## 2026-06-16 — Lote de melhorias UX/UI atrasadas
+
+Commit `<TBD>` agrega 5 frentes pequenas de melhoria:
+
+1. **Stage bar responsiva** — `@media (max-width: 1200px / 900px)` no `.op-stage-step`. Em telas estreitas o atual destaca via `flex: 2.5` e a barra ganha `overflow-x: auto` no mobile. Resolve "estoura com pipeline 8+ estagios".
+
+2. **Permissao granular pra editar valor estimado** — funcionalidade nova `comercial.editar_valor_oportunidade` (categoria comercial, ordem 13). `api_editar_oportunidade` so aceita `valor_estimado`/`probabilidade` se o usuario tiver a permissao OU for superuser. Template gate-eia o `.editable` no header summary + card Oportunidade (mostra cadeado se nao puder editar). Falta rodar `seed_funcionalidades` em prod + atribuir aos perfis que precisam.
+
+3. **Health indicators nas regras** — `_health_regra(regra)` em `automacoes_pipeline_view`. Calcula `verde / amarelo / vermelho / nodata / off` baseado em `total_disparos`, `total_acoes_efetivas` e `ultima_execucao` (janela 30d). Renderiza como dot colorido ao lado do status. Vermelho pulsa pra chamar atencao (regra que avalia mas nunca executa = condicao quebrada).
+
+4. **View alternada "Lista plana"** — toggle `?view=pipeline|lista`. Vista lista mostra `data-table` com TODAS as regras (incluindo regras de acao pura) ordenadas por health (criticas primeiro) e total de disparos. Util pra auditoria quando crescer pra 50+ regras.
+
+5. **Templates de regra pre-prontos** — galeria visivel em `/crm/automacoes-pipeline/nova/` (6 templates: Docs validados → Assinar, Docs validados → Gerar, Lead respondeu, Venda pos-venda WhatsApp, Sem contato 72h, Em branco). Click leva pra `?template=<slug>` que pre-popula nome + condicoes + acoes via JS no DOMContentLoaded. User edita marginalmente em vez de comecar do zero.
+
+Arquivos:
+- `apps/comercial/leads/...` (sem mudancas — Empresa entity nao foi implementada nessa rodada — ver abaixo)
+- `apps/comercial/crm/views.py` (api_editar_oportunidade, automacoes_pipeline_view, regra_pipeline_criar)
+- `apps/comercial/crm/templates/crm/oportunidade_detalhe.html` (stage bar media queries, cadeado no Valor)
+- `apps/comercial/crm/templates/crm/automacoes_pipeline.html` (view toggle, health dot, lista plana)
+- `apps/comercial/crm/templates/crm/regra_form.html` (galeria templates + auto-popular)
+- `apps/sistema/management/commands/seed_funcionalidades.py` (nova funcionalidade)
+
+Status: completed (local + checks). Pending: rodar `seed_funcionalidades` em prod; commit + push + deploy.
+
+## 2026-06-16 — Evolucao em backlog: Empresa como entity propria
+
+**Decisao**: deixar pra sprint dedicada. Refactor estrutural grande, arrisca quebrar producao se feito junto com outras coisas.
+
+Hoje `LeadProspecto.empresa` eh um `CharField` solto — duas oportunidades da mesma empresa nao se conhecem; sem agrupamento; sem CNPJ separado; sem visao consolidada de receita por empresa.
+
+Proposta de design (pra futura sessao):
+- **Model novo** `Conta` em `apps.comercial.contas` — campos: `cnpj` (unique by tenant), `razao_social`, `nome_fantasia`, `segmento`, `tamanho` (pequena/media/grande), `dono` (FK User), `ativo`, observacao, dados_extras.
+- **FK em LeadProspecto** `conta` (nullable, on_delete=SET_NULL) — migrar dados do CharField pra normalizar (1 conta por empresa unica detectada).
+- **UI nova** `/comercial/contas/` (lista plana com filtros) + `/comercial/contas/<id>/` (detalhe com oportunidades agrupadas).
+- **Sidebar do lead detalhe** ganha card "Conta" com link.
+- **Detalhe da oportunidade** ganha card "Outras oportunidades da mesma conta".
+
+Estimativa: ~6-8h de trabalho. Riscos: migracao de dados existentes (precisa heuristica de deduplicacao); impactar templates que usam `lead.empresa` direto.

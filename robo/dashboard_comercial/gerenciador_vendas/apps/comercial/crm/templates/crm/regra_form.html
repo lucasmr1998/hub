@@ -8,7 +8,7 @@
   <div class="page-header-top">
     <div>
       <h1 class="page-title">{% if regra %}Editar regra{% else %}Nova regra{% endif %}</h1>
-      <p class="page-subtitle">Configure as condições, o estágio destino (opcional) e as ações que serão executadas.</p>
+      <p class="page-subtitle">{% if template_titulo %}Template: <strong>{{ template_titulo }}</strong> — campos pre-preenchidos abaixo. Voce pode editar tudo antes de salvar.{% else %}Configure as condições, o estágio destino (opcional) e as ações que serão executadas.{% endif %}</p>
     </div>
     <div class="page-actions">
       <a href="{% url 'crm:automacoes_pipeline' %}" class="btn btn-ghost btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
@@ -16,13 +16,56 @@
   </div>
 </div>
 
+{# Galeria de templates — so na criacao, sem template ja selecionado #}
+{% if not regra and regra_templates and not template_selecionado %}
+  <div class="card" style="margin-bottom: var(--sp-4);">
+    <div class="card-header"><h3 class="card-title"><i class="bi bi-collection"></i> Comece com um template</h3></div>
+    <div class="card-body">
+      <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0 0 var(--sp-3);">
+        Escolha um modelo pre-pronto pra acelerar — voce pode editar tudo antes de salvar.
+      </p>
+      <div class="regra-templates-grid">
+        {% for t in regra_templates %}
+          <a href="?template={{ t.slug }}{% if estagio_preselecionado_id %}&estagio={{ estagio_preselecionado_id }}{% endif %}" class="regra-template-card">
+            <i class="bi {{ t.icon }}"></i>
+            <strong>{{ t.nome }}</strong>
+            <span>{{ t.descricao }}</span>
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <style>
+    .regra-templates-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--sp-3);
+    }
+    .regra-template-card {
+      display: flex; flex-direction: column; gap: 6px;
+      padding: var(--sp-3) var(--sp-4);
+      background: var(--color-bg); border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      text-decoration: none; color: inherit;
+      transition: all var(--transition);
+    }
+    .regra-template-card:hover {
+      border-color: var(--color-primary); background: var(--color-primary-soft);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(15,23,42,.08);
+    }
+    .regra-template-card i { font-size: 20px; color: var(--color-primary); }
+    .regra-template-card strong { font-size: var(--fs-sm); color: var(--color-text); }
+    .regra-template-card span { font-size: var(--fs-xs); color: var(--color-text-muted); line-height: 1.4; }
+  </style>
+{% endif %}
+
 <form method="post" class="card">
   {% csrf_token %}
   <div class="card-body">
     <div class="field">
       <label class="field-label">Nome da regra *</label>
       <div class="field-input-wrap">
-        <input type="text" name="nome" class="field-input" required placeholder="Ex: Tag Assinado move pra Ganho" value="{{ regra.nome|default:'' }}">
+        <input type="text" name="nome" class="field-input" required placeholder="Ex: Tag Assinado move pra Ganho" value="{{ regra.nome|default:nome_pre|default:'' }}">
       </div>
     </div>
 
@@ -144,13 +187,51 @@
 
 {% block extra_js %}
 <script>
-function addCondicao() {
+function addCondicao(prefil) {
   const tpl = document.getElementById('condicao-template');
   const list = document.getElementById('condicoes-list');
   const clone = tpl.content.cloneNode(true);
   list.appendChild(clone);
   document.getElementById('condicoes-empty').style.display = 'none';
+  if (prefil) {
+    const novaRow = list.querySelector('.cond-row:last-of-type');
+    if (novaRow) {
+      const setVal = (name, value) => {
+        const el = novaRow.querySelector(`[name="${name}"]`);
+        if (el && value !== undefined && value !== null) el.value = value;
+      };
+      setVal('cond_tipo', prefil.tipo);
+      setVal('cond_campo', prefil.campo);
+      setVal('cond_operador', prefil.operador);
+      setVal('cond_valor', prefil.valor);
+    }
+  }
 }
+
+// Auto-popular condicoes/acoes quando vier template selecionado
+{% if template_selecionado and condicoes_pre %}
+document.addEventListener('DOMContentLoaded', function() {
+  const condicoesPre = {{ condicoes_pre|safe|default:"[]" }};
+  condicoesPre.forEach(c => addCondicao(c));
+});
+{% endif %}
+{% if template_selecionado and acoes_pre %}
+document.addEventListener('DOMContentLoaded', function() {
+  const acoesPre = {{ acoes_pre|safe|default:"[]" }};
+  acoesPre.forEach(a => {
+    const cb = document.querySelector(`input[name="acao_tipo"][value="${a.tipo}"]`);
+    if (cb && !cb.checked) {
+      cb.checked = true;
+      cb.dispatchEvent(new Event('change'));
+    }
+    // se houver configuracao, preencher textarea/input de extra
+    if (a.configuracao) {
+      const extra = document.querySelector(`[name^="acao_${a.tipo}__"]`);
+      if (extra) extra.value = a.configuracao;
+    }
+  });
+});
+{% endif %}
 
 document.addEventListener('click', function(e) {
   if (e.target.closest('.cond-remove')) {

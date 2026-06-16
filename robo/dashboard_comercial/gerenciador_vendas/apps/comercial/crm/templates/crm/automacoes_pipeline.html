@@ -78,6 +78,90 @@
   {% include "components/list_filters.html" with fields=filter_fields search_placeholder="Buscar por nome da regra..." search_name="q" search_value=q clear_url=request.path collapsed=True collapsed_label="Filtros" active_filters_count=active_filters_count %}
 </div>
 
+{# View toggle: Pipeline accordion vs Lista plana #}
+<div class="view-toggle">
+  <a href="?{% if pipeline_filtro %}pipeline={{ pipeline_filtro }}&{% endif %}{% if status_filtro %}status={{ status_filtro }}&{% endif %}{% if q %}q={{ q }}&{% endif %}view=pipeline"
+     class="view-toggle-btn {% if view_mode != 'lista' %}is-active{% endif %}"><i class="bi bi-diagram-3"></i> Por pipeline</a>
+  <a href="?{% if pipeline_filtro %}pipeline={{ pipeline_filtro }}&{% endif %}{% if status_filtro %}status={{ status_filtro }}&{% endif %}{% if q %}q={{ q }}&{% endif %}view=lista"
+     class="view-toggle-btn {% if view_mode == 'lista' %}is-active{% endif %}"><i class="bi bi-list-ul"></i> Lista plana</a>
+</div>
+
+{% if view_mode == 'lista' %}
+{# === Vista plana: tabela com todas as regras === #}
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h3 class="card-title"><i class="bi bi-list-ul"></i> Todas as regras <span style="color: var(--color-text-muted); font-weight: normal; font-size: var(--fs-sm);">({{ regras_plano|length }})</span></h3>
+    <span style="font-size: var(--fs-xs); color: var(--color-text-muted);">Ordenado por health (criticas primeiro) e depois por total de disparos</span>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="text-align: center; width: 40px;" title="Health">●</th>
+          <th>Nome</th>
+          <th>Pipeline</th>
+          <th>Estagio</th>
+          <th>Executa</th>
+          <th style="text-align: center; width: 110px;">Acoes</th>
+          <th style="text-align: center; width: 80px;">Status</th>
+          <th style="text-align: center; width: 140px;">Ultima execucao</th>
+          <th style="text-align: center; width: 90px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for regra in regras_plano %}
+          <tr>
+            <td style="text-align: center;">
+              <span class="regra-health regra-health-{{ regra.health }}" title="health: {{ regra.health }}"></span>
+            </td>
+            <td><strong>{{ regra.nome }}</strong>
+              {% if regra.prioridade %}<span style="font-size: 10px; color: var(--color-text-muted);">prio {{ regra.prioridade }}</span>{% endif %}
+            </td>
+            <td>
+              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: {{ regra.pipeline_cor }}; margin-right: 6px;"></span>
+              {{ regra.pipeline_nome }}
+            </td>
+            <td>
+              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: {{ regra.estagio_cor }}; margin-right: 6px;"></span>
+              {{ regra.estagio_nome }}
+            </td>
+            <td>
+              {% if regra.acoes_labels %}
+                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                  {% for label in regra.acoes_labels %}
+                    <span style="font-size: var(--fs-xs); background: var(--color-primary-soft); color: var(--color-primary); padding: 2px 7px; border-radius: var(--radius-full);">{{ label }}</span>
+                  {% endfor %}
+                </div>
+              {% else %}—{% endif %}
+            </td>
+            <td style="text-align: center;">
+              <strong>{{ regra.total_acoes_efetivas|default:0 }}</strong>
+              <div style="font-size: 10px; color: var(--color-text-muted);">de {{ regra.total_disparos|default:0 }}</div>
+            </td>
+            <td style="text-align: center;">
+              {% if regra.ativo %}
+                {% include "components/badge.html" with variant="success" label="Ativa" size="sm" %}
+              {% else %}
+                {% include "components/badge.html" with variant="danger" label="Inativa" size="sm" %}
+              {% endif %}
+            </td>
+            <td style="text-align: center; font-size: var(--fs-xs); color: var(--color-text-muted);">
+              {% if regra.ultima_execucao %}{{ regra.ultima_execucao|date:"d/m/Y H:i" }}{% else %}—{% endif %}
+            </td>
+            <td style="text-align: center; white-space: nowrap;">
+              <a href="{% url 'crm:regra_pipeline_editar' regra.id %}" class="btn btn-ghost btn-sm" title="Editar"><i class="bi bi-pencil"></i></a>
+              <button class="btn btn-ghost btn-sm" title="{% if regra.ativo %}Desativar{% else %}Ativar{% endif %}" onclick="toggleRegra({{ regra.id }})"><i class="bi {% if regra.ativo %}bi-pause{% else %}bi-play{% endif %}"></i></button>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="9" style="text-align: center; padding: var(--sp-5); color: var(--color-text-muted);">Nenhuma regra encontrada com os filtros atuais.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+{# === Vista por pipeline (default — accordion) === #}
 {% for pipe_ctx in pipelines_ctx %}
   <details class="pipeline-accordion"{% if forloop.first %} open{% endif %} style="margin-bottom: var(--sp-4);">
     <summary class="pipeline-accordion-header" style="border-bottom: 2px solid {{ pipe_ctx.pipeline.cor_hex }};">
@@ -154,6 +238,7 @@
                       {% else %}
                         {% include "components/badge.html" with variant="danger" label="Inativa" size="sm" %}
                       {% endif %}
+                      <div class="regra-health regra-health-{{ regra.health }}" title="{% if regra.health == 'verde' %}Funcionando: disparou nos ultimos 30d{% elif regra.health == 'amarelo' %}Sem disparo ha mais de 30 dias{% elif regra.health == 'vermelho' %}Avalia mas nunca executa — condicoes podem estar quebradas{% elif regra.health == 'nodata' %}Ainda nao disparou — sem dados{% else %}Regra desativada{% endif %}"></div>
                     </td>
                     <td style="text-align: center; font-size: var(--fs-xs); color: var(--color-text-muted);">
                       {% if regra.ultima_execucao %}{{ regra.ultima_execucao|date:"d/m/Y H:i" }}{% else %}—{% endif %}
@@ -276,6 +361,7 @@
   </div>
 </details>
 {% endif %}
+{% endif %}{# fim do view_mode == 'lista' vs accordion #}
 
 {% endblock %}
 
@@ -297,6 +383,40 @@
     background: transparent;
     border-style: dotted;
   }
+
+  /* View toggle (Por pipeline | Lista plana) */
+  .view-toggle {
+    display: inline-flex; gap: 0;
+    margin-bottom: var(--sp-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    overflow: hidden;
+  }
+  .view-toggle-btn {
+    padding: 6px 14px;
+    font-size: var(--fs-sm); font-weight: var(--fw-semibold);
+    color: var(--color-text-muted); text-decoration: none;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all var(--transition);
+    border-right: 1px solid var(--color-border);
+  }
+  .view-toggle-btn:last-child { border-right: 0; }
+  .view-toggle-btn:hover { background: var(--color-surface-subtle, #F8FAFC); color: var(--color-text); }
+  .view-toggle-btn.is-active { background: var(--color-text, #1e293b); color: #fff; }
+
+  /* Health indicator das regras (verde/amarelo/vermelho) */
+  .regra-health {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    margin-left: 6px; vertical-align: middle;
+    background: var(--color-text-muted, #94A3B8);
+  }
+  .regra-health-verde    { background: var(--color-success, #16A34A); }
+  .regra-health-amarelo  { background: var(--color-warning, #F59E0B); }
+  .regra-health-vermelho { background: var(--color-danger, #DC2626); animation: pulse-red 2s infinite; }
+  .regra-health-nodata   { background: var(--color-border, #E2E8F0); }
+  .regra-health-off      { background: transparent; }
+  @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
   /* Accordion de pipelines — vira card (padrao Hubtrix) */
   .pipeline-accordion {

@@ -515,12 +515,16 @@ def api_editar_oportunidade(request, pk):
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({'error': 'JSON invalido'}, status=400)
 
+    # Campos financeiros gated por permissao comercial.editar_valor_oportunidade
+    pode_editar_valor = user_tem_funcionalidade(request, 'comercial.editar_valor_oportunidade') or request.user.is_superuser
     campos_oport = [
-        'titulo', 'valor_estimado', 'probabilidade', 'prioridade',
+        'titulo', 'prioridade',
         'origem_crm', 'data_fechamento_previsto',
         'motivo_perda', 'motivo_perda_categoria',
         'motivo_ganho_categoria', 'concorrente_perdido',
     ]
+    if pode_editar_valor:
+        campos_oport += ['valor_estimado', 'probabilidade']
     campos_lead = [
         'nome_razaosocial', 'email', 'telefone', 'cpf_cnpj', 'rg',
         'data_nascimento',
@@ -835,6 +839,8 @@ def oportunidade_detalhe(request, pk):
         'cta_proximo': cta_proximo,
         'cta_ganho': cta_ganho,
         'cta_perdido': cta_perdido,
+        'pode_editar_valor': (user_tem_funcionalidade(request, 'comercial.editar_valor_oportunidade')
+                              or request.user.is_superuser),
         'motivos_perda': MotivoPerda.objects.filter(ativo=True).order_by('ordem', 'nome'),
         'motivo_perda_obrigatorio': bool(ConfiguracaoCRM.get_config() and ConfiguracaoCRM.get_config().motivo_perda_obrigatorio),
         'motivo_perda_pede_concorrente': bool(ConfiguracaoCRM.get_config() and ConfiguracaoCRM.get_config().motivo_perda_pede_concorrente),
@@ -2497,6 +2503,7 @@ def automacoes_pipeline_view(request):
     pipeline_filtro = request.GET.get('pipeline') or ''
     q = (request.GET.get('q') or '').strip()
     status = request.GET.get('status') or ''
+    view_mode = request.GET.get('view') or 'pipeline'  # 'pipeline' (default, accordion) | 'lista' (plana)
 
     pipelines_qs = Pipeline.objects.filter(ativo=True).order_by('ordem', 'nome')
     if pipeline_filtro:
@@ -2512,6 +2519,31 @@ def automacoes_pipeline_view(request):
         if q and q.lower() not in (regra.nome or '').lower():
             return False
         return True
+
+    def _health_regra(regra):
+        """Health binario simples: verde / amarelo / vermelho / sem-dados.
+        verde     = regra ativa, com disparo nos ultimos 30 dias
+        amarelo   = regra ativa, sem disparo ha 30+ dias (suspeita de quebra/abandono)
+        vermelho  = regra ativa, com 0 acoes efetivas e mais de 0 avaliacoes
+                   (avalia mas nunca executa — provavel condicao quebrada)
+        nodata    = regra ativa que nunca disparou
+        off       = regra desativada (status indiferente)
+        """
+        if not regra.ativo:
+            return 'off'
+        disparos = regra.total_disparos or 0
+        efetivos = regra.total_acoes_efetivas or 0
+        if disparos == 0:
+            return 'nodata'
+        if disparos > 0 and efetivos == 0:
+            return 'vermelho'
+        ultima = regra.ultima_execucao
+        if ultima:
+            agora = timezone.now()
+            if (agora - ultima).days <= 30:
+                return 'verde'
+            return 'amarelo'
+        return 'nodata'
 
     pipelines_ctx = []
     total_regras = 0
@@ -2538,7 +2570,9 @@ def automacoes_pipeline_view(request):
                     'acoes_labels': [ACOES_DISPONIVEIS_DICT.get(a.get('tipo'), {}).get('label', a.get('tipo')) for a in (regra.acoes or [])],
                     'atualizado_em': regra.atualizado_em,
                     'total_disparos': getattr(regra, 'total_disparos', 0),
+                    'total_acoes_efetivas': getattr(regra, 'total_acoes_efetivas', 0),
                     'ultima_execucao': getattr(regra, 'ultima_execucao', None),
+                    'health': _health_regra(regra),
                 })
             estagios_ctx.append({
                 'estagio': est,
@@ -2573,12 +2607,40 @@ def automacoes_pipeline_view(request):
             'acoes_labels': [ACOES_DISPONIVEIS_DICT.get(a.get('tipo'), {}).get('label', a.get('tipo')) for a in (regra.acoes or [])],
             'atualizado_em': regra.atualizado_em,
             'total_disparos': getattr(regra, 'total_disparos', 0),
+            'total_acoes_efetivas': getattr(regra, 'total_acoes_efetivas', 0),
             'ultima_execucao': getattr(regra, 'ultima_execucao', None),
+            'health': _health_regra(regra),
         })
         total_regras += 1
         if regra.ativo:
             total_ativas += 1
         total_disparos_global += regra.total_disparos or 0
+
+    # Lista plana (view alternada): todas as regras com pipeline+estagio
+    regras_plano = []
+    for p_ctx in pipelines_ctx:
+        for g in p_ctx['estagios']:
+            for r in g['regras']:
+                regras_plano.append({
+                    **r,
+                    'pipeline_nome': p_ctx['pipeline'].nome,
+                    'pipeline_cor': p_ctx['pipeline'].cor_hex,
+                    'estagio_nome': g['estagio'].nome,
+                    'estagio_cor': g['estagio'].cor_hex,
+                    'estagio_tipo': g['estagio'].get_tipo_display(),
+                })
+    for r in regras_acao_pura:
+        regras_plano.append({
+            **r,
+            'pipeline_nome': '—',
+            'pipeline_cor': '#94A3B8',
+            'estagio_nome': '(sem estagio destino)',
+            'estagio_cor': '#94A3B8',
+            'estagio_tipo': '—',
+        })
+    # Ordena por health + ultima_execucao
+    health_ordem = {'vermelho': 0, 'amarelo': 1, 'nodata': 2, 'verde': 3, 'off': 4}
+    regras_plano.sort(key=lambda r: (health_ordem.get(r.get('health'), 5), -(r.get('total_disparos') or 0)))
 
     # Filter fields no padrao list_filters (MODO B)
     pipeline_options = [('', 'Todos os pipelines')] + [
@@ -2603,9 +2665,11 @@ def automacoes_pipeline_view(request):
         'pipeline_filtro': pipeline_filtro,
         'q': q,
         'status_filtro': status,
+        'view_mode': view_mode,
         'filter_fields': filter_fields,
         'active_filters_count': active_filters_count,
         'regras_acao_pura': regras_acao_pura,
+        'regras_plano': regras_plano,
         'total_regras': total_regras,
         'total_ativas': total_ativas,
         'total_disparos_global': total_disparos_global,
@@ -2709,6 +2773,78 @@ def _parse_acoes_do_post(request):
     return acoes
 
 
+# Templates de regra pre-prontos pra acelerar criacao
+REGRA_TEMPLATES = [
+    {
+        'slug': 'docs_validados_contrato',
+        'nome': 'Documentos validados → Assinar contrato HubSoft',
+        'descricao': 'Quando todos os documentos do lead estiverem aprovados, assina o contrato no HubSoft automaticamente.',
+        'icon': 'bi-file-earmark-check',
+        'nome_regra_sugerido': 'Docs validados — Assinar contrato',
+        'condicoes': [
+            {'tipo': 'imagem_status', 'campo': 'todas_iguais', 'operador': 'igual', 'valor': 'documentos_validos'},
+            {'tipo': 'score_externo', 'campo': '', 'operador': 'igual', 'valor': 'aprovado'},
+        ],
+        'acoes': [{'tipo': 'assinar_contrato_hubsoft'}],
+    },
+    {
+        'slug': 'docs_validados_gerar_contrato',
+        'nome': 'Documentos validados → Gerar contrato HubSoft (cria + anexa + aceita)',
+        'descricao': 'Mesmo que o anterior, mas cria o contrato do zero (usar so se o tenant nao criar contrato automaticamente).',
+        'icon': 'bi-file-earmark-plus',
+        'nome_regra_sugerido': 'Docs validados — Gerar contrato',
+        'condicoes': [
+            {'tipo': 'imagem_status', 'campo': 'todas_iguais', 'operador': 'igual', 'valor': 'documentos_validos'},
+            {'tipo': 'score_externo', 'campo': '', 'operador': 'igual', 'valor': 'aprovado'},
+        ],
+        'acoes': [{'tipo': 'gerar_contrato_hubsoft'}],
+    },
+    {
+        'slug': 'lead_respondeu_mover',
+        'nome': 'Lead respondeu o bot → Em Atendimento',
+        'descricao': 'Quando o lead enviar a primeira mensagem real ao bot, move pra estagio "Em Atendimento" (selecione abaixo).',
+        'icon': 'bi-chat-dots',
+        'nome_regra_sugerido': 'Lead respondeu o bot',
+        'condicoes': [
+            {'tipo': 'historico_status', 'campo': '', 'operador': 'existe', 'valor': 'fluxo_inicializado'},
+        ],
+        'acoes': [],  # so move estagio (configurar no select estagio)
+    },
+    {
+        'slug': 'venda_criada_pos_venda',
+        'nome': 'Venda criada → Mensagem WhatsApp pos-venda',
+        'descricao': 'Envia mensagem agradecendo pela compra quando a venda for criada.',
+        'icon': 'bi-whatsapp',
+        'nome_regra_sugerido': 'Pos-venda WhatsApp',
+        'condicoes': [
+            {'tipo': 'historico_status', 'campo': '', 'operador': 'existe', 'valor': 'venda_criada'},
+        ],
+        'acoes': [{'tipo': 'enviar_whatsapp', 'configuracao': 'Obrigado pela compra! Em breve nosso time vai entrar em contato pra agendar a instalacao.'}],
+    },
+    {
+        'slug': 'sem_contato_72h',
+        'nome': 'Sem contato em 72h → Criar tarefa de follow-up',
+        'descricao': 'Cria tarefa pra vendedor quando lead ficar parado sem novo contato.',
+        'icon': 'bi-clock-history',
+        'nome_regra_sugerido': 'Follow-up 72h',
+        'condicoes': [
+            {'tipo': 'historico_status', 'campo': '', 'operador': 'existe', 'valor': 'sem_resposta'},
+        ],
+        'acoes': [{'tipo': 'criar_tarefa', 'configuracao': 'Follow-up: lead sem contato ha 72h'}],
+    },
+    {
+        'slug': 'em_branco',
+        'nome': 'Em branco (do zero)',
+        'descricao': 'Crie a regra do zero, sem nenhum campo pre-preenchido.',
+        'icon': 'bi-plus-square-dotted',
+        'nome_regra_sugerido': '',
+        'condicoes': [],
+        'acoes': [],
+    },
+]
+REGRA_TEMPLATES_DICT = {t['slug']: t for t in REGRA_TEMPLATES}
+
+
 @login_required
 def regra_pipeline_criar(request):
     denied = _check_perm(request, 'comercial.configurar_pipeline')
@@ -2742,7 +2878,19 @@ def regra_pipeline_criar(request):
     except (TypeError, ValueError):
         estagio_pre = None
 
-    return render(request, 'crm/regra_form.html', _contexto_form_regra(estagio_preselecionado=estagio_pre))
+    template_slug = request.GET.get('template') or ''
+    template_dados = REGRA_TEMPLATES_DICT.get(template_slug)
+
+    ctx = _contexto_form_regra(estagio_preselecionado=estagio_pre)
+    ctx['regra_templates'] = REGRA_TEMPLATES
+    ctx['template_selecionado'] = template_slug
+    # Defaults pra evitar VariableDoesNotExist no template
+    ctx['nome_pre'] = (template_dados.get('nome_regra_sugerido') or '') if template_dados else ''
+    ctx['condicoes_pre'] = json.dumps((template_dados.get('condicoes') or []) if template_dados else [], ensure_ascii=False)
+    ctx['acoes_pre'] = json.dumps((template_dados.get('acoes') or []) if template_dados else [], ensure_ascii=False)
+    ctx['template_titulo'] = template_dados.get('nome') if template_dados else ''
+
+    return render(request, 'crm/regra_form.html', ctx)
 
 
 @login_required

@@ -68,8 +68,8 @@
   <div class="op-header-summary">
     <div class="op-summary-cols">
       <div class="op-summary-item">
-        <label>Valor</label>
-        <strong class="editable op-summary-value" data-field="valor_estimado">{% if oportunidade.valor_estimado %}R$ {{ oportunidade.valor_estimado }}{% endif %}</strong>
+        <label>Valor {% if not pode_editar_valor %}<i class="bi bi-lock-fill" style="font-size: 10px; opacity: 0.5;" title="Voce nao tem permissao para editar"></i>{% endif %}</label>
+        <strong class="{% if pode_editar_valor %}editable {% endif %}op-summary-value" data-field="valor_estimado">{% if oportunidade.valor_estimado %}R$ {{ oportunidade.valor_estimado }}{% endif %}</strong>
       </div>
       <div class="op-summary-item">
         <label>Probabilidade</label>
@@ -143,8 +143,8 @@
       </div>
       <div class="card-body">
         <div class="detail-field">
-          <label>Valor estimado</label>
-          <div class="value"><span class="editable" data-field="valor_estimado">{{ oportunidade.valor_estimado|default:"" }}</span></div>
+          <label>Valor estimado {% if not pode_editar_valor %}<i class="bi bi-lock-fill" style="font-size: 10px; opacity: 0.5;" title="Voce nao tem permissao para editar"></i>{% endif %}</label>
+          <div class="value"><span class="{% if pode_editar_valor %}editable{% endif %}" data-field="valor_estimado">{{ oportunidade.valor_estimado|default:"" }}</span></div>
         </div>
         <div class="detail-field">
           <label>Probabilidade</label>
@@ -1479,10 +1479,22 @@
   .op-stage-step:hover:not(.is-current) { background: rgba(0,0,0,.03); color: var(--color-text); }
   .op-stage-step.is-current {
     background: var(--color-primary); color: #fff;
+    flex: 2;  /* destaca o atual quando ha muitos estagios */
   }
   .op-stage-step.is-current.is-ganho { background: var(--color-success); }
   .op-stage-step.is-current.is-perdido { background: var(--color-danger); }
   .op-stage-step-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+  /* Responsivo: pipeline com muitos estagios */
+  @media (max-width: 1200px) {
+    .op-stage-step { padding: 8px 10px; font-size: 11px; }
+    .op-stage-step.is-current { flex: 2.5; }
+  }
+  @media (max-width: 900px) {
+    .op-stage-bar { overflow-x: auto; }
+    .op-stage-step { padding: 8px 12px; min-width: 90px; flex: 0 0 auto; }
+    .op-stage-step.is-current { flex: 0 0 auto; min-width: 130px; }
+  }
 
   .op-header-summary {
     display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4);
