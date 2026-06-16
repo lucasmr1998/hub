@@ -426,7 +426,7 @@
             </div>
             {% if lead.score_atualizado_em %}
               <div class="score-meta">
-                por {{ lead.score_atualizado_por.get_full_name|default:lead.score_atualizado_por.username|default:"sistema" }}
+                por {% if lead.score_atualizado_por %}{{ lead.score_atualizado_por.get_full_name|default:lead.score_atualizado_por.username }}{% else %}sistema{% endif %}
                 — {{ lead.score_atualizado_em|date:"d/m/Y H:i" }}
               </div>
             {% endif %}
