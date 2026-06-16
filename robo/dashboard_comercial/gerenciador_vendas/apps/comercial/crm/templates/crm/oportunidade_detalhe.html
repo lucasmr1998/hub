@@ -392,6 +392,29 @@
         <div class="detail-field"><label>Email</label><div class="value"><span class="editable" data-field="email">{{ lead.email|default:"" }}</span></div></div>
         <div class="detail-field"><label>Telefone</label><div class="value"><span class="editable" data-field="telefone">{{ lead.telefone|default:"" }}</span></div></div>
         <div class="detail-field"><label>CPF/CNPJ</label><div class="value"><span class="editable" data-field="cpf_cnpj">{{ lead.cpf_cnpj|default:"" }}</span></div></div>
+        <div class="detail-field">
+          <label>CEP</label>
+          <div class="value"><span class="editable" data-field="cep" id="lead-cep-inline">{{ lead.cep|default:"" }}</span></div>
+          {% with via=lead.dados_custom.viabilidade %}
+            {% if via and via.status and via.status != 'nao_consultado' %}
+              <div class="viabilidade-meta" id="viabilidade-meta">
+                {% if via.status == 'cobertura_ok' %}
+                  <span class="badge-mini badge-success" title="Viabilidade: cobertura tecnica disponivel">
+                    <i class="bi bi-check-circle"></i> Coberto{% if via.cidade %} — {{ via.cidade }}/{{ via.uf }}{% endif %}
+                  </span>
+                {% elif via.status == 'fora_cobertura' %}
+                  <span class="badge-mini badge-danger" title="Viabilidade: sem cobertura tecnica">
+                    <i class="bi bi-x-circle"></i> Sem cobertura{% if via.cidade %} — {{ via.cidade }}/{{ via.uf }}{% endif %}
+                  </span>
+                {% else %}
+                  <span class="badge-mini badge-warning" title="Erro ao consultar viabilidade">
+                    <i class="bi bi-exclamation-triangle"></i> {{ via.status }}
+                  </span>
+                {% endif %}
+              </div>
+            {% endif %}
+          {% endwith %}
+        </div>
         <div class="detail-field"><label>Cidade</label><div class="value"><span class="editable" data-field="cidade">{{ lead.cidade|default:"" }}</span></div></div>
         <div class="detail-field"><label>Estado</label><div class="value"><span class="editable" data-field="estado">{{ lead.estado|default:"" }}</span></div></div>
         <div class="detail-field"><label>Empresa</label><div class="value"><span class="editable" data-field="empresa">{{ lead.empresa|default:"" }}</span></div></div>
@@ -1940,6 +1963,9 @@ document.querySelectorAll('.editable').forEach(function(el) {
       .then(data => {
         el.classList.remove('editable-saving');
         el.textContent = data.success ? newValue : currentValue;
+        if (data.success && data.viabilidade) {
+          aplicarViabilidade(data.viabilidade);
+        }
       })
       .catch(() => { el.classList.remove('editable-saving'); el.textContent = currentValue; });
     }
@@ -2357,6 +2383,51 @@ async function rejeitarDocumento(docPk) {
       toast('Erro', d.error || 'Falha', 'danger');
     }
   } catch { toast('Erro', 'Falha na requisicao', 'danger'); }
+}
+
+// === Viabilidade tecnica ===
+function aplicarViabilidade(via) {
+  if (!via || !via.status) return;
+  const cidadeUf = (via.cidade && via.uf) ? ` — ${via.cidade}/${via.uf}` : '';
+  const cep = via.cep_consultado || '';
+
+  let badge, tipo, titulo, msg;
+  if (via.status === 'cobertura_ok') {
+    badge = `<span class="badge-mini badge-success" title="Viabilidade: cobertura tecnica disponivel"><i class="bi bi-check-circle"></i> Coberto${cidadeUf}</span>`;
+    tipo = 'success';
+    titulo = 'Viabilidade OK';
+    msg = `CEP ${cep}${cidadeUf} tem cobertura tecnica.`;
+  } else if (via.status === 'fora_cobertura') {
+    badge = `<span class="badge-mini badge-danger" title="Viabilidade: sem cobertura tecnica"><i class="bi bi-x-circle"></i> Sem cobertura${cidadeUf}</span>`;
+    tipo = 'warning';
+    titulo = 'Sem cobertura';
+    msg = `CEP ${cep}${cidadeUf} esta fora da area de atendimento.`;
+  } else {
+    badge = `<span class="badge-mini badge-warning" title="Erro ao consultar viabilidade"><i class="bi bi-exclamation-triangle"></i> ${via.status}</span>`;
+    tipo = 'info';
+    titulo = 'Viabilidade';
+    msg = `Nao foi possivel consultar (${via.status}).`;
+  }
+
+  // Atualiza/insere o badge abaixo do CEP
+  let metaEl = document.getElementById('viabilidade-meta');
+  if (!metaEl) {
+    const cepEl = document.getElementById('lead-cep-inline');
+    if (cepEl) {
+      const detalheField = cepEl.closest('.detail-field');
+      if (detalheField) {
+        metaEl = document.createElement('div');
+        metaEl.id = 'viabilidade-meta';
+        metaEl.className = 'viabilidade-meta';
+        detalheField.appendChild(metaEl);
+      }
+    }
+  }
+  if (metaEl) metaEl.innerHTML = badge;
+
+  if (typeof toast === 'function') {
+    toast(titulo, msg, tipo);
+  }
 }
 
 async function removerDocumento(docPk) {

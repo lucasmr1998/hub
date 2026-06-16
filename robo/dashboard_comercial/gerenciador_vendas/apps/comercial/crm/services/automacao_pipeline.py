@@ -659,12 +659,70 @@ def _acao_enviar_venda_whatsapp(oportunidade, config):
         return False
 
 
+def _acao_mover_para_perdido_sem_viabilidade(oportunidade, config):
+    """
+    Move a oportunidade pra estagio is_final_perdido + preenche motivo_perda.
+    Usa primeiro estagio com is_final_perdido=True do mesmo pipeline. Idempotente
+    (nao move se ja esta em perdido).
+
+    config aceita (opcional):
+      - motivo_template: string com placeholders {cidade}/{uf}/{cep}.
+        Default: "CEP {cep} sem cobertura tecnica em {cidade}/{uf}"
+    """
+    from apps.comercial.crm.models import PipelineEstagio, HistoricoPipelineEstagio
+    from django.utils import timezone
+
+    if oportunidade.estagio and oportunidade.estagio.is_final_perdido:
+        return False  # ja perdido
+
+    estagio_perdido = PipelineEstagio.all_tenants.filter(
+        pipeline=oportunidade.pipeline,
+        is_final_perdido=True,
+        ativo=True,
+    ).order_by('ordem').first()
+    if not estagio_perdido:
+        logger.warning(
+            "[mover_para_perdido_sem_viabilidade] sem estagio is_final_perdido no pipeline %s",
+            oportunidade.pipeline_id,
+        )
+        return False
+
+    via = (oportunidade.lead.dados_custom or {}).get('viabilidade') or {}
+    cep = via.get('cep_consultado') or oportunidade.lead.cep or ''
+    cidade = via.get('cidade') or '—'
+    uf = via.get('uf') or '—'
+    template = config.get('motivo_template') or (
+        'CEP {cep} sem cobertura tecnica em {cidade}/{uf}'
+    )
+    motivo = template.format(cep=cep, cidade=cidade, uf=uf)
+
+    estagio_anterior = oportunidade.estagio
+    oportunidade.estagio = estagio_perdido
+    oportunidade.data_entrada_estagio = timezone.now()
+    oportunidade.motivo_perda_categoria = 'viabilidade'
+    oportunidade.motivo_perda = motivo
+    oportunidade.save(update_fields=[
+        'estagio', 'data_entrada_estagio', 'motivo_perda_categoria', 'motivo_perda',
+    ])
+    HistoricoPipelineEstagio.objects.create(
+        tenant=oportunidade.tenant,
+        oportunidade=oportunidade,
+        estagio_anterior=estagio_anterior,
+        estagio_novo=estagio_perdido,
+        movido_por=None,
+        motivo=f'Automacao: {motivo}',
+    )
+    logger.info("[mover_para_perdido_sem_viabilidade] op=%s movida (motivo: %s)", oportunidade.pk, motivo)
+    return True
+
+
 _EXECUTORES_ACAO = {
     'criar_venda': _acao_criar_venda,
     'atribuir_agente': _acao_atribuir_agente,
     'gerar_contrato_hubsoft': _acao_gerar_contrato_hubsoft,
     'assinar_contrato_hubsoft': _acao_assinar_contrato_hubsoft,
     'enviar_venda_whatsapp': _acao_enviar_venda_whatsapp,
+    'mover_para_perdido_sem_viabilidade': _acao_mover_para_perdido_sem_viabilidade,
 }
 
 

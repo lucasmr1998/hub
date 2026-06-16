@@ -323,3 +323,28 @@ class CondicaoScoreExterno:
     def avaliar(self, operador, valor, campo, contexto):
         atual = contexto.get('_score_status', 'nao_consultado')
         return comparar_valor(atual, operador, valor)
+
+
+@registrar
+class CondicaoViabilidadeStatus:
+    """
+    Status de viabilidade tecnica gravado em `lead.dados_custom.viabilidade.status`.
+    Setado automaticamente pelo api_editar_oportunidade quando o CEP eh editado.
+
+    Valores possiveis: 'cobertura_ok' | 'fora_cobertura' | 'nao_consultado' | 'erro'.
+    Operadores: igual, diferente, existe, nao_existe.
+    """
+    slug = 'viabilidade_status'
+    label = 'Status de viabilidade tecnica'
+
+    def coletar_contexto(self, oportunidade, contexto):
+        lead = getattr(oportunidade, 'lead', None)
+        viabilidade = (getattr(lead, 'dados_custom', None) or {}).get('viabilidade') or {}
+        contexto['_viabilidade_status'] = viabilidade.get('status') or 'nao_consultado'
+        contexto['_viabilidade_cidade'] = viabilidade.get('cidade') or ''
+        contexto['_viabilidade_uf'] = viabilidade.get('uf') or ''
+        contexto['_viabilidade_cep'] = viabilidade.get('cep_consultado') or ''
+
+    def avaliar(self, operador, valor, campo, contexto):
+        atual = contexto.get('_viabilidade_status', 'nao_consultado')
+        return comparar_valor(atual, operador, valor)

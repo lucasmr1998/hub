@@ -861,86 +861,48 @@ def _acao_check_viabilidade(config, contexto, atendimento):
 
     Determinismo total: zero IA, zero alucinacao, custo zero por consulta.
     """
-    from apps.comercial.viabilidade.models import CidadeViabilidade
-    import re
+    from apps.comercial.viabilidade.services import consultar_viabilidade
 
     tenant = atendimento.fluxo.tenant
     variaveis = (atendimento.dados_respostas or {}).get('variaveis', {})
 
-    # 1. Le CEP
     cep_var = config.get('cep_var', 'cep')
     cep_var_key = cep_var.replace('var.', '').strip()
     cep_raw = variaveis.get(cep_var_key) or contexto.get(cep_var_key) or ''
-    cep_digits = re.sub(r'\D', '', str(cep_raw))
 
     var_saida = config.get('variavel_saida', 'cobertura_status')
     var_cidade = config.get('variavel_cidade', 'cidade_detectada')
     var_uf = config.get('variavel_uf', 'uf_detectada')
 
-    def salvar(status, cidade='', uf=''):
-        _salvar_variavel(atendimento, var_saida, status)
-        if cidade:
-            _salvar_variavel(atendimento, var_cidade, cidade)
-        if uf:
-            _salvar_variavel(atendimento, var_uf, uf)
-        contexto[var_saida] = status
-        contexto[var_cidade] = cidade
-        contexto[var_uf] = uf
+    resultado = consultar_viabilidade(tenant, cep_raw)
+    status_normalizado = (
+        resultado.status if resultado.status in ('cobertura_ok', 'fora_cobertura')
+        else 'fora_cobertura'
+    )
 
-    if len(cep_digits) != 8:
-        _registrar_log(atendimento, None, 'erro',
-                       f'check_viabilidade: CEP invalido ({cep_raw!r})')
-        salvar('fora_cobertura')
-        return
+    _salvar_variavel(atendimento, var_saida, status_normalizado)
+    if resultado.cidade:
+        _salvar_variavel(atendimento, var_cidade, resultado.cidade)
+    if resultado.uf:
+        _salvar_variavel(atendimento, var_uf, resultado.uf)
+    contexto[var_saida] = status_normalizado
+    contexto[var_cidade] = resultado.cidade
+    contexto[var_uf] = resultado.uf
 
-    cep_formatado = f"{cep_digits[:5]}-{cep_digits[5:]}"
-
-    # 2. Match direto por CEP
-    direto = CidadeViabilidade.all_tenants.filter(
-        tenant=tenant, ativo=True, cep=cep_formatado,
-    ).first()
-    if direto:
-        salvar('cobertura_ok', direto.cidade, direto.estado)
-        _registrar_log(atendimento, None, 'sucesso',
-                       f'check_viabilidade: cobertura_ok por CEP direto ({cep_formatado} → {direto.cidade}/{direto.estado})',
-                       dados={'cidade': direto.cidade, 'uf': direto.estado, 'match': 'cep_direto'})
-        return
-
-    # 3. ViaCEP -> cidade/UF
-    cidade_via_cep = ''
-    uf_via_cep = ''
-    try:
-        resp = requests.get(f'https://viacep.com.br/ws/{cep_digits}/json/', timeout=5)
-        dados_cep = resp.json()
-        if not dados_cep.get('erro'):
-            cidade_via_cep = dados_cep.get('localidade', '') or ''
-            uf_via_cep = dados_cep.get('uf', '') or ''
-    except Exception as e:
-        logger.warning(f'check_viabilidade: ViaCEP falhou ({cep_digits}): {e}')
-
-    if not cidade_via_cep or not uf_via_cep:
-        salvar('fora_cobertura')
-        _registrar_log(atendimento, None, 'erro',
-                       f'check_viabilidade: ViaCEP nao retornou cidade/UF pra {cep_formatado}')
-        return
-
-    # 4. Cruza com CidadeViabilidade por cidade + UF
-    por_cidade = CidadeViabilidade.all_tenants.filter(
-        tenant=tenant, ativo=True,
-        cidade__iexact=cidade_via_cep,
-        estado=uf_via_cep,
-    ).exists()
-
-    if por_cidade:
-        salvar('cobertura_ok', cidade_via_cep, uf_via_cep)
-        _registrar_log(atendimento, None, 'sucesso',
-                       f'check_viabilidade: cobertura_ok por cidade ({cidade_via_cep}/{uf_via_cep})',
-                       dados={'cidade': cidade_via_cep, 'uf': uf_via_cep, 'match': 'cidade'})
-    else:
-        salvar('fora_cobertura', cidade_via_cep, uf_via_cep)
-        _registrar_log(atendimento, None, 'sucesso',
-                       f'check_viabilidade: fora_cobertura ({cidade_via_cep}/{uf_via_cep} nao cadastrada)',
-                       dados={'cidade': cidade_via_cep, 'uf': uf_via_cep, 'match': 'nenhum'})
+    nivel = 'sucesso' if resultado.status in ('cobertura_ok', 'fora_cobertura') else 'erro'
+    _registrar_log(
+        atendimento, None, nivel,
+        f'check_viabilidade: {status_normalizado} '
+        f'(cep={resultado.cep_consultado} fonte={resultado.fonte or "—"} '
+        f'cidade={resultado.cidade}/{resultado.uf})',
+        dados={
+            'status': resultado.status,
+            'cidade': resultado.cidade,
+            'uf': resultado.uf,
+            'fonte': resultado.fonte,
+            'detalhes': resultado.detalhes,
+        },
+    )
 
 
 # ============================================================================

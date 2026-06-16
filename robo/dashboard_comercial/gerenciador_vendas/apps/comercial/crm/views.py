@@ -547,6 +547,9 @@ def api_editar_oportunidade(request, pk):
     oport_atualizados = []
     lead_atualizados = []
 
+    # Snapshot do CEP atual pra detectar mudanca apos o loop (dispara viabilidade)
+    cep_antes = (oport.lead.cep or '') if oport.lead else ''
+
     for campo, valor in data.items():
         if campo.startswith('dados_custom.'):
             # Campo custom da oportunidade
@@ -593,7 +596,34 @@ def api_editar_oportunidade(request, pk):
         registrar_acao('crm', 'editar', 'oportunidade', oport.pk,
                        f'Campos atualizados: {", ".join(todos)}', request=request)
 
-    return JsonResponse({'success': True, 'campos': todos})
+    # Trigger viabilidade quando CEP mudou (universal — service decide a fonte por tenant)
+    viabilidade_payload = None
+    if 'cep' in lead_atualizados and oport.lead:
+        cep_depois = oport.lead.cep or ''
+        if cep_depois and cep_depois != cep_antes:
+            try:
+                from apps.comercial.viabilidade.services import consultar_viabilidade
+                resultado = consultar_viabilidade(oport.tenant, cep_depois)
+                if resultado.status != 'nao_consultado':
+                    dc = oport.lead.dados_custom or {}
+                    dc['viabilidade'] = resultado.to_dict()
+                    oport.lead.dados_custom = dc
+                    oport.lead.save(update_fields=['dados_custom'])
+                    viabilidade_payload = resultado.to_dict()
+                    registrar_acao(
+                        'crm', 'viabilidade_consultada', 'oportunidade', oport.pk,
+                        f'CEP {resultado.cep_consultado} -> {resultado.status} '
+                        f'({resultado.cidade}/{resultado.uf}) via {resultado.fonte}',
+                        request=request,
+                    )
+            except Exception as e:
+                logger.exception('Erro ao consultar viabilidade pro lead %s', oport.lead_id)
+
+    return JsonResponse({
+        'success': True,
+        'campos': todos,
+        'viabilidade': viabilidade_payload,
+    })
 
 
 @login_required
