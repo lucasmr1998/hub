@@ -59,7 +59,13 @@ Nao comecar feature nova enquanto houver bug critico aberto no produto em produc
 
 **Se o comando que quero rodar cair na zona cinza** (ex: "atualizar 1 campo num lead"), **SEMPRE confirmar com o usuario antes de executar**, mesmo que pareça trivial.
 
-**Credenciais de acesso ao servidor de producao:** ver arquivo local `.env.prod_readonly` (gitignored). Contem `PROD_DB_*` (Postgres) e eventualmente SSH do VPS Hostinger (EasyPanel). **NUNCA** colar credenciais no chat ou em arquivos versionados. Servidor roda no IP `103.199.187.4`; Postgres na porta 5433; console do EasyPanel (UI) ja roda dentro do container do app Django — comandos `python manage.py X` funcionam direto sem `docker exec`.
+**Credenciais de acesso ao servidor de producao:** ver arquivo local `.env.prod_readonly` (gitignored). Contem `PROD_DB_*` (Postgres), `PROD_SSH_*` (VPS Hostinger/EasyPanel) e `HUB_DEPLOY_WEBHOOK` (URL secreta que dispara redeploy do container hub). **NUNCA** colar credenciais ou a URL do webhook no chat ou em arquivos versionados. Servidor roda no IP `103.199.187.4`; Postgres na porta 5433; console do EasyPanel (UI) ja roda dentro do container do app Django — comandos `python manage.py X` funcionam direto sem `docker exec`.
+
+**Forcar deploy** (equivalente a clicar "Deploy" no painel EasyPanel) — usar apos `git push origin main`:
+```bash
+source .env.prod_readonly && curl -X POST "$HUB_DEPLOY_WEBHOOK"
+```
+Rebuild clona `origin/main` e aplica migrations automaticamente. Leva ~3-5min apos o trigger.
 
 ### Multi-Tenancy (CRITICO)
 - **TODA query deve filtrar por tenant.** Nunca usar `.objects.all()` em views sem filtro de tenant.
