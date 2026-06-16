@@ -406,6 +406,10 @@
                   <span class="badge-mini badge-danger" title="Viabilidade: sem cobertura tecnica">
                     <i class="bi bi-x-circle"></i> Sem cobertura{% if via.cidade %} — {{ via.cidade }}/{{ via.uf }}{% endif %}
                   </span>
+                {% elif via.status == 'endereco_incompleto' %}
+                  <span class="badge-mini badge-warning" title="Endereco incompleto pra checar viabilidade">
+                    <i class="bi bi-exclamation-triangle"></i> Endereco incompleto
+                  </span>
                 {% else %}
                   <span class="badge-mini badge-warning" title="Erro ao consultar viabilidade">
                     <i class="bi bi-exclamation-triangle"></i> {{ via.status }}
@@ -2402,6 +2406,11 @@ function aplicarViabilidade(via) {
     tipo = 'warning';
     titulo = 'Sem cobertura';
     msg = `CEP ${cep}${cidadeUf} esta fora da area de atendimento.`;
+  } else if (via.status === 'endereco_incompleto') {
+    badge = `<span class="badge-mini badge-warning" title="Endereco incompleto pra checar viabilidade"><i class="bi bi-exclamation-triangle"></i> Endereco incompleto</span>`;
+    tipo = 'info';
+    titulo = 'Endereco incompleto';
+    msg = `Faltam dados pra consultar viabilidade (cidade/UF). Complete o endereco.`;
   } else {
     badge = `<span class="badge-mini badge-warning" title="Erro ao consultar viabilidade"><i class="bi bi-exclamation-triangle"></i> ${via.status}</span>`;
     tipo = 'info';

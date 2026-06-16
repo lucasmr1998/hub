@@ -547,8 +547,12 @@ def api_editar_oportunidade(request, pk):
     oport_atualizados = []
     lead_atualizados = []
 
-    # Snapshot do CEP atual pra detectar mudanca apos o loop (dispara viabilidade)
-    cep_antes = (oport.lead.cep or '') if oport.lead else ''
+    # Snapshot dos campos de endereco antes do save (pra detectar mudanca e disparar viabilidade)
+    CAMPOS_ENDERECO_TRIGGER = ('cep', 'rua', 'numero_residencia', 'bairro', 'cidade', 'estado')
+    snapshot_endereco = {}
+    if oport.lead:
+        for c in CAMPOS_ENDERECO_TRIGGER:
+            snapshot_endereco[c] = (getattr(oport.lead, c, '') or '')
 
     for campo, valor in data.items():
         if campo.startswith('dados_custom.'):
@@ -596,28 +600,52 @@ def api_editar_oportunidade(request, pk):
         registrar_acao('crm', 'editar', 'oportunidade', oport.pk,
                        f'Campos atualizados: {", ".join(todos)}', request=request)
 
-    # Trigger viabilidade quando CEP mudou (universal — service decide a fonte por tenant)
+    # Trigger viabilidade quando qualquer campo do endereco mudou. Service auto-preenche
+    # campos faltantes via ViaCEP — basta CEP pra disparar.
     viabilidade_payload = None
-    if 'cep' in lead_atualizados and oport.lead:
-        cep_depois = oport.lead.cep or ''
-        if cep_depois and cep_depois != cep_antes:
-            try:
-                from apps.comercial.viabilidade.services import consultar_viabilidade
-                resultado = consultar_viabilidade(oport.tenant, cep_depois)
-                if resultado.status != 'nao_consultado':
-                    dc = oport.lead.dados_custom or {}
-                    dc['viabilidade'] = resultado.to_dict()
-                    oport.lead.dados_custom = dc
-                    oport.lead.save(update_fields=['dados_custom'])
-                    viabilidade_payload = resultado.to_dict()
-                    registrar_acao(
-                        'crm', 'viabilidade_consultada', 'oportunidade', oport.pk,
-                        f'CEP {resultado.cep_consultado} -> {resultado.status} '
-                        f'({resultado.cidade}/{resultado.uf}) via {resultado.fonte}',
-                        request=request,
-                    )
-            except Exception as e:
-                logger.exception('Erro ao consultar viabilidade pro lead %s', oport.lead_id)
+    endereco_mudou = oport.lead and any(
+        c in lead_atualizados and snapshot_endereco.get(c, '') != (getattr(oport.lead, c, '') or '')
+        for c in CAMPOS_ENDERECO_TRIGGER
+    )
+    if endereco_mudou and oport.lead and (oport.lead.cep or ''):
+        try:
+            from apps.comercial.viabilidade.services import consultar_viabilidade
+            resultado = consultar_viabilidade(
+                oport.tenant,
+                cep=oport.lead.cep or '',
+                logradouro=oport.lead.rua or '',
+                numero=oport.lead.numero_residencia or '',
+                bairro=oport.lead.bairro or '',
+                cidade=oport.lead.cidade or '',
+                uf=oport.lead.estado or '',
+            )
+            if resultado.status != 'nao_consultado':
+                # Persistir tambem campos auto-preenchidos no lead (ViaCEP enriqueceu)
+                lead_extras = []
+                for campo_ext, valor_ext in (resultado.auto_preenchido or {}).items():
+                    nome_attr = {
+                        'logradouro': 'rua',
+                        'bairro': 'bairro',
+                        'cidade': 'cidade',
+                        'uf': 'estado',
+                    }.get(campo_ext)
+                    if nome_attr and not getattr(oport.lead, nome_attr, ''):
+                        setattr(oport.lead, nome_attr, valor_ext)
+                        lead_extras.append(nome_attr)
+                dc = oport.lead.dados_custom or {}
+                dc['viabilidade'] = resultado.to_dict()
+                oport.lead.dados_custom = dc
+                save_fields = ['dados_custom'] + lead_extras
+                oport.lead.save(update_fields=save_fields)
+                viabilidade_payload = resultado.to_dict()
+                registrar_acao(
+                    'crm', 'viabilidade_consultada', 'oportunidade', oport.pk,
+                    f'CEP {resultado.cep_consultado} -> {resultado.status} '
+                    f'({resultado.cidade}/{resultado.uf}) via {resultado.fonte}',
+                    request=request,
+                )
+        except Exception:
+            logger.exception('Erro ao consultar viabilidade pro lead %s', oport.lead_id)
 
     return JsonResponse({
         'success': True,
