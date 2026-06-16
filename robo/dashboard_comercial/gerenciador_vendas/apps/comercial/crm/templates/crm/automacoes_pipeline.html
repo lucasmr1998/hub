@@ -302,20 +302,30 @@
     border-style: dotted;
   }
 
-  /* Accordion de pipelines */
-  .pipeline-accordion { border: 0; }
+  /* Accordion de pipelines — vira card (padrao Hubtrix) */
+  .pipeline-accordion {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, .04));
+    overflow: hidden;
+  }
   .pipeline-accordion > summary {
     list-style: none;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--sp-2) var(--sp-1);
-    margin-bottom: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    margin-bottom: 0;
     user-select: none;
+    background: var(--color-bg);
+  }
+  .pipeline-accordion[open] > summary {
+    border-bottom: 1px solid var(--color-border);
   }
   .pipeline-accordion > summary::-webkit-details-marker { display: none; }
-  .pipeline-accordion > summary:hover { opacity: 0.85; }
+  .pipeline-accordion > summary:hover { background: var(--color-surface-subtle, #F8FAFC); }
   .pipeline-accordion-title {
     display: flex;
     align-items: center;
@@ -337,7 +347,7 @@
     transform: rotate(90deg);
   }
   .pipeline-accordion-body {
-    padding-top: var(--sp-1);
+    padding: var(--sp-3) var(--sp-4);
   }
 </style>
 {% endblock %}
