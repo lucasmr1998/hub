@@ -98,6 +98,13 @@ urlpatterns = [
     path('oportunidades/<int:pk>/itens/', views.api_itens_oportunidade, name='api_itens_oportunidade'),
     path('itens/<int:pk>/remover/', views.api_item_oportunidade_remover, name='api_item_remover'),
 
+    # Documentos da Oportunidade (upload manual + aprovacao inline)
+    path('oportunidades/<int:pk>/documentos/', views.api_oportunidade_adicionar_documento, name='api_oportunidade_adicionar_documento'),
+    path('documentos/<int:pk>/aprovar/', views.api_documento_aprovar, name='api_documento_aprovar'),
+    path('documentos/<int:pk>/rejeitar/', views.api_documento_rejeitar, name='api_documento_rejeitar'),
+    path('documentos/<int:pk>/remover/', views.api_documento_remover, name='api_documento_remover'),
+    path('documentos/<int:pk>/visualizar/', views.api_documento_visualizar, name='api_documento_visualizar'),
+
     # Webhooks inbound
     path('webhook/hubsoft/contrato/', views.webhook_hubsoft_contrato, name='webhook_hubsoft_contrato'),
 ]

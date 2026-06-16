@@ -852,6 +852,18 @@ def oportunidade_detalhe(request, pk):
         'cta_perdido': cta_perdido,
         'pode_editar_valor': (user_tem_funcionalidade(request, 'comercial.editar_valor_oportunidade')
                               or request.user.is_superuser),
+        'pode_adicionar_documento': (user_tem_funcionalidade(request, 'comercial.adicionar_documento_inline')
+                                     or request.user.is_superuser),
+        'pode_aprovar_documento': (user_tem_funcionalidade(request, 'comercial.aprovar_documento_inline')
+                                   or request.user.is_superuser),
+        'tipos_documento_choices': [
+            ('selfie', 'Selfie com Documento'),
+            ('doc_frente', 'Documento Frente'),
+            ('doc_verso', 'Documento Verso'),
+            ('comprovante_residencia', 'Comprovante de Residencia'),
+            ('contrato_assinado', 'Contrato Assinado'),
+            ('outro', 'Outro'),
+        ],
         'motivos_perda': MotivoPerda.objects.filter(ativo=True).order_by('ordem', 'nome'),
         'motivo_perda_obrigatorio': bool(ConfiguracaoCRM.get_config() and ConfiguracaoCRM.get_config().motivo_perda_obrigatorio),
         'motivo_perda_pede_concorrente': bool(ConfiguracaoCRM.get_config() and ConfiguracaoCRM.get_config().motivo_perda_pede_concorrente),
@@ -1736,6 +1748,214 @@ def api_estagio_campos_obrigatorios(request, pk):
                    f'Campos obrigatorios de "{est.nome}" atualizados: {codigos}',
                    request=request)
     return JsonResponse({'ok': True, 'campos_obrigatorios': codigos})
+
+
+# ============================================================================
+# DOCUMENTOS DA OPORTUNIDADE (upload manual + aprovacao inline)
+# ============================================================================
+
+@login_required
+@require_POST
+def api_oportunidade_adicionar_documento(request, pk):
+    """
+    POST /crm/oportunidades/<pk>/documentos/
+    Multipart form com:
+      - tipo_documento (selfie|doc_frente|doc_verso|comprovante_residencia|contrato_assinado|outro)
+      - arquivo (UploadedFile, imagem ou PDF, max 5MB)
+      - observacao (opcional)
+
+    Cria DocumentoLead vinculado ao lead da oportunidade.
+    Se user tem comercial.aprovar_documento_inline, ja salva como 'aprovado'.
+    Senao salva como 'pendente'.
+    """
+    import base64
+    from apps.comercial.cadastro.models import DocumentoLead
+    from apps.comercial.cadastro.services.documentos import recalcular_documentacao_validada
+    from apps.sistema.utils import registrar_acao
+
+    if not user_tem_funcionalidade(request, 'comercial.adicionar_documento_inline') and not request.user.is_superuser:
+        return JsonResponse({'error': 'Sem permissao para adicionar documento'}, status=403)
+
+    oportunidade = get_object_or_404(OportunidadeVenda, pk=pk)
+    lead = oportunidade.lead
+
+    tipo = (request.POST.get('tipo_documento') or '').strip()
+    tipos_validos = {c[0] for c in DocumentoLead.TIPO_DOCUMENTO_CHOICES}
+    if tipo not in tipos_validos:
+        return JsonResponse({'error': f'tipo_documento invalido. Aceitos: {sorted(tipos_validos)}'}, status=400)
+
+    arquivo = request.FILES.get('arquivo')
+    if not arquivo:
+        return JsonResponse({'error': 'Arquivo nao informado (campo "arquivo")'}, status=400)
+
+    MAX_BYTES = 5 * 1024 * 1024
+    if arquivo.size > MAX_BYTES:
+        return JsonResponse({'error': f'Arquivo excede 5MB (recebido {arquivo.size} bytes)'}, status=400)
+
+    formatos_validos = {'jpg', 'jpeg', 'png', 'webp', 'pdf'}
+    nome = arquivo.name or 'documento'
+    formato = (nome.rsplit('.', 1)[-1] or '').lower() if '.' in nome else ''
+    if formato not in formatos_validos:
+        return JsonResponse({'error': f'Formato invalido. Aceitos: {sorted(formatos_validos)}'}, status=400)
+
+    conteudo = arquivo.read()
+    arquivo_b64 = base64.b64encode(conteudo).decode('ascii')
+
+    pode_aprovar = user_tem_funcionalidade(request, 'comercial.aprovar_documento_inline') or request.user.is_superuser
+    status_inicial = 'aprovado' if pode_aprovar else 'pendente'
+
+    usuario_nome = request.user.get_full_name() or request.user.username
+
+    doc = DocumentoLead.objects.create(
+        lead=lead,
+        tipo_documento=tipo,
+        arquivo_base64=arquivo_b64,
+        nome_arquivo=nome[:255],
+        tamanho_arquivo=arquivo.size,
+        formato_arquivo=formato,
+        status=status_inicial,
+        observacoes_validacao=(request.POST.get('observacao') or '').strip() or None,
+        data_validacao=timezone.now() if pode_aprovar else None,
+        validado_por=usuario_nome if pode_aprovar else None,
+    )
+
+    if pode_aprovar:
+        recalcular_documentacao_validada(lead)
+
+    registrar_acao('crm', 'adicionar_documento', 'oportunidade', oportunidade.pk,
+                   f'{usuario_nome} adicionou documento "{doc.get_tipo_documento_display()}" ({nome}) — status: {status_inicial}',
+                   request=request)
+
+    return JsonResponse({
+        'ok': True,
+        'documento': {
+            'id': doc.pk,
+            'tipo': doc.tipo_documento,
+            'tipo_display': doc.get_tipo_documento_display(),
+            'nome': doc.nome_arquivo,
+            'tamanho': doc.tamanho_arquivo,
+            'formato': doc.formato_arquivo,
+            'status': doc.status,
+            'status_display': doc.get_status_display(),
+        },
+        'documentacao_validada': lead.documentacao_validada,
+    }, status=201)
+
+
+@login_required
+@require_POST
+def api_documento_aprovar(request, pk):
+    """POST /crm/documentos/<pk>/aprovar/  — body opcional: {observacao: "..."}"""
+    from apps.comercial.cadastro.models import DocumentoLead
+    from apps.comercial.cadastro.services.documentos import recalcular_documentacao_validada
+    from apps.sistema.utils import registrar_acao
+
+    if not user_tem_funcionalidade(request, 'comercial.aprovar_documento_inline') and not request.user.is_superuser:
+        return JsonResponse({'error': 'Sem permissao para aprovar documento'}, status=403)
+
+    doc = get_object_or_404(DocumentoLead, pk=pk)
+    try:
+        body = json.loads(request.body or '{}')
+    except (json.JSONDecodeError, ValueError):
+        body = {}
+    observacao = (body.get('observacao') or '').strip()
+    usuario_nome = request.user.get_full_name() or request.user.username
+
+    doc.validar_documento(status='aprovado', observacoes=observacao or None, usuario=usuario_nome)
+    recalcular_documentacao_validada(doc.lead)
+
+    registrar_acao('crm', 'aprovar_documento', 'documento_lead', doc.pk,
+                   f'{usuario_nome} aprovou documento "{doc.get_tipo_documento_display()}" do lead #{doc.lead_id}',
+                   request=request)
+
+    return JsonResponse({
+        'ok': True,
+        'documento': {'id': doc.pk, 'status': doc.status, 'status_display': doc.get_status_display()},
+        'documentacao_validada': doc.lead.documentacao_validada,
+    })
+
+
+@login_required
+@require_POST
+def api_documento_rejeitar(request, pk):
+    """POST /crm/documentos/<pk>/rejeitar/  — body: {observacao: "motivo"}"""
+    from apps.comercial.cadastro.models import DocumentoLead
+    from apps.comercial.cadastro.services.documentos import recalcular_documentacao_validada
+    from apps.sistema.utils import registrar_acao
+
+    if not user_tem_funcionalidade(request, 'comercial.aprovar_documento_inline') and not request.user.is_superuser:
+        return JsonResponse({'error': 'Sem permissao para rejeitar documento'}, status=403)
+
+    doc = get_object_or_404(DocumentoLead, pk=pk)
+    try:
+        body = json.loads(request.body or '{}')
+    except (json.JSONDecodeError, ValueError):
+        body = {}
+    observacao = (body.get('observacao') or '').strip()
+    usuario_nome = request.user.get_full_name() or request.user.username
+
+    doc.validar_documento(status='rejeitado', observacoes=observacao or None, usuario=usuario_nome)
+    recalcular_documentacao_validada(doc.lead)
+
+    registrar_acao('crm', 'rejeitar_documento', 'documento_lead', doc.pk,
+                   f'{usuario_nome} rejeitou documento "{doc.get_tipo_documento_display()}" do lead #{doc.lead_id}'
+                   + (f' — motivo: {observacao}' if observacao else ''),
+                   request=request)
+
+    return JsonResponse({
+        'ok': True,
+        'documento': {'id': doc.pk, 'status': doc.status, 'status_display': doc.get_status_display()},
+        'documentacao_validada': doc.lead.documentacao_validada,
+    })
+
+
+@login_required
+@require_http_methods(['DELETE', 'POST'])
+def api_documento_remover(request, pk):
+    """DELETE /crm/documentos/<pk>/  — remove o documento."""
+    from apps.comercial.cadastro.models import DocumentoLead
+    from apps.comercial.cadastro.services.documentos import recalcular_documentacao_validada
+    from apps.sistema.utils import registrar_acao
+
+    if not user_tem_funcionalidade(request, 'comercial.adicionar_documento_inline') and not request.user.is_superuser:
+        return JsonResponse({'error': 'Sem permissao'}, status=403)
+
+    doc = get_object_or_404(DocumentoLead, pk=pk)
+    lead = doc.lead
+    nome_arquivo = doc.nome_arquivo
+    tipo_display = doc.get_tipo_documento_display()
+    usuario_nome = request.user.get_full_name() or request.user.username
+    doc.delete()
+    recalcular_documentacao_validada(lead)
+
+    registrar_acao('crm', 'remover_documento', 'documento_lead', pk,
+                   f'{usuario_nome} removeu documento "{tipo_display}" ({nome_arquivo}) do lead #{lead.pk}',
+                   request=request)
+
+    return JsonResponse({'ok': True, 'documentacao_validada': lead.documentacao_validada})
+
+
+@login_required
+@require_GET
+def api_documento_visualizar(request, pk):
+    """GET /crm/documentos/<pk>/visualizar/  — retorna o arquivo inline (image ou PDF)."""
+    from django.http import HttpResponse
+    from apps.comercial.cadastro.models import DocumentoLead
+    import base64
+
+    doc = get_object_or_404(DocumentoLead, pk=pk)
+    if not doc.arquivo_base64:
+        return JsonResponse({'error': 'Arquivo nao disponivel'}, status=404)
+    raw = base64.b64decode(doc.arquivo_base64)
+    fmt = (doc.formato_arquivo or '').lower()
+    content_type = {
+        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+        'png': 'image/png', 'webp': 'image/webp',
+        'pdf': 'application/pdf',
+    }.get(fmt, 'application/octet-stream')
+    resp = HttpResponse(raw, content_type=content_type)
+    resp['Content-Disposition'] = f'inline; filename="{doc.nome_arquivo}"'
+    return resp
 
 
 @login_required

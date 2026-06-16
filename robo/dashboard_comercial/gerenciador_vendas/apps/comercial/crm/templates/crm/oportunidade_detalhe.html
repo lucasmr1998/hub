@@ -531,14 +531,20 @@
     {% endif %}
 
     {# Anexos / Documentos #}
-    {% if anexos %}
+    {% if anexos or pode_adicionar_documento %}
       <div class="card">
-        <div class="card-header">
+        <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
           <h3 class="card-title"><i class="bi bi-paperclip" style="color: var(--color-text-muted);"></i> Documentos <span class="card-count">({{ anexos|length }})</span></h3>
+          {% if pode_adicionar_documento %}
+            <button class="card-action-link" onclick="abrirModalAdicionarDocumento()" title="Adicionar documento manualmente"><i class="bi bi-plus-circle"></i> Adicionar</button>
+          {% endif %}
         </div>
         <div class="card-body">
+          {% if not anexos %}
+            <p style="font-size: var(--fs-sm); color: var(--color-text-muted); margin: 0;">Nenhum documento ainda. Use "Adicionar" pra anexar foto ou PDF.</p>
+          {% endif %}
           {% for a in anexos|slice:":8" %}
-            <div class="op-anexo-item">
+            <div class="op-anexo-item" data-doc-pk="{{ a.pk|default:'' }}" data-doc-tipo="{{ a.tipo }}">
               <div class="op-anexo-icon">
                 {% if a.tipo == 'documento_lead' %}
                   <i class="bi bi-file-earmark-image"></i>
@@ -547,20 +553,39 @@
                 {% endif %}
               </div>
               <div class="op-anexo-body">
-                <div class="op-anexo-name">{{ a.nome|truncatechars:38 }}</div>
+                <div class="op-anexo-name">
+                  {% if a.tipo == 'documento_lead' and a.pk %}
+                    <a href="{% url 'crm:api_documento_visualizar' a.pk %}" target="_blank" rel="noopener" style="color: var(--color-text); text-decoration: none;">{{ a.nome|truncatechars:38 }}</a>
+                  {% else %}
+                    {{ a.nome|truncatechars:38 }}
+                  {% endif %}
+                </div>
                 <div class="op-anexo-meta">
                   {{ a.rotulo_tipo }}
                   {% if a.tamanho_bytes %} · {{ a.tamanho_bytes|filesizeformat }}{% endif %}
                   · {{ a.data|date:"d/m" }}
                 </div>
               </div>
-              {% if a.status == 'aprovado' or a.status == 'enviado' %}
-                <span class="badge-mini badge-success" title="{{ a.status_display }}"><i class="bi bi-check-circle"></i></span>
-              {% elif a.status == 'rejeitado' %}
-                <span class="badge-mini badge-danger" title="{{ a.status_display }}"><i class="bi bi-x-circle"></i></span>
-              {% elif a.status == 'em_analise' %}
-                <span class="badge-mini badge-warning" title="{{ a.status_display }}"><i class="bi bi-hourglass"></i></span>
-              {% endif %}
+              <div style="display: flex; align-items: center; gap: 4px;">
+                {% if a.status == 'aprovado' or a.status == 'enviado' %}
+                  <span class="badge-mini badge-success" title="{{ a.status_display }}"><i class="bi bi-check-circle"></i></span>
+                {% elif a.status == 'rejeitado' %}
+                  <span class="badge-mini badge-danger" title="{{ a.status_display }}"><i class="bi bi-x-circle"></i></span>
+                {% elif a.status == 'em_analise' %}
+                  <span class="badge-mini badge-warning" title="{{ a.status_display }}"><i class="bi bi-hourglass"></i></span>
+                {% elif a.status == 'pendente' %}
+                  <span class="badge-mini badge-warning" title="{{ a.status_display }}"><i class="bi bi-hourglass-split"></i></span>
+                {% endif %}
+                {% if a.tipo == 'documento_lead' and a.pk and pode_aprovar_documento and a.status != 'aprovado' %}
+                  <button class="op-doc-btn op-doc-btn-aprovar" onclick="aprovarDocumento({{ a.pk }})" title="Aprovar"><i class="bi bi-check-lg"></i></button>
+                {% endif %}
+                {% if a.tipo == 'documento_lead' and a.pk and pode_aprovar_documento and a.status != 'rejeitado' %}
+                  <button class="op-doc-btn op-doc-btn-rejeitar" onclick="rejeitarDocumento({{ a.pk }})" title="Rejeitar"><i class="bi bi-x-lg"></i></button>
+                {% endif %}
+                {% if a.tipo == 'documento_lead' and a.pk and pode_adicionar_documento %}
+                  <button class="op-doc-btn op-doc-btn-remover" onclick="removerDocumento({{ a.pk }})" title="Remover"><i class="bi bi-trash"></i></button>
+                {% endif %}
+              </div>
             </div>
           {% endfor %}
           {% if anexos|length > 8 %}
@@ -1155,6 +1180,49 @@
     </div>
   </div>
 </div>
+
+{% if pode_adicionar_documento %}
+<div class="modal-overlay" id="modal-add-documento" style="display: none;">
+  <div class="modal" style="max-width: 480px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-cloud-upload"></i> Adicionar documento</h3>
+      <button class="modal-close" onclick="fecharModal('modal-add-documento')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="field-label">Tipo do documento *</label>
+        <div class="field-input-wrap">
+          <select id="add-doc-tipo" class="field-input">
+            {% for codigo, label in tipos_documento_choices %}
+              <option value="{{ codigo }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-top: var(--sp-3);">
+        <label class="field-label">Arquivo (foto ou PDF, max 5MB) *</label>
+        <div class="field-input-wrap">
+          <input type="file" id="add-doc-arquivo" class="field-input" accept="image/jpeg,image/png,image/webp,application/pdf">
+        </div>
+        <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 4px;">Formatos: jpg, jpeg, png, webp, pdf.</div>
+      </div>
+      <div class="field" style="margin-top: var(--sp-3);">
+        <label class="field-label">Observacao (opcional)</label>
+        <div class="field-input-wrap"><textarea id="add-doc-obs" class="field-input" rows="2" placeholder="Ex: enviado por email pelo cliente"></textarea></div>
+      </div>
+      {% if not pode_aprovar_documento %}
+        <div style="margin-top: var(--sp-3); padding: 8px 10px; background: rgba(245, 158, 11, 0.08); border-radius: 6px; font-size: 12px; color: var(--color-text-muted);">
+          <i class="bi bi-info-circle"></i> Documento ficara como <strong>pendente</strong>. Um responsavel com permissao precisa aprovar antes de liberar o gate de documentacao.
+        </div>
+      {% endif %}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="fecharModal('modal-add-documento')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="btn-salvar-doc" onclick="salvarDocumentoUpload()"><i class="bi bi-cloud-upload"></i> Enviar</button>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_css %}
@@ -1633,6 +1701,23 @@
   }
   .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
   @media (max-width: 600px) { .form-grid-2 { grid-template-columns: 1fr; } }
+
+  .op-doc-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-elev);
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    transition: all 0.15s ease;
+    padding: 0;
+  }
+  .op-doc-btn:hover { background: var(--color-bg-soft); }
+  .op-doc-btn-aprovar:hover { background: rgba(34, 197, 94, 0.12); color: var(--color-success); border-color: var(--color-success); }
+  .op-doc-btn-rejeitar:hover { background: rgba(239, 68, 68, 0.12); color: var(--color-danger); border-color: var(--color-danger); }
+  .op-doc-btn-remover:hover { background: rgba(239, 68, 68, 0.12); color: var(--color-danger); border-color: var(--color-danger); }
 </style>
 {% endblock %}
 
@@ -2176,5 +2261,116 @@ document.querySelectorAll('.tl-chip').forEach(chip => {
     });
   });
 });
+
+// === Documentos (upload manual + aprovar/rejeitar inline) ===
+function abrirModalAdicionarDocumento() {
+  const m = document.getElementById('modal-add-documento');
+  if (!m) return;
+  document.getElementById('add-doc-tipo').value = 'doc_frente';
+  document.getElementById('add-doc-arquivo').value = '';
+  document.getElementById('add-doc-obs').value = '';
+  abrirModal('modal-add-documento');
+}
+
+async function salvarDocumentoUpload() {
+  const tipo = document.getElementById('add-doc-tipo').value;
+  const fileInput = document.getElementById('add-doc-arquivo');
+  const obs = document.getElementById('add-doc-obs').value.trim();
+  const btn = document.getElementById('btn-salvar-doc');
+
+  if (!fileInput.files || !fileInput.files[0]) {
+    toast('Atencao', 'Selecione um arquivo', 'warning');
+    return;
+  }
+  const arquivo = fileInput.files[0];
+  if (arquivo.size > 5 * 1024 * 1024) {
+    toast('Erro', 'Arquivo excede 5MB', 'danger');
+    return;
+  }
+
+  const fd = new FormData();
+  fd.append('tipo_documento', tipo);
+  fd.append('arquivo', arquivo);
+  if (obs) fd.append('observacao', obs);
+
+  btn.disabled = true;
+  const labelOriginal = btn.innerHTML;
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Enviando...';
+
+  try {
+    const res = await fetch(`/crm/oportunidades/${OP_PK}/documentos/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF },
+      body: fd,
+    });
+    const d = await res.json();
+    if (res.ok && d.ok) {
+      toast('Enviado', 'Documento adicionado', 'success');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      toast('Erro', d.error || 'Falha no upload', 'danger');
+      btn.disabled = false;
+      btn.innerHTML = labelOriginal;
+    }
+  } catch (e) {
+    toast('Erro', 'Falha na requisicao', 'danger');
+    btn.disabled = false;
+    btn.innerHTML = labelOriginal;
+  }
+}
+
+async function aprovarDocumento(docPk) {
+  if (!confirm('Aprovar este documento?')) return;
+  try {
+    const res = await fetch(`/crm/documentos/${docPk}/aprovar/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({}),
+    });
+    const d = await res.json();
+    if (res.ok && d.ok) {
+      toast('Aprovado', 'Documento aprovado', 'success');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      toast('Erro', d.error || 'Falha', 'danger');
+    }
+  } catch { toast('Erro', 'Falha na requisicao', 'danger'); }
+}
+
+async function rejeitarDocumento(docPk) {
+  const motivo = prompt('Motivo da rejeicao (opcional):') || '';
+  if (motivo === null) return;
+  try {
+    const res = await fetch(`/crm/documentos/${docPk}/rejeitar/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ observacao: motivo }),
+    });
+    const d = await res.json();
+    if (res.ok && d.ok) {
+      toast('Rejeitado', 'Documento rejeitado', 'warning');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      toast('Erro', d.error || 'Falha', 'danger');
+    }
+  } catch { toast('Erro', 'Falha na requisicao', 'danger'); }
+}
+
+async function removerDocumento(docPk) {
+  if (!confirm('Remover este documento? Esta acao nao pode ser desfeita.')) return;
+  try {
+    const res = await fetch(`/crm/documentos/${docPk}/remover/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF },
+    });
+    const d = await res.json();
+    if (res.ok && d.ok) {
+      toast('Removido', 'Documento excluido', 'success');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      toast('Erro', d.error || 'Falha', 'danger');
+    }
+  } catch { toast('Erro', 'Falha na requisicao', 'danger'); }
+}
 </script>
 {% endblock %}

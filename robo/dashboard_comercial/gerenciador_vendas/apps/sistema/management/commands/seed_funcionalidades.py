@@ -21,6 +21,8 @@ FUNCIONALIDADES = [
     ('comercial', 'comercial.excluir_lead', 'Excluir Leads', 'Excluir permanentemente um lead (remove tambem oportunidade, tarefas, notas e conversas vinculadas)', 11),
     ('comercial', 'comercial.excluir_oportunidade', 'Excluir Oportunidades', 'Excluir permanentemente uma oportunidade (remove tambem tarefas, notas e itens vinculados)', 12),
     ('comercial', 'comercial.editar_valor_oportunidade', 'Editar Valor Estimado', 'Permite editar o valor estimado e probabilidade da oportunidade (campo financeiro sensivel)', 13),
+    ('comercial', 'comercial.adicionar_documento_inline', 'Adicionar Documento na Oportunidade', 'Permite adicionar documentos manualmente (foto/PDF) pela sidebar do detalhe da oportunidade', 14),
+    ('comercial', 'comercial.aprovar_documento_inline', 'Aprovar/Rejeitar Documento Inline', 'Permite aprovar ou rejeitar documentos do lead direto pela sidebar (sem ir no painel de validacao)', 15),
     # Configuracoes
     ('configuracoes', 'config.gerenciar_usuarios', 'Gerenciar Usuarios', 'Criar, editar e excluir usuarios do sistema', 1),
     ('configuracoes', 'config.gerenciar_perfis', 'Gerenciar Perfis de Permissao', 'Criar e editar perfis de permissao', 2),
