@@ -2493,13 +2493,25 @@ def automacoes_pipeline_view(request):
 
     from .models import Pipeline
 
-    # Filtro opcional por pipeline
-    pipeline_filtro = request.GET.get('pipeline')
+    # Filtros via query params
+    pipeline_filtro = request.GET.get('pipeline') or ''
+    q = (request.GET.get('q') or '').strip()
+    status = request.GET.get('status') or ''
+
     pipelines_qs = Pipeline.objects.filter(ativo=True).order_by('ordem', 'nome')
     if pipeline_filtro:
         pipelines_qs = pipelines_qs.filter(pk=pipeline_filtro)
 
     pipelines_todos = list(Pipeline.objects.filter(ativo=True).order_by('ordem', 'nome'))
+
+    def _passa_filtros(regra):
+        if status == 'ativa' and not regra.ativo:
+            return False
+        if status == 'inativa' and regra.ativo:
+            return False
+        if q and q.lower() not in (regra.nome or '').lower():
+            return False
+        return True
 
     pipelines_ctx = []
     total_regras = 0
@@ -2515,6 +2527,8 @@ def automacoes_pipeline_view(request):
         for est in estagios:
             regras = []
             for regra in est.regras.all().order_by('prioridade'):
+                if not _passa_filtros(regra):
+                    continue
                 regras.append({
                     'id': regra.pk,
                     'nome': regra.nome,
@@ -2548,6 +2562,8 @@ def automacoes_pipeline_view(request):
     from .models import RegraPipelineEstagio
     regras_acao_pura = []
     for regra in RegraPipelineEstagio.objects.filter(estagio__isnull=True).order_by('prioridade'):
+        if not _passa_filtros(regra):
+            continue
         regras_acao_pura.append({
             'id': regra.pk,
             'nome': regra.nome,
@@ -2564,10 +2580,31 @@ def automacoes_pipeline_view(request):
             total_ativas += 1
         total_disparos_global += regra.total_disparos or 0
 
+    # Filter fields no padrao list_filters (MODO B)
+    pipeline_options = [('', 'Todos os pipelines')] + [
+        (str(p.pk), p.nome) for p in pipelines_todos
+    ]
+    status_options = [
+        ('', 'Todas'),
+        ('ativa', 'Ativas'),
+        ('inativa', 'Inativas'),
+    ]
+    filter_fields = [
+        {'type': 'select', 'name': 'pipeline', 'label': 'Pipeline',
+         'options': pipeline_options, 'value': pipeline_filtro},
+        {'type': 'select', 'name': 'status', 'label': 'Status',
+         'options': status_options, 'value': status},
+    ]
+    active_filters_count = sum(1 for v in (pipeline_filtro, status, q) if v)
+
     return render(request, 'crm/automacoes_pipeline.html', {
         'pipelines_ctx': pipelines_ctx,
         'pipelines_todos': pipelines_todos,
         'pipeline_filtro': pipeline_filtro,
+        'q': q,
+        'status_filtro': status,
+        'filter_fields': filter_fields,
+        'active_filters_count': active_filters_count,
         'regras_acao_pura': regras_acao_pura,
         'total_regras': total_regras,
         'total_ativas': total_ativas,

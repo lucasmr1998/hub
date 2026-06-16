@@ -74,24 +74,9 @@
   });
 </script>
 
-{% if pipelines_todos|length > 1 %}
-  <div class="card" style="margin-bottom: var(--sp-4);">
-    <div class="card-body">
-      <form method="get" style="display: flex; gap: var(--sp-3); align-items: center;">
-        <label style="font-size: var(--fs-sm); color: var(--color-text-muted); white-space: nowrap;">Pipeline:</label>
-        <div class="field-input-wrap" style="max-width: 260px; flex: 1;">
-          <select name="pipeline" class="field-input" onchange="this.form.submit()">
-            <option value="">Todos os pipelines</option>
-            {% for p in pipelines_todos %}
-              <option value="{{ p.pk }}" {% if pipeline_filtro == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.nome }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        {% if pipeline_filtro %}<a href="{% url 'crm:automacoes_pipeline' %}" class="btn btn-ghost btn-sm">Limpar</a>{% endif %}
-      </form>
-    </div>
-  </div>
-{% endif %}
+<div style="margin-bottom: var(--sp-4);">
+  {% include "components/list_filters.html" with fields=filter_fields search_placeholder="Buscar por nome da regra..." search_name="q" search_value=q clear_url=request.path collapsed=True collapsed_label="Filtros" active_filters_count=active_filters_count %}
+</div>
 
 {% for pipe_ctx in pipelines_ctx %}
   <details class="pipeline-accordion"{% if forloop.first %} open{% endif %} style="margin-bottom: var(--sp-4);">
