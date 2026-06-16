@@ -852,7 +852,8 @@ def oportunidade_detalhe(request, pk):
         if oportunidade.estagio.is_final_perdido:
             cta_perdido = None
 
-    # Anexos do lead — consolidando DocumentoLead + anexos de contratos
+    # Anexos do lead — consolidando DocumentoLead (upload manual base64) +
+    # ImagemLeadProspecto (URLs vindas do bot Matrix) + anexos de contratos
     anexos = []
     try:
         from apps.comercial.cadastro.models import DocumentoLead
@@ -870,6 +871,49 @@ def oportunidade_detalhe(request, pk):
             })
     except Exception:
         pass
+    # ImagemLeadProspecto (URLs externas do Matrix CDN) — populadas pelo bot
+    try:
+        from apps.comercial.leads.utils import resolver_link_interno_imagem
+    except Exception:
+        resolver_link_interno_imagem = None
+    LABEL_TIPO_IMAGEM = {
+        'selfie_com_doc': 'Selfie com documento',
+        'frente_doc': 'Documento (frente)',
+        'verso_doc': 'Documento (verso)',
+        'comprovante_residencia': 'Comprovante de residencia',
+        'contrato_assinado': 'Contrato assinado',
+        'outro': 'Outro',
+    }
+    STATUS_IMAGEM_PRA_DOC = {
+        'pendente': 'pendente',
+        'documentos_validos': 'aprovado',
+        'documentos_rejeitados': 'rejeitado',
+    }
+    STATUS_IMAGEM_DISPLAY = {
+        'pendente': 'Pendente',
+        'documentos_validos': 'Aprovado',
+        'documentos_rejeitados': 'Rejeitado',
+    }
+    for img in lead.imagens.all().order_by('-data_criacao')[:20]:
+        desc = (img.descricao or '').strip().lower()
+        rotulo = LABEL_TIPO_IMAGEM.get(desc, img.descricao or 'Imagem do lead')
+        link = img.link_url or ''
+        if resolver_link_interno_imagem:
+            try:
+                link = resolver_link_interno_imagem(img) or link
+            except Exception:
+                pass
+        anexos.append({
+            'tipo': 'imagem_lead',
+            'nome': rotulo,
+            'rotulo_tipo': rotulo,
+            'status': STATUS_IMAGEM_PRA_DOC.get(img.status_validacao, img.status_validacao),
+            'status_display': STATUS_IMAGEM_DISPLAY.get(img.status_validacao, img.status_validacao),
+            'tamanho_bytes': 0,
+            'data': img.data_criacao,
+            'pk': img.pk,
+            'url': link,
+        })
     # Anexos enviados nas tentativas de contrato
     for ct in contrato_tentativas:
         if ct.anexos_enviados:

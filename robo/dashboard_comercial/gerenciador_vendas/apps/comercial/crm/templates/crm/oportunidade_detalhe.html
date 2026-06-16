@@ -573,7 +573,7 @@
           {% for a in anexos|slice:":8" %}
             <div class="op-anexo-item" data-doc-pk="{{ a.pk|default:'' }}" data-doc-tipo="{{ a.tipo }}">
               <div class="op-anexo-icon">
-                {% if a.tipo == 'documento_lead' %}
+                {% if a.tipo == 'documento_lead' or a.tipo == 'imagem_lead' %}
                   <i class="bi bi-file-earmark-image"></i>
                 {% else %}
                   <i class="bi bi-file-earmark-text"></i>
@@ -583,6 +583,8 @@
                 <div class="op-anexo-name">
                   {% if a.tipo == 'documento_lead' and a.pk %}
                     <a href="{% url 'crm:api_documento_visualizar' a.pk %}" target="_blank" rel="noopener" style="color: var(--color-text); text-decoration: none;">{{ a.nome|truncatechars:38 }}</a>
+                  {% elif a.tipo == 'imagem_lead' and a.url %}
+                    <a href="{{ a.url }}" target="_blank" rel="noopener" style="color: var(--color-text); text-decoration: none;">{{ a.nome|truncatechars:38 }}</a>
                   {% else %}
                     {{ a.nome|truncatechars:38 }}
                   {% endif %}
