@@ -2919,7 +2919,15 @@ def regra_pipeline_editar(request, pk):
         regra.save()
         return redirect('crm:automacoes_pipeline')
 
-    return render(request, 'crm/regra_form.html', _contexto_form_regra(regra))
+    ctx = _contexto_form_regra(regra)
+    # Defaults pra nao quebrar o template (vars usadas pela tela de "criar" via template)
+    ctx.setdefault('regra_templates', [])
+    ctx.setdefault('template_selecionado', '')
+    ctx.setdefault('nome_pre', '')
+    ctx.setdefault('condicoes_pre', '[]')
+    ctx.setdefault('acoes_pre', '[]')
+    ctx.setdefault('template_titulo', '')
+    return render(request, 'crm/regra_form.html', ctx)
 
 
 @login_required
