@@ -219,6 +219,12 @@ class PerfilUsuario(models.Model):
         default=False, verbose_name="Senha temporária",
         help_text="Se True, o usuário será forçado a trocar a senha no próximo login"
     )
+    login_matrix = models.CharField(
+        max_length=80, blank=True, null=True, db_index=True,
+        verbose_name='Login Matrix Brasil',
+        help_text='Login do agente no Matrix Brasil (ex: "joyce", "AnaP"). '
+                  'Usado pelo cron de sync pra atribuir oportunidade ao mesmo vendedor que pegou o atendimento la.',
+    )
 
     class Meta:
         app_label = 'sistema'
