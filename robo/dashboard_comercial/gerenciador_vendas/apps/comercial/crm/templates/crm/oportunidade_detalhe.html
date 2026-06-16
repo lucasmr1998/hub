@@ -2266,10 +2266,13 @@ document.querySelectorAll('.tl-chip').forEach(chip => {
 function abrirModalAdicionarDocumento() {
   const m = document.getElementById('modal-add-documento');
   if (!m) return;
-  document.getElementById('add-doc-tipo').value = 'doc_frente';
-  document.getElementById('add-doc-arquivo').value = '';
-  document.getElementById('add-doc-obs').value = '';
-  abrirModal('modal-add-documento');
+  const tipo = document.getElementById('add-doc-tipo');
+  const arq  = document.getElementById('add-doc-arquivo');
+  const obs  = document.getElementById('add-doc-obs');
+  if (tipo) tipo.value = 'doc_frente';
+  if (arq) arq.value = '';
+  if (obs) obs.value = '';
+  m.style.display = 'flex';
 }
 
 async function salvarDocumentoUpload() {
