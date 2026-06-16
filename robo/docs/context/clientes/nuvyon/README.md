@@ -120,6 +120,10 @@ O passo 2 imprime o `API TOKEN`. Esse token vai no header `Authorization: Bearer
 - Reuniões → [reunioes/](reunioes/)
 - Implementações → [implementacoes/](implementacoes/)
 
+## Features em produção
+
+- **Sync de vendedor Matrix Brasil → Hubtrix** (16/06/2026) — distribui automaticamente a atribuicao de `OportunidadeVenda.responsavel` baseado no agente designado no Matrix. Cron a cada 1min. Ver [sync-vendedor-matrix.md](sync-vendedor-matrix.md).
+
 ---
 
 ## Observações
