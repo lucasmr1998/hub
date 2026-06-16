@@ -19,23 +19,49 @@
 
 
 <div class="stats-grid stats-grid-4" style="margin-bottom: var(--sp-4);">
-  {% include "components/stat_card.html" with label="Regras totais" value=total_regras icon="bi-diagram-3" %}
+  {% include "components/stat_card.html" with label="Regras totais" value=total_regras icon="bi-diagram-3" icon_variant="primary" %}
   {% include "components/stat_card.html" with label="Regras ativas" value=total_ativas icon="bi-check-circle" icon_variant="success" %}
   {% include "components/stat_card.html" with label="Estágios com regra" value=total_estagios_com_regra icon="bi-bullseye" icon_variant="info" %}
   {% include "components/stat_card.html" with label="Disparos totais" value=total_disparos_global icon="bi-lightning" icon_variant="warning" %}
 </div>
 
-<div class="card" style="margin-bottom: var(--sp-4); background: var(--color-info-soft); border-left: 3px solid var(--color-info);">
-  <div class="card-body" style="display: flex; gap: var(--sp-3); align-items: flex-start;">
-    <i class="bi bi-info-circle" style="color: var(--color-info); font-size: 18px;"></i>
-    <div style="flex: 1; font-size: var(--fs-sm);">
-      <strong>Como funciona:</strong> o motor é acionado quando uma tag é adicionada/removida,
-      histórico é registrado, documento é validado ou status do serviço HubSoft muda. Ele avalia
-      todas as regras ativas e, se alguma bater, move a oportunidade pro estágio correspondente.
-      <strong>Estágios são avaliados dos mais avançados pros menos.</strong>
-    </div>
+<details class="info-collapsable" style="margin-bottom: var(--sp-4);">
+  <summary class="info-collapsable-summary">
+    <i class="bi bi-info-circle" style="color: var(--color-info);"></i>
+    <strong>Como funciona</strong>
+    <span style="color: var(--color-text-muted); font-weight: normal; font-size: var(--fs-xs);">— clique para expandir</span>
+  </summary>
+  <div class="info-collapsable-body">
+    O motor é acionado quando uma tag é adicionada/removida, histórico é registrado, documento é validado ou status do serviço HubSoft muda. Ele avalia todas as regras ativas e, se alguma bater, move a oportunidade pro estágio correspondente.
+    <strong>Estágios são avaliados dos mais avançados pros menos.</strong>
   </div>
-</div>
+</details>
+<style>
+  .info-collapsable {
+    background: var(--color-info-soft);
+    border-left: 3px solid var(--color-info);
+    border-radius: var(--radius-md);
+    padding: 0;
+  }
+  .info-collapsable-summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 10px var(--sp-3);
+    display: flex; align-items: center; gap: 8px;
+    font-size: var(--fs-sm);
+  }
+  .info-collapsable-summary::-webkit-details-marker { display: none; }
+  .info-collapsable-summary::before {
+    content: '▸'; color: var(--color-info); font-size: 12px;
+    transition: transform var(--transition);
+    display: inline-block;
+  }
+  .info-collapsable[open] .info-collapsable-summary::before { transform: rotate(90deg); }
+  .info-collapsable-body {
+    padding: 0 var(--sp-3) var(--sp-3) calc(var(--sp-3) + 22px);
+    font-size: var(--fs-sm); line-height: 1.55;
+  }
+</style>
 
 {% if pipelines_todos|length > 1 %}
   <div class="card" style="margin-bottom: var(--sp-4);">
@@ -151,14 +177,22 @@
           </div>
         </div>
       {% else %}
-        <div class="estagio-empty">
+        <div class="estagio-empty {% if grupo.estagio.is_final_ganho or grupo.estagio.is_final_perdido %}estagio-empty-final{% endif %}">
           <div style="display: flex; align-items: center; gap: 8px;">
             <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: {{ grupo.estagio.cor_hex }};"></span>
             <strong style="font-size: var(--fs-sm);">{{ grupo.estagio.nome }}</strong>
             <span style="color: var(--color-text-muted); font-size: var(--fs-xs);">({{ grupo.estagio.get_tipo_display }})</span>
-            <span style="color: var(--color-text-muted); font-size: var(--fs-xs); font-style: italic;">sem regras</span>
+            {% if grupo.estagio.is_final_ganho %}
+              <span style="color: var(--color-text-muted); font-size: var(--fs-xs); font-style: italic;">estagio final — regras nao sao reavaliadas</span>
+            {% elif grupo.estagio.is_final_perdido %}
+              <span style="color: var(--color-text-muted); font-size: var(--fs-xs); font-style: italic;">estagio final — regras nao sao reavaliadas</span>
+            {% else %}
+              <span style="color: var(--color-text-muted); font-size: var(--fs-xs); font-style: italic;">sem regras</span>
+            {% endif %}
           </div>
-          <a href="{% url 'crm:regra_pipeline_criar' %}?estagio={{ grupo.estagio.pk }}" class="btn btn-ghost btn-sm"><i class="bi bi-plus"></i> Criar regra aqui</a>
+          {% if not grupo.estagio.is_final_ganho and not grupo.estagio.is_final_perdido %}
+            <a href="{% url 'crm:regra_pipeline_criar' %}?estagio={{ grupo.estagio.pk }}" class="btn btn-ghost btn-sm"><i class="bi bi-plus"></i> Criar regra aqui</a>
+          {% endif %}
         </div>
       {% endif %}
     {% empty %}
@@ -261,6 +295,11 @@
     background: var(--color-surface);
     border: 1px dashed var(--color-border);
     border-radius: var(--radius-md);
+  }
+  .estagio-empty-final {
+    opacity: 0.55;
+    background: transparent;
+    border-style: dotted;
   }
 
   /* Accordion de pipelines */
