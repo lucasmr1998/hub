@@ -57,3 +57,20 @@ Registro cronológico do que foi executado no módulo comercial (ação, decisã
 - **Validação**: `manage.py check` ok. Migration aplicada local. Smoke test do tipo de condicao: `avaliar(igual, aprovado)` retorna False com `score=nao_consultado` e True com `score=aprovado`. Template renderiza HTTP 200 com a secao Score visivel.
 - **Arquivos**: `apps/comercial/leads/models.py` + migration 0007; `apps/comercial/crm/views.py`; `apps/comercial/crm/services/automacao_condicoes.py`; `apps/comercial/crm/services/automacao_pipeline.py`; `apps/integracoes/views_matrix_os.py`; `apps/comercial/crm/templates/crm/oportunidade_detalhe.html`; `apps/comercial/crm/migrations/0021_score_externo_gate_nuvyon.py`; doc `crm/oportunidades.md`.
 - **Status**: completed (local); pending commit + push + deploy prod + smoke real com lead da Nuvyon.
+
+## 2026-06-15 — Tela /crm/automacoes-pipeline/ alinhada ao padrao DS
+
+Cinco commits em sequencia que padronizam visualmente a tela com /vendas/, /crm/tarefas/ e demais telas:
+
+- **`f2a8a85` Quick wins**: caixa "Como funciona" colapsa em `<details>`; estagios finais (`is_final_ganho/perdido`) ficam acinzentados (opacity 0.55) sem o botao "+ Criar regra aqui" — engine pula esses; stat cards ganham cores distintas (primary/success/info/warning).
+- **`d937bc2` Fundo card**: `.pipeline-accordion` agora tem background bg + border + radius + sombra leve, virando card padrao do DS. Antes ficava solto sobre fundo cinza, quebrando consistencia.
+- **`890b63a` Popover de ajuda**: "Como funciona" sai do corpo e vira popover ancorado no botao `?` do header (junto com "Configuracoes CRM" / "Nova regra"). Recupera ~50px de espaco; click fora fecha.
+- **`f762b18` Filtros padrao DS**: substitui o card solto com select Pipeline pelo `components/list_filters.html` MODO B colapsado, com campos Pipeline + Status (todas/ativas/inativas) + Buscar (nome da regra). View aceita `?pipeline=&status=&q=`. Aplica em regras agrupadas E em regras de acao pura.
+
+Motivo: usuario apontou que a tela parecia "diferente das outras" — analise mostrou: card solto de filtro fora do `list_filters`, accordion sem fundo card, falta busca/status, caixa "Como funciona" ocupando espaco primario. Tudo isso foi alinhado.
+
+Itens nao implementados (evolucao futura): view alternada "lista plana paginada" (`data-table` por regra individual sem agrupamento por pipeline); templates de regra pre-prontos no modal "Nova regra"; health indicators (verde/amarelo/vermelho por taxa de falha).
+
+Arquivos: `apps/comercial/crm/templates/crm/automacoes_pipeline.html`; `apps/comercial/crm/views.py:automacoes_pipeline_view`; doc `crm/automacoes-pipeline.md`.
+
+Status: completed + deployado em prod.

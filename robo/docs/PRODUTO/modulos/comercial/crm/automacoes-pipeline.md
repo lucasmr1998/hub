@@ -221,6 +221,32 @@ Tabela: `crm_regras_pipeline_estagio`.
 
 ---
 
+## Pagina `/crm/automacoes-pipeline/`
+
+Layout segue padrao do DS — visualmente alinhado com `/vendas/`, `/crm/tarefas/` e demais telas.
+
+**Header**
+- Titulo + subtitulo
+- Botao `?` (popover ancorado) com "Como funciona" — clique abre, click fora fecha
+- "Configuracoes CRM" + "Nova regra"
+
+**Stat cards** (4) — Regras totais (primary), Regras ativas (success), Estagios com regra (info), Disparos totais (warning).
+
+**Filtros** — `components/list_filters.html` MODO B (grid) colapsado por default. Campos:
+- Pipeline (select)
+- Status (Todas / Ativas / Inativas)
+- Buscar (input texto, substring case-insensitive em `regra.nome`)
+
+Query params suportados pela view: `?pipeline=<id>&status=ativa|inativa&q=<termo>`. `active_filters_count` mostra badge no header colapsado quando ha filtros aplicados.
+
+**Lista de pipelines** — accordion (`<details>`). Cada pipeline e um card branco com sombra leve (`.pipeline-accordion`).
+
+**Estagios sem regras**:
+- Estagios normais: linha dashed com "+ Criar regra aqui"
+- Estagios finais (`is_final_ganho` / `is_final_perdido`): opacity 0.55, sem botao, texto "estagio final — regras nao reavaliadas" (engine pula esses)
+
+**Estagios com regras** — card branco contendo `data-table` com colunas: Prio., Nome, Condicoes (AND), Executa, Acoes (efetivas/avaliacoes), Status, Ultima execucao, Acoes (toggle/duplicar/excluir).
+
 ## Referências
 
 - Código do engine: `apps/comercial/crm/services/automacao_pipeline.py`
