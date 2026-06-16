@@ -10,13 +10,23 @@
       <p class="page-subtitle">Regras que movem oportunidades automaticamente entre estágios com base em tags, histórico, documentos e outros eventos.</p>
     </div>
     <div class="page-actions">
+      <div class="help-pop-wrap">
+        <button type="button" class="btn btn-ghost btn-sm help-pop-btn" onclick="event.stopPropagation(); document.getElementById('help-pop').classList.toggle('is-open');" title="Como funciona">
+          <i class="bi bi-question-circle"></i>
+        </button>
+        <div id="help-pop" class="help-pop">
+          <div class="help-pop-arrow"></div>
+          <strong style="display: block; margin-bottom: 6px;">Como funciona</strong>
+          <p style="margin: 0 0 6px;">O motor é acionado quando uma tag é adicionada/removida, histórico é registrado, documento é validado ou status do serviço HubSoft muda.</p>
+          <p style="margin: 0 0 6px;">Ele avalia todas as regras ativas e, se alguma bater, move a oportunidade pro estágio correspondente.</p>
+          <p style="margin: 0;"><strong>Estágios são avaliados dos mais avançados pros menos.</strong></p>
+        </div>
+      </div>
       <a href="{% url 'crm:configuracoes' %}" class="btn btn-ghost btn-sm"><i class="bi bi-sliders"></i> Configurações CRM</a>
       <a href="{% url 'crm:regra_pipeline_criar' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Nova regra</a>
     </div>
   </div>
 </div>
-
-
 
 <div class="stats-grid stats-grid-4" style="margin-bottom: var(--sp-4);">
   {% include "components/stat_card.html" with label="Regras totais" value=total_regras icon="bi-diagram-3" icon_variant="primary" %}
@@ -25,43 +35,44 @@
   {% include "components/stat_card.html" with label="Disparos totais" value=total_disparos_global icon="bi-lightning" icon_variant="warning" %}
 </div>
 
-<details class="info-collapsable" style="margin-bottom: var(--sp-4);">
-  <summary class="info-collapsable-summary">
-    <i class="bi bi-info-circle" style="color: var(--color-info);"></i>
-    <strong>Como funciona</strong>
-    <span style="color: var(--color-text-muted); font-weight: normal; font-size: var(--fs-xs);">— clique para expandir</span>
-  </summary>
-  <div class="info-collapsable-body">
-    O motor é acionado quando uma tag é adicionada/removida, histórico é registrado, documento é validado ou status do serviço HubSoft muda. Ele avalia todas as regras ativas e, se alguma bater, move a oportunidade pro estágio correspondente.
-    <strong>Estágios são avaliados dos mais avançados pros menos.</strong>
-  </div>
-</details>
 <style>
-  .info-collapsable {
-    background: var(--color-info-soft);
-    border-left: 3px solid var(--color-info);
+  /* Popover de ajuda (anchored ao botao do header) */
+  .help-pop-wrap { position: relative; display: inline-block; }
+  .help-pop-btn i { font-size: 16px; color: var(--color-text-muted); }
+  .help-pop-btn:hover i { color: var(--color-info); }
+  .help-pop {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px); left: 0;
+    width: 340px; max-width: 90vw;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    padding: 0;
-  }
-  .info-collapsable-summary {
-    list-style: none;
-    cursor: pointer;
-    padding: 10px var(--sp-3);
-    display: flex; align-items: center; gap: 8px;
-    font-size: var(--fs-sm);
-  }
-  .info-collapsable-summary::-webkit-details-marker { display: none; }
-  .info-collapsable-summary::before {
-    content: '▸'; color: var(--color-info); font-size: 12px;
-    transition: transform var(--transition);
-    display: inline-block;
-  }
-  .info-collapsable[open] .info-collapsable-summary::before { transform: rotate(90deg); }
-  .info-collapsable-body {
-    padding: 0 var(--sp-3) var(--sp-3) calc(var(--sp-3) + 22px);
+    box-shadow: 0 6px 20px rgba(15, 23, 42, .12);
+    padding: 14px 16px;
+    z-index: 100;
     font-size: var(--fs-sm); line-height: 1.55;
+    color: var(--color-text);
+  }
+  .help-pop.is-open { display: block; }
+  .help-pop-arrow {
+    position: absolute; top: -7px; left: 14px;
+    width: 12px; height: 12px;
+    background: var(--color-bg);
+    border-top: 1px solid var(--color-border);
+    border-left: 1px solid var(--color-border);
+    transform: rotate(45deg);
   }
 </style>
+<script>
+  // Click fora fecha o popover
+  document.addEventListener('click', function(e) {
+    var pop = document.getElementById('help-pop');
+    if (!pop || !pop.classList.contains('is-open')) return;
+    if (e.target.closest('#help-pop') || e.target.closest('.help-pop-btn')) return;
+    pop.classList.remove('is-open');
+  });
+</script>
 
 {% if pipelines_todos|length > 1 %}
   <div class="card" style="margin-bottom: var(--sp-4);">
