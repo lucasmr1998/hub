@@ -67,6 +67,12 @@ class PipelineEstagio(TenantMixin):
     probabilidade_padrao = models.IntegerField(default=50, verbose_name="Probabilidade Padrão (%)")
     sla_horas = models.PositiveIntegerField(null=True, blank=True, verbose_name="SLA (horas)")
     ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    campos_obrigatorios = models.JSONField(
+        default=list, blank=True,
+        verbose_name='Campos obrigatorios para entrar',
+        help_text='Lista de campos que devem estar preenchidos pra avancar pra este estagio. '
+                  'Formato: ["lead.cpf_cnpj", "lead.cep", "oportunidade.valor_estimado"]',
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:

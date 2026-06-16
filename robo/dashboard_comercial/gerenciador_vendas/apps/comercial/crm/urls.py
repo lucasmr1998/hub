@@ -78,6 +78,7 @@ urlpatterns = [
     path('configuracoes/estagios/reordenar/', views.api_reordenar_estagios, name='api_reordenar_estagios'),
     path('configuracoes/estagios/criar/', views.api_criar_estagio, name='api_criar_estagio'),
     path('configuracoes/estagios/<int:pk>/', views.api_estagio_detalhe, name='api_estagio_detalhe'),
+    path('configuracoes/estagios/<int:pk>/campos-obrigatorios/', views.api_estagio_campos_obrigatorios, name='api_estagio_campos_obrigatorios'),
     path('configuracoes/estagios/<int:pk>/excluir/', views.api_excluir_estagio, name='api_excluir_estagio'),
     path('configuracoes/equipes/criar/', views.api_criar_equipe, name='api_criar_equipe'),
     path('equipes/', views.equipes_view, name='equipes'),

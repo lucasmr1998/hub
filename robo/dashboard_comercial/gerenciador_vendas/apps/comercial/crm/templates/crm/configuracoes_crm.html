@@ -329,6 +329,28 @@
           <input type="checkbox" name="is_final_perdido" id="est-perdido">
           Estagio final — <strong style="color: var(--color-danger);">PERDIDO</strong>
         </label>
+
+        <div class="cfg-section-title" style="margin-top: var(--sp-4);">
+          Campos obrigatorios pra entrar neste estagio
+          <span style="font-weight: normal; font-size: var(--fs-xs); color: var(--color-text-muted);">
+            — vendedor sera bloqueado de mover sem preencher
+          </span>
+        </div>
+        <div id="est-campos-obrigatorios" style="background: var(--color-surface-subtle, #F8FAFC); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--sp-3);">
+          {% for modulo, campos in campos_disponiveis_por_modulo.items %}
+            <div style="margin-bottom: var(--sp-3);">
+              <div style="font-size: 11px; font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); margin-bottom: 6px;">{{ modulo }}</div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px;">
+                {% for c in campos %}
+                  <label class="chk-inline" style="font-size: var(--fs-sm); padding: 4px 8px;">
+                    <input type="checkbox" class="est-campo-obrig" data-codigo="{{ c.codigo }}">
+                    {{ c.label }}
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
       </form>
     </div>
     <div class="modal-footer">
@@ -613,12 +635,30 @@ function salvarOrdem(btn) {
 }
 
 // Modal estagio
+function _resetCamposObrigatorios() {
+  document.querySelectorAll('#est-campos-obrigatorios .est-campo-obrig').forEach(cb => cb.checked = false);
+}
+
+function _setCamposObrigatorios(codigos) {
+  _resetCamposObrigatorios();
+  (codigos || []).forEach(cod => {
+    const cb = document.querySelector(`#est-campos-obrigatorios .est-campo-obrig[data-codigo="${cod}"]`);
+    if (cb) cb.checked = true;
+  });
+}
+
+function _getCamposObrigatoriosSelecionados() {
+  return Array.from(document.querySelectorAll('#est-campos-obrigatorios .est-campo-obrig:checked'))
+    .map(cb => cb.dataset.codigo);
+}
+
 function abrirModalEstagio() {
   document.getElementById('estagio-modal-titulo').innerHTML = '<i class="bi bi-columns-gap" style="color: var(--color-primary);"></i> Novo estagio';
   document.getElementById('form-estagio').reset();
   document.getElementById('est-id').value = '';
   document.getElementById('est-cor').value = '#2563eb';
   atualizarCorPreview('#2563eb');
+  _resetCamposObrigatorios();
   document.getElementById('preview-nome').textContent = 'Novo estagio';
   document.getElementById('preview-tipo').textContent = 'qualificacao';
   document.getElementById('modal-estagio').style.display = 'flex';
@@ -640,6 +680,7 @@ function editarEstagio(pk) {
       document.getElementById('est-icone').value = e.icone_fa;
       document.getElementById('est-ganho').checked = e.is_final_ganho;
       document.getElementById('est-perdido').checked = e.is_final_perdido;
+      _setCamposObrigatorios(e.campos_obrigatorios || []);
       atualizarCorPreview(e.cor_hex);
       document.getElementById('preview-nome').textContent = e.nome;
       document.getElementById('preview-tipo').textContent = e.tipo;
@@ -660,9 +701,25 @@ document.getElementById('form-estagio').addEventListener('submit', function(e) {
     .then(r => r.json())
     .then(d => {
       if (d.ok) {
-        fecharModalEstagio();
-        toast('Salvo', 'Estagio salvo', 'success');
-        setTimeout(() => location.reload(), 700);
+        // Apos salvar o estagio basico, persiste campos obrigatorios
+        const estId = d.id || document.getElementById('est-id').value;
+        const codigos = _getCamposObrigatoriosSelecionados();
+        if (estId) {
+          const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+          fetch(`/crm/configuracoes/estagios/${estId}/campos-obrigatorios/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({ campos_obrigatorios: codigos }),
+          }).finally(() => {
+            fecharModalEstagio();
+            toast('Salvo', 'Estagio salvo', 'success');
+            setTimeout(() => location.reload(), 700);
+          });
+        } else {
+          fecharModalEstagio();
+          toast('Salvo', 'Estagio salvo', 'success');
+          setTimeout(() => location.reload(), 700);
+        }
       } else toast('Erro', d.erro || 'Erro ao salvar', 'danger');
     });
 });

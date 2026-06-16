@@ -256,6 +256,17 @@ def api_mover_oportunidade(request):
     if oportunidade.estagio_id == estagio_novo_id:
         return JsonResponse({'ok': True, 'mensagem': 'Sem mudança de estágio'})
 
+    # Gate de campos obrigatorios — bloqueia avanco se faltarem campos
+    from apps.comercial.crm.services.requisitos_estagio import campos_faltando
+    faltantes = campos_faltando(oportunidade, estagio_novo)
+    if faltantes:
+        return JsonResponse({
+            'ok': False,
+            'erro': f'Campos obrigatorios faltando para entrar em "{estagio_novo.nome}".',
+            'codigo': 'campos_obrigatorios_faltando',
+            'campos_faltando': [{'codigo': c, 'label': l} for c, l in faltantes],
+        }, status=400)
+
     # T2 — Validacao: se estagio destino e final de perda + config exige motivo,
     # rejeita 400 sem motivo. Aceita motivo via body do request ou ja persistido.
     motivo_perda_ref_id = data.get('motivo_perda_ref_id') or None
@@ -1551,6 +1562,12 @@ def configuracoes_crm(request):
     from .models import MotivoPerda
     motivos_perda = MotivoPerda.objects.all().order_by('ordem', 'nome')
 
+    # Campos disponiveis pra marcar como obrigatorios por estagio
+    from apps.comercial.crm.services.requisitos_estagio import CAMPOS_DISPONIVEIS
+    campos_por_modulo = {}
+    for codigo, label, modulo in CAMPOS_DISPONIVEIS:
+        campos_por_modulo.setdefault(modulo, []).append({'codigo': codigo, 'label': label})
+
     context = {
         'config': config,
         'pipelines': pipelines,
@@ -1558,6 +1575,7 @@ def configuracoes_crm(request):
         'estagios': estagios,
         'equipes': equipes,
         'motivos_perda': motivos_perda,
+        'campos_disponiveis_por_modulo': campos_por_modulo,
         'page_title': 'Configurações do CRM',
     }
     return render(request, 'crm/configuracoes_crm.html', context)
@@ -1687,8 +1705,37 @@ def api_estagio_detalhe(request, pk):
             'is_final_ganho': est.is_final_ganho,
             'is_final_perdido': est.is_final_perdido,
             'ativo': est.ativo,
+            'campos_obrigatorios': list(est.campos_obrigatorios or []),
         }
     })
+
+
+@login_required
+@require_POST
+def api_estagio_campos_obrigatorios(request, pk):
+    """Atualiza a lista de campos obrigatorios pra entrar no estagio."""
+    if not user_tem_funcionalidade(request, 'comercial.configurar_pipeline'):
+        return JsonResponse({'ok': False, 'erro': 'Sem permissão'}, status=403)
+    est = get_object_or_404(PipelineEstagio, pk=pk)
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'erro': 'JSON invalido'}, status=400)
+    codigos = data.get('campos_obrigatorios') or []
+    if not isinstance(codigos, list):
+        return JsonResponse({'ok': False, 'erro': 'campos_obrigatorios precisa ser lista'}, status=400)
+    # Valida que cada codigo esta na lista de disponiveis
+    from apps.comercial.crm.services.requisitos_estagio import CAMPOS_DISPONIVEIS_DICT
+    invalidos = [c for c in codigos if c not in CAMPOS_DISPONIVEIS_DICT]
+    if invalidos:
+        return JsonResponse({'ok': False, 'erro': f'Campos invalidos: {invalidos}'}, status=400)
+    est.campos_obrigatorios = codigos
+    est.save(update_fields=['campos_obrigatorios'])
+    from apps.sistema.utils import registrar_acao
+    registrar_acao('crm', 'editar', 'estagio', est.pk,
+                   f'Campos obrigatorios de "{est.nome}" atualizados: {codigos}',
+                   request=request)
+    return JsonResponse({'ok': True, 'campos_obrigatorios': codigos})
 
 
 @login_required

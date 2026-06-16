@@ -1752,6 +1752,9 @@ async function confirmarMoverEstagio() {
       toast('Atualizado', 'Estagio atualizado', 'success');
       fecharModal('modal-estagio');
       setTimeout(() => location.reload(), 800);
+    } else if (data.codigo === 'campos_obrigatorios_faltando') {
+      const labels = (data.campos_faltando || []).map(c => c.label).join(', ');
+      toast('Bloqueado', `Faltam campos: ${labels}`, 'warning');
     } else {
       toast('Erro', data.erro || 'Erro ao mover', 'danger');
     }
@@ -2084,6 +2087,9 @@ async function moverParaEstagioRapido(estagioId) {
     if (data.ok) {
       toast('Atualizado', 'Estagio movido', 'success');
       setTimeout(() => location.reload(), 600);
+    } else if (data.codigo === 'campos_obrigatorios_faltando') {
+      const labels = (data.campos_faltando || []).map(c => c.label).join(', ');
+      toast('Bloqueado', `Faltam campos: ${labels}`, 'warning');
     } else {
       toast('Erro', data.erro || 'Erro', 'danger');
     }

@@ -158,8 +158,21 @@ def _mover_por_regra(oportunidade, estagio_destino, regra):
     """
     Move a oportunidade pro estágio destino, registra histórico, atualiza métricas
     da regra e loga auditoria.
+
+    Respeita gate de `campos_obrigatorios` do estagio destino: se faltarem
+    campos, nao move e loga warning (evita lead avancar incompleto).
     """
     from apps.comercial.crm.models import HistoricoPipelineEstagio
+    from apps.comercial.crm.services.requisitos_estagio import campos_faltando
+
+    # Gate: campos obrigatorios do estagio destino
+    faltantes = campos_faltando(oportunidade, estagio_destino)
+    if faltantes:
+        logger.info(
+            "[_mover_por_regra] oport=%s nao move pra '%s' — campos faltando: %s",
+            oportunidade.pk, estagio_destino.nome, [c for c, _ in faltantes]
+        )
+        return  # silencioso: regra pode bater de novo quando lead completar
 
     agora = timezone.now()
     horas = (agora - oportunidade.data_entrada_estagio).total_seconds() / 3600
