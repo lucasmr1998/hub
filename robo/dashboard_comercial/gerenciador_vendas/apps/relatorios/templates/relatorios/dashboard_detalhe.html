@@ -323,7 +323,7 @@
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/gridstack@9/dist/gridstack-all.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 <script>
 const DASHBOARD_PK = {{ dashboard.pk }};
 const MODO_EDICAO = {{ modo_edicao|yesno:"true,false" }};
@@ -416,8 +416,9 @@ function renderWidget(cardEl, d) {
   const viz = (d.meta && d.meta.visualizacao) || cardEl.dataset.viz || 'barra';
   const labels = d.labels || [];
   const valores = (d.series && d.series[0] && d.series[0].data) || [];
+  const seriesName = (d.series && d.series[0] && d.series[0].name) || 'Total';
 
-  // Numero unico — so quando o widget eh declarado como 'numero'
+  // Numero unico
   if (viz === 'numero') {
     numeroEl.textContent = fmtNum(d.total != null ? d.total : (valores[0] || 0));
     numeroEl.style.display = 'block';
@@ -425,46 +426,145 @@ function renderWidget(cardEl, d) {
   }
   // Tabela
   if (viz === 'tabela') {
-    let html = '<table><thead><tr><th>Categoria</th><th>Valor</th></tr></thead><tbody>';
-    labels.forEach((l, i) => { html += `<tr><td>${esc(l)}</td><td>${fmtNum(valores[i])}</td></tr>`; });
+    let html = '<table><thead><tr><th>Categoria</th><th style="text-align:right;">Valor</th></tr></thead><tbody>';
+    labels.forEach((l, i) => { html += `<tr><td>${esc(l)}</td><td style="text-align:right;">${fmtNum(valores[i])}</td></tr>`; });
     html += '</tbody></table>';
     tabelaEl.innerHTML = html;
     tabelaEl.style.display = 'block';
     return;
   }
-  // Chart.js (barra, linha, pizza, funil)
-  chartEl.style.display = 'block';
-  const ctx = chartEl.getContext('2d');
-  let type = 'bar';
-  if (viz === 'linha') type = 'line';
-  if (viz === 'pizza') type = 'doughnut';
-  if (viz === 'funil') type = 'bar'; // funil renderiza como barra horizontal
 
-  // Destroi instancia anterior se existir
-  if (chartEl._chart) chartEl._chart.destroy();
+  // ECharts — destroi instancia anterior se existir
+  // (canvas eh substituido por div pra ECharts; criamos uma vez)
+  let echartsDiv = body.querySelector('.widget-echarts');
+  if (!echartsDiv) {
+    echartsDiv = document.createElement('div');
+    echartsDiv.className = 'widget-echarts';
+    echartsDiv.style.cssText = 'width:100%;height:100%;min-height:120px;';
+    body.appendChild(echartsDiv);
+  }
+  echartsDiv.style.display = 'block';
+  // Canvas Chart.js antigo fica oculto
+  chartEl.style.display = 'none';
 
-  chartEl._chart = new Chart(ctx, {
-    type,
-    data: {
-      labels,
-      datasets: [{
-        label: (d.series && d.series[0] && d.series[0].name) || 'Total',
-        data: valores,
-        backgroundColor: (viz === 'pizza') ? PALETTE : PALETTE[0],
-        borderColor: PALETTE[0], borderWidth: viz === 'linha' ? 2 : 0,
-        tension: 0.2,
+  if (echartsDiv._chart) {
+    echartsDiv._chart.dispose();
+  }
+
+  const chart = echarts.init(echartsDiv, null, { renderer: 'canvas' });
+  echartsDiv._chart = chart;
+
+  const option = montarOptionEcharts(viz, labels, valores, seriesName);
+  chart.setOption(option);
+
+  // Resize on container change
+  if (!echartsDiv._resizeObs) {
+    const ro = new ResizeObserver(() => chart.resize());
+    ro.observe(echartsDiv);
+    echartsDiv._resizeObs = ro;
+  }
+}
+
+function montarOptionEcharts(viz, labels, valores, seriesName) {
+  const base = {
+    color: PALETTE,
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgba(15,23,42,0.92)',
+      borderWidth: 0,
+      textStyle: { color: '#fff', fontSize: 12 },
+      padding: [8, 12],
+    },
+    grid: { left: 50, right: 20, top: 20, bottom: 50, containLabel: true },
+    animation: true,
+    animationDuration: 600,
+    animationEasing: 'cubicOut',
+  };
+
+  if (viz === 'pizza') {
+    return {
+      ...base,
+      tooltip: { ...base.tooltip, trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+      legend: { bottom: 0, type: 'scroll', textStyle: { fontSize: 11 } },
+      series: [{
+        type: 'pie',
+        radius: ['45%', '70%'],
+        center: ['50%', '45%'],
+        avoidLabelOverlap: true,
+        itemStyle: { borderRadius: 4, borderColor: '#fff', borderWidth: 2 },
+        label: { show: false },
+        labelLine: { show: false },
+        emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
+        data: labels.map((l, i) => ({ name: String(l), value: Number(valores[i] || 0) })),
       }],
-    },
-    options: {
-      maintainAspectRatio: false, responsive: true,
-      indexAxis: viz === 'funil' ? 'y' : 'x',
-      plugins: { legend: { display: viz === 'pizza' } },
-      scales: viz === 'pizza' ? {} : {
-        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' } },
-        x: { grid: { display: false } },
-      },
-    },
-  });
+    };
+  }
+
+  if (viz === 'funil') {
+    return {
+      ...base,
+      grid: undefined,
+      tooltip: { ...base.tooltip, formatter: '{b}: {c}' },
+      series: [{
+        type: 'funnel',
+        left: '10%', right: '10%', top: 20, bottom: 20,
+        minSize: '10%', maxSize: '100%',
+        sort: 'descending',
+        gap: 4,
+        itemStyle: { borderColor: '#fff', borderWidth: 1 },
+        label: { show: true, position: 'inside', fontSize: 12, color: '#fff', fontWeight: 'bold' },
+        labelLine: { show: false },
+        data: labels.map((l, i) => ({ name: String(l), value: Number(valores[i] || 0) })),
+      }],
+    };
+  }
+
+  if (viz === 'linha') {
+    return {
+      ...base,
+      tooltip: { ...base.tooltip, trigger: 'axis' },
+      xAxis: { type: 'category', data: labels.map(String), axisTick: { show: false }, axisLine: { lineStyle: { color: '#e2e8f0' } }, axisLabel: { color: '#64748b', fontSize: 11 } },
+      yAxis: { type: 'value', splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b', fontSize: 11 } },
+      series: [{
+        type: 'line',
+        name: seriesName,
+        data: valores.map(v => Number(v || 0)),
+        smooth: true, symbol: 'circle', symbolSize: 6,
+        lineStyle: { width: 3, color: PALETTE[0] },
+        itemStyle: { color: PALETTE[0] },
+        areaStyle: {
+          color: {
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(37,99,235,0.25)' },
+              { offset: 1, color: 'rgba(37,99,235,0)' },
+            ],
+          },
+        },
+      }],
+    };
+  }
+
+  // BARRA (default) — vertical ou horizontal se muitas categorias
+  const horizontal = labels.length > 6;
+  const xAxis = horizontal
+    ? { type: 'value', splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b', fontSize: 11 } }
+    : { type: 'category', data: labels.map(String), axisTick: { show: false }, axisLine: { lineStyle: { color: '#e2e8f0' } }, axisLabel: { color: '#64748b', fontSize: 11, interval: 0, rotate: labels.length > 4 ? 30 : 0 } };
+  const yAxis = horizontal
+    ? { type: 'category', data: labels.map(String), axisTick: { show: false }, axisLine: { show: false }, axisLabel: { color: '#64748b', fontSize: 11 } }
+    : { type: 'value', splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b', fontSize: 11 } };
+  return {
+    ...base,
+    tooltip: { ...base.tooltip, trigger: 'axis', axisPointer: { type: 'shadow' } },
+    xAxis, yAxis,
+    series: [{
+      type: 'bar',
+      name: seriesName,
+      data: valores.map(v => Number(v || 0)),
+      itemStyle: { borderRadius: [4, 4, 0, 0], color: PALETTE[0] },
+      barMaxWidth: 40,
+    }],
+  };
 }
 
 function guessViz(d) { return (d.labels && d.labels.length > 1) ? 'barra' : 'numero'; }
@@ -703,27 +803,16 @@ async function renderPreview() {
       preview.innerHTML = html;
       return;
     }
-    // Chart
-    const canvas = document.createElement('canvas');
-    canvas.style.maxHeight = '280px';
-    preview.appendChild(canvas);
-    let type = 'bar';
-    if (wizardEstado.visualizacao === 'linha') type = 'line';
-    if (wizardEstado.visualizacao === 'pizza') type = 'doughnut';
-    new Chart(canvas.getContext('2d'), {
-      type,
-      data: {
-        labels: d.labels,
-        datasets: [{
-          label: d.series[0]?.name || 'Total',
-          data: d.series[0]?.data || [],
-          backgroundColor: wizardEstado.visualizacao === 'pizza' ? PALETTE : PALETTE[0],
-          borderColor: PALETTE[0],
-        }],
-      },
-      options: { maintainAspectRatio: false, responsive: true, indexAxis: wizardEstado.visualizacao === 'funil' ? 'y' : 'x',
-                  plugins: { legend: { display: wizardEstado.visualizacao === 'pizza' } } },
-    });
+    // ECharts no preview
+    const echartsDiv = document.createElement('div');
+    echartsDiv.style.cssText = 'width:100%;height:280px;';
+    preview.appendChild(echartsDiv);
+    const chart = echarts.init(echartsDiv);
+    const opt = montarOptionEcharts(
+      wizardEstado.visualizacao, d.labels, d.series[0]?.data || [],
+      d.series[0]?.name || 'Total',
+    );
+    chart.setOption(opt);
   } catch (e) {
     preview.innerHTML = `<div style="color:var(--color-danger);">${e.message}</div>`;
   }
