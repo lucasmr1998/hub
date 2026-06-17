@@ -25,6 +25,28 @@ VISUALIZACAO_CHOICES = [
     ('funil',  'Funil'),
 ]
 
+SETOR_CHOICES = [
+    ('comercial',   'Comercial'),
+    ('atendimento', 'Atendimento'),
+    ('marketing',   'Marketing'),
+    ('cs',          'Customer Success'),
+    ('financeiro',  'Financeiro'),
+    ('tecnico',     'Tecnico / Operacional'),
+    ('executivo',   'Executivo'),
+    ('outros',      'Outros'),
+]
+
+SETOR_ICONES = {
+    'comercial':   'bi-graph-up-arrow',
+    'atendimento': 'bi-chat-dots',
+    'marketing':   'bi-megaphone',
+    'cs':          'bi-heart',
+    'financeiro':  'bi-cash-coin',
+    'tecnico':     'bi-tools',
+    'executivo':   'bi-trophy',
+    'outros':      'bi-grid-1x2',
+}
+
 
 class Dashboard(TenantMixin):
     """
@@ -36,6 +58,12 @@ class Dashboard(TenantMixin):
     icone = models.CharField(
         max_length=50, default='bi-bar-chart',
         verbose_name='Icone (Bootstrap Icons)',
+    )
+    setor = models.CharField(
+        max_length=20, choices=SETOR_CHOICES, default='outros',
+        db_index=True,
+        verbose_name='Setor',
+        help_text='Agrupa o dashboard por area da empresa na sidebar.',
     )
     criado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,

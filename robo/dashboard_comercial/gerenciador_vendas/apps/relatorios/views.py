@@ -22,7 +22,7 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 from apps.sistema.decorators import user_tem_funcionalidade
 
 from . import data_sources as ds_registry
-from .models import Dashboard, Widget
+from .models import Dashboard, Widget, SETOR_CHOICES, SETOR_ICONES
 from .query_builder import WidgetQueryBuilder, WidgetQueryError
 
 logger = logging.getLogger(__name__)
@@ -59,17 +59,40 @@ def _dashboards_visiveis(request):
 # ----------------------------------------------------------------------------
 
 @login_required
-def lista_view(request):
+def lista_view(request, setor=None):
     if not _perm(request, 'relatorios.ver_dashboards'):
         return HttpResponseForbidden('Sem permissao')
-    dashboards = list(_dashboards_visiveis(request).select_related('criado_por'))
-    proprios = [d for d in dashboards if d.criado_por_id == request.user.id]
-    compartilhados = [d for d in dashboards if d.criado_por_id != request.user.id]
+
+    qs = _dashboards_visiveis(request).select_related('criado_por')
+    if setor:
+        qs = qs.filter(setor=setor)
+
+    dashboards = list(qs)
+
+    # Agrupa por setor
+    setor_labels = dict(SETOR_CHOICES)
+    grupos = []
+    for slug, label in SETOR_CHOICES:
+        do_setor = [d for d in dashboards if d.setor == slug]
+        if do_setor:
+            grupos.append({
+                'slug': slug,
+                'label': label,
+                'icone': SETOR_ICONES.get(slug, 'bi-grid-1x2'),
+                'total': len(do_setor),
+                'dashboards': do_setor,
+            })
+
     return render(request, 'relatorios/lista.html', {
-        'proprios': proprios,
-        'compartilhados': compartilhados,
+        'grupos': grupos,
+        'setor_atual': setor,
+        'setor_atual_label': setor_labels.get(setor) if setor else None,
         'pode_criar': _perm(request, 'relatorios.criar_dashboard'),
-        'page_title': 'Relatorios',
+        'page_title': setor_labels.get(setor, 'Dashboards') if setor else 'Dashboards',
+        'todos_setores': [
+            {'slug': s, 'label': l, 'icone': SETOR_ICONES.get(s, 'bi-grid-1x2')}
+            for s, l in SETOR_CHOICES
+        ],
     })
 
 
@@ -98,10 +121,13 @@ def dashboard_editar_view(request, pk):
         # Salva alteracoes basicas do dashboard
         nome = (request.POST.get('nome') or '').strip()
         descricao = (request.POST.get('descricao') or '').strip()
+        setor = (request.POST.get('setor') or '').strip()
         compartilhado_flag = request.POST.get('compartilhado') == 'on'
         if nome:
             dashboard.nome = nome[:120]
         dashboard.descricao = descricao
+        if setor and setor in {s for s, _ in SETOR_CHOICES}:
+            dashboard.setor = setor
         if _perm(request, 'relatorios.compartilhar_dashboard'):
             dashboard.compartilhado = compartilhado_flag
         dashboard.save()
@@ -119,6 +145,7 @@ def dashboard_editar_view(request, pk):
         'pode_editar': True,
         'modo_edicao': True,
         'data_sources': data_sources_list,
+        'setores': SETOR_CHOICES,
         'pode_compartilhar': _perm(request, 'relatorios.compartilhar_dashboard'),
         'page_title': f'{dashboard.nome} — Editar',
     })
@@ -130,18 +157,27 @@ def dashboard_criar_view(request):
     if not _perm(request, 'relatorios.criar_dashboard'):
         return HttpResponseForbidden('Sem permissao pra criar dashboard')
     if request.method == 'GET':
-        return render(request, 'relatorios/criar.html', {'page_title': 'Novo dashboard'})
+        return render(request, 'relatorios/criar.html', {
+            'page_title': 'Novo dashboard',
+            'setores': SETOR_CHOICES,
+        })
 
     nome = (request.POST.get('nome') or '').strip()
     descricao = (request.POST.get('descricao') or '').strip()
+    setor = (request.POST.get('setor') or 'outros').strip()
+    setores_validos = {s for s, _ in SETOR_CHOICES}
+    if setor not in setores_validos:
+        setor = 'outros'
     if not nome:
         return render(request, 'relatorios/criar.html', {
             'erro': 'Nome obrigatorio',
             'nome_pre': nome, 'descricao_pre': descricao,
+            'setores': SETOR_CHOICES,
         })
     dashboard = Dashboard.objects.create(
         nome=nome[:120],
         descricao=descricao,
+        setor=setor,
         criado_por=request.user,
         compartilhado=False,
     )

@@ -1,11 +1,15 @@
 {% extends "layouts/layout_app.html" %}
-{% block title %}Relatorios — Hubtrix{% endblock %}
+{% block title %}Dashboards — Hubtrix{% endblock %}
 
 {% block content %}
-<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);gap:var(--sp-3);flex-wrap:wrap;">
   <div>
-    <h1 style="font-size:var(--fs-2xl);margin:0;">Relatorios</h1>
-    <p style="color:var(--color-text-muted);margin:4px 0 0;">Dashboards self-service. Crie graficos sobre Oportunidades, Clientes HubSoft, Vendas, etc.</p>
+    <h1 style="font-size:var(--fs-2xl);margin:0;">
+      {% if setor_atual_label %}{{ setor_atual_label }}{% else %}Dashboards{% endif %}
+    </h1>
+    <p style="color:var(--color-text-muted);margin:4px 0 0;">
+      {% if setor_atual %}Dashboards de {{ setor_atual_label }}.{% else %}Visao por setor da empresa.{% endif %}
+    </p>
   </div>
   {% if pode_criar %}
     <a href="{% url 'relatorios:criar' %}" class="btn btn-primary">
@@ -14,50 +18,99 @@
   {% endif %}
 </div>
 
-<section style="margin-bottom:var(--sp-6);">
-  <h2 style="font-size:var(--fs-lg);margin:0 0 var(--sp-3);">Meus dashboards</h2>
-  {% if proprios %}
-    <div class="dash-grid">
-      {% for d in proprios %}
-        <a href="{% url 'relatorios:detalhe' d.pk %}" class="dash-card">
-          <div class="dash-card-icon"><i class="bi {{ d.icone|default:'bi-bar-chart' }}"></i></div>
-          <div class="dash-card-body">
-            <div class="dash-card-title">{{ d.nome }}</div>
-            <div class="dash-card-meta">
-              {{ d.widgets.count }} widget{{ d.widgets.count|pluralize }}
-              {% if d.compartilhado %} · <span class="badge-mini badge-info"><i class="bi bi-share"></i> Compartilhado</span>{% endif %}
-            </div>
-            {% if d.descricao %}<div class="dash-card-desc">{{ d.descricao|truncatechars:80 }}</div>{% endif %}
-          </div>
-        </a>
-      {% endfor %}
-    </div>
-  {% else %}
-    <p style="color:var(--color-text-muted);">Voce ainda nao criou nenhum dashboard. {% if pode_criar %}<a href="{% url 'relatorios:criar' %}">Crie o primeiro</a>.{% endif %}</p>
-  {% endif %}
-</section>
+{# Chips de setor — atalhos no topo #}
+<div class="setor-chips">
+  <a href="{% url 'relatorios:lista' %}" class="setor-chip {% if not setor_atual %}is-active{% endif %}">
+    <i class="bi bi-grid-3x3-gap"></i> Todos
+  </a>
+  {% for s in todos_setores %}
+    <a href="{% url 'relatorios:lista_setor' s.slug %}" class="setor-chip {% if setor_atual == s.slug %}is-active{% endif %}">
+      <i class="bi {{ s.icone }}"></i> {{ s.label }}
+    </a>
+  {% endfor %}
+</div>
 
-{% if compartilhados %}
-<section>
-  <h2 style="font-size:var(--fs-lg);margin:0 0 var(--sp-3);">Compartilhados pela equipe</h2>
-  <div class="dash-grid">
-    {% for d in compartilhados %}
-      <a href="{% url 'relatorios:detalhe' d.pk %}" class="dash-card">
-        <div class="dash-card-icon"><i class="bi {{ d.icone|default:'bi-bar-chart' }}"></i></div>
-        <div class="dash-card-body">
-          <div class="dash-card-title">{{ d.nome }}</div>
-          <div class="dash-card-meta">
-            {{ d.widgets.count }} widget{{ d.widgets.count|pluralize }} · por {{ d.criado_por.get_full_name|default:d.criado_por.username|default:"sistema" }}
-          </div>
-          {% if d.descricao %}<div class="dash-card-desc">{{ d.descricao|truncatechars:80 }}</div>{% endif %}
+{% if grupos %}
+  {% for grupo in grupos %}
+    <section class="setor-section">
+      <header class="setor-header">
+        <div class="setor-header-left">
+          <span class="setor-header-icon"><i class="bi {{ grupo.icone }}"></i></span>
+          <h2 class="setor-header-title">{{ grupo.label }}</h2>
+          <span class="setor-header-count">{{ grupo.total }}</span>
         </div>
-      </a>
-    {% endfor %}
+        {% if not setor_atual %}
+          <a href="{% url 'relatorios:lista_setor' grupo.slug %}" class="setor-header-link">Ver todos <i class="bi bi-arrow-right"></i></a>
+        {% endif %}
+      </header>
+
+      <div class="dash-grid">
+        {% for d in grupo.dashboards %}
+          <a href="{% url 'relatorios:detalhe' d.pk %}" class="dash-card">
+            <div class="dash-card-icon"><i class="bi {{ d.icone|default:'bi-bar-chart' }}"></i></div>
+            <div class="dash-card-body">
+              <div class="dash-card-title">{{ d.nome }}</div>
+              <div class="dash-card-meta">
+                {{ d.widgets.count }} widget{{ d.widgets.count|pluralize }}
+                {% if d.compartilhado %} · <span class="badge-mini badge-info"><i class="bi bi-share"></i> Compartilhado</span>
+                {% else %} · <span class="badge-mini">Privado</span>{% endif %}
+              </div>
+              {% if d.descricao %}<div class="dash-card-desc">{{ d.descricao|truncatechars:80 }}</div>{% endif %}
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    </section>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">
+    <i class="bi bi-bar-chart" style="font-size:3rem;color:var(--color-text-muted);"></i>
+    <h3 style="margin:var(--sp-3) 0 var(--sp-1);">Nenhum dashboard{% if setor_atual %} em {{ setor_atual_label }}{% endif %}</h3>
+    <p style="color:var(--color-text-muted);">
+      {% if pode_criar %}
+        Crie o primeiro <a href="{% url 'relatorios:criar' %}">dashboard agora</a>.
+      {% else %}
+        Peca pro admin compartilhar um dashboard com voce.
+      {% endif %}
+    </p>
   </div>
-</section>
 {% endif %}
 
 <style>
+  /* Chips de setor */
+  .setor-chips { display:flex; flex-wrap:wrap; gap:var(--sp-2); margin-bottom:var(--sp-5); }
+  .setor-chip {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:8px 14px; border-radius:999px;
+    background:var(--color-bg); border:1px solid var(--color-border);
+    color:var(--color-text); text-decoration:none; font-size:var(--fs-sm);
+    transition: all 0.12s ease;
+  }
+  .setor-chip:hover { border-color:var(--color-primary); color:var(--color-primary); }
+  .setor-chip.is-active { background:var(--color-primary); color:#fff; border-color:var(--color-primary); }
+
+  /* Secao por setor */
+  .setor-section { margin-bottom:var(--sp-6); }
+  .setor-header {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:var(--sp-3); padding-bottom:var(--sp-2);
+    border-bottom:1px solid var(--color-border);
+  }
+  .setor-header-left { display:flex; align-items:center; gap:var(--sp-2); }
+  .setor-header-icon {
+    width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+    background:rgba(37,99,235,0.1); color:var(--color-primary);
+    border-radius:var(--radius); font-size:1rem;
+  }
+  .setor-header-title { font-size:var(--fs-lg); margin:0; font-weight:var(--fw-semibold); }
+  .setor-header-count {
+    background:var(--color-bg-muted); color:var(--color-text-muted);
+    padding:2px 10px; border-radius:999px; font-size:var(--fs-xs); font-weight:var(--fw-medium);
+  }
+  .setor-header-link { color:var(--color-primary); text-decoration:none; font-size:var(--fs-sm); }
+  .setor-header-link:hover { text-decoration:underline; }
+
+  /* Grid de cards */
   .dash-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:var(--sp-3); }
   .dash-card {
     display:flex; gap:var(--sp-3); padding:var(--sp-3);
@@ -76,5 +129,12 @@
   .dash-card-title { font-weight:var(--fw-semibold); color:var(--color-text); }
   .dash-card-meta { font-size:var(--fs-xs); color:var(--color-text-muted); margin-top:2px; }
   .dash-card-desc { font-size:var(--fs-sm); color:var(--color-text-muted); margin-top:var(--sp-2); }
+
+  /* Empty state */
+  .empty-state {
+    text-align:center; padding:var(--sp-8) var(--sp-4);
+    background:var(--color-bg); border:1px dashed var(--color-border);
+    border-radius:var(--radius-lg);
+  }
 </style>
 {% endblock %}

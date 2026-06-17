@@ -7,6 +7,7 @@ app_name = 'relatorios'
 urlpatterns = [
     # UI
     path('', views.lista_view, name='lista'),
+    path('setor/<slug:setor>/', views.lista_view, name='lista_setor'),
     path('<int:pk>/', views.dashboard_detalhe_view, name='detalhe'),
     path('<int:pk>/editar/', views.dashboard_editar_view, name='editar'),
     path('criar/', views.dashboard_criar_view, name='criar'),

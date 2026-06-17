@@ -185,6 +185,16 @@
           <div class="field-input-wrap"><input type="text" name="nome" class="field-input" required maxlength="120" value="{{ dashboard.nome }}"></div>
         </div>
         <div class="field" style="margin-top:var(--sp-3);">
+          <label class="field-label">Setor</label>
+          <div class="field-input-wrap">
+            <select name="setor" class="field-input">
+              {% for slug, label in setores %}
+                <option value="{{ slug }}" {% if slug == dashboard.setor %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="field" style="margin-top:var(--sp-3);">
           <label class="field-label">Descricao</label>
           <div class="field-input-wrap"><textarea name="descricao" class="field-input" rows="2">{{ dashboard.descricao }}</textarea></div>
         </div>
