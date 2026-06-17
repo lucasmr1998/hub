@@ -204,16 +204,38 @@ registrar(DataSource(
     slug='cliente_hubsoft',
     label='Clientes HubSoft',
     model_path='integracoes.ClienteHubsoft',
-    descricao='Base de clientes HubSoft (espelho sincronizado).',
+    descricao='Base de clientes HubSoft (espelho sincronizado). Pra relatorios de CS, churn, retencao, perfil demografico.',
     campos={
-        'nome_razaosocial':    FieldSpec('Nome', 'string'),
-        'cpf_cnpj':            FieldSpec('CPF/CNPJ', 'string'),
-        'cidade':              FieldSpec('Cidade', 'string'),
-        'uf':                  FieldSpec('UF', 'string'),
-        'data_cadastro_hubsoft': FieldSpec('Cadastrado em', 'datetime', granularidades=['mes','ano']),
-        'data_sync':           FieldSpec('Sincronizado em', 'datetime'),
+        # Identificacao
+        'nome_razaosocial':        FieldSpec('Nome / Razao Social', 'string'),
+        'cpf_cnpj':                FieldSpec('CPF/CNPJ', 'string'),
+        'tipo_pessoa':             FieldSpec('Tipo Pessoa', 'choice', choices=[('pf','PF'),('pj','PJ')]),
+        # Contato
+        'telefone_primario':       FieldSpec('Telefone primario', 'string'),
+        'email_principal':         FieldSpec('Email principal', 'string'),
+        # Demografico
+        'estado_civil':            FieldSpec('Estado civil', 'choice'),
+        'genero':                  FieldSpec('Genero', 'choice'),
+        'nacionalidade':           FieldSpec('Nacionalidade', 'string'),
+        'profissao':               FieldSpec('Profissao', 'string'),
+        'data_nascimento':         FieldSpec('Data nascimento', 'date', granularidades=['ano']),
+        # Status + ciclo de vida
+        'ativo':                   FieldSpec('Ativo', 'bool'),
+        'alerta':                  FieldSpec('Tem alerta', 'bool'),
+        'data_cadastro_hubsoft':   FieldSpec('Cadastrado no HubSoft em', 'datetime', granularidades=['dia','semana','mes','ano']),
+        'data_atualizacao_hubsoft': FieldSpec('Ultima atualizacao HubSoft', 'datetime'),
+        'data_criacao':            FieldSpec('Espelhado em', 'datetime', granularidades=['dia','semana','mes']),
+        'data_sync':               FieldSpec('Sincronizado em', 'datetime'),
+        # Churn
+        'churn_score':             FieldSpec('Churn score (0-100)', 'integer'),
+        'churn_atualizado_em':     FieldSpec('Churn atualizado em', 'datetime'),
+        # Origem / classificacao
+        'origem_cliente':          FieldSpec('Origem do cliente', 'choice'),
+        'motivo_contratacao':      FieldSpec('Motivo da contratacao', 'choice'),
+        # Cross-modulo
+        'lead__origem':            FieldSpec('Origem do lead (Hubtrix)', 'choice'),
     },
-    metricas=['count'],
+    metricas=['count', 'avg:churn_score'],
     order_by_padrao='-data_cadastro_hubsoft',
 ))
 
@@ -221,24 +243,46 @@ registrar(DataSource(
     slug='servico_hubsoft',
     label='Servicos HubSoft',
     model_path='integracoes.ServicoClienteHubsoft',
-    descricao='Servicos contratados (plano, valor, status). Base pra receita + churn.',
+    descricao='Servicos contratados (plano, valor, status, tecnologia, vendedor). Base pra receita, churn, performance de vendedor HubSoft.',
     campos={
-        'nome':              FieldSpec('Plano', 'string'),
-        'valor':             FieldSpec('Valor mensal', 'decimal'),
-        'status_prefixo':    FieldSpec('Status', 'choice', choices=[
+        # Plano + valores
+        'nome':                    FieldSpec('Plano (nome)', 'string'),
+        'numero_plano':            FieldSpec('Numero do plano', 'integer'),
+        'id_servico':              FieldSpec('ID do plano (HubSoft)', 'integer'),
+        'valor':                   FieldSpec('Valor mensal (R$)', 'decimal'),
+        'tecnologia':              FieldSpec('Tecnologia', 'choice'),
+        'velocidade_download':     FieldSpec('Velocidade download', 'string'),
+        'velocidade_upload':       FieldSpec('Velocidade upload', 'string'),
+        # Status
+        'status':                  FieldSpec('Status (texto)', 'string'),
+        'status_prefixo':          FieldSpec('Status', 'choice', choices=[
             ('servico_habilitado', 'Ativo'),
             ('aguardando_instalacao', 'Aguardando instalacao'),
             ('servico_suspenso', 'Suspenso'),
             ('servico_cancelado', 'Cancelado'),
         ]),
-        'tecnologia':        FieldSpec('Tecnologia', 'choice'),
-        'data_habilitacao':  FieldSpec('Habilitado em', 'datetime', granularidades=['mes','ano']),
-        'data_cancelamento': FieldSpec('Cancelado em', 'datetime', granularidades=['mes','ano']),
-        'motivo_cancelamento': FieldSpec('Motivo cancelamento', 'string'),
-        'vigencia_meses':    FieldSpec('Vigencia (meses)', 'integer'),
-        'cliente__cidade':   FieldSpec('Cidade do cliente', 'string'),
+        # Datas
+        'data_habilitacao':        FieldSpec('Habilitado em', 'datetime', granularidades=['dia','semana','mes','ano']),
+        'data_cancelamento':       FieldSpec('Cancelado em', 'datetime', granularidades=['dia','semana','mes','ano']),
+        'data_atualizacao_servico': FieldSpec('Atualizado em', 'datetime'),
+        'data_sync':               FieldSpec('Sincronizado em', 'datetime'),
+        'vigencia_meses':          FieldSpec('Vigencia (meses)', 'integer'),
+        # Cancelamento
+        'motivo_cancelamento':     FieldSpec('Motivo cancelamento', 'string'),
+        # Vendedor
+        'id_vendedor':             FieldSpec('ID Vendedor HubSoft', 'integer'),
+        'vendedor_nome':           FieldSpec('Vendedor (nome)', 'string'),
+        'vendedor_email':          FieldSpec('Vendedor (email)', 'string'),
+        # Cliente vinculado
+        'cliente__nome_razaosocial': FieldSpec('Cliente (nome)', 'string'),
+        'cliente__cpf_cnpj':       FieldSpec('Cliente (CPF/CNPJ)', 'string'),
+        'cliente__tipo_pessoa':    FieldSpec('Tipo do cliente', 'choice'),
+        'cliente__churn_score':    FieldSpec('Churn score do cliente', 'integer'),
+        'cliente__origem_cliente': FieldSpec('Origem do cliente', 'choice'),
+        # Contrato
+        'id_cliente_servico_contrato': FieldSpec('ID Contrato HubSoft', 'integer'),
     },
-    metricas=['count', 'sum:valor', 'avg:valor'],
+    metricas=['count', 'sum:valor', 'avg:valor', 'avg:vigencia_meses', 'avg:cliente__churn_score'],
     order_by_padrao='-data_habilitacao',
 ))
 
