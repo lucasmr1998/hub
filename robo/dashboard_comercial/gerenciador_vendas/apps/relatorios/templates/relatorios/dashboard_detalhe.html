@@ -413,13 +413,13 @@ function renderWidget(cardEl, d) {
   const numeroEl = body.querySelector('.widget-numero');
   const tabelaEl = body.querySelector('.widget-tabela');
 
-  const viz = (d.meta && d.meta.visualizacao) || cardEl.dataset.viz || guessViz(d);
+  const viz = (d.meta && d.meta.visualizacao) || cardEl.dataset.viz || 'barra';
   const labels = d.labels || [];
   const valores = (d.series && d.series[0] && d.series[0].data) || [];
 
-  // Numero unico
-  if (labels.length <= 1 && viz === 'numero') {
-    numeroEl.textContent = fmtNum(d.total || valores[0] || 0);
+  // Numero unico — so quando o widget eh declarado como 'numero'
+  if (viz === 'numero') {
+    numeroEl.textContent = fmtNum(d.total != null ? d.total : (valores[0] || 0));
     numeroEl.style.display = 'block';
     return;
   }

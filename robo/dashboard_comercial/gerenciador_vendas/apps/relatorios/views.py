@@ -251,7 +251,11 @@ def api_widget_dados(request, pk):
     try:
         builder = WidgetQueryBuilder(widget, tenant=request.tenant)
         resultado = builder.build()
-        return JsonResponse({'ok': True, 'widget_id': widget.pk, **resultado.to_dict()})
+        payload = resultado.to_dict()
+        # Garante visualizacao no meta — JS do front usa pra renderizar com tipo correto
+        if isinstance(payload.get('meta'), dict):
+            payload['meta']['visualizacao'] = widget.visualizacao
+        return JsonResponse({'ok': True, 'widget_id': widget.pk, **payload})
     except WidgetQueryError as exc:
         return JsonResponse({'error': str(exc)}, status=400)
     except Exception as exc:
