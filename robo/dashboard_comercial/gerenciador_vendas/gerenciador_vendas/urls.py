@@ -107,6 +107,7 @@ urlpatterns = [
     path('integracoes/<path:resto>', RedirectView.as_view(url='/configuracoes/integracoes/%(resto)s', permanent=False, query_string=True)),
     path('integracoes/', RedirectView.as_view(url='/configuracoes/integracoes/', permanent=False, query_string=True)),
     path('crm/',          include('apps.comercial.crm.urls')),
+    path('relatorios/',   include('apps.relatorios.urls')),
     path('comercial/',    include('apps.integracoes.urls_comercial')),
     path('marketing/automacoes/', include('apps.marketing.automacoes.urls')),
     path('marketing/emails/',     include('apps.marketing.emails.urls')),

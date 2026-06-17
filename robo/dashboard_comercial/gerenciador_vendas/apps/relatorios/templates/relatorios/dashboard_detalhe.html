@@ -1,0 +1,728 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}{{ dashboard.nome }} — Relatorios{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@9/dist/gridstack.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="rel-header">
+  <div>
+    <a href="{% url 'relatorios:lista' %}" class="rel-back"><i class="bi bi-arrow-left"></i> Relatorios</a>
+    <h1 class="rel-title">{{ dashboard.nome }}</h1>
+    {% if dashboard.descricao %}<p class="rel-desc">{{ dashboard.descricao }}</p>{% endif %}
+  </div>
+  <div class="rel-header-actions">
+    {% if pode_editar %}
+      {% if modo_edicao %}
+        <a href="{% url 'relatorios:detalhe' dashboard.pk %}" class="btn btn-secondary btn-sm"><i class="bi bi-eye"></i> Visualizar</a>
+        <button class="btn btn-primary btn-sm" onclick="abrirWizardWidget()"><i class="bi bi-plus-lg"></i> Adicionar widget</button>
+      {% else %}
+        <a href="{% url 'relatorios:editar' dashboard.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil"></i> Editar</a>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+{% if not widgets %}
+  <div class="rel-empty">
+    <i class="bi bi-bar-chart" style="font-size:3rem;color:var(--color-text-muted);"></i>
+    <h2>Dashboard vazio</h2>
+    <p>Adicione widgets pra ver dados.</p>
+    {% if pode_editar and modo_edicao %}
+      <button class="btn btn-primary" onclick="abrirWizardWidget()"><i class="bi bi-plus-lg"></i> Adicionar widget</button>
+    {% elif pode_editar %}
+      <a href="{% url 'relatorios:editar' dashboard.pk %}" class="btn btn-primary"><i class="bi bi-pencil"></i> Entrar em modo edicao</a>
+    {% endif %}
+  </div>
+{% else %}
+<div class="grid-stack" id="rel-grid">
+  {% for w in widgets %}
+    <div class="grid-stack-item"
+         gs-id="{{ w.pk }}"
+         gs-x="{{ w.layout.x|default_if_none:0 }}"
+         gs-y="{{ w.layout.y|default_if_none:0 }}"
+         gs-w="{{ w.layout.w|default_if_none:4 }}"
+         gs-h="{{ w.layout.h|default_if_none:3 }}">
+      <div class="grid-stack-item-content">
+        <div class="widget-card" data-widget-id="{{ w.pk }}">
+          <div class="widget-header">
+            <div class="widget-title">{{ w.titulo }}</div>
+            {% if modo_edicao %}
+              <div class="widget-actions">
+                <button class="widget-btn" onclick="editarWidget({{ w.pk }})" title="Editar"><i class="bi bi-pencil"></i></button>
+                <button class="widget-btn widget-btn-danger" onclick="excluirWidget({{ w.pk }})" title="Excluir"><i class="bi bi-trash"></i></button>
+              </div>
+            {% endif %}
+          </div>
+          <div class="widget-body">
+            <div class="widget-loading"><i class="bi bi-hourglass-split"></i> Carregando...</div>
+            <canvas class="widget-chart" style="display:none;"></canvas>
+            <div class="widget-numero" style="display:none;"></div>
+            <div class="widget-tabela" style="display:none;"></div>
+            <div class="widget-erro" style="display:none;color:var(--color-danger);font-size:var(--fs-xs);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if modo_edicao %}
+<!-- Modal Wizard Widget -->
+<div class="modal-overlay" id="modal-wizard" style="display:none;">
+  <div class="modal-content" style="max-width:780px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-bar-chart"></i> <span id="wizard-modal-titulo">Novo widget</span></h3>
+      <button class="modal-close" onclick="fecharModal('modal-wizard')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Steps indicator -->
+      <div class="wizard-steps">
+        <div class="wizard-step is-active" data-step="1"><span>1</span> Fonte de dados</div>
+        <div class="wizard-step" data-step="2"><span>2</span> Metrica</div>
+        <div class="wizard-step" data-step="3"><span>3</span> Agrupamento + Filtros</div>
+        <div class="wizard-step" data-step="4"><span>4</span> Visualizacao</div>
+      </div>
+
+      <!-- STEP 1: Data Source -->
+      <div class="wizard-pane is-active" data-pane="1">
+        <p class="wizard-desc">Sobre quais dados o widget eh montado?</p>
+        <div class="wizard-grid-options" id="ds-options">
+          {% for ds in data_sources %}
+            <label class="wizard-option" data-slug="{{ ds.slug }}">
+              <input type="radio" name="ds_radio" value="{{ ds.slug }}" style="display:none;">
+              <div class="wizard-option-title">{{ ds.label }}</div>
+              <div class="wizard-option-desc">{{ ds.descricao }}</div>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- STEP 2: Metrica -->
+      <div class="wizard-pane" data-pane="2" style="display:none;">
+        <div class="field">
+          <label class="field-label">Titulo do widget *</label>
+          <div class="field-input-wrap"><input type="text" id="wiz-titulo" class="field-input" maxlength="120" placeholder="Ex: Total de oportunidades por estagio"></div>
+        </div>
+        <div class="field" style="margin-top:var(--sp-3);">
+          <label class="field-label">Metrica *</label>
+          <div id="wiz-metricas" class="wizard-radio-row"></div>
+        </div>
+        <div class="field" id="wiz-campo-metrica-bloco" style="display:none;margin-top:var(--sp-3);">
+          <label class="field-label">Campo da metrica</label>
+          <div class="field-input-wrap"><select id="wiz-campo-metrica" class="field-input"></select></div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Agrupamento + filtros -->
+      <div class="wizard-pane" data-pane="3" style="display:none;">
+        <div class="field">
+          <label class="field-label">Agrupar por (opcional)</label>
+          <div class="field-input-wrap">
+            <select id="wiz-dimensao" class="field-input">
+              <option value="">— Sem agrupamento (mostra numero unico) —</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" id="wiz-granularidade-bloco" style="display:none;margin-top:var(--sp-3);">
+          <label class="field-label">Granularidade</label>
+          <div class="field-input-wrap"><select id="wiz-granularidade" class="field-input"></select></div>
+        </div>
+        <div class="field" style="margin-top:var(--sp-3);">
+          <label class="field-label">Filtros (opcional)</label>
+          <div id="wiz-filtros"></div>
+          <button class="btn btn-ghost btn-sm" onclick="addFiltro()" style="margin-top:6px;"><i class="bi bi-plus"></i> Adicionar filtro</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: Viz -->
+      <div class="wizard-pane" data-pane="4" style="display:none;">
+        <div class="wizard-viz-chips">
+          {% for codigo, label in '|numero|Numero|barra|Barra|linha|Linha|pizza|Pizza|tabela|Tabela|funil|Funil'.split|slice:'1:' %}
+          {% endfor %}
+          <label class="wizard-viz-chip" data-viz="numero"><i class="bi bi-123"></i><span>Numero</span></label>
+          <label class="wizard-viz-chip" data-viz="barra"><i class="bi bi-bar-chart"></i><span>Barra</span></label>
+          <label class="wizard-viz-chip" data-viz="linha"><i class="bi bi-graph-up"></i><span>Linha</span></label>
+          <label class="wizard-viz-chip" data-viz="pizza"><i class="bi bi-pie-chart"></i><span>Pizza</span></label>
+          <label class="wizard-viz-chip" data-viz="tabela"><i class="bi bi-table"></i><span>Tabela</span></label>
+          <label class="wizard-viz-chip" data-viz="funil"><i class="bi bi-funnel"></i><span>Funil</span></label>
+        </div>
+
+        <div style="margin-top:var(--sp-4);">
+          <div class="field-label">Preview</div>
+          <div id="wiz-preview" class="wizard-preview">
+            <div style="color:var(--color-text-muted);font-size:var(--fs-sm);">Preview vai aparecer aqui apos configurar...</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:space-between;">
+      <button class="btn btn-secondary btn-sm" id="wiz-btn-voltar" onclick="wizardVoltar()" style="visibility:hidden;"><i class="bi bi-arrow-left"></i> Voltar</button>
+      <div>
+        <button class="btn btn-secondary btn-sm" onclick="fecharModal('modal-wizard')">Cancelar</button>
+        <button class="btn btn-primary btn-sm" id="wiz-btn-avancar" onclick="wizardAvancar()">Avancar <i class="bi bi-arrow-right"></i></button>
+        <button class="btn btn-success btn-sm" id="wiz-btn-salvar" onclick="salvarWidget()" style="display:none;"><i class="bi bi-check-lg"></i> Salvar widget</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<style>
+  .rel-header { display:flex; align-items:start; justify-content:space-between; gap:var(--sp-4); margin-bottom:var(--sp-4); }
+  .rel-back { color:var(--color-text-muted); text-decoration:none; font-size:var(--fs-sm); }
+  .rel-title { font-size:var(--fs-2xl); margin:var(--sp-2) 0 0; }
+  .rel-desc { color:var(--color-text-muted); margin:4px 0 0; }
+  .rel-header-actions { display:flex; gap:var(--sp-2); flex-shrink:0; }
+  .rel-empty { text-align:center; padding:var(--sp-8) var(--sp-4); }
+  .rel-empty h2 { font-size:var(--fs-lg); margin:var(--sp-3) 0 var(--sp-2); }
+  .rel-empty p { color:var(--color-text-muted); margin-bottom:var(--sp-3); }
+
+  /* Widget card */
+  .widget-card {
+    background:var(--color-bg); border:1px solid var(--color-border);
+    border-radius:var(--radius); height:100%; display:flex; flex-direction:column;
+  }
+  .widget-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:var(--sp-2) var(--sp-3); border-bottom:1px solid var(--color-border);
+  }
+  .widget-title { font-size:var(--fs-sm); font-weight:var(--fw-semibold); }
+  .widget-actions { display:flex; gap:4px; }
+  .widget-btn {
+    width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center;
+    background:transparent; border:1px solid var(--color-border); border-radius:4px;
+    cursor:pointer; color:var(--color-text-muted); font-size:11px;
+  }
+  .widget-btn:hover { background:var(--color-bg-soft); }
+  .widget-btn-danger:hover { background:rgba(239,68,68,0.1); color:var(--color-danger); border-color:var(--color-danger); }
+  .widget-body { flex:1; padding:var(--sp-3); position:relative; min-height:0; display:flex; align-items:center; justify-content:center; }
+  .widget-numero { font-size:2.5rem; font-weight:var(--fw-bold); color:var(--color-primary); }
+  .widget-loading { color:var(--color-text-muted); font-size:var(--fs-xs); }
+  .widget-chart { max-width:100%; max-height:100%; }
+  .widget-tabela { width:100%; max-height:100%; overflow:auto; }
+  .widget-tabela table { width:100%; border-collapse:collapse; font-size:var(--fs-xs); }
+  .widget-tabela th, .widget-tabela td { padding:6px 8px; border-bottom:1px solid var(--color-border); text-align:left; }
+
+  /* Wizard */
+  .wizard-steps { display:flex; gap:var(--sp-2); margin-bottom:var(--sp-4); padding-bottom:var(--sp-2); border-bottom:1px solid var(--color-border); }
+  .wizard-step { display:flex; align-items:center; gap:6px; font-size:var(--fs-xs); color:var(--color-text-muted); }
+  .wizard-step span {
+    width:22px; height:22px; border-radius:50%; background:var(--color-bg-soft);
+    display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:600;
+  }
+  .wizard-step.is-active { color:var(--color-primary); font-weight:var(--fw-semibold); }
+  .wizard-step.is-active span { background:var(--color-primary); color:#fff; }
+  .wizard-step.is-done span { background:var(--color-success); color:#fff; }
+
+  .wizard-pane { animation: fadeIn 0.15s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(4px);} to{opacity:1;transform:none;} }
+  .wizard-desc { color:var(--color-text-muted); font-size:var(--fs-sm); margin:0 0 var(--sp-3); }
+
+  .wizard-grid-options { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:var(--sp-2); }
+  .wizard-option {
+    border:1px solid var(--color-border); border-radius:var(--radius);
+    padding:var(--sp-3); cursor:pointer; transition: all 0.12s;
+  }
+  .wizard-option:hover { border-color:var(--color-primary); }
+  .wizard-option.is-active { border-color:var(--color-primary); background:rgba(37,99,235,0.06); }
+  .wizard-option-title { font-weight:var(--fw-semibold); font-size:var(--fs-sm); }
+  .wizard-option-desc { color:var(--color-text-muted); font-size:var(--fs-xs); margin-top:4px; line-height:1.4; }
+
+  .wizard-radio-row { display:flex; gap:var(--sp-2); flex-wrap:wrap; }
+  .wizard-radio-row label {
+    border:1px solid var(--color-border); border-radius:var(--radius);
+    padding:var(--sp-2) var(--sp-3); cursor:pointer; font-size:var(--fs-sm);
+  }
+  .wizard-radio-row label.is-active { border-color:var(--color-primary); background:rgba(37,99,235,0.06); color:var(--color-primary); font-weight:var(--fw-semibold); }
+  .wizard-radio-row input { display:none; }
+
+  .wizard-viz-chips { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:var(--sp-2); }
+  .wizard-viz-chip {
+    border:1px solid var(--color-border); border-radius:var(--radius); padding:var(--sp-3);
+    text-align:center; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:var(--sp-2);
+    transition: all 0.12s;
+  }
+  .wizard-viz-chip i { font-size:1.5rem; color:var(--color-text-muted); }
+  .wizard-viz-chip span { font-size:var(--fs-xs); }
+  .wizard-viz-chip:hover { border-color:var(--color-primary); }
+  .wizard-viz-chip.is-active { border-color:var(--color-primary); background:rgba(37,99,235,0.06); }
+  .wizard-viz-chip.is-active i { color:var(--color-primary); }
+
+  .wizard-preview { background:var(--color-bg-soft); border-radius:var(--radius); padding:var(--sp-4); min-height:200px; display:flex; align-items:center; justify-content:center; }
+  .wizard-preview canvas { max-width:100%; max-height:300px; }
+  .wizard-preview-numero { font-size:3rem; font-weight:var(--fw-bold); color:var(--color-primary); }
+
+  .filtro-row { display:flex; gap:6px; margin-top:6px; align-items:center; }
+  .filtro-row select, .filtro-row input { flex:1; min-width:0; padding:6px 8px; border:1px solid var(--color-border); border-radius:4px; font-size:var(--fs-xs); }
+  .filtro-row button { background:transparent; border:1px solid var(--color-border); border-radius:4px; padding:4px 8px; cursor:pointer; }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/gridstack@9/dist/gridstack-all.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const DASHBOARD_PK = {{ dashboard.pk }};
+const MODO_EDICAO = {{ modo_edicao|yesno:"true,false" }};
+const CSRF = "{{ csrf_token }}";
+
+const URLS = {
+  data_sources: "{% url 'relatorios:api_data_sources' %}",
+  ds_detalhe: (slug) => `/relatorios/api/data-source/${slug}/`,
+  preview: "{% url 'relatorios:api_preview' %}",
+  widget_dados: (id) => `/relatorios/api/widget/${id}/dados/`,
+  widget_salvar: "{% url 'relatorios:api_widget_salvar' %}",
+  widget_excluir: (id) => `/relatorios/api/widget/${id}/excluir/`,
+  layout_salvar: "{% url 'relatorios:api_dashboard_layout' dashboard.pk %}",
+};
+
+const PALETTE = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#94a3b8', '#06b6d4', '#a855f7'];
+
+// ============================================================
+// GridStack init
+// ============================================================
+let grid = null;
+document.addEventListener('DOMContentLoaded', () => {
+  const gridEl = document.querySelector('.grid-stack');
+  if (gridEl) {
+    grid = GridStack.init({
+      column: 12,
+      cellHeight: 80,
+      margin: 8,
+      disableDrag: !MODO_EDICAO,
+      disableResize: !MODO_EDICAO,
+      float: false,
+    });
+    if (MODO_EDICAO) {
+      grid.on('change', () => salvarLayout());
+    }
+    // Carrega dados dos widgets
+    document.querySelectorAll('.widget-card').forEach(card => {
+      const wid = card.dataset.widgetId;
+      carregarWidget(wid, card);
+    });
+  }
+});
+
+function salvarLayout() {
+  if (!grid) return;
+  const items = grid.save(false).map(n => ({
+    id: parseInt(n.id), x: n.x, y: n.y, w: n.w, h: n.h,
+  }));
+  fetch(URLS.layout_salvar, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+    body: JSON.stringify({ layouts: items }),
+  });
+}
+
+// ============================================================
+// Carregar widget (render)
+// ============================================================
+async function carregarWidget(widgetId, cardEl) {
+  const body = cardEl.querySelector('.widget-body');
+  const loading = body.querySelector('.widget-loading');
+  const chart = body.querySelector('.widget-chart');
+  const numero = body.querySelector('.widget-numero');
+  const tabela = body.querySelector('.widget-tabela');
+  const erro = body.querySelector('.widget-erro');
+
+  try {
+    const r = await fetch(URLS.widget_dados(widgetId));
+    const d = await r.json();
+    loading.style.display = 'none';
+    if (!r.ok || !d.ok) {
+      erro.textContent = d.error || 'Falha ao carregar';
+      erro.style.display = 'block';
+      return;
+    }
+    renderWidget(cardEl, d);
+  } catch (e) {
+    loading.style.display = 'none';
+    erro.textContent = `Erro: ${e.message}`;
+    erro.style.display = 'block';
+  }
+}
+
+function renderWidget(cardEl, d) {
+  const body = cardEl.querySelector('.widget-body');
+  const chartEl = body.querySelector('.widget-chart');
+  const numeroEl = body.querySelector('.widget-numero');
+  const tabelaEl = body.querySelector('.widget-tabela');
+
+  const viz = (d.meta && d.meta.visualizacao) || cardEl.dataset.viz || guessViz(d);
+  const labels = d.labels || [];
+  const valores = (d.series && d.series[0] && d.series[0].data) || [];
+
+  // Numero unico
+  if (labels.length <= 1 && viz === 'numero') {
+    numeroEl.textContent = fmtNum(d.total || valores[0] || 0);
+    numeroEl.style.display = 'block';
+    return;
+  }
+  // Tabela
+  if (viz === 'tabela') {
+    let html = '<table><thead><tr><th>Categoria</th><th>Valor</th></tr></thead><tbody>';
+    labels.forEach((l, i) => { html += `<tr><td>${esc(l)}</td><td>${fmtNum(valores[i])}</td></tr>`; });
+    html += '</tbody></table>';
+    tabelaEl.innerHTML = html;
+    tabelaEl.style.display = 'block';
+    return;
+  }
+  // Chart.js (barra, linha, pizza, funil)
+  chartEl.style.display = 'block';
+  const ctx = chartEl.getContext('2d');
+  let type = 'bar';
+  if (viz === 'linha') type = 'line';
+  if (viz === 'pizza') type = 'doughnut';
+  if (viz === 'funil') type = 'bar'; // funil renderiza como barra horizontal
+
+  // Destroi instancia anterior se existir
+  if (chartEl._chart) chartEl._chart.destroy();
+
+  chartEl._chart = new Chart(ctx, {
+    type,
+    data: {
+      labels,
+      datasets: [{
+        label: (d.series && d.series[0] && d.series[0].name) || 'Total',
+        data: valores,
+        backgroundColor: (viz === 'pizza') ? PALETTE : PALETTE[0],
+        borderColor: PALETTE[0], borderWidth: viz === 'linha' ? 2 : 0,
+        tension: 0.2,
+      }],
+    },
+    options: {
+      maintainAspectRatio: false, responsive: true,
+      indexAxis: viz === 'funil' ? 'y' : 'x',
+      plugins: { legend: { display: viz === 'pizza' } },
+      scales: viz === 'pizza' ? {} : {
+        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' } },
+        x: { grid: { display: false } },
+      },
+    },
+  });
+}
+
+function guessViz(d) { return (d.labels && d.labels.length > 1) ? 'barra' : 'numero'; }
+function fmtNum(n) {
+  if (n == null) return '—';
+  if (typeof n === 'number') return n.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+  return n;
+}
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ============================================================
+// Wizard de widget
+// ============================================================
+{% if modo_edicao %}
+let wizardEstado = {
+  step: 1,
+  widget_id: null,  // null = novo
+  data_source: null,
+  data_source_schema: null,  // {campos, metricas}
+  titulo: '',
+  metrica: { tipo: 'count' },
+  agrupamento: {},
+  filtros: [],
+  visualizacao: 'numero',
+};
+
+function abrirWizardWidget(widgetId = null) {
+  // Reset
+  wizardEstado = {
+    step: 1, widget_id: widgetId, data_source: null, data_source_schema: null,
+    titulo: '', metrica: { tipo: 'count' }, agrupamento: {}, filtros: [], visualizacao: 'numero',
+  };
+  document.getElementById('wizard-modal-titulo').textContent = widgetId ? 'Editar widget' : 'Novo widget';
+  // Reset UI
+  document.querySelectorAll('.wizard-option').forEach(o => o.classList.remove('is-active'));
+  document.getElementById('wiz-titulo').value = '';
+  document.getElementById('wiz-filtros').innerHTML = '';
+  document.querySelectorAll('.wizard-viz-chip').forEach(c => c.classList.remove('is-active'));
+  document.querySelector('.wizard-viz-chip[data-viz="numero"]').classList.add('is-active');
+  wizardEstado.visualizacao = 'numero';
+  wizardIrParaStep(1);
+  // Click handler dos data-sources
+  document.querySelectorAll('#ds-options .wizard-option').forEach(opt => {
+    opt.onclick = () => {
+      document.querySelectorAll('#ds-options .wizard-option').forEach(o => o.classList.remove('is-active'));
+      opt.classList.add('is-active');
+      wizardEstado.data_source = opt.dataset.slug;
+    };
+  });
+  // Viz chips
+  document.querySelectorAll('.wizard-viz-chip').forEach(chip => {
+    chip.onclick = () => {
+      document.querySelectorAll('.wizard-viz-chip').forEach(c => c.classList.remove('is-active'));
+      chip.classList.add('is-active');
+      wizardEstado.visualizacao = chip.dataset.viz;
+      renderPreview();
+    };
+  });
+
+  document.getElementById('modal-wizard').style.display = 'flex';
+}
+
+function wizardIrParaStep(n) {
+  wizardEstado.step = n;
+  document.querySelectorAll('.wizard-step').forEach(s => {
+    const stepNum = parseInt(s.dataset.step);
+    s.classList.toggle('is-active', stepNum === n);
+    s.classList.toggle('is-done', stepNum < n);
+  });
+  document.querySelectorAll('.wizard-pane').forEach(p => {
+    const paneNum = parseInt(p.dataset.pane);
+    p.classList.toggle('is-active', paneNum === n);
+    p.style.display = (paneNum === n) ? 'block' : 'none';
+  });
+  // Botoes
+  document.getElementById('wiz-btn-voltar').style.visibility = (n > 1) ? 'visible' : 'hidden';
+  document.getElementById('wiz-btn-avancar').style.display = (n < 4) ? 'inline-flex' : 'none';
+  document.getElementById('wiz-btn-salvar').style.display = (n === 4) ? 'inline-flex' : 'none';
+
+  if (n === 4) renderPreview();
+}
+
+async function wizardAvancar() {
+  if (wizardEstado.step === 1) {
+    if (!wizardEstado.data_source) { toast('Atencao', 'Escolha uma fonte de dados', 'warning'); return; }
+    // Carrega schema
+    const r = await fetch(URLS.ds_detalhe(wizardEstado.data_source));
+    const d = await r.json();
+    wizardEstado.data_source_schema = d;
+    popularStep2();
+    popularStep3();
+  }
+  if (wizardEstado.step === 2) {
+    const titulo = document.getElementById('wiz-titulo').value.trim();
+    if (!titulo) { toast('Atencao', 'Defina um titulo', 'warning'); return; }
+    wizardEstado.titulo = titulo;
+    const tipo = document.querySelector('input[name=wiz-metrica-tipo]:checked')?.value || 'count';
+    wizardEstado.metrica = { tipo };
+    if (tipo !== 'count') {
+      wizardEstado.metrica.campo = document.getElementById('wiz-campo-metrica').value;
+      if (!wizardEstado.metrica.campo) { toast('Atencao', 'Escolha o campo da metrica', 'warning'); return; }
+    }
+  }
+  if (wizardEstado.step === 3) {
+    const dim = document.getElementById('wiz-dimensao').value;
+    wizardEstado.agrupamento = dim ? { dimensao: dim } : {};
+    const gran = document.getElementById('wiz-granularidade').value;
+    if (gran && dim) wizardEstado.agrupamento.granularidade = gran;
+    // Filtros
+    wizardEstado.filtros = [];
+    document.querySelectorAll('.filtro-row').forEach(row => {
+      const campo = row.querySelector('.filtro-campo').value;
+      const operador = row.querySelector('.filtro-op').value;
+      const valor = row.querySelector('.filtro-valor').value;
+      if (campo) wizardEstado.filtros.push({ campo, operador, valor });
+    });
+  }
+  wizardIrParaStep(wizardEstado.step + 1);
+}
+
+function wizardVoltar() {
+  if (wizardEstado.step > 1) wizardIrParaStep(wizardEstado.step - 1);
+}
+
+function popularStep2() {
+  const metricas = wizardEstado.data_source_schema.metricas || ['count'];
+  const cont = document.getElementById('wiz-metricas');
+  cont.innerHTML = '';
+  metricas.forEach((m, i) => {
+    const [tipo, campo] = m.split(':');
+    const label = { count: 'Contagem', sum: `Soma de ${campo}`, avg: `Media de ${campo}` }[tipo] || m;
+    const id = `m_${i}`;
+    cont.innerHTML += `<label for="${id}" class="${i===0?'is-active':''}"><input type="radio" id="${id}" name="wiz-metrica-tipo" value="${tipo}" data-campo="${campo||''}" ${i===0?'checked':''}>${label}</label>`;
+  });
+  cont.querySelectorAll('label').forEach(l => {
+    l.onclick = () => {
+      cont.querySelectorAll('label').forEach(x => x.classList.remove('is-active'));
+      l.classList.add('is-active');
+      setTimeout(atualizarCampoMetrica, 10);
+    };
+  });
+  atualizarCampoMetrica();
+}
+
+function atualizarCampoMetrica() {
+  const sel = document.querySelector('input[name=wiz-metrica-tipo]:checked');
+  const bloco = document.getElementById('wiz-campo-metrica-bloco');
+  const select = document.getElementById('wiz-campo-metrica');
+  if (!sel || sel.value === 'count') { bloco.style.display = 'none'; return; }
+  // Pre-popula com campo da metrica + outros decimais/integers
+  const campos = wizardEstado.data_source_schema.campos.filter(c => ['decimal','integer'].includes(c.tipo));
+  const campoMetrica = sel.dataset.campo;
+  select.innerHTML = campos.map(c => `<option value="${c.nome}" ${c.nome===campoMetrica?'selected':''}>${c.label}</option>`).join('');
+  bloco.style.display = 'block';
+}
+
+function popularStep3() {
+  const campos = wizardEstado.data_source_schema.campos;
+  const sel = document.getElementById('wiz-dimensao');
+  sel.innerHTML = '<option value="">— Sem agrupamento (mostra numero unico) —</option>';
+  campos.forEach(c => {
+    sel.innerHTML += `<option value="${c.nome}" data-tipo="${c.tipo}" data-granularidades='${JSON.stringify(c.granularidades||[])}'>${c.label}</option>`;
+  });
+  sel.onchange = () => {
+    const opt = sel.options[sel.selectedIndex];
+    const grans = JSON.parse(opt.dataset.granularidades || '[]');
+    const bloco = document.getElementById('wiz-granularidade-bloco');
+    const selGran = document.getElementById('wiz-granularidade');
+    if (grans.length) {
+      selGran.innerHTML = grans.map(g => `<option value="${g}" ${g==='mes'?'selected':''}>${g}</option>`).join('');
+      bloco.style.display = 'block';
+    } else {
+      bloco.style.display = 'none';
+    }
+  };
+  document.getElementById('wiz-filtros').innerHTML = '';
+}
+
+function addFiltro() {
+  const campos = wizardEstado.data_source_schema.campos;
+  const wrap = document.createElement('div');
+  wrap.className = 'filtro-row';
+  wrap.innerHTML = `
+    <select class="filtro-campo"><option value="">— Campo —</option>${campos.map(c=>`<option value="${c.nome}">${c.label}</option>`).join('')}</select>
+    <select class="filtro-op">
+      <option value="igual">=</option><option value="diferente">≠</option>
+      <option value="maior">&gt;</option><option value="menor">&lt;</option>
+      <option value="contem">contem</option><option value="existe">existe</option>
+    </select>
+    <input type="text" class="filtro-valor" placeholder="Valor">
+    <button type="button" onclick="this.parentElement.remove()"><i class="bi bi-x"></i></button>
+  `;
+  document.getElementById('wiz-filtros').appendChild(wrap);
+}
+
+async function renderPreview() {
+  const preview = document.getElementById('wiz-preview');
+  preview.innerHTML = '<div style="color:var(--color-text-muted);font-size:var(--fs-sm);"><i class="bi bi-hourglass-split"></i> Calculando...</div>';
+  // Atualiza filtros do estado se estamos no step 4
+  if (wizardEstado.step === 4) {
+    wizardEstado.filtros = [];
+    document.querySelectorAll('.filtro-row').forEach(row => {
+      const campo = row.querySelector('.filtro-campo').value;
+      if (campo) wizardEstado.filtros.push({
+        campo, operador: row.querySelector('.filtro-op').value,
+        valor: row.querySelector('.filtro-valor').value,
+      });
+    });
+  }
+  try {
+    const r = await fetch(URLS.preview, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({
+        data_source: wizardEstado.data_source,
+        metrica: wizardEstado.metrica,
+        agrupamento: wizardEstado.agrupamento,
+        filtros: wizardEstado.filtros,
+        visualizacao: wizardEstado.visualizacao,
+      }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { preview.innerHTML = `<div style="color:var(--color-danger);">${d.error || 'Erro'}</div>`; return; }
+    preview.innerHTML = '';
+    // Renderiza igual ao widget normal
+    if (wizardEstado.visualizacao === 'numero' || (d.labels||[]).length <= 1) {
+      preview.innerHTML = `<div class="wizard-preview-numero">${fmtNum(d.total || d.series[0]?.data?.[0] || 0)}</div>`;
+      return;
+    }
+    if (wizardEstado.visualizacao === 'tabela') {
+      let html = '<table style="width:100%;font-size:var(--fs-sm);"><thead><tr><th style="text-align:left;padding:6px;border-bottom:1px solid var(--color-border);">Categoria</th><th style="text-align:right;padding:6px;border-bottom:1px solid var(--color-border);">Valor</th></tr></thead><tbody>';
+      d.labels.forEach((l, i) => {
+        html += `<tr><td style="padding:6px;border-bottom:1px solid var(--color-border);">${esc(l)}</td><td style="padding:6px;text-align:right;border-bottom:1px solid var(--color-border);">${fmtNum(d.series[0].data[i])}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      preview.innerHTML = html;
+      return;
+    }
+    // Chart
+    const canvas = document.createElement('canvas');
+    canvas.style.maxHeight = '280px';
+    preview.appendChild(canvas);
+    let type = 'bar';
+    if (wizardEstado.visualizacao === 'linha') type = 'line';
+    if (wizardEstado.visualizacao === 'pizza') type = 'doughnut';
+    new Chart(canvas.getContext('2d'), {
+      type,
+      data: {
+        labels: d.labels,
+        datasets: [{
+          label: d.series[0]?.name || 'Total',
+          data: d.series[0]?.data || [],
+          backgroundColor: wizardEstado.visualizacao === 'pizza' ? PALETTE : PALETTE[0],
+          borderColor: PALETTE[0],
+        }],
+      },
+      options: { maintainAspectRatio: false, responsive: true, indexAxis: wizardEstado.visualizacao === 'funil' ? 'y' : 'x',
+                  plugins: { legend: { display: wizardEstado.visualizacao === 'pizza' } } },
+    });
+  } catch (e) {
+    preview.innerHTML = `<div style="color:var(--color-danger);">${e.message}</div>`;
+  }
+}
+
+async function salvarWidget() {
+  if (!wizardEstado.titulo || !wizardEstado.data_source) {
+    toast('Atencao', 'Configuracao incompleta', 'warning'); return;
+  }
+  const body = {
+    id: wizardEstado.widget_id,
+    dashboard_id: DASHBOARD_PK,
+    titulo: wizardEstado.titulo,
+    data_source: wizardEstado.data_source,
+    metrica: wizardEstado.metrica,
+    agrupamento: wizardEstado.agrupamento,
+    filtros: wizardEstado.filtros,
+    visualizacao: wizardEstado.visualizacao,
+  };
+  try {
+    const r = await fetch(URLS.widget_salvar, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { toast('Erro', d.error || 'Falha', 'danger'); return; }
+    toast('Salvo', 'Widget criado. Recarregando...', 'success');
+    setTimeout(() => location.reload(), 500);
+  } catch (e) {
+    toast('Erro', e.message, 'danger');
+  }
+}
+
+async function editarWidget(widgetId) {
+  // Pega config do widget e popula wizard
+  try {
+    const r = await fetch(URLS.widget_dados(widgetId));
+    const d = await r.json();
+    if (!d.ok) { toast('Erro', d.error || 'Falha', 'danger'); return; }
+    // Encontra config pelo metadata (basico — pra MVP, busca pelo Django admin se quiser editar profundo)
+    abrirWizardWidget(widgetId);
+    // TODO: pre-popular wizardEstado com dados do widget atual
+  } catch (e) { toast('Erro', e.message, 'danger'); }
+}
+
+async function excluirWidget(widgetId) {
+  if (!confirm('Excluir este widget?')) return;
+  const r = await fetch(URLS.widget_excluir(widgetId), {
+    method: 'POST', headers: { 'X-CSRFToken': CSRF },
+  });
+  const d = await r.json();
+  if (d.ok) {
+    toast('Excluido', 'Widget removido', 'success');
+    setTimeout(() => location.reload(), 500);
+  } else {
+    toast('Erro', d.error || 'Falha', 'danger');
+  }
+}
+{% endif %}
+</script>
+{% endblock %}

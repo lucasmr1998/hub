@@ -1,0 +1,80 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}Relatorios — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
+  <div>
+    <h1 style="font-size:var(--fs-2xl);margin:0;">Relatorios</h1>
+    <p style="color:var(--color-text-muted);margin:4px 0 0;">Dashboards self-service. Crie graficos sobre Oportunidades, Clientes HubSoft, Vendas, etc.</p>
+  </div>
+  {% if pode_criar %}
+    <a href="{% url 'relatorios:criar' %}" class="btn btn-primary">
+      <i class="bi bi-plus-lg"></i> Novo dashboard
+    </a>
+  {% endif %}
+</div>
+
+<section style="margin-bottom:var(--sp-6);">
+  <h2 style="font-size:var(--fs-lg);margin:0 0 var(--sp-3);">Meus dashboards</h2>
+  {% if proprios %}
+    <div class="dash-grid">
+      {% for d in proprios %}
+        <a href="{% url 'relatorios:detalhe' d.pk %}" class="dash-card">
+          <div class="dash-card-icon"><i class="bi {{ d.icone|default:'bi-bar-chart' }}"></i></div>
+          <div class="dash-card-body">
+            <div class="dash-card-title">{{ d.nome }}</div>
+            <div class="dash-card-meta">
+              {{ d.widgets.count }} widget{{ d.widgets.count|pluralize }}
+              {% if d.compartilhado %} · <span class="badge-mini badge-info"><i class="bi bi-share"></i> Compartilhado</span>{% endif %}
+            </div>
+            {% if d.descricao %}<div class="dash-card-desc">{{ d.descricao|truncatechars:80 }}</div>{% endif %}
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p style="color:var(--color-text-muted);">Voce ainda nao criou nenhum dashboard. {% if pode_criar %}<a href="{% url 'relatorios:criar' %}">Crie o primeiro</a>.{% endif %}</p>
+  {% endif %}
+</section>
+
+{% if compartilhados %}
+<section>
+  <h2 style="font-size:var(--fs-lg);margin:0 0 var(--sp-3);">Compartilhados pela equipe</h2>
+  <div class="dash-grid">
+    {% for d in compartilhados %}
+      <a href="{% url 'relatorios:detalhe' d.pk %}" class="dash-card">
+        <div class="dash-card-icon"><i class="bi {{ d.icone|default:'bi-bar-chart' }}"></i></div>
+        <div class="dash-card-body">
+          <div class="dash-card-title">{{ d.nome }}</div>
+          <div class="dash-card-meta">
+            {{ d.widgets.count }} widget{{ d.widgets.count|pluralize }} · por {{ d.criado_por.get_full_name|default:d.criado_por.username|default:"sistema" }}
+          </div>
+          {% if d.descricao %}<div class="dash-card-desc">{{ d.descricao|truncatechars:80 }}</div>{% endif %}
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<style>
+  .dash-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:var(--sp-3); }
+  .dash-card {
+    display:flex; gap:var(--sp-3); padding:var(--sp-3);
+    background:var(--color-bg); border:1px solid var(--color-border);
+    border-radius:var(--radius-lg); text-decoration:none; color:inherit;
+    transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+  }
+  .dash-card:hover { transform:translateY(-2px); border-color:var(--color-primary); box-shadow:var(--shadow-md); }
+  .dash-card-icon {
+    width:42px; height:42px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(37,99,235,0.1); color:var(--color-primary);
+    border-radius:var(--radius); font-size:1.3rem;
+  }
+  .dash-card-body { flex:1; min-width:0; }
+  .dash-card-title { font-weight:var(--fw-semibold); color:var(--color-text); }
+  .dash-card-meta { font-size:var(--fs-xs); color:var(--color-text-muted); margin-top:2px; }
+  .dash-card-desc { font-size:var(--fs-sm); color:var(--color-text-muted); margin-top:var(--sp-2); }
+</style>
+{% endblock %}

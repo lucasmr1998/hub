@@ -1,0 +1,36 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}Novo Dashboard — Hubtrix{% endblock %}
+
+{% block content %}
+<div style="max-width:600px;margin:0 auto;">
+  <a href="{% url 'relatorios:lista' %}" style="color:var(--color-text-muted);text-decoration:none;font-size:var(--fs-sm);">
+    <i class="bi bi-arrow-left"></i> Voltar
+  </a>
+  <h1 style="font-size:var(--fs-xl);margin:var(--sp-2) 0 var(--sp-4);">Novo dashboard</h1>
+
+  {% if erro %}
+    <div class="alert alert-danger" style="background:rgba(239,68,68,0.08);border:1px solid var(--color-danger);padding:var(--sp-2) var(--sp-3);border-radius:var(--radius);margin-bottom:var(--sp-3);color:var(--color-danger);">
+      {{ erro }}
+    </div>
+  {% endif %}
+
+  <form method="post" action="{% url 'relatorios:criar' %}">
+    {% csrf_token %}
+    <div class="field" style="margin-bottom:var(--sp-3);">
+      <label class="field-label">Nome *</label>
+      <div class="field-input-wrap">
+        <input type="text" name="nome" class="field-input" required maxlength="120" value="{{ nome_pre|default:'' }}" placeholder="Ex: Funil comercial, Inadimplencia, Performance vendedores...">
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:var(--sp-4);">
+      <label class="field-label">Descricao</label>
+      <div class="field-input-wrap">
+        <textarea name="descricao" class="field-input" rows="2">{{ descricao_pre|default:'' }}</textarea>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-plus-lg"></i> Criar e adicionar widgets
+    </button>
+  </form>
+</div>
+{% endblock %}
