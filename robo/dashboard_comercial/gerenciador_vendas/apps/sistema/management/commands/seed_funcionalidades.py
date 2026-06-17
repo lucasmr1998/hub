@@ -23,6 +23,10 @@ FUNCIONALIDADES = [
     ('comercial', 'comercial.editar_valor_oportunidade', 'Editar Valor Estimado', 'Permite editar o valor estimado e probabilidade da oportunidade (campo financeiro sensivel)', 13),
     ('comercial', 'comercial.adicionar_documento_inline', 'Adicionar Documento na Oportunidade', 'Permite adicionar documentos manualmente (foto/PDF) pela sidebar do detalhe da oportunidade', 14),
     ('comercial', 'comercial.aprovar_documento_inline', 'Aprovar/Rejeitar Documento Inline', 'Permite aprovar ou rejeitar documentos do lead direto pela sidebar (sem ir no painel de validacao)', 15),
+    # Relatorios (dashboards self-service)
+    ('relatorios', 'relatorios.ver_dashboards', 'Ver Dashboards', 'Acessar a tela de relatorios (dashboards compartilhados + proprios)', 1),
+    ('relatorios', 'relatorios.criar_dashboard', 'Criar Dashboards Pessoais', 'Criar e editar dashboards privados do usuario', 2),
+    ('relatorios', 'relatorios.compartilhar_dashboard', 'Compartilhar Dashboards', 'Marcar dashboard como compartilhado com a equipe (apenas admin)', 3),
     # Configuracoes
     ('configuracoes', 'config.gerenciar_usuarios', 'Gerenciar Usuarios', 'Criar, editar e excluir usuarios do sistema', 1),
     ('configuracoes', 'config.gerenciar_perfis', 'Gerenciar Perfis de Permissao', 'Criar e editar perfis de permissao', 2),

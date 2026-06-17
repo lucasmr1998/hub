@@ -112,6 +112,9 @@ INSTALLED_APPS = [
     # === Comando (mono-tenant Hubtrix interno: agentes IA, automações — DORMENTE fase 1) ===
     'apps.comando',
 
+    # === Relatorios self-service (dashboards estilo Hubspot) ===
+    'apps.relatorios',
+
     # === Cron (dispatcher central de jobs periódicos — cross-tenant) ===
     'apps.cron',
 ]
