@@ -270,7 +270,16 @@ def receber_lead(request):
             if not pipeline:
                 pipeline = Pipeline.all_tenants.filter(tenant=tenant).first()
             estagio = None
-            if pipeline:
+            # Permite forcar um estagio especifico via payload (estagio_slug).
+            # Usado, por exemplo, pelo bot Vero (TR Carrion) quando um lead vem
+            # de fora-cobertura — opp ja nasce em "Aguardando Vendedor" pro
+            # humano avaliar caso a caso.
+            estagio_slug_in = (payload.get('estagio_slug') or '').strip().lower()
+            if pipeline and estagio_slug_in:
+                estagio = PipelineEstagio.all_tenants.filter(
+                    tenant=tenant, pipeline=pipeline, slug=estagio_slug_in, ativo=True,
+                ).first()
+            if not estagio and pipeline:
                 estagio = PipelineEstagio.all_tenants.filter(
                     tenant=tenant, pipeline=pipeline,
                 ).order_by('ordem').first()
