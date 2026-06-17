@@ -124,6 +124,8 @@ def _detectar_modulo_atual(request):
         return 'atendimento'
     if path.startswith('/marketing/') or path.startswith('/leads/') or app_name == 'comercial_leads' or url_name in ('leads', 'campanhas_trafego', 'configuracoes_cadastro'):
         return 'marketing'
+    if path.startswith('/dashboards/'):
+        return 'dashboards'
     if url_name.startswith('relatorio'):
         return 'relatorios'
     if '/configuracoes' in path or path.startswith('/perfil/') or path.startswith('/viabilidade/'):
