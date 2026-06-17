@@ -16,6 +16,7 @@
     {% if pode_editar %}
       {% if modo_edicao %}
         <a href="{% url 'relatorios:detalhe' dashboard.pk %}" class="btn btn-secondary btn-sm"><i class="bi bi-eye"></i> Visualizar</a>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalConfig()"><i class="bi bi-gear"></i> Config</button>
         <button class="btn btn-primary btn-sm" onclick="abrirWizardWidget()"><i class="bi bi-plus-lg"></i> Adicionar widget</button>
       {% else %}
         <a href="{% url 'relatorios:editar' dashboard.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil"></i> Editar</a>
@@ -168,9 +169,70 @@
     </div>
   </div>
 </div>
+
+<!-- Modal de Config do Dashboard -->
+<div class="modal-overlay" id="modal-config" style="display:none;">
+  <div class="modal-content" style="max-width:500px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-gear"></i> Configuracoes do dashboard</h3>
+      <button class="modal-close" onclick="fecharModal('modal-config')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <form method="post" action="{% url 'relatorios:editar' dashboard.pk %}">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div class="field">
+          <label class="field-label">Nome *</label>
+          <div class="field-input-wrap"><input type="text" name="nome" class="field-input" required maxlength="120" value="{{ dashboard.nome }}"></div>
+        </div>
+        <div class="field" style="margin-top:var(--sp-3);">
+          <label class="field-label">Descricao</label>
+          <div class="field-input-wrap"><textarea name="descricao" class="field-input" rows="2">{{ dashboard.descricao }}</textarea></div>
+        </div>
+        {% if pode_compartilhar %}
+          <div class="field" style="margin-top:var(--sp-3);">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" name="compartilhado" {% if dashboard.compartilhado %}checked{% endif %}>
+              <span>Compartilhar com a equipe</span>
+            </label>
+            <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;margin-left:24px;">Quando marcado, outros usuarios do tenant podem visualizar (so admin pode editar).</div>
+          </div>
+        {% endif %}
+        <hr style="margin:var(--sp-4) 0;border:none;border-top:1px solid var(--color-border);">
+        <button type="button" class="btn btn-danger btn-sm" onclick="excluirDashboard()" style="background:rgba(239,68,68,0.08);color:var(--color-danger);border:1px solid var(--color-danger);">
+          <i class="bi bi-trash"></i> Excluir dashboard
+        </button>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">Acao permanente. Remove todos os widgets junto.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModal('modal-config')">Cancelar</button>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg"></i> Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endif %}
 
 <style>
+  /* Modal: overlay opaco + content solido + GARANTIR que hidden esconde
+     mesmo com style.display inline (bug do dashboard.css legado) */
+  .modal-overlay[hidden] { display: none !important; }
+  .modal-overlay {
+    position: fixed !important; top: 0 !important; left: 0 !important;
+    width: 100vw !important; height: 100vh !important;
+    background: rgba(15, 23, 42, 0.65) !important;
+    z-index: 10000 !important;
+    display: flex; align-items: center; justify-content: center;
+    padding: var(--sp-4);
+  }
+  .modal-overlay > .modal-content {
+    background: var(--color-bg, #fff) !important;
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    width: 100%; max-height: calc(100vh - var(--sp-8, 32px));
+    overflow-y: auto;
+    z-index: 10001;
+  }
+
   .rel-header { display:flex; align-items:start; justify-content:space-between; gap:var(--sp-4); margin-bottom:var(--sp-4); }
   .rel-back { color:var(--color-text-muted); text-decoration:none; font-size:var(--fs-sm); }
   .rel-title { font-size:var(--fs-2xl); margin:var(--sp-2) 0 0; }
@@ -462,7 +524,7 @@ function abrirWizardWidget(widgetId = null) {
     };
   });
 
-  document.getElementById('modal-wizard').style.display = 'flex';
+  abrirModal('modal-wizard');
 }
 
 function wizardIrParaStep(n) {
@@ -697,14 +759,85 @@ async function salvarWidget() {
 }
 
 async function editarWidget(widgetId) {
-  // Pega config do widget e popula wizard
+  // Pega config do widget e abre o wizard ja pre-populado
   try {
-    const r = await fetch(URLS.widget_dados(widgetId));
+    const r = await fetch(`/dashboards/api/widget/${widgetId}/config/`);
     const d = await r.json();
-    if (!d.ok) { toast('Erro', d.error || 'Falha', 'danger'); return; }
-    // Encontra config pelo metadata (basico — pra MVP, busca pelo Django admin se quiser editar profundo)
+    if (!r.ok || !d.ok) { toast('Erro', d.error || 'Falha', 'danger'); return; }
+
+    // Abre wizard zerado e depois sobrescreve estado com config existente
     abrirWizardWidget(widgetId);
-    // TODO: pre-popular wizardEstado com dados do widget atual
+    document.getElementById('wizard-modal-titulo').textContent = `Editar widget: ${d.widget.titulo}`;
+    wizardEstado.data_source = d.widget.data_source;
+    wizardEstado.titulo = d.widget.titulo;
+    wizardEstado.metrica = d.widget.metrica;
+    wizardEstado.agrupamento = d.widget.agrupamento;
+    wizardEstado.filtros = d.widget.filtros;
+    wizardEstado.visualizacao = d.widget.visualizacao;
+
+    // Marca o data source selecionado
+    document.querySelectorAll('#ds-options .wizard-option').forEach(o => {
+      o.classList.toggle('is-active', o.dataset.slug === d.widget.data_source);
+    });
+    // Carrega schema do data source pra popular steps 2-3
+    const r2 = await fetch(URLS.ds_detalhe(d.widget.data_source));
+    wizardEstado.data_source_schema = await r2.json();
+    popularStep2();
+    popularStep3();
+
+    // Preenche titulo no step 2
+    document.getElementById('wiz-titulo').value = d.widget.titulo;
+    // Preenche metrica no step 2
+    const metricaRadio = document.querySelector(`input[name=wiz-metrica-tipo][value="${d.widget.metrica.tipo}"]`);
+    if (metricaRadio) {
+      metricaRadio.checked = true;
+      metricaRadio.closest('label').classList.add('is-active');
+      atualizarCampoMetrica();
+      if (d.widget.metrica.campo) {
+        document.getElementById('wiz-campo-metrica').value = d.widget.metrica.campo;
+      }
+    }
+    // Preenche agrupamento no step 3
+    if (d.widget.agrupamento && d.widget.agrupamento.dimensao) {
+      const dimSel = document.getElementById('wiz-dimensao');
+      dimSel.value = d.widget.agrupamento.dimensao;
+      dimSel.dispatchEvent(new Event('change'));
+      if (d.widget.agrupamento.granularidade) {
+        document.getElementById('wiz-granularidade').value = d.widget.agrupamento.granularidade;
+      }
+    }
+    // Preenche filtros
+    document.getElementById('wiz-filtros').innerHTML = '';
+    (d.widget.filtros || []).forEach(f => {
+      addFiltro();
+      const row = document.querySelectorAll('.filtro-row');
+      const last = row[row.length - 1];
+      last.querySelector('.filtro-campo').value = f.campo;
+      last.querySelector('.filtro-op').value = f.operador;
+      last.querySelector('.filtro-valor').value = f.valor || '';
+    });
+    // Marca viz
+    document.querySelectorAll('.wizard-viz-chip').forEach(c => {
+      c.classList.toggle('is-active', c.dataset.viz === d.widget.visualizacao);
+    });
+  } catch (e) { toast('Erro', e.message, 'danger'); }
+}
+
+function abrirModalConfig() {
+  abrirModal('modal-config');
+}
+
+async function excluirDashboard() {
+  if (!confirm('Excluir este dashboard? Todos os widgets serao removidos. Acao permanente.')) return;
+  try {
+    const fd = new FormData();
+    fd.append('csrfmiddlewaretoken', CSRF);
+    const r = await fetch(`/dashboards/${DASHBOARD_PK}/excluir/`, { method: 'POST', body: fd });
+    if (r.ok || r.status === 302) {
+      window.location.href = '/dashboards/';
+    } else {
+      toast('Erro', 'Falha ao excluir', 'danger');
+    }
   } catch (e) { toast('Erro', e.message, 'danger'); }
 }
 

@@ -260,6 +260,30 @@ def api_widget_dados(request, pk):
 
 
 @login_required
+@require_GET
+def api_widget_config(request, pk):
+    """Retorna config completa do widget pra pre-popular o wizard de edicao."""
+    if not _perm(request, 'relatorios.ver_dashboards'):
+        return JsonResponse({'error': 'Sem permissao'}, status=403)
+    widget = get_object_or_404(Widget.objects.select_related('dashboard'), pk=pk)
+    dashboard = widget.dashboard
+    if not (dashboard.compartilhado or dashboard.criado_por_id == request.user.id or request.user.is_superuser):
+        return JsonResponse({'error': 'Sem acesso'}, status=403)
+    return JsonResponse({
+        'ok': True,
+        'widget': {
+            'id': widget.pk,
+            'titulo': widget.titulo,
+            'data_source': widget.data_source,
+            'metrica': widget.metrica or {'tipo': 'count'},
+            'agrupamento': widget.agrupamento or {},
+            'filtros': widget.filtros or [],
+            'visualizacao': widget.visualizacao or 'numero',
+        },
+    })
+
+
+@login_required
 @require_POST
 def api_widget_salvar(request):
     """

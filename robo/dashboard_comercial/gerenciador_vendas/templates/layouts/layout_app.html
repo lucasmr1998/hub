@@ -448,6 +448,8 @@ Com subnav:
         m.hidden = false;
         // Compat com CSS legado (dashboard.css) que usa .show/.active pra display:flex
         m.classList.add('show', 'active');
+        // Garante display flex mesmo se template tem style="display:none" inline
+        m.style.display = 'flex';
         document.body.style.overflow = 'hidden';
       }
     }
@@ -456,6 +458,10 @@ Com subnav:
       if (m) {
         m.hidden = true;
         m.classList.remove('show', 'active');
+        // Limpa style.display inline que muitos templates antigos setam ao abrir
+        // (sem isso, [hidden] e .modal-overlay base nao escondem -> overlay continua
+        // bloqueando cliques e a pagina "trava")
+        m.style.display = 'none';
         document.body.style.overflow = '';
       }
     }
