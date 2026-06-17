@@ -234,7 +234,7 @@ registrar(DataSource(
         'tecnologia':        FieldSpec('Tecnologia', 'choice'),
         'data_habilitacao':  FieldSpec('Habilitado em', 'datetime', granularidades=['mes','ano']),
         'data_cancelamento': FieldSpec('Cancelado em', 'datetime', granularidades=['mes','ano']),
-        'motivo_cancelamento_prefixo': FieldSpec('Motivo cancelamento', 'choice'),
+        'motivo_cancelamento': FieldSpec('Motivo cancelamento', 'string'),
         'vigencia_meses':    FieldSpec('Vigencia (meses)', 'integer'),
         'cliente__cidade':   FieldSpec('Cidade do cliente', 'string'),
     },
