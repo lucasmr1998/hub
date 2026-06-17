@@ -269,11 +269,11 @@ const CSRF = "{{ csrf_token }}";
 
 const URLS = {
   data_sources: "{% url 'relatorios:api_data_sources' %}",
-  ds_detalhe: (slug) => `/relatorios/api/data-source/${slug}/`,
+  ds_detalhe: (slug) => `/dashboards/api/data-source/${slug}/`,
   preview: "{% url 'relatorios:api_preview' %}",
-  widget_dados: (id) => `/relatorios/api/widget/${id}/dados/`,
+  widget_dados: (id) => `/dashboards/api/widget/${id}/dados/`,
   widget_salvar: "{% url 'relatorios:api_widget_salvar' %}",
-  widget_excluir: (id) => `/relatorios/api/widget/${id}/excluir/`,
+  widget_excluir: (id) => `/dashboards/api/widget/${id}/excluir/`,
   layout_salvar: "{% url 'relatorios:api_dashboard_layout' dashboard.pk %}",
 };
 
