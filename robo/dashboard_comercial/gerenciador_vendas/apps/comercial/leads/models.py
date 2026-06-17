@@ -359,6 +359,20 @@ class LeadProspecto(TenantMixin):
         verbose_name="Data do Último Contato"
     )
 
+    # Marco "Lead atendido" pro relatorio de performance das consultoras.
+    # Preenchido por signal quando:
+    #   - primeiro HistoricoContato (humano) eh criado, OU
+    #   - oportunidade vinculada sai do estagio "atendimento-bot" (Nuvyon)
+    # Imutavel apos primeiro preenchimento.
+    atendido_em = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name="Atendido em (primeira interacao humana)",
+        help_text="Timestamp da primeira interacao humana com o lead. "
+                  "Usado no relatorio de performance/TMA das consultoras.",
+    )
+
     motivo_rejeicao = models.TextField(
         null=True,
         blank=True,
