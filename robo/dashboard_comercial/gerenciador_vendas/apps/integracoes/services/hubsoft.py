@@ -1307,6 +1307,94 @@ class HubsoftService:
         return resposta.get('ordens_servico') or resposta.get('ordem_servico') or []
 
     # ------------------------------------------------------------------
+    # Endpoints /todos paginados — pra sync em lote (relatorios + CS)
+    # Resposta tem `paginacao` com {primeira_pagina, ultima_pagina, pagina_atual, total_registros}
+    # ------------------------------------------------------------------
+
+    def listar_clientes_todos(
+        self, *,
+        pagina: int = 0,
+        itens_por_pagina: int = 100,
+        data_inicio: str = None,
+        data_fim: str = None,
+        cancelado: str = None,
+        servico_status: str = None,
+        relacoes: str = None,
+    ) -> dict:
+        """
+        GET /api/v1/integracao/cliente/todos paginado.
+        `data_inicio`/`data_fim` em formato YYYY-MM-DD pra delta sync.
+        Retorna dict completo: {status, msg, paginacao, clientes[]}.
+        `clientes[].servicos` vem inline (sem N+1).
+        """
+        params = {'pagina': int(pagina), 'itens_por_pagina': int(itens_por_pagina)}
+        if data_inicio:
+            params['data_inicio'] = data_inicio
+        if data_fim:
+            params['data_fim'] = data_fim
+        if cancelado is not None:
+            params['cancelado'] = cancelado
+        if servico_status:
+            params['servico_status'] = servico_status
+        if relacoes:
+            params['relacoes'] = relacoes
+        resposta = self._get('/api/v1/integracao/cliente/todos', params=params)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft retornou erro em /cliente/todos: {resposta}"
+            )
+        return resposta
+
+    def listar_os_todos(
+        self, *,
+        pagina: int = 0,
+        itens_por_pagina: int = 100,
+        data_inicio: str = None,
+        data_fim: str = None,
+    ) -> dict:
+        """
+        GET /api/v1/integracao/ordem_servico/todos paginado.
+        Retorna {status, paginacao, ordens_servico[]}.
+        """
+        params = {'pagina': int(pagina), 'itens_por_pagina': int(itens_por_pagina)}
+        if data_inicio:
+            params['data_inicio'] = data_inicio
+        if data_fim:
+            params['data_fim'] = data_fim
+        resposta = self._get('/api/v1/integracao/ordem_servico/todos', params=params)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft retornou erro em /ordem_servico/todos: {resposta}"
+            )
+        return resposta
+
+    def listar_atendimentos_todos(
+        self, *,
+        pagina: int = 0,
+        itens_por_pagina: int = 100,
+        data_inicio: str = None,
+        data_fim: str = None,
+        relacoes: str = None,
+    ) -> dict:
+        """
+        GET /api/v1/integracao/atendimento/todos paginado.
+        Retorna {status, paginacao, atendimentos[]}.
+        """
+        params = {'pagina': int(pagina), 'itens_por_pagina': int(itens_por_pagina)}
+        if data_inicio:
+            params['data_inicio'] = data_inicio
+        if data_fim:
+            params['data_fim'] = data_fim
+        if relacoes:
+            params['relacoes'] = relacoes
+        resposta = self._get('/api/v1/integracao/atendimento/todos', params=params)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft retornou erro em /atendimento/todos: {resposta}"
+            )
+        return resposta
+
+    # ------------------------------------------------------------------
     # Abertura / agendamento de OS (camada que substitui o apimatrix)
     # ------------------------------------------------------------------
 

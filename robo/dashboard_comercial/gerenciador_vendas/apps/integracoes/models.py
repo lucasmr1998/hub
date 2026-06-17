@@ -14,6 +14,13 @@ from .models_os import OrdemServicoTentativa  # noqa: F401
 # Tentativas de criar/aceitar contrato HubSoft (painel /integracoes/contratos/)
 from .models_contrato import ContratoTentativa  # noqa: F401
 
+# Espelhos de dados HubSoft pra alimentar relatorios + modulo CS
+from .models_hubsoft_relatorios import (  # noqa: F401
+    FaturaHubsoft,
+    OrdemServicoHubsoft,
+    AtendimentoHubsoft,
+)
+
 
 class IntegracaoAPI(TenantMixin):
     """
