@@ -1711,7 +1711,10 @@ class HubsoftService:
         if lead.data_nascimento:
             payload['data_nascimento'] = lead.data_nascimento.strftime('%d/%m/%Y')
 
-        # Endereco aninhado (prospecto_endereco.*)
+        # Endereco aninhado como objeto JSON (prospecto_endereco: {...})
+        # — formato corrigido 18/06: antes usavamos dotnotation flat
+        # ("prospecto_endereco.cep") mas HubSoft retornava success silencioso
+        # sem aplicar os campos. Aninhado como objeto funciona.
         endereco: dict = {}
         if lead.cep:
             endereco['cep'] = self._somente_numeros(lead.cep)
@@ -1723,16 +1726,19 @@ class HubsoftService:
             endereco['numero'] = lead.numero_residencia
         if lead.ponto_referencia:
             endereco['referencia'] = lead.ponto_referencia
-        for chave, valor in endereco.items():
-            payload[f'prospecto_endereco.{chave}'] = valor
+        if endereco:
+            payload['prospecto_endereco'] = endereco
 
-        # Servico aninhado (prospecto_servico.*)
+        # Servico aninhado (prospecto_servico: {...})
+        servico: dict = {}
         extras = self.integracao.configuracoes_extras or {}
         plano_id = lead.id_plano_rp or extras.get('plano_id_padrao')
         if plano_id:
-            payload['prospecto_servico.id_servico'] = int(plano_id)
+            servico['id_servico'] = int(plano_id)
         if lead.valor:
-            payload['prospecto_servico.valor'] = float(lead.valor)
+            servico['valor'] = float(lead.valor)
+        if servico:
+            payload['prospecto_servico'] = servico
 
         # Relacionamento (flat, igual ao create)
         if lead.id_origem:
