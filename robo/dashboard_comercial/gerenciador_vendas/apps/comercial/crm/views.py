@@ -2837,6 +2837,12 @@ ACOES_DISPONIVEIS = [
             {'name': 'telefone_destino', 'label': 'Telefone destino', 'type': 'text', 'help': 'Formato DDI+DDD+numero, só dígitos. Ex: 5553981521653'},
         ],
     },
+    {
+        'tipo': 'sincronizar_prospecto_hubsoft',
+        'label': 'Sincronizar Prospecto HubSoft',
+        'descricao': 'Cria rascunho (POST /prospecto) OU atualiza prospecto existente (PUT /prospecto/{id}) no HubSoft. Decide automaticamente pelo lead.id_hubsoft. Idempotente.',
+        'icon': 'bi-cloud-arrow-up',
+    },
 ]
 ACOES_DISPONIVEIS_DICT = {a['tipo']: a for a in ACOES_DISPONIVEIS}
 
