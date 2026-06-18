@@ -162,7 +162,25 @@ def sincronizar_prospecto_hubsoft(
             for attr, valor in snapshot.items():
                 setattr(lead, attr.replace('_attr', ''), valor)
 
-    # ATUALIZA prospecto existente com dados reais
+    # ATUALIZA prospecto existente — mas SO se lead estiver completo (mesmo
+    # padrao do cron `processar_pendentes` legado: usa
+    # validar_lead_pronto_para_prospect como gate). Se faltar dado, muda
+    # status_api pro motivo (incompleto/cpf_invalido/etc.) e NAO chama
+    # editar_prospecto — lead sai da fila ate alguem completar e setar
+    # status_api='pendente' de novo.
+    from apps.comercial.leads.utils import validar_lead_pronto_para_prospect
+    status_pre, motivo_pre = validar_lead_pronto_para_prospect(lead, integracao)
+    if status_pre != 'pendente':
+        LeadProspecto.all_tenants.filter(pk=lead.pk).update(
+            status_api=status_pre,
+            motivo_rejeicao=(motivo_pre or '')[:500],
+        )
+        return ResultadoSincProspecto(
+            ok=False, acao='pulado_preflight',
+            motivo=f'{status_pre}: {motivo_pre}',
+            id_prospecto=id_hubsoft_atual,
+        )
+
     try:
         resposta = service.editar_prospecto(lead, id_hubsoft_atual)
     except HubsoftServiceError as exc:
