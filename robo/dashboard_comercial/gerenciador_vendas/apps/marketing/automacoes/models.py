@@ -18,6 +18,7 @@ class RegraAutomacao(TenantMixin):
         ('lead_criado', 'Novo lead criado'),
         ('lead_qualificado', 'Lead qualificado (score mínimo)'),
         ('lead_sem_contato', 'Lead sem contato há X dias'),
+        ('lead_status_pendente', 'Lead atingiu status pendente (pronto pra integracao)'),
         ('oportunidade_movida', 'Oportunidade movida de estágio'),
         ('venda_aprovada', 'Venda aprovada'),
         ('cliente_aniversario', 'Aniversário de cliente'),
@@ -163,6 +164,7 @@ class AcaoRegra(TenantMixin):
         ('atribuir_responsavel', 'Atribuir responsável'),
         ('dar_pontos', 'Dar pontos no Clube'),
         ('webhook', 'Chamar webhook externo'),
+        ('sincronizar_prospecto_hubsoft', 'Sincronizar prospecto HubSoft (cria/atualiza)'),
     ]
 
     regra = models.ForeignKey(RegraAutomacao, on_delete=models.CASCADE, related_name='acoes')

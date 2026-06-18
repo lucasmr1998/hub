@@ -464,6 +464,7 @@ def _get_executor(tipo):
         'webhook': _acao_webhook,
         'criar_oportunidade': _acao_criar_oportunidade,
         'criar_venda': _acao_criar_venda,
+        'sincronizar_prospecto_hubsoft': _acao_sincronizar_prospecto_hubsoft,
     }.get(tipo)
 
 
@@ -792,3 +793,33 @@ def _acao_criar_venda(regra, acao, contexto):
         status=Venda.STATUS_PENDENTE_ERP,
     )
     return f'Venda criada para lead {lead.pk}'
+
+
+def _acao_sincronizar_prospecto_hubsoft(regra, acao, contexto):
+    """Cria rascunho OU atualiza prospecto no HubSoft — decide pelo id_hubsoft do lead.
+
+    Comportamento:
+    - Se lead.id_hubsoft vazio: chama cadastrar_prospecto com placeholders nos
+      campos vazios (cep=00000000, endereco/bairro="A confirmar", numero="S/N",
+      observacao="RASCUNHO"). Nome e telefone reais.
+    - Se lead.id_hubsoft preenchido: chama PUT /prospecto/{id} via
+      editar_prospecto com os dados reais ja coletados (update parcial).
+
+    Idempotente: lead com id_hubsoft preenchido nao cria novo, sempre atualiza.
+    NAO interfere nos crons antigos (processar_pendentes / criar_prospectos_crm)
+    porque eles ja pulam quando lead.id_hubsoft esta preenchido.
+    """
+    from apps.integracoes.services.hubsoft_prospecto_rascunho import (
+        sincronizar_prospecto_hubsoft,
+    )
+
+    lead = contexto.get('lead')
+    if not lead or not hasattr(lead, 'pk'):
+        return 'Lead nao encontrado no contexto'
+
+    resultado = sincronizar_prospecto_hubsoft(lead)
+    if resultado.ok:
+        return (
+            f'Prospecto {resultado.acao} (id_hubsoft={resultado.id_prospecto})'
+        )
+    return f'Pulado/erro: acao={resultado.acao} motivo={resultado.motivo}'

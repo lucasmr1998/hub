@@ -58,6 +58,7 @@ class HubsoftService:
     # Viabilidade / cobertura
     ENDPOINT_VIABILIDADE = '/api/v1/integracao/mapeamento/viabilidade/consultar'
     ENDPOINT_PROSPECTO_CREATE = '/api/v1/integracao/prospecto/create'
+    ENDPOINT_PROSPECTO_EDITAR_TPL = '/api/v1/integracao/prospecto/{id_prospecto}'
 
     # Atendimento / OS (LEITURA — Bloco H6 reduzido)
     ENDPOINT_CLIENTE_ATENDIMENTO = '/api/v1/integracao/cliente/atendimento'
@@ -138,6 +139,30 @@ class HubsoftService:
         if resposta.get('status') != 'success':
             raise HubsoftServiceError(
                 f"HubSoft rejeitou prospecto: {resposta}"
+            )
+        return resposta
+
+    def editar_prospecto(self, lead, id_prospecto: str | int, *, payload: dict | None = None) -> dict:
+        """Atualiza prospecto existente no HubSoft (PUT /prospecto/{id}).
+
+        Aceita update parcial — todos os campos sao opcionais na API HubSoft. Se
+        `payload` nao for passado, monta automaticamente via
+        `_mapear_lead_para_hubsoft_editar`, que produz o formato aninhado
+        (prospecto_endereco.*, prospecto_servico.*) exigido pelo endpoint editar
+        (diferente do create, que usa flat cep/endereco/bairro + servico.*).
+
+        Retorna dict da API (espera `msg: "Prospecto atualizado com sucesso"`).
+        """
+        if not id_prospecto:
+            raise HubsoftServiceError('editar_prospecto: id_prospecto vazio')
+        if payload is None:
+            payload = self._mapear_lead_para_hubsoft_editar(lead)
+        endpoint = self.ENDPOINT_PROSPECTO_EDITAR_TPL.format(id_prospecto=id_prospecto)
+        resposta = self._put(endpoint, json=payload, lead=lead)
+
+        if resposta.get('status') and resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft rejeitou edicao do prospecto {id_prospecto}: {resposta}"
             )
         return resposta
 
@@ -1654,6 +1679,71 @@ class HubsoftService:
         )
         if origem_servico_id:
             payload['id_origem_servico'] = origem_servico_id
+
+        payload['id_externo'] = str(lead.pk)
+        return payload
+
+    def _mapear_lead_para_hubsoft_editar(self, lead) -> dict:
+        """Payload pro endpoint PUT /prospecto/{id} (editar).
+
+        Diferencas vs create:
+        - endereco usa prefixo `prospecto_endereco.*` (nao flat)
+        - servico usa prefixo `prospecto_servico.*` (nao `servico.*`)
+        - TODOS os campos sao opcionais — so passa o que tem valor preenchido
+        - update parcial (subset aceito pela API)
+        """
+        payload: dict = {}
+
+        if lead.nome_razaosocial:
+            payload['nome_razaosocial'] = lead.nome_razaosocial
+        payload['tipo_pessoa'] = self._detectar_tipo_pessoa(lead.cpf_cnpj)
+
+        if lead.cpf_cnpj:
+            payload['cpf_cnpj'] = self._somente_numeros(lead.cpf_cnpj)
+        if lead.telefone:
+            payload['telefone'] = self._normalizar_telefone(lead.telefone)
+        if lead.email:
+            payload['email'] = lead.email
+        if lead.observacoes:
+            payload['observacao'] = lead.observacoes
+        if lead.rg:
+            payload['rg'] = lead.rg
+        if lead.data_nascimento:
+            payload['data_nascimento'] = lead.data_nascimento.strftime('%d/%m/%Y')
+
+        # Endereco aninhado (prospecto_endereco.*)
+        endereco: dict = {}
+        if lead.cep:
+            endereco['cep'] = self._somente_numeros(lead.cep)
+        if lead.rua or lead.endereco:
+            endereco['endereco'] = lead.rua or lead.endereco
+        if lead.bairro:
+            endereco['bairro'] = lead.bairro
+        if lead.numero_residencia:
+            endereco['numero'] = lead.numero_residencia
+        if lead.ponto_referencia:
+            endereco['referencia'] = lead.ponto_referencia
+        for chave, valor in endereco.items():
+            payload[f'prospecto_endereco.{chave}'] = valor
+
+        # Servico aninhado (prospecto_servico.*)
+        extras = self.integracao.configuracoes_extras or {}
+        plano_id = lead.id_plano_rp or extras.get('plano_id_padrao')
+        if plano_id:
+            payload['prospecto_servico.id_servico'] = int(plano_id)
+        if lead.valor:
+            payload['prospecto_servico.valor'] = float(lead.valor)
+
+        # Relacionamento (flat, igual ao create)
+        if lead.id_origem:
+            payload['id_origem_cliente'] = int(lead.id_origem)
+        if lead.id_dia_vencimento:
+            payload['id_vencimento'] = int(lead.id_dia_vencimento)
+        if lead.id_vendedor_rp:
+            try:
+                payload['id_vendedor'] = int(lead.id_vendedor_rp)
+            except (ValueError, TypeError):
+                pass
 
         payload['id_externo'] = str(lead.pk)
         return payload

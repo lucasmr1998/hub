@@ -34,6 +34,31 @@ def on_lead_criado(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender='leads.LeadProspecto')
+def on_lead_status_pendente(sender, instance, created, **kwargs):
+    """Dispara 'lead_status_pendente' quando lead atinge status 'pendente'.
+
+    Usado pra acoes de integracao externa (ex: editar prospecto HubSoft com
+    dados ja completos). Idempotencia tratada pela cooldown/max_execucoes_por_lead
+    da regra — disparar varias vezes nao causa side-effect duplicado se a acao
+    for idempotente (caso de sincronizar_prospecto_hubsoft).
+    """
+    if getattr(instance, '_skip_automacao', False):
+        return
+    if getattr(instance, 'status_api', None) != 'pendente':
+        return
+
+    from .engine import disparar_evento
+    disparar_evento('lead_status_pendente', {
+        'lead': instance,
+        'lead_nome': instance.nome_razaosocial,
+        'lead_telefone': instance.telefone,
+        'lead_id_hubsoft': instance.id_hubsoft or '',
+        'telefone': instance.telefone,
+        'nome': instance.nome_razaosocial,
+    }, tenant=instance.tenant)
+
+
+@receiver(post_save, sender='leads.LeadProspecto')
 def on_lead_qualificado(sender, instance, created, **kwargs):
     """Dispara evento 'lead_qualificado' quando score muda para >= 7."""
     if created:
