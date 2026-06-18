@@ -168,6 +168,11 @@ def api_pipeline_dados(request):
         'lead', 'estagio', 'responsavel', 'plano_interesse', 'pipeline'
     ).prefetch_related('tarefas', 'tags')
 
+    # Esconde oportunidades rascunho (lead novo nao qualificado ainda)
+    # do funil padrao. Pra debug/admin: ?incluir_rascunhos=1
+    if request.GET.get('incluir_rascunhos') != '1':
+        qs = qs.filter(is_rascunho=False)
+
     if pipeline_id:
         qs = qs.filter(pipeline_id=pipeline_id)
 
@@ -385,6 +390,10 @@ def oportunidades_lista(request):
     qs = OportunidadeVenda.objects.filter(ativo=True).select_related(
         'lead', 'estagio', 'responsavel'
     ).prefetch_related('tags').order_by('estagio__ordem', '-data_criacao')
+
+    # Esconde rascunhos por padrao
+    if request.GET.get('incluir_rascunhos') != '1':
+        qs = qs.filter(is_rascunho=False)
 
     if not user_tem_funcionalidade(request, 'comercial.ver_todas_oportunidades'):
         qs = qs.filter(Q(responsavel=request.user) | Q(responsavel__isnull=True))

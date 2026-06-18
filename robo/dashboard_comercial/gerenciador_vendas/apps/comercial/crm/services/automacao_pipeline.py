@@ -716,6 +716,34 @@ def _acao_mover_para_perdido_sem_viabilidade(oportunidade, config):
     return True
 
 
+def _acao_sincronizar_prospecto_hubsoft(oportunidade, config):
+    """Cria rascunho OU atualiza prospecto no HubSoft a partir do lead da oportunidade.
+
+    Decide pelo lead.id_hubsoft: vazio -> POST /prospecto com placeholders;
+    preenchido -> PUT /prospecto/{id} com dados reais. Idempotente.
+    Retorna True se uma chamada efetiva foi feita (criou ou atualizou),
+    False se pulou (lead sem nome/telefone ou tenant sem integracao HubSoft).
+    """
+    from apps.integracoes.services.hubsoft_prospecto_rascunho import (
+        sincronizar_prospecto_hubsoft,
+    )
+    lead = getattr(oportunidade, 'lead', None)
+    if lead is None:
+        return False
+    resultado = sincronizar_prospecto_hubsoft(lead)
+    if resultado.ok and resultado.acao in ('criado', 'atualizado'):
+        logger.info(
+            "[Automacao Pipeline] HubSoft prospecto %s para lead %s (id=%s)",
+            resultado.acao, lead.pk, resultado.id_prospecto,
+        )
+        return True
+    logger.info(
+        "[Automacao Pipeline] sincronizar_prospecto_hubsoft pulado/erro: acao=%s motivo=%s",
+        resultado.acao, resultado.motivo,
+    )
+    return False
+
+
 _EXECUTORES_ACAO = {
     'criar_venda': _acao_criar_venda,
     'atribuir_agente': _acao_atribuir_agente,
@@ -723,6 +751,7 @@ _EXECUTORES_ACAO = {
     'assinar_contrato_hubsoft': _acao_assinar_contrato_hubsoft,
     'enviar_venda_whatsapp': _acao_enviar_venda_whatsapp,
     'mover_para_perdido_sem_viabilidade': _acao_mover_para_perdido_sem_viabilidade,
+    'sincronizar_prospecto_hubsoft': _acao_sincronizar_prospecto_hubsoft,
 }
 
 

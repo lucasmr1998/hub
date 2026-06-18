@@ -239,6 +239,16 @@ class OportunidadeVenda(TenantMixin):
     prioridade = models.CharField(max_length=10, choices=PRIORIDADE_CHOICES, default='normal', verbose_name="Prioridade")
     tags = models.ManyToManyField(TagCRM, blank=True, related_name='oportunidades', verbose_name="Tags")
 
+    is_rascunho = models.BooleanField(
+        default=False, db_index=True,
+        verbose_name="Rascunho (lead nao qualificado ainda)",
+        help_text=(
+            "True quando a oportunidade foi criada automaticamente pra leads novos "
+            "que ainda nao bateram score/status de qualificacao. Escondida do "
+            "funil/kanban padrao. Vira False quando o lead qualifica."
+        ),
+    )
+
     data_entrada_estagio = models.DateTimeField(default=timezone.now, verbose_name="Entrada no Estágio Atual")
     motivo_perda = models.TextField(null=True, blank=True, verbose_name="Motivo da Perda (texto livre)")
     concorrente_perdido = models.CharField(max_length=100, null=True, blank=True, verbose_name="Concorrente (Perda)")
@@ -883,6 +893,16 @@ class ConfiguracaoCRM(TenantMixin):
         default=True,
         verbose_name="Pedir 'qual concorrente?' quando motivo for Concorrente",
         help_text="Quando motivo escolhido for relacionado a concorrente, exibe campo extra para identificar qual.",
+    )
+
+    # Marco "Proposta enviada" pro relatorio de velocidade de atendimento.
+    # Quando o lead/oportunidade chega nesse estagio, conta-se como momento
+    # da "proposta enviada" pro calculo do tempo medio Lead -> Proposta.
+    estagio_proposta_slug = models.CharField(
+        max_length=80, blank=True, default='',
+        verbose_name="Estagio que representa 'Proposta enviada'",
+        help_text="Slug do estagio do pipeline padrao que marca o momento da 'proposta enviada' "
+                  "(usado no relatorio Velocidade de atendimento). Ex: 'em-negociacao', 'plano-escolhido'.",
     )
 
     data_atualizacao = models.DateTimeField(auto_now=True)
