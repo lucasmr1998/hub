@@ -1,6 +1,8 @@
 # Prospecto rascunho HubSoft (criar cedo + atualizar depois)
 
 > Status: implementado em 17/06/2026, refatorado em 18/06/2026 pra motor de automação do CRM. **Inativo por padrão** — ativação pela Gabi (Nuvyon) pela UI de Automações do Pipeline.
+>
+> **Atualização 18/06 (limpa):** removida flag `OportunidadeVenda.is_rascunho` (inventada por engano). Webhook Matrix já cria oportunidade direto — não precisa de flag intermediária. Regras agora usam só `lead.id_hubsoft` (existe/não existe) como gatilho.
 
 ## Problema
 
@@ -12,15 +14,13 @@ Hoje o prospecto HubSoft só é criado quando o lead atinge `status_api='pendent
 
 Implementação **dentro do motor de automação do Pipeline (CRM)** — Gabi vê e ajusta as regras no mesmo lugar onde já tem outras regras comerciais (`🎯 13. Automações do Pipeline`).
 
-## Pré-requisito chave: `OportunidadeVenda.is_rascunho`
+## Pré-requisito chave: webhook Matrix cria oportunidade direto
 
-O motor CRM avalia regras **contra uma oportunidade**. Lead novo (sem score, sem qualificação) **não tinha** oportunidade antes da refatoração — agora **sempre tem**, com flag `is_rascunho=True` se ainda não qualificou.
+Na Nuvyon, leads chegam via webhook N8N do Matrix ([`views_n8n_webhook.py:299`](robo/dashboard_comercial/gerenciador_vendas/apps/integracoes/views_n8n_webhook.py#L299)). Esse webhook **já cria a OportunidadeVenda** no momento da chegada, com estágio definido pelo Matrix (pipeline "Atendimento Bot (Nuvyon)").
 
-- `is_rascunho=True` → escondida do funil/kanban padrão (filtros embutidos em [crm/views.py](robo/dashboard_comercial/gerenciador_vendas/apps/comercial/crm/views.py))
-  - Pra debug/admin: `?incluir_rascunhos=1` na URL
-- `is_rascunho=False` → oportunidade qualificada normal, aparece em todos os relatórios
-- Signal `qualificar_oportunidade_rascunho` ([crm/signals.py](robo/dashboard_comercial/gerenciador_vendas/apps/comercial/crm/signals.py)) promove `True → False` quando o lead bate score mínimo OU `status_api='sucesso'`
-- Distribuição (round robin) só roda quando deixa de ser rascunho — vendedores não recebem leads "lixo"
+Significa: lead recém-chegado **já tem oportunidade** → motor CRM (`RegraPipelineEstagio`) consegue avaliar regras desde o primeiro `post_save`.
+
+Não precisa de flag/scaffolding intermediário. Idempotência é via `lead.id_hubsoft`.
 
 ## Fluxo
 
@@ -40,7 +40,6 @@ Lead entra (Matrix webhook / Inbox WhatsApp / CRM manual / Widget)
         |
         +-- Regra 1: "HubSoft - Criar rascunho ao receber lead (CRM)"
         |   Condições:
-        |     - oportunidade_is_rascunho == True
         |     - lead_campo: id_hubsoft nao_existe
         |   Ação: sincronizar_prospecto_hubsoft
         |     -> POST /api/v1/integracao/prospecto
@@ -131,12 +130,13 @@ Erros (timeout HubSoft, validação rejeitada, etc.) são logados em `motivo_rej
 ### Motor CRM (foco atual)
 | Arquivo | Tipo |
 |---|---|
-| `apps/comercial/crm/models.py` | adição (`OportunidadeVenda.is_rascunho`) |
-| `apps/comercial/crm/migrations/0024_oportunidadevenda_is_rascunho.py` | migration |
-| `apps/comercial/crm/signals.py` | refactor `criar_oportunidade_automatica` + novo `qualificar_oportunidade_rascunho` |
-| `apps/comercial/crm/views.py` | filtro `is_rascunho=False` em kanban + lista |
 | `apps/comercial/crm/services/automacao_pipeline.py` | adição (`_acao_sincronizar_prospecto_hubsoft` + entrada em `_EXECUTORES_ACAO`) |
-| `apps/comercial/crm/services/automacao_condicoes.py` | adição (`CondicaoOportunidadeIsRascunho`) |
+
+Arquivos tocados em 18/06 e revertidos no mesmo dia (campo `is_rascunho` era desnecessário):
+- `models.py` (campo `is_rascunho` adicionado e removido via migrations 0024 → 0025)
+- `signals.py` (`criar_oportunidade_automatica` refatorada e revertida; `qualificar_oportunidade_rascunho` criada e removida)
+- `views.py` (filtros `is_rascunho=False` adicionados e revertidos no kanban + lista)
+- `automacao_condicoes.py` (`CondicaoOportunidadeIsRascunho` adicionada e removida)
 
 ### Integrações HubSoft (já em prod desde 17/06)
 | Arquivo | Tipo |

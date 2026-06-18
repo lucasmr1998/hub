@@ -285,24 +285,6 @@ class CondicaoConversaAtribuida:
 
 
 @registrar
-class CondicaoOportunidadeIsRascunho:
-    """Checa se a oportunidade esta como rascunho (lead nao qualificado ainda).
-
-    Usado pra regra "se is_rascunho=True E lead.id_hubsoft vazio -> criar
-    prospecto HubSoft rascunho". Operadores: igual, diferente, existe, nao_existe.
-    """
-    slug = 'oportunidade_is_rascunho'
-    label = 'Oportunidade é rascunho (lead nao qualificado)'
-
-    def coletar_contexto(self, oportunidade, contexto):
-        contexto['_oportunidade_is_rascunho'] = bool(getattr(oportunidade, 'is_rascunho', False))
-
-    def avaliar(self, operador, valor, campo, contexto):
-        atual = contexto.get('_oportunidade_is_rascunho', False)
-        return comparar_bool(atual, operador, valor)
-
-
-@registrar
 class CondicaoOportunidadeDadosCustom:
     """
     Checa chaves dentro de Oportunidade.dados_custom (JSONB).

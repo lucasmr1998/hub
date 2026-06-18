@@ -239,16 +239,6 @@ class OportunidadeVenda(TenantMixin):
     prioridade = models.CharField(max_length=10, choices=PRIORIDADE_CHOICES, default='normal', verbose_name="Prioridade")
     tags = models.ManyToManyField(TagCRM, blank=True, related_name='oportunidades', verbose_name="Tags")
 
-    is_rascunho = models.BooleanField(
-        default=False, db_index=True,
-        verbose_name="Rascunho (lead nao qualificado ainda)",
-        help_text=(
-            "True quando a oportunidade foi criada automaticamente pra leads novos "
-            "que ainda nao bateram score/status de qualificacao. Escondida do "
-            "funil/kanban padrao. Vira False quando o lead qualifica."
-        ),
-    )
-
     data_entrada_estagio = models.DateTimeField(default=timezone.now, verbose_name="Entrada no Estágio Atual")
     motivo_perda = models.TextField(null=True, blank=True, verbose_name="Motivo da Perda (texto livre)")
     concorrente_perdido = models.CharField(max_length=100, null=True, blank=True, verbose_name="Concorrente (Perda)")

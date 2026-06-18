@@ -11,17 +11,8 @@ logger = logging.getLogger(__name__)
 @receiver(post_save, sender='leads.LeadProspecto')
 def criar_oportunidade_automatica(sender, instance, created, **kwargs):
     """
-    Cria OportunidadeVenda automaticamente assim que um lead nasce.
-
-    - Lead novo qualificado (score >= minimo OU status_api='sucesso'):
-        OportunidadeVenda(is_rascunho=False) — aparece no funil normal,
-        recebe distribuicao automatica.
-    - Lead novo NAO qualificado:
-        OportunidadeVenda(is_rascunho=True) — escondida do funil padrao,
-        nao recebe distribuicao. Serve pra motor de automacao do CRM poder
-        disparar regras (ex: sincronizar_prospecto_hubsoft) desde a chegada
-        do lead. Quando qualifica, signal `qualificar_oportunidade_rascunho`
-        marca is_rascunho=False e ela vira oportunidade normal.
+    Cria OportunidadeVenda automaticamente quando um lead é qualificado.
+    Critérios: score_qualificacao >= config.score_minimo OU status_api == 'sucesso'.
     """
     from apps.comercial.crm.models import OportunidadeVenda, ConfiguracaoCRM
 
@@ -29,7 +20,7 @@ def criar_oportunidade_automatica(sender, instance, created, **kwargs):
     if getattr(instance, '_skip_crm_signal', False):
         return
 
-    # Verificar se já existe oportunidade para este lead
+    # Verificar se já existe oportunidade para este lead (all_tenants para funcionar em signals)
     if OportunidadeVenda.all_tenants.filter(lead=instance).exists():
         return
 
@@ -55,6 +46,9 @@ def criar_oportunidade_automatica(sender, instance, created, **kwargs):
         or status_api == 'sucesso'
     )
 
+    if not qualificado:
+        return
+
     try:
         oportunidade = OportunidadeVenda.objects.create(
             lead=instance,
@@ -63,64 +57,15 @@ def criar_oportunidade_automatica(sender, instance, created, **kwargs):
             valor_estimado=getattr(instance, 'valor', None),
             origem_crm='automatico',
             probabilidade=config.estagio_inicial_padrao.probabilidade_padrao,
-            is_rascunho=not qualificado,
         )
-        logger.info(
-            f"[CRM] OportunidadeVenda criada para LeadProspecto id={instance.pk} "
-            f"is_rascunho={oportunidade.is_rascunho}"
-        )
+        logger.info(f"[CRM] OportunidadeVenda criada para LeadProspecto id={instance.pk}")
 
-        # Distribuicao automatica so pra oportunidade ja qualificada — rascunho
-        # nao deve poluir round-robin de vendedores
-        if qualificado:
-            from apps.comercial.crm.distribution import distribuir_oportunidade
-            distribuir_oportunidade(oportunidade)
+        # Distribuir automaticamente (round robin)
+        from apps.comercial.crm.distribution import distribuir_oportunidade
+        distribuir_oportunidade(oportunidade)
 
     except Exception as e:
         logger.error(f"[CRM] Erro ao criar OportunidadeVenda para lead {instance.pk}: {e}")
-
-
-@receiver(post_save, sender='leads.LeadProspecto')
-def qualificar_oportunidade_rascunho(sender, instance, created, **kwargs):
-    """
-    Promove oportunidade is_rascunho=True -> False quando o lead qualifica.
-    Disparada por mudanca de score/status_api.
-    """
-    if getattr(instance, '_skip_crm_signal', False):
-        return
-    if created:
-        return  # tratado pelo criar_oportunidade_automatica
-
-    from apps.comercial.crm.models import OportunidadeVenda, ConfiguracaoCRM
-
-    config = ConfiguracaoCRM.all_tenants.filter(tenant=instance.tenant).first()
-    if not config:
-        return
-
-    score = getattr(instance, 'score_qualificacao', 0) or 0
-    status_api = getattr(instance, 'status_api', '') or ''
-    qualificado = (
-        score >= config.score_minimo_auto_criacao
-        or status_api == 'sucesso'
-    )
-    if not qualificado:
-        return
-
-    op = OportunidadeVenda.all_tenants.filter(lead=instance, is_rascunho=True).first()
-    if not op:
-        return
-
-    op.is_rascunho = False
-    op.save(update_fields=['is_rascunho'])
-    logger.info(f"[CRM] Oportunidade {op.pk} promovida de rascunho para qualificada (lead {instance.pk})")
-
-    # Agora distribui (nao distribuimos quando ainda era rascunho)
-    if not op.responsavel:
-        try:
-            from apps.comercial.crm.distribution import distribuir_oportunidade
-            distribuir_oportunidade(op)
-        except Exception as e:
-            logger.error(f"[CRM] Falha ao distribuir oportunidade {op.pk} apos qualificacao: {e}")
 
 
 @receiver(post_save, sender='leads.HistoricoContato')
