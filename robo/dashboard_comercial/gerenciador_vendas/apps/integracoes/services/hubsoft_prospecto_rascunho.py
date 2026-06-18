@@ -25,8 +25,10 @@ from apps.integracoes.models import IntegracaoAPI
 from apps.integracoes.services.hubsoft import HubsoftService, HubsoftServiceError
 
 
-# Placeholders padrao usados quando o lead nao tem dado real ainda
-PLACEHOLDER_CEP = '00000000'
+# Placeholders padrao usados quando o lead nao tem dado real ainda.
+# CEP precisa ser real pra HubSoft resolver cidade — pode ser sobrescrito
+# por tenant via IntegracaoAPI.configuracoes_extras.cep_default.
+PLACEHOLDER_CEP_FALLBACK = '13730000'  # Mococa-SP centro (default Nuvyon)
 PLACEHOLDER_TEXTO = 'A confirmar'
 PLACEHOLDER_NUMERO = 'S/N'
 OBSERVACAO_RASCUNHO = 'RASCUNHO - dados pendentes via Hubtrix'
@@ -40,16 +42,23 @@ class ResultadoSincProspecto:
     id_prospecto: Optional[str]  # preenchido em sucesso
 
 
-def _preencher_placeholders_para_rascunho(lead: LeadProspecto) -> dict:
+def _preencher_placeholders_para_rascunho(lead: LeadProspecto, integracao=None) -> dict:
     """Mantém nome+telefone reais; preenche placeholders nos vazios pra
     passar validacao do create do HubSoft.
+
+    CEP precisa ser real pra HubSoft resolver cidade. Le de
+    `IntegracaoAPI.configuracoes_extras.cep_default` se presente,
+    senao usa PLACEHOLDER_CEP_FALLBACK (Mococa-SP).
 
     Retorna dict {campo: valor_placeholder} que vai SOBRESCREVER campos vazios
     do lead apenas no momento da chamada — NAO persiste no lead.
     """
+    extras = (integracao.configuracoes_extras or {}) if integracao else {}
+    cep_default = (extras.get('cep_default') or PLACEHOLDER_CEP_FALLBACK).strip()
+
     overrides = {}
     if not (lead.cep or '').strip():
-        overrides['cep'] = PLACEHOLDER_CEP
+        overrides['cep'] = cep_default
     if not (lead.rua or lead.endereco or '').strip():
         overrides['endereco'] = PLACEHOLDER_TEXTO
     if not (lead.bairro or '').strip():
@@ -105,7 +114,7 @@ def sincronizar_prospecto_hubsoft(
 
     if not id_hubsoft_atual:
         # CRIA rascunho com placeholders
-        overrides = _preencher_placeholders_para_rascunho(lead)
+        overrides = _preencher_placeholders_para_rascunho(lead, integracao)
         # Aplica overrides em campos vazios via attribute set TEMPORARIO
         snapshot = {}
         try:
