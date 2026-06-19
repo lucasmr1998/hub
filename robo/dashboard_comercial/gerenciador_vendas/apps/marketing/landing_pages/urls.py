@@ -7,4 +7,5 @@ app_name = 'landing_pages'
 
 urlpatterns = [
     path('<slug:tenant_slug>/<slug:landing_slug>/', views.landing_publica, name='publica'),
+    path('<slug:tenant_slug>/<slug:landing_slug>/submit/', views.submeter_formulario, name='submeter'),
 ]

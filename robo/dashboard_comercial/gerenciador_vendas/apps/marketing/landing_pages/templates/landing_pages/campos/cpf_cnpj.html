@@ -1,0 +1,30 @@
+<div class="lp-campo lp-campo-cpf" style="display: flex; flex-direction: column; gap: 4px;">
+  <label for="lp-{{ props.name }}" style="font-weight: 500; font-size: 0.875rem; color: #374151;">{{ props.label }}{% if props.required %} <span style="color:#dc2626;">*</span>{% endif %}</label>
+  <input type="text" id="lp-{{ props.name }}" name="{{ props.name }}"
+         placeholder="{{ props.placeholder|default:'000.000.000-00' }}"
+         {% if props.required %}required{% endif %}
+         inputmode="numeric"
+         data-mask="cpf-cnpj"
+         data-tipo="{{ props.tipo|default:'auto' }}"
+         style="padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;">
+  {% if props.help_text %}<small style="color: #6b7280; font-size: 0.75rem;">{{ props.help_text }}</small>{% endif %}
+</div>
+<script>
+(function(){
+  const el = document.currentScript.previousElementSibling.querySelector('input[data-mask="cpf-cnpj"]');
+  if (!el || el.dataset.maskInit) return;
+  el.dataset.maskInit = '1';
+  el.addEventListener('input', function() {
+    let v = el.value.replace(/\D/g, '').slice(0, 14);
+    if (v.length <= 11) {
+      el.value = v.replace(/(\d{0,3})(\d{0,3})(\d{0,3})(\d{0,2})/, function(_,a,b,c,d){
+        let out = a; if(b) out += '.'+b; if(c) out += '.'+c; if(d) out += '-'+d; return out;
+      });
+    } else {
+      el.value = v.replace(/(\d{0,2})(\d{0,3})(\d{0,3})(\d{0,4})(\d{0,2})/, function(_,a,b,c,d,e){
+        let out = a; if(b) out += '.'+b; if(c) out += '.'+c; if(d) out += '/'+d; if(e) out += '-'+e; return out;
+      });
+    }
+  });
+})();
+</script>

@@ -1,0 +1,42 @@
+<div class="lp-campo lp-campo-cep" style="display: flex; flex-direction: column; gap: 4px;">
+  <label for="lp-{{ props.name }}" style="font-weight: 500; font-size: 0.875rem; color: #374151;">{{ props.label }}{% if props.required %} <span style="color:#dc2626;">*</span>{% endif %}</label>
+  <input type="text" id="lp-{{ props.name }}" name="{{ props.name }}"
+         placeholder="{{ props.placeholder|default:'00000-000' }}"
+         {% if props.required %}required{% endif %}
+         inputmode="numeric"
+         data-mask="cep"
+         data-viacep="{{ props.integra_viacep|yesno:'1,0' }}"
+         data-campos="{{ props.campos_preenchidos|default:'rua,bairro,cidade,uf' }}"
+         maxlength="9"
+         style="padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;">
+  {% if props.help_text %}<small style="color: #6b7280; font-size: 0.75rem;">{{ props.help_text }}</small>{% endif %}
+</div>
+<script>
+(function(){
+  const el = document.currentScript.previousElementSibling.querySelector('input[data-mask="cep"]');
+  if (!el || el.dataset.maskInit) return;
+  el.dataset.maskInit = '1';
+  el.addEventListener('input', function() {
+    let v = el.value.replace(/\D/g, '').slice(0, 8);
+    el.value = v.length > 5 ? v.replace(/(\d{5})(\d{0,3}).*/, '$1-$2') : v;
+  });
+  if (el.dataset.viacep === '1') {
+    el.addEventListener('blur', async function() {
+      const cep = el.value.replace(/\D/g, '');
+      if (cep.length !== 8) return;
+      try {
+        const r = await fetch('https://viacep.com.br/ws/' + cep + '/json/');
+        const d = await r.json();
+        if (d.erro) return;
+        const campos = (el.dataset.campos || 'rua,bairro,cidade,uf').split(',');
+        const form = el.closest('form');
+        const map = {rua: d.logradouro, bairro: d.bairro, cidade: d.localidade, uf: d.uf};
+        for (const c of campos) {
+          const target = form.querySelector('[name="' + c.trim() + '"]') || form.querySelector('[name="endereco[' + c.trim() + ']"]');
+          if (target && map[c.trim()]) target.value = map[c.trim()];
+        }
+      } catch (e) {}
+    });
+  }
+})();
+</script>

@@ -1,0 +1,8 @@
+{# Wrapper compartilhado: label + ajuda + slot do input + erro inline #}
+<div class="lp-campo" style="display: flex; flex-direction: column; gap: 4px;">
+  <label for="lp-{{ props.name }}" style="font-weight: 500; font-size: 0.875rem; color: #374151;">
+    {{ props.label }}{% if props.required %} <span style="color:#dc2626;">*</span>{% endif %}
+  </label>
+  {{ input_slot|safe }}
+  {% if props.help_text %}<small style="color: #6b7280; font-size: 0.75rem;">{{ props.help_text }}</small>{% endif %}
+</div>

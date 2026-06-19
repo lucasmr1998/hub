@@ -1,0 +1,14 @@
+{# Campo viabilidade: visual de status (atualizado via JS apos preenchimento do CEP/endereco).
+   Server-side validacao chama consultar_viabilidade(tenant, ...) e marca status no LandingSubmissao. #}
+<div class="lp-campo lp-campo-viabilidade" data-campo-viabilidade
+     data-msg-fora="{{ props.mensagem_fora_cobertura|default:'Infelizmente ainda nao atendemos seu endereco.' }}"
+     style="display: flex; flex-direction: column; gap: 4px;">
+  <label style="font-weight: 500; font-size: 0.875rem; color: #374151;">
+    {{ props.label }}
+  </label>
+  <input type="hidden" name="{{ props.name }}" value="">
+  <div class="lp-viab-status" style="padding: 12px; border-radius: 6px; background: #f3f4f6; color: #6b7280; font-size: 0.875rem;">
+    Aguardando preenchimento do CEP e endereco...
+  </div>
+  {% if props.help_text %}<small style="color: #6b7280; font-size: 0.75rem;">{{ props.help_text }}</small>{% endif %}
+</div>

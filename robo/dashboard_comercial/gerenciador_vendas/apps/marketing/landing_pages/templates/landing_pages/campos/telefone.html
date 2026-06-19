@@ -1,0 +1,24 @@
+<div class="lp-campo lp-campo-telefone" style="display: flex; flex-direction: column; gap: 4px;">
+  <label for="lp-{{ props.name }}" style="font-weight: 500; font-size: 0.875rem; color: #374151;">{{ props.label }}{% if props.required %} <span style="color:#dc2626;">*</span>{% endif %}</label>
+  <input type="tel" id="lp-{{ props.name }}" name="{{ props.name }}"
+         placeholder="{{ props.placeholder|default:'(11) 99999-9999' }}"
+         {% if props.required %}required{% endif %}
+         inputmode="numeric"
+         data-mask="telefone-br"
+         style="padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;">
+  {% if props.help_text %}<small style="color: #6b7280; font-size: 0.75rem;">{{ props.help_text }}</small>{% endif %}
+</div>
+<script>
+(function(){
+  const el = document.currentScript.previousElementSibling.querySelector('input[data-mask="telefone-br"]');
+  if (!el || el.dataset.maskInit) return;
+  el.dataset.maskInit = '1';
+  el.addEventListener('input', function() {
+    let v = el.value.replace(/\D/g, '').slice(0, 11);
+    if (v.length > 10) el.value = v.replace(/(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3');
+    else if (v.length > 6) el.value = v.replace(/(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+    else if (v.length > 2) el.value = v.replace(/(\d{2})(\d{0,5}).*/, '($1) $2');
+    else if (v.length > 0) el.value = v.replace(/(\d{0,2}).*/, '($1');
+  });
+})();
+</script>

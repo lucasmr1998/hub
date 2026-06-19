@@ -1,0 +1,10 @@
+<div class="lp-campo lp-campo-text" style="display: flex; flex-direction: column; gap: 4px;">
+  <label for="lp-{{ props.name }}" style="font-weight: 500; font-size: 0.875rem; color: #374151;">{{ props.label }}{% if props.required %} <span style="color:#dc2626;">*</span>{% endif %}</label>
+  <input type="text" id="lp-{{ props.name }}" name="{{ props.name }}"
+         placeholder="{{ props.placeholder|default:'' }}"
+         {% if props.required %}required{% endif %}
+         {% if props.max_length %}maxlength="{{ props.max_length }}"{% endif %}
+         {% if props.min_length %}minlength="{{ props.min_length }}"{% endif %}
+         style="padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;">
+  {% if props.help_text %}<small style="color: #6b7280; font-size: 0.75rem;">{{ props.help_text }}</small>{% endif %}
+</div>

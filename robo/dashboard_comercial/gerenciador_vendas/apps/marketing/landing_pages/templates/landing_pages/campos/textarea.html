@@ -1,0 +1,10 @@
+<div class="lp-campo lp-campo-textarea" style="display: flex; flex-direction: column; gap: 4px;">
+  <label for="lp-{{ props.name }}" style="font-weight: 500; font-size: 0.875rem; color: #374151;">{{ props.label }}{% if props.required %} <span style="color:#dc2626;">*</span>{% endif %}</label>
+  <textarea id="lp-{{ props.name }}" name="{{ props.name }}"
+            rows="{{ props.rows|default:'4' }}"
+            placeholder="{{ props.placeholder|default:'' }}"
+            {% if props.required %}required{% endif %}
+            maxlength="{{ props.max_length|default:'2000' }}"
+            style="padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-family: inherit; resize: vertical;"></textarea>
+  {% if props.help_text %}<small style="color: #6b7280; font-size: 0.75rem;">{{ props.help_text }}</small>{% endif %}
+</div>

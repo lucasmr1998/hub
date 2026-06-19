@@ -102,6 +102,56 @@ class LandingPage(TenantMixin):
         return f'{self.nome} ({self.slug})'
 
 
+class FormularioLanding(TenantMixin):
+    """Formulario reutilizavel em N landing pages.
+
+    Mudar o form atualiza TODAS as LPs que apontam pra ele. Cada campo e
+    componentizado via JSON schema do catalog (CAMPO_REGISTRY).
+    """
+
+    nome = models.CharField(
+        max_length=200, verbose_name='Nome interno',
+        help_text='Ex: "Cadastro completo cliente fibra"',
+    )
+    descricao = models.CharField(max_length=300, blank=True, default='')
+
+    campos_json = models.JSONField(
+        default=list, blank=True,
+        verbose_name='Campos do formulario',
+        help_text='Array ordenado: [{"tipo": "text", "name": "nome", "props": {...}}, ...]',
+    )
+
+    submit_label = models.CharField(max_length=80, default='Enviar', verbose_name='Texto do botao')
+    success_msg = models.TextField(
+        blank=True, default='Recebemos seu cadastro! Em breve entraremos em contato.',
+        verbose_name='Mensagem de sucesso',
+    )
+    success_redirect = models.URLField(
+        blank=True, default='',
+        verbose_name='URL de redirect pos-sucesso (opcional)',
+    )
+
+    # Comportamento do submit
+    criar_lead = models.BooleanField(default=True, verbose_name='Criar LeadProspecto no submit')
+    bloquear_fora_cobertura = models.BooleanField(
+        default=False,
+        verbose_name='Bloquear submit se viabilidade=fora_cobertura',
+        help_text='So tem efeito se o form tem campo viabilidade.',
+    )
+
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'marketing_formulario_landing'
+        verbose_name = 'Formulario de Landing Page'
+        verbose_name_plural = 'Formularios de Landing Pages'
+        ordering = ['-atualizado_em']
+
+    def __str__(self):
+        return self.nome
+
+
 class LandingSubmissao(TenantMixin):
     """Cada submit do form da LP vira aqui + cria LeadProspecto."""
 
@@ -109,6 +159,11 @@ class LandingSubmissao(TenantMixin):
         LandingPage, on_delete=models.CASCADE,
         related_name='submissoes',
         verbose_name='Landing page',
+    )
+    formulario = models.ForeignKey(
+        FormularioLanding, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='submissoes',
     )
     lead = models.ForeignKey(
         'leads.LeadProspecto', on_delete=models.SET_NULL,

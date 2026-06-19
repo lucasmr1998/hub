@@ -1,0 +1,26 @@
+<div class="lp-campo lp-campo-endereco" style="display: flex; flex-direction: column; gap: 8px;">
+  <label style="font-weight: 500; font-size: 0.875rem; color: #374151;">{{ props.label }}{% if props.required %} <span style="color:#dc2626;">*</span>{% endif %}</label>
+  <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 8px;">
+    <input type="text" name="endereco[rua]" placeholder="Rua/Avenida" {% if props.required %}required{% endif %}
+           style="padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;">
+    <input type="text" name="endereco[numero]" placeholder="Numero" {% if props.required %}required{% endif %}
+           style="padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;">
+  </div>
+  {% if props.mostrar_complemento %}
+    <input type="text" name="endereco[complemento]" placeholder="Complemento (apto, bloco)"
+           style="padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;">
+  {% endif %}
+  <input type="text" name="endereco[bairro]" placeholder="Bairro" {% if props.required %}required{% endif %}
+         style="padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;">
+  <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 8px;">
+    <input type="text" name="endereco[cidade]" placeholder="Cidade" {% if props.required %}required{% endif %}
+           style="padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;">
+    <input type="text" name="endereco[uf]" placeholder="UF" maxlength="2" {% if props.required %}required{% endif %}
+           style="padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; text-transform: uppercase;">
+  </div>
+  {% if props.mostrar_referencia %}
+    <input type="text" name="endereco[referencia]" placeholder="Ponto de referencia"
+           style="padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;">
+  {% endif %}
+  {% if props.help_text %}<small style="color: #6b7280; font-size: 0.75rem;">{{ props.help_text }}</small>{% endif %}
+</div>

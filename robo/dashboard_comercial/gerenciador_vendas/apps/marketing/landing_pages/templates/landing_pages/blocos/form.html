@@ -1,0 +1,81 @@
+{% load landing_pages_tags %}
+{% with formulario=props.formulario_id|get_formulario %}
+<section class="lp-bloco lp-form" style="padding: 48px 16px; background: #f8fafc;">
+  <div class="lp-container" style="max-width: {{ props.max_width|default:'560' }}px;">
+    {% if props.titulo %}<h2 style="margin: 0 0 8px; font-size: 1.875rem; text-align: center;">{{ props.titulo }}</h2>{% endif %}
+    {% if props.descricao %}<p style="margin: 0 0 24px; text-align: center; color: #6b7280;">{{ props.descricao }}</p>{% endif %}
+
+    {% if formulario %}
+      <form method="post"
+            action="{% url 'landing_pages:submeter' landing.tenant.slug landing.slug %}"
+            data-formulario-id="{{ formulario.pk }}"
+            data-bloquear-fora-cobertura="{{ formulario.bloquear_fora_cobertura|yesno:'1,0' }}"
+            class="lp-form-element"
+            style="display: flex; flex-direction: column; gap: 16px; background: #ffffff; padding: 32px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        {% csrf_token %}
+        <input type="hidden" name="formulario_id" value="{{ formulario.pk }}">
+
+        {% for campo in formulario.campos_json %}
+          {{ campo|render_campo }}
+        {% endfor %}
+
+        <button type="submit" style="
+            margin-top: 8px;
+            padding: 14px 24px;
+            background: {{ props.cor_botao|default:'#2563eb' }};
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        ">{{ formulario.submit_label|default:'Enviar' }}</button>
+
+        <div class="lp-form-msg" style="display: none; padding: 12px; border-radius: 6px; margin-top: 8px;"></div>
+      </form>
+    {% else %}
+      <div style="padding: 16px; background: #fee2e2; color: #991b1b; border-radius: 6px;">
+        Formulario nao configurado (props.formulario_id ausente ou invalido).
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+<script>
+(function() {
+  const form = document.currentScript.previousElementSibling.querySelector('form.lp-form-element');
+  if (!form) return;
+  const msg = form.querySelector('.lp-form-msg');
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    msg.style.display = 'none';
+    const data = new FormData(form);
+    try {
+      const resp = await fetch(form.action, {
+        method: 'POST', body: data,
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+      });
+      const json = await resp.json();
+      if (json.ok) {
+        if (json.redirect) { window.location.href = json.redirect; return; }
+        msg.style.background = '#dcfce7';
+        msg.style.color = '#166534';
+        msg.textContent = json.mensagem || 'Recebemos seu cadastro! Em breve entraremos em contato.';
+        msg.style.display = 'block';
+        form.reset();
+      } else {
+        msg.style.background = '#fee2e2';
+        msg.style.color = '#991b1b';
+        msg.textContent = (json.erros || []).join(' | ') || json.erro || 'Erro ao enviar.';
+        msg.style.display = 'block';
+      }
+    } catch (err) {
+      msg.style.background = '#fee2e2';
+      msg.style.color = '#991b1b';
+      msg.textContent = 'Erro de rede. Tente novamente.';
+      msg.style.display = 'block';
+    }
+  });
+})();
+</script>
+{% endwith %}
