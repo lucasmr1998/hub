@@ -800,6 +800,29 @@ def inbox_mensagem(request):
                 if remetente_tipo == 'contato':
                     conversa.mensagens_nao_lidas = (conversa.mensagens_nao_lidas or 0) + 1
                     campos_conv.append('mensagens_nao_lidas')
+                # Promove conversa pra modo humano quando atendente responde
+                # direto pelo WhatsApp/telefone (fora do Inbox do Hubtrix). Sem
+                # isso o bot continua disparando paralelo. Reusa agente_id da
+                # ultima conversa resolvida do mesmo lead quando disponivel —
+                # senao deixa null e admin pode atribuir depois.
+                if remetente_tipo == 'agente' and conversa.modo_atendimento == 'bot':
+                    from django.utils import timezone as _tz
+                    conversa.modo_atendimento = 'humano'
+                    conversa.assumida = True
+                    conversa.data_assumida = _tz.now()
+                    campos_conv.extend(['modo_atendimento', 'assumida', 'data_assumida'])
+                    # Tenta herdar agente da conversa anterior resolvida do mesmo lead
+                    if not conversa.agente_id and lead:
+                        ultima_anterior = (
+                            Conversa.all_tenants
+                            .filter(tenant=tenant, lead=lead, agente__isnull=False)
+                            .exclude(pk=conversa.pk)
+                            .order_by('-data_resolucao', '-id')
+                            .first()
+                        )
+                        if ultima_anterior and ultima_anterior.agente_id:
+                            conversa.agente_id = ultima_anterior.agente_id
+                            campos_conv.append('agente_id')
                 conversa.save(update_fields=campos_conv)
 
     # Notifica Inbox aberto via WebSocket pra atualizacao em tempo real
