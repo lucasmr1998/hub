@@ -1,0 +1,9 @@
+<section class="lp-bloco lp-imagem" style="padding: 16px;">
+  <div class="lp-container" style="text-align: {% if props.alinhamento == 'esquerda' %}left{% elif props.alinhamento == 'direita' %}right{% else %}center{% endif %};">
+    {% if props.src %}
+      {% if props.link %}<a href="{{ props.link }}">{% endif %}
+      <img src="{{ props.src }}" alt="{{ props.alt|default:'' }}" style="max-width: {{ props.max_width|default:'600' }}px; height: auto; display: inline-block;">
+      {% if props.link %}</a>{% endif %}
+    {% endif %}
+  </div>
+</section>

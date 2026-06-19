@@ -1,0 +1,8 @@
+<section class="lp-bloco lp-texto" style="padding: 32px 16px;">
+  <div class="lp-container" style="
+      max-width: {{ props.max_width|default:'720' }}px;
+      text-align: {% if props.alinhamento == 'direita' %}right{% elif props.alinhamento == 'centro' %}center{% elif props.alinhamento == 'justificado' %}justify{% else %}left{% endif %};
+  ">
+    {{ props.html|safe }}
+  </div>
+</section>

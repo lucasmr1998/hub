@@ -1,0 +1,15 @@
+<section class="lp-bloco lp-botao" style="padding: 16px;">
+  <div class="lp-container" style="text-align: {% if props.alinhamento == 'esquerda' %}left{% elif props.alinhamento == 'direita' %}right{% else %}center{% endif %};">
+    <a href="{{ props.link|default:'#' }}" style="
+        display: {% if props.full_width %}block{% else %}inline-block{% endif %};
+        padding: {% if props.tamanho == 'pequeno' %}8px 16px{% elif props.tamanho == 'grande' %}16px 40px{% else %}12px 28px{% endif %};
+        background: {{ props.cor_fundo|default:'#2563eb' }};
+        color: {{ props.cor_texto|default:'#ffffff' }};
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: {% if props.tamanho == 'pequeno' %}0.875rem{% elif props.tamanho == 'grande' %}1.125rem{% else %}1rem{% endif %};
+        {% if props.full_width %}width: 100%; text-align: center;{% endif %}
+    ">{{ props.texto|default:'Clique aqui' }}</a>
+  </div>
+</section>

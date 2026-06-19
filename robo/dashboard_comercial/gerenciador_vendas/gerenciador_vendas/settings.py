@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'apps.marketing.campanhas',
     'apps.marketing.automacoes',
     'apps.marketing.emails',
+    'apps.marketing.landing_pages',
 
     # === API ===
     'apps.api',
@@ -117,6 +118,9 @@ INSTALLED_APPS = [
 
     # === Cron (dispatcher central de jobs periódicos — cross-tenant) ===
     'apps.cron',
+
+    # === Automação (engine unificada estilo n8n — Fase 0, greenfield isolado) ===
+    'apps.automacao',
 ]
 
 MIDDLEWARE = [

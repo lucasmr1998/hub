@@ -1,0 +1,19 @@
+{% load landing_pages_tags %}
+<section class="lp-bloco lp-colunas" style="padding: 32px 16px;">
+  <div class="lp-container">
+    <div style="display: grid; grid-template-columns: repeat({{ props.n_colunas|default:'2' }}, 1fr); gap: {{ props.gap|default:'24' }}px;">
+      {% for coluna in props.colunas %}
+        <div class="lp-coluna">
+          {% for sub_bloco in coluna.blocos %}
+            {{ sub_bloco|render_bloco }}
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+<style>
+@media (max-width: 768px) {
+  .lp-colunas > .lp-container > div { grid-template-columns: 1fr !important; }
+}
+</style>
