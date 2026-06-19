@@ -143,6 +143,9 @@ urlpatterns = [
     # === Landing Pages publicas (sem login) ===
     path('p/', include('apps.marketing.landing_pages.urls')),
 
+    # === Landing Pages admin (com login) ===
+    path('marketing/landing-pages/', include('apps.marketing.landing_pages.urls_admin')),
+
     # === Assistente CRM (webhook WhatsApp) ===
     path('assistente/', include('apps.assistente.urls')),
 

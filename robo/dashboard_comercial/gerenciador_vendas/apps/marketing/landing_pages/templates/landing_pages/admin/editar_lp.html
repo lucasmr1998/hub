@@ -1,0 +1,319 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}Editor — {{ lp.nome }}{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-3);">
+  <div style="display:flex;align-items:center;gap:var(--sp-2);">
+    <a href="{% url 'landing_pages_admin:lista_lps' %}" class="btn btn-secondary btn-sm" title="Voltar"><i class="bi bi-arrow-left"></i></a>
+    <input id="lp-nome" type="text" value="{{ lp.nome }}" maxlength="200"
+           style="font-size:var(--fs-xl);font-weight:var(--fw-semibold);border:1px solid transparent;background:transparent;padding:4px 8px;border-radius:4px;width:400px;"
+           onfocus="this.style.border='1px solid var(--color-border)';this.style.background='var(--color-bg)';"
+           onblur="this.style.border='1px solid transparent';this.style.background='transparent';">
+  </div>
+  <div style="display:flex;align-items:center;gap:var(--sp-2);">
+    <span id="status-msg" style="font-size:var(--fs-sm);color:var(--color-text-muted);"></span>
+    {% if lp.status == 'publicada' %}<a href="/p/{{ lp.tenant.slug }}/{{ lp.slug }}/" target="_blank" class="btn btn-secondary btn-sm"><i class="bi bi-box-arrow-up-right"></i> Ver publica</a>{% endif %}
+    <select id="lp-status" class="field-input" style="max-width:140px;">
+      <option value="rascunho" {% if lp.status == 'rascunho' %}selected{% endif %}>Rascunho</option>
+      <option value="publicada" {% if lp.status == 'publicada' %}selected{% endif %}>Publicada</option>
+      <option value="arquivada" {% if lp.status == 'arquivada' %}selected{% endif %}>Arquivada</option>
+    </select>
+    <button id="btn-salvar" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:240px 1fr 320px;gap:var(--sp-3);min-height:calc(100vh - 200px);">
+
+  {# ============================== PALETA DE BLOCOS ============================== #}
+  <aside style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--sp-3);position:sticky;top:80px;height:fit-content;">
+    <h3 style="font-size:var(--fs-sm);text-transform:uppercase;color:var(--color-text-muted);margin:0 0 var(--sp-2);">Adicionar bloco</h3>
+    <div id="paleta-blocos" style="display:flex;flex-direction:column;gap:6px;"></div>
+  </aside>
+
+  {# ============================== CANVAS ============================== #}
+  <main style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--sp-3);">
+    <div id="canvas-blocos" style="display:flex;flex-direction:column;gap:8px;min-height:400px;"></div>
+    <div id="canvas-vazio" style="text-align:center;padding:60px 20px;color:var(--color-text-muted);display:none;">
+      <i class="bi bi-arrow-left-circle" style="font-size:2rem;"></i>
+      <p style="margin-top:8px;">Arraste blocos da paleta a esquerda pra comecar</p>
+    </div>
+  </main>
+
+  {# ============================== INSPECTOR ============================== #}
+  <aside style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--sp-3);position:sticky;top:80px;height:fit-content;max-height:calc(100vh - 100px);overflow-y:auto;">
+    <h3 style="font-size:var(--fs-sm);text-transform:uppercase;color:var(--color-text-muted);margin:0 0 var(--sp-2);">Inspector</h3>
+    <div id="inspector-vazio" style="color:var(--color-text-muted);font-size:var(--fs-sm);padding:var(--sp-4) 0;text-align:center;">
+      Clique num bloco do canvas pra editar suas propriedades.
+    </div>
+    <div id="inspector-content" style="display:none;"></div>
+  </aside>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+(function() {
+  const CATALOGO = {{ catalogo_blocos_json|safe }};
+  const FORMULARIOS = {{ formularios_json|safe }};
+  const CATALOGO_MAP = Object.fromEntries(CATALOGO.map(b => [b.slug, b]));
+  let blocos = {{ blocos_json|safe }};
+  let blocoSelecionadoIdx = null;
+  let saving = false;
+
+  const URL_SALVAR = "{% url 'landing_pages_admin:salvar_lp' lp.pk %}";
+  const CSRF = "{{ csrf_token }}";
+
+  const paletaEl = document.getElementById('paleta-blocos');
+  const canvasEl = document.getElementById('canvas-blocos');
+  const canvasVazioEl = document.getElementById('canvas-vazio');
+  const inspVazioEl = document.getElementById('inspector-vazio');
+  const inspContEl = document.getElementById('inspector-content');
+  const statusMsgEl = document.getElementById('status-msg');
+
+  // ========== Paleta ==========
+  function renderPaleta() {
+    paletaEl.innerHTML = '';
+    CATALOGO.forEach(b => {
+      const el = document.createElement('div');
+      el.className = 'paleta-item';
+      el.dataset.tipo = b.slug;
+      el.style.cssText = 'padding:10px 12px;background:var(--color-bg-muted);border:1px solid var(--color-border);border-radius:6px;cursor:grab;font-size:13px;display:flex;flex-direction:column;gap:2px;';
+      el.innerHTML = `<strong>${b.label}</strong><small style="color:var(--color-text-muted);">${b.descricao || ''}</small>`;
+      el.addEventListener('click', () => adicionarBloco(b.slug));
+      paletaEl.appendChild(el);
+    });
+  }
+
+  // ========== Canvas ==========
+  function renderCanvas() {
+    canvasEl.innerHTML = '';
+    if (!blocos.length) {
+      canvasVazioEl.style.display = 'block';
+      canvasEl.style.display = 'none';
+      return;
+    }
+    canvasVazioEl.style.display = 'none';
+    canvasEl.style.display = 'flex';
+    blocos.forEach((b, idx) => {
+      const spec = CATALOGO_MAP[b.tipo];
+      const el = document.createElement('div');
+      el.className = 'bloco-card';
+      el.dataset.idx = idx;
+      const selecionado = idx === blocoSelecionadoIdx;
+      el.style.cssText = `padding:12px 16px;background:${selecionado ? 'rgba(37,99,235,0.05)' : 'var(--color-bg-muted)'};border:1px solid ${selecionado ? 'var(--color-primary)' : 'var(--color-border)'};border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;`;
+      el.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+          <i class="bi bi-grip-vertical handle" style="color:var(--color-text-muted);cursor:grab;"></i>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:var(--fw-medium);font-size:14px;">${spec ? spec.label : b.tipo}</div>
+            <div style="font-size:12px;color:var(--color-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${resumoBloco(b)}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-secondary btn-sm" data-acao="duplicar" title="Duplicar"><i class="bi bi-files"></i></button>
+          <button class="btn btn-secondary btn-sm" data-acao="excluir" title="Excluir" style="color:var(--color-danger);"><i class="bi bi-trash"></i></button>
+        </div>
+      `;
+      el.addEventListener('click', (ev) => {
+        if (ev.target.closest('[data-acao]')) return;
+        selecionarBloco(idx);
+      });
+      el.querySelector('[data-acao="duplicar"]').addEventListener('click', (ev) => { ev.stopPropagation(); duplicarBloco(idx); });
+      el.querySelector('[data-acao="excluir"]').addEventListener('click', (ev) => { ev.stopPropagation(); excluirBloco(idx); });
+      canvasEl.appendChild(el);
+    });
+  }
+
+  function resumoBloco(bloco) {
+    const props = bloco.props || {};
+    if (bloco.tipo === 'hero') return props.titulo || '(sem titulo)';
+    if (bloco.tipo === 'texto') return (props.html || '').replace(/<[^>]+>/g, '').substring(0, 80);
+    if (bloco.tipo === 'botao') return props.texto || '(sem texto)';
+    if (bloco.tipo === 'imagem') return props.alt || props.src || '(sem imagem)';
+    if (bloco.tipo === 'form') {
+      const f = FORMULARIOS.find(x => x.id === props.formulario_id);
+      return f ? `Form: ${f.nome}` : '(escolha um formulario)';
+    }
+    if (bloco.tipo === 'colunas') return `${props.n_colunas || 2} colunas`;
+    return '';
+  }
+
+  function adicionarBloco(tipo) {
+    const spec = CATALOGO_MAP[tipo];
+    if (!spec) return;
+    blocos.push({tipo, props: JSON.parse(JSON.stringify(spec.defaults))});
+    blocoSelecionadoIdx = blocos.length - 1;
+    renderCanvas();
+    renderInspector();
+  }
+
+  function duplicarBloco(idx) {
+    const copia = JSON.parse(JSON.stringify(blocos[idx]));
+    blocos.splice(idx + 1, 0, copia);
+    blocoSelecionadoIdx = idx + 1;
+    renderCanvas();
+    renderInspector();
+  }
+
+  function excluirBloco(idx) {
+    if (!confirm('Excluir este bloco?')) return;
+    blocos.splice(idx, 1);
+    if (blocoSelecionadoIdx === idx) blocoSelecionadoIdx = null;
+    else if (blocoSelecionadoIdx > idx) blocoSelecionadoIdx--;
+    renderCanvas();
+    renderInspector();
+  }
+
+  function selecionarBloco(idx) {
+    blocoSelecionadoIdx = idx;
+    renderCanvas();
+    renderInspector();
+  }
+
+  // ========== Inspector ==========
+  function renderInspector() {
+    if (blocoSelecionadoIdx === null || !blocos[blocoSelecionadoIdx]) {
+      inspVazioEl.style.display = 'block';
+      inspContEl.style.display = 'none';
+      return;
+    }
+    inspVazioEl.style.display = 'none';
+    inspContEl.style.display = 'block';
+    const bloco = blocos[blocoSelecionadoIdx];
+    const spec = CATALOGO_MAP[bloco.tipo];
+    if (!spec) {
+      inspContEl.innerHTML = '<div style="color:var(--color-danger);">Bloco desconhecido</div>';
+      return;
+    }
+    inspContEl.innerHTML = `<div style="font-weight:600;margin-bottom:12px;">${spec.label}</div>`;
+    Object.entries(spec.schema).forEach(([nome, schema]) => {
+      const valor = bloco.props[nome] !== undefined ? bloco.props[nome] : (schema.default !== undefined ? schema.default : '');
+      inspContEl.appendChild(criarCampoInspector(nome, schema, valor, bloco));
+    });
+  }
+
+  function criarCampoInspector(nome, schema, valor, bloco) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'margin-bottom:12px;display:flex;flex-direction:column;gap:4px;';
+    const label = document.createElement('label');
+    label.style.cssText = 'font-size:12px;font-weight:500;color:var(--color-text);';
+    label.textContent = schema.label || nome;
+    wrap.appendChild(label);
+
+    let input;
+    const tipo = schema.type;
+    const fmt = schema.format;
+
+    if (nome === 'formulario_id' && bloco.tipo === 'form') {
+      // Select especial: lista formularios disponiveis
+      input = document.createElement('select');
+      input.className = 'field-input';
+      input.style.cssText = 'padding:6px 8px;font-size:13px;';
+      input.innerHTML = '<option value="">— Escolha um formulario —</option>' +
+        FORMULARIOS.map(f => `<option value="${f.id}" ${f.id === valor ? 'selected' : ''}>${f.nome}</option>`).join('');
+      input.addEventListener('change', () => { bloco.props[nome] = input.value ? parseInt(input.value) : null; renderCanvas(); });
+    } else if (schema.enum) {
+      input = document.createElement('select');
+      input.className = 'field-input';
+      input.style.cssText = 'padding:6px 8px;font-size:13px;';
+      input.innerHTML = schema.enum.map(o => `<option value="${o}" ${o === valor ? 'selected' : ''}>${o}</option>`).join('');
+      input.addEventListener('change', () => { bloco.props[nome] = input.value; renderCanvas(); });
+    } else if (tipo === 'boolean') {
+      const sub = document.createElement('label');
+      sub.style.cssText = 'display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;';
+      input = document.createElement('input');
+      input.type = 'checkbox';
+      input.checked = !!valor;
+      input.addEventListener('change', () => { bloco.props[nome] = input.checked; renderCanvas(); });
+      sub.appendChild(input);
+      sub.appendChild(document.createTextNode(schema.label || nome));
+      wrap.replaceChild(sub, label);
+      return wrap;
+    } else if (tipo === 'integer') {
+      input = document.createElement('input');
+      input.type = 'number';
+      input.className = 'field-input';
+      input.style.cssText = 'padding:6px 8px;font-size:13px;';
+      input.value = valor;
+      if (schema.minimum !== undefined) input.min = schema.minimum;
+      if (schema.maximum !== undefined) input.max = schema.maximum;
+      input.addEventListener('input', () => { bloco.props[nome] = parseInt(input.value) || 0; renderCanvas(); });
+    } else if (fmt === 'color') {
+      input = document.createElement('input');
+      input.type = 'color';
+      input.value = valor && valor.startsWith('#') ? valor : '#000000';
+      input.style.cssText = 'height:32px;width:60px;';
+      input.addEventListener('input', () => { bloco.props[nome] = input.value; renderCanvas(); });
+    } else if (fmt === 'uri') {
+      input = document.createElement('input');
+      input.type = 'url';
+      input.className = 'field-input';
+      input.style.cssText = 'padding:6px 8px;font-size:13px;';
+      input.value = valor || '';
+      input.placeholder = 'https://...';
+      input.addEventListener('input', () => { bloco.props[nome] = input.value; renderCanvas(); });
+    } else if (schema.multiline) {
+      input = document.createElement('textarea');
+      input.className = 'field-input';
+      input.style.cssText = 'padding:6px 8px;font-size:13px;font-family:inherit;min-height:80px;';
+      input.value = valor || '';
+      input.addEventListener('input', () => { bloco.props[nome] = input.value; renderCanvas(); });
+    } else {
+      input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'field-input';
+      input.style.cssText = 'padding:6px 8px;font-size:13px;';
+      input.value = valor || '';
+      input.addEventListener('input', () => { bloco.props[nome] = input.value; renderCanvas(); });
+    }
+    wrap.appendChild(input);
+    return wrap;
+  }
+
+  // ========== Salvar ==========
+  async function salvar() {
+    if (saving) return;
+    saving = true;
+    statusMsgEl.textContent = 'Salvando...';
+    try {
+      const resp = await fetch(URL_SALVAR, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+        body: JSON.stringify({
+          blocos_json: blocos,
+          nome: document.getElementById('lp-nome').value,
+          status: document.getElementById('lp-status').value,
+        }),
+      });
+      const json = await resp.json();
+      if (json.ok) {
+        statusMsgEl.textContent = '✓ Salvo';
+        setTimeout(() => statusMsgEl.textContent = '', 2000);
+      } else {
+        statusMsgEl.textContent = '✗ Erro: ' + (json.erro || '');
+      }
+    } catch (err) {
+      statusMsgEl.textContent = '✗ Erro de rede';
+    }
+    saving = false;
+  }
+  document.getElementById('btn-salvar').addEventListener('click', salvar);
+
+  // ========== Sortable (drag-drop) ==========
+  Sortable.create(canvasEl, {
+    handle: '.handle',
+    animation: 150,
+    onEnd: (evt) => {
+      const item = blocos.splice(evt.oldIndex, 1)[0];
+      blocos.splice(evt.newIndex, 0, item);
+      blocoSelecionadoIdx = evt.newIndex;
+      renderCanvas();
+    },
+  });
+
+  renderPaleta();
+  renderCanvas();
+  renderInspector();
+})();
+</script>
+{% endblock %}

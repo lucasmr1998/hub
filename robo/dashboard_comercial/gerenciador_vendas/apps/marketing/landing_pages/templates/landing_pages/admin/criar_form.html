@@ -1,0 +1,21 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}Novo Formulario — Hubtrix{% endblock %}
+
+{% block content %}
+<div style="max-width:560px;margin:0 auto;">
+  <a href="{% url 'landing_pages_admin:lista_forms' %}" style="color:var(--color-text-muted);text-decoration:none;font-size:var(--fs-sm);"><i class="bi bi-arrow-left"></i> Voltar</a>
+  <h1 style="font-size:var(--fs-xl);margin:var(--sp-2) 0 var(--sp-4);">Novo formulario</h1>
+
+  {% if erro %}<div style="background:rgba(239,68,68,0.08);border:1px solid var(--color-danger);padding:var(--sp-2) var(--sp-3);border-radius:var(--radius);margin-bottom:var(--sp-3);color:var(--color-danger);">{{ erro }}</div>{% endif %}
+
+  <form method="post" action="{% url 'landing_pages_admin:criar_form' %}">
+    {% csrf_token %}
+    <div class="field" style="margin-bottom:var(--sp-4);">
+      <label class="field-label">Nome interno *</label>
+      <div class="field-input-wrap"><input type="text" name="nome" required maxlength="200" class="field-input" value="{{ nome_pre|default:'' }}" placeholder="Ex: Cadastro completo cliente fibra"></div>
+      <small style="color:var(--color-text-muted);">Identificacao interna. Mesmo form pode ser reusado em N Landing Pages.</small>
+    </div>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Criar e abrir composer</button>
+  </form>
+</div>
+{% endblock %}

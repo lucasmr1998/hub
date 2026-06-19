@@ -7,19 +7,26 @@ Views da Landing Page.
 """
 from __future__ import annotations
 
+import json
 import logging
+from dataclasses import asdict
+from datetime import timedelta
 
+from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.utils.text import slugify
 from django.views.decorators.cache import cache_control
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
-from django.utils import timezone
-from datetime import timedelta
+from django.views.decorators.http import require_POST, require_http_methods, require_GET
 
 from apps.sistema.models import Tenant
 
-from .catalog import get_campo
+from .catalog import (
+    CAMPO_REGISTRY, REGISTRY, aplicar_defaults, aplicar_defaults_campo,
+    get_bloco, get_campo, listar_blocos, listar_campos,
+)
 from .models import FormularioLanding, LandingPage, LandingSubmissao
 from .renderer import renderizar_landing
 from .validators import get_validador
@@ -221,3 +228,227 @@ def _criar_ou_atualizar_lead(tenant, dados: dict, landing):
             campanha_origem_id=landing.campanha_padrao_id,
         )
     return lead
+
+
+# ============================================================================
+# ADMIN — listas + editor
+# ============================================================================
+
+def _slug_unico(tenant, base: str) -> str:
+    """Garante slug unico por tenant no LandingPage."""
+    base = slugify(base) or 'nova-pagina'
+    candidato, i = base, 2
+    while LandingPage.objects.filter(slug=candidato).exists():
+        candidato = f'{base}-{i}'
+        i += 1
+    return candidato
+
+
+@login_required
+def admin_lista_lps(request):
+    """Lista as Landing Pages do tenant."""
+    qs = LandingPage.objects.all().select_related('campanha_padrao').order_by('-atualizado_em')
+    busca = (request.GET.get('q') or '').strip()
+    if busca:
+        qs = qs.filter(nome__icontains=busca) | qs.filter(slug__icontains=busca)
+    status_filtro = request.GET.get('status') or ''
+    if status_filtro:
+        qs = qs.filter(status=status_filtro)
+    return render(request, 'landing_pages/admin/lista_lps.html', {
+        'page_title': 'Landing Pages',
+        'lps': qs[:200],
+        'busca': busca,
+        'status_filtro': status_filtro,
+    })
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def admin_criar_lp(request):
+    """Cria nova Landing Page (form simples). Apos criar, redireciona pro editor."""
+    if request.method == 'POST':
+        nome = (request.POST.get('nome') or '').strip()
+        slug = (request.POST.get('slug') or '').strip()
+        if not nome:
+            return render(request, 'landing_pages/admin/criar_lp.html', {
+                'erro': 'Nome obrigatorio', 'nome_pre': nome, 'slug_pre': slug,
+            })
+        slug = _slug_unico(request.tenant, slug or nome)
+        lp = LandingPage.objects.create(
+            nome=nome[:200],
+            slug=slug,
+            status='rascunho',
+            blocos_json=[],
+            criado_por=request.user,
+        )
+        return redirect('landing_pages_admin:editar_lp', pk=lp.pk)
+    return render(request, 'landing_pages/admin/criar_lp.html', {
+        'page_title': 'Nova Landing Page',
+    })
+
+
+@login_required
+def admin_editar_lp(request, pk: int):
+    """Editor visual da LP — drag-drop dos blocos."""
+    lp = get_object_or_404(LandingPage.objects.all(), pk=pk)
+
+    # Catalogo de blocos pra paleta lateral (incluindo categoria + label)
+    catalogo = [
+        {
+            'slug': b.slug,
+            'label': b.label,
+            'categoria': b.categoria,
+            'descricao': b.descricao,
+            'defaults': b.defaults,
+            'schema': b.schema,
+        }
+        for b in listar_blocos()
+    ]
+    # Formularios disponiveis pro bloco `form`
+    formularios = list(FormularioLanding.objects.all().values('id', 'nome'))
+
+    return render(request, 'landing_pages/admin/editar_lp.html', {
+        'page_title': f'Editor — {lp.nome}',
+        'lp': lp,
+        'catalogo_blocos': catalogo,
+        'catalogo_blocos_json': json.dumps(catalogo, ensure_ascii=False),
+        'formularios_json': json.dumps(formularios, ensure_ascii=False),
+        'blocos_json': json.dumps(lp.blocos_json or [], ensure_ascii=False),
+    })
+
+
+@login_required
+@require_POST
+def admin_salvar_lp(request, pk: int):
+    """API JSON — salva blocos_json + config_json + status."""
+    lp = get_object_or_404(LandingPage.objects.all(), pk=pk)
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'ok': False, 'erro': 'JSON invalido'}, status=400)
+
+    if 'blocos_json' in payload and isinstance(payload['blocos_json'], list):
+        lp.blocos_json = payload['blocos_json']
+    if 'config_json' in payload and isinstance(payload['config_json'], dict):
+        lp.config_json = payload['config_json']
+    if 'nome' in payload:
+        lp.nome = str(payload['nome'])[:200]
+    if 'seo_title' in payload:
+        lp.seo_title = str(payload['seo_title'])[:200]
+    if 'seo_description' in payload:
+        lp.seo_description = str(payload['seo_description'])[:300]
+    if 'status' in payload and payload['status'] in ('rascunho', 'publicada', 'arquivada'):
+        lp.status = payload['status']
+        if payload['status'] == 'publicada' and not lp.publicado_em:
+            lp.publicado_em = timezone.now()
+    # Invalida cache do html_compilado quando edita
+    lp.html_compilado = ''
+    lp.save()
+    return JsonResponse({'ok': True, 'lp_id': lp.pk})
+
+
+@login_required
+@require_POST
+def admin_excluir_lp(request, pk: int):
+    lp = get_object_or_404(LandingPage.objects.all(), pk=pk)
+    lp.delete()
+    return redirect('landing_pages_admin:lista_lps')
+
+
+# ----- Formularios -----
+
+@login_required
+def admin_lista_forms(request):
+    qs = FormularioLanding.objects.all().order_by('-atualizado_em')
+    busca = (request.GET.get('q') or '').strip()
+    if busca:
+        qs = qs.filter(nome__icontains=busca)
+    return render(request, 'landing_pages/admin/lista_forms.html', {
+        'page_title': 'Formularios',
+        'formularios': qs[:200],
+        'busca': busca,
+    })
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def admin_criar_form(request):
+    if request.method == 'POST':
+        nome = (request.POST.get('nome') or '').strip()
+        if not nome:
+            return render(request, 'landing_pages/admin/criar_form.html', {
+                'erro': 'Nome obrigatorio', 'nome_pre': nome,
+            })
+        form = FormularioLanding.objects.create(
+            nome=nome[:200],
+            campos_json=[],
+            submit_label='Enviar',
+        )
+        return redirect('landing_pages_admin:editar_form', pk=form.pk)
+    return render(request, 'landing_pages/admin/criar_form.html', {
+        'page_title': 'Novo Formulario',
+    })
+
+
+@login_required
+def admin_editar_form(request, pk: int):
+    form = get_object_or_404(FormularioLanding.objects.all(), pk=pk)
+    catalogo = [
+        {
+            'slug': c.slug,
+            'label': c.label,
+            'descricao': c.descricao,
+            'defaults': c.defaults,
+            'schema': c.schema,
+            'validador': c.validador,
+        }
+        for c in listar_campos()
+    ]
+    return render(request, 'landing_pages/admin/editar_form.html', {
+        'page_title': f'Editor — {form.nome}',
+        'form_obj': form,
+        'catalogo_campos': catalogo,
+        'catalogo_campos_json': json.dumps(catalogo, ensure_ascii=False),
+        'campos_json': json.dumps(form.campos_json or [], ensure_ascii=False),
+    })
+
+
+@login_required
+@require_POST
+def admin_salvar_form(request, pk: int):
+    form = get_object_or_404(FormularioLanding.objects.all(), pk=pk)
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'ok': False, 'erro': 'JSON invalido'}, status=400)
+    if 'campos_json' in payload and isinstance(payload['campos_json'], list):
+        form.campos_json = payload['campos_json']
+    if 'nome' in payload:
+        form.nome = str(payload['nome'])[:200]
+    if 'submit_label' in payload:
+        form.submit_label = str(payload['submit_label'])[:80]
+    if 'success_msg' in payload:
+        form.success_msg = str(payload['success_msg'])
+    if 'success_redirect' in payload:
+        form.success_redirect = str(payload['success_redirect'])[:200]
+    if 'bloquear_fora_cobertura' in payload:
+        form.bloquear_fora_cobertura = bool(payload['bloquear_fora_cobertura'])
+    form.save()
+    return JsonResponse({'ok': True, 'form_id': form.pk})
+
+
+@login_required
+@require_POST
+def admin_excluir_form(request, pk: int):
+    form = get_object_or_404(FormularioLanding.objects.all(), pk=pk)
+    form.delete()
+    return redirect('landing_pages_admin:lista_forms')
+
+
+@login_required
+@require_GET
+def admin_preview_lp(request, pk: int):
+    """Renderiza HTML da LP usando o renderer (mesmo do publico) — pra iframe do editor."""
+    lp = get_object_or_404(LandingPage.objects.all(), pk=pk)
+    html = renderizar_landing(lp, request=request)
+    return HttpResponse(html)

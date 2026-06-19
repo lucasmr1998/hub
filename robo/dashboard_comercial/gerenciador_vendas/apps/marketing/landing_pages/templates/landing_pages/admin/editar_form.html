@@ -1,0 +1,223 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}Editor — {{ form_obj.nome }}{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-3);">
+  <div style="display:flex;align-items:center;gap:var(--sp-2);">
+    <a href="{% url 'landing_pages_admin:lista_forms' %}" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left"></i></a>
+    <input id="form-nome" type="text" value="{{ form_obj.nome }}" maxlength="200"
+           style="font-size:var(--fs-xl);font-weight:var(--fw-semibold);border:1px solid transparent;background:transparent;padding:4px 8px;border-radius:4px;width:400px;"
+           onfocus="this.style.border='1px solid var(--color-border)';this.style.background='var(--color-bg)';"
+           onblur="this.style.border='1px solid transparent';this.style.background='transparent';">
+  </div>
+  <div style="display:flex;align-items:center;gap:var(--sp-2);">
+    <span id="status-msg" style="font-size:var(--fs-sm);color:var(--color-text-muted);"></span>
+    <button id="btn-salvar" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:240px 1fr 320px;gap:var(--sp-3);min-height:calc(100vh - 200px);">
+
+  <aside style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--sp-3);position:sticky;top:80px;height:fit-content;">
+    <h3 style="font-size:var(--fs-sm);text-transform:uppercase;color:var(--color-text-muted);margin:0 0 var(--sp-2);">Adicionar campo</h3>
+    <div id="paleta-campos" style="display:flex;flex-direction:column;gap:6px;"></div>
+  </aside>
+
+  <main style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--sp-3);">
+    <div style="margin-bottom:var(--sp-3);display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-2);">
+      <div class="field"><label class="field-label">Texto do botao submit</label><input id="form-submit-label" class="field-input" value="{{ form_obj.submit_label }}"></div>
+      <div class="field"><label class="field-label">URL de redirect pos-sucesso</label><input id="form-success-redirect" type="url" class="field-input" value="{{ form_obj.success_redirect }}" placeholder="opcional"></div>
+    </div>
+    <div class="field" style="margin-bottom:var(--sp-3);"><label class="field-label">Mensagem de sucesso</label><textarea id="form-success-msg" class="field-input" rows="2">{{ form_obj.success_msg }}</textarea></div>
+    <div class="field" style="margin-bottom:var(--sp-3);">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+        <input id="form-bloquear" type="checkbox" {% if form_obj.bloquear_fora_cobertura %}checked{% endif %}>
+        <span>Bloquear submit se viabilidade = fora de cobertura</span>
+      </label>
+    </div>
+
+    <hr style="margin:var(--sp-3) 0;border:none;border-top:1px solid var(--color-border);">
+    <h3 style="margin:0 0 var(--sp-2);font-size:var(--fs-sm);text-transform:uppercase;color:var(--color-text-muted);">Campos do formulario</h3>
+    <div id="canvas-campos" style="display:flex;flex-direction:column;gap:8px;min-height:200px;"></div>
+    <div id="canvas-vazio" style="text-align:center;padding:40px 20px;color:var(--color-text-muted);display:none;">
+      <p>Arraste campos da paleta a esquerda</p>
+    </div>
+  </main>
+
+  <aside style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--sp-3);position:sticky;top:80px;height:fit-content;max-height:calc(100vh - 100px);overflow-y:auto;">
+    <h3 style="font-size:var(--fs-sm);text-transform:uppercase;color:var(--color-text-muted);margin:0 0 var(--sp-2);">Inspector</h3>
+    <div id="inspector-vazio" style="color:var(--color-text-muted);font-size:var(--fs-sm);padding:var(--sp-4) 0;text-align:center;">Clique num campo pra editar.</div>
+    <div id="inspector-content" style="display:none;"></div>
+  </aside>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+(function() {
+  const CATALOGO = {{ catalogo_campos_json|safe }};
+  const CATALOGO_MAP = Object.fromEntries(CATALOGO.map(c => [c.slug, c]));
+  let campos = {{ campos_json|safe }};
+  let campoSelecionadoIdx = null;
+  const URL_SALVAR = "{% url 'landing_pages_admin:salvar_form' form_obj.pk %}";
+  const CSRF = "{{ csrf_token }}";
+
+  const paletaEl = document.getElementById('paleta-campos');
+  const canvasEl = document.getElementById('canvas-campos');
+  const canvasVazioEl = document.getElementById('canvas-vazio');
+  const inspVazioEl = document.getElementById('inspector-vazio');
+  const inspContEl = document.getElementById('inspector-content');
+  const statusMsgEl = document.getElementById('status-msg');
+
+  function renderPaleta() {
+    paletaEl.innerHTML = '';
+    CATALOGO.forEach(c => {
+      const el = document.createElement('div');
+      el.style.cssText = 'padding:10px 12px;background:var(--color-bg-muted);border:1px solid var(--color-border);border-radius:6px;cursor:pointer;font-size:13px;display:flex;flex-direction:column;gap:2px;';
+      el.innerHTML = `<strong>${c.label}</strong><small style="color:var(--color-text-muted);">${c.descricao || c.slug}</small>`;
+      el.addEventListener('click', () => adicionarCampo(c.slug));
+      paletaEl.appendChild(el);
+    });
+  }
+
+  function renderCanvas() {
+    canvasEl.innerHTML = '';
+    if (!campos.length) { canvasVazioEl.style.display = 'block'; canvasEl.style.display = 'none'; return; }
+    canvasVazioEl.style.display = 'none'; canvasEl.style.display = 'flex';
+    campos.forEach((c, idx) => {
+      const spec = CATALOGO_MAP[c.tipo];
+      const props = c.props || {};
+      const selecionado = idx === campoSelecionadoIdx;
+      const el = document.createElement('div');
+      el.dataset.idx = idx;
+      el.style.cssText = `padding:12px 16px;background:${selecionado ? 'rgba(37,99,235,0.05)' : 'var(--color-bg-muted)'};border:1px solid ${selecionado ? 'var(--color-primary)' : 'var(--color-border)'};border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;`;
+      el.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+          <i class="bi bi-grip-vertical handle" style="color:var(--color-text-muted);cursor:grab;"></i>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:var(--fw-medium);font-size:14px;">${props.label || (spec ? spec.label : c.tipo)} <small style="color:var(--color-text-muted);font-weight:400;">(${c.tipo})</small></div>
+            <div style="font-size:12px;color:var(--color-text-muted);">name="${props.name || ''}" ${props.required ? '· obrigatorio' : ''}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-secondary btn-sm" data-acao="duplicar" title="Duplicar"><i class="bi bi-files"></i></button>
+          <button class="btn btn-secondary btn-sm" data-acao="excluir" title="Excluir" style="color:var(--color-danger);"><i class="bi bi-trash"></i></button>
+        </div>
+      `;
+      el.addEventListener('click', (ev) => {
+        if (ev.target.closest('[data-acao]')) return;
+        campoSelecionadoIdx = idx; renderCanvas(); renderInspector();
+      });
+      el.querySelector('[data-acao="duplicar"]').addEventListener('click', (ev) => { ev.stopPropagation(); duplicar(idx); });
+      el.querySelector('[data-acao="excluir"]').addEventListener('click', (ev) => { ev.stopPropagation(); excluir(idx); });
+      canvasEl.appendChild(el);
+    });
+  }
+
+  function adicionarCampo(tipo) {
+    const spec = CATALOGO_MAP[tipo];
+    if (!spec) return;
+    campos.push({tipo, props: JSON.parse(JSON.stringify(spec.defaults))});
+    campoSelecionadoIdx = campos.length - 1;
+    renderCanvas(); renderInspector();
+  }
+
+  function duplicar(idx) {
+    campos.splice(idx + 1, 0, JSON.parse(JSON.stringify(campos[idx])));
+    campoSelecionadoIdx = idx + 1;
+    renderCanvas(); renderInspector();
+  }
+
+  function excluir(idx) {
+    if (!confirm('Excluir este campo?')) return;
+    campos.splice(idx, 1);
+    if (campoSelecionadoIdx === idx) campoSelecionadoIdx = null;
+    else if (campoSelecionadoIdx > idx) campoSelecionadoIdx--;
+    renderCanvas(); renderInspector();
+  }
+
+  function renderInspector() {
+    if (campoSelecionadoIdx === null || !campos[campoSelecionadoIdx]) {
+      inspVazioEl.style.display = 'block'; inspContEl.style.display = 'none'; return;
+    }
+    inspVazioEl.style.display = 'none'; inspContEl.style.display = 'block';
+    const campo = campos[campoSelecionadoIdx];
+    const spec = CATALOGO_MAP[campo.tipo];
+    inspContEl.innerHTML = `<div style="font-weight:600;margin-bottom:12px;">${spec.label}</div>`;
+    Object.entries(spec.schema).forEach(([nome, schema]) => {
+      const valor = campo.props[nome] !== undefined ? campo.props[nome] : (schema.default !== undefined ? schema.default : '');
+      inspContEl.appendChild(criarInput(nome, schema, valor, campo));
+    });
+  }
+
+  function criarInput(nome, schema, valor, campo) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'margin-bottom:12px;display:flex;flex-direction:column;gap:4px;';
+    const label = document.createElement('label');
+    label.style.cssText = 'font-size:12px;font-weight:500;color:var(--color-text);';
+    label.textContent = schema.label || nome;
+    let input;
+    const t = schema.type;
+    if (schema.enum) {
+      input = document.createElement('select'); input.className = 'field-input'; input.style.cssText = 'padding:6px 8px;font-size:13px;';
+      input.innerHTML = schema.enum.map(o => `<option value="${o}" ${o === valor ? 'selected' : ''}>${o}</option>`).join('');
+      input.addEventListener('change', () => { campo.props[nome] = input.value; renderCanvas(); });
+    } else if (t === 'boolean') {
+      const sub = document.createElement('label'); sub.style.cssText = 'display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;';
+      input = document.createElement('input'); input.type = 'checkbox'; input.checked = !!valor;
+      input.addEventListener('change', () => { campo.props[nome] = input.checked; renderCanvas(); });
+      sub.appendChild(input); sub.appendChild(document.createTextNode(schema.label || nome));
+      wrap.appendChild(sub); return wrap;
+    } else if (t === 'integer') {
+      input = document.createElement('input'); input.type = 'number'; input.className = 'field-input'; input.style.cssText = 'padding:6px 8px;font-size:13px;';
+      input.value = valor; if (schema.minimum !== undefined) input.min = schema.minimum; if (schema.maximum !== undefined) input.max = schema.maximum;
+      input.addEventListener('input', () => { campo.props[nome] = parseInt(input.value) || 0; renderCanvas(); });
+    } else if (t === 'array') {
+      input = document.createElement('textarea'); input.className = 'field-input'; input.style.cssText = 'padding:6px 8px;font-size:13px;font-family:inherit;min-height:80px;';
+      input.placeholder = 'Uma opcao por linha'; input.value = (valor || []).join('\n');
+      input.addEventListener('input', () => { campo.props[nome] = input.value.split('\n').map(s => s.trim()).filter(Boolean); renderCanvas(); });
+    } else if (schema.multiline) {
+      input = document.createElement('textarea'); input.className = 'field-input'; input.style.cssText = 'padding:6px 8px;font-size:13px;font-family:inherit;min-height:60px;';
+      input.value = valor || ''; input.addEventListener('input', () => { campo.props[nome] = input.value; renderCanvas(); });
+    } else {
+      input = document.createElement('input'); input.type = 'text'; input.className = 'field-input'; input.style.cssText = 'padding:6px 8px;font-size:13px;';
+      input.value = valor || ''; input.addEventListener('input', () => { campo.props[nome] = input.value; renderCanvas(); });
+    }
+    wrap.appendChild(label); wrap.appendChild(input); return wrap;
+  }
+
+  async function salvar() {
+    statusMsgEl.textContent = 'Salvando...';
+    try {
+      const resp = await fetch(URL_SALVAR, {
+        method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+        body: JSON.stringify({
+          campos_json: campos,
+          nome: document.getElementById('form-nome').value,
+          submit_label: document.getElementById('form-submit-label').value,
+          success_msg: document.getElementById('form-success-msg').value,
+          success_redirect: document.getElementById('form-success-redirect').value,
+          bloquear_fora_cobertura: document.getElementById('form-bloquear').checked,
+        }),
+      });
+      const json = await resp.json();
+      statusMsgEl.textContent = json.ok ? '✓ Salvo' : '✗ ' + (json.erro || 'erro');
+      if (json.ok) setTimeout(() => statusMsgEl.textContent = '', 2000);
+    } catch (err) { statusMsgEl.textContent = '✗ Erro de rede'; }
+  }
+  document.getElementById('btn-salvar').addEventListener('click', salvar);
+
+  Sortable.create(canvasEl, {
+    handle: '.handle', animation: 150,
+    onEnd: (evt) => {
+      const item = campos.splice(evt.oldIndex, 1)[0];
+      campos.splice(evt.newIndex, 0, item);
+      campoSelecionadoIdx = evt.newIndex;
+      renderCanvas();
+    },
+  });
+
+  renderPaleta(); renderCanvas(); renderInspector();
+})();
+</script>
+{% endblock %}

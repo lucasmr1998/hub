@@ -1,0 +1,50 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}Formularios — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
+  <div>
+    <h1 style="font-size:var(--fs-2xl);margin:0;">Formularios</h1>
+    <p style="color:var(--color-text-muted);margin:4px 0 0;">Formularios reusaveis. Mude o form, muda em todas as Landing Pages que o usam.</p>
+  </div>
+  <div style="display:flex;gap:var(--sp-2);">
+    <a href="{% url 'landing_pages_admin:lista_lps' %}" class="btn btn-secondary"><i class="bi bi-file-earmark-richtext"></i> Landing Pages</a>
+    <a href="{% url 'landing_pages_admin:criar_form' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Novo formulario</a>
+  </div>
+</div>
+
+<form method="get" style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-3);align-items:center;">
+  <input type="search" name="q" value="{{ busca }}" placeholder="Buscar..." class="field-input" style="max-width:320px;">
+  <button type="submit" class="btn btn-secondary"><i class="bi bi-search"></i> Filtrar</button>
+</form>
+
+{% if formularios %}
+<table style="width:100%;border-collapse:collapse;background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;">
+  <thead><tr style="background:var(--color-bg-muted);">
+    <th style="padding:12px 16px;text-align:left;font-size:var(--fs-sm);">Nome</th>
+    <th style="padding:12px 16px;text-align:left;font-size:var(--fs-sm);">Campos</th>
+    <th style="padding:12px 16px;text-align:left;font-size:var(--fs-sm);">Atualizado</th>
+    <th style="padding:12px 16px;text-align:right;font-size:var(--fs-sm);">Acoes</th>
+  </tr></thead>
+  <tbody>
+    {% for f in formularios %}
+    <tr style="border-top:1px solid var(--color-border);">
+      <td style="padding:12px 16px;font-weight:var(--fw-medium);">{{ f.nome }}</td>
+      <td style="padding:12px 16px;color:var(--color-text-muted);">{{ f.campos_json|length }} campo{{ f.campos_json|length|pluralize }}</td>
+      <td style="padding:12px 16px;color:var(--color-text-muted);font-size:var(--fs-sm);">{{ f.atualizado_em|date:"d/m/Y H:i" }}</td>
+      <td style="padding:12px 16px;text-align:right;">
+        <a href="{% url 'landing_pages_admin:editar_form' f.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil"></i> Editar</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div style="padding:var(--sp-8);background:var(--color-bg);border:1px dashed var(--color-border);border-radius:var(--radius-lg);text-align:center;">
+  <i class="bi bi-input-cursor" style="font-size:3rem;color:var(--color-text-muted);"></i>
+  <h3 style="margin:var(--sp-3) 0 var(--sp-1);">Nenhum formulario ainda</h3>
+  <p style="color:var(--color-text-muted);">Crie um formulario reusavel pra usar em varias landing pages.</p>
+  <a href="{% url 'landing_pages_admin:criar_form' %}" class="btn btn-primary" style="margin-top:var(--sp-2);"><i class="bi bi-plus-lg"></i> Criar formulario</a>
+</div>
+{% endif %}
+{% endblock %}

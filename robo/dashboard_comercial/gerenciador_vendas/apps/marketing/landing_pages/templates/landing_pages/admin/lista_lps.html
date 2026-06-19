@@ -1,0 +1,65 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}Landing Pages — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
+  <div>
+    <h1 style="font-size:var(--fs-2xl);margin:0;">Landing Pages</h1>
+    <p style="color:var(--color-text-muted);margin:4px 0 0;">Construa paginas publicas pra captura de leads, contratacao, ofertas.</p>
+  </div>
+  <div style="display:flex;gap:var(--sp-2);">
+    <a href="{% url 'landing_pages_admin:lista_forms' %}" class="btn btn-secondary"><i class="bi bi-input-cursor"></i> Formularios</a>
+    <a href="{% url 'landing_pages_admin:criar_lp' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Nova landing page</a>
+  </div>
+</div>
+
+<form method="get" style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-3);align-items:center;">
+  <input type="search" name="q" value="{{ busca }}" placeholder="Buscar por nome ou slug..." class="field-input" style="max-width:320px;">
+  <select name="status" class="field-input" style="max-width:160px;">
+    <option value="">Todos status</option>
+    <option value="rascunho" {% if status_filtro == 'rascunho' %}selected{% endif %}>Rascunho</option>
+    <option value="publicada" {% if status_filtro == 'publicada' %}selected{% endif %}>Publicada</option>
+    <option value="arquivada" {% if status_filtro == 'arquivada' %}selected{% endif %}>Arquivada</option>
+  </select>
+  <button type="submit" class="btn btn-secondary"><i class="bi bi-search"></i> Filtrar</button>
+</form>
+
+{% if lps %}
+<table style="width:100%;border-collapse:collapse;background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;">
+  <thead>
+    <tr style="background:var(--color-bg-muted);">
+      <th style="padding:12px 16px;text-align:left;font-size:var(--fs-sm);">Nome</th>
+      <th style="padding:12px 16px;text-align:left;font-size:var(--fs-sm);">Slug</th>
+      <th style="padding:12px 16px;text-align:left;font-size:var(--fs-sm);">Status</th>
+      <th style="padding:12px 16px;text-align:left;font-size:var(--fs-sm);">Atualizado</th>
+      <th style="padding:12px 16px;text-align:right;font-size:var(--fs-sm);">Acoes</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for lp in lps %}
+    <tr style="border-top:1px solid var(--color-border);">
+      <td style="padding:12px 16px;font-weight:var(--fw-medium);">{{ lp.nome }}</td>
+      <td style="padding:12px 16px;color:var(--color-text-muted);font-family:monospace;">/p/{{ request.tenant.slug }}/{{ lp.slug }}/</td>
+      <td style="padding:12px 16px;">
+        {% if lp.status == 'publicada' %}<span class="badge-mini badge-success">Publicada</span>
+        {% elif lp.status == 'rascunho' %}<span class="badge-mini badge-warning">Rascunho</span>
+        {% else %}<span class="badge-mini">Arquivada</span>{% endif %}
+      </td>
+      <td style="padding:12px 16px;color:var(--color-text-muted);font-size:var(--fs-sm);">{{ lp.atualizado_em|date:"d/m/Y H:i" }}</td>
+      <td style="padding:12px 16px;text-align:right;">
+        {% if lp.status == 'publicada' %}<a href="/p/{{ request.tenant.slug }}/{{ lp.slug }}/" target="_blank" class="btn btn-secondary btn-sm" title="Ver publica"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        <a href="{% url 'landing_pages_admin:editar_lp' lp.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil"></i> Editar</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div style="padding:var(--sp-8);background:var(--color-bg);border:1px dashed var(--color-border);border-radius:var(--radius-lg);text-align:center;">
+  <i class="bi bi-file-earmark-richtext" style="font-size:3rem;color:var(--color-text-muted);"></i>
+  <h3 style="margin:var(--sp-3) 0 var(--sp-1);">Nenhuma landing page ainda</h3>
+  <p style="color:var(--color-text-muted);">Crie sua primeira pagina publica.</p>
+  <a href="{% url 'landing_pages_admin:criar_lp' %}" class="btn btn-primary" style="margin-top:var(--sp-2);"><i class="bi bi-plus-lg"></i> Criar landing page</a>
+</div>
+{% endif %}
+{% endblock %}
