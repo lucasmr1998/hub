@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import asdict
 from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
@@ -19,14 +18,11 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.views.decorators.cache import cache_control
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST, require_http_methods, require_GET
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 from apps.sistema.models import Tenant
 
-from .catalog import (
-    CAMPO_REGISTRY, REGISTRY, aplicar_defaults, aplicar_defaults_campo,
-    get_bloco, get_campo, listar_blocos, listar_campos,
-)
+from .catalog import get_campo, listar_blocos, listar_campos
 from .models import FormularioLanding, LandingPage, LandingSubmissao
 from .renderer import renderizar_landing
 from .validators import get_validador
@@ -452,3 +448,19 @@ def admin_preview_lp(request, pk: int):
     lp = get_object_or_404(LandingPage.objects.all(), pk=pk)
     html = renderizar_landing(lp, request=request)
     return HttpResponse(html)
+
+
+@login_required
+@require_POST
+def admin_render_blocos_html(request):
+    """Renderiza HTML de uma lista de blocos. Usado pelo editor pra preview ao vivo."""
+    from .renderer import renderizar_blocos
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'ok': False, 'erro': 'JSON invalido'}, status=400)
+    blocos = payload.get('blocos_json') or []
+    if not isinstance(blocos, list):
+        return JsonResponse({'ok': False, 'erro': 'blocos_json deve ser lista'}, status=400)
+    html = renderizar_blocos(blocos, request=request)
+    return JsonResponse({'ok': True, 'html': html})

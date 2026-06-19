@@ -1,56 +1,244 @@
 {% extends "layouts/layout_app.html" %}
 {% block title %}Editor — {{ lp.nome }}{% endblock %}
 
+{% block extra_css %}
+<style>
+  .lp-editor-layout { display: flex; height: calc(100vh - 180px); gap: 0; }
+  .lp-sidebar {
+    width: 260px;
+    background: var(--color-bg, #fff);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    overflow-y: auto;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .lp-canvas-wrap {
+    flex: 1;
+    background: var(--color-bg-muted, #f8fafc);
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+    padding: var(--sp-5) var(--sp-3);
+  }
+  .lp-config-panel {
+    width: 320px;
+    background: var(--color-bg, #fff);
+    border: 1px solid var(--color-border);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+
+  /* Toolbar */
+  .lp-toolbar {
+    display: flex; align-items: center; gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-4);
+    background: var(--color-bg, #fff);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--sp-3);
+  }
+  .lp-toolbar-title {
+    flex: 1; margin: 0;
+    font-size: var(--fs-md); font-weight: var(--fw-bold);
+    display: inline-flex; align-items: center; gap: var(--sp-2);
+  }
+  .lp-toolbar-title input {
+    border: 1px solid transparent; background: transparent;
+    padding: 4px 8px; border-radius: 4px;
+    font-size: var(--fs-md); font-weight: var(--fw-bold);
+    width: 320px;
+  }
+  .lp-toolbar-title input:focus { border-color: var(--color-border); background: var(--color-bg-muted); outline: none; }
+
+  .preview-toggle { display: inline-flex; border: 1px solid var(--color-border); border-radius: 6px; overflow: hidden; }
+  .preview-toggle button {
+    background: transparent; border: none; padding: 6px 10px; cursor: pointer; color: var(--color-text-muted);
+  }
+  .preview-toggle button.active { background: var(--color-primary, #2563eb); color: #fff; }
+
+  /* Sidebar */
+  .sidebar-header { padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--color-border); }
+  .sidebar-header h3 { font-size: var(--fs-sm); font-weight: var(--fw-bold); margin: 0; }
+  .sidebar-blocks { padding: var(--sp-2) var(--sp-3); flex: 1; overflow-y: auto; }
+  .block-section-title {
+    font-size: 11px; font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    padding: var(--sp-2) 4px;
+  }
+  .block-draggable {
+    display: flex; align-items: center; gap: var(--sp-2);
+    padding: 8px 12px; border-radius: 6px;
+    font-size: 13px; font-weight: var(--fw-medium);
+    cursor: grab; border: 1px solid transparent; margin-bottom: 2px;
+  }
+  .block-draggable:hover { background: var(--color-bg-muted); border-color: var(--color-border); }
+  .block-draggable i { width: 20px; text-align: center; flex-shrink: 0; }
+
+  /* Canvas */
+  .lp-canvas {
+    width: 100%; max-width: 1100px;
+    min-height: 600px;
+    background: #fff;
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    transition: max-width 0.3s ease;
+  }
+  .lp-canvas.mobile-mode { max-width: 380px; }
+  .canvas-drop-zone {
+    min-height: 600px; position: relative;
+  }
+  .canvas-drop-zone:empty {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--color-text-muted); font-size: var(--fs-sm);
+    border: 2px dashed var(--color-border); border-radius: var(--radius-md); margin: var(--sp-4);
+  }
+  .canvas-drop-zone:empty::after { content: 'Arraste blocos da esquerda pra comecar'; padding: var(--sp-8); }
+
+  .canvas-block {
+    position: relative;
+    border: 2px solid transparent; border-radius: 4px;
+    cursor: pointer;
+  }
+  .canvas-block:hover { border-color: rgba(37,99,235,0.25); }
+  .canvas-block.selected { border-color: var(--color-primary, #2563eb); box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+  .canvas-block .block-actions {
+    position: absolute; top: -14px; right: 8px; display: none; gap: 4px; z-index: 10;
+  }
+  .canvas-block:hover .block-actions, .canvas-block.selected .block-actions { display: flex; }
+  .block-action-btn {
+    width: 26px; height: 26px; border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.12); background: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 11px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  }
+  .block-action-btn:hover { background: var(--color-primary, #2563eb); color: #fff; }
+  .block-action-btn.danger:hover { background: var(--color-danger, #dc2626); color: #fff; }
+  .canvas-block .block-type-badge {
+    position: absolute; top: -10px; left: 8px;
+    background: var(--color-primary, #2563eb); color: #fff;
+    padding: 2px 8px; border-radius: 4px;
+    font-size: 10px; font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    display: none; z-index: 10;
+  }
+  .canvas-block.selected .block-type-badge { display: inline-block; }
+
+  /* Config panel */
+  .config-header { padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--color-border); }
+  .config-header h3 { font-size: var(--fs-sm); font-weight: var(--fw-bold); margin: 0; }
+  .config-body { padding: var(--sp-3) var(--sp-4); }
+  .config-group { margin-bottom: var(--sp-3); }
+  .config-group > label {
+    display: block;
+    font-size: 11px; font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    margin-bottom: 4px;
+  }
+  .config-group input, .config-group select, .config-group textarea {
+    width: 100%; padding: 8px 10px;
+    border: 1px solid var(--color-border); border-radius: 6px;
+    font-size: 13px; font-family: inherit;
+  }
+  .config-group input[type="color"] { height: 36px; padding: 2px; }
+  .config-group textarea { min-height: 80px; resize: vertical; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-3);">
-  <div style="display:flex;align-items:center;gap:var(--sp-2);">
-    <a href="{% url 'landing_pages_admin:lista_lps' %}" class="btn btn-secondary btn-sm" title="Voltar"><i class="bi bi-arrow-left"></i></a>
-    <input id="lp-nome" type="text" value="{{ lp.nome }}" maxlength="200"
-           style="font-size:var(--fs-xl);font-weight:var(--fw-semibold);border:1px solid transparent;background:transparent;padding:4px 8px;border-radius:4px;width:400px;"
-           onfocus="this.style.border='1px solid var(--color-border)';this.style.background='var(--color-bg)';"
-           onblur="this.style.border='1px solid transparent';this.style.background='transparent';">
+
+<div class="lp-toolbar">
+  <a href="{% url 'landing_pages_admin:lista_lps' %}" class="btn btn-secondary btn-sm" title="Voltar"><i class="bi bi-arrow-left"></i></a>
+  <h2 class="lp-toolbar-title">
+    <i class="bi bi-file-earmark-richtext" style="color: var(--color-primary);"></i>
+    <input id="lp-nome" type="text" value="{{ lp.nome }}" maxlength="200">
+  </h2>
+
+  {% if lp.status == 'publicada' %}
+    {% include "components/badge.html" with variant="success" label="Publicada" size="sm" %}
+  {% elif lp.status == 'rascunho' %}
+    {% include "components/badge.html" with variant="warning" label="Rascunho" size="sm" %}
+  {% else %}
+    {% include "components/badge.html" with variant="neutral" label="Arquivada" size="sm" %}
+  {% endif %}
+
+  <div class="preview-toggle">
+    <button class="active" id="btn-mode-desktop" title="Desktop"><i class="bi bi-laptop"></i></button>
+    <button id="btn-mode-mobile" title="Mobile"><i class="bi bi-phone"></i></button>
   </div>
-  <div style="display:flex;align-items:center;gap:var(--sp-2);">
-    <span id="status-msg" style="font-size:var(--fs-sm);color:var(--color-text-muted);"></span>
-    {% if lp.status == 'publicada' %}<a href="/p/{{ lp.tenant.slug }}/{{ lp.slug }}/" target="_blank" class="btn btn-secondary btn-sm"><i class="bi bi-box-arrow-up-right"></i> Ver publica</a>{% endif %}
-    <select id="lp-status" class="field-input" style="max-width:140px;">
-      <option value="rascunho" {% if lp.status == 'rascunho' %}selected{% endif %}>Rascunho</option>
-      <option value="publicada" {% if lp.status == 'publicada' %}selected{% endif %}>Publicada</option>
-      <option value="arquivada" {% if lp.status == 'arquivada' %}selected{% endif %}>Arquivada</option>
-    </select>
-    <button id="btn-salvar" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
-  </div>
-</div>
 
-<div style="display:grid;grid-template-columns:240px 1fr 320px;gap:var(--sp-3);min-height:calc(100vh - 200px);">
-
-  {# ============================== PALETA DE BLOCOS ============================== #}
-  <aside style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--sp-3);position:sticky;top:80px;height:fit-content;">
-    <h3 style="font-size:var(--fs-sm);text-transform:uppercase;color:var(--color-text-muted);margin:0 0 var(--sp-2);">Adicionar bloco</h3>
-    <div id="paleta-blocos" style="display:flex;flex-direction:column;gap:6px;"></div>
-  </aside>
-
-  {# ============================== CANVAS ============================== #}
-  <main style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--sp-3);">
-    <div id="canvas-blocos" style="display:flex;flex-direction:column;gap:8px;min-height:400px;"></div>
-    <div id="canvas-vazio" style="text-align:center;padding:60px 20px;color:var(--color-text-muted);display:none;">
-      <i class="bi bi-arrow-left-circle" style="font-size:2rem;"></i>
-      <p style="margin-top:8px;">Arraste blocos da paleta a esquerda pra comecar</p>
-    </div>
-  </main>
-
-  {# ============================== INSPECTOR ============================== #}
-  <aside style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--sp-3);position:sticky;top:80px;height:fit-content;max-height:calc(100vh - 100px);overflow-y:auto;">
-    <h3 style="font-size:var(--fs-sm);text-transform:uppercase;color:var(--color-text-muted);margin:0 0 var(--sp-2);">Inspector</h3>
-    <div id="inspector-vazio" style="color:var(--color-text-muted);font-size:var(--fs-sm);padding:var(--sp-4) 0;text-align:center;">
-      Clique num bloco do canvas pra editar suas propriedades.
-    </div>
-    <div id="inspector-content" style="display:none;"></div>
-  </aside>
-
+  <span id="status-msg" style="font-size: var(--fs-sm); color: var(--color-text-muted);"></span>
+  <button class="btn btn-secondary btn-sm" id="btn-preview"><i class="bi bi-eye"></i> Preview</button>
+  <button class="btn btn-primary btn-sm" id="btn-salvar"><i class="bi bi-check-lg"></i> Salvar</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<div class="lp-editor-layout">
+
+  {# ======================== SIDEBAR ======================== #}
+  <div class="lp-sidebar">
+    <div class="sidebar-header"><h3><i class="bi bi-puzzle" style="color: var(--color-primary); margin-right: 6px;"></i> Blocos</h3></div>
+    <div class="sidebar-blocks" id="paleta-blocos"></div>
+  </div>
+
+  {# ======================== CANVAS ======================== #}
+  <div class="lp-canvas-wrap">
+    <div class="lp-canvas" id="lp-canvas">
+      <div class="canvas-drop-zone" id="canvas-drop-zone"></div>
+    </div>
+  </div>
+
+  {# ======================== CONFIG PANEL ======================== #}
+  <div class="lp-config-panel">
+    <div class="config-header"><h3 id="config-title">Configuracoes da pagina</h3></div>
+    <div class="config-body" id="config-body">
+      {# Estado vazio: config global #}
+      <div id="config-global">
+        <div class="config-group">
+          <label>Slug (URL)</label>
+          <input type="text" id="cfg-slug" value="{{ lp.slug }}" readonly title="Edicao via rename no futuro" style="background:var(--color-bg-muted);">
+          <small style="color: var(--color-text-muted); font-size: 11px;">URL: <code>/p/{{ lp.tenant.slug }}/{{ lp.slug }}/</code></small>
+        </div>
+        <div class="config-group">
+          <label>Status</label>
+          <select id="cfg-status">
+            <option value="rascunho" {% if lp.status == 'rascunho' %}selected{% endif %}>Rascunho</option>
+            <option value="publicada" {% if lp.status == 'publicada' %}selected{% endif %}>Publicada</option>
+            <option value="arquivada" {% if lp.status == 'arquivada' %}selected{% endif %}>Arquivada</option>
+          </select>
+        </div>
+        <div class="config-group">
+          <label>SEO title (aba do navegador)</label>
+          <input type="text" id="cfg-seo-title" value="{{ lp.seo_title }}" maxlength="200" placeholder="{{ lp.nome }}">
+        </div>
+        <div class="config-group">
+          <label>SEO description</label>
+          <textarea id="cfg-seo-desc" maxlength="300" rows="2">{{ lp.seo_description }}</textarea>
+        </div>
+        <div class="config-group">
+          <label>Cor de fundo</label>
+          <input type="color" id="cfg-cor-fundo" value="{{ lp.config_json.cor_fundo|default:'#ffffff' }}">
+        </div>
+        <div class="config-group">
+          <label>Largura maxima (px)</label>
+          <input type="number" id="cfg-max-width" min="600" max="1600" step="20" value="{{ lp.config_json.max_width|default:'1200' }}">
+        </div>
+      </div>
+
+      {# Estado bloco selecionado #}
+      <div id="config-bloco" style="display: none;"></div>
+    </div>
+  </div>
+
+</div>
+
 <script>
 (function() {
   const CATALOGO = {{ catalogo_blocos_json|safe }};
@@ -58,84 +246,163 @@
   const CATALOGO_MAP = Object.fromEntries(CATALOGO.map(b => [b.slug, b]));
   let blocos = {{ blocos_json|safe }};
   let blocoSelecionadoIdx = null;
-  let saving = false;
+  let renderTimer = null;
 
   const URL_SALVAR = "{% url 'landing_pages_admin:salvar_lp' lp.pk %}";
+  const URL_RENDER = "{% url 'landing_pages_admin:render_blocos' %}";
+  const URL_PREVIEW = "/p/{{ lp.tenant.slug }}/{{ lp.slug }}/";
   const CSRF = "{{ csrf_token }}";
 
   const paletaEl = document.getElementById('paleta-blocos');
-  const canvasEl = document.getElementById('canvas-blocos');
-  const canvasVazioEl = document.getElementById('canvas-vazio');
-  const inspVazioEl = document.getElementById('inspector-vazio');
-  const inspContEl = document.getElementById('inspector-content');
+  const canvasEl = document.getElementById('lp-canvas');
+  const dropZoneEl = document.getElementById('canvas-drop-zone');
+  const configGlobalEl = document.getElementById('config-global');
+  const configBlocoEl = document.getElementById('config-bloco');
+  const configTitleEl = document.getElementById('config-title');
   const statusMsgEl = document.getElementById('status-msg');
+
+  // ICONES por bloco
+  const ICONES = {
+    hero: {icon: 'bi-stars', color: '#6366f1'},
+    texto: {icon: 'bi-text-left', color: '#3b82f6'},
+    imagem: {icon: 'bi-image', color: '#10b981'},
+    botao: {icon: 'bi-square', color: '#f59e0b'},
+    colunas: {icon: 'bi-layout-three-columns', color: '#8b5cf6'},
+    form: {icon: 'bi-ui-checks-grid', color: '#ec4899'},
+  };
 
   // ========== Paleta ==========
   function renderPaleta() {
-    paletaEl.innerHTML = '';
+    const grupos = {};
     CATALOGO.forEach(b => {
-      const el = document.createElement('div');
-      el.className = 'paleta-item';
-      el.dataset.tipo = b.slug;
-      el.style.cssText = 'padding:10px 12px;background:var(--color-bg-muted);border:1px solid var(--color-border);border-radius:6px;cursor:grab;font-size:13px;display:flex;flex-direction:column;gap:2px;';
-      el.innerHTML = `<strong>${b.label}</strong><small style="color:var(--color-text-muted);">${b.descricao || ''}</small>`;
-      el.addEventListener('click', () => adicionarBloco(b.slug));
-      paletaEl.appendChild(el);
+      const cat = (b.categoria || 'outros');
+      grupos[cat] = grupos[cat] || [];
+      grupos[cat].push(b);
+    });
+    const ordemCat = ['basico', 'conteudo', 'midia', 'form', 'isp', 'outros'];
+    const labelCat = {basico: 'Estrutura', conteudo: 'Conteudo', midia: 'Midia', form: 'Formularios', isp: 'ISP', outros: 'Outros'};
+    paletaEl.innerHTML = '';
+    ordemCat.forEach(cat => {
+      if (!grupos[cat]) return;
+      const sec = document.createElement('div');
+      sec.className = 'block-section';
+      sec.innerHTML = `<div class="block-section-title"><span>${labelCat[cat] || cat}</span></div>`;
+      const items = document.createElement('div');
+      items.className = 'block-section-items';
+      grupos[cat].forEach(b => {
+        const ic = ICONES[b.slug] || {icon: 'bi-box', color: '#6b7280'};
+        const el = document.createElement('div');
+        el.className = 'block-draggable';
+        el.dataset.tipo = b.slug;
+        el.innerHTML = `<i class="bi ${ic.icon}" style="color: ${ic.color};"></i> ${b.label}`;
+        el.addEventListener('click', () => adicionarBloco(b.slug));
+        items.appendChild(el);
+      });
+      sec.appendChild(items);
+      paletaEl.appendChild(sec);
     });
   }
 
-  // ========== Canvas ==========
-  function renderCanvas() {
-    canvasEl.innerHTML = '';
+  // ========== Canvas (preview ao vivo) ==========
+  async function renderCanvas() {
     if (!blocos.length) {
-      canvasVazioEl.style.display = 'block';
-      canvasEl.style.display = 'none';
+      dropZoneEl.innerHTML = '';
       return;
     }
-    canvasVazioEl.style.display = 'none';
-    canvasEl.style.display = 'flex';
-    blocos.forEach((b, idx) => {
-      const spec = CATALOGO_MAP[b.tipo];
-      const el = document.createElement('div');
-      el.className = 'bloco-card';
-      el.dataset.idx = idx;
-      const selecionado = idx === blocoSelecionadoIdx;
-      el.style.cssText = `padding:12px 16px;background:${selecionado ? 'rgba(37,99,235,0.05)' : 'var(--color-bg-muted)'};border:1px solid ${selecionado ? 'var(--color-primary)' : 'var(--color-border)'};border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;`;
-      el.innerHTML = `
-        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
-          <i class="bi bi-grip-vertical handle" style="color:var(--color-text-muted);cursor:grab;"></i>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:var(--fw-medium);font-size:14px;">${spec ? spec.label : b.tipo}</div>
-            <div style="font-size:12px;color:var(--color-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${resumoBloco(b)}</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:4px;">
-          <button class="btn btn-secondary btn-sm" data-acao="duplicar" title="Duplicar"><i class="bi bi-files"></i></button>
-          <button class="btn btn-secondary btn-sm" data-acao="excluir" title="Excluir" style="color:var(--color-danger);"><i class="bi bi-trash"></i></button>
-        </div>
-      `;
-      el.addEventListener('click', (ev) => {
-        if (ev.target.closest('[data-acao]')) return;
-        selecionarBloco(idx);
+    try {
+      const resp = await fetch(URL_RENDER, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+        body: JSON.stringify({blocos_json: blocos}),
       });
-      el.querySelector('[data-acao="duplicar"]').addEventListener('click', (ev) => { ev.stopPropagation(); duplicarBloco(idx); });
-      el.querySelector('[data-acao="excluir"]').addEventListener('click', (ev) => { ev.stopPropagation(); excluirBloco(idx); });
-      canvasEl.appendChild(el);
-    });
+      const json = await resp.json();
+      if (!json.ok) return;
+      dropZoneEl.innerHTML = '';
+      // Cria container pra cada bloco com wrapper interativo
+      blocos.forEach((b, idx) => {
+        const spec = CATALOGO_MAP[b.tipo];
+        const wrap = document.createElement('div');
+        wrap.className = 'canvas-block' + (idx === blocoSelecionadoIdx ? ' selected' : '');
+        wrap.dataset.idx = idx;
+        wrap.innerHTML = `
+          <span class="block-type-badge">${spec ? spec.label : b.tipo}</span>
+          <div class="block-actions">
+            <button class="block-action-btn" data-acao="up" title="Mover pra cima"><i class="bi bi-arrow-up"></i></button>
+            <button class="block-action-btn" data-acao="down" title="Mover pra baixo"><i class="bi bi-arrow-down"></i></button>
+            <button class="block-action-btn" data-acao="duplicar" title="Duplicar"><i class="bi bi-files"></i></button>
+            <button class="block-action-btn danger" data-acao="excluir" title="Excluir"><i class="bi bi-trash"></i></button>
+          </div>
+          <div class="bloco-html"></div>
+        `;
+        wrap.addEventListener('click', (ev) => {
+          if (ev.target.closest('[data-acao]')) return;
+          selecionarBloco(idx);
+        });
+        wrap.querySelector('[data-acao="up"]').addEventListener('click', (ev) => { ev.stopPropagation(); moverBloco(idx, -1); });
+        wrap.querySelector('[data-acao="down"]').addEventListener('click', (ev) => { ev.stopPropagation(); moverBloco(idx, 1); });
+        wrap.querySelector('[data-acao="duplicar"]').addEventListener('click', (ev) => { ev.stopPropagation(); duplicarBloco(idx); });
+        wrap.querySelector('[data-acao="excluir"]').addEventListener('click', (ev) => { ev.stopPropagation(); excluirBloco(idx); });
+        dropZoneEl.appendChild(wrap);
+      });
+      // Insere o HTML renderizado de cada bloco no slot correspondente
+      // (parse do HTML retornado e splita por bloco — vamos renderizar isoladamente)
+      // Estrategia: renderizar bloco a bloco via fetch individual seria pesado.
+      // Por isso, o HTML retornado e UM bloco completo gerado pelo renderer (join de todos).
+      // Vamos splitar pelo wrap class — mas e mais simples: chamar endpoint por bloco?
+      // Pra v1, injetamos o HTML inteiro no dropzone (sem interatividade por bloco).
+      // Substituimos pelo agrupamento manual:
+      dropZoneEl.innerHTML = ''; // reset
+      blocos.forEach((b, idx) => {
+        const spec = CATALOGO_MAP[b.tipo];
+        const wrap = document.createElement('div');
+        wrap.className = 'canvas-block' + (idx === blocoSelecionadoIdx ? ' selected' : '');
+        wrap.dataset.idx = idx;
+        wrap.innerHTML = `
+          <span class="block-type-badge">${spec ? spec.label : b.tipo}</span>
+          <div class="block-actions">
+            <button class="block-action-btn" data-acao="up" title="Mover pra cima"><i class="bi bi-arrow-up"></i></button>
+            <button class="block-action-btn" data-acao="down" title="Mover pra baixo"><i class="bi bi-arrow-down"></i></button>
+            <button class="block-action-btn" data-acao="duplicar" title="Duplicar"><i class="bi bi-files"></i></button>
+            <button class="block-action-btn danger" data-acao="excluir" title="Excluir"><i class="bi bi-trash"></i></button>
+          </div>
+        `;
+        wrap.addEventListener('click', (ev) => {
+          if (ev.target.closest('[data-acao]')) return;
+          selecionarBloco(idx);
+        });
+        wrap.querySelector('[data-acao="up"]').addEventListener('click', (ev) => { ev.stopPropagation(); moverBloco(idx, -1); });
+        wrap.querySelector('[data-acao="down"]').addEventListener('click', (ev) => { ev.stopPropagation(); moverBloco(idx, 1); });
+        wrap.querySelector('[data-acao="duplicar"]').addEventListener('click', (ev) => { ev.stopPropagation(); duplicarBloco(idx); });
+        wrap.querySelector('[data-acao="excluir"]').addEventListener('click', (ev) => { ev.stopPropagation(); excluirBloco(idx); });
+        dropZoneEl.appendChild(wrap);
+      });
+      // Renderiza cada bloco individualmente via fetch (paralelo)
+      const htmls = await Promise.all(blocos.map(b => fetchBlocoHtml(b)));
+      Array.from(dropZoneEl.children).forEach((wrap, idx) => {
+        const slot = document.createElement('div');
+        slot.innerHTML = htmls[idx];
+        wrap.appendChild(slot);
+      });
+    } catch (err) {
+      console.error('renderCanvas:', err);
+    }
   }
 
-  function resumoBloco(bloco) {
-    const props = bloco.props || {};
-    if (bloco.tipo === 'hero') return props.titulo || '(sem titulo)';
-    if (bloco.tipo === 'texto') return (props.html || '').replace(/<[^>]+>/g, '').substring(0, 80);
-    if (bloco.tipo === 'botao') return props.texto || '(sem texto)';
-    if (bloco.tipo === 'imagem') return props.alt || props.src || '(sem imagem)';
-    if (bloco.tipo === 'form') {
-      const f = FORMULARIOS.find(x => x.id === props.formulario_id);
-      return f ? `Form: ${f.nome}` : '(escolha um formulario)';
-    }
-    if (bloco.tipo === 'colunas') return `${props.n_colunas || 2} colunas`;
-    return '';
+  async function fetchBlocoHtml(bloco) {
+    try {
+      const resp = await fetch(URL_RENDER, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+        body: JSON.stringify({blocos_json: [bloco]}),
+      });
+      const json = await resp.json();
+      return json.ok ? json.html : '';
+    } catch (e) { return ''; }
+  }
+
+  function renderCanvasDebounced() {
+    clearTimeout(renderTimer);
+    renderTimer = setTimeout(renderCanvas, 250);
   }
 
   function adicionarBloco(tipo) {
@@ -144,15 +411,13 @@
     blocos.push({tipo, props: JSON.parse(JSON.stringify(spec.defaults))});
     blocoSelecionadoIdx = blocos.length - 1;
     renderCanvas();
-    renderInspector();
+    renderConfig();
   }
 
   function duplicarBloco(idx) {
-    const copia = JSON.parse(JSON.stringify(blocos[idx]));
-    blocos.splice(idx + 1, 0, copia);
+    blocos.splice(idx + 1, 0, JSON.parse(JSON.stringify(blocos[idx])));
     blocoSelecionadoIdx = idx + 1;
-    renderCanvas();
-    renderInspector();
+    renderCanvas(); renderConfig();
   }
 
   function excluirBloco(idx) {
@@ -160,120 +425,121 @@
     blocos.splice(idx, 1);
     if (blocoSelecionadoIdx === idx) blocoSelecionadoIdx = null;
     else if (blocoSelecionadoIdx > idx) blocoSelecionadoIdx--;
-    renderCanvas();
-    renderInspector();
+    renderCanvas(); renderConfig();
+  }
+
+  function moverBloco(idx, delta) {
+    const newIdx = idx + delta;
+    if (newIdx < 0 || newIdx >= blocos.length) return;
+    const item = blocos.splice(idx, 1)[0];
+    blocos.splice(newIdx, 0, item);
+    blocoSelecionadoIdx = newIdx;
+    renderCanvas(); renderConfig();
   }
 
   function selecionarBloco(idx) {
     blocoSelecionadoIdx = idx;
-    renderCanvas();
-    renderInspector();
+    renderCanvas(); renderConfig();
   }
 
-  // ========== Inspector ==========
-  function renderInspector() {
+  // ========== Config Panel ==========
+  function renderConfig() {
     if (blocoSelecionadoIdx === null || !blocos[blocoSelecionadoIdx]) {
-      inspVazioEl.style.display = 'block';
-      inspContEl.style.display = 'none';
+      configTitleEl.textContent = 'Configuracoes da pagina';
+      configGlobalEl.style.display = 'block';
+      configBlocoEl.style.display = 'none';
       return;
     }
-    inspVazioEl.style.display = 'none';
-    inspContEl.style.display = 'block';
     const bloco = blocos[blocoSelecionadoIdx];
     const spec = CATALOGO_MAP[bloco.tipo];
-    if (!spec) {
-      inspContEl.innerHTML = '<div style="color:var(--color-danger);">Bloco desconhecido</div>';
-      return;
-    }
-    inspContEl.innerHTML = `<div style="font-weight:600;margin-bottom:12px;">${spec.label}</div>`;
+    if (!spec) return;
+    configTitleEl.textContent = `Editar: ${spec.label}`;
+    configGlobalEl.style.display = 'none';
+    configBlocoEl.style.display = 'block';
+    configBlocoEl.innerHTML = '';
     Object.entries(spec.schema).forEach(([nome, schema]) => {
       const valor = bloco.props[nome] !== undefined ? bloco.props[nome] : (schema.default !== undefined ? schema.default : '');
-      inspContEl.appendChild(criarCampoInspector(nome, schema, valor, bloco));
+      configBlocoEl.appendChild(criarCampoConfig(nome, schema, valor, bloco));
     });
+    // Botao "voltar para config global"
+    const back = document.createElement('button');
+    back.className = 'btn btn-secondary btn-sm';
+    back.style.cssText = 'margin-top: 12px; width: 100%;';
+    back.innerHTML = '<i class="bi bi-arrow-left"></i> Configuracoes gerais';
+    back.addEventListener('click', () => { blocoSelecionadoIdx = null; renderCanvas(); renderConfig(); });
+    configBlocoEl.appendChild(back);
   }
 
-  function criarCampoInspector(nome, schema, valor, bloco) {
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'margin-bottom:12px;display:flex;flex-direction:column;gap:4px;';
+  function criarCampoConfig(nome, schema, valor, bloco) {
+    const group = document.createElement('div');
+    group.className = 'config-group';
     const label = document.createElement('label');
-    label.style.cssText = 'font-size:12px;font-weight:500;color:var(--color-text);';
     label.textContent = schema.label || nome;
-    wrap.appendChild(label);
+    group.appendChild(label);
 
     let input;
     const tipo = schema.type;
     const fmt = schema.format;
-
     if (nome === 'formulario_id' && bloco.tipo === 'form') {
-      // Select especial: lista formularios disponiveis
       input = document.createElement('select');
-      input.className = 'field-input';
-      input.style.cssText = 'padding:6px 8px;font-size:13px;';
       input.innerHTML = '<option value="">— Escolha um formulario —</option>' +
         FORMULARIOS.map(f => `<option value="${f.id}" ${f.id === valor ? 'selected' : ''}>${f.nome}</option>`).join('');
-      input.addEventListener('change', () => { bloco.props[nome] = input.value ? parseInt(input.value) : null; renderCanvas(); });
+      input.addEventListener('change', () => { bloco.props[nome] = input.value ? parseInt(input.value) : null; renderCanvasDebounced(); });
     } else if (schema.enum) {
       input = document.createElement('select');
-      input.className = 'field-input';
-      input.style.cssText = 'padding:6px 8px;font-size:13px;';
       input.innerHTML = schema.enum.map(o => `<option value="${o}" ${o === valor ? 'selected' : ''}>${o}</option>`).join('');
-      input.addEventListener('change', () => { bloco.props[nome] = input.value; renderCanvas(); });
+      input.addEventListener('change', () => { bloco.props[nome] = input.value; renderCanvasDebounced(); });
     } else if (tipo === 'boolean') {
-      const sub = document.createElement('label');
-      sub.style.cssText = 'display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;';
+      const lab2 = document.createElement('label');
+      lab2.style.cssText = 'display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--color-text); margin-top: 4px;';
       input = document.createElement('input');
       input.type = 'checkbox';
       input.checked = !!valor;
-      input.addEventListener('change', () => { bloco.props[nome] = input.checked; renderCanvas(); });
-      sub.appendChild(input);
-      sub.appendChild(document.createTextNode(schema.label || nome));
-      wrap.replaceChild(sub, label);
-      return wrap;
+      input.addEventListener('change', () => { bloco.props[nome] = input.checked; renderCanvasDebounced(); });
+      lab2.appendChild(input);
+      lab2.appendChild(document.createTextNode(schema.label || nome));
+      group.replaceChild(lab2, label);
+      return group;
     } else if (tipo === 'integer') {
-      input = document.createElement('input');
-      input.type = 'number';
-      input.className = 'field-input';
-      input.style.cssText = 'padding:6px 8px;font-size:13px;';
-      input.value = valor;
+      input = document.createElement('input'); input.type = 'number'; input.value = valor;
       if (schema.minimum !== undefined) input.min = schema.minimum;
       if (schema.maximum !== undefined) input.max = schema.maximum;
-      input.addEventListener('input', () => { bloco.props[nome] = parseInt(input.value) || 0; renderCanvas(); });
+      input.addEventListener('input', () => { bloco.props[nome] = parseInt(input.value) || 0; renderCanvasDebounced(); });
     } else if (fmt === 'color') {
-      input = document.createElement('input');
-      input.type = 'color';
-      input.value = valor && valor.startsWith('#') ? valor : '#000000';
-      input.style.cssText = 'height:32px;width:60px;';
-      input.addEventListener('input', () => { bloco.props[nome] = input.value; renderCanvas(); });
+      input = document.createElement('input'); input.type = 'color';
+      input.value = (valor && valor.startsWith('#')) ? valor : '#000000';
+      input.addEventListener('input', () => { bloco.props[nome] = input.value; renderCanvasDebounced(); });
     } else if (fmt === 'uri') {
-      input = document.createElement('input');
-      input.type = 'url';
-      input.className = 'field-input';
-      input.style.cssText = 'padding:6px 8px;font-size:13px;';
-      input.value = valor || '';
+      input = document.createElement('input'); input.type = 'url'; input.value = valor || '';
       input.placeholder = 'https://...';
-      input.addEventListener('input', () => { bloco.props[nome] = input.value; renderCanvas(); });
+      input.addEventListener('input', () => { bloco.props[nome] = input.value; renderCanvasDebounced(); });
     } else if (schema.multiline) {
-      input = document.createElement('textarea');
-      input.className = 'field-input';
-      input.style.cssText = 'padding:6px 8px;font-size:13px;font-family:inherit;min-height:80px;';
-      input.value = valor || '';
-      input.addEventListener('input', () => { bloco.props[nome] = input.value; renderCanvas(); });
+      input = document.createElement('textarea'); input.value = valor || '';
+      input.addEventListener('input', () => { bloco.props[nome] = input.value; renderCanvasDebounced(); });
     } else {
-      input = document.createElement('input');
-      input.type = 'text';
-      input.className = 'field-input';
-      input.style.cssText = 'padding:6px 8px;font-size:13px;';
-      input.value = valor || '';
-      input.addEventListener('input', () => { bloco.props[nome] = input.value; renderCanvas(); });
+      input = document.createElement('input'); input.type = 'text'; input.value = valor || '';
+      input.addEventListener('input', () => { bloco.props[nome] = input.value; renderCanvasDebounced(); });
     }
-    wrap.appendChild(input);
-    return wrap;
+    group.appendChild(input);
+    return group;
   }
+
+  // ========== Mode toggle desktop/mobile ==========
+  document.getElementById('btn-mode-desktop').addEventListener('click', (e) => {
+    canvasEl.classList.remove('mobile-mode');
+    e.target.closest('button').classList.add('active');
+    document.getElementById('btn-mode-mobile').classList.remove('active');
+  });
+  document.getElementById('btn-mode-mobile').addEventListener('click', (e) => {
+    canvasEl.classList.add('mobile-mode');
+    e.target.closest('button').classList.add('active');
+    document.getElementById('btn-mode-desktop').classList.remove('active');
+  });
+
+  document.getElementById('btn-preview').addEventListener('click', () => { window.open(URL_PREVIEW, '_blank'); });
 
   // ========== Salvar ==========
   async function salvar() {
-    if (saving) return;
-    saving = true;
     statusMsgEl.textContent = 'Salvando...';
     try {
       const resp = await fetch(URL_SALVAR, {
@@ -282,7 +548,13 @@
         body: JSON.stringify({
           blocos_json: blocos,
           nome: document.getElementById('lp-nome').value,
-          status: document.getElementById('lp-status').value,
+          status: document.getElementById('cfg-status').value,
+          seo_title: document.getElementById('cfg-seo-title').value,
+          seo_description: document.getElementById('cfg-seo-desc').value,
+          config_json: {
+            cor_fundo: document.getElementById('cfg-cor-fundo').value,
+            max_width: parseInt(document.getElementById('cfg-max-width').value) || 1200,
+          },
         }),
       });
       const json = await resp.json();
@@ -292,28 +564,25 @@
       } else {
         statusMsgEl.textContent = '✗ Erro: ' + (json.erro || '');
       }
-    } catch (err) {
-      statusMsgEl.textContent = '✗ Erro de rede';
-    }
-    saving = false;
+    } catch (err) { statusMsgEl.textContent = '✗ Erro de rede'; }
   }
   document.getElementById('btn-salvar').addEventListener('click', salvar);
 
-  // ========== Sortable (drag-drop) ==========
-  Sortable.create(canvasEl, {
-    handle: '.handle',
+  // ========== Sortable drag-drop no canvas ==========
+  Sortable.create(dropZoneEl, {
     animation: 150,
     onEnd: (evt) => {
+      if (evt.oldIndex === evt.newIndex) return;
       const item = blocos.splice(evt.oldIndex, 1)[0];
       blocos.splice(evt.newIndex, 0, item);
       blocoSelecionadoIdx = evt.newIndex;
-      renderCanvas();
+      renderCanvas(); renderConfig();
     },
   });
 
   renderPaleta();
   renderCanvas();
-  renderInspector();
+  renderConfig();
 })();
 </script>
 {% endblock %}

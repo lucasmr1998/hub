@@ -13,6 +13,7 @@ urlpatterns = [
     path('<int:pk>/salvar/', views.admin_salvar_lp, name='salvar_lp'),
     path('<int:pk>/excluir/', views.admin_excluir_lp, name='excluir_lp'),
     path('<int:pk>/preview/', views.admin_preview_lp, name='preview_lp'),
+    path('render-blocos/', views.admin_render_blocos_html, name='render_blocos'),
 
     # Formularios
     path('formularios/', views.admin_lista_forms, name='lista_forms'),
