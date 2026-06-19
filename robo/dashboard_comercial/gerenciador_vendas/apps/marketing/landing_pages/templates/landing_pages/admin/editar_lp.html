@@ -1,7 +1,7 @@
 {% extends "layouts/layout_app.html" %}
 {% block title %}Editor — {{ lp.nome }}{% endblock %}
 
-{% block extra_css %}
+{% block extra_head %}
 <style>
   .lp-editor-layout { display: flex; height: calc(100vh - 180px); gap: 0; }
   .lp-sidebar {
@@ -305,83 +305,40 @@
 
   // ========== Canvas (preview ao vivo) ==========
   async function renderCanvas() {
-    if (!blocos.length) {
-      dropZoneEl.innerHTML = '';
-      return;
-    }
+    dropZoneEl.innerHTML = '';
+    if (!blocos.length) return;
+    // Cria wrappers interativos por bloco
+    blocos.forEach((b, idx) => {
+      const spec = CATALOGO_MAP[b.tipo];
+      const wrap = document.createElement('div');
+      wrap.className = 'canvas-block' + (idx === blocoSelecionadoIdx ? ' selected' : '');
+      wrap.dataset.idx = idx;
+      wrap.innerHTML = `
+        <span class="block-type-badge">${spec ? spec.label : b.tipo}</span>
+        <div class="block-actions">
+          <button class="block-action-btn" data-acao="up" title="Mover pra cima"><i class="bi bi-arrow-up"></i></button>
+          <button class="block-action-btn" data-acao="down" title="Mover pra baixo"><i class="bi bi-arrow-down"></i></button>
+          <button class="block-action-btn" data-acao="duplicar" title="Duplicar"><i class="bi bi-files"></i></button>
+          <button class="block-action-btn danger" data-acao="excluir" title="Excluir"><i class="bi bi-trash"></i></button>
+        </div>
+        <div class="bloco-html-slot"></div>
+      `;
+      wrap.addEventListener('click', (ev) => {
+        if (ev.target.closest('[data-acao]')) return;
+        selecionarBloco(idx);
+      });
+      wrap.querySelector('[data-acao="up"]').addEventListener('click', (ev) => { ev.stopPropagation(); moverBloco(idx, -1); });
+      wrap.querySelector('[data-acao="down"]').addEventListener('click', (ev) => { ev.stopPropagation(); moverBloco(idx, 1); });
+      wrap.querySelector('[data-acao="duplicar"]').addEventListener('click', (ev) => { ev.stopPropagation(); duplicarBloco(idx); });
+      wrap.querySelector('[data-acao="excluir"]').addEventListener('click', (ev) => { ev.stopPropagation(); excluirBloco(idx); });
+      dropZoneEl.appendChild(wrap);
+    });
+    // Renderiza HTML de cada bloco em paralelo
     try {
-      const resp = await fetch(URL_RENDER, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
-        body: JSON.stringify({blocos_json: blocos}),
-      });
-      const json = await resp.json();
-      if (!json.ok) return;
-      dropZoneEl.innerHTML = '';
-      // Cria container pra cada bloco com wrapper interativo
-      blocos.forEach((b, idx) => {
-        const spec = CATALOGO_MAP[b.tipo];
-        const wrap = document.createElement('div');
-        wrap.className = 'canvas-block' + (idx === blocoSelecionadoIdx ? ' selected' : '');
-        wrap.dataset.idx = idx;
-        wrap.innerHTML = `
-          <span class="block-type-badge">${spec ? spec.label : b.tipo}</span>
-          <div class="block-actions">
-            <button class="block-action-btn" data-acao="up" title="Mover pra cima"><i class="bi bi-arrow-up"></i></button>
-            <button class="block-action-btn" data-acao="down" title="Mover pra baixo"><i class="bi bi-arrow-down"></i></button>
-            <button class="block-action-btn" data-acao="duplicar" title="Duplicar"><i class="bi bi-files"></i></button>
-            <button class="block-action-btn danger" data-acao="excluir" title="Excluir"><i class="bi bi-trash"></i></button>
-          </div>
-          <div class="bloco-html"></div>
-        `;
-        wrap.addEventListener('click', (ev) => {
-          if (ev.target.closest('[data-acao]')) return;
-          selecionarBloco(idx);
-        });
-        wrap.querySelector('[data-acao="up"]').addEventListener('click', (ev) => { ev.stopPropagation(); moverBloco(idx, -1); });
-        wrap.querySelector('[data-acao="down"]').addEventListener('click', (ev) => { ev.stopPropagation(); moverBloco(idx, 1); });
-        wrap.querySelector('[data-acao="duplicar"]').addEventListener('click', (ev) => { ev.stopPropagation(); duplicarBloco(idx); });
-        wrap.querySelector('[data-acao="excluir"]').addEventListener('click', (ev) => { ev.stopPropagation(); excluirBloco(idx); });
-        dropZoneEl.appendChild(wrap);
-      });
-      // Insere o HTML renderizado de cada bloco no slot correspondente
-      // (parse do HTML retornado e splita por bloco — vamos renderizar isoladamente)
-      // Estrategia: renderizar bloco a bloco via fetch individual seria pesado.
-      // Por isso, o HTML retornado e UM bloco completo gerado pelo renderer (join de todos).
-      // Vamos splitar pelo wrap class — mas e mais simples: chamar endpoint por bloco?
-      // Pra v1, injetamos o HTML inteiro no dropzone (sem interatividade por bloco).
-      // Substituimos pelo agrupamento manual:
-      dropZoneEl.innerHTML = ''; // reset
-      blocos.forEach((b, idx) => {
-        const spec = CATALOGO_MAP[b.tipo];
-        const wrap = document.createElement('div');
-        wrap.className = 'canvas-block' + (idx === blocoSelecionadoIdx ? ' selected' : '');
-        wrap.dataset.idx = idx;
-        wrap.innerHTML = `
-          <span class="block-type-badge">${spec ? spec.label : b.tipo}</span>
-          <div class="block-actions">
-            <button class="block-action-btn" data-acao="up" title="Mover pra cima"><i class="bi bi-arrow-up"></i></button>
-            <button class="block-action-btn" data-acao="down" title="Mover pra baixo"><i class="bi bi-arrow-down"></i></button>
-            <button class="block-action-btn" data-acao="duplicar" title="Duplicar"><i class="bi bi-files"></i></button>
-            <button class="block-action-btn danger" data-acao="excluir" title="Excluir"><i class="bi bi-trash"></i></button>
-          </div>
-        `;
-        wrap.addEventListener('click', (ev) => {
-          if (ev.target.closest('[data-acao]')) return;
-          selecionarBloco(idx);
-        });
-        wrap.querySelector('[data-acao="up"]').addEventListener('click', (ev) => { ev.stopPropagation(); moverBloco(idx, -1); });
-        wrap.querySelector('[data-acao="down"]').addEventListener('click', (ev) => { ev.stopPropagation(); moverBloco(idx, 1); });
-        wrap.querySelector('[data-acao="duplicar"]').addEventListener('click', (ev) => { ev.stopPropagation(); duplicarBloco(idx); });
-        wrap.querySelector('[data-acao="excluir"]').addEventListener('click', (ev) => { ev.stopPropagation(); excluirBloco(idx); });
-        dropZoneEl.appendChild(wrap);
-      });
-      // Renderiza cada bloco individualmente via fetch (paralelo)
       const htmls = await Promise.all(blocos.map(b => fetchBlocoHtml(b)));
       Array.from(dropZoneEl.children).forEach((wrap, idx) => {
-        const slot = document.createElement('div');
-        slot.innerHTML = htmls[idx];
-        wrap.appendChild(slot);
+        const slot = wrap.querySelector('.bloco-html-slot');
+        if (slot) slot.innerHTML = htmls[idx] || '';
       });
     } catch (err) {
       console.error('renderCanvas:', err);
