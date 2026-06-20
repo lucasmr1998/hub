@@ -118,9 +118,6 @@ INSTALLED_APPS = [
 
     # === Cron (dispatcher central de jobs periódicos — cross-tenant) ===
     'apps.cron',
-
-    # === Automação (engine unificada estilo n8n — Fase 0, greenfield isolado) ===
-    'apps.automacao',
 ]
 
 MIDDLEWARE = [
