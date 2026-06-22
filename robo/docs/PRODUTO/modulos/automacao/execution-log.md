@@ -243,6 +243,16 @@
 - **Validação:** 7/7 pytest (2 do adaptador mockado + 5 do nó) + check limpo.
 - **Status:** completed (piloto). Faltam os swaps das outras 6 ações (notificacao_sistema, mover_estagio, criar_oportunidade, criar_venda, atribuir_responsavel, dar_pontos) — atenção: `dar_pontos`/`atribuir` no service usam tenant explícito, swap = corrige multi-tenancy em prod (mudança consciente).
 
+## 2026-06-22 — Integrações: HubSoft (1º provedor ERP) — sincronizar prospecto + consultar cliente
+
+- **Ação:** HubSoft entra como **3º provedor** sob Integrações (ao lado de Matrix e WhatsApp · Uazapi). Starter set sólido (o service HubSoft tem 30+ operações — o resto entra incremental):
+  - 🔴 **`hubsoft_sincronizar_prospecto`** — cria rascunho/atualiza prospecto no ERP (core do pipeline Nuvyon). Reusa `hubsoft_prospecto_rascunho.sincronizar_prospecto_hubsoft(lead)` — **a mesma fonte** que a ação `_acao_sincronizar_prospecto_hubsoft` do marketing → converge a última 🔴. Precisa de lead (com pk) no contexto.
+  - 🟢 **`hubsoft_consultar_cliente`** — read por CPF/CNPJ (enriquecimento).
+  - Wrapper `apps/automacao/services/hubsoft.py` (`hubsoft_do_tenant` + `sincronizar_prospecto` + `consultar_cliente`).
+- **⚠️ Outbound real (sincronizar):** validado só com unit mockado (8/8). NÃO sincronizei nada real — teste real exige Nuvyon + lead de teste + OK.
+- **Próximo (e ROI do mecanismo dinâmico):** HubSoft tem APIs de **listagem** (`listar_modelos_contrato`, `listar_servicos`, `listar_planos_por_cep`…) — quando construir o **select_dinamico + preview** (adiado no Matrix), o HubSoft é onde ele se paga.
+- **Status:** completed (starter set). Resto da API HubSoft (contrato, faturas, serviços técnicos, viabilidade, OS) entra sob demanda.
+
 ### Pendências / próximos passos
 - **Decisão (22/06): opções dinâmicas + preview ADIADAS.** Quería-se dropdown de contas/templates Matrix + preview do HSM ao selecionar. Mas o **Matrix não expõe API de listar templates** (confirmado), então a única fonte do preview seria um **registro local** (cópia do corpo por tenant) — com manutenção manual e risco de drift vs o template aprovado. Decidido **manter `cod_conta`/`hsm` manuais** por ora. O **mecanismo genérico de opções dinâmicas** (`select_dinamico` carregado de endpoint por-tenant + painel de preview) fica pra quando entrar uma integração com **API de listagem real** (ex: HubSoft, ou "listar pipelines" do CRM) — aí o investimento se paga em vários provedores.
 - **Pending:** decidir volume/dia por tenant + latência → runtime síncrono-em-cron (modelo marketing) vs. fila. Bloqueia a fase de runtime.

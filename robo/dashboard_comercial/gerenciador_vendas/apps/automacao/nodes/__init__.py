@@ -30,3 +30,5 @@ from . import criar_venda  # noqa: F401,E402  (C5 — convergência: criar venda
 from . import dar_pontos  # noqa: F401,E402  (C6 — convergência: pontos no clube)
 from . import atribuir_responsavel  # noqa: F401,E402  (C7 — convergência: round-robin)
 from . import matrix_hsm  # noqa: F401,E402  (M1 — Integrações: disparo HSM Matrix)
+from . import hubsoft_sincronizar_prospecto  # noqa: F401,E402  (H1 — Integrações: prospecto HubSoft)
+from . import hubsoft_consultar_cliente  # noqa: F401,E402  (H2 — Integrações: consultar cliente)
