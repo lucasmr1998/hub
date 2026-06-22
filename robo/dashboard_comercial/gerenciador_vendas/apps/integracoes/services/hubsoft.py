@@ -5,6 +5,7 @@ import time
 from datetime import timedelta
 
 import requests
+from django.db import transaction
 from django.utils import timezone
 
 from apps.integracoes.models import IntegracaoAPI, LogIntegracao, ClienteHubsoft, ServicoClienteHubsoft
@@ -286,37 +287,44 @@ class HubsoftService:
         if tenant_obj:
             campos_cliente['tenant'] = tenant_obj
 
-        cliente, created = ClienteHubsoft.all_tenants.update_or_create(
-            tenant=tenant_obj,
-            id_cliente=id_cliente,
-            defaults=campos_cliente,
-        )
-
-        alteracoes_servicos = self._sincronizar_servicos(cliente, dados.get('servicos') or [])
-        todas_alteracoes = alteracoes + alteracoes_servicos
-
-        ClienteHubsoft.all_tenants.filter(pk=cliente.pk).update(
-            houve_alteracao=bool(todas_alteracoes) and not created,
-        )
-
-        if created:
-            logger.info("Cliente Hubsoft criado: %s (id_cliente=%s)", cliente.nome_razaosocial, id_cliente)
-        elif todas_alteracoes:
-            logger.info(
-                "Cliente Hubsoft atualizado com %d alteração(ões): %s (id_cliente=%s)",
-                len(todas_alteracoes), cliente.nome_razaosocial, id_cliente,
+        # Atomico: cliente + servicos ficam visiveis no banco JUNTOS.
+        # Sem isso, ha uma janela de race em que clientes_hubsoft ja foi
+        # commitado mas servicos_cliente_hubsoft ainda nao — consumidores
+        # do endpoint /lead/hubsoft-status/ (ex: flow Matrix) podem ver
+        # eh_cliente_hubsoft=true com servicos=[] e cachear id_cliente_servico
+        # vazio numa variavel, quebrando o agendamento de OS depois.
+        with transaction.atomic():
+            cliente, created = ClienteHubsoft.all_tenants.update_or_create(
+                tenant=tenant_obj,
+                id_cliente=id_cliente,
+                defaults=campos_cliente,
             )
 
-        if todas_alteracoes and not created:
-            historico = cliente.historico_alteracoes or []
-            historico.append({
-                'data': timezone.now().isoformat(),
-                'alteracoes': todas_alteracoes,
-            })
+            alteracoes_servicos = self._sincronizar_servicos(cliente, dados.get('servicos') or [])
+            todas_alteracoes = alteracoes + alteracoes_servicos
+
             ClienteHubsoft.all_tenants.filter(pk=cliente.pk).update(
-                historico_alteracoes=historico,
-                houve_alteracao=True,
+                houve_alteracao=bool(todas_alteracoes) and not created,
             )
+
+            if created:
+                logger.info("Cliente Hubsoft criado: %s (id_cliente=%s)", cliente.nome_razaosocial, id_cliente)
+            elif todas_alteracoes:
+                logger.info(
+                    "Cliente Hubsoft atualizado com %d alteração(ões): %s (id_cliente=%s)",
+                    len(todas_alteracoes), cliente.nome_razaosocial, id_cliente,
+                )
+
+            if todas_alteracoes and not created:
+                historico = cliente.historico_alteracoes or []
+                historico.append({
+                    'data': timezone.now().isoformat(),
+                    'alteracoes': todas_alteracoes,
+                })
+                ClienteHubsoft.all_tenants.filter(pk=cliente.pk).update(
+                    historico_alteracoes=historico,
+                    houve_alteracao=True,
+                )
 
         return cliente
 
