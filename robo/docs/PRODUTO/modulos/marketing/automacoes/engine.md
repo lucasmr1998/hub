@@ -4,6 +4,8 @@ Arquivo: `apps/marketing/automacoes/engine.py`
 
 O engine e o coracao do modulo. Processa eventos em dois modos: **linear legado** e **BFS em grafo visual**.
 
+> **Nota (engine nova):** `disparar_evento` tambem notifica a engine de automacao unificada (`apps.automacao`) via uma chamada blindada a `on_evento`, controlada pelo kill-switch `settings.AUTOMACAO_WIRING_ATIVO` (prod **off** por padrao). E o ponto de convergencia: os eventos do sistema passam a alimentar os dois motores. Detalhes em `robo/docs/PRODUTO/modulos/automacao/`.
+
 ---
 
 ## Fluxo de execucao

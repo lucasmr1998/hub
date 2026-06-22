@@ -150,7 +150,7 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 | `if` | Fluxo › Lógica | Condição (If) | ✅ (saídas true/false) |
 | `delay` | Fluxo › Controle | Aguardar | ✅ (pausa; retoma via cron) |
 | `webhook` | Gatilho › Entrada | Webhook | ✅ **trigger** (entrada do fluxo, sem porta de entrada) |
-| `evento` | Gatilho › Sistema | Evento do sistema | ✅ config (evento + filtros); **wiring dos signals pendente** |
+| `evento` | Gatilho › Sistema | Evento do sistema | ✅ **trigger** (evento + filtros; wiring deferido via `on_evento`, kill-switch `AUTOMACAO_WIRING_ATIVO`) |
 | `whatsapp_texto` | WhatsApp › Enviar | WhatsApp: enviar mensagem | ✅ (reusa `UazapiService`) |
 | `whatsapp_midia` | WhatsApp › Enviar | WhatsApp: enviar mídia | ✅ (image/doc/audio/video) |
 | `whatsapp_presenca` | WhatsApp › Presença | WhatsApp: digitando/presença | ✅ |

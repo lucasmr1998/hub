@@ -10,14 +10,15 @@
 - **Contrato de nó** (`nodes/base.py`): `BaseNode`/`NodeResult` + registry `@registrar`. Cada nó declara `tipo, label, icone, grupo/subgrupo, categoria (gating), saidas, campos_config(), is_trigger`. **Identidade:** o `id` do nó é o **handle** (slug seguro) usado em `{{nodes.<handle>}}`; `data.nome` é só exibição.
 - **Contrato híbrido** (`nodes/context.py`): contexto global (tenant obrigatório, fora-de-request) + output por nó endereçável (`{{nodes.id.campo}}`); resolver de template dot-notation próprio. `Contexto.serializar()` por id.
 - **Runtime** (`runtime.py`): `executar_fluxo()` percorre o grafo, ramifica por `branch`, pausa/retoma, loop guard, validação. À prova de exceção (nó que estoura vira `erro`).
-- **Persistência** (`models.py`): `Fluxo` (grafo JSONField) + `ExecucaoFluxo` (estado serializado + âncora). Migrations 0001–0003 (dev).
+- **Persistência** (`models.py`): `Fluxo` (grafo JSONField, índice `gatilho_evento`) + `ExecucaoFluxo` (estado serializado + âncora; status inclui `pendente`). Migrations 0001–0004 (dev).
 - **3 modelos de execução, um motor só (a "âncora"):** **timer** (delay), **resposta** (conversa: pausa no contato, retoma no signal do inbox ou timeout), **lead** (jornada/enrollment estilo RD/HubSpot — FK `lead` no model, dedup ainda não feito). `execucao.py`: `retomar/retomar_pendentes/retomar_por_resposta`.
+- **Camada de gatilho (wiring)** (`gatilhos.py`): `on_evento(evento, contexto, tenant)` — hook **blindado** no `disparar_evento` do marketing acha os fluxos (índice `Fluxo.gatilho_evento`), avalia filtros (reusa `_comparar` do `if`) e **enfileira** execução (`pendente`); o cron `rodar_novos` roda **fora do thread do evento** (deferido, não sobrecarrega). Kill-switch `AUTOMACAO_WIRING_ATIVO` (prod default **off**).
 
 ### Nós (10) — por grupo
 - **Core:** `http_request` (SSRF + mascaramento)
 - **Transformação:** `set_fields`
 - **Fluxo:** `if` (true/false), `delay`
-- **Gatilho:** `webhook` (✅ funcional), `evento` (config: select + filtros; **wiring pendente**)
+- **Gatilho:** `webhook` (✅ funcional), `evento` (✅ funcional via wiring deferido — kill-switch `AUTOMACAO_WIRING_ATIVO`)
 - **WhatsApp (Uazapi):** `whatsapp_texto`, `whatsapp_midia`, `whatsapp_presenca`, `whatsapp_pergunta` (envia e aguarda resposta) — reusam `UazapiService` via `services/whatsapp.py`
 
 ### Editor, skill, segurança
@@ -30,7 +31,8 @@
 - Testar nó/fluxo isolado: `manage.py testar_no` / `testar_fluxo`. Retoma de delays/timeout: `manage.py automacao_retomar` (cron).
 
 ### Pendências principais
-- **Wiring do gatilho de evento** (assinar `disparar_evento`/signals → rodar fluxos) = a convergência de verdade.
+- ~~Wiring do gatilho de evento~~ **✅ feito (22/06)** — deferido + kill-switch + E2E. Próximo da convergência: mover as **ações do marketing** pra nós da engine nova.
+- **Re-hidratar oportunidade/conversa como entidade** em execução deferida (hoje só `lead` via FK; os `var.*` desses eventos já funcionam).
 - **Modo jornada/enrollment** (ativar âncora `lead`: 1 por lead/fluxo, dedup, visão por etapa).
 - Gating por tenant (categoria existe, não enforced); observabilidade (UI de execuções); decisão de build no deploy; revisão de segurança do signal do inbox antes de prod.
 
@@ -169,6 +171,21 @@
 - **Decisão:** classificação unificada (categoria) + dispatch unificado, **nós separados** — igual n8n. Triggers são uma categoria de nó (`is_trigger`), não um nó único.
 - **Output:** editor `App.tsx` (NodePanel reescrito + GRUPO_INFO), `styles.css` (np-cat/drill-in). Build OK.
 - **Status:** completed (UX do picker). Falta ainda: paleta contextual (só gatilhos no fluxo vazio) — opcional.
+
+## 2026-06-22 — Wiring: camada de gatilho unificada (evento → fluxo roda sozinho)
+
+- **Ação:** ligado o gatilho de **evento do sistema** à engine. Agora um evento (ex: `lead_criado`) faz os fluxos que o escutam rodarem **sozinhos**. Peças:
+  - `Fluxo.gatilho_evento` (índice denormalizado, populado no `save()` a partir do grafo) — acha rápido "quais fluxos escutam o evento X".
+  - `gatilhos.on_evento(evento, contexto, tenant)`: acha fluxos do tenant, monta `Contexto` (entidades + escalares), avalia filtros (reusa `_comparar` do `if`), **enfileira** execução `pendente`.
+  - `execucao.rodar_novos()` + `automacao_retomar` (cron): roda as enfileiradas **fora do thread do evento**.
+  - **1 linha blindada** (try/except) no `disparar_evento` do marketing (único toque no sistema vivo) → `on_evento`.
+  - Migration 0004 (campo + status `pendente`), dev only.
+- **Decisão (modelo deferido):** o hook **NÃO roda o fluxo na hora** — só query barata + enfileira; o cron roda depois. Responde direto à preocupação de **sobrecarga**: o evento nunca espera o fluxo (nem se tiver nó lento de HTTP/WhatsApp).
+- **Segurança:** kill-switch `AUTOMACAO_WIRING_ATIVO` (prod **off** por padrão = inerte mesmo deployado; dev **on**); guard de re-entrância (anti-cascata); tudo por tenant; hook blindado (erro no motor novo não quebra o antigo).
+- **Limitação anotada:** execução deferida re-hidrata só o `lead` (FK); oportunidade/conversa como entidade ficam de follow-up (seus subcampos são `var.*`, que já funcionam).
+- **Output:** `gatilhos.py` (novo), `models.py`, `execucao.py`, `automacao_retomar.py`, `settings.py`+`settings_local.py`, `marketing/automacoes/engine.py` (hook), `testar_automacao_db.py` (+6 checks). Commits `2a062b0` (isolado) + `0e5ae80` (sistema vivo), na branch `feat/engine-automacao`.
+- **Validação (dev):** `testar_automacao_db` 11/11 PASS (enfileira, cron roda → completa, trace `ev→g`, filtro bloqueia/passa) + 60 testes DB-free + `manage.py check` limpo.
+- **Status:** completed. **Não deployado** (kill-switch off em prod). Próximo: mover ações do marketing pra nós (convergência) e/ou modo jornada.
 
 ### Pendências / próximos passos
 - **Pending:** decidir volume/dia por tenant + latência → runtime síncrono-em-cron (modelo marketing) vs. fila. Bloqueia a fase de runtime.
