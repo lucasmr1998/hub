@@ -1,0 +1,253 @@
+import { useState } from 'react'
+import type { Node } from '@xyflow/react'
+import type { Campo, EventoCatalogo } from './api'
+
+const OPERADORES = [
+  'igual', 'diferente', 'contem', 'nao_contem',
+  'maior', 'menor', 'maior_igual', 'menor_igual', 'vazio', 'nao_vazio',
+]
+
+function _vazio(v: any): boolean {
+  return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0)
+}
+
+type Form = Record<string, any>
+
+function initForm(config: Form, campos: Campo[]): Form {
+  const f: Form = {}
+  for (const c of campos) {
+    const v = config[c.nome]
+    if (c.tipo === 'keyvalue') {
+      f[c.nome] = v && typeof v === 'object' && !Array.isArray(v)
+        ? Object.entries(v).map(([k, val]) => ({ k, v: String(val) }))
+        : []
+    } else if (c.tipo === 'lista_campos' || c.tipo === 'filtros') {
+      f[c.nome] = Array.isArray(v) ? v : []
+    } else if (c.tipo === 'booleano') {
+      f[c.nome] = !!v
+    } else {
+      f[c.nome] = v ?? ''
+    }
+  }
+  return f
+}
+
+function formToConfig(form: Form, campos: Campo[]): Form {
+  const cfg: Form = {}
+  for (const c of campos) {
+    const v = form[c.nome]
+    if (c.tipo === 'keyvalue') {
+      const obj: Form = {}
+      for (const row of v || []) if (row.k) obj[row.k] = row.v
+      cfg[c.nome] = obj
+    } else if (c.tipo === 'lista_campos') {
+      cfg[c.nome] = (v || []).filter((r: any) => r.nome)
+    } else if (c.tipo === 'filtros') {
+      cfg[c.nome] = (v || []).filter((r: any) => r.campo)
+    } else if (c.tipo === 'numero') {
+      cfg[c.nome] = v === '' ? '' : Number(v)
+    } else {
+      cfg[c.nome] = v
+    }
+  }
+  return cfg
+}
+
+export function NodeModal({
+  node, campos, label, icone, eventos, onConfig, onClose, onExecutar,
+}: {
+  node: Node
+  campos: Campo[]
+  label: string
+  icone: string
+  eventos: EventoCatalogo[]
+  onConfig: (cfg: Form) => void
+  onClose: () => void
+  onExecutar: () => Promise<any>
+}) {
+  const [form, setForm] = useState<Form>(() => initForm((node.data as any).config ?? {}, campos))
+  const [saida, setSaida] = useState<any>(null)
+  const [rodando, setRodando] = useState(false)
+
+  const atualizar = (nome: string, valor: any) => {
+    const nf = { ...form, [nome]: valor }
+    setForm(nf)
+    onConfig(formToConfig(nf, campos))
+  }
+
+  const executar = async () => {
+    setRodando(true)
+    try {
+      setSaida(await onExecutar())
+    } finally {
+      setRodando(false)
+    }
+  }
+
+  const meuOutput = saida?.nodes?.[node.id]
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <header className="modal-head">
+          <span className="modal-titulo">
+            <i className={`bi ${icone}`} /> {label}
+            <code className="modal-handle">{node.id}</code>
+          </span>
+          <button className="modal-exec" onClick={executar} disabled={rodando}>
+            {rodando ? '…' : '▶ Executar nó'}
+          </button>
+          <button className="modal-x" onClick={onClose}>×</button>
+        </header>
+
+        <div className="modal-corpo">
+          <section className="modal-io">
+            <div className="io-titulo">INPUT</div>
+            <pre className="io-json">{saida ? JSON.stringify(saida.variaveis ?? {}, null, 2) : '—'}</pre>
+          </section>
+
+          <section className="modal-params">
+            <div className="io-titulo">PARÂMETROS</div>
+            {campos.length === 0 && <div className="muted">Este nó não tem parâmetros.</div>}
+            {campos.map((c) => (
+              <div key={c.nome} className="campo">
+                <label>{c.label}{c.obrigatorio && <span className="req"> *</span>}</label>
+                {c.tipo === 'filtros' ? (
+                  <FiltrosCampo
+                    linhas={form[c.nome] ?? []}
+                    subcampos={eventos.find((e) => e.tipo === form.evento)?.subcampos ?? []}
+                    onChange={(ls) => atualizar(c.nome, ls)}
+                  />
+                ) : (
+                  renderCampo(c, form[c.nome], (v) => atualizar(c.nome, v))
+                )}
+                {c.obrigatorio && _vazio(form[c.nome]) && (
+                  <div className="campo-req">obrigatório</div>
+                )}
+                {c.ajuda && <div className="campo-ajuda">{c.ajuda}</div>}
+              </div>
+            ))}
+            <details className="json-adv">
+              <summary>config JSON (avançado)</summary>
+              <pre className="io-json">{JSON.stringify(formToConfig(form, campos), null, 2)}</pre>
+            </details>
+          </section>
+
+          <section className="modal-io">
+            <div className="io-titulo">OUTPUT</div>
+            {!saida && <div className="muted">Clique em "Executar nó".</div>}
+            {saida && (
+              <>
+                <div className={`status status-${saida.status}`}>{saida.status}</div>
+                {saida.erro && <div className="erro">{saida.erro}</div>}
+                <pre className="io-json">{JSON.stringify(meuOutput ?? {}, null, 2)}</pre>
+              </>
+            )}
+          </section>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function renderCampo(c: Campo, valor: any, set: (v: any) => void) {
+  if (c.tipo === 'select') {
+    return (
+      <select value={valor ?? ''} onChange={(e) => set(e.target.value)}>
+        <option value="">—</option>
+        {(c.opcoes ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+    )
+  }
+  if (c.tipo === 'booleano') {
+    return <input type="checkbox" checked={!!valor} onChange={(e) => set(e.target.checked)} />
+  }
+  if (c.tipo === 'numero') {
+    return <input type="number" value={valor ?? ''} onChange={(e) => set(e.target.value)} />
+  }
+  if (c.tipo === 'textarea') {
+    return (
+      <textarea className="mono" rows={4} placeholder={c.placeholder} spellCheck={false}
+        value={valor ?? ''} onChange={(e) => set(e.target.value)} />
+    )
+  }
+  if (c.tipo === 'lista_campos') {
+    const linhas: any[] = valor ?? []
+    const set_ = (ls: any[]) => set(ls)
+    return (
+      <div className="repeater">
+        {linhas.map((row, i) => (
+          <div key={i} className="repeater-row">
+            <input placeholder="nome" value={row.nome ?? ''}
+              onChange={(e) => set_(linhas.map((r, j) => j === i ? { ...r, nome: e.target.value } : r))} />
+            <input className="mono" placeholder="valor / {{expr}}" value={row.valor ?? ''}
+              onChange={(e) => set_(linhas.map((r, j) => j === i ? { ...r, valor: e.target.value } : r))} />
+            <button onClick={() => set_(linhas.filter((_, j) => j !== i))}>×</button>
+          </div>
+        ))}
+        <button className="repeater-add" onClick={() => set_([...linhas, { nome: '', valor: '' }])}>+ campo</button>
+      </div>
+    )
+  }
+  if (c.tipo === 'keyvalue') {
+    const linhas: any[] = valor ?? []
+    const set_ = (ls: any[]) => set(ls)
+    return (
+      <div className="repeater">
+        {linhas.map((row, i) => (
+          <div key={i} className="repeater-row">
+            <input placeholder="chave" value={row.k ?? ''}
+              onChange={(e) => set_(linhas.map((r, j) => j === i ? { ...r, k: e.target.value } : r))} />
+            <input className="mono" placeholder="valor / {{expr}}" value={row.v ?? ''}
+              onChange={(e) => set_(linhas.map((r, j) => j === i ? { ...r, v: e.target.value } : r))} />
+            <button onClick={() => set_(linhas.filter((_, j) => j !== i))}>×</button>
+          </div>
+        ))}
+        <button className="repeater-add" onClick={() => set_([...linhas, { k: '', v: '' }])}>+ item</button>
+      </div>
+    )
+  }
+  // texto (default) — aceita expressões {{ }}
+  return (
+    <input className="mono" placeholder={c.placeholder} value={valor ?? ''}
+      onChange={(e) => set(e.target.value)} />
+  )
+}
+
+function FiltrosCampo({
+  linhas, subcampos, onChange,
+}: {
+  linhas: any[]
+  subcampos: Campo[]
+  onChange: (ls: any[]) => void
+}) {
+  const set = (i: number, patch: any) =>
+    onChange(linhas.map((r, j) => (j === i ? { ...r, ...patch } : r)))
+  return (
+    <div className="repeater">
+      {linhas.length === 0 && <div className="muted">Sem filtros — dispara sempre que o evento ocorre.</div>}
+      {linhas.map((row, i) => (
+        <div key={i} className="filtro-row">
+          {subcampos.length > 0 ? (
+            <select value={row.campo ?? ''} onChange={(e) => set(i, { campo: e.target.value })}>
+              <option value="">campo…</option>
+              {subcampos.map((s) => <option key={s.nome} value={s.nome}>{s.label}</option>)}
+            </select>
+          ) : (
+            <input placeholder="campo" value={row.campo ?? ''} onChange={(e) => set(i, { campo: e.target.value })} />
+          )}
+          <select value={row.operador ?? 'igual'} onChange={(e) => set(i, { operador: e.target.value })}>
+            {OPERADORES.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+          <input className="mono" placeholder="valor" value={row.valor ?? ''}
+            onChange={(e) => set(i, { valor: e.target.value })} />
+          <button onClick={() => onChange(linhas.filter((_, j) => j !== i))}>×</button>
+        </div>
+      ))}
+      <button className="repeater-add"
+        onClick={() => onChange([...linhas, { campo: '', operador: 'igual', valor: '' }])}>
+        + filtro
+      </button>
+    </div>
+  )
+}

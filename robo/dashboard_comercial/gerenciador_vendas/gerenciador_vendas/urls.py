@@ -109,6 +109,7 @@ urlpatterns = [
     path('crm/',          include('apps.comercial.crm.urls')),
     path('dashboards/',   include('apps.relatorios.urls')),
     path('comercial/',    include('apps.integracoes.urls_comercial')),
+    path('automacao/', include('apps.automacao.urls')),
     path('marketing/automacoes/', include('apps.marketing.automacoes.urls')),
     path('marketing/emails/',     include('apps.marketing.emails.urls')),
     path('marketing/segmentos/', include('apps.marketing.segmentos_urls')),

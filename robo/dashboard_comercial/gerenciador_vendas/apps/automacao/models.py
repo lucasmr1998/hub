@@ -1,0 +1,73 @@
+"""
+Persistência da engine de automação.
+
+`Fluxo` guarda o grafo (nós + conexões) como JSON — o MESMO formato que o runtime
+(`executar_fluxo`) consome e que o editor produz. JSONField em vez de models
+normalizados de Nó/Conexão porque o runtime e o editor já falam esse dict; mantém
+a impedância zero. (Normalizar depois, se precisar de query por nó.)
+"""
+from django.conf import settings
+from django.db import models
+
+from apps.sistema.mixins import TenantMixin
+
+
+class Fluxo(TenantMixin):
+    nome = models.CharField(max_length=200)
+    descricao = models.TextField(blank=True, default='')
+    ativo = models.BooleanField(default=True, db_index=True)
+    # {inicio, nodes: {handle: {tipo, config, pos, label}}, conexoes: [{de, para, saida}]}
+    grafo = models.JSONField(default=dict)
+    # Gatilho webhook: token secreto; POST em /automacao/webhook/<token>/ dispara o fluxo.
+    webhook_token = models.CharField(max_length=64, blank=True, default='', db_index=True)
+    criado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'automacao_fluxo'
+        ordering = ['-atualizado_em']
+        verbose_name = 'Fluxo de automação'
+        verbose_name_plural = 'Fluxos de automação'
+
+    def __str__(self):
+        return self.nome
+
+
+class ExecucaoFluxo(TenantMixin):
+    """Uma execução de um fluxo. Guarda o estado serializado pra retoma (delay)."""
+    STATUS = [
+        ('rodando', 'rodando'), ('aguardando', 'aguardando'),
+        ('completado', 'completado'), ('erro', 'erro'),
+    ]
+    fluxo = models.ForeignKey(Fluxo, on_delete=models.CASCADE, related_name='execucoes')
+    status = models.CharField(max_length=20, choices=STATUS, default='rodando', db_index=True)
+    estado = models.JSONField(default=dict)        # Contexto.serializar()
+    no_pausado = models.CharField(max_length=200, blank=True, default='')  # handle do nó que pausou
+    modo_espera = models.CharField(max_length=20, blank=True, default='')  # '' | 'timer' | 'resposta'
+    # Âncora conversacional: o que a execução espera (ex: telefone normalizado).
+    chave = models.CharField(max_length=64, blank=True, default='', db_index=True)
+    # Âncora de jornada (enrollment): 1 execução ativa por lead por fluxo.
+    lead = models.ForeignKey(
+        'leads.LeadProspecto', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+    )
+    agendado_para = models.DateTimeField(null=True, blank=True, db_index=True)
+    trace = models.JSONField(default=list)
+    erro = models.TextField(blank=True, default='')
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'automacao_execucao'
+        ordering = ['-criado_em']
+        indexes = [
+            models.Index(fields=['status', 'agendado_para']),
+            models.Index(fields=['status', 'modo_espera', 'chave']),
+        ]
+
+    def __str__(self):
+        return f'{self.fluxo_id} · {self.status}'
