@@ -3489,9 +3489,23 @@ def api_cadastro_completo_oportunidade(request, pk):
 
     if request.method == 'GET':
         viab = (lead.dados_custom or {}).get('viabilidade') or {}
-        # Opcoes da integracao HubSoft (se houver)
-        opcoes_planos = []
-        opcoes_vencimentos = []
+        # Opcoes pre-definidas do flow Matrix v9 (NUVYON):
+        # Vendedor escolhe label amigavel, sistema converte pra id_hubsoft.
+        # Se outro tenant quiser usar isso, mover pra IntegracaoAPI.configuracoes_extras.
+        opcoes_planos = [
+            {'id_hubsoft': 758,  'nome': 'Plano de 300MB', 'valor': 78.9},
+            {'id_hubsoft': 770,  'nome': 'Plano de 400MB', 'valor': 89.9},
+            {'id_hubsoft': 707,  'nome': 'Plano de 500MB', 'valor': 99.9},
+            {'id_hubsoft': 1236, 'nome': 'Plano de 600MB', 'valor': 109.9},
+            {'id_hubsoft': 696,  'nome': 'Plano de 800MB', 'valor': 189.9},
+        ]
+        opcoes_vencimentos = [
+            {'id_hubsoft': 9, 'dia': 5},
+            {'id_hubsoft': 4, 'dia': 10},
+            {'id_hubsoft': 5, 'dia': 15},
+            {'id_hubsoft': 6, 'dia': 20},
+        ]
+        # Override por tenant se IntegracaoAPI tiver lista custom
         try:
             from apps.integracoes.models import IntegracaoAPI
             integ = IntegracaoAPI.all_tenants.filter(
@@ -3499,8 +3513,10 @@ def api_cadastro_completo_oportunidade(request, pk):
             ).first()
             if integ:
                 extras = integ.configuracoes_extras or {}
-                opcoes_planos = extras.get('planos_disponiveis') or []
-                opcoes_vencimentos = extras.get('dias_vencimento_disponiveis') or []
+                if extras.get('planos_disponiveis'):
+                    opcoes_planos = extras['planos_disponiveis']
+                if extras.get('dias_vencimento_disponiveis'):
+                    opcoes_vencimentos = extras['dias_vencimento_disponiveis']
         except Exception:
             pass
 

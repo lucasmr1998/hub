@@ -2476,10 +2476,24 @@ async function abrirCadastroCompleto() {
       toast('Erro', d.error || 'Falha ao carregar dados', 'danger');
       return;
     }
+    _ccPopularSelects(d.opcoes_planos || [], d.opcoes_vencimentos || []);
     _ccPreencher(d);
     _ccAtualizarStatus();
   } catch (e) {
     toast('Erro', 'Falha de rede', 'danger');
+  }
+}
+
+function _ccPopularSelects(planos, vencimentos) {
+  const selPlano = _ccElem('cc-plano');
+  const selVenc  = _ccElem('cc-vencimento');
+  if (selPlano) {
+    selPlano.innerHTML = '<option value="">— escolha o plano —</option>' +
+      planos.map(p => `<option value="${p.id_hubsoft}">${p.nome}${p.valor ? ` — R$ ${Number(p.valor).toFixed(2).replace('.',',')}` : ''}</option>`).join('');
+  }
+  if (selVenc) {
+    selVenc.innerHTML = '<option value="">— escolha o dia —</option>' +
+      vencimentos.map(v => `<option value="${v.id_hubsoft}">Dia ${v.dia}</option>`).join('');
   }
 }
 
@@ -2612,8 +2626,16 @@ async function _ccSalvar(eFechar) {
       <div class="cc-section">
         <h4>Comercial</h4>
         <div class="cc-grid">
-          <label class="cc-field"><span>id_plano_rp (HubSoft) *</span><input id="cc-plano" type="text" placeholder="ex: 1260" oninput="_ccAtualizarStatus()"></label>
-          <label class="cc-field"><span>Dia de vencimento *</span><input id="cc-vencimento" type="text" placeholder="ex: 4" oninput="_ccAtualizarStatus()"></label>
+          <label class="cc-field"><span>Plano *</span>
+            <select id="cc-plano" onchange="_ccAtualizarStatus()">
+              <option value="">— escolha o plano —</option>
+            </select>
+          </label>
+          <label class="cc-field"><span>Dia de vencimento *</span>
+            <select id="cc-vencimento" onchange="_ccAtualizarStatus()">
+              <option value="">— escolha o dia —</option>
+            </select>
+          </label>
         </div>
       </div>
       <div class="cc-section">
@@ -2636,8 +2658,8 @@ async function _ccSalvar(eFechar) {
   .cc-field { display: flex; flex-direction: column; gap: 4px; }
   .cc-field.cc-col-2 { grid-column: span 2; }
   .cc-field > span { font-size: var(--fs-xs); color: var(--color-text); font-weight: var(--fw-semibold); }
-  .cc-field input { padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: var(--fs-sm); }
-  .cc-field input:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-primary-soft); }
+  .cc-field input, .cc-field select { padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--color-bg); }
+  .cc-field input:focus, .cc-field select:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-primary-soft); }
   .cc-status { font-size: var(--fs-xs); padding: 2px 10px; border-radius: var(--radius-full); margin-left: var(--sp-2); }
   .cc-status-empty { background: var(--color-danger-soft, #FEE2E2); color: var(--color-danger, #DC2626); }
   .cc-status-warn  { background: var(--color-warning-soft, #FEF3C7); color: var(--color-warning, #F59E0B); }
