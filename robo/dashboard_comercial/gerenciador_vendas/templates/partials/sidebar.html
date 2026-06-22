@@ -63,6 +63,9 @@ Visibilidade:
     </div>
 
     <div class="app-sidebar-group app-sidebar-group-bottom">
+      <a href="/ajuda/" class="app-sidebar-item {% if modulo_atual == 'ajuda' %}is-active{% endif %}" data-module="ajuda" title="Manual do vendedor">
+        <i class="bi bi-question-circle"></i>
+      </a>
       {% if is_superuser or perm.acesso_configuracoes %}
         <a href="/configuracoes/" class="app-sidebar-item {% if modulo_atual == 'configuracoes' %}is-active{% endif %}" data-module="configuracoes" title="Configuracoes">
           <i class="bi bi-gear"></i>

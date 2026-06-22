@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual do Vendedor — Nuvyon · Hubtrix</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+:root {
+  --tinta: #252020;
+  --tinta-80: #4A4444;
+  --tinta-60: #6C6868;
+  --sienna: #E76F51;
+  --sienna-soft: #FBE3DC;
+  --sienna-bg: #FDF1EC;
+  --grafite: #475569;
+  --grafite-soft: #94A3B8;
+  --offwhite: #F8FAFC;
+  --border: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --bg: #FFFFFF;
+  --ok: #22C55E;
+  --ok-bg: #DCFCE7;
+  --warn: #F59E0B;
+  --warn-bg: #FEF3C7;
+  --danger: #EF4444;
+  --danger-bg: #FEE2E2;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--tinta);
+  line-height: 1.65;
+  font-size: 16px;
+}
+.app {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh;
+}
+/* ============== SIDEBAR ============== */
+.sidebar {
+  background: var(--offwhite);
+  border-right: 1px solid var(--border);
+  padding: 32px 24px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.brand-logo {
+  position: relative;
+  width: 38px; height: 38px;
+  background: var(--tinta);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 18px;
+}
+.brand-logo::after {
+  content: '';
+  position: absolute;
+  right: 4px; bottom: 4px;
+  width: 7px; height: 7px;
+  background: var(--sienna);
+  border-radius: 50%;
+}
+.brand-name {
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--tinta);
+  letter-spacing: -0.3px;
+}
+.brand-tag {
+  font-size: 11px;
+  color: var(--grafite);
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.nav-title {
+  font-size: 11px;
+  color: var(--grafite-soft);
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin: 24px 0 12px;
+}
+.nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.nav-list a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 6px;
+  color: var(--tinta-80);
+  text-decoration: none;
+  font-size: 14px;
+  margin-bottom: 2px;
+  transition: all 0.15s;
+}
+.nav-list a:hover {
+  background: var(--sienna-bg);
+  color: var(--tinta);
+}
+.nav-list a.active {
+  background: var(--tinta);
+  color: white;
+}
+.nav-list a.active i { color: var(--sienna); }
+.nav-list i {
+  width: 16px;
+  font-size: 14px;
+}
+/* ============== MAIN ============== */
+.main {
+  padding: 48px 64px;
+  max-width: 920px;
+}
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.crumb {
+  font-size: 13px;
+  color: var(--grafite);
+  margin-bottom: 6px;
+}
+.crumb a { color: var(--grafite); text-decoration: none; }
+.topbar h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--tinta);
+  letter-spacing: -0.6px;
+  position: relative;
+}
+.tagline {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--sienna);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.version-badge {
+  background: var(--tinta);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 4px;
+  letter-spacing: 0.2px;
+  position: relative;
+}
+.version-badge::after {
+  content: '';
+  position: absolute;
+  right: -3px; bottom: -3px;
+  width: 7px; height: 7px;
+  background: var(--sienna);
+  border-radius: 50%;
+}
+.intro {
+  background: var(--sienna-bg);
+  border-left: 4px solid var(--sienna);
+  border-radius: 4px;
+  padding: 18px 24px;
+  margin-bottom: 40px;
+  font-size: 15px;
+  color: var(--tinta);
+}
+.intro strong { color: var(--tinta); }
+section {
+  margin-bottom: 56px;
+  scroll-margin-top: 24px;
+}
+h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--tinta);
+  letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+h2 .sec-num {
+  background: var(--tinta);
+  color: white;
+  width: 34px; height: 34px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  position: relative;
+}
+h2 .sec-num::after {
+  content: '';
+  position: absolute;
+  right: -3px; bottom: -3px;
+  width: 7px; height: 7px;
+  background: var(--sienna);
+  border-radius: 50%;
+}
+.subtitle {
+  color: var(--grafite);
+  font-size: 14px;
+  margin: 0 0 24px;
+  padding-left: 48px;
+}
+h3 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 28px 0 12px;
+  color: var(--tinta);
+}
+h4 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: var(--tinta);
+}
+p { margin: 0 0 14px; color: var(--tinta-80); }
+strong { color: var(--tinta); font-weight: 600; }
+code {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  background: var(--offwhite);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 13px;
+  color: var(--sienna);
+}
+.diagram {
+  background: var(--offwhite);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--sienna);
+  border-radius: 4px;
+  padding: 20px 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--tinta-80);
+  margin: 16px 0 20px;
+  white-space: pre;
+  overflow-x: auto;
+}
+.diagram .highlight { color: var(--sienna); font-weight: 700; }
+/* ============== TABELAS ============== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  font-size: 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+thead { background: var(--tinta); }
+th {
+  text-align: left;
+  padding: 12px 14px;
+  font-weight: 600;
+  font-size: 12px;
+  color: white;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  color: var(--tinta-80);
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--offwhite); }
+/* ============== CALLOUTS ============== */
+.callout {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid;
+  border-radius: 4px;
+  padding: 14px 18px;
+  margin: 16px 0;
+  font-size: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.callout i {
+  font-size: 18px;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+.callout strong {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.callout p { margin: 0; color: var(--tinta-80); }
+.callout-tip { border-left-color: var(--sienna); background: var(--sienna-bg); }
+.callout-tip i { color: var(--sienna); }
+.callout-warn { border-left-color: var(--warn); background: var(--warn-bg); }
+.callout-warn i { color: var(--warn); }
+.callout-danger { border-left-color: var(--danger); background: var(--danger-bg); }
+.callout-danger i { color: var(--danger); }
+.callout-ok { border-left-color: var(--ok); background: var(--ok-bg); }
+.callout-ok i { color: var(--ok); }
+
+/* ============== LISTAS ============== */
+ul, ol { padding-left: 20px; margin: 12px 0; color: var(--tinta-80); }
+li { margin-bottom: 6px; }
+.steps {
+  list-style: none;
+  padding: 0;
+  counter-reset: step;
+  margin: 18px 0;
+}
+.steps li {
+  counter-increment: step;
+  position: relative;
+  padding: 0 0 18px 44px;
+  margin: 0;
+  border-left: 1px solid var(--border);
+  margin-left: 14px;
+}
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: -14px; top: -2px;
+  width: 28px; height: 28px;
+  background: var(--tinta);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+.steps li:last-child { border-left-color: transparent; }
+
+/* ============== CHECKLIST ============== */
+.checklist {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0;
+}
+.checklist li {
+  position: relative;
+  padding: 14px 14px 14px 48px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  background: var(--bg);
+  transition: all 0.2s;
+}
+.checklist li:hover {
+  border-color: var(--sienna);
+  background: var(--sienna-bg);
+}
+.checklist li::before {
+  content: '';
+  position: absolute;
+  left: 16px; top: 16px;
+  width: 18px; height: 18px;
+  border: 2px solid var(--tinta-60);
+  border-radius: 3px;
+  background: white;
+  transition: all 0.15s;
+}
+.checklist li.done::before {
+  background: var(--sienna);
+  border-color: var(--sienna);
+}
+.checklist li.done::after {
+  content: '✓';
+  position: absolute;
+  left: 19px; top: 12px;
+  color: white;
+  font-weight: 700;
+  font-size: 13px;
+}
+.checklist .step-num {
+  font-weight: 700;
+  color: var(--sienna);
+  margin-right: 6px;
+}
+
+/* ============== CARDS DE CASO ============== */
+.case-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 18px 22px;
+  margin: 14px 0;
+  position: relative;
+}
+.case-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--sienna);
+  border-radius: 6px 0 0 6px;
+}
+.case-card h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: var(--tinta);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.case-card h4 i { color: var(--sienna); }
+.case-card .case-body { font-size: 14px; color: var(--tinta-80); }
+.case-card blockquote {
+  margin: 12px 0 0;
+  padding: 12px 18px;
+  background: var(--offwhite);
+  border-left: 3px solid var(--sienna);
+  border-radius: 4px;
+  font-style: italic;
+  color: var(--tinta);
+  font-size: 14px;
+}
+
+/* tags / acentos */
+.tag-auto { color: var(--grafite); font-size: 12px; }
+.tag-acao { color: var(--sienna); font-weight: 600; font-size: 12px; }
+
+/* prompt-card pra "sinal pronto" */
+.prompt-card {
+  background: var(--tinta);
+  color: white;
+  border-radius: 6px;
+  padding: 24px 28px;
+  margin: 24px 0;
+  position: relative;
+}
+.prompt-card::after {
+  content: '';
+  position: absolute;
+  right: 16px; bottom: 16px;
+  width: 12px; height: 12px;
+  background: var(--sienna);
+  border-radius: 50%;
+}
+.prompt-card h4 {
+  color: white;
+  margin: 0 0 14px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.prompt-card h4 i { color: var(--sienna); }
+.prompt-card ol { color: rgba(255,255,255,0.85); margin: 0; padding-left: 20px; }
+.prompt-card ol li { margin-bottom: 8px; }
+.prompt-card .ready {
+  margin-top: 16px;
+  padding: 10px 14px;
+  background: rgba(231,111,81,0.2);
+  border-left: 3px solid var(--sienna);
+  border-radius: 4px;
+  font-size: 14px;
+  color: white;
+}
+
+/* footer */
+.footer {
+  margin-top: 64px;
+  padding-top: 32px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--grafite);
+  position: relative;
+}
+.footer .tagline-footer {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--sienna);
+  margin-bottom: 12px;
+}
+.footer p { color: var(--grafite); }
+
+@media (max-width: 900px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+  .main { padding: 32px 24px; }
+  .topbar h1 { font-size: 24px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- =================== SIDEBAR =================== -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-logo">h</div>
+    <div>
+      <div class="brand-name">Hubtrix</div>
+      <div class="brand-tag">Manual Vendedor</div>
+    </div>
+  </div>
+
+  <div class="nav-title">Conteúdo</div>
+  <ul class="nav-list">
+    <li><a href="#sec-0"><i class="bi bi-house"></i>O que é o Hubtrix</a></li>
+    <li><a href="#sec-1"><i class="bi bi-flag"></i>Seu primeiro dia</a></li>
+    <li><a href="#sec-2"><i class="bi bi-box-arrow-in-right"></i>Login e tela inicial</a></li>
+    <li><a href="#sec-3"><i class="bi bi-diagram-3"></i>Fluxo do lead</a></li>
+    <li><a href="#sec-4"><i class="bi bi-person-check"></i>Atendendo no horário</a></li>
+    <li><a href="#sec-5"><i class="bi bi-check2-square"></i>Tarefas e notas</a></li>
+    <li><a href="#sec-6"><i class="bi bi-lightbulb"></i>Casos comuns</a></li>
+    <li><a href="#sec-7"><i class="bi bi-life-preserver"></i>Problemas</a></li>
+  </ul>
+
+  <div class="nav-title">Sobre</div>
+  <ul class="nav-list">
+    <li><a href="#footer"><i class="bi bi-info-circle"></i>Versão e atualizações</a></li>
+  </ul>
+</aside>
+
+<!-- =================== MAIN =================== -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="crumb"><a href="#">Hubtrix</a> · Manual do Vendedor · <strong>Nuvyon</strong></div>
+      <h1>Manual do Vendedor</h1>
+      <div class="tagline">Vende mais. Perde menos. Fideliza sempre.</div>
+    </div>
+    <span class="version-badge">v1.1 · jun/2026</span>
+  </div>
+
+  <div class="intro">
+    <strong>Guia rápido pra usar o Hubtrix no dia a dia da Nuvyon.</strong>
+    Leitura estimada: 18 minutos. Mantenha aberto numa aba enquanto trabalha.
+  </div>
+
+  <!-- ========= SEC 0 ========= -->
+  <section id="sec-0">
+    <h2><span class="sec-num">0</span>O que é o Hubtrix</h2>
+    <p class="subtitle">Em 2 parágrafos, sem rodeio.</p>
+
+    <p style="font-size: 18px; color: var(--tinta); font-weight: 500; line-height: 1.5;">
+      <strong>Lead entra no WhatsApp, contrato chega no HubSoft. Sem digitar duas vezes.</strong> Essa é a parte que importa.
+    </p>
+
+    <p>O Hubtrix faz a parte chata da sua venda. Recebe o lead, organiza o funil, lembra de cobrar documento, envia tudo pro HubSoft no momento certo. Você fica com a parte que importa: fechar.</p>
+
+    <p>Por isso o sistema não é um CRM "a mais". Ele é o <strong>único lugar onde Matrix Brasil (onde o cliente conversa) e HubSoft (onde o cliente é cadastrado) se falam sem ninguém precisar copiar dados de uma tela pra outra</strong>.</p>
+
+    <h3>Como o Hubtrix divide o trabalho com você</h3>
+    <div class="diagram">Cliente fala no WhatsApp
+       ↓
+Bot do WhatsApp coleta dados básicos
+       ↓
+Hubtrix organiza tudo num card no funil (CRM)
+       ↓
+<span class="highlight">[VOCÊ ATUA AQUI] valida documentos, aceita contrato no HubSoft</span>
+       ↓
+Hubtrix sincroniza com HubSoft e dispara a instalação</div>
+
+    <div class="callout callout-tip">
+      <i class="bi bi-lightbulb"></i>
+      <div><strong>Sem o Hubtrix no meio</strong>
+      <p>Vendedor anota CPF num papel, abre HubSoft, digita tudo de novo, perde foto que cliente mandou no WhatsApp, esquece de cobrar documento, descobre depois de 3 dias que CPF tem restrição. <strong>Com o Hubtrix:</strong> você abre o card, todo dado já está lá, você só decide.</p></div>
+    </div>
+  </section>
+
+  <!-- ========= SEC 1 — PRIMEIRO DIA ========= -->
+  <section id="sec-1">
+    <h2><span class="sec-num">1</span>Seu primeiro dia no Hubtrix</h2>
+    <p class="subtitle">Faça esses 7 itens antes de tentar atender o primeiro lead real. Demora 20 minutos.</p>
+
+    <div class="callout callout-warn">
+      <i class="bi bi-exclamation-triangle"></i>
+      <div><strong>Sem esses 7 itens, você vai bater em paredes invisíveis</strong>
+      <p>Esquecer de vincular o login Matrix, por exemplo, faz você atender lead na Matrix sem ele virar seu no Hubtrix — e você fica achando que o sistema está bugado.</p></div>
+    </div>
+
+    <h3>Checklist Dia 1</h3>
+    <ul class="checklist">
+      <li><span class="step-num">1.</span>Logar no Hubtrix em <code>https://app.hubtrix.com.br/login/</code> com seu email Nuvyon (pedir senha pra Gabi se ainda não tem)</li>
+      <li><span class="step-num">2.</span>Conferir se seu <strong>login do Matrix Brasil</strong> está vinculado ao seu perfil Hubtrix (Configurações → Meu perfil → campo "Login Matrix"). Se estiver vazio, <strong>pedir pra Gabi preencher antes de continuar</strong>. Sem isso, leads que você pega na Matrix não vão aparecer atribuídos a você no Hubtrix.</li>
+      <li><span class="step-num">3.</span>Abrir o <strong>CRM</strong> no menu lateral e olhar como o kanban está organizado hoje (colunas e cards atuais)</li>
+      <li><span class="step-num">4.</span>Identificar a coluna <strong>"Análises - Doc & Score"</strong> — é nela que você vai atuar o dia inteiro</li>
+      <li><span class="step-num">5.</span>Com a Gabi do lado, abrir um card real (ou de teste) e clicar em <strong>"Atribuir a mim"</strong> pra entender a UI</li>
+      <li><span class="step-num">6.</span>Abrir o painel do <strong>HubSoft</strong> em outra aba e fazer login com seu acesso HubSoft (mesma senha do Hubtrix? confirma com a Gabi). Mantenha aberto o dia inteiro.</li>
+      <li><span class="step-num">7.</span>Ler as seções 3 (Fluxo do lead) e 4 (Atendendo no horário comercial) deste manual antes de pegar lead real</li>
+    </ul>
+
+    <div class="prompt-card">
+      <h4><i class="bi bi-stars"></i>Sinal de que você está pronto pra atender</h4>
+      <p style="color: rgba(255,255,255,0.9); margin: 0 0 12px;">Você consegue responder estas 3 perguntas sem consultar ninguém:</p>
+      <ol>
+        <li><strong>Em qual coluna do CRM eu atuo?</strong> (Análises - Doc & Score)</li>
+        <li><strong>Onde eu aceito o contrato do cliente?</strong> (Painel HubSoft, fora do Hubtrix)</li>
+        <li><strong>Se eu pegar uma conversa na Matrix, em quanto tempo o card vai virar meu no Hubtrix?</strong> (10-15 minutos, automático)</li>
+      </ol>
+      <div class="ready">Se respondeu as 3 → bora atender 🚀.</div>
+    </div>
+  </section>
+
+  <!-- ========= SEC 2 — LOGIN ========= -->
+  <section id="sec-2">
+    <h2><span class="sec-num">2</span>Login e tela inicial</h2>
+    <p class="subtitle">Como entrar e os endereços que você usa todo dia.</p>
+
+    <h3>Acessando o sistema</h3>
+    <ul>
+      <li>Endereço: <code>https://app.hubtrix.com.br/login/</code></li>
+      <li>Use seu <strong>email Nuvyon</strong> e a senha que a Gabi te entregou</li>
+      <li>Se esquecer a senha, peça pra Gabi resetar (ela tem permissão de admin)</li>
+    </ul>
+
+    <h3>Endereços que você usa todo dia</h3>
+    <p>Deixa esses 4 fixados nos favoritos do navegador:</p>
+    <table>
+      <thead><tr><th>Pra que serve</th><th>Endereço</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Hubtrix CRM</strong> (kanban dos leads)</td><td><code>https://app.hubtrix.com.br/crm/</code></td></tr>
+        <tr><td><strong>Hubtrix Inbox</strong> (conversas)</td><td><code>https://app.hubtrix.com.br/inbox/</code></td></tr>
+        <tr><td><strong>HubSoft Nuvyon</strong> (painel admin)</td><td><code>&lt;URL HubSoft Nuvyon — confirmar com Gabi&gt;</code></td></tr>
+        <tr><td><strong>Matrix Brasil</strong> (atendimento WhatsApp)</td><td><code>&lt;URL Matrix Brasil — confirmar com Gabi&gt;</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>O que tem na tela inicial</h3>
+    <p>Depois do login, você vê o <strong>menu lateral</strong> com as principais áreas:</p>
+    <table>
+      <thead><tr><th>Menu</th><th>Pra que serve</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Início</strong></td><td>Dashboard com seus números do dia</td></tr>
+        <tr><td><strong>CRM</strong></td><td>O funil de vendas, onde você passa a maior parte do tempo</td></tr>
+        <tr><td><strong>Inbox</strong></td><td>Conversas de WhatsApp e outros canais (uso eventual)</td></tr>
+        <tr><td><strong>Tarefas</strong></td><td>Lista de tarefas suas pendentes</td></tr>
+        <tr><td><strong>Suporte</strong></td><td>Tickets de problemas (quando virar cliente Nuvyon ativo)</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-tip">
+      <i class="bi bi-lightbulb"></i>
+      <div><strong>Atalho</strong><p>Clique no logo Hubtrix no canto superior esquerdo pra voltar pra Início de qualquer tela.</p></div>
+    </div>
+  </section>
+
+  <!-- ========= SEC 3 — FLUXO ========= -->
+  <section id="sec-3">
+    <h2><span class="sec-num">3</span>Fluxo completo de um lead</h2>
+    <p class="subtitle">Como o lead chega, como anda no funil e a regra de ouro.</p>
+
+    <h3>3.1. Como o lead chega</h3>
+    <p><strong>Você não cria leads no Hubtrix manualmente.</strong> Eles chegam automaticamente quando o cliente fala com o bot de atendimento no WhatsApp da Nuvyon. O bot:</p>
+    <ol>
+      <li>Coleta nome, telefone, CPF</li>
+      <li>Pergunta endereço (CEP, número)</li>
+      <li>Mostra os planos disponíveis e o cliente escolhe um</li>
+      <li>Pede 3 fotos: selfie, frente do documento, verso</li>
+      <li>Pede pra cliente assinar contrato no app HubSoft</li>
+    </ol>
+    <p>Conforme o cliente avança, o <strong>card dele no CRM move sozinho</strong> pelo funil.</p>
+
+    <h3>3.2. O funil (Kanban)</h3>
+    <p>O CRM da Nuvyon tem <strong>10 estágios</strong>. O Hubtrix move o card automaticamente entre eles. Você só atua em 1 estágio (o de número 7).</p>
+    <table>
+      <thead><tr><th>#</th><th>Estágio</th><th>O que o Hubtrix faz</th><th>O que VOCÊ faz</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Novo Lead</td><td><span class="tag-auto">Cria o card automaticamente</span></td><td>Nada</td></tr>
+        <tr><td>2</td><td>Em Atendimento</td><td><span class="tag-auto">Move quando bot entra em conversa</span></td><td>Nada</td></tr>
+        <tr><td>3</td><td>Endereço Validado</td><td><span class="tag-auto">Move quando CEP/número chegam</span></td><td>Nada</td></tr>
+        <tr><td>4</td><td>Plano Escolhido</td><td><span class="tag-auto">Move quando cliente escolhe plano</span></td><td>Nada</td></tr>
+        <tr><td>5</td><td>Dados Completos</td><td><span class="tag-auto">Move quando CPF + email + nascimento estão OK</span></td><td>Nada</td></tr>
+        <tr><td>6</td><td>Aguardando Documentos</td><td><span class="tag-auto">Espera cliente mandar as 3 fotos</span></td><td>Nada</td></tr>
+        <tr><td><strong>7</strong></td><td><strong>Análises - Doc & Score</strong></td><td><span class="tag-acao">Move quando cliente começou a enviar fotos</span></td><td><strong>VOCÊ ATUA AQUI no horário comercial</strong></td></tr>
+        <tr><td>8</td><td>Contrato Assinado</td><td><span class="tag-auto">Move quando contrato é aceito no HubSoft</span></td><td>Acompanha (você foi quem aceitou)</td></tr>
+        <tr><td>9</td><td>Ativação Confirmada</td><td><span class="tag-auto">Move quando HubSoft ativa o serviço</span></td><td>Lead virou cliente.</td></tr>
+        <tr><td>10</td><td>Perdido</td><td><span class="tag-acao">Você move quando cliente desistiu</span></td><td>Marca motivo</td></tr>
+      </tbody>
+    </table>
+
+    <h3>3.3. Regra de ouro: a diferença entre ATRIBUIR e MOVER</h3>
+    <p>Essas 2 coisas são diferentes e o vendedor tem permissão diferente em cada uma:</p>
+    <table>
+      <thead><tr><th>Ação</th><th>Quando você pode fazer</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Atribuir responsável</strong><br><span style="color:var(--grafite); font-size:13px;">"Atribuir a mim" / "Atribuir"</span></td><td><strong>SEMPRE</strong>, em qualquer estágio. Não quebra nada.</td></tr>
+        <tr><td><strong>Mover card de estágio</strong><br><span style="color:var(--grafite); font-size:13px;">arrastar entre colunas</span></td><td><strong>NUNCA, exceto pra "Perdido"</strong>. O Hubtrix move sozinho conforme o cliente avança.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-warn">
+      <i class="bi bi-exclamation-triangle"></i>
+      <div><strong>Por que isso importa</strong>
+      <p>Se você arrasta um card de estágio 4 (Plano Escolhido) pra estágio 8 (Contrato Assinado) "pra adiantar", o Hubtrix vai considerar que o cliente já assinou contrato e pode disparar processo de instalação errado. <strong>Move só pra Perdido. O resto é com o sistema.</strong></p></div>
+    </div>
+  </section>
+
+  <!-- ========= SEC 4 — ATENDENDO ========= -->
+  <section id="sec-4">
+    <h2><span class="sec-num">4</span>Atendendo um lead no horário comercial</h2>
+    <p class="subtitle">A parte mais importante do seu dia.</p>
+
+    <div class="callout callout-tip">
+      <i class="bi bi-clock"></i>
+      <div><strong>Horário comercial Nuvyon: Segunda a Sexta, 08h às 18h.</strong>
+      <p>Fora desse horário, o Hubtrix faz tudo automático. Você atua apenas no horário comercial.</p></div>
+    </div>
+
+    <h3>4.1. Pegando um lead</h3>
+    <p>Você tem <strong>2 caminhos</strong> pra virar responsável de um lead:</p>
+
+    <div class="callout callout-ok">
+      <i class="bi bi-magic"></i>
+      <div><strong>Caminho 1 — Você pega na Matrix (automático)</strong>
+      <p>Quando você assume uma conversa no <strong>Matrix Brasil</strong>, o Hubtrix detecta isso a cada 10-15 minutos e te atribui como responsável do card automaticamente. <strong>Você não precisa fazer nada aqui no Hubtrix.</strong> Esse é o caminho mais comum.</p></div>
+    </div>
+
+    <p><strong>Caminho 2 — Direto pelo Hubtrix.</strong> Útil quando o lead apareceu sem responsável e ninguém o assumiu na Matrix:</p>
+    <ol class="steps">
+      <li>Abra <strong>CRM</strong> no menu</li>
+      <li>Olha a coluna <strong>Análises - Doc & Score</strong> (estágio 7) — esses são os leads esperando ação humana</li>
+      <li>Clique no card pra abrir o detalhe</li>
+      <li>No header tem um botão <strong>"Atribuir a mim"</strong> (ou "Atribuir" se for outro vendedor)</li>
+      <li>Lead agora é seu — aparece também na sua aba "Meus leads"</li>
+    </ol>
+
+    <div class="callout callout-tip">
+      <i class="bi bi-shield-check"></i>
+      <div><strong>Atribuir é SEMPRE seguro</strong>
+      <p>Você pode atribuir/desatribuir em qualquer estágio. Já mover o card de estágio, só pra Perdido. Veja seção 3.3.</p></div>
+    </div>
+
+    <h3>4.2. Verificando os dados do lead</h3>
+    <p>Quando você abre o card, vê:</p>
+    <ul>
+      <li><strong>Header:</strong> nome, telefone, CPF, estágio atual</li>
+      <li><strong>Sidebar direita:</strong> dados completos (endereço, plano escolhido, dia vencimento)</li>
+      <li><strong>Timeline:</strong> histórico do que aconteceu (cada mensagem do bot, cada etapa concluída)</li>
+      <li><strong>Documentos:</strong> fotos que o cliente enviou (selfie, frente, verso)</li>
+    </ul>
+
+    <h3>4.3. Completando dados que faltam</h3>
+    <p>Se o bot não conseguiu coletar tudo, use o botão <strong>"Completar dados"</strong> no header.</p>
+    <p>Abre um modal com <strong>12 campos obrigatórios</strong>:</p>
+    <ul>
+      <li><strong>Dados pessoais:</strong> nome, CPF, email, data nascimento, RG, telefone</li>
+      <li><strong>Endereço:</strong> CEP, rua, número, bairro, cidade, estado, complemento (opcional)</li>
+      <li><strong>Comercial:</strong> plano, dia vencimento</li>
+    </ul>
+
+    <div class="callout callout-tip">
+      <i class="bi bi-lightbulb"></i>
+      <div><strong>Dica</strong><p>Quando você preenche o CEP, o Hubtrix busca rua/bairro/cidade no ViaCEP automaticamente. Só precisa digitar número e complemento.</p></div>
+    </div>
+
+    <div class="callout callout-ok">
+      <i class="bi bi-check-circle"></i>
+      <div><strong>Salvou — e agora?</strong><p>O Hubtrix avisa o HubSoft sozinho. Você <strong>não</strong> precisa ir lá atualizar o prospect.</p></div>
+    </div>
+
+    <h3>4.4. Validando documentos e aceitando o contrato</h3>
+    <p><strong>Este é o passo mais importante do horário comercial.</strong></p>
+    <ol class="steps">
+      <li>Abra a aba <strong>Documentos</strong> do card</li>
+      <li>Confira as 3 fotos: selfie (rosto + RG visíveis, sem óculos escuros, sem boné), frente do RG/CNH (legível, sem brilho que apague texto), verso do RG/CNH (legível, número visível)</li>
+      <li>Confira se os dados do documento <strong>batem</strong> com o que o cliente declarou no bot (CPF, nome, data de nascimento)</li>
+      <li>Se tudo OK, abra o painel HubSoft em outra aba: login, busca pelo CPF, <strong>"Aceitar Contrato"</strong>, abra a OS de instalação pra o dia que o cliente confirmou</li>
+      <li>Volte pro Hubtrix. O card move pra "Contrato Assinado" em até 1 minuto (sincronia automática).</li>
+    </ol>
+
+    <h3>4.5. O que NÃO fazer no horário comercial</h3>
+    <table>
+      <thead><tr><th>❌ Não faça</th><th>Por quê</th></tr></thead>
+      <tbody>
+        <tr><td>Arrastar card de uma coluna pra outra</td><td>Sistema move sozinho. Arrastar quebra o processo.</td></tr>
+        <tr><td>Aceitar contrato no HubSoft sem ver as 3 fotos</td><td>Pode ser fraude / CPF restrito</td></tr>
+        <tr><td>Aceitar contrato se dados do doc não batem com declarado</td><td>Cliente pode ter mandado documento de outra pessoa</td></tr>
+        <tr><td>Mexer no card de outro vendedor sem combinar</td><td>Vai roubar lead dele</td></tr>
+        <tr><td>Apagar lead achando que é teste</td><td>Pode ser cliente real</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ========= SEC 5 — TAREFAS ========= -->
+  <section id="sec-5">
+    <h2><span class="sec-num">5</span>Tarefas e notas</h2>
+    <p class="subtitle">Organize lembretes e passe contexto pro próximo vendedor.</p>
+
+    <h3>5.1. Criando uma tarefa</h3>
+    <p>Tarefa = lembrete pra você ou outro vendedor fazer algo num lead específico.</p>
+    <ol class="steps">
+      <li>Abra o card do lead</li>
+      <li>Aba <strong>Tarefas</strong> → botão <strong>+ Nova Tarefa</strong></li>
+      <li>Preencha: título, prazo, responsável, descrição</li>
+      <li>Salvar</li>
+    </ol>
+    <p>Aparece também na tela <strong>Tarefas</strong> do menu principal.</p>
+
+    <h3>5.2. Marcando como concluída</h3>
+    <p>Na aba Tarefas (do card OU da tela geral), clique no ✅ ao lado da tarefa.</p>
+
+    <h3>5.3. Notas internas</h3>
+    <p>Nota = anotação só pro time interno ver (cliente nunca vê).</p>
+    <ol class="steps">
+      <li>Abra o card do lead</li>
+      <li>Aba <strong>Notas</strong> → botão <strong>+ Nova Nota</strong></li>
+      <li>Escreva. Pode fixar pra aparecer no topo (se for crítico)</li>
+    </ol>
+
+    <div class="callout callout-tip">
+      <i class="bi bi-chat-quote"></i>
+      <div><strong>Quando usar nota?</strong><p>Quando você descobre algo importante que outro vendedor precisa saber. Exemplo: "Cliente ligou 3x irritado, prefere ser atendido pela manhã".</p></div>
+    </div>
+  </section>
+
+  <!-- ========= SEC 6 — CASOS ========= -->
+  <section id="sec-6">
+    <h2><span class="sec-num">6</span>Casos comuns no dia a dia</h2>
+    <p class="subtitle">6 situações que aparecem com frequência. Como resolver.</p>
+
+    <div class="case-card">
+      <h4><i class="bi bi-question-circle"></i>6.1. "Cliente diz que não escolheu plano nenhum"</h4>
+      <div class="case-body">
+        <p><strong>Causa provável:</strong> bot não captou bem a resposta.</p>
+        <ol class="steps">
+          <li>Abra o card, vá na aba <strong>Histórico</strong></li>
+          <li>Procure pela última mensagem do bot perguntando o plano</li>
+          <li>Confirme com o cliente no WhatsApp pessoal (use o número que já está no card)</li>
+          <li>Use <strong>"Completar dados"</strong> pra registrar o plano correto</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <h4><i class="bi bi-arrow-left-right"></i>6.2. "Cliente quer mudar de plano antes do contrato"</h4>
+      <div class="case-body">
+        <ol class="steps">
+          <li>Use <strong>"Completar dados"</strong> e troque o plano</li>
+          <li>Salve. O Hubtrix atualiza o prospect no HubSoft automaticamente</li>
+          <li>Avise o cliente no WhatsApp que ajustou</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <h4><i class="bi bi-files"></i>6.3. "Lead duplicado, mesmo CPF, dois cards"</h4>
+      <div class="case-body">
+        <p><strong>Causa provável:</strong> cliente falou de 2 números diferentes.</p>
+        <ol class="steps">
+          <li>Verifique qual card está mais avançado no funil</li>
+          <li>Marque o outro como <strong>Perdido</strong> com motivo "duplicado"</li>
+          <li>Se ambos têm dados completos, escolha o mais recente</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <h4><i class="bi bi-exclamation-octagon"></i>6.4. "CPF aparece com restrição no HubSoft"</h4>
+      <div class="case-body">
+        <ol class="steps">
+          <li><strong>Não aceite o contrato no HubSoft.</strong></li>
+          <li>Volte pro Hubtrix, marque o card como <strong>Perdido</strong> com motivo "CPF restrito"</li>
+          <li>Avise o cliente pelo WhatsApp educadamente: "Identificamos uma pendência no seu CPF. Pra prosseguir, recomendamos regularizar com a Serasa antes."</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <h4><i class="bi bi-tag"></i>6.5. "Cliente reclama da promoção R$39,90"</h4>
+      <div class="case-body">
+        <p><strong>Resposta sugerida (educada e firme):</strong></p>
+        <blockquote>"Olá, [Nome]! A promoção de R$39,90 era por tempo limitado e foi encerrada em [data]. Nossa oferta atual é [plano X] por R$XX/mês com [vantagem]. Posso te explicar melhor essa nova condição?"</blockquote>
+        <p style="margin-top: 12px;">Se for caso pontual e o cliente já estava em conversa quando a promoção saiu do ar, escale com a Gabi.</p>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <h4><i class="bi bi-calendar-event"></i>6.6. "Cliente confirmou data de instalação, mas o sistema não abriu OS"</h4>
+      <div class="case-body">
+        <p><strong>Causa provável:</strong> cliente ainda não foi cadastrado no HubSoft (acontece em horário comercial).</p>
+        <ol class="steps">
+          <li>Abra HubSoft em outra aba</li>
+          <li>Verifique se o prospect ainda está como "Aguardando Assinatura"</li>
+          <li>Se sim: aceite contrato → abra OS manualmente pra a data que o cliente confirmou</li>
+          <li>Avise o cliente pelo WhatsApp confirmando o dia</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========= SEC 7 — PROBLEMAS ========= -->
+  <section id="sec-7">
+    <h2><span class="sec-num">7</span>Problemas e quem chamar</h2>
+    <p class="subtitle">Quando algo não funciona, siga este roteiro.</p>
+
+    <table>
+      <thead><tr><th>Situação</th><th>Quem chamar</th></tr></thead>
+      <tbody>
+        <tr><td>Esqueci minha senha</td><td>Pedir reset pra <strong>Gabi</strong> (admin Nuvyon)</td></tr>
+        <tr><td>Não consigo entrar no Hubtrix (sistema fora do ar)</td><td>Avisar <strong>Gabi</strong> no grupo. Se urgente, ela escala pro time Hubtrix</td></tr>
+        <tr><td>Lead não está aparecendo no meu kanban</td><td>Provável: lead não foi atribuído a você. Procure na aba "Não atribuídos" e clique "Atribuir a mim"</td></tr>
+        <tr><td>Lead que peguei na Matrix está sem responsável no Hubtrix mesmo depois de 30min</td><td>Provável: seu <strong>login Matrix</strong> não está vinculado ao perfil Hubtrix. Pedir pra <strong>Gabi</strong> conferir (Configurações → Meu perfil → campo Login Matrix)</td></tr>
+        <tr><td>Card aparece duplicado ou em estágio estranho</td><td>Anote o <strong>ID do lead</strong> (visível na URL: <code>/crm/oportunidades/1635/</code> → ID é 1635). Avisa <strong>Gabi</strong> com o ID</td></tr>
+        <tr><td>Sistema apresentou erro X ao salvar</td><td>Tire <strong>screenshot da tela inteira</strong> (incluindo URL). Mande pra <strong>Gabi</strong> com: o que estava tentando fazer, ID do lead, horário aproximado</td></tr>
+        <tr><td>Cliente pergunta algo técnico (Wi-Fi, configuração)</td><td>Não responder. Transferir pra <strong>Suporte Técnico Nuvyon</strong> (fora do escopo do vendedor)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="footer" id="footer">
+    <div class="tagline-footer">Vende mais. Perde menos. Fideliza sempre.</div>
+    <p><strong>Manual do Vendedor — Nuvyon · v1.1</strong></p>
+    <p>Última atualização: 22/06/2026.</p>
+    <p>Próximas versões: screenshots de cada tela, vídeo curto do fluxo completo, glossário, FAQ ampliado, critérios detalhados de documentos, seção LGPD e versão impressa em PDF.</p>
+    <p>Sugestões e correções: mande pra Gabi ou anote numa nota no card "Manual Vendedor" no Workspace.</p>
+  </div>
+</main>
+
+</div>
+
+<script>
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-list a');
+
+function setActive() {
+  let current = '';
+  sections.forEach(sec => {
+    const top = sec.offsetTop - 120;
+    if (window.scrollY >= top) current = sec.id;
+  });
+  navLinks.forEach(link => {
+    link.classList.remove('active');
+    if (link.getAttribute('href') === '#' + current) link.classList.add('active');
+  });
+}
+window.addEventListener('scroll', setActive);
+setActive();
+
+navLinks.forEach(link => {
+  link.addEventListener('click', e => {
+    const href = link.getAttribute('href');
+    if (href.startsWith('#')) {
+      e.preventDefault();
+      const target = document.querySelector(href);
+      if (target) target.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+  });
+});
+
+// Checklist clicável
+document.querySelectorAll('.checklist li').forEach(li => {
+  li.addEventListener('click', () => li.classList.toggle('done'));
+  li.style.cursor = 'pointer';
+});
+</script>
+</body>
+</html>
