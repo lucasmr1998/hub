@@ -919,12 +919,8 @@ def relatorio_conversoes_view(request):
 
 
 def ajuda_view(request):
-    """View para página de ajuda"""
-    context = {
-        'user': request.user if request.user.is_authenticated else None,
-        'page_title': 'Central de Ajuda - Megalink'
-    }
-    return render(request, 'dashboard/ajuda.html', context)
+    """Manual do vendedor — renderiza template novo em ajuda/manual.html."""
+    return render(request, 'ajuda/manual.html')
 
 
 def documentacao_view(request):

@@ -125,9 +125,6 @@ urlpatterns = [
     path('crm/retencao/', RedirectView.as_view(url='/cs/retencao/', permanent=False, query_string=True)),
     path('crm/retencao/<path:resto>', RedirectView.as_view(url='/cs/retencao/%(resto)s', permanent=False, query_string=True)),
 
-    # === Ajuda / Manual do vendedor ===
-    path('ajuda/', TemplateView.as_view(template_name='ajuda/manual.html'), name='ajuda_manual'),
-
     # === Suporte ===
     path('suporte/', include('apps.suporte.urls')),
 
