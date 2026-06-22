@@ -172,3 +172,26 @@ Senha temporaria padrao `Nuvyon@2026` (com `senha_temporaria=True`). Danielle Ak
 Pendencias: 3 logins Matrix (Letícia/`caconde`, Nicole/`nicole`, Nicoly/`nicolyaraujo`) aguardam email institucional Nuvyon pra User Hubtrix ser criado. Feature 2 (criar prospecto HubSoft + converter) ainda na fila.
 
 Status: completed + deployado em prod (commits `d4cbd3c`, `88dd40d`, `e3f2de0`, `805e7bd`).
+
+---
+
+## 2026-06-21 — Historico de disparos das regras de automacao pipeline
+
+- **Acao**: Botao "Historico" (icone `bi-clock-history`) em cada linha da tabela em `/crm/automacoes-pipeline/`. Click abre modal com os ultimos 50 disparos da regra: timestamp, oportunidade + lead, mudanca de estagio ou chips de acoes executadas, e badge `efetiva` / `idempotente`.
+- **Implementacao**: motor `automacao_pipeline.py` agora enriquece `dados_extras` do `LogSistema` central com `regra_id`, `estagio_anterior_id/nome`, `estagio_destino_id/nome`, `lead_id`, `acoes_executadas`, `houve_efetiva`, `horas_no_estagio_anterior`. Nova view `regra_pipeline_historico` filtra `LogSistema` por `dados_extras__regra_id=pk`. Zero migration (reusa `log_sistema`).
+- **Decisao**: NAO criar tabela `crm_log_regra_execucao` propria — `LogSistema` central ja existe, ja recebe os eventos do motor (`registrar_acao('crm','mover_regra',...)`). Mais barato e mais alinhado com o padrao do produto (toda acao deveria ir pra `log_sistema`).
+- **Why**: usuario pediu "quero ver os logs das regras direto por ali" — descoberto que motor so contabilizava `total_disparos` mas nao expunha timeline. Bug de produto.
+- **How to apply**: ao criar outra acao no motor que dispare regra, garantir que `registrar_acao` seja chamado com `dados_extras={'regra_id': ..., ...}` pra aparecer no historico. Logs sem `dados_extras.regra_id` ficam invisiveis no botao.
+- **Output**: commit `d749c80`. Doc completa em [`crm/automacoes-pipeline.md`](crm/automacoes-pipeline.md#historico-de-execucao).
+- **Pendencia**: 116 logs antigos Nuvyon (pre-feature) foram apagados no cleanup do dia em prod — nao tinham `dados_extras.regra_id` populado, ficariam invisiveis no botao. Outros tenants: logs antigos ficam de fora dos modais ate logs novos serem gerados.
+- **Status**: completed + deployado em prod.
+
+## 2026-06-21 — Fix webhook N8N: canais WhatsApp + telefone VARCHAR(32)
+
+- **Acao**: Webhook `/api/public/n8n/inbox/mensagem/` ignora canais/newsletters/broadcasts do WhatsApp + 2 colunas `*.telefone` VARCHAR(17) alargadas pra VARCHAR(32).
+- **Causa raiz**: numero `120363426906258649` (canal WhatsApp newsletter do Mercado Livre, ofertas) chegava como mensagem normal no TR Carrion via Uazapi. Tem 18 digitos, estourava as 2 ultimas colunas VARCHAR(17) defasadas do schema (resto ja era VARCHAR(20) pelo commit `247123a`). Resultado: HTTP 500 a cada ~5min em prod, alerta disparando.
+- **Fix A — filtro de canal**: no `inbox_mensagem`, telefones com prefixo `120363` ou mais de 15 digitos retornam `200 {ignored:true, motivo:'canal_whatsapp_broadcast'}`. Evita criar Lead/Conversa pra canal de ofertas e impede o bot Vero de responder "vou anotar suas informacoes" pra cada produto do ML.
+- **Fix B — alarga schema**: migrations `inbox.0017_alter_conversa_contato_telefone` e `leads.0009_alter_historicocontato_telefone` levam `inbox_conversas.contato_telefone` e `historico_contato.telefone` pra VARCHAR(32). Defense in depth pra qualquer ID grande futuro (grupos WhatsApp, broadcasts, listas).
+- **How to apply**: padrao "telefone" no schema deve ser VARCHAR >= 20. Se ID `120363...` voltar a aparecer em outro tenant, ja esta blindado. Pra debugar webhooks futuros, `integracoes_log_webhook_n8n` tem `body_preview` + `status_code` por chamada (consultar via SQL).
+- **Output**: commit `570ef8c`.
+- **Status**: completed + deployado em prod.

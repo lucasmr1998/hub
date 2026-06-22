@@ -175,7 +175,7 @@ Módulo completo com CRUD visual:
 - **Listagem:** `/crm/automacoes-pipeline/`
   - Regras agrupadas por estágio (respeita ordem dos estágios)
   - Cada regra mostra: prioridade, nome, condições em linguagem natural, disparos totais, última execução, status
-  - Ações por regra: editar, ativar/desativar (toggle), duplicar, excluir
+  - Ações por regra: **histórico de disparos** (modal), editar, ativar/desativar (toggle), duplicar, excluir
   - Botão "Nova regra" leva ao formulário
 - **Formulário de criação/edição:** `/crm/automacoes-pipeline/nova/` e `/crm/automacoes-pipeline/<id>/editar/`
   - Campos: nome, estágio destino (select), prioridade, ativa
@@ -221,6 +221,61 @@ Tabela: `crm_regras_pipeline_estagio`.
 
 ---
 
+## Histórico de execução
+
+Cada vez que uma regra dispara, o motor grava um registro em `LogSistema` (tabela central de auditoria `log_sistema`, app `apps.sistema`). Não há tabela própria — o histórico vive no log central com `categoria='crm'` e `acao IN ('mover_regra', 'acoes_regra')`.
+
+**Estrutura do `dados_extras` (JSONField):**
+
+Em `mover_regra` (regra com estágio destino movimentou a oportunidade):
+```json
+{
+  "regra_id": 23,
+  "regra_nome": "HubSoft - Criar rascunho",
+  "lead_id": 591,
+  "estagio_anterior_id": 4,
+  "estagio_anterior_nome": "Em Atendimento",
+  "estagio_destino_id": 5,
+  "estagio_destino_nome": "Endereço Validado",
+  "horas_no_estagio_anterior": 2.7
+}
+```
+
+Em `acoes_regra` (regra global rodou ações sem mover estágio):
+```json
+{
+  "regra_id": 24,
+  "regra_nome": "HubSoft - Atualizar prospecto",
+  "lead_id": 591,
+  "houve_efetiva": true,
+  "acoes_executadas": [
+    {"tipo": "sincronizar_prospecto_hubsoft", "resultado": "efetiva"}
+  ]
+}
+```
+
+Resultado por ação no log:
+- `efetiva` — a action retornou True/None (rodou de fato)
+- `idempotente` — retornou False (pulou porque já estava feito)
+- `erro` — exception, vai com chave `erro` truncada em 120 chars
+- `desconhecido` — `tipo` não está em `_EXECUTORES_ACAO`
+
+**UI — botão "Histórico":**
+
+Cada linha da tabela de regras tem ícone `bi-clock-history`. Click abre modal com últimos 50 disparos daquela regra (mais recentes primeiro). Mostra:
+- Timestamp
+- Oportunidade (#id + nome do lead, link clicável)
+- Movimentação (`estagio_anterior → estagio_destino`) ou chips de ações executadas
+- Badge "mover" / "efetiva" / "idempotente"
+
+Endpoint: `GET /crm/automacoes-pipeline/<id>/historico/` — retorna JSON `{success, regra_id, regra_nome, total, items}`. Filtra `LogSistema.objects.filter(categoria='crm', dados_extras__regra_id=<pk>).order_by('-data_criacao')[:50]`. Postgres usa JSONB path lookup nativamente; sem índice GIN dedicado (aceito por volume baixo). Multi-tenant herdado do `TenantManager`.
+
+**Limitações:**
+- Janela fixa de 50 (sem paginação na v1)
+- Logs anteriores a 2026-06-21 (data da feature) não têm `dados_extras.regra_id` populado — não aparecem no histórico. Para Nuvyon, os 116 logs antigos foram apagados no cleanup do dia (consistência com reset dos contadores).
+
+---
+
 ## Pagina `/crm/automacoes-pipeline/`
 
 Layout segue padrao do DS — visualmente alinhado com `/vendas/`, `/crm/tarefas/` e demais telas.
@@ -253,6 +308,7 @@ Query params suportados pela view: `?pipeline=<id>&status=ativa|inativa&q=<termo
 - Signals: `apps/comercial/crm/signals.py`
 - Endpoint: `apps/comercial/leads/views.py:api_lead_tags`
 - Tela read-only: `apps/comercial/crm/views.py:automacoes_pipeline_view`
+- Endpoint histórico: `apps/comercial/crm/views.py:regra_pipeline_historico` (GET `/crm/automacoes-pipeline/<id>/historico/`)
 - Template: `templates/crm/automacoes_pipeline.html`
 - Seed command: `apps/comercial/crm/management/commands/seed_regras_pipeline_padrao.py`
 - Testes: `tests/test_automacao_pipeline.py`

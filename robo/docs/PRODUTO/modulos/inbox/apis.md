@@ -24,6 +24,15 @@ Registra mensagem no Inbox e garante Conversa + Lead + Oportunidade. Campos:
 `tenant_slug`, `telefone`, `conteudo`, `direcao`, `tipo_conteudo`, `arquivo_url`,
 `arquivo_nome`, `modo_atendimento`, `dados_lead`, `msg_id_externo`.
 
+**Filtro de canal WhatsApp (newsletter/broadcast):** telefones com prefixo
+`120363` (formato global de canais @newsletter) ou mais de 15 digitos sao
+**ignorados silenciosamente** — o endpoint retorna `200 {sucesso: true,
+ignored: true, motivo: 'canal_whatsapp_broadcast', telefone: ...}` sem criar
+Lead/Conversa nem disparar bot. Motivo: o Uazapi entrega mensagens de canais
+(ex: ofertas do Mercado Livre que o usuario segue) como se fossem clientes.
+Antes (jun/26) o bot Vero respondia "vou anotar suas informacoes com carinho"
+pra cada oferta. Telefones de pessoa fisica BR tem no maximo 13 digitos.
+
 **Midia:** se o `conteudo` chegar como o objeto de midia do WhatsApp serializado
 em JSON (acontece quando o fluxo N8N pega `message.content` em vez de
 `message.text`), `_sanitizar_conteudo_midia` extrai `mimetype`/`title`/`URL` e
