@@ -192,6 +192,7 @@ export function App() {
           <button onClick={salvar}>💾 Salvar</button>
           <button className="primary" onClick={rodar}>▶ Testar</button>
           <button onClick={exportar}>Exportar JSON</button>
+          <a className="topbar-link" href="/automacao/execucoes/">Execuções</a>
         </div>
       </header>
 

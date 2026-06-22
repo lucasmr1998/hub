@@ -14,7 +14,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
-from .models import Fluxo
+from .models import Fluxo, ExecucaoFluxo
 from .nodes import Contexto, REGISTRY
 from .runtime import executar_fluxo, validar_fluxo
 
@@ -52,6 +52,47 @@ def editor_page(request):
     except OSError:
         v = ''
     return render(request, 'automacao/editor.html', {'v': v})
+
+
+@login_required
+def execucoes_page(request):
+    """Observabilidade: lista as execuções de fluxo do tenant (status, trace, erro)."""
+    from django.core.paginator import Paginator
+    from django.db.models import Count
+
+    tenant = getattr(request, 'tenant', None)
+    if tenant is None:
+        return render(request, 'automacao/execucoes.html', {'sem_tenant': True})
+
+    qs = (ExecucaoFluxo.all_tenants
+          .filter(tenant=tenant)
+          .select_related('fluxo')
+          .order_by('-criado_em'))
+
+    status = (request.GET.get('status') or '').strip()
+    if status:
+        qs = qs.filter(status=status)
+    fluxo_id = (request.GET.get('fluxo') or '').strip()
+    if fluxo_id.isdigit():
+        qs = qs.filter(fluxo_id=int(fluxo_id))
+
+    # Contadores por status (sobre o tenant inteiro, sem o filtro de status).
+    base = ExecucaoFluxo.all_tenants.filter(tenant=tenant)
+    contagem = {r['status']: r['n'] for r in base.values('status').annotate(n=Count('id'))}
+    stats = {
+        'total': sum(contagem.values()),
+        'completado': contagem.get('completado', 0),
+        'erro': contagem.get('erro', 0),
+        'aguardando': contagem.get('aguardando', 0) + contagem.get('pendente', 0),
+    }
+
+    pagina = Paginator(qs, 30).get_page(request.GET.get('p'))
+    return render(request, 'automacao/execucoes.html', {
+        'execucoes': pagina,
+        'stats': stats,
+        'status_atual': status,
+        'status_opcoes': ['pendente', 'rodando', 'aguardando', 'completado', 'erro'],
+    })
 
 
 @login_required

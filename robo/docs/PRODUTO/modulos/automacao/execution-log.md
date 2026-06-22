@@ -270,6 +270,12 @@
 - **Total: 44 nós** (Integrações 29, Comercial 6, Fluxo 3, Gatilho 2, Core/Transformação/Notificações/CS 1 cada).
 - **Status:** completed.
 
+## 2026-06-22 — Engine mesclada na `main` + tela de execuções (observabilidade)
+
+- **Merge na main:** `feat/engine-automacao` → `main` (local, **não pushado/deployado**). Motivo: outra sessão concorrente vivia jogando o working tree na `main`, derrubando o editor (404) toda hora; com a engine na main, parar nela deixa de quebrar. Feito com segurança (merge `main`→branch primeiro, 1 conflito resolvido — `extrair_historico_matrix.py`, peguei a versão da main; auto-merge do `settings.py` manteve `apps.automacao` + apps novos da main; 145 testes + check verdes — só então fast-forward na main). Revert point: main estava em `71f5cd7`. **Antes de deployar:** revisar signal do inbox (roda por mensagem) + mudança do `dar_pontos` (filtro por tenant); migrations 0001-0004 sobem no deploy (tabelas aditivas); Dockerfile não muda (bundle React pré-buildado + collectstatic).
+- **Tela de execuções (`/automacao/execucoes/`):** observabilidade — lista `ExecucaoFluxo` do tenant (status, quando, trace expansível por nó, erro) + cards de contagem + filtro por status + paginação. View `execucoes_page` (login + tenant-scoped), template no design system (`layout_app` + stat_card + badge). Link "Execuções" na topbar do editor. Validado: render real 200 + check.
+- **Status:** completed. Próximos da evolução (acordados): **nó de loop/iterar** + **Testar com contexto de exemplo**.
+
 ### Pendências / próximos passos
 - **Decisão (22/06): opções dinâmicas + preview ADIADAS.** Quería-se dropdown de contas/templates Matrix + preview do HSM ao selecionar. Mas o **Matrix não expõe API de listar templates** (confirmado), então a única fonte do preview seria um **registro local** (cópia do corpo por tenant) — com manutenção manual e risco de drift vs o template aprovado. Decidido **manter `cod_conta`/`hsm` manuais** por ora. O **mecanismo genérico de opções dinâmicas** (`select_dinamico` carregado de endpoint por-tenant + painel de preview) fica pra quando entrar uma integração com **API de listagem real** (ex: HubSoft, ou "listar pipelines" do CRM) — aí o investimento se paga em vários provedores.
 - **Pending:** decidir volume/dia por tenant + latência → runtime síncrono-em-cron (modelo marketing) vs. fila. Bloqueia a fase de runtime.

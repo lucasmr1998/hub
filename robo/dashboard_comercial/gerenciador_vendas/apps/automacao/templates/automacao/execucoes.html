@@ -1,0 +1,102 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}Execuções — Hubtrix{% endblock %}
+
+{% block content %}
+<style>
+  .exec-nav { display:flex; gap:14px; margin-bottom:6px; }
+  .exec-nav a { color:#5b6472; text-decoration:none; font-weight:600; font-size:14px; }
+  .exec-nav a.ativo { color:#2f6df6; }
+  .exec-stats { display:flex; gap:12px; flex-wrap:wrap; margin:14px 0 20px; }
+  .exec-stats > * { flex:1 1 160px; }
+  .exec-filtros { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+  .exec-filtro { padding:5px 12px; border:1px solid #dde2ea; border-radius:20px; font-size:13px;
+                 color:#5b6472; text-decoration:none; background:#fff; }
+  .exec-filtro.ativo { background:#2f6df6; color:#fff; border-color:#2f6df6; }
+  .exec-tab { width:100%; border-collapse:collapse; font-size:13px; background:#fff;
+              border:1px solid #e4e8ef; border-radius:12px; overflow:hidden; }
+  .exec-tab th { text-align:left; padding:10px 12px; background:#fafbfc; color:#5b6472;
+                 font-size:11px; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid #e4e8ef; }
+  .exec-tab td { padding:10px 12px; border-bottom:1px solid #eef1f6; vertical-align:top; }
+  .exec-tab tr:last-child td { border-bottom:none; }
+  .exec-tab details summary { cursor:pointer; color:#2f6df6; font-weight:600; }
+  .exec-tab details ol { margin:6px 0 0; padding-left:18px; }
+  .exec-tab details li { margin-bottom:4px; line-height:1.4; }
+  .exec-tab code { background:#eef3ff; color:#2f6df6; padding:0 4px; border-radius:4px; }
+  .exec-erro-step { color:#c0322b; }
+  .exec-pag { display:flex; gap:14px; align-items:center; margin-top:16px; font-size:13px; }
+  .exec-pag a { color:#2f6df6; text-decoration:none; }
+</style>
+
+<div class="exec-nav">
+  <a href="{% url 'automacao:editor' %}">Editor</a>
+  <a href="{% url 'automacao:execucoes' %}" class="ativo">Execuções</a>
+</div>
+<h1>Execuções da automação</h1>
+
+{% if sem_tenant %}
+  <p class="muted">Sem tenant na sessão.</p>
+{% else %}
+
+<div class="exec-stats">
+  {% include "components/stat_card.html" with label="Total" value=stats.total icon="bi-collection" %}
+  {% include "components/stat_card.html" with label="Completadas" value=stats.completado icon="bi-check-circle" icon_variant="success" %}
+  {% include "components/stat_card.html" with label="Erros" value=stats.erro icon="bi-exclamation-triangle" icon_variant="danger" %}
+  {% include "components/stat_card.html" with label="Aguardando" value=stats.aguardando icon="bi-hourglass-split" icon_variant="warning" %}
+</div>
+
+<div class="exec-filtros">
+  <a href="?" class="exec-filtro{% if not status_atual %} ativo{% endif %}">Todas</a>
+  {% for s in status_opcoes %}
+    <a href="?status={{ s }}" class="exec-filtro{% if status_atual == s %} ativo{% endif %}">{{ s }}</a>
+  {% endfor %}
+</div>
+
+<table class="exec-tab">
+  <thead>
+    <tr><th>Fluxo</th><th>Status</th><th>Quando</th><th>Passos</th><th>Erro</th></tr>
+  </thead>
+  <tbody>
+  {% for e in execucoes %}
+    <tr>
+      <td>{{ e.fluxo.nome|default:"(sem nome)" }}</td>
+      <td>
+        {% if e.status == 'completado' %}{% include "components/badge.html" with variant="success" label="completado" dot=True %}
+        {% elif e.status == 'erro' %}{% include "components/badge.html" with variant="danger" label="erro" dot=True %}
+        {% elif e.status == 'aguardando' or e.status == 'pendente' %}{% include "components/badge.html" with variant="warning" label=e.status dot=True %}
+        {% else %}{% include "components/badge.html" with variant="info" label=e.status dot=True %}{% endif %}
+      </td>
+      <td>{{ e.criado_em|date:"d/m/Y H:i" }}</td>
+      <td>
+        {% if e.trace %}
+        <details>
+          <summary>{{ e.trace|length }} passo(s)</summary>
+          <ol>
+          {% for p in e.trace %}
+            <li>
+              <code>{{ p.handle }}</code> · {{ p.tipo }} → {{ p.branch|default:"—" }}
+              {% if p.status == 'erro' %}<span class="exec-erro-step">(erro)</span>{% endif %}
+              {% if p.erro %}<div class="muted">{{ p.erro }}</div>{% endif %}
+            </li>
+          {% endfor %}
+          </ol>
+        </details>
+        {% else %}<span class="muted">—</span>{% endif %}
+      </td>
+      <td class="muted">{{ e.erro|truncatechars:90 }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5" class="muted" style="padding:24px; text-align:center;">Nenhuma execução ainda. Quando um fluxo rodar (gatilho, webhook ou Testar persistido), aparece aqui.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% if execucoes.has_other_pages %}
+<div class="exec-pag">
+  {% if execucoes.has_previous %}<a href="?{% if status_atual %}status={{ status_atual }}&{% endif %}p={{ execucoes.previous_page_number }}">‹ anterior</a>{% endif %}
+  <span class="muted">{{ execucoes.number }} / {{ execucoes.paginator.num_pages }}</span>
+  {% if execucoes.has_next %}<a href="?{% if status_atual %}status={{ status_atual }}&{% endif %}p={{ execucoes.next_page_number }}">próxima ›</a>{% endif %}
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

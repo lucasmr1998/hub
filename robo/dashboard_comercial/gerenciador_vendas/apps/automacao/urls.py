@@ -6,6 +6,7 @@ app_name = 'automacao'
 
 urlpatterns = [
     path('editor/', views.editor_page, name='editor'),
+    path('execucoes/', views.execucoes_page, name='execucoes'),
     path('api/nodes/', views.nodes_catalogo_api, name='nodes_catalogo'),
     path('api/eventos/', views.eventos_api, name='eventos'),
     path('api/testar-fluxo/', views.testar_fluxo_api, name='testar_fluxo'),
