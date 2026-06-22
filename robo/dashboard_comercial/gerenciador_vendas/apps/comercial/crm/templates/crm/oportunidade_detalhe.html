@@ -2508,7 +2508,6 @@ function _ccPreencher(d) {
   _ccElem('cc-cep').value             = l.cep || '';
   _ccElem('cc-rua').value             = l.rua || '';
   _ccElem('cc-numero').value          = l.numero_residencia || '';
-  _ccElem('cc-complemento').value     = l.complemento || '';
   _ccElem('cc-bairro').value          = l.bairro || '';
   _ccElem('cc-cidade').value          = l.cidade || '';
   _ccElem('cc-estado').value          = l.estado || '';
@@ -2559,7 +2558,6 @@ async function _ccSalvar(eFechar) {
     cep: _ccElem('cc-cep').value.trim(),
     rua: _ccElem('cc-rua').value.trim(),
     numero_residencia: _ccElem('cc-numero').value.trim(),
-    complemento: _ccElem('cc-complemento').value.trim(),
     bairro: _ccElem('cc-bairro').value.trim(),
     cidade: _ccElem('cc-cidade').value.trim(),
     estado: _ccElem('cc-estado').value.trim(),
@@ -2617,7 +2615,6 @@ async function _ccSalvar(eFechar) {
           <label class="cc-field"><span>CEP *</span><input id="cc-cep" type="text" placeholder="00000-000" onblur="_ccBuscarCep()" oninput="_ccAtualizarStatus()"></label>
           <label class="cc-field cc-col-2"><span>Rua *</span><input id="cc-rua" type="text" oninput="_ccAtualizarStatus()"></label>
           <label class="cc-field"><span>Numero *</span><input id="cc-numero" type="text" oninput="_ccAtualizarStatus()"></label>
-          <label class="cc-field cc-col-2"><span>Complemento</span><input id="cc-complemento" type="text"></label>
           <label class="cc-field"><span>Bairro *</span><input id="cc-bairro" type="text" oninput="_ccAtualizarStatus()"></label>
           <label class="cc-field"><span>Cidade *</span><input id="cc-cidade" type="text" oninput="_ccAtualizarStatus()"></label>
           <label class="cc-field"><span>UF *</span><input id="cc-estado" type="text" maxlength="2" style="text-transform: uppercase;" oninput="this.value=this.value.toUpperCase();_ccAtualizarStatus()"></label>

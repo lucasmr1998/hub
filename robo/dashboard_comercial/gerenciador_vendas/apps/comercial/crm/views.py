@@ -3534,7 +3534,6 @@ def api_cadastro_completo_oportunidade(request, pk):
                 'cep': lead.cep or '',
                 'rua': lead.rua or '',
                 'numero_residencia': lead.numero_residencia or '',
-                'complemento': lead.complemento_residencia or '',
                 'bairro': lead.bairro or '',
                 'cidade': lead.cidade or '',
                 'estado': lead.estado or '',
@@ -3564,13 +3563,12 @@ def api_cadastro_completo_oportunidade(request, pk):
 
     campos_permitidos = {
         'nome_razaosocial', 'cpf_cnpj', 'data_nascimento', 'rg', 'email',
-        'telefone', 'cep', 'rua', 'numero_residencia', 'complemento_residencia',
+        'telefone', 'cep', 'rua', 'numero_residencia',
         'bairro', 'cidade', 'estado', 'id_plano_rp', 'id_dia_vencimento',
     }
     # Mapeamento de chaves do JS pro Lead (alguns nomes diferentes)
     aliases = {
         'nome': 'nome_razaosocial',
-        'complemento': 'complemento_residencia',
     }
 
     update_fields = {}
