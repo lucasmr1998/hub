@@ -41,9 +41,10 @@
 **⚠️ Pendências:**
 - Gabi deve revisar os 3 defaults acima e confirmar com plano/vencimento oficiais
 - Bootstrap full Nuvyon (`sync_base_clientes_hubsoft --tenant nuvyon --full`, ~15min) não rodado
-- Backfill viabilidade (`backfill_viabilidade --tenant nuvyon`, ~10min, ~500 leads) não rodado
 - **Apagar manual no painel HubSoft:** prospectos 22936 (Eva), 22994 (teste antigo), 22996 (Pedro / cliente 60151)
 - CRM Nuvyon zerado em 2026-06-21 — validar proxima esteira end-to-end
+
+> Backfill viabilidade foi removido do backlog em 2026-06-21: nao ha mais leads Nuvyon historicos pra processar (CRM zerado no cleanup do dia). Reativar caso entre re-importacao do Matrix ou bootstrap traga leads antigos com CEP.
 
 ---
 
@@ -132,11 +133,11 @@
 ### Pendente — bootstrap full sync Nuvyon
 Rodar `python manage.py sync_base_clientes_hubsoft --tenant nuvyon --full` (1x, ~15min, 24.560 clientes). Habilita dashboards CS completos.
 
-### Pendente — backfill viabilidade
-Rodar `python manage.py backfill_viabilidade --tenant nuvyon` (~10min, ~500 leads históricos sem viabilidade gravada). Habilita relatório #9 do briefing.
+### ~~Pendente — backfill viabilidade~~ (encerrado 2026-06-21)
+Removido do backlog: cleanup do dia zerou os leads Nuvyon historicos, nao ha mais o que processar. Reativar se entrarem leads antigos com CEP via re-importacao do Matrix.
 
-### Pendente — desativar signal envio direto HubSoft
-Signal `enviar_lead_para_integracao` em `apps/integracoes/signals.py:47` ainda ativo. Bypassa Regras 23/24, pode criar prospecto sem placeholders quando lead completo de cara. Desativar via `IntegracaoAPI.configuracoes_extras.modos_sync.enviar_lead='desativado'` ou `ConfiguracaoEmpresa.enviar_leads_integracao=False`.
+### ~~Pendente — desativar signal envio direto HubSoft~~ (concluido 2026-06-21)
+Resolvido: `IntegracaoAPI #18` (HubSoft Nuvyon) com `modos_sync.enviar_lead='desativado'` em prod. Regra 23 do motor CRM e caminho unico de criacao de prospecto.
 
 ### Pendente — Gabi confirma defaults
 - `plano_id_padrao = 1236` — qual plano oficial Nuvyon usa pra rascunho?
