@@ -133,3 +133,38 @@ def test_simular_exige_campos_e_parseia_ids():
     kw = svc.simular_renegociacao.call_args.kwargs
     assert kw['ids_faturas'] == [123, 124, 125]
     assert kw['quantidade_parcelas'] == 3 and kw['vencimento'] == '2026-07-10'
+
+
+# --- batch 3: globais + agenda ------------------------------------------
+def test_batch3_registrados():
+    for t in ('hubsoft_listar_clientes_todos', 'hubsoft_listar_os_todos',
+              'hubsoft_listar_atendimentos_todos', 'hubsoft_horarios_agenda'):
+        assert tipo_por_slug(t) is not None, t
+
+
+def test_clientes_todos_extrai_lista_e_paginacao():
+    no = tipo_por_slug('hubsoft_listar_clientes_todos')
+    svc = mock.Mock()
+    svc.listar_clientes_todos.return_value = {'paginacao': {}, 'clientes': [{'id': 1}]}
+    with mock.patch(_PATCH, return_value=svc):
+        res = no.executar({'data_inicio': '2026-01-01', 'pagina': '2'}, {}, _ctx())
+    assert res.branch == 'sucesso' and res.output == {'clientes': [{'id': 1}], 'total': 1}
+    kw = svc.listar_clientes_todos.call_args.kwargs
+    assert kw['pagina'] == 2 and kw['data_inicio'] == '2026-01-01'
+
+
+def test_horarios_agenda_exige_id_ou_descricao():
+    no = tipo_por_slug('hubsoft_horarios_agenda')
+    assert no.validar_config({})
+    assert not no.validar_config({'descricao': 'Instalação'})
+
+
+def test_horarios_agenda_chama_service():
+    no = tipo_por_slug('hubsoft_horarios_agenda')
+    svc = mock.Mock()
+    svc.consultar_horarios_agenda.return_value = {'2026-07-01': []}
+    with mock.patch(_PATCH, return_value=svc):
+        res = no.executar({'descricao': 'Instalação', 'dias': '3'}, {}, _ctx())
+    assert res.branch == 'sucesso' and res.output == {'horarios': {'2026-07-01': []}}
+    kw = svc.consultar_horarios_agenda.call_args.kwargs
+    assert kw['descricao'] == 'Instalação' and kw['dias'] == 3
