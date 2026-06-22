@@ -258,7 +258,7 @@ function FiltrosCampo({
         return (
         <div key={i} className="filtro-row">
           {subcampos.length > 0 ? (
-            <select value={row.campo ?? ''} onChange={(e) => set(i, { campo: e.target.value, valor: '' })}>
+            <select value={row.campo ?? ''} onChange={(e) => set(i, { campo: e.target.value, valor: '', operador: 'igual' })}>
               <option value="">campo…</option>
               {subcampos.map((s) => <option key={s.nome} value={s.nome}>{s.label}</option>)}
             </select>
@@ -266,7 +266,7 @@ function FiltrosCampo({
             <input placeholder="campo" value={row.campo ?? ''} onChange={(e) => set(i, { campo: e.target.value })} />
           )}
           <select value={row.operador ?? 'igual'} onChange={(e) => set(i, { operador: e.target.value })}>
-            {OPERADORES.map((o) => <option key={o} value={o}>{o}</option>)}
+            {(sc?.fonte ? ['igual', 'diferente'] : OPERADORES).map((o) => <option key={o} value={o}>{o}</option>)}
           </select>
           {sc?.fonte ? (
             <OpcoesSelect fonte={sc.fonte} value={row.valor}
