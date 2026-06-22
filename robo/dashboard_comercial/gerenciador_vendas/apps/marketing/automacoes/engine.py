@@ -41,6 +41,16 @@ def disparar_evento(evento, contexto=None, tenant=None):
         logger.warning(f'Automações: evento {evento} sem tenant, ignorando.')
         return
 
+    # === Engine de automação nova (apps.automacao) ===
+    # Wiring deferido + blindado + kill-switch (settings.AUTOMACAO_WIRING_ATIVO).
+    # Enfileira os fluxos novos que escutam este evento. NUNCA quebra o motor antigo:
+    # se on_evento explodir, o erro é logado e o fluxo de marketing segue normal.
+    try:
+        from apps.automacao.gatilhos import on_evento
+        on_evento(evento, contexto, tenant)
+    except Exception:
+        logger.exception('Automação nova: on_evento falhou (evento=%s)', evento)
+
     regras = RegraAutomacao.all_tenants.filter(
         tenant=tenant, evento=evento, ativa=True,
     ).prefetch_related('condicoes', 'acoes', 'nodos', 'conexoes')

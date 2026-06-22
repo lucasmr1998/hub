@@ -70,6 +70,50 @@ class Command(BaseCommand):
             ExecucaoFluxo.all_tenants.filter(fluxo=f2).delete()
             f2.delete()
 
+        # 3) Gatilho por evento: enfileira (deferido) e o cron roda o fluxo.
+        from django.test import override_settings
+        from apps.automacao.gatilhos import on_evento
+        from apps.automacao.execucao import rodar_novos
+
+        g3 = {'inicio': 'ev', 'nodes': {
+            'ev': {'tipo': 'evento', 'config': {'evento': 'lead_criado', 'filtros': []}},
+            'g': {'tipo': 'set_fields', 'config': {'campo': 'veio', 'valor': '{{var.lead_email}}'}},
+        }, 'conexoes': [{'de': 'ev', 'para': 'g', 'saida': 'default'}]}
+        f3 = Fluxo.objects.create(tenant=tenant, nome='_test_db evento', grafo=g3)
+        try:
+            check(f3.gatilho_evento == 'lead_criado', 'gatilho_evento populado no save')
+            with override_settings(AUTOMACAO_WIRING_ATIVO=True):
+                on_evento('lead_criado', {'lead_email': 'a@b.com'}, tenant)
+            check(ExecucaoFluxo.all_tenants.filter(fluxo=f3, status='pendente').count() == 1,
+                  'evento enfileira execucao pendente')
+            rodar_novos()
+            ex3 = ExecucaoFluxo.all_tenants.filter(fluxo=f3).order_by('-criado_em').first()
+            check(ex3 is not None and ex3.status == 'completado', 'cron roda enfileirada -> completa')
+            check(ex3 is not None and [p['handle'] for p in ex3.trace] == ['ev', 'g'],
+                  'trace do evento (ev -> g)')
+        finally:
+            ExecucaoFluxo.all_tenants.filter(fluxo=f3).delete()
+            f3.delete()
+
+        # 4) Filtro do gatilho: bloqueia quando não bate, passa quando bate.
+        g4 = {'inicio': 'ev', 'nodes': {
+            'ev': {'tipo': 'evento', 'config': {'evento': 'lead_criado',
+                   'filtros': [{'campo': 'var.lead_email', 'operador': 'igual', 'valor': 'match@x.com'}]}},
+            'g': {'tipo': 'set_fields', 'config': {'campo': 'ok', 'valor': '1'}},
+        }, 'conexoes': [{'de': 'ev', 'para': 'g', 'saida': 'default'}]}
+        f4 = Fluxo.objects.create(tenant=tenant, nome='_test_db filtro', grafo=g4)
+        try:
+            with override_settings(AUTOMACAO_WIRING_ATIVO=True):
+                on_evento('lead_criado', {'lead_email': 'nope@x.com'}, tenant)
+                check(not ExecucaoFluxo.all_tenants.filter(fluxo=f4).exists(),
+                      'filtro bloqueia quando nao bate')
+                on_evento('lead_criado', {'lead_email': 'match@x.com'}, tenant)
+                check(ExecucaoFluxo.all_tenants.filter(fluxo=f4, status='pendente').count() == 1,
+                      'filtro passa quando bate')
+        finally:
+            ExecucaoFluxo.all_tenants.filter(fluxo=f4).delete()
+            f4.delete()
+
         if falhas:
             raise CommandError(f'{len(falhas)} checagem(ns) falharam: {", ".join(falhas)}')
         self.stdout.write(self.style.SUCCESS('OK — todos os checks da camada de banco passaram.'))

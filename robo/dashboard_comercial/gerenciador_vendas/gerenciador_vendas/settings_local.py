@@ -33,3 +33,6 @@ DATABASES = {
 # Media files — serve localmente via static()
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR.parent.parent.parent  # hub/ root (arquivos em hub/workspace/anexos/...)
+
+# Automação: liga o wiring de gatilho por evento em DEV (prod fica False por padrão).
+AUTOMACAO_WIRING_ATIVO = True

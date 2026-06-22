@@ -123,6 +123,12 @@ INSTALLED_APPS = [
     'apps.automacao',
 ]
 
+# === Automação: kill-switch do wiring de gatilho por evento ===
+# Quando True, eventos do sistema (disparar_evento) enfileiram os fluxos que os
+# escutam. Default False = prod seguro (mesmo deployado, o motor novo fica inerte
+# até ligarmos de propósito). settings_local liga em dev.
+AUTOMACAO_WIRING_ATIVO = False
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
