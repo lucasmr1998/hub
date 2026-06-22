@@ -160,7 +160,7 @@ class Conversa(TenantMixin):
         related_name='conversas', verbose_name="Lead"
     )
     contato_nome = models.CharField(max_length=255, blank=True, verbose_name="Nome do Contato")
-    contato_telefone = models.CharField(max_length=17, blank=True, db_index=True, verbose_name="Telefone")
+    contato_telefone = models.CharField(max_length=32, blank=True, db_index=True, verbose_name="Telefone")
     contato_email = models.EmailField(blank=True, verbose_name="E-mail")
 
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='aberta', verbose_name="Status")

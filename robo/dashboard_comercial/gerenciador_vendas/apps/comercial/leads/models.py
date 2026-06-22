@@ -1191,7 +1191,7 @@ class HistoricoContato(TenantMixin):
     )
 
     telefone = models.CharField(
-        max_length=17,
+        max_length=32,
         verbose_name="Telefone",
         help_text="Número de telefone do contato"
     )

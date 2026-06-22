@@ -524,6 +524,18 @@ def inbox_mensagem(request):
     nome_contato = (payload.get('nome_contato') or '').strip() or 'Lead WhatsApp'
     telefone_norm = ''.join(c for c in telefone if c.isdigit())
 
+    # Filtro defensivo: ignora canais/newsletters/broadcasts do WhatsApp.
+    # IDs `120363...` sao newsletters (formato @newsletter); qualquer telefone com
+    # mais de 15 digitos nao e uma pessoa fisica e quebra varchar(17) das tabelas
+    # de historico/conversa. Retorna 200 ignored=True pro N8N nao reagendar.
+    if telefone_norm.startswith('120363') or len(telefone_norm) > 15:
+        return JsonResponse({
+            'sucesso': True,
+            'ignored': True,
+            'motivo': 'canal_whatsapp_broadcast',
+            'telefone': telefone_norm[:32],
+        }, status=200)
+
     # Validacao antecipada de modo_atendimento (Bug 2)
     modo_in = payload.get('modo_atendimento')
     if modo_in and modo_in not in dict(Conversa.MODO_ATENDIMENTO_CHOICES):
