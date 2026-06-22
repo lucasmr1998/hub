@@ -51,9 +51,58 @@ DRY_RUN = os.environ.get('DRY_RUN', '0') == '1'
 # Backoff por tentativa: 0=primeira tem 0s espera, 1=5min, 2=30min
 BACKOFF_MINUTOS = [0, 5, 30]
 
+# ------------------------------------------------------------------
+# Janela de pausa (horario comercial)
+# ------------------------------------------------------------------
+# A Nuvyon pediu: dentro do horario de atendimento o bot NAO converte
+# automaticamente — a equipe humana faz isso manualmente pra supervisionar
+# qualidade. Fora do horario (noite/madrugada/fim de semana), bot continua
+# convertendo normal pra nao perder lead.
+#
+# Configuracao via env vars (container hubtrix-bot-nuvyon):
+#   PAUSA_DIAS_SEMANA="0,1,2,3,4"   (0=Seg ... 6=Dom). Default Seg-Sex.
+#   PAUSA_HORA_INICIO="08:00"        (HH:MM no fuso de Brasilia)
+#   PAUSA_HORA_FIM="18:00"           (HH:MM)
+#   PAUSA_FUSO="America/Sao_Paulo"   (default)
+#   PAUSA_ATIVA="1"                  (0 desliga o filtro — bot converte 24/7)
+#
+# IMPORTANTE: container roda em UTC; convertemos pro fuso BR antes de comparar.
+PAUSA_ATIVA = os.environ.get('PAUSA_ATIVA', '1') == '1'
+PAUSA_FUSO = os.environ.get('PAUSA_FUSO', 'America/Sao_Paulo')
+_dias_raw = os.environ.get('PAUSA_DIAS_SEMANA', '0,1,2,3,4')
+PAUSA_DIAS = {int(d.strip()) for d in _dias_raw.split(',') if d.strip().isdigit()}
+_hi = os.environ.get('PAUSA_HORA_INICIO', '08:00').split(':')
+_hf = os.environ.get('PAUSA_HORA_FIM', '18:00').split(':')
+PAUSA_HORA_INICIO = (int(_hi[0]), int(_hi[1]) if len(_hi) > 1 else 0)
+PAUSA_HORA_FIM    = (int(_hf[0]), int(_hf[1]) if len(_hf) > 1 else 0)
+
 
 def _agora_iso():
     return datetime.now(timezone.utc).isoformat()
+
+
+def _dentro_do_horario_comercial():
+    """True se AGORA esta dentro da janela em que o bot deve ficar pausado.
+
+    Usa explicitamente o fuso de Brasilia (ZoneInfo) — container roda em UTC,
+    nao confia no relogio local. Retorna False se PAUSA_ATIVA=0 (desligado).
+    """
+    if not PAUSA_ATIVA:
+        return False
+    try:
+        from zoneinfo import ZoneInfo
+        agora = datetime.now(ZoneInfo(PAUSA_FUSO))
+    except Exception as exc:
+        # Fallback seguro: nao pausar (bot continua trabalhando)
+        print(f'[pausa] erro ao resolver fuso {PAUSA_FUSO}: {exc} — bot nao pausa', flush=True)
+        return False
+    if agora.weekday() not in PAUSA_DIAS:
+        return False
+    hh, mm = agora.hour, agora.minute
+    inicio = PAUSA_HORA_INICIO[0] * 60 + PAUSA_HORA_INICIO[1]
+    fim    = PAUSA_HORA_FIM[0]    * 60 + PAUSA_HORA_FIM[1]
+    atual  = hh * 60 + mm
+    return inicio <= atual < fim
 
 
 def _conn():
@@ -167,6 +216,16 @@ def processar_lead(conn, lead: dict) -> tuple[bool, str | None]:
 
 def processar_todos():
     """Um ciclo: busca pendentes, processa todos."""
+    # Pausa durante horario comercial — equipe humana converte manualmente
+    if _dentro_do_horario_comercial():
+        try:
+            from zoneinfo import ZoneInfo
+            agora_br = datetime.now(ZoneInfo(PAUSA_FUSO)).strftime('%a %H:%M %Z')
+        except Exception:
+            agora_br = '?'
+        print(f'[{_agora_iso()}] pausado (horario comercial {agora_br}) — equipe humana converte', flush=True)
+        return
+
     try:
         conn = _conn()
     except Exception as e:
