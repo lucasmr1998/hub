@@ -14,8 +14,11 @@ Aqui é só o mapa + o que o editor mostra.
 """
 
 
-def _c(nome, label, tipo='texto'):
-    return {'nome': nome, 'label': label, 'tipo': tipo}
+def _c(nome, label, tipo='texto', fonte=None):
+    d = {'nome': nome, 'label': label, 'tipo': tipo}
+    if fonte:
+        d['fonte'] = fonte   # dropdown dinâmico (ver apps/automacao/opcoes.py)
+    return d
 
 
 EVENTOS = {
@@ -63,7 +66,7 @@ EVENTOS = {
         'label': 'Lead entrou em segmento', 'grupo': 'Leads',
         'descricao': 'O lead passou a pertencer a um segmento.',
         'subcampos': [
-            _c('var.segmento_nome', 'Segmento'),
+            _c('var.segmento_nome', 'Segmento', fonte='segmentos'),
             _c('lead.origem', 'Origem'),
         ],
     },
@@ -80,11 +83,11 @@ EVENTOS = {
         'label': 'Oportunidade mudou de etapa', 'grupo': 'Comercial',
         'descricao': 'Uma oportunidade foi movida de estágio no funil.',
         'subcampos': [
-            _c('var.estagio', 'Estágio (slug)'),
+            _c('var.estagio', 'Estágio (slug)', fonte='estagios'),
             _c('var.estagio_nome', 'Estágio (nome)'),
-            _c('var.pipeline', 'Pipeline'),
+            _c('var.pipeline', 'Pipeline', fonte='pipelines'),
             _c('oportunidade.titulo', 'Título'),
-            _c('var.responsavel', 'Responsável'),
+            _c('var.responsavel', 'Responsável', fonte='responsaveis'),
         ],
     },
     'indicacao_convertida': {

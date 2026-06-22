@@ -96,6 +96,14 @@ def execucoes_page(request):
 
 
 @login_required
+def opcoes_api(request, fonte):
+    """Opções dinâmicas de uma fonte (segmentos, pipelines, estágios, responsáveis…)
+    pro tenant — alimenta os dropdowns dinâmicos do editor."""
+    from .opcoes import opcoes_de
+    return JsonResponse({'opcoes': opcoes_de(fonte, getattr(request, 'tenant', None))})
+
+
+@login_required
 def execucoes_api(request):
     """JSON das execuções do tenant — alimenta a aba 'Execuções' DENTRO do editor
     (sem sair da página). Opcional `?fluxo=<id>` e `?status=<s>`."""

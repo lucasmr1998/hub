@@ -21,7 +21,7 @@ class AtribuirResponsavelNode(BaseNode):
         return [
             {'nome': 'modo', 'label': 'Modo', 'tipo': 'select', 'opcoes': ['round-robin', 'fixo']},
             {'nome': 'username', 'label': 'Usuário (modo fixo)', 'tipo': 'texto',
-             'ajuda': 'Só no modo fixo: parte do username do responsável.'},
+             'fonte': 'responsaveis', 'ajuda': 'Só no modo fixo: o responsável.'},
         ]
 
     def executar(self, config, entrada, contexto) -> NodeResult:

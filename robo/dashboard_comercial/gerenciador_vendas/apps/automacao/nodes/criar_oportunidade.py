@@ -20,10 +20,10 @@ class CriarOportunidadeNode(BaseNode):
     def campos_config(self) -> list:
         return [
             {'nome': 'titulo', 'label': 'Título', 'tipo': 'texto', 'placeholder': '{{lead.nome}}'},
-            {'nome': 'pipeline_slug', 'label': 'Pipeline (slug, opcional)', 'tipo': 'texto',
-             'ajuda': 'Vazio = pipeline padrão do tenant.'},
-            {'nome': 'estagio_slug', 'label': 'Estágio (slug, opcional)', 'tipo': 'texto',
-             'ajuda': 'Vazio = primeiro estágio do pipeline.'},
+            {'nome': 'pipeline_slug', 'label': 'Pipeline (opcional)', 'tipo': 'texto',
+             'fonte': 'pipelines', 'ajuda': 'Vazio = pipeline padrão do tenant.'},
+            {'nome': 'estagio_slug', 'label': 'Estágio (opcional)', 'tipo': 'texto',
+             'fonte': 'estagios', 'ajuda': 'Vazio = primeiro estágio do pipeline.'},
         ]
 
     def executar(self, config, entrada, contexto) -> NodeResult:

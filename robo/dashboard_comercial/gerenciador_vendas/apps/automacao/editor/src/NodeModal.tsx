@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Node } from '@xyflow/react'
-import type { Campo, EventoCatalogo } from './api'
+import { buscarOpcoes, type Campo, type EventoCatalogo, type Opcao } from './api'
 
 const OPERADORES = [
   'igual', 'diferente', 'contem', 'nao_contem',
@@ -150,7 +150,34 @@ export function NodeModal({
   )
 }
 
+function OpcoesSelect({ fonte, value, onChange, placeholder }: {
+  fonte: string
+  value: any
+  onChange: (v: string) => void
+  placeholder?: string
+}) {
+  const [ops, setOps] = useState<Opcao[]>([])
+  const [carregando, setCarregando] = useState(true)
+  useEffect(() => {
+    let vivo = true
+    buscarOpcoes(fonte)
+      .then((o) => { if (vivo) setOps(o) })
+      .finally(() => { if (vivo) setCarregando(false) })
+    return () => { vivo = false }
+  }, [fonte])
+  return (
+    <select value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
+      <option value="">{carregando ? 'carregando…' : (placeholder || '— selecione —')}</option>
+      {value && !ops.some((o) => o.value === value) && <option value={value}>{value}</option>}
+      {ops.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  )
+}
+
 function renderCampo(c: Campo, valor: any, set: (v: any) => void) {
+  if (c.fonte) {
+    return <OpcoesSelect fonte={c.fonte} value={valor} onChange={set} placeholder={c.placeholder} />
+  }
   if (c.tipo === 'select') {
     return (
       <select value={valor ?? ''} onChange={(e) => set(e.target.value)}>
@@ -226,10 +253,12 @@ function FiltrosCampo({
   return (
     <div className="repeater">
       {linhas.length === 0 && <div className="muted">Sem filtros — dispara sempre que o evento ocorre.</div>}
-      {linhas.map((row, i) => (
+      {linhas.map((row, i) => {
+        const sc = subcampos.find((s) => s.nome === row.campo)
+        return (
         <div key={i} className="filtro-row">
           {subcampos.length > 0 ? (
-            <select value={row.campo ?? ''} onChange={(e) => set(i, { campo: e.target.value })}>
+            <select value={row.campo ?? ''} onChange={(e) => set(i, { campo: e.target.value, valor: '' })}>
               <option value="">campo…</option>
               {subcampos.map((s) => <option key={s.nome} value={s.nome}>{s.label}</option>)}
             </select>
@@ -239,11 +268,17 @@ function FiltrosCampo({
           <select value={row.operador ?? 'igual'} onChange={(e) => set(i, { operador: e.target.value })}>
             {OPERADORES.map((o) => <option key={o} value={o}>{o}</option>)}
           </select>
-          <input className="mono" placeholder="valor" value={row.valor ?? ''}
-            onChange={(e) => set(i, { valor: e.target.value })} />
+          {sc?.fonte ? (
+            <OpcoesSelect fonte={sc.fonte} value={row.valor}
+              onChange={(v) => set(i, { valor: v })} placeholder="valor" />
+          ) : (
+            <input className="mono" placeholder="valor" value={row.valor ?? ''}
+              onChange={(e) => set(i, { valor: e.target.value })} />
+          )}
           <button onClick={() => onChange(linhas.filter((_, j) => j !== i))}>×</button>
         </div>
-      ))}
+        )
+      })}
       <button className="repeater-add"
         onClick={() => onChange([...linhas, { campo: '', operador: 'igual', valor: '' }])}>
         + filtro

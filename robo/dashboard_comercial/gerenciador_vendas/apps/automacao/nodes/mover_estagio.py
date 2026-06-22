@@ -19,8 +19,8 @@ class MoverEstagioNode(BaseNode):
 
     def campos_config(self) -> list:
         return [
-            {'nome': 'estagio_slug', 'label': 'Estágio (slug)', 'tipo': 'texto',
-             'obrigatorio': True, 'placeholder': 'negociacao'},
+            {'nome': 'estagio_slug', 'label': 'Estágio', 'tipo': 'texto',
+             'fonte': 'estagios', 'obrigatorio': True, 'placeholder': 'negociacao'},
         ]
 
     def validar_config(self, config) -> list:

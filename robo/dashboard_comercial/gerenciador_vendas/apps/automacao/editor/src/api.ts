@@ -15,6 +15,24 @@ export interface Campo {
   placeholder?: string
   ajuda?: string
   obrigatorio?: boolean
+  fonte?: string   // dropdown dinâmico: opções carregadas de /api/opcoes/<fonte>/
+}
+
+export interface Opcao { value: string; label: string }
+
+const _cacheOpcoes: Record<string, Opcao[]> = {}
+
+export async function buscarOpcoes(fonte: string): Promise<Opcao[]> {
+  if (_cacheOpcoes[fonte]) return _cacheOpcoes[fonte]
+  try {
+    const r = await fetch('/automacao/api/opcoes/' + encodeURIComponent(fonte) + '/', { credentials: 'include' })
+    if (!r.ok) return []
+    const ops = (await r.json()).opcoes ?? []
+    _cacheOpcoes[fonte] = ops
+    return ops
+  } catch {
+    return []
+  }
 }
 
 export interface NoCatalogo {
