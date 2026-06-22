@@ -69,3 +69,41 @@ def test_consultar_sem_integracao_vira_erro():
                     side_effect=ValueError('tenant sem integração HubSoft ativa')):
         res = no.executar({'cpf_cnpj': '123'}, {}, _ctx())
     assert res.branch == 'erro' and 'HubSoft' in res.erro
+
+
+# --- listar faturas (read) -----------------------------------------------
+def test_faturas_registrado_e_exige_cpf():
+    no = tipo_por_slug('hubsoft_listar_faturas')
+    assert no is not None
+    assert no.validar_config({})
+    assert not no.validar_config({'cpf_cnpj': '123'})
+
+
+def test_faturas_ok():
+    no = tipo_por_slug('hubsoft_listar_faturas')
+    ctx = _ctx(lead=SimpleNamespace(cpf_cnpj='12345678900'))
+    with mock.patch('apps.automacao.nodes.hubsoft_listar_faturas.listar_faturas',
+                    return_value=[{'id': 1}, {'id': 2}]) as m:
+        res = no.executar({'cpf_cnpj': '{{lead.cpf_cnpj}}', 'apenas_pendente': True}, {}, ctx)
+    assert res.branch == 'sucesso'
+    assert res.output['total'] == 2
+    assert m.call_args.args[1] == '12345678900'
+    assert m.call_args.kwargs['apenas_pendente'] is True
+
+
+# --- planos por CEP (read) -----------------------------------------------
+def test_planos_registrado_e_exige_cep():
+    no = tipo_por_slug('hubsoft_planos_cep')
+    assert no is not None
+    assert no.validar_config({})
+    assert not no.validar_config({'cep': '13730000'})
+
+
+def test_planos_ok():
+    no = tipo_por_slug('hubsoft_planos_cep')
+    ctx = _ctx(lead=SimpleNamespace(cep='13730000'))
+    with mock.patch('apps.automacao.nodes.hubsoft_planos_cep.listar_planos_por_cep',
+                    return_value=[{'plano': 'A'}]) as m:
+        res = no.executar({'cep': '{{lead.cep}}'}, {}, ctx)
+    assert res.branch == 'sucesso' and res.output['total'] == 1
+    assert m.call_args.args[1] == '13730000'

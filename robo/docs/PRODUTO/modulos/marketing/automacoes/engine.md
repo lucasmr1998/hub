@@ -6,7 +6,7 @@ O engine e o coracao do modulo. Processa eventos em dois modos: **linear legado*
 
 > **Nota (engine nova):** `disparar_evento` tambem notifica a engine de automacao unificada (`apps.automacao`) via uma chamada blindada a `on_evento`, controlada pelo kill-switch `settings.AUTOMACAO_WIRING_ATIVO` (prod **off** por padrao). E o ponto de convergencia: os eventos do sistema passam a alimentar os dois motores. Detalhes em `robo/docs/PRODUTO/modulos/automacao/`.
 >
-> **Convergencia das acoes (em andamento):** os executores `_acao_*` estao migrando pra **services de dominio unicos** (`apps.automacao.services.acoes`) que os dois motores chamam — sem 2a copia da logica. Piloto: `_acao_criar_tarefa` ja delega pro service. Os demais migram um a um (faithful swap).
+> **Convergencia das acoes (passo 2):** as **7 acoes DB-only** (`criar_tarefa`, `notificacao_sistema`, `mover_estagio`, `criar_oportunidade`, `criar_venda`, `atribuir_responsavel`, `dar_pontos`) ja **delegam** pros **services de dominio unicos** (`apps.automacao.services.acoes`) que os dois motores chamam — sem 2a copia da logica. Os `_acao_*` viraram adaptadores finos (parseiam a config legada + chamam o service). Faltam so as acoes 🔴 com efeito externo (enviar_whatsapp/email, sincronizar_prospecto_hubsoft) quando forem redesenhadas. **Mudanca consciente:** `dar_pontos` agora filtra `MembroClube` por tenant (corrige vazamento multi-tenant).
 
 ---
 

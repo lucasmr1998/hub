@@ -165,6 +165,8 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 | `matrix_hsm` | Integrações › Matrix | Matrix: disparar HSM (WhatsApp) | ✅ **outbound real** (`MatrixBrasilService.enviar_hsm`; template HSM + variáveis) |
 | `hubsoft_sincronizar_prospecto` | Integrações › HubSoft | HubSoft: sincronizar prospecto | ✅ **outbound real** (cria rascunho/atualiza; converge a ação do marketing; precisa de lead) |
 | `hubsoft_consultar_cliente` | Integrações › HubSoft | HubSoft: consultar cliente | ✅ read (por CPF/CNPJ; enriquecimento) |
+| `hubsoft_listar_faturas` | Integrações › HubSoft | HubSoft: listar faturas | ✅ read (boletos por CPF/CNPJ; só pendentes opcional) |
+| `hubsoft_planos_cep` | Integrações › HubSoft | HubSoft: planos por CEP | ✅ read (viabilidade comercial por CEP) |
 
 **Modelos de execução (a "âncora"):** o mesmo runtime faz três comportamentos, decididos por como a execução pausa/ancora (`NodeResult.espera` + `ExecucaoFluxo`):
 - **timer** (delay) → retoma por tempo (cron).

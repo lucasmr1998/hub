@@ -34,3 +34,19 @@ def consultar_cliente(tenant, cpf_cnpj, *, incluir_contrato=False):
     if svc is None:
         raise ValueError('tenant sem integração HubSoft ativa')
     return svc.consultar_cliente(cpf_cnpj, incluir_contrato=incluir_contrato)
+
+
+def listar_faturas(tenant, cpf_cnpj, *, apenas_pendente=False):
+    """Lista faturas (boletos) do cliente por CPF/CNPJ. Devolve list[dict]."""
+    svc = hubsoft_do_tenant(tenant)
+    if svc is None:
+        raise ValueError('tenant sem integração HubSoft ativa')
+    return svc.listar_faturas_cliente(cpf_cnpj=cpf_cnpj, apenas_pendente=apenas_pendente)
+
+
+def listar_planos_por_cep(tenant, cep):
+    """Lista os planos disponíveis pra um CEP (viabilidade comercial). Devolve list."""
+    svc = hubsoft_do_tenant(tenant)
+    if svc is None:
+        raise ValueError('tenant sem integração HubSoft ativa')
+    return svc.listar_planos_por_cep(cep)

@@ -32,3 +32,5 @@ from . import atribuir_responsavel  # noqa: F401,E402  (C7 — convergência: ro
 from . import matrix_hsm  # noqa: F401,E402  (M1 — Integrações: disparo HSM Matrix)
 from . import hubsoft_sincronizar_prospecto  # noqa: F401,E402  (H1 — Integrações: prospecto HubSoft)
 from . import hubsoft_consultar_cliente  # noqa: F401,E402  (H2 — Integrações: consultar cliente)
+from . import hubsoft_listar_faturas  # noqa: F401,E402  (H3 — Integrações: faturas HubSoft)
+from . import hubsoft_planos_cep  # noqa: F401,E402  (H4 — Integrações: planos por CEP)
