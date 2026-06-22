@@ -40,3 +40,4 @@ from . import hubsoft_cliente  # noqa: F401,E402  (H7 — atendimentos/OS/extrat
 from . import hubsoft_globais  # noqa: F401,E402  (H8 — clientes/OS/atendimentos todos + agenda)
 from . import hubsoft_writes  # noqa: F401,E402  (H9 — writes moderados: contrato/renegociação/OS)
 from . import condicao_comercial  # noqa: F401,E402  (CC — condições da engine comercial)
+from . import acao_comercial  # noqa: F401,E402  (AC — ações da engine comercial)
