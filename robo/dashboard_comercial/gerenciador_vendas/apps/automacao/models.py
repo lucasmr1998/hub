@@ -20,6 +20,9 @@ class Fluxo(TenantMixin):
     grafo = models.JSONField(default=dict)
     # Gatilho webhook: token secreto; POST em /automacao/webhook/<token>/ dispara o fluxo.
     webhook_token = models.CharField(max_length=64, blank=True, default='', db_index=True)
+    # Índice denormalizado do gatilho de evento (preenchido no save a partir do grafo).
+    # Permite achar rápido "quais fluxos escutam o evento X" sem varrer JSON em SQL.
+    gatilho_evento = models.CharField(max_length=64, blank=True, default='', db_index=True)
     criado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
         on_delete=models.SET_NULL, related_name='+',
@@ -33,6 +36,24 @@ class Fluxo(TenantMixin):
         verbose_name = 'Fluxo de automação'
         verbose_name_plural = 'Fluxos de automação'
 
+    def _evento_do_grafo(self):
+        """Lê o evento do nó-gatilho de evento no grafo (ou '' se não houver)."""
+        nodes = (self.grafo or {}).get('nodes') or {}
+        for n in nodes.values():
+            if n.get('tipo') == 'evento':
+                return ((n.get('config') or {}).get('evento') or '').strip()
+        return ''
+
+    def save(self, *args, **kwargs):
+        # Mantém o índice gatilho_evento sincronizado com o grafo em qualquer save.
+        novo = self._evento_do_grafo()
+        if novo != self.gatilho_evento:
+            self.gatilho_evento = novo
+            uf = kwargs.get('update_fields')
+            if uf is not None:
+                kwargs['update_fields'] = list(set(uf) | {'gatilho_evento'})
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.nome
 
@@ -40,6 +61,7 @@ class Fluxo(TenantMixin):
 class ExecucaoFluxo(TenantMixin):
     """Uma execução de um fluxo. Guarda o estado serializado pra retoma (delay)."""
     STATUS = [
+        ('pendente', 'pendente'),  # enfileirada por gatilho; o cron roda (deferido)
         ('rodando', 'rodando'), ('aguardando', 'aguardando'),
         ('completado', 'completado'), ('erro', 'erro'),
     ]

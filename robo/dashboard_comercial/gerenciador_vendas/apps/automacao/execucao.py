@@ -9,6 +9,7 @@ A execução pode pausar de dois jeitos (NodeResult.espera):
 `retomar(execucao, branch, dados)` continua a partir do **nó que pausou**, seguindo
 `branch` — e injeta a resposta do contato quando há.
 """
+import logging
 from datetime import timedelta
 
 from django.utils import timezone
@@ -16,6 +17,8 @@ from django.utils import timezone
 from .models import ExecucaoFluxo
 from .nodes import Contexto
 from .runtime import executar_fluxo, _proxima
+
+logger = logging.getLogger(__name__)
 
 
 def executar_e_persistir(fluxo, contexto, *, inicio=None, execucao=None):
@@ -56,7 +59,7 @@ def retomar(execucao, branch, dados=None):
     `dados` (ex: {'resposta': '...'}) é injetado: vira `{{nodes.<pausado>.resposta}}`
     e `{{var.resposta}}` pro resto do fluxo.
     """
-    contexto = _rehidratar(execucao.estado, execucao.tenant)
+    contexto = _rehidratar(execucao)
     if dados:
         contexto.registrar_saida(execucao.no_pausado, dados)
         if 'resposta' in dados:
@@ -89,6 +92,32 @@ def retomar_pendentes(limite=100):
     return n
 
 
+def rodar_novos(limite=100):
+    """Cron: roda as execuções enfileiradas por gatilho (status `pendente`, deferido).
+
+    O fluxo roda AQUI (no cron), fora do thread do evento que só enfileirou. Cada
+    execução é isolada: uma falha não derruba as outras.
+    """
+    agora = timezone.now()
+    novos = list(
+        ExecucaoFluxo.all_tenants.select_related('fluxo', 'tenant', 'lead')
+        .filter(status='pendente', agendado_para__lte=agora)[:limite]
+    )
+    n = 0
+    for ex in novos:
+        try:
+            contexto = _rehidratar(ex)
+            inicio = (ex.estado or {}).get('inicio')
+            executar_e_persistir(ex.fluxo, contexto, inicio=inicio, execucao=ex)
+            n += 1
+        except Exception:
+            logger.exception('automacao: falha ao rodar execução pendente %s', ex.pk)
+            ex.status = 'erro'
+            ex.erro = 'falha ao rodar execução enfileirada'
+            ex.save(update_fields=['status', 'erro', 'atualizado_em'])
+    return n
+
+
 def retomar_por_resposta(tenant, chave, conteudo):
     """Inbox: o contato `chave` respondeu — retoma a execução pausada por ele."""
     if not chave or tenant is None:
@@ -104,6 +133,13 @@ def retomar_por_resposta(tenant, chave, conteudo):
     return True
 
 
-def _rehidratar(estado, tenant):
-    estado = estado or {}
-    return Contexto(tenant=tenant, variaveis=estado.get('variaveis'), nodes=estado.get('nodes'))
+def _rehidratar(execucao):
+    """Re-hidrata o Contexto de uma execução. Restaura o lead pela FK; oportunidade/
+    conversa como entidade ficam como follow-up (seus subcampos são `var.*`)."""
+    estado = execucao.estado or {}
+    return Contexto(
+        tenant=execucao.tenant,
+        lead=execucao.lead,
+        variaveis=estado.get('variaveis'),
+        nodes=estado.get('nodes'),
+    )
