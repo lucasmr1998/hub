@@ -204,6 +204,19 @@
 - **Validação (dev):** 5/5 pytest unit (mock do service) + smoke DB 13/13 + check + build.
 - **Status:** completed.
 
+## 2026-06-22 — Convergência (3/N): 5 ações CRM/CS de uma vez
+
+- **Ação:** convergidas as **verdes restantes** (DB-only) no padrão service+nó, via skill:
+  - `mover_estagio` (Comercial › Oportunidades) — precisa de oportunidade no contexto.
+  - `criar_oportunidade` (Comercial › Oportunidades) — idempotente; pipeline/estágio padrão se vazios.
+  - `criar_venda` (Comercial › Vendas) — idempotente; status pendente-ERP.
+  - `atribuir_responsavel` (Comercial › Oportunidades) — round-robin (menos carregado) ou fixo (username).
+  - `dar_pontos` (CS › Clube) — CPF do config ou do lead; **agora filtra por tenant** (corrige gap multi-tenant do código antigo).
+  - Executores em `services/acoes.py` (todos com `all_tenants` + tenant explícito, pois a engine roda fora de request). Grupo novo "CS" no editor.
+- **Decisão:** ficaram **de fora** as 🔴 com efeito externo/crítico — `enviar_whatsapp`/`enviar_email` (hoje N8N hardcoded + config string única, precisam de redesenho) e `sincronizar_prospecto_hubsoft` (Nuvyon). `webhook` já está coberta pelo `http_request`. Marketing **intacto** (passo 1).
+- **Validação (dev):** 82 pytest unit (22 novos) + smoke dos 5 services reais (imports/queries OK, sem fixtures) + check + build.
+- **Status:** completed. **Verdes 100% convergidas (7 ações).** Faltam: as 🔴 (redesenho) + o **swap do marketing** (passo 2: `_acao_*` delega pros services).
+
 ### Pendências / próximos passos
 - **Pending:** decidir volume/dia por tenant + latência → runtime síncrono-em-cron (modelo marketing) vs. fila. Bloqueia a fase de runtime.
 - **Pending (convergência):** extrair executores de domínio (`criar_oportunidade`, `webhook`...) pra service único tenant-aware; aposentar motores na ordem marketing → atendimento → comercial.
