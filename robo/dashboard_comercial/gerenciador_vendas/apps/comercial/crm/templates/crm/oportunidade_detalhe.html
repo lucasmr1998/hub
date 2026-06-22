@@ -27,6 +27,7 @@
       {% if oportunidade.prioridade %}
         <span class="prioridade-badge prio-{{ oportunidade.prioridade }}">{{ oportunidade.get_prioridade_display }}</span>
       {% endif %}
+      <button class="btn btn-secondary btn-sm" onclick="abrirCadastroCompleto()" title="Preencher todos os campos obrigatorios pra venda"><i class="bi bi-list-check"></i> Completar dados</button>
       {# CTA contextual primario: Avancar (nao-final) #}
       {% if cta_proximo %}
         <button class="btn btn-primary btn-sm" onclick="moverParaEstagioRapido({{ cta_proximo.pk }})"><i class="bi bi-arrow-right"></i> Avancar pra {{ cta_proximo.nome }}</button>
@@ -2457,5 +2458,208 @@ async function removerDocumento(docPk) {
     }
   } catch { toast('Erro', 'Falha na requisicao', 'danger'); }
 }
+
+// =============================================================
+// Modal "Completar dados da venda"
+// =============================================================
+const OPORTUNIDADE_PK = {{ oportunidade.pk }};
+
+function _ccElem(id) { return document.getElementById(id); }
+
+async function abrirCadastroCompleto() {
+  abrirModal('modal-cadastro-completo');
+  // Carrega dados frescos do servidor
+  try {
+    const r = await fetch(`/crm/oportunidades/${OPORTUNIDADE_PK}/cadastro-completo/`);
+    const d = await r.json();
+    if (!d.success) {
+      toast('Erro', d.error || 'Falha ao carregar dados', 'danger');
+      return;
+    }
+    _ccPopularSelects(d.opcoes_planos || [], d.opcoes_vencimentos || []);
+    _ccPreencher(d);
+    _ccAtualizarStatus();
+  } catch (e) {
+    toast('Erro', 'Falha de rede', 'danger');
+  }
+}
+
+function _ccPopularSelects(planos, vencimentos) {
+  const selPlano = _ccElem('cc-plano');
+  const selVenc  = _ccElem('cc-vencimento');
+  if (selPlano) {
+    selPlano.innerHTML = '<option value="">— escolha o plano —</option>' +
+      planos.map(p => `<option value="${p.id_hubsoft}">${p.nome}${p.valor ? ` — R$ ${Number(p.valor).toFixed(2).replace('.',',')}` : ''}</option>`).join('');
+  }
+  if (selVenc) {
+    selVenc.innerHTML = '<option value="">— escolha o dia —</option>' +
+      vencimentos.map(v => `<option value="${v.id_hubsoft}">Dia ${v.dia}</option>`).join('');
+  }
+}
+
+function _ccPreencher(d) {
+  const l = d.lead || {};
+  _ccElem('cc-nome').value           = l.nome || '';
+  _ccElem('cc-cpf').value             = l.cpf_cnpj || '';
+  _ccElem('cc-data-nasc').value       = l.data_nascimento || '';
+  _ccElem('cc-rg').value              = l.rg || '';
+  _ccElem('cc-email').value           = l.email || '';
+  _ccElem('cc-telefone').value        = l.telefone || '';
+  _ccElem('cc-cep').value             = l.cep || '';
+  _ccElem('cc-rua').value             = l.rua || '';
+  _ccElem('cc-numero').value          = l.numero_residencia || '';
+  _ccElem('cc-bairro').value          = l.bairro || '';
+  _ccElem('cc-cidade').value          = l.cidade || '';
+  _ccElem('cc-estado').value          = l.estado || '';
+  _ccElem('cc-plano').value           = l.id_plano_rp || '';
+  _ccElem('cc-vencimento').value      = l.id_dia_vencimento || '';
+  _ccElem('cc-viabilidade').textContent = (d.viabilidade && d.viabilidade.status) || '(nao consultado)';
+}
+
+const CC_OBRIGATORIOS = ['cc-nome','cc-cpf','cc-data-nasc','cc-telefone','cc-cep','cc-rua','cc-numero','cc-bairro','cc-cidade','cc-estado','cc-plano','cc-vencimento'];
+
+function _ccAtualizarStatus() {
+  let ok = 0;
+  for (const id of CC_OBRIGATORIOS) {
+    const el = _ccElem(id);
+    if (el && el.value.trim()) ok++;
+  }
+  const total = CC_OBRIGATORIOS.length;
+  const status = _ccElem('cc-status');
+  if (status) {
+    status.textContent = `${ok}/${total} campos preenchidos`;
+    status.className = 'cc-status ' + (ok === total ? 'cc-status-ok' : (ok >= total*0.7 ? 'cc-status-warn' : 'cc-status-empty'));
+  }
+}
+
+async function _ccBuscarCep() {
+  const cep = _ccElem('cc-cep').value.replace(/\D/g, '');
+  if (cep.length !== 8) return;
+  try {
+    const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    const d = await r.json();
+    if (d.erro) return;
+    if (!_ccElem('cc-rua').value)    _ccElem('cc-rua').value = d.logradouro || '';
+    if (!_ccElem('cc-bairro').value) _ccElem('cc-bairro').value = d.bairro || '';
+    if (!_ccElem('cc-cidade').value) _ccElem('cc-cidade').value = d.localidade || '';
+    if (!_ccElem('cc-estado').value) _ccElem('cc-estado').value = d.uf || '';
+    _ccAtualizarStatus();
+  } catch {}
+}
+
+async function _ccSalvar(eFechar) {
+  const payload = {
+    nome: _ccElem('cc-nome').value.trim(),
+    cpf_cnpj: _ccElem('cc-cpf').value.replace(/\D/g, ''),
+    data_nascimento: _ccElem('cc-data-nasc').value || null,
+    rg: _ccElem('cc-rg').value.trim(),
+    email: _ccElem('cc-email').value.trim(),
+    telefone: _ccElem('cc-telefone').value.replace(/\D/g, ''),
+    cep: _ccElem('cc-cep').value.trim(),
+    rua: _ccElem('cc-rua').value.trim(),
+    numero_residencia: _ccElem('cc-numero').value.trim(),
+    bairro: _ccElem('cc-bairro').value.trim(),
+    cidade: _ccElem('cc-cidade').value.trim(),
+    estado: _ccElem('cc-estado').value.trim(),
+    id_plano_rp: _ccElem('cc-plano').value.trim(),
+    id_dia_vencimento: _ccElem('cc-vencimento').value.trim(),
+  };
+
+  try {
+    const r = await fetch(`/crm/oportunidades/${OPORTUNIDADE_PK}/cadastro-completo/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (d.success) {
+      toast('Salvo', `${d.campos_atualizados.length} campo(s) atualizado(s)`, 'success');
+      if (eFechar) {
+        fecharModal('modal-cadastro-completo');
+        setTimeout(() => location.reload(), 600);
+      } else {
+        _ccAtualizarStatus();
+      }
+    } else {
+      toast('Erro', d.error || 'Falha ao salvar', 'danger');
+    }
+  } catch (e) {
+    toast('Erro', 'Falha de rede', 'danger');
+  }
+}
 </script>
+
+{# Modal Completar dados da venda #}
+<div id="modal-cadastro-completo" class="modal-overlay" hidden>
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 class="modal-title">Completar dados da venda</h3>
+      <span id="cc-status" class="cc-status cc-status-empty">0/12 campos</span>
+      <button class="modal-close" onclick="fecharModal('modal-cadastro-completo')" aria-label="Fechar">&times;</button>
+    </div>
+    <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+      <div class="cc-section">
+        <h4>Dados pessoais</h4>
+        <div class="cc-grid">
+          <label class="cc-field cc-col-2"><span>Nome completo *</span><input id="cc-nome" type="text" oninput="_ccAtualizarStatus()"></label>
+          <label class="cc-field"><span>CPF / CNPJ *</span><input id="cc-cpf" type="text" placeholder="000.000.000-00" oninput="_ccAtualizarStatus()"></label>
+          <label class="cc-field"><span>Data de nascimento *</span><input id="cc-data-nasc" type="date" oninput="_ccAtualizarStatus()"></label>
+          <label class="cc-field"><span>RG</span><input id="cc-rg" type="text"></label>
+          <label class="cc-field"><span>Email</span><input id="cc-email" type="email"></label>
+          <label class="cc-field"><span>Telefone *</span><input id="cc-telefone" type="text" placeholder="(00) 00000-0000" oninput="_ccAtualizarStatus()"></label>
+        </div>
+      </div>
+      <div class="cc-section">
+        <h4>Endereco de instalacao</h4>
+        <div class="cc-grid">
+          <label class="cc-field"><span>CEP *</span><input id="cc-cep" type="text" placeholder="00000-000" onblur="_ccBuscarCep()" oninput="_ccAtualizarStatus()"></label>
+          <label class="cc-field cc-col-2"><span>Rua *</span><input id="cc-rua" type="text" oninput="_ccAtualizarStatus()"></label>
+          <label class="cc-field"><span>Numero *</span><input id="cc-numero" type="text" oninput="_ccAtualizarStatus()"></label>
+          <label class="cc-field"><span>Bairro *</span><input id="cc-bairro" type="text" oninput="_ccAtualizarStatus()"></label>
+          <label class="cc-field"><span>Cidade *</span><input id="cc-cidade" type="text" oninput="_ccAtualizarStatus()"></label>
+          <label class="cc-field"><span>UF *</span><input id="cc-estado" type="text" maxlength="2" style="text-transform: uppercase;" oninput="this.value=this.value.toUpperCase();_ccAtualizarStatus()"></label>
+        </div>
+      </div>
+      <div class="cc-section">
+        <h4>Comercial</h4>
+        <div class="cc-grid">
+          <label class="cc-field"><span>Plano *</span>
+            <select id="cc-plano" onchange="_ccAtualizarStatus()">
+              <option value="">— escolha o plano —</option>
+            </select>
+          </label>
+          <label class="cc-field"><span>Dia de vencimento *</span>
+            <select id="cc-vencimento" onchange="_ccAtualizarStatus()">
+              <option value="">— escolha o dia —</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div class="cc-section">
+        <h4>Viabilidade</h4>
+        <p style="margin: 0; color: var(--color-text-muted);">Status: <strong id="cc-viabilidade">(nao consultado)</strong></p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="fecharModal('modal-cadastro-completo')">Cancelar</button>
+      <button class="btn btn-secondary btn-sm" onclick="_ccSalvar(false)"><i class="bi bi-check"></i> Salvar</button>
+      <button class="btn btn-primary btn-sm" onclick="_ccSalvar(true)"><i class="bi bi-check-lg"></i> Salvar e fechar</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .cc-section { margin-bottom: var(--sp-4); }
+  .cc-section h4 { margin: 0 0 var(--sp-2); font-size: var(--fs-sm); color: var(--color-text-muted); font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: 0.04em; }
+  .cc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2) var(--sp-3); }
+  .cc-field { display: flex; flex-direction: column; gap: 4px; }
+  .cc-field.cc-col-2 { grid-column: span 2; }
+  .cc-field > span { font-size: var(--fs-xs); color: var(--color-text); font-weight: var(--fw-semibold); }
+  .cc-field input, .cc-field select { padding: 6px 10px; border: 1px solid var(--color-border); border-radius: var(--radius); font-size: var(--fs-sm); background: var(--color-bg); }
+  .cc-field input:focus, .cc-field select:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-primary-soft); }
+  .cc-status { font-size: var(--fs-xs); padding: 2px 10px; border-radius: var(--radius-full); margin-left: var(--sp-2); }
+  .cc-status-empty { background: var(--color-danger-soft, #FEE2E2); color: var(--color-danger, #DC2626); }
+  .cc-status-warn  { background: var(--color-warning-soft, #FEF3C7); color: var(--color-warning, #F59E0B); }
+  .cc-status-ok    { background: var(--color-success-soft, #DCFCE7); color: var(--color-success, #16A34A); }
+</style>
 {% endblock %}

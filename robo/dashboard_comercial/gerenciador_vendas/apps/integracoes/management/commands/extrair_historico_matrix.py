@@ -73,31 +73,38 @@ def _build_anonimizador(contato):
 
 
 def _extrair_mensagens(detalhe, anon):
-    """Extrai lista de mensagens do detalhe do atendimento (anonimizadas)."""
+    """Extrai lista de mensagens do detalhe do atendimento (anonimizadas).
+
+    Formato real Matrix /rest/v1/atendimento:
+    - rec['mensagens'] = lista de {id_mensagem, data_msg, boleano_entrante,
+      tip_msg, descricao_msg, autor}
+    - boleano_entrante='1' -> cliente; '0' -> bot/agente (autor='BOT' = bot)
+    - `autor` NAO copiado no output (LGPD: pode ter nome real de agente).
+    """
     rec = detalhe[0] if isinstance(detalhe, list) and detalhe else detalhe
     if not isinstance(rec, dict):
         return []
-    raw = rec.get('mensagens') or rec.get('mensagem') or []
+    raw = rec.get('mensagens') or []
     if isinstance(raw, dict):
         raw = [raw]
     out = []
     for m in raw:
         if not isinstance(m, dict):
             continue
-        tipo = (m.get('tipo') or m.get('origem') or '').lower()
-        # normaliza tipo: cliente / agente / auto (bot)
-        if 'cliente' in tipo or 'contato' in tipo:
+        entrante = str(m.get('boleano_entrante') or '0')
+        autor = (m.get('autor') or '').upper()
+        if entrante == '1':
             tipo_norm = 'cliente'
-        elif 'agente' in tipo or 'atendente' in tipo:
-            tipo_norm = 'agente'
-        elif 'auto' in tipo or 'bot' in tipo or 'sistema' in tipo:
+        elif 'BOT' in autor:
             tipo_norm = 'bot'
         else:
-            tipo_norm = tipo or 'desconhecido'
+            tipo_norm = 'agente'
+        texto = m.get('descricao_msg') or ''
         out.append({
             'tipo': tipo_norm,
-            'ts': m.get('data') or m.get('data_envio') or m.get('timestamp') or '',
-            'texto': anon(m.get('mensagem') or m.get('texto') or m.get('conteudo') or ''),
+            'ts': m.get('data_msg') or '',
+            'texto': anon(texto),
+            'tipo_msg': m.get('tip_msg') or '',  # TEXTO, IMAGEM, AUDIO, ARQUIVO, etc
         })
     return out
 

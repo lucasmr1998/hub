@@ -3469,6 +3469,153 @@ def regra_pipeline_historico(request, pk):
 
 
 @login_required
+@require_http_methods(["GET", "POST"])
+def api_cadastro_completo_oportunidade(request, pk):
+    """Modal "Completar dados da venda" — agrupa todos os campos obrigatorios
+    pro vendedor preencher de uma vez (sem mudar logica de back-end).
+
+    GET: retorna dict com dados atuais do Lead + opcoes (vencimentos, planos).
+    POST: recebe JSON com campos, atualiza LeadProspecto. Signal post_save
+          dispara o motor de regras normalmente — sem caminho paralelo.
+    """
+    try:
+        op = OportunidadeVenda.objects.select_related('lead', 'responsavel').get(pk=pk)
+    except OportunidadeVenda.DoesNotExist:
+        return JsonResponse({'error': 'Oportunidade nao encontrada'}, status=404)
+
+    lead = op.lead
+    if not lead:
+        return JsonResponse({'error': 'Oportunidade sem lead vinculado'}, status=400)
+
+    if request.method == 'GET':
+        viab = (lead.dados_custom or {}).get('viabilidade') or {}
+        # Opcoes pre-definidas do flow Matrix v9 (NUVYON):
+        # Vendedor escolhe label amigavel, sistema converte pra id_hubsoft.
+        # Se outro tenant quiser usar isso, mover pra IntegracaoAPI.configuracoes_extras.
+        opcoes_planos = [
+            {'id_hubsoft': 758,  'nome': 'Plano de 300MB', 'valor': 78.9},
+            {'id_hubsoft': 770,  'nome': 'Plano de 400MB', 'valor': 89.9},
+            {'id_hubsoft': 707,  'nome': 'Plano de 500MB', 'valor': 99.9},
+            {'id_hubsoft': 1236, 'nome': 'Plano de 600MB', 'valor': 109.9},
+            {'id_hubsoft': 696,  'nome': 'Plano de 800MB', 'valor': 189.9},
+        ]
+        opcoes_vencimentos = [
+            {'id_hubsoft': 9, 'dia': 5},
+            {'id_hubsoft': 4, 'dia': 10},
+            {'id_hubsoft': 5, 'dia': 15},
+            {'id_hubsoft': 6, 'dia': 20},
+        ]
+        # Override por tenant se IntegracaoAPI tiver lista custom
+        try:
+            from apps.integracoes.models import IntegracaoAPI
+            integ = IntegracaoAPI.all_tenants.filter(
+                tenant=request.tenant, tipo='hubsoft', ativa=True,
+            ).first()
+            if integ:
+                extras = integ.configuracoes_extras or {}
+                if extras.get('planos_disponiveis'):
+                    opcoes_planos = extras['planos_disponiveis']
+                if extras.get('dias_vencimento_disponiveis'):
+                    opcoes_vencimentos = extras['dias_vencimento_disponiveis']
+        except Exception:
+            pass
+
+        return JsonResponse({
+            'success': True,
+            'oportunidade_id': op.pk,
+            'lead': {
+                'id': lead.pk,
+                'nome': lead.nome_razaosocial or '',
+                'cpf_cnpj': lead.cpf_cnpj or '',
+                'data_nascimento': lead.data_nascimento.strftime('%Y-%m-%d') if lead.data_nascimento else '',
+                'rg': lead.rg or '',
+                'email': lead.email or '',
+                'telefone': lead.telefone or '',
+                'cep': lead.cep or '',
+                'rua': lead.rua or '',
+                'numero_residencia': lead.numero_residencia or '',
+                'bairro': lead.bairro or '',
+                'cidade': lead.cidade or '',
+                'estado': lead.estado or '',
+                'id_plano_rp': lead.id_plano_rp or '',
+                'id_dia_vencimento': lead.id_dia_vencimento or '',
+                'id_hubsoft': lead.id_hubsoft or '',
+                'status_api': lead.status_api or '',
+            },
+            'responsavel': {
+                'id': op.responsavel_id,
+                'nome': op.responsavel.get_full_name() if op.responsavel else '',
+            } if op.responsavel else None,
+            'viabilidade': {
+                'status': viab.get('status') or '',
+                'consultado_em': viab.get('consultado_em') or '',
+            },
+            'opcoes_planos': opcoes_planos,
+            'opcoes_vencimentos': opcoes_vencimentos,
+        })
+
+    # POST — atualiza Lead
+    import json
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({'error': 'JSON invalido'}, status=400)
+
+    campos_permitidos = {
+        'nome_razaosocial', 'cpf_cnpj', 'data_nascimento', 'rg', 'email',
+        'telefone', 'cep', 'rua', 'numero_residencia',
+        'bairro', 'cidade', 'estado', 'id_plano_rp', 'id_dia_vencimento',
+    }
+    # Mapeamento de chaves do JS pro Lead (alguns nomes diferentes)
+    aliases = {
+        'nome': 'nome_razaosocial',
+    }
+
+    update_fields = {}
+    for k, v in (data.items() if isinstance(data, dict) else []):
+        campo = aliases.get(k, k)
+        if campo not in campos_permitidos:
+            continue
+        valor = v if v is not None else ''
+        if campo == 'data_nascimento' and valor:
+            try:
+                from datetime import datetime as _dt
+                valor = _dt.strptime(valor, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                continue
+        update_fields[campo] = valor
+
+    if not update_fields:
+        return JsonResponse({'error': 'Nenhum campo valido pra atualizar'}, status=400)
+
+    try:
+        from apps.comercial.leads.models import LeadProspecto
+        for k, v in update_fields.items():
+            setattr(lead, k, v)
+        lead.save(update_fields=list(update_fields.keys()) + ['data_atualizacao'])
+    except Exception as exc:
+        return JsonResponse({'error': f'Falha ao salvar: {exc!s}'[:300]}, status=500)
+
+    try:
+        from apps.sistema.utils import registrar_acao
+        campos_str = ', '.join(sorted(update_fields.keys()))
+        registrar_acao(
+            'crm', 'editar', 'oportunidade', op.pk,
+            f"Campos atualizados via modal cadastro-completo: {campos_str}",
+            request=request,
+            dados_extras={'oportunidade_id': op.pk, 'lead_id': lead.pk, 'campos': list(update_fields.keys())},
+        )
+    except Exception:
+        pass
+
+    return JsonResponse({
+        'success': True,
+        'campos_atualizados': sorted(update_fields.keys()),
+        'lead_id': lead.pk,
+    })
+
+
+@login_required
 @require_http_methods(["POST"])
 def api_sugestao_aplicar(request, pk):
     """
