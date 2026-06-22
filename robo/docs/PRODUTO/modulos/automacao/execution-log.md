@@ -217,6 +217,14 @@
 - **Validação (dev):** 82 pytest unit (22 novos) + smoke dos 5 services reais (imports/queries OK, sem fixtures) + check + build.
 - **Status:** completed. **Verdes 100% convergidas (7 ações).** Faltam: as 🔴 (redesenho) + o **swap do marketing** (passo 2: `_acao_*` delega pros services).
 
+## 2026-06-22 — Picker 3 níveis (Integrações) + canal/provedor explícito
+
+- **Decisão de design (discutida):** "WhatsApp" não é uma integração, é **capacidade com canais** (Uazapi, Matrix, Meta Cloud) e cada tenant tem o seu. Os canais **não são intercambiáveis** (Uazapi = texto livre; Meta = exige template fora da janela 24h; Matrix = sai pelo bot dela). Logo, **expor o canal/provedor é mais correto** do que abstrair — quem monta o fluxo precisa saber a infra do tenant. → menu de **3 níveis** nas integrações (a intuição original do usuário).
+- **Ação:** picker ganhou 3º nível **só na ramificação "Integrações"** (grupo → provedor → ações); os demais grupos seguem 2 níveis (`TRES_NIVEIS={'Integrações'}` no editor). Os 4 nós Uazapi migraram de grupo "WhatsApp" → **Integrações / "WhatsApp · Uazapi"** (provedor = subgrupo). Grupo "Integrações" no `GRUPO_INFO`/`CORES_GRUPO`.
+- **Modelo escolhido:** **ações por provedor** (cada um com suas capacidades reais), não um nó genérico com seletor de canal. Default futuro: canal ativo do tenant.
+- **Output:** `nodes/whatsapp.py` (grupo/subgrupo), `editor/src/App.tsx` (TRES_NIVEIS + NodePanel 3 níveis), `flow.ts` (cor). Build OK, whatsapp 6/6, check limpo.
+- **Status:** completed (estrutura). Próximos provedores (Matrix, Meta, HubSoft, SGP) entram sob Integrações com suas ações.
+
 ### Pendências / próximos passos
 - **Pending:** decidir volume/dia por tenant + latência → runtime síncrono-em-cron (modelo marketing) vs. fila. Bloqueia a fase de runtime.
 - **Pending (convergência):** extrair executores de domínio (`criar_oportunidade`, `webhook`...) pra service único tenant-aware; aposentar motores na ordem marketing → atendimento → comercial.

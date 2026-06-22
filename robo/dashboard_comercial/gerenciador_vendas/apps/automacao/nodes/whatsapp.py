@@ -15,7 +15,8 @@ def _erro(msg):
 
 class _WhatsappBase(BaseNode):
     categoria = "atendimento"   # gating por tenant (futuro): só quem tem Uazapi
-    grupo = "WhatsApp"
+    grupo = "Integrações"
+    subgrupo = "WhatsApp · Uazapi"   # provedor = 2º nível do picker (3 níveis)
     icone = "bi-whatsapp"
     saidas = ["sucesso", "erro"]
 
@@ -27,7 +28,6 @@ class _WhatsappBase(BaseNode):
 class WhatsappTextoNode(_WhatsappBase):
     tipo = "whatsapp_texto"
     label = "WhatsApp: enviar mensagem"
-    subgrupo = "Enviar"
 
     def campos_config(self) -> list:
         return [
@@ -57,7 +57,6 @@ class WhatsappTextoNode(_WhatsappBase):
 class WhatsappMidiaNode(_WhatsappBase):
     tipo = "whatsapp_midia"
     label = "WhatsApp: enviar mídia"
-    subgrupo = "Enviar"
     icone = "bi-image"
 
     def campos_config(self) -> list:
@@ -100,7 +99,6 @@ class WhatsappMidiaNode(_WhatsappBase):
 class WhatsappPresencaNode(_WhatsappBase):
     tipo = "whatsapp_presenca"
     label = "WhatsApp: digitando/presença"
-    subgrupo = "Presença"
     icone = "bi-three-dots"
 
     def campos_config(self) -> list:
@@ -128,7 +126,6 @@ class WhatsappPresencaNode(_WhatsappBase):
 class WhatsappPerguntaNode(_WhatsappBase):
     tipo = "whatsapp_pergunta"
     label = "WhatsApp: enviar e aguardar resposta"
-    subgrupo = "Conversa"
     icone = "bi-chat-dots"
     saidas = ["resposta", "timeout"]
 

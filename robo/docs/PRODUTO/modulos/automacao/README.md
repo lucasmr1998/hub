@@ -151,10 +151,10 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 | `delay` | Fluxo › Controle | Aguardar | ✅ (pausa; retoma via cron) |
 | `webhook` | Gatilho › Entrada | Webhook | ✅ **trigger** (entrada do fluxo, sem porta de entrada) |
 | `evento` | Gatilho › Sistema | Evento do sistema | ✅ **trigger** (evento + filtros; wiring deferido via `on_evento`, kill-switch `AUTOMACAO_WIRING_ATIVO`) |
-| `whatsapp_texto` | WhatsApp › Enviar | WhatsApp: enviar mensagem | ✅ (reusa `UazapiService`) |
-| `whatsapp_midia` | WhatsApp › Enviar | WhatsApp: enviar mídia | ✅ (image/doc/audio/video) |
-| `whatsapp_presenca` | WhatsApp › Presença | WhatsApp: digitando/presença | ✅ |
-| `whatsapp_pergunta` | WhatsApp › Conversa | WhatsApp: enviar e aguardar resposta | ✅ (pausa → retoma na resposta; saídas resposta/timeout) |
+| `whatsapp_texto` | Integrações › WhatsApp · Uazapi | WhatsApp: enviar mensagem | ✅ (reusa `UazapiService`) |
+| `whatsapp_midia` | Integrações › WhatsApp · Uazapi | WhatsApp: enviar mídia | ✅ (image/doc/audio/video) |
+| `whatsapp_presenca` | Integrações › WhatsApp · Uazapi | WhatsApp: digitando/presença | ✅ |
+| `whatsapp_pergunta` | Integrações › WhatsApp · Uazapi | WhatsApp: enviar e aguardar resposta | ✅ (pausa → retoma na resposta; saídas resposta/timeout) |
 | `criar_tarefa` | Comercial › Tarefas | Criar tarefa (CRM) | ✅ **convergência marketing** (service de domínio `services/acoes.py`; saídas sucesso/erro) |
 | `notificacao_sistema` | Notificações › Sistema | Notificar equipe (broadcast) | ✅ **convergência marketing** (reusa `notificacoes.criar_notificacao` via `acoes.notificar`) |
 | `mover_estagio` | Comercial › Oportunidades | Mover de estágio | ✅ **convergência** (precisa de oportunidade no contexto) |

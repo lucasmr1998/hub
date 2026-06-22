@@ -302,11 +302,15 @@ const GRUPO_INFO: Record<string, { icone: string; descricao: string; ordem: numb
   Core: { icone: 'bi-box', descricao: 'HTTP, integrações genéricas', ordem: 1 },
   Fluxo: { icone: 'bi-signpost-split', descricao: 'Condição, espera, ramificação', ordem: 2 },
   'Transformação': { icone: 'bi-pencil-square', descricao: 'Definir e mexer em variáveis', ordem: 3 },
-  WhatsApp: { icone: 'bi-whatsapp', descricao: 'Enviar, mídia, aguardar resposta', ordem: 4 },
+  'Integrações': { icone: 'bi-plug', descricao: 'WhatsApp, ERPs, provedores', ordem: 4 },
   Comercial: { icone: 'bi-briefcase', descricao: 'Tarefas, oportunidades, CRM', ordem: 5 },
   'Notificações': { icone: 'bi-bell', descricao: 'Avisar a equipe', ordem: 6 },
   CS: { icone: 'bi-gift', descricao: 'Clube, pontos, benefícios', ordem: 7 },
 }
+
+// Grupos com 3 níveis no picker: grupo → provedor (subgrupo) → ações.
+// Pros demais, o picker fica em 2 níveis (grupo → nós).
+const TRES_NIVEIS = new Set(['Integrações'])
 
 function NodePanel({
   catalogo, onAdd, onClose,
@@ -317,6 +321,7 @@ function NodePanel({
 }) {
   const [q, setQ] = useState('')
   const [cat, setCat] = useState<string | null>(null)
+  const [prov, setProv] = useState<string | null>(null)   // 3º nível: provedor (subgrupo)
   const termo = q.trim().toLowerCase()
 
   const itemNo = (c: NoCatalogo) => (
@@ -337,17 +342,24 @@ function NodePanel({
   const grupos = Array.from(new Set(catalogo.map((c) => c.grupo)))
     .sort((a, b) => (GRUPO_INFO[a]?.ordem ?? 99) - (GRUPO_INFO[b]?.ordem ?? 99))
 
-  // Nós da categoria aberta, por subgrupo.
-  const subsDaCat: Record<string, NoCatalogo[]> = {}
-  if (cat) for (const c of catalogo.filter((c) => c.grupo === cat)) {
-    (subsDaCat[c.subgrupo || '—'] ??= []).push(c)
+  // Grupo de 3 níveis (ex: Integrações) → o subgrupo é um provedor clicável.
+  const ehTres = !!cat && TRES_NIVEIS.has(cat)
+  const provedores = cat
+    ? Array.from(new Set(catalogo.filter((c) => c.grupo === cat).map((c) => c.subgrupo || '—'))).sort()
+    : []
+  // Grupo de 2 níveis: nós por subgrupo (cabeçalho inline).
+  const porSub: Record<string, NoCatalogo[]> = {}
+  if (cat && !ehTres) for (const c of catalogo.filter((c) => c.grupo === cat)) {
+    (porSub[c.subgrupo || '—'] ??= []).push(c)
   }
+
+  const voltar = () => { if (prov) setProv(null); else setCat(null) }
 
   return (
     <div className="nodepanel">
       <div className="nodepanel-head">
         {cat && !termo ? (
-          <button className="np-voltar" onClick={() => setCat(null)}>← {cat}</button>
+          <button className="np-voltar" onClick={voltar}>← {prov ? `${cat} › ${prov}` : cat}</button>
         ) : (
           <strong>Adicionar nó</strong>
         )}
@@ -376,7 +388,7 @@ function NodePanel({
             <button
               key={g}
               className={`np-cat ${g === 'Gatilho' ? 'np-cat-trigger' : ''}`}
-              onClick={() => setCat(g)}
+              onClick={() => { setCat(g); setProv(null) }}
             >
               <i className={`bi ${info?.icone ?? 'bi-grid'} np-cat-ic`}
                  style={{ color: CORES_GRUPO[g] ?? '#5b6472' }} />
@@ -389,10 +401,28 @@ function NodePanel({
           )
         })}
 
-        {/* CATEGORIA ABERTA → nós dela */}
-        {!termo && cat && Object.entries(subsDaCat).map(([sub, list]) => (
-          <div key={sub} className="nodepanel-subbloco">
-            {sub !== '—' && <div className="nodepanel-sub">{sub}</div>}
+        {/* NÍVEL 2 (3 níveis): provedores do grupo (ex: WhatsApp · Uazapi, HubSoft) */}
+        {!termo && cat && ehTres && !prov && provedores.map((p) => (
+          <button key={p} className="np-cat" onClick={() => setProv(p)}>
+            <i className="bi bi-box-seam np-cat-ic" style={{ color: CORES_GRUPO[cat ?? ''] ?? '#5b6472' }} />
+            <span className="np-cat-txt">
+              <strong>{p}</strong>
+              <span className="muted">
+                {catalogo.filter((c) => c.grupo === cat && (c.subgrupo || '—') === p).length} ação(ões)
+              </span>
+            </span>
+            <i className="bi bi-chevron-right np-cat-arrow" />
+          </button>
+        ))}
+
+        {/* NÍVEL FINAL (3 níveis): nós do provedor escolhido */}
+        {!termo && cat && ehTres && prov &&
+          catalogo.filter((c) => c.grupo === cat && (c.subgrupo || '—') === prov).map(itemNo)}
+
+        {/* NÍVEL FINAL (2 níveis): nós por subgrupo (cabeçalho inline) */}
+        {!termo && cat && !ehTres && Object.entries(porSub).map(([s, list]) => (
+          <div key={s} className="nodepanel-subbloco">
+            {s !== '—' && <div className="nodepanel-sub">{s}</div>}
             {list.map(itemNo)}
           </div>
         ))}

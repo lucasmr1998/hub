@@ -30,7 +30,7 @@ export const CORES_GRUPO: Record<string, string> = {
   Fluxo: '#7c3aed',         // roxo
   'Transformação': '#0d9488', // verde-água
   Gatilho: '#ea580c',       // laranja
-  WhatsApp: '#25d366',      // verde whatsapp
+  'Integrações': '#16a34a', // verde (provedores: WhatsApp, ERPs)
   Comercial: '#c2410c',     // âmbar/CRM
   'Notificações': '#0891b2', // ciano
   CS: '#db2777',            // rosa (clube/benefícios)
