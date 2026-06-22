@@ -38,3 +38,4 @@ from . import hubsoft_catalogo  # noqa: F401,E402  (H5 — serviços/vencimentos
 from . import hubsoft_viabilidade  # noqa: F401,E402  (H6 — viabilidade endereço/coords)
 from . import hubsoft_cliente  # noqa: F401,E402  (H7 — atendimentos/OS/extrato/renegociações)
 from . import hubsoft_globais  # noqa: F401,E402  (H8 — clientes/OS/atendimentos todos + agenda)
+from . import hubsoft_writes  # noqa: F401,E402  (H9 — writes moderados: contrato/renegociação/OS)
