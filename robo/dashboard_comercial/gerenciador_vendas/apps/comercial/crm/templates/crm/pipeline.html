@@ -1149,13 +1149,15 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-// Nova oportunidade
+// Nova oportunidade — usa abrirModal/fecharModal globais pra manter
+// atributo `hidden` consistente (CSS .modal-overlay:not([hidden]){opacity:1}
+// depende disso pro modal nao ficar invisivel ao reabrir).
 function abrirModalNovaOportunidade() {
-  document.getElementById('modalNovaOport').style.display = 'flex';
+  abrirModal('modalNovaOport');
   document.getElementById('novaOportNome').focus();
 }
 function fecharModalOport() {
-  document.getElementById('modalNovaOport').style.display = 'none';
+  fecharModal('modalNovaOport');
 }
 function criarOportunidade() {
   const nome = document.getElementById('novaOportNome').value.trim();
@@ -1187,8 +1189,5 @@ function criarOportunidade() {
   .catch(() => toast('Erro', 'Erro de conexao', 'danger'));
 }
 
-document.getElementById('modalNovaOport')?.addEventListener('click', function(e) {
-  if (e.target === this) fecharModalOport();
-});
 </script>
 {% endblock %}
