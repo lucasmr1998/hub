@@ -235,6 +235,14 @@
 - **⚠️ Outbound REAL (não testado de verdade):** manda mensagem pra cliente. Validado só com **unit test mockado (5/5)** + check + build. **NÃO** disparei nada real. Teste real exige: tenant Nuvyon + `cod_conta`/`hsm` de um template de teste + um número seguro + **OK do usuário**.
 - **Status:** completed (código). **Pendente:** disparo real de validação (com o usuário) + provedores v2 (dialogoWhatsapp/sendSms) + consultar status (`hsmEnviadas`).
 
+## 2026-06-22 — Convergência passo 2 (piloto): marketing `_acao_criar_tarefa` delega pro service
+
+- **Ação:** o `_acao_criar_tarefa` do motor de marketing virou **adaptador fino** — parseia o formato antigo de config (linhas string) e **chama `apps.automacao.services.acoes.criar_tarefa`** (a mesma fonte que o nó da engine nova usa). A cópia da lógica (criar TarefaCRM + fallback de responsável) **saiu do marketing**.
+- **É a aposentadoria começando:** agora há **1 implementação** de "criar tarefa", chamada pelos dois motores. Repetir pras outras ações esvazia o motor antigo.
+- **Risco:** toca código de prod do marketing — feito **swap fiel** (mesma config, mesmos params, mesmo retorno). **Dev-only até deploy.**
+- **Validação:** 7/7 pytest (2 do adaptador mockado + 5 do nó) + check limpo.
+- **Status:** completed (piloto). Faltam os swaps das outras 6 ações (notificacao_sistema, mover_estagio, criar_oportunidade, criar_venda, atribuir_responsavel, dar_pontos) — atenção: `dar_pontos`/`atribuir` no service usam tenant explícito, swap = corrige multi-tenancy em prod (mudança consciente).
+
 ### Pendências / próximos passos
 - **Decisão (22/06): opções dinâmicas + preview ADIADAS.** Quería-se dropdown de contas/templates Matrix + preview do HSM ao selecionar. Mas o **Matrix não expõe API de listar templates** (confirmado), então a única fonte do preview seria um **registro local** (cópia do corpo por tenant) — com manutenção manual e risco de drift vs o template aprovado. Decidido **manter `cod_conta`/`hsm` manuais** por ora. O **mecanismo genérico de opções dinâmicas** (`select_dinamico` carregado de endpoint por-tenant + painel de preview) fica pra quando entrar uma integração com **API de listagem real** (ex: HubSoft, ou "listar pipelines" do CRM) — aí o investimento se paga em vários provedores.
 - **Pending:** decidir volume/dia por tenant + latência → runtime síncrono-em-cron (modelo marketing) vs. fila. Bloqueia a fase de runtime.

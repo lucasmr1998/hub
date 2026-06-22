@@ -611,8 +611,11 @@ def _acao_notificacao_sistema(regra, acao, contexto):
 
 
 def _acao_criar_tarefa(regra, acao, contexto):
-    from apps.comercial.crm.models import TarefaCRM
-    from apps.sistema.models import PerfilUsuario
+    # CONVERGÊNCIA (passo 2): a lógica de criar a tarefa agora mora no service de
+    # domínio único (apps.automacao.services.acoes.criar_tarefa) — a MESMA fonte que
+    # o nó `criar_tarefa` da engine nova usa. Aqui só traduzimos o formato antigo de
+    # config (linhas string) e delegamos. Sem 2ª cópia da lógica.
+    from apps.automacao.services.acoes import criar_tarefa
 
     config_lines = acao.configuracao.strip().split('\n')
     titulo = _substituir_variaveis(config_lines[0] if config_lines else f'Tarefa: {regra.nome}', contexto)
@@ -626,25 +629,14 @@ def _acao_criar_tarefa(regra, acao, contexto):
         elif line.lower().startswith('titulo:') or line.lower().startswith('título:'):
             titulo = _substituir_variaveis(line.split(':', 1)[1].strip(), contexto)
 
-    lead = contexto.get('lead')
-    oportunidade = contexto.get('oportunidade')
-    responsavel = contexto.get('responsavel')
-    if responsavel is None and lead and hasattr(lead, 'responsavel'):
-        responsavel = getattr(lead, 'responsavel', None)
-    if responsavel is None:
-        perfil = PerfilUsuario.objects.filter(tenant=regra.tenant, user__is_staff=True).first()
-        responsavel = perfil.user if perfil else User.objects.filter(is_superuser=True).first()
-    if not responsavel:
-        return 'Nenhum responsável disponível'
-
-    tarefa = TarefaCRM.objects.create(
-        tenant=regra.tenant, titulo=titulo, tipo=tipo_tarefa, prioridade=prioridade,
-        status='pendente',
-        lead=lead if lead and hasattr(lead, 'pk') else None,
-        oportunidade=oportunidade if oportunidade and hasattr(oportunidade, 'pk') else None,
-        responsavel=responsavel,
-        data_vencimento=timezone.now() + timedelta(days=1),
-    )
+    try:
+        tarefa = criar_tarefa(
+            regra.tenant, titulo=titulo, tipo=tipo_tarefa, prioridade=prioridade,
+            lead=contexto.get('lead'), oportunidade=contexto.get('oportunidade'),
+            responsavel=contexto.get('responsavel'),
+        )
+    except ValueError as e:
+        return str(e)
     return f'Tarefa criada (pk={tarefa.pk})'
 
 
