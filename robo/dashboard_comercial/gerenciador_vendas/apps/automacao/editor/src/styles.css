@@ -155,7 +155,7 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: 
 .modal-exec:disabled { opacity: .6; cursor: default; }
 .modal-x { border: none; background: none; font-size: 22px; cursor: pointer; color: #8a94a6; line-height: 1; }
 .modal-corpo { display: grid; grid-template-columns: 1fr 1.4fr 1fr; flex: 1; min-height: 0; }
-.modal-io, .modal-params { padding: 14px 16px; overflow: auto; }
+.modal-io, .modal-params { padding: 14px 16px; overflow-y: auto; overflow-x: hidden; }
 .modal-io { background: #fafbfc; }
 .modal-params { border-left: 1px solid #e9edf3; border-right: 1px solid #e9edf3; }
 .io-titulo { font-size: 11px; font-weight: 700; letter-spacing: .06em; color: #8a94a6; margin-bottom: 8px; }
@@ -170,9 +170,10 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: 
 .repeater-row input { flex: 1; }
 .repeater-row > button { border: 1px solid #dde2ea; background: #fff; border-radius: 7px; cursor: pointer; padding: 0 10px; }
 .repeater-add { margin-top: 2px; border: 1px dashed #c3ccda; background: #fff; border-radius: 7px; padding: 5px 10px; cursor: pointer; font-size: 12px; color: #2f6df6; }
-.filtro-row { display: flex; gap: 6px; margin-bottom: 6px; }
-.filtro-row select, .filtro-row input { flex: 1; min-width: 0; }
-.filtro-row select:nth-child(2) { flex: 0 0 auto; }
-.filtro-row > button { border: 1px solid #dde2ea; background: #fff; border-radius: 7px; cursor: pointer; padding: 0 10px; }
+.filtro-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; align-items: center; }
+.filtro-row select, .filtro-row input { flex: 1 1 120px; min-width: 0; padding: 6px 8px;
+  border: 1px solid #dde2ea; border-radius: 7px; font-size: 13px; }
+.filtro-row > button { flex: 0 0 auto; border: 1px solid #f3c2bf; background: #fff5f4;
+  color: #c0322b; border-radius: 7px; cursor: pointer; padding: 5px 11px; }
 .json-adv { margin-top: 12px; }
 .json-adv summary { font-size: 12px; color: #8a94a6; cursor: pointer; }
