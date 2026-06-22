@@ -25,6 +25,7 @@ urlpatterns = [
 
     # AI suggested next action
     path('oportunidades/<int:pk>/sugestao/aplicar/', views.api_sugestao_aplicar, name='api_sugestao_aplicar'),
+    path('oportunidades/<int:pk>/cadastro-completo/', views.api_cadastro_completo_oportunidade, name='api_cadastro_completo_oportunidade'),
     path('oportunidades/<int:pk>/sugestao/rejeitar/', views.api_sugestao_rejeitar, name='api_sugestao_rejeitar'),
 
     # Tarefas
