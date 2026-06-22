@@ -149,6 +149,7 @@
               {% if regra.ultima_execucao %}{{ regra.ultima_execucao|date:"d/m/Y H:i" }}{% else %}—{% endif %}
             </td>
             <td style="text-align: center; white-space: nowrap;">
+              <button class="btn btn-ghost btn-sm" title="Histórico de disparos" onclick="abrirHistoricoRegra({{ regra.id }}, '{{ regra.nome|escapejs }}')"><i class="bi bi-clock-history"></i></button>
               <a href="{% url 'crm:regra_pipeline_editar' regra.id %}" class="btn btn-ghost btn-sm" title="Editar"><i class="bi bi-pencil"></i></a>
               <button class="btn btn-ghost btn-sm" title="{% if regra.ativo %}Desativar{% else %}Ativar{% endif %}" onclick="toggleRegra({{ regra.id }})"><i class="bi {% if regra.ativo %}bi-pause{% else %}bi-play{% endif %}"></i></button>
             </td>
@@ -244,6 +245,7 @@
                       {% if regra.ultima_execucao %}{{ regra.ultima_execucao|date:"d/m/Y H:i" }}{% else %}—{% endif %}
                     </td>
                     <td style="text-align: center; white-space: nowrap;">
+                      <button class="btn btn-ghost btn-sm" title="Histórico de disparos" onclick="abrirHistoricoRegra({{ regra.id }}, '{{ regra.nome|escapejs }}')"><i class="bi bi-clock-history"></i></button>
                       <a href="{% url 'crm:regra_pipeline_editar' regra.id %}" class="btn btn-ghost btn-sm" title="Editar"><i class="bi bi-pencil"></i></a>
                       <button class="btn btn-ghost btn-sm" title="{% if regra.ativo %}Desativar{% else %}Ativar{% endif %}" onclick="toggleRegra({{ regra.id }})">
                         <i class="bi {% if regra.ativo %}bi-pause{% else %}bi-play{% endif %}"></i>
@@ -506,6 +508,88 @@ function excluirRegra(id, nome) {
     else toast('Erro', d.error || 'Falha ao excluir', 'danger');
   });
 }
+
+function _escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function abrirHistoricoRegra(id, nome) {
+  document.getElementById('historico-regra-titulo').textContent = 'Histórico — ' + nome;
+  const body = document.getElementById('historico-regra-body');
+  body.innerHTML = '<div style="padding: var(--sp-4); text-align: center; color: var(--color-text-muted);">Carregando...</div>';
+  abrirModal('modal-historico-regra');
+  fetch(`/crm/automacoes-pipeline/${id}/historico/`)
+    .then(r => r.json())
+    .then(d => {
+      if (!d.success) {
+        body.innerHTML = `<div style="padding: var(--sp-4); color: var(--color-danger);">${_escapeHtml(d.error || 'Erro ao carregar histórico')}</div>`;
+        return;
+      }
+      if (!d.items.length) {
+        body.innerHTML = '<div style="padding: var(--sp-4); text-align: center; color: var(--color-text-muted);">Esta regra ainda não disparou nenhuma vez.</div>';
+        return;
+      }
+      let html = `<div style="font-size: var(--fs-xs); color: var(--color-text-muted); padding: 0 var(--sp-4) var(--sp-2);">Últimos ${d.items.length} disparos (mais recentes primeiro)</div>`;
+      html += '<table class="data-table" style="margin: 0;"><thead><tr>'
+            + '<th style="width: 130px;">Quando</th>'
+            + '<th>Oportunidade</th>'
+            + '<th>Movimentação / Ações</th>'
+            + '<th style="text-align: center; width: 90px;">Resultado</th>'
+            + '</tr></thead><tbody>';
+      for (const it of d.items) {
+        const opLink = it.oportunidade_url
+          ? `<a href="${it.oportunidade_url}" target="_blank">#${it.oportunidade_id}</a>`
+          : `#${it.oportunidade_id || '—'}`;
+        const lead = it.lead_nome ? ` <span style="color: var(--color-text-muted); font-size: var(--fs-xs);">${_escapeHtml(it.lead_nome)}</span>` : '';
+        let middle = '';
+        if (it.acao_tipo === 'mover_regra') {
+          middle = `<span style="font-size: var(--fs-xs); color: var(--color-text-muted);">${_escapeHtml(it.estagio_anterior) || '—'}</span> <i class="bi bi-arrow-right" style="font-size: 11px;"></i> <strong>${_escapeHtml(it.estagio_destino)}</strong>`;
+          if (it.horas_no_estagio_anterior != null) middle += ` <span style="font-size: 10px; color: var(--color-text-muted);">(${it.horas_no_estagio_anterior}h no estágio anterior)</span>`;
+        } else if (it.acao_tipo === 'acoes_regra') {
+          const chips = (it.acoes_executadas || []).map(a => {
+            const cor = a.resultado === 'efetiva' ? 'var(--color-success)' : (a.resultado === 'erro' ? 'var(--color-danger)' : 'var(--color-text-muted)');
+            return `<span style="font-size: var(--fs-xs); background: var(--color-primary-soft); color: ${cor}; padding: 2px 7px; border-radius: var(--radius-full);">${_escapeHtml(a.tipo)}${a.resultado !== 'efetiva' ? ' · ' + _escapeHtml(a.resultado) : ''}</span>`;
+          }).join(' ');
+          middle = chips || `<span style="color: var(--color-text-muted); font-style: italic;">${_escapeHtml(it.mensagem)}</span>`;
+        } else {
+          middle = _escapeHtml(it.mensagem);
+        }
+        let badge;
+        if (it.acao_tipo === 'mover_regra') {
+          badge = `<span style="font-size: 10px; background: var(--color-info-soft, #DBEAFE); color: var(--color-info, #2563EB); padding: 2px 7px; border-radius: var(--radius-full);">mover</span>`;
+        } else {
+          const cor = it.houve_efetiva ? 'var(--color-success)' : 'var(--color-text-muted)';
+          const label = it.houve_efetiva ? 'efetiva' : 'idempotente';
+          badge = `<span style="font-size: 10px; background: var(--color-success-soft, #DCFCE7); color: ${cor}; padding: 2px 7px; border-radius: var(--radius-full);">${label}</span>`;
+        }
+        html += `<tr><td style="font-size: var(--fs-xs); color: var(--color-text-muted);">${_escapeHtml(it.data)}</td>`
+              + `<td>${opLink}${lead}</td>`
+              + `<td>${middle}</td>`
+              + `<td style="text-align: center;">${badge}</td></tr>`;
+      }
+      html += '</tbody></table>';
+      body.innerHTML = html;
+    })
+    .catch(err => {
+      body.innerHTML = `<div style="padding: var(--sp-4); color: var(--color-danger);">Erro de rede: ${_escapeHtml(err.message)}</div>`;
+    });
+}
 </script>
+
+{# Modal de histórico de regra #}
+<div id="modal-historico-regra" class="modal" style="display: none;">
+  <div class="modal-backdrop" onclick="fecharModal('modal-historico-regra')"></div>
+  <div class="modal-content" style="max-width: 900px; width: 90%;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="historico-regra-titulo">Histórico</h3>
+      <button class="modal-close" onclick="fecharModal('modal-historico-regra')" aria-label="Fechar">&times;</button>
+    </div>
+    <div class="modal-body" id="historico-regra-body" style="padding: 0; max-height: 70vh; overflow-y: auto;">
+      <div style="padding: var(--sp-4); text-align: center; color: var(--color-text-muted);">Carregando...</div>
+    </div>
+  </div>
+</div>
+
 <form style="display: none;">{% csrf_token %}</form>
 {% endblock %}

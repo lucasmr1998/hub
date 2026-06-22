@@ -68,6 +68,7 @@ urlpatterns = [
     path('automacoes-pipeline/<int:pk>/toggle/', views.regra_pipeline_toggle, name='regra_pipeline_toggle'),
     path('automacoes-pipeline/<int:pk>/duplicar/', views.regra_pipeline_duplicar, name='regra_pipeline_duplicar'),
     path('automacoes-pipeline/<int:pk>/preview/', views.regra_pipeline_preview, name='regra_pipeline_preview'),
+    path('automacoes-pipeline/<int:pk>/historico/', views.regra_pipeline_historico, name='regra_pipeline_historico'),
 
     # Motivos de Perda — tela dedicada (T7)
     path('motivos-perda/', views.motivos_perda_lista, name='motivos_perda_lista'),

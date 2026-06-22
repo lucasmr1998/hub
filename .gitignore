@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+
+# Backups locais de dados prod (LGPD — NUNCA commitar)
+_backup_*.json
+_backup_*.sql
 *.so
 *.egg
 *.egg-info/

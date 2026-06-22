@@ -224,6 +224,16 @@ def _mover_por_regra(oportunidade, estagio_destino, regra):
         registrar_acao(
             'crm', 'mover_regra', 'oportunidade', oportunidade.pk,
             f"Movida para '{estagio_destino.nome}' pela regra '{regra_nome}'",
+            dados_extras={
+                'regra_id': regra.pk,
+                'regra_nome': regra_nome,
+                'lead_id': oportunidade.lead_id,
+                'estagio_anterior_id': estagio_anterior.pk if estagio_anterior else None,
+                'estagio_anterior_nome': estagio_anterior.nome if estagio_anterior else None,
+                'estagio_destino_id': estagio_destino.pk,
+                'estagio_destino_nome': estagio_destino.nome,
+                'horas_no_estagio_anterior': round(horas, 2),
+            },
         )
     except Exception:
         pass
@@ -264,20 +274,25 @@ def _executar_acoes_regra(oportunidade, regra):
     """
     acoes = regra.acoes or []
     houve_acao_efetiva = False
+    acoes_log = []
     for acao in acoes:
         tipo = acao.get('tipo')
         config = acao.get('config') or {}
         executor = _EXECUTORES_ACAO.get(tipo)
         if executor is None:
             logger.warning("[Automacao Pipeline] Tipo de ação desconhecido: %s", tipo)
+            acoes_log.append({'tipo': tipo, 'resultado': 'desconhecido'})
             continue
         try:
             ret = executor(oportunidade, config)
             # Action retornou False => pulou idempotente; True/None => efetivou
-            if ret is not False:
+            efetivou = ret is not False
+            if efetivou:
                 houve_acao_efetiva = True
+            acoes_log.append({'tipo': tipo, 'resultado': 'efetiva' if efetivou else 'idempotente'})
         except Exception as exc:
             logger.warning("[Automacao Pipeline] Falha ao executar ação %s: %s", tipo, exc)
+            acoes_log.append({'tipo': tipo, 'resultado': 'erro', 'erro': str(exc)[:120]})
 
     try:
         update_fields = ['total_disparos', 'ultima_execucao']
@@ -289,6 +304,23 @@ def _executar_acoes_regra(oportunidade, regra):
         regra.save(update_fields=update_fields)
     except Exception as exc:
         logger.warning("[Automacao Pipeline] Falha ao atualizar métricas da regra %s: %s", regra.pk, exc)
+
+    try:
+        from apps.sistema.utils import registrar_acao
+        labels = ', '.join(a.get('tipo') or '?' for a in acoes_log) or '(sem ações)'
+        registrar_acao(
+            'crm', 'acoes_regra', 'oportunidade', oportunidade.pk,
+            f"Regra '{regra.nome}' executou: {labels}",
+            dados_extras={
+                'regra_id': regra.pk,
+                'regra_nome': regra.nome,
+                'lead_id': oportunidade.lead_id,
+                'acoes_executadas': acoes_log,
+                'houve_efetiva': houve_acao_efetiva,
+            },
+        )
+    except Exception:
+        pass
 
 
 def _acao_criar_venda(oportunidade, config):

@@ -7,7 +7,7 @@
 
 ---
 
-## Estado atual (snapshot 2026-06-19)
+## Estado atual (snapshot 2026-06-21)
 
 **Em produção:**
 
@@ -42,9 +42,9 @@
 - Gabi deve revisar os 3 defaults acima e confirmar com plano/vencimento oficiais
 - Bootstrap full Nuvyon (`sync_base_clientes_hubsoft --tenant nuvyon --full`, ~15min) não rodado
 - Backfill viabilidade (`backfill_viabilidade --tenant nuvyon`, ~10min, ~500 leads) não rodado
-- Apagar prospecto teste 22994 no painel HubSoft
-- Cliente 60151 (Pedro real) com endereço placeholder no HubSoft — corrigir manual no painel
+- **Apagar manual no painel HubSoft:** prospectos 22936 (Eva), 22994 (teste antigo), 22996 (Pedro / cliente 60151)
 - Signal `enviar_lead_para_integracao` ainda ativo pra Nuvyon — vale desativar pra Regras 23/24 serem caminho único
+- CRM Nuvyon zerado em 2026-06-21 — validar proxima esteira end-to-end
 
 ---
 
@@ -107,6 +107,15 @@
 - Output: Cliente 60151 (Pedro) ficou com endereço placeholder "A CONFIRMAR S/N, A CONFIRMAR, MOCOCA/SP, CEP 13730000". Próximos leads vão funcionar.
 - How to apply: HubSoft tem comportamento traiçoeiro — retorna sucesso silencioso pra campos não reconhecidos. Sempre validar visualmente no painel HubSoft depois de qualquer mudança no payload.
 - Status: completed (fix), pending (correção manual do cliente 60151 no painel)
+
+## 2026-06-21 — Cleanup CRM Nuvyon em prod
+
+- Acao: Apagados 13 leads + 13 oportunidades + filhas (220 linhas em 11 tabelas) em transacao atomica. Backup JSON local em `_backup_nuvyon_cleanup_20260621_1500.json` (gitignored).
+- Decisao: Limpar so CRM (leads/oportunidades/historico/vendas/contratos). NAO tocar espelhos HubSoft (1.006 clientes + 1.308 servicos preservados). `clientes_hubsoft.lead_id` zerado pros 2 espelhos linkados (eva 22936, pedro 22996) — espelho fica intacto, so perde vinculo com lead deletado.
+- Why: Comecar a esteira do zero pra validar as Regras 23/24 e o pipeline atual com dados limpos.
+- How to apply: Proximos leads via webhook Matrix vao testar o fluxo end-to-end. Backup local serve pra reverter se necessario (script de restore JSON nao implementado — usar INSERT manual ou pedir).
+- Pendencia manual: apagar prospectos 22936, 22994, 22996 no painel HubSoft (acesso humano necessario).
+- Status: completed
 
 ---
 

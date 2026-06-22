@@ -3410,6 +3410,65 @@ def regra_pipeline_preview(request, pk):
 
 
 @login_required
+@require_http_methods(["GET"])
+def regra_pipeline_historico(request, pk):
+    """Retorna os ultimos 50 disparos de uma regra (do log_sistema central).
+
+    Lê de LogSistema filtrando por dados_extras.regra_id=pk e categoria='crm'.
+    Inclui mover_regra (movimentações) e acoes_regra (execução de ações).
+    """
+    denied = _check_perm(request, 'comercial.configurar_pipeline')
+    if denied:
+        return denied
+
+    from .models import RegraPipelineEstagio, OportunidadeVenda
+    from apps.sistema.models import LogSistema
+
+    regra = RegraPipelineEstagio.objects.filter(pk=pk).first()
+    if not regra:
+        return JsonResponse({'error': 'Regra não encontrada'}, status=404)
+
+    logs = list(
+        LogSistema.objects
+        .filter(categoria='crm', dados_extras__regra_id=pk)
+        .order_by('-data_criacao')[:50]
+    )
+
+    op_ids = {l.entidade_id for l in logs if l.entidade == 'oportunidade' and l.entidade_id}
+    ops = {
+        o.pk: o
+        for o in OportunidadeVenda.objects.filter(pk__in=op_ids).select_related('lead')
+    }
+
+    items = []
+    for log in logs:
+        extras = log.dados_extras if isinstance(log.dados_extras, dict) else {}
+        op = ops.get(log.entidade_id) if log.entidade == 'oportunidade' else None
+        lead = op.lead if op else None
+        items.append({
+            'data': log.data_criacao.strftime('%d/%m/%Y %H:%M'),
+            'acao_tipo': log.acao,
+            'oportunidade_id': op.pk if op else log.entidade_id,
+            'oportunidade_url': f'/crm/oportunidade/{op.pk}/' if op else None,
+            'lead_nome': lead.nome_razaosocial if lead else None,
+            'estagio_anterior': extras.get('estagio_anterior_nome') or '',
+            'estagio_destino': extras.get('estagio_destino_nome') or '',
+            'acoes_executadas': extras.get('acoes_executadas') or [],
+            'houve_efetiva': extras.get('houve_efetiva'),
+            'horas_no_estagio_anterior': extras.get('horas_no_estagio_anterior'),
+            'mensagem': log.mensagem,
+        })
+
+    return JsonResponse({
+        'success': True,
+        'regra_id': regra.pk,
+        'regra_nome': regra.nome,
+        'total': len(items),
+        'items': items,
+    })
+
+
+@login_required
 @require_http_methods(["POST"])
 def api_sugestao_aplicar(request, pk):
     """
