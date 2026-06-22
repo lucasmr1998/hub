@@ -34,3 +34,5 @@ from . import hubsoft_sincronizar_prospecto  # noqa: F401,E402  (H1 — Integra�
 from . import hubsoft_consultar_cliente  # noqa: F401,E402  (H2 — Integrações: consultar cliente)
 from . import hubsoft_listar_faturas  # noqa: F401,E402  (H3 — Integrações: faturas HubSoft)
 from . import hubsoft_planos_cep  # noqa: F401,E402  (H4 — Integrações: planos por CEP)
+from . import hubsoft_catalogo  # noqa: F401,E402  (H5 — serviços/vencimentos/modelos contrato)
+from . import hubsoft_viabilidade  # noqa: F401,E402  (H6 — viabilidade endereço/coords)
