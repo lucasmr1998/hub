@@ -17,7 +17,6 @@ import logging
 from datetime import timedelta
 
 import requests
-from django.contrib.auth.models import User
 from django.utils import timezone
 
 from apps.sistema.middleware import get_current_tenant
@@ -546,43 +545,22 @@ def _acao_enviar_email(regra, acao, contexto):
 
 
 def _acao_atribuir_responsavel(regra, acao, contexto):
-    """Atribui responsável à oportunidade (round-robin ou fixo)."""
-    from apps.comercial.crm.models import OportunidadeVenda
-    from apps.sistema.models import PerfilUsuario
-
-    oportunidade = contexto.get('oportunidade')
-    if not oportunidade:
-        lead = contexto.get('lead')
-        if lead and hasattr(lead, 'pk'):
-            oportunidade = OportunidadeVenda.objects.filter(lead=lead).first()
-    if not oportunidade:
-        return 'Sem oportunidade para atribuir'
+    # CONVERGÊNCIA (passo 2): delega pro service único (acoes.atribuir_responsavel).
+    from apps.automacao.services.acoes import atribuir_responsavel
 
     config = acao.configuracao.strip().lower()
-
     if 'round-robin' in config or 'auto' in config:
-        perfis = PerfilUsuario.objects.filter(
-            tenant=regra.tenant, user__is_staff=True, user__is_active=True,
-        ).select_related('user')
-        if not perfis.exists():
-            return 'Nenhum agente disponível para round-robin'
-        from apps.comercial.crm.models import OportunidadeVenda as OV
-        counts = {}
-        for p in perfis:
-            counts[p.user_id] = OV.objects.filter(responsavel=p.user, ativo=True).count()
-        user_id = min(counts, key=counts.get)
-        from django.contrib.auth.models import User
-        responsavel = User.objects.get(pk=user_id)
+        modo, username = 'round-robin', ''
     else:
-        from django.contrib.auth.models import User
-        responsavel = User.objects.filter(
-            is_staff=True, username__icontains=config.split(':')[-1].strip()
-        ).first()
-        if not responsavel:
-            return f'Responsável não encontrado: {config}'
+        modo, username = 'fixo', config.split(':')[-1].strip()
 
-    oportunidade.responsavel = responsavel
-    oportunidade.save(update_fields=['responsavel'])
+    try:
+        responsavel = atribuir_responsavel(
+            regra.tenant, oportunidade=contexto.get('oportunidade'),
+            lead=contexto.get('lead'), modo=modo, username=username,
+        )
+    except ValueError as e:
+        return str(e)
     return f'Responsável atribuído: {responsavel.get_full_name() or responsavel.username}'
 
 
@@ -594,19 +572,15 @@ def _acao_notificacao_sistema(regra, acao, contexto):
     Sem destinatario, a Notificacao usa o suporte a broadcast do
     apps.notificacoes (ver NotificacaoLeituraBroadcast).
     """
-    from apps.notificacoes.services import criar_notificacao
+    # CONVERGÊNCIA (passo 2): delega pro service único (acoes.notificar, que reusa
+    # notificacoes.criar_notificacao com codigo_tipo='sistema_geral' + broadcast).
+    from apps.automacao.services.acoes import notificar
 
     mensagem = _substituir_variaveis(acao.configuracao, contexto)
     titulo = getattr(acao, '_titulo', '') or f'Automacao: {regra.nome}'
     titulo = _substituir_variaveis(titulo, contexto)
 
-    notif = criar_notificacao(
-        tenant=regra.tenant,
-        codigo_tipo='sistema_geral',
-        titulo=titulo,
-        mensagem=mensagem,
-        destinatario=None,  # broadcast — equipe inteira ve
-    )
+    notif = notificar(regra.tenant, titulo=titulo, mensagem=mensagem)
     return 'Notificacao broadcast criada' if notif else 'Tipo de notificacao nao encontrado pro tenant (rode seedar_notificacoes)'
 
 
@@ -641,38 +615,33 @@ def _acao_criar_tarefa(regra, acao, contexto):
 
 
 def _acao_mover_estagio(regra, acao, contexto):
-    from apps.comercial.crm.models import PipelineEstagio
+    # CONVERGÊNCIA (passo 2): delega pro service único (acoes.mover_estagio).
+    from apps.automacao.services.acoes import mover_estagio
 
     oportunidade = contexto.get('oportunidade')
     if not oportunidade:
         return 'Sem oportunidade no contexto'
 
-    config_lines = acao.configuracao.strip().split('\n')
     estagio_slug = ''
-    for line in config_lines:
+    for line in acao.configuracao.strip().split('\n'):
         if 'estagio' in line.lower() or 'estágio' in line.lower():
             estagio_slug = line.split(':', 1)[1].strip()
 
-    if not estagio_slug:
-        return 'Estágio não especificado'
-
-    estagio = PipelineEstagio.objects.filter(
-        pipeline=oportunidade.pipeline, slug=estagio_slug,
-    ).first()
-    if not estagio:
-        return f'Estágio "{estagio_slug}" não encontrado'
-
-    oportunidade.estagio = estagio
-    oportunidade.save(update_fields=['estagio'])
+    try:
+        estagio = mover_estagio(regra.tenant, oportunidade=oportunidade, estagio_slug=estagio_slug)
+    except ValueError as e:
+        return str(e)
     return f'Oportunidade movida para {estagio.nome}'
 
 
 def _acao_dar_pontos(regra, acao, contexto):
-    from apps.cs.clube.models import MembroClube
+    # CONVERGÊNCIA (passo 2): delega pro service único (acoes.dar_pontos).
+    # MUDANÇA CONSCIENTE: o service filtra MembroClube por tenant (o código antigo
+    # buscava por CPF global — vazamento multi-tenant que isto corrige).
+    from apps.automacao.services.acoes import dar_pontos
 
-    config_lines = acao.configuracao.strip().split('\n')
     pontos = 0
-    for line in config_lines:
+    for line in acao.configuracao.strip().split('\n'):
         if line.lower().startswith('pontos:'):
             try:
                 pontos = int(line.split(':', 1)[1].strip())
@@ -681,15 +650,10 @@ def _acao_dar_pontos(regra, acao, contexto):
 
     lead = contexto.get('lead')
     cpf = getattr(lead, 'cpf_cnpj', '') if lead else contexto.get('cpf', '')
-    if not cpf:
-        return 'CPF não encontrado'
-
-    membro = MembroClube.objects.filter(cpf=cpf.replace('.', '').replace('-', '')[:14]).first()
-    if not membro:
-        return f'Membro não encontrado para CPF {cpf}'
-
-    membro.saldo += pontos
-    membro.save(update_fields=['saldo'])
+    try:
+        membro = dar_pontos(regra.tenant, cpf=cpf, pontos=pontos)
+    except ValueError as e:
+        return str(e)
     return f'{pontos} pontos adicionados a {membro.nome}'
 
 
@@ -721,79 +685,51 @@ def _acao_webhook(regra, acao, contexto):
 
 
 def _acao_criar_oportunidade(regra, acao, contexto):
-    """Cria oportunidade no CRM para o lead."""
-    from apps.comercial.crm.models import OportunidadeVenda, Pipeline, PipelineEstagio
+    # CONVERGÊNCIA (passo 2): delega pro service único (acoes.criar_oportunidade).
+    from apps.automacao.services.acoes import criar_oportunidade
 
     lead = contexto.get('lead')
     if not lead or not hasattr(lead, 'pk'):
         return 'Lead nao encontrado no contexto'
 
-    # Se ja existe, nao duplicar
-    if OportunidadeVenda.objects.filter(lead=lead).exists():
-        return f'Oportunidade ja existe para lead {lead.pk}'
-
-    # Buscar pipeline (config ou padrao)
     config = acao.configuracao if hasattr(acao, 'configuracao') else ''
-    pipeline = None
-    estagio = None
-
+    pipeline_slug = estagio_slug = ''
     if hasattr(acao, '_config_json') and acao._config_json:
         cfg = acao._config_json
         pipeline_slug = cfg.get('pipeline', '')
         estagio_slug = cfg.get('estagio', '')
-        if pipeline_slug:
-            pipeline = Pipeline.objects.filter(slug=pipeline_slug).first()
-        if estagio_slug and pipeline:
-            estagio = PipelineEstagio.objects.filter(pipeline=pipeline, slug=estagio_slug).first()
-
-    if not pipeline:
-        pipeline = Pipeline.objects.filter(tenant=regra.tenant, padrao=True).first()
-    if not pipeline:
-        pipeline = Pipeline.objects.filter(tenant=regra.tenant).first()
-    if not estagio and pipeline:
-        estagio = PipelineEstagio.objects.filter(pipeline=pipeline).order_by('ordem').first()
-
-    if not estagio:
-        return 'Nenhum estagio encontrado'
 
     titulo = _substituir_variaveis(
         config if isinstance(config, str) and config.strip() else '{{lead_nome}}',
-        contexto
+        contexto,
     )
 
-    oport = OportunidadeVenda.objects.create(
-        tenant=regra.tenant,
-        lead=lead,
-        pipeline=pipeline,
-        estagio=estagio,
-        titulo=titulo,
-        valor_estimado=lead.valor if hasattr(lead, 'valor') else None,
-        origem_crm='automatico',
-    )
+    try:
+        oport, criada = criar_oportunidade(
+            regra.tenant, lead=lead, titulo=titulo,
+            pipeline_slug=pipeline_slug, estagio_slug=estagio_slug,
+        )
+    except ValueError as e:
+        return str(e)
+    if not criada:
+        return f'Oportunidade ja existe para lead {lead.pk}'
     return f'Oportunidade criada (pk={oport.pk})'
 
 
 def _acao_criar_venda(regra, acao, contexto):
-    """Cria registro de Venda concretizada para o lead (disparado por docs_validados)."""
-    from apps.comercial.crm.models import Venda, OportunidadeVenda
+    # CONVERGÊNCIA (passo 2): delega pro service único (acoes.criar_venda).
+    from apps.automacao.services.acoes import criar_venda
 
     lead = contexto.get('lead')
     if not lead or not hasattr(lead, 'pk'):
         return 'Lead nao encontrado no contexto'
 
-    if Venda.objects.filter(tenant=regra.tenant, lead=lead).exists():
+    try:
+        _venda, criada = criar_venda(regra.tenant, lead=lead)
+    except ValueError as e:
+        return str(e)
+    if not criada:
         return f'Venda ja existe para lead {lead.pk}'
-
-    oport = OportunidadeVenda.objects.filter(tenant=regra.tenant, lead=lead).first()
-
-    Venda.objects.create(
-        tenant=regra.tenant,
-        lead=lead,
-        oportunidade=oport,
-        plano=oport.plano_interesse if oport else None,
-        valor=oport.valor_estimado if oport else None,
-        status=Venda.STATUS_PENDENTE_ERP,
-    )
     return f'Venda criada para lead {lead.pk}'
 
 

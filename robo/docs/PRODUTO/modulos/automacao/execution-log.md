@@ -242,6 +242,7 @@
 - **Risco:** toca código de prod do marketing — feito **swap fiel** (mesma config, mesmos params, mesmo retorno). **Dev-only até deploy.**
 - **Validação:** 7/7 pytest (2 do adaptador mockado + 5 do nó) + check limpo.
 - **Status:** completed (piloto). Faltam os swaps das outras 6 ações (notificacao_sistema, mover_estagio, criar_oportunidade, criar_venda, atribuir_responsavel, dar_pontos) — atenção: `dar_pontos`/`atribuir` no service usam tenant explícito, swap = corrige multi-tenancy em prod (mudança consciente).
+- **Atualização (22/06, mesma sessão): os 6 swaps restantes FEITOS.** Todas as 7 ações DB-only do marketing agora delegam pros services de `acoes.py` (1 implementação, 2 motores). Removido o import órfão `User` do `engine.py`. `dar_pontos` agora filtra MembroClube por **tenant** (corrige vazamento) — mudança consciente em prod. Validado: 10/10 pytest dos adaptadores (mock) + check. Falta só o swap das 🔴 (enviar_whatsapp/email/hubsoft) quando elas forem redesenhadas/convergidas. **O motor de marketing já não tem cópia própria da lógica das ações DB-only.**
 
 ## 2026-06-22 — Integrações: HubSoft (1º provedor ERP) — sincronizar prospecto + consultar cliente
 
