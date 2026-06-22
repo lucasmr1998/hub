@@ -31,6 +31,7 @@ export const CORES_GRUPO: Record<string, string> = {
   'Transformação': '#0d9488', // verde-água
   Gatilho: '#ea580c',       // laranja
   WhatsApp: '#25d366',      // verde whatsapp
+  Comercial: '#c2410c',     // âmbar/CRM
 }
 
 export function corDoTipo(tipo: string): string {

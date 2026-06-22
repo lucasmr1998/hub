@@ -114,6 +114,35 @@ class Command(BaseCommand):
             ExecucaoFluxo.all_tenants.filter(fluxo=f4).delete()
             f4.delete()
 
+        # 5) Convergência: nó criar_tarefa cria uma TarefaCRM real (via service de domínio).
+        from django.contrib.auth.models import User
+        from apps.comercial.crm.models import TarefaCRM
+        from apps.sistema.models import PerfilUsuario
+
+        tem_resp = (PerfilUsuario.objects.filter(tenant=tenant, user__is_staff=True).exists()
+                    or User.objects.filter(is_superuser=True).exists())
+        if not tem_resp:
+            self.stdout.write(self.style.WARNING('SKIP criar_tarefa — sem responsável no tenant'))
+        else:
+            g5 = {'inicio': 't', 'nodes': {
+                't': {'tipo': 'criar_tarefa',
+                      'config': {'titulo': '_test_db tarefa {{var.n}}', 'tipo': 'followup'}}},
+                'conexoes': []}
+            f5 = Fluxo.objects.create(tenant=tenant, nome='_test_db criar_tarefa', grafo=g5)
+            tarefa_id = None
+            try:
+                _ex5, res5 = executar_e_persistir(f5, Contexto(tenant=tenant, variaveis={'n': 'X'}))
+                check(res5.status == 'completado', 'criar_tarefa: fluxo completa')
+                t = (TarefaCRM.all_tenants.filter(tenant=tenant, titulo='_test_db tarefa X')
+                     .order_by('-id').first())
+                check(t is not None, 'criar_tarefa: TarefaCRM criada no banco')
+                tarefa_id = t.pk if t else None
+            finally:
+                if tarefa_id:
+                    TarefaCRM.all_tenants.filter(pk=tarefa_id).delete()
+                ExecucaoFluxo.all_tenants.filter(fluxo=f5).delete()
+                f5.delete()
+
         if falhas:
             raise CommandError(f'{len(falhas)} checagem(ns) falharam: {", ".join(falhas)}')
         self.stdout.write(self.style.SUCCESS('OK — todos os checks da camada de banco passaram.'))

@@ -187,6 +187,16 @@
 - **Validação (dev):** `testar_automacao_db` 11/11 PASS (enfileira, cron roda → completa, trace `ev→g`, filtro bloqueia/passa) + 60 testes DB-free + `manage.py check` limpo.
 - **Status:** completed. **Não deployado** (kill-switch off em prod). Próximo: mover ações do marketing pra nós (convergência) e/ou modo jornada.
 
+## 2026-06-22 — Convergência (1/N): ação `criar_tarefa` vira nó (service de domínio)
+
+- **Ação:** primeira ação do motor de marketing convergida pra engine nova, no padrão **service único + nó** (via skill `/criar-no-automacao`):
+  - `services/acoes.py::criar_tarefa(tenant, *, titulo, tipo, prioridade, lead, oportunidade, responsavel, prazo_dias)` — fonte única da lógica (resolve responsável default: lead.responsavel → staff → superuser). Recebe params **já resolvidos** + tenant explícito.
+  - nó `criar_tarefa` (grupo **Comercial › Tarefas**, saídas sucesso/erro) — resolve templates e chama o service. Não toca ORM direto.
+  - grupo novo "Comercial" registrado no editor (`GRUPO_INFO` + `CORES_GRUPO`); skill atualizada com esse passo.
+- **Decisão (sequência de risco):** **passo 1 = só construir** (service + nó); o `_acao_criar_tarefa` do marketing **fica intacto** por enquanto (zero risco ao motor que roda). Passo 2 (depois) = apontar o marketing pro mesmo service (aposentadoria de fato).
+- **Validação (dev):** 5/5 pytest unit (mock do service) + smoke DB 13/13 (cria `TarefaCRM` real via gatilho→nó→service e limpa) + check limpo + build do editor.
+- **Status:** completed. Faltam as outras ações (notificacao_sistema, mover_estagio, … → 🔴 enviar_whatsapp/email/hubsoft com cuidado) + o swap do marketing (passo 2).
+
 ### Pendências / próximos passos
 - **Pending:** decidir volume/dia por tenant + latência → runtime síncrono-em-cron (modelo marketing) vs. fila. Bloqueia a fase de runtime.
 - **Pending (convergência):** extrair executores de domínio (`criar_oportunidade`, `webhook`...) pra service único tenant-aware; aposentar motores na ordem marketing → atendimento → comercial.

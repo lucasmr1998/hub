@@ -68,6 +68,13 @@ Espelhe `test_automacao_set_fields.py` / `test_automacao_whatsapp.py` (mock do s
 ## 5. Catálogo na doc
 Adicione a linha na tabela "Catálogo de nós" do `README.md` do módulo (com grupo › subgrupo + status).
 
+## 5b. Grupo novo no editor (só se o `grupo` ainda não existe no picker)
+Se o nó usa um **grupo que ainda não está no picker** (ex: "Comercial"), registre-o senão ele aparece sem ícone/descrição e cinza:
+- `apps/automacao/editor/src/App.tsx` → `GRUPO_INFO` (ícone Bootstrap + descrição + ordem)
+- `apps/automacao/editor/src/flow.ts` → `CORES_GRUPO` (cor da categoria)
+
+Rebuild (passo 7) pra aparecer.
+
 ## 6. Invariantes (checklist "feature completa")
 - Tenant explícito se toca ORM (`contexto.tenant`); nunca `get_current_tenant()`.
 - Mascarar `Authorization`/`Cookie` se expõe headers/segredos.
