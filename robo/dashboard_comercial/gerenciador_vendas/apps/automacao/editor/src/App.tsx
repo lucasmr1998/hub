@@ -304,6 +304,7 @@ const GRUPO_INFO: Record<string, { icone: string; descricao: string; ordem: numb
   'Transformação': { icone: 'bi-pencil-square', descricao: 'Definir e mexer em variáveis', ordem: 3 },
   WhatsApp: { icone: 'bi-whatsapp', descricao: 'Enviar, mídia, aguardar resposta', ordem: 4 },
   Comercial: { icone: 'bi-briefcase', descricao: 'Tarefas, oportunidades, CRM', ordem: 5 },
+  'Notificações': { icone: 'bi-bell', descricao: 'Avisar a equipe', ordem: 6 },
 }
 
 function NodePanel({

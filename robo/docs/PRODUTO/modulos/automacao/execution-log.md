@@ -197,6 +197,13 @@
 - **Validação (dev):** 5/5 pytest unit (mock do service) + smoke DB 13/13 (cria `TarefaCRM` real via gatilho→nó→service e limpa) + check limpo + build do editor.
 - **Status:** completed. Faltam as outras ações (notificacao_sistema, mover_estagio, … → 🔴 enviar_whatsapp/email/hubsoft com cuidado) + o swap do marketing (passo 2).
 
+## 2026-06-22 — Convergência (2/N): ação `notificacao_sistema` vira nó
+
+- **Ação:** nó `notificacao_sistema` ("Notificar equipe", grupo **Notificações › Sistema**, saídas sucesso/erro). Aqui o **service de domínio já existia** (`apps.notificacoes.services.criar_notificacao`), então só adicionei o executor fino `services/acoes.notificar` (broadcast, `codigo_tipo='sistema_geral'`) + o nó que o chama. Grupo "Notificações" registrado no editor.
+- **Comportamento:** se o tipo de notificação não estiver cadastrado pro tenant, o nó segue a saída **erro** com mensagem clara (mesma semântica do marketing). Marketing intacto (passo 1).
+- **Validação (dev):** 5/5 pytest unit (mock do service) + smoke DB 13/13 + check + build.
+- **Status:** completed.
+
 ### Pendências / próximos passos
 - **Pending:** decidir volume/dia por tenant + latência → runtime síncrono-em-cron (modelo marketing) vs. fila. Bloqueia a fase de runtime.
 - **Pending (convergência):** extrair executores de domínio (`criar_oportunidade`, `webhook`...) pra service único tenant-aware; aposentar motores na ordem marketing → atendimento → comercial.

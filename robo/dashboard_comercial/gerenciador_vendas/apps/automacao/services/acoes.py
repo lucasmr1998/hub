@@ -47,3 +47,17 @@ def criar_tarefa(tenant, *, titulo, tipo='followup', prioridade='normal',
     )
     tarefa.save()
     return tarefa
+
+
+def notificar(tenant, *, titulo, mensagem, codigo_tipo='sistema_geral'):
+    """Cria uma notificação **broadcast** (a equipe inteira do tenant vê).
+
+    Reusa o service de domínio `apps.notificacoes.services.criar_notificacao`.
+    Devolve a Notificacao, ou `None` se o tipo não estiver cadastrado pro tenant
+    (nesse caso o chamador trata — ex: rodar `seedar_notificacoes`).
+    """
+    from apps.notificacoes.services import criar_notificacao
+    return criar_notificacao(
+        tenant=tenant, codigo_tipo=codigo_tipo,
+        titulo=titulo, mensagem=mensagem, destinatario=None,
+    )

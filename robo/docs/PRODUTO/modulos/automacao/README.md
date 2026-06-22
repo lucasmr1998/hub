@@ -156,6 +156,7 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 | `whatsapp_presenca` | WhatsApp › Presença | WhatsApp: digitando/presença | ✅ |
 | `whatsapp_pergunta` | WhatsApp › Conversa | WhatsApp: enviar e aguardar resposta | ✅ (pausa → retoma na resposta; saídas resposta/timeout) |
 | `criar_tarefa` | Comercial › Tarefas | Criar tarefa (CRM) | ✅ **convergência marketing** (service de domínio `services/acoes.py`; saídas sucesso/erro) |
+| `notificacao_sistema` | Notificações › Sistema | Notificar equipe (broadcast) | ✅ **convergência marketing** (reusa `notificacoes.criar_notificacao` via `acoes.notificar`) |
 
 **Modelos de execução (a "âncora"):** o mesmo runtime faz três comportamentos, decididos por como a execução pausa/ancora (`NodeResult.espera` + `ExecucaoFluxo`):
 - **timer** (delay) → retoma por tempo (cron).
