@@ -126,3 +126,4 @@ Tabela referencia usada em varios endpoints:
 |---|---|---|
 | `MatrixBrasilService` (16/06/2026) | `apps/integracoes/services/matrix_brasil.py` | Sync de vendedor — Hubtrix puxa `login_agente` por `codigo_atendimento` pra atribuir `OportunidadeVenda.responsavel` automaticamente. Detalhe em [`docs/context/clientes/nuvyon/sync-vendedor-matrix.md`](../../../../context/clientes/nuvyon/sync-vendedor-matrix.md) |
 | `buscar_dados_atendimento` (legado) | `apps/comercial/atendimento/services/atendimento_service.py` | Gera HTML do historico de mensagens pra um lead. Usa env var `MATRIX_API_TOKEN` global (nao multi-tenant) — em desuso pra novas integracoes |
+| `enviar_hsm` + nó `matrix_hsm` (22/06/2026) | `apps/integracoes/services/matrix_brasil.py` + `apps/automacao/nodes/matrix_hsm.py` | Engine de automação dispara template HSM (`POST /rest/v1/sendHsm`) — provedor "Matrix" sob Integrações. **Outbound real.** |

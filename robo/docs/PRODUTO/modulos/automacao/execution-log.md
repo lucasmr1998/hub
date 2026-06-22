@@ -225,6 +225,16 @@
 - **Output:** `nodes/whatsapp.py` (grupo/subgrupo), `editor/src/App.tsx` (TRES_NIVEIS + NodePanel 3 níveis), `flow.ts` (cor). Build OK, whatsapp 6/6, check limpo.
 - **Status:** completed (estrutura). Próximos provedores (Matrix, Meta, HubSoft, SGP) entram sob Integrações com suas ações.
 
+## 2026-06-22 — Integrações: Matrix · disparar HSM (1º provedor outbound)
+
+- **Ação:** primeiro nó **outbound de integração** — `matrix_hsm` ("Matrix: disparar HSM (WhatsApp)", **Integrações › Matrix**). Dispara template HSM aprovado via Matrix Brasil.
+  - **Service:** implementado `MatrixBrasilService.enviar_hsm(cod_conta, hsm, contato, tipo_envio, variaveis, url_file)` — `POST /rest/v1/sendHsm` (v1, token raw — mesmo auth que o service já usava). Trata `cod_error != 0` como erro.
+  - **Wrapper:** `apps/automacao/services/matrix.py::matrix_do_tenant` (resolve `MatrixBrasilService.from_tenant`, None se sem integração) — espelha `uazapi_do_tenant`.
+  - **Nó:** campos cod_conta, hsm (template), telefone, nome, variaveis (keyvalue), tipo_envio, url_file. Resolve templates, monta `contato`, chama o service. Saídas sucesso/erro.
+- **Por que HSM (e não livre):** fora da janela 24h o WhatsApp exige template aprovado. `dialogoWhatsapp`/`sendSms` são **v2 (JWT)** — ficam de follow-up (precisam do fluxo de auth v2 + cache de token).
+- **⚠️ Outbound REAL (não testado de verdade):** manda mensagem pra cliente. Validado só com **unit test mockado (5/5)** + check + build. **NÃO** disparei nada real. Teste real exige: tenant Nuvyon + `cod_conta`/`hsm` de um template de teste + um número seguro + **OK do usuário**.
+- **Status:** completed (código). **Pendente:** disparo real de validação (com o usuário) + provedores v2 (dialogoWhatsapp/sendSms) + consultar status (`hsmEnviadas`).
+
 ### Pendências / próximos passos
 - **Pending:** decidir volume/dia por tenant + latência → runtime síncrono-em-cron (modelo marketing) vs. fila. Bloqueia a fase de runtime.
 - **Pending (convergência):** extrair executores de domínio (`criar_oportunidade`, `webhook`...) pra service único tenant-aware; aposentar motores na ordem marketing → atendimento → comercial.

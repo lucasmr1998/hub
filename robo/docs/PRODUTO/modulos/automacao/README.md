@@ -162,6 +162,7 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 | `criar_venda` | Comercial › Vendas | Criar venda | ✅ **convergência** (idempotente; status pendente-ERP) |
 | `atribuir_responsavel` | Comercial › Oportunidades | Atribuir responsável | ✅ **convergência** (round-robin ou fixo por username) |
 | `dar_pontos` | CS › Clube | Dar pontos (Clube) | ✅ **convergência** (CPF do config ou do lead; filtra por tenant) |
+| `matrix_hsm` | Integrações › Matrix | Matrix: disparar HSM (WhatsApp) | ✅ **outbound real** (`MatrixBrasilService.enviar_hsm`; template HSM + variáveis) |
 
 **Modelos de execução (a "âncora"):** o mesmo runtime faz três comportamentos, decididos por como a execução pausa/ancora (`NodeResult.espera` + `ExecucaoFluxo`):
 - **timer** (delay) → retoma por tempo (cron).

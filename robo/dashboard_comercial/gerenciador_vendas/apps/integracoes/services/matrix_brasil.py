@@ -85,6 +85,47 @@ class MatrixBrasilService:
             raise MatrixBrasilServiceError(f'Resposta nao-JSON: {r.text[:200]}')
 
     # ------------------------------------------------------------------
+    # Disparos (outbound — inicia conversa do nosso lado)
+    # ------------------------------------------------------------------
+    def enviar_hsm(self, *, cod_conta, hsm, contato, tipo_envio=2,
+                   variaveis=None, url_file=None, extra=None):
+        """POST /rest/v1/sendHsm — dispara um template HSM aprovado pro contato.
+
+        `contato`: dict com ao menos `telefone` (+ `nome`, `cpfCnpj`, `email`...).
+        `variaveis`: dict {"1": "x", "2": "y"} pros placeholders do template.
+        `tipo_envio`: 1=automatico, 2=notificacao, 3=fila.
+        Cria um atendimento na Matrix. Devolve o dict de resposta.
+
+        Levanta MatrixBrasilServiceError em erro de rede/HTTP ou `cod_error != 0`.
+        """
+        payload = {
+            'cod_conta': int(cod_conta), 'hsm': int(hsm),
+            'tipo_envio': int(tipo_envio), 'contato': contato,
+        }
+        if variaveis:
+            payload['variaveis'] = variaveis
+        if url_file:
+            payload['url_file'] = url_file
+        if extra:
+            payload.update(extra)
+        url = f'{self.base_url}/rest/v1/sendHsm'
+        try:
+            r = requests.post(url, headers=self._headers(), json=payload, timeout=self.timeout)
+        except requests.RequestException as e:
+            raise MatrixBrasilServiceError(f'Erro de rede: {e}')
+        if r.status_code in (401, 403):
+            raise MatrixBrasilServiceError(f'Token Matrix invalido (HTTP {r.status_code})')
+        if r.status_code != 200:
+            raise MatrixBrasilServiceError(f'HTTP {r.status_code}: {r.text[:200]}')
+        try:
+            data = r.json()
+        except ValueError:
+            raise MatrixBrasilServiceError(f'Resposta nao-JSON: {r.text[:200]}')
+        if str(data.get('cod_error', 0)) != '0':
+            raise MatrixBrasilServiceError(f"Matrix recusou: {data.get('msg', data)}")
+        return data
+
+    # ------------------------------------------------------------------
     # Agentes (uteis pra debug + popular login_matrix)
     # ------------------------------------------------------------------
     def listar_agentes(self):

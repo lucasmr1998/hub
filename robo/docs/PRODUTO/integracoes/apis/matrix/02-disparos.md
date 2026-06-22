@@ -231,4 +231,4 @@ Hoje a Nuvyon nao tem uazapi propria configurada. Fluxo possivel:
 
 `dialogoWhatsapp` com `contato[]` agrupando ate N telefones por chamada.
 
-**Decisao arquitetural pendente:** o wrapper `MatrixService` ainda nao existe no codigo atual do Hubtrix (so o esqueleto em `prod/.../integracoes/services/matrix.py`). Quando implementar, seguir padrao do `HubsoftService` (FromIntegracaoAPI + cache de JWT v2).
+**Estado (22/06/2026):** `sendHsm` (v1) **implementado** em `MatrixBrasilService.enviar_hsm` e consumido pelo nó `matrix_hsm` da engine de automação (Integrações › Matrix). `dialogoWhatsapp`/`sendSms` (v2, JWT) ainda **pendentes** — precisam do fluxo de auth v2 (`authuser` + cache de token), seguir padrao do `HubsoftService`. Status de envio (`hsmEnviadas`) ainda não pollado (sem `MatrixDisparo` model).
