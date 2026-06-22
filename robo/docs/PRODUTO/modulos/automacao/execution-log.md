@@ -255,6 +255,21 @@
 - **Status:** completed (starter set). Resto da API HubSoft (contrato, faturas, serviços técnicos, viabilidade, OS) entra sob demanda.
 - **Atualização (22/06, mesma sessão): +2 nós read HubSoft** — `hubsoft_listar_faturas` (boletos por CPF/CNPJ, só-pendentes opcional) e `hubsoft_planos_cep` (viabilidade por CEP). HubSoft agora com **4 nós** (1 🔴 write + 3 🟢 read). Wrappers `listar_faturas`/`listar_planos_por_cep` em `services/hubsoft.py`. 12/12 pytest.
 
+## 2026-06-22 — Geração em massa: HubSoft completo + engine comercial (44 nós no total)
+
+- **Pedido:** gerar todos os nós da engine comercial + todos os HubSoft possíveis, com **params/filtros customizáveis** (obrigatórios mantidos). Feito em 6 lotes inline, commitados.
+- **HubSoft (24 nós, base `HubsoftNode` em `hubsoft_base.py` — resolve service + trata erro):**
+  - **Reads (17):** consultar_cliente, listar_faturas, planos_cep, listar_servicos, listar_vencimentos, listar_modelos_contrato, viabilidade (endereço/coords), atendimentos/OS do cliente, extrato_conexão, renegociações (listar + simular), clientes/OS/atendimentos (todos, paginados), horários de agenda.
+  - **Writes moderados (7):** sincronizar_prospecto, criar/aceitar contrato, efetivar_renegociacao, abrir_atendimento_os, agendar_os, abrir_os.
+  - **🔴🔴 fora (decisão):** suspender/habilitar/ativar serviço, solicitar_desconexao, desbloqueio_confianca, reset_mac/phy (afetam serviço do cliente). `anexar_arquivos_contrato` fora (exige bytes).
+  - Cada nó espelha os params do método (obrigatórios → `obrigatorio:True`; filtros → campos opcionais). Reusa os métodos do `HubsoftService` (sem 2ª cópia).
+- **Engine comercial (2 nós genéricos, reusam os registries existentes):**
+  - `condicao_comercial` (Fluxo › Lógica) — expõe as **12 condições** (`automacao_condicoes`) via select + operador + valor + campo; saídas true/false; avalia sobre a oportunidade.
+  - `acao_comercial` (Comercial › Pipeline) — expõe as **7 ações** (`_EXECUTORES_ACAO`) via select + params keyvalue.
+- **Validação:** **145 testes** da automação passam + check. **Nenhum outbound real disparado** (writes validados com mock). Branch instável (outra sessão jogando na main) — restaurado várias vezes; trabalho commitado a cada lote.
+- **Total: 44 nós** (Integrações 29, Comercial 6, Fluxo 3, Gatilho 2, Core/Transformação/Notificações/CS 1 cada).
+- **Status:** completed.
+
 ### Pendências / próximos passos
 - **Decisão (22/06): opções dinâmicas + preview ADIADAS.** Quería-se dropdown de contas/templates Matrix + preview do HSM ao selecionar. Mas o **Matrix não expõe API de listar templates** (confirmado), então a única fonte do preview seria um **registro local** (cópia do corpo por tenant) — com manutenção manual e risco de drift vs o template aprovado. Decidido **manter `cod_conta`/`hsm` manuais** por ora. O **mecanismo genérico de opções dinâmicas** (`select_dinamico` carregado de endpoint por-tenant + painel de preview) fica pra quando entrar uma integração com **API de listagem real** (ex: HubSoft, ou "listar pipelines" do CRM) — aí o investimento se paga em vários provedores.
 - **Pending:** decidir volume/dia por tenant + latência → runtime síncrono-em-cron (modelo marketing) vs. fila. Bloqueia a fase de runtime.

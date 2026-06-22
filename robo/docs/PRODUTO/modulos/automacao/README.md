@@ -167,6 +167,9 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 | `hubsoft_consultar_cliente` | Integrações › HubSoft | HubSoft: consultar cliente | ✅ read (por CPF/CNPJ; enriquecimento) |
 | `hubsoft_listar_faturas` | Integrações › HubSoft | HubSoft: listar faturas | ✅ read (boletos por CPF/CNPJ; só pendentes opcional) |
 | `hubsoft_planos_cep` | Integrações › HubSoft | HubSoft: planos por CEP | ✅ read (viabilidade comercial por CEP) |
+| `hubsoft_*` (catálogo/cliente/globais/writes) | Integrações › HubSoft | +20 nós HubSoft | ✅ serviços, vencimentos, modelos contrato, viabilidade (endereço/coords), atendimentos/OS (cliente e todos), extrato conexão, renegociações (listar/simular/efetivar), clientes/atendimentos todos, horários agenda, criar/aceitar contrato, abrir/agendar OS. Base `HubsoftNode`; params do método espelhados. 🔴🔴 que afetam serviço ficaram de fora. |
+| `condicao_comercial` | Fluxo › Lógica | Condição comercial (CRM) | ✅ expõe as 12 condições do `automacao_condicoes` (select + operador + valor); true/false; sobre a oportunidade |
+| `acao_comercial` | Comercial › Pipeline | Ação comercial (CRM) | ✅ expõe as 7 ações do `_EXECUTORES_ACAO` (select + params keyvalue); sobre a oportunidade |
 
 **Modelos de execução (a "âncora"):** o mesmo runtime faz três comportamentos, decididos por como a execução pausa/ancora (`NodeResult.espera` + `ExecucaoFluxo`):
 - **timer** (delay) → retoma por tempo (cron).
