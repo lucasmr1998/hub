@@ -106,3 +106,39 @@ class MatrixBrasilService:
             return d[0] if isinstance(d, list) and d else d
         except ValueError:
             raise MatrixBrasilServiceError(f'Resposta nao-JSON: {r.text[:200]}')
+
+    # ------------------------------------------------------------------
+    # Listagem analitica (paginada) — pra extracao em massa
+    # ------------------------------------------------------------------
+    def listar_atendimentos_analitico(self, data_inicial, data_final,
+                                       servico_nome=None, page=1, limit=300):
+        """GET /rest/v1/relAtAnalitico — paginado, datas YYYY-MM-DD.
+
+        Filtro `servico` aceita o NOME da fila como string (descoberta
+        empirica: passar id_servico int e ignorado silenciosamente; passar
+        o nome funciona). Ex.: servico_nome='NOVO CLIENTE'.
+
+        Retorna o dict bruto: {page, total, records, rows[], grafico}.
+        rows[] tem id_atendimento, contato, telefone, cpf, agente, servico,
+        datas e contadores (qtd_cliente/agente/auto), sem mensagens.
+        Pra mensagens use consultar_atendimento(codigo).
+        """
+        params = {
+            'data_inicial': data_inicial,
+            'data_final': data_final,
+            'page': page,
+            'limit': limit,
+        }
+        if servico_nome:
+            params['servico'] = servico_nome
+        url = f'{self.base_url}/rest/v1/relAtAnalitico'
+        try:
+            r = requests.get(url, headers=self._headers(), params=params, timeout=self.timeout)
+        except requests.RequestException as e:
+            raise MatrixBrasilServiceError(f'Erro de rede: {e}')
+        if r.status_code != 200:
+            raise MatrixBrasilServiceError(f'HTTP {r.status_code}: {r.text[:200]}')
+        try:
+            return r.json()
+        except ValueError:
+            raise MatrixBrasilServiceError(f'Resposta nao-JSON: {r.text[:200]}')
