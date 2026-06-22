@@ -43,7 +43,6 @@
 - Bootstrap full Nuvyon (`sync_base_clientes_hubsoft --tenant nuvyon --full`, ~15min) não rodado
 - Backfill viabilidade (`backfill_viabilidade --tenant nuvyon`, ~10min, ~500 leads) não rodado
 - **Apagar manual no painel HubSoft:** prospectos 22936 (Eva), 22994 (teste antigo), 22996 (Pedro / cliente 60151)
-- Signal `enviar_lead_para_integracao` ainda ativo pra Nuvyon — vale desativar pra Regras 23/24 serem caminho único
 - CRM Nuvyon zerado em 2026-06-21 — validar proxima esteira end-to-end
 
 ---
@@ -107,6 +106,15 @@
 - Output: Cliente 60151 (Pedro) ficou com endereço placeholder "A CONFIRMAR S/N, A CONFIRMAR, MOCOCA/SP, CEP 13730000". Próximos leads vão funcionar.
 - How to apply: HubSoft tem comportamento traiçoeiro — retorna sucesso silencioso pra campos não reconhecidos. Sempre validar visualmente no painel HubSoft depois de qualquer mudança no payload.
 - Status: completed (fix), pending (correção manual do cliente 60151 no painel)
+
+## 2026-06-21 — Signal enviar_lead_para_integracao desativado pra Nuvyon
+
+- Acao: `IntegracaoAPI #18` (Nuvyon HubSoft) `configuracoes_extras.modos_sync.enviar_lead` mudado de `automatico` pra `desativado` via UPDATE direto em prod.
+- Why: era o ultimo caminho redundante criando prospecto HubSoft em paralelo com a Regra 23 do motor CRM. Race condition real — signal + motor competiam pelo mesmo lead, podendo criar 2 prospectos (ex: 22994 orfao). Signal nao tem placeholders Mococa, nao tem update tardio, nao tem visibilidade na UI.
+- Efeito: signal para no `if not integracao.sync_habilitado('enviar_lead'): return`. Regra 23 ("HubSoft - Criar rascunho ao receber lead") vira caminho unico de criacao. Regra 24 cuida do update tardio.
+- How to apply: pra reativar (caso ache que motor nao da conta), trocar `enviar_lead` de volta pra `automatico` via UI da integracao OU UPDATE jsonb_set inverso. Outras integracoes preservadas (`sincronizar_cliente=automatico` segue rodando, eh o cron de espelho).
+- Outras integracoes HubSoft: nenhuma — Nuvyon eh a unica com HubSoft ATIVO em prod (TR Carrion = Vero, FATEPI = editor nativo). Quando entrar segundo tenant HubSoft, configurar a mesma flag.
+- Status: completed
 
 ## 2026-06-21 — Cleanup CRM Nuvyon em prod
 
