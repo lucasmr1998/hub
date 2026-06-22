@@ -109,3 +109,30 @@ export async function atualizarFluxo(id: number, nome: string, grafo: unknown): 
   })
   return r.json()
 }
+
+export interface PassoTrace {
+  handle: string
+  tipo: string
+  status: string
+  branch: string | null
+  erro?: string | null
+}
+
+export interface ExecucaoResumo {
+  id: number
+  fluxo: string
+  fluxo_id: number
+  status: string
+  quando: string
+  erro: string
+  trace: PassoTrace[]
+}
+
+export async function listarExecucoes(fluxoId?: number | null, status?: string): Promise<ExecucaoResumo[]> {
+  const p = new URLSearchParams()
+  if (fluxoId) p.set('fluxo', String(fluxoId))
+  if (status) p.set('status', status)
+  const r = await fetch('/automacao/api/execucoes/?' + p.toString(), { credentials: 'include' })
+  if (!r.ok) throw new Error('execuções HTTP ' + r.status)
+  return (await r.json()).execucoes
+}

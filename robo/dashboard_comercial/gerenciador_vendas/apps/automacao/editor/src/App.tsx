@@ -7,6 +7,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import { BlocoNode } from './BlocoNode'
 import { NodeModal } from './NodeModal'
+import ExecucoesPanel from './ExecucoesPanel'
 import {
   buscarCatalogo, buscarEventos, testarFluxo, listarFluxos, getFluxo, criarFluxo, atualizarFluxo,
   type NoCatalogo, type FluxoResumo, type EventoCatalogo,
@@ -38,6 +39,7 @@ export function App() {
   const [msg, setMsg] = useState('')
   const [webhookUrl, setWebhookUrl] = useState('')
   const [editId, setEditId] = useState<string | null>(null)
+  const [aba, setAba] = useState<'editor' | 'execucoes'>('editor')
   const contadores = useRef<Record<string, number>>({})
 
   const urlWebhook = (token: string) =>
@@ -187,16 +189,21 @@ export function App() {
             ))}
           </select>
         </div>
+        <div className="topbar-tabs">
+          <button className={`topbar-tab ${aba === 'editor' ? 'ativo' : ''}`}
+                  onClick={() => setAba('editor')}>Editor</button>
+          <button className={`topbar-tab ${aba === 'execucoes' ? 'ativo' : ''}`}
+                  onClick={() => setAba('execucoes')}>Execuções</button>
+        </div>
         <div className="topbar-acoes">
           {msg && <span className="topbar-msg">{msg}</span>}
           <button onClick={salvar}>💾 Salvar</button>
           <button className="primary" onClick={rodar}>▶ Testar</button>
           <button onClick={exportar}>Exportar JSON</button>
-          <a className="topbar-link" href="/automacao/execucoes/">Execuções</a>
         </div>
       </header>
 
-      <div className="corpo">
+      <div className="corpo" style={{ display: aba === 'editor' ? 'grid' : 'none' }}>
         <main className="canvas">
           {paletaAberta && (
             <NodePanel
@@ -276,6 +283,8 @@ export function App() {
           )}
         </aside>
       </div>
+
+      {aba === 'execucoes' && <ExecucoesPanel fluxoId={fluxoId} />}
 
       {editId && (() => {
         const n = nodes.find((x) => x.id === editId)

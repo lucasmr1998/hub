@@ -23,6 +23,31 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: 
 .topbar-msg { font-size: 12px; color: #1d7a43; font-weight: 600; }
 .topbar-link { font-size: 13px; color: #2f6df6; text-decoration: none; font-weight: 600; padding: 7px 6px; }
 .topbar-link:hover { text-decoration: underline; }
+
+/* Abas Editor / Execuções (estilo n8n — troca sem sair do editor) */
+.topbar-tabs { display: flex; gap: 4px; }
+.topbar-tab { padding: 7px 14px; border: none; background: none; cursor: pointer; font-size: 13px; font-weight: 600; color: #5b6472; border-bottom: 2px solid transparent; }
+.topbar-tab.ativo { color: #2f6df6; border-bottom-color: #2f6df6; }
+
+/* Painel de execuções (dentro do editor) */
+.exec-panel { height: 100%; overflow: auto; background: #fafbfc; padding: 16px 20px; }
+.exec-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.exec-bar select, .exec-bar button { padding: 6px 10px; border: 1px solid #dde2ea; border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; }
+.exec-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #5b6472; }
+.exec-count { color: #8a94a6; font-size: 12px; margin-left: auto; }
+.exec-lista { display: flex; flex-direction: column; gap: 8px; }
+.exec-item { border: 1px solid #e4e8ef; border-radius: 10px; background: #fff; overflow: hidden; }
+.exec-item-head { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; }
+.exec-item-head:hover { background: #f6f8fc; }
+.exec-badge { color: #fff; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 10px; text-transform: uppercase; letter-spacing: .03em; }
+.exec-fluxo { font-weight: 600; font-size: 13px; }
+.exec-quando { color: #8a94a6; font-size: 12px; }
+.exec-passos { color: #5b6472; font-size: 12px; }
+.exec-chevron { margin-left: auto; color: #b3bcca; }
+.exec-detalhe { border-top: 1px solid #eef1f6; padding: 10px 14px; background: #fafbfc; }
+.exec-detalhe ol { margin: 4px 0 0; padding-left: 18px; font-size: 12px; }
+.exec-detalhe li { margin-bottom: 4px; line-height: 1.4; }
+.exec-detalhe code { background: #eef3ff; color: #2f6df6; padding: 0 4px; border-radius: 4px; }
 .topbar button, .row button { padding: 7px 11px; border: 1px solid #dde2ea; border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; }
 .primary { background: #2f6df6 !important; color: #fff; border-color: #2f6df6 !important; }
 

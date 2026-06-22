@@ -96,6 +96,33 @@ def execucoes_page(request):
 
 
 @login_required
+def execucoes_api(request):
+    """JSON das execuções do tenant — alimenta a aba 'Execuções' DENTRO do editor
+    (sem sair da página). Opcional `?fluxo=<id>` e `?status=<s>`."""
+    tenant = getattr(request, 'tenant', None)
+    if tenant is None:
+        return JsonResponse({'erro': 'sem tenant'}, status=400)
+    qs = (ExecucaoFluxo.all_tenants.filter(tenant=tenant)
+          .select_related('fluxo').order_by('-criado_em'))
+    fluxo_id = (request.GET.get('fluxo') or '').strip()
+    if fluxo_id.isdigit():
+        qs = qs.filter(fluxo_id=int(fluxo_id))
+    status = (request.GET.get('status') or '').strip()
+    if status:
+        qs = qs.filter(status=status)
+    execs = [{
+        'id': e.pk,
+        'fluxo': e.fluxo.nome or '(sem nome)',
+        'fluxo_id': e.fluxo_id,
+        'status': e.status,
+        'quando': e.criado_em.strftime('%d/%m/%Y %H:%M'),
+        'erro': e.erro or '',
+        'trace': e.trace or [],
+    } for e in qs[:100]]
+    return JsonResponse({'execucoes': execs})
+
+
+@login_required
 def nodes_catalogo_api(request):
     """Paleta: tipos de nó disponíveis pro editor montar a barra de blocos."""
     return JsonResponse({'nodes': [
