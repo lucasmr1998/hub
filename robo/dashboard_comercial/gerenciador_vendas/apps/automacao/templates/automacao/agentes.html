@@ -1,0 +1,274 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}Agentes IA — Hubtrix{% endblock %}
+
+{% block content %}
+<style>
+  .ag-nav { display:flex; gap:14px; margin-bottom:6px; }
+  .ag-nav a { color:#5b6472; text-decoration:none; font-weight:600; font-size:14px; }
+  .ag-nav a.ativo { color:#2f6df6; }
+  .ag-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:8px 0 18px; }
+  .ag-aviso { background:#fff6e9; border:1px solid #f3d9a6; color:#8a5a00; padding:10px 14px;
+              border-radius:10px; font-size:13px; margin-bottom:16px; }
+  .ag-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; }
+  .ag-card { background:#fff; border:1px solid #e4e8ef; border-radius:14px; padding:16px;
+             display:flex; flex-direction:column; gap:10px; }
+  .ag-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+  .ag-card-nome { font-weight:700; font-size:15px; color:#1f2733; }
+  .ag-card-meta { font-size:12px; color:#5b6472; display:flex; flex-direction:column; gap:3px; }
+  .ag-card-meta code { background:#eef3ff; color:#2f6df6; padding:0 5px; border-radius:4px; }
+  .ag-card-prompt { font-size:12px; color:#7a828f; line-height:1.45; max-height:54px; overflow:hidden;
+                    border-top:1px solid #eef1f6; padding-top:8px; }
+  .ag-card-acoes { display:flex; gap:6px; margin-top:auto; padding-top:6px; }
+  .ag-btn { border:1px solid #dde2ea; background:#fff; color:#3a4250; border-radius:8px;
+            padding:6px 11px; font-size:13px; cursor:pointer; text-decoration:none; display:inline-flex;
+            align-items:center; gap:5px; }
+  .ag-btn:hover { background:#f5f7fa; }
+  .ag-btn-primary { background:#2f6df6; border-color:#2f6df6; color:#fff; }
+  .ag-btn-primary:hover { background:#255fd8; }
+  .ag-btn-danger { color:#c0322b; border-color:#f3c2bf; background:#fff5f4; }
+  .ag-vazio { text-align:center; color:#7a828f; padding:40px 16px; border:1px dashed #d8dee8;
+              border-radius:14px; }
+  /* modal */
+  .ag-modal { display:none; position:fixed; inset:0; background:rgba(20,28,40,.45); z-index:1000;
+              align-items:center; justify-content:center; padding:20px; }
+  .ag-modal-box { background:#fff; border-radius:16px; width:100%; max-width:560px; max-height:90vh;
+                  overflow-y:auto; box-shadow:0 24px 60px rgba(0,0,0,.25); }
+  .ag-modal-head { padding:16px 20px; border-bottom:1px solid #eef1f6; display:flex;
+                   align-items:center; justify-content:space-between; }
+  .ag-modal-head h3 { margin:0; font-size:16px; color:#1f2733; }
+  .ag-modal-x { border:none; background:transparent; font-size:20px; color:#8a929e; cursor:pointer; }
+  .ag-modal-body { padding:20px; display:flex; flex-direction:column; gap:14px; }
+  .ag-field label { display:block; font-size:13px; font-weight:600; color:#3a4250; margin-bottom:5px; }
+  .ag-field input[type=text], .ag-field select, .ag-field textarea {
+    width:100%; border:1px solid #dde2ea; border-radius:9px; padding:9px 11px; font-size:14px;
+    font-family:inherit; box-sizing:border-box; }
+  .ag-field textarea { min-height:140px; resize:vertical; line-height:1.5; }
+  .ag-field .ag-ajuda { font-size:12px; color:#8a929e; margin-top:4px; }
+  .ag-check { display:flex; align-items:center; gap:8px; font-size:14px; color:#3a4250; }
+  .ag-modal-foot { padding:14px 20px; border-top:1px solid #eef1f6; display:flex; gap:8px;
+                   justify-content:flex-end; }
+  /* playground */
+  .ag-pg-resp { background:#f7f9fc; border:1px solid #e4e8ef; border-radius:10px; padding:14px;
+                font-size:14px; line-height:1.55; color:#1f2733; white-space:pre-wrap; min-height:60px; }
+  .ag-pg-resp.vazio { color:#9aa2ae; }
+</style>
+
+<div class="ag-nav">
+  <a href="{% url 'automacao:editor' %}">Editor</a>
+  <a href="{% url 'automacao:execucoes' %}">Execuções</a>
+  <a href="{% url 'automacao:agentes' %}" class="ativo">Agentes</a>
+</div>
+
+{% if sem_tenant %}
+  <p class="muted">Sem tenant na sessão.</p>
+{% else %}
+
+<div class="ag-head">
+  <h1 style="margin:0;">Agentes IA</h1>
+  <button class="ag-btn ag-btn-primary" onclick="agNovo()"><i class="bi bi-plus-lg"></i> Novo agente</button>
+</div>
+
+{% if not tem_integracao %}
+  <div class="ag-aviso">
+    <i class="bi bi-exclamation-triangle"></i>
+    Nenhuma integração de IA ativa no tenant. Configure uma (OpenAI, Anthropic, Groq…) em
+    <a href="/configuracoes/integracoes/">Integrações</a> pra os agentes funcionarem.
+  </div>
+{% endif %}
+
+{% if agentes %}
+<div class="ag-grid">
+  {% for a in agentes %}
+    <div class="ag-card">
+      <div class="ag-card-top">
+        <div class="ag-card-nome">{{ a.nome }}</div>
+        {% if a.ativo %}{% include "components/badge.html" with variant="success" label="ativo" dot=True %}
+        {% else %}{% include "components/badge.html" with variant="muted" label="inativo" dot=True %}{% endif %}
+      </div>
+      <div class="ag-card-meta">
+        <span><i class="bi bi-cpu"></i> {{ a.integracao_ia.nome|default:"(sem integração)" }}</span>
+        <span>modelo: <code>{{ a.modelo|default:"default da integração" }}</code></span>
+      </div>
+      {% if a.system_prompt %}<div class="ag-card-prompt">{{ a.system_prompt|truncatechars:160 }}</div>{% endif %}
+      <div class="ag-card-acoes">
+        <button class="ag-btn" onclick="agEditar({{ a.pk }})"><i class="bi bi-pencil"></i> Editar</button>
+        <button class="ag-btn ag-btn-primary" onclick="agPlayground({{ a.pk }}, '{{ a.nome|escapejs }}')"><i class="bi bi-play"></i> Testar</button>
+        <button class="ag-btn ag-btn-danger" onclick="agExcluir({{ a.pk }}, '{{ a.nome|escapejs }}')" title="Excluir"><i class="bi bi-trash"></i></button>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% else %}
+  <div class="ag-vazio">
+    <p>Nenhum agente ainda.</p>
+    <button class="ag-btn ag-btn-primary" onclick="agNovo()"><i class="bi bi-plus-lg"></i> Criar primeiro agente</button>
+  </div>
+{% endif %}
+
+{{ agentes_json|json_script:"agentes-data" }}
+
+{# ---- Modal criar/editar ---- #}
+<div class="ag-modal" id="ag-form-modal">
+  <div class="ag-modal-box">
+    <div class="ag-modal-head">
+      <h3 id="ag-form-titulo">Novo agente</h3>
+      <button class="ag-modal-x" onclick="agFecharForm()">&times;</button>
+    </div>
+    <div class="ag-modal-body">
+      <input type="hidden" id="ag-id">
+      <div class="ag-field">
+        <label for="ag-nome">Nome</label>
+        <input type="text" id="ag-nome" placeholder="Ex: Atendimento NPS">
+      </div>
+      <div class="ag-field">
+        <label for="ag-integracao">Integração de IA</label>
+        <select id="ag-integracao">
+          <option value="">— selecione —</option>
+          {% for i in integracoes %}<option value="{{ i.id }}">{{ i.nome }} ({{ i.tipo }})</option>{% endfor %}
+        </select>
+      </div>
+      <div class="ag-field">
+        <label for="ag-modelo">Modelo (opcional)</label>
+        <input type="text" id="ag-modelo" placeholder="gpt-4.1-mini">
+        <div class="ag-ajuda">Vazio = usa o modelo padrão da integração.</div>
+      </div>
+      <div class="ag-field">
+        <label for="ag-prompt">System prompt</label>
+        <textarea id="ag-prompt" placeholder="Você é um atendente da empresa X. Seja cordial e objetivo…"></textarea>
+        <div class="ag-ajuda">Aceita expressões {% verbatim %}{{var.nome}}{% endverbatim %} quando rodar dentro de um fluxo.</div>
+      </div>
+      <label class="ag-check"><input type="checkbox" id="ag-ativo" checked> Ativo</label>
+    </div>
+    <div class="ag-modal-foot">
+      <button class="ag-btn" onclick="agFecharForm()">Cancelar</button>
+      <button class="ag-btn ag-btn-primary" onclick="agSalvar()"><i class="bi bi-check-lg"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+{# ---- Modal playground ---- #}
+<div class="ag-modal" id="ag-pg-modal">
+  <div class="ag-modal-box">
+    <div class="ag-modal-head">
+      <h3>Testar: <span id="ag-pg-nome"></span></h3>
+      <button class="ag-modal-x" onclick="agFecharPg()">&times;</button>
+    </div>
+    <div class="ag-modal-body">
+      <div class="ag-field">
+        <label for="ag-pg-msg">Mensagem de teste</label>
+        <textarea id="ag-pg-msg" placeholder="Oi, queria saber sobre os planos" style="min-height:80px;"></textarea>
+      </div>
+      <div class="ag-field">
+        <label>Resposta do agente</label>
+        <div class="ag-pg-resp vazio" id="ag-pg-resp">A resposta do LLM aparece aqui.</div>
+      </div>
+    </div>
+    <div class="ag-modal-foot">
+      <button class="ag-btn" onclick="agFecharPg()">Fechar</button>
+      <button class="ag-btn ag-btn-primary" id="ag-pg-btn" onclick="agTestar()"><i class="bi bi-play"></i> Testar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const AG_DADOS = JSON.parse(document.getElementById('agentes-data').textContent || '[]');
+  const AG_BY_ID = {};
+  AG_DADOS.forEach(a => { AG_BY_ID[a.id] = a; });
+  function agCsrf() {
+    const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+
+  // ---- form ----
+  function agNovo() {
+    document.getElementById('ag-form-titulo').textContent = 'Novo agente';
+    document.getElementById('ag-id').value = '';
+    document.getElementById('ag-nome').value = '';
+    document.getElementById('ag-integracao').value = '';
+    document.getElementById('ag-modelo').value = '';
+    document.getElementById('ag-prompt').value = '';
+    document.getElementById('ag-ativo').checked = true;
+    document.getElementById('ag-form-modal').style.display = 'flex';
+  }
+  function agEditar(id) {
+    const a = AG_BY_ID[id];
+    if (!a) return;
+    document.getElementById('ag-form-titulo').textContent = 'Editar agente';
+    document.getElementById('ag-id').value = a.id;
+    document.getElementById('ag-nome').value = a.nome || '';
+    document.getElementById('ag-integracao').value = a.integracao_ia || '';
+    document.getElementById('ag-modelo').value = a.modelo || '';
+    document.getElementById('ag-prompt').value = a.system_prompt || '';
+    document.getElementById('ag-ativo').checked = !!a.ativo;
+    document.getElementById('ag-form-modal').style.display = 'flex';
+  }
+  function agFecharForm() { document.getElementById('ag-form-modal').style.display = 'none'; }
+
+  function agSalvar() {
+    const nome = document.getElementById('ag-nome').value.trim();
+    if (!nome) { toast('', 'Dê um nome ao agente.', 'warning'); return; }
+    const body = new FormData();
+    body.append('id', document.getElementById('ag-id').value);
+    body.append('nome', nome);
+    body.append('integracao_ia', document.getElementById('ag-integracao').value);
+    body.append('modelo', document.getElementById('ag-modelo').value.trim());
+    body.append('system_prompt', document.getElementById('ag-prompt').value);
+    if (document.getElementById('ag-ativo').checked) body.append('ativo', 'on');
+    fetch("{% url 'automacao:agente_salvar' %}", {
+      method: 'POST', credentials: 'include',
+      headers: { 'X-CSRFToken': agCsrf() }, body,
+    }).then(r => r.json()).then(d => {
+      if (d.ok) { toast('', 'Agente salvo.', 'success'); setTimeout(() => location.reload(), 500); }
+      else toast('', d.erro || 'Erro ao salvar.', 'danger');
+    }).catch(() => toast('', 'Falha de rede.', 'danger'));
+  }
+
+  function agExcluir(id, nome) {
+    if (!confirm('Excluir o agente "' + nome + '"?')) return;
+    fetch('/automacao/agentes/' + id + '/excluir/', {
+      method: 'POST', credentials: 'include', headers: { 'X-CSRFToken': agCsrf() },
+    }).then(r => r.json()).then(d => {
+      if (d.ok) { toast('', 'Agente excluído.', 'success'); setTimeout(() => location.reload(), 400); }
+      else toast('', d.erro || 'Erro.', 'danger');
+    });
+  }
+
+  // ---- playground ----
+  let AG_PG_ID = null;
+  function agPlayground(id, nome) {
+    AG_PG_ID = id;
+    document.getElementById('ag-pg-nome').textContent = nome;
+    document.getElementById('ag-pg-msg').value = '';
+    const resp = document.getElementById('ag-pg-resp');
+    resp.textContent = 'A resposta do LLM aparece aqui.';
+    resp.classList.add('vazio');
+    document.getElementById('ag-pg-modal').style.display = 'flex';
+  }
+  function agFecharPg() { document.getElementById('ag-pg-modal').style.display = 'none'; }
+  function agTestar() {
+    const msg = document.getElementById('ag-pg-msg').value.trim();
+    if (!msg) { toast('', 'Escreva uma mensagem de teste.', 'warning'); return; }
+    const btn = document.getElementById('ag-pg-btn');
+    const resp = document.getElementById('ag-pg-resp');
+    btn.disabled = true;
+    resp.classList.remove('vazio');
+    resp.textContent = 'Pensando…';
+    fetch("{% url 'automacao:agente_playground' %}", {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': agCsrf() },
+      body: JSON.stringify({ agente_id: AG_PG_ID, mensagem: msg }),
+    }).then(r => r.json().then(d => ({ ok: r.ok, d }))).then(({ ok, d }) => {
+      if (ok && d.resposta !== undefined) { resp.textContent = d.resposta || '(resposta vazia)'; }
+      else { resp.textContent = ''; resp.classList.add('vazio'); toast('', d.erro || 'Erro ao testar.', 'danger'); }
+    }).catch(() => { resp.classList.add('vazio'); resp.textContent=''; toast('', 'Falha de rede.', 'danger'); })
+      .finally(() => { btn.disabled = false; });
+  }
+
+  // fecha modal clicando fora
+  document.querySelectorAll('.ag-modal').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
+  });
+</script>
+
+{% endif %}
+{% endblock %}

@@ -93,3 +93,37 @@ class ExecucaoFluxo(TenantMixin):
 
     def __str__(self):
         return f'{self.fluxo_id} · {self.status}'
+
+
+class Agente(TenantMixin):
+    """Agente IA gerenciado: prompt + modelo + tools (D3) + conhecimento (D4).
+
+    Definido UMA vez (área /automacao/agentes/) e referenciado pelos fluxos pelo
+    nó `ia_agente`. Espelha o padrão da IntegracaoAPI (configura uma vez, usa por id).
+    """
+    nome = models.CharField(max_length=200)
+    integracao_ia = models.ForeignKey(
+        'integracoes.IntegracaoAPI', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+    )
+    # Vazio = usa o modelo default da integração (configuracoes_extras['modelo']).
+    modelo = models.CharField(max_length=100, blank=True, default='')
+    system_prompt = models.TextField(blank=True, default='')
+    # D3: chaves das tools habilitadas (registry em services/ia_tools.py).
+    tools = models.JSONField(default=list, blank=True)
+    ativo = models.BooleanField(default=True, db_index=True)
+    criado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'automacao_agente'
+        ordering = ['nome']
+        verbose_name = 'Agente IA'
+        verbose_name_plural = 'Agentes IA'
+
+    def __str__(self):
+        return self.nome

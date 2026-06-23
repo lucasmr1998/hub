@@ -131,6 +131,121 @@ def execucoes_api(request):
 
 
 @login_required
+def agentes_page(request):
+    """Área de Agentes IA: lista + criar/editar + playground. Agentes gerenciados
+    que os fluxos referenciam (nó ia_agente)."""
+    tenant = getattr(request, 'tenant', None)
+    if tenant is None:
+        return render(request, 'automacao/agentes.html', {'sem_tenant': True})
+    from .models import Agente
+    from apps.integracoes.models import IntegracaoAPI
+    agentes = list(
+        Agente.all_tenants.filter(tenant=tenant).select_related('integracao_ia').order_by('nome')
+    )
+    integracoes = list(
+        IntegracaoAPI.all_tenants
+        .filter(tenant=tenant, tipo__in=['openai', 'anthropic', 'groq', 'google_ai'], ativa=True)
+        .order_by('nome')
+    )
+    agentes_json = [{
+        'id': a.pk, 'nome': a.nome, 'integracao_ia': a.integracao_ia_id,
+        'modelo': a.modelo, 'system_prompt': a.system_prompt, 'ativo': a.ativo,
+    } for a in agentes]
+    return render(request, 'automacao/agentes.html', {
+        'agentes': agentes,
+        'agentes_json': agentes_json,
+        'integracoes': integracoes,
+        'tem_integracao': bool(integracoes),
+    })
+
+
+@require_POST
+@login_required
+def agente_salvar(request):
+    """Cria/atualiza um Agente do tenant (form POST)."""
+    tenant = getattr(request, 'tenant', None)
+    if tenant is None:
+        return JsonResponse({'erro': 'sem tenant'}, status=400)
+    from .models import Agente
+    from apps.integracoes.models import IntegracaoAPI
+
+    nome = (request.POST.get('nome') or '').strip()
+    if not nome:
+        return JsonResponse({'erro': 'nome obrigatório'}, status=400)
+
+    integracao = None
+    integ_id = (request.POST.get('integracao_ia') or '').strip()
+    if integ_id.isdigit():
+        integracao = IntegracaoAPI.all_tenants.filter(tenant=tenant, id=int(integ_id)).first()
+
+    pk = (request.POST.get('id') or '').strip()
+    if pk.isdigit():
+        agente = Agente.all_tenants.filter(tenant=tenant, pk=int(pk)).first()
+        if agente is None:
+            return JsonResponse({'erro': 'agente não encontrado'}, status=404)
+    else:
+        agente = Agente(tenant=tenant,
+                        criado_por=request.user if request.user.is_authenticated else None)
+
+    agente.nome = nome
+    agente.integracao_ia = integracao
+    agente.modelo = (request.POST.get('modelo') or '').strip()
+    agente.system_prompt = request.POST.get('system_prompt') or ''
+    agente.ativo = (request.POST.get('ativo') or '') in ('on', 'true', '1')
+    agente.save()
+    return JsonResponse({'ok': True, 'id': agente.pk})
+
+
+@require_POST
+@login_required
+def agente_excluir(request, pk):
+    """Remove um Agente do tenant."""
+    tenant = getattr(request, 'tenant', None)
+    from .models import Agente
+    agente = Agente.all_tenants.filter(tenant=tenant, pk=pk).first()
+    if agente is None:
+        return JsonResponse({'erro': 'agente não encontrado'}, status=404)
+    agente.delete()
+    return JsonResponse({'ok': True})
+
+
+@require_POST
+@login_required
+def agente_playground_api(request):
+    """Testa um agente: manda uma mensagem e devolve a resposta do LLM (sem memória)."""
+    tenant = getattr(request, 'tenant', None)
+    if tenant is None:
+        return JsonResponse({'erro': 'sem tenant'}, status=400)
+    from .models import Agente
+    from .services.ia import chamar_llm, integracao_ia_do_tenant
+
+    data = _corpo_json(request) or {}
+    mensagem = (data.get('mensagem') or '').strip()
+    if not mensagem:
+        return JsonResponse({'erro': 'mensagem vazia'}, status=400)
+
+    agente = (Agente.all_tenants.filter(tenant=tenant, pk=data.get('agente_id'))
+              .select_related('integracao_ia').first())
+    if agente is None:
+        return JsonResponse({'erro': 'agente não encontrado'}, status=404)
+
+    integracao = agente.integracao_ia or integracao_ia_do_tenant(tenant)
+    if integracao is None:
+        return JsonResponse({'erro': 'sem integração de IA ativa no tenant'}, status=400)
+
+    messages = []
+    if agente.system_prompt:
+        messages.append({'role': 'system', 'content': agente.system_prompt})
+    messages.append({'role': 'user', 'content': mensagem})
+
+    resposta = chamar_llm(integracao, messages, modelo=agente.modelo or None)
+    if resposta is None:
+        return JsonResponse({'erro': 'falha ao chamar o LLM (cheque credencial/modelo nos logs)'},
+                            status=502)
+    return JsonResponse({'resposta': resposta})
+
+
+@login_required
 def nodes_catalogo_api(request):
     """Paleta: tipos de nó disponíveis pro editor montar a barra de blocos."""
     return JsonResponse({'nodes': [

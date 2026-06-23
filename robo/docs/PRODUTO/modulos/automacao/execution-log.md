@@ -284,6 +284,17 @@
 - **Validação (dev):** as 4 fontes retornam dados reais (6/3/19/4) + check + build TS.
 - **Status:** completed (fontes locais). **HubSoft (externo)** pode entrar como fonte depois (chama a API do tenant — `listar_servicos`/`modelos_contrato`/`planos_cep`), com cache. Bug de layout do bloco Filtros também corrigido (não estoura mais).
 
+## 2026-06-22 — Capacidade de Agente IA — D1: Agentes gerenciados + serviço LLM + playground
+
+- **Por quê:** trazer fluxos conversacionais com IA pra engine (alvo: bot WhatsApp Megalink NPS+upsell). Convergência do Atendimento. Plano completo: `C:\Users\lucas\.claude\plans\a-gente-deve-gerar-expressive-pixel.md`.
+- **Decisões (com o usuário):** (1) **Agentes são entidades gerenciadas** (área `/automacao/agentes/`), não config inline no nó — o fluxo referencia por dropdown (reusa o mecanismo de opções dinâmicas). (2) **Tools moram no agente** (loop LLM↔tool interno no nó; não mexe no runtime/editor). (3) **Memória:** janela = execução pausada (já existe); fatos = CRM via tools (já existe); **sem tabela nova** (chat persistente deferido, vira flag no `Agente` se precisar — usuário indeciso, porta aberta).
+- **D1 entregue:**
+  - `services/ia.py` — `integracao_ia_do_tenant(tenant, integracao_id=None)` + `chamar_llm(integracao, messages, modelo=None, max_tokens=1000)`. **Extraído** de `atendimento/engine.py:1465` (`_chamar_llm_simples`), cópia canônica multi-provider (OpenAI/Groq/Anthropic/Google AI) — executor de domínio único, NÃO importa do motor a aposentar.
+  - Model `Agente(TenantMixin)` (`nome`, `integracao_ia` FK, `modelo`, `system_prompt`, `tools` JSON pré-preparado p/ D3, `ativo`) + migration **0005_agente** aplicada em `aurora_dev`.
+  - Tela `/automacao/agentes/` (estende `layout_app`): lista (cards) + criar/editar (modal) + **playground** ("testar agente": manda msg → resposta do LLM, sem memória). Nav Editor·Execuções·Agentes.
+- **Gate D1 (validado):** `check` limpo; `agentes_page` renderiza (200); playground 404 p/ agente inexistente; **`chamar_llm` real retornou texto** (OpenAI da `fatepifaespi`/`aurora-hq`). Falta o usuário criar um agente na UI e testar no playground.
+- **Status:** completed (aguardando validação do usuário antes do D2: nó `ia_agente`).
+
 ### Pendências / próximos passos
 - **~~Opções dinâmicas ADIADAS~~ → FEITO (22/06) pras fontes locais** (segmentos/pipelines/estágios/responsáveis). Falta só ligar fontes **externas** (HubSoft: serviços/modelos/planos) como `fonte` que chama a API do tenant + cache. Matrix segue sem API de listar templates (manual).
 - **Decisão (22/06): opções dinâmicas + preview ADIADAS.** Quería-se dropdown de contas/templates Matrix + preview do HSM ao selecionar. Mas o **Matrix não expõe API de listar templates** (confirmado), então a única fonte do preview seria um **registro local** (cópia do corpo por tenant) — com manutenção manual e risco de drift vs o template aprovado. Decidido **manter `cod_conta`/`hsm` manuais** por ora. O **mecanismo genérico de opções dinâmicas** (`select_dinamico` carregado de endpoint por-tenant + painel de preview) fica pra quando entrar uma integração com **API de listagem real** (ex: HubSoft, ou "listar pipelines" do CRM) — aí o investimento se paga em vários provedores.
