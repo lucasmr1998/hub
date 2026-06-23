@@ -842,6 +842,19 @@
                   {% if item.obj.acao %}<p class="tl-body">Acao: {{ item.obj.acao.get_tipo_display|default:item.obj.acao }}</p>{% endif %}
                   {% if item.obj.resultado %}<p class="tl-body" {% if item.obj.status == 'erro' %}style="color: var(--color-danger);"{% endif %}>{{ item.obj.resultado|truncatechars:200 }}</p>{% endif %}
                   <div class="tl-meta">{{ item.obj.get_status_display }}{% if item.obj.nodo %} · nodo: {{ item.obj.nodo.nome|default:'?' }}{% endif %}</div>
+                {% elif item.tipo == 'atribuicao' %}
+                  <div class="tl-dot dot-estagio"></div>
+                  <div class="tl-header">
+                    <div class="tl-title">
+                      <i class="bi bi-person-check" style="color: var(--color-primary); font-size: 12px;"></i>
+                      Responsavel atribuido
+                    </div>
+                    <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
+                  </div>
+                  <p class="tl-body">{{ item.obj.mensagem|truncatechars:240 }}</p>
+                  <div class="tl-meta">
+                    {% if item.obj.usuario %}por {{ item.obj.usuario.get_full_name|default:item.obj.usuario.username }}{% else %}automatico (sync Matrix){% endif %}
+                  </div>
                 {% endif %}
               </div>
             {% endfor %}

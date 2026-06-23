@@ -819,6 +819,21 @@ def oportunidade_detalhe(request, pk):
             'data': nota.data_criacao,
             'obj': nota,
         })
+    # Logs de atribuicao de responsavel (via UI ou cron sync_vendedores_matrix)
+    try:
+        from apps.sistema.models import LogSistema
+        logs_atribuicao = LogSistema.objects.filter(
+            tenant=request.tenant, entidade='oportunidade',
+            entidade_id=oportunidade.pk, categoria='crm', acao='atribuir',
+        ).select_related('usuario').order_by('-data_criacao')[:20]
+        for log in logs_atribuicao:
+            timeline_items.append({
+                'tipo': 'atribuicao',
+                'data': log.data_criacao,
+                'obj': log,
+            })
+    except Exception:
+        pass
     timeline_items.sort(key=lambda x: x['data'], reverse=True)
 
     # Estagios do mesmo pipeline da oportunidade (pra stage progress bar)
