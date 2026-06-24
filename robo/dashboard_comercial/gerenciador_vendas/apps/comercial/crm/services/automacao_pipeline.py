@@ -776,6 +776,100 @@ def _acao_sincronizar_prospecto_hubsoft(oportunidade, config):
     return False
 
 
+def _acao_criar_tarefa(oportunidade, config):
+    """
+    Cria uma Tarefa no CRM vinculada a oportunidade. Idempotente: pula se ja
+    existe tarefa pendente com mesmo `titulo` (apos format) pra mesma oportunidade.
+
+    config aceita:
+      - titulo: string obrigatoria. Suporta placeholders {cidade}/{uf}/{cep}/
+                {nome_lead}/{viabilidade_status} extraidos de lead.dados_custom.viabilidade
+                e do proprio lead.
+      - descricao: string opcional, mesmos placeholders.
+      - prazo_horas: int, horas a partir de agora (default 24).
+      - prioridade: 'baixa' | 'normal' | 'alta' | 'urgente' (default 'normal').
+      - tipo: tipo da tarefa (default 'followup'). Veja Tarefa.TIPO_CHOICES.
+      - responsavel_id: User id explicito. Se None, usa oportunidade.responsavel
+                       ou cai pro primeiro superuser do tenant.
+      - chave_idempotencia: string opcional. Se setada, idempotencia checa por
+                            essa chave dentro do titulo em vez do titulo completo.
+                            Util quando placeholders fazem o titulo variar.
+    """
+    from apps.comercial.crm.models import Tarefa
+    from django.contrib.auth.models import User
+    from django.utils import timezone
+    from datetime import timedelta
+
+    titulo_template = (config.get('titulo') or '').strip()
+    if not titulo_template:
+        logger.warning("[criar_tarefa] config.titulo eh obrigatorio")
+        return False
+
+    lead = getattr(oportunidade, 'lead', None)
+    via = (getattr(lead, 'dados_custom', None) or {}).get('viabilidade') or {}
+    placeholders = {
+        'cidade': via.get('cidade') or (getattr(lead, 'cidade', None) or '—'),
+        'uf': via.get('uf') or (getattr(lead, 'estado', None) or '—'),
+        'cep': via.get('cep_consultado') or (getattr(lead, 'cep', None) or '—'),
+        'nome_lead': getattr(lead, 'nome_razaosocial', None) or '—',
+        'viabilidade_status': via.get('status') or 'nao_consultado',
+    }
+    try:
+        titulo = titulo_template.format(**placeholders)
+    except (KeyError, IndexError):
+        titulo = titulo_template
+    descricao_template = config.get('descricao') or ''
+    try:
+        descricao = descricao_template.format(**placeholders)
+    except (KeyError, IndexError):
+        descricao = descricao_template
+
+    chave = (config.get('chave_idempotencia') or '').strip()
+    chave_match = chave if chave else titulo
+    if Tarefa.objects.filter(
+        oportunidade=oportunidade,
+        status__in=['pendente', 'em_andamento'],
+        titulo__icontains=chave_match,
+    ).exists():
+        logger.info("[criar_tarefa] op=%s ja tem tarefa pendente com chave %r — pula",
+                    oportunidade.pk, chave_match)
+        return False
+
+    responsavel = None
+    resp_id = config.get('responsavel_id')
+    if resp_id:
+        responsavel = User.objects.filter(pk=resp_id).first()
+    if not responsavel:
+        responsavel = getattr(oportunidade, 'responsavel', None)
+    if not responsavel:
+        responsavel = User.objects.filter(
+            is_superuser=True, perfil__tenant=oportunidade.tenant
+        ).order_by('id').first() or User.objects.filter(is_superuser=True).order_by('id').first()
+    if not responsavel:
+        logger.error("[criar_tarefa] op=%s sem responsavel possivel — abortando", oportunidade.pk)
+        return False
+
+    prazo_horas = int(config.get('prazo_horas') or 24)
+    prioridade = config.get('prioridade') or 'normal'
+    tipo = config.get('tipo') or 'followup'
+
+    Tarefa.objects.create(
+        tenant=oportunidade.tenant,
+        oportunidade=oportunidade,
+        lead=lead,
+        responsavel=responsavel,
+        criado_por=None,
+        tipo=tipo,
+        titulo=titulo[:255],
+        descricao=descricao,
+        prioridade=prioridade,
+        data_vencimento=timezone.now() + timedelta(hours=prazo_horas),
+    )
+    logger.info("[criar_tarefa] op=%s tarefa criada (titulo=%r resp=%s prazo=%sh)",
+                oportunidade.pk, titulo[:80], responsavel.username, prazo_horas)
+    return True
+
+
 _EXECUTORES_ACAO = {
     'criar_venda': _acao_criar_venda,
     'atribuir_agente': _acao_atribuir_agente,
@@ -784,6 +878,7 @@ _EXECUTORES_ACAO = {
     'enviar_venda_whatsapp': _acao_enviar_venda_whatsapp,
     'mover_para_perdido_sem_viabilidade': _acao_mover_para_perdido_sem_viabilidade,
     'sincronizar_prospecto_hubsoft': _acao_sincronizar_prospecto_hubsoft,
+    'criar_tarefa': _acao_criar_tarefa,
 }
 
 

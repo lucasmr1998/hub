@@ -331,7 +331,15 @@ class CondicaoViabilidadeStatus:
     Status de viabilidade tecnica gravado em `lead.dados_custom.viabilidade.status`.
     Setado automaticamente pelo api_editar_oportunidade quando o CEP eh editado.
 
-    Valores possiveis: 'cobertura_ok' | 'fora_cobertura' | 'nao_consultado' | 'erro'.
+    Valores possiveis:
+      'cobertura_ok'      | 'fora_cobertura'      | 'pendente_revisao'
+      'endereco_incompleto' | 'nao_consultado'    | 'erro'
+
+    Especial 'pendente_revisao': HubSoft retornou sem cobertura, mas a cidade esta
+    na whitelist do tenant (configuracoes_extras.hubsoft.cidades_whitelist). Usar
+    esse status em uma regra com acao `criar_tarefa` pra forcar validacao manual
+    em vez de mover pra Perdido.
+
     Operadores: igual, diferente, existe, nao_existe.
     """
     slug = 'viabilidade_status'

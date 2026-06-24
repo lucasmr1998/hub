@@ -16,6 +16,11 @@ Estrategia:
 Status possiveis no resultado:
   - 'cobertura_ok'        — atende (HubSoft) ou cidade cadastrada (local)
   - 'fora_cobertura'      — nao atende (HubSoft) ou cidade nao cadastrada
+  - 'pendente_revisao'    — HubSoft disse "fora_cobertura" mas cidade esta na whitelist
+                            do tenant (cidades_whitelist em configuracoes_extras.hubsoft).
+                            Significa: filial atende mas mapeamento HubSoft pode estar
+                            incompleto. Lead NAO deve ir pra Perdido — exige validacao
+                            manual (uma Tarefa eh criada pelo CRM).
   - 'endereco_incompleto' — falta dado pra chamar HubSoft (e nao tem CidadeViabilidade)
   - 'nao_consultado'      — tenant nao tem fonte de viabilidade
   - 'erro'                — falha imprevista
@@ -24,6 +29,7 @@ from __future__ import annotations
 
 import logging
 import re
+import unicodedata
 from dataclasses import dataclass, asdict, field
 from datetime import datetime, timezone as dt_timezone
 from typing import Optional
@@ -31,6 +37,15 @@ from typing import Optional
 import requests
 
 logger = logging.getLogger(__name__)
+
+
+def _normalizar_cidade(s: str) -> str:
+    """Normaliza nome de cidade pra comparacao: sem acento, lowercase, trim."""
+    if not s:
+        return ''
+    s = unicodedata.normalize('NFD', str(s))
+    s = s.encode('ascii', 'ignore').decode('ascii')
+    return s.strip().lower()
 
 
 @dataclass
@@ -224,8 +239,26 @@ def _tentar_hubsoft(
     }
     detalhes = {k: v for k, v in detalhes.items() if v is not None}
 
+    if atende:
+        status = 'cobertura_ok'
+    else:
+        # Cidades com filial ativa mas mapeamento HubSoft possivelmente incompleto.
+        # Em vez de descartar como fora_cobertura, marca pendente_revisao pra
+        # forcar validacao manual (tarefa eh criada pelo CRM ao salvar).
+        extras = (integracao.configuracoes_extras or {}).get('hubsoft', {})
+        whitelist_raw = extras.get('cidades_whitelist') or []
+        whitelist_norm = {_normalizar_cidade(c) for c in whitelist_raw if c}
+        if whitelist_norm and _normalizar_cidade(cidade) in whitelist_norm:
+            status = 'pendente_revisao'
+            detalhes['motivo_whitelist'] = (
+                f'cidade {cidade!r} esta na whitelist do tenant — HubSoft retornou '
+                'sem cobertura, mas filial atende a regiao. Validar manualmente.'
+            )
+        else:
+            status = 'fora_cobertura'
+
     return ResultadoViabilidade(
-        status='cobertura_ok' if atende else 'fora_cobertura',
+        status=status,
         cep_consultado=cep_fmt,
         cidade=cidade, uf=uf, fonte='hubsoft',
         detalhes=detalhes,
