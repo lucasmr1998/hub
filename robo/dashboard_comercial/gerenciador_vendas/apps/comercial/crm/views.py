@@ -2053,6 +2053,77 @@ def api_documento_remover(request, pk):
 
 
 @login_required
+@require_POST
+def api_imagem_aprovar(request, pk):
+    """POST /crm/imagens/<pk>/aprovar/  — body opcional: {observacao: "..."}"""
+    from apps.comercial.leads.models import ImagemLeadProspecto
+    from apps.sistema.utils import registrar_acao
+    from django.utils import timezone
+
+    if not user_tem_funcionalidade(request, 'comercial.aprovar_documento_inline') and not request.user.is_superuser:
+        return JsonResponse({'error': 'Sem permissao para aprovar imagem'}, status=403)
+
+    img = get_object_or_404(ImagemLeadProspecto, pk=pk)
+    try:
+        body = json.loads(request.body or '{}')
+    except (json.JSONDecodeError, ValueError):
+        body = {}
+    observacao = (body.get('observacao') or '').strip()
+    usuario_nome = request.user.get_full_name() or request.user.username
+
+    img.status_validacao = ImagemLeadProspecto.STATUS_VALIDO
+    img.observacao_validacao = observacao
+    img.data_validacao = timezone.now()
+    img.validado_por = usuario_nome
+    img.save(update_fields=['status_validacao', 'observacao_validacao', 'data_validacao', 'validado_por'])
+
+    registrar_acao('crm', 'aprovar_imagem', 'imagem_lead', img.pk,
+                   f'{usuario_nome} aprovou imagem "{img.descricao or "sem rotulo"}" do lead #{img.lead_id}',
+                   request=request)
+
+    return JsonResponse({
+        'ok': True,
+        'imagem': {'id': img.pk, 'status': img.status_validacao, 'status_display': img.get_status_validacao_display()},
+    })
+
+
+@login_required
+@require_POST
+def api_imagem_rejeitar(request, pk):
+    """POST /crm/imagens/<pk>/rejeitar/  — body: {observacao: "motivo"}"""
+    from apps.comercial.leads.models import ImagemLeadProspecto
+    from apps.sistema.utils import registrar_acao
+    from django.utils import timezone
+
+    if not user_tem_funcionalidade(request, 'comercial.aprovar_documento_inline') and not request.user.is_superuser:
+        return JsonResponse({'error': 'Sem permissao para rejeitar imagem'}, status=403)
+
+    img = get_object_or_404(ImagemLeadProspecto, pk=pk)
+    try:
+        body = json.loads(request.body or '{}')
+    except (json.JSONDecodeError, ValueError):
+        body = {}
+    observacao = (body.get('observacao') or '').strip()
+    usuario_nome = request.user.get_full_name() or request.user.username
+
+    img.status_validacao = ImagemLeadProspecto.STATUS_REJEITADO
+    img.observacao_validacao = observacao
+    img.data_validacao = timezone.now()
+    img.validado_por = usuario_nome
+    img.save(update_fields=['status_validacao', 'observacao_validacao', 'data_validacao', 'validado_por'])
+
+    registrar_acao('crm', 'rejeitar_imagem', 'imagem_lead', img.pk,
+                   f'{usuario_nome} rejeitou imagem "{img.descricao or "sem rotulo"}" do lead #{img.lead_id}'
+                   + (f' — motivo: {observacao}' if observacao else ''),
+                   request=request)
+
+    return JsonResponse({
+        'ok': True,
+        'imagem': {'id': img.pk, 'status': img.status_validacao, 'status_display': img.get_status_validacao_display()},
+    })
+
+
+@login_required
 @require_GET
 def api_documento_visualizar(request, pk):
     """GET /crm/documentos/<pk>/visualizar/  — retorna o arquivo inline (image ou PDF)."""

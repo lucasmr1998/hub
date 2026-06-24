@@ -106,6 +106,8 @@ urlpatterns = [
     path('documentos/<int:pk>/rejeitar/', views.api_documento_rejeitar, name='api_documento_rejeitar'),
     path('documentos/<int:pk>/remover/', views.api_documento_remover, name='api_documento_remover'),
     path('documentos/<int:pk>/visualizar/', views.api_documento_visualizar, name='api_documento_visualizar'),
+    path('imagens/<int:pk>/aprovar/', views.api_imagem_aprovar, name='api_imagem_aprovar'),
+    path('imagens/<int:pk>/rejeitar/', views.api_imagem_rejeitar, name='api_imagem_rejeitar'),
 
     # Webhooks inbound
     path('webhook/hubsoft/contrato/', views.webhook_hubsoft_contrato, name='webhook_hubsoft_contrato'),
