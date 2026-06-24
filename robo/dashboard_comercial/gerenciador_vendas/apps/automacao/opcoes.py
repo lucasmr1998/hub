@@ -36,11 +36,18 @@ def _responsaveis(tenant):
     return out
 
 
+def _agentes(tenant):
+    from apps.automacao.models import Agente
+    return [{'value': str(a.pk), 'label': a.nome}
+            for a in Agente.all_tenants.filter(tenant=tenant, ativo=True).order_by('nome')]
+
+
 FONTES = {
     'segmentos': _segmentos,
     'pipelines': _pipelines,
     'estagios': _estagios,
     'responsaveis': _responsaveis,
+    'agentes': _agentes,
 }
 
 

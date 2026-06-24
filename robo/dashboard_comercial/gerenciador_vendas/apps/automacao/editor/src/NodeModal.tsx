@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { Node } from '@xyflow/react'
-import { buscarOpcoes, type Campo, type EventoCatalogo, type Opcao } from './api'
+import { buscarOpcoes, buscarAgenteResumo, type Campo, type EventoCatalogo, type Opcao, type AgenteResumo } from './api'
 
 const OPERADORES = [
   'igual', 'diferente', 'contem', 'nao_contem',
@@ -54,7 +54,7 @@ function formToConfig(form: Form, campos: Campo[]): Form {
 }
 
 export function NodeModal({
-  node, campos, label, icone, eventos, onConfig, onClose, onExecutar,
+  node, campos, label, icone, eventos, onConfig, onClose, onExecutar, webhookUrl,
 }: {
   node: Node
   campos: Campo[]
@@ -64,6 +64,7 @@ export function NodeModal({
   onConfig: (cfg: Form) => void
   onClose: () => void
   onExecutar: () => Promise<any>
+  webhookUrl?: string
 }) {
   const [form, setForm] = useState<Form>(() => initForm((node.data as any).config ?? {}, campos))
   const [saida, setSaida] = useState<any>(null)
@@ -108,7 +109,8 @@ export function NodeModal({
 
           <section className="modal-params">
             <div className="io-titulo">PARÂMETROS</div>
-            {campos.length === 0 && <div className="muted">Este nó não tem parâmetros.</div>}
+            {(node.data as any).tipo === 'webhook' && <WebhookPanel url={webhookUrl} />}
+            {campos.length === 0 && (node.data as any).tipo !== 'webhook' && <div className="muted">Este nó não tem parâmetros.</div>}
             {campos.map((c) => (
               <div key={c.nome} className="campo">
                 <label>{c.label}{c.obrigatorio && <span className="req"> *</span>}</label>
@@ -125,6 +127,7 @@ export function NodeModal({
                   <div className="campo-req">obrigatório</div>
                 )}
                 {c.ajuda && <div className="campo-ajuda">{c.ajuda}</div>}
+                {c.detalhe === 'agente' && <AgenteResumoBox agenteId={form[c.nome]} />}
               </div>
             ))}
             <details className="json-adv">
@@ -171,6 +174,67 @@ function OpcoesSelect({ fonte, value, onChange, placeholder }: {
       {value && !ops.some((o) => o.value === value) && <option value={value}>{value}</option>}
       {ops.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
+  )
+}
+
+function AgenteResumoBox({ agenteId }: { agenteId: any }) {
+  const id = String(agenteId ?? '').trim()
+  const [dados, setDados] = useState<AgenteResumo | null>(null)
+  const [carregando, setCarregando] = useState(false)
+  useEffect(() => {
+    if (!id) { setDados(null); return }
+    let vivo = true
+    setCarregando(true)
+    buscarAgenteResumo(id)
+      .then((d) => { if (vivo) setDados(d) })
+      .finally(() => { if (vivo) setCarregando(false) })
+    return () => { vivo = false }
+  }, [id])
+  if (!id) return null
+  if (carregando) return <div className="agente-resumo muted">carregando agente…</div>
+  if (!dados) return null
+  return (
+    <div className="agente-resumo">
+      <div className="ar-meta">Modelo: <b>{dados.modelo}</b>{dados.integracao ? ` · ${dados.integracao}` : ''}</div>
+      <div className="ar-tit">System prompt</div>
+      <pre className="ar-prompt">{dados.system_prompt || '(vazio)'}</pre>
+      <div className="ar-tit">Ferramentas ativas{dados.tools.length ? ` (${dados.tools.length})` : ''}</div>
+      {dados.tools.length === 0
+        ? <div className="muted">nenhuma — o agente só conversa</div>
+        : dados.tools.map((t) => (
+            <div key={t.chave} className="ar-tool"><b>{t.chave}</b> — {t.descricao}</div>
+          ))}
+      <div className="ar-tit">Base de conhecimento</div>
+      <div className="ar-tool">{dados.base_categorias.length ? dados.base_categorias.join(', ') : 'base inteira do tenant'}</div>
+      <div className="ar-rodape">Editar em <a href="/automacao/agentes/" target="_blank" rel="noreferrer">/automacao/agentes/</a></div>
+    </div>
+  )
+}
+
+function WebhookPanel({ url }: { url?: string }) {
+  const [copiado, setCopiado] = useState(false)
+  const path = url ? (url.split('/automacao/webhook/')[1] ?? '').replace(/\/$/, '') : ''
+  const copiar = () => {
+    if (!url) return
+    navigator.clipboard?.writeText(url)
+    setCopiado(true)
+    setTimeout(() => setCopiado(false), 1500)
+  }
+  return (
+    <div className="wh-panel">
+      <div className="wh-tit">URL do Webhook</div>
+      {url ? (
+        <div className="wh-row">
+          <span className="wh-met">POST</span>
+          <input className="wh-url" readOnly value={url} onFocus={(e) => e.currentTarget.select()} />
+          <button className="wh-copy" onClick={copiar}>{copiado ? '✓ copiado' : 'copiar'}</button>
+        </div>
+      ) : (
+        <div className="muted">Salve o fluxo (💾) pra gerar a URL.</div>
+      )}
+      <div className="wh-meta">Método <b>POST</b>{path ? <> · Path <code>{path}</code></> : null}</div>
+      <div className="wh-meta muted">Um POST nessa URL inicia o fluxo. O corpo JSON vira <code>{'{{var.payload}}'}</code>.</div>
+    </div>
   )
 }
 

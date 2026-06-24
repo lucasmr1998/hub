@@ -121,3 +121,68 @@ def chamar_llm(integracao, messages, *, modelo=None, max_tokens=1000):
     except Exception as e:  # noqa: BLE001 — falha de rede/parse vira None (tratada pelo chamador)
         logger.error('Erro ao chamar LLM %s: %s', tipo, e)
         return None
+
+
+def chamar_llm_com_tools(integracao, messages, tools_schema, despachar_tool, *, modelo=None, max_iter=5):
+    """Chama o LLM com tools e roda o loop de tool-calling até a resposta final.
+
+    - `tools_schema`: defs no formato OpenAI `[{type:'function', function:{name,description,parameters}}]`.
+    - `despachar_tool(nome, args) -> str`: callback (injetado) que executa a tool e devolve o
+      resultado em texto. Desacopla o loop de qualquer modelo de domínio.
+    Só OpenAI/Groq fazem tool-calling; outros providers (ou sem tools) caem em `chamar_llm`.
+    Devolve o texto final (ou None em falha).
+    """
+    import json as _json
+
+    tipo = integracao.tipo
+    if not tools_schema or tipo not in ('openai', 'groq'):
+        return chamar_llm(integracao, messages, modelo=modelo)
+
+    extras = integracao.configuracoes_extras or {}
+    api_key = _credencial(integracao)
+    modelo = modelo or extras.get('modelo', '')
+    headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {api_key}'}
+    url = integracao.base_url or (
+        'https://api.openai.com/v1/chat/completions' if tipo == 'openai'
+        else 'https://api.groq.com/openai/v1/chat/completions'
+    )
+    modelo_final = modelo or ('gpt-4o-mini' if tipo == 'openai' else 'llama-3.1-8b-instant')
+
+    current = list(messages)
+    ultimo_texto = None
+    for _ in range(max_iter):
+        payload = {'model': modelo_final, 'messages': current, 'tools': tools_schema, 'max_tokens': 1500}
+        try:
+            res = requests.post(url, json=payload, headers=headers, timeout=30)
+        except Exception as e:  # noqa: BLE001
+            logger.error('LLM tools %s erro de rede: %s', tipo, e)
+            return ultimo_texto
+        if res.status_code != 200:
+            logger.error('LLM tools %s retornou %s: %s', tipo, res.status_code, res.text[:200])
+            return ultimo_texto
+
+        choice = (res.json().get('choices') or [{}])[0]
+        message = choice.get('message', {})
+        if message.get('content'):
+            ultimo_texto = message['content']
+
+        if choice.get('finish_reason') != 'tool_calls':
+            return message.get('content') or ultimo_texto
+        tool_calls = message.get('tool_calls') or []
+        if not tool_calls:
+            return message.get('content') or ultimo_texto
+
+        current.append(message)  # assistant + tool_calls
+        for tc in tool_calls:
+            fn = tc.get('function', {})
+            try:
+                args = _json.loads(fn.get('arguments') or '{}')
+            except Exception:  # noqa: BLE001
+                args = {}
+            try:
+                resultado = despachar_tool(fn.get('name', ''), args)
+            except Exception as e:  # noqa: BLE001 — tool que estoura vira resultado de erro, não derruba o loop
+                resultado = f'erro ao executar {fn.get("name", "")}: {e}'
+            current.append({'role': 'tool', 'tool_call_id': tc.get('id', ''), 'content': str(resultado)})
+
+    return ultimo_texto  # estourou max_iter

@@ -111,6 +111,8 @@ class Agente(TenantMixin):
     system_prompt = models.TextField(blank=True, default='')
     # D3: chaves das tools habilitadas (registry em services/ia_tools.py).
     tools = models.JSONField(default=list, blank=True)
+    # D4: ids das CategoriaConhecimento que o agente enxerga no RAG (vazio = base inteira do tenant).
+    base_categorias = models.JSONField(default=list, blank=True)
     ativo = models.BooleanField(default=True, db_index=True)
     criado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,

@@ -295,6 +295,53 @@
 - **Gate D1 (validado):** `check` limpo; `agentes_page` renderiza (200); playground 404 p/ agente inexistente; **`chamar_llm` real retornou texto** (OpenAI da `fatepifaespi`/`aurora-hq`). Falta o usuário criar um agente na UI e testar no playground.
 - **Status:** completed (aguardando validação do usuário antes do D2: nó `ia_agente`).
 
+## 2026-06-23 — Agente IA — D2: nó `ia_agente` (turno conversacional + memória)
+
+- **O que:** nó que referencia um `Agente` gerenciado e roda 1 turno de conversa. `apps/automacao/nodes/ia_agente.py` — config `agente_id` (dropdown `fonte:'agentes'`, nova fonte em `opcoes.py`) + `mensagem` (default `{{var.conteudo}}`; se vazio usa `var.resposta` da retoma ou `var.conteudo`). Monta system prompt do agente + histórico + msg → `services/ia.chamar_llm` → `output.resposta`. Saídas `sucesso/erro`.
+- **Memória (janela):** histórico em `var._hist_agente_<id>` acumulado via `promote` (janela 10 turnos). Persiste no `estado` da execução → na retoma volta junto. **Sem tabela nova.** Loop conversacional = topologia do fluxo (ex: `ia_agente` → `whatsapp_pergunta` que pausa → resposta volta pro `ia_agente`); o nó em si **não** pausa (separação: enviar/aguardar é do nó de WhatsApp).
+- **Reuso:** `services/ia.chamar_llm` (D1). Não duplica chamada LLM.
+- **Gate (validado):** `check` limpo; **7 testes** (`tests/test_automacao_ia_agente.py`, mock de `Agente`+`chamar_llm`) verdes; **E2E real em dev** (agente `Hotspot`/`TESTE D2` no `aurora-hq` + OpenAI real) → `branch=sucesso`, resposta coerente, histórico acumulado. Nó aparece na paleta (IA › Agente) sem rebuild (catálogo em runtime).
+- **Não commitado ainda** (risco de push automático pra prod pela sessão concorrente — aguardar OK do usuário pra commitar).
+- **Status:** completed. Próximo: **D3** (tools no agente — modelo CTO: descritor curado que delega a nós, com idempotência + teto de output + params pinados).
+
+## 2026-06-23 — Agente IA — D3: tools no agente (loop tool-calling)
+
+- **Modelo (parecer do CTO):** a camada de tool é própria (`services/ia_tools.py`: chave + descrição p/ LLM + schema dos args) e **delega** ao executor de domínio — NÃO é "todo nó vira tool automático". Garantias: **teto de output** (`_cap`, 1200 chars), **tenant-safe** (`contexto.tenant`), **allowlist por agente** (`Agente.tools`), **params pinados** (ex: pipeline não exposto ao LLM), **idempotência** (tools de escrita delegam a nós já idempotentes).
+- **`services/ia.py::chamar_llm_com_tools(integracao, messages, tools_schema, despachar_tool, modelo, max_iter=5)`** — loop extraído de `atendimento/engine.py:2338`, com `despachar_tool(nome,args)->str` **injetado** (desacopla de `atendimento`). Só OpenAI/Groq; senão cai em `chamar_llm`.
+- **2 tools curadas:** `registrar_feedback(nota, comentario)` — self-contained, grava `LogSistema` no lead (caso NPS); `criar_oportunidade(titulo, valor)` — **delega ao nó** `criar_oportunidade` (pipeline pinado, idempotente).
+- **Nó `ia_agente`:** quando o agente tem `tools`, monta o schema e chama `chamar_llm_com_tools`; histórico guarda só user+assistant final (não o trace de tools).
+- **UI:** seção **Ferramentas** (checkboxes) no editor do agente (`/automacao/agentes/`); `agente_salvar` lê `tools[]`.
+- **Gate (validado):** `check` limpo; **15 testes** (`test_automacao_ia_tools.py` + `_ia_agente.py`) verdes; **E2E real** em dev — agente com `registrar_feedback` + msg "minha nota é 9, adorei" → o LLM **chamou a tool** (extraiu nota=9 + comentário) e gravou `LogSistema` (0→1). Não commitado ainda (risco de push da sessão concorrente).
+- **Status:** completed. Próximo: **D4** (RAG — `services/rag.py` + tool `consultar_base_conhecimento` reusando `apps/suporte/services.buscar_artigos`).
+
+## 2026-06-23 — Agente IA — D4: RAG com filtro por categoria (opção B)
+
+- **Decisão (usuário):** opção **B** — o agente enxerga um **subconjunto** da base de conhecimento (por categoria), não a base inteira. Isolamento entre clientes já vem do `buscar_artigos` (filtra `tenant`); B adiciona escopo **dentro** do tenant (ex: agente de Vendas só vê a categoria "Vendas").
+- **Estrutura reusada (já existia, madura):** módulo **Suporte › Base de Conhecimento** — `CategoriaConhecimento`/`ArtigoConhecimento` (pgvector 1536, embedding por signal), telas `/suporte/conhecimento/gerenciar/`, busca `buscar_artigos` + `/api/buscar/`, "perguntas sem resposta". Não construímos base nova.
+- **Entregue:**
+  - `Agente.base_categorias` (JSON, ids de CategoriaConhecimento; vazio = base inteira) + migration **0006**.
+  - `buscar_artigos(..., categorias=None)` estendido (backward-compatible; `.filter(categoria_id__in=...)`).
+  - `services/rag.py::buscar_conhecimento(tenant, pergunta, categorias, k)` — envolve `buscar_artigos`, formata título+trecho, **degrada gracioso** (sem embedding/pgvector → texto neutro, não levanta).
+  - Tool `consultar_base_conhecimento` em `ia_tools.py` (assinatura das tools virou `fn(contexto, args, agente)`; `despachar(..., agente)`; nó passa o agente) — usa `agente.base_categorias`.
+  - UI: seção **Base de conhecimento** (checkboxes de categorias) no editor do agente; painel do nó `ia_agente` mostra prompt + tools + categorias.
+- **Gate (validado):** `check` limpo; **21 testes** (`test_automacao_rag.py` + tools + agente); tela renderiza; **dev NÃO roda RAG** (aurora_dev sem coluna `embedding`/pgvector). Validação de **dado real em prod (read-only):** `aurora-hq` tem 6 categorias com artigos embeddados (Produto 8, Integrações 5, Vendas 4, Técnico 2, Onboarding 2, FAQ 1) → o filtro por categoria tem dado real. Não commitado (risco de push da sessão concorrente).
+- **Pendências do RAG:** **pgvector no `aurora_dev`** (pra testar localmente) e **clientes-alvo popularem a base** (nuvyon/tr_carrion/fatepi/megalink ainda não têm artigos). Hoje só `aurora-hq` e `demo` têm base.
+- **Status:** completed. Próximo: **D5** (pausa-por-humano via `if` em `{{var.modo_atendimento}}` + canal Evolution se necessário) e/ou montar o **fluxo de teste** do bot.
+
+## 2026-06-23 — Agente IA — D5: pausa-por-humano (+ Evolution deferido)
+
+- **Decisão:** modelo **declarativo** (não hard-guard). Hard-guard no resume quebraria o loop porque `inbox.Conversa.modo_atendimento` tem **default `'humano'`** (bot/humano/finalizado_bot) — bloquear em 'humano' pararia toda conversa. Então o fluxo **opta** por checar via nó `if`.
+- **Entregue (4 edições pequenas):**
+  - `inbox/signals.py` (`on_mensagem_recebida`): o contexto do evento `mensagem_recebida` agora carrega `modo_atendimento` (estado da conversa no disparo).
+  - `eventos.py`: `mensagem_recebida` expõe o subcampo filtrável `var.modo_atendimento`.
+  - `execucao.py`: `retomar(..., extra_vars=None)` + `retomar_por_resposta(..., modo_atendimento=None)` — na retoma, **refresca** `var.modo_atendimento` (o `_rehidratar` não restaura a entidade conversa, então promove o escalar atual).
+  - `automacao/signals.py`: o gancho de retoma passa `conversa.modo_atendimento` atual.
+- **Como o fluxo usa:** nó `if` no topo do loop — esquerda `{{var.modo_atendimento}}`, operador `igual`, direita `humano` → saída `true` encerra (bot não responde); `false` segue pro Agente IA. Visível e à prova de loop (default não bloqueia salvo se o autor adicionar o check).
+- **Premissa:** depende do inbox marcar a conversa como `'humano'` quando um atendente assume (semântica já existente do campo; o motor antigo usa isso).
+- **Evolution API:** **deferido** — nosso sistema usa Uazapi/Matrix; o alvo (Megalink) re-plataforma no canal nosso. Só fazer se um cliente exigir Evolution.
+- **Gate (validado):** `check` limpo; **24 testes** (`test_automacao_pausa_humano.py` + regressão D2–D4); o `if` ramifica certo por `modo_atendimento`; `retomar_por_resposta` aceita o novo arg (compat). Não commitado (risco de push da sessão concorrente).
+- **Status:** completed. **Capacidade de Agente IA completa (D1–D5).** Falta: montar o **fluxo de teste** do bot, **ligar o wiring** em prod (com revisão do signal do inbox + `dar_pontos`), e **commitar**.
+
 ### Pendências / próximos passos
 - **~~Opções dinâmicas ADIADAS~~ → FEITO (22/06) pras fontes locais** (segmentos/pipelines/estágios/responsáveis). Falta só ligar fontes **externas** (HubSoft: serviços/modelos/planos) como `fonte` que chama a API do tenant + cache. Matrix segue sem API de listar templates (manual).
 - **Decisão (22/06): opções dinâmicas + preview ADIADAS.** Quería-se dropdown de contas/templates Matrix + preview do HSM ao selecionar. Mas o **Matrix não expõe API de listar templates** (confirmado), então a única fonte do preview seria um **registro local** (cópia do corpo por tenant) — com manutenção manual e risco de drift vs o template aprovado. Decidido **manter `cod_conta`/`hsm` manuais** por ora. O **mecanismo genérico de opções dinâmicas** (`select_dinamico` carregado de endpoint por-tenant + painel de preview) fica pra quando entrar uma integração com **API de listagem real** (ex: HubSoft, ou "listar pipelines" do CRM) — aí o investimento se paga em vários provedores.

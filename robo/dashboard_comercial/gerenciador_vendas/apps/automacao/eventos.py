@@ -114,6 +114,7 @@ EVENTOS = {
             _c('var.conteudo', 'Conteúdo'),
             _c('var.canal', 'Canal'),
             _c('var.telefone', 'Telefone'),
+            _c('var.modo_atendimento', 'Modo de atendimento'),
         ],
     },
     'conversa_aberta': {

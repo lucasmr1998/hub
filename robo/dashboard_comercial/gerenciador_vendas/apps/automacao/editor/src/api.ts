@@ -16,9 +16,30 @@ export interface Campo {
   ajuda?: string
   obrigatorio?: boolean
   fonte?: string   // dropdown dinâmico: opções carregadas de /api/opcoes/<fonte>/
+  detalhe?: string // painel read-only abaixo do campo (ex: 'agente' → resumo do agente)
 }
 
 export interface Opcao { value: string; label: string }
+
+export interface AgenteResumo {
+  nome: string
+  ativo: boolean
+  modelo: string
+  integracao: string
+  system_prompt: string
+  tools: { chave: string; descricao: string }[]
+  base_categorias: string[]
+}
+
+export async function buscarAgenteResumo(id: string): Promise<AgenteResumo | null> {
+  try {
+    const r = await fetch('/automacao/api/agentes/' + encodeURIComponent(id) + '/', { credentials: 'include' })
+    if (!r.ok) return null
+    return await r.json()
+  } catch {
+    return null
+  }
+}
 
 const _cacheOpcoes: Record<string, Opcao[]> = {}
 

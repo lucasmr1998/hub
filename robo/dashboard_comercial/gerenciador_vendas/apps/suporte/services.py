@@ -82,7 +82,7 @@ def registrar_pergunta_sem_resposta(*, tenant, pergunta: str, lead=None, convers
 # BUSCA DE CONHECIMENTO (RAG via pgvector)
 # ============================================================================
 
-def buscar_artigos(tenant, pergunta: str, k: int = 5, distancia_max: float = 0.5):
+def buscar_artigos(tenant, pergunta: str, k: int = 5, distancia_max: float = 0.5, categorias=None):
     """Busca top-K artigos da base de conhecimento mais relevantes pra `pergunta`.
 
     Usa pgvector com distancia cosseno (`<=>`). Filtra por tenant + publicado=True.
@@ -118,7 +118,12 @@ def buscar_artigos(tenant, pergunta: str, k: int = 5, distancia_max: float = 0.5
         ArtigoConhecimento.all_tenants
         .filter(tenant=tenant, publicado=True)
         .exclude(embedding__isnull=True)
-        .annotate(distancia=CosineDistance('embedding', emb_pergunta))
+    )
+    if categorias:
+        # Escopo opcional por categoria (ex: agente que só enxerga parte da base).
+        qs = qs.filter(categoria_id__in=categorias)
+    qs = (
+        qs.annotate(distancia=CosineDistance('embedding', emb_pergunta))
         .filter(distancia__lte=distancia_max)
         .order_by('distancia')[:k]
     )

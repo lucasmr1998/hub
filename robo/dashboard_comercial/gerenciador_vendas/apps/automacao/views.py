@@ -147,15 +147,22 @@ def agentes_page(request):
         .filter(tenant=tenant, tipo__in=['openai', 'anthropic', 'groq', 'google_ai'], ativa=True)
         .order_by('nome')
     )
+    from .services.ia_tools import tools_disponiveis
+    from apps.suporte.models import CategoriaConhecimento
+    categorias = list(CategoriaConhecimento.all_tenants.filter(tenant=tenant).order_by('nome'))
     agentes_json = [{
         'id': a.pk, 'nome': a.nome, 'integracao_ia': a.integracao_ia_id,
         'modelo': a.modelo, 'system_prompt': a.system_prompt, 'ativo': a.ativo,
+        'tools': a.tools or [],
+        'base_categorias': [str(x) for x in (a.base_categorias or [])],
     } for a in agentes]
     return render(request, 'automacao/agentes.html', {
         'agentes': agentes,
         'agentes_json': agentes_json,
         'integracoes': integracoes,
         'tem_integracao': bool(integracoes),
+        'tools_disponiveis': [{'chave': c, 'descricao': d} for c, d in tools_disponiveis()],
+        'categorias': categorias,
     })
 
 
@@ -192,6 +199,8 @@ def agente_salvar(request):
     agente.modelo = (request.POST.get('modelo') or '').strip()
     agente.system_prompt = request.POST.get('system_prompt') or ''
     agente.ativo = (request.POST.get('ativo') or '') in ('on', 'true', '1')
+    agente.tools = [t for t in request.POST.getlist('tools') if t]
+    agente.base_categorias = [c for c in request.POST.getlist('base_categorias') if c]
     agente.save()
     return JsonResponse({'ok': True, 'id': agente.pk})
 
@@ -243,6 +252,36 @@ def agente_playground_api(request):
         return JsonResponse({'erro': 'falha ao chamar o LLM (cheque credencial/modelo nos logs)'},
                             status=502)
     return JsonResponse({'resposta': resposta})
+
+
+@login_required
+def agente_resumo_api(request, pk):
+    """Resumo read-only de um agente (prompt + tools ativas) — pro nó ia_agente
+    mostrar o que o agente escolhido faz, sem sair do editor."""
+    tenant = getattr(request, 'tenant', None)
+    from .models import Agente
+    from .services.ia_tools import tools_disponiveis
+    ag = (Agente.all_tenants.filter(tenant=tenant, pk=pk)
+          .select_related('integracao_ia').first())
+    if ag is None:
+        return JsonResponse({'erro': 'agente não encontrado'}, status=404)
+    descr = dict(tools_disponiveis())
+    extras = getattr(ag.integracao_ia, 'configuracoes_extras', None) or {}
+    cats = []
+    if ag.base_categorias:
+        from apps.suporte.models import CategoriaConhecimento
+        cats = list(CategoriaConhecimento.all_tenants
+                    .filter(tenant=tenant, pk__in=ag.base_categorias)
+                    .values_list('nome', flat=True))
+    return JsonResponse({
+        'nome': ag.nome,
+        'ativo': ag.ativo,
+        'modelo': ag.modelo or extras.get('modelo', '') or '(default da integração)',
+        'integracao': getattr(ag.integracao_ia, 'nome', '') or '',
+        'system_prompt': ag.system_prompt or '',
+        'tools': [{'chave': c, 'descricao': descr.get(c, '')} for c in (ag.tools or [])],
+        'base_categorias': list(cats),
+    })
 
 
 @login_required

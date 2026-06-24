@@ -212,6 +212,7 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
             'nome': conversa.contato_nome,
             'conteudo': instance.conteudo[:200],
             'canal': conversa.canal.tipo if conversa.canal_id else '',
+            'modo_atendimento': conversa.modo_atendimento,  # pausa-por-humano: fluxo checa via if
         }
 
         if conversa.lead:

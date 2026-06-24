@@ -300,6 +300,7 @@ export function App() {
             onConfig={atualizarConfig}
             onClose={() => setEditId(null)}
             onExecutar={async () => await testarFluxo(paraRuntime(nodes, edges))}
+            webhookUrl={webhookUrl}
           />
         )
       })()}

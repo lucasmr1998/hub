@@ -27,6 +27,7 @@ def on_mensagem_resposta(sender, instance, created, **kwargs):
             getattr(conversa, 'tenant', None),
             chave_telefone(getattr(conversa, 'contato_telefone', '') or ''),
             getattr(instance, 'conteudo', '') or '',
+            getattr(conversa, 'modo_atendimento', '') or '',
         )
     except Exception:
         logger.exception('[automacao] falha ao retomar execução por resposta')

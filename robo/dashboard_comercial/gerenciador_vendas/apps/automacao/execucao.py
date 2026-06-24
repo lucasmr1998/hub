@@ -53,13 +53,16 @@ def executar_e_persistir(fluxo, contexto, *, inicio=None, execucao=None):
     return execucao, res
 
 
-def retomar(execucao, branch, dados=None):
+def retomar(execucao, branch, dados=None, extra_vars=None):
     """Continua a execução a partir do nó pausado, seguindo `branch`.
 
     `dados` (ex: {'resposta': '...'}) é injetado: vira `{{nodes.<pausado>.resposta}}`
-    e `{{var.resposta}}` pro resto do fluxo.
+    e `{{var.resposta}}` pro resto do fluxo. `extra_vars` funde em `var.*` (ex:
+    `modo_atendimento` atualizado, pra o fluxo re-checar pausa-por-humano na retoma).
     """
     contexto = _rehidratar(execucao)
+    if extra_vars:
+        contexto.variaveis.update(extra_vars)
     if dados:
         contexto.registrar_saida(execucao.no_pausado, dados)
         if 'resposta' in dados:
@@ -118,8 +121,13 @@ def rodar_novos(limite=100):
     return n
 
 
-def retomar_por_resposta(tenant, chave, conteudo):
-    """Inbox: o contato `chave` respondeu — retoma a execução pausada por ele."""
+def retomar_por_resposta(tenant, chave, conteudo, modo_atendimento=None):
+    """Inbox: o contato `chave` respondeu — retoma a execução pausada por ele.
+
+    `modo_atendimento` (estado atual da conversa) é promovido em `var.modo_atendimento`
+    pra o fluxo re-checar pausa-por-humano na retoma (o `_rehidratar` não restaura a
+    entidade conversa).
+    """
     if not chave or tenant is None:
         return False
     ex = (
@@ -129,7 +137,8 @@ def retomar_por_resposta(tenant, chave, conteudo):
     )
     if ex is None:
         return False
-    retomar(ex, 'resposta', {'resposta': conteudo})
+    extra = {'modo_atendimento': modo_atendimento} if modo_atendimento else None
+    retomar(ex, 'resposta', {'resposta': conteudo}, extra_vars=extra)
     return True
 
 
