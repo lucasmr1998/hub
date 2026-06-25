@@ -398,6 +398,18 @@
 - **Gate (provado no dev, tenant demo):** `--salvar` criou Fluxos 38/39 (inativos, com origem_regra); cutover dry-run listou os pares; **`--ativar` no Fluxo 38** → `Fluxo.ativo False→True` + `regra.ativa True→False` (atômico, sem duplo); **`--reverter`** → voltou tudo. Reversível.
 - **Status:** completed (cutover). Falta só: **wiring on em prod** + revisão (signal inbox + dar_pontos) — passo gated/deploy.
 
+## 2026-06-25 — Convergência marketing: revisão de go-live + runbook (wiring) [GATED]
+
+- **Revisão de segurança (verde):** `dar_pontos` tenant-safe (`filter(tenant, cpf)`); wiring `on_evento` blindado (try/except + kill-switch `AUTOMACAO_WIRING_ATIVO` + guard de re-entrância + deferido via cron `rodar_novos`); signals do inbox (`on_mensagem_recebida`/`on_mensagem_resposta`) baratos (query indexada).
+- **Fato-chave (prod read-only):** **0 Fluxos no total** em prod (0 com gatilho de evento) e **8 RegraAutomacao ativas**. Logo, **ligar o wiring em prod é INERTE** — `on_evento` não acha fluxo, não faz nada — até a migração rodar lá. Risco do go-live é baixo e gradual.
+- **Runbook de go-live (prod, GATED — autorização explícita do usuário por passo):**
+  1. (Opcional, recomendado) tornar `AUTOMACAO_WIRING_ATIVO` **env-driven** (toggle no EasyPanel sem deploy; rollback instantâneo).
+  2. `migrar_regras_marketing --tenant <slug> --salvar` em prod → cria 8 Fluxos **inativos** (`origem_regra` setado). Conferir avisos (ações sem nó: email etc.).
+  3. **Ligar o wiring** (`AUTOMACAO_WIRING_ATIVO=True`). Inerte (fluxos ainda inativos).
+  4. `cutover_marketing --fluxo <id> --ativar` **regra por regra** (começar por 1 de baixo risco) → liga o Fluxo, desliga a regra antiga (atômico, sem duplo). Monitorar `automacao_execucao`.
+  5. Rollback de qualquer passo: `cutover_marketing --fluxo <id> --reverter` (volta pro motor antigo) ou desligar a flag.
+- **Status do build:** convergência marketing **construída e testada** (freio + tradutor + cutover, dry-run 10/10). O **go-live em prod** é o passo deploy/gated, aguardando autorização. `enviar_email` fica no motor antigo (deferido).
+
 ### Pendências / próximos passos
 - **~~Opções dinâmicas ADIADAS~~ → FEITO (22/06) pras fontes locais** (segmentos/pipelines/estágios/responsáveis). Falta só ligar fontes **externas** (HubSoft: serviços/modelos/planos) como `fonte` que chama a API do tenant + cache. Matrix segue sem API de listar templates (manual).
 - **Decisão (22/06): opções dinâmicas + preview ADIADAS.** Quería-se dropdown de contas/templates Matrix + preview do HSM ao selecionar. Mas o **Matrix não expõe API de listar templates** (confirmado), então a única fonte do preview seria um **registro local** (cópia do corpo por tenant) — com manutenção manual e risco de drift vs o template aprovado. Decidido **manter `cod_conta`/`hsm` manuais** por ora. O **mecanismo genérico de opções dinâmicas** (`select_dinamico` carregado de endpoint por-tenant + painel de preview) fica pra quando entrar uma integração com **API de listagem real** (ex: HubSoft, ou "listar pipelines" do CRM) — aí o investimento se paga em vários provedores.
