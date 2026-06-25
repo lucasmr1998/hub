@@ -86,13 +86,18 @@ class Command(BaseCommand):
                     preco = Decimal('0')
                 velocidade_down = p.get('velocidade_download')
                 velocidade_up = p.get('velocidade_upload')
-                ativo = bool(p.get('ativo', True))
 
                 if dry:
                     self.stdout.write(f'  [DRY] {id_servico:>5} | R$ {preco:>7} | {nome}')
                     continue
 
-                # UPSERT por (tenant, id_externo)
+                # UPSERT por (tenant, id_externo).
+                #
+                # IMPORTANTE: este sync NUNCA mexe no campo `ativo` — o admin
+                # do tenant controla quais planos ficam ativos no CRM via UI
+                # (whitelist). Sync atualiza apenas nome/preco/dados_erp.
+                # Novos planos ainda nascem com ativo=False (default seguro)
+                # pra que o admin decida ativar.
                 produto, criado_agora = ProdutoServico.all_tenants.get_or_create(
                     tenant=tenant, id_externo=id_servico,
                     defaults={
@@ -100,7 +105,7 @@ class Command(BaseCommand):
                         'preco': preco,
                         'categoria': 'plano',
                         'recorrencia': 'mensal',
-                        'ativo': ativo,
+                        'ativo': False,
                         'dados_erp': {
                             'empresa': empresa,
                             'velocidade_download_mbps': velocidade_down,
@@ -112,7 +117,7 @@ class Command(BaseCommand):
                 if criado_agora:
                     criados += 1
                     self.stdout.write(self.style.SUCCESS(
-                        f'  CRIADO  {id_servico:>5} | R$ {preco:>7} | {nome}'
+                        f'  CRIADO  {id_servico:>5} | R$ {preco:>7} | {nome} (ativo=False)'
                     ))
                 else:
                     mudou = False
@@ -120,8 +125,7 @@ class Command(BaseCommand):
                         produto.nome = nome; mudou = True
                     if produto.preco != preco:
                         produto.preco = preco; mudou = True
-                    if produto.ativo != ativo:
-                        produto.ativo = ativo; mudou = True
+                    # NAO mexer em produto.ativo — controlado pelo admin
                     dados = dict(produto.dados_erp or {})
                     dados.update({
                         'empresa': empresa,
