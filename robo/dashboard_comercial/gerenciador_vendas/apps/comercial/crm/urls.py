@@ -9,6 +9,8 @@ urlpatterns = [
     path('pipeline/', views.pipeline_view, name='pipeline_view'),
     path('pipeline/dados/', views.api_pipeline_dados, name='api_pipeline_dados'),
     path('pipeline/mover/', views.api_mover_oportunidade, name='api_mover_oportunidade'),
+    path('pipeline/preferencia-kanban/', views.api_preferencia_kanban, name='api_preferencia_kanban'),
+    path('pipeline/configuracao-card-padrao/', views.api_configuracao_card_padrao, name='api_configuracao_card_padrao'),
 
     # Oportunidades
     path('oportunidades/criar/', views.api_criar_oportunidade, name='api_criar_oportunidade'),

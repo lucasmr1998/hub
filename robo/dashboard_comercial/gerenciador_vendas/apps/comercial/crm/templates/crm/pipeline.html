@@ -29,6 +29,7 @@
       {% endif %}
     </div>
     <div class="page-actions">
+      <button class="btn btn-secondary btn-sm" onclick="abrirModalPersonalizarCard()" title="Personalizar campos do card"><i class="bi bi-sliders"></i> Personalizar card</button>
       <button class="btn btn-secondary btn-sm" onclick="carregarPipeline()"><i class="bi bi-arrow-clockwise"></i> Atualizar</button>
       {% include "components/view_toggle.html" with storage_key="pipeline-view" %}
       <button class="btn btn-primary btn-sm" onclick="abrirModalNovaOportunidade()"><i class="bi bi-plus-lg"></i> Nova oportunidade</button>
@@ -179,6 +180,45 @@
 </div>
 
 {% csrf_token %}
+
+<!-- Modal: Personalizar card do kanban -->
+<div id="modalPersonalizarCard" class="modal-overlay" hidden>
+  <div class="modal modal-personalizar-card">
+    <div class="modal-header">
+      <h2><i class="bi bi-sliders"></i> Personalizar card do kanban</h2>
+      <button class="modal-close" onclick="fecharModalPersonalizarCard()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body modal-personalizar-body">
+      <div class="personalizar-grid">
+        <div class="personalizar-coluna">
+          <div class="personalizar-coluna-header">
+            <span>Campos disponiveis</span>
+          </div>
+          <div id="campos-disponiveis" class="personalizar-lista"></div>
+        </div>
+        <div class="personalizar-coluna">
+          <div class="personalizar-coluna-header">
+            <span>Visiveis no card <small id="campos-contador" class="muted">0/5</small></span>
+            <small class="muted">Arraste pra reordenar</small>
+          </div>
+          <div id="campos-selecionados" class="personalizar-lista personalizar-selecionados"></div>
+        </div>
+      </div>
+      <div class="personalizar-preview">
+        <div class="personalizar-preview-label">Preview</div>
+        <div id="preview-card-render"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="voltarPadraoPersonalizarCard()">Voltar pro padrao</button>
+      <div style="flex:1;"></div>
+      <button class="btn btn-secondary btn-sm" onclick="fecharModalPersonalizarCard()">Cancelar</button>
+      <button id="btn-salvar-personalizar" class="btn btn-primary btn-sm" onclick="salvarPersonalizacaoCard()">
+        <i class="bi bi-check-lg"></i> Salvar
+      </button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_css %}
@@ -558,6 +598,103 @@
   @media (max-width: 768px) {
     .kanban-column { flex: 0 0 250px; }
   }
+
+  /* Campos customizaveis do card */
+  .card-campo {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--color-text); padding: 2px 0;
+    line-height: 1.4;
+  }
+  .card-campo i { font-size: 11px; color: var(--color-text-muted); flex-shrink: 0; }
+  .card-campo-meta { color: var(--color-text-muted); font-size: 11px; }
+  .card-campo.card-valor { font-weight: 600; color: var(--color-text); }
+  .card-campo.card-tempo-vencido { color: #c93b3b; }
+  .card-campo.card-tempo-vencido i { color: #c93b3b; }
+  .card-campo.card-sem-resp { color: var(--color-text-muted); font-style: italic; font-size: 11px; }
+
+  /* Modal personalizar */
+  .modal-personalizar-card { max-width: 920px; width: 95vw; }
+  .modal-personalizar-body { padding: 16px 20px; }
+  .personalizar-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    margin-bottom: 16px;
+  }
+  .personalizar-coluna {
+    display: flex; flex-direction: column;
+    border: 1px solid var(--color-border); border-radius: 8px;
+    overflow: hidden; background: var(--color-bg);
+    max-height: 360px;
+  }
+  .personalizar-coluna-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 10px 12px; background: var(--color-bg-elevated);
+    border-bottom: 1px solid var(--color-border);
+    font-size: 12px; font-weight: 600;
+  }
+  .personalizar-coluna-header .muted { color: var(--color-text-muted); font-weight: 400; }
+  .personalizar-lista { overflow-y: auto; padding: 8px; flex: 1; }
+  .campos-grupo { margin-bottom: 12px; }
+  .campos-grupo-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--color-text-muted); padding: 4px 4px 6px;
+  }
+  .campo-opcao {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px; border-radius: 6px;
+    font-size: 13px; cursor: pointer;
+    transition: background 0.1s;
+  }
+  .campo-opcao:hover { background: var(--color-bg-elevated); }
+  .campo-opcao.disabled { opacity: 0.5; cursor: not-allowed; }
+  .campo-opcao i { color: var(--color-text-muted); }
+  .campo-opcao input[type=checkbox] { margin: 0; }
+
+  .personalizar-selecionados { display: flex; flex-direction: column; gap: 6px; padding: 12px; }
+  .campos-vazio {
+    text-align: center; color: var(--color-text-muted);
+    font-size: 12px; padding: 32px 16px;
+  }
+  .campo-pill {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; border-radius: 6px;
+    background: var(--color-bg); border: 1px solid var(--color-border);
+    font-size: 13px; cursor: grab; user-select: none;
+  }
+  .campo-pill.dragging { opacity: 0.4; }
+  .campo-pill .campo-grip { color: var(--color-text-muted); cursor: grab; }
+  .campo-pill span { flex: 1; }
+  .campo-pill .campo-remover {
+    background: none; border: none; cursor: pointer;
+    color: var(--color-text-muted); padding: 2px 6px; border-radius: 4px;
+  }
+  .campo-pill .campo-remover:hover { color: #c93b3b; background: var(--color-bg-elevated); }
+
+  .personalizar-preview {
+    border-top: 1px solid var(--color-border);
+    padding: 16px; background: var(--color-bg);
+    border-radius: 8px;
+  }
+  .personalizar-preview-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--color-text-muted); margin-bottom: 10px;
+  }
+  .kanban-card-preview {
+    max-width: 280px; padding: 12px; border-radius: 8px;
+    background: white; border: 1px solid var(--color-border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .kanban-card-preview .card-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .kanban-card-preview .card-nome { font-weight: 600; font-size: 14px; }
+  .kanban-card-preview .card-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--color-border);
+  }
+  .kanban-card-preview .card-avatar {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--color-text); color: white; font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .kanban-card-preview .card-dias { font-size: 11px; color: var(--color-text-muted); }
 </style>
 {% endblock %}
 
@@ -568,6 +705,11 @@ const ESTAGIOS = [
   { id: {{ e.pk }}, nome: "{{ e.nome }}", cor: "{{ e.cor_hex }}", tipo: "{{ e.tipo }}", is_ganho: {{ e.is_final_ganho|yesno:"true,false" }}, is_perdido: {{ e.is_final_perdido|yesno:"true,false" }} },
   {% endfor %}
 ];
+
+// Personalizacao do card — vindo do server. Cascata: pref usuario -> default tenant -> default global
+window.PIPELINE_CAMPOS_VISIVEIS = {{ campos_visiveis_json|safe }};
+window.PIPELINE_CAMPOS_DISPONIVEIS = {{ campos_disponiveis_json|safe }};
+window.PIPELINE_CAMPOS_MAX = {{ campos_max }};
 
 const TAGS_QUALIFICACAO = ['Comercial', 'Endereço', 'Documental'];
 const TAG_ICONES = {
@@ -888,6 +1030,12 @@ function criarCard(op, estagio) {
     </div>`;
   }
 
+  // Render dinamico baseado em window.PIPELINE_CAMPOS_VISIVEIS (config do usuario)
+  const camposVisiveis = (window.PIPELINE_CAMPOS_VISIVEIS && window.PIPELINE_CAMPOS_VISIVEIS.length)
+    ? window.PIPELINE_CAMPOS_VISIVEIS
+    : ['nome', 'telefone', 'valor_estimado', 'tempo_no_estagio', 'responsavel'];
+  const camposHtml = camposVisiveis.map(slug => renderCampoCard(slug, op)).filter(Boolean).join('');
+
   card.innerHTML += `
     <div class="card-top">
       <div class="card-nome">${escapeHtml(op.nome)}</div>
@@ -895,17 +1043,16 @@ function criarCard(op, estagio) {
         <i class="bi bi-three-dots-vertical"></i>
       </button>
     </div>
-    <div class="card-tel">${escapeHtml(op.telefone || '—')}</div>
-    ${badgesHtml ? `<div class="card-badges">${badgesHtml}</div>` : ''}
+    ${camposHtml}
+    ${badgesHtml && !camposVisiveis.includes('valor_estimado') ? `<div class="card-badges">${badgesHtml}</div>` : ''}
     ${botHtml}
-    ${dadosExtrasHtml}
     ${tagsHtml}
     <div class="card-footer">
       ${op.responsavel_id
         ? `<div class="card-avatar" title="${escapeHtml(avatarTitle)}">${escapeHtml(avatarText)}</div>`
         : `<div class="card-resp-empty">sem responsável</div>`
       }
-      <div class="${diasClass}">${op.dias_no_estagio}d</div>
+      <div class="${diasClass}">${formatarTempoEstagio(op.dias_no_estagio)}</div>
     </div>
   `;
 
@@ -1142,6 +1289,266 @@ function mostrarLoader(show) {
 function formatarValor(valor) {
   if (valor >= 1000) return (valor / 1000).toFixed(1).replace('.', ',') + 'k';
   return valor.toFixed(2).replace('.', ',');
+}
+
+// ============================================================================
+// CARD CUSTOMIZAVEL — render dinamico baseado em window.PIPELINE_CAMPOS_VISIVEIS
+// ============================================================================
+
+function formatarTempoEstagio(dias) {
+  if (dias == null) return '—';
+  if (dias === 0) return 'hoje';
+  if (dias === 1) return '1d';
+  if (dias < 7) return dias + 'd';
+  if (dias < 30) return Math.floor(dias / 7) + 'sem';
+  return Math.floor(dias / 30) + 'mes';
+}
+
+function renderCampoCard(slug, op) {
+  switch (slug) {
+    case 'nome':
+      return ''; // ja renderiza no card-top
+    case 'telefone':
+      if (!op.telefone) return '';
+      return `<div class="card-campo card-tel"><i class="bi bi-telephone"></i> ${escapeHtml(op.telefone)}</div>`;
+    case 'cpf':
+      if (!op.cpf) return '';
+      return `<div class="card-campo"><i class="bi bi-card-text"></i> ${escapeHtml(op.cpf)}</div>`;
+    case 'email':
+      if (!op.email) return '';
+      return `<div class="card-campo"><i class="bi bi-envelope"></i> ${escapeHtml(op.email)}</div>`;
+    case 'valor_estimado': {
+      const v = parseFloat(op.valor_estimado || op.valor || 0);
+      if (v <= 0) return '';
+      return `<div class="card-campo card-valor"><i class="bi bi-currency-dollar"></i> R$ ${formatarValor(v)}</div>`;
+    }
+    case 'plano':
+      if (!op.plano) return '';
+      return `<div class="card-campo"><i class="bi bi-wifi"></i> ${escapeHtml(op.plano)}</div>`;
+    case 'responsavel':
+      if (!op.responsavel_id) return `<div class="card-campo card-sem-resp">Sem responsavel</div>`;
+      return `<div class="card-campo"><i class="bi bi-person-badge"></i> ${escapeHtml(op.responsavel_nome || op.responsavel)}</div>`;
+    case 'responsavel_avatar':
+      return ''; // ja vai no card-footer
+    case 'tempo_no_estagio': {
+      const cls = op.sla_vencido ? 'card-campo card-tempo-vencido' : 'card-campo';
+      return `<div class="${cls}"><i class="bi bi-clock"></i> ${formatarTempoEstagio(op.dias_no_estagio)} no estagio</div>`;
+    }
+    case 'tags':
+      return ''; // tags ja renderizam separado
+    case 'score_externo':
+      if (!op.score_externo) return '';
+      return `<div class="card-campo"><i class="bi bi-graph-up"></i> Score: ${escapeHtml(op.score_externo)}</div>`;
+    case 'viabilidade':
+      if (!op.viabilidade) return '';
+      return `<div class="card-campo"><i class="bi bi-geo-alt"></i> ${escapeHtml(op.viabilidade)}</div>`;
+    case 'proxima_tarefa':
+      if (!op.proxima_tarefa) return '';
+      return `<div class="card-campo"><i class="bi bi-check2-square"></i> ${escapeHtml(op.proxima_tarefa.titulo)}` +
+             (op.proxima_tarefa.vencimento ? ` <span class="card-campo-meta">${op.proxima_tarefa.vencimento}</span>` : '') + `</div>`;
+    case 'ultima_atividade':
+      if (!op.ultima_atividade) return '';
+      return `<div class="card-campo card-campo-meta"><i class="bi bi-activity"></i> ${escapeHtml(op.ultima_atividade)}</div>`;
+    case 'id_hubsoft':
+      if (!op.id_hubsoft) return '';
+      return `<div class="card-campo card-campo-meta"><i class="bi bi-link-45deg"></i> HubSoft ${escapeHtml(String(op.id_hubsoft))}</div>`;
+  }
+  return '';
+}
+
+// ============================================================================
+// MODAL "PERSONALIZAR CARD"
+// ============================================================================
+function abrirModalPersonalizarCard() {
+  if (typeof abrirModal === 'function') abrirModal('modalPersonalizarCard');
+  else document.getElementById('modalPersonalizarCard')?.removeAttribute('hidden');
+  carregarPersonalizacaoCard();
+}
+
+function fecharModalPersonalizarCard() {
+  if (typeof fecharModal === 'function') fecharModal('modalPersonalizarCard');
+  else document.getElementById('modalPersonalizarCard')?.setAttribute('hidden', '');
+}
+
+let _camposSelecionados = [];
+
+function carregarPersonalizacaoCard() {
+  _camposSelecionados = [...(window.PIPELINE_CAMPOS_VISIVEIS || [])];
+  renderListasPersonalizar();
+  renderPreviewCard();
+}
+
+function renderListasPersonalizar() {
+  const disponiveis = window.PIPELINE_CAMPOS_DISPONIVEIS || [];
+  const max = window.PIPELINE_CAMPOS_MAX || 5;
+
+  const grupos = {};
+  disponiveis.forEach(c => {
+    if (!grupos[c.categoria]) grupos[c.categoria] = { label: c.categoria_label, items: [] };
+    grupos[c.categoria].items.push(c);
+  });
+
+  const dispEl = document.getElementById('campos-disponiveis');
+  if (dispEl) {
+    dispEl.innerHTML = Object.keys(grupos).map(cat => `
+      <div class="campos-grupo">
+        <div class="campos-grupo-label">${escapeHtml(grupos[cat].label)}</div>
+        ${grupos[cat].items.map(c => {
+          const checked = _camposSelecionados.includes(c.slug);
+          const disabled = !checked && _camposSelecionados.length >= max;
+          return `
+            <label class="campo-opcao ${disabled ? 'disabled' : ''}">
+              <input type="checkbox" data-slug="${c.slug}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}
+                onchange="toggleCampo('${c.slug}', this.checked)">
+              <i class="bi ${c.icone}"></i> ${escapeHtml(c.label)}
+            </label>`;
+        }).join('')}
+      </div>
+    `).join('');
+  }
+
+  const selEl = document.getElementById('campos-selecionados');
+  if (selEl) {
+    const dispMap = {}; disponiveis.forEach(c => dispMap[c.slug] = c);
+    selEl.innerHTML = _camposSelecionados.length === 0
+      ? `<div class="campos-vazio">Selecione campos a esquerda</div>`
+      : _camposSelecionados.map((slug, idx) => {
+          const c = dispMap[slug] || { label: slug, icone: 'bi-question' };
+          return `
+            <div class="campo-pill" draggable="true" data-idx="${idx}">
+              <i class="bi bi-grip-vertical campo-grip"></i>
+              <i class="bi ${c.icone}"></i>
+              <span>${escapeHtml(c.label)}</span>
+              <button onclick="removerCampo(${idx})" class="campo-remover" title="Remover"><i class="bi bi-x"></i></button>
+            </div>`;
+        }).join('');
+    setupDragSelecionados();
+  }
+
+  const ctEl = document.getElementById('campos-contador');
+  if (ctEl) ctEl.textContent = `${_camposSelecionados.length}/${max}`;
+}
+
+function toggleCampo(slug, ativar) {
+  const max = window.PIPELINE_CAMPOS_MAX || 5;
+  if (ativar) {
+    if (_camposSelecionados.length >= max) return;
+    if (!_camposSelecionados.includes(slug)) _camposSelecionados.push(slug);
+  } else {
+    _camposSelecionados = _camposSelecionados.filter(s => s !== slug);
+  }
+  renderListasPersonalizar();
+  renderPreviewCard();
+}
+
+function removerCampo(idx) {
+  _camposSelecionados.splice(idx, 1);
+  renderListasPersonalizar();
+  renderPreviewCard();
+}
+
+function setupDragSelecionados() {
+  const pills = document.querySelectorAll('#campos-selecionados .campo-pill');
+  let dragSrc = null;
+  pills.forEach(pill => {
+    pill.addEventListener('dragstart', e => {
+      dragSrc = parseInt(pill.dataset.idx);
+      pill.classList.add('dragging');
+    });
+    pill.addEventListener('dragend', () => pill.classList.remove('dragging'));
+    pill.addEventListener('dragover', e => { e.preventDefault(); });
+    pill.addEventListener('drop', e => {
+      e.preventDefault();
+      const dst = parseInt(pill.dataset.idx);
+      if (dragSrc === null || dragSrc === dst) return;
+      const item = _camposSelecionados.splice(dragSrc, 1)[0];
+      _camposSelecionados.splice(dst, 0, item);
+      renderListasPersonalizar();
+      renderPreviewCard();
+    });
+  });
+}
+
+function renderPreviewCard() {
+  const previewEl = document.getElementById('preview-card-render');
+  if (!previewEl) return;
+  const opMock = {
+    nome: 'Joao Silva (preview)',
+    telefone: '(11) 99999-9999',
+    cpf: '123.456.789-00',
+    email: 'joao@exemplo.com',
+    valor: '199.90', valor_estimado: '199.90',
+    plano: 'Plano 500MB',
+    responsavel: 'Maria Vendas', responsavel_nome: 'Maria Vendas', responsavel_id: 1, responsavel_inicial: 'M',
+    dias_no_estagio: 3, tempo_no_estagio: 3, sla_vencido: false,
+    score_externo: 'B',
+    viabilidade: 'OK',
+    proxima_tarefa: { titulo: 'Ligar de manha', vencimento: 'amanha 09:00' },
+    ultima_atividade: 'ontem 14:32',
+    id_hubsoft: 12345,
+  };
+  const camposHtml = _camposSelecionados
+    .map(slug => renderCampoCard(slug, opMock))
+    .filter(Boolean).join('');
+  previewEl.innerHTML = `
+    <div class="kanban-card-preview">
+      <div class="card-top">
+        <div class="card-nome">${escapeHtml(opMock.nome)}</div>
+      </div>
+      ${camposHtml}
+      <div class="card-footer">
+        <div class="card-avatar">${opMock.responsavel_inicial}</div>
+        <div class="card-dias">${formatarTempoEstagio(opMock.dias_no_estagio)}</div>
+      </div>
+    </div>`;
+}
+
+async function salvarPersonalizacaoCard() {
+  const btn = document.getElementById('btn-salvar-personalizar');
+  if (btn) btn.disabled = true;
+  try {
+    const csrftoken = getCookie('csrftoken');
+    const resp = await fetch('/crm/pipeline/preferencia-kanban/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+      body: JSON.stringify({ campos: _camposSelecionados }),
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.success) throw new Error(data.error || 'Falha ao salvar');
+    window.PIPELINE_CAMPOS_VISIVEIS = data.campos_atuais || _camposSelecionados;
+    toast('Personalizacao salva', 'Card atualizado pra sua conta', 'success');
+    fecharModalPersonalizarCard();
+    carregarPipeline();
+  } catch (e) {
+    toast('Erro', e.message || 'Nao foi possivel salvar', 'danger');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function voltarPadraoPersonalizarCard() {
+  if (!confirm('Voltar ao padrao do tenant? Sua personalizacao pessoal sera apagada.')) return;
+  try {
+    const csrftoken = getCookie('csrftoken');
+    const resp = await fetch('/crm/pipeline/preferencia-kanban/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+      body: JSON.stringify({ voltar_padrao: true }),
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.success) throw new Error(data.error || 'Falha');
+    window.PIPELINE_CAMPOS_VISIVEIS = data.campos_atuais || [];
+    toast('Voltou ao padrao', 'Card resetado', 'success');
+    fecharModalPersonalizarCard();
+    carregarPipeline();
+  } catch (e) {
+    toast('Erro', e.message || 'Falha', 'danger');
+  }
+}
+
+function getCookie(name) {
+  const v = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith(name + '='));
+  return v ? decodeURIComponent(v.split('=')[1]) : '';
 }
 
 function escapeHtml(str) {

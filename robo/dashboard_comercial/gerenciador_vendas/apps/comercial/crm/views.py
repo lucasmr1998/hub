@@ -54,28 +54,71 @@ def _oportunidade_para_dict(op):
         1 for t in op.tarefas.all()
         if t.status in ('pendente', 'em_andamento')
     )
+    # Plano: tenta id_plano_rp -> ProdutoServico, senao plano_interesse legado
+    plano_nome = None
+    if lead.id_plano_rp:
+        try:
+            from apps.comercial.crm.models import ProdutoServico
+            prod = ProdutoServico.objects.filter(id_externo=str(lead.id_plano_rp)).first()
+            if prod:
+                plano_nome = prod.nome
+        except Exception:
+            pass
+    if not plano_nome and op.plano_interesse:
+        plano_nome = op.plano_interesse.nome
 
+    # Viabilidade
+    dc_lead = getattr(lead, 'dados_custom', None) or {}
+    via = dc_lead.get('viabilidade') if isinstance(dc_lead, dict) else None
+    viab_status = via.get('status') if isinstance(via, dict) else None
+
+    # Proxima tarefa (primeira pendente por prazo)
+    proxima_tarefa = None
+    for t in sorted(op.tarefas.all(), key=lambda x: x.data_vencimento or x.data_criacao):
+        if t.status in ('pendente', 'em_andamento'):
+            proxima_tarefa = {
+                'titulo': t.titulo[:50],
+                'vencimento': t.data_vencimento.strftime('%d/%m %H:%M') if t.data_vencimento else None,
+            }
+            break
+
+    # Nome exibido no card: SEMPRE prioriza o nome atual do lead (sincronizado
+    # em tempo real). op.titulo eh fallback de apelido manual; telefone e
+    # ultimo recurso quando nem nome existe. Antes priorizava op.titulo, mas
+    # isso travava o card num snapshot da criacao (bug do lead 1591/op 1750
+    # onde o nome atualizou no lead mas o titulo da op ficou "Rafa").
+    nome_display = lead.nome_razaosocial or op.titulo or lead.telefone or f'Lead #{lead.id}'
     return {
         'id': op.pk,
         'lead_id': lead.pk,
-        'nome': op.titulo or lead.nome_razaosocial,
+        'nome': nome_display,
         'telefone': lead.telefone,
         'email': lead.email or '',
+        'cpf': lead.cpf_cnpj or '',
         'valor': str(op.valor_estimado or 0),
+        'valor_estimado': str(op.valor_estimado or 0),
         'probabilidade': op.probabilidade,
         'prioridade': op.prioridade,
         'score': lead.score_qualificacao or 0,
+        'score_externo': getattr(lead, 'score_status', '') or '',
+        'viabilidade': viab_status or '',
         'origem': lead.origem or '',
         'dias_no_estagio': op.dias_no_estagio,
+        'tempo_no_estagio': op.dias_no_estagio,
         'sla_vencido': op.sla_vencido,
         'responsavel_id': responsavel.pk if responsavel else None,
+        'responsavel': (responsavel.get_full_name() or responsavel.username) if responsavel else '',
         'responsavel_nome': responsavel.get_full_name() or responsavel.username if responsavel else None,
+        'responsavel_avatar': (responsavel.get_full_name() or responsavel.username)[0].upper() if responsavel else '?',
         'responsavel_inicial': (responsavel.get_full_name() or responsavel.username)[0].upper() if responsavel else '?',
         'tarefas_pendentes': tarefas_pendentes,
+        'proxima_tarefa': proxima_tarefa,
         'estagio_id': op.estagio_id,
         'data_criacao': op.data_criacao.strftime('%d/%m/%Y'),
         'data_prevista': op.data_fechamento_previsto.strftime('%d/%m/%Y') if op.data_fechamento_previsto else None,
-        'plano': op.plano_interesse.nome if op.plano_interesse else None,  # legado
+        'ultima_atividade': op.data_atualizacao.strftime('%d/%m %H:%M') if op.data_atualizacao else None,
+        'plano': plano_nome,
+        'id_hubsoft': lead.id_hubsoft or '',
         'itens_count': sum(1 for _ in op.itens.all()),
         'tags': [{'nome': t.nome, 'cor': t.cor_hex} for t in op.tags.all()],
         'churn_risk_score': op.churn_risk_score,
@@ -135,6 +178,18 @@ def pipeline_view(request):
     motivo_perda_obrigatorio = bool(cfg_crm and cfg_crm.motivo_perda_obrigatorio)
     motivo_perda_pede_concorrente = bool(cfg_crm and cfg_crm.motivo_perda_pede_concorrente)
 
+    # Personalizacao do card — campos visiveis pro usuario atual
+    from .cards_config import (
+        CAMPOS_CARD_DISPONIVEIS, CATEGORIAS_LABEL, MAX_CAMPOS_VISIVEIS,
+        resolver_campos_do_usuario,
+    )
+    campos_visiveis = resolver_campos_do_usuario(request.user, cfg_crm)
+    campos_disponiveis = [
+        {'slug': slug, 'label': label, 'categoria': cat, 'icone': icone,
+         'categoria_label': CATEGORIAS_LABEL.get(cat, cat)}
+        for slug, label, cat, icone in CAMPOS_CARD_DISPONIVEIS
+    ]
+
     context = {
         'estagios': estagios,
         'vendedores': vendedores,
@@ -146,6 +201,9 @@ def pipeline_view(request):
         'motivo_perda_obrigatorio': motivo_perda_obrigatorio,
         'motivo_perda_pede_concorrente': motivo_perda_pede_concorrente,
         'page_title': f'Pipeline: {pipeline_atual.nome}' if pipeline_atual else 'Pipeline CRM',
+        'campos_visiveis_json': json.dumps(campos_visiveis, ensure_ascii=False),
+        'campos_disponiveis_json': json.dumps(campos_disponiveis, ensure_ascii=False),
+        'campos_max': MAX_CAMPOS_VISIVEIS,
     }
     return render(request, 'crm/pipeline.html', context)
 
@@ -992,6 +1050,73 @@ def oportunidade_detalhe(request, pk):
 
 @login_required
 @require_POST
+@login_required
+@require_http_methods(['GET', 'POST'])
+def api_preferencia_kanban(request):
+    """GET retorna campos atuais (com fallback em cascata).
+    POST salva preferencia pessoal: {campos: ['nome','telefone',...]}.
+    """
+    from .cards_config import (
+        CAMPOS_CARD_DISPONIVEIS, MAX_CAMPOS_VISIVEIS, CATEGORIAS_LABEL,
+        campos_validos, resolver_campos_do_usuario,
+    )
+    from .models import PreferenciaUsuarioKanban, ConfiguracaoCRM
+    cfg = ConfiguracaoCRM.get_config()
+
+    if request.method == 'GET':
+        atual = resolver_campos_do_usuario(request.user, cfg)
+        pref = PreferenciaUsuarioKanban.objects.filter(user=request.user).first()
+        tem_pref_pessoal = bool(pref and pref.campos)
+        catalogo = [
+            {'slug': slug, 'label': label, 'categoria': cat, 'icone': icone,
+             'categoria_label': CATEGORIAS_LABEL.get(cat, cat)}
+            for slug, label, cat, icone in CAMPOS_CARD_DISPONIVEIS
+        ]
+        return JsonResponse({
+            'success': True,
+            'campos_atuais': atual,
+            'campos_disponiveis': catalogo,
+            'max_campos': MAX_CAMPOS_VISIVEIS,
+            'tem_preferencia_pessoal': tem_pref_pessoal,
+            'campos_padrao_tenant': (cfg.campos_card_padrao if cfg else []) or [],
+        })
+
+    # POST — salva
+    try:
+        data = json.loads(request.body or '{}')
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'JSON invalido'}, status=400)
+    campos = campos_validos(data.get('campos') or [])
+    voltar_padrao = bool(data.get('voltar_padrao'))
+    if voltar_padrao:
+        PreferenciaUsuarioKanban.objects.filter(user=request.user).delete()
+        return JsonResponse({'success': True, 'voltou_padrao': True,
+                             'campos_atuais': resolver_campos_do_usuario(request.user, cfg)})
+    pref, _ = PreferenciaUsuarioKanban.objects.update_or_create(
+        user=request.user, defaults={'campos': campos},
+    )
+    return JsonResponse({'success': True, 'campos_atuais': campos})
+
+
+@login_required
+@require_POST
+def api_configuracao_card_padrao(request):
+    """Admin define o default de campos do card pro tenant."""
+    if not (request.user.is_superuser or user_tem_funcionalidade(request, 'comercial.editar_configuracoes')):
+        return JsonResponse({'success': False, 'error': 'Sem permissao'}, status=403)
+    from .cards_config import campos_validos
+    from .models import ConfiguracaoCRM
+    try:
+        data = json.loads(request.body or '{}')
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'JSON invalido'}, status=400)
+    cfg, _ = ConfiguracaoCRM.objects.get_or_create(tenant=request.tenant)
+    cfg.campos_card_padrao = campos_validos(data.get('campos') or [])
+    cfg.save(update_fields=['campos_card_padrao', 'data_atualizacao'])
+    return JsonResponse({'success': True, 'campos_padrao_tenant': cfg.campos_card_padrao})
+
+
+@login_required
 def api_atribuir_responsavel(request, pk):
     oportunidade = get_object_or_404(OportunidadeVenda, pk=pk)
     try:

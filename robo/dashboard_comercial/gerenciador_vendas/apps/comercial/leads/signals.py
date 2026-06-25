@@ -29,6 +29,27 @@ def relate_prospecto_when_lead_has_hubsoft(sender, instance: LeadProspecto, crea
         prospectos_sem_lead.update(lead=instance)
 
 
+@receiver(post_save, sender=LeadProspecto)
+def sincronizar_titulo_oportunidade(sender, instance: LeadProspecto, created, **kwargs):
+    """Quando o nome do lead muda, atualiza op.titulo das oportunidades vinculadas
+    pra manter o card do kanban sincronizado. Usa .update() no queryset pra evitar
+    recursao de signals e disparar somente quando ha mudanca real.
+
+    Caso pra qual existe: flow Matrix cria lead com nome parcial ("Rafa"), depois
+    atualiza pra nome completo ("Cristiano Lourenco Lima"). Sem isso, op.titulo
+    fica travado no snapshot da criacao."""
+    if created:
+        return
+    nome_atual = (instance.nome_razaosocial or '').strip()
+    if not nome_atual:
+        return
+    # update direto no queryset — nao dispara post_save em OportunidadeVenda
+    from apps.comercial.crm.models import OportunidadeVenda
+    OportunidadeVenda.all_tenants.filter(
+        lead_id=instance.id, ativo=True
+    ).exclude(titulo=nome_atual).update(titulo=nome_atual)
+
+
 @receiver(post_save, sender=Prospecto)
 def relate_lead_when_prospecto_has_hubsoft(sender, instance: Prospecto, created, **kwargs):
     """Quando um Prospecto com id_prospecto_hubsoft é salvo e não tem lead,

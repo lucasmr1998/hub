@@ -895,6 +895,17 @@ class ConfiguracaoCRM(TenantMixin):
                   "(usado no relatorio Velocidade de atendimento). Ex: 'em-negociacao', 'plano-escolhido'.",
     )
 
+    # Personalizacao do card do kanban — campos default visiveis. Vendedor
+    # pode sobrescrever na sua preferencia pessoal (PreferenciaUsuarioKanban).
+    # Lista ordenada, max 5 elementos. Valores possiveis listados em
+    # apps.comercial.crm.cards_config.CAMPOS_CARD_DISPONIVEIS.
+    campos_card_padrao = models.JSONField(
+        default=list, blank=True,
+        verbose_name="Campos padrao do card no kanban",
+        help_text="Campos visiveis em cada card do kanban (max 5). "
+                  "Default global do tenant; cada vendedor pode personalizar.",
+    )
+
     data_atualizacao = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -1048,3 +1059,29 @@ class Venda(TenantMixin):
 
     def __str__(self):
         return f"Venda #{self.pk} — {self.lead}"
+
+
+class PreferenciaUsuarioKanban(models.Model):
+    """Preferencia individual de cada vendedor sobre quais campos aparecem no
+    card do kanban. Se nao existe ou `campos` esta vazio, cai pro default do
+    tenant em ConfiguracaoCRM.campos_card_padrao.
+    """
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE,
+        related_name='preferencia_kanban', verbose_name='Usuario',
+    )
+    campos = models.JSONField(
+        default=list, blank=True,
+        verbose_name='Campos visiveis no card',
+        help_text='Lista ordenada de slugs de campos (max 5). '
+                  'Veja apps.comercial.crm.cards_config.CAMPOS_CARD_DISPONIVEIS.',
+    )
+    data_atualizacao = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'crm_preferencia_kanban'
+        verbose_name = 'Preferencia de Kanban'
+        verbose_name_plural = 'Preferencias de Kanban'
+
+    def __str__(self):
+        return f'{self.user} — {len(self.campos)} campos'
