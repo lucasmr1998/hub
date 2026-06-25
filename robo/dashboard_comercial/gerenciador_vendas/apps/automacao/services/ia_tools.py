@@ -124,7 +124,8 @@ def _criar_oportunidade(contexto, args, agente=None):
 def _consultar_base_conhecimento(contexto, args, agente=None):
     from .rag import buscar_conhecimento
     categorias = list(getattr(agente, 'base_categorias', None) or [])  # vazio = base inteira do tenant
-    return buscar_conhecimento(contexto.tenant, args.get('pergunta', ''), categorias=categorias)
+    return buscar_conhecimento(contexto.tenant, args.get('pergunta', ''),
+                               categorias=categorias, lead=getattr(contexto, 'lead', None))
 
 
 def _marcar_fato(contexto, acao, label, valor, extras=None):

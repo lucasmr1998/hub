@@ -364,6 +364,17 @@
 - **Gate:** `check` ok; lista/novo/editar renderizam (200).
 - **Status:** completed.
 
+## 2026-06-25 — RAG fecha o ciclo (perguntas sem resposta) + anti-invenção
+
+- **Problema visto pelo usuário:** o Hotspot (sem RAG ligado) **inventou** um prazo de desconto que não estava em lugar nenhum (alucinação).
+- **3 ajustes:**
+  1. **RAG:** quando `consultar_base_conhecimento`/`rag.buscar_conhecimento` **acha 0**, registra a pergunta em `PerguntaSemResposta` (reusa `suporte.services.registrar_pergunta_sem_resposta`, tenant + pergunta + lead) — fecha o ciclo de melhoria da base (aparece em `/suporte/conhecimento/perguntas/`). **Só registra em "achou 0", não em erro de infra** (pgvector/credencial ausente cai no except e não registra). Blindado (try/except, nunca quebra o agente).
+  2. **Hotspot (dev):** ligada a tool `consultar_base_conhecimento` + **regra anti-invenção** no prompt ("só informe prazos/valores/condições se estiver na base; senão diga que confirma com o time; nunca invente").
+  3. Tool passa o `lead` do contexto pro registro do gap.
+- **Gate:** `check` + **testes** (gap registrado em "achou 0"; NÃO registrado em erro de infra). **E2E:** a pergunta que antes ele inventou ("quanto tempo pro desconto?") → agora o agente **consulta a base, não acha (dev), e responde "vou confirmar com o time"** (não inventa). Gap registrado (`PerguntaSemResposta`).
+- **Nota dev:** RAG não busca de verdade no `aurora_dev` — `gerar_embedding` falha (lib `openai` com assinatura diferente, erro `proxies`) → `buscar_artigos` volta vazio. Em prod funciona (22 artigos embeddados). O comportamento anti-invenção + registro de gap está provado mesmo assim.
+- **Status:** completed.
+
 ### Pendências / próximos passos
 - **~~Opções dinâmicas ADIADAS~~ → FEITO (22/06) pras fontes locais** (segmentos/pipelines/estágios/responsáveis). Falta só ligar fontes **externas** (HubSoft: serviços/modelos/planos) como `fonte` que chama a API do tenant + cache. Matrix segue sem API de listar templates (manual).
 - **Decisão (22/06): opções dinâmicas + preview ADIADAS.** Quería-se dropdown de contas/templates Matrix + preview do HSM ao selecionar. Mas o **Matrix não expõe API de listar templates** (confirmado), então a única fonte do preview seria um **registro local** (cópia do corpo por tenant) — com manutenção manual e risco de drift vs o template aprovado. Decidido **manter `cod_conta`/`hsm` manuais** por ora. O **mecanismo genérico de opções dinâmicas** (`select_dinamico` carregado de endpoint por-tenant + painel de preview) fica pra quando entrar uma integração com **API de listagem real** (ex: HubSoft, ou "listar pipelines" do CRM) — aí o investimento se paga em vários provedores.

@@ -25,16 +25,21 @@ def test_buscar_conhecimento_formata_resultados():
     assert '## Horário' in out and '9h às 18h' in out
 
 
-def test_buscar_conhecimento_vazio():
-    with mock.patch('apps.suporte.services.buscar_artigos', return_value=[]):
-        out = rag.buscar_conhecimento(SimpleNamespace(pk=1), 'xyz')
+def test_buscar_conhecimento_vazio_registra_gap():
+    with mock.patch('apps.suporte.services.buscar_artigos', return_value=[]), \
+         mock.patch('apps.suporte.services.registrar_pergunta_sem_resposta') as mreg:
+        out = rag.buscar_conhecimento(SimpleNamespace(pk=1), 'qual o prazo do desconto?')
     assert 'Nada encontrado' in out
+    mreg.assert_called_once()
+    assert mreg.call_args.kwargs['pergunta'] == 'qual o prazo do desconto?'
 
 
-def test_buscar_conhecimento_erro_degrada_gracioso():
-    with mock.patch('apps.suporte.services.buscar_artigos', side_effect=RuntimeError('pgvector off')):
-        out = rag.buscar_conhecimento(SimpleNamespace(pk=1), 'xyz')
+def test_buscar_conhecimento_erro_degrada_e_nao_registra_gap():
+    with mock.patch('apps.suporte.services.buscar_artigos', side_effect=RuntimeError('pgvector off')), \
+         mock.patch('apps.suporte.services.registrar_pergunta_sem_resposta') as mreg:
+        out = rag.buscar_conhecimento(SimpleNamespace(pk=1), 'qual o prazo?')
     assert 'Não foi possível' in out
+    mreg.assert_not_called()  # erro de infra não vira "pergunta sem resposta"
 
 
 def test_tool_consultar_base_passa_categorias_do_agente():
