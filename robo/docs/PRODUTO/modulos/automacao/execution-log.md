@@ -391,6 +391,13 @@
 - **Gate:** **dry-run no dev → 10/10 regras válidas** (8 visual + 2 linear); `enviar_email` corretamente flagado (1 aviso); nós/conexões batem. **12 testes** (`test_automacao_migracao.py` lógica pura + freio).
 - **Status:** completed (tradutor). Próximo: cutover (motor antigo pula regra migrada; sem disparo duplo).
 
+## 2026-06-25 — Convergência marketing: CUTOVER (sem disparo duplo)
+
+- **Risco:** o evento dispara nos DOIS motores (o antigo roda a `RegraAutomacao` E o `on_evento` enfileira o `Fluxo`) → ação 2×. Como os dois já filtram por ativo (`RegraAutomacao.ativa` / `Fluxo.ativo`), o cutover é só **flipar o par atomicamente**.
+- **Entregue:** campo **`Fluxo.origem_regra`** (int, sem FK — não acopla a marketing) + migration **0007**. O `migrar_regras_marketing --salvar` agora seta `origem_regra` e é **idempotente** (upsert por origem_regra, não duplica). Command **`cutover_marketing`** (dry-run por padrão; `--ativar`/`--reverter`; `--tenant`/`--fluxo`): em transação, liga o Fluxo migrado e desliga a regra de origem (ou o inverso).
+- **Gate (provado no dev, tenant demo):** `--salvar` criou Fluxos 38/39 (inativos, com origem_regra); cutover dry-run listou os pares; **`--ativar` no Fluxo 38** → `Fluxo.ativo False→True` + `regra.ativa True→False` (atômico, sem duplo); **`--reverter`** → voltou tudo. Reversível.
+- **Status:** completed (cutover). Falta só: **wiring on em prod** + revisão (signal inbox + dar_pontos) — passo gated/deploy.
+
 ### Pendências / próximos passos
 - **~~Opções dinâmicas ADIADAS~~ → FEITO (22/06) pras fontes locais** (segmentos/pipelines/estágios/responsáveis). Falta só ligar fontes **externas** (HubSoft: serviços/modelos/planos) como `fonte` que chama a API do tenant + cache. Matrix segue sem API de listar templates (manual).
 - **Decisão (22/06): opções dinâmicas + preview ADIADAS.** Quería-se dropdown de contas/templates Matrix + preview do HSM ao selecionar. Mas o **Matrix não expõe API de listar templates** (confirmado), então a única fonte do preview seria um **registro local** (cópia do corpo por tenant) — com manutenção manual e risco de drift vs o template aprovado. Decidido **manter `cod_conta`/`hsm` manuais** por ora. O **mecanismo genérico de opções dinâmicas** (`select_dinamico` carregado de endpoint por-tenant + painel de preview) fica pra quando entrar uma integração com **API de listagem real** (ex: HubSoft, ou "listar pipelines" do CRM) — aí o investimento se paga em vários provedores.

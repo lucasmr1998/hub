@@ -23,6 +23,10 @@ class Fluxo(TenantMixin):
     # Índice denormalizado do gatilho de evento (preenchido no save a partir do grafo).
     # Permite achar rápido "quais fluxos escutam o evento X" sem varrer JSON em SQL.
     gatilho_evento = models.CharField(max_length=64, blank=True, default='', db_index=True)
+    # Convergência: id da RegraAutomacao (marketing) que originou este fluxo (tradutor).
+    # Usado no cutover pra desligar a regra antiga ao ligar este fluxo. int simples
+    # (sem FK) pra não acoplar a engine nova ao app de marketing.
+    origem_regra = models.IntegerField(null=True, blank=True, db_index=True)
     criado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
         on_delete=models.SET_NULL, related_name='+',

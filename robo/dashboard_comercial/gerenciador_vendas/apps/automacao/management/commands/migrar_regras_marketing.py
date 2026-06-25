@@ -56,14 +56,20 @@ class Command(BaseCommand):
 
             validos += 1
             if salvar:
-                f = Fluxo.objects.create(
-                    tenant=regra.tenant,
-                    nome=f'[migrado] {regra.nome}'[:200],
-                    grafo=grafo,
-                    ativo=False,  # nasce inativo; o cutover liga
-                )
-                criados += 1
-                self.stdout.write(self.style.SUCCESS(f'    → Fluxo {f.id} criado (inativo)'))
+                nome = f'[migrado] {regra.nome}'[:200]
+                f = Fluxo.all_tenants.filter(tenant=regra.tenant, origem_regra=regra.id).first()
+                if f:  # idempotente: re-rodar atualiza o grafo, sem mexer no ativo
+                    f.nome, f.grafo = nome, grafo
+                    f.save()
+                    self.stdout.write(self.style.SUCCESS(f'    → Fluxo {f.id} atualizado'))
+                else:
+                    f = Fluxo.objects.create(
+                        tenant=regra.tenant, nome=nome, grafo=grafo,
+                        ativo=False,  # nasce inativo; o cutover liga
+                        origem_regra=regra.id,
+                    )
+                    criados += 1
+                    self.stdout.write(self.style.SUCCESS(f'    → Fluxo {f.id} criado (inativo)'))
 
         self.stdout.write('')
         resumo = f'total={total} válidos={validos} com_aviso={com_aviso}'
