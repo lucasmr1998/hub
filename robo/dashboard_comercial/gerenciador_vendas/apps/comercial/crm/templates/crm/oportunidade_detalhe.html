@@ -2141,7 +2141,7 @@ function adicionarItem() {
 
 function removerItem(id) {
   if (!confirm('Remover este item?')) return;
-  fetch('/comercial/crm/itens/' + id + '/remover/', {
+  fetch('/crm/itens/' + id + '/remover/', {
     method: 'DELETE',
     headers: { 'X-CSRFToken': CSRF },
   })
