@@ -28,6 +28,10 @@ class EventoTriggerNode(BaseNode):
              'opcoes': opcoes_eventos()},
             {'nome': 'filtros', 'label': 'Filtros (todos precisam bater)', 'tipo': 'filtros',
              'ajuda': 'Os campos disponíveis dependem do evento escolhido.'},
+            {'nome': 'max_por_lead', 'label': 'Máx. disparos por lead', 'tipo': 'numero',
+             'ajuda': 'Freio: 0 = ilimitado. Ex: 1 = dispara só uma vez por lead.'},
+            {'nome': 'cooldown_horas', 'label': 'Cooldown (horas)', 'tipo': 'numero',
+             'ajuda': 'Freio: 0 = sem espera. Não dispara de novo pro mesmo lead dentro desse intervalo.'},
         ]
 
     def executar(self, config, entrada, contexto) -> NodeResult:

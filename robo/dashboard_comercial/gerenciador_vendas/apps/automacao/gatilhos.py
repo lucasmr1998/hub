@@ -64,11 +64,14 @@ def _despachar(evento, contexto, tenant):
 
     for fluxo in fluxos:
         try:
-            trigger_handle, filtros = _achar_trigger(fluxo.grafo, evento)
+            trigger_handle, cfg = _achar_trigger(fluxo.grafo, evento)
             if trigger_handle is None:
                 continue
             ctx = _contexto_do_evento(contexto, tenant)
-            if not _filtros_passam(filtros, ctx):
+            if not _filtros_passam(cfg.get('filtros') or [], ctx):
+                continue
+            lead = ctx.lead if _eh_lead(ctx.lead) else None
+            if _freio_bloqueia(fluxo, lead, cfg):
                 continue
             _enfileirar(fluxo, ctx, trigger_handle)
         except Exception:
@@ -76,12 +79,43 @@ def _despachar(evento, contexto, tenant):
 
 
 def _achar_trigger(grafo, evento):
-    """Acha o handle do nó-gatilho de evento e seus filtros. (handle, filtros) ou (None, [])."""
+    """Acha (handle, config) do nó-gatilho de evento. (None, {}) se não houver."""
     nodes = (grafo or {}).get('nodes') or {}
     for handle, n in nodes.items():
         if n.get('tipo') == 'evento' and ((n.get('config') or {}).get('evento') or '') == evento:
-            return handle, (n.get('config') or {}).get('filtros') or []
-    return None, []
+            return handle, (n.get('config') or {})
+    return None, {}
+
+
+def _freio_bloqueia(fluxo, lead, cfg):
+    """Freio por lead: True se o disparo deve ser barrado.
+
+    - `cooldown_horas`: não dispara de novo pro mesmo lead dentro do intervalo.
+    - `max_por_lead`: não dispara se o lead já atingiu o nº máximo de execuções.
+    Sem lead ou sem freio configurado → nunca barra. Idempotência das ações de
+    escrita + âncora de lead continuam valendo por cima disto.
+    """
+    def _int(v):
+        try:
+            return int(v or 0)
+        except (ValueError, TypeError):
+            return 0
+
+    max_lead = _int(cfg.get('max_por_lead'))
+    cooldown_h = _int(cfg.get('cooldown_horas'))
+    if lead is None or (max_lead <= 0 and cooldown_h <= 0):
+        return False
+
+    from .models import ExecucaoFluxo
+    qs = ExecucaoFluxo.all_tenants.filter(tenant=fluxo.tenant, fluxo=fluxo, lead=lead)
+    if cooldown_h > 0:
+        from datetime import timedelta
+        from django.utils import timezone
+        if qs.filter(criado_em__gte=timezone.now() - timedelta(hours=cooldown_h)).exists():
+            return True
+    if max_lead > 0 and qs.count() >= max_lead:
+        return True
+    return False
 
 
 def _contexto_do_evento(contexto, tenant):
