@@ -383,6 +383,14 @@
 - **Gate:** `check` + **6 testes** (`test_automacao_freio.py`, mock de ExecucaoFluxo: sem lead/sem config não barra; cooldown barra se recente; max barra ao atingir). Campos aparecem no editor sem rebuild (catálogo runtime).
 - **Status:** completed (freio). Próximo: tradutor RegraAutomacao→Fluxo.
 
+## 2026-06-25 — Convergência marketing: TRADUTOR (RegraAutomacao → Fluxo)
+
+- **O que:** `apps/automacao/migracao_marketing.py` (`traduzir_regra(regra) → (grafo, avisos)`) + command `migrar_regras_marketing` (dry-run por padrão; `--tenant/--regra/--salvar`). Converte os 2 formatos legacy: **visual** (`NodoFluxo`+`ConexaoNodo`) e **linear** (`CondicaoRegra`+`AcaoRegra`) → grafo `{inicio,nodes,conexoes}` da engine nova.
+- **Mapeamento:** trigger→`evento` (com freio da regra: max/cooldown); condition→`if`; delay→`delay`; action→nó da ação (pelo subtipo). Saída legacy (default/true/false) → saída do nó novo pelo tipo da origem (ação default→`sucesso`). **Template flat→var:** `{{lead_nome}}`→`{{var.lead_nome}}` (dot-notation mantida). Renome de campo por subtipo (ex: `tipo_tarefa`→`tipo`). Ações sem nó (`enviar_email`/`enviar_whatsapp`/`webhook`/`hubsoft`) viram **aviso** (regra segue no motor antigo). `--salvar` cria `Fluxo` **inativo** (cutover liga depois).
+- **Bug corrigido na validação:** o campo `NodoFluxo.tipo` tem valores **em PT e EN** nos dados (`acao`/`action`, `condicao`/`condition`) — versões diferentes do editor. Normalizado (`_TIPO_NORM`) antes de mapear; sem isso, ações/condições eram puladas (fluxo só com gatilho).
+- **Gate:** **dry-run no dev → 10/10 regras válidas** (8 visual + 2 linear); `enviar_email` corretamente flagado (1 aviso); nós/conexões batem. **12 testes** (`test_automacao_migracao.py` lógica pura + freio).
+- **Status:** completed (tradutor). Próximo: cutover (motor antigo pula regra migrada; sem disparo duplo).
+
 ### Pendências / próximos passos
 - **~~Opções dinâmicas ADIADAS~~ → FEITO (22/06) pras fontes locais** (segmentos/pipelines/estágios/responsáveis). Falta só ligar fontes **externas** (HubSoft: serviços/modelos/planos) como `fonte` que chama a API do tenant + cache. Matrix segue sem API de listar templates (manual).
 - **Decisão (22/06): opções dinâmicas + preview ADIADAS.** Quería-se dropdown de contas/templates Matrix + preview do HSM ao selecionar. Mas o **Matrix não expõe API de listar templates** (confirmado), então a única fonte do preview seria um **registro local** (cópia do corpo por tenant) — com manutenção manual e risco de drift vs o template aprovado. Decidido **manter `cod_conta`/`hsm` manuais** por ora. O **mecanismo genérico de opções dinâmicas** (`select_dinamico` carregado de endpoint por-tenant + painel de preview) fica pra quando entrar uma integração com **API de listagem real** (ex: HubSoft, ou "listar pipelines" do CRM) — aí o investimento se paga em vários provedores.
