@@ -2266,6 +2266,7 @@ _STOP_WORDS_PT = {
     'meu', 'seu', 'sua', 'ter', 'ser', 'esta', 'este', 'isso', 'esse', 'essa',
     'tem', 'sao', 'foi', 'quais', 'qual', 'quando', 'onde', 'quem', 'pode',
     'ja', 'nao', 'sim', 'muito', 'bem', 'vai', 'vou', 'ta', 'to', 'me',
+    'quanto', 'quantos', 'quanta', 'quantas', 'porque', 'pra', 'pro',
 }
 
 

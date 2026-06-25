@@ -373,6 +373,7 @@
   3. Tool passa o `lead` do contexto pro registro do gap.
 - **Gate:** `check` + **testes** (gap registrado em "achou 0"; NÃO registrado em erro de infra). **E2E:** a pergunta que antes ele inventou ("quanto tempo pro desconto?") → agora o agente **consulta a base, não acha (dev), e responde "vou confirmar com o time"** (não inventa). Gap registrado (`PerguntaSemResposta`).
 - **Nota dev:** RAG não busca de verdade no `aurora_dev` — `gerar_embedding` falha (lib `openai` com assinatura diferente, erro `proxies`) → `buscar_artigos` volta vazio. Em prod funciona (22 artigos embeddados). O comportamento anti-invenção + registro de gap está provado mesmo assim.
+- **Bug do dedup corrigido (Suporte):** o usuário notou que a pergunta do desconto não aparecia na lista. Causa: `_primeiro_termo_significativo` (suporte/services.py) escolhia a 1ª palavra significativa e `registrar_pergunta_sem_resposta` dedupava por `icontains` dela — mas **"quanto" não estava nas stop-words**, então "quanto tempo…" colava em "Quanto custa o plano…" (incrementava em vez de criar). Fix: adicionadas as palavras-de-pergunta (`quanto/quantos/quanta/quantas/qual/quais/quando/onde/quem/porque/pra/pro`) ao `_STOP_WORDS_PT` em **`suporte/services.py` E `atendimento/engine.py`** (mantidos em sync). Validado: o termo virou "tempo" e a pergunta do desconto criou registro novo (`criada=True`). Afeta os dois motores (melhora ambos).
 - **Status:** completed.
 
 ### Pendências / próximos passos

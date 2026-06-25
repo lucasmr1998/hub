@@ -19,6 +19,10 @@ _STOP_WORDS_PT = {
     'mais', 'ou', 'ao', 'aos', 'as', 'os', 'eu', 'ele', 'ela', 'eles', 'elas',
     'meu', 'minha', 'seu', 'sua', 'voce', 'voces', 'isso', 'isto', 'aquele',
     'aquela', 'aqui', 'ali', 'la', 'tem', 'ter', 'ser', 'estar', 'foi', 'era',
+    # palavras de pergunta (não são "tópico" — evitam agrupar perguntas diferentes
+    # que só começam igual, ex: "quanto tempo..." vs "quanto custa...").
+    'quanto', 'quantos', 'quanta', 'quantas', 'qual', 'quais', 'quando',
+    'onde', 'quem', 'porque', 'pra', 'pro',
 }
 
 
