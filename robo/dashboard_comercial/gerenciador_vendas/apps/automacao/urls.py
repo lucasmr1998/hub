@@ -11,6 +11,7 @@ urlpatterns = [
     path('agentes/salvar/', views.agente_salvar, name='agente_salvar'),
     path('agentes/<int:pk>/excluir/', views.agente_excluir, name='agente_excluir'),
     path('api/agentes/playground/', views.agente_playground_api, name='agente_playground'),
+    path('api/agentes/simular/', views.agente_simular_api, name='agente_simular'),
     path('api/agentes/<int:pk>/', views.agente_resumo_api, name='agente_resumo'),
     path('api/nodes/', views.nodes_catalogo_api, name='nodes_catalogo'),
     path('api/execucoes/', views.execucoes_api, name='execucoes_api'),

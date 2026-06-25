@@ -350,6 +350,13 @@
 - **Gate (validado):** `check` + **27 testes** (3 novos parametrizados); **E2E real de 4 turnos** em dev → bot segue o script (NPS → é-cliente → pitch Mega Energia), `registrar_feedback` e `marcar_cliente` dispararam no momento certo e gravaram no CRM.
 - **Status:** completed. Bot Megalink remontado nativo. Pendente: go-live (wiring) e clientes-alvo terem base/canal.
 
+## 2026-06-24 — Simulador de conversa (chat) no editor do agente
+
+- **Por quê:** testar o bot interativamente sem WhatsApp (o E2E até aqui era via script). O playground era 1 turno só.
+- **O que:** o "Testar" do agente virou um **chat multi-turno**. Endpoint `agente_simular_api` (`POST /automacao/api/agentes/simular/`) roda o agente com o histórico do chat + tools (que **rodam de verdade em dev**) e devolve `{resposta, tools}` (quais dispararam). Front em `agentes.html`: bolhas user/bot + chips 🔧 das tools que rodaram. Reusa `chamar_llm`/`chamar_llm_com_tools` + `despachar`. Tenant-safe.
+- **Gate:** `check` ok; página renderiza; 2 turnos reais → memória carrega + `registrar_feedback` dispara e é reportada na UI. Server-side (sem rebuild do editor).
+- **Status:** completed.
+
 ### Pendências / próximos passos
 - **~~Opções dinâmicas ADIADAS~~ → FEITO (22/06) pras fontes locais** (segmentos/pipelines/estágios/responsáveis). Falta só ligar fontes **externas** (HubSoft: serviços/modelos/planos) como `fonte` que chama a API do tenant + cache. Matrix segue sem API de listar templates (manual).
 - **Decisão (22/06): opções dinâmicas + preview ADIADAS.** Quería-se dropdown de contas/templates Matrix + preview do HSM ao selecionar. Mas o **Matrix não expõe API de listar templates** (confirmado), então a única fonte do preview seria um **registro local** (cópia do corpo por tenant) — com manutenção manual e risco de drift vs o template aprovado. Decidido **manter `cod_conta`/`hsm` manuais** por ora. O **mecanismo genérico de opções dinâmicas** (`select_dinamico` carregado de endpoint por-tenant + painel de preview) fica pra quando entrar uma integração com **API de listagem real** (ex: HubSoft, ou "listar pipelines" do CRM) — aí o investimento se paga em vários provedores.

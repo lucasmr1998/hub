@@ -51,10 +51,15 @@
   .ag-tool b { color:#1f2733; }
   .ag-modal-foot { padding:14px 20px; border-top:1px solid #eef1f6; display:flex; gap:8px;
                    justify-content:flex-end; }
-  /* playground */
-  .ag-pg-resp { background:#f7f9fc; border:1px solid #e4e8ef; border-radius:10px; padding:14px;
-                font-size:14px; line-height:1.55; color:#1f2733; white-space:pre-wrap; min-height:60px; }
-  .ag-pg-resp.vazio { color:#9aa2ae; }
+  /* simulador (chat) */
+  .ag-chat { height:340px; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:8px; background:#f7f9fc; }
+  .ag-chat-vazio { color:#9aa2ae; font-size:13px; text-align:center; margin:auto; max-width:280px; }
+  .ag-msg { max-width:80%; padding:8px 12px; border-radius:12px; font-size:14px; line-height:1.5; white-space:pre-wrap; word-break:break-word; }
+  .ag-msg-user { align-self:flex-end; background:#2f6df6; color:#fff; border-bottom-right-radius:4px; }
+  .ag-msg-bot { align-self:flex-start; background:#fff; border:1px solid #e4e8ef; color:#1f2733; border-bottom-left-radius:4px; }
+  .ag-msg-tools { margin-top:6px; font-size:11px; color:#1d9a64; opacity:.9; }
+  .ag-chat-foot { gap:8px; }
+  .ag-chat-input { flex:1; border:1px solid #dde2ea; border-radius:9px; padding:9px 11px; font-size:14px; font-family:inherit; }
 </style>
 
 <div class="ag-nav">
@@ -176,26 +181,21 @@
   </div>
 </div>
 
-{# ---- Modal playground ---- #}
+{# ---- Modal simulador (chat) ---- #}
 <div class="ag-modal" id="ag-pg-modal">
-  <div class="ag-modal-box">
+  <div class="ag-modal-box" style="max-width:580px;">
     <div class="ag-modal-head">
-      <h3>Testar: <span id="ag-pg-nome"></span></h3>
+      <h3><i class="bi bi-chat-dots"></i> Simular: <span id="ag-pg-nome"></span></h3>
       <button class="ag-modal-x" onclick="agFecharPg()">&times;</button>
     </div>
-    <div class="ag-modal-body">
-      <div class="ag-field">
-        <label for="ag-pg-msg">Mensagem de teste</label>
-        <textarea id="ag-pg-msg" placeholder="Oi, queria saber sobre os planos" style="min-height:80px;"></textarea>
-      </div>
-      <div class="ag-field">
-        <label>Resposta do agente</label>
-        <div class="ag-pg-resp vazio" id="ag-pg-resp">A resposta do LLM aparece aqui.</div>
-      </div>
+    <div class="ag-modal-body" style="padding:0; gap:0;">
+      <div id="ag-chat" class="ag-chat"></div>
     </div>
-    <div class="ag-modal-foot">
-      <button class="ag-btn" onclick="agFecharPg()">Fechar</button>
-      <button class="ag-btn ag-btn-primary" id="ag-pg-btn" onclick="agTestar()"><i class="bi bi-play"></i> Testar</button>
+    <div class="ag-modal-foot ag-chat-foot">
+      <input id="ag-pg-msg" class="ag-chat-input" autocomplete="off"
+        placeholder="Escreva como o cliente…"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();agEnviar();}">
+      <button class="ag-btn ag-btn-primary" id="ag-pg-btn" onclick="agEnviar()">Enviar</button>
     </div>
   </div>
 </div>
@@ -271,35 +271,55 @@
     });
   }
 
-  // ---- playground ----
+  // ---- simulador (chat) ----
   let AG_PG_ID = null;
+  let AG_HIST = [];
   function agPlayground(id, nome) {
-    AG_PG_ID = id;
+    AG_PG_ID = id; AG_HIST = [];
     document.getElementById('ag-pg-nome').textContent = nome;
     document.getElementById('ag-pg-msg').value = '';
-    const resp = document.getElementById('ag-pg-resp');
-    resp.textContent = 'A resposta do LLM aparece aqui.';
-    resp.classList.add('vazio');
+    document.getElementById('ag-chat').innerHTML =
+      '<div class="ag-chat-vazio">Converse como se fosse o cliente. Memória e tools rodam de verdade (dev).</div>';
     document.getElementById('ag-pg-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('ag-pg-msg').focus(), 50);
   }
   function agFecharPg() { document.getElementById('ag-pg-modal').style.display = 'none'; }
-  function agTestar() {
-    const msg = document.getElementById('ag-pg-msg').value.trim();
-    if (!msg) { toast('', 'Escreva uma mensagem de teste.', 'warning'); return; }
+  function agBolha(role, texto, tools) {
+    const chat = document.getElementById('ag-chat');
+    const vazio = chat.querySelector('.ag-chat-vazio'); if (vazio) vazio.remove();
+    const el = document.createElement('div');
+    el.className = 'ag-msg ag-msg-' + role;
+    el.textContent = texto;
+    if (tools && tools.length) {
+      const t = document.createElement('div'); t.className = 'ag-msg-tools';
+      t.textContent = tools.map(x => '🔧 ' + x).join('   ');
+      el.appendChild(t);
+    }
+    chat.appendChild(el); chat.scrollTop = chat.scrollHeight;
+    return el;
+  }
+  function agEnviar() {
+    const inp = document.getElementById('ag-pg-msg');
+    const msg = inp.value.trim();
+    if (!msg) return;
     const btn = document.getElementById('ag-pg-btn');
-    const resp = document.getElementById('ag-pg-resp');
-    btn.disabled = true;
-    resp.classList.remove('vazio');
-    resp.textContent = 'Pensando…';
-    fetch("{% url 'automacao:agente_playground' %}", {
+    agBolha('user', msg);
+    const historico = AG_HIST.slice();         // turnos anteriores (sem a msg atual)
+    AG_HIST.push({ role: 'user', content: msg });
+    inp.value = ''; btn.disabled = true;
+    const pensando = agBolha('bot', '…');
+    fetch("{% url 'automacao:agente_simular' %}", {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': agCsrf() },
-      body: JSON.stringify({ agente_id: AG_PG_ID, mensagem: msg }),
+      body: JSON.stringify({ agente_id: AG_PG_ID, mensagem: msg, historico }),
     }).then(r => r.json().then(d => ({ ok: r.ok, d }))).then(({ ok, d }) => {
-      if (ok && d.resposta !== undefined) { resp.textContent = d.resposta || '(resposta vazia)'; }
-      else { resp.textContent = ''; resp.classList.add('vazio'); toast('', d.erro || 'Erro ao testar.', 'danger'); }
-    }).catch(() => { resp.classList.add('vazio'); resp.textContent=''; toast('', 'Falha de rede.', 'danger'); })
-      .finally(() => { btn.disabled = false; });
+      pensando.remove();
+      if (ok && d.resposta !== undefined) {
+        agBolha('bot', d.resposta || '(resposta vazia)', d.tools);
+        AG_HIST.push({ role: 'assistant', content: d.resposta || '' });
+      } else { agBolha('bot', '⚠ ' + (d.erro || 'erro')); }
+    }).catch(() => { pensando.remove(); agBolha('bot', '⚠ falha de rede'); })
+      .finally(() => { btn.disabled = false; inp.focus(); });
   }
 
   // fecha modal clicando fora

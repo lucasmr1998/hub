@@ -254,6 +254,54 @@ def agente_playground_api(request):
     return JsonResponse({'resposta': resposta})
 
 
+@require_POST
+@login_required
+def agente_simular_api(request):
+    """Simulador de conversa: roda o agente com o histórico do chat + tools (que rodam
+    de verdade em dev), e devolve a resposta + quais tools dispararam. Sem WhatsApp."""
+    tenant = getattr(request, 'tenant', None)
+    if tenant is None:
+        return JsonResponse({'erro': 'sem tenant'}, status=400)
+    from .models import Agente
+    from .nodes import Contexto
+    from .services.ia import chamar_llm, chamar_llm_com_tools, integracao_ia_do_tenant
+    from .services.ia_tools import schema_openai, despachar
+
+    data = _corpo_json(request) or {}
+    mensagem = (data.get('mensagem') or '').strip()
+    if not mensagem:
+        return JsonResponse({'erro': 'mensagem vazia'}, status=400)
+    agente = (Agente.all_tenants.filter(tenant=tenant, pk=data.get('agente_id'))
+              .select_related('integracao_ia').first())
+    if agente is None:
+        return JsonResponse({'erro': 'agente não encontrado'}, status=404)
+    integracao = agente.integracao_ia or integracao_ia_do_tenant(tenant)
+    if integracao is None:
+        return JsonResponse({'erro': 'sem integração de IA ativa'}, status=400)
+
+    messages = []
+    if agente.system_prompt:
+        messages.append({'role': 'system', 'content': agente.system_prompt})
+    for m in (data.get('historico') or []):
+        if m.get('role') in ('user', 'assistant') and m.get('content'):
+            messages.append({'role': m['role'], 'content': m['content']})
+    messages.append({'role': 'user', 'content': mensagem})
+
+    contexto = Contexto(tenant=tenant, variaveis={'conteudo': mensagem})
+    chamadas = []
+    schema = schema_openai(list(agente.tools or []))
+    if schema:
+        def _disp(nome, args):
+            chamadas.append(nome)
+            return despachar(nome, args, contexto, agente)
+        resposta = chamar_llm_com_tools(integracao, messages, schema, _disp, modelo=agente.modelo or None)
+    else:
+        resposta = chamar_llm(integracao, messages, modelo=agente.modelo or None)
+    if resposta is None:
+        return JsonResponse({'erro': 'falha ao chamar o LLM'}, status=502)
+    return JsonResponse({'resposta': resposta, 'tools': chamadas})
+
+
 @login_required
 def agente_resumo_api(request, pk):
     """Resumo read-only de um agente (prompt + tools ativas) — pro nó ia_agente
