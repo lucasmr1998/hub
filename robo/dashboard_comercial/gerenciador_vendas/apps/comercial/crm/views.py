@@ -2762,6 +2762,27 @@ def api_itens_oportunidade(request, pk):
         try:
             data = json.loads(request.body)
             produto = get_object_or_404(ProdutoServico, pk=data.get('produto_id'))
+            forcar = bool(data.get('forcar_duplicidade'))
+
+            # Anti-duplicidade: bloquear adicionar 2 produtos da mesma categoria
+            # na mesma op (ex: 2 planos). Frontend pode reenviar com
+            # forcar_duplicidade=true se o vendedor confirmar.
+            if not forcar:
+                ja_tem = oportunidade.itens.filter(produto__categoria=produto.categoria).first()
+                if ja_tem:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'duplicidade_categoria',
+                        'message': (
+                            f'A oportunidade ja tem um item da categoria '
+                            f'"{produto.get_categoria_display()}" ({ja_tem.produto.nome}). '
+                            f'Remova o atual ou confirme pra substituir.'
+                        ),
+                        'item_existente': {
+                            'id': ja_tem.pk,
+                            'produto_nome': ja_tem.produto.nome,
+                        },
+                    }, status=409)
 
             item = ItemOportunidade.objects.create(
                 tenant=request.tenant,
@@ -2774,6 +2795,13 @@ def api_itens_oportunidade(request, pk):
             )
 
             oportunidade.recalcular_valor()
+
+            from apps.sistema.utils import registrar_acao
+            registrar_acao(
+                'crm', 'adicionar_item', 'oportunidade', oportunidade.pk,
+                f'Adicionou produto "{produto.nome}" (R$ {item.valor_unitario}, qtd {item.quantidade})',
+                request=request,
+            )
 
             return JsonResponse({
                 'success': True,
@@ -2799,8 +2827,18 @@ def api_item_oportunidade_remover(request, pk):
     try:
         item = get_object_or_404(ItemOportunidade, pk=pk)
         oportunidade = item.oportunidade
+        nome_produto = item.produto.nome
+        valor = item.valor_unitario
         item.delete()
         oportunidade.recalcular_valor()
+
+        from apps.sistema.utils import registrar_acao
+        registrar_acao(
+            'crm', 'remover_item', 'oportunidade', oportunidade.pk,
+            f'Removeu produto "{nome_produto}" (R$ {valor})',
+            request=request,
+        )
+
         return JsonResponse({
             'success': True,
             'message': 'Item removido.',

@@ -2113,27 +2113,32 @@ function mostrarModalItem() {
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
-function adicionarItem() {
+function adicionarItem(forcarDuplicidade) {
   const payload = {
     produto_id: document.getElementById('itemProduto').value,
     quantidade: document.getElementById('itemQtd').value,
     valor_unitario: document.getElementById('itemValor').value,
     desconto: document.getElementById('itemDesconto').value || '0',
   };
+  if (forcarDuplicidade) payload.forcar_duplicidade = true;
   fetch(URLS.itens, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
     body: JSON.stringify(payload),
   })
-  .then(r => r.json())
-  .then(d => {
+  .then(r => r.json().then(d => ({status: r.status, body: d})))
+  .then(({status, body: d}) => {
     if (d.success) {
       toast('Adicionado', d.message, 'success');
       const modal = document.getElementById('modalItem');
       if (modal) modal.remove();
       carregarItens();
+    } else if (status === 409 && d.error === 'duplicidade_categoria') {
+      if (confirm((d.message || 'Ja tem item dessa categoria.') + '\n\nQuer adicionar mesmo assim?')) {
+        adicionarItem(true);
+      }
     } else {
-      toast('Erro', d.error || 'Erro ao adicionar', 'danger');
+      toast('Erro', d.message || d.error || 'Erro ao adicionar', 'danger');
     }
   })
   .catch(() => toast('Erro', 'Erro de conexao', 'danger'));
