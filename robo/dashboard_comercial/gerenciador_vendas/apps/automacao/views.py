@@ -132,8 +132,8 @@ def execucoes_api(request):
 
 @login_required
 def agentes_page(request):
-    """Área de Agentes IA: lista + criar/editar + playground. Agentes gerenciados
-    que os fluxos referenciam (nó ia_agente)."""
+    """Lista de Agentes IA do tenant (gerência). Criar/editar/testar fica na página
+    dedicada `agente_editar_page`."""
     tenant = getattr(request, 'tenant', None)
     if tenant is None:
         return render(request, 'automacao/agentes.html', {'sem_tenant': True})
@@ -142,27 +142,46 @@ def agentes_page(request):
     agentes = list(
         Agente.all_tenants.filter(tenant=tenant).select_related('integracao_ia').order_by('nome')
     )
+    tem_integracao = IntegracaoAPI.all_tenants.filter(
+        tenant=tenant, tipo__in=['openai', 'anthropic', 'groq', 'google_ai'], ativa=True
+    ).exists()
+    return render(request, 'automacao/agentes.html', {
+        'agentes': agentes,
+        'tem_integracao': tem_integracao,
+    })
+
+
+@login_required
+def agente_editar_page(request, pk=None):
+    """Página dedicada de criar/editar agente (form + chat de teste ao lado)."""
+    tenant = getattr(request, 'tenant', None)
+    if tenant is None:
+        return render(request, 'automacao/agente_editar.html', {'sem_tenant': True})
+    from django.http import Http404
+    from .models import Agente
+    from apps.integracoes.models import IntegracaoAPI
+    from apps.suporte.models import CategoriaConhecimento
+    from .services.ia_tools import tools_disponiveis
+
+    agente = None
+    if pk:
+        agente = Agente.all_tenants.filter(tenant=tenant, pk=pk).select_related('integracao_ia').first()
+        if agente is None:
+            raise Http404('agente não encontrado')
     integracoes = list(
         IntegracaoAPI.all_tenants
         .filter(tenant=tenant, tipo__in=['openai', 'anthropic', 'groq', 'google_ai'], ativa=True)
         .order_by('nome')
     )
-    from .services.ia_tools import tools_disponiveis
-    from apps.suporte.models import CategoriaConhecimento
     categorias = list(CategoriaConhecimento.all_tenants.filter(tenant=tenant).order_by('nome'))
-    agentes_json = [{
-        'id': a.pk, 'nome': a.nome, 'integracao_ia': a.integracao_ia_id,
-        'modelo': a.modelo, 'system_prompt': a.system_prompt, 'ativo': a.ativo,
-        'tools': a.tools or [],
-        'base_categorias': [str(x) for x in (a.base_categorias or [])],
-    } for a in agentes]
-    return render(request, 'automacao/agentes.html', {
-        'agentes': agentes,
-        'agentes_json': agentes_json,
+    return render(request, 'automacao/agente_editar.html', {
+        'agente': agente,
+        'agente_tools': (agente.tools or []) if agente else [],
+        'agente_cats': [str(x) for x in (agente.base_categorias or [])] if agente else [],
         'integracoes': integracoes,
-        'tem_integracao': bool(integracoes),
-        'tools_disponiveis': [{'chave': c, 'descricao': d} for c, d in tools_disponiveis()],
         'categorias': categorias,
+        'tools_disponiveis': [{'chave': c, 'descricao': d} for c, d in tools_disponiveis()],
+        'tem_integracao': bool(integracoes),
     })
 
 
@@ -216,42 +235,6 @@ def agente_excluir(request, pk):
         return JsonResponse({'erro': 'agente não encontrado'}, status=404)
     agente.delete()
     return JsonResponse({'ok': True})
-
-
-@require_POST
-@login_required
-def agente_playground_api(request):
-    """Testa um agente: manda uma mensagem e devolve a resposta do LLM (sem memória)."""
-    tenant = getattr(request, 'tenant', None)
-    if tenant is None:
-        return JsonResponse({'erro': 'sem tenant'}, status=400)
-    from .models import Agente
-    from .services.ia import chamar_llm, integracao_ia_do_tenant
-
-    data = _corpo_json(request) or {}
-    mensagem = (data.get('mensagem') or '').strip()
-    if not mensagem:
-        return JsonResponse({'erro': 'mensagem vazia'}, status=400)
-
-    agente = (Agente.all_tenants.filter(tenant=tenant, pk=data.get('agente_id'))
-              .select_related('integracao_ia').first())
-    if agente is None:
-        return JsonResponse({'erro': 'agente não encontrado'}, status=404)
-
-    integracao = agente.integracao_ia or integracao_ia_do_tenant(tenant)
-    if integracao is None:
-        return JsonResponse({'erro': 'sem integração de IA ativa no tenant'}, status=400)
-
-    messages = []
-    if agente.system_prompt:
-        messages.append({'role': 'system', 'content': agente.system_prompt})
-    messages.append({'role': 'user', 'content': mensagem})
-
-    resposta = chamar_llm(integracao, messages, modelo=agente.modelo or None)
-    if resposta is None:
-        return JsonResponse({'erro': 'falha ao chamar o LLM (cheque credencial/modelo nos logs)'},
-                            status=502)
-    return JsonResponse({'resposta': resposta})
 
 
 @require_POST

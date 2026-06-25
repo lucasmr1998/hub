@@ -357,6 +357,13 @@
 - **Gate:** `check` ok; página renderiza; 2 turnos reais → memória carrega + `registrar_feedback` dispara e é reportada na UI. Server-side (sem rebuild do editor).
 - **Status:** completed.
 
+## 2026-06-24 — Edição de agente vira PÁGINA (não modal) + chat ao lado
+
+- **Pedido do usuário:** editar agente numa página dedicada, não em modal.
+- **O que:** `agente_editar_page` (`/automacao/agentes/novo/` e `/<id>/editar/`) — template `agente_editar.html` com **form (esquerda) + chat de teste (direita)** lado a lado. A lista (`agentes.html`) virou só gerência: cards com **Editar/Testar** (link pra página) + **Excluir**; modais de form/chat removidos. O chat (simulador) migrou pra página de edição. `agentes_page` view enxugada (sem agentes_json/tools/categorias). Removido o endpoint morto `agente_playground_api` (substituído por `agente_simular`).
+- **Gate:** `check` ok; lista/novo/editar renderizam (200).
+- **Status:** completed.
+
 ### Pendências / próximos passos
 - **~~Opções dinâmicas ADIADAS~~ → FEITO (22/06) pras fontes locais** (segmentos/pipelines/estágios/responsáveis). Falta só ligar fontes **externas** (HubSoft: serviços/modelos/planos) como `fonte` que chama a API do tenant + cache. Matrix segue sem API de listar templates (manual).
 - **Decisão (22/06): opções dinâmicas + preview ADIADAS.** Quería-se dropdown de contas/templates Matrix + preview do HSM ao selecionar. Mas o **Matrix não expõe API de listar templates** (confirmado), então a única fonte do preview seria um **registro local** (cópia do corpo por tenant) — com manutenção manual e risco de drift vs o template aprovado. Decidido **manter `cod_conta`/`hsm` manuais** por ora. O **mecanismo genérico de opções dinâmicas** (`select_dinamico` carregado de endpoint por-tenant + painel de preview) fica pra quando entrar uma integração com **API de listagem real** (ex: HubSoft, ou "listar pipelines" do CRM) — aí o investimento se paga em vários provedores.
