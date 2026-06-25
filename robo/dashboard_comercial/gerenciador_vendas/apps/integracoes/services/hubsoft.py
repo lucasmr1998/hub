@@ -1657,7 +1657,19 @@ class HubsoftService:
                     lead_id_int = None
             return lead_id_int or (int(default_id) if default_id else None)
 
-        plano_id = lead.id_plano_rp or extras.get('plano_id_padrao') or 0
+        # Plano padrao por empresa (Nuvyon usa NUVYON 600MB; Mega/Salto usa
+        # plano Mega). Lead que ja escolheu plano (id_plano_rp) sempre vence.
+        # `empresa` vem de lead.dados_custom['empresa'] (marcado pelo flow Matrix).
+        empresa_flow = ''
+        dc_lead = getattr(lead, 'dados_custom', None) or {}
+        if isinstance(dc_lead, dict):
+            empresa_flow = (dc_lead.get('empresa') or '').strip().lower()
+        plano_padrao = extras.get('plano_id_padrao')
+        if empresa_flow:
+            por_emp = extras.get('plano_id_padrao_por_empresa') or {}
+            if isinstance(por_emp, dict) and por_emp.get(empresa_flow):
+                plano_padrao = por_emp[empresa_flow]
+        plano_id = lead.id_plano_rp or plano_padrao or 0
         payload['servico'] = {
             'id_servico': int(plano_id) if plano_id else 0,
             'valor': float(lead.valor) if lead.valor else 0,
