@@ -342,6 +342,14 @@
 - **Gate (validado):** `check` limpo; **24 testes** (`test_automacao_pausa_humano.py` + regressão D2–D4); o `if` ramifica certo por `modo_atendimento`; `retomar_por_resposta` aceita o novo arg (compat). Não commitado (risco de push da sessão concorrente).
 - **Status:** completed. **Capacidade de Agente IA completa (D1–D5).** Falta: montar o **fluxo de teste** do bot, **ligar o wiring** em prod (com revisão do signal do inbox + `dar_pontos`), e **commitar**.
 
+## 2026-06-24 — Tools de fato (paridade com o n8n) + fluxo Hotspot
+
+- **Contexto:** o D1–D5 foi commitado (`4a83cfc`). O fluxo n8n Megalink tinha 4 "saves" (nota, é-cliente, intenção, energia); só `registrar_feedback` existia.
+- **3 tools novas em `ia_tools.py`** (mesmo padrão curado, self-contained, tenant-safe via `LogSistema`, `fn(contexto,args,agente)`): `marcar_cliente` (é cliente da Megalink?), `marcar_intencao` (intenção de compra), `marcar_intencao_energia` (interesse no Mega Energia). Helper `_marcar_fato`. Aparecem automático na seção Ferramentas do agente.
+- **Fluxo "Bot Hotspot (teste)"** (id 36, dev, `ativo=False`) + agente **Hotspot** com o **system prompt real do n8n** (NPS hotspot + upsell Mega Energia) + as 4 tools ligadas.
+- **Gate (validado):** `check` + **27 testes** (3 novos parametrizados); **E2E real de 4 turnos** em dev → bot segue o script (NPS → é-cliente → pitch Mega Energia), `registrar_feedback` e `marcar_cliente` dispararam no momento certo e gravaram no CRM.
+- **Status:** completed. Bot Megalink remontado nativo. Pendente: go-live (wiring) e clientes-alvo terem base/canal.
+
 ### Pendências / próximos passos
 - **~~Opções dinâmicas ADIADAS~~ → FEITO (22/06) pras fontes locais** (segmentos/pipelines/estágios/responsáveis). Falta só ligar fontes **externas** (HubSoft: serviços/modelos/planos) como `fonte` que chama a API do tenant + cache. Matrix segue sem API de listar templates (manual).
 - **Decisão (22/06): opções dinâmicas + preview ADIADAS.** Quería-se dropdown de contas/templates Matrix + preview do HSM ao selecionar. Mas o **Matrix não expõe API de listar templates** (confirmado), então a única fonte do preview seria um **registro local** (cópia do corpo por tenant) — com manutenção manual e risco de drift vs o template aprovado. Decidido **manter `cod_conta`/`hsm` manuais** por ora. O **mecanismo genérico de opções dinâmicas** (`select_dinamico` carregado de endpoint por-tenant + painel de preview) fica pra quando entrar uma integração com **API de listagem real** (ex: HubSoft, ou "listar pipelines" do CRM) — aí o investimento se paga em vários provedores.

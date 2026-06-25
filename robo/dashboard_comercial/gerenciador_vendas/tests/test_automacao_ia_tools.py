@@ -8,6 +8,8 @@ import json
 from types import SimpleNamespace
 from unittest import mock
 
+import pytest
+
 from apps.automacao.services import ia_tools
 from apps.automacao.services.ia import chamar_llm_com_tools
 from apps.automacao.nodes import Contexto, tipo_por_slug
@@ -86,6 +88,24 @@ def test_loop_sem_tools_cai_em_chamar_llm():
         out = chamar_llm_com_tools(integ, [{'role': 'user', 'content': 'oi'}], [], lambda n, a: '')
     assert out == 'simples'
     mc.assert_called_once()
+
+
+@pytest.mark.parametrize('chave,arg,acao', [
+    ('marcar_cliente', {'e_cliente': True}, 'marcar_cliente'),
+    ('marcar_intencao', {'tem_intencao': True}, 'marcar_intencao'),
+    ('marcar_intencao_energia', {'tem_interesse': True}, 'marcar_intencao_energia'),
+])
+def test_marcar_fatos_gravam_logsistema_tenant_safe(chave, arg, acao):
+    ctx = SimpleNamespace(tenant=SimpleNamespace(pk=7), lead=SimpleNamespace(pk=42))
+    with mock.patch('apps.sistema.models.LogSistema') as MLog:
+        out = ia_tools.despachar(chave, arg, ctx)
+    MLog.objects.create.assert_called_once()
+    kw = MLog.objects.create.call_args.kwargs
+    assert kw['tenant'] is ctx.tenant
+    assert kw['acao'] == acao
+    assert kw['entidade_id'] == 42
+    assert kw['dados_extras']['valor'] is True
+    assert 'registrado' in out
 
 
 def test_no_ia_agente_usa_tools_quando_agente_tem():

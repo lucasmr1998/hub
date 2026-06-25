@@ -125,3 +125,46 @@ def _consultar_base_conhecimento(contexto, args, agente=None):
     from .rag import buscar_conhecimento
     categorias = list(getattr(agente, 'base_categorias', None) or [])  # vazio = base inteira do tenant
     return buscar_conhecimento(contexto.tenant, args.get('pergunta', ''), categorias=categorias)
+
+
+def _marcar_fato(contexto, acao, label, valor, extras=None):
+    """Registra um fato booleano sobre o contato no CRM (LogSistema), tenant-safe."""
+    from apps.sistema.models import LogSistema
+    lead = contexto.lead
+    LogSistema.objects.create(
+        tenant=contexto.tenant, modulo='automacao', categoria='crm', acao=acao,
+        entidade='lead', entidade_id=getattr(lead, 'pk', None),
+        mensagem=f'{label}: {valor}',
+        dados_extras={**(extras or {}), 'valor': valor},
+    )
+    return f'{label} registrado: {valor}.'
+
+
+@_tool(
+    'marcar_cliente',
+    'Registre se o contato JÁ é cliente da Megalink. Use quando o cliente disser que é (ou não é) cliente.',
+    {'e_cliente': {'type': 'boolean', 'description': 'true se já é cliente da Megalink'}},
+    ['e_cliente'],
+)
+def _marcar_cliente(contexto, args, agente=None):
+    return _marcar_fato(contexto, 'marcar_cliente', 'É cliente', bool(args.get('e_cliente')))
+
+
+@_tool(
+    'marcar_intencao',
+    'Registre a intenção de compra do contato. Use quando ele demonstrar (ou negar) interesse em contratar.',
+    {'tem_intencao': {'type': 'boolean', 'description': 'true se demonstrou intenção de compra'}},
+    ['tem_intencao'],
+)
+def _marcar_intencao(contexto, args, agente=None):
+    return _marcar_fato(contexto, 'marcar_intencao', 'Intenção de compra', bool(args.get('tem_intencao')))
+
+
+@_tool(
+    'marcar_intencao_energia',
+    'Registre o interesse do contato no produto Mega Energia. Use só depois de o cliente aceitar ouvir sobre o Mega Energia.',
+    {'tem_interesse': {'type': 'boolean', 'description': 'true se interessado no Mega Energia'}},
+    ['tem_interesse'],
+)
+def _marcar_intencao_energia(contexto, args, agente=None):
+    return _marcar_fato(contexto, 'marcar_intencao_energia', 'Interesse Mega Energia', bool(args.get('tem_interesse')))
