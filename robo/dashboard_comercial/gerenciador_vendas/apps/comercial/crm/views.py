@@ -2724,6 +2724,8 @@ def api_produtos_listar(request):
         'recorrencia': p.recorrencia,
         'recorrencia_display': p.get_recorrencia_display(),
         'ativo': p.ativo,
+        'empresa': (p.dados_erp or {}).get('empresa', '') if isinstance(p.dados_erp, dict) else '',
+        'velocidade_down': (p.dados_erp or {}).get('velocidade_download_mbps') if isinstance(p.dados_erp, dict) else None,
     } for p in qs]
 
     return JsonResponse({'success': True, 'produtos': produtos})

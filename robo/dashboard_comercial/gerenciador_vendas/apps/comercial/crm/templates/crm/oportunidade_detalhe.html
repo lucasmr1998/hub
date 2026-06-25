@@ -2075,20 +2075,26 @@ function abrirModalItem() {
 
 function mostrarModalItem() {
   if (_produtosCache.length === 0) { toast('Aviso', 'Nenhum produto cadastrado. Crie um produto primeiro.', 'warning'); return; }
-  const opts = _produtosCache.map(p => `<option value="${p.id}" data-preco="${p.preco}">${p.nome} (R$ ${parseFloat(p.preco).toFixed(2)} / ${p.recorrencia_display})</option>`).join('');
   const html = `<div class="modal-overlay" id="modalItem" style="display:flex;" onclick="if(event.target===this)this.remove()">
-    <div class="modal-content" style="max-width:420px;">
+    <div class="modal-content" style="max-width:520px;">
       <div class="modal-header">
         <h3 class="modal-title"><i class="bi bi-plus-circle" style="color:var(--color-primary);"></i> Adicionar produto</h3>
         <button class="modal-close" onclick="document.getElementById('modalItem').remove()"><i class="bi bi-x-lg"></i></button>
       </div>
       <div class="modal-body">
+        <input type="hidden" id="itemProduto" value="">
         <div class="field">
-          <label class="field-label">Produto</label>
-          <div class="field-input-wrap">
-            <select id="itemProduto" class="field-input" onchange="document.getElementById('itemValor').value=this.options[this.selectedIndex].dataset.preco">${opts}</select>
+          <label class="field-label">Buscar produto</label>
+          <div class="field-input-wrap" style="position:relative;">
+            <input id="itemProdutoBusca" type="text" class="field-input" placeholder="Digite nome, velocidade ou empresa (ex: 1GB, mega, salto)" autocomplete="off">
+            <i class="bi bi-search" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--color-text-muted);pointer-events:none;"></i>
           </div>
+          <div id="filtroEmpresa" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;font-size:12px;"></div>
         </div>
+        <div id="produtoListaWrap" style="margin-top:8px;border:1px solid var(--color-border);border-radius:6px;max-height:280px;overflow-y:auto;background:var(--surface-2,#F8FAFC);">
+          <div id="produtoLista"></div>
+        </div>
+        <div id="produtoSelecionado" style="display:none;margin-top:12px;padding:10px;border:1px solid var(--color-primary);border-radius:6px;background:#FDF1EC;font-size:13px;"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--sp-2);margin-top:var(--sp-3);">
           <div class="field">
             <label class="field-label">Qtd</label>
@@ -2096,7 +2102,7 @@ function mostrarModalItem() {
           </div>
           <div class="field">
             <label class="field-label">Valor (R$)</label>
-            <div class="field-input-wrap"><input id="itemValor" type="number" class="field-input" step="0.01" value="${_produtosCache[0].preco}"></div>
+            <div class="field-input-wrap"><input id="itemValor" type="number" class="field-input" step="0.01" value="0.00"></div>
           </div>
           <div class="field">
             <label class="field-label">Desconto</label>
@@ -2106,11 +2112,87 @@ function mostrarModalItem() {
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary btn-sm" onclick="document.getElementById('modalItem').remove()">Cancelar</button>
-        <button class="btn btn-primary btn-sm" onclick="adicionarItem()"><i class="bi bi-plus-lg"></i> Adicionar</button>
+        <button class="btn btn-primary btn-sm" onclick="adicionarItem()" id="btnAdicionarItem" disabled><i class="bi bi-plus-lg"></i> Adicionar</button>
       </div>
     </div>
   </div>`;
   document.body.insertAdjacentHTML('beforeend', html);
+
+  // Inicializa estado do combobox
+  window._produtoFiltro = { texto: '', empresa: '' };
+
+  // Pills de filtro por empresa (gerado dinamicamente)
+  const empresas = [...new Set(_produtosCache.map(p => (p.empresa || '').toLowerCase()).filter(Boolean))];
+  const pills = ['<button type="button" class="filtro-empresa-pill" data-empresa="" style="padding:3px 10px;border-radius:12px;border:1px solid var(--color-border);background:white;cursor:pointer;font-weight:600;">Todas</button>'];
+  empresas.forEach(e => {
+    pills.push(`<button type="button" class="filtro-empresa-pill" data-empresa="${e}" style="padding:3px 10px;border-radius:12px;border:1px solid var(--color-border);background:white;cursor:pointer;text-transform:capitalize;">${e}</button>`);
+  });
+  document.getElementById('filtroEmpresa').innerHTML = pills.join('');
+  document.querySelectorAll('.filtro-empresa-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filtro-empresa-pill').forEach(b => {
+        b.style.background = 'white';
+        b.style.borderColor = 'var(--color-border)';
+        b.style.color = 'var(--color-text)';
+      });
+      btn.style.background = '#252020';
+      btn.style.borderColor = '#252020';
+      btn.style.color = 'white';
+      window._produtoFiltro.empresa = btn.dataset.empresa;
+      renderListaProdutos();
+    });
+  });
+
+  document.getElementById('itemProdutoBusca').addEventListener('input', e => {
+    window._produtoFiltro.texto = e.target.value.trim().toLowerCase();
+    renderListaProdutos();
+  });
+
+  renderListaProdutos();
+  setTimeout(() => document.getElementById('itemProdutoBusca').focus(), 100);
+}
+
+function renderListaProdutos() {
+  const filtro = window._produtoFiltro || { texto: '', empresa: '' };
+  const filtrados = _produtosCache.filter(p => {
+    if (filtro.empresa && (p.empresa || '').toLowerCase() !== filtro.empresa) return false;
+    if (!filtro.texto) return true;
+    const hay = [p.nome, p.empresa, p.codigo, p.velocidade_down]
+      .filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(filtro.texto);
+  });
+  const cont = document.getElementById('produtoLista');
+  if (!filtrados.length) {
+    cont.innerHTML = '<div style="padding:16px;text-align:center;color:var(--color-text-muted);font-size:13px;">Nenhum produto encontrado.</div>';
+    return;
+  }
+  cont.innerHTML = filtrados.map(p => {
+    const empresaTag = p.empresa ? `<span style="background:#FDF1EC;color:#E76F51;font-size:10px;padding:1px 6px;border-radius:8px;font-weight:600;text-transform:uppercase;margin-right:4px;">${p.empresa}</span>` : '';
+    const velocTag = p.velocidade_down ? `<span style="color:var(--color-text-muted);font-size:11px;">${Math.round(p.velocidade_down/1000)}Mb</span>` : '';
+    const preco = parseFloat(p.preco || 0);
+    return `<div onclick="selecionarProduto(${p.id})" style="padding:10px 12px;border-bottom:1px solid var(--color-border);cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;background:white;transition:background 0.1s;" onmouseover="this.style.background='#FDF1EC'" onmouseout="this.style.background='white'">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:500;color:#252020;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          ${empresaTag}${p.nome}
+        </div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">${velocTag} ${p.recorrencia_display}</div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:#252020;white-space:nowrap;">
+        R$ ${preco.toFixed(2)}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selecionarProduto(produtoId) {
+  const p = _produtosCache.find(x => x.id === produtoId);
+  if (!p) return;
+  document.getElementById('itemProduto').value = p.id;
+  document.getElementById('itemValor').value = parseFloat(p.preco || 0).toFixed(2);
+  document.getElementById('btnAdicionarItem').disabled = false;
+  const sel = document.getElementById('produtoSelecionado');
+  sel.style.display = 'block';
+  sel.innerHTML = `<i class="bi bi-check-circle-fill" style="color:#E76F51;"></i> <strong>${p.nome}</strong> selecionado — R$ ${parseFloat(p.preco || 0).toFixed(2)}`;
 }
 
 function adicionarItem(forcarDuplicidade) {
