@@ -1882,14 +1882,20 @@ class HubsoftService:
             except ValueError:
                 resposta_json = {'raw': resp.text[:2000]}
 
-            sucesso = resp.status_code in (200, 201)
+            sucesso_http = resp.status_code in (200, 201)
             resposta_para_log = (
                 resposta_json if isinstance(resposta_json, dict)
                 else {'list': resposta_json}
             )
             msg_erro_api = ''
+            status_logico = ''
             if isinstance(resposta_json, dict):
                 msg_erro_api = resposta_json.get('msg', '') or ''
+                status_logico = (resposta_json.get('status') or '').lower()
+
+            # HubSoft pode retornar HTTP 200 com body {status: error, msg: ...}
+            # (ex: regra de negocio bloqueando edicao). Trate como falha logica.
+            sucesso = sucesso_http and status_logico != 'error'
 
             if sucesso:
                 self._registrar_log(

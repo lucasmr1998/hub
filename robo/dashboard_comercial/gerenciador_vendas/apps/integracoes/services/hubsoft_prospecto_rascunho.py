@@ -46,15 +46,32 @@ def _preencher_placeholders_para_rascunho(lead: LeadProspecto, integracao=None) 
     """Mantém nome+telefone reais; preenche placeholders nos vazios pra
     passar validacao do create do HubSoft.
 
-    CEP precisa ser real pra HubSoft resolver cidade. Le de
-    `IntegracaoAPI.configuracoes_extras.cep_default` se presente,
-    senao usa PLACEHOLDER_CEP_FALLBACK (Mococa-SP).
+    CEP precisa ser real pra HubSoft resolver cidade — e como cada
+    Unidade de Negocio do HubSoft (Nuvyon, Mega/Salto, etc.) so vende seus
+    planos em CEPs da cidade dela, o CEP padrao precisa bater com a empresa
+    do flow que criou o lead. Resolucao em cascata:
+
+      1. `lead.dados_custom['empresa']` + `cep_default_por_empresa[empresa]`
+      2. `IntegracaoAPI.configuracoes_extras.cep_default` (legado)
+      3. `PLACEHOLDER_CEP_FALLBACK` (Mococa-SP Nuvyon)
 
     Retorna dict {campo: valor_placeholder} que vai SOBRESCREVER campos vazios
     do lead apenas no momento da chamada — NAO persiste no lead.
     """
     extras = (integracao.configuracoes_extras or {}) if integracao else {}
     cep_default = (extras.get('cep_default') or PLACEHOLDER_CEP_FALLBACK).strip()
+
+    # Override por empresa quando o flow Matrix marcou explicitamente
+    empresa = ''
+    dados_custom = getattr(lead, 'dados_custom', None) or {}
+    if isinstance(dados_custom, dict):
+        empresa = (dados_custom.get('empresa') or '').strip().lower()
+    if empresa:
+        por_empresa = extras.get('cep_default_por_empresa') or {}
+        if isinstance(por_empresa, dict):
+            cep_emp = (por_empresa.get(empresa) or '').strip()
+            if cep_emp:
+                cep_default = cep_emp
 
     overrides = {}
     if not (lead.cep or '').strip():

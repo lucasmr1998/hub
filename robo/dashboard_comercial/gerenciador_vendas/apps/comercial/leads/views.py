@@ -523,6 +523,19 @@ def registrar_lead_api(request):
     try:
         allowed = _model_field_names(LeadProspecto)
         payload = {k: v for k, v in data.items() if k in allowed}
+
+        # Campo `empresa` nao eh do modelo — eh um marcador do flow Matrix pra
+        # diferenciar leads de empresas que compartilham o mesmo tenant
+        # (ex: Nuvyon vs Mega/Salto). Guarda em dados_custom pra que a Regra 23
+        # use o CEP padrao correto na criacao do rascunho HubSoft.
+        empresa_flow = (data.get('empresa') or '').strip()
+        if empresa_flow:
+            dc = payload.get('dados_custom') or {}
+            if not isinstance(dc, dict):
+                dc = {}
+            dc['empresa'] = empresa_flow.lower()
+            payload['dados_custom'] = dc
+
         lead = LeadProspecto.objects.create(**payload)
 
         # Auto-criar Oportunidade se o tenant tiver a flag ConfiguracaoCRM.
