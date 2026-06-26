@@ -187,12 +187,58 @@ class WidgetQueryBuilder:
             valor_label = row[dimensao]
             labels.append(str(valor_label) if valor_label is not None else '—')
             data.append(float(row['_valor'] or 0))
+
+        # Pos-processamento opcional (transform). Permite manipular resultados
+        # antes de retornar — util pro funil comercial que agrupa varios
+        # estagios finais ganhos como uma unica linha "Contratacao".
+        transform = (agrupamento or {}).get('transform')
+        if transform:
+            labels, data = self._aplicar_transform(transform, dimensao, qs, labels, data)
+
         return ResultadoQuery(
             labels=labels,
             series=[{'name': self._label_metrica(metrica), 'data': data}],
             total=sum(data) if data else 0,
             meta={'data_source': self.data_source.slug, 'metrica': metrica, 'dimensao': dimensao},
         )
+
+    def _aplicar_transform(self, transform: str, dimensao: str, qs, labels: list, data: list):
+        """Pos-processa resultado do agrupamento aplicando uma transformacao.
+
+        Transforms disponiveis:
+        - 'funil_comercial': quando dimensao=estagio__nome, agrupa estagios
+          `is_final_ganho` como 'Contratacao' e `is_final_perdido` como
+          'Perdido'. Ordena pelo `ordem` do estagio (nao pelo valor).
+        """
+        if transform == 'funil_comercial' and dimensao == 'estagio__nome':
+            from apps.comercial.crm.models import PipelineEstagio
+            # Mapa nome -> (ordem, is_ganho, is_perdido)
+            ests = {e.nome: (e.ordem, e.is_final_ganho, e.is_final_perdido)
+                    for e in PipelineEstagio.all_tenants.filter(tenant=self.tenant)}
+            # Agrupa
+            agg_map = {}  # label_final -> (ordem_min, total)
+            for lbl, valor in zip(labels, data):
+                meta_est = ests.get(lbl)
+                if meta_est:
+                    ordem, ganho, perdido = meta_est
+                    if ganho:
+                        label_final = 'Contratacao'
+                        ordem_ord = 9000  # depois das etapas normais
+                    elif perdido:
+                        label_final = 'Perdido'
+                        ordem_ord = 9999  # ultimo
+                    else:
+                        label_final = lbl
+                        ordem_ord = ordem
+                else:
+                    label_final = lbl
+                    ordem_ord = 9500
+                cur = agg_map.get(label_final, (ordem_ord, 0))
+                agg_map[label_final] = (min(cur[0], ordem_ord), cur[1] + valor)
+            ordenado = sorted(agg_map.items(), key=lambda kv: kv[1][0])
+            labels = [k for k, _ in ordenado]
+            data = [v[1] for _, v in ordenado]
+        return labels, data
 
     def _label_metrica(self, metrica: dict) -> str:
         tipo = (metrica or {}).get('tipo', 'count')
