@@ -629,9 +629,10 @@
     min-width: 0;
   }
   /* Card geral — respeitar largura da coluna + altura minima pra uniformidade.
-     overflow-x: hidden trava horizontalmente sem cortar conteudo vertical
-     (cards podem crescer pra acomodar tags/responsavel/etc). */
-  .op-card { min-width: 0; max-width: 100%; overflow-x: hidden; min-height: 88px; }
+     NAO usar overflow-x: hidden aqui porque browser auto-aplica overflow-y: auto,
+     criando scrollbar vertical em cada card. O truncamento horizontal e feito
+     nos elementos internos (.card-nome, .card-campo). */
+  .op-card { min-width: 0; max-width: 100%; min-height: 88px; }
 
   /* Modal personalizar */
   .modal-personalizar-card { max-width: 920px; width: 95vw; }
