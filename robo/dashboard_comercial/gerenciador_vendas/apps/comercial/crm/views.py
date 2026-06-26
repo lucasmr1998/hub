@@ -3114,6 +3114,12 @@ ACOES_DISPONIVEIS = [
         'descricao': 'Cria rascunho (POST /prospecto) OU atualiza prospecto existente (PUT /prospecto/{id}) no HubSoft. Decide automaticamente pelo lead.id_hubsoft. Idempotente.',
         'icon': 'bi-cloud-arrow-up',
     },
+    {
+        'tipo': 'adicionar_item_oportunidade',
+        'label': 'Vincular plano escolhido como item',
+        'descricao': 'Cria ItemOportunidade a partir do plano escolhido pelo cliente (lead.id_plano_rp). Busca ProdutoServico com id_externo igual no catalogo do tenant. Idempotente: nao duplica se ja vinculado.',
+        'icon': 'bi-cart-plus',
+    },
 ]
 ACOES_DISPONIVEIS_DICT = {a['tipo']: a for a in ACOES_DISPONIVEIS}
 

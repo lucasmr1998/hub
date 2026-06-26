@@ -829,6 +829,60 @@ def _acao_sincronizar_prospecto_hubsoft(oportunidade, config):
     return False
 
 
+def _acao_adicionar_item_oportunidade(oportunidade, config):
+    """Vincula o plano escolhido pelo cliente como ItemOportunidade na op.
+
+    Onde a escolha vem: `lead.id_plano_rp` (gravado pelo flow Matrix quando
+    cliente escolhe via atendimento). Esse id e o id_servico do HubSoft.
+
+    O que faz:
+    1) Le `lead.id_plano_rp`
+    2) Busca ProdutoServico com `id_externo == id_plano_rp` no catalogo do tenant
+    3) Cria ItemOportunidade (quantidade=1, valor=produto.preco) se ainda nao existe
+    4) Idempotente: se ja ha item vinculado ao mesmo produto, nao duplica
+
+    Resolve o gap onde:
+      - cliente escolheu plano via Matrix
+      - lead.id_plano_rp ficou preenchido
+      - aba "Produtos" da op ficava vazia
+      - card do kanban mostrava "sem valor"
+    """
+    from apps.comercial.crm.models import ProdutoServico, ItemOportunidade
+
+    lead = getattr(oportunidade, 'lead', None)
+    if lead is None or not lead.id_plano_rp:
+        return False
+
+    produto = ProdutoServico.all_tenants.filter(
+        tenant=oportunidade.tenant,
+        id_externo=str(lead.id_plano_rp),
+    ).first()
+    if not produto:
+        logger.info(
+            "[adicionar_item] op=%s lead.id_plano_rp=%s sem ProdutoServico no catalogo do tenant",
+            oportunidade.pk, lead.id_plano_rp,
+        )
+        return False
+
+    # Idempotencia — ja tem esse produto vinculado?
+    if oportunidade.itens.filter(produto=produto).exists():
+        return False
+
+    ItemOportunidade.all_tenants.create(
+        tenant=oportunidade.tenant,
+        oportunidade=oportunidade,
+        produto=produto,
+        quantidade=1,
+        valor_unitario=produto.preco or 0,
+        desconto=0,
+    )
+    logger.info(
+        "[adicionar_item] op=%s produto=%s (R$ %s) vinculado",
+        oportunidade.pk, produto.nome, produto.preco,
+    )
+    return True
+
+
 def _acao_criar_tarefa(oportunidade, config):
     """
     Cria uma Tarefa no CRM vinculada a oportunidade. Idempotente: pula se ja
@@ -932,6 +986,7 @@ _EXECUTORES_ACAO = {
     'mover_para_perdido_sem_viabilidade': _acao_mover_para_perdido_sem_viabilidade,
     'sincronizar_prospecto_hubsoft': _acao_sincronizar_prospecto_hubsoft,
     'criar_tarefa': _acao_criar_tarefa,
+    'adicionar_item_oportunidade': _acao_adicionar_item_oportunidade,
 }
 
 
