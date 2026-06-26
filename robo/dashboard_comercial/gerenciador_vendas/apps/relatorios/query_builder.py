@@ -315,26 +315,27 @@ class WidgetQueryBuilder:
             for op_id, est_id_atual in qs.values_list('id', 'estagio_id'):
                 _check_final(op_id, est_id_atual)
 
+            # EXCLUI ops perdidas do funil — funil mostra apenas o caminho
+            # de conversao (Novo Lead -> Contratacao). Ops que terminaram
+            # em is_final_perdido nao contam em nenhuma etapa.
+            op_ids_validos = set(ordem_max_por_op.keys()) - ops_perdidas
+
             # Monta funil — etapas intermediarias (nao finais), ordenadas por ordem.
-            # Cada etapa N: count(ops cujo ordem_max >= N).
+            # Cada etapa N: count(ops cujo ordem_max >= N, excluindo perdidas).
             etapas_intermediarias = []
             etagios_nao_finais = [e for e in estagios if not e.is_final_ganho and not e.is_final_perdido]
             etagios_nao_finais.sort(key=lambda e: e.ordem)
             for est in etagios_nao_finais:
-                count = sum(1 for o in ordem_max_por_op if ordem_max_por_op[o] >= est.ordem)
+                count = sum(1 for o in op_ids_validos if ordem_max_por_op[o] >= est.ordem)
                 etapas_intermediarias.append((est.ordem, est.nome, count))
-
-            ganhos_set = ops_ganhas
-            perdidos_set = ops_perdidas
 
             etapas_intermediarias.sort(key=lambda x: x[0])
             labels = [n for _, n, _ in etapas_intermediarias]
             data = [float(c) for _, _, c in etapas_intermediarias]
-            # Finais condensados em 1 linha so: "Contratacao: X | Perdido: Y"
-            n_ganhos = len(ganhos_set)
-            n_perdidos = len(perdidos_set)
-            labels.append(f'Contratacao: {n_ganhos} | Perdido: {n_perdidos}')
-            data.append(float(n_ganhos + n_perdidos))
+            # Linha final = total de contratacoes (ops que ganharam)
+            n_ganhos = len(ops_ganhas - ops_perdidas)
+            labels.append('Contratacao')
+            data.append(float(n_ganhos))
 
         return labels, data
 
