@@ -218,6 +218,14 @@ class LeadProspecto(TenantMixin):
         verbose_name="CEP"
     )
 
+    complemento = models.CharField(
+        max_length=120,
+        null=True,
+        blank=True,
+        verbose_name="Complemento",
+        help_text="Apto, casa, bloco, sala — coletado pelo flow Matrix e usado no HubSoft."
+    )
+
     ponto_referencia = models.CharField(
         max_length=255,
         null=True,

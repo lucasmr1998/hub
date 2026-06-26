@@ -616,7 +616,8 @@ def api_editar_oportunidade(request, pk):
     campos_lead = [
         'nome_razaosocial', 'email', 'telefone', 'cpf_cnpj', 'rg',
         'data_nascimento',
-        'cidade', 'estado', 'cep', 'rua', 'numero_residencia', 'bairro',
+        'cidade', 'estado', 'cep', 'rua', 'numero_residencia', 'complemento',
+        'bairro',
         'empresa', 'observacoes', 'origem', 'canal_entrada',
         'score_qualificacao', 'score_status',
     ]
@@ -3811,6 +3812,7 @@ def api_cadastro_completo_oportunidade(request, pk):
                 'cep': lead.cep or '',
                 'rua': lead.rua or '',
                 'numero_residencia': lead.numero_residencia or '',
+                'complemento': lead.complemento or '',
                 'bairro': lead.bairro or '',
                 'cidade': lead.cidade or '',
                 'estado': lead.estado or '',
@@ -3840,7 +3842,7 @@ def api_cadastro_completo_oportunidade(request, pk):
 
     campos_permitidos = {
         'nome_razaosocial', 'cpf_cnpj', 'data_nascimento', 'rg', 'email',
-        'telefone', 'cep', 'rua', 'numero_residencia',
+        'telefone', 'cep', 'rua', 'numero_residencia', 'complemento',
         'bairro', 'cidade', 'estado', 'id_plano_rp', 'id_dia_vencimento',
     }
     # Mapeamento de chaves do JS pro Lead (alguns nomes diferentes)

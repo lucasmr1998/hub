@@ -232,6 +232,7 @@ def receber_lead(request):
                 bairro=payload.get('bairro') or '',
                 rua=payload.get('rua') or '',
                 numero_residencia=payload.get('numero') or '',
+                complemento=payload.get('complemento') or '',
                 cpf_cnpj=payload.get('cpf') or '',
                 data_nascimento=data_nasc,
                 origem=payload.get('origem') or 'whatsapp_n8n',
@@ -247,6 +248,7 @@ def receber_lead(request):
                 'bairro': payload.get('bairro'),
                 'rua': payload.get('rua'),
                 'numero_residencia': payload.get('numero'),
+                'complemento': payload.get('complemento'),
                 'cpf_cnpj': payload.get('cpf'),
                 'data_nascimento': data_nasc,
             }
@@ -324,6 +326,7 @@ def receber_lead(request):
             CAMPOS_PERMITIDOS = {
                 'id_plano_rp', 'status_api', 'cpf_cnpj', 'email', 'cep',
                 'cidade', 'estado', 'bairro', 'rua', 'numero_residencia',
+                'complemento',
             }
             campos_ok = []
             for campo, valor in lead_campos.items():
@@ -596,6 +599,7 @@ def inbox_mensagem(request):
             campos_map = {
                 'email': 'email', 'cep': 'cep', 'cidade': 'cidade', 'estado': 'estado',
                 'bairro': 'bairro', 'rua': 'rua', 'numero': 'numero_residencia',
+                'complemento': 'complemento',
                 'cpf': 'cpf_cnpj',
             }
             atualizou = False

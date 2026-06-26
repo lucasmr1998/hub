@@ -1659,6 +1659,8 @@ class HubsoftService:
         payload['endereco'] = lead.rua or lead.endereco or ''
         payload['numero'] = lead.numero_residencia or 'S/N'
 
+        if lead.complemento:
+            payload['complemento'] = lead.complemento
         if lead.ponto_referencia:
             payload['referencia'] = lead.ponto_referencia
         if lead.rg:
@@ -1783,6 +1785,8 @@ class HubsoftService:
             endereco['bairro'] = lead.bairro
         if lead.numero_residencia:
             endereco['numero'] = lead.numero_residencia
+        if lead.complemento:
+            endereco['complemento'] = lead.complemento
         if lead.ponto_referencia:
             endereco['referencia'] = lead.ponto_referencia
         if endereco:
