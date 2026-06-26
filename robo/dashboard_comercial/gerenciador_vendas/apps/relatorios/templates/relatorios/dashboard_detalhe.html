@@ -535,18 +535,34 @@ function montarOptionEcharts(viz, labels, valores, seriesName) {
       tooltip: { ...base.tooltip, formatter: (p) => `${p.marker} <b>${p.name}</b><br/>${fmtCompacto(p.value)}` },
       series: [{
         type: 'funnel',
-        left: '5%', right: '5%', top: 20, bottom: 20,
-        minSize: '20%', maxSize: '100%',
+        left: '10%', right: '10%', top: 16, bottom: 16,
+        minSize: '30%', maxSize: '100%',
         // sort: 'none' respeita a ORDEM dos dados (importante pra funil
-        // cumulativo onde a ordem do pipeline define o fluxo). Antes era
-        // 'descending' que reordenava por valor.
+        // cumulativo onde a ordem do pipeline define o fluxo).
         sort: 'none',
-        gap: 4,
-        itemStyle: { borderColor: '#fff', borderWidth: 1 },
-        label: { show: true, position: 'inside', fontSize: 12, color: '#fff', fontWeight: 'bold',
-          formatter: (p) => `${p.name}: ${fmtCompacto(p.value)}` },
+        gap: 2,
+        itemStyle: { borderColor: '#ffffff', borderWidth: 2, borderRadius: 4 },
+        label: {
+          show: true, position: 'inside', fontSize: 13, color: '#ffffff',
+          fontWeight: 600,
+          formatter: (p) => `${p.name}  ·  ${fmtCompacto(p.value)}`,
+        },
         labelLine: { show: false },
-        data: labels.map((l, i) => ({ name: String(l), value: Number(valores[i] || 0) })),
+        // Paleta editorial monocromatica: gradiente do tinta-escuro pro
+        // sienna, passando por tons intermediarios. Visual minimalista,
+        // hierarquia clara (topo escuro = ainda no funil, fundo sienna =
+        // contratado).
+        data: labels.map((l, i) => {
+          const total = labels.length;
+          // Interpola entre tinta escuro (#252020) no topo e sienna (#E76F51) no fundo
+          const t = total <= 1 ? 0 : i / (total - 1);
+          const lerp = (a, b) => Math.round(a + (b - a) * t);
+          const r = lerp(0x25, 0xE7);
+          const g = lerp(0x20, 0x6F);
+          const b = lerp(0x20, 0x51);
+          const cor = `rgb(${r},${g},${b})`;
+          return { name: String(l), value: Number(valores[i] || 0), itemStyle: { color: cor } };
+        }),
       }],
     };
   }
