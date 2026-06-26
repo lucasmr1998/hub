@@ -493,6 +493,71 @@ def visualizar_conversa_pdf_inbox(request, lead_id):
 
 @csrf_exempt
 @api_token_required
+def consultar_cpf_api(request):
+    """Consulta se CPF ja eh cliente HubSoft ou tem lead ativo no tenant.
+
+    GET /api/leads/consultar-cpf/?cpf=12345678900
+
+    Retorno:
+      {
+        "eh_cliente": bool,           # cliente HubSoft existe pra esse CPF
+        "tem_lead_ativo": bool,       # ja existe LeadProspecto ativo
+        "lead_id": int|null,
+        "oportunidade_id": int|null,
+        "estagio_lead": str|null,     # ex: "Plano Escolhido", "Ativacao Confirmada"
+        "cliente_hubsoft_id": int|null,
+        "nome": str|null,
+        "deve_abrir_cartao": bool,    # false se ja eh cliente/lead — bot direciona pra SAC
+        "mensagem": str,
+      }
+
+    Pro flow Matrix consultar ANTES de criar lead. Se `deve_abrir_cartao=false`,
+    o bot deve direcionar pra SAC/suporte em vez de seguir o fluxo comercial.
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Use GET'}, status=405)
+    cpf_raw = (request.GET.get('cpf') or request.GET.get('cpf_cnpj') or '').strip()
+    cpf_limpo = ''.join(filter(str.isdigit, cpf_raw))
+    if not cpf_limpo or len(cpf_limpo) < 11:
+        return JsonResponse({'error': 'CPF invalido (esperado 11+ digitos)'}, status=400)
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        return JsonResponse({'error': 'Tenant nao identificado'}, status=400)
+
+    from apps.integracoes.models import ClienteHubsoft
+    from apps.comercial.crm.models import OportunidadeVenda
+
+    cliente = ClienteHubsoft.all_tenants.filter(tenant=tenant, cpf_cnpj=cpf_limpo).first()
+    lead = LeadProspecto.objects.filter(cpf_cnpj=cpf_limpo, ativo=True).order_by('-data_cadastro').first()
+    op = OportunidadeVenda.objects.filter(lead=lead).first() if lead else None
+
+    eh_cliente = bool(cliente)
+    tem_lead_ativo = bool(lead)
+    deve_abrir = not (eh_cliente or tem_lead_ativo)
+
+    if eh_cliente:
+        msg = f'CPF ja eh cliente HubSoft ({cliente.id_cliente_hubsoft}). Direcionar para SAC.'
+    elif tem_lead_ativo:
+        estagio = op.estagio.nome if op and op.estagio else '?'
+        msg = f'Lead ja existe (id={lead.id}, estagio={estagio}). Nao abrir novo cartao.'
+    else:
+        msg = 'CPF novo — pode abrir cartao no CRM normalmente.'
+
+    return JsonResponse({
+        'eh_cliente': eh_cliente,
+        'tem_lead_ativo': tem_lead_ativo,
+        'lead_id': lead.id if lead else None,
+        'oportunidade_id': op.id if op else None,
+        'estagio_lead': op.estagio.nome if (op and op.estagio) else None,
+        'cliente_hubsoft_id': cliente.id_cliente_hubsoft if cliente else None,
+        'nome': (cliente.nome_razaosocial if cliente else (lead.nome_razaosocial if lead else None)),
+        'deve_abrir_cartao': deve_abrir,
+        'mensagem': msg,
+    }, status=200)
+
+
+@csrf_exempt
+@api_token_required
 def registrar_lead_api(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método não permitido'}, status=405)
@@ -523,6 +588,55 @@ def registrar_lead_api(request):
     try:
         allowed = _model_field_names(LeadProspecto)
         payload = {k: v for k, v in data.items() if k in allowed}
+
+        # GUARD CPF duplicado — antes de criar lead, checa se ja existe cliente
+        # HubSoft OU lead ativo com mesmo CPF no tenant. Evita reabrir card pra
+        # cliente atual (caso reportado pela Gabi: cliente liga pra saber da OS,
+        # bot pergunta "voce eh cliente?", cliente responde "nao", abre novo
+        # CRM duplicando o cadastro).
+        cpf_raw = (payload.get('cpf_cnpj') or data.get('cpf') or '').strip()
+        cpf_limpo = ''.join(filter(str.isdigit, cpf_raw))
+        tenant = getattr(request, 'tenant', None)
+        if cpf_limpo and len(cpf_limpo) >= 11 and tenant:
+            from apps.integracoes.models import ClienteHubsoft
+            # 1) Cliente HubSoft com esse CPF?
+            cli = ClienteHubsoft.all_tenants.filter(
+                tenant=tenant, cpf_cnpj=cpf_limpo,
+            ).first()
+            if cli:
+                _criar_log_sistema(
+                    nivel='INFO', modulo='registrar_lead_api',
+                    mensagem=f'CPF {cpf_limpo} ja eh cliente HubSoft — payload rejeitado pra evitar duplicata',
+                    dados_extras={'cpf': cpf_limpo, 'cliente_hubsoft_id': cli.id_cliente_hubsoft, 'payload_nome': data.get('nome_razaosocial')},
+                    request=request,
+                )
+                return JsonResponse({
+                    'sucesso': False,
+                    'motivo': 'cpf_ja_cliente',
+                    'cliente_hubsoft_id': cli.id_cliente_hubsoft,
+                    'nome_cliente': cli.nome_razaosocial,
+                    'mensagem': 'CPF ja eh cliente ativo — direcionar atendimento para SAC/suporte, nao abrir CRM.',
+                }, status=200)
+            # 2) LeadProspecto ativo com mesmo CPF no tenant?
+            lead_existente = LeadProspecto.objects.filter(
+                cpf_cnpj=cpf_limpo, ativo=True,
+            ).order_by('-data_cadastro').first()
+            if lead_existente:
+                _criar_log_sistema(
+                    nivel='INFO', modulo='registrar_lead_api',
+                    mensagem=f'CPF {cpf_limpo} ja tem lead ativo (id={lead_existente.id}) — reaproveitado',
+                    dados_extras={'cpf': cpf_limpo, 'lead_existente_id': lead_existente.id},
+                    request=request,
+                )
+                from apps.comercial.crm.models import OportunidadeVenda
+                op_existente = OportunidadeVenda.objects.filter(lead=lead_existente).first()
+                return JsonResponse({
+                    'sucesso': True,
+                    'reaproveitado': True,
+                    'lead_id': lead_existente.id,
+                    'oportunidade_id': op_existente.id if op_existente else None,
+                    'mensagem': 'Lead ja existe pra esse CPF — reaproveitado em vez de criar novo.',
+                }, status=200)
 
         # Campo `empresa` nao eh do modelo — eh um marcador do flow Matrix pra
         # diferenciar leads de empresas que compartilham o mesmo tenant
