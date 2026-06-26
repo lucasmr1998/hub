@@ -628,8 +628,8 @@
     white-space: nowrap;
     min-width: 0;
   }
-  /* Card geral — respeitar largura da coluna */
-  .op-card { min-width: 0; max-width: 100%; overflow: hidden; }
+  /* Card geral — respeitar largura da coluna + altura minima pra uniformidade */
+  .op-card { min-width: 0; max-width: 100%; overflow: hidden; min-height: 88px; }
 
   /* Modal personalizar */
   .modal-personalizar-card { max-width: 920px; width: 95vw; }
@@ -1328,24 +1328,20 @@ function renderCampoCard(slug, op) {
     case 'nome':
       return ''; // ja renderiza no card-top
     case 'telefone':
-      if (!op.telefone) return '';
-      return `<div class="card-campo card-tel"><i class="bi bi-telephone"></i> ${escapeHtml(op.telefone)}</div>`;
+      return `<div class="card-campo card-tel"><i class="bi bi-telephone"></i> ${op.telefone ? escapeHtml(op.telefone) : '<span class="card-campo-meta">—</span>'}</div>`;
     case 'cpf':
-      if (!op.cpf) return '';
-      return `<div class="card-campo"><i class="bi bi-card-text"></i> ${escapeHtml(op.cpf)}</div>`;
+      return `<div class="card-campo"><i class="bi bi-card-text"></i> ${op.cpf ? escapeHtml(op.cpf) : '<span class="card-campo-meta">—</span>'}</div>`;
     case 'email':
-      if (!op.email) return '';
-      return `<div class="card-campo"><i class="bi bi-envelope"></i> ${escapeHtml(op.email)}</div>`;
+      return `<div class="card-campo"><i class="bi bi-envelope"></i> ${op.email ? escapeHtml(op.email) : '<span class="card-campo-meta">—</span>'}</div>`;
     case 'valor_estimado': {
       const v = parseFloat(op.valor_estimado || op.valor || 0);
-      if (v <= 0) return '';
-      return `<div class="card-campo card-valor"><i class="bi bi-currency-dollar"></i> R$ ${formatarValor(v)}</div>`;
+      const txt = v > 0 ? `R$ ${formatarValor(v)}` : '<span class="card-campo-meta">sem valor</span>';
+      return `<div class="card-campo card-valor"><i class="bi bi-currency-dollar"></i> ${txt}</div>`;
     }
     case 'plano':
-      if (!op.plano) return '';
-      return `<div class="card-campo"><i class="bi bi-wifi"></i> ${escapeHtml(op.plano)}</div>`;
+      return `<div class="card-campo"><i class="bi bi-wifi"></i> ${op.plano ? escapeHtml(op.plano) : '<span class="card-campo-meta">sem plano</span>'}</div>`;
     case 'responsavel':
-      if (!op.responsavel_id) return `<div class="card-campo card-sem-resp">Sem responsavel</div>`;
+      if (!op.responsavel_id) return `<div class="card-campo card-sem-resp"><i class="bi bi-person-badge"></i> Sem responsavel</div>`;
       return `<div class="card-campo"><i class="bi bi-person-badge"></i> ${escapeHtml(op.responsavel_nome || op.responsavel)}</div>`;
     case 'responsavel_avatar':
       return ''; // ja vai no card-footer
