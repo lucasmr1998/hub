@@ -187,6 +187,17 @@ class MotivoPerda(TenantMixin):
 # ============================================================================
 
 class OportunidadeVenda(TenantMixin):
+    # Managers customizados — sobrescrevem `objects` e `all_tenants` do
+    # TenantMixin pra adicionar `.com_valor_estimado()` (annotate de SUM
+    # dos itens). Necessario pra todos filter/aggregate por valor_estimado
+    # funcionarem agora que o campo virou property.
+    from apps.comercial.crm.managers import (
+        OportunidadeManager,
+        OportunidadeAllTenantsManager,
+    )
+    objects = OportunidadeManager()
+    all_tenants = OportunidadeAllTenantsManager()
+
     ORIGEM_CHOICES = [
         ('automatico', 'Automático (Lead Qualificado)'),
         ('manual', 'Criação Manual'),
@@ -225,7 +236,14 @@ class OportunidadeVenda(TenantMixin):
     )
 
     titulo = models.CharField(max_length=255, blank=True, verbose_name="Título")
-    valor_estimado = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name="Valor Estimado (R$)")
+    # `valor_estimado_manual` e override opcional (raro: vendedor negocia
+    # um valor diferente da soma dos itens). Por default fica vazio. O valor
+    # exibido (.valor_estimado) prioriza a SOMA DOS ITENS — vide property abaixo.
+    valor_estimado_manual = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        verbose_name="Valor Estimado Manual (R$)",
+        help_text="Override opcional. Se vazio, valor_estimado eh a soma dos itens.",
+    )
     probabilidade = models.IntegerField(default=50, verbose_name="Probabilidade (%)")
     data_fechamento_previsto = models.DateField(null=True, blank=True, verbose_name="Previsão de Fechamento")
     data_fechamento_real = models.DateTimeField(null=True, blank=True, verbose_name="Data de Fechamento Real")
@@ -353,12 +371,45 @@ class OportunidadeVenda(TenantMixin):
         )
         return resultado['total']
 
-    def recalcular_valor(self):
-        """Atualiza valor_estimado com base nos itens, se houver."""
-        total = self.valor_total_itens
-        if total > 0:
-            self.valor_estimado = total
-            self.save(update_fields=['valor_estimado'])
+    @property
+    def valor_estimado(self):
+        """Valor visivel da oportunidade. Calculado dinamicamente:
+        1) Soma dos itens vinculados (fonte primaria)
+        2) Se zero itens, fallback no override manual (`valor_estimado_manual`)
+        3) Se ambos vazios, retorna 0.
+
+        Substitui o antigo campo DB `valor_estimado` (renomeado pra
+        `valor_estimado_manual` na migration 0027). Pra filtros/aggregates SQL
+        use o QuerySet `.com_valor_estimado()` que faz annotate equivalente.
+        """
+        from decimal import Decimal
+        # Se o objeto veio de uma query com .com_valor_estimado(), usa o
+        # annotate cacheado (evita N+1 em listas)
+        anotado = getattr(self, 'valor_estimado_anotado', None)
+        if anotado is not None:
+            return anotado
+        soma = self.valor_total_itens
+        if soma and soma > 0:
+            return soma
+        return self.valor_estimado_manual or Decimal('0')
+
+    @valor_estimado.setter
+    def valor_estimado(self, value):
+        """Retrocompatibilidade — escrever em op.valor_estimado redireciona
+        pro override manual. Util pra code legado (webhooks N8N, scripts,
+        DRF serializers) que faz op.valor_estimado = X.
+        """
+        self.valor_estimado_manual = value
+
+    def __init__(self, *args, **kwargs):
+        """Aceita `valor_estimado=` como kwarg legacy. Redireciona pra
+        `valor_estimado_manual` pra que webhook N8N e scripts antigos
+        continuem funcionando sem quebrar. Object.create(valor_estimado=X)
+        nao passa pelo setter da property — precisa interceptar aqui.
+        """
+        if 'valor_estimado' in kwargs:
+            kwargs['valor_estimado_manual'] = kwargs.pop('valor_estimado')
+        super().__init__(*args, **kwargs)
 
 
 class HistoricoPipelineEstagio(TenantMixin):

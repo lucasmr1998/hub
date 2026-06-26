@@ -115,13 +115,14 @@ def _home_vendedor(request):
     hoje = timezone.now().date()
 
     from django.db.models import Q
-    minhas_oportunidades = Oportunidade.objects.filter(
+    # valor_estimado virou property — usa com_valor_estimado() pro Sum
+    minhas_oportunidades = Oportunidade.objects.com_valor_estimado().filter(
         responsavel=user,
     ).exclude(Q(estagio__is_final_ganho=True) | Q(estagio__is_final_perdido=True))
 
     oportunidades_qtd = minhas_oportunidades.count()
     oportunidades_valor = minhas_oportunidades.aggregate(
-        total=Sum('valor_estimado')
+        total=Sum('valor_estimado_anotado')
     )['total'] or 0
 
     tarefas_hoje = TarefaCRM.objects.filter(
@@ -160,10 +161,10 @@ def _home_gerente_comercial(request):
     janela_30d = agora - timedelta(days=30)
 
     funil_status = (
-        Oportunidade.objects
+        Oportunidade.objects.com_valor_estimado()
         .exclude(estagio__is_final_perdido=True)
         .values('estagio__nome')
-        .annotate(qtd=Count('id'), valor=Sum('valor_estimado'))
+        .annotate(qtd=Count('id'), valor=Sum('valor_estimado_anotado'))
         .order_by('estagio__nome')
     )
 
@@ -179,10 +180,10 @@ def _home_gerente_comercial(request):
         estagio__is_final_ganho=True,
         data_atualizacao__gte=janela_30d,
     ).count()
-    valor_fechado_30d = Oportunidade.objects.filter(
+    valor_fechado_30d = Oportunidade.objects.com_valor_estimado().filter(
         estagio__is_final_ganho=True,
         data_atualizacao__gte=janela_30d,
-    ).aggregate(total=Sum('valor_estimado'))['total'] or 0
+    ).aggregate(total=Sum('valor_estimado_anotado'))['total'] or 0
 
     return render(request, 'dashboard/home_gerente_comercial.html', {
         'user': request.user,

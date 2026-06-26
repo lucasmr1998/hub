@@ -194,11 +194,14 @@ class OportunidadeAPIView(N8NAPIMixin, APIView):
                 oport.responsavel = user
                 campos_atualizados.append('responsavel')
 
-        # Outros campos
+        # Outros campos. valor_estimado virou property — setter redireciona
+        # pra valor_estimado_manual, mas o update_fields precisa do NOME do
+        # campo no DB (senao Django nao salva).
+        FIELD_MAP = {'valor_estimado': 'valor_estimado_manual'}
         for campo in ['titulo', 'valor_estimado', 'prioridade', 'motivo_perda']:
             if campo in data and data[campo]:
                 setattr(oport, campo, data[campo])
-                campos_atualizados.append(campo)
+                campos_atualizados.append(FIELD_MAP.get(campo, campo))
 
         # Dados customizados (merge com existentes)
         # Aceita tanto {"dados_custom": {"campo": "valor"}} quanto {"dados_custom.campo": "valor"}

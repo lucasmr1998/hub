@@ -242,13 +242,14 @@ def resumo_pipeline(tenant, usuario, args):
     from apps.comercial.crm.models import OportunidadeVenda, PipelineEstagio
     from django.db.models import Count, Sum
 
-    qs = OportunidadeVenda.objects.filter(ativo=True)
+    # valor_estimado virou property — usa com_valor_estimado() pro Sum
+    qs = OportunidadeVenda.objects.com_valor_estimado().filter(ativo=True)
 
     total = qs.count()
-    valor_total = qs.aggregate(total=Sum('valor_estimado'))['total'] or 0
+    valor_total = qs.aggregate(total=Sum('valor_estimado_anotado'))['total'] or 0
 
     por_estagio = qs.values('estagio__nome').annotate(
-        qtd=Count('id'), valor=Sum('valor_estimado')
+        qtd=Count('id'), valor=Sum('valor_estimado_anotado')
     ).order_by('estagio__ordem')
 
     resultado = f'Pipeline: {total} oportunidades, R$ {valor_total:.2f} total\n\n'

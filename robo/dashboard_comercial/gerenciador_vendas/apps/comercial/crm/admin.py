@@ -84,7 +84,7 @@ class ItemOportunidadeInline(admin.TabularInline):
 class OportunidadeVendaAdmin(admin.ModelAdmin):
     list_display = [
         'lead_nome', 'estagio', 'responsavel', 'prioridade',
-        'valor_estimado', 'probabilidade', 'dias_no_estagio_display',
+        'valor_estimado_manual', 'probabilidade', 'dias_no_estagio_display',
         'sla_badge', 'data_fechamento_previsto', 'ativo'
     ]
     list_filter = ['estagio', 'prioridade', 'ativo', 'origem_crm', 'responsavel']
@@ -96,7 +96,7 @@ class OportunidadeVendaAdmin(admin.ModelAdmin):
 
     fieldsets = [
         ('Identificação', {'fields': ['lead', 'titulo', 'estagio', 'responsavel', 'criado_por', 'tags']}),
-        ('Comercial', {'fields': ['valor_estimado', 'probabilidade', 'prioridade', 'plano_interesse', 'data_fechamento_previsto']}),
+        ('Comercial', {'fields': ['valor_estimado_manual', 'probabilidade', 'prioridade', 'plano_interesse', 'data_fechamento_previsto']}),
         ('Resultado', {'fields': ['data_fechamento_real', 'motivo_perda', 'concorrente_perdido', 'contrato_hubsoft_id']}),
         ('CRM', {'fields': ['origem_crm', 'churn_risk_score', 'ativo']}),
         ('Datas', {'fields': ['data_entrada_estagio', 'data_criacao', 'data_atualizacao'], 'classes': ['collapse']}),

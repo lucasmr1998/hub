@@ -233,9 +233,11 @@ def api_pipeline_dados(request):
     prioridade = request.GET.get('prioridade')
     search = request.GET.get('search', '').strip()
 
-    qs = OportunidadeVenda.objects.filter(ativo=True).select_related(
+    # com_valor_estimado() anota `valor_estimado_anotado` (SUM dos itens com
+    # fallback no manual) e evita N+1 ao ler op.valor_estimado em cada card
+    qs = OportunidadeVenda.objects.com_valor_estimado().filter(ativo=True).select_related(
         'lead', 'estagio', 'responsavel', 'plano_interesse', 'pipeline'
-    ).prefetch_related('tarefas', 'tags')
+    ).prefetch_related('tarefas', 'tags', 'itens')
 
     if pipeline_id:
         qs = qs.filter(pipeline_id=pipeline_id)
@@ -255,11 +257,16 @@ def api_pipeline_dados(request):
     if tag:
         qs = qs.filter(tags__nome=tag)
     if valor_range:
+        # valor_estimado virou property — usar annotate via com_valor_estimado()
+        qs = qs.com_valor_estimado()
         if valor_range == '1000+':
-            qs = qs.filter(valor_estimado__gte=1000)
+            qs = qs.filter(valor_estimado_anotado__gte=1000)
         elif '-' in valor_range:
             parts = valor_range.split('-')
-            qs = qs.filter(valor_estimado__gte=Decimal(parts[0]), valor_estimado__lte=Decimal(parts[1]))
+            qs = qs.filter(
+                valor_estimado_anotado__gte=Decimal(parts[0]),
+                valor_estimado_anotado__lte=Decimal(parts[1]),
+            )
     if search:
         from django.db.models import Q
         qs = qs.filter(
@@ -451,7 +458,8 @@ def oportunidades_lista(request):
     from django.db.models import Q
     from .models import TagCRM
 
-    qs = OportunidadeVenda.objects.filter(ativo=True).select_related(
+    # com_valor_estimado() pra evitar N+1 ao ler op.valor_estimado em cada linha
+    qs = OportunidadeVenda.objects.com_valor_estimado().filter(ativo=True).select_related(
         'lead', 'estagio', 'responsavel'
     ).prefetch_related('tags').order_by('estagio__ordem', '-data_criacao')
 
@@ -1535,13 +1543,14 @@ def api_desempenho_dados(request):
         data_inicio = hoje.replace(day=1)
 
     # Oportunidades fechadas no período
-    ops_ganhas = OportunidadeVenda.objects.filter(
+    # valor_estimado virou property — usa com_valor_estimado() pra somar
+    ops_ganhas = OportunidadeVenda.objects.com_valor_estimado().filter(
         estagio__is_final_ganho=True,
         data_fechamento_real__date__gte=data_inicio,
         ativo=True,
     ).values('responsavel').annotate(
         total=Count('id'),
-        valor=Sum('valor_estimado'),
+        valor=Sum('valor_estimado_anotado'),
     )
 
     por_vendedor = {item['responsavel']: item for item in ops_ganhas}
@@ -3968,7 +3977,8 @@ def relatorio_win_loss(request):
     desde = timezone.now() - timedelta(days=dias)
 
     from django.db.models import Q
-    qs = OportunidadeVenda.objects.filter(
+    # valor_estimado virou property — usa com_valor_estimado() pros Sums
+    qs = OportunidadeVenda.objects.com_valor_estimado().filter(
         Q(estagio__is_final_ganho=True) | Q(estagio__is_final_perdido=True),
         data_atualizacao__gte=desde,
     )
@@ -3978,12 +3988,12 @@ def relatorio_win_loss(request):
 
     breakdown_perda = (
         perdidas.values('motivo_perda_ref', 'motivo_perda_ref__nome')
-        .annotate(qtd=Count('id'), valor=Sum('valor_estimado'))
+        .annotate(qtd=Count('id'), valor=Sum('valor_estimado_anotado'))
         .order_by('-qtd')
     )
     breakdown_ganho = (
         ganhas.values('motivo_ganho_categoria')
-        .annotate(qtd=Count('id'), valor=Sum('valor_estimado'))
+        .annotate(qtd=Count('id'), valor=Sum('valor_estimado_anotado'))
         .order_by('-qtd')
     )
 
@@ -3992,8 +4002,8 @@ def relatorio_win_loss(request):
     total = total_ganhas + total_perdidas
     win_rate = round(total_ganhas / total * 100, 1) if total else 0
 
-    valor_ganho = ganhas.aggregate(total=Sum('valor_estimado'))['total'] or 0
-    valor_perdido = perdidas.aggregate(total=Sum('valor_estimado'))['total'] or 0
+    valor_ganho = ganhas.aggregate(total=Sum('valor_estimado_anotado'))['total'] or 0
+    valor_perdido = perdidas.aggregate(total=Sum('valor_estimado_anotado'))['total'] or 0
 
     # Mapa de label legível (ganho ainda usa choices fixas)
     ganho_labels = dict(OportunidadeVenda.MOTIVO_GANHO_CHOICES)
