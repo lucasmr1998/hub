@@ -38,6 +38,13 @@ def processar_oportunidade(oportunidade):
     if estagio.is_final_ganho or estagio.is_final_perdido:
         return
 
+    # Skip leads cujo prospect ja virou cliente no ERP — qualquer regra que
+    # tente PUT em /prospecto/{id} vai bater no erro "convertido pra cliente".
+    # Esses leads sao "finalizados" do ponto de vista da integracao.
+    lead = oportunidade.lead
+    if lead and getattr(lead, 'status_api', None) == 'convertido_cliente':
+        return
+
     # 1. Regras com estágio destino → move oportunidade
     resultado = _avaliar_regras(oportunidade)
     if resultado is not None:

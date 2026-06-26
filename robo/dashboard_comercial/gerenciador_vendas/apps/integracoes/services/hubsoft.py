@@ -153,15 +153,54 @@ class HubsoftService:
         (diferente do create, que usa flat cep/endereco/bairro + servico.*).
 
         Retorna dict da API (espera `msg: "Prospecto atualizado com sucesso"`).
+
+        Guard contra "prospect ja convertido em cliente": se ja existe um
+        ClienteHubsoft com o mesmo CPF/CNPJ do lead, significa que a venda
+        fechou (no painel HubSoft ou via API). Nesse caso o PUT vai sempre
+        retornar erro "Prospecto foi convertido para o cliente", entao
+        marcamos o lead como `convertido_cliente` e pulamos a chamada.
         """
         if not id_prospecto:
             raise HubsoftServiceError('editar_prospecto: id_prospecto vazio')
+
+        # Guard — prospect ja virou cliente?
+        if lead and lead.cpf_cnpj:
+            cpf_limpo = self._somente_numeros(lead.cpf_cnpj)
+            if cpf_limpo:
+                ja_cliente = ClienteHubsoft.all_tenants.filter(
+                    tenant=lead.tenant, cpf_cnpj=cpf_limpo,
+                ).exists()
+                if ja_cliente and lead.status_api != 'convertido_cliente':
+                    lead.status_api = 'convertido_cliente'
+                    lead.save(update_fields=['status_api', 'data_atualizacao'])
+                    logger.info(
+                        f"[HubsoftService] Lead {lead.id} ja eh cliente HubSoft (CPF {cpf_limpo}); "
+                        f"marcado convertido_cliente, PUT prospecto pulado"
+                    )
+                if ja_cliente:
+                    return {
+                        'status': 'skip',
+                        'msg': 'Prospect ja convertido em cliente — PUT nao chamado',
+                        'lead_id': lead.id,
+                    }
+
         if payload is None:
             payload = self._mapear_lead_para_hubsoft_editar(lead)
         endpoint = self.ENDPOINT_PROSPECTO_EDITAR_TPL.format(id_prospecto=id_prospecto)
         resposta = self._put(endpoint, json=payload, lead=lead)
 
         if resposta.get('status') and resposta.get('status') != 'success':
+            # Detecta erro "convertido pra cliente" mesmo quando o guard nao pegou
+            # (caso o ClienteHubsoft ainda nao foi sincronizado no espelho) e marca
+            # o lead pra parar futuras tentativas
+            msg = str(resposta.get('msg', '')).lower()
+            if 'convertido para o cliente' in msg and lead:
+                lead.status_api = 'convertido_cliente'
+                lead.save(update_fields=['status_api', 'data_atualizacao'])
+                logger.info(
+                    f"[HubsoftService] Lead {lead.id} marcado convertido_cliente "
+                    f"(detectado via resposta HubSoft)"
+                )
             raise HubsoftServiceError(
                 f"HubSoft rejeitou edicao do prospecto {id_prospecto}: {resposta}"
             )
