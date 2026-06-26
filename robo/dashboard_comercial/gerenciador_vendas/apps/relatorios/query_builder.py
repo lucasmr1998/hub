@@ -208,36 +208,94 @@ class WidgetQueryBuilder:
         Transforms disponiveis:
         - 'funil_comercial': quando dimensao=estagio__nome, agrupa estagios
           `is_final_ganho` como 'Contratacao' e `is_final_perdido` como
-          'Perdido'. Ordena pelo `ordem` do estagio (nao pelo valor).
+          'Perdido'. Mantem snapshot atual (ops EM cada estagio agora).
+          Ordena pelo `ordem` do estagio.
+        - 'funil_cumulativo': funil classico de marketing. Etapa 1 = total
+          de oportunidades; cada etapa subsequente = quantas passaram por
+          aquele estagio (via HistoricoPipelineEstagio). Finais agrupados
+          em 'Contratacao' e 'Perdido'. IGNORA o resultado original do
+          queryset — recalcula via historico.
         """
         if transform == 'funil_comercial' and dimensao == 'estagio__nome':
             from apps.comercial.crm.models import PipelineEstagio
-            # Mapa nome -> (ordem, is_ganho, is_perdido)
             ests = {e.nome: (e.ordem, e.is_final_ganho, e.is_final_perdido)
                     for e in PipelineEstagio.all_tenants.filter(tenant=self.tenant)}
-            # Agrupa
-            agg_map = {}  # label_final -> (ordem_min, total)
+            agg_map = {}
             for lbl, valor in zip(labels, data):
                 meta_est = ests.get(lbl)
                 if meta_est:
                     ordem, ganho, perdido = meta_est
                     if ganho:
-                        label_final = 'Contratacao'
-                        ordem_ord = 9000  # depois das etapas normais
+                        label_final = 'Contratacao'; ordem_ord = 9000
                     elif perdido:
-                        label_final = 'Perdido'
-                        ordem_ord = 9999  # ultimo
+                        label_final = 'Perdido'; ordem_ord = 9999
                     else:
-                        label_final = lbl
-                        ordem_ord = ordem
+                        label_final = lbl; ordem_ord = ordem
                 else:
-                    label_final = lbl
-                    ordem_ord = 9500
+                    label_final = lbl; ordem_ord = 9500
                 cur = agg_map.get(label_final, (ordem_ord, 0))
                 agg_map[label_final] = (min(cur[0], ordem_ord), cur[1] + valor)
             ordenado = sorted(agg_map.items(), key=lambda kv: kv[1][0])
             labels = [k for k, _ in ordenado]
             data = [v[1] for _, v in ordenado]
+
+        elif transform == 'funil_cumulativo':
+            # Funil classico: pra cada estagio do pipeline (ordenado por ordem),
+            # quantas oportunidades JA PASSARAM por aquele estagio (incluindo
+            # as que ja avancaram). Usa HistoricoPipelineEstagio.estagio_novo
+            # distintos por oportunidade.
+            from apps.comercial.crm.models import (
+                PipelineEstagio, HistoricoPipelineEstagio, OportunidadeVenda,
+            )
+            estagios = list(PipelineEstagio.all_tenants.filter(
+                tenant=self.tenant, ativo=True,
+            ).order_by('ordem'))
+
+            # Filtros do widget aplicados ao QuerySet base de Oportunidade
+            # pra respeitar periodo/responsavel/etc (passados via filtros do widget).
+            # qs eh OportunidadeVenda ja filtrado pelo _aplicar_filtros.
+            op_ids = list(qs.values_list('id', flat=True))
+            if not op_ids:
+                return [], []
+
+            # Pega todos os historicos das ops filtradas
+            historicos = HistoricoPipelineEstagio.all_tenants.filter(
+                tenant=self.tenant, oportunidade_id__in=op_ids,
+            ).values_list('oportunidade_id', 'estagio_novo_id')
+            # Mapa estagio_id -> set(op_ids que passaram)
+            passou_por = {}
+            for op_id, est_id in historicos:
+                if est_id:
+                    passou_por.setdefault(est_id, set()).add(op_id)
+
+            # Tambem considera o estagio ATUAL da op (caso ela nunca tenha
+            # gerado historico — ex: primeiro estagio onde nasceu)
+            for op_id, est_id_atual in qs.values_list('id', 'estagio_id'):
+                if est_id_atual:
+                    passou_por.setdefault(est_id_atual, set()).add(op_id)
+
+            # Monta funil — agrupa is_final_ganho como 'Contratacao' e
+            # is_final_perdido como 'Perdido'. Etapa 1 = total de ops.
+            ganhos_set, perdidos_set = set(), set()
+            etapas_intermediarias = []  # [(ordem, nome, count)]
+            for est in estagios:
+                ops_passou = passou_por.get(est.id, set())
+                if est.is_final_ganho:
+                    ganhos_set |= ops_passou
+                elif est.is_final_perdido:
+                    perdidos_set |= ops_passou
+                else:
+                    etapas_intermediarias.append((est.ordem, est.nome, len(ops_passou)))
+
+            etapas_intermediarias.sort(key=lambda x: x[0])
+            labels = [n for _, n, _ in etapas_intermediarias]
+            data = [float(c) for _, _, c in etapas_intermediarias]
+            # Apend finais
+            labels.append('Contratacao')
+            data.append(float(len(ganhos_set)))
+            labels.append('Perdido')
+            data.append(float(len(perdidos_set)))
+
         return labels, data
 
     def _label_metrica(self, metrica: dict) -> str:
