@@ -1353,7 +1353,10 @@ function renderCampoCard(slug, op) {
       return ''; // ja vai no card-footer
     case 'tempo_no_estagio': {
       const cls = op.sla_vencido ? 'card-campo card-tempo-vencido' : 'card-campo';
-      return `<div class="${cls}"><i class="bi bi-clock"></i> ${formatarTempoEstagio(op.dias_no_estagio)} no estagio</div>`;
+      // Prioriza tempo humano granular ("1 hora", "25 minutos") vindo do server.
+      // Fallback no resumo de dias quando nao tem.
+      const txt = op.tempo_no_estagio_humano || `${formatarTempoEstagio(op.dias_no_estagio)}`;
+      return `<div class="${cls}"><i class="bi bi-clock"></i> ha ${txt} no estagio</div>`;
     }
     case 'tags':
       return ''; // tags ja renderizam separado

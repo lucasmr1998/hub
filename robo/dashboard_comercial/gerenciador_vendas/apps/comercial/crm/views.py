@@ -47,6 +47,7 @@ def _disparar_webhook(url, payload):
 
 
 def _oportunidade_para_dict(op):
+    from django.utils.timesince import timesince
     lead = op.lead
     responsavel = op.responsavel
     # Usa o prefetch_related cache (evita N+1) — .all() usa cache, .filter() cria nova query
@@ -54,6 +55,15 @@ def _oportunidade_para_dict(op):
         1 for t in op.tarefas.all()
         if t.status in ('pendente', 'em_andamento')
     )
+    # Tempo no estagio formatado humano ("1 hora, 25 minutos") — usa o mesmo
+    # `timesince` que a pagina detalhe. Mais granular que dias.
+    if op.data_entrada_estagio:
+        try:
+            tempo_estagio_humano = timesince(op.data_entrada_estagio).split(',')[0]
+        except Exception:
+            tempo_estagio_humano = None
+    else:
+        tempo_estagio_humano = None
     # Plano: tenta id_plano_rp -> ProdutoServico, senao plano_interesse legado
     plano_nome = None
     if lead.id_plano_rp:
@@ -105,6 +115,7 @@ def _oportunidade_para_dict(op):
         'origem': lead.origem or '',
         'dias_no_estagio': op.dias_no_estagio,
         'tempo_no_estagio': op.dias_no_estagio,
+        'tempo_no_estagio_humano': tempo_estagio_humano,
         'sla_vencido': op.sla_vencido,
         'responsavel_id': responsavel.pk if responsavel else None,
         'responsavel': (responsavel.get_full_name() or responsavel.username) if responsavel else '',
