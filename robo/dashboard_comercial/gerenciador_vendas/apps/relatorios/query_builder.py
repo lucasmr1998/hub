@@ -244,11 +244,19 @@ class WidgetQueryBuilder:
             # quantas oportunidades JA PASSARAM por aquele estagio (incluindo
             # as que ja avancaram). Usa HistoricoPipelineEstagio.estagio_novo
             # distintos por oportunidade.
+            #
+            # Filtra estagios SO dos pipelines presentes no queryset filtrado.
+            # Sem isso, tenants com 2+ pipelines (Nuvyon: "Atendimento Bot" +
+            # "CRM Mococa") misturariam estagios diferentes no mesmo funil.
             from apps.comercial.crm.models import (
-                PipelineEstagio, HistoricoPipelineEstagio, OportunidadeVenda,
+                PipelineEstagio, HistoricoPipelineEstagio,
             )
+            pipeline_ids = list(qs.values_list('pipeline_id', flat=True).distinct())
+            pipeline_ids = [p for p in pipeline_ids if p]
+            if not pipeline_ids:
+                return [], []
             estagios = list(PipelineEstagio.all_tenants.filter(
-                tenant=self.tenant, ativo=True,
+                tenant=self.tenant, ativo=True, pipeline_id__in=pipeline_ids,
             ).order_by('ordem'))
 
             # Filtros do widget aplicados ao QuerySet base de Oportunidade

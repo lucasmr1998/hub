@@ -537,7 +537,10 @@ function montarOptionEcharts(viz, labels, valores, seriesName) {
         type: 'funnel',
         left: '5%', right: '5%', top: 20, bottom: 20,
         minSize: '20%', maxSize: '100%',
-        sort: 'descending',
+        // sort: 'none' respeita a ORDEM dos dados (importante pra funil
+        // cumulativo onde a ordem do pipeline define o fluxo). Antes era
+        // 'descending' que reordenava por valor.
+        sort: 'none',
         gap: 4,
         itemStyle: { borderColor: '#fff', borderWidth: 1 },
         label: { show: true, position: 'inside', fontSize: 12, color: '#fff', fontWeight: 'bold',
