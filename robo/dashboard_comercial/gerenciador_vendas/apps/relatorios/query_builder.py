@@ -259,28 +259,46 @@ class WidgetQueryBuilder:
                 tenant=self.tenant, ativo=True, pipeline_id__in=pipeline_ids,
             ).order_by('ordem'))
 
-            # Filtros do widget aplicados ao QuerySet base de Oportunidade
-            # pra respeitar periodo/responsavel/etc (passados via filtros do widget).
             # qs eh OportunidadeVenda ja filtrado pelo _aplicar_filtros.
             op_ids = list(qs.values_list('id', flat=True))
             if not op_ids:
                 return [], []
 
-            # Pega todos os historicos das ops filtradas
+            # "Passou por X" = qualquer indicio de ter estado em X:
+            # - estagio_atual = X (ainda esta)
+            # - historico.estagio_novo = X (mudou pra X)
+            # - historico.estagio_anterior = X (saiu de X)
+            #
+            # Sem o estagio_anterior, o primeiro estagio onde a op NASCEU
+            # (sem gerar historico como destino) some do funil — bug do
+            # "Novo Lead: 4" quando o total real eh 200.
             historicos = HistoricoPipelineEstagio.all_tenants.filter(
                 tenant=self.tenant, oportunidade_id__in=op_ids,
-            ).values_list('oportunidade_id', 'estagio_novo_id')
-            # Mapa estagio_id -> set(op_ids que passaram)
+            ).values_list('oportunidade_id', 'estagio_novo_id', 'estagio_anterior_id')
             passou_por = {}
-            for op_id, est_id in historicos:
-                if est_id:
-                    passou_por.setdefault(est_id, set()).add(op_id)
+            for op_id, est_novo, est_ant in historicos:
+                if est_novo:
+                    passou_por.setdefault(est_novo, set()).add(op_id)
+                if est_ant:
+                    passou_por.setdefault(est_ant, set()).add(op_id)
 
-            # Tambem considera o estagio ATUAL da op (caso ela nunca tenha
-            # gerado historico — ex: primeiro estagio onde nasceu)
+            # Estagio atual de cada op
             for op_id, est_id_atual in qs.values_list('id', 'estagio_id'):
                 if est_id_atual:
                     passou_por.setdefault(est_id_atual, set()).add(op_id)
+
+            # Primeiro estagio do pipeline recebe TODAS as ops (toda op passou
+            # pelo inicio, mesmo que nao tenha historico nem esteja la agora).
+            # Sem isso, ops criadas direto em estagios avancados (importadas)
+            # mantem o "Novo Lead" subnumerado.
+            primeiros_por_pipeline = {}
+            for est in estagios:
+                cur = primeiros_por_pipeline.get(est.pipeline_id)
+                if cur is None or est.ordem < cur.ordem:
+                    primeiros_por_pipeline[est.pipeline_id] = est
+            for pid, est_primeiro in primeiros_por_pipeline.items():
+                ops_do_pipeline = set(qs.filter(pipeline_id=pid).values_list('id', flat=True))
+                passou_por.setdefault(est_primeiro.id, set()).update(ops_do_pipeline)
 
             # Monta funil — agrupa is_final_ganho como 'Contratacao' e
             # is_final_perdido como 'Perdido'. Etapa 1 = total de ops.
