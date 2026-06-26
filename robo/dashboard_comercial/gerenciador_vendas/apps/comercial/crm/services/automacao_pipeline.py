@@ -11,11 +11,38 @@ Lógica:
 - Estágios finais (is_final_ganho / is_final_perdido) não são reavaliados
 - Multi-tenant: engine sempre resolve pela tenant da oportunidade
 """
+import inspect
 import logging
 
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
+
+
+def _identificar_disparador(skip_frames: int = 2) -> str:
+    """Olha o stack acima do call site pra identificar quem causou o save()
+    que disparou este motor. Retorna string compacta "arquivo.py:linha funcao".
+
+    Filtra frames internos do Django (db/models/, signals/) pra apontar pro
+    codigo da aplicacao que realmente chamou save().
+    """
+    try:
+        stack = inspect.stack()
+        # Procura primeiro frame "util" que nao seja django interno nem este arquivo
+        for frame_info in stack[skip_frames:skip_frames + 12]:
+            fn = frame_info.filename.replace('\\', '/')
+            if '/django/' in fn or 'automacao_pipeline.py' in fn or '/signals.py' in fn:
+                continue
+            partes = fn.rsplit('/apps/', 1)
+            curto = ('apps/' + partes[1]) if len(partes) == 2 else fn.rsplit('/', 1)[-1]
+            return f"{curto}:{frame_info.lineno} {frame_info.function}"
+        # Fallback — primeiro frame nao django
+        for frame_info in stack[skip_frames:skip_frames + 20]:
+            if '/django/' not in frame_info.filename.replace('\\', '/'):
+                return f"{frame_info.filename.rsplit('/', 1)[-1]}:{frame_info.lineno} {frame_info.function}"
+    except Exception:
+        pass
+    return '?'
 
 
 def processar_oportunidade(oportunidade):
@@ -44,6 +71,25 @@ def processar_oportunidade(oportunidade):
     lead = oportunidade.lead
     if lead and getattr(lead, 'status_api', None) == 'convertido_cliente':
         return
+
+    # Auditoria de disparo — identifica quem causou o save() que invocou o motor.
+    # Persiste em LogSistema pra rastrear retrocessos, loops e disparos
+    # inesperados (ex: sync HubSoft / sync Matrix / edicao manual).
+    try:
+        from apps.sistema.models import LogSistema
+        disparador = _identificar_disparador()
+        LogSistema.all_tenants.create(
+            tenant=oportunidade.tenant,
+            categoria='crm', acao='motor_disparado',
+            entidade='OportunidadeVenda', entidade_id=oportunidade.id,
+            mensagem=(
+                f"Motor reavaliou op {oportunidade.id} (estagio='{estagio.nome}') "
+                f"trigger: {disparador}"
+            ),
+            dados_extras={'trigger': disparador, 'estagio_id': estagio.id},
+        )
+    except Exception as e:
+        logger.warning(f"[Motor] Falhou ao registrar disparo: {e}")
 
     # 1. Regras com estágio destino → move oportunidade
     resultado = _avaliar_regras(oportunidade)
