@@ -631,8 +631,11 @@
   /* Card geral — respeitar largura da coluna + altura minima pra uniformidade.
      NAO usar overflow-x: hidden aqui porque browser auto-aplica overflow-y: auto,
      criando scrollbar vertical em cada card. O truncamento horizontal e feito
-     nos elementos internos (.card-nome, .card-campo). */
-  .op-card { min-width: 0; max-width: 100%; min-height: 88px; }
+     nos elementos internos (.card-nome, .card-campo).
+     flex-shrink: 0 e essencial: sem isso, o flex column do .column-cards
+     comprime os cards (height vira 88px fixo) mesmo com conteudo maior,
+     fazendo elementos vazarem pra cima/baixo do card seguinte. */
+  .op-card { min-width: 0; max-width: 100%; min-height: 88px; flex-shrink: 0; }
 
   /* Modal personalizar */
   .modal-personalizar-card { max-width: 920px; width: 95vw; }
