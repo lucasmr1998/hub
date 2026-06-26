@@ -330,11 +330,11 @@ class WidgetQueryBuilder:
             etapas_intermediarias.sort(key=lambda x: x[0])
             labels = [n for _, n, _ in etapas_intermediarias]
             data = [float(c) for _, _, c in etapas_intermediarias]
-            # Apend finais
-            labels.append('Contratacao')
-            data.append(float(len(ganhos_set)))
-            labels.append('Perdido')
-            data.append(float(len(perdidos_set)))
+            # Finais condensados em 1 linha so: "Contratacao: X | Perdido: Y"
+            n_ganhos = len(ganhos_set)
+            n_perdidos = len(perdidos_set)
+            labels.append(f'Contratacao: {n_ganhos} | Perdido: {n_perdidos}')
+            data.append(float(n_ganhos + n_perdidos))
 
         return labels, data
 
