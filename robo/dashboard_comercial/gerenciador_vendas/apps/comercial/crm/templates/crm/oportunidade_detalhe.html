@@ -2623,6 +2623,16 @@ async function abrirCadastroCompleto() {
       toast('Erro', d.error || 'Falha ao carregar dados', 'danger');
       return;
     }
+    // Lead ja virou cliente HubSoft — qualquer PUT vai dar erro "convertido pra cliente"
+    if ((d.lead || {}).status_api === 'convertido_cliente') {
+      toast(
+        'Cliente ja convertido',
+        'Este lead ja foi convertido em cliente HubSoft. Edicoes nao surtem efeito.',
+        'warning'
+      );
+      fecharModal('modal-cadastro-completo');
+      return;
+    }
     _ccPopularSelects(d.opcoes_planos || [], d.opcoes_vencimentos || []);
     _ccPreencher(d);
     _ccAtualizarStatus();

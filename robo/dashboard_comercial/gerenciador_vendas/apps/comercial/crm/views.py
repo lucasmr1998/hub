@@ -3767,16 +3767,28 @@ def api_cadastro_completo_oportunidade(request, pk):
 
     if request.method == 'GET':
         viab = (lead.dados_custom or {}).get('viabilidade') or {}
-        # Opcoes pre-definidas do flow Matrix v9 (NUVYON):
-        # Vendedor escolhe label amigavel, sistema converte pra id_hubsoft.
-        # Se outro tenant quiser usar isso, mover pra IntegracaoAPI.configuracoes_extras.
-        opcoes_planos = [
-            {'id_hubsoft': 758,  'nome': 'Plano de 300MB', 'valor': 78.9},
-            {'id_hubsoft': 770,  'nome': 'Plano de 400MB', 'valor': 89.9},
-            {'id_hubsoft': 707,  'nome': 'Plano de 500MB', 'valor': 99.9},
-            {'id_hubsoft': 1236, 'nome': 'Plano de 600MB', 'valor': 109.9},
-            {'id_hubsoft': 696,  'nome': 'Plano de 800MB', 'valor': 189.9},
-        ]
+
+        # Planos vem do catalogo ProdutoServico (categoria='plano', ativo=True).
+        # Antes era lista hardcoded de 5 (300/400/500/600/800MB) que escondia
+        # planos promocionais e outros do catalogo.
+        from apps.comercial.crm.models import ProdutoServico
+        planos_catalogo = ProdutoServico.all_tenants.filter(
+            tenant=request.tenant, categoria='plano', ativo=True,
+        ).exclude(id_externo='').order_by('preco', 'nome')
+        opcoes_planos = []
+        for p in planos_catalogo:
+            try:
+                id_hub = int(str(p.id_externo).strip())
+            except (ValueError, TypeError):
+                continue
+            empresa = (p.dados_erp or {}).get('empresa') or ''
+            opcoes_planos.append({
+                'id_hubsoft': id_hub,
+                'nome': p.nome,
+                'valor': float(p.preco or 0),
+                'empresa': empresa,
+            })
+
         opcoes_vencimentos = [
             {'id_hubsoft': 9, 'dia': 5},
             {'id_hubsoft': 4, 'dia': 10},
@@ -3791,6 +3803,7 @@ def api_cadastro_completo_oportunidade(request, pk):
             ).first()
             if integ:
                 extras = integ.configuracoes_extras or {}
+                # Override de planos so se tiver no extras (fallback no catalogo)
                 if extras.get('planos_disponiveis'):
                     opcoes_planos = extras['planos_disponiveis']
                 if extras.get('dias_vencimento_disponiveis'):
@@ -3850,6 +3863,10 @@ def api_cadastro_completo_oportunidade(request, pk):
         'nome': 'nome_razaosocial',
     }
 
+    # Campos numericos do model (IntegerField) — string vazia precisa virar
+    # None pra nao explodir "expected a number but got ''"
+    CAMPOS_INT_NULLABLE = {'id_plano_rp', 'id_dia_vencimento'}
+
     update_fields = {}
     for k, v in (data.items() if isinstance(data, dict) else []):
         campo = aliases.get(k, k)
@@ -3862,6 +3879,16 @@ def api_cadastro_completo_oportunidade(request, pk):
                 valor = _dt.strptime(valor, '%Y-%m-%d').date()
             except (ValueError, TypeError):
                 continue
+        if campo == 'data_nascimento' and not valor:
+            valor = None
+        if campo in CAMPOS_INT_NULLABLE:
+            if valor in ('', None):
+                valor = None
+            else:
+                try:
+                    valor = int(str(valor).strip())
+                except (ValueError, TypeError):
+                    continue
         update_fields[campo] = valor
 
     if not update_fields:
