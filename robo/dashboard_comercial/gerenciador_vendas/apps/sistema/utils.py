@@ -173,45 +173,80 @@ def _apply_updates(instance, updates):
     return instance
 
 
+# Mapeamento de modulo legado pra (categoria, acao) usado pelo
+# _criar_log_sistema. Quando algum endpoint criar log via essa funcao,
+# `categoria` e `acao` sao derivados aqui automaticamente, em vez de
+# ficarem vazios no banco (problema dos 2422 logs sem categoria).
+#
+# Pra novo codigo, prefira usar `registrar_acao` diretamente (que ja
+# exige categoria/acao explicitos). Esse mapa cobre as 6 chamadas legadas
+# existentes apenas.
+_MAPA_MODULO_CATEGORIA = {
+    'registrar_lead_api':       ('leads', 'criar'),
+    'atualizar_lead_api':       ('leads', 'editar'),
+    'registrar_historico_api':  ('leads', 'criar_historico'),
+    'criar_fluxo_api':          ('atendimento', 'criar'),
+    'deletar_fluxo_api':        ('atendimento', 'excluir'),
+    'atualizar_fluxo_api':      ('atendimento', 'editar'),
+}
+
+
 def _criar_log_sistema(nivel, modulo, mensagem, dados_extras=None, request=None):
     """
-    Cria um log no sistema
+    Cria um log no sistema (helper legado). Para novo codigo, prefira
+    `registrar_acao(categoria, acao, entidade, entidade_id, mensagem, ...)`.
 
     Args:
-        nivel: Nível do log (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-        modulo: Módulo/função que gerou o log
+        nivel: Nivel do log (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        modulo: Modulo/funcao que gerou o log
         mensagem: Mensagem do log
         dados_extras: Dados JSON extras (opcional)
-        request: Request HTTP para extrair IP e usuário (opcional)
+        request: Request HTTP para extrair IP e usuario (opcional)
+
+    Categoria e acao sao derivados de `modulo` via _MAPA_MODULO_CATEGORIA.
+    Modulo desconhecido cai em categoria='sistema' acao='evento'.
     """
     try:
         from apps.sistema.models import LogSistema
 
         ip = None
         usuario = None
+        tenant = None
 
         if request:
-            # Extrair IP do request
             x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
             if x_forwarded_for:
                 ip = x_forwarded_for.split(',')[0].strip()
             else:
                 ip = request.META.get('REMOTE_ADDR')
 
-            # Extrair usuário se autenticado
             if request.user.is_authenticated:
                 usuario = request.user.username
 
+            tenant = getattr(request, 'tenant', None)
+
+        if not tenant:
+            try:
+                from apps.sistema.middleware import get_current_tenant
+                tenant = get_current_tenant()
+            except Exception:
+                tenant = None
+
+        categoria, acao = _MAPA_MODULO_CATEGORIA.get(modulo, ('sistema', 'evento'))
+
         LogSistema.objects.create(
+            tenant=tenant,
+            categoria=categoria,
+            acao=acao,
             nivel=nivel,
             modulo=modulo,
             mensagem=mensagem,
             dados_extras=dados_extras,
             usuario=usuario,
-            ip=ip
+            ip=ip,
         )
     except Exception as e:
-        # Se falhar ao criar log, não interromper o fluxo principal
+        # Se falhar ao criar log, nao interromper o fluxo principal
         logger.warning("Erro ao criar log: %s", str(e))
 
 
