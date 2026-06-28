@@ -417,38 +417,9 @@ def monitoramento_view(request):
     })
 
 
-@superuser_required
-def logs_view(request):
-    """Logs do sistema. Somente superusers."""
-    from django.db.models import Count
-
-    nivel = request.GET.get('nivel', '')
-    modulo = request.GET.get('modulo', '')
-    busca = request.GET.get('q', '')
-
-    logs = LogSistema.all_tenants.all().order_by('-data_criacao')
-
-    if nivel:
-        logs = logs.filter(nivel=nivel)
-    if modulo:
-        logs = logs.filter(modulo__icontains=modulo)
-    if busca:
-        logs = logs.filter(mensagem__icontains=busca)
-
-    # Counts per level
-    level_counts = dict(
-        LogSistema.all_tenants.values_list('nivel').annotate(c=Count('id')).values_list('nivel', 'c')
-    )
-
-    logs = logs[:200]
-
-    return render(request, 'admin_aurora/logs.html', {
-        'logs': logs,
-        'nivel': nivel,
-        'modulo': modulo,
-        'busca': busca,
-        'level_counts': level_counts,
-    })
+# logs_view foi movida pra apps/admin_aurora/views_logs.py
+# Agora cobre 4 tabs (Sistema, Integracao, Webhook N8N, Fluxo Atendimento)
+# com filtros, paginacao e export CSV. urls.py aponta direto pra views_logs.
 
 
 @superuser_required

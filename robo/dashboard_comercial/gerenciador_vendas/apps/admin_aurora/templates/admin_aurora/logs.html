@@ -3,149 +3,275 @@
 {% block title %}Logs{% endblock %}
 {% block topbar_title %}Logs do sistema{% endblock %}
 
-{% block topbar_actions %}
-  <label class="admin-checkbox-label admin-checkbox-xs">
-    <input type="checkbox" id="auto-refresh"> Auto-refresh (30s)
-  </label>
-{% endblock %}
-
 {% block content %}
-  {# Filtros #}
+
+  <div class="tabs tabs-pills page-section">
+    <a href="?tab=sistema" class="tabs-item{% if tab == 'sistema' %} is-active{% endif %}">
+      <span>Sistema</span>
+      <span class="tabs-item-badge">{{ tabs_counts.sistema }}</span>
+    </a>
+    <a href="?tab=integracao" class="tabs-item{% if tab == 'integracao' %} is-active{% endif %}">
+      <span>Integracao</span>
+      <span class="tabs-item-badge">{{ tabs_counts.integracao }}</span>
+    </a>
+    <a href="?tab=webhook" class="tabs-item{% if tab == 'webhook' %} is-active{% endif %}">
+      <span>Webhook N8N</span>
+      <span class="tabs-item-badge">{{ tabs_counts.webhook }}</span>
+    </a>
+    <a href="?tab=fluxo" class="tabs-item{% if tab == 'fluxo' %} is-active{% endif %}">
+      <span>Fluxo Atendimento</span>
+      <span class="tabs-item-badge">{{ tabs_counts.fluxo }}</span>
+    </a>
+  </div>
+
   <div class="card page-section">
     <div class="card-body">
-      <form method="get" action="{% url 'admin_aurora:logs' %}" class="filters-form">
-        <div class="field field-w-240">
-          <label class="field-label" for="q-busca">Busca</label>
-          <div class="field-input-wrap">
-            <i class="bi bi-search field-icon field-icon-left"></i>
-            <input id="q-busca" class="field-input has-icon-left" type="text" name="q" value="{{ busca }}" placeholder="Buscar na mensagem...">
-          </div>
+      <form method="get" action="{% url 'admin_aurora:logs' %}" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: end;">
+        <input type="hidden" name="tab" value="{{ tab }}">
+
+        <div class="field" style="width: 180px;">
+          <label class="field-label">Tenant</label>
+          <select name="tenant" class="field-input">
+            <option value="">(todos)</option>
+            {% for slug in tenants_choices %}
+              <option value="{{ slug }}"{% if f_tenant == slug %} selected{% endif %}>{{ slug }}</option>
+            {% endfor %}
+          </select>
         </div>
-        <div class="field field-w-200">
-          <label class="field-label" for="q-modulo">Modulo</label>
-          <div class="field-input-wrap">
-            <input id="q-modulo" class="field-input" type="text" name="modulo" value="{{ modulo }}" placeholder="Ex: comercial, sistema...">
-          </div>
+        <div class="field" style="width: 140px;">
+          <label class="field-label">De</label>
+          <input type="date" name="data_de" value="{{ f_data_de }}" class="field-input">
         </div>
-        {% if nivel %}<input type="hidden" name="nivel" value="{{ nivel }}">{% endif %}
-        {% include "components/button.html" with variant="primary" size="sm" type="submit" icon="bi-funnel" label="Filtrar" %}
-        {% if busca or modulo or nivel %}
-          <a href="{% url 'admin_aurora:logs' %}" class="btn btn-secondary btn-sm"><i class="bi bi-x-lg"></i> <span>Limpar</span></a>
+        <div class="field" style="width: 140px;">
+          <label class="field-label">Ate</label>
+          <input type="date" name="data_ate" value="{{ f_data_ate }}" class="field-input">
+        </div>
+        <div class="field" style="width: 240px;">
+          <label class="field-label">Busca</label>
+          <input type="text" name="q" value="{{ f_busca }}" class="field-input" placeholder="texto livre">
+        </div>
+
+        {% if tab == 'sistema' %}
+          <div class="field" style="width: 120px;">
+            <label class="field-label">Nivel</label>
+            <select name="nivel" class="field-input">
+              <option value="">(todos)</option>
+              <option value="DEBUG"{% if f_nivel == 'DEBUG' %} selected{% endif %}>DEBUG</option>
+              <option value="INFO"{% if f_nivel == 'INFO' %} selected{% endif %}>INFO</option>
+              <option value="WARNING"{% if f_nivel == 'WARNING' %} selected{% endif %}>WARNING</option>
+              <option value="ERROR"{% if f_nivel == 'ERROR' %} selected{% endif %}>ERROR</option>
+              <option value="CRITICAL"{% if f_nivel == 'CRITICAL' %} selected{% endif %}>CRITICAL</option>
+            </select>
+          </div>
+          <div class="field" style="width: 140px;">
+            <label class="field-label">Categoria</label>
+            <input type="text" name="categoria" value="{{ f_categoria }}" class="field-input" placeholder="leads, crm, etc">
+          </div>
+          <div class="field" style="width: 140px;">
+            <label class="field-label">Acao</label>
+            <input type="text" name="acao" value="{{ f_acao }}" class="field-input" placeholder="criar, editar, etc">
+          </div>
+        {% elif tab == 'integracao' %}
+          <div class="field" style="width: 140px;">
+            <label class="field-label">Sucesso</label>
+            <select name="sucesso" class="field-input">
+              <option value="">(todos)</option>
+              <option value="sim"{% if f_sucesso == 'sim' %} selected{% endif %}>Sucesso</option>
+              <option value="nao"{% if f_sucesso == 'nao' %} selected{% endif %}>Falha</option>
+            </select>
+          </div>
+          <div class="field" style="width: 100px;">
+            <label class="field-label">Metodo</label>
+            <select name="metodo" class="field-input">
+              <option value="">(todos)</option>
+              <option value="GET"{% if f_metodo == 'GET' %} selected{% endif %}>GET</option>
+              <option value="POST"{% if f_metodo == 'POST' %} selected{% endif %}>POST</option>
+              <option value="PUT"{% if f_metodo == 'PUT' %} selected{% endif %}>PUT</option>
+              <option value="DELETE"{% if f_metodo == 'DELETE' %} selected{% endif %}>DELETE</option>
+            </select>
+          </div>
+          <div class="field" style="width: 220px;">
+            <label class="field-label">Integracao</label>
+            <select name="integracao" class="field-input">
+              <option value="">(todas)</option>
+              {% for it in integracoes_choices %}
+                <option value="{{ it.id }}"{% if f_integracao == it.id|stringformat:"s" %} selected{% endif %}>{{ it.nome }} ({{ it.tipo }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field" style="width: 110px;">
+            <label class="field-label">Status HTTP</label>
+            <input type="text" name="status_code" value="{{ f_status_code }}" class="field-input" placeholder="200, 400">
+          </div>
+        {% elif tab == 'webhook' %}
+          <div class="field" style="width: 140px;">
+            <label class="field-label">Sucesso</label>
+            <select name="sucesso" class="field-input">
+              <option value="">(todos)</option>
+              <option value="sim"{% if f_sucesso == 'sim' %} selected{% endif %}>Sucesso</option>
+              <option value="nao"{% if f_sucesso == 'nao' %} selected{% endif %}>Falha</option>
+            </select>
+          </div>
+        {% elif tab == 'fluxo' %}
+          <div class="field" style="width: 140px;">
+            <label class="field-label">Status</label>
+            <select name="status" class="field-input">
+              <option value="">(todos)</option>
+              <option value="sucesso"{% if f_status == 'sucesso' %} selected{% endif %}>Sucesso</option>
+              <option value="erro"{% if f_status == 'erro' %} selected{% endif %}>Erro</option>
+              <option value="aguardando"{% if f_status == 'aguardando' %} selected{% endif %}>Aguardando</option>
+              <option value="agendado"{% if f_status == 'agendado' %} selected{% endif %}>Agendado</option>
+            </select>
+          </div>
         {% endif %}
+
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Filtrar</button>
+        <a href="?tab={{ tab }}" class="btn btn-secondary btn-sm"><i class="bi bi-x-lg"></i> Limpar</a>
+        <a href="?{{ request.GET.urlencode }}&export=csv" class="btn btn-secondary btn-sm" title="Exporta filtros atuais como CSV (max 5000 linhas)"><i class="bi bi-download"></i> Exportar CSV</a>
       </form>
     </div>
   </div>
 
-  {# Filtros por nivel (pills) #}
-  <div class="tabs tabs-pills page-section">
-    <a href="{% url 'admin_aurora:logs' %}{% if busca %}?q={{ busca }}{% endif %}{% if modulo %}{% if busca %}&{% else %}?{% endif %}modulo={{ modulo }}{% endif %}"
-       class="tabs-item{% if not nivel %} is-active{% endif %}">
-      <span>Todos</span>
-    </a>
-    <a href="{% url 'admin_aurora:logs' %}?nivel=DEBUG{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
-       class="tabs-item{% if nivel == 'DEBUG' %} is-active{% endif %}">
-      <span>DEBUG</span>{% if level_counts.DEBUG %}<span class="tabs-item-badge">{{ level_counts.DEBUG }}</span>{% endif %}
-    </a>
-    <a href="{% url 'admin_aurora:logs' %}?nivel=INFO{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
-       class="tabs-item tabs-item-link{% if nivel == 'INFO' %} is-active{% endif %}">
-      <span>INFO</span>{% if level_counts.INFO %}<span class="tabs-item-badge">{{ level_counts.INFO }}</span>{% endif %}
-    </a>
-    <a href="{% url 'admin_aurora:logs' %}?nivel=WARNING{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
-       class="tabs-item{% if nivel == 'WARNING' %} is-active{% endif %}">
-      <span>WARNING</span>{% if level_counts.WARNING %}<span class="tabs-item-badge">{{ level_counts.WARNING }}</span>{% endif %}
-    </a>
-    <a href="{% url 'admin_aurora:logs' %}?nivel=ERROR{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
-       class="tabs-item{% if nivel == 'ERROR' %} is-active{% endif %}">
-      <span>ERROR</span>{% if level_counts.ERROR %}<span class="tabs-item-badge">{{ level_counts.ERROR }}</span>{% endif %}
-    </a>
-    <a href="{% url 'admin_aurora:logs' %}?nivel=CRITICAL{% if busca %}&q={{ busca }}{% endif %}{% if modulo %}&modulo={{ modulo }}{% endif %}"
-       class="tabs-item{% if nivel == 'CRITICAL' %} is-active{% endif %}">
-      <span>CRITICAL</span>{% if level_counts.CRITICAL %}<span class="tabs-item-badge">{{ level_counts.CRITICAL }}</span>{% endif %}
-    </a>
+  <div class="card page-section">
+    <div class="card-body">
+      <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+        <span class="muted">{{ total }} registro{{ total|pluralize }} | mostrando {{ pagina.start_index }} a {{ pagina.end_index }}</span>
+      </div>
+
+      {% if tab == 'sistema' %}
+        <table class="logs-table">
+          <thead>
+            <tr>
+              <th>Data</th><th>Tenant</th><th>Nivel</th><th>Cat.</th><th>Acao</th>
+              <th>Usuario</th><th>Mensagem</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for lg in pagina %}
+              <tr>
+                <td class="nowrap">{{ lg.data_criacao|date:"d/m H:i:s" }}</td>
+                <td>{{ lg.tenant.slug|default:"" }}</td>
+                <td><span class="badge-{{ lg.nivel|lower }}">{{ lg.nivel }}</span></td>
+                <td>{{ lg.categoria|default:"" }}</td>
+                <td>{{ lg.acao|default:"" }}</td>
+                <td>{{ lg.usuario|default:"" }}</td>
+                <td class="truncate" title="{{ lg.mensagem }}">{{ lg.mensagem|truncatechars:120 }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="7" class="vazio">Sem logs</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+      {% elif tab == 'integracao' %}
+        <table class="logs-table">
+          <thead>
+            <tr>
+              <th>Data</th><th>Tenant</th><th>Integracao</th><th>Metodo</th>
+              <th>Endpoint</th><th>Status</th><th>OK?</th><th>Tempo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for lg in pagina %}
+              <tr>
+                <td class="nowrap">{{ lg.data_criacao|date:"d/m H:i:s" }}</td>
+                <td>{{ lg.tenant.slug|default:"" }}</td>
+                <td>{{ lg.integracao.nome|default:"" }}</td>
+                <td>{{ lg.metodo }}</td>
+                <td class="truncate" title="{{ lg.endpoint }}">{{ lg.endpoint|truncatechars:60 }}</td>
+                <td>{{ lg.status_code|default:"" }}</td>
+                <td>{% if lg.sucesso %}<span class="badge-success">OK</span>{% else %}<span class="badge-danger">FAIL</span>{% endif %}</td>
+                <td>{{ lg.tempo_resposta_ms|default:"" }}ms</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="8" class="vazio">Sem logs</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+      {% elif tab == 'webhook' %}
+        <table class="logs-table">
+          <thead>
+            <tr>
+              <th>Data</th><th>Metodo</th><th>Endpoint</th>
+              <th>Status</th><th>Duracao</th><th>IP</th><th>Body</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for lg in pagina %}
+              <tr>
+                <td class="nowrap">{{ lg.criado_em|date:"d/m H:i:s" }}</td>
+                <td>{{ lg.metodo }}</td>
+                <td class="truncate" title="{{ lg.endpoint }}">{{ lg.endpoint|truncatechars:80 }}</td>
+                <td>{% if lg.status_code >= 200 and lg.status_code < 300 %}<span class="badge-success">{{ lg.status_code }}</span>{% else %}<span class="badge-danger">{{ lg.status_code }}</span>{% endif %}</td>
+                <td>{{ lg.duracao_ms }}ms</td>
+                <td class="nowrap">{{ lg.ip_origem|default:"" }}</td>
+                <td class="truncate" title="{{ lg.body_preview|default:'' }}">{{ lg.body_preview|truncatechars:100 }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="7" class="vazio">Sem logs</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+      {% elif tab == 'fluxo' %}
+        <table class="logs-table">
+          <thead>
+            <tr>
+              <th>Data</th><th>Tenant</th><th>Atendimento</th><th>Nodo</th>
+              <th>Lead</th><th>Status</th><th>Mensagem</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for lg in pagina %}
+              <tr>
+                <td class="nowrap">{{ lg.data_execucao|date:"d/m H:i:s" }}</td>
+                <td>{{ lg.tenant.slug|default:"" }}</td>
+                <td>#{{ lg.atendimento_id }}</td>
+                <td>{{ lg.tipo_nodo }}{% if lg.subtipo_nodo %} ({{ lg.subtipo_nodo }}){% endif %}</td>
+                <td>{% if lg.lead_id %}#{{ lg.lead_id }}{% endif %}</td>
+                <td><span class="badge-{{ lg.status }}">{{ lg.status }}</span></td>
+                <td class="truncate" title="{{ lg.mensagem }}">{{ lg.mensagem|truncatechars:100 }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="7" class="vazio">Sem logs</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+
+      {% if pagina.has_other_pages %}
+        <div style="display: flex; gap: 8px; align-items: center; justify-content: center; margin-top: 16px;">
+          {% if pagina.has_previous %}
+            <a href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ pagina.previous_page_number }}" class="btn btn-secondary btn-sm">Anterior</a>
+          {% endif %}
+          <span class="muted">Pagina {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+          {% if pagina.has_next %}
+            <a href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ pagina.next_page_number }}" class="btn btn-secondary btn-sm">Proxima</a>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
   </div>
 
-  {# Tabela #}
-  <div class="table-wrap">
-    <table class="table">
-      <thead>
-        <tr><th>Data</th><th>Nivel</th><th>Modulo</th><th>Tenant</th><th>Usuario</th><th>Mensagem</th></tr>
-      </thead>
-      <tbody>
-        {% for log in logs %}
-          <tr>
-            <td>{{ log.data_criacao|date:"d/m/Y H:i:s" }}</td>
-            <td>
-              {% if log.nivel == 'CRITICAL' or log.nivel == 'ERROR' %}
-                {% include "components/badge.html" with variant="danger" style="solid" label=log.nivel %}
-              {% elif log.nivel == 'WARNING' %}
-                {% include "components/badge.html" with variant="warning" label=log.nivel %}
-              {% elif log.nivel == 'INFO' %}
-                {% include "components/badge.html" with variant="info" label=log.nivel %}
-              {% else %}
-                {% include "components/badge.html" with variant="neutral" label=log.nivel %}
-              {% endif %}
-            </td>
-            <td>{{ log.modulo|default:"—" }}</td>
-            <td>{{ log.tenant|default:"—" }}</td>
-            <td>{{ log.usuario|default:"—" }}</td>
-            <td class="log-msg-cell">{{ log.mensagem }}</td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="6">
-              <div class="table-empty">
-                <i class="bi bi-inbox"></i>
-                Nenhum log encontrado{% if nivel %} para o nivel {{ nivel }}{% endif %}{% if busca %} com "{{ busca }}"{% endif %}.
-              </div>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <p class="log-footer-note">
-    Exibindo ate 200 registros mais recentes.
-  </p>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-  .page-section { margin-bottom: var(--sp-4); }
-  .filters-form { display: flex; gap: var(--sp-3); align-items: flex-end; flex-wrap: wrap; }
-  .filters-form .field { margin: 0; }
-  .field-w-240 { width: 240px; }
-  .field-w-200 { width: 200px; }
-  .tabs-item-link, .tabs-item { text-decoration: none; }
-  .log-msg-cell { max-width: 400px; word-break: break-word; font-size: var(--fs-xs); }
-  .log-footer-note { margin-top: var(--sp-3); font-size: var(--fs-xs); color: var(--color-text-muted); text-align: right; }
-  .admin-checkbox-label { display: inline-flex; align-items: center; gap: var(--sp-2);
-                          font-size: var(--fs-sm); cursor: pointer; }
-  .admin-checkbox-xs { font-size: var(--fs-xs); margin: 0; }
-  .admin-checkbox-label input[type="checkbox"] { width: 14px; height: 14px;
-                                                  accent-color: var(--color-primary); }
+  .logs-table { border-collapse: collapse; font-size: 13px; width: 100%; }
+  .logs-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--color-border); background: var(--color-bg-elevated); font-weight: 600; }
+  .logs-table td { padding: 6px 12px; border-bottom: 1px solid var(--color-border); }
+  .logs-table tr:hover { background: var(--color-bg-elevated); }
+  .logs-table .nowrap { white-space: nowrap; font-size: 12px; }
+  .logs-table .truncate { max-width: 480px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .logs-table .vazio { text-align: center; padding: 24px; color: var(--color-text-muted); }
+  .badge-info, .badge-debug { background: #94a3b8; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; display: inline-block; }
+  .badge-warning { background: #f59e0b; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; display: inline-block; }
+  .badge-error, .badge-critical, .badge-erro, .badge-danger { background: #ef4444; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; display: inline-block; }
+  .badge-success, .badge-sucesso { background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; display: inline-block; }
+  .badge-aguardando { background: #6366f1; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; display: inline-block; }
+  .badge-agendado { background: #8b5cf6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; display: inline-block; }
+  .tabs-item-badge { background: var(--color-text-muted); color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-left: 4px; }
+  .muted { color: var(--color-text-muted); }
 </style>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-  (function() {
-    const checkbox = document.getElementById('auto-refresh');
-    let timer = null;
-    const KEY = 'aurora_logs_autorefresh';
-    if (localStorage.getItem(KEY) === 'true') {
-      checkbox.checked = true;
-      timer = setTimeout(() => location.reload(), 30000);
-    }
-    checkbox.addEventListener('change', function() {
-      if (this.checked) {
-        localStorage.setItem(KEY, 'true');
-        timer = setTimeout(() => location.reload(), 30000);
-      } else {
-        localStorage.removeItem(KEY);
-        if (timer) clearTimeout(timer);
-      }
-    });
-  })();
-</script>
 {% endblock %}
