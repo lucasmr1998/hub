@@ -808,7 +808,7 @@ class HubsoftService:
     # `fn_chave_item` extrai um identificador estável pra contar diff.
     CATALOGOS_CACHE = {
         'vendedores':         ('ENDPOINT_CFG_VENDEDOR',           'vendedores',         lambda i: f"id:{i.get('id')}"),
-        'origens_cliente':    ('ENDPOINT_CFG_ORIGEM_CLIENTE',     'origens_cliente',    lambda i: f"id:{i.get('id_origem_cliente')}"),
+        'origens_cliente':    ('ENDPOINT_CFG_ORIGEM_CLIENTE',     'origem_clientes',    lambda i: f"id:{i.get('id_origem_cliente')}"),
         'origens_contato':    ('ENDPOINT_CFG_ORIGEM_CONTATO',     'origem_contatos',    lambda i: f"id:{i.get('id_origem_contato')}"),
         'meios_pagamento':    ('ENDPOINT_CFG_MEIO_PAGAMENTO',     'meios_pagamento',    lambda i: f"prefixo:{i.get('prefixo')}"),
         'grupos_cliente':     ('ENDPOINT_CFG_GRUPO_CLIENTE',      'grupo_cliente',      lambda i: f"id:{i.get('id_grupo_cliente')}"),
@@ -888,12 +888,30 @@ class HubsoftService:
         if dry_run:
             return resumo
 
+        # Guard defensivo: nao sobrescrever cache populado com lista vazia.
+        # Causa do bug: API HubSoft mudou nome da chave de resposta ou retornou
+        # erro silencioso, `itens` virou [], e o cache de 23 origens era zerado.
+        # Se o anterior tinha N>0 itens e o novo tem 0, mantemos o anterior e
+        # logamos warning pra investigacao.
+        if len(itens) == 0 and len(anterior) > 0:
+            import logging
+            logging.getLogger(__name__).warning(
+                '[HubsoftService] Sync de %s retornou 0 itens mas cache anterior tinha %d. '
+                'Cache preservado pra evitar zeramento (provavel mudanca de schema da API ou erro silencioso). '
+                'Resposta da API foi inspecionada em _persistir_cache.',
+                chave, len(anterior),
+            )
+            resumo['preservado_anterior'] = True
+            resumo['motivo'] = 'sync_retornou_vazio'
+            return resumo
+
         cache[chave] = itens
         extras['cache'] = cache
-        type(self.integracao).objects.filter(pk=self.integracao.pk).update(
-            configuracoes_extras=extras,
-        )
+        # Usa .save() pra disparar a auditoria de cache_zerado em IntegracaoAPI.save
+        # (caminho .update() bypassa o hook). Ao salvar so configuracoes_extras
+        # via update_fields, evitamos efeitos colaterais em outros campos.
         self.integracao.configuracoes_extras = extras
+        self.integracao.save(update_fields=['configuracoes_extras', 'data_atualizacao'])
         return resumo
 
     # ------------------------------------------------------------------
