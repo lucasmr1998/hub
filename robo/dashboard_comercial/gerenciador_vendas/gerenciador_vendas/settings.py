@@ -127,7 +127,9 @@ INSTALLED_APPS = [
 # Quando True, eventos do sistema (disparar_evento) enfileiram os fluxos que os
 # escutam. Default False = prod seguro (mesmo deployado, o motor novo fica inerte
 # até ligarmos de propósito). settings_local liga em dev.
-AUTOMACAO_WIRING_ATIVO = False
+# Env-driven: liga/desliga pelo EasyPanel (var AUTOMACAO_WIRING_ATIVO=true) sem
+# precisar de deploy — rollback instantâneo. Default continua False.
+AUTOMACAO_WIRING_ATIVO = os.environ.get('AUTOMACAO_WIRING_ATIVO', 'false').strip().lower() in ('true', '1', 'yes', 'on')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

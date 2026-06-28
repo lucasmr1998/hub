@@ -410,6 +410,14 @@
   5. Rollback de qualquer passo: `cutover_marketing --fluxo <id> --reverter` (volta pro motor antigo) ou desligar a flag.
 - **Status do build:** convergência marketing **construída e testada** (freio + tradutor + cutover, dry-run 10/10). O **go-live em prod** é o passo deploy/gated, aguardando autorização. `enviar_email` fica no motor antigo (deferido).
 
+## 2026-06-27 — Go-live do marketing: preparação (env-driven flag)
+
+- **Decisão (usuário):** fazer o go-live — e é **seguro**: prod tem **0 execuções do motor de marketing nos últimos 30 dias** (57 históricas), 8 regras ativas mas paradas (aurora-hq/demo internos; só fatepifaespi+nuvyon reais, nuvyon mal-configurada). Nada ativo pra atropelar.
+- **Estado de prod (read-only):** já está com migrations `0001`–`0007` aplicadas (inclui `0007 origem_regra`) e o código da convergência deployado (dormente). `origin/main` == HEAD local. **Não precisa deploy de código novo** — só ativar.
+- **Feito:** `AUTOMACAO_WIRING_ATIVO` virou **env-driven** em `settings.py` (`os.environ.get(...)`, default False) → liga/desliga pelo EasyPanel sem deploy, rollback instantâneo. `settings_local` segue True.
+- **Runbook de ativação (EasyPanel console + env):** (1) deploy pra pegar o settings env-driven; (2) `migrar_regras_marketing --salvar` (cria Fluxos inativos); (3) setar env `AUTOMACAO_WIRING_ATIVO=true` (inerte — fluxos inativos); (4) `cutover_marketing --ativar` regra a regra (começar pela real, fatepifaespi); rollback: `--reverter` ou env=false. Monitorar `automacao_execucao`.
+- **Status:** flag env-driven pronto. Próximo: deploy + os passos no EasyPanel (mãos do usuário no console/env).
+
 ### Pendências / próximos passos
 - **~~Opções dinâmicas ADIADAS~~ → FEITO (22/06) pras fontes locais** (segmentos/pipelines/estágios/responsáveis). Falta só ligar fontes **externas** (HubSoft: serviços/modelos/planos) como `fonte` que chama a API do tenant + cache. Matrix segue sem API de listar templates (manual).
 - **Decisão (22/06): opções dinâmicas + preview ADIADAS.** Quería-se dropdown de contas/templates Matrix + preview do HSM ao selecionar. Mas o **Matrix não expõe API de listar templates** (confirmado), então a única fonte do preview seria um **registro local** (cópia do corpo por tenant) — com manutenção manual e risco de drift vs o template aprovado. Decidido **manter `cod_conta`/`hsm` manuais** por ora. O **mecanismo genérico de opções dinâmicas** (`select_dinamico` carregado de endpoint por-tenant + painel de preview) fica pra quando entrar uma integração com **API de listagem real** (ex: HubSoft, ou "listar pipelines" do CRM) — aí o investimento se paga em vários provedores.
