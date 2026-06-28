@@ -21,7 +21,7 @@ function initForm(config: Form, campos: Campo[]): Form {
       f[c.nome] = v && typeof v === 'object' && !Array.isArray(v)
         ? Object.entries(v).map(([k, val]) => ({ k, v: String(val) }))
         : []
-    } else if (c.tipo === 'lista_campos' || c.tipo === 'filtros') {
+    } else if (c.tipo === 'lista_campos' || c.tipo === 'filtros' || c.tipo === 'regras') {
       f[c.nome] = Array.isArray(v) ? v : []
     } else if (c.tipo === 'booleano') {
       f[c.nome] = !!v
@@ -44,6 +44,8 @@ function formToConfig(form: Form, campos: Campo[]): Form {
       cfg[c.nome] = (v || []).filter((r: any) => r.nome)
     } else if (c.tipo === 'filtros') {
       cfg[c.nome] = (v || []).filter((r: any) => r.campo)
+    } else if (c.tipo === 'regras') {
+      cfg[c.nome] = (v || []).filter((r: any) => (r.saida || '').trim())
     } else if (c.tipo === 'numero') {
       cfg[c.nome] = v === '' ? '' : Number(v)
     } else {
@@ -118,6 +120,11 @@ export function NodeModal({
                   <FiltrosCampo
                     linhas={form[c.nome] ?? []}
                     subcampos={eventos.find((e) => e.tipo === form.evento)?.subcampos ?? []}
+                    onChange={(ls) => atualizar(c.nome, ls)}
+                  />
+                ) : c.tipo === 'regras' ? (
+                  <RegrasCampo
+                    linhas={form[c.nome] ?? []}
                     onChange={(ls) => atualizar(c.nome, ls)}
                   />
                 ) : (
@@ -346,6 +353,44 @@ function FiltrosCampo({
       <button className="repeater-add"
         onClick={() => onChange([...linhas, { campo: '', operador: 'igual', valor: '' }])}>
         + filtro
+      </button>
+    </div>
+  )
+}
+
+// Regras do switch (modelo n8n): cada linha = esquerda [operador] direita → nome da saída.
+// As saídas do nó (portas) vêm dos nomes das regras (saídas dinâmicas).
+function RegrasCampo({
+  linhas, onChange,
+}: {
+  linhas: any[]
+  onChange: (ls: any[]) => void
+}) {
+  const set = (i: number, patch: any) =>
+    onChange(linhas.map((r, j) => (j === i ? { ...r, ...patch } : r)))
+  const semValor = (op: string) => op === 'vazio' || op === 'nao_vazio'
+  return (
+    <div className="repeater">
+      {linhas.length === 0 && <div className="muted">Sem regras — tudo segue por "default".</div>}
+      {linhas.map((row, i) => (
+        <div key={i} className="filtro-row">
+          <input className="mono" placeholder="{{valor}}" value={row.esquerda ?? ''}
+            onChange={(e) => set(i, { esquerda: e.target.value })} />
+          <select value={row.operador ?? 'igual'} onChange={(e) => set(i, { operador: e.target.value })}>
+            {OPERADORES.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+          {!semValor(row.operador ?? 'igual') && (
+            <input className="mono" placeholder="comparar" value={row.direita ?? ''}
+              onChange={(e) => set(i, { direita: e.target.value })} />
+          )}
+          <input placeholder="→ saída (ex: bug)" value={row.saida ?? ''}
+            onChange={(e) => set(i, { saida: e.target.value })} />
+          <button onClick={() => onChange(linhas.filter((_, j) => j !== i))}>×</button>
+        </div>
+      ))}
+      <button className="repeater-add"
+        onClick={() => onChange([...linhas, { esquerda: '', operador: 'igual', direita: '', saida: '' }])}>
+        + regra
       </button>
     </div>
   )

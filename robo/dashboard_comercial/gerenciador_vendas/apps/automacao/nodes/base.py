@@ -104,7 +104,8 @@ class BaseNode:
         if isinstance(raw, str):
             nomes = [ln.strip() for ln in raw.splitlines() if ln.strip()]
         elif isinstance(raw, (list, tuple)):
-            nomes = [(x.get('valor') if isinstance(x, dict) else x) for x in raw]
+            nomes = [(x.get('saida') or x.get('valor') or x.get('nome')
+                      if isinstance(x, dict) else x) for x in raw]
             nomes = [str(x).strip() for x in nomes if str(x or '').strip()]
         else:
             nomes = []

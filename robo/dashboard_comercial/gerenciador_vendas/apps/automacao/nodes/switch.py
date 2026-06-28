@@ -1,15 +1,12 @@
-"""Nó `switch` — roteador de N saídas.
+"""Nó `switch` — roteador de N saídas (modelo "Rules" do n8n).
 
-Testa um valor (`{{...}}`) contra uma lista de casos; cada caso vira um ramo do
-fluxo. O que não casar segue por `default`. Casa **normalizado** (sem espaços, sem
-maiúsc.) pra aguentar saída de LLM ("Bug " == "bug"). É o roteador genérico da
-engine — as saídas são **dinâmicas** (vêm dos casos, via `BaseNode.saidas_de`).
+Cada regra é uma condição completa `esquerda [operador] direita` + um nome de saída.
+Avalia as regras EM ORDEM; a primeira que casa define o ramo. Nada casou → `default`.
+É a generalização N-via do `if` — reusa o mesmo `_comparar` (mesmos operadores), e as
+saídas são **dinâmicas** (vêm dos nomes das regras, via `BaseNode.saidas_de`).
 """
 from .base import BaseNode, NodeResult, registrar
-
-
-def _norm(valor) -> str:
-    return str(valor or '').strip().lower()
+from .if_node import _comparar
 
 
 @registrar
@@ -20,36 +17,35 @@ class SwitchNode(BaseNode):
     categoria = "core"
     grupo = "Fluxo"
     subgrupo = "Roteamento"
-    saidas = ["default"]          # base; as reais vêm dos casos (saidas_dinamicas)
+    saidas = ["default"]          # base; as reais vêm das regras (saidas_dinamicas)
     saidas_dinamicas = True
-    campo_saidas = "casos"
+    campo_saidas = "regras"
     is_trigger = False
 
     def campos_config(self) -> list:
         return [
-            {'nome': 'valor', 'label': 'Valor a testar', 'tipo': 'texto', 'obrigatorio': True,
-             'placeholder': '{{nodes.classificador.resposta}}',
-             'ajuda': 'O valor que decide o caminho. Aceita expressões {{...}}.'},
-            {'nome': 'casos', 'label': 'Casos (um por linha)', 'tipo': 'textarea', 'obrigatorio': True,
-             'placeholder': 'bug\nduvida\nfinanceiro',
-             'ajuda': 'Cada linha vira um ramo. Casa por igualdade ignorando maiúsc./espaços. '
-                      'O que não casar segue por "default".'},
+            {'nome': 'regras', 'label': 'Regras de roteamento', 'tipo': 'regras', 'obrigatorio': True,
+             'ajuda': 'Cada regra: valor [operador] comparar → nome da saída. Avalia em ordem; a '
+                      'primeira que casa define o caminho. O que não casar segue por "default".'},
         ]
 
     def validar_config(self, config) -> list:
-        erros = []
-        if not str(config.get('valor') or '').strip():
-            erros.append('`valor` é obrigatório.')
-        casos = [s for s in self.saidas_de(config) if s != 'default']
-        if not casos:
-            erros.append('Defina ao menos um caso (uma linha em "Casos").')
-        return erros
+        validas = [r for r in (config.get('regras') or [])
+                   if isinstance(r, dict) and str(r.get('saida') or '').strip()]
+        if not validas:
+            return ['Defina ao menos uma regra com nome de saída.']
+        return []
 
     def executar(self, config, entrada, contexto) -> NodeResult:
-        valor = _norm(contexto.resolver(config.get('valor', '')))
-        for caso in self.saidas_de(config):
-            if caso == 'default':
+        for regra in (config.get('regras') or []):
+            if not isinstance(regra, dict):
                 continue
-            if _norm(caso) == valor:
-                return NodeResult(output={'valor': valor, 'caso': caso}, branch=caso)
-        return NodeResult(output={'valor': valor, 'caso': None}, branch='default')
+            saida = str(regra.get('saida') or '').strip()
+            if not saida:
+                continue
+            operador = regra.get('operador') or 'igual'
+            esquerda = contexto.resolver(regra.get('esquerda', ''))
+            direita = contexto.resolver(regra.get('direita', ''))
+            if _comparar(esquerda, operador, direita):
+                return NodeResult(output={'saida': saida}, branch=saida)
+        return NodeResult(output={'saida': None}, branch='default')

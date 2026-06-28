@@ -22,7 +22,7 @@ export function saidasDeNo(tipo: string, config: any): string[] {
   const linhas = typeof raw === 'string'
     ? raw.split('\n').map((s) => s.trim()).filter(Boolean)
     : Array.isArray(raw)
-      ? raw.map((x) => (x && typeof x === 'object' ? x.valor : x)).map((x) => String(x ?? '').trim()).filter(Boolean)
+      ? raw.map((x) => (x && typeof x === 'object' ? (x.saida ?? x.valor ?? x.nome) : x)).map((x) => String(x ?? '').trim()).filter(Boolean)
       : []
   const vistos = new Set<string>()
   const ramos: string[] = []
