@@ -1867,10 +1867,104 @@ class HubsoftService:
         return self._request('GET', endpoint, params=params, lead=lead)
 
     def _post(self, endpoint: str, *, json: dict = None, params: dict = None, lead=None) -> dict:
+        json = self._sanitizar_payload(json) if json else json
         return self._request('POST', endpoint, json=json, params=params, lead=lead)
 
     def _put(self, endpoint: str, *, json: dict = None, params: dict = None, lead=None) -> dict:
+        json = self._sanitizar_payload(json) if json else json
         return self._request('PUT', endpoint, json=json, params=params, lead=lead)
+
+    # IDs que sao validados contra cache local antes de qualquer POST/PUT.
+    # Configuracao: (campo_no_payload, cache_chave, item_id_key, extras_default_key)
+    # Se o ID do payload nao existir no cache, substitui pelo default do extras.
+    # Cobre os mappers POST e PUT + qualquer outro caminho futuro (defesa
+    # estrutural no nivel mais baixo do service).
+    _CAMPOS_SANITIZAR = [
+        ('id_origem_cliente',  'origens_cliente',  'id_origem_cliente',  'id_origem_padrao'),
+        ('id_vendedor',        'vendedores',       'id',                 'id_vendedor_padrao'),
+        ('id_origem_servico',  'origens_contato',  'id_origem_contato',  'id_origem_servico_padrao'),
+    ]
+
+    def _sanitizar_payload(self, payload: dict) -> dict:
+        """Sanea IDs do payload antes de enviar pra API HubSoft.
+
+        Pra cada campo conhecido (id_origem_cliente, id_vendedor, etc):
+        - Se o ID atual nao existe no cache local, substitui pelo default da
+          IntegracaoAPI.configuracoes_extras (id_origem_padrao, etc).
+        - Se nao tem default, REMOVE o campo (API HubSoft prefere ausente a
+          invalido em campos opcionais).
+
+        Resolve o bug recorrente "REDES SOCIAIS inativado": antes o PUT
+        mandava id_origem=15 (inativado) direto, sem validar. Agora qualquer
+        path (POST, PUT, caller direto) eh defendido aqui.
+
+        Aplica tambem no payload aninhado `prospecto_servico` que pode ter
+        `id_origem_servico`.
+        """
+        if not isinstance(payload, dict):
+            return payload
+        extras = self.integracao.configuracoes_extras or {}
+        cache = extras.get('cache') or {}
+
+        def _validar(valor_atual, cache_chave, item_id_key, default_key):
+            """Retorna (valor_novo, foi_substituido). Se invalido sem default, retorna (None, True)."""
+            if valor_atual is None or valor_atual == '':
+                return valor_atual, False
+            try:
+                valor_int = int(valor_atual)
+            except (ValueError, TypeError):
+                return valor_atual, False
+            itens = cache.get(cache_chave) or []
+            if not itens:
+                # Cache vazio: nao tem como validar, mantem o valor original
+                return valor_atual, False
+            ids_validos = {int(it.get(item_id_key)) for it in itens if it.get(item_id_key) is not None}
+            if valor_int in ids_validos:
+                return valor_atual, False
+            # Invalido: tenta default
+            default = extras.get(default_key)
+            if default and int(default) in ids_validos:
+                logger.warning(
+                    '[HubsoftService] payload sanitizado: %s=%s invalido, '
+                    'usando default %s (=%s) do extras.%s',
+                    item_id_key, valor_int, default, default, default_key,
+                )
+                return int(default), True
+            # Sem default valido: remove o campo
+            logger.warning(
+                '[HubsoftService] payload sanitizado: %s=%s invalido e '
+                'sem default valido em %s — campo REMOVIDO do payload',
+                item_id_key, valor_int, default_key,
+            )
+            return None, True
+
+        # Top-level
+        for campo, cache_chave, item_id_key, default_key in self._CAMPOS_SANITIZAR:
+            if campo in payload:
+                valor_novo, substituido = _validar(
+                    payload[campo], cache_chave, item_id_key, default_key,
+                )
+                if substituido:
+                    if valor_novo is None:
+                        del payload[campo]
+                    else:
+                        payload[campo] = valor_novo
+
+        # Aninhado prospecto_servico (no PUT, id_origem_servico vai aqui)
+        servico = payload.get('prospecto_servico')
+        if isinstance(servico, dict):
+            for campo, cache_chave, item_id_key, default_key in self._CAMPOS_SANITIZAR:
+                if campo in servico:
+                    valor_novo, substituido = _validar(
+                        servico[campo], cache_chave, item_id_key, default_key,
+                    )
+                    if substituido:
+                        if valor_novo is None:
+                            del servico[campo]
+                        else:
+                            servico[campo] = valor_novo
+
+        return payload
 
     # Resiliência: retry com exponential backoff em erros transitórios
     MAX_RETRIES = 3
