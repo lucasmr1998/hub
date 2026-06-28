@@ -86,6 +86,35 @@ class BaseNode:
     saidas = ["sucesso"] # branches que o nó pode emitir (portas de saída no editor)
     is_trigger = False   # gatilho? (sem porta de entrada; é o início do fluxo)
 
+    # Saídas dinâmicas (config-driven): quando True, as portas do nó vêm de um campo
+    # da config (`campo_saidas`) em vez de `saidas` fixo. Ex: o `switch` deriva os
+    # ramos dos "casos". Genérico — qualquer nó pode optar. `saidas` segue como base.
+    saidas_dinamicas = False
+    campo_saidas = ""    # nome do campo de config que lista os ramos (str por linha OU lista)
+
+    def saidas_de(self, config) -> list:
+        """Saídas reais deste nó dada sua config. Estático → `self.saidas`.
+
+        Dinâmico → ramos do campo `campo_saidas` (textarea um-por-linha ou lista de
+        valores) + `default` no fim (rede de segurança pro que não casar).
+        """
+        if not self.saidas_dinamicas:
+            return self.saidas
+        raw = (config or {}).get(self.campo_saidas) or ''
+        if isinstance(raw, str):
+            nomes = [ln.strip() for ln in raw.splitlines() if ln.strip()]
+        elif isinstance(raw, (list, tuple)):
+            nomes = [(x.get('valor') if isinstance(x, dict) else x) for x in raw]
+            nomes = [str(x).strip() for x in nomes if str(x or '').strip()]
+        else:
+            nomes = []
+        vistos, ordenados = set(), []
+        for n in nomes:
+            if n not in vistos and n != 'default':
+                vistos.add(n)
+                ordenados.append(n)
+        return ordenados + ['default']
+
     def validar_config(self, config) -> list:
         """Retorna lista de erros de config (vazia = válida)."""
         return []

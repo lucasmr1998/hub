@@ -1,6 +1,6 @@
-import { Fragment } from 'react'
-import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { saidasDe, ICONES, corDoTipo, ehTrigger } from './flow'
+import { Fragment, useEffect } from 'react'
+import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflow/react'
+import { saidasDeNo, ICONES, corDoTipo, ehTrigger } from './flow'
 
 // Resumo curto mostrado embaixo do nome (estilo n8n: "POST: url", "5 minutos"...).
 function resumo(tipo: string, config: any): string {
@@ -25,7 +25,10 @@ function corLabel(s: string): string {
 // direita com rótulo do lado de fora (não competem mais com o título).
 export function BlocoNode({ id, data, selected }: NodeProps) {
   const d = data as { tipo: string; nome?: string; config?: any }
-  const saidas = saidasDe(d.tipo)
+  const saidas = saidasDeNo(d.tipo, d.config)
+  // Saídas dinâmicas (switch): quando os casos mudam, reposiciona as portas/arestas.
+  const updateInternals = useUpdateNodeInternals()
+  useEffect(() => { updateInternals(id) }, [id, saidas.join('|'), updateInternals])
   const icone = ICONES[d.tipo] || 'bi-box'
   const cor = corDoTipo(d.tipo)
   const sub = resumo(d.tipo, d.config)

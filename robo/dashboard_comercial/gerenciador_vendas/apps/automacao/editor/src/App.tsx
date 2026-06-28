@@ -12,7 +12,7 @@ import {
   buscarCatalogo, buscarEventos, testarFluxo, listarFluxos, getFluxo, criarFluxo, atualizarFluxo,
   type NoCatalogo, type FluxoResumo, type EventoCatalogo,
 } from './api'
-import { paraRuntime, deRuntime, ICONES, GRUPOS, CORES_GRUPO, SAIDAS, TRIGGERS, slug } from './flow'
+import { paraRuntime, deRuntime, ICONES, GRUPOS, CORES_GRUPO, SAIDAS, SAIDAS_DIN, CAMPO_SAIDAS, TRIGGERS, slug } from './flow'
 
 function recomputarContadores(nodes: Node[]): Record<string, number> {
   const c: Record<string, number> = {}
@@ -53,6 +53,8 @@ export function App() {
         GRUPOS[c.tipo] = c.grupo
         SAIDAS[c.tipo] = c.saidas
         TRIGGERS[c.tipo] = c.is_trigger
+        SAIDAS_DIN[c.tipo] = !!c.saidas_dinamicas
+        if (c.campo_saidas) CAMPO_SAIDAS[c.tipo] = c.campo_saidas
       })
     }).catch((e) => console.error('catálogo:', e))
     buscarEventos().then(setEventos).catch((e) => console.error('eventos:', e))

@@ -323,6 +323,7 @@ def nodes_catalogo_api(request):
             'tipo': n.tipo, 'label': n.label, 'icone': n.icone,
             'grupo': n.grupo, 'subgrupo': n.subgrupo, 'categoria': n.categoria,
             'saidas': n.saidas, 'is_trigger': n.is_trigger, 'campos': n.campos_config(),
+            'saidas_dinamicas': n.saidas_dinamicas, 'campo_saidas': n.campo_saidas,
         }
         for n in REGISTRY.values()
     ]})

@@ -18,6 +18,7 @@ from .context import Contexto  # noqa: F401
 from . import set_fields  # noqa: F401,E402  (D2 — nó de referência)
 from . import http_request  # noqa: F401,E402  (D4)
 from . import if_node  # noqa: F401,E402  (P2 — condição)
+from . import switch  # noqa: F401,E402  (P3 — roteador de N saídas; saídas dinâmicas)
 from . import delay  # noqa: F401,E402  (P2 — espera)
 from . import webhook_trigger  # noqa: F401,E402  (T1 — gatilho webhook)
 from . import evento_trigger  # noqa: F401,E402  (EV — gatilho evento)

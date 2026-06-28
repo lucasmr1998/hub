@@ -70,11 +70,14 @@ def validar_fluxo(fluxo) -> list:
         if c.get('para') not in nodes:
             erros.append(f"conexão com destino inexistente: {c.get('para')}")
         # F4: a saída usada tem que ser uma saída declarada pelo nó de origem.
+        # `saidas_de(config)` resolve saídas dinâmicas (ex: casos do switch).
         if de in nodes:
-            no = tipo_por_slug((nodes[de] or {}).get('tipo'))
+            no_def = nodes[de] or {}
+            no = tipo_por_slug(no_def.get('tipo'))
             saida = c.get('saida', 'default')
-            if no is not None and saida not in (no.saidas or []) and saida != 'default':
-                erros.append(f"nó '{de}': saída '{saida}' não existe (válidas: {', '.join(no.saidas)})")
+            validas = no.saidas_de(no_def.get('config') or {}) if no is not None else []
+            if no is not None and saida not in (validas or []) and saida != 'default':
+                erros.append(f"nó '{de}': saída '{saida}' não existe (válidas: {', '.join(validas)})")
     return erros
 
 

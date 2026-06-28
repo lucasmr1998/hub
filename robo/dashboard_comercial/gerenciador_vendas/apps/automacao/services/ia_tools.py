@@ -35,6 +35,12 @@ def tools_disponiveis():
     return [(t['chave'], t['descricao']) for t in _TOOLS.values()]
 
 
+def _prioridades():
+    """Valores de prioridade vindos do modelo (fonte da verdade, nada hardcoded)."""
+    from apps.suporte.models import Ticket
+    return [v for v, _ in Ticket.PRIORIDADE_CHOICES]
+
+
 def schema_openai(chaves):
     """Monta o tools_schema (formato OpenAI) só das tools habilitadas e existentes."""
     schema = []
@@ -169,3 +175,33 @@ def _marcar_intencao(contexto, args, agente=None):
 )
 def _marcar_intencao_energia(contexto, args, agente=None):
     return _marcar_fato(contexto, 'marcar_intencao_energia', 'Interesse Mega Energia', bool(args.get('tem_interesse')))
+
+
+@_tool(
+    'abrir_ticket',
+    'Abra um ticket de suporte pro time humano resolver. Use quando o cliente reportar um '
+    'problema/bug, ou quando você não conseguir resolver e precisar escalar. Dê um título '
+    'objetivo e uma descrição com o MÁXIMO de contexto (o que aconteceu, quando, passos pra '
+    'reproduzir, o que era esperado) — quanto melhor a descrição, mais rápido o time resolve.',
+    {'titulo': {'type': 'string', 'description': 'Título curto e objetivo do problema'},
+     'descricao': {'type': 'string', 'description': 'Descrição detalhada: o que aconteceu, quando, '
+                   'passos pra reproduzir e o que era esperado'},
+     'categoria': {'type': 'string', 'description': 'Categoria do chamado (ex: Bug, Dúvida, Financeiro). Opcional.'},
+     'prioridade': {'type': 'string', 'enum': _prioridades(),
+                    'description': 'Prioridade do chamado. Opcional (padrão: normal).'}},
+    ['titulo', 'descricao'],
+)
+def _abrir_ticket(contexto, args, agente=None):
+    from .tickets import criar_ticket
+    try:
+        ticket = criar_ticket(
+            contexto.tenant,
+            args.get('titulo', ''),
+            args.get('descricao', ''),
+            categoria=(args.get('categoria') or '').strip() or None,
+            prioridade=(args.get('prioridade') or 'normal'),
+        )
+    except Exception as e:  # noqa: BLE001
+        return f'não foi possível abrir o ticket: {e}'
+    cat = ticket.categoria.nome if ticket.categoria else '—'
+    return f'ticket #{ticket.numero} aberto (categoria: {cat}, prioridade: {ticket.prioridade}).'

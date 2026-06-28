@@ -8,6 +8,29 @@ export function saidasDe(tipo: string): string[] {
   return SAIDAS[tipo] ?? ['sucesso']
 }
 
+// Saídas dinâmicas: tipo → tem saídas vindas da config? e de qual campo?
+// (preenchido pelo App a partir do catálogo). Ex: o switch deriva ramos dos "casos".
+export const SAIDAS_DIN: Record<string, boolean> = {}
+export const CAMPO_SAIDAS: Record<string, string> = {}
+
+// Saídas reais de um nó já colocado (considera config). Espelha BaseNode.saidas_de:
+// campo textarea (um por linha) → ramos + 'default'.
+export function saidasDeNo(tipo: string, config: any): string[] {
+  if (!SAIDAS_DIN[tipo]) return saidasDe(tipo)
+  const campo = CAMPO_SAIDAS[tipo]
+  const raw = (config || {})[campo] ?? ''
+  const linhas = typeof raw === 'string'
+    ? raw.split('\n').map((s) => s.trim()).filter(Boolean)
+    : Array.isArray(raw)
+      ? raw.map((x) => (x && typeof x === 'object' ? x.valor : x)).map((x) => String(x ?? '').trim()).filter(Boolean)
+      : []
+  const vistos = new Set<string>()
+  const ramos: string[] = []
+  for (const l of linhas) if (l !== 'default' && !vistos.has(l)) { vistos.add(l); ramos.push(l) }
+  ramos.push('default')
+  return ramos
+}
+
 // Handle seguro pra referência ({{nodes.<handle>}}): sem espaço/acento/símbolo.
 export function slug(s: string): string {
   const r = (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')

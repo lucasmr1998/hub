@@ -66,6 +66,8 @@ export interface NoCatalogo {
   saidas: string[]
   is_trigger: boolean
   campos: Campo[]
+  saidas_dinamicas?: boolean
+  campo_saidas?: string
 }
 
 export async function buscarCatalogo(): Promise<NoCatalogo[]> {

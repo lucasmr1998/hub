@@ -148,6 +148,7 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 | `set_fields` | Transformação › Campos | Definir variáveis | ✅ (nó de referência) |
 | `http_request` | Core › HTTP | HTTP Request | ✅ (guard SSRF + mascaramento) |
 | `if` | Fluxo › Lógica | Condição (If) | ✅ (saídas true/false) |
+| `switch` | Fluxo › Roteamento | Switch (roteador) | ✅ **N saídas dinâmicas** (casos da config → ramos + `default`; casa normalizado) |
 | `delay` | Fluxo › Controle | Aguardar | ✅ (pausa; retoma via cron) |
 | `webhook` | Gatilho › Entrada | Webhook | ✅ **trigger** (entrada do fluxo, sem porta de entrada) |
 | `evento` | Gatilho › Sistema | Evento do sistema | ✅ **trigger** (evento + filtros; wiring deferido via `on_evento`, kill-switch `AUTOMACAO_WIRING_ATIVO`) |
