@@ -151,6 +151,67 @@ class IntegracaoAPI(TenantMixin):
         status = "Ativa" if self.ativa else "Inativa"
         return f"{self.nome} ({self.get_tipo_display()}) — {status}"
 
+    def save(self, *args, **kwargs):
+        """Audita zeramento do cache. Quando configuracoes_extras.cache[X]
+        vai de N>0 itens pra 0 ou some, registra LogSistema com WARNING e
+        identifica o caller. Resolve o bug recorrente "id_origem 15
+        inativado" causado por cache.origens_cliente esvaziado em algum
+        path desconhecido. Nao bloqueia o save, so audita.
+        """
+        if self.pk:
+            try:
+                self._auditar_zeramento_cache()
+            except Exception:
+                # Auditoria nunca bloqueia o save
+                import logging
+                logging.getLogger(__name__).exception('[IntegracaoAPI] Falhou auditoria de cache')
+        super().save(*args, **kwargs)
+
+    def _auditar_zeramento_cache(self):
+        antigo = type(self).all_tenants.filter(pk=self.pk).only('configuracoes_extras').first()
+        if not antigo:
+            return
+        cache_antigo = (antigo.configuracoes_extras or {}).get('cache') or {}
+        cache_novo = (self.configuracoes_extras or {}).get('cache') or {}
+        zerados = []
+        for k, v_antigo in cache_antigo.items():
+            if not isinstance(v_antigo, list) or len(v_antigo) == 0:
+                continue
+            v_novo = cache_novo.get(k, [])
+            if not isinstance(v_novo, list) or len(v_novo) == 0:
+                zerados.append({'chave': k, 'antes': len(v_antigo), 'depois': len(v_novo) if isinstance(v_novo, list) else 0})
+        if not zerados:
+            return
+        import inspect
+        caller = '?'
+        try:
+            for fr in inspect.stack()[2:14]:
+                fn = fr.filename.replace('\\', '/')
+                if '/django/' in fn or 'models.py' in fn:
+                    continue
+                partes = fn.rsplit('/apps/', 1)
+                curto = ('apps/' + partes[1]) if len(partes) == 2 else fn.rsplit('/', 1)[-1]
+                caller = f"{curto}:{fr.lineno} {fr.function}"
+                break
+        except Exception:
+            pass
+        try:
+            from apps.sistema.models import LogSistema
+            LogSistema.all_tenants.create(
+                tenant=self.tenant,
+                categoria='integracao', acao='cache_zerado',
+                entidade='IntegracaoAPI', entidade_id=self.pk,
+                nivel='WARNING',
+                mensagem=f'Cache de IntegracaoAPI {self.pk} ({self.tipo}) zerado em {len(zerados)} chave(s). Caller: {caller}',
+                dados_extras={'zerados': zerados, 'caller': caller},
+            )
+        except Exception:
+            import logging
+            logging.getLogger(__name__).warning(
+                '[IntegracaoAPI %s] cache zerado: %s caller=%s',
+                self.pk, zerados, caller,
+            )
+
     @property
     def token_valido(self):
         """Retorna True se o token cacheado ainda está válido."""
