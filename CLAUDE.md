@@ -1,314 +1,338 @@
 # CLAUDE.md
 
-## Abordagem de Trabalho
+## 1. Modo de operacao (LEIA PRIMEIRO)
 
-**OBRIGATORIO:** Antes de implementar qualquer funcionalidade, correcao ou alteracao:
-1. **Ler a documentacao do modulo PRIMEIRO.** Antes de qualquer alteracao, **sempre** ler `robo/docs/PRODUTO/` do modulo correspondente (ex: mexer em notificacoes -> ler `robo/docs/PRODUTO/ops/03-NOTIFICACOES.md`; mexer em integracao -> `robo/docs/PRODUTO/integracoes/`; modulo funcional -> `robo/docs/PRODUTO/modulos/<modulo>/`). A doc tem o desenho original, decisoes ja tomadas e armadilhas conhecidas. **Nao implementar sem ler a doc.** Se a doc nao existir, criar antes — nao confiar so no que o codigo aparenta fazer.
-2. **Discutir antes de fazer.** Apresentar o problema/tarefa, sugerir abordagens e perguntar como o usuario quer proceder.
-3. **Trazer opcoes.** Sempre que houver mais de uma forma de resolver, apresentar as opcoes com pros e contras.
-4. **Nunca implementar sem alinhamento.** Mesmo que a solucao pareca obvia, perguntar antes. O usuario decide a direcao.
-5. **Confirmar escopo.** Antes de comecar, resumir o que vai ser feito e pedir confirmacao.
+### 1.1 Sempre traga opcoes
 
-### Checklist de "feature completa"
+Pra qualquer mudanca que tenha mais de uma forma de resolver, apresente opcoes A/B/C com pros e contras e **indique qual voce recomenda**. O usuario decide a direcao. Nunca implemente direto sem alinhamento, mesmo que a solucao pareca obvia.
 
-Uma feature so e considerada **pronta** quando TODOS os itens abaixo foram cumpridos:
+### 1.2 Confirmacoes obrigatorias
 
-- [ ] Codigo funcional com teste manual/automatizado passando
-- [ ] Documentacao em `robo/docs/PRODUTO/` atualizada (modulo correspondente)
-- [ ] `execution-log.md` do modulo atualizado (o que foi feito + status)
-- [ ] Nenhum `print`, `console.log` ou comentario de debug deixado no codigo
-- [ ] Imports/variaveis nao utilizados removidos
-- [ ] Deploy validado com teste real em producao (se aplicavel)
-- [ ] Nenhum bug critico aberto no escopo da feature
-- [ ] `python manage.py check` sem erros
-- [ ] Migration aplicada nos ambientes de dev e prod (se houver)
+| Acao | Confirmar antes? |
+|---|---|
+| UPDATE em prod (mesmo 1 linha, mesmo reversivel) | Sim sempre |
+| Deploy (push origin main + webhook) | Sim sempre |
+| Criar Tenant, IntegracaoAPI ou Regra em prod | Sim sempre |
+| `migrate` em prod (ele roda automatico via rebuild de qualquer jeito, mas confirme primeiro) | Sim sempre |
+| Fix local em codigo (DB local) | Pode agir |
+| Limpeza de arquivos locais nao versionados | Pode agir |
 
-### Regra anti-paralelismo
+### 1.3 Threads paralelas
 
-Nao comecar feature nova enquanto houver bug critico aberto no produto em producao. Fechar bugs primeiro, feature depois. Ritmo cai no curto prazo mas acelera no medio (menos retrabalho, menos surpresas no deploy).
+Quando houver 2 ou mais frentes abertas em paralelo (ex: "fix A esperando deploy" + "decidir B" + "investigar C"), lembre o usuario proativamente ao concluir uma tarefa. Use TodoWrite quando passar de 3 itens.
+
+### 1.4 Wake-up agendado
+
+Use `ScheduleWakeup` somente pra validacao visual (CSS, layout, render). Pra mudanca de backend, espere o usuario validar manualmente ou alerta de erro disparar.
+
+### 1.5 Antes de codar mudanca que afeta comportamento
+
+Ler o doc do modulo correspondente em `robo/docs/PRODUTO/<modulo>/`. Pra fix de bug ou ajuste local, nao precisa. Exemplos:
+
+| Tipo | Ler doc primeiro? |
+|---|---|
+| Fix de regex, ajuste de template, typo | Nao |
+| Nova regra de pipeline, nova condicao, mudanca de schema | Sim |
+| Refactor que muda contrato entre modulos | Sim |
+| UPDATE de dado isolado em prod | Nao precisa (mas confirmar UPDATE sim) |
+
+### 1.6 Quando salvar resumo de sessao
+
+Salvar `robo/docs/context/reunioes/assunto_DD-MM-AAAA.md` (use TEMPLATE.md):
+
+- Antes do contexto da conversa ser compactado pelo Claude Code
+- Quando rolar uma decisao arquitetural ou mudanca importante de produto
+- Ao fim de sessao com varios assuntos misturados (pra retomada futura)
+
+### 1.7 Tarefa antes de implementacao
+
+Toda implementacao deve estar vinculada a uma tarefa no Workspace (tenant Aurora HQ). Se nao existir, criar via UI antes de comecar a codar. Workspace tabela DB: `workspace_tarefa`.
+
+### 1.8 Anti paralelismo
+
+Nao comecar feature nova enquanto houver bug critico aberto no produto em prod. Fechar bugs primeiro, feature depois.
 
 ---
 
-## Regras Fundamentais
+## 2. Seguranca e producao
 
-### Banco de Dados
+### 2.1 Read-only em prod (permitido)
 
-**Desenvolvimento padrao:** sempre usar `--settings=gerenciador_vendas.settings_local` pra rodar codigo, testes, `runserver`, etc. No ambiente atual, `settings_local` e `settings_local_pg` apontam para o mesmo Postgres local (`aurora_dev` em `localhost:5432`). A alternativa SQLite nao esta configurada.
+Investigar/analisar em prod e permitido, com as regras abaixo.
 
-**Consultas read-only em producao:** permitidas quando necessarias pra investigacao/analise, com as seguintes regras.
-
-**Permitido em producao:**
+**Pode em prod:**
 - `SELECT` via `manage.py shell`, `manage.py dbshell` ou scripts
-- Queries do Django ORM com `.filter()`, `.values()`, `.annotate()`, `.aggregate()`
+- Queries Django ORM: `.filter()`, `.values()`, `.annotate()`, `.aggregate()`
 - Exports pontuais (CSV/JSON) pra analise offline
 - Management commands marcados explicitamente como read-only
 
-**Proibido em producao (sem autorizacao explicita do usuario por tarefa):**
-- `migrate`, `makemigrations` — migrations sobem via CI/CD ou manualmente pelo dono
-- `createsuperuser`, `flush`, `loaddata`, `dumpdata` — mudam estado
+**NUNCA em prod sem autorizacao explicita por tarefa:**
+- `migrate`, `makemigrations` (migrations sobem via rebuild do EasyPanel)
+- `createsuperuser`, `flush`, `loaddata`, `dumpdata`
 - Qualquer `.create()`, `.save()`, `.update()`, `.delete()`, `.bulk_*()` no ORM
 - `UPDATE`, `INSERT`, `DELETE`, `TRUNCATE`, `ALTER` em SQL cru
-- Rodar codigo que dispare signals que escrevam (ex: instanciar model com `save=True`)
+- Rodar codigo que dispare signals que escrevam
 
-**Obrigatorio em qualquer consulta de producao:**
-1. **Avisar no chat** antes de conectar (ex: "vou rodar uma query em producao pra investigar X")
-2. **Filtrar por tenant** sempre que o model herdar `TenantMixin`, mesmo em leitura
-3. **Respeitar LGPD:** conversas, dados pessoais e PII precisam ser tratados como confidenciais. Nunca copiar/exibir dados de clientes em chat/docs sem necessidade clara
-4. **Nunca compartilhar credenciais** ou dumps de producao em arquivos versionados ou canais externos
-5. **Em caso de duvida, perguntar ao usuario** antes de rodar
+**Obrigatorio em qualquer consulta de prod:**
+1. Avisar no chat antes de conectar
+2. Filtrar por tenant sempre que o model herdar `TenantMixin`, mesmo em leitura
+3. Respeitar LGPD: PII de cliente eh confidencial. Nao copiar/exibir sem necessidade clara
+4. Nunca compartilhar credenciais ou dumps em arquivos versionados
+5. Em duvida, perguntar ao usuario antes
 
-**Se o comando que quero rodar cair na zona cinza** (ex: "atualizar 1 campo num lead"), **SEMPRE confirmar com o usuario antes de executar**, mesmo que pareça trivial.
+### 2.2 Credenciais de prod
 
-**Credenciais de acesso ao servidor de producao:** ver arquivo local `.env.prod_readonly` (gitignored). Contem `PROD_DB_*` (Postgres), `PROD_SSH_*` (VPS Hostinger/EasyPanel) e `HUB_DEPLOY_WEBHOOK` (URL secreta que dispara redeploy do container hub). **NUNCA** colar credenciais ou a URL do webhook no chat ou em arquivos versionados. Servidor roda no IP `103.199.187.4`; Postgres na porta 5433; console do EasyPanel (UI) ja roda dentro do container do app Django — comandos `python manage.py X` funcionam direto sem `docker exec`.
+Ver arquivo local `.env.prod_readonly` (gitignored). Contem:
 
-**Forcar deploy** (equivalente a clicar "Deploy" no painel EasyPanel) — usar apos `git push origin main`:
+- `PROD_DB_*` (Postgres remoto)
+- `PROD_SSH_*` (VPS Hostinger/EasyPanel)
+- `HUB_DEPLOY_WEBHOOK` (URL secreta de redeploy do container hub)
+
+**NUNCA** colar credenciais ou a URL do webhook no chat ou em arquivo versionado.
+
+Servidor: `103.199.187.4`. Postgres: porta 5433. Console EasyPanel ja roda dentro do container do app Django, comandos `python manage.py X` funcionam direto sem `docker exec`.
+
+### 2.3 Forcar deploy
+
+Apos `git push origin main`:
+
 ```bash
 source .env.prod_readonly && curl -X POST "$HUB_DEPLOY_WEBHOOK"
 ```
-Rebuild clona `origin/main` e aplica migrations automaticamente. Leva ~3-5min apos o trigger.
 
-### Multi-Tenancy (CRITICO)
-- **TODA query deve filtrar por tenant.** Nunca usar `.objects.all()` em views sem filtro de tenant.
-- Models com `TenantMixin` usam `TenantManager` que filtra automaticamente. Models sem `TenantMixin` (como `IntegracaoAPI`) devem ser filtrados manualmente: `.filter(tenant=request.tenant)`.
-- **Nunca expor dados de um tenant para outro.** Isso inclui: views, APIs, templates, selects, admin.
-- Ao criar qualquer view, API ou query: **sempre verificar se o tenant esta sendo filtrado**.
-- Ao criar models novos: **sempre usar TenantMixin** ou adicionar FK tenant com filtro manual.
+Rebuild clona `origin/main` e aplica migrations automaticamente. Leva 3 a 5 minutos.
 
-### Escopo de Edicao
-- **`robo/` liberado para edicao.** Estrutura modular em `apps/` e a fonte da verdade.
-- **NAO editar** o projeto `megaroleta/`. Apenas leitura.
-- **`vendas_web` esta morto.** Removido do INSTALLED_APPS. Nao referenciar.
-- **Secrets em variaveis de ambiente.** Nenhuma credencial hardcoded.
+### 2.4 Multi-tenancy (CRITICO)
 
-### Integracoes por tenant (CRITICO)
-
-Quando o usuario falar sobre uma integracao externa (HubSoft, SGP, Uazapi, etc.) e perguntar "ja fizemos X?", "quantos leads foram?", "esta funcionando?", **considerar SOMENTE os tenants que tem essa integracao ATIVA**. Tenants sem integracao cadastrada nao contam pro raciocinio.
-
-Como verificar antes de responder:
-```sql
-SELECT t.slug FROM integracoes_api i JOIN sistema_tenant t ON t.id=i.tenant_id
-WHERE i.tipo='<tipo>' AND i.ativa=TRUE AND t.ativo=TRUE;
-```
-
-Estado atual (03/06/2026, prod):
-- **HubSoft:** **a UNICA empresa em prod usando HubSoft hoje e a `nuvyon`**. (`aurora-hq` tem registro com `nome='teste'` — ignorar). TR Carrion, FATEPI, Demo, Gigamax, Megalink: NAO tem integracao HubSoft. Pipeline de leads HubSoft (cadastrar_prospecto + bot Selenium de conversao) e construido sob medida pra Nuvyon hoje — qualquer regra/cron/fix HubSoft deve se preocupar so com nuvyon ate outro cliente entrar.
-- **SGP (inSystem):** so `gigamax` no dev (nao em prod ainda).
-- **Uazapi:** aurora-hq e fatepifaespi.
-
-Importante NAO confundir ferramentas por tenant:
-- **Nuvyon:** leads chegam via **Matrix** (sistema externo dela), webhook -> Hubtrix -> HubSoft (cadastrar_prospecto API) -> bot Selenium converte em cliente. **Nao usa Vero**.
-- **TR Carrion:** usa **Vero** (bot N8N de WhatsApp do Hubtrix). Nao usa HubSoft.
-- **FATEPI:** usa **editor nativo do Hubtrix** (sem bot externo, sem HubSoft).
-
-Numeros agregados ("194 leads pendentes em prod") sem o filtro acima sao **enganosos** e devem ser evitados. Sempre apresentar dado por tenant com integracao ATIVA daquele tipo. Ver [[feedback-validar-dado-no-db]].
-
-### Escrita
-- **Nao usar traco/hifen** como elemento de pontuacao em frases e textos de marketing. Usar ponto, virgula ou reescrever.
+- TODA query deve filtrar por tenant. Nunca `.objects.all()` em view sem filtro.
+- Models com `TenantMixin` usam `TenantManager` que filtra automaticamente. Models sem `TenantMixin` precisam filtro manual: `.filter(tenant=request.tenant)`.
+- Nunca expor dados de um tenant pra outro (view, API, template, select, admin).
+- Criar models novos usando `TenantMixin` sempre que aplicavel.
 
 ---
 
-## Documentacao
+## 3. Escopo de edicao
 
-### Regra principal
-**OBRIGATORIO: ao finalizar qualquer implementacao, atualizar o documento do modulo correspondente em `robo/docs/PRODUTO/` antes de concluir a tarefa.** Se nao existir documento para o modulo alterado, criar. Nunca considerar uma tarefa concluida sem a documentacao atualizada.
-
-### Consultar antes de implementar
-Antes de implementar qualquer funcionalidade, **consultar os documentos existentes** para entender o contexto, decisoes anteriores e estado atual:
-- `robo/docs/PRODUTO/` — especificacoes de cada modulo
-- `robo/docs/context/reunioes/` — decisoes tomadas em sessoes anteriores
-- `robo/docs/context/tarefas/` — backlog e tarefas concluidas
-
-### Cópia na nuvem (Workspace) e rastreabilidade
-
-Os docs de `robo/docs/` também vivem na nuvem, no módulo **Workspace** (Drive de documentos, tenant Aurora HQ), como cópia viva colaborativa. A pasta `robo/docs/` **continua sendo a fonte versionada** (e o que se lê antes de codar); a nuvem é a cópia editável compartilhada.
-
-- **Subir/sincronizar:** `python manage.py importar_docs_drive` (idempotente; suporta `.md`, `.pdf`, `.pptx`, `.json`, `.sql`; flags `--apenas-md`, `--apenas-binarios`, `--base-url`).
-- **Estado de sync:** o command gera `robo/docs/_SYNC_NUVEM.md` (legível) e `robo/docs/.sync_nuvem.json` mostrando, por arquivo, se já está na nuvem e o link. O `hub.html` exibe um badge nuvem/local por documento a partir desse manifesto.
-
-### Hub de documentos
-O arquivo `robo/exports/hub.html` e o gestor visual unificado. **Rodar automaticamente** sempre que um `.md` for criado ou modificado:
-
-```
-python scripts/gerar_hub.py
-```
-
-### Pre-commit hook de documentacao
-
-Ao mexer em `apps/comercial/atendimento/`, `apps/inbox/`, `apps/comercial/crm/`, `apps/suporte/`, `apps/marketing/`, `apps/cs/`, `apps/integracoes/` ou `apps/assistente/`, atualizar tambem a doc correspondente em `robo/docs/PRODUTO/modulos/<modulo>/`.
-
-O hook pre-commit em `.git/hooks/pre-commit` avisa quando detecta mudanca em modulo sem mudanca correspondente na doc. Nao bloqueia o commit, so avisa.
-
-**Instalar hook apos clonar o repo:**
-```
-python scripts/instalar_hooks.py
-```
-
-Script de verificacao manual: `python scripts/verificar_docs.py` (mudancas nao commitadas) ou `--staged` (mudancas staged).
-
-### Reunioes
-Ao final de conversas relevantes, salvar resumo em:
-```
-robo/docs/context/reunioes/assunto_DD-MM-AAAA.md
-```
-Template em `robo/docs/context/reunioes/TEMPLATE.md`.
-
-### Tarefas
-
-**A partir de 04/05/2026, fonte da verdade do backlog é o módulo Workspace** (não mais markdown).
-
-- **Onde:** `https://app.hubtrix.com.br/workspace/` — tenant Aurora HQ (id 3)
-- **Tabela DB:** `workspace_tarefa`
-- **Consulta read-only via SQL:** ver `robo/docs/context/tarefas/README.md`
-
-Toda implementação deve estar vinculada a uma tarefa no Workspace. Se nao existir, **criar antes de implementar** — pela UI, não via markdown.
-
-A pasta `robo/docs/context/tarefas/backlog/` e `finalizadas/` ficam **deprecadas** (preservadas como histórico). Não criar arquivos `.md` novos lá. O `TEMPLATE.md` segue como referência de campos pra preencher na UI do Workspace.
-
-### Documentos de produto existentes
-
-Estrutura hierarquica em `robo/docs/PRODUTO/`:
-
-**core/** — transversais
-- `core/00-STATUS.md` — Estado atual de cada modulo
-- `core/01-ROADMAP.md` — Roadmap
-- `core/02-TESTES.md` — Estrategia de testes
-- `core/03-PERMISSOES.md` — Permissoes granulares
-
-**integracoes/**
-- `integracoes/01-HUBSOFT.md` — HubSoft
-- `integracoes/02-INTEGRACOES.md` — Demais integracoes
-- `integracoes/03-APIS_N8N.md` — APIs consumidas pelo N8N
-
-**ops/**
-- `ops/01-DEPLOY.md` — Deploy
-- `ops/02-CRON.md` — Cron jobs
-- `ops/03-NOTIFICACOES.md` — Motor de notificacoes
-
-**modulos/** — um diretorio por modulo funcional, cada um com `README.md` + arquivos por funcionalidade
-- `modulos/atendimento/` — Engine, sessoes, recontato
-- `modulos/comercial/` — Leads, cadastro, viabilidade, CRM (pipeline/oportunidades/metas)
-- `modulos/inbox/` — Chat multicanal, distribuicao, widget, websocket
-- `modulos/fluxos/` — Editor visual, nodos, integracao IA
-- `modulos/assistente-crm/` — Assistente via WhatsApp cross-tenant
-- `modulos/marketing/` — Campanhas, segmentos, automacoes (regras e motor)
-- `modulos/suporte/` — Tickets e SLA
-- `modulos/cs/` — Clube, parceiros, indicacoes, carteirinha, NPS, retencao
-
-Indice completo em `robo/docs/PRODUTO/README.md`.
-
-### Execution log (por modulo)
-
-Cada modulo mantem um `execution-log.md` na sua pasta de doc (`robo/docs/PRODUTO/<modulo>/execution-log.md`; criar se nao existir). E a trilha do que foi **executado** no modulo. Complementa as reunioes: reuniao e o resumo da conversa, execution-log e o que foi feito, decidido e o que ficou pendente.
-
-- **Consultar antes:** ao retomar trabalho num modulo, ler o `execution-log.md` dele pra saber o que ja foi feito, o estado atual e o que ficou `pending`/`blocked`.
-- **Quando atualizar:** ao concluir uma unidade de trabalho relevante (fix, PR, investigacao, decisao de arquitetura, bloqueio). Nao para cada micro-passo.
-- **Onde:** no modulo do lado dominante do trabalho. Se for cross-module, registrar no dominante e referenciar o(s) outro(s).
-- **Formato:** append no fim (entrada mais nova embaixo). Cabecalho `## AAAA-MM-DD — <titulo curto>` + bullets `Acao / Decisao / Output (PRs, arquivos) / Status`. Status: `completed` / `pending` / `blocked`.
-- **Bloqueios:** registrar com `blocked`, o que esta esperando (ex: resposta de fornecedor) e a memoria relacionada, se houver.
-- **Modulos:** os mesmos de `PRODUTO/` (`integracoes/`, `ops/`, `modulos/<funcional>/`).
+- `robo/` liberado pra edicao. Estrutura modular em `apps/` eh fonte da verdade.
+- **NAO editar** `megaroleta/` (apenas leitura, projeto legado).
+- `vendas_web` esta morto (removido do INSTALLED_APPS).
+- Secrets em variaveis de ambiente. Nenhuma credencial hardcoded.
 
 ---
 
-## Projeto
+## 4. Convencoes
 
-### Stack
-Python 3.11, Django 5.2, DRF, PostgreSQL, Gunicorn, Nginx, Drawflow.js, N8N
+### 4.1 Commit message (obrigatorio)
 
-### Estrutura
+Prefixo: `feat:` / `fix:` / `refactor:` / `style:` / `docs:` / `chore:`.
+
+Escopo entre parenteses quando ajudar: `feat(crm): ...`, `fix(integracao): ...`.
+
+Mensagem em PT-BR, sem traco/hifen (use ponto, virgula ou reescrever). Sem `Co-Authored-By`.
+
+Exemplo:
 
 ```
-hub/
-├── CLAUDE.md                    ← este arquivo
-├── scripts/gerar_hub.py         ← gerador do hub
-├── robo/                        ← projeto principal
-│   ├── docs/                    ← documentacao (GTM, PRODUTO, BRAND, AGENTES, OPERACIONAL, context)
-│   │   └── OPERACIONAL/         ← contratos + implementacao + materiais (templates, propostas, deck)
-│   ├── exports/                 ← saidas geradas (hub.html, backlog.html)
-│   └── dashboard_comercial/gerenciador_vendas/   ← projeto Django
-│       ├── apps/                ← 18 apps modulares
-│       │   ├── sistema/         ← Tenant, auth, configs, logging, permissoes
-│       │   ├── comercial/       ← leads, atendimento, cadastro, viabilidade, crm
-│       │   ├── marketing/       ← campanhas, automacoes, emails
-│       │   ├── cs/              ← clube, parceiros, indicacoes, carteirinha
-│       │   ├── inbox/           ← chat multicanal
-│       │   ├── suporte/         ← tickets, base de conhecimento
-│       │   ├── integracoes/     ← HubSoft, providers IA
-│       │   ├── notificacoes/    ← motor de comunicacao
-│       │   ├── dashboard/       ← relatorios
-│       │   └── admin_aurora/    ← painel SaaS (/aurora-admin/)
-│       ├── tests/               ← testes
-│       └── gerenciador_vendas/  ← settings, urls, wsgi
-└── megaroleta/                  ← legacy (read-only)
+fix(crm): largura uniforme das colunas do kanban
+
+Coluna estagio Perdido estava com 846px em prod (vs 280px esperado das
+outras). Causa: `min-width: auto` default em flex items deixava
+min-content do conteudo vencer o flex-basis de 280px.
+
+Fix: width/min-width/max-width 280px explicitos.
 ```
 
-### Bancos de dados
+### 4.2 Linguagem
 
-| Ambiente | Settings | Banco | Uso |
-|----------|----------|-------|-----|
-| **Dev PostgreSQL (padrao)** | `settings_local` ou `settings_local_pg` | `aurora_dev` (localhost:5432, user: postgres, pass: admin123) | Desenvolvimento e validacao. Ambos os settings apontam para o mesmo Postgres local. |
-| **Producao** | `settings` | PostgreSQL remoto (variaveis .env) | **NUNCA usar no desenvolvimento** |
+Tudo em PT-BR: codigo, comentarios, docstrings, commits, conversa, doc.
 
-> Historico: originalmente `settings_local` apontava para SQLite (`db_local.sqlite3`) e `settings_local_pg` para Postgres. Hoje ambos foram unificados no Postgres local para garantir paridade com producao. Se precisar de SQLite isolado pra um teste, crie um settings dedicado em vez de assumir que `settings_local` e SQLite.
+### 4.3 Traco e hifen (proibido)
 
-### Como rodar
+Nao usar traco (em dash) nem hifen como elemento de pontuacao. Em qualquer texto: codigo, commit, conversa, doc. Use ponto, virgula ou reescreva.
+
+### 4.4 Arquivos temporarios
+
+Use o scratchpad de sessao (`%TEMP%/claude/<projeto>/<sessao>/scratchpad/`) pra arquivos ad hoc. Nao criar `_qa_*`, `_test_*` na raiz do repo.
+
+---
+
+## 5. Stack
+
+Python 3.11, Django 5.2, DRF, PostgreSQL, Docker (EasyPanel Swarm) com Nginx interno, React Flow (engine nova `apps/automacao`).
+
+Engine antiga ainda viva em `apps/comercial/atendimento` e `apps/marketing/automacoes` usa Drawflow.js. Migracao gradual para a nova.
+
+N8N: ativo em TR Carrion (Vero) e Nuvyon (Matrix).
+
+---
+
+## 6. Banco de dados
+
+| Ambiente | Settings | Banco |
+|---|---|---|
+| **Dev (padrao)** | `settings_local` ou `settings_local_pg` | Postgres `aurora_dev` (localhost:5432, user postgres, pass admin123). Ambos os settings apontam pro mesmo banco. |
+| **Producao** | `settings` | Postgres remoto via `.env`. NUNCA usar no desenvolvimento. |
+
+---
+
+## 7. Como rodar
 
 ```bash
 cd robo/dashboard_comercial/gerenciador_vendas
 
-# Desenvolvimento padrao (Postgres local aurora_dev)
 python manage.py runserver 8001 --settings=gerenciador_vendas.settings_local
 ```
 
 ### Commands essenciais
 
 ```bash
-# Migrations (Postgres local aurora_dev)
 python manage.py makemigrations --settings=gerenciador_vendas.settings_local
 python manage.py migrate --settings=gerenciador_vendas.settings_local
-
-# Testes
 python manage.py test tests/ --settings=gerenciador_vendas.settings_local
-
-# Testes de automacoes (E2E)
-python manage.py testar_automacoes --settings=gerenciador_vendas.settings_local
-
-# Check
 python manage.py check --settings=gerenciador_vendas.settings_local
-
-# Hub
 python scripts/gerar_hub.py
 ```
 
 ---
 
-## Design System e Templates
+## 8. Estrutura do projeto
 
-Estrutura unificada de templates em `robo/dashboard_comercial/gerenciador_vendas/templates/`. Pagina de showcase em `/design-system/preview/` (layout) e `/design-system/componentes/` (biblioteca).
+```
+hub/
+  CLAUDE.md
+  scripts/
+    gerar_hub.py          ← gera robo/exports/hub.html
+    instalar_hooks.py     ← instala pre-commit/pre-push hooks
+  robo/
+    docs/                 ← documentacao (PRODUTO, BRAND, AGENTES, OPERACIONAL, context)
+    exports/              ← hub.html, backlog.html
+    dashboard_comercial/gerenciador_vendas/
+      apps/
+        sistema/          ← Tenant, auth, configs, logging, permissoes
+        comercial/        ← leads, atendimento, cadastro, viabilidade, crm
+        marketing/        ← campanhas, automacoes, emails
+        cs/               ← clube, parceiros, indicacoes, carteirinha
+        inbox/            ← chat multicanal
+        suporte/          ← tickets, base de conhecimento
+        integracoes/      ← HubSoft, providers IA
+        notificacoes/     ← motor de comunicacao
+        dashboard/        ← relatorios legados
+        admin_aurora/     ← painel SaaS (/aurora-admin/)
+        automacao/        ← engine nova de automacao (React Flow)
+        relatorios/       ← sistema de dashboards self-service
+        workspace/        ← tarefas e docs nuvem
+      gerenciador_vendas/ ← settings, urls, wsgi
+      tests/
+  megaroleta/             ← legacy (read-only)
+```
+
+---
+
+## 9. Estado dos tenants em prod
+
+Quando o usuario perguntar "ja fizemos X com integracao Y?", considerar SOMENTE tenants com a integracao ATIVA. Tenants sem integracao cadastrada nao entram.
+
+Como verificar:
+
+```sql
+SELECT t.slug FROM integracoes_api i JOIN sistema_tenant t ON t.id=i.tenant_id
+WHERE i.tipo='<tipo>' AND i.ativa=TRUE AND t.ativo=TRUE;
+```
+
+Estado em 27/06/2026:
+
+| Tenant | Integracoes ATIVAS | Status |
+|---|---|---|
+| nuvyon | HubSoft (UNICO em prod), Matrix N8N | Cliente ativo, foco principal |
+| tr-carrion | Vero (N8N), OpenAI, Uazapi | Cliente ativo |
+| gigamax | SGP "teste local" | Em homologacao, sem prod efetiva |
+| fatepifaespi | (tenant.ativo=False) | DESATIVADO |
+| aurora-hq | OpenAI, Uazapi (Assistente CRM) | Tenant interno (workspace, demo) |
+| demo | OpenAI | Tenant de demonstracao |
+
+### Importante nao confundir ferramentas por tenant
+
+- **Nuvyon:** leads vem via Matrix (sistema dela), webhook -> Hubtrix -> HubSoft (cadastrar_prospecto API) -> bot Selenium converte em cliente. NAO usa Vero.
+- **TR Carrion:** usa Vero (bot N8N do Hubtrix). NAO usa HubSoft.
+
+Numeros agregados ("194 leads pendentes em prod") sem filtro por tenant ativo da integracao sao enganosos. Sempre apresentar dado por tenant.
+
+---
+
+## 10. Documentacao
+
+### 10.1 Estrutura de docs
+
+```
+robo/docs/
+  PRODUTO/                ← especificacoes por modulo
+    core/                 ← 00-STATUS, 01-ROADMAP, 02-TESTES, 03-PERMISSOES
+    integracoes/          ← 01-HUBSOFT, 02-INTEGRACOES, 03-APIS_N8N
+    ops/                  ← 01-DEPLOY, 02-CRON, 03-NOTIFICACOES
+    modulos/<modulo>/     ← README + arquivos por funcionalidade + execution-log.md
+  context/
+    reunioes/             ← resumo de sessoes (use TEMPLATE.md)
+    tarefas/              ← DEPRECADO. Fonte da verdade eh Workspace agora.
+    clientes/<cliente>/   ← contexto especifico por cliente
+  BRAND/                  ← identidade visual
+  AGENTES/                ← definicoes dos agentes
+  OPERACIONAL/            ← contratos, propostas, materiais
+  MANUAL_VENDEDOR/        ← guias por tenant
+```
+
+### 10.2 Execution log por modulo (OBRIGATORIO)
+
+Cada modulo mantem `execution-log.md` em `robo/docs/PRODUTO/<modulo>/`. Eh a trilha do que foi executado.
+
+- Atualizar ao concluir uma unidade de trabalho (fix, PR, investigacao, decisao de arquitetura, bloqueio). Nao pra cada micro passo.
+- Append no fim (entrada mais nova embaixo). Cabecalho: `## AAAA-MM-DD — <titulo>` + bullets `Acao / Decisao / Output / Status` (`completed` / `pending` / `blocked`).
+- Consultar ao retomar trabalho em um modulo.
+
+### 10.3 Copia na nuvem (Workspace)
+
+Os docs de `robo/docs/` tambem ficam na nuvem no modulo Workspace (tenant Aurora HQ). `robo/docs/` continua sendo a fonte versionada. Nuvem eh copia colaborativa.
+
+Subir: `python manage.py importar_docs_drive` (idempotente, suporta md/pdf/pptx/json/sql).
+
+Estado de sync: `robo/docs/_SYNC_NUVEM.md` (legivel) e `.sync_nuvem.json` (machine readable).
+
+### 10.4 Hub de docs
+
+`robo/exports/hub.html` eh o gestor visual unificado. Rodar `python scripts/gerar_hub.py` apos commit de doc.
+
+### 10.5 Pre-commit hook
+
+Hook em `.git/hooks/pre-commit` avisa quando mudanca em modulo nao tem mudanca correspondente na doc. Nao bloqueia, so avisa.
+
+Instalar: `python scripts/instalar_hooks.py`.
+
+Verificacao manual: `python scripts/verificar_docs.py` (ou `--staged`).
+
+---
+
+## 11. Design System e templates
+
+Estrutura unificada em `robo/dashboard_comercial/gerenciador_vendas/templates/`. Showcase em `/design-system/preview/` (layout) e `/design-system/componentes/` (biblioteca).
 
 ### Onde fica o que
 
-- **Tokens CSS:** `templates/layouts/base.html` — cores, tipografia, espacamentos, radii, sombras, layout sizes. Fonte unica de variaveis.
-- **Layout base pra paginas logadas:** `templates/layouts/layout_app.html` — ja traz topbar + sidebar + flyout + toast container + JS base (modal/toast/tabs/flyout de hover). **Toda pagina logada deve extender este layout.**
-- **Partials reutilizaveis:** `templates/partials/{topbar,sidebar,sidebar_subnav}.html` — mexer aqui propaga pra todas as paginas.
-- **Biblioteca de componentes:** `templates/components/*.html` — botao, input, badge, stat_card, modal, breadcrumbs, tabs. Cada arquivo e um partial reutilizavel documentado no inicio do proprio arquivo.
+- **Tokens CSS:** `templates/layouts/base.html` (cores, tipografia, espacamentos, radii, sombras, layout sizes).
+- **Layout pra paginas logadas:** `templates/layouts/layout_app.html` (topbar + sidebar + flyout + toast + JS base). Toda pagina logada deve estender este layout.
+- **Partials reutilizaveis:** `templates/partials/{topbar,sidebar,sidebar_subnav}.html`.
+- **Biblioteca de componentes:** `templates/components/*.html` (botao, input, badge, stat_card, modal, breadcrumbs, tabs).
 
-### Regra de ouro
+### Regras de ouro
 
-- Toda pagina logada **deve extender** `layouts/layout_app.html`. **Nunca duplicar** topbar/sidebar no template da pagina.
-- Mudancas visuais globais vao nos partials/tokens, nunca em CSS inline da pagina.
-- Ao criar elemento de UI que ja exista como componente, **usar o componente**. Nao reinventar botao/input/badge inline.
-- **Se o elemento nao existe ainda no DS, criar o componente primeiro** em `templates/components/` e adicionar ao showcase (`/design-system/componentes/`). So depois usar. Isso evita o DS voltar a drift de inline CSS/one-offs durante a migracao.
-- **Se o padrao visual ja existe num preview/showcase, COPIAR a estrutura HTML/CSS dele — nao reinventar.** Os previews em `/design-system/preview/` e `/design-system/componentes/` sao a fonte da verdade de como cada padrao se comporta (colapsar, flyout, dropdown, toast, etc.). Quando migrar pra server-side, mantem a mesma marcacao e so troca o conteudo dinamico. Nao adicionar variantes novas (tipo "botao flutuante absoluto") quando o preview ja tem o padrao certo. Se o preview esta errado, conserta o preview primeiro e replica.
+- Toda pagina logada estende `layouts/layout_app.html`. Nunca duplicar topbar/sidebar.
+- Mudancas visuais globais vao nos partials/tokens, nunca em CSS inline.
+- Usar componente existente. Se nao existir, criar componente primeiro em `templates/components/` e adicionar ao showcase. So depois usar.
+- Se padrao visual ja existe em preview/showcase, COPIAR a estrutura. Nao reinventar.
 
 ### Como criar pagina nova
 
 ```django
 {% extends "layouts/layout_app.html" %}
-{% block title %}Minha pagina — Hubtrix{% endblock %}
-
-{% block subnav %}{# opcional — incluir partial de subnav ou HTML custom #}{% endblock %}
-{% block main_mod %} has-subnav{% endblock %}{# so se tiver subnav #}
-
+{% block title %}Minha pagina, Hubtrix{% endblock %}
 {% block content %}
   <h1>Minha pagina</h1>
   {% include "components/button.html" with variant="primary" label="Salvar" icon="bi-check" %}
@@ -324,84 +348,124 @@ Estrutura unificada de templates em `robo/dashboard_comercial/gerenciador_vendas
 {% include "components/stat_card.html" with label="Leads" value="248" delta="+12%" delta_trend="up" icon="bi-person-plus" %}
 {% include "components/modal.html" with id="meu-modal" title="..." confirm_label="Salvar" %}
 {% include "components/tabs.html" with items=tabs_list %}
-{% include "components/breadcrumbs.html" with items=crumbs %}
 ```
 
-JS globais disponiveis em qualquer pagina que use o layout: `abrirModal(id)`, `fecharModal(id)`, `toast(titulo, msg, 'success'|'warning'|'danger'|'info')`.
-
-### Backlog de migracao
-
-Paginas legadas (CRM, Inbox, aurora-admin, etc.) ainda NAO usam o design system. A migracao e gradual — cada vez que uma pagina for tocada por outro motivo, migrar tambem pro DS.
+JS globais disponiveis: `abrirModal(id)`, `fecharModal(id)`, `toast(titulo, msg, 'success'|'warning'|'danger'|'info')`.
 
 ---
 
-## Logging e Auditoria
+## 12. Logging e auditoria
 
-Toda acao de usuario no sistema deve gerar log de auditoria. Usar:
+### 12.1 Onde olhar
+
+Pagina unificada de logs (4 tabs): **`/aurora-admin/logs/`** (so superuser).
+Filtros, paginacao e export CSV.
+
+### 12.2 Os 4 tipos de log
+
+| Modelo | Tabela | O que registra | Multi-tenant |
+|---|---|---|---|
+| `LogSistema` | `log_sistema` | Acoes de usuario/sistema (criar lead, mover op, regra disparou, save de config) | Sim |
+| `LogIntegracao` | `logs_integracao` | Chamadas HTTP a APIs externas (HubSoft, Uazapi, etc) | Sim |
+| `LogWebhookN8N` | `integracoes_log_webhook_n8n` | Payloads recebidos via webhook publico N8N | Nao (cross tenant) |
+| `LogFluxoAtendimento` | `atendimento_log_fluxo` | Cada nodo executado no fluxo do bot de atendimento | Sim |
+
+### 12.3 Como registrar (codigo novo)
 
 ```python
-# Para views simples (decorator automatico)
-from apps.sistema.utils import auditar
+from apps.sistema.utils import auditar, registrar_acao
 
+# Decorator pra views simples
 @auditar('categoria', 'acao', 'entidade')
 def minha_view(request): ...
 
-# Para logica custom
-from apps.sistema.utils import registrar_acao
-
+# Pra logica custom
 registrar_acao('categoria', 'acao', 'entidade', entidade_id, 'mensagem', request=request)
 ```
 
-**Categorias:** auth, leads, crm, inbox, suporte, cs, marketing, config, admin, integracao, sistema
+Categorias validas: ver `apps.sistema.models.LogSistema.CATEGORIA_CHOICES`
+(auth, leads, crm, inbox, suporte, cs, marketing, config, admin, integracao, sistema).
+
+### 12.4 Funcao legada (`_criar_log_sistema`)
+
+Helper antigo `apps.sistema.utils._criar_log_sistema(nivel, modulo, mensagem)`
+**ainda funcional mas obsoleto**. Hoje deriva `categoria` e `acao` automaticamente
+a partir do `modulo` (via `_MAPA_MODULO_CATEGORIA`). **Pra codigo novo, use
+`registrar_acao()` direto** — ela exige categoria/acao explicitos.
+
+### 12.5 Auditoria automatica de mudanca em IntegracaoAPI
+
+`IntegracaoAPI.save()` audita zeramento de cache. Se algum array em
+`configuracoes_extras.cache` vai de N>0 itens pra 0/vazio, registra
+`LogSistema(categoria='integracao', acao='cache_zerado', nivel='WARNING')`
+com identificacao do caller via stack inspection. Resolve o bug recorrente
+de cache reescrito por sync com chave errada.
 
 ---
 
-## Agentes
+## 13. Agentes
 
-**SEMPRE iniciar a resposta** identificando o agente na primeira linha:
+Identificar o agente na primeira linha de toda resposta:
 
 > `Agente: [Nome]`
 
-### Regra de classificacao (obrigatoria antes de responder)
+### Regra de classificacao (obrigatoria)
 
-Antes de cada resposta, fazer esta pergunta: **"o que o usuario esta pedindo?"** — e mapear para o agente conforme a tabela abaixo. NAO defaultar em Tech Lead quando o tema e de produto, conteudo, vendas ou processo.
+Antes de cada resposta, perguntar: "o que o usuario esta pedindo?" e mapear pra agente conforme a tabela. NAO defaultar em Tech Lead quando o tema eh produto, conteudo, vendas ou processo.
 
 | Tema | Agente | Exemplos |
-|------|--------|----------|
+|---|---|---|
 | Codigo, arquitetura, stack, scripts, migrations, debug | **Tech Lead** | refatorar engine.py, fix de bug, performance, Django |
-| Infraestrutura, CI/CD, deploy, monitoramento | **DevOps** | configurar pipeline, escalar servidor, logs de producao |
+| Infraestrutura, CI/CD, deploy, monitoramento | **DevOps** | configurar pipeline, escalar servidor, logs de prod |
 | Funcionalidade, fluxo de usuario, escopo de feature, priorizacao | **PM** | "como deveria funcionar X", cortes de escopo, MVP |
 | Posicionamento, mensagem de mercado, canais, GTM | **PMM** | deck, one-pager, comparacao com concorrente |
-| Experiencia do usuario, jornada, usabilidade, interface | **UX Designer** | fluxo de tela, friction points, consistencia visual |
-| Roadmap, estrategia de produto, criterios de sucesso | **CPO** | priorizar entre modulos, definir OKRs de produto |
+| UX, jornada, usabilidade, interface | **UX Designer** | fluxo de tela, friction, consistencia visual |
+| Roadmap, estrategia de produto, OKRs | **CPO** | priorizar entre modulos, definir OKRs |
 | Precificacao, margens, ROI, unit economics | **CFO** | precos, CAC, LTV, pricing de plano, runway |
-| Visao estrategica, alocacao de recursos entre areas | **CEO** | priorizar entre produto vs comercial, decisoes de empresa |
-| Estrategia de marketing, branding, canais de aquisicao | **CMO** | posicionar a marca, escolher canais, budget de marketing |
-| Vendas, objecoes, parceiros, pipeline comercial | **Head de Vendas** | script de venda, resposta a objecao, metas de MRR |
-| Customer Success, onboarding, churn, health score | **CS Manager** | prevencao de churn, upsell, onboarding de cliente novo |
-| Parcerias, revendas, modelos de comissao | **Parcerias** | negociar com HubSoft, estrutura de revenda |
-| Texto comercial: emails, WhatsApp, social, copy | **Copywriter** | escrever mensagem, template de email, script WhatsApp |
+| Visao estrategica, alocacao de recursos | **CEO** | priorizar entre produto vs comercial |
+| Estrategia de marketing, branding, aquisicao | **CMO** | posicionar a marca, escolher canais |
+| Vendas, objecoes, parceiros, pipeline comercial | **Head de Vendas** | script de venda, resposta a objecao, metas |
+| CS, onboarding, churn, health score | **CS Manager** | prevencao de churn, upsell, onboarding |
+| Parcerias, revendas, comissoes | **Parcerias** | negociar com HubSoft, estrutura de revenda |
+| Texto comercial: email, WhatsApp, social, copy | **Copywriter** | escrever mensagem, template, script WhatsApp |
 | Conteudo editorial, blog, SEO, comunidade | **Conteudo** | calendario editorial, artigo de blog, post LinkedIn |
-| Automacoes, segmentacao, regras de relacionamento, N8N | **CRM e Automacao** | trigger de automacao, segmento, jornada, fluxo N8N |
-| Growth, experimentos de conversao, aquisicao por canal | **Growth** | hipotese de teste, otimizacao de funil, CAC por canal |
-| Midia paga, campanhas, ROAS, trafego | **Performance** | gestao de Google Ads, Meta Ads, testes A/B de anuncio |
-| RevOps, integracao entre areas, comissoes, processos | **RevOps** | integrar Marketing-Vendas-CS, automatizar processo de vendas |
-| Seguranca, LGPD, auth, permissoes, vulnerabilidades | **Seguranca** | auditoria de codigo, politica de senha, compliance |
-| Legal, contratos, DPA, conformidade regulatoria | **Legal** | contrato SaaS, clausula de privacidade, LGPD |
-| Testes, qualidade, QA, Playwright, regressao | **QA** | estrategia de teste, Playwright E2E, casos de teste |
-| Organizacao de arquivos/pastas do projeto (quando NAO e codigo) | **PM** | organizar docs, hierarquia de pastas de conteudo |
-| Conversa geral, pergunta direta, favor pontual | **Assistente** | "me explica X", pergunta rapida sem categoria clara |
+| Automacoes, segmentacao, regras, N8N | **CRM e Automacao** | trigger de automacao, segmento, jornada |
+| Growth, experimentos de conversao, aquisicao por canal | **Growth** | hipotese de teste, otimizacao de funil |
+| Midia paga, campanhas, ROAS, trafego | **Performance** | gestao Google Ads, Meta Ads, A/B de anuncio |
+| RevOps, integracao entre areas, processos | **RevOps** | integrar Marketing/Vendas/CS |
+| Seguranca, LGPD, auth, permissoes | **Seguranca** | auditoria de codigo, politica de senha, compliance |
+| Legal, contratos, DPA, regulatorio | **Legal** | contrato SaaS, clausula de privacidade, LGPD |
+| Testes, QA, Playwright, regressao | **QA** | estrategia de teste, Playwright E2E |
+| Organizacao de arquivos/pastas (nao codigo) | **PM** | organizar docs, hierarquia de pastas |
+| Conversa geral, pergunta direta | **Assistente** | "me explica X", pergunta rapida |
 
 ### Casos de fronteira (NAO default em Tech Lead)
 
-- **Reorganizar docs/materiais/pastas de conteudo:** PM (organizacao de informacao), NAO Tech Lead
-- **Decidir o que vai pro cliente vs fica interno:** PMM
-- **Definir o que e "entrega" vs "operacional":** PM ou PMM conforme o foco
-- **Escrever sobre o produto para publico externo:** PMM ou Copywriter
-- **Script ou automacao que publica/envia algo:** Copywriter (texto) + Tech Lead (implementacao) — escolher o lado dominante do pedido
+- Reorganizar docs/materiais: **PM**, nao Tech Lead
+- Decidir o que vai pro cliente vs fica interno: **PMM**
+- Definir o que eh "entrega" vs "operacional": **PM ou PMM**
+- Escrever sobre o produto pra publico externo: **PMM ou Copywriter**
+- Script que publica algo: **Copywriter (texto) + Tech Lead (implementacao)**. Escolher o lado dominante.
 
 ### Multi-tema
 
-Se o pedido legitimamente cobre dois agentes (ex: "organize os templates E ajuste o script"), escolher o agente do **lado dominante** da pergunta. Se for 50/50, declarar que e misto na resposta.
+Se o pedido cobre dois agentes (ex: "organize os templates E ajuste o script"), escolher o lado dominante. Se for 50/50, declarar misto na resposta.
 
 Definicoes completas em `robo/docs/AGENTES/`.
+
+---
+
+## 14. Checklist de feature completa
+
+| Item | Necessario |
+|---|---|
+| Codigo funcional com teste manual/automatizado passando | Sim |
+| Doc PRODUTO atualizada (modulo correspondente) | Sim, se a mudanca afeta comportamento. Fix puro de bug nao precisa. |
+| `execution-log.md` do modulo atualizado | Sim |
+| Sem `print`, `console.log`, comentario de debug | Sim |
+| Imports/variaveis nao utilizados removidos | Sim |
+| Deploy validado em prod (se aplicavel) | Sim |
+| Nenhum bug critico aberto no escopo da feature | Sim |
+| `python manage.py check` sem erros | Sim |
+| Migration aplicada em dev e prod (se houver) | Sim |
+| Tarefa Workspace marcada como concluida | Sim |

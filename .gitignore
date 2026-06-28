@@ -89,3 +89,14 @@ prod/
 .claude/settings.local.json
 dump_*.sql
 web_driver_conversao_lead/dom_capturado/
+
+# ── Arquivos temporarios da raiz (scripts ad-hoc, prints, refs) ──
+# Tudo que comeca com underscore na raiz fica fora do versionamento.
+# Use scratchpad de sessao em vez do raiz pra novos arquivos temporarios.
+/_*.py
+/_*.json
+/_*.txt
+/_qa_*/
+/_hs_*/
+/_historicos/
+/_backup_*/
