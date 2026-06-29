@@ -108,10 +108,4 @@ class TestMarketingViews:
         resp = logged_sys_client.get(reverse('marketing_campanhas:campanhas_trafego'))
         assert resp.status_code == 200
 
-    def test_automacoes_lista(self, logged_sys_client, sys_setup):
-        resp = logged_sys_client.get(reverse('marketing_automacoes:lista'))
-        assert resp.status_code == 200
-
-    def test_automacoes_criar(self, logged_sys_client, sys_setup):
-        resp = logged_sys_client.get(reverse('marketing_automacoes:criar'))
-        assert resp.status_code == 200
+    # test_automacoes_lista/criar removidos — editor antigo de automacoes aposentado (engine nova: apps.automacao)

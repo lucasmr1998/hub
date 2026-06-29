@@ -74,7 +74,7 @@ class IaAgenteNode(BaseNode):
         # no agente; registry em services/memoria.py). Compartilhada de graça: todos os
         # agentes leem a mesma conversa. Sem conversa/memória → janela vazia (stateless).
         from ..services.memoria import carregar_memoria
-        historico = carregar_memoria(agente.memoria or 'conversa', contexto, k=_MAX_TURNOS)
+        historico = carregar_memoria(getattr(agente, 'memoria', '') or 'conversa', contexto, k=_MAX_TURNOS)
 
         messages = []
         prompt = str(contexto.resolver(agente.system_prompt or '') or '').strip()
