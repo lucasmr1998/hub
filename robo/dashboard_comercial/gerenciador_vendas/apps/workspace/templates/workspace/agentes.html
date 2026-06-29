@@ -1,0 +1,161 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}{{ pagetitle }} — Hubtrix{% endblock %}
+
+{% block extra_head %}{% include "workspace/_workspace_styles.html" %}{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">Workspace</p>
+        <h1 class="page-title">Agentes</h1>
+        <p class="page-subtitle">Converse com os agentes da empresa. Eles consultam os dados reais do seu workspace pra fundamentar as respostas.</p>
+      </div>
+    </div>
+  </div>
+
+  {% if agentes %}
+  <div style="display: grid; grid-template-columns: 320px 1fr; gap: var(--sp-5); align-items: start; margin-top: var(--sp-5);">
+
+    <!-- Roster -->
+    <section style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-4); max-height: 70vh; overflow-y: auto;">
+      <h2 style="margin: 0 0 var(--sp-3); font-size: 0.95rem; font-weight: 600;">Time ({{ agentes|length }})</h2>
+      <div id="roster" style="display: flex; flex-direction: column; gap: var(--sp-2);">
+        {% for a in agentes %}
+          <button type="button" class="ws-agente" data-id="{{ a.pk }}" data-nome="{{ a.nome }}"
+                  style="text-align: left; padding: var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); cursor: pointer; color: inherit;">
+            <span style="font-weight: 600; display: block;">{{ a.nome }}</span>
+            <span style="font-size: 0.75rem; color: var(--color-text-muted);">{{ a.tools|length }} ferramenta{{ a.tools|length|pluralize }} de dados</span>
+          </button>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Chat -->
+    <section style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); display: flex; flex-direction: column; height: 70vh;">
+      <div id="chat-header" style="padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--color-border); font-weight: 600;">
+        Selecione um agente
+      </div>
+      <div id="chat-msgs" style="flex: 1; overflow-y: auto; padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3);">
+        <p id="chat-vazio" style="color: var(--color-text-muted); text-align: center; margin: auto;">
+          Escolha um agente no time pra começar.
+        </p>
+      </div>
+      <form id="chat-form" style="display: flex; gap: var(--sp-2); padding: var(--sp-3); border-top: 1px solid var(--color-border);">
+        <input id="chat-input" type="text" autocomplete="off" placeholder="Pergunte algo (ex: como está o pipeline?)" disabled
+               style="flex: 1; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); color: var(--color-text);">
+        <button id="chat-send" type="submit" class="btn btn-primary" disabled>Enviar</button>
+      </form>
+    </section>
+
+  </div>
+  {% else %}
+    <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-6); text-align: center; margin-top: var(--sp-5);">
+      <p style="color: var(--color-text-muted); margin: 0;">
+        Nenhum agente cadastrado neste tenant. Rode <code>python manage.py seed_agentes_workspace</code> pra criar o time.
+      </p>
+    </div>
+  {% endif %}
+
+  <script>
+  (function () {
+    var CSRF = '{{ csrf_token }}';
+    var URL_CHAT = '{% url "workspace:agentes_chat" %}';
+    var atual = null;          // {id, nome}
+    var historico = [];        // [{role, content}]
+
+    var msgs = document.getElementById('chat-msgs');
+    var header = document.getElementById('chat-header');
+    var input = document.getElementById('chat-input');
+    var send = document.getElementById('chat-send');
+    var form = document.getElementById('chat-form');
+    if (!form) return;
+
+    function limparVazio() {
+      var v = document.getElementById('chat-vazio');
+      if (v) v.remove();
+    }
+
+    function addMsg(role, texto, tools) {
+      limparVazio();
+      var box = document.createElement('div');
+      box.style.maxWidth = '80%';
+      box.style.padding = '8px 12px';
+      box.style.borderRadius = '10px';
+      box.style.whiteSpace = 'pre-wrap';
+      box.style.lineHeight = '1.45';
+      if (role === 'user') {
+        box.style.alignSelf = 'flex-end';
+        box.style.background = 'var(--color-accent)';
+        box.style.color = '#fff';
+      } else {
+        box.style.alignSelf = 'flex-start';
+        box.style.background = 'var(--color-surface)';
+        box.style.border = '1px solid var(--color-border)';
+      }
+      box.textContent = texto;
+      if (tools && tools.length) {
+        var chip = document.createElement('div');
+        chip.style.marginTop = '6px';
+        chip.style.fontSize = '0.7rem';
+        chip.style.opacity = '0.7';
+        chip.textContent = 'consultou: ' + tools.join(', ');
+        box.appendChild(chip);
+      }
+      msgs.appendChild(box);
+      msgs.scrollTop = msgs.scrollHeight;
+      return box;
+    }
+
+    document.querySelectorAll('.ws-agente').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.ws-agente').forEach(function (b) { b.style.borderColor = 'var(--color-border)'; });
+        btn.style.borderColor = 'var(--color-accent)';
+        atual = { id: btn.dataset.id, nome: btn.dataset.nome };
+        historico = [];
+        msgs.innerHTML = '';
+        header.textContent = atual.nome;
+        input.disabled = false;
+        send.disabled = false;
+        input.focus();
+      });
+    });
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!atual) return;
+      var texto = (input.value || '').trim();
+      if (!texto) return;
+      input.value = '';
+      addMsg('user', texto);
+      historico.push({ role: 'user', content: texto });
+      input.disabled = true;
+      send.disabled = true;
+      var pensando = addMsg('assistant', '...');
+      fetch(URL_CHAT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ agente_id: atual.id, mensagem: texto, historico: historico.slice(0, -1) }),
+      }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          pensando.remove();
+          if (!res.ok) {
+            addMsg('assistant', 'erro: ' + (res.d.erro || 'falha'));
+          } else {
+            addMsg('assistant', res.d.resposta || '(sem resposta)', res.d.tools);
+            historico.push({ role: 'assistant', content: res.d.resposta || '' });
+          }
+        }).catch(function () {
+          pensando.remove();
+          addMsg('assistant', 'erro de rede.');
+        }).finally(function () {
+          input.disabled = false;
+          send.disabled = false;
+          input.focus();
+        });
+    });
+  })();
+  </script>
+{% endblock %}

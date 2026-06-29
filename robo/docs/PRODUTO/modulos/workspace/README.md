@@ -174,13 +174,28 @@ Models já têm campos que serão usados na fase 3 quando ressuscitarmos a camad
 - `Documento.visivel_agentes` — bool
 - `Documento.agente_origem` (FK `comando.Agente`) — agente autor
 
-## O que NÃO está incluído (fica fase 2/3)
+## Agentes IA e Propostas (entregue 29/06/2026, branch feat/agentes-workspace)
 
-- Dashboard CEO completo cruzando dados de outros apps (Leads, Vendas, Churn) — fase 2
-- Camada de agentes IA — fase 3 (já vem em schema dormente em `apps/comando/`)
-- Reuniões multi-agente — fase 3
-- Automações + Alertas + Propostas — fase 3
-- FAQ gerada por IA — fase 3
+A camada de agentes foi expressa **sobre a engine `apps/automacao`** (decisão: workspace é a casa,
+automacao é o motor reusado; fonte única do agente = `automacao.Agente`):
+
+- **Agentes** (`/workspace/agentes/`): roster vindo de `docs/AGENTES/*.md` via `seed_agentes_workspace`;
+  chat 1:1 que roda o agente com tools de dados read-only tenant-scoped (`status_pipeline`, `resumo_leads`,
+  `vendas_periodo`, `churn_clientes`, `tickets_abertos`, em `automacao/services/ia_tools.py`).
+- **Propostas** (`/workspace/propostas/`): o agente recomenda ações via a tool `solicitar_aprovacao`, que
+  cria uma `Proposta` (TenantMixin); humano aprova/rejeita (gate `workspace.editar_todos`).
+- As FKs `Tarefa.criado_por_agente` e `Documento.agente_origem` foram re-apontadas pro `automacao.Agente`
+  (o `apps/comando/` ficou órfão e vazio, a aposentar depois).
+
+> Ambiente: o RAG (`suporte`) exige pgvector; o dev usa um container Docker `pgvector/pgvector:pg17`
+> (porta 5433, comandos com `DB_PORT=5433`). Ver `context/reunioes/agentes_workspace_fase1_29-06-2026.md`.
+
+## O que ainda NÃO está incluído
+
+- **Cron autônomo** (agente acorda sozinho e trabalha o backlog) — precisa de decisão de design
+  (atribuição tarefa→agente) + guards anti-loop. Frontier.
+- **Execução diferida da Proposta** (auto-executar `dados_execucao` ao aprovar) — v1 é advisory.
+- Dashboard CEO completo cruzando outros apps; reuniões multi-agente; FAQ por IA.
 
 ## Histórico de migrações
 

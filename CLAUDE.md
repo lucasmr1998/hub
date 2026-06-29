@@ -52,6 +52,17 @@ Toda implementacao deve estar vinculada a uma tarefa no Workspace (tenant Aurora
 
 Nao comecar feature nova enquanto houver bug critico aberto no produto em prod. Fechar bugs primeiro, feature depois.
 
+### 1.9 Checkpoint de doc + tarefa (OBRIGATORIO a cada unidade de trabalho)
+
+Ao **concluir cada unidade de trabalho** (feature, fix, investigacao, decisao) e **antes de comecar a proxima**. Nao acumular "pra depois": doc e tarefa atrasam quando o ritmo aperta, e ai escorrega.
+
+1. **Tarefa Workspace (1.7):** criar **no inicio** da implementacao, nao no fim. Se nao existir, **parar e pedir pro usuario criar/confirmar antes de codar**. Marcar concluida ao terminar (`workspace_tarefa`).
+2. **Execution-log do modulo (10.2):** append da entrada no `execution-log.md` do(s) modulo(s) afetado(s). Se o modulo nao tem o arquivo, criar.
+3. **Doc PRODUTO / README:** atualizar se mudou comportamento (1.5 / secao 14), depois `python scripts/gerar_hub.py`.
+4. **Checklist pro usuario:** ao fechar um bloco grande, listar em 1-2 linhas o que foi documentado + a tarefa atualizada, pra ele auditar na hora.
+
+**Cadencia:** a cada commit relevante + no fim de sessao (antes de compactar, ver 1.6). **Sinal de alerta:** se um bloco gerou codigo mas nenhuma atualizacao de doc/tarefa, algo ficou pendente. Voltar e fechar antes de seguir.
+
 ---
 
 ## 2. Seguranca e producao
@@ -170,18 +181,23 @@ N8N: ativo em TR Carrion (Vero) e Nuvyon (Matrix).
 
 | Ambiente | Settings | Banco |
 |---|---|---|
-| **Dev (padrao)** | `settings_local` ou `settings_local_pg` | Postgres `aurora_dev` (localhost:5432, user postgres, pass admin123). Ambos os settings apontam pro mesmo banco. |
-| **Producao** | `settings` | Postgres remoto via `.env`. NUNCA usar no desenvolvimento. |
+| **Dev (padrao)** | `settings_local` | Postgres `aurora_dev` no container Docker **`pgvector/pgvector:pg17`** (localhost:**5433**, user postgres, pass admin123), espelha prod (PG17 + pgvector). `settings_local` le `DB_PORT` do env (default **5433**); exige `docker start hubtrix-pg17`. |
+| Dev (PG nativo, legado) | `settings_local` + `DB_PORT=5432` | PG 18 nativo na 5432, **sem pgvector**: RAG/embeddings e as migrations da `suporte` (0007+) nao funcionam. Beco sem saida; preferir o Docker. |
+| **Producao** | `settings` | Postgres remoto (PG 17.10 + pgvector 0.8.2) via `.env`. NUNCA usar no desenvolvimento. |
 
 ---
 
 ## 7. Como rodar
 
 ```bash
+docker start hubtrix-pg17   # banco de dev (PG17 + pgvector, porta 5433, default do settings_local)
+
 cd robo/dashboard_comercial/gerenciador_vendas
 
 python manage.py runserver 8001 --settings=gerenciador_vendas.settings_local
 ```
+
+> O `settings_local` aponta por padrao pro container Docker (5433). Sem ele de pe, `migrate`/runserver quebram. Pra forcar o PG nativo legado (5432, sem pgvector): prefixar com `DB_PORT=5432`.
 
 ### Commands essenciais
 
