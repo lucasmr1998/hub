@@ -1,3 +1,5 @@
+import re
+
 from django.db import models
 from django.core.validators import RegexValidator, EmailValidator, MinValueValidator, MaxValueValidator
 from django.utils import timezone
@@ -212,7 +214,7 @@ class LeadProspecto(TenantMixin):
     )
 
     cep = models.CharField(
-        max_length=12,
+        max_length=20,
         null=True,
         blank=True,
         verbose_name="CEP"
@@ -567,6 +569,23 @@ class LeadProspecto(TenantMixin):
 
     def __str__(self):
         return f"{self.nome_razaosocial} - {self.email}"
+
+    @staticmethod
+    def _normalizar_cep(valor):
+        """Mantem so digitos e aplica mascara 12345-678. Resolve bug
+        recorrente 'value too long for type character varying(12)' quando
+        Matrix/operador manda CEP com lixo (ex: '12345-678 - Centro')."""
+        if not valor:
+            return valor
+        digitos = re.sub(r'\D', '', str(valor))[:8]
+        if len(digitos) == 8:
+            return f'{digitos[:5]}-{digitos[5:]}'
+        return digitos
+
+    def save(self, *args, **kwargs):
+        if self.cep:
+            self.cep = self._normalizar_cep(self.cep)
+        super().save(*args, **kwargs)
 
     @staticmethod
     def status_api_inicial(tenant):
