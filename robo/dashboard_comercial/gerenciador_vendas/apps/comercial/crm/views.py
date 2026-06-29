@@ -787,11 +787,23 @@ def oportunidade_detalhe(request, pk):
     from django.contrib.auth.models import User
     vendedores = User.objects.filter(is_active=True, perfil__tenant=request.tenant).order_by('first_name')
 
-    # Timeline de automações para este lead
-    from apps.marketing.automacoes.models import LogExecucao as LogAutomacao
-    logs_automacao = LogAutomacao.all_tenants.filter(
-        tenant=request.tenant, lead=lead,
-    ).select_related('regra', 'acao', 'nodo').order_by('-data_execucao')[:20]
+    # Timeline de automações (engine nova) para este lead. Adaptador SimpleNamespace
+    # expõe os campos que o template espera (regra.nome, status, resultado…) sem mudar o HTML.
+    from apps.automacao.models import ExecucaoFluxo
+    from types import SimpleNamespace
+    logs_automacao = [
+        SimpleNamespace(
+            data_execucao=ex.criado_em,
+            status=ex.status,
+            get_status_display=ex.get_status_display(),
+            regra=SimpleNamespace(nome=ex.fluxo.nome if ex.fluxo_id else '(fluxo removido)'),
+            acao=None, nodo=None,
+            resultado=(ex.erro or ''),
+        )
+        for ex in (ExecucaoFluxo.all_tenants
+                   .filter(tenant=request.tenant, lead=lead)
+                   .select_related('fluxo').order_by('-criado_em')[:20])
+    ]
 
     # Conversas e mensagens do Inbox
     from apps.inbox.models import Conversa, Mensagem

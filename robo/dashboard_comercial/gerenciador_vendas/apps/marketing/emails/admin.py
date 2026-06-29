@@ -59,7 +59,7 @@ class EnvioEmailAdmin(admin.ModelAdmin):
     list_filter = ('status', 'enviado_em', 'tenant')
     search_fields = ('email_destino', 'assunto_renderizado')
     readonly_fields = ('tracking_id', 'enviado_em', 'aberto_em', 'clicado_em')
-    raw_id_fields = ('lead', 'template', 'automacao')
+    raw_id_fields = ('lead', 'template')  # 'automacao' virou int (motor antigo aposentado)
 
     def status_badge(self, obj):
         cores = {'enviado': '#3b82f6', 'aberto': '#16a34a', 'clicado': '#8b5cf6', 'erro': '#ef4444', 'bounce': '#f59e0b'}

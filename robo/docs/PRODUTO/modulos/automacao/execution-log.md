@@ -12,7 +12,8 @@
   - **Trocados** os imports de `inbox/signals.py` (3×) + `crm/signals.py` (1×) → `apps.automacao.hub`.
   - **Cron deferido:** os eventos `lead_sem_contato`/`tarefa_vencida`/`disparo_segmento` (gated por regra antiga, 0 fluxo novo consome) morrem com o app na Fase 3; relocar quando um fluxo novo precisar. A engine nova já tem cron próprio (`automacao_retomar`).
   - **Verificado (dev):** signals antigos NÃO carregam, novos carregam, hub ok, `check` limpo → eventos vão **1×** pra engine nova.
-- **Próximo:** commit → deploy → verificar em prod → Fase 2 (FK emails + timeline CRM) → Fase 3 (backup + drop tabelas, irreversível).
+- **Fase 2 (desacoplar dados):** FK `EnvioEmail.automacao` → `IntegerField` (migration `emails 0003`; tira o constraint que bloqueava o drop; FK estava morta — `disparar_para_lead` nunca é chamado). Timeline de automação do CRM (`oportunidade_detalhe`) repontada de `LogExecucao` → `ExecucaoFluxo` via adaptador `SimpleNamespace` (template intacto). Fix do `EnvioEmailAdmin.raw_id_fields`. **Gate verde:** nenhuma ref funcional a `marketing.automacoes` fora do app + ferramentas descartáveis (só comentários + settings/urls, que saem na Fase 3).
+- **Próximo:** deploy + verificar em prod → Fase 3 (backup + drop das 8 tabelas + remover app, **IRREVERSÍVEL**).
 
 ---
 

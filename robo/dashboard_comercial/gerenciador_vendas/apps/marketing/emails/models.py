@@ -285,10 +285,9 @@ class EnvioEmail(TenantMixin):
         'leads.LeadProspecto', on_delete=models.SET_NULL,
         null=True, related_name='emails_recebidos'
     )
-    automacao = models.ForeignKey(
-        'automacoes.RegraAutomacao', on_delete=models.SET_NULL,
-        null=True, blank=True, related_name='emails_enviados'
-    )
+    # Era FK pra automacoes.RegraAutomacao (motor antigo aposentado). Virou int — guarda o
+    # id histórico da regra que disparou, sem acoplar/bloquear o drop das tabelas antigas.
+    automacao = models.IntegerField(null=True, blank=True, db_column='automacao_id')
 
     # Dados do envio
     email_destino = models.EmailField()
