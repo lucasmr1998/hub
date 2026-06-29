@@ -136,7 +136,7 @@ def editar_page(request, pk=None):
         'agente_cats': [str(x) for x in (agente.base_categorias or [])] if agente else [],
         'integracoes': integracoes,
         'categorias': categorias,
-        'tools_disponiveis': [{'chave': c, 'descricao': d} for c, d in tools_disponiveis()],
+        'tools_disponiveis': sorted(tools_disponiveis(), key=lambda t: (t['categoria'], t['chave'])),
         'equipes': Agente.EQUIPE_CHOICES,
         'pagetitle': agente.nome if agente else 'Novo agente',
     })

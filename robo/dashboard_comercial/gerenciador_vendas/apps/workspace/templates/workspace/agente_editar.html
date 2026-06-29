@@ -111,17 +111,26 @@
 
       <section class="ag-sec">
         <h2>Ferramentas (tools)</h2>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2);">
-          {% for t in tools_disponiveis %}
-            <label class="ag-check">
-              <input type="checkbox" name="tools" value="{{ t.chave }}" {% if t.chave in agente_tools %}checked{% endif %}>
-              <span style="min-width: 0;">
-                <span style="font-weight: 600; display: block; font-size: 0.85rem;">{{ t.chave }}</span>
-                <span style="font-size: 0.74rem; color: var(--color-text-muted);">{{ t.descricao }}</span>
-              </span>
-            </label>
-          {% endfor %}
-        </div>
+        {% regroup tools_disponiveis by categoria as grupos_tools %}
+        {% for grupo in grupos_tools %}
+          <div style="margin-bottom: var(--sp-3);">
+            <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); font-weight: 600; margin-bottom: var(--sp-2);">{{ grupo.grouper }}</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2);">
+              {% for t in grupo.list %}
+                <label class="ag-check">
+                  <input type="checkbox" name="tools" value="{{ t.chave }}" {% if t.chave in agente_tools %}checked{% endif %}>
+                  <span style="min-width: 0;">
+                    <span style="font-weight: 600; display: block; font-size: 0.85rem;">
+                      {{ t.chave }}
+                      <span style="font-size: 0.62rem; font-weight: 500; padding: 1px 5px; border-radius: 4px; {% if t.tipo == 'conhecimento' %}background: #e0f2fe; color: #0369a1;{% else %}background: #fef3c7; color: #b45309;{% endif %}">{% if t.tipo == 'conhecimento' %}consulta{% else %}ação{% endif %}</span>
+                    </span>
+                    <span style="font-size: 0.74rem; color: var(--color-text-muted);">{{ t.descricao }}</span>
+                  </span>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
       </section>
 
       {% if categorias %}

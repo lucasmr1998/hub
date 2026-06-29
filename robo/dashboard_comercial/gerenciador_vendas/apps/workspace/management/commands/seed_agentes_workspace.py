@@ -19,7 +19,12 @@ from django.core.management.base import BaseCommand, CommandError
 # Tools de dados (read-only) que todo agente executivo recebe.
 # Chaves do registry em apps/automacao/services/ia_tools.py.
 TOOLS_AGENTE = [
+    # consulta (read-only)
     'status_pipeline', 'resumo_leads', 'vendas_periodo', 'churn_clientes', 'tickets_abertos',
+    'listar_documentos',
+    # acao no workspace (o agente faz)
+    'criar_projeto', 'criar_tarefa', 'criar_etapa', 'salvar_documento',
+    # recomendar com aval humano
     'solicitar_aprovacao',
 ]
 

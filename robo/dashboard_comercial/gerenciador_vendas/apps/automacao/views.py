@@ -280,7 +280,7 @@ def agente_resumo_api(request, pk):
           .select_related('integracao_ia').first())
     if ag is None:
         return JsonResponse({'erro': 'agente não encontrado'}, status=404)
-    descr = dict(tools_disponiveis())
+    descr = {t['chave']: t['descricao'] for t in tools_disponiveis()}
     extras = getattr(ag.integracao_ia, 'configuracoes_extras', None) or {}
     cats = []
     if ag.base_categorias:

@@ -11,7 +11,7 @@ from apps.automacao.services import ia_tools, rag
 
 
 def test_rag_tool_registrada():
-    assert any(c == 'consultar_base_conhecimento' for c, _ in ia_tools.tools_disponiveis())
+    assert any(t['chave'] == 'consultar_base_conhecimento' for t in ia_tools.tools_disponiveis())
 
 
 def test_buscar_conhecimento_formata_resultados():

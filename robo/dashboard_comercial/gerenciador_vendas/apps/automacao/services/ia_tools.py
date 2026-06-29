@@ -21,18 +21,52 @@ def _cap(texto):
 
 _TOOLS = {}
 
+# Classificacao das tools (tipo + categoria), pro catalogo TOOLS.md e o editor.
+#   tipo: 'conhecimento' (le/consulta, read-only) | 'executavel' (faz/escreve, efeito colateral)
+# Tool nova pode declarar via @_tool(..., tipo=, categoria=); senao cai aqui (indice central).
+_CLASSIFICACAO = {
+    'registrar_feedback':          ('executavel', 'atendimento'),
+    'criar_oportunidade':          ('executavel', 'crm'),
+    'consultar_base_conhecimento': ('conhecimento', 'conhecimento'),
+    'marcar_cliente':              ('executavel', 'atendimento'),
+    'marcar_intencao':             ('executavel', 'atendimento'),
+    'marcar_intencao_energia':     ('executavel', 'atendimento'),
+    'abrir_ticket':                ('executavel', 'suporte'),
+    'status_pipeline':             ('conhecimento', 'dados'),
+    'resumo_leads':                ('conhecimento', 'dados'),
+    'vendas_periodo':              ('conhecimento', 'dados'),
+    'churn_clientes':              ('conhecimento', 'dados'),
+    'tickets_abertos':             ('conhecimento', 'dados'),
+    'solicitar_aprovacao':         ('executavel', 'governanca'),
+    'criar_projeto':               ('executavel', 'workspace'),
+    'criar_tarefa':                ('executavel', 'workspace'),
+    'criar_etapa':                 ('executavel', 'workspace'),
+    'salvar_documento':            ('executavel', 'workspace'),
+    'listar_documentos':           ('conhecimento', 'workspace'),
+}
 
-def _tool(chave, descricao, parametros, obrigatorios):
+
+def _tool(chave, descricao, parametros, obrigatorios, tipo=None, categoria=None):
     def deco(fn):
+        t, c = _CLASSIFICACAO.get(chave, ('executavel', 'geral'))
         _TOOLS[chave] = {'chave': chave, 'descricao': descricao,
-                         'parametros': parametros, 'obrigatorios': obrigatorios, 'fn': fn}
+                         'parametros': parametros, 'obrigatorios': obrigatorios,
+                         'tipo': tipo or t, 'categoria': categoria or c, 'fn': fn}
         return fn
     return deco
 
 
 def tools_disponiveis():
-    """[(chave, descricao)] — alimenta a seção Ferramentas do editor do agente."""
-    return [(t['chave'], t['descricao']) for t in _TOOLS.values()]
+    """[{chave, descricao, tipo, categoria}] — subset curado pro editor."""
+    return [{'chave': t['chave'], 'descricao': t['descricao'],
+             'tipo': t['tipo'], 'categoria': t['categoria']} for t in _TOOLS.values()]
+
+
+def catalogo_tools():
+    """Metadata completa de cada tool (pro catalogo TOOLS.md). Inclui params."""
+    return [{'chave': t['chave'], 'descricao': t['descricao'], 'tipo': t['tipo'],
+             'categoria': t['categoria'], 'parametros': t['parametros'],
+             'obrigatorios': t['obrigatorios']} for t in _TOOLS.values()]
 
 
 def _prioridades():
@@ -365,3 +399,151 @@ def _solicitar_aprovacao(contexto, args, agente=None):
         status='pendente',
     )
     return f'proposta #{p.pk} registrada (prioridade {prio}), aguardando aprovacao humana.'
+
+
+# ----------------------------------------------------------------------------
+# Tools de acao no Workspace (o agente FAZ, nao so consulta). Tenant-safe.
+# ----------------------------------------------------------------------------
+
+def _projeto_padrao(tenant):
+    """Projeto onde caem as tarefas dos agentes quando nenhum e indicado."""
+    from apps.workspace.models import Projeto
+    p = Projeto.all_tenants.filter(tenant=tenant, nome='Caixa dos agentes').first()
+    if p is None:
+        p = Projeto(tenant=tenant, nome='Caixa dos agentes',
+                    objetivo='Tarefas criadas pelos agentes sem projeto definido.',
+                    status='em_andamento')
+        p.save()
+    return p
+
+
+def _slug_unico(tenant, titulo, Model):
+    """Slug unico por tenant a partir do titulo (Documento exige slug unico)."""
+    from django.utils.text import slugify
+    base = (slugify(titulo) or 'doc')[:200]
+    slug, i = base, 2
+    while Model.all_tenants.filter(tenant=tenant, slug=slug).exists():
+        slug = f'{base}-{i}'[:220]
+        i += 1
+    return slug
+
+
+@_tool(
+    'criar_projeto',
+    'Crie um projeto no Workspace (uma frente de trabalho com objetivo). Use pra organizar '
+    'um conjunto de tarefas sob uma iniciativa.',
+    {'nome': {'type': 'string', 'description': 'Nome do projeto'},
+     'objetivo': {'type': 'string', 'description': 'Objetivo do projeto (opcional)'}},
+    ['nome'],
+)
+def _criar_projeto(contexto, args, agente=None):
+    from apps.workspace.models import Projeto
+    nome = str(args.get('nome') or '').strip()[:200]
+    if not nome:
+        return 'nome do projeto vazio.'
+    p = Projeto(tenant=contexto.tenant, nome=nome,
+                objetivo=str(args.get('objetivo') or '').strip(),
+                status='em_andamento')
+    p.save()
+    return f'projeto #{p.pk} criado: "{nome}".'
+
+
+@_tool(
+    'criar_tarefa',
+    'Crie uma tarefa no Workspace. Use pra registrar um trabalho a fazer. Sem projeto_id, '
+    'a tarefa cai na "Caixa dos agentes".',
+    {'titulo': {'type': 'string', 'description': 'Titulo da tarefa'},
+     'descricao': {'type': 'string', 'description': 'O que fazer (opcional)'},
+     'prioridade': {'type': 'string', 'description': 'baixa | media | alta | critica (padrao media)'},
+     'projeto_id': {'type': 'integer', 'description': 'ID do projeto (opcional)'}},
+    ['titulo'],
+)
+def _criar_tarefa(contexto, args, agente=None):
+    from apps.workspace.models import Projeto, Tarefa, PRIORIDADE_CHOICES
+    titulo = str(args.get('titulo') or '').strip()[:200]
+    if not titulo:
+        return 'titulo da tarefa vazio.'
+    projeto = None
+    pid = _int_arg(args.get('projeto_id'), 0)
+    if pid:
+        projeto = Projeto.all_tenants.filter(tenant=contexto.tenant, pk=pid).first()
+    if projeto is None:
+        projeto = _projeto_padrao(contexto.tenant)
+    validas = {v for v, _ in PRIORIDADE_CHOICES}
+    prio = (args.get('prioridade') or 'media').strip().lower()
+    if prio not in validas:
+        prio = 'media'
+    t = Tarefa(tenant=contexto.tenant, projeto=projeto, titulo=titulo,
+               descricao=str(args.get('descricao') or '').strip(),
+               prioridade=prio, status='pendente',
+               criado_por_agente=agente if getattr(agente, 'pk', None) else None)
+    t.save()
+    return f'tarefa #{t.pk} criada em "{projeto.nome}" (prioridade {prio}).'
+
+
+@_tool(
+    'criar_etapa',
+    'Crie uma etapa (fase) dentro de um projeto do Workspace.',
+    {'projeto_id': {'type': 'integer', 'description': 'ID do projeto'},
+     'nome': {'type': 'string', 'description': 'Nome da etapa'}},
+    ['projeto_id', 'nome'],
+)
+def _criar_etapa(contexto, args, agente=None):
+    from apps.workspace.models import Projeto, Etapa
+    pid = _int_arg(args.get('projeto_id'), 0)
+    projeto = Projeto.all_tenants.filter(tenant=contexto.tenant, pk=pid).first() if pid else None
+    if projeto is None:
+        return 'projeto nao encontrado (passe um projeto_id valido).'
+    nome = str(args.get('nome') or '').strip()[:200]
+    if not nome:
+        return 'nome da etapa vazio.'
+    e = Etapa(tenant=contexto.tenant, projeto=projeto, nome=nome)
+    e.save()
+    return f'etapa #{e.pk} criada em "{projeto.nome}": {nome}.'
+
+
+@_tool(
+    'salvar_documento',
+    'Salve um documento (markdown) no Workspace. Use pra registrar uma analise, ata, plano '
+    'ou qualquer texto que deva ficar guardado e consultavel depois.',
+    {'titulo': {'type': 'string', 'description': 'Titulo do documento'},
+     'conteudo': {'type': 'string', 'description': 'Conteudo em markdown'},
+     'categoria': {'type': 'string', 'description': 'estrategia | relatorio | decisoes | processo | outro (opcional)'}},
+    ['titulo', 'conteudo'],
+)
+def _salvar_documento(contexto, args, agente=None):
+    from apps.workspace.models import Documento, DOCUMENTO_CATEGORIA_CHOICES
+    titulo = str(args.get('titulo') or '').strip()[:200]
+    conteudo = str(args.get('conteudo') or '').strip()
+    if not titulo or not conteudo:
+        return 'titulo e conteudo sao obrigatorios.'
+    cats = {v for v, _ in DOCUMENTO_CATEGORIA_CHOICES}
+    categoria = (args.get('categoria') or 'outro').strip().lower()
+    if categoria not in cats:
+        categoria = 'outro'
+    d = Documento(tenant=contexto.tenant, titulo=titulo,
+                  slug=_slug_unico(contexto.tenant, titulo, Documento),
+                  formato='markdown', conteudo=conteudo, categoria=categoria,
+                  agente_origem=agente if getattr(agente, 'pk', None) else None)
+    d.save()
+    return f'documento #{d.pk} salvo: "{titulo}" (categoria {categoria}).'
+
+
+@_tool(
+    'listar_documentos',
+    'Liste documentos do Workspace (id + titulo + categoria), opcionalmente filtrando por um '
+    'termo no titulo. Use pra achar um documento antes de consultar.',
+    {'busca': {'type': 'string', 'description': 'Termo pra filtrar no titulo (opcional)'}},
+    [],
+)
+def _listar_documentos(contexto, args, agente=None):
+    from apps.workspace.models import Documento
+    qs = Documento.all_tenants.filter(tenant=contexto.tenant)
+    termo = (args.get('busca') or '').strip()
+    if termo:
+        qs = qs.filter(titulo__icontains=termo)
+    docs = list(qs.order_by('-atualizado_em')[:20])
+    if not docs:
+        return 'nenhum documento encontrado.'
+    linhas = [f'#{d.pk} [{d.categoria}] {d.titulo}' for d in docs]
+    return 'documentos:\n' + '\n'.join(linhas)
