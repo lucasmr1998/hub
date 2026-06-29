@@ -154,57 +154,19 @@ def execucao_detalhe_api(request, pk):
 
 @login_required
 def agentes_page(request):
-    """Lista de Agentes IA do tenant (gerência). Criar/editar/testar fica na página
-    dedicada `agente_editar_page`."""
-    tenant = getattr(request, 'tenant', None)
-    if tenant is None:
-        return render(request, 'automacao/agentes.html', {'sem_tenant': True})
-    from .models import Agente
-    from apps.integracoes.models import IntegracaoAPI
-    agentes = list(
-        Agente.all_tenants.filter(tenant=tenant).select_related('integracao_ia').order_by('nome')
-    )
-    tem_integracao = IntegracaoAPI.all_tenants.filter(
-        tenant=tenant, tipo__in=['openai', 'anthropic', 'groq', 'google_ai'], ativa=True
-    ).exists()
-    return render(request, 'automacao/agentes.html', {
-        'agentes': agentes,
-        'tem_integracao': tem_integracao,
-    })
+    """Consolidado: a gerencia de agentes mora no Workspace (casa unica).
+    Mantido como redirect pra nao quebrar links/bookmarks antigos."""
+    from django.shortcuts import redirect
+    return redirect('workspace:agentes_lista')
 
 
 @login_required
 def agente_editar_page(request, pk=None):
-    """Página dedicada de criar/editar agente (form + chat de teste ao lado)."""
-    tenant = getattr(request, 'tenant', None)
-    if tenant is None:
-        return render(request, 'automacao/agente_editar.html', {'sem_tenant': True})
-    from django.http import Http404
-    from .models import Agente
-    from apps.integracoes.models import IntegracaoAPI
-    from apps.suporte.models import CategoriaConhecimento
-    from .services.ia_tools import tools_disponiveis
-
-    agente = None
+    """Consolidado: o editor de agentes mora no Workspace. Redirect (mantem o pk)."""
+    from django.shortcuts import redirect
     if pk:
-        agente = Agente.all_tenants.filter(tenant=tenant, pk=pk).select_related('integracao_ia').first()
-        if agente is None:
-            raise Http404('agente não encontrado')
-    integracoes = list(
-        IntegracaoAPI.all_tenants
-        .filter(tenant=tenant, tipo__in=['openai', 'anthropic', 'groq', 'google_ai'], ativa=True)
-        .order_by('nome')
-    )
-    categorias = list(CategoriaConhecimento.all_tenants.filter(tenant=tenant).order_by('nome'))
-    return render(request, 'automacao/agente_editar.html', {
-        'agente': agente,
-        'agente_tools': (agente.tools or []) if agente else [],
-        'agente_cats': [str(x) for x in (agente.base_categorias or [])] if agente else [],
-        'integracoes': integracoes,
-        'categorias': categorias,
-        'tools_disponiveis': [{'chave': c, 'descricao': d} for c, d in tools_disponiveis()],
-        'tem_integracao': bool(integracoes),
-    })
+        return redirect('workspace:agente_editar', pk=pk)
+    return redirect('workspace:agente_novo')
 
 
 @require_POST
