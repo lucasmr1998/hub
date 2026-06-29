@@ -133,15 +133,81 @@ class HubsoftService:
     # ------------------------------------------------------------------
 
     def cadastrar_prospecto(self, lead) -> dict:
-        """Envia LeadProspecto para o HubSoft. Retorna dict da API."""
+        """Envia LeadProspecto para o HubSoft. Retorna dict da API.
+
+        Fallback automatico pra duplicidade: se o HubSoft rejeita com
+        'CPF/CNPJ ja foi cadastrado', tenta recuperar o id_prospecto
+        existente via busca por telefone + filtro de CPF. Achando, seta
+        em lead.id_hubsoft (pra proxima chamada virar PUT em vez de POST)
+        e retorna sucesso simulado.
+        """
         payload = self._mapear_lead_para_hubsoft(lead)
         resposta = self._post(self.ENDPOINT_PROSPECTO, json=payload, lead=lead)
 
         if resposta.get('status') != 'success':
+            msg = (resposta.get('msg') or '').lower()
+            if 'já foi cadastrado' in msg or 'ja foi cadastrado' in msg:
+                # Tenta recuperar o id existente
+                id_existente = self._recuperar_id_prospect_duplicado(lead)
+                if id_existente:
+                    lead.id_hubsoft = str(id_existente)
+                    lead._skip_rules_evaluation = True
+                    lead.save(update_fields=['id_hubsoft', 'data_atualizacao'])
+                    logger.info(
+                        f"[HubsoftService] Lead {lead.id} duplicado no HubSoft "
+                        f"resolvido automaticamente: id_prospecto={id_existente}"
+                    )
+                    return {
+                        'status': 'success',
+                        'msg': f'Prospect duplicado recuperado: id={id_existente}',
+                        'prospecto': {'id_prospecto': id_existente},
+                        'fallback_duplicado': True,
+                    }
             raise HubsoftServiceError(
                 f"HubSoft rejeitou prospecto: {resposta}"
             )
         return resposta
+
+    def _recuperar_id_prospect_duplicado(self, lead) -> int | None:
+        """Tenta achar o id_prospecto existente no HubSoft quando POST
+        falha com 'CPF ja cadastrado'. Estrategia em cascata:
+
+        1. Busca por telefone (mais especifico) e filtra por CPF
+        2. Busca por nome (primeiro nome) e filtra por CPF
+        3. Desiste — retorna None (operador resolve manualmente)
+        """
+        cpf_lead = self._somente_numeros(lead.cpf_cnpj) if lead.cpf_cnpj else None
+        if not cpf_lead:
+            return None
+
+        tentativas = []
+        if lead.telefone:
+            tel_lead = self._normalizar_telefone(lead.telefone)
+            if tel_lead:
+                tentativas.append(('telefone', tel_lead))
+        if lead.nome_razaosocial:
+            primeiro_nome = lead.nome_razaosocial.split()[0]
+            if len(primeiro_nome) >= 3:
+                tentativas.append(('nome_razaosocial', primeiro_nome))
+
+        for busca_tipo, termo in tentativas:
+            try:
+                resp = self._get(self.ENDPOINT_PROSPECTO, params={'busca': busca_tipo, 'termo_busca': termo}, lead=lead)
+                prospectos = resp.get('prospectos') or []
+                for p in prospectos:
+                    cpf_p = self._somente_numeros(p.get('cpf_cnpj') or '')
+                    if cpf_p == cpf_lead:
+                        id_p = p.get('id_prospecto')
+                        if id_p:
+                            logger.info(
+                                f"[HubsoftService] Achei prospect duplicado lead {lead.id}: "
+                                f"id_prospecto={id_p} via busca={busca_tipo}"
+                            )
+                            return int(id_p)
+            except Exception as e:
+                logger.warning(f"[HubsoftService] Falha buscando prospect por {busca_tipo}: {e}")
+                continue
+        return None
 
     def editar_prospecto(self, lead, id_prospecto: str | int, *, payload: dict | None = None) -> dict:
         """Atualiza prospecto existente no HubSoft (PUT /prospecto/{id}).
