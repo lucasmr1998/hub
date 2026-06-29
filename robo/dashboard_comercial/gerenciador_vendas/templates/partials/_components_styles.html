@@ -637,6 +637,34 @@ Tokens base (cores, tipografia, spacing) ficam em layouts/base.html.
   .list-filters.is-collapsible .list-filters-body .list-filters-fields { margin-top: var(--sp-3); }
   .list-filters.is-collapsible .list-filters-body .list-filters-actions { border-top: 1px solid var(--color-border); }
 
+  /* Multiselect — dropdown com checkboxes (Sprint 5 filtros canal/fonte/campanha) */
+  .multiselect-wrap { position: relative; }
+  .multiselect-toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; text-align: left; width: 100%;
+    padding: var(--sp-2) var(--sp-3); gap: var(--sp-2);
+  }
+  .multiselect-toggle:hover { background: var(--color-bg-elevated); }
+  .multiselect-toggle .bi-chevron-down { font-size: 12px; transition: transform .15s; }
+  .multiselect-wrap.is-open .multiselect-toggle .bi-chevron-down { transform: rotate(180deg); }
+  .multiselect-label { color: var(--color-text); }
+  .multiselect-menu {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius-md); box-shadow: 0 4px 12px rgba(0,0,0,.08);
+    z-index: 100; max-height: 240px; overflow-y: auto;
+    padding: var(--sp-2);
+  }
+  .multiselect-wrap.is-open .multiselect-menu { display: block; }
+  .multiselect-item {
+    display: flex; align-items: center; gap: var(--sp-2);
+    padding: var(--sp-2); border-radius: var(--radius-sm); cursor: pointer;
+    font-size: 13px;
+  }
+  .multiselect-item:hover { background: var(--color-bg-elevated); }
+  .multiselect-item input[type=checkbox] { margin: 0; cursor: pointer; }
+  .multiselect-item span { flex: 1; }
+
   @media (max-width: 640px) {
     .list-filters-compact { flex-direction: column; align-items: stretch; }
     .list-filters-search { max-width: 100%; margin-left: 0; }

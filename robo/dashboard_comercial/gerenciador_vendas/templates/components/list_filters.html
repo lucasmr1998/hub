@@ -77,6 +77,17 @@ Exemplo MODO B (colapsado — preserva espaco em kanban/lista grande):
 
 {% if fields %}
   {# MODO B — grid #}
+  <script>
+    // Fecha dropdowns multiselect ao clicar fora
+    if (!window._multiselectInitialized) {
+      window._multiselectInitialized = true;
+      document.addEventListener('click', function(e){
+        document.querySelectorAll('.multiselect-wrap.is-open').forEach(function(el){
+          if (!el.contains(e.target)) el.classList.remove('is-open');
+        });
+      });
+    }
+  </script>
   <div class="list-filters list-filters-grid{% if collapsed %} is-collapsible is-collapsed{% endif %}">
     {% if collapsed %}
       <button type="button" class="list-filters-toggle" onclick="this.closest('.list-filters').classList.toggle('is-collapsed')">
@@ -101,11 +112,22 @@ Exemplo MODO B (colapsado — preserva espaco em kanban/lista grande):
                   {% endfor %}
                 </select>
               {% elif f.type == 'multiselect' %}
-                <select name="{{ f.name }}" class="field-input" multiple size="4" title="Segure Ctrl/Cmd pra selecionar varios">
-                  {% for opt_val, opt_label in f.options %}
-                    <option value="{{ opt_val }}"{% if opt_val in f.values %} selected{% endif %}>{{ opt_label }}</option>
-                  {% endfor %}
-                </select>
+                <div class="multiselect-wrap" data-multiselect>
+                  <button type="button" class="field-input multiselect-toggle" onclick="this.parentElement.classList.toggle('is-open')">
+                    <span class="multiselect-label">
+                      {% if f.values %}{{ f.values|length }} selecionado{{ f.values|length|pluralize:"s" }}{% else %}Todos{% endif %}
+                    </span>
+                    <i class="bi bi-chevron-down"></i>
+                  </button>
+                  <div class="multiselect-menu">
+                    {% for opt_val, opt_label in f.options %}
+                      <label class="multiselect-item">
+                        <input type="checkbox" name="{{ f.name }}" value="{{ opt_val }}"{% if opt_val in f.values %} checked{% endif %}>
+                        <span>{{ opt_label }}</span>
+                      </label>
+                    {% endfor %}
+                  </div>
+                </div>
               {% else %}
                 <input type="{{ f.type|default:'text' }}"
                        name="{{ f.name }}"
