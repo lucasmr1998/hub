@@ -160,7 +160,7 @@ Use o scratchpad de sessao (`%TEMP%/claude/<projeto>/<sessao>/scratchpad/`) pra 
 
 Python 3.11, Django 5.2, DRF, PostgreSQL, Docker (EasyPanel Swarm) com Nginx interno, React Flow (engine nova `apps/automacao`).
 
-Engine antiga ainda viva em `apps/comercial/atendimento` e `apps/marketing/automacoes` usa Drawflow.js. Migracao gradual para a nova.
+Engine antiga ainda viva em `apps/comercial/atendimento` (Drawflow.js). Migracao gradual para a nova. O motor de `apps/marketing/automacoes` foi **aposentado** (29/06/2026): codigo deletado, 8 tabelas dropadas em prod (backup em `_backups/`), app virou husk inerte (so pra coerencia do grafo de migrations). Eventos de dominio agora saem de `apps/automacao/signals_dominio.py` via `apps/automacao/hub.py`.
 
 N8N: ativo em TR Carrion (Vero) e Nuvyon (Matrix).
 
