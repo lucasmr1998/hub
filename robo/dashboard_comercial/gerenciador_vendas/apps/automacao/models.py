@@ -117,6 +117,9 @@ class Agente(TenantMixin):
     tools = models.JSONField(default=list, blank=True)
     # D4: ids das CategoriaConhecimento que o agente enxerga no RAG (vazio = base inteira do tenant).
     base_categorias = models.JSONField(default=list, blank=True)
+    # Tipo de memória (registry em services/memoria.py). 'conversa' = mensagens da
+    # conversa atual; '' / desconhecido = sem memória (stateless). Extensível.
+    memoria = models.CharField(max_length=30, default='conversa', blank=True)
     ativo = models.BooleanField(default=True, db_index=True)
     criado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,

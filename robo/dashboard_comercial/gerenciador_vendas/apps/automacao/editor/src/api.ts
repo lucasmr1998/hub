@@ -100,6 +100,22 @@ export async function testarFluxo(fluxo: unknown): Promise<unknown> {
   return r.json()
 }
 
+// Chat de teste (estilo n8n): roda o fluxo com `var.conteudo` = a mensagem digitada.
+// `turnos` = a conversa até aqui ([{role, content}]) — vira a memória (sem inbox no teste).
+// Reusa o endpoint de testar-fluxo passando o contexto. Não persiste; tools rodam de verdade (dev).
+export async function chatTestar(fluxo: unknown, mensagem: string, turnos?: any[]): Promise<any> {
+  const r = await fetch('/automacao/api/testar-fluxo/', {
+    method: 'POST',
+    headers: headersJSON(),
+    credentials: 'include',
+    body: JSON.stringify({
+      fluxo,
+      contexto: { variaveis: { conteudo: mensagem, _memoria_turnos: turnos ?? [] } },
+    }),
+  })
+  return r.json()
+}
+
 export interface FluxoResumo {
   id: number
   nome: string

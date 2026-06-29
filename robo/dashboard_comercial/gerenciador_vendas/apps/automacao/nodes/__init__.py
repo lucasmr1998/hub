@@ -22,6 +22,7 @@ from . import switch  # noqa: F401,E402  (P3 — roteador de N saídas; saídas 
 from . import delay  # noqa: F401,E402  (P2 — espera)
 from . import webhook_trigger  # noqa: F401,E402  (T1 — gatilho webhook)
 from . import evento_trigger  # noqa: F401,E402  (EV — gatilho evento)
+from . import chat  # noqa: F401,E402  (CH — gatilho de teste estilo n8n)
 from . import whatsapp  # noqa: F401,E402  (W — nós Uazapi/WhatsApp)
 from . import criar_tarefa  # noqa: F401,E402  (C1 — convergência marketing: ação CRM)
 from . import notificacao_sistema  # noqa: F401,E402  (C2 — convergência: notificar equipe)

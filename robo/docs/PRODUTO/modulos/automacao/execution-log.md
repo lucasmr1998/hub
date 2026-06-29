@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-06-28 — Chat de teste (n8n) + arquitetura conversacional (memória = a conversa)
+
+- **Nó `chat`** (`nodes/chat.py`): gatilho de teste estilo n8n. **Painel "💬 Chat"** no editor (`ChatPanel.tsx`): cada msg roda o fluxo (`var.conteudo`) reusando `testar-fluxo`, extrai a resposta do último agente, mostra trace. **Adicionar o nó chat abre o painel.** **Caminho executado fica verde** (`destacarCaminho` lê o trace). 2 testes.
+- **INPUT/OUTPUT por nó (estilo n8n):** o modal do nó pré-preenche **INPUT = output do nó anterior** (upstream via aresta) e **OUTPUT = output do próprio nó**, ambos da última execução; "Executar nó" roda com a última msg do chat.
+- **Memória de agente = registry extensível** (`services/memoria.py`, mesmo padrão de nodes/tools). Campo **`Agente.memoria`** (migration `0008`). 1º tipo **`conversa`**: as mensagens da conversa atual — **inbox em prod** (`Mensagem`: contato→user, bot/agente→assistant), **turnos do chat no teste** (`var._memoria_turnos`). **Compartilhada de graça** (todos os agentes leem a mesma conversa) e o **classificador não polui** (não responde → não vira mensagem → fora da memória). Sem tabela nova, sem write-back. Outros tipos (resumo, store) entram no registry depois.
+- **Decisão de arquitetura (com o usuário):** "classificar todo `oi` é robótico". Multi-agente mantido (token + prompts focados), mas com **`conversa` como 4ª saída** do classificador → **Conversador** que sonda. Memória compartilhada + persistência = mensagens da conversa do inbox (modelo n8n, backend = nosso inbox).
+- **5 agentes (aurora-hq dev):** Classificador (+`conversa`), Conversador, Capturador, Respondedor (RAG), Financeiro — todos `memoria='conversa'`. Fluxo "Triagem de Suporte" religado com **4 ramos** (bug/duvida/financeiro/conversa).
+- **Validado (LLM real, multi-turno):** "oi" → `conversa` → Conversador cumprimenta natural; "tô com bug" → `bug` → Capturador pergunta detalhes **lembrando** do oi (não re-cumprimenta, não repete). Memória ponta a ponta. `check` limpo; testes por-arquivo verdes.
+- **Status:** arquitetura conversacional **completed** e commitada. RAG só valida em prod (embeddings quebrados no dev). Próximo: **drag-to-reference** no editor (arrastar campo do INPUT → insere `{{nodes.X.campo}}`).
+
+---
+
 ## 📌 Resumo geral (estado consolidado — 19-20/06/2026)
 
 > **O que é:** engine de automação unificada estilo n8n, greenfield em `apps/automacao/`, **isolada e dev-only** (migrations só no `aurora_dev`, **nada deployado**, os 3 motores antigos intactos). Objetivo: convergir e aposentar os motores atuais (marketing → atendimento → comercial). A trilha detalhada de cada etapa está nas entradas datadas abaixo.

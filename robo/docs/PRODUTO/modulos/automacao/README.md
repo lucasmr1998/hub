@@ -152,6 +152,7 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 | `delay` | Fluxo › Controle | Aguardar | ✅ (pausa; retoma via cron) |
 | `webhook` | Gatilho › Entrada | Webhook | ✅ **trigger** (entrada do fluxo, sem porta de entrada) |
 | `evento` | Gatilho › Sistema | Evento do sistema | ✅ **trigger** (evento + filtros; wiring deferido via `on_evento`, kill-switch `AUTOMACAO_WIRING_ATIVO`) |
+| `chat` | Gatilho › Teste | Chat (teste) | ✅ **trigger de teste** (estilo n8n): abre o painel "💬 Chat" no editor; cada mensagem roda o fluxo como `{{var.conteudo}}`. Caminho executado fica verde; INPUT/OUTPUT por nó. |
 | `whatsapp_texto` | Integrações › WhatsApp · Uazapi | WhatsApp: enviar mensagem | ✅ (reusa `UazapiService`) |
 | `whatsapp_midia` | Integrações › WhatsApp · Uazapi | WhatsApp: enviar mídia | ✅ (image/doc/audio/video) |
 | `whatsapp_presenca` | Integrações › WhatsApp · Uazapi | WhatsApp: digitando/presença | ✅ |
@@ -171,7 +172,7 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 | `hubsoft_*` (catálogo/cliente/globais/writes) | Integrações › HubSoft | +20 nós HubSoft | ✅ serviços, vencimentos, modelos contrato, viabilidade (endereço/coords), atendimentos/OS (cliente e todos), extrato conexão, renegociações (listar/simular/efetivar), clientes/atendimentos todos, horários agenda, criar/aceitar contrato, abrir/agendar OS. Base `HubsoftNode`; params do método espelhados. 🔴🔴 que afetam serviço ficaram de fora. |
 | `condicao_comercial` | Fluxo › Lógica | Condição comercial (CRM) | ✅ expõe as 12 condições do `automacao_condicoes` (select + operador + valor); true/false; sobre a oportunidade |
 | `acao_comercial` | Comercial › Pipeline | Ação comercial (CRM) | ✅ expõe as 7 ações do `_EXECUTORES_ACAO` (select + params keyvalue); sobre a oportunidade |
-| `ia_agente` | IA › Agente | Agente IA | ✅ **D2+D3+D4** referencia um `Agente` gerenciado (dropdown `fonte:agentes`); turno LLM com prompt + memória (`var._hist_agente_<id>`) + **tools** do agente (loop via `chamar_llm_com_tools`) + **RAG** (tool `consultar_base_conhecimento`, base de conhecimento do Suporte com filtro por categoria); resposta em `output.resposta`. Loop conversacional = topologia do fluxo (com `whatsapp_pergunta`). |
+| `ia_agente` | IA › Agente | Agente IA | ✅ **D2+D3+D4** referencia um `Agente` gerenciado (dropdown `fonte:agentes`); turno LLM com prompt + **memória configurável** (campo `Agente.memoria`; registry em `services/memoria.py`; 1º tipo `conversa` = mensagens da conversa atual — inbox em prod, turnos do chat no teste — **compartilhada** entre os agentes do fluxo, sem write-back) + **tools** do agente (loop via `chamar_llm_com_tools`) + **RAG** (tool `consultar_base_conhecimento`, base de conhecimento do Suporte com filtro por categoria); resposta em `output.resposta`. |
 
 **Modelos de execução (a "âncora"):** o mesmo runtime faz três comportamentos, decididos por como a execução pausa/ancora (`NodeResult.espera` + `ExecucaoFluxo`):
 - **timer** (delay) → retoma por tempo (cron).

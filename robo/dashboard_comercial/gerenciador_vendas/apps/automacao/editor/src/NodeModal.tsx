@@ -56,7 +56,8 @@ function formToConfig(form: Form, campos: Campo[]): Form {
 }
 
 export function NodeModal({
-  node, campos, label, icone, eventos, onConfig, onClose, onExecutar, webhookUrl,
+  node, campos, label, icone, eventos, onConfig, onClose, onExecutar,
+  inputInicial, outputInicial, upstreamId, webhookUrl,
 }: {
   node: Node
   campos: Campo[]
@@ -66,6 +67,9 @@ export function NodeModal({
   onConfig: (cfg: Form) => void
   onClose: () => void
   onExecutar: () => Promise<any>
+  inputInicial?: any
+  outputInicial?: any
+  upstreamId?: string
   webhookUrl?: string
 }) {
   const [form, setForm] = useState<Form>(() => initForm((node.data as any).config ?? {}, campos))
@@ -87,7 +91,12 @@ export function NodeModal({
     }
   }
 
-  const meuOutput = saida?.nodes?.[node.id]
+  // INPUT = output do nó anterior; OUTPUT = output deste nó. Após "Executar nó",
+  // vêm da run fresca (`saida`); antes, dos valores da última execução (pré-preenchido).
+  const inputAtual = saida
+    ? (upstreamId ? saida.nodes?.[upstreamId] : saida.variaveis) ?? saida.variaveis
+    : inputInicial
+  const outputAtual = saida ? (saida.nodes?.[node.id] ?? {}) : outputInicial
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -105,8 +114,10 @@ export function NodeModal({
 
         <div className="modal-corpo">
           <section className="modal-io">
-            <div className="io-titulo">INPUT</div>
-            <pre className="io-json">{saida ? JSON.stringify(saida.variaveis ?? {}, null, 2) : '—'}</pre>
+            <div className="io-titulo">INPUT{upstreamId ? <span className="io-de"> · de {upstreamId}</span> : null}</div>
+            <pre className="io-json">{
+              inputAtual ? JSON.stringify(inputAtual, null, 2) : '— (rode o Chat primeiro)'
+            }</pre>
           </section>
 
           <section className="modal-params">
@@ -145,14 +156,11 @@ export function NodeModal({
 
           <section className="modal-io">
             <div className="io-titulo">OUTPUT</div>
-            {!saida && <div className="muted">Clique em "Executar nó".</div>}
-            {saida && (
-              <>
-                <div className={`status status-${saida.status}`}>{saida.status}</div>
-                {saida.erro && <div className="erro">{saida.erro}</div>}
-                <pre className="io-json">{JSON.stringify(meuOutput ?? {}, null, 2)}</pre>
-              </>
-            )}
+            {saida && <div className={`status status-${saida.status}`}>{saida.status}</div>}
+            {saida?.erro && <div className="erro">{saida.erro}</div>}
+            {outputAtual
+              ? <pre className="io-json">{JSON.stringify(outputAtual, null, 2)}</pre>
+              : <div className="muted">Clique em "Executar nó" (ou rode o Chat).</div>}
           </section>
         </div>
       </div>

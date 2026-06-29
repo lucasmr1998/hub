@@ -70,16 +70,21 @@ class IaAgenteNode(BaseNode):
         if not mensagem:
             return _erro('mensagem do contato vazia')
 
-        # Histórico por agente — persiste no estado da execução (janela da conversa).
-        hist_key = f'_hist_agente_{agente.pk}'
-        historico = list(contexto.variaveis.get(hist_key) or [])
+        # Memória = as últimas trocas da conversa em que o agente roda (tipo configurável
+        # no agente; registry em services/memoria.py). Compartilhada de graça: todos os
+        # agentes leem a mesma conversa. Sem conversa/memória → janela vazia (stateless).
+        from ..services.memoria import carregar_memoria
+        historico = carregar_memoria(agente.memoria or 'conversa', contexto, k=_MAX_TURNOS)
 
         messages = []
         prompt = str(contexto.resolver(agente.system_prompt or '') or '').strip()
         if prompt:
             messages.append({'role': 'system', 'content': prompt})
-        messages.extend(historico[-(_MAX_TURNOS * 2):])
-        messages.append({'role': 'user', 'content': mensagem})
+        messages.extend(historico)
+        # mensagem atual como último turno do user (sem duplicar se já veio no histórico)
+        if not (historico and historico[-1].get('role') == 'user'
+                and historico[-1].get('content') == mensagem):
+            messages.append({'role': 'user', 'content': mensagem})
 
         # Com tools habilitadas no agente → loop de tool-calling; senão chamada simples.
         chaves_tools = list(getattr(agente, 'tools', None) or [])
@@ -100,12 +105,9 @@ class IaAgenteNode(BaseNode):
         if resposta is None:
             return _erro('falha ao chamar o LLM (cheque credencial/modelo)')
 
-        historico.append({'role': 'user', 'content': mensagem})
-        historico.append({'role': 'assistant', 'content': resposta})
-        historico = historico[-(_MAX_TURNOS * 2):]
-
+        # Sem write-back de histórico: a memória É a conversa. Em prod, a resposta vira
+        # mensagem da conversa (canal); no chat de teste, o painel acumula os turnos.
         return NodeResult(
             output={'resposta': resposta, 'agente': agente.nome},
             branch='sucesso',
-            promote={hist_key: historico},
         )

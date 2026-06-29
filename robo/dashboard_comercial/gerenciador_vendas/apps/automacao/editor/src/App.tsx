@@ -7,9 +7,10 @@ import {
 import '@xyflow/react/dist/style.css'
 import { BlocoNode } from './BlocoNode'
 import { NodeModal } from './NodeModal'
+import { ChatPanel } from './ChatPanel'
 import ExecucoesPanel from './ExecucoesPanel'
 import {
-  buscarCatalogo, buscarEventos, testarFluxo, listarFluxos, getFluxo, criarFluxo, atualizarFluxo,
+  buscarCatalogo, buscarEventos, testarFluxo, chatTestar, listarFluxos, getFluxo, criarFluxo, atualizarFluxo,
   type NoCatalogo, type FluxoResumo, type EventoCatalogo,
 } from './api'
 import { paraRuntime, deRuntime, ICONES, GRUPOS, CORES_GRUPO, SAIDAS, SAIDAS_DIN, CAMPO_SAIDAS, TRIGGERS, slug } from './flow'
@@ -31,7 +32,10 @@ export function App() {
   const [catalogo, setCatalogo] = useState<NoCatalogo[]>([])
   const [eventos, setEventos] = useState<EventoCatalogo[]>([])
   const [selId, setSelId] = useState<string | null>(null)
+  const [chatAberto, setChatAberto] = useState(false)
   const [resultado, setResultado] = useState<any>(null)
+  const [ultimaExec, setUltimaExec] = useState<any>(null)   // dados da última execução (chat/Testar) p/ o INPUT do nó
+  const [ultimaMensagem, setUltimaMensagem] = useState('')  // último texto do chat (re-roda o nó com ele)
   const [paletaAberta, setPaletaAberta] = useState(false)
   const [lista, setLista] = useState<FluxoResumo[]>([])
   const [fluxoId, setFluxoId] = useState<number | null>(null)
@@ -120,6 +124,7 @@ export function App() {
     )
     setSelId(id)
     setPaletaAberta(false)
+    if (tipo === 'chat') setChatAberto(true)  // estilo n8n: o gatilho de chat abre o painel
   }
 
   const atualizarConfig = (cfg: unknown) => {
@@ -148,10 +153,39 @@ export function App() {
     setSelId(novo)
   }
 
+  // Estilo n8n: pinta de verde (+ animado) as arestas do caminho que executou.
+  // O trace traz (handle, branch) por passo → a aresta percorrida é source==handle & sourceHandle==branch.
+  const destacarCaminho = (passos: any[]) => {
+    const ps = passos || []
+    setEdges((eds) => {
+      const exec = new Set<string>()
+      for (const p of ps) {
+        for (const e of eds) {
+          const okBranch = e.sourceHandle === p.branch || p.branch == null || (!e.sourceHandle && !p.branch)
+          if (e.source === p.handle && okBranch) exec.add(e.id)
+        }
+      }
+      return eds.map((e) => ({
+        ...e,
+        animated: exec.has(e.id),
+        style: exec.has(e.id) ? { stroke: '#1d7a43', strokeWidth: 2.5 } : {},
+      }))
+    })
+  }
+
+  // Guarda a última execução (chat ou Testar): pinta o caminho + alimenta o INPUT do nó.
+  const registrarRun = (res: any, msg?: string) => {
+    setUltimaExec(res)
+    destacarCaminho(res?.passos ?? [])
+    if (msg !== undefined) setUltimaMensagem(msg)
+  }
+
   const rodar = async () => {
     setResultado({ status: 'rodando...' })
     try {
-      setResultado(await testarFluxo(paraRuntime(nodes, edges)))
+      const res: any = await testarFluxo(paraRuntime(nodes, edges))
+      setResultado(res)
+      registrarRun(res)
     } catch (e: any) {
       setResultado({ status: 'erro', erro: String(e) })
     }
@@ -201,6 +235,7 @@ export function App() {
           {msg && <span className="topbar-msg">{msg}</span>}
           <button onClick={salvar}>💾 Salvar</button>
           <button className="primary" onClick={rodar}>▶ Testar</button>
+          <button className={chatAberto ? 'ativo' : ''} onClick={() => setChatAberto((v) => !v)}>💬 Chat</button>
           <button onClick={exportar}>Exportar JSON</button>
         </div>
       </header>
@@ -288,10 +323,22 @@ export function App() {
 
       {aba === 'execucoes' && <ExecucoesPanel fluxoId={fluxoId} />}
 
+      {chatAberto && (
+        <ChatPanel
+          getFluxo={() => paraRuntime(nodes, edges)}
+          onRun={registrarRun}
+          onClose={() => setChatAberto(false)}
+        />
+      )}
+
       {editId && (() => {
         const n = nodes.find((x) => x.id === editId)
         if (!n) return null
         const cat = catalogo.find((c) => c.tipo === (n.data as any).tipo)
+        // INPUT do nó = output do nó anterior (quem aponta pra ele); se não houver, as variáveis.
+        const upstreamId = edges.find((e) => e.target === editId)?.source
+        const inputDoNo = upstreamId ? ultimaExec?.nodes?.[upstreamId] : ultimaExec?.variaveis
+        const outputDoNo = ultimaExec?.nodes?.[editId]
         return (
           <NodeModal
             node={n}
@@ -301,7 +348,14 @@ export function App() {
             eventos={eventos}
             onConfig={atualizarConfig}
             onClose={() => setEditId(null)}
-            onExecutar={async () => await testarFluxo(paraRuntime(nodes, edges))}
+            inputInicial={inputDoNo}
+            outputInicial={outputDoNo}
+            upstreamId={upstreamId}
+            onExecutar={async () => {
+              const r = await chatTestar(paraRuntime(nodes, edges), ultimaMensagem)
+              registrarRun(r)
+              return r
+            }}
             webhookUrl={webhookUrl}
           />
         )
