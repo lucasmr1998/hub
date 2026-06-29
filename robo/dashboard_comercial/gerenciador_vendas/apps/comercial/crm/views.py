@@ -377,9 +377,16 @@ def api_mover_oportunidade(request):
     # Pre-preenche os campos enviados no body ANTES da validacao de campos
     # obrigatorios (assim o usuario consegue mover preenchendo no mesmo POST,
     # sem precisar de chamada extra pra salvar antes).
-    motivo_perda_categoria_body = (data.get('motivo_perda_categoria') or '').strip()
-    if motivo_perda_categoria_body and estagio_novo.is_final_perdido:
-        oportunidade.motivo_perda_categoria = motivo_perda_categoria_body
+    if estagio_novo.is_final_perdido:
+        motivo_ref_body = data.get('motivo_perda_ref_id') or None
+        if motivo_ref_body:
+            oportunidade.motivo_perda_ref_id = motivo_ref_body
+        motivo_categoria_body = (data.get('motivo_perda_categoria') or '').strip()
+        if motivo_categoria_body:
+            oportunidade.motivo_perda_categoria = motivo_categoria_body
+        motivo_texto_body = (data.get('motivo_perda') or '').strip()
+        if motivo_texto_body:
+            oportunidade.motivo_perda = motivo_texto_body
 
     # Gate de campos obrigatorios — bloqueia avanco se faltarem campos
     from apps.comercial.crm.services.requisitos_estagio import campos_faltando

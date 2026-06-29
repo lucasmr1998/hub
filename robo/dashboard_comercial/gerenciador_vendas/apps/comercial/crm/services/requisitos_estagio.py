@@ -42,7 +42,8 @@ CAMPOS_DISPONIVEIS = [
     ('oportunidade.data_fechamento_previsto', 'Data fechamento prevista', 'Oportunidade'),
     ('oportunidade.responsavel',    'Responsavel atribuido',      'Oportunidade'),
     # Oportunidade - Perda (campos pra exigir ao mover pra "Perdido")
-    ('oportunidade.motivo_perda_categoria', 'Motivo da perda (categoria)', 'Perda'),
+    ('oportunidade.motivo_perda_ref',       'Motivo da perda (lista)',       'Perda'),
+    ('oportunidade.motivo_perda_categoria', 'Motivo da perda (categoria)',   'Perda'),
     ('oportunidade.motivo_perda',           'Motivo da perda (texto livre)', 'Perda'),
 ]
 

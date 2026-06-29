@@ -946,22 +946,7 @@
       {# T3 — Campos extras visiveis SOMENTE quando estagio destino e is_final_perdido #}
       <div id="bloco-motivo-perda" style="display:none; margin-top: var(--sp-3);">
         <div class="field">
-          <label class="field-label" for="sel-motivo-perda-categoria">Categoria do motivo <span style="color: var(--color-danger);">*</span></label>
-          <div class="field-input-wrap">
-            <select id="sel-motivo-perda-categoria" class="field-input">
-              <option value="">-- selecione --</option>
-              <option value="preco">Preço</option>
-              <option value="concorrente">Concorrente</option>
-              <option value="timing">Timing / não era o momento</option>
-              <option value="sem_orcamento">Sem orçamento / poder de decisão</option>
-              <option value="viabilidade_tecnica">Sem viabilidade técnica</option>
-              <option value="sem_resposta">Sumiu / sem resposta</option>
-              <option value="outro">Outro</option>
-            </select>
-          </div>
-        </div>
-        <div class="field" style="margin-top: var(--sp-3);">
-          <label class="field-label" for="sel-motivo-perda-ref">Motivo especifico (opcional)</label>
+          <label class="field-label" for="sel-motivo-perda-ref">Motivo da perda <span style="color: var(--color-danger);">*</span></label>
           <div class="field-input-wrap">
             <select id="sel-motivo-perda-ref" class="field-input" onchange="onMudancaMotivoPerda()">
               <option value="">-- selecione --</option>
@@ -1870,15 +1855,13 @@ async function confirmarMoverEstagio() {
   const ehPerdido = optEst && optEst.dataset.isFinalPerdido === '1';
 
   let motivo_perda_ref_id = null;
-  let motivo_perda_categoria = null;
   let concorrente_perdido = null;
   if (ehPerdido) {
-    motivo_perda_categoria = document.getElementById('sel-motivo-perda-categoria').value || null;
     motivo_perda_ref_id = document.getElementById('sel-motivo-perda-ref').value || null;
     concorrente_perdido = document.getElementById('input-concorrente').value.trim() || null;
 
-    if (!motivo_perda_categoria) {
-      toast('Atencao', 'Selecione a categoria do motivo de perda.', 'warning');
+    if (!motivo_perda_ref_id) {
+      toast('Atencao', 'Selecione o motivo da perda.', 'warning');
       return;
     }
     if (MOTIVO_PERDA_PEDE_CONCORRENTE && motivo_perda_ref_id) {
@@ -1892,7 +1875,6 @@ async function confirmarMoverEstagio() {
   }
 
   const body = { oportunidade_id: OP_PK, estagio_id, motivo };
-  if (motivo_perda_categoria) body.motivo_perda_categoria = motivo_perda_categoria;
   if (motivo_perda_ref_id) body.motivo_perda_ref_id = motivo_perda_ref_id;
   if (motivo) body.motivo_perda = motivo;
   if (concorrente_perdido) body.concorrente_perdido = concorrente_perdido;
