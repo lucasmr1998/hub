@@ -34,6 +34,10 @@ class LeadProspecto(TenantMixin):
     ]
 
     ORIGEM_CHOICES = [
+        # Mantido por compatibilidade durante migracao. Sera removido na
+        # Fase 2 (apos validar producao). Use CANAL_CHOICES ou
+        # FONTE_CHOICES nos novos codigos. Ver
+        # docs/PRODUTO/modulos/comercial/modelo_origem_lead_e_oportunidade.md
         ('site', 'Site'),
         ('facebook', 'Facebook'),
         ('instagram', 'Instagram'),
@@ -42,6 +46,33 @@ class LeadProspecto(TenantMixin):
         ('indicacao', 'Indicação'),
         ('telefone', 'Telefone'),
         ('email', 'Email'),
+        ('outros', 'Outros'),
+    ]
+
+    # CANAL = meio fisico de chegada (Lead chegou POR ONDE)
+    CANAL_CHOICES = [
+        ('whatsapp', 'WhatsApp'),
+        ('telefone', 'Telefone'),
+        ('email', 'Email'),
+        ('site', 'Site'),
+        ('sms', 'SMS'),
+        ('loja_fisica', 'Loja Física'),
+        ('manual', 'Manual / Operador'),
+    ]
+
+    # FONTE = de qual plataforma o trafego veio (Lead veio DE ONDE)
+    FONTE_CHOICES = [
+        ('facebook', 'Facebook'),
+        ('instagram', 'Instagram'),
+        ('google', 'Google'),
+        ('tiktok', 'TikTok'),
+        ('youtube', 'YouTube'),
+        ('linkedin', 'LinkedIn'),
+        ('indicacao', 'Indicação'),
+        ('parceiro', 'Parceiro'),
+        ('organico', 'Orgânico'),
+        ('email_mkt', 'Email Marketing'),
+        ('direto', 'Direto'),
         ('outros', 'Outros'),
     ]
 
@@ -293,6 +324,29 @@ class LeadProspecto(TenantMixin):
         blank=True,
         verbose_name="Tipo de Entrada",
         help_text="Tipo específico de entrada no sistema"
+    )
+
+    # Modelo novo de origem (Fase 1 do refactor). Substitui `origem` e
+    # `canal_entrada` (que serao removidos na Fase 2).
+    # Ver docs/PRODUTO/modulos/comercial/modelo_origem_lead_e_oportunidade.md
+    canal = models.CharField(
+        max_length=20,
+        choices=CANAL_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Canal",
+        help_text="Meio fisico de chegada (WhatsApp, Telefone, Site, etc)",
+        db_index=True,
+    )
+
+    fonte = models.CharField(
+        max_length=30,
+        choices=FONTE_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Fonte",
+        help_text="Plataforma que trouxe o trafego (Facebook, Google, Indicacao, etc)",
+        db_index=True,
     )
 
     # Campos de Campanhas de Tráfego Pago
