@@ -170,18 +170,23 @@ N8N: ativo em TR Carrion (Vero) e Nuvyon (Matrix).
 
 | Ambiente | Settings | Banco |
 |---|---|---|
-| **Dev (padrao)** | `settings_local` ou `settings_local_pg` | Postgres `aurora_dev` (localhost:5432, user postgres, pass admin123). Ambos os settings apontam pro mesmo banco. |
-| **Producao** | `settings` | Postgres remoto via `.env`. NUNCA usar no desenvolvimento. |
+| **Dev (padrao)** | `settings_local` | Postgres `aurora_dev` no container Docker **`pgvector/pgvector:pg17`** (localhost:**5433**, user postgres, pass admin123), espelha prod (PG17 + pgvector). `settings_local` le `DB_PORT` do env (default **5433**); exige `docker start hubtrix-pg17`. |
+| Dev (PG nativo, legado) | `settings_local` + `DB_PORT=5432` | PG 18 nativo na 5432, **sem pgvector**: RAG/embeddings e as migrations da `suporte` (0007+) nao funcionam. Beco sem saida; preferir o Docker. |
+| **Producao** | `settings` | Postgres remoto (PG 17.10 + pgvector 0.8.2) via `.env`. NUNCA usar no desenvolvimento. |
 
 ---
 
 ## 7. Como rodar
 
 ```bash
+docker start hubtrix-pg17   # banco de dev (PG17 + pgvector, porta 5433, default do settings_local)
+
 cd robo/dashboard_comercial/gerenciador_vendas
 
 python manage.py runserver 8001 --settings=gerenciador_vendas.settings_local
 ```
+
+> O `settings_local` aponta por padrao pro container Docker (5433). Sem ele de pe, `migrate`/runserver quebram. Pra forcar o PG nativo legado (5432, sem pgvector): prefixar com `DB_PORT=5432`.
 
 ### Commands essenciais
 
