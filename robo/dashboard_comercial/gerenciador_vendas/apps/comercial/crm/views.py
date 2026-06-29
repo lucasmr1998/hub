@@ -1597,15 +1597,19 @@ def api_desempenho_dados(request):
     else:
         data_inicio = hoje.replace(day=1)
 
-    # Oportunidades fechadas no período
-    # valor_estimado virou property — usa com_valor_estimado() pra somar
-    ops_ganhas = OportunidadeVenda.objects.com_valor_estimado().filter(
+    # Oportunidades fechadas no período. Soma valor_estimado_manual
+    # (fallback simples — soma de itens nao funciona em aggregate de
+    # aggregate; pra precisao total usar com_valor_estimado por op).
+    from django.db.models import Value, DecimalField
+    from django.db.models.functions import Coalesce
+    ops_ganhas = OportunidadeVenda.objects.filter(
         estagio__is_final_ganho=True,
         data_fechamento_real__date__gte=data_inicio,
         ativo=True,
     ).values('responsavel').annotate(
         total=Count('id'),
-        valor=Sum('valor_estimado_anotado'),
+        valor=Coalesce(Sum('valor_estimado_manual'),
+                       Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))),
     )
 
     por_vendedor = {item['responsavel']: item for item in ops_ganhas}

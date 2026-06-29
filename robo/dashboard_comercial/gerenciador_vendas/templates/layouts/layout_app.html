@@ -22,8 +22,12 @@ Com subnav:
 {% block ds_styles %}{% include "partials/_components_styles.html" %}{% endblock %}
 
 {% block body %}
-  {# Topbar e sidebar sao sobrescritiveis — util pra paineis com menu proprio (ex: aurora-admin) #}
-  {% block topbar %}{% include "partials/topbar.html" %}{% endblock %}
+  {% comment %}
+    Topbar removida — notificacao e avatar agora vivem no rodape da sidebar.
+    Paineis especificos (ex: aurora-admin) podem injetar topbar propria
+    sobrescrevendo o bloco topbar abaixo.
+  {% endcomment %}
+  {% block topbar %}{% endblock %}
   {% block sidebar %}{% include "partials/sidebar.html" %}{% endblock %}
 
   {# Subnav opcional — pagina sobrescreve pra injetar seu submenu #}
@@ -79,7 +83,7 @@ Com subnav:
 
     .app-subnav {
       position: fixed;
-      top: var(--topbar-h);
+      top: 0;
       left: var(--sidebar-w);
       bottom: 0;
       width: var(--subnav-w);
@@ -167,9 +171,9 @@ Com subnav:
     }
 
     .app-main {
-      margin-top: var(--topbar-h);
+      margin-top: 0;
       margin-left: var(--sidebar-w);
-      min-height: calc(100vh - var(--topbar-h));
+      min-height: 100vh;
       background: var(--color-surface);
       transition: margin-left var(--transition);
     }
@@ -191,9 +195,9 @@ Com subnav:
     .app-sidebar-flyout {
       position: fixed;
       left: var(--sidebar-w);
-      top: var(--topbar-h);
+      top: var(--sp-3);
       width: var(--subnav-w);
-      max-height: calc(100vh - var(--topbar-h) - 16px);
+      max-height: calc(100vh - 24px);
       overflow-y: auto;
       background: var(--color-bg);
       border: 1px solid var(--color-border);
@@ -232,7 +236,7 @@ Com subnav:
     /* Toast container (posicionamento global) */
     .toast-container {
       position: fixed;
-      top: calc(var(--topbar-h) + var(--sp-3));
+      top: var(--sp-3);
       right: var(--sp-4);
       z-index: 2000;
       display: flex;
@@ -314,7 +318,7 @@ Com subnav:
         marketing: { title: 'Marketing', groups: [
           { section: 'Aquisicao', items: [
             { icon: 'bi-person-plus', label: 'Leads', url: '/leads/' },
-            { icon: 'bi-globe', label: 'Landing Page', url: '/configuracoes/campanhas/' },
+            { icon: 'bi-file-earmark-richtext', label: 'Landing Pages', url: '/marketing/landing-pages/' },
           ]},
           { section: 'Campanhas', items: [
             { icon: 'bi-megaphone', label: 'Campanhas', url: '/marketing/emails/' },

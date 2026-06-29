@@ -10,7 +10,10 @@ Visibilidade:
 - Atendimento: exige (is_superuser OR perm.acesso_inbox)
 - CS: exige `modulo_cs` AND (is_superuser OR perm.acesso_cs)
 - Relatorios: sempre visivel (cada relatorio filtra internamente)
+
+Rodape: notificacoes + avatar/menu do usuario (movidos do topbar removido).
 {% endcomment %}
+{% load permissoes_tags %}
 <nav class="app-sidebar" aria-label="Menu principal">
   <div class="app-sidebar-inner">
 
@@ -57,29 +60,64 @@ Visibilidade:
         <i class="bi bi-grid-1x2"></i>
       </a>
 
-      <a href="/marketing/landing-pages/" class="app-sidebar-item {% if modulo_atual == 'landing_pages' %}is-active{% endif %}" data-module="landing_pages" title="Landing Pages">
-        <i class="bi bi-file-earmark-richtext"></i>
-      </a>
+      {# Landing Pages movida pro submenu de Marketing — ver HUB_SIDEBAR_MODULES.marketing #}
     </div>
 
     <div class="app-sidebar-group app-sidebar-group-bottom">
-      <a href="/ajuda/" class="app-sidebar-item {% if modulo_atual == 'ajuda' %}is-active{% endif %}" data-module="ajuda" title="Manual do vendedor">
+      {# Avatar + menu do usuario (movido do topbar) — primeiro item agora #}
+      <div class="app-sidebar-user-wrap">
+        <button type="button" class="app-sidebar-item app-sidebar-item-light app-sidebar-user-trigger"
+                title="{{ request.user.get_full_name|default:request.user.username|default:'Usuario' }}"
+                onclick="this.closest('.app-sidebar-user-wrap').classList.toggle('is-open')">
+          <span class="app-sidebar-user-avatar">{{ request.user.first_name|default:request.user.username|first|upper|default:"U" }}</span>
+        </button>
+        <div class="app-sidebar-user-menu">
+          <div class="app-sidebar-user-header">
+            <div class="app-sidebar-user-name">{{ request.user.get_full_name|default:request.user.username|default:"Usuario" }}</div>
+            <div class="app-sidebar-user-email">{{ request.user.email|default:"" }}</div>
+          </div>
+          {% if is_superuser or perm.acesso_configuracoes %}
+            <a href="/configuracoes/" class="app-sidebar-user-item">
+              <i class="bi bi-gear"></i><span>Configuracoes</span>
+            </a>
+          {% endif %}
+          <form method="post" action="{% url 'sistema:logout' %}" style="margin:0;" onsubmit="return confirm('Sair da conta?');">
+            {% csrf_token %}
+            <button type="submit" class="app-sidebar-user-item app-sidebar-user-item-danger">
+              <i class="bi bi-box-arrow-right"></i><span>Sair da conta</span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {# Notificacoes (movido do topbar) #}
+      <a href="{% url 'notificacoes:minhas_notificacoes' %}" class="app-sidebar-item app-sidebar-item-light app-sidebar-bell" title="Notificacoes">
+        <i class="bi bi-bell"></i>
+        <span class="app-sidebar-bell-dot" id="notificationBadge" hidden></span>
+      </a>
+
+      {# Ajuda #}
+      <a href="/ajuda/" class="app-sidebar-item app-sidebar-item-light {% if modulo_atual == 'ajuda' %}is-active{% endif %}" data-module="ajuda" title="Manual do vendedor">
         <i class="bi bi-question-circle"></i>
       </a>
-      {% if is_superuser or perm.acesso_configuracoes %}
-        <a href="/configuracoes/" class="app-sidebar-item {% if modulo_atual == 'configuracoes' %}is-active{% endif %}" data-module="configuracoes" title="Configuracoes">
-          <i class="bi bi-gear"></i>
-        </a>
-      {% endif %}
     </div>
 
   </div>
 </nav>
 
+<script>
+  // Fecha menu user ao clicar fora
+  document.addEventListener('click', function(e){
+    var wrap = document.querySelector('.app-sidebar-user-wrap');
+    if (!wrap) return;
+    if (!wrap.contains(e.target)) wrap.classList.remove('is-open');
+  });
+</script>
+
 <style>
   .app-sidebar {
     position: fixed;
-    top: var(--topbar-h);
+    top: 0;
     left: 0;
     bottom: 0;
     width: var(--sidebar-w);
@@ -121,4 +159,141 @@ Visibilidade:
     background: var(--sidebar-bg-active);
     color: var(--sidebar-icon-active);
   }
+
+  /* Grupo de itens claros no rodape — card unificado */
+  .app-sidebar-group-bottom {
+    background: var(--color-bg);
+    border-radius: var(--radius-lg);
+    padding: 4px;
+    gap: 0;
+    align-items: stretch;
+    overflow: visible;
+  }
+  /* Avatar wrapper igual aos outros (mesma area clicavel) */
+  .app-sidebar-group-bottom .app-sidebar-user-wrap {
+    display: flex;
+    justify-content: center;
+    height: 44px;
+  }
+  /* Todos os 3 itens com mesma dimensao centralizada */
+  .app-sidebar-group-bottom .app-sidebar-item,
+  .app-sidebar-group-bottom .app-sidebar-user-trigger {
+    width: 100%;
+    height: 44px;
+    margin: 0;
+    background: transparent !important;
+    color: var(--color-text);
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .app-sidebar-group-bottom .app-sidebar-item:hover,
+  .app-sidebar-group-bottom .app-sidebar-user-trigger:hover {
+    background: var(--color-surface) !important;
+    color: var(--color-text);
+  }
+  /* Divisor sutil entre os 3 itens (sem padding extra) */
+  .app-sidebar-group-bottom > * + * {
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* Notificacao no rodape da sidebar */
+  .app-sidebar-bell { position: relative; }
+  .app-sidebar-bell-dot {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 8px; height: 8px;
+    background: var(--color-danger);
+    border: 2px solid var(--sidebar-bg);
+    border-radius: 50%;
+  }
+
+  /* Avatar + menu do usuario no rodape da sidebar */
+  .app-sidebar-user-wrap { position: relative; }
+  .app-sidebar-user-trigger {
+    width: 44px; height: 44px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin: 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .app-sidebar-user-avatar {
+    width: 30px; height: 30px;
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    border-radius: 50%;
+    font-weight: var(--fw-semibold);
+    font-size: 0.78rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .app-sidebar-user-menu {
+    position: absolute;
+    bottom: 0;
+    left: calc(100% + 8px);
+    min-width: 240px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    padding: var(--sp-2);
+    z-index: 200;
+    opacity: 0;
+    transform: translateX(-4px);
+    pointer-events: none;
+    transition: opacity var(--transition), transform var(--transition);
+  }
+  .app-sidebar-user-wrap.is-open .app-sidebar-user-menu {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+  .app-sidebar-user-header {
+    padding: var(--sp-3);
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: var(--sp-2);
+  }
+  .app-sidebar-user-name {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text);
+    margin-bottom: 2px;
+  }
+  .app-sidebar-user-email {
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+  }
+  .app-sidebar-user-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-3);
+    border-radius: var(--radius-sm);
+    color: var(--color-text);
+    font-size: var(--fs-sm);
+    text-decoration: none;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background var(--transition);
+  }
+  .app-sidebar-user-item:hover { background: var(--color-surface); }
+  .app-sidebar-user-item i {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    width: 16px;
+    text-align: center;
+  }
+  .app-sidebar-user-item-danger { color: var(--color-danger); }
+  .app-sidebar-user-item-danger:hover { background: var(--color-danger-soft); }
+  .app-sidebar-user-item-danger i { color: var(--color-danger); }
 </style>

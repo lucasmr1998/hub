@@ -89,6 +89,9 @@ Uso em template que extende layout_app:
         <a href="/leads/" class="app-subnav-item {% if request.resolver_match.url_name == 'leads' %}is-active{% endif %}">
           <i class="bi bi-person-plus"></i><span>Leads</span>
         </a>
+        <a href="/marketing/landing-pages/" class="app-subnav-item {% if 'landing_pages' in request.resolver_match.url_name|default:'' or modulo_atual == 'landing_pages' %}is-active{% endif %}">
+          <i class="bi bi-file-earmark-richtext"></i><span>Landing Pages</span>
+        </a>
       </nav>
       <div class="app-subnav-section">Campanhas</div>
       <nav class="app-subnav-list">
