@@ -69,3 +69,32 @@ HistoricoPipelineEstagio registrado pra cada uma com motivo
 "Correcao em massa". Notificacoes disparadas pros responsaveis.
 
 ---
+
+## 2026-06-29 — Motivo de perda obrigatorio + bug 2 estagios "Perdido"
+
+**Acao 1 (codigo):** commit `320f83c` adiciona 2 campos novos no
+catalogo `CAMPOS_DISPONIVEIS` em
+`apps/comercial/crm/services/requisitos_estagio.py`:
+- `oportunidade.motivo_perda_categoria` (categoria — escolha estruturada)
+- `oportunidade.motivo_perda` (texto livre)
+
+Permite marcar como obrigatorios em qualquer estagio via UI
+`/crm/configuracoes/`.
+
+**Acao 2 (UPDATE em prod, tenant 12 nuvyon):**
+1. Estagio id=84 ("Perdido"): tipo='novo' -> 'perdido' (era bug
+   irmão do que vimos com "Ativacao Confirmada" — quebrava analises
+   automaticas filtradas por tipo).
+2. Estagios id=73 e id=84: `campos_obrigatorios` agora inclui
+   `oportunidade.motivo_perda_categoria`. Vendedora nao consegue
+   mais mover pra "Perdido" sem categorizar a perda.
+
+**Diagnostico que motivou:** Dos 22 leads enriquecidos pelo Sprint 4
+que viraram perdidos, 17 (77%) estavam sem motivo registrado. Todos
+movidos por vendedoras humanas (thais.moreira lidera com 12).
+
+**Pendencia:** Existem 2 estagios "Perdido" no pipeline Nuvyon
+(id=73 vazio + id=84 com 22 ops). Aguardando decisao do Lucas pra
+consolidar (mover ops 84->73 + deletar 84) OU manter ambos.
+
+---
