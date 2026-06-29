@@ -257,6 +257,39 @@ class OportunidadeVenda(TenantMixin):
     prioridade = models.CharField(max_length=10, choices=PRIORIDADE_CHOICES, default='normal', verbose_name="Prioridade")
     tags = models.ManyToManyField(TagCRM, blank=True, related_name='oportunidades', verbose_name="Tags")
 
+    # Atribuicao da oportunidade (last-touch) — Fase 2 do refactor de
+    # origem. Lead representa first-touch (quem trouxe a pessoa), Op
+    # representa last-touch (quem trouxe esta negociacao especifica).
+    # Pode diferir do lead em casos de reativacao por nova campanha.
+    # Ver docs/PRODUTO/modulos/comercial/modelo_origem_lead_e_oportunidade.md
+    canal_atribuicao = models.CharField(
+        max_length=20,
+        null=True, blank=True,
+        verbose_name="Canal de Atribuicao",
+        help_text="Meio fisico que trouxe esta op. Herda de lead.canal na criacao.",
+        db_index=True,
+    )
+    fonte_atribuicao = models.CharField(
+        max_length=30,
+        null=True, blank=True,
+        verbose_name="Fonte de Atribuicao",
+        help_text="Plataforma que trouxe esta op. Herda de lead.fonte na criacao.",
+        db_index=True,
+    )
+    campanha_atribuicao = models.ForeignKey(
+        'campanhas.CampanhaTrafego',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='oportunidades_atribuicao',
+        verbose_name="Campanha de Atribuicao",
+        help_text="Campanha que trouxe esta op (pode diferir de lead.campanha_origem).",
+    )
+    metadata_atribuicao = models.JSONField(
+        default=dict, blank=True,
+        verbose_name="Metadata de Atribuicao",
+        help_text="Dados extras da atribuicao (utm_content, utm_term, protocolo, etc).",
+    )
+
     data_entrada_estagio = models.DateTimeField(default=timezone.now, verbose_name="Entrada no Estágio Atual")
     motivo_perda = models.TextField(null=True, blank=True, verbose_name="Motivo da Perda (texto livre)")
     concorrente_perdido = models.CharField(max_length=100, null=True, blank=True, verbose_name="Concorrente (Perda)")
@@ -410,6 +443,23 @@ class OportunidadeVenda(TenantMixin):
         if 'valor_estimado' in kwargs:
             kwargs['valor_estimado_manual'] = kwargs.pop('valor_estimado')
         super().__init__(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        """Na criacao, herda canal/fonte/campanha do lead (atribuicao
+        last-touch comeca igual ao first-touch do lead). Operador ou
+        sistema pode alterar depois se a op foi reativada por nova
+        campanha.
+
+        Edicoes subsequentes NAO sobrescrevem (so preenche se ainda
+        estiver vazio)."""
+        if not self.pk and self.lead_id:
+            if not self.canal_atribuicao:
+                self.canal_atribuicao = self.lead.canal
+            if not self.fonte_atribuicao:
+                self.fonte_atribuicao = self.lead.fonte
+            if not self.campanha_atribuicao_id:
+                self.campanha_atribuicao = self.lead.campanha_origem
+        super().save(*args, **kwargs)
 
 
 class HistoricoPipelineEstagio(TenantMixin):
