@@ -24,12 +24,28 @@ def lista(request):
     if tenant is not None:
         agentes = list(
             Agente.all_tenants.filter(tenant=tenant, ativo=True)
-            .select_related('integracao_ia').order_by('nome')
+            .select_related('integracao_ia').order_by('equipe', 'ordem', 'nome')
         )
     return render(request, 'workspace/agentes.html', {
-        'agentes': agentes,
+        'grupos': _agrupar_por_time(agentes),
+        'total': len(agentes),
         'pagetitle': 'Agentes',
     })
+
+
+def _agrupar_por_time(agentes):
+    """Agrupa por time na ordem de EQUIPE_CHOICES; agentes 'sem time' por ultimo."""
+    from apps.automacao.models import Agente
+    labels = dict(Agente.EQUIPE_CHOICES)
+    grupos = []
+    for chave, label in Agente.EQUIPE_CHOICES:
+        ags = [a for a in agentes if a.equipe == chave]
+        if ags:
+            grupos.append({'chave': chave, 'label': label, 'agentes': ags})
+    sem_time = [a for a in agentes if a.equipe not in labels]
+    if sem_time:
+        grupos.append({'chave': '', 'label': 'Sem time / Outros', 'agentes': sem_time})
+    return grupos
 
 
 @require_POST

@@ -16,19 +16,29 @@
     </div>
   </div>
 
-  {% if agentes %}
+  {% if total %}
   <div style="display: grid; grid-template-columns: 320px 1fr; gap: var(--sp-5); align-items: start; margin-top: var(--sp-5);">
 
     <!-- Roster -->
     <section style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-4); max-height: 70vh; overflow-y: auto;">
-      <h2 style="margin: 0 0 var(--sp-3); font-size: 0.95rem; font-weight: 600;">Time ({{ agentes|length }})</h2>
-      <div id="roster" style="display: flex; flex-direction: column; gap: var(--sp-2);">
-        {% for a in agentes %}
-          <button type="button" class="ws-agente" data-id="{{ a.pk }}" data-nome="{{ a.nome }}"
-                  style="text-align: left; padding: var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); cursor: pointer; color: inherit;">
-            <span style="font-weight: 600; display: block;">{{ a.nome }}</span>
-            <span style="font-size: 0.75rem; color: var(--color-text-muted);">{{ a.tools|length }} ferramenta{{ a.tools|length|pluralize }} de dados</span>
-          </button>
+      <h2 style="margin: 0 0 var(--sp-3); font-size: 0.95rem; font-weight: 600;">Time ({{ total }})</h2>
+      <div id="roster" style="display: flex; flex-direction: column; gap: var(--sp-4);">
+        {% for g in grupos %}
+          <div>
+            <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); font-weight: 600; margin-bottom: var(--sp-2);">{{ g.label }} ({{ g.agentes|length }})</div>
+            <div style="display: flex; flex-direction: column; gap: var(--sp-2);">
+              {% for a in g.agentes %}
+                <button type="button" class="ws-agente" data-id="{{ a.pk }}" data-nome="{{ a.nome }}"
+                        style="text-align: left; padding: var(--sp-3); border: 1px solid var(--color-border); border-left: 3px solid {{ a.cor|default:'var(--color-border)' }}; border-radius: var(--radius); background: var(--color-surface); cursor: pointer; color: inherit; display: flex; align-items: center; gap: var(--sp-3);">
+                  <i class="bi {{ a.icone|default:'bi-robot' }}" style="font-size: 1.05rem; color: {{ a.cor|default:'var(--color-text-muted)' }};"></i>
+                  <span style="min-width: 0;">
+                    <span style="font-weight: 600; display: block;">{{ a.nome }}</span>
+                    <span style="font-size: 0.75rem; color: var(--color-text-muted);">{{ a.tools|length }} ferramenta{{ a.tools|length|pluralize }}</span>
+                  </span>
+                </button>
+              {% endfor %}
+            </div>
+          </div>
         {% endfor %}
       </div>
     </section>
