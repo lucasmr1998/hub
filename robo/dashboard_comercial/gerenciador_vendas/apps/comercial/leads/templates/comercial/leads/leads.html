@@ -282,12 +282,16 @@
         document.getElementById('paginationControls').style.display = 'none';
         return;
       }
+      const truncar = (s, n) => {
+        if (!s) return '';
+        return s.length > n ? s.slice(0, n) + '...' : s;
+      };
       tbody.innerHTML = data.results.map(l => `
         <tr>
           <td style="color: var(--color-text-muted); font-size: var(--fs-xs);">#${l.id}</td>
-          <td>
-            <div style="font-weight: var(--fw-semibold);">${l.nome_razaosocial}</div>
-            ${l.empresa ? `<span class="lead-row-sub">${l.empresa}</span>` : ''}
+          <td style="max-width: 280px;">
+            <div style="font-weight: var(--fw-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${(l.nome_razaosocial || '').replace(/"/g,'&quot;')}">${truncar(l.nome_razaosocial, 40)}</div>
+            ${l.empresa ? `<span class="lead-row-sub" title="${l.empresa.replace(/"/g,'&quot;')}">${truncar(l.empresa, 40)}</span>` : ''}
           </td>
           <td>
             <div>${fmtPhone(l.telefone)}</div>
