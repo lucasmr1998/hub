@@ -36,6 +36,19 @@ class CampanhaTrafego(TenantMixin):
         ('regex', 'Expressão Regular'),
     ]
 
+    # MEIO = tipo de trafego (UTM medium). Complementa a plataforma:
+    # plataforma=facebook_ads + meio=ads (Facebook pago)
+    # plataforma=instagram_ads + meio=social (post organico no Insta)
+    # Ver docs/PRODUTO/modulos/comercial/modelo_origem_lead_e_oportunidade.md
+    MEIO_CHOICES = [
+        ('ads',      'Tráfego Pago (ads)'),
+        ('social',   'Social Orgânico'),
+        ('search',   'Busca'),
+        ('referral', 'Indicação'),
+        ('email',    'Email'),
+        ('direct',   'Direto'),
+    ]
+
     # Identificação
     nome = models.CharField(
         max_length=200,
@@ -89,6 +102,15 @@ class CampanhaTrafego(TenantMixin):
         choices=TIPO_TRAFEGO_CHOICES,
         blank=True,
         verbose_name="Tipo de Tráfego"
+    )
+
+    meio = models.CharField(
+        max_length=20,
+        choices=MEIO_CHOICES,
+        null=True, blank=True,
+        verbose_name="Meio (UTM medium)",
+        help_text="Categoria de trafego (ads pago / social organico / busca / indicacao / email / direto)",
+        db_index=True,
     )
 
     # Configurações
