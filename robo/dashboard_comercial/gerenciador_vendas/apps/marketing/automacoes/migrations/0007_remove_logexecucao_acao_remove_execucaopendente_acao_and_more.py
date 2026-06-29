@@ -7,6 +7,12 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('automacoes', '0006_alter_regraautomacao_evento'),
+        # O DeleteModel de RegraAutomacao so pode rodar depois que emails 0003
+        # converteu EnvioEmail.automacao (FK -> IntegerField). Sem isto, um build
+        # fresh (test DB / novo deploy) pode ordenar o delete antes e quebrar com
+        # "Related model 'automacoes.regraautomacao' cannot be resolved". Em prod
+        # nao quebrou porque o migrate foi incremental (ordem temporal correta).
+        ('emails', '0003_alter_envioemail_automacao'),
     ]
 
     operations = [
