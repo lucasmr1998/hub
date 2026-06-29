@@ -225,3 +225,13 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: 
 .chat-input button:disabled { opacity: .5; cursor: default; }
 
 .io-de { font-weight: 400; color: #8a94a6; font-size: 11px; }
+
+/* Árvore do INPUT — campos arrastáveis (drag-to-reference estilo n8n) */
+.input-arvore { display: flex; flex-direction: column; gap: 4px; }
+.ia-linha { display: flex; align-items: center; gap: 8px; padding: 5px 9px; background: #11192b;
+  border: 1px solid #26324b; border-radius: 7px; cursor: grab; font-size: 12px; }
+.ia-linha:hover { border-color: #2f6df6; background: #16223c; }
+.ia-linha:active { cursor: grabbing; }
+.ia-chave { color: #7fb0ff; font-family: ui-monospace, monospace; font-weight: 600; flex: 0 0 auto; }
+.ia-valor { color: #c8d0de; font-family: ui-monospace, monospace; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }

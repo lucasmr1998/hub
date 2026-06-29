@@ -11,6 +11,57 @@ function _vazio(v: any): boolean {
   return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0)
 }
 
+// Drag-to-reference (estilo n8n): props pra um input/textarea aceitar um campo
+// arrastado do INPUT — insere a referência ({{nodes.X.campo}}) na posição do cursor.
+function propsDrop(valor: any, set: (v: string) => void) {
+  return {
+    onDragOver: (e: any) => { e.preventDefault() },
+    onDrop: (e: any) => {
+      e.preventDefault()
+      const ref = e.dataTransfer.getData('text/plain')
+      if (!ref) return
+      const el = e.currentTarget as HTMLInputElement | HTMLTextAreaElement
+      const v = String(valor ?? '')
+      const ini = el.selectionStart ?? v.length
+      const fim = el.selectionEnd ?? ini
+      set(v.slice(0, ini) + ref + v.slice(fim))
+    },
+  }
+}
+
+// Árvore do INPUT: cada campo é arrastável e carrega sua referência ({{prefixo.campo}}).
+function InputArvore({ dados, prefixo }: { dados: any; prefixo: string }) {
+  if (dados === null || dados === undefined) {
+    return <div className="muted">— (rode o Chat primeiro)</div>
+  }
+  if (typeof dados !== 'object') {
+    const ref = `{{${prefixo}}}`
+    return (
+      <div className="ia-linha" draggable title={`arraste pra usar ${ref}`}
+        onDragStart={(e) => e.dataTransfer.setData('text/plain', ref)}>
+        <span className="ia-valor">{String(dados)}</span>
+      </div>
+    )
+  }
+  const entradas = Object.entries(dados)
+  if (entradas.length === 0) return <div className="muted">vazio</div>
+  return (
+    <div className="input-arvore">
+      {entradas.map(([k, v]) => {
+        const ref = `{{${prefixo}.${k}}}`
+        const escalar = v === null || typeof v !== 'object'
+        return (
+          <div key={k} className="ia-linha" draggable title={`arraste pra usar ${ref}`}
+            onDragStart={(e) => { e.dataTransfer.setData('text/plain', ref); e.dataTransfer.effectAllowed = 'copy' }}>
+            <span className="ia-chave">{k}</span>
+            <span className="ia-valor">{escalar ? String(v) : (Array.isArray(v) ? `[${v.length}]` : '{…}')}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 type Form = Record<string, any>
 
 function initForm(config: Form, campos: Campo[]): Form {
@@ -115,9 +166,7 @@ export function NodeModal({
         <div className="modal-corpo">
           <section className="modal-io">
             <div className="io-titulo">INPUT{upstreamId ? <span className="io-de"> · de {upstreamId}</span> : null}</div>
-            <pre className="io-json">{
-              inputAtual ? JSON.stringify(inputAtual, null, 2) : '— (rode o Chat primeiro)'
-            }</pre>
+            <InputArvore dados={inputAtual} prefixo={upstreamId ? `nodes.${upstreamId}` : 'var'} />
           </section>
 
           <section className="modal-params">
@@ -274,7 +323,7 @@ function renderCampo(c: Campo, valor: any, set: (v: any) => void) {
   if (c.tipo === 'textarea') {
     return (
       <textarea className="mono" rows={4} placeholder={c.placeholder} spellCheck={false}
-        value={valor ?? ''} onChange={(e) => set(e.target.value)} />
+        value={valor ?? ''} onChange={(e) => set(e.target.value)} {...propsDrop(valor, set)} />
     )
   }
   if (c.tipo === 'lista_campos') {
@@ -316,7 +365,7 @@ function renderCampo(c: Campo, valor: any, set: (v: any) => void) {
   // texto (default) — aceita expressões {{ }}
   return (
     <input className="mono" placeholder={c.placeholder} value={valor ?? ''}
-      onChange={(e) => set(e.target.value)} />
+      onChange={(e) => set(e.target.value)} {...propsDrop(valor, set)} />
   )
 }
 
@@ -383,13 +432,15 @@ function RegrasCampo({
       {linhas.map((row, i) => (
         <div key={i} className="filtro-row">
           <input className="mono" placeholder="{{valor}}" value={row.esquerda ?? ''}
-            onChange={(e) => set(i, { esquerda: e.target.value })} />
+            onChange={(e) => set(i, { esquerda: e.target.value })}
+            {...propsDrop(row.esquerda, (v) => set(i, { esquerda: v }))} />
           <select value={row.operador ?? 'igual'} onChange={(e) => set(i, { operador: e.target.value })}>
             {OPERADORES.map((o) => <option key={o} value={o}>{o}</option>)}
           </select>
           {!semValor(row.operador ?? 'igual') && (
             <input className="mono" placeholder="comparar" value={row.direita ?? ''}
-              onChange={(e) => set(i, { direita: e.target.value })} />
+              onChange={(e) => set(i, { direita: e.target.value })}
+              {...propsDrop(row.direita, (v) => set(i, { direita: v }))} />
           )}
           <input placeholder="→ saída (ex: bug)" value={row.saida ?? ''}
             onChange={(e) => set(i, { saida: e.target.value })} />

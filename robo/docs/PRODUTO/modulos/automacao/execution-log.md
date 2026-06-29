@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-28 — Drag-to-reference + seletor de conta (credential do n8n) + output de integração
+
+- **Drag-to-reference (editor):** o painel INPUT virou **árvore arrastável** (`InputArvore`); cada campo carrega sua referência (`{{nodes.<nó>.campo}}` ou `{{var.campo}}`). Campos de texto/textarea + as regras do switch viram **drop targets** (`propsDrop` insere no cursor). Zero mudança no backend (a referência já era resolvida pelo `contexto.resolver`).
+- **Seletor de conta = o "credential" do n8n:** nós de integração ganham o campo **"Conta (Uazapi)"** (`integracao_id`, `fonte: integracoes_uazapi`) — escolhe **qual `IntegracaoAPI`** usar (a credencial é a integração; antes pegava sempre a 1ª ativa). `uazapi_do_tenant(tenant, integracao_id=None)` resolve a escolhida, com fallback pra 1ª ativa. Nova fonte `_integracoes_por_tipo` em `opcoes.py` (genérica por tipo). Backend-driven (dropdown automático, sem rebuild). Vale pros 4 nós WhatsApp (texto/mídia/presença/pergunta).
+- **Output de integração enriquecido:** `enviar_texto`/`enviar_midia` devolvem a resposta do uazapi → vai pro `output.resultado` (saneado por `_saneia`, serializável e capado). Agora dá pra referenciar o id/status do envio downstream + ver no painel OUTPUT.
+- **⚠️ Nota (não corrigido a pedido):** o chat de teste roda os nós **de verdade** — inclui envio real de WhatsApp. Modo-teste sem outbound foi **deixado de fora** por opção do usuário.
+- `check` limpo; `test_automacao_whatsapp` 6/6.
+
+---
+
 ## 2026-06-28 — Chat de teste (n8n) + arquitetura conversacional (memória = a conversa)
 
 - **Nó `chat`** (`nodes/chat.py`): gatilho de teste estilo n8n. **Painel "💬 Chat"** no editor (`ChatPanel.tsx`): cada msg roda o fluxo (`var.conteudo`) reusando `testar-fluxo`, extrai a resposta do último agente, mostra trace. **Adicionar o nó chat abre o painel.** **Caminho executado fica verde** (`destacarCaminho` lê o trace). 2 testes.

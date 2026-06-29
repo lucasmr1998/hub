@@ -42,12 +42,24 @@ def _agentes(tenant):
             for a in Agente.all_tenants.filter(tenant=tenant, ativo=True).order_by('nome')]
 
 
+def _integracoes_por_tipo(tenant, tipo):
+    """Contas/credenciais (IntegracaoAPI) ativas de um tipo — o "credential" do n8n."""
+    from apps.integracoes.models import IntegracaoAPI
+    return [{'value': str(i.pk), 'label': i.nome or f'{tipo} #{i.pk}'}
+            for i in IntegracaoAPI.all_tenants.filter(tenant=tenant, tipo=tipo, ativa=True).order_by('nome')]
+
+
+def _integracoes_uazapi(tenant):
+    return _integracoes_por_tipo(tenant, 'uazapi')
+
+
 FONTES = {
     'segmentos': _segmentos,
     'pipelines': _pipelines,
     'estagios': _estagios,
     'responsaveis': _responsaveis,
     'agentes': _agentes,
+    'integracoes_uazapi': _integracoes_uazapi,
 }
 
 

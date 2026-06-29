@@ -13,6 +13,17 @@ def _erro(msg):
     return NodeResult(status='erro', branch='erro', erro=msg, output={'ok': False})
 
 
+def _saneia(valor):
+    """Torna o retorno do provedor serializável no output (sem explodir o contexto)."""
+    if valor is None or isinstance(valor, (bool, int, float, str)):
+        return valor
+    if isinstance(valor, dict):
+        return {str(k): _saneia(v) for k, v in list(valor.items())[:30]}
+    if isinstance(valor, (list, tuple)):
+        return [_saneia(v) for v in list(valor)[:30]]
+    return str(valor)[:500]
+
+
 class _WhatsappBase(BaseNode):
     categoria = "atendimento"   # gating por tenant (futuro): só quem tem Uazapi
     grupo = "Integrações"
@@ -22,6 +33,17 @@ class _WhatsappBase(BaseNode):
 
     def _telefone(self, config, contexto):
         return str(contexto.resolver(config.get('telefone', '')) or '').strip()
+
+    def _campo_conta(self):
+        """Campo "conta/credencial" (o seletor de credential do n8n): escolhe qual
+        IntegracaoAPI Uazapi usar. Vazio = primeira ativa do tenant."""
+        return {'nome': 'integracao_id', 'label': 'Conta (Uazapi)', 'tipo': 'texto',
+                'fonte': 'integracoes_uazapi',
+                'ajuda': 'Qual conta/integração Uazapi enviar. Vazio = a primeira ativa do tenant.'}
+
+    def _uaz(self, config, contexto):
+        integ_id = str(contexto.resolver(config.get('integracao_id', '')) or '').strip() or None
+        return uazapi_do_tenant(contexto.tenant, integ_id)
 
 
 @registrar
@@ -33,13 +55,14 @@ class WhatsappTextoNode(_WhatsappBase):
         return [
             {'nome': 'telefone', 'label': 'Telefone', 'tipo': 'texto', 'obrigatorio': True, 'placeholder': '{{var.telefone}}'},
             {'nome': 'mensagem', 'label': 'Mensagem', 'tipo': 'textarea', 'placeholder': 'Oi {{lead.nome}}!'},
+            self._campo_conta(),
         ]
 
     def validar_config(self, config) -> list:
         return [] if config.get('telefone') else ['`telefone` é obrigatório.']
 
     def executar(self, config, entrada, contexto) -> NodeResult:
-        uaz = uazapi_do_tenant(contexto.tenant)
+        uaz = self._uaz(config, contexto)
         if uaz is None:
             return _erro('tenant sem integração Uazapi ativa')
         telefone = self._telefone(config, contexto)
@@ -47,10 +70,10 @@ class WhatsappTextoNode(_WhatsappBase):
             return _erro('telefone vazio')
         mensagem = str(contexto.resolver(config.get('mensagem', '')) or '')
         try:
-            uaz.enviar_texto(telefone, mensagem)
+            resultado = uaz.enviar_texto(telefone, mensagem)
         except Exception as exc:
             return _erro(f'falha Uazapi: {exc}')
-        return NodeResult(output={'ok': True, 'telefone': telefone}, branch='sucesso')
+        return NodeResult(output={'ok': True, 'telefone': telefone, 'resultado': _saneia(resultado)}, branch='sucesso')
 
 
 @registrar
@@ -66,6 +89,7 @@ class WhatsappMidiaNode(_WhatsappBase):
             {'nome': 'tipo', 'label': 'Tipo', 'tipo': 'select',
              'opcoes': ['image', 'document', 'audio', 'video']},
             {'nome': 'legenda', 'label': 'Legenda', 'tipo': 'texto'},
+            self._campo_conta(),
         ]
 
     def validar_config(self, config) -> list:
@@ -77,7 +101,7 @@ class WhatsappMidiaNode(_WhatsappBase):
         return erros
 
     def executar(self, config, entrada, contexto) -> NodeResult:
-        uaz = uazapi_do_tenant(contexto.tenant)
+        uaz = self._uaz(config, contexto)
         if uaz is None:
             return _erro('tenant sem integração Uazapi ativa')
         telefone = self._telefone(config, contexto)
@@ -85,14 +109,14 @@ class WhatsappMidiaNode(_WhatsappBase):
         if not telefone or not url:
             return _erro('telefone/url vazios')
         try:
-            uaz.enviar_midia(
+            resultado = uaz.enviar_midia(
                 telefone, url,
                 tipo=config.get('tipo', 'image'),
                 legenda=str(contexto.resolver(config.get('legenda', '')) or ''),
             )
         except Exception as exc:
             return _erro(f'falha Uazapi: {exc}')
-        return NodeResult(output={'ok': True, 'telefone': telefone}, branch='sucesso')
+        return NodeResult(output={'ok': True, 'telefone': telefone, 'resultado': _saneia(resultado)}, branch='sucesso')
 
 
 @registrar
@@ -106,10 +130,11 @@ class WhatsappPresencaNode(_WhatsappBase):
             {'nome': 'telefone', 'label': 'Telefone', 'tipo': 'texto', 'obrigatorio': True, 'placeholder': '{{var.telefone}}'},
             {'nome': 'tipo', 'label': 'Presença', 'tipo': 'select',
              'opcoes': ['composing', 'recording', 'available', 'unavailable']},
+            self._campo_conta(),
         ]
 
     def executar(self, config, entrada, contexto) -> NodeResult:
-        uaz = uazapi_do_tenant(contexto.tenant)
+        uaz = self._uaz(config, contexto)
         if uaz is None:
             return _erro('tenant sem integração Uazapi ativa')
         telefone = self._telefone(config, contexto)
@@ -119,7 +144,7 @@ class WhatsappPresencaNode(_WhatsappBase):
             uaz.enviar_presenca(telefone, config.get('tipo', 'composing'))
         except Exception as exc:
             return _erro(f'falha Uazapi: {exc}')
-        return NodeResult(output={'ok': True}, branch='sucesso')
+        return NodeResult(output={'ok': True, 'telefone': telefone}, branch='sucesso')
 
 
 @registrar
@@ -134,13 +159,14 @@ class WhatsappPerguntaNode(_WhatsappBase):
             {'nome': 'telefone', 'label': 'Telefone', 'tipo': 'texto', 'obrigatorio': True, 'placeholder': '{{var.telefone}}'},
             {'nome': 'mensagem', 'label': 'Pergunta', 'tipo': 'textarea'},
             {'nome': 'timeout_min', 'label': 'Timeout (min, 0 = sem limite)', 'tipo': 'numero'},
+            self._campo_conta(),
         ]
 
     def validar_config(self, config) -> list:
         return [] if config.get('telefone') else ['`telefone` é obrigatório.']
 
     def executar(self, config, entrada, contexto) -> NodeResult:
-        uaz = uazapi_do_tenant(contexto.tenant)
+        uaz = self._uaz(config, contexto)
         if uaz is None:
             return _erro('tenant sem integração Uazapi ativa')
         telefone = self._telefone(config, contexto)
