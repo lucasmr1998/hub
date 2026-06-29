@@ -123,8 +123,8 @@
   <div class="card-header">
     <h3 class="card-title"><i class="bi bi-table"></i> Leads <span id="totalCount" class="badge badge-primary badge-soft" style="margin-left: var(--sp-2);">0</span></h3>
   </div>
-  <div class="table-wrap" style="border: none; border-radius: 0;">
-    <table class="table">
+  <div class="table-wrap" style="border: none; border-radius: 0; overflow-x: auto;">
+    <table class="table" style="min-width: 900px;">
       <thead>
         <tr>
           <th>ID</th>
@@ -289,9 +289,9 @@
       tbody.innerHTML = data.results.map(l => `
         <tr>
           <td style="color: var(--color-text-muted); font-size: var(--fs-xs);">#${l.id}</td>
-          <td style="max-width: 280px;">
-            <div style="font-weight: var(--fw-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${(l.nome_razaosocial || '').replace(/"/g,'&quot;')}">${truncar(l.nome_razaosocial, 40)}</div>
-            ${l.empresa ? `<span class="lead-row-sub" title="${l.empresa.replace(/"/g,'&quot;')}">${truncar(l.empresa, 40)}</span>` : ''}
+          <td style="max-width: 220px;">
+            <div style="font-weight: var(--fw-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${(l.nome_razaosocial || '').replace(/"/g,'&quot;')}">${truncar(l.nome_razaosocial, 32)}</div>
+            ${l.empresa ? `<span class="lead-row-sub" title="${l.empresa.replace(/"/g,'&quot;')}">${truncar(l.empresa, 32)}</span>` : ''}
           </td>
           <td>
             <div>${fmtPhone(l.telefone)}</div>
