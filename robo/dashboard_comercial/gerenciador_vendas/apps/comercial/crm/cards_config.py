@@ -30,6 +30,10 @@ CAMPOS_CARD_DISPONIVEIS = [
     ('ultima_atividade',  'Ultima atividade',    'atividade',  'bi-activity'),
     # Integracao
     ('id_hubsoft',        'ID HubSoft',          'integracao', 'bi-link-45deg'),
+    # Origem (atribuicao da venda — Sprint 1+2+4)
+    ('canal',             'Canal de chegada',    'origem',     'bi-chat-dots'),
+    ('fonte',             'Fonte / Plataforma',  'origem',     'bi-globe'),
+    ('campanha',          'Campanha de origem',  'origem',     'bi-megaphone'),
 ]
 
 # Defaults razoaveis pra um tenant novo
@@ -45,6 +49,7 @@ CATEGORIAS_LABEL = {
     'status':     'Status',
     'atividade':  'Atividade',
     'integracao': 'Integracao',
+    'origem':     'Origem / Atribuicao',
 }
 
 

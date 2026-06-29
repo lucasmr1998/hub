@@ -134,6 +134,11 @@ def _oportunidade_para_dict(op):
         'tags': [{'nome': t.nome, 'cor': t.cor_hex} for t in op.tags.all()],
         'churn_risk_score': op.churn_risk_score,
         'dados_custom': op.dados_custom or {},
+        # Origem / atribuicao — prioriza op (last-touch) com fallback no lead (first-touch)
+        'canal':    op.canal_atribuicao or lead.canal or '',
+        'fonte':    op.fonte_atribuicao or lead.fonte or '',
+        'campanha': (op.campanha_atribuicao.nome if op.campanha_atribuicao_id
+                     else (lead.campanha_origem.nome if lead.campanha_origem_id else '')),
     }
 
 

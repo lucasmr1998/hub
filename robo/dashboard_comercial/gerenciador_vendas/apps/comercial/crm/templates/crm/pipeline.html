@@ -1376,6 +1376,15 @@ function renderCampoCard(slug, op) {
     case 'id_hubsoft':
       if (!op.id_hubsoft) return '';
       return `<div class="card-campo card-campo-meta"><i class="bi bi-link-45deg"></i> HubSoft ${escapeHtml(String(op.id_hubsoft))}</div>`;
+    case 'canal':
+      if (!op.canal) return '';
+      return `<div class="card-campo card-campo-meta"><i class="bi bi-chat-dots"></i> ${escapeHtml(op.canal)}</div>`;
+    case 'fonte':
+      if (!op.fonte) return '';
+      return `<div class="card-campo card-campo-meta"><i class="bi bi-globe"></i> ${escapeHtml(op.fonte)}</div>`;
+    case 'campanha':
+      if (!op.campanha) return '';
+      return `<div class="card-campo card-campo-meta"><i class="bi bi-megaphone"></i> ${escapeHtml(op.campanha)}</div>`;
   }
   return '';
 }
@@ -1510,6 +1519,9 @@ function renderPreviewCard() {
     proxima_tarefa: { titulo: 'Ligar de manha', vencimento: 'amanha 09:00' },
     ultima_atividade: 'ontem 14:32',
     id_hubsoft: 12345,
+    canal: 'whatsapp',
+    fonte: 'facebook',
+    campanha: 'Entre em Contato e Aproveite!',
   };
   const camposHtml = _camposSelecionados
     .map(slug => renderCampoCard(slug, opMock))
