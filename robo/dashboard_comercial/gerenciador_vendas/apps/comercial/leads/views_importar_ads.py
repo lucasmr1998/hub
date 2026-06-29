@@ -163,19 +163,19 @@ def importar_ads_view(request):
         tenant = next((t for t in tenants if t.slug == tenant_slug), None)
         if not tenant:
             contexto['erro'] = 'Tenant invalido'
-            return render(request, 'leads/importar_ads.html', contexto)
+            return render(request, 'comercial/leads/importar_ads.html', contexto)
         contexto['tenant_selecionado'] = tenant.slug
 
         if acao == 'preview':
             arquivo = request.FILES.get('arquivo')
             if not arquivo:
                 contexto['erro'] = 'Selecione um arquivo CSV'
-                return render(request, 'leads/importar_ads.html', contexto)
+                return render(request, 'comercial/leads/importar_ads.html', contexto)
             try:
                 rows = _parse_csv(arquivo)
             except Exception as e:
                 contexto['erro'] = f'Erro ao processar CSV: {e}'
-                return render(request, 'leads/importar_ads.html', contexto)
+                return render(request, 'comercial/leads/importar_ads.html', contexto)
 
             matches = _executar_match(rows, tenant)
             contexto.update({
@@ -211,7 +211,7 @@ def importar_ads_view(request):
                 'resultado': resultado,
             })
 
-    return render(request, 'leads/importar_ads.html', contexto)
+    return render(request, 'comercial/leads/importar_ads.html', contexto)
 
 
 def _persistir_matches(matches_data, ids_aprovados, tenant):
