@@ -6,7 +6,7 @@
 
 > `tipo`: **Conhecimento** = le/consulta (read-only) · **Executavel** = faz/escreve (efeito colateral).
 
-Total: **21 tools** em **7 categorias**.
+Total: **22 tools** em **8 categorias**.
 
 | Categoria | Tools |
 |---|---|
@@ -14,6 +14,7 @@ Total: **21 tools** em **7 categorias**.
 | **conhecimento** | `consultar_base_conhecimento` |
 | **crm** | `criar_oportunidade` |
 | **dados** | `churn_clientes`, `resumo_leads`, `status_pipeline`, `tickets_abertos`, `vendas_periodo` |
+| **dev** | `explorar_codigo` |
 | **governanca** | `solicitar_aprovacao` |
 | **suporte** | `abrir_ticket` |
 | **workspace** | `consultar_documento`, `listar_documentos`, `atualizar_projeto`, `atualizar_tarefa_workspace`, `criar_etapa`, `criar_projeto`, `criar_tarefa_workspace`, `salvar_documento` |
@@ -111,6 +112,18 @@ Vendas registradas no periodo: quantidade e valor total. Use para responder quan
 | Parametro | Tipo | Obrigatorio | Descricao |
 |---|---|---|---|
 | `dias` | integer | nao | Janela em dias (padrao 30) |
+
+## dev
+
+### `explorar_codigo` — Conhecimento
+
+Explore o codigo do projeto (READ-ONLY) pra responder duvidas tecnicas. acao=arvore lista arquivos de uma pasta; acao=ler le um arquivo; acao=buscar procura um termo. Caminho relativo a raiz do projeto (robo/). Segredos sao bloqueados e credenciais sao redigidas.
+
+| Parametro | Tipo | Obrigatorio | Descricao |
+|---|---|---|---|
+| `acao` | string | sim | arvore | ler | buscar |
+| `caminho` | string | nao | Caminho relativo (ex: dashboard_comercial/gerenciador_vendas/apps/workspace). Vazio = raiz. |
+| `termo` | string | nao | So pra acao=buscar: o termo a procurar |
 
 ## governanca
 

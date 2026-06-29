@@ -29,6 +29,11 @@ TOOLS_AGENTE = [
     'solicitar_aprovacao',
 ]
 
+# Tools extras por time (alem das padrao). O time tech pode explorar o codigo.
+TOOLS_EXTRA_POR_EQUIPE = {
+    'tech': ['explorar_codigo'],
+}
+
 PREFIXO_PROMPT = (
     'Voce e um agente da Hubtrix operando no Workspace interno. Quando a pergunta '
     'envolver numeros do negocio (pipeline, leads, vendas, churn, suporte), USE as '
@@ -120,7 +125,7 @@ class Command(BaseCommand):
                 tenant=tenant, nome=nome,
                 defaults={
                     'system_prompt': PREFIXO_PROMPT + texto,
-                    'tools': list(TOOLS_AGENTE),
+                    'tools': list(TOOLS_AGENTE) + TOOLS_EXTRA_POR_EQUIPE.get(equipe, []),
                     'memoria': 'conversa',
                     'integracao_ia': integracao,
                     'ativo': True,

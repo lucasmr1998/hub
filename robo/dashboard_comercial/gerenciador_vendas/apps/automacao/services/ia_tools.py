@@ -646,3 +646,112 @@ def _consultar_documento(contexto, args, agente=None):
     if not corpo:
         return f'documento #{d.pk} "{d.titulo}" sem conteudo de texto (formato {d.formato}).'
     return f'# {d.titulo}\n\n{corpo}'
+
+
+# ----------------------------------------------------------------------------
+# explorar_codigo: leitura READ-ONLY do projeto, com travas de seguranca.
+# Raiz = robo/ (nunca a raiz do repo, que tem .env/secrets). So pro time tech.
+# ----------------------------------------------------------------------------
+
+_BLOCK_PATH = ('.env', '.prod_readonly', 'secret', 'credential', '.pem', '.key', '.git',
+               '__pycache__', 'node_modules', '/media/', '/anexos/', '.sqlite')
+_EXT_OK = {'.py', '.html', '.js', '.css', '.md', '.json', '.txt', '.yml', '.yaml',
+           '.sql', '.sh', '.toml', '.cfg', '.ini'}
+_SEGREDO_RE = r'(?i)(api|key|token|secret|password|senha|passwd|credential|webhook|auth)'
+
+
+def _raiz_codigo():
+    """Raiz permitida: o projeto robo/ (exclui a raiz do repo com .env/secrets)."""
+    from pathlib import Path
+    from django.conf import settings
+    base = Path(settings.BASE_DIR)
+    for cand in [base, *base.parents]:
+        if cand.name == 'robo' and (cand / 'dashboard_comercial').is_dir():
+            return cand
+    return base
+
+
+def _path_bloqueado(rel):
+    s = str(rel).replace('\\', '/').lower()
+    return any(b in s for b in _BLOCK_PATH)
+
+
+def _redige_linha(linha):
+    import re
+    # Linha menciona algo sensivel -> redige strings longas com cara de credencial.
+    if re.search(_SEGREDO_RE, linha):
+        return re.sub(r'([\'"])([A-Za-z0-9_\-./:+]{12,})\1', r'\1<REDACTED>\1', linha)
+    return linha
+
+
+@_tool(
+    'explorar_codigo',
+    'Explore o codigo do projeto (READ-ONLY) pra responder duvidas tecnicas. acao=arvore lista '
+    'arquivos de uma pasta; acao=ler le um arquivo; acao=buscar procura um termo. Caminho relativo '
+    'a raiz do projeto (robo/). Segredos sao bloqueados e credenciais sao redigidas.',
+    {'acao': {'type': 'string', 'enum': ['arvore', 'ler', 'buscar'], 'description': 'arvore | ler | buscar'},
+     'caminho': {'type': 'string', 'description': 'Caminho relativo (ex: dashboard_comercial/gerenciador_vendas/apps/workspace). Vazio = raiz.'},
+     'termo': {'type': 'string', 'description': 'So pra acao=buscar: o termo a procurar'}},
+    ['acao'],
+    tipo='conhecimento', categoria='dev',
+)
+def _explorar_codigo(contexto, args, agente=None):
+    raiz = _raiz_codigo()
+    rel = (args.get('caminho') or '').strip().lstrip('/').replace('\\', '/')
+    alvo = (raiz / rel).resolve()
+    try:
+        rel_seguro = alvo.relative_to(raiz)  # trava: alvo DENTRO da raiz (bloqueia ..)
+    except ValueError:
+        return 'caminho fora do escopo do projeto.'
+    if _path_bloqueado(rel_seguro):
+        return 'caminho bloqueado (segredo/area sensivel).'
+    acao = (args.get('acao') or '').strip().lower()
+
+    if acao == 'arvore':
+        if not alvo.is_dir():
+            return f'"{rel or "."}" nao e uma pasta.'
+        itens = []
+        for p in sorted(alvo.iterdir()):
+            r = str(p.relative_to(raiz)).replace('\\', '/')
+            if _path_bloqueado(r):
+                continue
+            itens.append(('[dir] ' if p.is_dir() else '      ') + r)
+        return '\n'.join(itens[:120]) or 'pasta vazia.'
+
+    if acao == 'ler':
+        if not alvo.is_file():
+            return f'"{rel}" nao e um arquivo.'
+        if alvo.suffix.lower() not in _EXT_OK:
+            return f'extensao {alvo.suffix} nao permitida pra leitura.'
+        try:
+            txt = alvo.read_text(encoding='utf-8', errors='replace')[:8000]
+        except OSError as e:
+            return f'erro ao ler: {e}'
+        return '\n'.join(_redige_linha(linha) for linha in txt.splitlines())
+
+    if acao == 'buscar':
+        termo = (args.get('termo') or '').strip()
+        if not termo:
+            return 'informe o termo pra acao=buscar.'
+        base = alvo if alvo.is_dir() else raiz
+        achados, escaneados = [], 0
+        for p in base.rglob('*'):
+            escaneados += 1
+            if escaneados > 4000 or len(achados) >= 25:
+                break
+            if not p.is_file() or p.suffix.lower() not in _EXT_OK:
+                continue
+            r = str(p.relative_to(raiz)).replace('\\', '/')
+            if _path_bloqueado(r):
+                continue
+            try:
+                for i, linha in enumerate(p.read_text(encoding='utf-8', errors='replace').splitlines(), 1):
+                    if termo.lower() in linha.lower():
+                        achados.append(f'{r}:{i}: {_redige_linha(linha.strip())[:90]}')
+                        if len(achados) >= 25:
+                            break
+            except OSError:
+                continue
+        return '\n'.join(achados) or f'nada encontrado pra "{termo}".'
+
+    return 'acao invalida (use arvore, ler ou buscar).'
