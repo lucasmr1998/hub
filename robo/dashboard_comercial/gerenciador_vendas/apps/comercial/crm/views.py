@@ -374,6 +374,13 @@ def api_mover_oportunidade(request):
     if oportunidade.estagio_id == estagio_novo_id:
         return JsonResponse({'ok': True, 'mensagem': 'Sem mudança de estágio'})
 
+    # Pre-preenche os campos enviados no body ANTES da validacao de campos
+    # obrigatorios (assim o usuario consegue mover preenchendo no mesmo POST,
+    # sem precisar de chamada extra pra salvar antes).
+    motivo_perda_categoria_body = (data.get('motivo_perda_categoria') or '').strip()
+    if motivo_perda_categoria_body and estagio_novo.is_final_perdido:
+        oportunidade.motivo_perda_categoria = motivo_perda_categoria_body
+
     # Gate de campos obrigatorios — bloqueia avanco se faltarem campos
     from apps.comercial.crm.services.requisitos_estagio import campos_faltando
     faltantes = campos_faltando(oportunidade, estagio_novo)
@@ -433,6 +440,10 @@ def api_mover_oportunidade(request):
 
     # T2 — Se foi pra estagio de perda e veio motivo no body, persiste tambem
     if estagio_novo.is_final_perdido:
+        motivo_perda_categoria = (data.get('motivo_perda_categoria') or '').strip()
+        if motivo_perda_categoria:
+            oportunidade.motivo_perda_categoria = motivo_perda_categoria
+            campos.append('motivo_perda_categoria')
         if motivo_perda_ref_id:
             oportunidade.motivo_perda_ref_id = motivo_perda_ref_id
             campos.append('motivo_perda_ref')
