@@ -1800,8 +1800,22 @@ class HubsoftService:
             'valor': float(lead.valor) if lead.valor else 0,
         }
 
+        # Vendedor: prioriza lead.id_vendedor_rp (vindo do Matrix) > perfil
+        # do responsavel da op (PerfilUsuario.id_vendedor_hubsoft) > default
+        # da IntegracaoAPI. Permite atribuir venda no HubSoft a vendedora
+        # certa em vez de cair sempre no padrao.
+        id_vendedor_perfil = None
+        try:
+            op = getattr(lead, 'oportunidade_crm', None)
+            resp = op.responsavel if op else None
+            perfil = getattr(resp, 'perfil', None) if resp else None
+            if perfil and perfil.id_vendedor_hubsoft:
+                id_vendedor_perfil = perfil.id_vendedor_hubsoft
+        except Exception:
+            pass
         vendedor_id = _id_valido_ou_default(
-            lead.id_vendedor_rp, extras.get('vendedor_id_padrao'),
+            lead.id_vendedor_rp or id_vendedor_perfil,
+            extras.get('vendedor_id_padrao'),
             cache_chave='vendedores', item_id_key='id',
         )
         if vendedor_id:

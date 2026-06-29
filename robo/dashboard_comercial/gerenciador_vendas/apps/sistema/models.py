@@ -225,6 +225,13 @@ class PerfilUsuario(models.Model):
         help_text='Login do agente no Matrix Brasil (ex: "joyce", "AnaP"). '
                   'Usado pelo cron de sync pra atribuir oportunidade ao mesmo vendedor que pegou o atendimento la.',
     )
+    id_vendedor_hubsoft = models.IntegerField(
+        null=True, blank=True, db_index=True,
+        verbose_name='ID Vendedor HubSoft',
+        help_text='ID do vendedor correspondente no HubSoft. Usado pelo '
+                  'mapper de prospecto pra atribuir vendas a vendedora correta '
+                  'no ERP. Achado via cache.vendedores da IntegracaoAPI HubSoft.',
+    )
 
     class Meta:
         app_label = 'sistema'
