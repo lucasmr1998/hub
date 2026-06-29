@@ -228,8 +228,8 @@ class Documento(TenantMixin):
     # Preparado pra IA
     visivel_agentes = models.BooleanField(default=True)
     agente_origem = models.ForeignKey(
-        'comando.Agente', null=True, blank=True, on_delete=models.SET_NULL,
-        related_name='documentos_criados',
+        'automacao.Agente', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='documentos_origem',
         help_text='Agente que gerou esse documento (se gerado por IA)',
     )
 
@@ -297,7 +297,7 @@ class Tarefa(TenantMixin):
         help_text='SOP/processo associado',
     )
     criado_por_agente = models.ForeignKey(
-        'comando.Agente', null=True, blank=True, on_delete=models.SET_NULL,
+        'automacao.Agente', null=True, blank=True, on_delete=models.SET_NULL,
         related_name='tarefas_criadas',
     )
 
