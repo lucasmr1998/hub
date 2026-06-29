@@ -61,7 +61,7 @@ Arquivo: `apps/cs/clube/services/gamification_service.py`
 
 **Usado por:**
 
-- Automacoes (acao `dar_pontos` — ver [marketing/automacoes/engine.md](../../marketing/automacoes/engine.md))
+- Automacoes (no `dar_pontos` da engine unificada; ver [../../automacao/README.md](../../automacao/README.md); motor antigo de marketing aposentado 29/06/2026)
 - Signals de indicacao (quando `confirmar_conversao`)
 - OTP validado (gatilho `telefone_verificado`)
 - Cadastro novo (gatilho `cadastro`)

@@ -295,7 +295,7 @@ o que acontece, como entra e sai, papel do Hubtrix, estado atual, metrica.
 - **Falha:** ERP rejeita (CPF duplicado, dados invalidos, endereco sem cobertura) → alerta no sistema, vendedor resolve e retenta
 
 **Papel do Hubtrix:**
-- Signal `on_oportunidade_movida` detecta transicao pra estagio ganho: [marketing/automacoes/signals.md](modulos/marketing/automacoes/signals.md)
+- Signal `on_oportunidade_movida` detecta transicao pra estagio ganho: [modulos/automacao/](modulos/automacao/README.md)
 - Dispatcher seleciona servico ERP por `tenant.erp_ativo`: [secao C acima](#c-como-os-modulos-se-conectam)
 - Servico ERP especifico (hubsoft/sgp/ixc/mk) chama API do ERP ou dispara workflow N8N
 - Webhook inbound `/webhook/<erp>/contrato/` recebe confirmacao e preenche `contrato_<erp>_id`: [comercial/crm/oportunidades.md](modulos/comercial/crm/oportunidades.md)
@@ -356,7 +356,7 @@ o que acontece, como entra e sai, papel do Hubtrix, estado atual, metrica.
 **Sai:** cliente operando normal, passado o periodo de adaptacao → estagio 8.
 
 **Papel do Hubtrix:**
-- Automacao dispara regua de boas-vindas (mensagens sequenciadas com delay): [marketing/automacoes/](modulos/marketing/automacoes/)
+- Automacao dispara regua de boas-vindas (mensagens sequenciadas com delay): [modulos/automacao/](modulos/automacao/README.md)
 - Clube completo com gamificacao, roleta, missoes: [cs/clube/](modulos/cs/clube/)
 - Cadastro de membro com OTP WhatsApp: [cs/clube/area-membro.md](modulos/cs/clube/area-membro.md)
 - Parceiros + cupons com regras de resgate (pontos/nivel): [cs/parceiros.md](modulos/cs/parceiros.md)
@@ -395,7 +395,7 @@ o que acontece, como entra e sai, papel do Hubtrix, estado atual, metrica.
 - Suporte: tickets com SLA por plano, timeline com comentarios, integracao com Inbox: [suporte/](modulos/suporte/)
 - NPS: pesquisa de satisfacao (stub — models prontos, execucao pendente): [cs/nps.md](modulos/cs/nps.md)
 - Clube: engajamento continuo (giros, missoes, indicacoes, resgates)
-- Automacoes por evento (`mensagem_recebida`, `conversa_aberta`, `conversa_resolvida`, `cliente_aniversario`): [marketing/automacoes/](modulos/marketing/automacoes/)
+- Automacoes por evento (`mensagem_recebida`, `conversa_aberta`, `conversa_resolvida`, `cliente_aniversario`): [modulos/automacao/](modulos/automacao/README.md)
 
 **Estado atual:**
 - ✅ Inbox multi-canal com fila, distribuicao, respostas rapidas, etiquetas, notas internas
@@ -471,7 +471,7 @@ o que acontece, como entra e sai, papel do Hubtrix, estado atual, metrica.
 
 **Papel do Hubtrix:**
 - Indicacao: pagina publica por `codigo_indicacao`, `IndicacaoService.confirmar_conversao` credita pontos automaticamente: [cs/indicacoes.md](modulos/cs/indicacoes.md)
-- Signal `indicacao_convertida` disponivel pra automacoes: [marketing/automacoes/signals.md](modulos/marketing/automacoes/signals.md)
+- Signal `indicacao_convertida` disponivel pra automacoes: [modulos/automacao/](modulos/automacao/README.md)
 - Alerta `upgrade_disponivel` no scanner de retencao: [comercial/crm/retencao.md](modulos/comercial/crm/retencao.md)
 - Segmentos dinamicos do CRM pra campanhas de upsell segmentadas: [comercial/crm/segmentos.md](modulos/comercial/crm/segmentos.md)
 - Disparo em massa por segmento como campanha de upsell/cross-sell: [marketing/segmentos.md](modulos/marketing/segmentos.md)
@@ -787,7 +787,7 @@ Testa cada uma, valida que esta funcionando. Configura webhooks do lado dos prov
 - Inbox three-panel multi-canal: [inbox/](modulos/inbox/)
 - Assistente CRM via WhatsApp pra operar pelo celular: [assistente-crm/](modulos/assistente-crm/)
 - Engine de atendimento rodando em background: [atendimento/](modulos/atendimento/)
-- Automacoes processando signals e cron: [marketing/automacoes/](modulos/marketing/automacoes/)
+- Automacoes processando signals e cron: [modulos/automacao/](modulos/automacao/README.md)
 - Clube operando (giros, resgates, indicacoes): [cs/clube/](modulos/cs/clube/)
 - Suporte recebendo tickets: [suporte/](modulos/suporte/)
 - Integracao com ERP sincronizando cliente ativo (apos implementacao do espelho em C)
@@ -958,9 +958,9 @@ Uma conversa pode ter mais de uma oportunidade/ticket ao longo do tempo. O Inbox
 #### Dois motores automatizados com propositos diferentes
 
 - **Fluxo de atendimento** (`apps/comercial/atendimento`, [fluxos/](modulos/fluxos/)) — **conversacional**. Bot que troca mensagens com o lead em tempo real. Pausa aguardando resposta. Usado na qualificacao (A2 estagio 3).
-- **Automacao** (`apps/marketing/automacoes/`) — **stateless, fire-and-forget**. Regras que reagem a eventos do sistema (lead_criado, oportunidade_movida, cliente_aniversario) e disparam acoes (enviar whatsapp, criar tarefa, dar pontos). Sem pausar, sem conversar.
+- **Automacao** (engine unificada `apps/automacao/`, [modulos/automacao/](modulos/automacao/README.md)): **reativa a eventos**. Regras que reagem a eventos do sistema (lead_criado, oportunidade_movida, cliente_aniversario) e disparam acoes (enviar whatsapp, criar tarefa, dar pontos). O motor antigo de automacao de marketing (`apps/marketing/automacoes/`, stateless fire-and-forget, editor Drawflow) foi **aposentado em 29/06/2026** (codigo deletado, tabelas dropadas) e substituido pela engine unificada estilo n8n.
 
-Ambos usam editor visual Drawflow mas sao **coisas diferentes**. Nao sao intercambiaveis:
+Fluxo de atendimento e automacao sao **coisas diferentes**. Nao sao intercambiaveis:
 
 | | Fluxo | Automacao |
 |---|-------|-----------|

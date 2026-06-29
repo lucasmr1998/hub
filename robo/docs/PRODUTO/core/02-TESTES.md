@@ -36,10 +36,10 @@ python -m pytest tests/
 python -m pytest tests/ --cov=apps --cov-report=term
 
 # Arquivo específico
-python -m pytest tests/test_automacoes.py -v
+python -m pytest tests/test_automacao_ia_agente.py -v
 
-# Teste específico
-python -m pytest tests/test_automacoes.py::EngineDispararEventoTest::test_condicao_verdadeira_executa -v
+# Teste específico (por nome)
+python -m pytest tests/test_automacao_ia_agente.py -k caminho_feliz -v
 ```
 
 O `pytest.ini` já configura `DJANGO_SETTINGS_MODULE = gerenciador_vendas.settings_local` (SQLite in-memory).
@@ -106,7 +106,7 @@ pytest tests/ -v --lf                    # só os que falharam na última run
 | `test_signals.py` | 15 | Signals: auto-criação CRM, envio HubSoft, conversão lead |
 | `test_module_access.py` | 6 | Acesso a módulos por plano (Start vs Pro) |
 | `test_admin_aurora.py` | 2 | Admin Aurora: dashboard, criar tenant |
-| **test_automacoes.py** | **43** | **Automações: models, engine, condições, ações, views, tenant isolation** |
+| test_automacao_*.py | vários | Engine unificada de automação: nós, runtime, IA, tenant. (test_automacoes.py do motor antigo removido 29/06/2026) |
 
 **Factories:** 30+ classes em `tests/factories.py` cobrindo todos os apps.
 
@@ -132,9 +132,6 @@ pytest tests/ -v --lf                    # só os que falharam na última run
 | `notificacoes/models.py` | 98% | Todos os models |
 | `integracoes/models.py` | 100% | IntegracaoAPI, ClienteHubsoft |
 | `campanhas/models.py` | 93% | CampanhaTrafego |
-| `automacoes/models.py` | 93% | RegraAutomacao, Condição, Ação |
-| `automacoes/views.py` | 97% | CRUD completo |
-| `automacoes/engine.py` | 71% | Dispatcher + executores |
 | `api/serializers_panel.py` | 100% | ViewSets DRF |
 | `api/serializers_n8n.py` | 93% | Serializers N8N |
 
@@ -150,7 +147,6 @@ pytest tests/ -v --lf                    # só os que falharam na última run
 | `atendimento/admin.py` | 45% | Admin customizado |
 | `cadastro/models.py` | 74% | Geração de PDF, signals |
 | `integracoes/signals.py` | 36% | Envio para HubSoft (mock) |
-| `automacoes/signals.py` | 67% | Mais cenários de evento |
 
 ### Sem cobertura significativa (<30%)
 

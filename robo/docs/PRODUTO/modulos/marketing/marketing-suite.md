@@ -45,8 +45,8 @@ Visão de como os 4 sub-apps de marketing do Hubtrix se conectam pra entregar **
 │                         │                                       │
 │              ┌──────────▼───────────┐                          │
 │              │   AUTOMAÇÕES         │                          │
-│              │   (engine BFS +      │                          │
-│              │    editor Drawflow)  │                          │
+│              │   (engine unificada  │                          │
+│              │    estilo n8n)       │                          │
 │              └──────┬─────┬────┬────┘                          │
 │                     │     │    │                                │
 │              ┌──────┘     │    └──────┐                        │
@@ -77,7 +77,7 @@ Visão de como os 4 sub-apps de marketing do Hubtrix se conectam pra entregar **
 |---|---|---|
 | `campanhas/` | 🟢 Implementado | [campanhas.md](campanhas.md) |
 | `segmentos` (URL no marketing/, model em comercial/crm) | 🟢 Implementado | [segmentos.md](segmentos.md) |
-| `automacoes/` | 🟢 Implementado | [automacoes/](automacoes/) |
+| ~~`automacoes/`~~ | ❌ **Aposentado (29/06/2026)**. Substituído pela engine unificada | [../automacao/README.md](../automacao/README.md) |
 | `emails/` | 🟢 Implementado (DNS, editor, envio, tracking) | [emails-dominios-remetentes.md](emails-dominios-remetentes.md) + [emails-templates-renderer.md](emails-templates-renderer.md) |
 | `landing_pages/` | 📋 Discovery (não implementado) | [landing-pages.md](landing-pages.md) |
 
@@ -88,11 +88,13 @@ Visão de como os 4 sub-apps de marketing do Hubtrix se conectam pra entregar **
 | **Captação** | inbox/widget + N8N + (futuro) landing_pages/ | Receber lead novo de qualquer canal |
 | **Atribuição** | marketing/campanhas/ | Detectar palavra-chave / UTM e ligar lead à campanha |
 | **Segmentação** | crm (model) + marketing (URLs) | Agrupar leads por critério dinâmico (cidade, plano interesse, momento da jornada) |
-| **Automação** | marketing/automacoes/ | Engine BFS — quando lead entra em segmento ou bate condição, dispara ações |
+| **Automação** | apps/automacao/ (engine unificada; motor antigo marketing/automacoes/ aposentado 29/06/2026) | Quando lead entra em segmento ou bate condição, dispara ações |
 | **Comunicação outbound** | marketing/emails/ + N8N (WhatsApp) | Email com DNS próprio do tenant, WhatsApp via uazapi |
 | **Conversão** | comercial/crm/ | Pipeline + regras de estágio (já documentado fora deste módulo) |
 
 ## Fluxos canônicos
+
+> **Nota (29/06/2026):** os exemplos abaixo citam `RegraAutomacao` por contexto histórico. Desde 29/06/2026 a etapa de automação roda na **engine unificada** (`apps/automacao/`, estilo n8n; ver [../automacao/README.md](../automacao/README.md)); o motor antigo `apps/marketing/automacoes/` foi aposentado.
 
 ### 1. Lead novo via Google Ads → cliente comprou
 
@@ -147,7 +149,7 @@ Visão de como os 4 sub-apps de marketing do Hubtrix se conectam pra entregar **
 |---|---|---|
 | **Resend** | Envio + DNS + webhook | `marketing/emails/services/resend_service.py` |
 | **N8N** | WhatsApp + detecção de campanha | webhook em `/api/public/n8n/*` |
-| **Drawflow.js** | Editor visual de automações | CDN v0.0.59 |
+| ~~**Drawflow.js**~~ | ~~Editor visual de automações~~ (❌ aposentado 29/06/2026; editor migrou pra engine unificada, React Flow) | (n/a) |
 | **Chart.js** | Gráficos no dashboard | CDN |
 | **uazapi** | Provedor WhatsApp do tenant | configurado em `IntegracaoAPI` |
 | **Caddy** (futuro) | Reverse proxy + Let's Encrypt pra domínio custom de LP | Fase 3 de LP |
@@ -162,8 +164,8 @@ Visão de como os 4 sub-apps de marketing do Hubtrix se conectam pra entregar **
 | Segmento | crm | `Segmento` |
 | Template de email | marketing/emails | `TemplateEmail` |
 | Domínio remetente | marketing/emails | `DominioRemetente` |
-| Regra de automação | marketing/automacoes | `RegraAutomacao` |
-| Execução de automação | marketing/automacoes | `LogExecucao` |
+| Regra de automação | apps/automacao (engine unificada; `RegraAutomacao` do motor antigo aposentado 29/06/2026) | nó/regra da engine unificada |
+| Execução de automação | apps/automacao (engine unificada; `LogExecucao` do motor antigo aposentado 29/06/2026) | log da engine unificada |
 | Envio individual de email | marketing/emails | `EnvioEmail` |
 | Detecção de campanha | marketing/campanhas | `DeteccaoCampanha` |
 | Pipeline + oportunidade | crm | `OportunidadeVenda` |
@@ -183,7 +185,7 @@ DNS de domínio remetente (`DominioRemetente`) e domínio custom de LP (`Landing
 | Disparar email personalizado pro próprio domínio | ✅ Sim — após configurar DNS no Resend via UI | `/marketing/emails/dominios/` |
 | Criar template visual de email | ✅ Sim | `/marketing/emails/` (editor de blocos) |
 | Tracking de abertura/clique/bounce | ✅ Sim — via webhook Resend | `EnvioEmail.status` |
-| Automatizar regras (signal → ação) | ✅ Sim | `/marketing/automacoes/` (editor Drawflow) |
+| Automatizar regras (signal → ação) | 🔁 Migrado | Engine unificada `apps/automacao/` (editor React Flow); motor antigo `/marketing/automacoes/` aposentado 29/06/2026 |
 | Detectar campanha por palavra-chave/UTM | ✅ Sim | `/marketing/campanhas/` |
 | Criar segmento dinâmico | ✅ Sim | rota URL marketing/ + model em crm |
 | **Criar landing page no Hubtrix** | ❌ **Não — em discovery** | (futuro) `/marketing/landing-pages/` |

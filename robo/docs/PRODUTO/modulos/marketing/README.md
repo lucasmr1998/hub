@@ -3,7 +3,7 @@
 **Status:** Em desenvolvimento
 **App:** `apps/marketing/`
 
-Motor de automacao e inteligencia do hub. Cobre campanhas de trafego pago com deteccao automatica por palavra-chave, segmentacao dinamica de leads e automacoes visuais com editor de fluxo (Drawflow). Composto por 3 sub-apps que se integram via signals, services e o engine de execucao.
+Cobre campanhas de trafego pago com deteccao automatica por palavra-chave, segmentacao dinamica de leads e envio outbound (email/WhatsApp). A automacao por regras saiu do escopo do modulo: o motor antigo `apps/marketing/automacoes/` (editor Drawflow) foi **aposentado em 29/06/2026** e substituido pela engine unificada estilo n8n em [../automacao/README.md](../automacao/README.md). Os sub-apps remanescentes se integram via signals, services e disparo de eventos pra engine unificada.
 
 ```
 Lead chega (WhatsApp/Site/Instagram)
@@ -30,7 +30,7 @@ Lead chega (WhatsApp/Site/Instagram)
 | [marketing-suite.md](marketing-suite.md) | — | **Visao integrada** de todos os sub-apps (capta → nutri → converte → atribui) |
 | [campanhas.md](campanhas.md) | `campanhas/` | Campanhas de trafego + deteccao automatica por palavra-chave |
 | [segmentos.md](segmentos.md) | (`crm/` + URLs `marketing/`) | Agrupamento dinamico de leads |
-| [automacoes/](automacoes/) | `automacoes/` | Engine completo de automacoes + editor visual |
+| ~~automacoes/~~ | ~~`automacoes/`~~ | ❌ **APOSENTADO (29/06/2026)**. Substituido pela engine unificada, ver [../automacao/README.md](../automacao/README.md) |
 | [emails-dominios-remetentes.md](emails-dominios-remetentes.md) | `emails/` | Dominios de envio (DNS Resend SPF/DKIM/DMARC), remetentes, webhook |
 | [emails-templates-renderer.md](emails-templates-renderer.md) | `emails/` | Editor visual de blocos + renderer JSON→HTML (12 tipos de bloco) |
 | [landing-pages.md](landing-pages.md) | `landing_pages/` (futuro) | 📋 Discovery — plano de implementacao de LP por tenant |
@@ -61,7 +61,7 @@ Automacoes ──timeline──▶ CRM/Lead (api_lead_timeline)
 | Servico | Uso | Integracao |
 |---------|-----|------------|
 | **N8N** | Envio de WhatsApp e e-mail, deteccao de campanha | Webhook POST |
-| **Drawflow.js** | Editor visual de fluxo | CDN v0.0.59 |
+| ~~**Drawflow.js**~~ | ~~Editor visual de fluxo~~ (❌ aposentado 29/06/2026; editor migrou pra engine unificada, React Flow) | (n/a) |
 | **Chart.js** | Grafico de execucoes no dashboard | CDN |
 
 ---
@@ -70,13 +70,13 @@ Automacoes ──timeline──▶ CRM/Lead (api_lead_timeline)
 
 | Metrica | Valor |
 |---------|-------|
-| Sub-apps | 4 (campanhas, automacoes, segmentos, emails) + 1 planejado (landing_pages) |
-| Models | 16 (2 campanhas + 7 automacoes + 2 segmentos + 5 emails) |
+| Sub-apps | 3 (campanhas, segmentos, emails) + 1 planejado (landing_pages); automacoes aposentado 29/06/2026 |
+| Models | 9 (2 campanhas + 2 segmentos + 5 emails); +7 de automacoes dropados 29/06/2026 |
 | Views | 22 funcoes |
 | Templates | 9 |
 | APIs | 22 endpoints |
 | Signals | 6 |
-| Testes | 60+ (test_automacoes.py) |
+| Testes | campanhas + emails + segmentos (test_automacoes.py aposentado 29/06/2026) |
 
 ---
 

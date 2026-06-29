@@ -42,4 +42,4 @@ Models registrados no admin. Views, URLs e service de envio vazios (TODO).
 1. Service `NPSService` com metodos `enviar_pesquisa(cliente)` e `registrar_resposta(nota, comentario)`
 2. Cron periodico que dispara pesquisas com base em `periodicidade_dias`
 3. Views de dashboard com NPS calculado + lista de detratores
-4. Integracao com [marketing/automacoes/](../marketing/automacoes/) — dispara evento `nps_respondido` ou `detrator_identificado`
+4. Integracao com a engine unificada [../automacao/README.md](../automacao/README.md): dispara evento `nps_respondido` ou `detrator_identificado`

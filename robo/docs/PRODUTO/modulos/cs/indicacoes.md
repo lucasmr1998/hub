@@ -83,4 +83,4 @@ Arquivo: `apps/cs/indicacoes/services/services.py`
 
 ## Integracao com automacoes
 
-O signal de conversao dispara o evento `indicacao_convertida` consumido por [marketing/automacoes/](../marketing/automacoes/). Permite mandar mensagem de agradecimento, notificar o indicador, etc.
+O signal de conversao dispara o evento `indicacao_convertida` consumido pela engine unificada [../automacao/README.md](../automacao/README.md). Permite mandar mensagem de agradecimento, notificar o indicador, etc. (O motor antigo de marketing foi aposentado em 29/06/2026.)

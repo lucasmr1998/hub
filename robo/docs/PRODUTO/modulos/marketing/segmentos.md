@@ -72,4 +72,4 @@ Ao clicar "Disparar Campanha" na tela do segmento:
 2. Chama `engine.disparar_evento('disparo_segmento', contexto_por_lead, tenant)` para cada um
 3. O engine processa cada lead na automacao vinculada (se houver)
 
-Ver [automacoes/](automacoes/) para como configurar a regra que consome esse evento.
+Ver [../automacao/README.md](../automacao/README.md) para como configurar a regra que consome esse evento (engine unificada; o motor antigo de marketing foi aposentado em 29/06/2026).

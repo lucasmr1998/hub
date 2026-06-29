@@ -59,7 +59,7 @@ Arquivo: `apps/comercial/crm/services/segmentos.py`
 
 ## Integracao com automacoes
 
-O signal `avaliar_segmentos_dinamicos` (post_save LeadProspecto) dispara o evento `lead_entrou_segmento` quando um lead passa a atender as regras de um segmento dinamico. Esse evento e captado por [marketing/automacoes/](../../marketing/automacoes/) para disparar campanhas.
+O signal `avaliar_segmentos_dinamicos` (post_save LeadProspecto) dispara o evento `lead_entrou_segmento` quando um lead passa a atender as regras de um segmento dinamico. Esse evento e captado pela engine unificada [../../automacao/README.md](../../automacao/README.md) para disparar campanhas (o motor antigo de marketing foi aposentado em 29/06/2026).
 
 ---
 

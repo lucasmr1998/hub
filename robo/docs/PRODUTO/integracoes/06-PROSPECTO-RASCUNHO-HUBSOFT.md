@@ -3,6 +3,8 @@
 > Status: implementado em 17/06/2026, refatorado em 18/06/2026 pra motor de automação do CRM. **Inativo por padrão** — ativação pela Gabi (Nuvyon) pela UI de Automações do Pipeline.
 >
 > **Atualização 18/06 (limpa):** removida flag `OportunidadeVenda.is_rascunho` (inventada por engano). Webhook Matrix já cria oportunidade direto — não precisa de flag intermediária. Regras agora usam só `lead.id_hubsoft` (existe/não existe) como gatilho.
+>
+> **Atualização 29/06/2026:** o motor genérico de marketing (`apps/marketing/automacoes/`) foi **completamente aposentado** (código deletado, 8 tabelas `automacoes_*` dropadas em prod). Os vestígios citados na seção "Motor genérico (marketing/automacoes)" abaixo não existem mais. Esta implementação roda no **motor CRM** (`RegraPipelineEstagio`), que segue ativo e não foi afetado.
 
 ## Problema
 

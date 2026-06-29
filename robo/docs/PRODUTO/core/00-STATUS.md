@@ -103,14 +103,16 @@ Este documento é a fonte da verdade sobre o que está pronto, em desenvolviment
 |----------------|--------|------------|
 | Segmentação de leads | 🔧 Parcial | Model existe, UI básica |
 
-### Automações (apps/marketing/automacoes/)
+### Automações (apps/marketing/automacoes/) (❌ APOSENTADO 29/06/2026)
+
+> Motor de automação de marketing **aposentado em 29/06/2026**: código deletado, 8 tabelas `automacoes_*` dropadas em prod. Substituído pela engine unificada `apps/automacao/` (estilo n8n), em prod porém dormente. Ver [modulos/automacao/](../modulos/automacao/README.md).
 
 | Funcionalidade | Status | Observação |
 |----------------|--------|------------|
-| Lista de automações com toggle | 🚧 Em desenvolvimento | Frontend pronto, backend pendente |
-| Builder visual (Quando/Se/Então) | 🚧 Em desenvolvimento | Frontend pronto, backend pendente |
-| Engine de execução de regras | 📋 Planejado | |
-| Histórico de execuções | 📋 Planejado | |
+| Lista de automações com toggle | ❌ Aposentado | Migrado para a engine unificada |
+| Builder visual (Quando/Se/Então) | ❌ Aposentado | Editor React Flow na engine unificada |
+| Engine de execução de regras | ❌ Aposentado | Substituído pela engine `apps/automacao/` |
+| Histórico de execuções | ❌ Aposentado | Tabelas dropadas |
 
 ### Funcionalidades planejadas
 

@@ -24,7 +24,7 @@ Forensics em tabelas de log (30/05/2026):
 
 | Job | Ultimo registro | Diagnostico |
 |---|---|---|
-| `executar_automacoes_cron` (motor marketing) | 27/04/2026 | **morto ha ~1 mes** |
+| `executar_automacoes_cron` (motor marketing) | 27/04/2026 | **APOSENTADO em 29/06/2026** (comando e tabelas deletados; substituido pela engine unificada `apps/automacao/`) |
 | `executar_recontato` (recontato Hubtrix) | 07/05/2026 (atendimento_log_fluxo) | **morto ha ~3 semanas** |
 | `sincronizar_clientes` (HubSoft) | 21/05/2026 (logs_integracao) | **morto ha 9 dias** |
 | `notificar_sla_*`, `alertar_sla_vendedor` | nunca | **nunca rodou** |
@@ -49,12 +49,14 @@ O sistema utiliza servicos periodicos para processar automacoes, sincronizar dad
 
 ## Servicos Criticos (producao)
 
-### 1. executar_automacoes_cron
+### 1. executar_automacoes_cron (❌ APOSENTADO 29/06/2026)
 
-**O que faz:** Coracao do motor de automacoes. Processa delays pendentes, detecta leads sem contato, tarefas vencidas e dispara automacoes por segmento.
+> **APOSENTADO em 29/06/2026.** O motor de automacao de marketing (`apps/marketing/automacoes/`) foi aposentado: codigo deletado, 8 tabelas `automacoes_*` dropadas em prod. O comando `executar_automacoes_cron`, a funcao `executar_pendentes` e os models `ExecucaoPendente`/`LogExecucao` **nao existem mais**. Substituido pela engine unificada `apps/automacao/` (estilo n8n), em prod porem dormente (execucao gated por `AUTOMACAO_WIRING_ATIVO`). Doc: [modulos/automacao/](../modulos/automacao/README.md). A descricao abaixo fica como referencia historica.
 
-**App:** `apps/marketing/automacoes/`
-**Comando:** `python manage.py executar_automacoes_cron --settings=gerenciador_vendas.settings`
+**O que fazia:** Coracao do motor de automacoes. Processava delays pendentes, detectava leads sem contato, tarefas vencidas e disparava automacoes por segmento.
+
+**App:** `apps/marketing/automacoes/` (deletado)
+**Comando:** `python manage.py executar_automacoes_cron --settings=gerenciador_vendas.settings` (removido)
 **Frequencia:** A cada 5 minutos
 
 **Argumentos:**
@@ -232,20 +234,22 @@ python manage.py sincronizar_catalogo_hubsoft --categoria=todos --apenas-automat
 
 ## Engine de Pendentes (Delays)
 
-### Automacoes (Marketing)
+### Automacoes (Marketing) (❌ APOSENTADO 29/06/2026)
 
-**Funcao:** `executar_pendentes(tenant=None)` em `apps/marketing/automacoes/engine.py`
+> **APOSENTADO em 29/06/2026.** `executar_pendentes` e o model `ExecucaoPendente` viviam em `apps/marketing/automacoes/engine.py`, app aposentado (codigo deletado, tabelas dropadas). A engine unificada `apps/automacao/` assume os delays agora. Descricao abaixo e historica.
 
-**Como funciona:**
-1. Busca `ExecucaoPendente` com `status='pendente'` e `data_agendada <= agora`
+**Funcao (removida):** `executar_pendentes(tenant=None)` em `apps/marketing/automacoes/engine.py`
+
+**Como funcionava:**
+1. Buscava `ExecucaoPendente` com `status='pendente'` e `data_agendada <= agora`
 2. Para cada pendente:
-   - Restaura contexto do JSON serializado
-   - Se `nodo` (modo fluxo): retoma traversal do grafo a partir das saidas do no de delay
-   - Se `acao` (modo legado): executa a acao diretamente
-   - Marca como `executado` ou `erro`
+   - Restaurava contexto do JSON serializado
+   - Se `nodo` (modo fluxo): retomava traversal do grafo a partir das saidas do no de delay
+   - Se `acao` (modo legado): executava a acao diretamente
+   - Marcava como `executado` ou `erro`
 3. Chamada pelo cron `executar_automacoes_cron`
 
-**Idempotente:** Cada pendente e marcado apos execucao, nao re-executa.
+**Idempotente:** Cada pendente era marcado apos execucao, nao re-executava.
 
 ### Atendimento (Fluxos de Bot)
 
@@ -281,7 +285,7 @@ python manage.py sincronizar_catalogo_hubsoft --categoria=todos --apenas-automat
 
 | Comando | App | O que faz |
 |---------|-----|-----------|
-| `testar_automacoes` | automacoes | 18 testes E2E do engine de automacoes |
+| ~~`testar_automacoes`~~ | ~~automacoes~~ | ❌ APOSENTADO 29/06/2026 (comando e engine deletados) |
 | `testar_pontuacoes` | cs/clube | Testa sistema de gamificacao |
 
 ---
@@ -296,7 +300,9 @@ python manage.py sincronizar_catalogo_hubsoft --categoria=todos --apenas-automat
 # ============================================================
 
 # Engine de automacoes (delays, eventos, segmentos)
-*/5 * * * * cd /opt/aurora && python manage.py executar_automacoes_cron --settings=gerenciador_vendas.settings >> /var/log/aurora/automacoes.log 2>&1
+# ❌ APOSENTADO 29/06/2026. Comando executar_automacoes_cron removido (motor marketing aposentado).
+#   Engine unificada apps/automacao/ assume; quando ativada, ajustar este bloco.
+# */5 * * * * cd /opt/aurora && python manage.py executar_automacoes_cron --settings=gerenciador_vendas.settings >> /var/log/aurora/automacoes.log 2>&1
 
 # Processar leads pendentes para HubSoft
 */30 * * * * cd /opt/aurora && python manage.py processar_pendentes --settings=gerenciador_vendas.settings >> /var/log/aurora/hubsoft_pendentes.log 2>&1
@@ -334,7 +340,7 @@ Para ambiente de desenvolvimento no Windows, criar tarefas no Agendador de Taref
 
 | Tarefa | Programa | Argumentos | Frequencia |
 |--------|----------|------------|------------|
-| Aurora Automacoes | python | `manage.py executar_automacoes_cron --settings=gerenciador_vendas.settings_local` | 5 min |
+| ~~Aurora Automacoes~~ ❌ APOSENTADO 29/06 | ~~python~~ | ~~`manage.py executar_automacoes_cron`~~ (comando removido) | nao roda |
 | Aurora HubSoft Sync | python | `manage.py sincronizar_clientes --settings=gerenciador_vendas.settings_local` | 1 min |
 | Aurora Pendentes | python | `manage.py processar_pendentes --settings=gerenciador_vendas.settings_local` | 30 min |
 | Aurora HubSoft Catalogos | python | `manage.py sincronizar_catalogo_hubsoft --categoria=todos --apenas-automatico --settings=gerenciador_vendas.settings_local` | 1x ao dia (03:00) |
@@ -349,16 +355,19 @@ Para verificar se os crons estao rodando:
 # Verificar logs
 tail -f /var/log/aurora/automacoes.log
 
-# Verificar pendentes acumulados (sinal de cron parado)
-python manage.py shell -c "
-from apps.marketing.automacoes.models import ExecucaoPendente
-print(f'Pendentes: {ExecucaoPendente.objects.filter(status=\"pendente\").count()}')
-"
-
-# Verificar ultima execucao
-python manage.py shell -c "
-from apps.marketing.automacoes.models import LogExecucao
-ultimo = LogExecucao.objects.order_by('-data_execucao').first()
-print(f'Ultima execucao: {ultimo.data_execucao if ultimo else \"nunca\"} - {ultimo.resultado[:50] if ultimo else \"\"}')
-"
+# ❌ APOSENTADO 29/06/2026. Os models ExecucaoPendente e LogExecucao foram
+#   deletados junto com o motor marketing (tabelas automacoes_* dropadas em prod).
+#   As queries abaixo nao funcionam mais; o monitoramento da engine unificada
+#   (apps/automacao/) sera definido quando ela sair do estado dormente.
+#
+# python manage.py shell -c "
+# from apps.marketing.automacoes.models import ExecucaoPendente
+# print(f'Pendentes: {ExecucaoPendente.objects.filter(status=\"pendente\").count()}')
+# "
+#
+# python manage.py shell -c "
+# from apps.marketing.automacoes.models import LogExecucao
+# ultimo = LogExecucao.objects.order_by('-data_execucao').first()
+# print(f'Ultima execucao: {ultimo.data_execucao if ultimo else \"nunca\"} - {ultimo.resultado[:50] if ultimo else \"\"}')
+# "
 ```
