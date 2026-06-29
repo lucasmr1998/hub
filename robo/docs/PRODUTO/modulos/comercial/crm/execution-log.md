@@ -57,4 +57,15 @@ de pular pra "Analises - Doc & Score").
 
 **Reverter (se necessario):** UPDATE ativo=True nos mesmos ids.
 
+**Correcao em massa das ops afetadas (2026-06-29):**
+37 ops foram movidas de "Analises - Doc & Score" -> "Em Atendimento"
+porque tinham caido aqui pela regra #30 sem ter documentacao
+completa. Mantidas em "Analises - Doc & Score":
+- Op 1755 Maikebinkan: regra correta #25 (tag aguardando_validacao)
+- Op 1736 Gabriel: movida manualmente (motivo vazio)
+- Op 1787 Tiago: score=aprovado, deixar vendedor decidir
+- Op 1790 Antonio: score=aprovado, deixar vendedor decidir
+HistoricoPipelineEstagio registrado pra cada uma com motivo
+"Correcao em massa". Notificacoes disparadas pros responsaveis.
+
 ---
