@@ -1077,7 +1077,7 @@ function criarCard(op, estagio) {
         ? `<div class="card-avatar" title="${escapeHtml(avatarTitle)}">${escapeHtml(avatarText)}</div>`
         : `<div class="card-resp-empty">sem responsável</div>`
       }
-      <div class="${diasClass}">${formatarTempoEstagio(op.dias_no_estagio)}</div>
+      <div class="${diasClass}">${op.tempo_no_estagio_humano || formatarTempoEstagio(op.dias_no_estagio)}</div>
     </div>
   `;
 
@@ -1522,6 +1522,7 @@ function renderPreviewCard() {
     canal: 'whatsapp',
     fonte: 'facebook',
     campanha: 'Entre em Contato e Aproveite!',
+    tempo_no_estagio_humano: '3 horas',
   };
   const camposHtml = _camposSelecionados
     .map(slug => renderCampoCard(slug, opMock))
@@ -1534,7 +1535,7 @@ function renderPreviewCard() {
       ${camposHtml}
       <div class="card-footer">
         <div class="card-avatar">${opMock.responsavel_inicial}</div>
-        <div class="card-dias">${formatarTempoEstagio(opMock.dias_no_estagio)}</div>
+        <div class="card-dias">${opMock.tempo_no_estagio_humano || formatarTempoEstagio(opMock.dias_no_estagio)}</div>
       </div>
     </div>`;
 }
