@@ -192,6 +192,23 @@ def engine_apos_imagem(sender, instance, **kwargs):
         _disparar_engine(lead_id=lead_id)
 
 
+@receiver(post_save, sender='crm.OportunidadeVenda')
+def engine_apos_op_criada(sender, instance, created, **kwargs):
+    """Dispara motor de regras quando uma op eh CRIADA (manualmente ou
+    automaticamente). Sem isso, regras como #23 'HubSoft - Criar rascunho
+    ao receber lead (CRM)' nao rodam pra op criada manualmente — so quando
+    o lead eh editado subsequentemente.
+
+    So dispara na criacao (created=True). Updates de op nao precisam
+    reavaliar regras (a unica regra que importa em movimento eh a de
+    transicao de estagio, que ja eh feita pelo proprio motor)."""
+    if not created:
+        return
+    if getattr(instance, '_skip_rules_evaluation', False):
+        return
+    _disparar_engine(oportunidade=instance)
+
+
 def _conectar_signal_servico_hubsoft():
     """Conecta post_save de ServicoClienteHubsoft se o modelo existir."""
     try:

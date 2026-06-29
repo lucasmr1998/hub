@@ -70,6 +70,33 @@ def on_lead_qualificado(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender='crm.OportunidadeVenda')
+def on_oportunidade_criada(sender, instance, created, **kwargs):
+    """Dispara 'oportunidade_criada' quando op eh criada (manual ou auto).
+
+    Permite que automacoes visuais no /automacao/editor/ escutem o evento
+    e reajam (criar rascunho HubSoft, distribuir, etc) sem precisar
+    hardcodar a logica."""
+    if not created:
+        return
+    if getattr(instance, '_skip_automacao', False):
+        return
+    disparar_evento('oportunidade_criada', {
+        'oportunidade': instance,
+        'oportunidade_titulo': instance.titulo or '',
+        'estagio': instance.estagio.slug if instance.estagio else '',
+        'estagio_nome': instance.estagio.nome if instance.estagio else '',
+        'pipeline': instance.pipeline.slug if instance.pipeline else '',
+        'pipeline_nome': instance.pipeline.nome if instance.pipeline else '',
+        'origem_crm': instance.origem_crm or '',
+        'lead': instance.lead,
+        'lead_nome': instance.lead.nome_razaosocial if instance.lead else '',
+        'lead_id_hubsoft': (instance.lead.id_hubsoft if instance.lead else '') or '',
+        'telefone': instance.lead.telefone if instance.lead else '',
+        'nome': instance.titulo or '',
+    }, tenant=instance.tenant)
+
+
+@receiver(post_save, sender='crm.OportunidadeVenda')
 def on_oportunidade_movida(sender, instance, created, **kwargs):
     """Dispara 'oportunidade_movida' quando o estágio muda (update)."""
     if created:
