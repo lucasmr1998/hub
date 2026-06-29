@@ -193,3 +193,20 @@ export async function listarExecucoes(fluxoId?: number | null, status?: string):
   if (!r.ok) throw new Error('execuções HTTP ' + r.status)
   return (await r.json()).execucoes
 }
+
+export interface ExecucaoDetalhe {
+  id: number
+  fluxo_id: number
+  grafo: any
+  variaveis: Record<string, any>
+  nodes: Record<string, any>
+  trace: PassoTrace[]
+  status: string
+  erro: string
+}
+
+export async function getExecucao(pk: number): Promise<ExecucaoDetalhe> {
+  const r = await fetch(`/automacao/api/execucoes/${pk}/`, { credentials: 'include' })
+  if (!r.ok) throw new Error('execução HTTP ' + r.status)
+  return r.json()
+}

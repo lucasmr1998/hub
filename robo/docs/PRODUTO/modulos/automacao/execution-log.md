@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-29 — Reproduzir execução no canvas (estilo n8n) + webhook testável no localhost
+
+- **Webhook no localhost:** `@csrf_exempt`, precisa fluxo `ativo=True`. Validado com curl: `POST /automacao/webhook/<token>/` com body → vira `{{var.payload}}`; nó Responder ao Webhook resolveu o corpo (`{{var.payload.nome}}` → "Ana"). **Limite anotado:** engine tem **um `inicio` só** por fluxo → chat+webhook no mesmo fluxo roda sempre do `inicio` (não há multi-trigger; recomendar 1 gatilho por fluxo até implementar).
+- **Persistir estado nas execuções completadas:** `executar_e_persistir` só salvava `estado` quando pausava (`aguardando`). Agora salva `contexto.serializar()` (variaveis+nodes) também em completada/erro → observabilidade.
+- **"Ver no fluxo" (estilo n8n):** `execucao_detalhe_api(pk)` devolve grafo+estado+trace; `ExecucoesPanel` ganha botão "↗ ver no fluxo"; `App.abrirExecucao` carrega o grafo no canvas, **pinta o caminho que rodou** (`destacarCaminho(trace)`) e alimenta o **I/O por nó** (`ultimaExec` = variaveis/nodes da execução). Clicar num nó mostra o INPUT (output do nó anterior) e OUTPUT daquela execução. Validado e2e (webhook → execução com `rp.output` persistido).
+
+---
+
 ## 2026-06-29 — Nó `responder_webhook` (Respond to Webhook do n8n) + guard de humano no fluxo de suporte
 
 - **Nó `responder_webhook`** (`nodes/responder_webhook.py`): define `status`+`corpo` (resolve `{{...}}`) da resposta HTTP de um fluxo via webhook. Promove `_resposta_webhook`; `webhook_receber` (já roda síncrono via `executar_e_persistir`) lê e devolve isso (JSON se parsear, senão texto) em vez do `{execucao_id, status}` padrão. 3 testes; e2e validado (`{{var.payload.nome}}` → corpo resolvido). Editor: aparece na paleta via catálogo (sem rebuild).

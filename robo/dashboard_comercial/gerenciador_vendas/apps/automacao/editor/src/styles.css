@@ -235,3 +235,8 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: 
 .ia-chave { color: #7fb0ff; font-family: ui-monospace, monospace; font-weight: 600; flex: 0 0 auto; }
 .ia-valor { color: #c8d0de; font-family: ui-monospace, monospace; overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap; }
+
+/* Botão "ver no fluxo" na lista de execuções */
+.exec-abrir { margin-left: auto; border: 1px solid #cdd6e6; background: #fff; color: #2f6df6;
+  border-radius: 6px; padding: 3px 9px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.exec-abrir:hover { border-color: #2f6df6; background: #f0f5ff; }

@@ -10,7 +10,7 @@ import { NodeModal } from './NodeModal'
 import { ChatPanel } from './ChatPanel'
 import ExecucoesPanel from './ExecucoesPanel'
 import {
-  buscarCatalogo, buscarEventos, testarFluxo, chatTestar, listarFluxos, getFluxo, criarFluxo, atualizarFluxo,
+  buscarCatalogo, buscarEventos, testarFluxo, chatTestar, listarFluxos, getFluxo, getExecucao, criarFluxo, atualizarFluxo,
   type NoCatalogo, type FluxoResumo, type EventoCatalogo,
 } from './api'
 import { paraRuntime, deRuntime, ICONES, GRUPOS, CORES_GRUPO, SAIDAS, SAIDAS_DIN, CAMPO_SAIDAS, TRIGGERS, slug } from './flow'
@@ -191,6 +191,26 @@ export function App() {
     }
   }
 
+  // Reproduz uma execução persistida no canvas (estilo n8n): carrega o fluxo,
+  // pinta o caminho que rodou e alimenta o I/O por nó com os dados daquela execução.
+  const abrirExecucao = async (id: number) => {
+    try {
+      const det = await getExecucao(id)
+      const { nodes: ns, edges: es } = deRuntime(det.grafo)
+      setNodes(ns); setEdges(es)
+      setFluxoId(det.fluxo_id); setSelId(null)
+      const f = lista.find((x) => x.id === det.fluxo_id)
+      if (f) setNome(f.nome)
+      setUltimaExec({ variaveis: det.variaveis, nodes: det.nodes })
+      setUltimaMensagem('')
+      setAba('editor')
+      destacarCaminho(det.trace)
+      setResultado({ status: det.status, erro: det.erro, passos: det.trace, variaveis: det.variaveis, nodes: det.nodes })
+    } catch (e) {
+      setMsg('erro ao abrir execução')
+    }
+  }
+
   const exportar = () => {
     const json = JSON.stringify(paraRuntime(nodes, edges), null, 2)
     const a = document.createElement('a')
@@ -321,7 +341,7 @@ export function App() {
         </aside>
       </div>
 
-      {aba === 'execucoes' && <ExecucoesPanel fluxoId={fluxoId} />}
+      {aba === 'execucoes' && <ExecucoesPanel fluxoId={fluxoId} onAbrir={abrirExecucao} />}
 
       {chatAberto && (
         <ChatPanel

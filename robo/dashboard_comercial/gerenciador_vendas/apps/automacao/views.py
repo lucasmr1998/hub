@@ -131,6 +131,28 @@ def execucoes_api(request):
 
 
 @login_required
+def execucao_detalhe_api(request, pk):
+    """Uma execução com o grafo + estado (variaveis/nodes) + trace — pro editor
+    REPRODUZIR a execução no canvas (caminho verde + I/O por nó), estilo n8n."""
+    tenant = getattr(request, 'tenant', None)
+    e = (ExecucaoFluxo.all_tenants.filter(tenant=tenant, pk=pk)
+         .select_related('fluxo').first())
+    if e is None:
+        return JsonResponse({'erro': 'execução não encontrada'}, status=404)
+    estado = e.estado or {}
+    return JsonResponse({
+        'id': e.pk,
+        'fluxo_id': e.fluxo_id,
+        'grafo': (e.fluxo.grafo or {}),
+        'variaveis': estado.get('variaveis') or {},
+        'nodes': estado.get('nodes') or {},
+        'trace': e.trace or [],
+        'status': e.status,
+        'erro': e.erro or '',
+    })
+
+
+@login_required
 def agentes_page(request):
     """Lista de Agentes IA do tenant (gerência). Criar/editar/testar fica na página
     dedicada `agente_editar_page`."""

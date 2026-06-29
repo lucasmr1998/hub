@@ -45,6 +45,9 @@ def executar_e_persistir(fluxo, contexto, *, inicio=None, execucao=None):
         segundos = espera.get('segundos') or 0
         execucao.agendado_para = (timezone.now() + timedelta(seconds=segundos)) if segundos else None
     else:
+        # Completada/erro: persiste o estado final (variaveis + nodes) pra observabilidade
+        # — o editor reproduz a execução no canvas com o I/O por nó (estilo n8n).
+        execucao.estado = contexto.serializar()
         execucao.agendado_para = None
         execucao.no_pausado = ''
         execucao.modo_espera = ''

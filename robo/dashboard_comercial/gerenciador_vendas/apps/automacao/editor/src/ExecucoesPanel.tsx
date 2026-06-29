@@ -10,7 +10,7 @@ function corStatus(s: string): string {
   return '#5b6472'
 }
 
-export default function ExecucoesPanel({ fluxoId }: { fluxoId: number | null }) {
+export default function ExecucoesPanel({ fluxoId, onAbrir }: { fluxoId: number | null; onAbrir?: (id: number) => void }) {
   const [execs, setExecs] = useState<ExecucaoResumo[]>([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
@@ -60,6 +60,10 @@ export default function ExecucoesPanel({ fluxoId }: { fluxoId: number | null }) 
               <span className="exec-fluxo">{e.fluxo}</span>
               <span className="exec-quando">{e.quando}</span>
               <span className="exec-passos">{e.trace.length} passo(s)</span>
+              {onAbrir && (
+                <button className="exec-abrir" title="Reproduzir no canvas"
+                  onClick={(ev) => { ev.stopPropagation(); onAbrir(e.id) }}>↗ ver no fluxo</button>
+              )}
               <span className="exec-chevron">{aberta === e.id ? '▾' : '▸'}</span>
             </div>
             {aberta === e.id && (
