@@ -100,6 +100,12 @@ Exemplo MODO B (colapsado — preserva espaco em kanban/lista grande):
                     <option value="{{ opt_val }}"{% if opt_val == f.value %} selected{% endif %}>{{ opt_label }}</option>
                   {% endfor %}
                 </select>
+              {% elif f.type == 'multiselect' %}
+                <select name="{{ f.name }}" class="field-input" multiple size="4" title="Segure Ctrl/Cmd pra selecionar varios">
+                  {% for opt_val, opt_label in f.options %}
+                    <option value="{{ opt_val }}"{% if opt_val in f.values %} selected{% endif %}>{{ opt_label }}</option>
+                  {% endfor %}
+                </select>
               {% else %}
                 <input type="{{ f.type|default:'text' }}"
                        name="{{ f.name }}"

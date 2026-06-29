@@ -167,6 +167,14 @@ def pipeline_view(request):
     from .models import TagCRM
     tags = TagCRM.objects.all().order_by('nome')
 
+    # Opcoes pra Canal e Fonte (escolhas fixas do model LeadProspecto)
+    from apps.comercial.leads.models import LeadProspecto as _L
+    # Campanhas: lista de CampanhaTrafego ativas do tenant
+    from apps.marketing.campanhas.models import CampanhaTrafego
+    campanhas_opts = list(
+        CampanhaTrafego.objects.filter(ativa=True).order_by('nome').values('id', 'nome')
+    )
+
     filter_fields = [
         {'type': 'select', 'label': 'Responsavel', 'name': 'responsavel', 'value': '',
          'options': [('', 'Todos')] + [(str(v['id']), v['nome']) for v in vendedores]},
@@ -180,6 +188,16 @@ def pipeline_view(request):
              ('500-1000', 'R$ 500 a R$ 1.000'),
              ('1000+', 'Acima de R$ 1.000'),
          ]},
+        # Sprint 5: filtros de origem (multi-select)
+        {'type': 'multiselect', 'label': 'Canal', 'name': 'canal',
+         'values': request.GET.getlist('canal'),
+         'options': [(v, l) for v, l in _L.CANAL_CHOICES]},
+        {'type': 'multiselect', 'label': 'Fonte', 'name': 'fonte',
+         'values': request.GET.getlist('fonte'),
+         'options': [(v, l) for v, l in _L.FONTE_CHOICES]},
+        {'type': 'multiselect', 'label': 'Campanha', 'name': 'campanha',
+         'values': request.GET.getlist('campanha'),
+         'options': [(str(c['id']), c['nome']) for c in campanhas_opts]},
     ]
 
     # T1 — Motivos de perda + flags pra o modal do Kanban
@@ -249,6 +267,10 @@ def api_pipeline_dados(request):
 
     tag = request.GET.get('tag', '').strip()
     valor_range = request.GET.get('valor', '').strip()
+    # Filtros novos (Sprint 5 — origem/atribuicao). Multi-valor via getlist.
+    canais = [c for c in request.GET.getlist('canal') if c]
+    fontes = [f for f in request.GET.getlist('fonte') if f]
+    campanhas = [c for c in request.GET.getlist('campanha') if c]
 
     if responsavel_id:
         qs = qs.filter(responsavel_id=responsavel_id)
@@ -256,6 +278,21 @@ def api_pipeline_dados(request):
         qs = qs.filter(prioridade=prioridade)
     if tag:
         qs = qs.filter(tags__nome=tag)
+    if canais:
+        # canal pode estar no lead (canal — first-touch) ou na op (canal_atribuicao — last-touch).
+        # Filtra pela atribuicao (mais especifico) com fallback no lead.
+        from django.db.models import Q
+        qs = qs.filter(Q(canal_atribuicao__in=canais) | (Q(canal_atribuicao__isnull=True) & Q(lead__canal__in=canais)))
+    if fontes:
+        from django.db.models import Q
+        qs = qs.filter(Q(fonte_atribuicao__in=fontes) | (Q(fonte_atribuicao__isnull=True) & Q(lead__fonte__in=fontes)))
+    if campanhas:
+        from django.db.models import Q
+        try:
+            campanhas_ids = [int(c) for c in campanhas]
+            qs = qs.filter(Q(campanha_atribuicao_id__in=campanhas_ids) | (Q(campanha_atribuicao__isnull=True) & Q(lead__campanha_origem_id__in=campanhas_ids)))
+        except (ValueError, TypeError):
+            pass
     if valor_range:
         # valor_estimado virou property — usar annotate via com_valor_estimado()
         qs = qs.com_valor_estimado()
