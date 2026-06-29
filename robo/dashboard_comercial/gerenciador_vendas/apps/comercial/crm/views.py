@@ -3807,7 +3807,10 @@ def api_cadastro_completo_oportunidade(request, pk):
             {'id_hubsoft': 5, 'dia': 15},
             {'id_hubsoft': 6, 'dia': 20},
         ]
-        # Override por tenant se IntegracaoAPI tiver lista custom
+        # Origens (cliente + servico) — do cache da IntegracaoAPI HubSoft.
+        # Lista vazia se nao houver integracao ou cache.
+        opcoes_origens_cliente = []
+        opcoes_origens_servico = []
         try:
             from apps.integracoes.models import IntegracaoAPI
             integ = IntegracaoAPI.all_tenants.filter(
@@ -3815,11 +3818,26 @@ def api_cadastro_completo_oportunidade(request, pk):
             ).first()
             if integ:
                 extras = integ.configuracoes_extras or {}
-                # Override de planos so se tiver no extras (fallback no catalogo)
                 if extras.get('planos_disponiveis'):
                     opcoes_planos = extras['planos_disponiveis']
                 if extras.get('dias_vencimento_disponiveis'):
                     opcoes_vencimentos = extras['dias_vencimento_disponiveis']
+                # Origens vem do cache (sincronizado pela API HubSoft)
+                cache = extras.get('cache') or {}
+                for it in (cache.get('origens_cliente') or []):
+                    if it.get('id_origem_cliente') is not None:
+                        opcoes_origens_cliente.append({
+                            'id': int(it['id_origem_cliente']),
+                            'nome': it.get('descricao') or it.get('nome') or f'#{it["id_origem_cliente"]}',
+                        })
+                for it in (cache.get('origens_contato') or []):
+                    if it.get('id_origem_contato') is not None:
+                        opcoes_origens_servico.append({
+                            'id': int(it['id_origem_contato']),
+                            'nome': it.get('descricao') or it.get('nome') or f'#{it["id_origem_contato"]}',
+                        })
+                opcoes_origens_cliente.sort(key=lambda x: x['nome'])
+                opcoes_origens_servico.sort(key=lambda x: x['nome'])
         except Exception:
             pass
 
@@ -3845,6 +3863,10 @@ def api_cadastro_completo_oportunidade(request, pk):
                 'id_dia_vencimento': lead.id_dia_vencimento or '',
                 'id_hubsoft': lead.id_hubsoft or '',
                 'status_api': lead.status_api or '',
+                'observacoes': lead.observacoes or '',
+                'ponto_referencia': lead.ponto_referencia or '',
+                'id_origem': lead.id_origem or '',
+                'id_origem_servico': lead.id_origem_servico or '',
             },
             'responsavel': {
                 'id': op.responsavel_id,
@@ -3856,6 +3878,8 @@ def api_cadastro_completo_oportunidade(request, pk):
             },
             'opcoes_planos': opcoes_planos,
             'opcoes_vencimentos': opcoes_vencimentos,
+            'opcoes_origens_cliente': opcoes_origens_cliente,
+            'opcoes_origens_servico': opcoes_origens_servico,
         })
 
     # POST — atualiza Lead
@@ -3869,6 +3893,7 @@ def api_cadastro_completo_oportunidade(request, pk):
         'nome_razaosocial', 'cpf_cnpj', 'data_nascimento', 'rg', 'email',
         'telefone', 'cep', 'rua', 'numero_residencia', 'complemento',
         'bairro', 'cidade', 'estado', 'id_plano_rp', 'id_dia_vencimento',
+        'observacoes', 'ponto_referencia', 'id_origem', 'id_origem_servico',
     }
     # Mapeamento de chaves do JS pro Lead (alguns nomes diferentes)
     aliases = {

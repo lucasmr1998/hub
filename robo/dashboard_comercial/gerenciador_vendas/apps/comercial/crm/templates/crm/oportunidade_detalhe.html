@@ -2633,7 +2633,8 @@ async function abrirCadastroCompleto() {
       fecharModal('modal-cadastro-completo');
       return;
     }
-    _ccPopularSelects(d.opcoes_planos || [], d.opcoes_vencimentos || []);
+    _ccPopularSelects(d.opcoes_planos || [], d.opcoes_vencimentos || [],
+                      d.opcoes_origens_cliente || [], d.opcoes_origens_servico || []);
     _ccPreencher(d);
     _ccAtualizarStatus();
   } catch (e) {
@@ -2641,9 +2642,11 @@ async function abrirCadastroCompleto() {
   }
 }
 
-function _ccPopularSelects(planos, vencimentos) {
+function _ccPopularSelects(planos, vencimentos, origensCliente, origensServico) {
   const selPlano = _ccElem('cc-plano');
   const selVenc  = _ccElem('cc-vencimento');
+  const selOC    = _ccElem('cc-id-origem');
+  const selOS    = _ccElem('cc-id-origem-servico');
   if (selPlano) {
     selPlano.innerHTML = '<option value="">— escolha o plano —</option>' +
       planos.map(p => `<option value="${p.id_hubsoft}">${p.nome}${p.valor ? ` — R$ ${Number(p.valor).toFixed(2).replace('.',',')}` : ''}</option>`).join('');
@@ -2651,6 +2654,14 @@ function _ccPopularSelects(planos, vencimentos) {
   if (selVenc) {
     selVenc.innerHTML = '<option value="">— escolha o dia —</option>' +
       vencimentos.map(v => `<option value="${v.id_hubsoft}">Dia ${v.dia}</option>`).join('');
+  }
+  if (selOC) {
+    selOC.innerHTML = '<option value="">— sem definir (usa padrao do tenant) —</option>' +
+      (origensCliente || []).map(o => `<option value="${o.id}">${o.nome}</option>`).join('');
+  }
+  if (selOS) {
+    selOS.innerHTML = '<option value="">— sem definir (usa padrao do tenant) —</option>' +
+      (origensServico || []).map(o => `<option value="${o.id}">${o.nome}</option>`).join('');
   }
 }
 
@@ -2671,6 +2682,10 @@ function _ccPreencher(d) {
   _ccElem('cc-estado').value          = l.estado || '';
   _ccElem('cc-plano').value           = l.id_plano_rp || '';
   _ccElem('cc-vencimento').value      = l.id_dia_vencimento || '';
+  _ccElem('cc-id-origem').value         = l.id_origem || '';
+  _ccElem('cc-id-origem-servico').value = l.id_origem_servico || '';
+  _ccElem('cc-referencia').value        = l.ponto_referencia || '';
+  _ccElem('cc-observacoes').value       = l.observacoes || '';
   _ccElem('cc-viabilidade').textContent = (d.viabilidade && d.viabilidade.status) || '(nao consultado)';
 }
 
@@ -2722,6 +2737,10 @@ async function _ccSalvar(eFechar) {
     estado: _ccElem('cc-estado').value.trim(),
     id_plano_rp: _ccElem('cc-plano').value.trim(),
     id_dia_vencimento: _ccElem('cc-vencimento').value.trim(),
+    id_origem: _ccElem('cc-id-origem').value.trim(),
+    id_origem_servico: _ccElem('cc-id-origem-servico').value.trim(),
+    ponto_referencia: _ccElem('cc-referencia').value.trim(),
+    observacoes: _ccElem('cc-observacoes').value,
   };
 
   try {
@@ -2793,6 +2812,28 @@ async function _ccSalvar(eFechar) {
               <option value="">— escolha o dia —</option>
             </select>
           </label>
+        </div>
+      </div>
+      <div class="cc-section">
+        <h4>Origem e atribuicao</h4>
+        <div class="cc-grid">
+          <label class="cc-field"><span>Origem do cliente</span>
+            <select id="cc-id-origem">
+              <option value="">— sem definir (usa padrao do tenant) —</option>
+            </select>
+          </label>
+          <label class="cc-field"><span>Origem do servico</span>
+            <select id="cc-id-origem-servico">
+              <option value="">— sem definir (usa padrao do tenant) —</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div class="cc-section">
+        <h4>Observacoes</h4>
+        <div class="cc-grid">
+          <label class="cc-field cc-col-3"><span>Ponto de referencia</span><input id="cc-referencia" type="text" placeholder="Ex: em frente a padaria"></label>
+          <label class="cc-field cc-col-3"><span>Observacoes</span><textarea id="cc-observacoes" rows="3" placeholder="Detalhes adicionais sobre o cliente ou negociacao"></textarea></label>
         </div>
       </div>
       <div class="cc-section">
