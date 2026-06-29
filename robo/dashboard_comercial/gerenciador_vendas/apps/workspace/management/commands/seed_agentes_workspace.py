@@ -23,7 +23,7 @@ TOOLS_AGENTE = [
     'status_pipeline', 'resumo_leads', 'vendas_periodo', 'churn_clientes', 'tickets_abertos',
     'listar_documentos',
     # acao no workspace (o agente faz)
-    'criar_projeto', 'criar_tarefa', 'criar_etapa', 'salvar_documento',
+    'criar_projeto', 'criar_tarefa_workspace', 'criar_etapa', 'salvar_documento',
     # recomendar com aval humano
     'solicitar_aprovacao',
 ]

@@ -39,7 +39,7 @@ _CLASSIFICACAO = {
     'tickets_abertos':             ('conhecimento', 'dados'),
     'solicitar_aprovacao':         ('executavel', 'governanca'),
     'criar_projeto':               ('executavel', 'workspace'),
-    'criar_tarefa':                ('executavel', 'workspace'),
+    'criar_tarefa_workspace':      ('executavel', 'workspace'),
     'criar_etapa':                 ('executavel', 'workspace'),
     'salvar_documento':            ('executavel', 'workspace'),
     'listar_documentos':           ('conhecimento', 'workspace'),
@@ -449,16 +449,16 @@ def _criar_projeto(contexto, args, agente=None):
 
 
 @_tool(
-    'criar_tarefa',
-    'Crie uma tarefa no Workspace. Use pra registrar um trabalho a fazer. Sem projeto_id, '
-    'a tarefa cai na "Caixa dos agentes".',
+    'criar_tarefa_workspace',
+    'Crie uma tarefa no Workspace (backlog de projeto da empresa, NAO o funil/CRM). Use pra '
+    'registrar um trabalho a fazer. Sem projeto_id, a tarefa cai na "Caixa dos agentes".',
     {'titulo': {'type': 'string', 'description': 'Titulo da tarefa'},
      'descricao': {'type': 'string', 'description': 'O que fazer (opcional)'},
      'prioridade': {'type': 'string', 'description': 'baixa | media | alta | critica (padrao media)'},
-     'projeto_id': {'type': 'integer', 'description': 'ID do projeto (opcional)'}},
+     'projeto_id': {'type': 'integer', 'description': 'ID do projeto do Workspace (opcional)'}},
     ['titulo'],
 )
-def _criar_tarefa(contexto, args, agente=None):
+def _criar_tarefa_workspace(contexto, args, agente=None):
     from apps.workspace.models import Projeto, Tarefa, PRIORIDADE_CHOICES
     titulo = str(args.get('titulo') or '').strip()[:200]
     if not titulo:

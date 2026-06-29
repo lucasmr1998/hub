@@ -16,7 +16,7 @@ Total: **18 tools** em **7 categorias**.
 | **dados** | `churn_clientes`, `resumo_leads`, `status_pipeline`, `tickets_abertos`, `vendas_periodo` |
 | **governanca** | `solicitar_aprovacao` |
 | **suporte** | `abrir_ticket` |
-| **workspace** | `listar_documentos`, `criar_etapa`, `criar_projeto`, `criar_tarefa`, `salvar_documento` |
+| **workspace** | `listar_documentos`, `criar_etapa`, `criar_projeto`, `criar_tarefa_workspace`, `salvar_documento` |
 
 ## atendimento
 
@@ -165,16 +165,16 @@ Crie um projeto no Workspace (uma frente de trabalho com objetivo). Use pra orga
 | `nome` | string | sim | Nome do projeto |
 | `objetivo` | string | nao | Objetivo do projeto (opcional) |
 
-### `criar_tarefa` — Executavel
+### `criar_tarefa_workspace` — Executavel
 
-Crie uma tarefa no Workspace. Use pra registrar um trabalho a fazer. Sem projeto_id, a tarefa cai na "Caixa dos agentes".
+Crie uma tarefa no Workspace (backlog de projeto da empresa, NAO o funil/CRM). Use pra registrar um trabalho a fazer. Sem projeto_id, a tarefa cai na "Caixa dos agentes".
 
 | Parametro | Tipo | Obrigatorio | Descricao |
 |---|---|---|---|
 | `titulo` | string | sim | Titulo da tarefa |
 | `descricao` | string | nao | O que fazer (opcional) |
 | `prioridade` | string | nao | baixa | media | alta | critica (padrao media) |
-| `projeto_id` | integer | nao | ID do projeto (opcional) |
+| `projeto_id` | integer | nao | ID do projeto do Workspace (opcional) |
 
 ### `salvar_documento` — Executavel
 

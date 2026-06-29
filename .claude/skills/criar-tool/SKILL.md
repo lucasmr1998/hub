@@ -22,7 +22,7 @@ Em `apps/automacao/services/ia_tools.py`:
   - **executavel** (faz/escreve, efeito colateral) → `criar_tarefa`, `salvar_documento`, `abrir_ticket`
 
 ## 2. Defina a spec
-- `chave`: slug unico snake_case (ex: `atualizar_tarefa`)
+- `chave`: slug unico snake_case. **Se o conceito existe em mais de um dominio** (ex: tarefa no Workspace vs no CRM, que ja tem um NO `criar_tarefa`), **deixe explicito** pra nao confundir o LLM nem colidir: use `criar_tarefa_workspace`, nunca `criar_tarefa`. NAO misture Workspace e CRM numa tool so.
 - `descricao`: 1-2 frases — **o que faz + QUANDO o agente deve usar** (o LLM le isso pra decidir chamar)
 - `tipo`: `conhecimento` (read-only) | `executavel` (efeito colateral)
 - `categoria`: uma das do `TOOLS.md` (`dados`, `workspace`, `crm`, `atendimento`, `suporte`, `conhecimento`, `governanca`) ou uma nova, se fizer sentido
