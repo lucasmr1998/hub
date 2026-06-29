@@ -150,7 +150,7 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 | `if` | Fluxo › Lógica | Condição (If) | ✅ (saídas true/false) |
 | `switch` | Fluxo › Roteamento | Switch (roteador) | ✅ **N saídas dinâmicas** — modelo "Rules" (n8n): regras `valor [operador] comparar → saída` (reusa operadores/`_comparar` do `if`); 1ª que casa ganha; resto → `default` |
 | `delay` | Fluxo › Controle | Aguardar | ✅ (pausa; retoma via cron) |
-| `webhook` | Gatilho › Entrada | Webhook | ✅ **trigger** (entrada do fluxo, sem porta de entrada) |
+| `webhook` | Gatilho › Entrada | Webhook | ✅ **trigger** (entrada do fluxo, sem porta de entrada); campo **`responder`** (modo n8n): `imediato` (ack) / `ultimo_no` (output do último nó) / `no_resposta` (usa o nó Responder ao Webhook) |
 | `responder_webhook` | Core › Webhook | Responder ao Webhook | ✅ **"Respond to Webhook" (n8n)**: define `status`+`corpo` (aceita `{{...}}`) da resposta HTTP do fluxo via webhook; `webhook_receber` devolve isso em vez do `{execucao_id, status}` padrão |
 | `evento` | Gatilho › Sistema | Evento do sistema | ✅ **trigger** (evento + filtros; wiring deferido via `on_evento`, kill-switch `AUTOMACAO_WIRING_ATIVO`) |
 | `chat` | Gatilho › Teste | Chat (teste) | ✅ **trigger de teste** (estilo n8n): abre o painel "💬 Chat" no editor; cada mensagem roda o fluxo como `{{var.conteudo}}`. Caminho executado fica verde; INPUT/OUTPUT por nó. |

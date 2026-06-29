@@ -491,13 +491,26 @@ def webhook_receber(request, token):
     from .execucao import executar_e_persistir
     contexto = Contexto(tenant=fluxo.tenant, variaveis={'payload': payload})
     execucao, res = executar_e_persistir(fluxo, contexto)
-    # "Respond to Webhook" (n8n): se o fluxo tem um nó responder_webhook, devolve o que ele definiu.
+
+    # Modo de resposta (estilo n8n), configurado no próprio nó Webhook.
+    grafo = fluxo.grafo or {}
+    cfg_wh = ((grafo.get('nodes') or {}).get(grafo.get('inicio')) or {}).get('config') or {}
+    modo = cfg_wh.get('responder') or 'imediato'
+
+    # Um nó "Responder ao Webhook" (se rodou) sempre define a resposta.
     resp = (contexto.variaveis or {}).get('_resposta_webhook')
     if isinstance(resp, dict):
-        corpo = resp.get('corpo', '')
-        status = resp.get('status', 200)
+        corpo, status = resp.get('corpo', ''), resp.get('status', 200)
         try:
             return JsonResponse(json.loads(corpo), status=status, safe=False)
         except (ValueError, TypeError):
             return HttpResponse(corpo, status=status, content_type='text/plain; charset=utf-8')
+
+    # "When Last Node Finishes": devolve o output do último nó executado.
+    if modo == 'ultimo_no':
+        passos = getattr(res, 'passos', None) or []
+        ultimo = passos[-1].handle if passos else None
+        return JsonResponse((contexto.nodes or {}).get(ultimo) or {}, safe=False)
+
+    # "Immediately" (default): ack.
     return JsonResponse({'execucao_id': execucao.id, 'status': res.status})

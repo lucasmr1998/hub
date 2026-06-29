@@ -19,7 +19,13 @@ class WebhookTriggerNode(BaseNode):
     is_trigger = True
 
     def campos_config(self) -> list:
-        return []
+        return [
+            {'nome': 'responder', 'label': 'Responder', 'tipo': 'select',
+             'opcoes': ['imediato', 'ultimo_no', 'no_resposta'],
+             'ajuda': 'Como o webhook responde (estilo n8n): "imediato" = devolve um ok na hora; '
+                      '"ultimo_no" = devolve o output do último nó executado; "no_resposta" = use '
+                      'um nó "Responder ao Webhook" no fluxo pra definir status/corpo.'},
+        ]
 
     def executar(self, config, entrada, contexto) -> NodeResult:
         payload = (contexto.variaveis or {}).get('payload', {})
