@@ -17,11 +17,12 @@ CAMPOS_CARD_DISPONIVEIS = [
     # Comercial
     ('valor_estimado',    'Valor estimado',      'comercial',  'bi-currency-dollar'),
     ('plano',             'Plano escolhido',     'comercial',  'bi-wifi'),
-    # Pessoas
-    ('responsavel',       'Responsavel',         'pessoas',    'bi-person-badge'),
-    ('responsavel_avatar','Avatar responsavel',  'pessoas',    'bi-person-circle'),
+    # `responsavel` e `responsavel_avatar` sairam da personalizacao —
+    # sempre aparecem compactos no rodape do card (avatar + nome).
+    # Evita duplicidade no meio do card.
     # Status
-    ('tempo_no_estagio',  'Tempo no estagio',    'status',     'bi-clock'),
+    # `tempo_no_estagio` saiu da personalizacao — sempre aparece compacto
+    # no rodape do card (ao lado do avatar do responsavel). Evita duplicidade.
     ('tags',              'Tags',                'status',     'bi-tag'),
     ('score_externo',     'Score externo',       'status',     'bi-graph-up'),
     ('viabilidade',       'Viabilidade',         'status',     'bi-geo-alt'),
@@ -36,8 +37,9 @@ CAMPOS_CARD_DISPONIVEIS = [
     ('campanha',          'Campanha de origem',  'origem',     'bi-megaphone'),
 ]
 
-# Defaults razoaveis pra um tenant novo
-DEFAULT_CAMPOS_CARD = ['nome', 'telefone', 'valor_estimado', 'tempo_no_estagio', 'responsavel']
+# Defaults razoaveis pra um tenant novo (tempo_no_estagio e responsavel
+# saem porque ja aparecem no rodape compacto sempre)
+DEFAULT_CAMPOS_CARD = ['nome', 'telefone', 'valor_estimado', 'plano', 'tags']
 
 # Limite maximo de campos visiveis (HubSpot usa 4, RD usa 4, Pipedrive 5)
 MAX_CAMPOS_VISIVEIS = 5
