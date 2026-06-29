@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-06-29 — Mapa de entrada (WhatsApp → memória) + fluxo de suporte pronto pra prod
+
+- **Como o WhatsApp inicia o fluxo (verificado no código, não chute):**
+  ```
+  Uazapi → POST /inbox/api/uazapi/webhook/ (inbox/views_uazapi.uazapi_webhook)
+         → services.receber_mensagem() → cria Conversa + Mensagem (remetente_tipo='contato')
+         → signal inbox/signals.py:192 on_mensagem_recebida → disparar_evento('mensagem_recebida', {'conversa':conversa, 'conteudo':..., ...})  [motor antigo]
+         → marketing/automacoes/engine.py:48 → on_evento(evento, contexto, tenant)  [encaminha p/ engine nova]
+         → automacao/gatilhos.py:_despachar → acha Fluxo ativo com gatilho_evento='mensagem_recebida' + nó `evento` → _contexto_do_evento → Contexto(conversa=..., var.conteudo=...)
+         → roda a partir do nó evento (NÃO do `inicio`) → agente memória 'conversa' lê as mensagens da Conversa → MEMÓRIA OK
+  ```
+- **Conclusão da dúvida do usuário:** o Uazapi entra **por webhook, mas via inbox** (cria Conversa) — **não** é o webhook cru/stateless. No canal real, a memória `conversa` funciona. O stateless só vale pra fluxo que use o nó-gatilho `webhook` direto (custom). `sessao` memory fica pra esse caso.
+- **`gatilho_evento`** é **auto-sincronizado no `Fluxo.save()`** (models.py:52-58) a partir do nó `evento` — não seta à mão.
+- **Multi-trigger parcial:** `evento` inicia do **handle do nó evento** (`_enfileirar(trigger_handle)`), `webhook`/`chat` iniciam do `grafo['inicio']`. Então **chat (teste) + evento (prod) coexistem** no mesmo fluxo; só webhook usa o `inicio`.
+- **Feito:** "Triagem de Suporte" ganhou nó `evento` (mensagem_recebida) → guard → Classificador (ao lado do chat). `gatilho_evento='mensagem_recebida'`. Falta só `ativo=True` + `AUTOMACAO_WIRING_ATIVO` pra disparar em prod (decisão de go-live).
+
+---
+
 ## 2026-06-29 — Reproduzir execução no canvas (estilo n8n) + webhook testável no localhost
 
 - **Webhook no localhost:** `@csrf_exempt`, precisa fluxo `ativo=True`. Validado com curl: `POST /automacao/webhook/<token>/` com body → vira `{{var.payload}}`; nó Responder ao Webhook resolveu o corpo (`{{var.payload.nome}}` → "Ana"). **Limite anotado:** engine tem **um `inicio` só** por fluxo → chat+webhook no mesmo fluxo roda sempre do `inicio` (não há multi-trigger; recomendar 1 gatilho por fluxo até implementar).
