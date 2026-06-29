@@ -250,6 +250,9 @@ Uso em template que extende layout_app:
         <a href="{% url 'workspace:agentes_lista' %}" class="app-subnav-item {% if 'agente' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-robot"></i><span>Agentes</span>
         </a>
+        <a href="{% url 'workspace:propostas_lista' %}" class="app-subnav-item {% if 'proposta' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-check2-circle"></i><span>Propostas</span>
+        </a>
       </nav>
 
     {% elif modulo_atual == 'relatorios' %}

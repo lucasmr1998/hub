@@ -402,3 +402,64 @@ class AnexoDocumento(TenantMixin):
     @property
     def eh_imagem(self):
         return self.tipo == 'imagem' or (self.mime_type or '').startswith('image/')
+
+
+# ============================================================================
+# PROPOSTA — ação proposta por um agente IA, aguardando aprovação humana
+# ============================================================================
+
+class Proposta(TenantMixin):
+    """Ação proposta por um agente IA, com execução diferida até aprovação humana.
+
+    Em vez de executar direto, o agente registra a intenção aqui (titulo + descricao
+    + `dados_execucao` com o bloco de ação). Um humano aprova (e o sistema executa o
+    bloco) ou rejeita. Padrão herdado do gestão (comando.Proposta), agora multi-tenant
+    (TenantMixin) e ligado ao `automacao.Agente` (fonte única do agente).
+    """
+    STATUS_CHOICES = [
+        ('pendente', 'Pendente'),
+        ('aprovada', 'Aprovada'),
+        ('rejeitada', 'Rejeitada'),
+        ('executada', 'Executada'),
+        ('erro', 'Erro'),
+    ]
+
+    agente = models.ForeignKey(
+        'automacao.Agente', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='propostas', help_text='Agente que propôs a ação',
+    )
+    tarefa = models.ForeignKey(
+        Tarefa, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='propostas', help_text='Tarefa de origem (se veio do backlog)',
+    )
+    titulo = models.CharField(max_length=300)
+    descricao = models.TextField(blank=True)
+    prioridade = models.CharField(max_length=20, choices=PRIORIDADE_CHOICES, default='media')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente', db_index=True)
+
+    # Bloco de ação a executar ao aprovar (execução diferida). Ex:
+    # {'tool': 'criar_tarefa', 'args': {...}}. Vazio = proposta só informativa.
+    dados_execucao = models.JSONField(default=dict, blank=True)
+    resultado_execucao = models.TextField(blank=True)
+    motivo_rejeicao = models.TextField(blank=True)
+
+    decidido_por = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='propostas_decididas',
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    data_decisao = models.DateTimeField(null=True, blank=True)
+    data_execucao = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'workspace'
+        db_table = 'workspace_proposta'
+        verbose_name = 'Proposta'
+        verbose_name_plural = 'Propostas'
+        ordering = ['-criado_em']
+        indexes = [
+            models.Index(fields=['tenant', 'status']),
+        ]
+
+    def __str__(self):
+        return f'[{self.status}] {self.titulo}'

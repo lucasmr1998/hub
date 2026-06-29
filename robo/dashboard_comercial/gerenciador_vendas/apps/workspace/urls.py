@@ -11,7 +11,7 @@ Estrutura (algumas views são stubs na fase 1, completam nas próximas PRs):
 """
 from django.urls import path
 
-from apps.workspace.views import agentes, dashboard, documentos, projetos, tarefas, api as api_views
+from apps.workspace.views import agentes, dashboard, documentos, projetos, propostas, tarefas, api as api_views
 
 app_name = 'workspace'
 
@@ -22,6 +22,10 @@ urlpatterns = [
     # Agentes IA — roster + chat 1:1 (motor reusado do apps/automacao)
     path('agentes/', agentes.lista, name='agentes_lista'),
     path('api/agentes/chat/', agentes.chat_api, name='agentes_chat'),
+
+    # Propostas — fila de aprovacao humana das acoes dos agentes
+    path('propostas/', propostas.lista, name='propostas_lista'),
+    path('propostas/<int:pk>/decidir/', propostas.decidir, name='proposta_decidir'),
 
     # Drive — vista unificada de pastas + documentos
     path('documentos/', documentos.drive, name='documentos_lista'),

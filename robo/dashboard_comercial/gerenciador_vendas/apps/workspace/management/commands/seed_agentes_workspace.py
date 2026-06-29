@@ -18,15 +18,17 @@ from django.core.management.base import BaseCommand, CommandError
 
 # Tools de dados (read-only) que todo agente executivo recebe.
 # Chaves do registry em apps/automacao/services/ia_tools.py.
-TOOLS_DADOS = [
+TOOLS_AGENTE = [
     'status_pipeline', 'resumo_leads', 'vendas_periodo', 'churn_clientes', 'tickets_abertos',
+    'solicitar_aprovacao',
 ]
 
 PREFIXO_PROMPT = (
     'Voce e um agente da Hubtrix operando no Workspace interno. Quando a pergunta '
     'envolver numeros do negocio (pipeline, leads, vendas, churn, suporte), USE as '
     'ferramentas de dados disponiveis para buscar os valores reais antes de responder, '
-    'em vez de estimar. Seja direto e fundamente as analises com os dados.\n\n'
+    'em vez de estimar. Quando quiser RECOMENDAR uma acao que precisa de aval humano, '
+    'use solicitar_aprovacao em vez de afirmar que ja fez. Seja direto e fundamente com dados.\n\n'
 )
 
 
@@ -94,7 +96,7 @@ class Command(BaseCommand):
                 tenant=tenant, nome=nome,
                 defaults={
                     'system_prompt': PREFIXO_PROMPT + texto,
-                    'tools': list(TOOLS_DADOS),
+                    'tools': list(TOOLS_AGENTE),
                     'memoria': 'conversa',
                     'integracao_ia': integracao,
                     'ativo': True,

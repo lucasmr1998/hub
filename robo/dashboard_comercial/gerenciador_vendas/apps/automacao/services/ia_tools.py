@@ -334,3 +334,34 @@ def _tickets_abertos(contexto, args, agente=None):
     nomes = dict(Ticket.STATUS_CHOICES)
     partes = '; '.join(f'{nomes.get(s["status"], s["status"])}: {s["n"]}' for s in por_status)
     return f'Tickets abertos: {total}. Por status: {partes}.'
+
+
+@_tool(
+    'solicitar_aprovacao',
+    'Registre uma PROPOSTA de acao para aprovacao humana, em vez de executar direto. '
+    'Use quando recomendar algo que precisa do aval de uma pessoa antes (uma decisao, '
+    'um gasto, uma mudanca importante). De um titulo objetivo e uma descricao com o '
+    'racional e a acao que voce sugere. Prioridade: baixa, media, alta ou critica.',
+    {'titulo': {'type': 'string', 'description': 'Titulo curto da proposta'},
+     'descricao': {'type': 'string', 'description': 'Racional + acao sugerida, com contexto'},
+     'prioridade': {'type': 'string', 'description': 'baixa | media | alta | critica (padrao media)'}},
+    ['titulo', 'descricao'],
+)
+def _solicitar_aprovacao(contexto, args, agente=None):
+    from apps.workspace.models import Proposta, PRIORIDADE_CHOICES
+    validas = {v for v, _ in PRIORIDADE_CHOICES}
+    prio = (args.get('prioridade') or 'media').strip().lower()
+    if prio not in validas:
+        prio = 'media'
+    titulo = str(args.get('titulo') or '').strip()[:300]
+    if not titulo:
+        return 'titulo da proposta vazio.'
+    p = Proposta.objects.create(
+        tenant=contexto.tenant,
+        agente=agente if getattr(agente, 'pk', None) else None,
+        titulo=titulo,
+        descricao=str(args.get('descricao') or '').strip(),
+        prioridade=prio,
+        status='pendente',
+    )
+    return f'proposta #{p.pk} registrada (prioridade {prio}), aguardando aprovacao humana.'

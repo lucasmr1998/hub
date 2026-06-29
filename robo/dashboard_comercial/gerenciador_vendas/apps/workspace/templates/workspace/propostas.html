@@ -1,0 +1,67 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}{{ pagetitle }} — Hubtrix{% endblock %}
+
+{% block extra_head %}{% include "workspace/_workspace_styles.html" %}{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">Workspace</p>
+        <h1 class="page-title">Propostas</h1>
+        <p class="page-subtitle">Ações propostas pelos agentes, aguardando sua aprovação.</p>
+      </div>
+    </div>
+  </div>
+
+  <section style="margin-top: var(--sp-5);">
+    <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-3);">Pendentes ({{ pendentes|length }})</h2>
+    {% if pendentes %}
+      <div style="display: flex; flex-direction: column; gap: var(--sp-3);">
+        {% for p in pendentes %}
+          <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-4);">
+            <div style="display: flex; justify-content: space-between; gap: var(--sp-3); align-items: start;">
+              <div style="min-width: 0;">
+                <div style="font-weight: 600;">{{ p.titulo }}</div>
+                <div style="font-size: 0.8rem; color: var(--color-text-muted); margin-top: 2px;">
+                  {% if p.agente %}{{ p.agente.nome }} &middot; {% endif %}{{ p.get_prioridade_display }} &middot; {{ p.criado_em|date:"d/m H:i" }}
+                </div>
+                {% if p.descricao %}<p style="margin: var(--sp-2) 0 0; white-space: pre-wrap;">{{ p.descricao }}</p>{% endif %}
+              </div>
+              {% if pode_decidir %}
+                <div style="display: flex; gap: var(--sp-2); flex-shrink: 0;">
+                  <form method="post" action="{% url 'workspace:proposta_decidir' pk=p.pk %}">{% csrf_token %}
+                    <input type="hidden" name="acao" value="aprovar">
+                    <button type="submit" class="btn btn-primary">Aprovar</button>
+                  </form>
+                  <form method="post" action="{% url 'workspace:proposta_decidir' pk=p.pk %}">{% csrf_token %}
+                    <input type="hidden" name="acao" value="rejeitar">
+                    <button type="submit" class="btn btn-secondary">Rejeitar</button>
+                  </form>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="color: var(--color-text-muted); padding: var(--sp-5) 0; text-align: center;">Nenhuma proposta pendente.</p>
+    {% endif %}
+  </section>
+
+  {% if decididas %}
+    <section style="margin-top: var(--sp-6);">
+      <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-3);">Histórico</h2>
+      <div style="display: flex; flex-direction: column; gap: var(--sp-2);">
+        {% for p in decididas %}
+          <div style="display: flex; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface);">
+            <span>{{ p.titulo }}</span>
+            <span style="font-size: 0.8rem; color: var(--color-text-muted);">{{ p.get_status_display }}{% if p.data_decisao %} &middot; {{ p.data_decisao|date:"d/m" }}{% endif %}</span>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}
