@@ -88,3 +88,41 @@ Plano completo em `.claude/plans/a-gente-deve-gerar-expressive-pixel.md`. Resumo
 - Fase 2 + Fase 3 (bloqueadas ate o pgvector).
 - Branch `feat/agentes-workspace` NAO foi pushada (a pedido). 2 commits: `6cc24e5` (Fase 1) +
   `58a9191` (fix migration).
+
+---
+
+## ATUALIZACAO (mesma sessao): pgvector DESTRAVADO + Fase 2a e 3 entregues
+
+**Bloqueio resolvido.** O Postgres local estava em **PG 18.3** (a frente do prod) **sem pgvector**.
+Prod roda **PG 17.10 + pgvector 0.8.2**. O usuario instalou Docker; subimos `pgvector/pgvector:pg17`
+(espelha prod) na **porta 5433** (pgvector 0.8.3). O `settings_local` agora le `DB_HOST`/`DB_PORT` do
+env (default 127.0.0.1/5432, nao quebra ninguem); roda tudo com `DB_PORT=5433`. Os dados do
+`aurora_dev` nativo (PG18) foram migrados pro Docker via `pg_dump` (downgrade PG18->17 limpo) +
+`migrate` catch-up. Round-trip do CEO valida no Docker. `migrate` + `pytest` fresh agora rodam.
+
+> Container `hubtrix-pg17` (volume `hubtrix_pg17_data`). Rodar comandos com `DB_PORT=5433`. O PG18
+> nativo segue intacto na 5432.
+
+**Fase 2a entregue (commit `f0258b7`):** propostas com aprovacao humana. Model `Proposta` (workspace,
+TenantMixin, migration `0004`) + tool `solicitar_aprovacao` (agente propoe em vez de agir) +
+`views/propostas.py` + template + rota `/workspace/propostas/` + subnav (aprovar/rejeitar, gate
+`workspace.editar_todos`). Seed da a tool pros agentes. `test_workspace_propostas.py` (7 testes).
+
+**Fase 3 (re-point) entregue (commit `a4ab444`):** `Tarefa.criado_por_agente` e
+`Documento.agente_origem` re-apontadas de `comando.Agente` -> `automacao.Agente` (fonte unica).
+Migration `0005`, sem dados. `comando` ficou orfao e vazio (0 rows).
+
+**Validacao:** 45 testes verdes (build fresh com pgvector no Docker), `check` limpo, round-trip real.
+
+**Frontier deixado (com motivo):**
+- **Fase 2b (cron autonomo):** agente acordar sozinho e trabalhar backlog. NAO feito: falta decisao de
+  design (o `Tarefa` tem `criado_por_agente` mas nao um "agente responsavel"; como atribuir tarefa a
+  agente?) + e a parte mais arriscada (precisa guards anti-loop + limites por ciclo). Precisa do time.
+- **Execucao diferida da Proposta:** v1 e advisory (aprovar so registra). Auto-executar o
+  `dados_execucao` ao aprovar fica pro proximo incremento.
+- **Aposentar `comando`:** orfao + vazio agora; husk + DeleteModel (igual marketing) e limpo, mas o
+  drop em prod e gated por deploy. Deferido.
+
+**Branch `feat/agentes-workspace`: 5 commits, NAO pushada.** Nada tocou prod. Mudanca local
+nao-commitada: `settings_local.py` (le `DB_HOST`/`DB_PORT` do env) — enabler do dev Docker, seguro
+(default 5432); decidir se commita.
