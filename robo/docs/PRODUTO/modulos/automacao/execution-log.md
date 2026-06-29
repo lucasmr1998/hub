@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-29 — Nó `responder_webhook` (Respond to Webhook do n8n) + guard de humano no fluxo de suporte
+
+- **Nó `responder_webhook`** (`nodes/responder_webhook.py`): define `status`+`corpo` (resolve `{{...}}`) da resposta HTTP de um fluxo via webhook. Promove `_resposta_webhook`; `webhook_receber` (já roda síncrono via `executar_e_persistir`) lê e devolve isso (JSON se parsear, senão texto) em vez do `{execucao_id, status}` padrão. 3 testes; e2e validado (`{{var.payload.nome}}` → corpo resolvido). Editor: aparece na paleta via catálogo (sem rebuild).
+- **Guard de "humano assumiu" no fluxo de suporte:** nó `if` no topo (`{{var.modo_atendimento}} == humano`) → bot calado; senão segue. Valor `humano` é o canônico de `Conversa.MODO_ATENDIMENTO_CHOICES` (não hardcoded). **Atenção:** o modelo tem `default='humano'` → em prod a conversa nasce humano e o guard calaria o bot por padrão; falta definir **quando a conversa vira `bot`** (decisão de produto, pré-prod).
+- **Afinação dos prompts (dados, dev):** Capturador/Financeiro pararam de interrogar — máx 2-3 perguntas, confirmam antes de abrir e avisam o nº do chamado. Validado: conversa fecha em ticket (#7/#8) sem virar questionário.
+- **Princípio reforçado pelo usuário (memória):** **nada hardcoded** — valores vêm de config/modelo/dropdown, nunca string mágico no código.
+
+---
+
 ## 2026-06-28 — Drag-to-reference + seletor de conta (credential do n8n) + output de integração
 
 - **Drag-to-reference (editor):** o painel INPUT virou **árvore arrastável** (`InputArvore`); cada campo carrega sua referência (`{{nodes.<nó>.campo}}` ou `{{var.campo}}`). Campos de texto/textarea + as regras do switch viram **drop targets** (`propsDrop` insere no cursor). Zero mudança no backend (a referência já era resolvida pelo `contexto.resolver`).

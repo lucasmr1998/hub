@@ -9,7 +9,7 @@ import json
 
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_POST
@@ -491,4 +491,13 @@ def webhook_receber(request, token):
     from .execucao import executar_e_persistir
     contexto = Contexto(tenant=fluxo.tenant, variaveis={'payload': payload})
     execucao, res = executar_e_persistir(fluxo, contexto)
+    # "Respond to Webhook" (n8n): se o fluxo tem um nó responder_webhook, devolve o que ele definiu.
+    resp = (contexto.variaveis or {}).get('_resposta_webhook')
+    if isinstance(resp, dict):
+        corpo = resp.get('corpo', '')
+        status = resp.get('status', 200)
+        try:
+            return JsonResponse(json.loads(corpo), status=status, safe=False)
+        except (ValueError, TypeError):
+            return HttpResponse(corpo, status=status, content_type='text/plain; charset=utf-8')
     return JsonResponse({'execucao_id': execucao.id, 'status': res.status})
