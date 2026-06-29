@@ -142,7 +142,7 @@ def avaliar_segmentos_dinamicos(sender, instance, **kwargs):
 
         # Disparar automação para cada segmento em que o lead entrou
         if segmentos_adicionados:
-            from apps.marketing.automacoes.engine import disparar_evento
+            from apps.automacao.hub import disparar_evento
             for seg in segmentos_adicionados:
                 disparar_evento('lead_entrou_segmento', {
                     'lead': instance,

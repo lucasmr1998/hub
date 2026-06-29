@@ -166,7 +166,7 @@ def on_conversa_criada(sender, instance, created, **kwargs):
         return
 
     try:
-        from apps.marketing.automacoes.engine import disparar_evento
+        from apps.automacao.hub import disparar_evento
 
         contexto = {
             'conversa': instance,
@@ -201,7 +201,7 @@ def on_mensagem_recebida(sender, instance, created, **kwargs):
         return
 
     try:
-        from apps.marketing.automacoes.engine import disparar_evento
+        from apps.automacao.hub import disparar_evento
 
         conversa = instance.conversa
         contexto = {
@@ -438,7 +438,7 @@ def on_conversa_resolvida(sender, instance, created, **kwargs):
         return
 
     try:
-        from apps.marketing.automacoes.engine import disparar_evento
+        from apps.automacao.hub import disparar_evento
 
         contexto = {
             'conversa': instance,

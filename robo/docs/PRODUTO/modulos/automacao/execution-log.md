@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-06-29 — Aposentar motor de marketing: Fase 0 (gate) + Fase 1 (relocar encanamento)
+
+- **Fase 0 (gate, read-only prod):** 9 regras "ativas" mas **0 execuções/30d**; **0** ações `sincronizar_prospecto_hubsoft` ativas (o risco do nuvyon não existe — nuvyon faz HubSoft via Matrix). Única regra com execuções reais: `aurora-hq` "Novo lead: notificar equipe" (lead_criado, 37x), tenant interno. **Decisão do usuário: pode morrer.** Gate verde — nada funcional depende da execução das regras antigas.
+- **Fase 1 (relocar o encanamento, sem deletar):**
+  - **`apps/automacao/hub.py`** — `disparar_evento(evento, contexto, tenant)` neutro → só `gatilhos.on_evento` (fallback de tenant, blindado). Não roda regra antiga.
+  - **`apps/automacao/signals_dominio.py`** — os 6 signals de domínio (lead_criado, lead_status_pendente, lead_qualificado, oportunidade_movida, docs_validados, indicacao_convertida) relocados do motor antigo; registrados em `automacao/apps.py::ready()`.
+  - **Desligado** o `from . import signals` do `marketing/automacoes/apps.py` (evita disparo duplo).
+  - **Trocados** os imports de `inbox/signals.py` (3×) + `crm/signals.py` (1×) → `apps.automacao.hub`.
+  - **Cron deferido:** os eventos `lead_sem_contato`/`tarefa_vencida`/`disparo_segmento` (gated por regra antiga, 0 fluxo novo consome) morrem com o app na Fase 3; relocar quando um fluxo novo precisar. A engine nova já tem cron próprio (`automacao_retomar`).
+  - **Verificado (dev):** signals antigos NÃO carregam, novos carregam, hub ok, `check` limpo → eventos vão **1×** pra engine nova.
+- **Próximo:** commit → deploy → verificar em prod → Fase 2 (FK emails + timeline CRM) → Fase 3 (backup + drop tabelas, irreversível).
+
+---
+
 ## 2026-06-29 — Mapa de entrada (WhatsApp → memória) + fluxo de suporte pronto pra prod
 
 - **Como o WhatsApp inicia o fluxo (verificado no código, não chute):**
