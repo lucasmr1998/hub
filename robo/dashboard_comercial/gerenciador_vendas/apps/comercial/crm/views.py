@@ -374,6 +374,13 @@ def api_mover_oportunidade(request):
     if oportunidade.estagio_id == estagio_novo_id:
         return JsonResponse({'ok': True, 'mensagem': 'Sem mudança de estágio'})
 
+    # Pre-preenche os campos enviados no body ANTES da validacao de campos
+    # obrigatorios (assim o usuario consegue mover preenchendo no mesmo POST,
+    # sem precisar de chamada extra pra salvar antes).
+    motivo_perda_categoria_body = (data.get('motivo_perda_categoria') or '').strip()
+    if motivo_perda_categoria_body and estagio_novo.is_final_perdido:
+        oportunidade.motivo_perda_categoria = motivo_perda_categoria_body
+
     # Gate de campos obrigatorios — bloqueia avanco se faltarem campos
     from apps.comercial.crm.services.requisitos_estagio import campos_faltando
     faltantes = campos_faltando(oportunidade, estagio_novo)
@@ -433,6 +440,10 @@ def api_mover_oportunidade(request):
 
     # T2 — Se foi pra estagio de perda e veio motivo no body, persiste tambem
     if estagio_novo.is_final_perdido:
+        motivo_perda_categoria = (data.get('motivo_perda_categoria') or '').strip()
+        if motivo_perda_categoria:
+            oportunidade.motivo_perda_categoria = motivo_perda_categoria
+            campos.append('motivo_perda_categoria')
         if motivo_perda_ref_id:
             oportunidade.motivo_perda_ref_id = motivo_perda_ref_id
             campos.append('motivo_perda_ref')
@@ -1597,15 +1608,19 @@ def api_desempenho_dados(request):
     else:
         data_inicio = hoje.replace(day=1)
 
-    # Oportunidades fechadas no período
-    # valor_estimado virou property — usa com_valor_estimado() pra somar
-    ops_ganhas = OportunidadeVenda.objects.com_valor_estimado().filter(
+    # Oportunidades fechadas no período. Soma valor_estimado_manual
+    # (fallback simples — soma de itens nao funciona em aggregate de
+    # aggregate; pra precisao total usar com_valor_estimado por op).
+    from django.db.models import Value, DecimalField
+    from django.db.models.functions import Coalesce
+    ops_ganhas = OportunidadeVenda.objects.filter(
         estagio__is_final_ganho=True,
         data_fechamento_real__date__gte=data_inicio,
         ativo=True,
     ).values('responsavel').annotate(
         total=Count('id'),
-        valor=Sum('valor_estimado_anotado'),
+        valor=Coalesce(Sum('valor_estimado_manual'),
+                       Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))),
     )
 
     por_vendedor = {item['responsavel']: item for item in ops_ganhas}

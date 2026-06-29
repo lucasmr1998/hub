@@ -89,6 +89,9 @@ Uso em template que extende layout_app:
         <a href="/leads/" class="app-subnav-item {% if request.resolver_match.url_name == 'leads' %}is-active{% endif %}">
           <i class="bi bi-person-plus"></i><span>Leads</span>
         </a>
+        <a href="/marketing/landing-pages/" class="app-subnav-item {% if 'landing_pages' in request.resolver_match.url_name|default:'' or modulo_atual == 'landing_pages' %}is-active{% endif %}">
+          <i class="bi bi-file-earmark-richtext"></i><span>Landing Pages</span>
+        </a>
       </nav>
       <div class="app-subnav-section">Campanhas</div>
       <nav class="app-subnav-list">
@@ -240,6 +243,12 @@ Uso em template que extende layout_app:
       <nav class="app-subnav-list">
         <a href="{% url 'workspace:documentos_lista' %}" class="app-subnav-item {% if 'documento' in request.resolver_match.url_name or 'pasta' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-folder2-open"></i><span>Documentos</span>
+        </a>
+      </nav>
+      <div class="app-subnav-section">Inteligencia</div>
+      <nav class="app-subnav-list">
+        <a href="{% url 'workspace:agentes_lista' %}" class="app-subnav-item {% if 'agente' in request.resolver_match.url_name %}is-active{% endif %}">
+          <i class="bi bi-robot"></i><span>Agentes</span>
         </a>
       </nav>
 
