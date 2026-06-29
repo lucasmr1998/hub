@@ -205,3 +205,132 @@ def _abrir_ticket(contexto, args, agente=None):
         return f'não foi possível abrir o ticket: {e}'
     cat = ticket.categoria.nome if ticket.categoria else '—'
     return f'ticket #{ticket.numero} aberto (categoria: {cat}, prioridade: {ticket.prioridade}).'
+
+
+# ----------------------------------------------------------------------------
+# Tools de DADOS (consulta read-only, tenant-scoped) para agentes executivos
+# do workspace. Reusam os models do registry de relatorios (data_sources.py).
+# Sempre filtram por contexto.tenant via all_tenants (explicito, nunca thread-local).
+# ----------------------------------------------------------------------------
+
+def _int_arg(valor, padrao):
+    try:
+        return int(valor)
+    except (TypeError, ValueError):
+        return padrao
+
+
+def _reais(valor):
+    return f'R$ {float(valor or 0):,.0f}'.replace(',', '.')
+
+
+@_tool(
+    'status_pipeline',
+    'Resumo do funil comercial: quantidade de oportunidades por estagio. Use para '
+    'responder sobre o pipeline ou o funil de vendas.',
+    {},
+    [],
+)
+def _status_pipeline(contexto, args, agente=None):
+    from django.db.models import Count
+    from apps.comercial.crm.models import OportunidadeVenda
+    linhas = list(
+        OportunidadeVenda.all_tenants.filter(tenant=contexto.tenant)
+        .values('estagio__nome')
+        .annotate(n=Count('id'))
+        .order_by('-n')
+    )
+    if not linhas:
+        return 'pipeline vazio (nenhuma oportunidade).'
+    total = sum(l['n'] for l in linhas)
+    partes = '; '.join(f'{(l["estagio__nome"] or "sem estagio")}: {l["n"]}' for l in linhas)
+    return f'Pipeline: {total} oportunidades. Por estagio: {partes}.'
+
+
+@_tool(
+    'resumo_leads',
+    'Resumo dos leads do funil: total, novos no periodo e principais origens. Use para '
+    'responder quantos leads existem ou de onde vem os leads.',
+    {'dias': {'type': 'integer', 'description': 'Janela em dias para os leads novos (padrao 30)'}},
+    [],
+)
+def _resumo_leads(contexto, args, agente=None):
+    from datetime import timedelta
+    from django.utils import timezone
+    from django.db.models import Count
+    from apps.comercial.leads.models import LeadProspecto
+    dias = _int_arg(args.get('dias'), 30)
+    base = LeadProspecto.all_tenants.filter(tenant=contexto.tenant)
+    total = base.count()
+    if not total:
+        return 'nenhum lead cadastrado para este tenant.'
+    novos = base.filter(data_cadastro__gte=timezone.now() - timedelta(days=dias)).count()
+    origens = base.values('origem').annotate(n=Count('id')).order_by('-n')[:5]
+    top = '; '.join(f'{(o["origem"] or "sem origem")}: {o["n"]}' for o in origens)
+    return f'Leads: {total} no total, {novos} novos nos ultimos {dias} dias. Principais origens: {top}.'
+
+
+@_tool(
+    'vendas_periodo',
+    'Vendas registradas no periodo: quantidade e valor total. Use para responder quanto '
+    'foi vendido (vendas do mes, da semana, etc).',
+    {'dias': {'type': 'integer', 'description': 'Janela em dias (padrao 30)'}},
+    [],
+)
+def _vendas_periodo(contexto, args, agente=None):
+    from datetime import timedelta
+    from django.utils import timezone
+    from django.db.models import Count, Sum
+    from apps.comercial.crm.models import Venda
+    dias = _int_arg(args.get('dias'), 30)
+    agg = (
+        Venda.all_tenants
+        .filter(tenant=contexto.tenant, data_venda__gte=timezone.now() - timedelta(days=dias))
+        .aggregate(n=Count('id'), valor=Sum('valor'))
+    )
+    return f'Vendas nos ultimos {dias} dias: {agg["n"] or 0} venda(s), total {_reais(agg["valor"])}.'
+
+
+@_tool(
+    'churn_clientes',
+    'Clientes ativos em risco de churn (churn_score alto) na base HubSoft espelhada. Use '
+    'para responder sobre risco de cancelamento ou retencao.',
+    {'score_minimo': {'type': 'integer',
+                      'description': 'Churn score minimo para considerar em risco (0 a 100, padrao 70)'}},
+    [],
+)
+def _churn_clientes(contexto, args, agente=None):
+    from django.db.models import Avg
+    from apps.integracoes.models import ClienteHubsoft
+    minimo = _int_arg(args.get('score_minimo'), 70)
+    base = ClienteHubsoft.all_tenants.filter(tenant=contexto.tenant, ativo=True)
+    total = base.count()
+    if not total:
+        return 'sem clientes HubSoft espelhados para este tenant.'
+    em_risco = base.filter(churn_score__gte=minimo).count()
+    media = base.aggregate(m=Avg('churn_score'))['m'] or 0
+    return (f'Clientes ativos: {total}. Em risco de churn (score >= {minimo}): {em_risco}. '
+            f'Churn score medio: {media:.0f}.')
+
+
+@_tool(
+    'tickets_abertos',
+    'Tickets de suporte ainda nao resolvidos, por status. Use para responder sobre a fila '
+    'de suporte ou quantos chamados estao abertos.',
+    {},
+    [],
+)
+def _tickets_abertos(contexto, args, agente=None):
+    from django.db.models import Count
+    from apps.suporte.models import Ticket
+    abertos = ['aberto', 'em_andamento', 'aguardando_cliente']
+    por_status = list(
+        Ticket.all_tenants.filter(tenant=contexto.tenant, status__in=abertos)
+        .values('status').annotate(n=Count('id')).order_by('-n')
+    )
+    total = sum(s['n'] for s in por_status)
+    if not total:
+        return 'nenhum ticket aberto.'
+    nomes = dict(Ticket.STATUS_CHOICES)
+    partes = '; '.join(f'{nomes.get(s["status"], s["status"])}: {s["n"]}' for s in por_status)
+    return f'Tickets abertos: {total}. Por status: {partes}.'
