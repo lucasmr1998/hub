@@ -6,7 +6,7 @@
 
 > `tipo`: **Conhecimento** = le/consulta (read-only) · **Executavel** = faz/escreve (efeito colateral).
 
-Total: **18 tools** em **7 categorias**.
+Total: **21 tools** em **7 categorias**.
 
 | Categoria | Tools |
 |---|---|
@@ -16,7 +16,7 @@ Total: **18 tools** em **7 categorias**.
 | **dados** | `churn_clientes`, `resumo_leads`, `status_pipeline`, `tickets_abertos`, `vendas_periodo` |
 | **governanca** | `solicitar_aprovacao` |
 | **suporte** | `abrir_ticket` |
-| **workspace** | `listar_documentos`, `criar_etapa`, `criar_projeto`, `criar_tarefa_workspace`, `salvar_documento` |
+| **workspace** | `consultar_documento`, `listar_documentos`, `atualizar_projeto`, `atualizar_tarefa_workspace`, `criar_etapa`, `criar_projeto`, `criar_tarefa_workspace`, `salvar_documento` |
 
 ## atendimento
 
@@ -139,6 +139,14 @@ Abra um ticket de suporte pro time humano resolver. Use quando o cliente reporta
 
 ## workspace
 
+### `consultar_documento` — Conhecimento
+
+Leia o conteudo de um documento do Workspace pelo id (use listar_documentos pra achar o id). Retorna o texto em markdown. Read-only.
+
+| Parametro | Tipo | Obrigatorio | Descricao |
+|---|---|---|---|
+| `documento_id` | integer | sim | ID do documento do Workspace |
+
 ### `listar_documentos` — Conhecimento
 
 Liste documentos do Workspace (id + titulo + categoria), opcionalmente filtrando por um termo no titulo. Use pra achar um documento antes de consultar.
@@ -146,6 +154,29 @@ Liste documentos do Workspace (id + titulo + categoria), opcionalmente filtrando
 | Parametro | Tipo | Obrigatorio | Descricao |
 |---|---|---|---|
 | `busca` | string | nao | Termo pra filtrar no titulo (opcional) |
+
+### `atualizar_projeto` — Executavel
+
+Atualize um projeto do Workspace (status, nome ou objetivo) pelo id.
+
+| Parametro | Tipo | Obrigatorio | Descricao |
+|---|---|---|---|
+| `projeto_id` | integer | sim | ID do projeto do Workspace |
+| `status` | string | nao | planejamento | em_andamento | pausado | concluido | cancelado (opcional) |
+| `nome` | string | nao | Novo nome (opcional) |
+| `objetivo` | string | nao | Novo objetivo (opcional) |
+
+### `atualizar_tarefa_workspace` — Executavel
+
+Atualize uma tarefa do Workspace (status, prioridade, titulo ou descricao) pelo id. NAO mexe em tarefa do CRM/funil.
+
+| Parametro | Tipo | Obrigatorio | Descricao |
+|---|---|---|---|
+| `tarefa_id` | integer | sim | ID da tarefa do Workspace |
+| `status` | string | nao | rascunho | pendente | em_andamento | concluida | bloqueada (opcional) |
+| `prioridade` | string | nao | baixa | media | alta | critica (opcional) |
+| `titulo` | string | nao | Novo titulo (opcional) |
+| `descricao` | string | nao | Nova descricao (opcional) |
 
 ### `criar_etapa` — Executavel
 

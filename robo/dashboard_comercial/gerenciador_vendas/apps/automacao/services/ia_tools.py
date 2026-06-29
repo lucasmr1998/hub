@@ -547,3 +547,102 @@ def _listar_documentos(contexto, args, agente=None):
         return 'nenhum documento encontrado.'
     linhas = [f'#{d.pk} [{d.categoria}] {d.titulo}' for d in docs]
     return 'documentos:\n' + '\n'.join(linhas)
+
+
+@_tool(
+    'atualizar_tarefa_workspace',
+    'Atualize uma tarefa do Workspace (status, prioridade, titulo ou descricao) pelo id. '
+    'NAO mexe em tarefa do CRM/funil.',
+    {'tarefa_id': {'type': 'integer', 'description': 'ID da tarefa do Workspace'},
+     'status': {'type': 'string', 'description': 'rascunho | pendente | em_andamento | concluida | bloqueada (opcional)'},
+     'prioridade': {'type': 'string', 'description': 'baixa | media | alta | critica (opcional)'},
+     'titulo': {'type': 'string', 'description': 'Novo titulo (opcional)'},
+     'descricao': {'type': 'string', 'description': 'Nova descricao (opcional)'}},
+    ['tarefa_id'],
+    tipo='executavel', categoria='workspace',
+)
+def _atualizar_tarefa_workspace(contexto, args, agente=None):
+    from apps.workspace.models import Tarefa, PRIORIDADE_CHOICES, TAREFA_STATUS_CHOICES
+    tid = _int_arg(args.get('tarefa_id'), 0)
+    t = Tarefa.all_tenants.filter(tenant=contexto.tenant, pk=tid).first() if tid else None
+    if t is None:
+        return 'tarefa nao encontrada (passe um tarefa_id valido do Workspace).'
+    mudou = []
+    status = (args.get('status') or '').strip().lower()
+    if status and status in {v for v, _ in TAREFA_STATUS_CHOICES}:
+        t.status = status
+        mudou.append(f'status={status}')
+        if status == 'concluida' and not t.data_conclusao:
+            from django.utils import timezone
+            t.data_conclusao = timezone.now()
+    prio = (args.get('prioridade') or '').strip().lower()
+    if prio and prio in {v for v, _ in PRIORIDADE_CHOICES}:
+        t.prioridade = prio
+        mudou.append(f'prioridade={prio}')
+    titulo = (args.get('titulo') or '').strip()
+    if titulo:
+        t.titulo = titulo[:200]
+        mudou.append('titulo')
+    descricao = args.get('descricao')
+    if descricao is not None and str(descricao).strip():
+        t.descricao = str(descricao).strip()
+        mudou.append('descricao')
+    if not mudou:
+        return 'nada pra atualizar (informe status, prioridade, titulo ou descricao).'
+    t.save()
+    return f'tarefa #{t.pk} atualizada: {", ".join(mudou)}.'
+
+
+@_tool(
+    'atualizar_projeto',
+    'Atualize um projeto do Workspace (status, nome ou objetivo) pelo id.',
+    {'projeto_id': {'type': 'integer', 'description': 'ID do projeto do Workspace'},
+     'status': {'type': 'string', 'description': 'planejamento | em_andamento | pausado | concluido | cancelado (opcional)'},
+     'nome': {'type': 'string', 'description': 'Novo nome (opcional)'},
+     'objetivo': {'type': 'string', 'description': 'Novo objetivo (opcional)'}},
+    ['projeto_id'],
+    tipo='executavel', categoria='workspace',
+)
+def _atualizar_projeto(contexto, args, agente=None):
+    from apps.workspace.models import Projeto, PROJETO_STATUS_CHOICES
+    pid = _int_arg(args.get('projeto_id'), 0)
+    p = Projeto.all_tenants.filter(tenant=contexto.tenant, pk=pid).first() if pid else None
+    if p is None:
+        return 'projeto nao encontrado (passe um projeto_id valido).'
+    mudou = []
+    status = (args.get('status') or '').strip().lower()
+    if status and status in {v for v, _ in PROJETO_STATUS_CHOICES}:
+        p.status = status
+        mudou.append(f'status={status}')
+    nome = (args.get('nome') or '').strip()
+    if nome:
+        p.nome = nome[:200]
+        mudou.append('nome')
+    objetivo = args.get('objetivo')
+    if objetivo is not None and str(objetivo).strip():
+        p.objetivo = str(objetivo).strip()
+        mudou.append('objetivo')
+    if not mudou:
+        return 'nada pra atualizar (informe status, nome ou objetivo).'
+    p.save()
+    return f'projeto #{p.pk} atualizado: {", ".join(mudou)}.'
+
+
+@_tool(
+    'consultar_documento',
+    'Leia o conteudo de um documento do Workspace pelo id (use listar_documentos pra achar o id). '
+    'Retorna o texto em markdown. Read-only.',
+    {'documento_id': {'type': 'integer', 'description': 'ID do documento do Workspace'}},
+    ['documento_id'],
+    tipo='conhecimento', categoria='workspace',
+)
+def _consultar_documento(contexto, args, agente=None):
+    from apps.workspace.models import Documento
+    did = _int_arg(args.get('documento_id'), 0)
+    d = Documento.all_tenants.filter(tenant=contexto.tenant, pk=did).first() if did else None
+    if d is None:
+        return 'documento nao encontrado (passe um documento_id valido).'
+    corpo = (d.conteudo or '').strip()
+    if not corpo:
+        return f'documento #{d.pk} "{d.titulo}" sem conteudo de texto (formato {d.formato}).'
+    return f'# {d.titulo}\n\n{corpo}'

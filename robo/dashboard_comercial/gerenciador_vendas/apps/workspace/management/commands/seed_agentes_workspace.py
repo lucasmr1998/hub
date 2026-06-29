@@ -21,9 +21,10 @@ from django.core.management.base import BaseCommand, CommandError
 TOOLS_AGENTE = [
     # consulta (read-only)
     'status_pipeline', 'resumo_leads', 'vendas_periodo', 'churn_clientes', 'tickets_abertos',
-    'listar_documentos',
+    'listar_documentos', 'consultar_documento',
     # acao no workspace (o agente faz)
     'criar_projeto', 'criar_tarefa_workspace', 'criar_etapa', 'salvar_documento',
+    'atualizar_tarefa_workspace', 'atualizar_projeto',
     # recomendar com aval humano
     'solicitar_aprovacao',
 ]
