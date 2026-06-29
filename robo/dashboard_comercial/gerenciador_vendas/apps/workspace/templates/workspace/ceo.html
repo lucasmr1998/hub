@@ -1,0 +1,148 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}{{ pagetitle }} — Hubtrix{% endblock %}
+
+{% block extra_head %}
+  {% include "workspace/_workspace_styles.html" %}
+  <style>
+    .ceo-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--sp-3); }
+    @media (max-width: 1100px) { .ceo-kpis { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 640px) { .ceo-kpis { grid-template-columns: repeat(2, 1fr); } }
+    .ceo-kpi { background: var(--color-bg); border: 1px solid var(--color-border); border-left: 3px solid var(--cor, var(--color-accent)); border-radius: var(--radius); padding: var(--sp-3); }
+    .ceo-kpi .v { font-size: 1.55rem; font-weight: 700; line-height: 1.1; }
+    .ceo-kpi .l { font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.03em; margin-top: 2px; }
+    .ceo-card { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-4); }
+    .ceo-card h2 { margin: 0 0 var(--sp-3); font-size: 0.95rem; font-weight: 600; }
+    .ceo-bar { height: 7px; background: var(--color-surface); border-radius: 4px; overflow: hidden; }
+    .ceo-bar > span { display: block; height: 100%; background: var(--color-accent); }
+    @media (max-width: 900px) { .ceo-2col { grid-template-columns: 1fr !important; } }
+  </style>
+{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">Workspace · Inteligência</p>
+        <h1 class="page-title">Dashboard CEO</h1>
+        <p class="page-subtitle">A empresa num olhar. Os números são reais; o briefing é gerado pelo agente CEO.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="ceo-kpis" style="margin-top: var(--sp-5);">
+    <div class="ceo-kpi" style="--cor:#1e3a8a;"><div class="v">{{ pipeline_total }}</div><div class="l">Pipeline (opps)</div></div>
+    <div class="ceo-kpi" style="--cor:#0f766e;"><div class="v">{{ leads_total }}</div><div class="l">Leads · {{ leads_novos }} novos 30d</div></div>
+    <div class="ceo-kpi" style="--cor:#b45309;"><div class="v">R$ {{ vendas_valor|floatformat:0 }}</div><div class="l">Vendas 30d · {{ vendas_qtd }}</div></div>
+    <div class="ceo-kpi" style="--cor:#be185d;"><div class="v">{{ churn_risco }}</div><div class="l">Clientes em risco</div></div>
+    <div class="ceo-kpi" style="--cor:#475569;"><div class="v">{{ tickets_abertos }}</div><div class="l">Tickets abertos</div></div>
+    <div class="ceo-kpi" style="--cor:#7c3aed;"><div class="v">{{ propostas_n }}</div><div class="l">Propostas pendentes</div></div>
+  </div>
+
+  <section class="ceo-card" style="margin-top: var(--sp-4); border-left: 3px solid var(--color-accent);">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap;">
+      <h2 style="margin: 0;"><i class="bi bi-robot"></i> Briefing executivo (IA){% if ceo_agente_nome %} · {{ ceo_agente_nome }}{% endif %}</h2>
+      <button id="btn-briefing" class="btn btn-primary" {% if not ceo_agente_id %}disabled{% endif %}>
+        <i class="bi bi-stars"></i> Gerar briefing
+      </button>
+    </div>
+    <div id="briefing-out" style="margin-top: var(--sp-3); white-space: pre-wrap; line-height: 1.55; color: var(--color-text);">
+      <span style="color: var(--color-text-muted);">{% if ceo_agente_id %}Clique em "Gerar briefing" — o agente CEO puxa os números e te dá a leitura executiva.{% else %}Nenhum agente executivo cadastrado. Rode o seed dos agentes.{% endif %}</span>
+    </div>
+    {% if ceo_agente_id %}
+    <div style="display: flex; gap: var(--sp-2); margin-top: var(--sp-3);">
+      <input id="briefing-pergunta" type="text" autocomplete="off" placeholder="Pergunte ao CEO (ex: e o churn?)"
+             style="flex: 1; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); color: var(--color-text);">
+      <button id="btn-pergunta" class="btn btn-ghost">Perguntar</button>
+    </div>
+    {% endif %}
+  </section>
+
+  <div class="ceo-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); margin-top: var(--sp-4); align-items: start;">
+    <section class="ceo-card">
+      <h2>Negócio</h2>
+      <div style="font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted); margin-bottom: var(--sp-2);">Pipeline por estágio</div>
+      {% for e in pipeline_estagios %}
+        <div style="margin-bottom: var(--sp-2);">
+          <div style="display: flex; justify-content: space-between; font-size: 0.82rem;"><span>{{ e.nome }}</span><span style="font-weight: 600;">{{ e.n }}</span></div>
+          <div class="ceo-bar"><span style="width: {% widthratio e.n pipeline_total 100 %}%;"></span></div>
+        </div>
+      {% empty %}
+        <p style="color: var(--color-text-muted); font-size: 0.85rem;">Sem oportunidades.</p>
+      {% endfor %}
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); margin-top: var(--sp-3);">
+        <div><div style="font-size: 1.3rem; font-weight: 700;">{{ churn_risco }}/{{ clientes_total }}</div><div style="font-size: 0.74rem; color: var(--color-text-muted);">Em risco / clientes ativos</div></div>
+        <div><div style="font-size: 1.3rem; font-weight: 700;">{{ tickets_abertos }}</div><div style="font-size: 0.74rem; color: var(--color-text-muted);">Tickets abertos</div></div>
+      </div>
+    </section>
+
+    <section class="ceo-card">
+      <h2>Workspace</h2>
+      <div style="font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted); margin-bottom: var(--sp-2);">Tarefas por status</div>
+      <div style="display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-3);">
+        {% for t in tarefas_por_status %}
+          <span style="font-size: 0.78rem; padding: 2px 8px; border: 1px solid var(--color-border); border-radius: 999px;">{{ t.rotulo }}: <strong>{{ t.n }}</strong></span>
+        {% endfor %}
+      </div>
+      <div style="font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted); margin-bottom: var(--sp-2);">Projetos ativos</div>
+      {% for p in projetos_ativos %}
+        <div style="font-size: 0.85rem; padding: 4px 0; border-bottom: 1px solid var(--color-border);">{{ p.nome }}</div>
+      {% empty %}
+        <p style="color: var(--color-text-muted); font-size: 0.85rem;">Nenhum projeto ativo.</p>
+      {% endfor %}
+      {% if propostas_n %}
+        <a href="{% url 'workspace:propostas_lista' %}" class="btn btn-ghost" style="margin-top: var(--sp-3);">
+          <i class="bi bi-check2-circle"></i> {{ propostas_n }} proposta{{ propostas_n|pluralize }} pra aprovar
+        </a>
+      {% endif %}
+    </section>
+  </div>
+
+  <section class="ceo-card" style="margin-top: var(--sp-4);">
+    <h2>Empresa de agentes ({{ agentes_total }})</h2>
+    <div style="display: flex; flex-wrap: wrap; gap: var(--sp-2);">
+      {% for a in agentes_por_time %}
+        <a href="{% url 'workspace:agentes_lista' %}" style="font-size: 0.82rem; padding: 4px 10px; border: 1px solid var(--color-border); border-radius: 999px; color: inherit;">{{ a.equipe }}: <strong>{{ a.n }}</strong></a>
+      {% endfor %}
+    </div>
+  </section>
+
+  <script>
+  (function () {
+    var CSRF = '{{ csrf_token }}';
+    var URL_CHAT = '{% url "workspace:agentes_chat" %}';
+    var AG = '{{ ceo_agente_id }}';
+    if (!AG) return;
+    var out = document.getElementById('briefing-out');
+    var btn = document.getElementById('btn-briefing');
+    var inp = document.getElementById('briefing-pergunta');
+    var btnP = document.getElementById('btn-pergunta');
+    var hist = [];
+
+    function perguntar(texto) {
+      out.textContent = '...';
+      btn.disabled = true; if (btnP) btnP.disabled = true;
+      fetch(URL_CHAT, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ agente_id: AG, mensagem: texto, historico: hist }) })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          if (!res.ok) { out.textContent = 'erro: ' + (res.d.erro || 'falha'); return; }
+          out.textContent = res.d.resposta || '(sem resposta)';
+          if (res.d.tools && res.d.tools.length) { out.textContent += '\n\n— consultou: ' + res.d.tools.join(', '); }
+          hist.push({ role: 'user', content: texto });
+          hist.push({ role: 'assistant', content: res.d.resposta || '' });
+        }).catch(function () { out.textContent = 'erro de rede.'; })
+        .finally(function () { btn.disabled = false; if (btnP) btnP.disabled = false; });
+    }
+
+    btn.addEventListener('click', function () {
+      perguntar('Faça um briefing executivo do estado atual da empresa. Use suas ferramentas pra puxar pipeline, leads, vendas, churn e suporte. Em ate 6 linhas: o que esta bem, o que precisa de atencao, e a recomendacao principal.');
+    });
+    if (btnP) {
+      btnP.addEventListener('click', function () { var t = (inp.value || '').trim(); if (t) { inp.value = ''; perguntar(t); } });
+      inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); btnP.click(); } });
+    }
+  })();
+  </script>
+{% endblock %}

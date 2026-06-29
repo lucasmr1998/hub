@@ -18,6 +18,7 @@ app_name = 'workspace'
 urlpatterns = [
     # Home
     path('', dashboard.home, name='home'),
+    path('ceo/', dashboard.ceo, name='ceo'),
 
     # Agentes IA — roster + chat 1:1 + editor (motor reusado do apps/automacao)
     path('agentes/', agentes.lista, name='agentes_lista'),

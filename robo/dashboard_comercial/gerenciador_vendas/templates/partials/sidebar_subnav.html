@@ -247,6 +247,9 @@ Uso em template que extende layout_app:
       </nav>
       <div class="app-subnav-section">Inteligencia</div>
       <nav class="app-subnav-list">
+        <a href="{% url 'workspace:ceo' %}" class="app-subnav-item {% if request.resolver_match.url_name == 'ceo' %}is-active{% endif %}">
+          <i class="bi bi-speedometer2"></i><span>Dashboard CEO</span>
+        </a>
         <a href="{% url 'workspace:agentes_lista' %}" class="app-subnav-item {% if 'agente' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-robot"></i><span>Agentes</span>
         </a>
