@@ -755,3 +755,43 @@ def _explorar_codigo(contexto, args, agente=None):
         return '\n'.join(achados) or f'nada encontrado pra "{termo}".'
 
     return 'acao invalida (use arvore, ler ou buscar).'
+
+
+@_tool(
+    'gerar_imagem',
+    'Gere uma imagem por IA (Gemini) a partir de um prompt e anexe num documento do Workspace. '
+    'Sem documento_id, cria um documento novo pra abrigar a imagem.',
+    {'prompt': {'type': 'string', 'description': 'Descricao da imagem a gerar (min 10 chars)'},
+     'documento_id': {'type': 'integer', 'description': 'ID do documento onde anexar (opcional; vazio cria um novo)'},
+     'titulo': {'type': 'string', 'description': 'Titulo do documento novo (so quando nao passa documento_id)'}},
+    ['prompt'],
+    tipo='executavel', categoria='workspace',
+)
+def _gerar_imagem(contexto, args, agente=None):
+    from apps.workspace.models import Documento
+    from apps.workspace.services.imagem_ia_service import gerar_e_anexar
+    prompt = str(args.get('prompt') or '').strip()
+    if len(prompt) < 10:
+        return 'prompt muito curto (min 10 chars).'
+    did = _int_arg(args.get('documento_id'), 0)
+    doc, criado_novo = None, False
+    if did:
+        doc = Documento.all_tenants.filter(tenant=contexto.tenant, pk=did).first()
+        if doc is None:
+            return 'documento nao encontrado (passe um documento_id valido ou deixe vazio).'
+    if doc is None:
+        titulo = str(args.get('titulo') or '').strip()[:200] or 'Imagem gerada por IA'
+        doc = Documento(tenant=contexto.tenant, titulo=titulo,
+                        slug=_slug_unico(contexto.tenant, titulo, Documento),
+                        formato='imagem', categoria='imagem',
+                        agente_origem=agente if getattr(agente, 'pk', None) else None)
+        doc.save()
+        criado_novo = True
+    try:
+        anexo = gerar_e_anexar(doc, prompt, criado_por=None)
+    except Exception as e:  # noqa: BLE001
+        if criado_novo:  # nao deixa doc vazio de lixo se a geracao falhou
+            doc.delete()
+        return f'nao foi possivel gerar a imagem: {e}'
+    onde = f'documento novo #{doc.pk} "{doc.titulo}"' if criado_novo else f'documento #{doc.pk}'
+    return f'imagem gerada (anexo #{anexo.pk}, modelo {anexo.modelo_ia or "?"}) em {onde}.'

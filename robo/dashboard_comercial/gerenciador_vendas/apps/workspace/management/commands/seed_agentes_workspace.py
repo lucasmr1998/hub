@@ -29,9 +29,10 @@ TOOLS_AGENTE = [
     'solicitar_aprovacao',
 ]
 
-# Tools extras por time (alem das padrao). O time tech pode explorar o codigo.
+# Tools extras por time (alem das padrao): tech explora codigo, marketing gera imagem.
 TOOLS_EXTRA_POR_EQUIPE = {
     'tech': ['explorar_codigo'],
+    'marketing': ['gerar_imagem'],
 }
 
 PREFIXO_PROMPT = (

@@ -6,7 +6,7 @@
 
 > `tipo`: **Conhecimento** = le/consulta (read-only) · **Executavel** = faz/escreve (efeito colateral).
 
-Total: **22 tools** em **8 categorias**.
+Total: **23 tools** em **8 categorias**.
 
 | Categoria | Tools |
 |---|---|
@@ -17,7 +17,7 @@ Total: **22 tools** em **8 categorias**.
 | **dev** | `explorar_codigo` |
 | **governanca** | `solicitar_aprovacao` |
 | **suporte** | `abrir_ticket` |
-| **workspace** | `consultar_documento`, `listar_documentos`, `atualizar_projeto`, `atualizar_tarefa_workspace`, `criar_etapa`, `criar_projeto`, `criar_tarefa_workspace`, `salvar_documento` |
+| **workspace** | `consultar_documento`, `listar_documentos`, `atualizar_projeto`, `atualizar_tarefa_workspace`, `criar_etapa`, `criar_projeto`, `criar_tarefa_workspace`, `gerar_imagem`, `salvar_documento` |
 
 ## atendimento
 
@@ -219,6 +219,16 @@ Crie uma tarefa no Workspace (backlog de projeto da empresa, NAO o funil/CRM). U
 | `descricao` | string | nao | O que fazer (opcional) |
 | `prioridade` | string | nao | baixa | media | alta | critica (padrao media) |
 | `projeto_id` | integer | nao | ID do projeto do Workspace (opcional) |
+
+### `gerar_imagem` — Executavel
+
+Gere uma imagem por IA (Gemini) a partir de um prompt e anexe num documento do Workspace. Sem documento_id, cria um documento novo pra abrigar a imagem.
+
+| Parametro | Tipo | Obrigatorio | Descricao |
+|---|---|---|---|
+| `prompt` | string | sim | Descricao da imagem a gerar (min 10 chars) |
+| `documento_id` | integer | nao | ID do documento onde anexar (opcional; vazio cria um novo) |
+| `titulo` | string | nao | Titulo do documento novo (so quando nao passa documento_id) |
 
 ### `salvar_documento` — Executavel
 
