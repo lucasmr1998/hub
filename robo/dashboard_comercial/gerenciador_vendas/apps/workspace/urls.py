@@ -19,9 +19,13 @@ urlpatterns = [
     # Home
     path('', dashboard.home, name='home'),
 
-    # Agentes IA — roster + chat 1:1 (motor reusado do apps/automacao)
+    # Agentes IA — roster + chat 1:1 + editor (motor reusado do apps/automacao)
     path('agentes/', agentes.lista, name='agentes_lista'),
+    path('agentes/novo/', agentes.editar_page, name='agente_novo'),
+    path('agentes/<int:pk>/editar/', agentes.editar_page, name='agente_editar'),
     path('api/agentes/chat/', agentes.chat_api, name='agentes_chat'),
+    path('api/agentes/salvar/', agentes.salvar, name='agente_salvar'),
+    path('api/agentes/<int:pk>/excluir/', agentes.excluir, name='agente_excluir'),
 
     # Propostas — fila de aprovacao humana das acoes dos agentes
     path('propostas/', propostas.lista, name='propostas_lista'),

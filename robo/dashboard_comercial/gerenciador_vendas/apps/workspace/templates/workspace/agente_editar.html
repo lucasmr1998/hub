@@ -1,0 +1,240 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}{{ pagetitle }} — Hubtrix{% endblock %}
+
+{% block extra_head %}
+  {% include "workspace/_workspace_styles.html" %}
+  <style>
+    .ag-sec { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-4); }
+    .ag-sec h2 { margin: 0 0 var(--sp-3); font-size: 0.95rem; font-weight: 600; }
+    .ag-label { display: block; font-size: 0.78rem; font-weight: 600; margin-bottom: 4px; color: var(--color-text-muted); }
+    .ag-input { width: 100%; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); color: var(--color-text); font: inherit; }
+    .ag-input:focus { outline: none; border-color: var(--color-accent); }
+    textarea.ag-input { resize: vertical; line-height: 1.5; }
+    .ag-check { display: flex; gap: var(--sp-2); align-items: flex-start; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius); cursor: pointer; }
+  </style>
+{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">Workspace · Agentes</p>
+        <h1 class="page-title">{{ pagetitle }}</h1>
+      </div>
+      <a href="{% url 'workspace:agentes_lista' %}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
+  </div>
+
+  <form id="form-agente" style="display: grid; grid-template-columns: 1fr 360px; gap: var(--sp-5); align-items: start; margin-top: var(--sp-5);">
+    <input type="hidden" name="id" value="{{ agente.pk|default:'' }}">
+
+    <div style="display: flex; flex-direction: column; gap: var(--sp-4);">
+
+      <section class="ag-sec">
+        <h2>Identidade</h2>
+        <div style="display: grid; gap: var(--sp-3);">
+          <label>
+            <span class="ag-label">Nome *</span>
+            <input name="nome" required value="{{ agente.nome|default:'' }}" class="ag-input">
+          </label>
+          <label>
+            <span class="ag-label">Descricao</span>
+            <textarea name="descricao" rows="2" class="ag-input">{{ agente.descricao|default:'' }}</textarea>
+          </label>
+          <div style="display: grid; grid-template-columns: 1fr 130px 150px; gap: var(--sp-3);">
+            <label>
+              <span class="ag-label">Time</span>
+              <select name="equipe" class="ag-input">
+                <option value="">— sem time —</option>
+                {% for val, lab in equipes %}
+                  <option value="{{ val }}" {% if agente.equipe == val %}selected{% endif %}>{{ lab }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label>
+              <span class="ag-label">Cor</span>
+              <input name="cor" value="{{ agente.cor|default:'' }}" placeholder="#1e3a8a" class="ag-input">
+            </label>
+            <label>
+              <span class="ag-label">Icone</span>
+              <input name="icone" value="{{ agente.icone|default:'bi-robot' }}" placeholder="bi-robot" class="ag-input">
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="ag-sec">
+        <h2>Comportamento</h2>
+        <div style="display: grid; gap: var(--sp-3);">
+          <label>
+            <span class="ag-label">Prompt (chat)</span>
+            <textarea name="system_prompt" rows="8" class="ag-input">{{ agente.system_prompt|default:'' }}</textarea>
+          </label>
+          <label>
+            <span class="ag-label">Prompt autonomo (modo cron/rotina) — vazio usa o prompt de chat</span>
+            <textarea name="prompt_autonomo" rows="4" class="ag-input">{{ agente.prompt_autonomo|default:'' }}</textarea>
+          </label>
+        </div>
+      </section>
+
+      <section class="ag-sec">
+        <h2>Motor</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3);">
+          <label>
+            <span class="ag-label">Integracao de IA</span>
+            <select name="integracao_ia" class="ag-input">
+              <option value="">— default do tenant —</option>
+              {% for i in integracoes %}
+                <option value="{{ i.id }}" {% if agente.integracao_ia_id == i.id %}selected{% endif %}>{{ i.nome }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            <span class="ag-label">Modelo (vazio = default)</span>
+            <input name="modelo" value="{{ agente.modelo|default:'' }}" class="ag-input">
+          </label>
+          <label>
+            <span class="ag-label">Memoria</span>
+            <select name="memoria" class="ag-input">
+              <option value="conversa" {% if agente.memoria == 'conversa' or not agente %}selected{% endif %}>Conversa (lembra do chat)</option>
+              <option value="" {% if agente and not agente.memoria %}selected{% endif %}>Sem memoria (stateless)</option>
+            </select>
+          </label>
+          <label class="ag-check" style="align-self: end;">
+            <input type="checkbox" name="ativo" {% if not agente or agente.ativo %}checked{% endif %}>
+            <span>Ativo</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="ag-sec">
+        <h2>Ferramentas (tools)</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2);">
+          {% for t in tools_disponiveis %}
+            <label class="ag-check">
+              <input type="checkbox" name="tools" value="{{ t.chave }}" {% if t.chave in agente_tools %}checked{% endif %}>
+              <span style="min-width: 0;">
+                <span style="font-weight: 600; display: block; font-size: 0.85rem;">{{ t.chave }}</span>
+                <span style="font-size: 0.74rem; color: var(--color-text-muted);">{{ t.descricao }}</span>
+              </span>
+            </label>
+          {% endfor %}
+        </div>
+      </section>
+
+      {% if categorias %}
+      <section class="ag-sec">
+        <h2>Base de conhecimento (RAG) — vazio = base inteira do tenant</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2);">
+          {% for c in categorias %}
+            <label class="ag-check">
+              <input type="checkbox" name="base_categorias" value="{{ c.pk }}" {% if c.pk|stringformat:'s' in agente_cats %}checked{% endif %}>
+              <span>{{ c.nome }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      <div style="display: flex; gap: var(--sp-3); align-items: center;">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        {% if agente %}
+          <button type="button" id="btn-excluir" class="btn btn-ghost" style="color: var(--color-danger);">Excluir</button>
+        {% endif %}
+        <span id="form-msg" style="color: var(--color-text-muted); font-size: 0.85rem;"></span>
+      </div>
+    </div>
+
+    <aside style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); display: flex; flex-direction: column; height: 72vh; position: sticky; top: var(--sp-4);">
+      <div style="padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--color-border); font-weight: 600;">Chat de teste</div>
+      <div id="chat-msgs" style="flex: 1; overflow-y: auto; padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3);">
+        <p id="chat-vazio" style="color: var(--color-text-muted); text-align: center; margin: auto;">
+          {% if agente %}Mande uma pergunta pra testar este agente.{% else %}Salve o agente primeiro pra testar.{% endif %}
+        </p>
+      </div>
+      <div style="display: flex; gap: var(--sp-2); padding: var(--sp-3); border-top: 1px solid var(--color-border);">
+        <input id="chat-input" type="text" autocomplete="off" placeholder="Testar..." {% if not agente %}disabled{% endif %}
+               style="flex: 1; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); color: var(--color-text);">
+        <button type="button" id="chat-send" class="btn btn-primary" {% if not agente %}disabled{% endif %}>Enviar</button>
+      </div>
+    </aside>
+  </form>
+
+  <script>
+  (function () {
+    var CSRF = '{{ csrf_token }}';
+    var URL_SALVAR = '{% url "workspace:agente_salvar" %}';
+    var URL_CHAT = '{% url "workspace:agentes_chat" %}';
+    var URL_LISTA = '{% url "workspace:agentes_lista" %}';
+    var AGENTE_ID = '{{ agente.pk|default:"" }}';
+
+    var form = document.getElementById('form-agente');
+    var msg = document.getElementById('form-msg');
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      msg.textContent = 'salvando...';
+      fetch(URL_SALVAR, { method: 'POST', headers: { 'X-CSRFToken': CSRF }, body: new FormData(form) })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          if (!res.ok) { msg.textContent = 'erro: ' + (res.d.erro || 'falha'); return; }
+          msg.textContent = 'salvo!';
+          if (!AGENTE_ID && res.d.id) {
+            window.location.href = '/workspace/agentes/' + res.d.id + '/editar/';
+          }
+        }).catch(function () { msg.textContent = 'erro de rede.'; });
+    });
+
+    var btnDel = document.getElementById('btn-excluir');
+    if (btnDel) {
+      btnDel.addEventListener('click', function () {
+        if (!confirm('Excluir este agente? Nao da pra desfazer.')) return;
+        fetch('/workspace/api/agentes/' + AGENTE_ID + '/excluir/', { method: 'POST', headers: { 'X-CSRFToken': CSRF } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { if (d.ok) { window.location.href = URL_LISTA; } else { alert(d.erro || 'falha'); } });
+      });
+    }
+
+    // Chat de teste (reusa o endpoint do roster)
+    var input = document.getElementById('chat-input');
+    var send = document.getElementById('chat-send');
+    var msgs = document.getElementById('chat-msgs');
+    var hist = [];
+    function addMsg(role, texto, tools) {
+      var v = document.getElementById('chat-vazio'); if (v) v.remove();
+      var box = document.createElement('div');
+      box.style.maxWidth = '85%'; box.style.padding = '8px 12px'; box.style.borderRadius = '10px';
+      box.style.whiteSpace = 'pre-wrap'; box.style.lineHeight = '1.45';
+      if (role === 'user') { box.style.alignSelf = 'flex-end'; box.style.background = 'var(--color-accent)'; box.style.color = '#fff'; }
+      else { box.style.alignSelf = 'flex-start'; box.style.background = 'var(--color-surface)'; box.style.border = '1px solid var(--color-border)'; }
+      box.textContent = texto;
+      if (tools && tools.length) {
+        var chip = document.createElement('div'); chip.style.marginTop = '6px'; chip.style.fontSize = '0.7rem'; chip.style.opacity = '0.7';
+        chip.textContent = 'consultou: ' + tools.join(', '); box.appendChild(chip);
+      }
+      msgs.appendChild(box); msgs.scrollTop = msgs.scrollHeight; return box;
+    }
+    function enviar() {
+      if (!AGENTE_ID) return;
+      var texto = (input.value || '').trim(); if (!texto) return;
+      input.value = ''; addMsg('user', texto);
+      var h = hist.slice(); hist.push({ role: 'user', content: texto });
+      input.disabled = true; send.disabled = true;
+      var pensando = addMsg('assistant', '...');
+      fetch(URL_CHAT, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ agente_id: AGENTE_ID, mensagem: texto, historico: h }) })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          pensando.remove();
+          if (!res.ok) { addMsg('assistant', 'erro: ' + (res.d.erro || 'falha')); }
+          else { addMsg('assistant', res.d.resposta || '(sem resposta)', res.d.tools); hist.push({ role: 'assistant', content: res.d.resposta || '' }); }
+        }).catch(function () { pensando.remove(); addMsg('assistant', 'erro de rede.'); })
+        .finally(function () { input.disabled = false; send.disabled = false; input.focus(); });
+    }
+    if (send) { send.addEventListener('click', enviar); }
+    if (input) { input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); enviar(); } }); }
+  })();
+  </script>
+{% endblock %}

@@ -13,6 +13,9 @@
         <h1 class="page-title">Agentes</h1>
         <p class="page-subtitle">Converse com os agentes da empresa. Eles consultam os dados reais do seu workspace pra fundamentar as respostas.</p>
       </div>
+      {% if pode_editar %}
+        <a href="{% url 'workspace:agente_novo' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Novo agente</a>
+      {% endif %}
     </div>
   </div>
 
@@ -28,14 +31,22 @@
             <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); font-weight: 600; margin-bottom: var(--sp-2);">{{ g.label }} ({{ g.agentes|length }})</div>
             <div style="display: flex; flex-direction: column; gap: var(--sp-2);">
               {% for a in g.agentes %}
-                <button type="button" class="ws-agente" data-id="{{ a.pk }}" data-nome="{{ a.nome }}"
-                        style="text-align: left; padding: var(--sp-3); border: 1px solid var(--color-border); border-left: 3px solid {{ a.cor|default:'var(--color-border)' }}; border-radius: var(--radius); background: var(--color-surface); cursor: pointer; color: inherit; display: flex; align-items: center; gap: var(--sp-3);">
-                  <i class="bi {{ a.icone|default:'bi-robot' }}" style="font-size: 1.05rem; color: {{ a.cor|default:'var(--color-text-muted)' }};"></i>
-                  <span style="min-width: 0;">
-                    <span style="font-weight: 600; display: block;">{{ a.nome }}</span>
-                    <span style="font-size: 0.75rem; color: var(--color-text-muted);">{{ a.tools|length }} ferramenta{{ a.tools|length|pluralize }}</span>
-                  </span>
-                </button>
+                <div style="display: flex; align-items: stretch; gap: var(--sp-2);">
+                  <button type="button" class="ws-agente" data-id="{{ a.pk }}" data-nome="{{ a.nome }}"
+                          style="flex: 1; min-width: 0; text-align: left; padding: var(--sp-3); border: 1px solid var(--color-border); border-left: 3px solid {{ a.cor|default:'var(--color-border)' }}; border-radius: var(--radius); background: var(--color-surface); cursor: pointer; color: inherit; display: flex; align-items: center; gap: var(--sp-3);">
+                    <i class="bi {{ a.icone|default:'bi-robot' }}" style="font-size: 1.05rem; color: {{ a.cor|default:'var(--color-text-muted)' }};"></i>
+                    <span style="min-width: 0;">
+                      <span style="font-weight: 600; display: block;">{{ a.nome }}</span>
+                      <span style="font-size: 0.75rem; color: var(--color-text-muted);">{{ a.tools|length }} ferramenta{{ a.tools|length|pluralize }}</span>
+                    </span>
+                  </button>
+                  {% if pode_editar %}
+                    <a href="{% url 'workspace:agente_editar' a.pk %}" title="Editar agente"
+                       style="display: flex; align-items: center; padding: 0 var(--sp-2); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); color: var(--color-text-muted);">
+                      <i class="bi bi-pencil"></i>
+                    </a>
+                  {% endif %}
+                </div>
               {% endfor %}
             </div>
           </div>

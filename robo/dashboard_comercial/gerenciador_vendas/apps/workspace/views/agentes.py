@@ -29,6 +29,7 @@ def lista(request):
     return render(request, 'workspace/agentes.html', {
         'grupos': _agrupar_por_time(agentes),
         'total': len(agentes),
+        'pode_editar': user_tem_funcionalidade(request, 'workspace.editar_todos'),
         'pagetitle': 'Agentes',
     })
 
@@ -99,3 +100,107 @@ def chat_api(request):
     if resposta is None:
         return JsonResponse({'erro': 'falha ao chamar o LLM (cheque a credencial/modelo)'}, status=502)
     return JsonResponse({'resposta': resposta, 'tools': chamadas})
+
+
+# --- Editor (CRUD): gerencia o agente no workspace, reusando o model + tools_disponiveis ---
+
+@login_required
+def editar_page(request, pk=None):
+    """Form de criar/editar um agente (todos os campos) + chat de teste ao lado."""
+    if not user_tem_funcionalidade(request, 'workspace.editar_todos'):
+        return HttpResponseForbidden('Sem permissao pra gerenciar agentes.')
+    tenant = getattr(request, 'tenant', None)
+    if tenant is None:
+        return HttpResponseForbidden('sem tenant')
+    from django.http import Http404
+    from apps.automacao.models import Agente
+    from apps.integracoes.models import IntegracaoAPI
+    from apps.suporte.models import CategoriaConhecimento
+    from apps.automacao.services.ia_tools import tools_disponiveis
+
+    agente = None
+    if pk:
+        agente = (Agente.all_tenants.filter(tenant=tenant, pk=pk)
+                  .select_related('integracao_ia').first())
+        if agente is None:
+            raise Http404('agente nao encontrado')
+    integracoes = list(
+        IntegracaoAPI.all_tenants
+        .filter(tenant=tenant, tipo__in=['openai', 'anthropic', 'groq', 'google_ai'], ativa=True)
+        .order_by('nome')
+    )
+    categorias = list(CategoriaConhecimento.all_tenants.filter(tenant=tenant).order_by('nome'))
+    return render(request, 'workspace/agente_editar.html', {
+        'agente': agente,
+        'agente_tools': (agente.tools or []) if agente else [],
+        'agente_cats': [str(x) for x in (agente.base_categorias or [])] if agente else [],
+        'integracoes': integracoes,
+        'categorias': categorias,
+        'tools_disponiveis': [{'chave': c, 'descricao': d} for c, d in tools_disponiveis()],
+        'equipes': Agente.EQUIPE_CHOICES,
+        'pagetitle': agente.nome if agente else 'Novo agente',
+    })
+
+
+@require_POST
+@login_required
+def salvar(request):
+    """Cria/atualiza um agente do tenant (todos os campos, incl. organizacao por time)."""
+    if not user_tem_funcionalidade(request, 'workspace.editar_todos'):
+        return JsonResponse({'erro': 'sem permissao'}, status=403)
+    tenant = getattr(request, 'tenant', None)
+    if tenant is None:
+        return JsonResponse({'erro': 'sem tenant'}, status=400)
+    from apps.automacao.models import Agente
+    from apps.integracoes.models import IntegracaoAPI
+
+    nome = (request.POST.get('nome') or '').strip()
+    if not nome:
+        return JsonResponse({'erro': 'nome obrigatorio'}, status=400)
+
+    integracao = None
+    integ_id = (request.POST.get('integracao_ia') or '').strip()
+    if integ_id.isdigit():
+        integracao = IntegracaoAPI.all_tenants.filter(tenant=tenant, id=int(integ_id)).first()
+
+    pk = (request.POST.get('id') or '').strip()
+    if pk.isdigit():
+        agente = Agente.all_tenants.filter(tenant=tenant, pk=int(pk)).first()
+        if agente is None:
+            return JsonResponse({'erro': 'agente nao encontrado'}, status=404)
+    else:
+        agente = Agente(tenant=tenant,
+                        criado_por=request.user if request.user.is_authenticated else None)
+
+    equipes_validas = {k for k, _ in Agente.EQUIPE_CHOICES}
+    equipe = (request.POST.get('equipe') or '').strip()
+    agente.nome = nome
+    agente.descricao = (request.POST.get('descricao') or '').strip()
+    agente.equipe = equipe if equipe in equipes_validas else ''
+    agente.cor = (request.POST.get('cor') or '').strip()[:7]
+    agente.icone = (request.POST.get('icone') or '').strip()[:40] or 'bi-robot'
+    agente.integracao_ia = integracao
+    agente.modelo = (request.POST.get('modelo') or '').strip()
+    agente.system_prompt = request.POST.get('system_prompt') or ''
+    agente.prompt_autonomo = request.POST.get('prompt_autonomo') or ''
+    agente.memoria = (request.POST.get('memoria') or 'conversa').strip()
+    agente.ativo = (request.POST.get('ativo') or '') in ('on', 'true', '1')
+    agente.tools = [t for t in request.POST.getlist('tools') if t]
+    agente.base_categorias = [c for c in request.POST.getlist('base_categorias') if c]
+    agente.save()
+    return JsonResponse({'ok': True, 'id': agente.pk})
+
+
+@require_POST
+@login_required
+def excluir(request, pk):
+    """Remove um agente do tenant."""
+    if not user_tem_funcionalidade(request, 'workspace.editar_todos'):
+        return JsonResponse({'erro': 'sem permissao'}, status=403)
+    tenant = getattr(request, 'tenant', None)
+    from apps.automacao.models import Agente
+    agente = Agente.all_tenants.filter(tenant=tenant, pk=pk).first()
+    if agente is None:
+        return JsonResponse({'erro': 'agente nao encontrado'}, status=404)
+    agente.delete()
+    return JsonResponse({'ok': True})
