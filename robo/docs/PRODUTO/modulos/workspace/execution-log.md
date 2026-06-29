@@ -31,6 +31,30 @@ workspace, casa unica). Consolidado na **main** via merge da `feat/agentes-works
 
 ---
 
+## 2026-06-29 — Empresa de agentes: Peca 2 (sistema de tools + tools de acao)
+
+Os agentes passam a AGIR no workspace, com um sistema de tools de primeira classe. Main, sem push.
+
+- **Sistema de tools** (`930ce7d`): `@_tool` ganha `tipo` (conhecimento/executavel) + `categoria`;
+  tools classificadas. Comando `gerar_catalogo_tools` gera `TOOLS.md` do registry (fonte da verdade =
+  codigo, doc derivado). Editor agrupa por categoria + badge de tipo. Skill `criar-tool` (passo 0 =
+  procurar no catalogo, anti-duplicacao).
+- **Naming** (`9fbf051`): `criar_tarefa` -> `criar_tarefa_workspace` pra nao confundir com a
+  `TarefaCRM` (que tem um NO `criar_tarefa`, registry separado). Regra "nao misturar Workspace e CRM".
+- **CRUD de workspace** (`930ce7d`, `4e9b6e1`): criar/atualizar/consultar projeto, tarefa, etapa,
+  documento (tenant-safe, agente como origem). Habilitadas no seed.
+- **explorar_codigo** (`d132fac`): leitura read-only do projeto, **so pro time tech**. Travas: raiz em
+  `robo/` (exclui `.env`), bloqueia escape/`.env`/secrets, allowlist de extensao, redige credenciais.
+  Validado (escape bloqueado, token nao vaza).
+- **gerar_imagem** (`264545f`): Gemini -> anexa em doc novo/existente, **so pro time marketing**.
+  Falha graciosa sem a key + cleanup do doc.
+- **faq_ia: descartada** (redundante — o agente ja faz com `consultar_base_conhecimento` +
+  `salvar_documento`).
+- 23 tools no catalogo. Per-time via `TOOLS_EXTRA_POR_EQUIPE` (tech/marketing). Status: completed
+  (Peca 2). Proximo: Peca 3 (Dashboard CEO).
+
+---
+
 ## 2026-06-29 — Camada de agentes IA (Fase 1 + 2a + 3)
 
 Branch `feat/agentes-workspace` (NAO pushada, prod intacto). Dar vida a camada de agentes do
