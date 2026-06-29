@@ -100,3 +100,6 @@ web_driver_conversao_lead/dom_capturado/
 /_hs_*/
 /_historicos/
 /_backup_*/
+
+# Backups locais de dados de prod (PII — nunca versionar)
+_backups/
