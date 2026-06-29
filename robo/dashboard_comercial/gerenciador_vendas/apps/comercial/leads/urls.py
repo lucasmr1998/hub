@@ -1,11 +1,12 @@
 from django.urls import path
-from . import views
+from . import views, views_importar_ads
 
 app_name = 'comercial_leads'
 
 urlpatterns = [
     # Paginas de leads
     path('leads/', views.leads_view, name='leads'),
+    path('leads/importar-ads/', views_importar_ads.importar_ads_view, name='importar_ads'),
     path('leads/<int:lead_id>/', views.lead_detail_view, name='lead_detail'),
     path('api/leads/criar/', views.api_lead_criar, name='api_lead_criar'),
     path('api/leads/<int:lead_id>/risco-inadimplencia/', views.api_lead_risco_inadimplencia, name='api_lead_risco_inadimplencia'),

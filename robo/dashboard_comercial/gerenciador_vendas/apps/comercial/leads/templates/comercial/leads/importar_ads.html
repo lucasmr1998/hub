@@ -1,0 +1,199 @@
+{% extends "sistema/base.html" %}
+
+{% block title %}Importar leads de ads — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-section" style="padding: 24px; max-width: 1200px; margin: 0 auto;">
+  <h1>Importar leads de ads</h1>
+  <p class="muted">Cruza planilha de ads do Matrix com leads existentes no CRM.
+    NAO cria leads novos — apenas enriquece os ja cadastrados.</p>
+
+  {% if erro %}
+    <div style="background:#fee; padding:12px; border-radius:6px; margin:12px 0;">
+      <strong>Erro:</strong> {{ erro }}
+    </div>
+  {% endif %}
+
+  {# === ESTAGIO 1: UPLOAD === #}
+  {% if estagio == 'upload' %}
+    <div class="card">
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="acao" value="preview">
+
+          <div class="field" style="margin-bottom: 16px;">
+            <label class="field-label">Tenant</label>
+            <select name="tenant" class="field-input" required>
+              <option value="">(selecione)</option>
+              {% for t in tenants_choices %}
+                <option value="{{ t.slug }}">{{ t.slug }} ({{ t.nome }})</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="field" style="margin-bottom: 16px;">
+            <label class="field-label">Arquivo CSV (export Matrix)</label>
+            <input type="file" name="arquivo" accept=".csv" class="field-input" required>
+            <div class="muted" style="font-size: 12px; margin-top: 4px;">
+              Formato: Cod;Titulo do post;Tipo;Conta;Canal;Nome;Telefone;Classificacao;Data;Protocolo;Mensagem
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-upload"></i> Processar (pre-visualizar)
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div style="margin-top: 24px; padding: 16px; background: #f8fafc; border-radius: 6px;">
+      <h3 style="margin-top: 0;">Como funciona o match</h3>
+      <p>Pra cada linha do CSV, o sistema busca leads no CRM por <strong>telefone</strong> e classifica:</p>
+      <ul>
+        <li><strong>Strong</strong>: telefone bate + lead criado em ±{{ janela_horas }}h da data do ad + canal compativel</li>
+        <li><strong>Medium</strong>: telefone bate + 1 dos 2 criterios acima</li>
+        <li><strong>Weak</strong>: so telefone bate (sem janela, sem canal)</li>
+      </ul>
+      <p>Voce confirma quais matches enriquecer no proximo passo.</p>
+    </div>
+  {% endif %}
+
+  {# === ESTAGIO 2: PREVIEW === #}
+  {% if estagio == 'preview' %}
+    <div style="display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap;">
+      <div style="background:#dbeafe; padding:12px 16px; border-radius:6px;">
+        <div style="font-size:24px; font-weight:bold;">{{ total_rows }}</div>
+        <div style="font-size:12px;">Total no CSV</div>
+      </div>
+      <div style="background:#dcfce7; padding:12px 16px; border-radius:6px;">
+        <div style="font-size:24px; font-weight:bold;">{{ total_match }}</div>
+        <div style="font-size:12px;">Match encontrado</div>
+      </div>
+      <div style="background:#fef3c7; padding:12px 16px; border-radius:6px;">
+        <div style="font-size:24px; font-weight:bold;">{{ no_match }}</div>
+        <div style="font-size:12px;">Sem match (ignorados)</div>
+      </div>
+      <div style="background:#10b981; color:white; padding:12px 16px; border-radius:6px;">
+        <div style="font-size:24px; font-weight:bold;">{{ strong }}</div>
+        <div style="font-size:12px;">Strong</div>
+      </div>
+      <div style="background:#f59e0b; color:white; padding:12px 16px; border-radius:6px;">
+        <div style="font-size:24px; font-weight:bold;">{{ medium }}</div>
+        <div style="font-size:12px;">Medium</div>
+      </div>
+      <div style="background:#9ca3af; color:white; padding:12px 16px; border-radius:6px;">
+        <div style="font-size:24px; font-weight:bold;">{{ weak }}</div>
+        <div style="font-size:12px;">Weak</div>
+      </div>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="acao" value="confirmar">
+      <input type="hidden" name="tenant" value="{{ tenant_selecionado }}">
+      <input type="hidden" name="matches_json" value="{{ matches_json }}">
+
+      <div style="margin-bottom: 12px;">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check2-circle"></i> Confirmar enriquecimento (apenas marcados)
+        </button>
+        <button type="button" onclick="document.querySelectorAll('.match-row input[type=checkbox]').forEach(c=>c.checked=true)" class="btn btn-secondary btn-sm">Marcar todos</button>
+        <button type="button" onclick="document.querySelectorAll('.match-row.strong input[type=checkbox]').forEach(c=>c.checked=true)" class="btn btn-secondary btn-sm">So Strong</button>
+        <button type="button" onclick="document.querySelectorAll('.match-row input[type=checkbox]').forEach(c=>c.checked=false)" class="btn btn-secondary btn-sm">Desmarcar todos</button>
+      </div>
+
+      <table class="logs-table" style="width: 100%; font-size: 13px;">
+        <thead>
+          <tr>
+            <th style="width:40px;"><input type="checkbox" onchange="document.querySelectorAll('.match-row input[type=checkbox]').forEach(c=>c.checked=this.checked)"></th>
+            <th>Qualidade</th>
+            <th>Telefone</th>
+            <th>Lead</th>
+            <th>Campanha (titulo post)</th>
+            <th>Data acesso</th>
+            <th>Classificacao</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in matches %}
+            {% if m.status == 'match' %}
+              <tr class="match-row {{ m.qualidade }}">
+                <td>
+                  <input type="checkbox" name="aprovar" value="{{ m.lead.id }}"
+                         {% if m.qualidade == 'strong' %}checked{% endif %}>
+                </td>
+                <td>
+                  {% if m.qualidade == 'strong' %}<span style="background:#10b981; color:white; padding:2px 8px; border-radius:4px; font-size:11px;">STRONG</span>{% endif %}
+                  {% if m.qualidade == 'medium' %}<span style="background:#f59e0b; color:white; padding:2px 8px; border-radius:4px; font-size:11px;">MEDIUM</span>{% endif %}
+                  {% if m.qualidade == 'weak' %}<span style="background:#9ca3af; color:white; padding:2px 8px; border-radius:4px; font-size:11px;">WEAK</span>{% endif %}
+                </td>
+                <td>{{ m.telefone }}</td>
+                <td>
+                  <a href="{% url 'comercial_leads:lead_detail' m.lead.id %}" target="_blank">
+                    L{{ m.lead.id }} {{ m.lead.nome_razaosocial|truncatechars:30 }}
+                  </a>
+                  <div style="font-size:11px; color:#64748b;">criado {{ m.lead.data_cadastro|date:"d/m H:i" }}</div>
+                </td>
+                <td>{{ m.titulo_post|truncatechars:40 }}</td>
+                <td>{{ m.data_acesso|date:"d/m H:i" }}</td>
+                <td>{{ m.classificacao }}</td>
+              </tr>
+            {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div style="margin-top: 16px;">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check2-circle"></i> Confirmar enriquecimento (apenas marcados)
+        </button>
+        <a href="{% url 'comercial_leads:importar_ads' %}" class="btn btn-secondary">Cancelar</a>
+      </div>
+    </form>
+  {% endif %}
+
+  {# === ESTAGIO 3: RESULTADO === #}
+  {% if estagio == 'resultado' %}
+    <div class="card">
+      <div class="card-body">
+        <h2>Resultado da importacao</h2>
+        <div style="display: flex; gap: 16px; margin: 16px 0;">
+          <div style="background:#dcfce7; padding:12px 16px; border-radius:6px;">
+            <div style="font-size:24px; font-weight:bold;">{{ resultado.enriquecidos }}</div>
+            <div style="font-size:12px;">Leads enriquecidos</div>
+          </div>
+          <div style="background:#dbeafe; padding:12px 16px; border-radius:6px;">
+            <div style="font-size:24px; font-weight:bold;">{{ resultado.campanhas_criadas }}</div>
+            <div style="font-size:12px;">Campanhas criadas</div>
+          </div>
+          <div style="background:#f3f4f6; padding:12px 16px; border-radius:6px;">
+            <div style="font-size:24px; font-weight:bold;">{{ resultado.pulados_nao_aprovados }}</div>
+            <div style="font-size:12px;">Pulados (nao aprovados)</div>
+          </div>
+        </div>
+
+        {% if resultado.erros %}
+          <h3>Erros</h3>
+          <ul>
+            {% for e in resultado.erros %}<li>{{ e }}</li>{% endfor %}
+          </ul>
+        {% endif %}
+
+        <a href="{% url 'comercial_leads:importar_ads' %}" class="btn btn-primary">Importar outra planilha</a>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+
+<style>
+  .logs-table { border-collapse: collapse; }
+  .logs-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid #e2e8f0; background: #f8fafc; font-weight: 600; }
+  .logs-table td { padding: 6px 12px; border-bottom: 1px solid #e2e8f0; }
+  .match-row.strong { background: #f0fdf4; }
+  .match-row.medium { background: #fffbeb; }
+  .match-row.weak { background: #fafafa; }
+  .muted { color: #64748b; }
+</style>
+{% endblock %}
