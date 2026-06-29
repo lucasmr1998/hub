@@ -105,7 +105,18 @@ class Agente(TenantMixin):
     Definido UMA vez (área /automacao/agentes/) e referenciado pelos fluxos pelo
     nó `ia_agente`. Espelha o padrão da IntegracaoAPI (configura uma vez, usa por id).
     """
+    EQUIPE_CHOICES = [
+        ('executivo', 'Executivo'),
+        ('produto', 'Produto'),
+        ('comercial', 'Comercial'),
+        ('marketing', 'Marketing'),
+        ('tech', 'Tech'),
+        ('operacoes', 'Operações'),
+        ('fluxo', 'Fluxos / Bot'),
+    ]
+
     nome = models.CharField(max_length=200)
+    descricao = models.TextField(blank=True, default='', help_text='Resumo curto do papel do agente.')
     integracao_ia = models.ForeignKey(
         'integracoes.IntegracaoAPI', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='+',
@@ -113,6 +124,8 @@ class Agente(TenantMixin):
     # Vazio = usa o modelo default da integração (configuracoes_extras['modelo']).
     modelo = models.CharField(max_length=100, blank=True, default='')
     system_prompt = models.TextField(blank=True, default='')
+    # Prompt do modo autonomo (cron/rotina), diferente do prompt de chat. Vazio = usa o system_prompt.
+    prompt_autonomo = models.TextField(blank=True, default='')
     # D3: chaves das tools habilitadas (registry em services/ia_tools.py).
     tools = models.JSONField(default=list, blank=True)
     # D4: ids das CategoriaConhecimento que o agente enxerga no RAG (vazio = base inteira do tenant).
@@ -120,6 +133,11 @@ class Agente(TenantMixin):
     # Tipo de memória (registry em services/memoria.py). 'conversa' = mensagens da
     # conversa atual; '' / desconhecido = sem memória (stateless). Extensível.
     memoria = models.CharField(max_length=30, default='conversa', blank=True)
+    # Organizacao visual (estilo "empresa de agentes"): time + cor + icone + ordem.
+    equipe = models.CharField(max_length=20, choices=EQUIPE_CHOICES, blank=True, default='', db_index=True)
+    cor = models.CharField(max_length=7, blank=True, default='', help_text='Cor hex do card (ex: #1e3a8a).')
+    icone = models.CharField(max_length=40, blank=True, default='bi-robot', help_text='Bootstrap Icon (bi-*).')
+    ordem = models.PositiveIntegerField(default=0, help_text='Ordem de exibicao dentro do time.')
     ativo = models.BooleanField(default=True, db_index=True)
     criado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
@@ -130,7 +148,7 @@ class Agente(TenantMixin):
 
     class Meta:
         db_table = 'automacao_agente'
-        ordering = ['nome']
+        ordering = ['equipe', 'ordem', 'nome']
         verbose_name = 'Agente IA'
         verbose_name_plural = 'Agentes IA'
 
