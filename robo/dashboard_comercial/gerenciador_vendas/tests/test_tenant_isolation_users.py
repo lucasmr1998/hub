@@ -92,21 +92,7 @@ def test_configuracoes_inbox_nao_vaza_usuarios(logged_client_a, users_b):
 
 
 # ============================================================================
-# MARKETING AUTOMACOES
-# ============================================================================
-
-@pytest.mark.django_db
-def test_editor_regra_automacao_nao_vaza_usuarios(logged_client_a, tenant_a, users_b):
-    """O editor de regras de automacao nao deve listar users do tenant B."""
-    from apps.marketing.automacoes.models import RegraAutomacao
-
-    regra = RegraAutomacao.objects.create(
-        tenant=tenant_a, nome='Regra Teste', ativa=True, fluxo_json={},
-    )
-    r = logged_client_a.get(f'/marketing/automacoes/{regra.pk}/editor/')
-    if r.status_code == 200:
-        assert not _vazou_user_b(r.content, users_b), \
-            "Editor de automacao vazou users do tenant B"
+# MARKETING AUTOMACOES — motor antigo APOSENTADO (editor Drawflow removido); teste obsoleto retirado.
 
 
 # ============================================================================

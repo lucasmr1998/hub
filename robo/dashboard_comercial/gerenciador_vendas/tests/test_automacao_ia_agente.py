@@ -39,7 +39,7 @@ def test_validar_config():
 
 
 @mock.patch('apps.automacao.nodes.ia_agente.chamar_llm', return_value='Olá! Como posso ajudar?')
-def test_caminho_feliz_responde_e_acumula_historico(mock_llm):
+def test_caminho_feliz_responde(mock_llm):
     p = _patch_agente(_fake_agente())
     try:
         res = tipo_por_slug('ia_agente').executar(
@@ -48,22 +48,21 @@ def test_caminho_feliz_responde_e_acumula_historico(mock_llm):
         p.stop()
     assert res.branch == 'sucesso'
     assert res.output['resposta'] == 'Olá! Como posso ajudar?'
-    hist = res.promote['_hist_agente_5']
-    assert hist[-2] == {'role': 'user', 'content': 'oi'}
-    assert hist[-1] == {'role': 'assistant', 'content': 'Olá! Como posso ajudar?'}
+    # memória = a conversa: sem write-back de histórico (não promove _hist).
     messages = mock_llm.call_args[0][1]
     assert messages[0]['role'] == 'system'
     assert messages[-1] == {'role': 'user', 'content': 'oi'}
 
 
 @mock.patch('apps.automacao.nodes.ia_agente.chamar_llm', return_value='resp2')
-def test_usa_var_resposta_na_retoma_com_historico(mock_llm):
+def test_usa_var_resposta_na_retoma_com_memoria(mock_llm):
     p = _patch_agente(_fake_agente())
     try:
         ctx = _ctx(variaveis={
             'resposta': 'quero saber o preço',
-            '_hist_agente_5': [{'role': 'user', 'content': 'oi'},
-                               {'role': 'assistant', 'content': 'olá'}],
+            # memória da conversa (no teste, os turnos vêm em _memoria_turnos)
+            '_memoria_turnos': [{'role': 'user', 'content': 'oi'},
+                                {'role': 'assistant', 'content': 'olá'}],
         })
         res = tipo_por_slug('ia_agente').executar({'agente_id': '5'}, {}, ctx)
     finally:
