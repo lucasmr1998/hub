@@ -62,7 +62,9 @@ Fizemos a Peca 1 e a Peca 2. No meio, resolvemos uma crise de ambiente (branch).
 
 - **Tudo na `main`, sem push.** Commits desta sessao: `428fd4c` (merge) → Peca 1 (`6c0b3c8`,
   `24d371a`, `cffa5e9`, `6b69558`, `90ebe43`, `46f567b`) → Peca 2 (`930ce7d`, `9fbf051`, `4e9b6e1`,
-  `d132fac`, `264545f`, `62e13a6`).
+  `d132fac`, `264545f`, `62e13a6`) → Peca 3 (`cb51618`, `15e5b33`).
+- **Peca 3:** Dashboard CEO em `/workspace/ceo/` — cockpit cruzando workspace+negocio+agentes +
+  **briefing IA** (agente CEO le os dados pelas tools e da a leitura executiva) + follow-up. Tarefa #146.
 - **Peca 1:** 6 campos no `automacao.Agente` (`equipe/cor/icone/prompt_autonomo/descricao/ordem`,
   migration `0009`); seed preenche time por subpasta do `AGENTES/`; roster `/workspace/agentes/`
   agrupado por time; editor CRUD completo no workspace; `/automacao/agentes/` redireciona.
@@ -76,8 +78,35 @@ Fizemos a Peca 1 e a Peca 2. No meio, resolvemos uma crise de ambiente (branch).
 
 ---
 
+## Peca 4 — rotinas autonomas NA ENGINE NOVA (design preliminar, pra retomar)
+
+Decisao do Lucas: as rotinas rodam **sobre `apps/automacao`** (a engine ja tem infra de cron:
+`execucao.py` rodar_novos/retomar_pendentes + `ExecucaoFluxo.agendado_para`). Rotina = um fluxo com
+um no `ia_agente`, disparado periodicamente.
+
+**O que falta construir:**
+1. **Gatilho de agendamento/cron** — a engine tem trigger de evento/webhook, mas nao um TIME-based
+   que INICIA um fluxo num intervalo. Criar um no `agendamento` (com `intervalo_horas`, como o
+   `Automacao` do gestao) via skill `criar-no-automacao`.
+2. **Atribuicao tarefa->agente** — a `Tarefa` precisa de um "agente responsavel" (FK pro Agente).
+   `nivel_delegacao` JA existe na Tarefa (0=humano, 1-2=agente).
+3. **Loop autonomo** — agente acorda -> le o backlog (tarefas dele com nivel_delegacao>=1) -> monta o
+   briefing (campos `objetivo/contexto/passos/entregavel/criterios_aceite` JA existem na Tarefa,
+   dormentes) -> executa/propoe (tools, incl. `solicitar_aprovacao`) -> registra em `log_execucao`.
+4. **Travas anti-loop (CRITICO)** — limite de ciclos por execucao, limite de tools por ciclo, guard de
+   custo (max chamadas LLM), `nivel_delegacao` como teto. Sem isso, agente roda em circulo / queima API.
+5. **Alertas** — rotina detecta algo (churn alto, meta abaixo) -> cria um `Alerta` (model novo simples:
+   tipo/severidade/lido/resolvido, ver gestao; tipos health/churn/metrica/erro) -> aparece no cockpit
+   + pode virar Proposta.
+
+**Secao 4 (a cola):** execucao diferida da Proposta (aprovar -> executa `dados_execucao`); briefing
+executivo da Tarefa (campos dormentes usados no loop); processo/SOP (`Tarefa.documento_processo`
+injetado no agente).
+
+---
+
 ## Proximos passos
 
-- [ ] Peca 3: Dashboard CEO.
-- [ ] Peca 4: rotinas autonomas + secao 4 + alertas.
+- [x] Peca 1, 2, 3 — feitas e validadas (na main, sem push).
+- [ ] Peca 4: alinhar o design acima, depois construir (gatilho cron + atribuicao + loop + travas + alertas).
 - [ ] Quando o Lucas decidir: revisar os commits e **pushar** (deploy).
