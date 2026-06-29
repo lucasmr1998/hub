@@ -23,7 +23,9 @@ DATABASES = {
         'USER': 'postgres',
         'PASSWORD': 'admin123',
         'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+        # Default 5433 = container Docker pgvector/pgvector:pg17 (espelha prod, tem pgvector).
+        # Exige `docker start hubtrix-pg17`. Pro PG 18 nativo (sem pgvector): DB_PORT=5432.
+        'PORT': os.environ.get('DB_PORT', '5433'),
     }
 }
 
