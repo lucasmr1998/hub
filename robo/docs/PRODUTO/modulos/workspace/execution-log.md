@@ -55,6 +55,20 @@ Os agentes passam a AGIR no workspace, com um sistema de tools de primeira class
 
 ---
 
+## 2026-06-29 — Empresa de agentes: Peca 3 (Dashboard CEO, cockpit + IA)
+
+Cockpit executivo em `/workspace/ceo/` (`cb51618`), tenant-safe, cruzando os 3 mundos:
+- **KPIs**: pipeline, leads (+novos 30d), vendas 30d, churn, tickets, propostas pendentes.
+- **Briefing IA** (a peca "com IA"): botao chama o agente CEO via `chat_api`; ele usa as tools de
+  dados (puxou 5 no teste) e devolve a leitura executiva + recomendacao; tem follow-up por chat.
+- Negocio (pipeline por estagio com barras), Workspace (tarefas por status / projetos / propostas),
+  agentes por time. Link na sidebar Inteligencia. Tarefa Workspace #146.
+- Validado no browser (Playwright): 6 KPIs com dado real, briefing chamou status_pipeline +
+  resumo_leads + vendas_periodo + churn_clientes + tickets_abertos.
+- Status: completed (Peca 3). Proximo: Peca 4 (rotinas autonomas + secao 4 + alertas).
+
+---
+
 ## 2026-06-29 — Camada de agentes IA (Fase 1 + 2a + 3)
 
 Branch `feat/agentes-workspace` (NAO pushada, prod intacto). Dar vida a camada de agentes do
