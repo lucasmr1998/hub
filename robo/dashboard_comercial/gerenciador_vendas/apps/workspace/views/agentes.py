@@ -49,6 +49,34 @@ def _agrupar_por_time(agentes):
     return grupos
 
 
+@login_required
+def tools_page(request):
+    """Catalogo de tools (registry) — a versao UI do TOOLS.md. Read-only."""
+    if not user_tem_funcionalidade(request, 'workspace.ver'):
+        return HttpResponseForbidden('Sem permissao pra acessar Workspace.')
+    tenant = getattr(request, 'tenant', None)
+    from apps.automacao.services.ia_tools import catalogo_tools
+    from apps.automacao.models import Agente
+
+    uso = {}
+    if tenant is not None:
+        for tools in Agente.all_tenants.filter(tenant=tenant, ativo=True).values_list('tools', flat=True):
+            for ch in (tools or []):
+                uso[ch] = uso.get(ch, 0) + 1
+
+    tools = catalogo_tools()
+    for t in tools:
+        t['usos'] = uso.get(t['chave'], 0)
+    grupos = {}
+    for t in sorted(tools, key=lambda x: (x['categoria'], x['tipo'], x['chave'])):
+        grupos.setdefault(t['categoria'], []).append(t)
+    return render(request, 'workspace/tools.html', {
+        'grupos': [{'categoria': c, 'tools': ts} for c, ts in grupos.items()],
+        'total': len(tools),
+        'pagetitle': 'Ferramentas',
+    })
+
+
 @require_POST
 @login_required
 def chat_api(request):

@@ -1,0 +1,40 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}{{ pagetitle }} — Hubtrix{% endblock %}
+
+{% block extra_head %}{% include "workspace/_workspace_styles.html" %}{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">Workspace · Inteligência</p>
+        <h1 class="page-title">Ferramentas</h1>
+        <p class="page-subtitle">As {{ total }} tools que os agentes podem usar, lidas do registry da engine. Pra criar uma nova, use a skill <code>criar-tool</code>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: var(--sp-4); margin-top: var(--sp-5);">
+    {% for g in grupos %}
+      <section style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-4);">
+        <h2 style="margin: 0 0 var(--sp-3); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted);">{{ g.categoria }} ({{ g.tools|length }})</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2);">
+          {% for t in g.tools %}
+            <div style="border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-3);">
+              <div style="display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap;">
+                <code style="font-weight: 600; font-size: 0.85rem;">{{ t.chave }}</code>
+                <span style="font-size: 0.62rem; font-weight: 500; padding: 1px 5px; border-radius: 4px; {% if t.tipo == 'conhecimento' %}background: #e0f2fe; color: #0369a1;{% else %}background: #fef3c7; color: #b45309;{% endif %}">{% if t.tipo == 'conhecimento' %}consulta{% else %}ação{% endif %}</span>
+                {% if t.usos %}<span style="font-size: 0.7rem; color: var(--color-text-muted); margin-left: auto;">{{ t.usos }} agente{{ t.usos|pluralize }}</span>{% endif %}
+              </div>
+              <div style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 4px; line-height: 1.4;">{{ t.descricao }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    {% empty %}
+      <p style="color: var(--color-text-muted);">Nenhuma tool no registry.</p>
+    {% endfor %}
+  </div>
+{% endblock %}

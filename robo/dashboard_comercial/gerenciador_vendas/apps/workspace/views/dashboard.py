@@ -106,3 +106,24 @@ def ceo(request):
     ctx['ceo_agente_nome'] = ceo_ag.nome if ceo_ag else ''
 
     return render(request, 'workspace/ceo.html', ctx)
+
+
+@login_required
+def fluxos(request):
+    """Lista os flows da engine de automacao (read-only) + link pro editor. Tenant-safe."""
+    if not user_tem_funcionalidade(request, 'workspace.ver'):
+        return HttpResponseForbidden('Sem permissão pra acessar Workspace.')
+    tenant = getattr(request, 'tenant', None)
+    fluxos_ctx = []
+    if tenant is not None:
+        from apps.automacao.models import Fluxo
+        for f in Fluxo.all_tenants.filter(tenant=tenant).order_by('-atualizado_em'):
+            nodes = (f.grafo or {}).get('nodes') or {}
+            gatilho = f.gatilho_evento or ('webhook' if f.webhook_token else 'manual')
+            fluxos_ctx.append({
+                'pk': f.pk, 'nome': f.nome, 'ativo': f.ativo,
+                'gatilho': gatilho, 'n_nos': len(nodes), 'atualizado': f.atualizado_em,
+            })
+    return render(request, 'workspace/fluxos.html', {
+        'fluxos': fluxos_ctx, 'total': len(fluxos_ctx), 'pagetitle': 'Fluxos',
+    })

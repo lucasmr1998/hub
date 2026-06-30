@@ -1,0 +1,52 @@
+{% extends "layouts/layout_app.html" %}
+{% block title %}{{ pagetitle }} — Hubtrix{% endblock %}
+
+{% block extra_head %}{% include "workspace/_workspace_styles.html" %}{% endblock %}
+{% block subnav %}{% include "partials/sidebar_subnav.html" %}{% endblock %}
+{% block main_mod %} has-subnav{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <p class="page-eyebrow">Workspace · Inteligência</p>
+        <h1 class="page-title">Fluxos</h1>
+        <p class="page-subtitle">Os {{ total }} fluxos da engine de automação. A edição é no editor visual.</p>
+      </div>
+      <a href="/automacao/editor/" class="btn btn-primary"><i class="bi bi-diagram-3"></i> Abrir editor</a>
+    </div>
+  </div>
+
+  {% if fluxos %}
+  <section style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); margin-top: var(--sp-5); overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+      <thead>
+        <tr style="text-align: left; color: var(--color-text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em;">
+          <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);">Fluxo</th>
+          <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);">Gatilho</th>
+          <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);">Nós</th>
+          <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);">Status</th>
+          <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);">Atualizado</th>
+          <th style="padding: var(--sp-3); border-bottom: 1px solid var(--color-border);"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in fluxos %}
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: var(--sp-3); font-weight: 600;">{{ f.nome }}</td>
+            <td style="padding: var(--sp-3);"><span style="font-size: 0.74rem; padding: 2px 8px; border: 1px solid var(--color-border); border-radius: 999px;">{{ f.gatilho }}</span></td>
+            <td style="padding: var(--sp-3); color: var(--color-text-muted);">{{ f.n_nos }}</td>
+            <td style="padding: var(--sp-3);">{% if f.ativo %}<span style="color: var(--color-success);">● ativo</span>{% else %}<span style="color: var(--color-text-muted);">○ inativo</span>{% endif %}</td>
+            <td style="padding: var(--sp-3); color: var(--color-text-muted); font-size: 0.8rem;">{{ f.atualizado|timesince }} atrás</td>
+            <td style="padding: var(--sp-3); text-align: right;"><a href="/automacao/editor/?fluxo={{ f.pk }}" style="color: var(--color-accent);">abrir</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% else %}
+    <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--sp-6); text-align: center; margin-top: var(--sp-5);">
+      <p style="color: var(--color-text-muted); margin: 0;">Nenhum fluxo ainda. <a href="/automacao/editor/">Abra o editor</a> pra criar o primeiro.</p>
+    </div>
+  {% endif %}
+{% endblock %}
