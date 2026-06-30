@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-06-29 — Paginas Ferramentas + Fluxos + fix ticket_detalhe
+
+- **Ferramentas** (`/workspace/ferramentas/`, `01af391`): catalogo UI das tools (le o registry da
+  engine) por categoria + tipo (consulta/acao) + uso por agente. A versao tela do `TOOLS.md`.
+- **Fluxos** (`/workspace/fluxos/`, `01af391`): lista os flows da engine `automacao` (nome/gatilho/
+  nos/status/atualizado) + link pro editor. A engine so tinha editor + `api/fluxos`, sem pagina de lista.
+- Ambas na sidebar Inteligencia: Dashboard CEO | Agentes | Ferramentas | Fluxos | Propostas.
+- **fix** (`783728e`): `suporte/ticket_detalhe` quebrava (500) quando solicitante/atendente/autor/
+  usuario era nulo — `{{ obj.get_full_name|default:obj.username }}` resolvia `username` num None
+  (o arg do filtro `default` propaga `VariableDoesNotExist`). Guardado com `{% if obj %}` nos 5
+  acessos. Validado: ticket 15 volta a 200.
+- Status: completed.
+
+---
+
 ## 2026-06-29 — Empresa de agentes: Peca 1 (campos + organizacao por time + editor)
 
 Continuacao da camada de agentes (traz do gestao a organizacao por time + o editor pro
