@@ -39,11 +39,11 @@
       <div class="card-body">
         {% for c in comentarios %}
           <div class="timeline-item">
-            <div class="timeline-avatar">{{ c.autor.first_name|first|default:c.autor.username|first|upper }}</div>
+            <div class="timeline-avatar">{% if c.autor %}{{ c.autor.first_name|first|default:c.autor.username|first|upper }}{% else %}?{% endif %}</div>
             <div class="timeline-content {% if c.interno %}interno{% endif %}">
               <div class="timeline-meta">
                 <div>
-                  <span class="timeline-author">{{ c.autor.get_full_name|default:c.autor.username }}</span>
+                  <span class="timeline-author">{% if c.autor %}{{ c.autor.get_full_name|default:c.autor.username }}{% else %}Sistema{% endif %}</span>
                   {% if c.interno %}<span class="timeline-interno-badge">Interno</span>{% endif %}
                 </div>
                 <span class="timeline-date">{{ c.data_criacao|date:"d/m/Y H:i" }}</span>
@@ -136,11 +136,11 @@
       <div class="card-body">
         <div class="info-row">
           <div class="info-label">Solicitante</div>
-          <div class="info-value">{{ ticket.solicitante.get_full_name|default:ticket.solicitante.username }}</div>
+          <div class="info-value">{% if ticket.solicitante %}{{ ticket.solicitante.get_full_name|default:ticket.solicitante.username }}{% else %}—{% endif %}</div>
         </div>
         <div class="info-row">
           <div class="info-label">Atendente</div>
-          <div class="info-value">{{ ticket.atendente.get_full_name|default:ticket.atendente.username|default:"Nao atribuido" }}</div>
+          <div class="info-value">{% if ticket.atendente %}{{ ticket.atendente.get_full_name|default:ticket.atendente.username }}{% else %}Nao atribuido{% endif %}</div>
         </div>
         <div class="info-row">
           <div class="info-label">Categoria</div>
@@ -252,7 +252,7 @@
                 {% elif h.tipo == 'criacao' %}<i class="bi bi-plus-circle" style="color: var(--color-success);"></i>
                 {% elif h.tipo == 'escalacao' %}<i class="bi bi-arrow-up" style="color: var(--color-danger);"></i>
                 {% else %}<i class="bi bi-circle" style="color: var(--color-text-muted);"></i>{% endif %}
-                <span class="hist-user">{{ h.usuario.get_full_name|default:h.usuario.username|default:"Sistema" }}</span>
+                <span class="hist-user">{% if h.usuario %}{{ h.usuario.get_full_name|default:h.usuario.username }}{% else %}Sistema{% endif %}</span>
                 <span class="hist-time">{{ h.data|timesince }} atras</span>
               </div>
               <div class="hist-desc">{{ h.descricao }}</div>
