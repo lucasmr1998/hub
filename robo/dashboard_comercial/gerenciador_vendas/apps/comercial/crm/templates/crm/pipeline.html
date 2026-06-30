@@ -114,10 +114,6 @@
         <label class="field-label" for="novaOportTitulo">Titulo da oportunidade</label>
         <div class="field-input-wrap"><input id="novaOportTitulo" type="text" class="field-input" placeholder="Ex: Maria — Plano 300MB"></div>
       </div>
-      <div class="field" style="margin-top: var(--sp-3);">
-        <label class="field-label" for="novaOportCidade">Cidade</label>
-        <div class="field-input-wrap"><input id="novaOportCidade" type="text" class="field-input" placeholder="Ex: Mococa"></div>
-      </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); margin-top: var(--sp-3);">
         <div class="field">
           <label class="field-label" for="novaOportOrigemCliente">Origem do cliente</label>
@@ -1625,7 +1621,6 @@ function criarOportunidade() {
   const nome = document.getElementById('novaOportNome').value.trim();
   const telefone = document.getElementById('novaOportTelefone').value.trim();
   const titulo = document.getElementById('novaOportTitulo').value.trim();
-  const cidade = document.getElementById('novaOportCidade').value.trim();
   const id_origem = document.getElementById('novaOportOrigemCliente').value;
   const id_origem_servico = document.getElementById('novaOportOrigemServico').value;
   const responsavel_id = document.getElementById('novaOportResponsavel').value;
@@ -1638,7 +1633,7 @@ function criarOportunidade() {
   fetch('{% url "crm:api_criar_oportunidade" %}', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-    body: JSON.stringify({ nome, telefone, titulo, cidade, id_origem, id_origem_servico, responsavel_id: responsavel_id || null })
+    body: JSON.stringify({ nome, telefone, titulo, id_origem, id_origem_servico, responsavel_id: responsavel_id || null })
   })
   .then(r => r.json())
   .then(d => {
