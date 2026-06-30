@@ -224,6 +224,33 @@ def pipeline_view(request):
         for slug, label, cat, icone in CAMPOS_CARD_DISPONIVEIS
     ]
 
+    # Origens HubSoft (cliente + servico) - do cache pra select do modal "Nova oportunidade"
+    opcoes_origens_cliente = []
+    opcoes_origens_servico = []
+    try:
+        from apps.integracoes.models import IntegracaoAPI
+        integ_hs = IntegracaoAPI.all_tenants.filter(
+            tenant=request.tenant, tipo='hubsoft', ativa=True,
+        ).first()
+        if integ_hs:
+            cache_hs = (integ_hs.configuracoes_extras or {}).get('cache') or {}
+            for it in (cache_hs.get('origens_cliente') or []):
+                if it.get('id_origem_cliente') is not None:
+                    opcoes_origens_cliente.append({
+                        'id': int(it['id_origem_cliente']),
+                        'nome': it.get('descricao') or it.get('nome') or f'#{it["id_origem_cliente"]}',
+                    })
+            for it in (cache_hs.get('origens_contato') or []):
+                if it.get('id_origem_contato') is not None:
+                    opcoes_origens_servico.append({
+                        'id': int(it['id_origem_contato']),
+                        'nome': it.get('descricao') or it.get('nome') or f'#{it["id_origem_contato"]}',
+                    })
+            opcoes_origens_cliente.sort(key=lambda x: x['nome'])
+            opcoes_origens_servico.sort(key=lambda x: x['nome'])
+    except Exception:
+        pass
+
     context = {
         'estagios': estagios,
         'vendedores': vendedores,
@@ -238,6 +265,8 @@ def pipeline_view(request):
         'campos_visiveis_json': json.dumps(campos_visiveis, ensure_ascii=False),
         'campos_disponiveis_json': json.dumps(campos_disponiveis, ensure_ascii=False),
         'campos_max': MAX_CAMPOS_VISIVEIS,
+        'opcoes_origens_cliente': opcoes_origens_cliente,
+        'opcoes_origens_servico': opcoes_origens_servico,
     }
     return render(request, 'crm/pipeline.html', context)
 
@@ -603,21 +632,40 @@ def api_criar_oportunidade(request):
     nome = body.get('nome', '').strip()
     telefone = body.get('telefone', '').strip()
     titulo = body.get('titulo', '').strip()
-    valor = body.get('valor')
     responsavel_id = body.get('responsavel_id')
+    cidade = (body.get('cidade') or '').strip()
+    id_origem = (body.get('id_origem') or '').strip()
+    id_origem_servico = (body.get('id_origem_servico') or '').strip()
 
     if not nome or not telefone:
         return JsonResponse({'ok': False, 'erro': 'Nome e telefone sao obrigatorios'}, status=400)
 
     from apps.comercial.leads.models import LeadProspecto
     # Buscar ou criar lead
+    defaults_lead = {'nome_razaosocial': nome, 'origem': 'manual'}
+    if cidade: defaults_lead['cidade'] = cidade
+    if id_origem: defaults_lead['id_origem'] = id_origem
+    if id_origem_servico: defaults_lead['id_origem_servico'] = id_origem_servico
     lead, created = LeadProspecto.objects.get_or_create(
         telefone=telefone,
-        defaults={'nome_razaosocial': nome, 'origem': 'manual'}
+        defaults=defaults_lead,
     )
+    # Atualiza campos no lead existente quando vierem preenchidos no payload
+    update_lead = []
     if not created and not lead.nome_razaosocial:
         lead.nome_razaosocial = nome
-        lead.save(update_fields=['nome_razaosocial'])
+        update_lead.append('nome_razaosocial')
+    if cidade and lead.cidade != cidade:
+        lead.cidade = cidade
+        update_lead.append('cidade')
+    if id_origem and lead.id_origem != id_origem:
+        lead.id_origem = id_origem
+        update_lead.append('id_origem')
+    if id_origem_servico and lead.id_origem_servico != id_origem_servico:
+        lead.id_origem_servico = id_origem_servico
+        update_lead.append('id_origem_servico')
+    if update_lead:
+        lead.save(update_fields=update_lead)
 
     # Verificar se lead ja tem oportunidade
     if OportunidadeVenda.objects.filter(lead=lead).exists():
@@ -634,7 +682,6 @@ def api_criar_oportunidade(request):
         lead=lead,
         estagio=estagio,
         titulo=titulo or nome,
-        valor_estimado=valor if valor else None,
         responsavel_id=responsavel_id if responsavel_id else None,
         criado_por=request.user,
         origem_crm='manual',
