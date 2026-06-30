@@ -680,6 +680,7 @@ def api_editar_oportunidade(request, pk):
         'bairro',
         'empresa', 'observacoes', 'origem', 'canal_entrada',
         'score_qualificacao', 'score_status',
+        'id_origem', 'id_origem_servico',
     ]
 
     oport_atualizados = []
@@ -1097,9 +1098,39 @@ def oportunidade_detalhe(request, pk):
                 })
     anexos.sort(key=lambda x: x['data'], reverse=True)
 
+    # Origens HubSoft (cliente + servico) - do cache da IntegracaoAPI HubSoft do tenant.
+    # Usado pelo modal "Editar oportunidade" pra select dos campos id_origem e id_origem_servico do lead.
+    opcoes_origens_cliente = []
+    opcoes_origens_servico = []
+    try:
+        from apps.integracoes.models import IntegracaoAPI
+        integ_hs = IntegracaoAPI.all_tenants.filter(
+            tenant=request.tenant, tipo='hubsoft', ativa=True,
+        ).first()
+        if integ_hs:
+            cache_hs = (integ_hs.configuracoes_extras or {}).get('cache') or {}
+            for it in (cache_hs.get('origens_cliente') or []):
+                if it.get('id_origem_cliente') is not None:
+                    opcoes_origens_cliente.append({
+                        'id': int(it['id_origem_cliente']),
+                        'nome': it.get('descricao') or it.get('nome') or f'#{it["id_origem_cliente"]}',
+                    })
+            for it in (cache_hs.get('origens_contato') or []):
+                if it.get('id_origem_contato') is not None:
+                    opcoes_origens_servico.append({
+                        'id': int(it['id_origem_contato']),
+                        'nome': it.get('descricao') or it.get('nome') or f'#{it["id_origem_contato"]}',
+                    })
+            opcoes_origens_cliente.sort(key=lambda x: x['nome'])
+            opcoes_origens_servico.sort(key=lambda x: x['nome'])
+    except Exception:
+        pass
+
     context = {
         'oportunidade': oportunidade,
         'lead': lead,
+        'opcoes_origens_cliente': opcoes_origens_cliente,
+        'opcoes_origens_servico': opcoes_origens_servico,
         'historico_contatos': historico_contatos,
         'cliente_hubsoft': cliente_hubsoft,
         'historico_estagios': historico_estagios,

@@ -1022,8 +1022,8 @@
               <div class="field-input-wrap"><input name="titulo" type="text" class="field-input" value="{{ oportunidade.titulo|default:'' }}"></div>
             </div>
             <div class="field">
-              <label class="field-label">Valor estimado (R$)</label>
-              <div class="field-input-wrap"><input name="valor_estimado" type="number" step="0.01" class="field-input" value="{{ oportunidade.valor_estimado|default:'' }}"></div>
+              <label class="field-label">Cidade</label>
+              <div class="field-input-wrap"><input name="cidade" type="text" class="field-input" value="{{ lead.cidade|default:'' }}"></div>
             </div>
             <div class="field">
               <label class="field-label">Probabilidade (%)</label>
@@ -1037,6 +1037,28 @@
                   <option value="normal" {% if oportunidade.prioridade == 'normal' %}selected{% endif %}>Normal</option>
                   <option value="alta" {% if oportunidade.prioridade == 'alta' %}selected{% endif %}>Alta</option>
                   <option value="urgente" {% if oportunidade.prioridade == 'urgente' %}selected{% endif %}>Urgente</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label">Origem do cliente (HubSoft)</label>
+              <div class="field-input-wrap">
+                <select name="id_origem" class="field-input">
+                  <option value="">— sem definir (usa padrao do tenant) —</option>
+                  {% for o in opcoes_origens_cliente %}
+                  <option value="{{ o.id }}" {% if lead.id_origem == o.id|stringformat:'s' %}selected{% endif %}>{{ o.nome }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label">Origem do servico (HubSoft)</label>
+              <div class="field-input-wrap">
+                <select name="id_origem_servico" class="field-input">
+                  <option value="">— sem definir (usa padrao do tenant) —</option>
+                  {% for o in opcoes_origens_servico %}
+                  <option value="{{ o.id }}" {% if lead.id_origem_servico == o.id|stringformat:'s' %}selected{% endif %}>{{ o.nome }}</option>
+                  {% endfor %}
                 </select>
               </div>
             </div>
