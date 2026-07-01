@@ -512,3 +512,15 @@
 - **Pending:** decidir volume/dia por tenant + latência → runtime síncrono-em-cron (modelo marketing) vs. fila. Bloqueia a fase de runtime.
 - **Pending (convergência):** extrair executores de domínio (`criar_oportunidade`, `webhook`...) pra service único tenant-aware; aposentar motores na ordem marketing → atendimento → comercial.
 - **Dívida (anotada na doc):** DNS-rebinding (pinning de IP), allowlist de destino por tenant, nó `code` com sandbox (nunca `eval`).
+
+## 2026-07-01 — Migração da automação do funil comercial (Fase 1: node-ificar as ações)
+
+- **Objetivo:** migrar a automação do funil (`RegraPipelineEstagio` + `crm/services/automacao_pipeline.py`, que roda **2 clientes vivos** — Nuvyon 16 regras/1787 disparos, TR Carrion 8/2726) pra engine nova, **sem downtime e sem tocar no motor antigo** até a Fase 4. Plano aprovado (parallel-run + shadow + cutover reversível por tenant).
+- **Restrição-chave (usuário):** criar **tudo no motor novo primeiro, autossuficiente** — a lógica de cada `_acao_*` é **portada** pra `apps/automacao/services/acoes.py` (o motor novo **não importa** do antigo). Só depois do shadow provar paridade mexemos no antigo (Fase 3 desativa regra=dado, Fase 4 deleta código).
+- **Decisão de design (usuário, 3 lembretes):** (1) todo node **configurável ao abrir** (`campos_config`); (2) nodes de **integração** precisam de **seletor de credencial** (qual `IntegracaoAPI`) — padrão do uazapi: campo `{'fonte': 'integracoes_uazapi'}` + `uazapi_do_tenant(tenant, integ_id)` (vazio = 1ª ativa). Espelhar nos nodes HubSoft/WhatsApp da migração.
+- **Feito (2/6 ações):**
+  - `mover_para_perdido_sem_viabilidade` (molde): porta `_acao_*` → `acoes.py` (idempotente, motivo template {cep}/{cidade}/{uf}, HistoricoPipelineEstagio); node `Comercial › Oportunidades`; 5 testes.
+  - `adicionar_item_oportunidade`: porta `_acao_*` → `acoes.py` (lead.id_plano_rp → ProdutoServico.id_externo → ItemOportunidade; idempotente; devolve `(item, criado, motivo)`); node com `quantidade` configurável; 6 testes.
+- **Ação local (ORM), sem credencial** nas 2 primeiras. As 3 de integração (`gerar_contrato_hubsoft`, `assinar_contrato_hubsoft`, `sincronizar_prospecto_hubsoft`) + `enviar_venda_whatsapp` vêm a seguir **com** o seletor de credencial.
+- **Output:** `manage.py check` limpo; 11 testes verdes (5+6). Catálogo do README atualizado. Motor antigo **intocado**.
+- **Status:** Fase 1 **in progress** (2/6). Faltam: `gerar_contrato_hubsoft`, `assinar_contrato_hubsoft`, `enviar_venda_whatsapp`, `sincronizar_prospecto_hubsoft`. Depois: Fase 2 (tradutor + shadow + comparador).

@@ -234,3 +234,43 @@ def mover_para_perdido_sem_viabilidade(tenant, *, oportunidade, motivo_template=
         movido_por=None, motivo=f'Automacao: {motivo}',
     )
     return estagio_perdido, True
+
+
+def adicionar_item_oportunidade(tenant, *, oportunidade, quantidade=1):
+    """Vincula o plano escolhido pelo cliente (via `lead.id_plano_rp`, gravado pelo
+    flow Matrix) como `ItemOportunidade` na oportunidade. Idempotente (não duplica o
+    mesmo produto). Devolve `(item, criado, motivo)`:
+    - criado=True → `item` é o ItemOportunidade novo, `motivo`=''
+    - criado=False → `item`=None, `motivo` ∈ {'lead_sem_plano','produto_nao_encontrado','ja_vinculado'}
+
+    `id_plano_rp` é o id_servico do HubSoft; casa com `ProdutoServico.id_externo` no
+    catálogo do tenant. Portado de `crm.services.automacao_pipeline._acao_adicionar_item_oportunidade`
+    (motor novo autossuficiente — não importa do antigo)."""
+    from apps.comercial.crm.models import ProdutoServico, ItemOportunidade
+    if oportunidade is None:
+        raise ValueError('Sem oportunidade para adicionar item.')
+
+    lead = getattr(oportunidade, 'lead', None)
+    if lead is None or not getattr(lead, 'id_plano_rp', None):
+        return None, False, 'lead_sem_plano'
+
+    produto = ProdutoServico.all_tenants.filter(
+        tenant=tenant, id_externo=str(lead.id_plano_rp),
+    ).first()
+    if not produto:
+        return None, False, 'produto_nao_encontrado'
+
+    if oportunidade.itens.filter(produto=produto).exists():
+        return None, False, 'ja_vinculado'
+
+    try:
+        qtd = int(quantidade or 1)
+    except (TypeError, ValueError):
+        qtd = 1
+    qtd = max(qtd, 1)
+
+    item = ItemOportunidade.all_tenants.create(
+        tenant=tenant, oportunidade=oportunidade, produto=produto,
+        quantidade=qtd, valor_unitario=produto.preco or 0, desconto=0,
+    )
+    return item, True, ''

@@ -45,4 +45,5 @@ from . import hubsoft_writes  # noqa: F401,E402  (H9 — writes moderados: contr
 from . import condicao_comercial  # noqa: F401,E402  (CC — condições da engine comercial)
 from . import acao_comercial  # noqa: F401,E402  (AC — ações da engine comercial)
 from . import mover_para_perdido_sem_viabilidade  # noqa: F401,E402  (F1 — migração funil: perder por viabilidade)
+from . import adicionar_item_oportunidade  # noqa: F401,E402  (F2 — migração funil: vincular plano escolhido)
 from . import ia_agente  # noqa: F401,E402  (D2 — Agente IA: turno conversacional referenciando Agente)
