@@ -296,8 +296,7 @@ def api_pipeline_dados(request):
 
     # Regra de visibilidade baseada em funcionalidade
     if not user_tem_funcionalidade(request, 'comercial.ver_todas_oportunidades'):
-        from django.db.models import Q
-        qs = qs.filter(Q(responsavel=request.user) | Q(responsavel__isnull=True))
+        qs = qs.filter(responsavel=request.user)
 
     tag = request.GET.get('tag', '').strip()
     valor_range = request.GET.get('valor', '').strip()
@@ -553,7 +552,7 @@ def oportunidades_lista(request):
     ).prefetch_related('tags').order_by('estagio__ordem', '-data_criacao')
 
     if not user_tem_funcionalidade(request, 'comercial.ver_todas_oportunidades'):
-        qs = qs.filter(Q(responsavel=request.user) | Q(responsavel__isnull=True))
+        qs = qs.filter(responsavel=request.user)
 
     # Filtros
     search = request.GET.get('search', '').strip()
