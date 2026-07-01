@@ -287,7 +287,7 @@ def _coletar_documentos(lead) -> list[dict]:
     return docs
 
 
-def enviar_venda_whatsapp(lead, telefone_destino: str, oportunidade=None) -> dict:
+def enviar_venda_whatsapp(lead, telefone_destino: str, oportunidade=None, integ_id=None) -> dict:
     """Envia resumo da venda + documentos pelo WhatsApp.
 
     Args:
@@ -295,6 +295,8 @@ def enviar_venda_whatsapp(lead, telefone_destino: str, oportunidade=None) -> dic
         telefone_destino: numero do destinatario (sera normalizado pra 55XXXXXX)
         oportunidade: OportunidadeVenda relacionada (opcional). Se nao passado,
             busca a primeira do lead. Usado pra extrair dados do plano.
+        integ_id: pk da IntegracaoAPI uazapi a usar (seletor de credencial).
+            Vazio = a primeira uazapi ativa do tenant (retrocompativel).
 
     Returns:
         dict com {ok: bool, texto_enviado: bool, docs_enviados: int,
@@ -317,9 +319,8 @@ def enviar_venda_whatsapp(lead, telefone_destino: str, oportunidade=None) -> dic
         logger.info('[venda_whatsapp] lead=%s pulado (idempotente)', lead.id)
         return resultado
 
-    integracao = IntegracaoAPI.all_tenants.filter(
-        tenant=lead.tenant, tipo='uazapi', ativa=True,
-    ).first()
+    _qs = IntegracaoAPI.all_tenants.filter(tenant=lead.tenant, tipo='uazapi', ativa=True)
+    integracao = (_qs.filter(pk=integ_id).first() if integ_id else _qs.first())
     if not integracao:
         resultado['motivo'] = f'tenant {lead.tenant.slug} sem IntegracaoAPI uazapi ativa'
         logger.warning(resultado['motivo'])
