@@ -161,6 +161,7 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 | `criar_tarefa` | Comercial › Tarefas | Criar tarefa (CRM) | ✅ **convergência marketing** (service de domínio `services/acoes.py`; saídas sucesso/erro) |
 | `notificacao_sistema` | Notificações › Sistema | Notificar equipe (broadcast) | ✅ **convergência marketing** (reusa `notificacoes.criar_notificacao` via `acoes.notificar`) |
 | `mover_estagio` | Comercial › Oportunidades | Mover de estágio | ✅ **convergência** (precisa de oportunidade no contexto) |
+| `mover_para_perdido_sem_viabilidade` | Comercial › Oportunidades | Perder por viabilidade (motivo {cep}/{cidade}/{uf}) | ✅ **migração funil Fase 1** (porta `_acao_*` p/ `acoes.py`; motor antigo intocado) |
 | `criar_oportunidade` | Comercial › Oportunidades | Criar oportunidade (CRM) | ✅ **convergência** (idempotente; pipeline/estágio padrão se vazios) |
 | `criar_venda` | Comercial › Vendas | Criar venda | ✅ **convergência** (idempotente; status pendente-ERP) |
 | `atribuir_responsavel` | Comercial › Oportunidades | Atribuir responsável | ✅ **convergência** (round-robin ou fixo por username) |
