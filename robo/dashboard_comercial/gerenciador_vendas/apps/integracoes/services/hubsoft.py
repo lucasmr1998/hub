@@ -1832,12 +1832,12 @@ class HubsoftService:
         if origem_id:
             payload['id_origem_cliente'] = origem_id
 
-        origem_servico_id = _id_valido_ou_default(
+        origem_contato_id = _id_valido_ou_default(
             lead.id_origem_servico, extras.get('id_origem_servico_padrao'),
             cache_chave='origens_contato', item_id_key='id_origem_contato',
         )
-        if origem_servico_id:
-            payload['id_origem_servico'] = origem_servico_id
+        if origem_contato_id:
+            payload['id_origem_contato'] = origem_contato_id
 
         payload['id_externo'] = str(lead.pk)
         return payload
@@ -1962,7 +1962,7 @@ class HubsoftService:
     _CAMPOS_SANITIZAR = [
         ('id_origem_cliente',  'origens_cliente',  'id_origem_cliente',  'id_origem_padrao'),
         ('id_vendedor',        'vendedores',       'id',                 'id_vendedor_padrao'),
-        ('id_origem_servico',  'origens_contato',  'id_origem_contato',  'id_origem_servico_padrao'),
+        ('id_origem_contato',  'origens_contato',  'id_origem_contato',  'id_origem_servico_padrao'),
     ]
 
     def _sanitizar_payload(self, payload: dict) -> dict:
