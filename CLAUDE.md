@@ -63,6 +63,15 @@ Ao **concluir cada unidade de trabalho** (feature, fix, investigacao, decisao) e
 
 **Cadencia:** a cada commit relevante + no fim de sessao (antes de compactar, ver 1.6). **Sinal de alerta:** se um bloco gerou codigo mas nenhuma atualizacao de doc/tarefa, algo ficou pendente. Voltar e fechar antes de seguir.
 
+### 1.10 Multiplas sessoes na mesma pasta (evitar atropelo)
+
+O usuario roda VARIAS sessoes do Claude na MESMA pasta ao mesmo tempo. Elas dividem a working tree e a HEAD, entao se atropelam (a branch troca sozinha, edit nao commitado some, duas fazem trabalho parecido). Como e a mesma pasta, worktree nao resolve. Pra minimizar:
+
+1. **Fique na `main`. NAO troque de branch** nem crie feature branch. `checkout` move a HEAD de TODAS as sessoes de uma vez.
+2. **Commit cedo e pequeno.** Nunca segure edit nao commitado: outra sessao pode sobrescrever a working tree. Cada unidade coerente pronta = commit imediato (vira historico e fica seguro; o git passa a conflitar em vez de sobrescrever calado).
+3. **`git branch --show-current` antes de `git add`/`commit`** (a branch pode ter mudado sem aviso).
+4. **Push so com confirmacao explicita do usuario** (2.3 / 1.2) — mesmo que a arvore pareca sua, outra sessao pode ter commits ali.
+
 ---
 
 ## 2. Seguranca e producao
