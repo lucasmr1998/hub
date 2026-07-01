@@ -187,3 +187,50 @@ def atribuir_responsavel(tenant, *, oportunidade=None, lead=None, modo='round-ro
     oportunidade.responsavel = responsavel
     oportunidade.save(update_fields=['responsavel'])
     return responsavel
+
+
+def mover_para_perdido_sem_viabilidade(tenant, *, oportunidade, motivo_template=''):
+    """Move a `oportunidade` pro estágio `is_final_perdido` do pipeline dela e preenche
+    `motivo_perda` (categoria 'viabilidade'), registrando o HistoricoPipelineEstagio.
+    Idempotente (não move se já está em perdido). Devolve `(estagio_perdido, movido: bool)`.
+
+    `motivo_template` aceita placeholders {cep}/{cidade}/{uf} (do lead.dados_custom['viabilidade']);
+    vazio usa o padrão. Portado de `crm.services.automacao_pipeline._acao_mover_para_perdido_sem_viabilidade`
+    (motor novo autossuficiente — não importa do antigo)."""
+    from apps.comercial.crm.models import PipelineEstagio, HistoricoPipelineEstagio
+    if oportunidade is None:
+        raise ValueError('Sem oportunidade para mover.')
+    if oportunidade.estagio and oportunidade.estagio.is_final_perdido:
+        return oportunidade.estagio, False  # já perdido
+
+    estagio_perdido = PipelineEstagio.all_tenants.filter(
+        tenant=tenant, pipeline=oportunidade.pipeline, is_final_perdido=True, ativo=True,
+    ).order_by('ordem').first()
+    if estagio_perdido is None:
+        raise ValueError('Nenhum estágio is_final_perdido no pipeline.')
+
+    lead = oportunidade.lead
+    via = (getattr(lead, 'dados_custom', None) or {}).get('viabilidade') or {}
+    cep = via.get('cep_consultado') or getattr(lead, 'cep', '') or ''
+    cidade = via.get('cidade') or '—'
+    uf = via.get('uf') or '—'
+    template = (motivo_template or '').strip() or 'CEP {cep} sem cobertura tecnica em {cidade}/{uf}'
+    try:
+        motivo = template.format(cep=cep, cidade=cidade, uf=uf)
+    except (KeyError, IndexError, ValueError):
+        motivo = template  # placeholder inválido no template → usa cru, sem quebrar
+
+    estagio_anterior = oportunidade.estagio
+    oportunidade.estagio = estagio_perdido
+    oportunidade.data_entrada_estagio = timezone.now()
+    oportunidade.motivo_perda_categoria = 'viabilidade'
+    oportunidade.motivo_perda = motivo
+    oportunidade.save(update_fields=[
+        'estagio', 'data_entrada_estagio', 'motivo_perda_categoria', 'motivo_perda',
+    ])
+    HistoricoPipelineEstagio.objects.create(
+        tenant=tenant, oportunidade=oportunidade,
+        estagio_anterior=estagio_anterior, estagio_novo=estagio_perdido,
+        movido_por=None, motivo=f'Automacao: {motivo}',
+    )
+    return estagio_perdido, True

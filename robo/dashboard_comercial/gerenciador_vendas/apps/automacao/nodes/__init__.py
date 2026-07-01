@@ -44,4 +44,5 @@ from . import hubsoft_globais  # noqa: F401,E402  (H8 — clientes/OS/atendiment
 from . import hubsoft_writes  # noqa: F401,E402  (H9 — writes moderados: contrato/renegociação/OS)
 from . import condicao_comercial  # noqa: F401,E402  (CC — condições da engine comercial)
 from . import acao_comercial  # noqa: F401,E402  (AC — ações da engine comercial)
+from . import mover_para_perdido_sem_viabilidade  # noqa: F401,E402  (F1 — migração funil: perder por viabilidade)
 from . import ia_agente  # noqa: F401,E402  (D2 — Agente IA: turno conversacional referenciando Agente)
