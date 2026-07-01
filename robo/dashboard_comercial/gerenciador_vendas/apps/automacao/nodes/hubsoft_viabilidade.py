@@ -10,7 +10,7 @@ class HubsoftViabilidadeEndereco(HubsoftNode):
     icone = "bi-geo"
     saida_chave = "viabilidade"
 
-    def campos_config(self) -> list:
+    def _campos_extra(self) -> list:
         return [
             {'nome': 'endereco', 'label': 'Endereço', 'tipo': 'texto', 'obrigatorio': True,
              'placeholder': '{{lead.rua}}'},
@@ -48,7 +48,7 @@ class HubsoftViabilidadeCoords(HubsoftNode):
     icone = "bi-pin-map"
     saida_chave = "viabilidade"
 
-    def campos_config(self) -> list:
+    def _campos_extra(self) -> list:
         return [
             {'nome': 'latitude', 'label': 'Latitude', 'tipo': 'texto', 'obrigatorio': True},
             {'nome': 'longitude', 'label': 'Longitude', 'tipo': 'texto', 'obrigatorio': True},

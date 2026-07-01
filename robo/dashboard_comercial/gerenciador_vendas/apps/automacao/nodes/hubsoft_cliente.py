@@ -39,7 +39,7 @@ class HubsoftListarAtendimentosCliente(HubsoftNode):
     icone = "bi-headset"
     saida_chave = "atendimentos"
 
-    def campos_config(self) -> list:
+    def _campos_extra(self) -> list:
         return _CAMPOS_IDENT + [{'nome': 'limit', 'label': 'Limite', 'tipo': 'numero', 'placeholder': '20'}]
 
     def validar_config(self, config) -> list:
@@ -57,7 +57,7 @@ class HubsoftListarOsCliente(HubsoftNode):
     icone = "bi-wrench"
     saida_chave = "ordens_servico"
 
-    def campos_config(self) -> list:
+    def _campos_extra(self) -> list:
         return _CAMPOS_IDENT + [{'nome': 'limit', 'label': 'Limite', 'tipo': 'numero', 'placeholder': '20'}]
 
     def validar_config(self, config) -> list:
@@ -75,7 +75,7 @@ class HubsoftExtratoConexao(HubsoftNode):
     icone = "bi-router"
     saida_chave = "registros"
 
-    def campos_config(self) -> list:
+    def _campos_extra(self) -> list:
         return [
             {'nome': 'busca', 'label': 'Buscar por', 'tipo': 'select', 'opcoes': _BUSCA_EXTRATO},
             {'nome': 'termo_busca', 'label': 'Termo (ex: login PPPoE)', 'tipo': 'texto', 'obrigatorio': True},
@@ -108,7 +108,7 @@ class HubsoftListarRenegociacoes(HubsoftNode):
     icone = "bi-cash-coin"
     saida_chave = "renegociacoes"
 
-    def campos_config(self) -> list:
+    def _campos_extra(self) -> list:
         return [
             {'nome': 'cpf_cnpj', 'label': 'CPF/CNPJ', 'tipo': 'texto', 'placeholder': '{{lead.cpf_cnpj}}'},
             {'nome': 'status', 'label': 'Status', 'tipo': 'texto'},
@@ -133,7 +133,7 @@ class HubsoftSimularRenegociacao(HubsoftNode):
     icone = "bi-calculator"
     saida_chave = "simulacao"
 
-    def campos_config(self) -> list:
+    def _campos_extra(self) -> list:
         return [
             {'nome': 'ids_faturas', 'label': 'IDs das faturas (vírgula)', 'tipo': 'texto',
              'obrigatorio': True, 'placeholder': '123,124'},

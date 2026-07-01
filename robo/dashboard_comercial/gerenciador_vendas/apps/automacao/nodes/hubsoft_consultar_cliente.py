@@ -4,6 +4,7 @@ Read-only (enriquecimento): traz os dados do cliente pro contexto do fluxo
 (`{{nodes.<id>.cliente.…}}`). Provedor HubSoft sob Integrações.
 """
 from .base import BaseNode, NodeResult, registrar
+from .hubsoft_base import campo_conta_hubsoft, integ_id_de
 from ..services.hubsoft import consultar_cliente
 
 
@@ -22,6 +23,7 @@ class HubsoftConsultarClienteNode(BaseNode):
             {'nome': 'cpf_cnpj', 'label': 'CPF/CNPJ', 'tipo': 'texto', 'obrigatorio': True,
              'placeholder': '{{lead.cpf_cnpj}}'},
             {'nome': 'incluir_contrato', 'label': 'Incluir contrato', 'tipo': 'booleano'},
+            campo_conta_hubsoft(),
         ]
 
     def validar_config(self, config) -> list:
@@ -33,7 +35,8 @@ class HubsoftConsultarClienteNode(BaseNode):
             return NodeResult(status='erro', branch='erro', erro='CPF/CNPJ vazio.')
         incluir = bool(config.get('incluir_contrato'))
         try:
-            dados = consultar_cliente(contexto.tenant, cpf, incluir_contrato=incluir)
+            dados = consultar_cliente(contexto.tenant, cpf, incluir_contrato=incluir,
+                                      integ_id=integ_id_de(config, contexto))
         except Exception as exc:
             return NodeResult(status='erro', branch='erro', erro=str(exc))
         return NodeResult(output={'cliente': dados}, branch='sucesso')

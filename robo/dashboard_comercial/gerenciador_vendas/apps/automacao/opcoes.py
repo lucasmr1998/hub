@@ -53,6 +53,10 @@ def _integracoes_uazapi(tenant):
     return _integracoes_por_tipo(tenant, 'uazapi')
 
 
+def _integracoes_hubsoft(tenant):
+    return _integracoes_por_tipo(tenant, 'hubsoft')
+
+
 FONTES = {
     'segmentos': _segmentos,
     'pipelines': _pipelines,
@@ -60,6 +64,7 @@ FONTES = {
     'responsaveis': _responsaveis,
     'agentes': _agentes,
     'integracoes_uazapi': _integracoes_uazapi,
+    'integracoes_hubsoft': _integracoes_hubsoft,
 }
 
 

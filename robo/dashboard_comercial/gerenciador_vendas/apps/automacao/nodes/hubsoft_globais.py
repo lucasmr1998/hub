@@ -30,7 +30,7 @@ class HubsoftListarClientesTodos(HubsoftNode):
     icone = "bi-people"
     saida_chave = "clientes"
 
-    def campos_config(self) -> list:
+    def _campos_extra(self) -> list:
         return _PAG + [
             {'nome': 'cancelado', 'label': 'Cancelado (sim/nao)', 'tipo': 'texto'},
             {'nome': 'servico_status', 'label': 'Status do serviço', 'tipo': 'texto'},
@@ -53,7 +53,7 @@ class HubsoftListarOsTodos(HubsoftNode):
     icone = "bi-card-checklist"
     saida_chave = "ordens_servico"
 
-    def campos_config(self) -> list:
+    def _campos_extra(self) -> list:
         return _PAG
 
     def _chamar(self, svc, config, contexto):
@@ -67,7 +67,7 @@ class HubsoftListarAtendimentosTodos(HubsoftNode):
     icone = "bi-chat-left-text"
     saida_chave = "atendimentos"
 
-    def campos_config(self) -> list:
+    def _campos_extra(self) -> list:
         return _PAG + [{'nome': 'relacoes', 'label': 'Relações (extra)', 'tipo': 'texto'}]
 
     def _chamar(self, svc, config, contexto):
@@ -85,7 +85,7 @@ class HubsoftHorariosAgenda(HubsoftNode):
     icone = "bi-calendar-week"
     saida_chave = "horarios"
 
-    def campos_config(self) -> list:
+    def _campos_extra(self) -> list:
         return [
             {'nome': 'id_agenda_ordem_servico', 'label': 'ID da agenda de OS', 'tipo': 'numero'},
             {'nome': 'descricao', 'label': 'Descrição da agenda', 'tipo': 'texto'},

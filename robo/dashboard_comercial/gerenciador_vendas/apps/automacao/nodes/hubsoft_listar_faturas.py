@@ -4,6 +4,7 @@ Read-only (enriquecimento/cobrança): traz as faturas pro contexto
 (`{{nodes.<id>.faturas}}`) — status, valor, datas, linha digitável, PIX, PDF.
 """
 from .base import BaseNode, NodeResult, registrar
+from .hubsoft_base import campo_conta_hubsoft, integ_id_de
 from ..services.hubsoft import listar_faturas
 
 
@@ -22,6 +23,7 @@ class HubsoftListarFaturasNode(BaseNode):
             {'nome': 'cpf_cnpj', 'label': 'CPF/CNPJ', 'tipo': 'texto', 'obrigatorio': True,
              'placeholder': '{{lead.cpf_cnpj}}'},
             {'nome': 'apenas_pendente', 'label': 'Só pendentes', 'tipo': 'booleano'},
+            campo_conta_hubsoft(),
         ]
 
     def validar_config(self, config) -> list:
@@ -33,7 +35,8 @@ class HubsoftListarFaturasNode(BaseNode):
             return NodeResult(status='erro', branch='erro', erro='CPF/CNPJ vazio.')
         apenas_pendente = bool(config.get('apenas_pendente'))
         try:
-            faturas = listar_faturas(contexto.tenant, cpf, apenas_pendente=apenas_pendente)
+            faturas = listar_faturas(contexto.tenant, cpf, apenas_pendente=apenas_pendente,
+                                     integ_id=integ_id_de(config, contexto))
         except Exception as exc:
             return NodeResult(status='erro', branch='erro', erro=str(exc))
         return NodeResult(output={'faturas': faturas, 'total': len(faturas or [])}, branch='sucesso')

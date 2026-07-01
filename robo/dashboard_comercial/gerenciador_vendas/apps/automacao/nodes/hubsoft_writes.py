@@ -18,7 +18,7 @@ class HubsoftCriarContrato(HubsoftNode):
     icone = "bi-file-earmark-plus"
     saida_chave = "contrato"
 
-    def campos_config(self) -> list:
+    def _campos_extra(self) -> list:
         return [
             {'nome': 'id_cliente_servico', 'label': 'ID cliente-serviço', 'tipo': 'numero', 'obrigatorio': True},
             {'nome': 'id_contrato_modelo', 'label': 'ID modelo de contrato', 'tipo': 'numero', 'obrigatorio': True},
@@ -52,7 +52,7 @@ class HubsoftAceitarContrato(HubsoftNode):
     icone = "bi-file-earmark-check"
     saida_chave = "resultado"
 
-    def campos_config(self) -> list:
+    def _campos_extra(self) -> list:
         return [
             {'nome': 'id_contrato', 'label': 'ID do contrato', 'tipo': 'numero', 'obrigatorio': True},
             {'nome': 'observacao', 'label': 'Observação', 'tipo': 'texto'},
@@ -74,7 +74,7 @@ class HubsoftEfetivarRenegociacao(HubsoftNode):
     icone = "bi-cash-stack"
     saida_chave = "renegociacao"
 
-    def campos_config(self) -> list:
+    def _campos_extra(self) -> list:
         return [
             {'nome': 'ids_faturas', 'label': 'IDs das faturas (vírgula)', 'tipo': 'texto',
              'obrigatorio': True, 'placeholder': '123,124'},
@@ -112,7 +112,7 @@ class HubsoftAbrirAtendimentoOs(HubsoftNode):
     icone = "bi-clipboard-plus"
     saida_chave = "atendimento"
 
-    def campos_config(self) -> list:
+    def _campos_extra(self) -> list:
         return [
             {'nome': 'id_cliente_servico', 'label': 'ID cliente-serviço', 'tipo': 'numero', 'obrigatorio': True},
             {'nome': 'descricao', 'label': 'Descrição', 'tipo': 'textarea', 'obrigatorio': True},
@@ -160,7 +160,7 @@ class HubsoftAgendarOs(HubsoftNode):
     icone = "bi-calendar-check"
     saida_chave = "resultado"
 
-    def campos_config(self) -> list:
+    def _campos_extra(self) -> list:
         return [{'nome': 'id_ordem_servico', 'label': 'ID da OS', 'tipo': 'numero', 'obrigatorio': True}]
 
     def validar_config(self, config) -> list:
@@ -177,7 +177,7 @@ class HubsoftAbrirOs(HubsoftNode):
     icone = "bi-clipboard2-plus"
     saida_chave = "ordem_servico"
 
-    def campos_config(self) -> list:
+    def _campos_extra(self) -> list:
         return [
             {'nome': 'id_atendimento', 'label': 'ID do atendimento', 'tipo': 'numero', 'obrigatorio': True},
             {'nome': 'id_tipo_ordem_servico', 'label': 'ID tipo de OS', 'tipo': 'numero'},

@@ -107,3 +107,39 @@ def test_planos_ok():
         res = no.executar({'cep': '{{lead.cep}}'}, {}, ctx)
     assert res.branch == 'sucesso' and res.output['total'] == 1
     assert m.call_args.args[1] == '13730000'
+
+
+# --- seletor de credencial (picker) --------------------------------------
+def _tem_campo_conta(no):
+    return any(c.get('nome') == 'integracao_id' and c.get('fonte') == 'integracoes_hubsoft'
+               for c in no.campos_config())
+
+
+def test_fonte_integracoes_hubsoft_registrada():
+    from apps.automacao.opcoes import FONTES
+    assert 'integracoes_hubsoft' in FONTES
+
+
+def test_todos_nodes_hubsoft_tem_campo_conta():
+    # amostra das 2 famílias (base HubsoftNode + BaseNode próprio) e do catálogo (sem _campos_extra)
+    for t in ('hubsoft_criar_contrato', 'hubsoft_viabilidade_endereco', 'hubsoft_listar_servicos',
+              'hubsoft_consultar_cliente', 'hubsoft_listar_faturas', 'hubsoft_planos_cep',
+              'hubsoft_sincronizar_prospecto'):
+        assert _tem_campo_conta(tipo_por_slug(t)), t
+
+
+def test_base_resolve_integ_id_escolhido():
+    no = tipo_por_slug('hubsoft_listar_servicos')
+    svc = mock.Mock()
+    svc.listar_servicos.return_value = []
+    with mock.patch('apps.automacao.nodes.hubsoft_base.hubsoft_do_tenant', return_value=svc) as m:
+        no.executar({'integracao_id': '7'}, {}, _ctx())
+    assert m.call_args.args[1] == '7'  # integ_id chega no resolvedor
+
+
+def test_familia2_thread_integ_id():
+    no = tipo_por_slug('hubsoft_consultar_cliente')
+    with mock.patch('apps.automacao.nodes.hubsoft_consultar_cliente.consultar_cliente',
+                    return_value={}) as m:
+        no.executar({'cpf_cnpj': '123', 'integracao_id': '9'}, {}, _ctx())
+    assert m.call_args.kwargs['integ_id'] == '9'

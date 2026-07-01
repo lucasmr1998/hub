@@ -6,6 +6,7 @@ ação `sincronizar_prospecto_hubsoft` do motor de marketing — mesma fonte (n�
 2ª cópia). Precisa de um `lead` real (com pk) no contexto.
 """
 from .base import BaseNode, NodeResult, registrar
+from .hubsoft_base import campo_conta_hubsoft, integ_id_de
 from ..services.hubsoft import sincronizar_prospecto
 
 
@@ -19,12 +20,15 @@ class HubsoftSincronizarProspectoNode(BaseNode):
     subgrupo = "HubSoft"
     saidas = ["sucesso", "erro"]
 
+    def campos_config(self) -> list:
+        return [campo_conta_hubsoft()]
+
     def executar(self, config, entrada, contexto) -> NodeResult:
         lead = contexto.lead
         if lead is None or not getattr(lead, 'pk', None):
             return NodeResult(status='erro', branch='erro', erro='Sem lead (com pk) no contexto.')
         try:
-            r = sincronizar_prospecto(lead)
+            r = sincronizar_prospecto(lead, integ_id=integ_id_de(config, contexto))
         except Exception as exc:
             return NodeResult(status='erro', branch='erro', erro=str(exc))
         out = {'acao': r.acao, 'id_prospecto': r.id_prospecto}
