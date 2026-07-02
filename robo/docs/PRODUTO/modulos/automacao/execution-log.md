@@ -530,3 +530,16 @@
   - `assinar_contrato_hubsoft` (Comercial › Contrato): 🔴 outbound real; porta consultar→aceitar (+ ativar_servico opcional) p/ `services/contrato_hubsoft.assinar_contrato`. **picker HubSoft**.
 - **Output:** `manage.py check` limpo; **45 testes verdes** (11 contrato + 7 venda + 16 hubsoft + 5 mover + 6 item). Catálogo do README atualizado. Motor antigo **intocado**.
 - **Status:** Fase 1 **completed**. Todas as ações do funil node-ificadas na engine nova (autossuficiente). Próximo: **Fase 2** — tradutor `RegraPipelineEstagio → Fluxo` + SHADOW (log-only) + comparador de paridade.
+
+## 2026-07-01 — Migração do funil, Fase 2 (mapa de eventos + Passo 1: tradutor)
+
+- **Mapa de eventos (decisão do usuário): Opção A, espelho fiel.** O motor antigo NÃO é event-driven: os 6 signals do CRM são "pulsos de recalcule" — qualquer um chama `processar_oportunidade`, que reavalia TODAS as regras (as condições da regra decidem, não o signal). O catálogo semântico novo só cobria 2 dos 6 momentos → Opção B (semântico) deixaria 4 momentos sem gatilho e furaria a paridade. Escolhido: **1 evento `crm_reavaliar_oportunidade`** disparado dos mesmos 6 pontos; cada regra vira um Fluxo com filtros idênticos. Semântico fica como faxina pós-cutover (Fase 4+).
+- **Passo 1 — tradutor (feito):**
+  - Evento `crm_reavaliar_oportunidade` no catálogo (`eventos.py`).
+  - `tradutor_pipeline.regra_para_grafo(regra)`: `[evento] → [condicao_comercial × N (AND)] → alvo`. Alvo = `mover_estagio` (regra com estágio) OU `acao_comercial × N` (regra de ação, roda todas via sucesso+erro). Puro, sem DB. **Paridade por construção**: `condicao_comercial`/`acao_comercial` reusam os MESMOS registries do motor antigo (`automacao_condicoes`/`_EXECUTORES_ACAO`).
+  - `regra_traduzivel`: pula regra sem condição (nunca dispara no antigo) e regra de ação sem ações.
+  - Command `migrar_regras_pipeline` (idempotente por `origem_regra`, `--dry-run`, `--tenant`, cria Fluxos **inativos/shadow**; NÃO toca no motor antigo, só lê).
+  - 7 testes do tradutor (grafo + `validar_fluxo` == []).
+- **Validação com dados reais (prod read-only, sem escrever):** rodei o tradutor sobre as **24 regras ativas reais** (16 Nuvyon + 8 TR Carrion). Resultado: **24/24 traduzidas, 0 puladas, 0 grafos inválidos**. Regras de estágio viram `mover_estagio`; regras de ação viram `acao_comercial` (criar_venda, atribuir_agente, sincronizar_prospecto, gerar/assinar contrato, enviar_venda_whatsapp, criar_tarefa, mover_para_perdido).
+- **Semânticas cross-regra NÃO reproduzidas** (cada regra = 1 fluxo independente): "primeiro-match-vence" entre regras de estágio + ordem por prioridade. O comparador do shadow (Passo 3) vai medir essas divergências antes do cutover.
+- **Status:** Fase 2 **in progress**. Passo 1 (tradutor) **completed**, validado nas 24 regras reais. Próximo: Passo 2 (shadow log-only — hook via observador do `LogSistema motor_disparado`) + Passo 3 (comparador de paridade).

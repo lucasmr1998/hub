@@ -106,6 +106,17 @@ EVENTOS = {
             _c('var.tarefa_titulo', 'Título da tarefa'),
         ],
     },
+    'crm_reavaliar_oportunidade': {
+        'label': 'Reavaliar oportunidade (funil)', 'grupo': 'Comercial',
+        'descricao': ('Pulso interno: algo mudou no lead/oportunidade e as regras do funil '
+                      'devem ser reavaliadas. Espelha os disparos do motor antigo '
+                      '(RegraPipelineEstagio) na migração da automação do funil.'),
+        'subcampos': [
+            _c('var.estagio', 'Estágio (slug)', fonte='estagios'),
+            _c('oportunidade.titulo', 'Título'),
+            _c('var.trigger', 'Origem do pulso'),
+        ],
+    },
     # ---- Inbox / Atendimento ----
     'mensagem_recebida': {
         'label': 'Mensagem recebida', 'grupo': 'Inbox',
