@@ -25,6 +25,7 @@ class TipoNotificacao(TenantMixin):
         ('tarefa_vencendo', 'Tarefa Próxima do Vencimento'),
         ('tarefa_atribuida', 'Tarefa Atribuída'),
         ('oportunidade_movida', 'Oportunidade Mudou de Estágio'),
+        ('resumo_diario_comercial', 'Resumo Diário Comercial'),
         # Suporte
         ('ticket_criado', 'Novo Ticket'),
         ('ticket_respondido', 'Ticket Respondido'),
