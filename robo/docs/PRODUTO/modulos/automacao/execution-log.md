@@ -543,3 +543,12 @@
 - **Validação com dados reais (prod read-only, sem escrever):** rodei o tradutor sobre as **24 regras ativas reais** (16 Nuvyon + 8 TR Carrion). Resultado: **24/24 traduzidas, 0 puladas, 0 grafos inválidos**. Regras de estágio viram `mover_estagio`; regras de ação viram `acao_comercial` (criar_venda, atribuir_agente, sincronizar_prospecto, gerar/assinar contrato, enviar_venda_whatsapp, criar_tarefa, mover_para_perdido).
 - **Semânticas cross-regra NÃO reproduzidas** (cada regra = 1 fluxo independente): "primeiro-match-vence" entre regras de estágio + ordem por prioridade. O comparador do shadow (Passo 3) vai medir essas divergências antes do cutover.
 - **Status:** Fase 2 **in progress**. Passo 1 (tradutor) **completed**, validado nas 24 regras reais. Próximo: Passo 2 (shadow log-only — hook via observador do `LogSistema motor_disparado`) + Passo 3 (comparador de paridade).
+
+## 2026-07-01 — Migração do funil, Fase 2, Passo 2 (shadow / espião log-only)
+
+- **Hook (decisão): observador do `LogSistema(acao='motor_disparado')`.** O motor antigo grava esse log no INÍCIO de cada pulso (antes de avaliar as regras). Um `post_save` receiver NOVO em `signals_dominio.py` escuta esse log → carrega a op → roda o shadow. Vantagem: avalia no MESMO instante e estado que o motor antigo, sem tocar em NENHUM código do antigo (nem `signals.py` nem `automacao_pipeline`). Fiel + zero acoplamento.
+- **`shadow.py`:** `avaliar_fluxo_shadow(grafo, avaliar_cond)` anda o grafo do Fluxo migrado sem efeito colateral — avalia `condicao_comercial` de verdade (read-only) e REGISTRA nós de ação como "faria" sem executar. `avaliar_pulso_shadow(op)` roda todos os fluxos migrados (com `origem_regra`) do tenant, monta o contexto das condições UMA vez (mesmo registry do antigo, sem importar dele), e grava `LogSistema(acao='shadow_fluxo')` só quando algo dispararia (baixo volume). 100% blindado.
+- **Flag `AUTOMACAO_SHADOW_ATIVO`** (env-driven, default False, separado do wiring de produção): liga o espião sem ligar a execução real, rollback instantâneo. `settings_local` = True (dev).
+- **Latência:** o shadow roda síncrono no pulso (fiel), mas só pra tenants com fluxos migrados, e o contexto das condições é montado 1x por pulso. Off por padrão; monitorar ao ligar em prod.
+- **Testes:** 6 do runner (dispara/não dispara, AND, ações em ordem, grafo vazio, guardas). check limpo.
+- **Status:** Passo 2 **completed** (dormente, flag off em prod). Falta Passo 3: comparador de paridade (cruza `shadow_fluxo` vs os fires reais do antigo `mover_regra`/`acoes_regra`).

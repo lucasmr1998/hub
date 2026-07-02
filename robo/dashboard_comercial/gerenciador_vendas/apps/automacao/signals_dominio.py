@@ -6,6 +6,7 @@ Registrados no `apps.py::ready()` da engine nova.
 """
 import logging
 
+from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -157,3 +158,34 @@ def on_indicacao_convertida(sender, instance, created, **kwargs):
         'telefone_indicado': instance.telefone_indicado,
         'membro_indicador': instance.membro_indicador.nome if instance.membro_indicador else '',
     }, tenant=instance.tenant)
+
+
+# ============================================================================
+# SHADOW da migração do funil (Fase 2) — observador do pulso do motor antigo.
+# O motor antigo grava LogSistema(acao='motor_disparado') no INÍCIO de cada pulso;
+# aqui o shadow avalia os Fluxos migrados no MESMO instante/estado, log-only, sem
+# tocar no motor antigo. Gated por AUTOMACAO_SHADOW_ATIVO. Blindado.
+# ============================================================================
+
+@receiver(post_save, sender='sistema.LogSistema')
+def on_motor_disparado_shadow(sender, instance, created, **kwargs):
+    if not created:
+        return
+    if not getattr(settings, 'AUTOMACAO_SHADOW_ATIVO', False):
+        return
+    if getattr(instance, 'acao', '') != 'motor_disparado':
+        return
+    if getattr(instance, 'entidade', '') != 'OportunidadeVenda' or not getattr(instance, 'entidade_id', None):
+        return
+    try:
+        from apps.comercial.crm.models import OportunidadeVenda
+        op = (OportunidadeVenda.all_tenants
+              .select_related('lead', 'estagio', 'tenant', 'pipeline')
+              .filter(pk=instance.entidade_id).first())
+        if op is None:
+            return
+        trigger = (getattr(instance, 'dados_extras', None) or {}).get('trigger', '')
+        from .shadow import avaliar_pulso_shadow
+        avaliar_pulso_shadow(op, trigger=trigger)
+    except Exception:  # noqa: BLE001 — shadow NUNCA quebra o caminho vivo
+        logger.exception('shadow: observador do motor_disparado falhou')

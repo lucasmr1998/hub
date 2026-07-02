@@ -131,6 +131,12 @@ INSTALLED_APPS = [
 # precisar de deploy — rollback instantâneo. Default continua False.
 AUTOMACAO_WIRING_ATIVO = os.environ.get('AUTOMACAO_WIRING_ATIVO', 'false').strip().lower() in ('true', '1', 'yes', 'on')
 
+# Shadow da migração do funil (Fase 2): liga o espião (log-only) que avalia os Fluxos
+# migrados no mesmo instante do motor antigo, sem executar nada. Separado do wiring de
+# produção — pode ligar o shadow com o wiring desligado. Default False (prod seguro),
+# env-driven pra ligar/desligar sem deploy. settings_local liga em dev.
+AUTOMACAO_SHADOW_ATIVO = os.environ.get('AUTOMACAO_SHADOW_ATIVO', 'false').strip().lower() in ('true', '1', 'yes', 'on')
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',

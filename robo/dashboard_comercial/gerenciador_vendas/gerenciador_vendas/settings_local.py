@@ -38,3 +38,5 @@ MEDIA_ROOT = BASE_DIR.parent.parent.parent  # hub/ root (arquivos em hub/workspa
 
 # Automação: liga o wiring de gatilho por evento em DEV (prod fica False por padrão).
 AUTOMACAO_WIRING_ATIVO = True
+# Shadow (espião log-only) da migração do funil: ligado em DEV pra testar.
+AUTOMACAO_SHADOW_ATIVO = True
