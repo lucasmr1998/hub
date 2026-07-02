@@ -552,3 +552,12 @@
 - **Latência:** o shadow roda síncrono no pulso (fiel), mas só pra tenants com fluxos migrados, e o contexto das condições é montado 1x por pulso. Off por padrão; monitorar ao ligar em prod.
 - **Testes:** 6 do runner (dispara/não dispara, AND, ações em ordem, grafo vazio, guardas). check limpo.
 - **Status:** Passo 2 **completed** (dormente, flag off em prod). Falta Passo 3: comparador de paridade (cruza `shadow_fluxo` vs os fires reais do antigo `mover_regra`/`acoes_regra`).
+
+## 2026-07-01 — Migração do funil, Fase 2, Passo 3 (comparador de paridade)
+
+- **`comparador_pipeline.py`:** núcleo puro `comparar_op(eventos)` — por op, cada `motor_disparado` abre um PULSO; acumula fires reais do antigo (`mover_regra`/`acoes_regra` → `regra_id`) e o que o shadow faria (`shadow_fluxo` → `origem_regra`); compara os conjuntos (`origem_regra` do fluxo == `regra_id` da regra). `resumir()` agrega paridade %, divergentes, regras só-antigo (novo perderia) e só-novo (novo faria a mais).
+- **Command `comparar_shadow_pipeline`** (read-only): puxa o LogSistema da janela, agrupa por tenant/op, roda o comparador e imprime o relatório por tenant (`--tenant`, `--dias`, `--exemplos`). Gate do cutover: **0 divergência por N dias com atividade**.
+- **6 testes do comparador** (match, novo-a-mais, novo-perderia, eventos órfãos ignorados, 2 pulsos, resumir).
+- **Fase 2 build COMPLETA (dormente):** tradutor + shadow + comparador. 19 testes (7+6+6), check limpo. Tudo com flag off em prod.
+- **Runbook pra ligar em prod (mãos do usuário, com confirmação):** (1) deploy do código; (2) `migrar_regras_pipeline --tenant <slug>` (cria os Fluxos inativos/shadow); (3) setar env `AUTOMACAO_SHADOW_ATIVO=true` (só o espião, wiring de produção segue off); (4) deixar rodar N dias; (5) `comparar_shadow_pipeline --tenant <slug> --dias N` até 0 divergência; (6) aí sim Fase 3 (cutover). Rollback do shadow: env=false.
+- **Status:** Fase 2 **completed** (código). Próximo: ligar o shadow em prod + medir (runbook) → Fase 3 (cutover por tenant).
