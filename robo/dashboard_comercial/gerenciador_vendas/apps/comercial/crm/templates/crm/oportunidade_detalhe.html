@@ -10,7 +10,7 @@
     <div class="op-header-lead">
       <div class="op-avatar">{{ lead.nome_razaosocial|first|upper|default:'?' }}</div>
       <div class="op-header-info">
-        <h1 class="page-title">{{ lead.nome_razaosocial|default:"Lead sem nome" }}</h1>
+        <h1 class="page-title" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; word-break: break-word; max-width: 640px;" title="{{ lead.nome_razaosocial|default:'Lead sem nome' }}">{{ lead.nome_razaosocial|default:"Lead sem nome" }}</h1>
         <div class="op-meta-row">
           {% if lead.telefone %}
             <span><i class="bi bi-telephone"></i>
