@@ -45,6 +45,22 @@ def comparar_op(eventos):
     return pulsos
 
 
+def comparar_op_agregado(eventos):
+    """v2 (eventos finos): agrega TODOS os eventos da op na janela, SEM fronteira de
+    pulso — os eventos finos do shadow disparam em momentos diferentes do
+    `motor_disparado`, então compara-se o CONJUNTO de regras ao longo do tempo:
+    o que o antigo disparou (mover_regra/acoes_regra) vs o que o shadow faria
+    (shadow_fluxo). Devolve 0 ou 1 pulso (a op inteira como um bloco)."""
+    antigo, novo = set(), set()
+    for ev in eventos:
+        acao = ev.get('acao')
+        if acao in _ACAO_FIRE:
+            antigo |= ev.get('rules') or set()
+        elif acao == _ACAO_SHADOW:
+            novo |= ev.get('rules') or set()
+    return [_fechar({'antigo': antigo, 'novo': novo})] if (antigo or novo) else []
+
+
 def _fechar(p):
     antigo, novo = p['antigo'], p['novo']
     return {

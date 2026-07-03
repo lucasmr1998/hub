@@ -2,7 +2,7 @@
 from types import SimpleNamespace
 
 from apps.automacao.tradutor_pipeline import regra_para_grafo
-from apps.automacao.shadow import avaliar_fluxo_shadow, avaliar_pulso_shadow
+from apps.automacao.shadow import avaliar_fluxo_shadow, avaliar_evento_shadow
 
 
 def _regra(condicoes=None, acoes=None, estagio=None, pk=1):
@@ -52,7 +52,7 @@ def test_grafo_vazio_nao_quebra():
     assert disparou is False and acoes == []
 
 
-def test_avaliar_pulso_shadow_sem_oportunidade_nao_quebra():
-    # guardas: None e sem tenant não estouram
-    avaliar_pulso_shadow(None)
-    avaliar_pulso_shadow(SimpleNamespace(tenant=None))
+def test_avaliar_evento_shadow_guardas_nao_quebram():
+    # guardas: evento vazio ou tenant None retornam cedo, sem tocar no DB
+    avaliar_evento_shadow('', {}, None)
+    avaliar_evento_shadow('tag_adicionada', {}, None)

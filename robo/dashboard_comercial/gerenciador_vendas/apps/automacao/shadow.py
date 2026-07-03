@@ -4,9 +4,11 @@ Roda os Fluxos migrados (os que têm `origem_regra`) em modo **log-only**: avali
 condições contra a oportunidade e registra "quais ações DISPARARIAM", SEM executar
 nada. Serve pra provar paridade com o motor antigo antes do cutover (Passo 3).
 
-Gatilho: um observador (`signals_dominio`) escuta o `LogSistema(acao='motor_disparado')`
-que o motor antigo grava no INÍCIO de cada pulso — então o shadow avalia no MESMO
-instante e com o MESMO estado que o motor antigo vai avaliar (fiel, sem tocar no antigo).
+Gatilho (v2 — eventos finos): o `hub.disparar_evento` chama `avaliar_evento_shadow`
+em paralelo ao caminho de produção. Quando um evento fino dispara (emitido em
+`signals_dominio` no save real), o shadow avalia SÓ os fluxos que escutam aquele
+evento — targeted, sem over-fire. (v1 escutava o pulso do motor antigo e avaliava
+todos; substituído.)
 
 Paridade por construção: as condições são avaliadas pelo MESMO registry
 (`automacao_condicoes`) que o motor antigo usa (`_condicao_bate`). Guardado pelo flag
@@ -109,19 +111,45 @@ def _fazer_avaliador(dados):
     return avaliar
 
 
-def avaliar_pulso_shadow(oportunidade, trigger=''):
-    """Avalia TODOS os fluxos migrados (com origem_regra) do tenant da oportunidade em
-    modo shadow. Registra um LogSistema(acao='shadow_fluxo') com o que DISPARARIA
-    (só quando algo dispara — baixo volume). Blindado."""
-    if oportunidade is None or getattr(oportunidade, 'tenant', None) is None:
+def _op_do_contexto(contexto):
+    """Resolve a oportunidade do contexto do evento (direto, ou pela do lead)."""
+    op = (contexto or {}).get('oportunidade')
+    if op is not None:
+        return op
+    lead = (contexto or {}).get('lead')
+    if lead is None or not getattr(lead, 'pk', None):
+        return None
+    try:
+        from apps.comercial.crm.models import OportunidadeVenda
+        return (OportunidadeVenda.all_tenants.filter(lead=lead)
+                .select_related('estagio', 'pipeline', 'lead')
+                .order_by('-ativo', '-data_criacao').first())
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def avaliar_evento_shadow(evento, contexto, tenant):
+    """Shadow v2: quando um EVENTO fino dispara, avalia (log-only) os fluxos migrados
+    que ESCUTAM esse evento e registra o que DISPARARIA. Chamado pelo hub em paralelo
+    ao caminho de produção (que segue gated por AUTOMACAO_WIRING_ATIVO). Blindado.
+
+    Diferente da v1 (avaliava TODOS os fluxos a cada pulso do motor antigo): aqui só
+    os fluxos cujo `gatilho_evento` == evento — targeted, sem over-fire."""
+    from django.conf import settings
+    if not getattr(settings, 'AUTOMACAO_SHADOW_ATIVO', False):
+        return
+    if not evento or tenant is None:
         return
     from .models import Fluxo
     fluxos = list(Fluxo.all_tenants.filter(
-        tenant=oportunidade.tenant, origem_regra__isnull=False))
+        tenant=tenant, origem_regra__isnull=False, gatilho_evento=evento))
     if not fluxos:
         return
 
-    dados = _dados_condicao(oportunidade)
+    op = _op_do_contexto(contexto)
+    if op is None:
+        return
+    dados = _dados_condicao(op)
     avaliar = _fazer_avaliador(dados)
 
     would_fire = []
@@ -144,12 +172,11 @@ def avaliar_pulso_shadow(oportunidade, trigger=''):
     try:
         from apps.sistema.models import LogSistema
         LogSistema.all_tenants.create(
-            tenant=oportunidade.tenant,
+            tenant=tenant,
             categoria='crm', acao='shadow_fluxo',
-            entidade='OportunidadeVenda', entidade_id=oportunidade.pk,
-            mensagem=f'Shadow: {len(would_fire)} fluxo(s) dispararia(m) na op {oportunidade.pk}',
-            dados_extras={'shadow': True, 'trigger': trigger, 'would_fire': would_fire,
-                          'total_fluxos': len(fluxos)},
+            entidade='OportunidadeVenda', entidade_id=op.pk,
+            mensagem=f'Shadow[{evento}]: {len(would_fire)} fluxo(s) dispararia(m) na op {op.pk}',
+            dados_extras={'shadow': True, 'evento': evento, 'would_fire': would_fire},
         )
     except Exception:  # noqa: BLE001
         logger.exception('shadow: falha ao registrar decisão')

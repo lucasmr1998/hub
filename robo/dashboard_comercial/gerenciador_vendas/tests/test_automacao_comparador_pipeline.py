@@ -1,5 +1,5 @@
 """Testes do comparador de paridade (núcleo puro, sem DB)."""
-from apps.automacao.comparador_pipeline import comparar_op, resumir
+from apps.automacao.comparador_pipeline import comparar_op, comparar_op_agregado, resumir
 
 
 def _pulso(): return {'acao': 'motor_disparado', 'ts': 0, 'rules': set()}
@@ -42,6 +42,19 @@ def test_dois_pulsos_separados():
     assert len(pulsos) == 2
     assert pulsos[0]['match'] is True
     assert pulsos[1]['match'] is False and pulsos[1]['so_novo'] == {9}
+
+
+def test_agregado_conjunto_da_op_ignora_pulsos():
+    # v2: junta tudo da op sem fronteira de pulso; compara os conjuntos
+    eventos = [_pulso(), _mover(5), _pulso(), _shadow({5, 6}), _acoes(7)]
+    res = comparar_op_agregado(eventos)
+    assert len(res) == 1
+    assert res[0]['antigo'] == {5, 7} and res[0]['novo'] == {5, 6}
+    assert res[0]['so_antigo'] == {7} and res[0]['so_novo'] == {6} and res[0]['match'] is False
+
+
+def test_agregado_sem_atividade_vazio():
+    assert comparar_op_agregado([_pulso()]) == []
 
 
 def test_resumir_agrega():

@@ -583,4 +583,11 @@
   - **Contexto resolve a op a partir do lead** (`_op_do_lead`) — os fluxos agem na oportunidade.
   - **Gated por `_emissao_ativa()` (wiring OU shadow)** → zero overhead (nem o pre_save roda) quando ambos off. Emissão → `on_evento` (gated por wiring, off em prod) → **no-op em prod hoje**. Blindado (nunca quebra o save).
   - Campos validados por introspecção (`modo_atendimento`, `agente_id`, `cliente.lead`, `tags`). 10 testes das emissões (lógica via receiver direto + mock). check limpo.
-- **Status:** redesign Passo 2 **completed**. Próximo: re-rodar `migrar_regras_pipeline` (o tradutor v2 já gera fluxos por-evento — atualiza os 24 existentes) + reformular a validação (shadow/comparador por resultado, não por pulso).
+- **Status:** redesign Passo 2 **completed**.
+
+- **Passo 4 feito (shadow + comparador v2, reaproveitando o runner):**
+  - `shadow.avaliar_evento_shadow(evento, contexto, tenant)` substitui o `avaliar_pulso_shadow` (v1): avalia SÓ os fluxos migrados cujo `gatilho_evento == evento` (targeted, sem over-fire), reusa `avaliar_fluxo_shadow`/`_dados_condicao`/`_fazer_avaliador`. Resolve a op do contexto (direto ou pela do lead). Loga `shadow_fluxo` com o `evento`.
+  - **Hook migrou** do observer do `LogSistema(motor_disparado)` (removido do `signals_dominio`) pro `hub.disparar_evento`, que chama o shadow em paralelo ao caminho de produção (gated por `AUTOMACAO_SHADOW_ATIVO`, independente do wiring).
+  - **Comparador v2:** `comparar_op_agregado` — como os eventos finos disparam em momentos diferentes do `motor_disparado`, a comparação vira **por-op agregada** (conjunto de regras que o antigo disparou vs o que o shadow faria, na janela), não mais por-pulso. Command `comparar_shadow_pipeline` usa a agregação.
+  - 34 testes da v2 (shadow+comparador+tradutor+eventos_finos) + **266 na regressão de automação, 0 falha** (motor antigo intocado).
+- **Status:** redesign **completo (código)**. Falta só operacional: deploy da v2 (push+webhook), re-rodar `migrar_regras_pipeline` em prod (atualiza os 24 fluxos pros gatilhos finos), e limpar artefatos v1. Aí o shadow v2 mede paridade por evento.

@@ -202,36 +202,8 @@ def on_indicacao_convertida(sender, instance, created, **kwargs):
     }, tenant=instance.tenant)
 
 
-# ============================================================================
-# SHADOW da migração do funil (Fase 2) — observador do pulso do motor antigo.
-# O motor antigo grava LogSistema(acao='motor_disparado') no INÍCIO de cada pulso;
-# aqui o shadow avalia os Fluxos migrados no MESMO instante/estado, log-only, sem
-# tocar no motor antigo. Gated por AUTOMACAO_SHADOW_ATIVO. Blindado.
-# ============================================================================
-
-@receiver(post_save, sender='sistema.LogSistema')
-def on_motor_disparado_shadow(sender, instance, created, **kwargs):
-    if not created:
-        return
-    if not getattr(settings, 'AUTOMACAO_SHADOW_ATIVO', False):
-        return
-    if getattr(instance, 'acao', '') != 'motor_disparado':
-        return
-    if getattr(instance, 'entidade', '') != 'OportunidadeVenda' or not getattr(instance, 'entidade_id', None):
-        return
-    try:
-        from apps.comercial.crm.models import OportunidadeVenda
-        op = (OportunidadeVenda.all_tenants
-              .select_related('lead', 'estagio', 'tenant', 'pipeline')
-              .filter(pk=instance.entidade_id).first())
-        if op is None:
-            return
-        trigger = (getattr(instance, 'dados_extras', None) or {}).get('trigger', '')
-        from .shadow import avaliar_pulso_shadow
-        avaliar_pulso_shadow(op, trigger=trigger)
-    except Exception:  # noqa: BLE001 — shadow NUNCA quebra o caminho vivo
-        logger.exception('shadow: observador do motor_disparado falhou')
-
+# Shadow v2: o hook não é mais aqui (observador do motor_disparado, removido). Agora
+# é no `hub.disparar_evento`, que chama `shadow.avaliar_evento_shadow` por evento fino.
 
 # ---- LeadProspecto: campos-chave, status_api e viabilidade (detecção de mudança) ----
 _LEAD_CAMPOS_GATILHO = ('id_plano_rp', 'id_dia_vencimento', 'id_hubsoft', 'cep',

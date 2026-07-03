@@ -23,6 +23,13 @@ def disparar_evento(evento, contexto=None, tenant=None):
         tenant = get_current_tenant()
     if not evento or tenant is None:
         return
+    # Shadow (migração do funil): avalia log-only os fluxos migrados que escutam o
+    # evento, em paralelo. Gated por AUTOMACAO_SHADOW_ATIVO, independente do wiring.
+    try:
+        from .shadow import avaliar_evento_shadow
+        avaliar_evento_shadow(evento, contexto or {}, tenant)
+    except Exception:  # noqa: BLE001
+        logger.exception('automacao.hub: shadow falhou (evento=%s)', evento)
     try:
         on_evento(evento, contexto or {}, tenant)
     except Exception:  # noqa: BLE001

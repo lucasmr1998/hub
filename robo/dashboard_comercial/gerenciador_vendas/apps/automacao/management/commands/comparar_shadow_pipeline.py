@@ -15,7 +15,7 @@ from itertools import groupby
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from apps.automacao.comparador_pipeline import comparar_op, resumir
+from apps.automacao.comparador_pipeline import comparar_op_agregado, resumir
 
 _ACOES = ('motor_disparado', 'mover_regra', 'acoes_regra', 'shadow_fluxo')
 
@@ -70,7 +70,7 @@ class Command(BaseCommand):
             for op_id, grupo_op in groupby(grupo_t, key=lambda l: l.entidade_id):
                 eventos = [{'acao': l.acao, 'ts': l.data_criacao, 'rules': _regras_do_log(l)}
                            for l in grupo_op]
-                pulsos_tenant.extend(comparar_op(eventos))
+                pulsos_tenant.extend(comparar_op_agregado(eventos))
             por_tenant[slug] = pulsos_tenant
 
         self.stdout.write(self.style.MIGRATE_HEADING(
