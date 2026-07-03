@@ -155,10 +155,11 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(f'Talk nao configurado pra {tenant.slug}: {e}'))
             return
 
+        # importado_do_talk fica no lead.dados_custom (populado pelo importador de prospects Talk)
         qs = (OportunidadeVenda.all_tenants
               .filter(tenant=tenant, responsavel__isnull=True,
                       data_criacao__gte=cutoff,
-                      dados_custom__importado_do_talk=True)
+                      lead__dados_custom__importado_do_talk=True)
               .select_related('lead')
               .order_by('-data_criacao')[:opts['limit']])
         total = qs.count()
