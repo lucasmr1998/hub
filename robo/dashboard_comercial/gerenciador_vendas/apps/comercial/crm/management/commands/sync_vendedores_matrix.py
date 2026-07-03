@@ -155,11 +155,18 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(f'Talk nao configurado pra {tenant.slug}: {e}'))
             return
 
-        # importado_do_talk fica no lead.dados_custom (populado pelo importador de prospects Talk)
+        # importado_do_talk fica no lead.dados_custom (populado pelo importador de prospects Talk).
+        # Filtro em 2 passos: `LeadProspecto.all_tenants` porque JSONField lookup nao propaga
+        # bem com FK cruzando managers `all_tenants` (Django faz JOIN mas nao aplica o
+        # segundo filtro dentro do JSON).
+        from apps.comercial.leads.models import LeadProspecto
+        lead_ids = list(LeadProspecto.all_tenants
+                        .filter(tenant=tenant, dados_custom__importado_do_talk=True)
+                        .values_list('id', flat=True))
         qs = (OportunidadeVenda.all_tenants
               .filter(tenant=tenant, responsavel__isnull=True,
                       data_criacao__gte=cutoff,
-                      lead__dados_custom__importado_do_talk=True)
+                      lead_id__in=lead_ids)
               .select_related('lead')
               .order_by('-data_criacao')[:opts['limit']])
         total = qs.count()
