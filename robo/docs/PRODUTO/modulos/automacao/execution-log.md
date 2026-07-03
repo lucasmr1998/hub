@@ -571,4 +571,16 @@
   - **Inferência config-driven** no tradutor (`evento_gatilho_da_regra`): o evento-gatilho sai do TIPO da condição primária da regra (`_EVENTO_POR_TIPO` + prioridade), nada hardcoded por regra. Casos especiais: `imagem_status todas_iguais`→`docs_validados`; `lead_campo nao_existe`→`oportunidade_criada`. As condições continuam como GUARDA no fluxo (o evento define o quando, a condição confirma).
   - `regra_para_grafo(regra, evento=None)`: mudança mínima — só o evento do nó-gatilho; resto idêntico (reuso).
 - **Validado nas 24 regras reais (read-only):** 24/24 mapeiam pra evento real, **0 caíram no pulso genérico, 0 grafos inválidos**. Distribuição: conversa_modo_mudou 6, lead_campo_mudou 4, tag_adicionada 4, historico_contato 2, documento_status_mudou 2, viabilidade_consultada 2, +1 cada (lead_status/servico/docs_validados/conversa_atribuida/oportunidade_criada).
-- **Status:** redesign Passo 1 **completed**. Próximo: **emitir** os 9 eventos nos saves certos (receivers novos em `signals_dominio`, aditivo, não toca motor antigo) → tradutor re-roda (atualiza os fluxos) → validação por resultado.
+- **Status:** redesign Passo 1 **completed**.
+
+- **Passo 2 feito (emissões dos eventos finos):** receivers novos em `signals_dominio.py` (aditivo, **não toca motor antigo**), com **detecção de mudança** (pre_save guarda o valor antigo, post_save compara → dispara só na transição, sem ruído):
+  - `LeadProspecto` (pre+post): `lead_status_mudou` (status_api), `lead_campo_mudou` (8 campos-chave que ganham valor), `viabilidade_consultada` (`dados_custom['viabilidade']['status']`).
+  - `HistoricoContato` (created): `historico_contato` (var.status).
+  - `ImagemLeadProspecto` (pre+post): `documento_status_mudou` (status_validacao muda).
+  - `OportunidadeVenda.tags` (m2m post_add): `tag_adicionada` (var.tag).
+  - `ServicoClienteHubsoft` (pre+post): `servico_hubsoft_mudou` (status muda).
+  - `Conversa` (pre+post): `conversa_modo_mudou` (**campo `modo_atendimento`**, não `modo`), `conversa_atribuida` (agente ganha valor).
+  - **Contexto resolve a op a partir do lead** (`_op_do_lead`) — os fluxos agem na oportunidade.
+  - **Gated por `_emissao_ativa()` (wiring OU shadow)** → zero overhead (nem o pre_save roda) quando ambos off. Emissão → `on_evento` (gated por wiring, off em prod) → **no-op em prod hoje**. Blindado (nunca quebra o save).
+  - Campos validados por introspecção (`modo_atendimento`, `agente_id`, `cliente.lead`, `tags`). 10 testes das emissões (lógica via receiver direto + mock). check limpo.
+- **Status:** redesign Passo 2 **completed**. Próximo: re-rodar `migrar_regras_pipeline` (o tradutor v2 já gera fluxos por-evento — atualiza os 24 existentes) + reformular a validação (shadow/comparador por resultado, não por pulso).
