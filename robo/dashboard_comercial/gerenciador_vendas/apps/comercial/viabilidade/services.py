@@ -225,18 +225,49 @@ def _tentar_hubsoft(
             consultado_em=_agora_iso(),
         )
 
-    # API retorna `resultado_api['viabilidade']` com 'atende' bool
-    via = resultado_api.get('viabilidade') if isinstance(resultado_api, dict) else None
-    if not isinstance(via, dict):
-        # Algumas versoes podem retornar direto sem nesting
-        via = resultado_api if isinstance(resultado_api, dict) else {}
+    # HubSoft (2026-07+) retorna a estrutura:
+    #   {"origem": "mapeamento_local",
+    #    "projetos": [{"projeto": {...},
+    #                  "busca": {"elementos": {"data": [{"caixa": "...", "disponiveis": N, ...}]}}}]}
+    # Considera "atende" se ao menos uma caixa optica proxima tem porta livre.
+    # Mantem fallback pro schema antigo (`viabilidade.atende`) caso HubSoft volte
+    # a devolver aquele formato em outros tenants.
+    via = resultado_api if isinstance(resultado_api, dict) else {}
 
-    atende = bool(via.get('atende'))
-    detalhes = {
-        'tipo_atendimento': via.get('tipo_atendimento'),
-        'planos': len(via.get('planos_disponiveis') or []),
-        'motivo': via.get('motivo') or via.get('obs'),
-    }
+    projetos = via.get('projetos') if isinstance(via.get('projetos'), list) else []
+    caixas_com_disponiveis = 0
+    total_disponiveis = 0
+    caixa_mais_proxima = None
+    for proj in projetos:
+        elementos = ((proj or {}).get('busca') or {}).get('elementos') or {}
+        for caixa in (elementos.get('data') or []):
+            disp = int(caixa.get('disponiveis') or 0)
+            if disp > 0:
+                caixas_com_disponiveis += 1
+                total_disponiveis += disp
+                if caixa_mais_proxima is None:
+                    caixa_mais_proxima = caixa.get('caixa')
+
+    if projetos:
+        # Schema novo — decide pela quantidade de portas livres.
+        atende = caixas_com_disponiveis > 0
+        detalhes = {
+            'origem': via.get('origem'),
+            'projetos': len(projetos),
+            'caixas_com_portas_livres': caixas_com_disponiveis,
+            'portas_disponiveis': total_disponiveis,
+        }
+        if caixa_mais_proxima:
+            detalhes['caixa_mais_proxima'] = caixa_mais_proxima
+    else:
+        # Fallback schema antigo (`viabilidade.atende`)
+        legado = via.get('viabilidade') if isinstance(via.get('viabilidade'), dict) else via
+        atende = bool(legado.get('atende'))
+        detalhes = {
+            'tipo_atendimento': legado.get('tipo_atendimento'),
+            'planos': len(legado.get('planos_disponiveis') or []),
+            'motivo': legado.get('motivo') or legado.get('obs'),
+        }
     detalhes = {k: v for k, v in detalhes.items() if v is not None}
 
     if atende:
