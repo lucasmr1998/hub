@@ -2,7 +2,7 @@
 from types import SimpleNamespace
 
 from apps.automacao.tradutor_pipeline import (
-    regra_para_grafo, regra_traduzivel, EVENTO_PULSO,
+    regra_para_grafo, regra_traduzivel, evento_gatilho_da_regra, EVENTO_PULSO,
 )
 from apps.automacao.runtime import validar_fluxo
 
@@ -13,11 +13,45 @@ def _regra(condicoes=None, acoes=None, estagio=None, pk=1):
                            estagio_id=getattr(estagio, 'pk', None))
 
 
-def test_trigger_e_o_pulso():
+def test_trigger_infere_evento_real():
+    # condição 'tag' → o fluxo dispara no evento real 'tag_adicionada', não no pulso
     g = regra_para_grafo(_regra(condicoes=[{'tipo': 'tag', 'operador': 'igual', 'valor': 'x'}]))
     assert g['inicio'] == 'trigger'
     assert g['nodes']['trigger']['tipo'] == 'evento'
+    assert g['nodes']['trigger']['config']['evento'] == 'tag_adicionada'
+
+
+def test_sem_condicao_gatilho_cai_no_pulso():
+    # 'score_externo' é só guarda → nenhum evento inferível → fallback pulso
+    g = regra_para_grafo(_regra(condicoes=[{'tipo': 'score_externo', 'operador': 'igual', 'valor': 'aprovado'}]))
     assert g['nodes']['trigger']['config']['evento'] == EVENTO_PULSO
+
+
+def test_inferencia_por_tipo_de_condicao():
+    def ev(tipo, op='igual'):
+        return evento_gatilho_da_regra(_regra(condicoes=[{'tipo': tipo, 'operador': op}]))
+    assert ev('tag') == 'tag_adicionada'
+    assert ev('historico_status') == 'historico_contato'
+    assert ev('servico_status') == 'servico_hubsoft_mudou'
+    assert ev('viabilidade_status') == 'viabilidade_consultada'
+    assert ev('conversa_modo') == 'conversa_modo_mudou'
+    assert ev('conversa_atribuida', 'existe') == 'conversa_atribuida'
+    assert ev('lead_status_api') == 'lead_status_mudou'
+    assert ev('lead_campo', 'existe') == 'lead_campo_mudou'
+    assert ev('lead_campo', 'nao_existe') == 'oportunidade_criada'  # gatilho de entrada
+    assert ev('imagem_status', 'todas_iguais') == 'docs_validados'
+    assert ev('imagem_status', 'igual') == 'documento_status_mudou'
+    assert ev('score_externo') is None  # só guarda
+
+
+def test_prioridade_tag_vence_lead_campo():
+    # regra 11 (tag Comercial + campos do lead) → gatilho = tag_adicionada
+    r = _regra(condicoes=[
+        {'tipo': 'lead_campo', 'campo': 'cep', 'operador': 'existe'},
+        {'tipo': 'tag', 'operador': 'igual', 'valor': 'Comercial'},
+        {'tipo': 'lead_campo', 'campo': 'cpf_cnpj', 'operador': 'existe'},
+    ])
+    assert evento_gatilho_da_regra(r) == 'tag_adicionada'
 
 
 def test_regra_de_estagio_gera_mover_e_valida():

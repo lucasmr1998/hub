@@ -79,6 +79,15 @@ EVENTOS = {
         ],
     },
     # ---- CRM / Comercial ----
+    'oportunidade_criada': {
+        'label': 'Oportunidade criada', 'grupo': 'Comercial',
+        'descricao': 'Uma oportunidade foi criada (manual ou automática).',
+        'subcampos': [
+            _c('var.estagio', 'Estágio (slug)', fonte='estagios'),
+            _c('var.origem_crm', 'Origem'),
+            _c('var.lead_id_hubsoft', 'ID HubSoft'),
+        ],
+    },
     'oportunidade_movida': {
         'label': 'Oportunidade mudou de etapa', 'grupo': 'Comercial',
         'descricao': 'Uma oportunidade foi movida de estágio no funil.',
@@ -115,6 +124,75 @@ EVENTOS = {
             _c('var.estagio', 'Estágio (slug)', fonte='estagios'),
             _c('oportunidade.titulo', 'Título'),
             _c('var.trigger', 'Origem do pulso'),
+        ],
+    },
+    # ---- Funil (eventos finos da migração) ----
+    # Cada um dispara no MOMENTO real de negócio; substituem o pulso genérico.
+    'documento_status_mudou': {
+        'label': 'Documento mudou de status', 'grupo': 'Funil',
+        'descricao': 'Um documento/imagem do lead mudou de status (recebido, validado, rejeitado).',
+        'subcampos': [
+            _c('var.status', 'Status do documento'),
+            _c('lead.cpf_cnpj', 'CPF/CNPJ'),
+        ],
+    },
+    'tag_adicionada': {
+        'label': 'Tag adicionada', 'grupo': 'Funil',
+        'descricao': 'Uma tag foi adicionada ao lead/oportunidade.',
+        'subcampos': [
+            _c('var.tag', 'Tag'),
+        ],
+    },
+    'historico_contato': {
+        'label': 'Histórico de contato registrado', 'grupo': 'Funil',
+        'descricao': 'Um HistoricoContato foi criado (ex: resposta do bot, fluxo finalizado).',
+        'subcampos': [
+            _c('var.status', 'Status do histórico'),
+        ],
+    },
+    'lead_campo_mudou': {
+        'label': 'Campo do lead preenchido', 'grupo': 'Funil',
+        'descricao': 'Um campo-chave do lead passou a ter valor (id_plano_rp, id_dia_vencimento, cep...).',
+        'subcampos': [
+            _c('var.campo', 'Campo'),
+            _c('var.valor', 'Novo valor'),
+        ],
+    },
+    'lead_status_mudou': {
+        'label': 'Status do lead mudou (status_api)', 'grupo': 'Funil',
+        'descricao': 'O `status_api` do lead mudou (ex: aguardando_assinatura, convertido_cliente).',
+        'subcampos': [
+            _c('var.status_api', 'Status API'),
+        ],
+    },
+    'servico_hubsoft_mudou': {
+        'label': 'Serviço HubSoft mudou de status', 'grupo': 'Funil',
+        'descricao': 'Um serviço do cliente no HubSoft mudou de status (ex: ATIVO).',
+        'subcampos': [
+            _c('var.status', 'Status do serviço'),
+        ],
+    },
+    'viabilidade_consultada': {
+        'label': 'Viabilidade consultada', 'grupo': 'Funil',
+        'descricao': 'Saiu o resultado da viabilidade técnica do endereço (fora_cobertura, pendente_revisao, ok).',
+        'subcampos': [
+            _c('var.viabilidade_status', 'Status da viabilidade'),
+            _c('lead.cidade', 'Cidade'),
+        ],
+    },
+    'conversa_modo_mudou': {
+        'label': 'Modo da conversa mudou', 'grupo': 'Funil',
+        'descricao': 'O modo de atendimento da conversa mudou (bot, humano, finalizado_bot).',
+        'subcampos': [
+            _c('var.modo', 'Modo'),
+            _c('lead.cidade', 'Cidade'),
+        ],
+    },
+    'conversa_atribuida': {
+        'label': 'Conversa atribuída a vendedor', 'grupo': 'Funil',
+        'descricao': 'Uma conversa foi atribuída a um agente/vendedor.',
+        'subcampos': [
+            _c('var.responsavel', 'Responsável'),
         ],
     },
     # ---- Inbox / Atendimento ----

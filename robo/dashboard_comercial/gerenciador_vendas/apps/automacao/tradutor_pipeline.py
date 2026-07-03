@@ -20,9 +20,58 @@ regras de estágio; ordem por prioridade) NÃO são reproduzidas aqui — cada r
 um Fluxo independente. O comparador do shadow mede essas divergências antes do cutover.
 """
 
-EVENTO_PULSO = 'crm_reavaliar_oportunidade'
+EVENTO_PULSO = 'crm_reavaliar_oportunidade'  # fallback: regra sem evento inferível
 
 _DX = 240  # espaçamento horizontal dos nós (layout do editor)
+
+# Config-driven (nada hardcoded por regra): o evento-gatilho de uma regra sai do
+# TIPO da condição primária dela. As condições continuam como guarda no fluxo — o
+# evento só define QUANDO reavaliar; a condição confirma o estado.
+_EVENTO_POR_TIPO = {
+    'tag': 'tag_adicionada',
+    'historico_status': 'historico_contato',
+    'servico_status': 'servico_hubsoft_mudou',
+    'viabilidade_status': 'viabilidade_consultada',
+    'conversa_modo': 'conversa_modo_mudou',
+    'conversa_atribuida': 'conversa_atribuida',
+    'lead_status_api': 'lead_status_mudou',
+    'lead_campo': 'lead_campo_mudou',
+    'oportunidade_dados_custom': 'conversa_modo_mudou',  # bot concluir ~ modo mudou
+}
+
+# Prioridade quando a regra tem várias condições-gatilho: a mais específica vence.
+_PRIORIDADE = [
+    'tag_adicionada', 'historico_contato', 'docs_validados', 'documento_status_mudou',
+    'servico_hubsoft_mudou', 'viabilidade_consultada', 'conversa_atribuida',
+    'conversa_modo_mudou', 'lead_status_mudou', 'lead_campo_mudou', 'oportunidade_criada',
+]
+
+
+def _evento_da_condicao(cond):
+    """Evento de negócio que a condição representa (None se for só guarda, ex: score)."""
+    tipo = (cond.get('tipo') or '').strip()
+    op = (cond.get('operador') or '').strip()
+    if tipo == 'imagem_status':
+        # 'todas_iguais documentos_validos' = docs_validados; senão = mudança de status
+        return 'docs_validados' if op == 'todas_iguais' else 'documento_status_mudou'
+    if tipo == 'lead_campo':
+        # campo AUSENTE ('nao_existe') = gatilho de entrada (op criada sem o dado);
+        # campo GANHANDO valor = lead_campo_mudou.
+        return 'oportunidade_criada' if op == 'nao_existe' else 'lead_campo_mudou'
+    return _EVENTO_POR_TIPO.get(tipo)
+
+
+def evento_gatilho_da_regra(regra):
+    """Evento real que dispara a regra, inferido da condição primária. `None` = nenhuma
+    condição-gatilho (o chamador cai pro EVENTO_PULSO)."""
+    candidatos = {_evento_da_condicao(c) for c in (regra.condicoes or [])}
+    candidatos.discard(None)
+    if not candidatos:
+        return None
+    for ev in _PRIORIDADE:
+        if ev in candidatos:
+            return ev
+    return next(iter(candidatos))
 
 
 def _cond_node(cond, x):
@@ -51,15 +100,20 @@ def _acao_node(acao, x):
     }
 
 
-def regra_para_grafo(regra):
-    """Converte a regra no grafo `{inicio, nodes, conexoes}` do Fluxo. Puro."""
+def regra_para_grafo(regra, evento=None):
+    """Converte a regra no grafo `{inicio, nodes, conexoes}` do Fluxo. Puro.
+
+    `evento` = gatilho do fluxo; se None, infere o evento real da regra (condição
+    primária) e cai pro EVENTO_PULSO se não houver. As condições continuam como
+    guarda — o evento define o QUANDO, a condição confirma o estado."""
+    evento = evento or evento_gatilho_da_regra(regra) or EVENTO_PULSO
     nodes, conexoes = {}, []
     x = 0
     nodes['trigger'] = {
         'tipo': 'evento',
-        'config': {'evento': EVENTO_PULSO, 'filtros': []},
+        'config': {'evento': evento, 'filtros': []},
         'pos': {'x': x, 'y': 0},
-        'label': 'Reavaliar oportunidade',
+        'label': f'Gatilho: {evento}',
     }
 
     # Corrente de condições (AND): cada 'true' liga na próxima; 'false' termina o fluxo.
