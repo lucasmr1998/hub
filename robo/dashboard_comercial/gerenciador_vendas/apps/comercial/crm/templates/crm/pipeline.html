@@ -1638,9 +1638,7 @@ function criarOportunidade() {
   .then(r => r.json())
   .then(d => {
     if (d.ok) {
-      toast('Criada', 'Oportunidade criada com sucesso', 'success');
-      fecharModalOport();
-      carregarPipeline();
+      window.location.href = '/crm/oportunidades/' + d.id + '/';
     } else {
       toast('Erro', d.erro || 'Erro ao criar', 'danger');
     }
