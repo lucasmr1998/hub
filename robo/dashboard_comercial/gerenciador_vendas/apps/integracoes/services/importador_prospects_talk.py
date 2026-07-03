@@ -232,11 +232,8 @@ def _criar_lead_e_op(tenant, prospect, id_prospecto, telefone):
         origem_crm='talk',
     )
 
-    # Auto distribui se ConfiguracaoCRM tiver round_robin
-    try:
-        from apps.comercial.crm.distribution import distribuir_oportunidade
-        distribuir_oportunidade(oport)
-    except Exception:  # noqa: BLE001
-        logger.debug('[TalkImporter] distribuir_oportunidade falhou (nao critico)', exc_info=True)
-
+    # NAO chamar distribuir_oportunidade aqui — o sync_vendedores_matrix
+    # (fase Talk) roda a cada 1min e atribui a op ao vendedor real que atendeu
+    # a chamada no Talk (via cod_talk). Se atribuirmos round-robin agora, o
+    # sync depois nao sobreescreve (filtra so responsavel__isnull=True).
     return lead
