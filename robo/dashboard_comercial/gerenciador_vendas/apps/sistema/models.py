@@ -225,6 +225,13 @@ class PerfilUsuario(models.Model):
         help_text='Login do agente no Matrix Brasil (ex: "joyce", "AnaP"). '
                   'Usado pelo cron de sync pra atribuir oportunidade ao mesmo vendedor que pegou o atendimento la.',
     )
+    cod_talk = models.IntegerField(
+        null=True, blank=True, db_index=True,
+        verbose_name='Codigo Agente Talk',
+        help_text='Codigo (cod_agente) do vendedor na plataforma Talk (matrixdobrasil.ai). '
+                  'Usado pelo cron de sync pra atribuir oportunidade Talk ao agente que atendeu '
+                  'a chamada. Descobrir via GET /ws/rest/restGerenciaAgente.php?modulo=listaagentes.',
+    )
     id_vendedor_hubsoft = models.IntegerField(
         null=True, blank=True, db_index=True,
         verbose_name='ID Vendedor HubSoft',

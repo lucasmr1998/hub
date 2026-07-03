@@ -35,6 +35,7 @@ class IntegracaoAPI(TenantMixin):
         ('meta_cloud', 'Meta Cloud API (WhatsApp)'),
         ('twilio_whatsapp', 'Twilio (WhatsApp)'),
         ('n8n', 'N8N (Automação)'),
+        ('talk', 'Talk (Matrix do Brasil - PABX)'),
         ('openai', 'OpenAI'),
         ('anthropic', 'Anthropic (Claude)'),
         ('groq', 'Groq'),
