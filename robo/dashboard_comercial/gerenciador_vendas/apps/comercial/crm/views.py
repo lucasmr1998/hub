@@ -1016,13 +1016,15 @@ def oportunidade_detalhe(request, pk):
             'data': nota.data_criacao,
             'obj': nota,
         })
-    # Logs de atribuicao de responsavel (via UI ou cron sync_vendedores_matrix)
+    # Logs de atribuicao de responsavel (via UI ou cron sync_vendedores_matrix).
+    # LogSistema.usuario eh CharField (nao FK), entao select_related NAO pode
+    # ser usado nesse campo (levaria FieldError e o try/except silenciava tudo).
     try:
         from apps.sistema.models import LogSistema
         logs_atribuicao = LogSistema.objects.filter(
             tenant=request.tenant, entidade='oportunidade',
             entidade_id=oportunidade.pk, categoria='crm', acao='atribuir',
-        ).select_related('usuario').order_by('-data_criacao')[:20]
+        ).order_by('-data_criacao')[:20]
         for log in logs_atribuicao:
             timeline_items.append({
                 'tipo': 'atribuicao',

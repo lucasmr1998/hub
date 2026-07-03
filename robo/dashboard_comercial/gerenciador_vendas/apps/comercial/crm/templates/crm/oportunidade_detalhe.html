@@ -868,7 +868,7 @@
                   </div>
                   <p class="tl-body">{{ item.obj.mensagem|truncatechars:240 }}</p>
                   <div class="tl-meta">
-                    {% if item.obj.usuario %}por {{ item.obj.usuario.get_full_name|default:item.obj.usuario.username }}{% else %}automatico (sync Matrix){% endif %}
+                    {% if item.obj.usuario %}por {{ item.obj.usuario }}{% else %}automatico (sync Matrix/Talk){% endif %}
                   </div>
                 {% endif %}
               </div>
