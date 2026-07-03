@@ -390,7 +390,7 @@ def auditar(categoria, acao, entidade):
     return decorator
 
 
-def registrar_acao(categoria, acao, entidade, entidade_id, mensagem, request=None, dados_extras=None, nivel='INFO'):
+def registrar_acao(categoria, acao, entidade, entidade_id, mensagem, request=None, dados_extras=None, nivel='INFO', tenant=None):
     """
     Registra uma acao de auditoria no LogSistema.
 
@@ -403,6 +403,7 @@ def registrar_acao(categoria, acao, entidade, entidade_id, mensagem, request=Non
         request: HttpRequest para extrair IP, usuario e tenant
         dados_extras: dict com dados adicionais
         nivel: INFO (padrao), WARNING, ERROR
+        tenant: Tenant explicito (usar quando roda de management command sem request)
     """
     try:
         from apps.sistema.models import LogSistema
@@ -410,7 +411,8 @@ def registrar_acao(categoria, acao, entidade, entidade_id, mensagem, request=Non
 
         ip = None
         usuario = None
-        tenant = None
+        # tenant explicito ganha; senao request; senao middleware; senao fallback pela entidade
+        tenant_arg = tenant
 
         if request:
             x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -420,11 +422,31 @@ def registrar_acao(categoria, acao, entidade, entidade_id, mensagem, request=Non
                 ip = request.META.get('REMOTE_ADDR')
             if request.user.is_authenticated:
                 usuario = request.user.username
-            tenant = getattr(request, 'tenant', None)
+            if not tenant_arg:
+                tenant_arg = getattr(request, 'tenant', None)
 
-        if not tenant:
-            tenant = get_current_tenant()
+        if not tenant_arg:
+            tenant_arg = get_current_tenant()
 
+        # Fallback: se ainda sem tenant e a entidade eh oportunidade/lead,
+        # descobre pelo entidade_id. Assim callers de management command que
+        # esquecem de passar tenant nao geram log orfao.
+        if not tenant_arg and entidade_id and entidade in ('oportunidade', 'lead'):
+            try:
+                if entidade == 'oportunidade':
+                    from apps.comercial.crm.models import OportunidadeVenda
+                    obj = OportunidadeVenda.all_tenants.filter(pk=entidade_id).first()
+                elif entidade == 'lead':
+                    from apps.comercial.leads.models import LeadProspecto
+                    obj = LeadProspecto.all_tenants.filter(pk=entidade_id).first()
+                else:
+                    obj = None
+                if obj is not None:
+                    tenant_arg = getattr(obj, 'tenant', None)
+            except Exception:  # noqa: BLE001
+                pass
+
+        tenant = tenant_arg
         LogSistema.objects.create(
             tenant=tenant,
             nivel=nivel,

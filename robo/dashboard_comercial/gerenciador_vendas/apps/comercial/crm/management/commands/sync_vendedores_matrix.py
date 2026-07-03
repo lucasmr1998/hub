@@ -115,6 +115,7 @@ class Command(BaseCommand):
                 try:
                     registrar_acao('crm', 'atribuir', 'oportunidade', oport.pk,
                                    f'Atribuido automatic via Matrix Brasil (login={login}) para {user.username}',
+                                   tenant=tenant,
                                    dados_extras={
                                        'login_matrix': login,
                                        'id_atendimento_matrix': codigo,
@@ -274,6 +275,7 @@ class Command(BaseCommand):
                 try:
                     registrar_acao('crm', 'atribuir', 'oportunidade', oport.pk,
                                    f'Atribuido automatic via Talk (cod={cod}, nom={nom_ag}) para {user.username}',
+                                   tenant=tenant,
                                    dados_extras={
                                        'cod_talk': cod,
                                        'nom_agente': nom_ag,
