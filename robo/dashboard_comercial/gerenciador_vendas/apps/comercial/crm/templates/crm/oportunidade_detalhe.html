@@ -20,6 +20,15 @@
           {% if lead.email %}<span><i class="bi bi-envelope"></i> {{ lead.email }}</span>{% endif %}
           <span><i class="bi bi-calendar"></i> Cadastro: {{ lead.data_cadastro|date:"d/m/Y" }}</span>
           {% if lead.origem %}<span><i class="bi bi-tag"></i> {{ lead.get_origem_display }}</span>{% endif %}
+          {% if lead.id_hubsoft %}
+            <span title="Prospect sincronizado no HubSoft" style="background: #e8f5e9; color: #1b5e20; padding: 2px 8px; border-radius: 4px; font-weight: var(--fw-semibold); font-size: 0.85em;">
+              <i class="bi bi-cloud-check"></i> HubSoft #{{ lead.id_hubsoft }}
+            </span>
+          {% else %}
+            <span title="Prospect ainda nao sincronizado no HubSoft" style="background: #fff3cd; color: #7a5b00; padding: 2px 8px; border-radius: 4px; font-weight: var(--fw-semibold); font-size: 0.85em;">
+              <i class="bi bi-cloud-slash"></i> Sem HubSoft
+            </span>
+          {% endif %}
         </div>
       </div>
     </div>
