@@ -143,3 +143,87 @@ Resolvido: `IntegracaoAPI #18` (HubSoft Nuvyon) com `modos_sync.enviar_lead='des
 - `plano_id_padrao = 1236` — qual plano oficial Nuvyon usa pra rascunho?
 - `dia_vencimento_id_padrao = 4` — qual dia oficial?
 - `cep_default = 13730000` — Mococa-SP centro — confirmar
+
+---
+
+## 2026-07-01 — Fix HubSoft rejeitando `id_origem_servico`
+
+- Ação: HubSoft rejeitava `POST /prospecto` com "O valor selecionado para o campo id origem servico é inválido". Descoberto que o nome correto do campo na API HubSoft é `id_origem_contato`, não `id_origem_servico`. Trocado em `hubsoft.py` (linhas ~1836 do POST + sanitizador). Testado direto contra HubSoft em prod: `id_origem_contato=18` aceito.
+- Decisão: Manter o dropdown do modal com os 4 valores de `origens_contato` (Facebook/Whatsapp/Telefone/Presencial) e renomear label pra "Origem do contato".
+- Output: `fix(crm): trocar id_origem_servico por id_origem_contato` — 3 arquivos (hubsoft.py + 2 templates).
+- Status: completed
+
+## 2026-07-01 — Vendedora comum não vê ops sem responsável
+
+- Ação: Removido `| Q(responsavel__isnull=True)` no filtro de visibilidade em `views.py:300` (kanban) e `views.py:556` (listagem). Vendedora sem funcionalidade `comercial.ver_todas_oportunidades` só vê `responsavel=request.user`.
+- Why: Ops órfãs virando "pool livre" gerava confusão de quem devia pegar. Admin/gerente continuam vendo tudo, então ops órfãs não ficam invisíveis no sistema.
+- How to apply: Cron `sync_vendedores_matrix_nuvyon` atribui responsável em 30-60s. Janela curta durante a qual vendedora dona ainda não vê — aceito.
+- Output: commit `82c8674`.
+- Status: completed
+
+## 2026-07-01 — Redirect ao criar op + permissão excluir op pra Admin
+
+- Ação (1): Modal "Nova oportunidade" ao criar redireciona pra `/crm/oportunidades/<id>/` (era ficar no pipeline). Commit `b8f0efd`.
+- Ação (2): Perfil "Admin" (id=89) da Nuvyon ganhou funcionalidade `comercial.excluir_oportunidade` via INSERT em `sistema_perfil_permissao_funcionalidades (89, 46)`. Gabi/Danielle/admin_nuvyon veem botão de excluir op.
+- Status: completed
+
+## 2026-07-01 — Resumo diário WhatsApp pra Gabi (código pronto, cron pendente)
+
+- Ação: Feature de resumo diário comercial via WhatsApp. Novo `TipoNotificacao('resumo_diario_comercial')` + `apps/comercial/crm/services/resumo_diario.py` + `apps/notificacoes/services/enviar_whatsapp_aurora.py` + management command. Uazapi da Aurora HQ (tenant 3, id=7) faz o envio. Gabi cadastrada em `PerfilUsuario.telefone` = `5519994576319`. Teste real chegou no WhatsApp.
+- Decisão: Enviar às 8h BRT — framing "Como ontem fechou + Pipeline agora". Danielle NÃO recebe (só Gabi).
+- Pendência: Ajuste do command pra respeitar `PreferenciaNotificacao.horario_inicio` (Gabi vira dona do horário via UI) + cadastrar cron. Ficou pausado.
+- Output: commit `fc946ac`. Migration 0006 aplicada em prod.
+- Status: pending (falta ajuste + cron)
+
+## 2026-07-01 — Fix parser viabilidade HubSoft (falsos negativos)
+
+- Ação: HubSoft mudou o schema do `/mapeamento/viabilidade/consultar` — retorna `{"origem":"mapeamento_local","projetos":[{"busca":{"elementos":{"data":[{"caixa":"...","disponiveis":N}]}}}]}` em vez do `{"viabilidade":{"atende":bool}}` antigo. Parser em `apps/comercial/viabilidade/services.py:_tentar_hubsoft` procurava a chave antiga; `bool(None)=False` → marcava TUDO como `fora_cobertura`. Regra "Sem viabilidade → Perdido" descartava leads viáveis silenciosamente. Ex: op #2059 (NALBER, CEP 13734-274 Mococa) foi movida pra Perdido apesar de 4 portas livres a 61m; escapou porque alguém moveu manualmente.
+- Fix: Parser passa a ler `projetos[].busca.elementos.data[]` e considera `atende=True` se ≥1 caixa com `disponiveis > 0`. Fallback pro schema antigo mantido.
+- Validado: 4 CEPs Mococa que antes davam `fora_cobertura` agora retornam `cobertura_ok`.
+- Output: commit `b4274ad`.
+- Status: completed
+
+## 2026-07-01 — Cleanup de 7 ops/leads de teste
+
+- Ação: Removidos 7 leads + 7 ops de teste via ORM. Total 51 objetos com CASCADE (histórico, tags, vendas legado). Nenhum `ClienteHubsoft` associado, seguro.
+- Pendente manual: Apagar prospectos HubSoft órfãos 23419, 23391, 23389, 23334, 23173, 676576, 676577 (HubSoft não expõe DELETE via API — Gabi/Bianca no painel).
+- Status: completed (Hubtrix); pending (HubSoft)
+
+## 2026-07-01 — Dropdown vencimento com 3 opções (10/20/30)
+
+- Ação: Modal "Completar dados" mostrava só Dia 5/10/15/20 hardcoded em `views.py:3945`. Populado `IntegracaoAPI 18.configuracoes_extras.dias_vencimento_disponiveis` com `[{dia:10,id_hubsoft:4},{dia:20,id_hubsoft:6},{dia:30,id_hubsoft:10}]`. Sem deploy — código já lia esse override.
+- Detalhe: HubSoft não tem "dia 30" nativo — usa `id_vencimento=10` (último dia do mês, 28/29/30/31). Time comercial precisa saber.
+- Status: completed
+
+---
+
+## 2026-07-03 — Integração Talk (matrixdobrasil.ai) end-to-end
+
+- Ação: Nova integração completa com a plataforma **Talk** (softphone/PABX) que a Nuvyon usa pra chamadas de voz. Documento dedicado: [`integracao-talk.md`](./integracao-talk.md).
+- Componentes: Service `apps/integracoes/services/talk.py`, importador de prospects (`importador_prospects_talk.py` + command + cron `* * * * *`), sync de vendedores (fase 2 do `sync_vendedores_matrix`), campo `PerfilUsuario.cod_talk` (migration 0014), tipo `talk` no `IntegracaoAPI` (migration 0018).
+- Estado: IntegracaoAPI Talk pk=25 criada em prod; 13 vendedoras com `cod_talk` populado; 8 ops importadas + atribuídas em 03/07.
+- Pendências: Andressa, Nicoly e as 3 "Mega" (Ryan/Vilhena/Bianca) sem `cod_talk` — Gabi validar. 1.186 prospects Talk antigos no HubSoft não removidos.
+- Output: commits `bd6c3ef` (importador), `70c30e2` (sync Talk), `326d09c` (fix filtro 2 passos), `785bff0` (não chamar distribuir_oportunidade no importador).
+- Status: completed
+
+## 2026-07-03 — Fixes de UI/UX no detalhe da op
+
+- Ação (1) Badge HubSoft no header: verde `☁️✓ HubSoft #NNNNN` quando lead tem `id_hubsoft`, amarelo `☁️⊘ Sem HubSoft` quando não. Commit `eddf2f7`.
+- Ação (2) Truncar nome do lead com line-clamp 2 + max-width 640px, evitar que nomes longos empurrem botões. Commit `8d3dacd`.
+- Status: completed
+
+## 2026-07-03 — Timeline finalmente mostra atribuições (bug oculto)
+
+- Ação: `select_related('usuario')` em `LogSistema.objects.filter(...)` na view do detalhe da op lançava `FieldError` porque `usuario` é CharField (não FK). O `try/except: pass` engolia a exceção — logs de atribuição nunca entravam no `timeline_items`. Bug silencioso desde o dia que foi escrito.
+- Fix (1): Removido `.select_related('usuario')` + template ajustado pra ler `item.obj.usuario` como string. Commit `6885de4`.
+- Fix (2) `registrar_acao`: adicionado kwarg `tenant` explícito + fallback automático (se sem tenant e `entidade in ('oportunidade','lead')`, busca via entidade_id). Sync Talk/Matrix passa `tenant=tenant` explícito. Commit `a1a54cf`.
+- Backfill: 698 logs de `entidade='oportunidade'` sem tenant → populados via `UPDATE log_sistema SET tenant_id = o.tenant_id FROM crm_oportunidades o WHERE ...`. 47 restantes são de ops deletadas.
+- Efeito: Timeline volta a mostrar "Responsável atribuído" (Matrix + Talk) em todas as ops antigas + novas.
+- Status: completed
+
+## 2026-07-03 — Log detalhado quando flow externo envia JSON inválido
+
+- Ação: Flow Matrix envia `"busca": ,` e `"lead_id": ,` (variáveis undefined serializadas sem valor). Endpoints `atualizar_lead_api` e `registrar_historico_api` retornavam 400 sem contexto suficiente. Nova utility `_diagnosticar_json_invalido()` usa regex pra detectar campos com valor faltando + reporta linha/coluna/excerpt do erro. Body armazenado no `log_sistema.dados_extras` aumentado de 500 → 1500 chars. Resposta HTTP passa a devolver `campos_com_valor_faltando` pro caller.
+- Pendência: Descobrir qual node do flow Matrix está com variável quebrada — precisa acesso ao painel. Cliente afetado tem protocolo `6249000001051212`, telefone `5511975630697`.
+- Output: commit `2b7f556`.
+- Status: partial (log implementado; fix real no flow depende de acesso Matrix)
