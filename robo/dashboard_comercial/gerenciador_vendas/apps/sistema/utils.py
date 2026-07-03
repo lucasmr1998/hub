@@ -17,6 +17,46 @@ def _parse_json_request(request):
         return None
 
 
+def _diagnosticar_json_invalido(body_str):
+    """
+    Recebe uma string que falhou em json.loads e retorna dict com diagnostico:
+    - erro_msg: str do JSONDecodeError
+    - linha, coluna, pos: posicao do erro reportado
+    - excerpt: recorte com ±40 chars ao redor do erro
+    - campos_vazios: lista de nomes de campos com valor faltando (ex: `"lead_id":,`).
+      Detectado via regex `"nome":\\s*[,}\\]]` — cobre o caso do Matrix/N8N onde
+      a variavel do flow eh serializada undefined e vira JSON invalido.
+
+    Sem argumentos rodando cria dict de erro coerente pra virar campo do log_sistema.
+    """
+    import re
+    info = {'erro_msg': None, 'linha': None, 'coluna': None, 'pos': None,
+            'excerpt': None, 'campos_vazios': []}
+    if not body_str:
+        info['erro_msg'] = 'body vazio'
+        return info
+    try:
+        json.loads(body_str)
+        info['erro_msg'] = 'JSON valido (nao deveria estar aqui)'
+        return info
+    except json.JSONDecodeError as e:
+        info['erro_msg'] = e.msg
+        info['linha'] = e.lineno
+        info['coluna'] = e.colno
+        info['pos'] = e.pos
+        inicio = max(0, e.pos - 40)
+        fim = min(len(body_str), e.pos + 40)
+        info['excerpt'] = body_str[inicio:fim].replace('\n', ' ')
+    except Exception as e:
+        info['erro_msg'] = f'{type(e).__name__}: {e}'
+        return info
+
+    # Detecta campos com valor faltando (padrao classico do Matrix quebrando)
+    for m in re.finditer(r'"([^"\\]+)"\s*:\s*(,|}|\])', body_str):
+        info['campos_vazios'].append(m.group(1))
+    return info
+
+
 def _parse_bool(value):
     if value is None:
         return None

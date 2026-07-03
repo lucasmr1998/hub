@@ -19,6 +19,7 @@ from apps.sistema.decorators import api_token_required, api_token_or_login_requi
 from apps.sistema.utils import auditar
 from apps.sistema.utils import (
     _parse_json_request,
+    _diagnosticar_json_invalido,
     _model_field_names,
     _serialize_instance,
     _apply_updates,
@@ -749,14 +750,26 @@ def atualizar_lead_api(request):
 
     data = _parse_json_request(request)
     if data is None:
+        raw = request.body.decode('utf-8', errors='ignore')
+        diag = _diagnosticar_json_invalido(raw)
         _criar_log_sistema(
             nivel='WARNING',
             modulo='atualizar_lead_api',
-            mensagem='Tentativa de atualização com JSON inválido',
-            dados_extras={'body': request.body.decode('utf-8', errors='ignore')[:500]},
+            mensagem=f"JSON invalido em atualizar_lead: {diag.get('erro_msg')} "
+                     f"(campos_vazios={diag.get('campos_vazios')})",
+            dados_extras={
+                'body': raw[:1500],
+                'diagnostico': diag,
+                'ip': request.META.get('REMOTE_ADDR'),
+                'user_agent': request.META.get('HTTP_USER_AGENT', '')[:200],
+            },
             request=request
         )
-        return JsonResponse({'error': 'JSON inválido'}, status=400)
+        return JsonResponse({
+            'error': 'JSON inválido',
+            'detalhe': diag.get('erro_msg'),
+            'campos_com_valor_faltando': diag.get('campos_vazios'),
+        }, status=400)
 
     termo = data.get('termo_busca')
     busca = data.get('busca')
@@ -1442,14 +1455,26 @@ def registrar_historico_api(request):
 
     data = _parse_json_request(request)
     if data is None:
+        raw = request.body.decode('utf-8', errors='ignore')
+        diag = _diagnosticar_json_invalido(raw)
         _criar_log_sistema(
             nivel='WARNING',
             modulo='registrar_historico_api',
-            mensagem='Tentativa de registro com JSON inválido',
-            dados_extras={'body': request.body.decode('utf-8', errors='ignore')[:500]},
+            mensagem=f"JSON invalido em registrar_historico: {diag.get('erro_msg')} "
+                     f"(campos_vazios={diag.get('campos_vazios')})",
+            dados_extras={
+                'body': raw[:1500],
+                'diagnostico': diag,
+                'ip': request.META.get('REMOTE_ADDR'),
+                'user_agent': request.META.get('HTTP_USER_AGENT', '')[:200],
+            },
             request=request
         )
-        return JsonResponse({'error': 'JSON inválido'}, status=400)
+        return JsonResponse({
+            'error': 'JSON inválido',
+            'detalhe': diag.get('erro_msg'),
+            'campos_com_valor_faltando': diag.get('campos_vazios'),
+        }, status=400)
 
     required = ['telefone', 'status']
     missing = [f for f in required if not data.get(f)]
