@@ -11,11 +11,12 @@ compativel com Chart.js.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Any, Optional
 
 from django.db.models import Count, Sum, Avg, F, Q
 from django.db.models.functions import TruncDay, TruncWeek, TruncMonth, TruncYear
+from django.utils import timezone
 
 from apps.relatorios import data_sources as ds_registry
 
@@ -33,6 +34,7 @@ OPERADORES_VALIDOS = {
     'existe':      lambda c, v: ~Q(**{f'{c}__isnull': True}) & ~Q(**{c: ''}),
     'nao_existe':  lambda c, v: Q(**{f'{c}__isnull': True}) | Q(**{c: ''}),
     'entre':       lambda c, v: Q(**{f'{c}__range': v}) if isinstance(v, (list, tuple)) and len(v) == 2 else Q(),
+    'ultimos_dias': lambda c, v: Q(**{f'{c}__gte': timezone.now() - timedelta(days=int(v))}),
 }
 
 
