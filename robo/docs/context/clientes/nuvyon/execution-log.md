@@ -227,3 +227,13 @@ Resolvido: `IntegracaoAPI #18` (HubSoft Nuvyon) com `modos_sync.enviar_lead='des
 - Pendência: Descobrir qual node do flow Matrix está com variável quebrada — precisa acesso ao painel. Cliente afetado tem protocolo `6249000001051212`, telefone `5511975630697`.
 - Output: commit `2b7f556`.
 - Status: partial (log implementado; fix real no flow depende de acesso Matrix)
+
+## 2026-07-04 — Painel único de relatórios + fix data_fechamento_real
+
+- Ação (1) Limpeza: deletados os 14 dashboards seed antigos do tenant Nuvyon (ids 1-14) + 59 widgets. Backup JSON no scratchpad da sessão (`backup_dashboards_nuvyon_20260704.json`). Único painel de trabalho agora é o **#15 "Painel Comercial"** (criado pela Gabi, compartilhado).
+- Ação (2) Data source: `oportunidade` ganhou 3 campos novos — `motivo_perda_ref__nome` (FK pro catálogo real de motivos, antes só existia `motivo_perda_categoria` que estava NULL em 211/217 perdidas), `estagio__is_final_perdido` e `estagio__is_final_ganho`. Query builder ganhou operador `ultimos_dias` (filtro de data relativa). Commit `c8f6424`.
+- Ação (3) Widgets novos no dash #15: **Oportunidades por origem** (pizza, `lead__origem`, últimos 30d — whatsapp 359 / manual 20 / telefone 11) e **Motivos de perda** (barra, `motivo_perda_ref__nome`, perdidas últimos 30d). Funil da Gabi reposicionado pro topo (largura cheia).
+- Ação (4) Bug crítico descoberto e corrigido: `data_fechamento_real` só era carimbado em estágio GANHO — os 2 caminhos (UI `api_mover_estagio` e motor `automacao_pipeline`) ignoravam PERDIDO. 210 de 217 perdidas estavam com data NULL e relatórios de perda por período mostravam quase nada. Fix nos 2 caminhos (commit `fe48a28`) + backfill das 210 ops via data da transição no `crm_historico_estagio` (100% recuperado, zero fallback).
+- Ação (5) Motivos de perda padronizados a pedido da Gabi: renomeados #46 "Prazo de instalação"→"Prazo" e #34 "Sumiu / sem resposta"→"Sem retorno" (FKs preservadas); criados #49 "Condições" e #50 "Fidelidade atual". Total 12 motivos ativos.
+- Validação: os 3 widgets renderizando com dados reais via WidgetQueryBuilder em prod (funil 390→289 + Contratação 78/Perdido 230; origem 391 ops; motivos 217 perdas).
+- Status: completed
