@@ -248,7 +248,10 @@ def _mover_por_regra(oportunidade, estagio_destino, regra):
     oportunidade.data_entrada_estagio = agora
     oportunidade.probabilidade = estagio_destino.probabilidade_padrao
 
-    if estagio_destino.is_final_ganho and not oportunidade.data_fechamento_real:
+    # Carimba fechamento nos DOIS finais (ganho E perdido) — sem isso, regras
+    # como "Sem viabilidade -> Perdido" deixavam data_fechamento_real NULL e
+    # relatorios de perda por periodo ficavam vazios.
+    if (estagio_destino.is_final_ganho or estagio_destino.is_final_perdido) and not oportunidade.data_fechamento_real:
         oportunidade.data_fechamento_real = agora
         campos_update.append('data_fechamento_real')
 

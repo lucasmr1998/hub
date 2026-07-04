@@ -468,10 +468,13 @@ def api_mover_oportunidade(request):
 
     campos = ['estagio', 'data_entrada_estagio', 'probabilidade', 'data_atualizacao']
 
-    if estagio_novo.is_final_ganho and not oportunidade.data_fechamento_real:
+    # Fechamento real vale pros DOIS finais (ganho E perdido) — metricas de
+    # perda por periodo dependem disso. Meta de venda so em ganho.
+    if (estagio_novo.is_final_ganho or estagio_novo.is_final_perdido) and not oportunidade.data_fechamento_real:
         oportunidade.data_fechamento_real = timezone.now()
         campos.append('data_fechamento_real')
-        _atualizar_meta_venda(oportunidade, request.user)
+        if estagio_novo.is_final_ganho:
+            _atualizar_meta_venda(oportunidade, request.user)
 
     # T2 — Se foi pra estagio de perda e veio motivo no body, persiste tambem
     if estagio_novo.is_final_perdido:
