@@ -47,9 +47,12 @@ class Command(BaseCommand):
         from apps.sistema.models import LogSistema
 
         desde = timezone.now() - timedelta(days=opts['dias'])
+        # NÃO filtrar por `entidade`: o motor antigo grava os fires como
+        # entidade='oportunidade' (registrar_acao), mas motor_disparado/shadow_fluxo
+        # usam 'OportunidadeVenda'. Todas as 4 ações são op-scoped, então `acao` +
+        # `entidade_id` bastam pra correlacionar por op.
         logs = (LogSistema.all_tenants
-                .filter(acao__in=_ACOES, entidade='OportunidadeVenda',
-                        entidade_id__isnull=False, data_criacao__gte=desde)
+                .filter(acao__in=_ACOES, entidade_id__isnull=False, data_criacao__gte=desde)
                 .select_related('tenant')
                 .order_by('tenant_id', 'entidade_id', 'data_criacao'))
         if opts['tenant']:
