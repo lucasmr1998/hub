@@ -8,17 +8,32 @@ A execução pode pausar de dois jeitos (NodeResult.espera):
 
 `retomar(execucao, branch, dados)` continua a partir do **nó que pausou**, seguindo
 `branch` — e injeta a resposta do contato quando há.
+
+Hardening do cron (rodadas podem sobrepor):
+- Claim atômico (E3): antes de processar uma execução o worker faz um CAS
+  (`_claim`) que só uma rodada vence — duas rodadas concorrentes não rodam a
+  mesma execução.
+- Watchdog (E3): `destravar_execucoes_presas` devolve pra fila o que ficou
+  `rodando` além do limite (worker morto no meio).
+- Retry transitório (E4): erro NÃO tratado (branch erro não conectada) em nó
+  seguro reenfileira com backoff, retomando DO NÓ QUE FALHOU, até um teto.
 """
 import logging
 from datetime import timedelta
 
+from django.conf import settings
 from django.utils import timezone
 
 from .models import ExecucaoFluxo
-from .nodes import Contexto
+from .nodes import Contexto, tipo_por_slug
 from .runtime import executar_fluxo, _proxima
 
 logger = logging.getLogger(__name__)
+
+# Retry transitório (E4): atrasos (segundos) de cada retentativa. O nº de posições
+# é o teto de retentativas. Retoma do nó que falhou, não do início.
+RETRY_BACKOFF_SEGUNDOS = [300, 900]
+MAX_TENTATIVAS = len(RETRY_BACKOFF_SEGUNDOS)
 
 
 def executar_e_persistir(fluxo, contexto, *, inicio=None, execucao=None):
@@ -31,11 +46,11 @@ def executar_e_persistir(fluxo, contexto, *, inicio=None, execucao=None):
 
     if execucao is None:
         execucao = ExecucaoFluxo(tenant=fluxo.tenant, fluxo=fluxo)
-    execucao.status = res.status
     execucao.trace = (execucao.trace or []) + trace
     execucao.erro = res.erro or ''
 
     if res.status == 'aguardando':
+        execucao.status = 'aguardando'
         ag = res.aguardando or {}
         espera = ag.get('espera') or {}
         execucao.estado = ag.get('estado') or {}
@@ -44,9 +59,23 @@ def executar_e_persistir(fluxo, contexto, *, inicio=None, execucao=None):
         execucao.chave = espera.get('chave') or ''
         segundos = espera.get('segundos') or 0
         execucao.agendado_para = (timezone.now() + timedelta(seconds=segundos)) if segundos else None
+    elif (res.status == 'erro' and execucao.tentativas < MAX_TENTATIVAS
+          and _no_seguro_pra_retry(fluxo, res)):
+        # Erro NÃO tratado (branch erro não conectada) em nó seguro: reenfileira com
+        # backoff, retomando DO NÓ QUE FALHOU (estado serializado no momento da falha).
+        atraso = RETRY_BACKOFF_SEGUNDOS[execucao.tentativas]
+        execucao.tentativas += 1
+        execucao.status = 'pendente'
+        execucao.estado = contexto.serializar()
+        execucao.no_pausado = res.passos[-1].handle if res.passos else ''
+        execucao.modo_espera = ''
+        execucao.chave = ''
+        execucao.claimed_em = None  # volta pra fila (não está mais reivindicada)
+        execucao.agendado_para = timezone.now() + timedelta(seconds=atraso)
     else:
-        # Completada/erro: persiste o estado final (variaveis + nodes) pra observabilidade
-        # — o editor reproduz a execução no canvas com o I/O por nó (estilo n8n).
+        # Completada/erro final: persiste o estado final (variaveis + nodes) pra
+        # observabilidade — o editor reproduz a execução no canvas com o I/O por nó.
+        execucao.status = res.status
         execucao.estado = contexto.serializar()
         execucao.agendado_para = None
         execucao.no_pausado = ''
@@ -54,6 +83,21 @@ def executar_e_persistir(fluxo, contexto, *, inicio=None, execucao=None):
 
     execucao.save()
     return execucao, res
+
+
+def _no_seguro_pra_retry(fluxo, res):
+    """True se o nó que falhou pode ser reexecutado automaticamente num retry.
+
+    Olha o tipo do nó do último passo (`res.passos[-1]`) e devolve
+    `no.retry_seguro`. Nó desconhecido ou sem passos → True (default seguro)."""
+    if not res.passos:
+        return True
+    handle = res.passos[-1].handle
+    definicao = ((fluxo.grafo.get('nodes') or {}).get(handle)) or {}
+    no = tipo_por_slug(definicao.get('tipo'))
+    if no is None:
+        return True
+    return getattr(no, 'retry_seguro', True)
 
 
 def retomar(execucao, branch, dados=None, extra_vars=None):
@@ -83,15 +127,57 @@ def retomar(execucao, branch, dados=None, extra_vars=None):
     return execucao
 
 
-def retomar_pendentes(limite=100):
-    """Cron: retoma o que venceu — timer (resume normal) ou resposta (timeout)."""
+def _claim(pk, de):
+    """CAS: `de` -> 'rodando'. True só pro worker que venceu a corrida (rowcount==1)."""
+    n = ExecucaoFluxo.all_tenants.filter(pk=pk, status=de).update(
+        status='rodando', claimed_em=timezone.now())
+    return n == 1
+
+
+def destravar_execucoes_presas(minutos=None):
+    """Watchdog: devolve pra fila o que ficou `rodando` além do limite.
+
+    Um worker que morre no meio deixa a execução travada em 'rodando'. Passado o
+    limite (`AUTOMACAO_WATCHDOG_MINUTOS`, default 10), volta pro status de origem:
+    `modo_espera` preenchido → 'aguardando' (pausa por resposta/timer); vazio →
+    'pendente'. Ambos com `agendado_para=now` e `claimed_em=None` (fila limpa).
+    Devolve o total destravado."""
+    limite = minutos if minutos is not None else getattr(settings, 'AUTOMACAO_WATCHDOG_MINUTOS', 10)
     agora = timezone.now()
-    pendentes = list(
-        ExecucaoFluxo.all_tenants.select_related('fluxo', 'tenant')
-        .filter(status='aguardando', agendado_para__lte=agora)[:limite]
+    corte = agora - timedelta(minutes=limite)
+    base = ExecucaoFluxo.all_tenants.filter(status='rodando', claimed_em__lte=corte)
+    # Preso após uma pausa (tinha modo_espera) volta pra 'aguardando'; senão 'pendente'.
+    presos_aguardando = base.exclude(modo_espera='').update(
+        status='aguardando', agendado_para=agora, claimed_em=None)
+    presos_pendentes = base.filter(modo_espera='').update(
+        status='pendente', agendado_para=agora, claimed_em=None)
+    total = presos_aguardando + presos_pendentes
+    if total:
+        logger.warning('automacao: watchdog destravou %s execução(ões) presa(s) em "rodando"', total)
+    return total
+
+
+def retomar_pendentes(limite=100):
+    """Cron: retoma o que venceu — timer (resume normal) ou resposta (timeout).
+
+    Claim atômico por execução (`_claim`): duas rodadas concorrentes não retomam a
+    mesma. Só processa o que este worker reivindicou (`aguardando` -> `rodando`)."""
+    agora = timezone.now()
+    pks = list(
+        ExecucaoFluxo.all_tenants
+        .filter(status='aguardando', agendado_para__lte=agora)
+        .values_list('pk', flat=True)[:limite]
     )
     n = 0
-    for ex in pendentes:
+    for pk in pks:
+        if not _claim(pk, 'aguardando'):
+            continue  # outra rodada venceu a corrida
+        ex = (
+            ExecucaoFluxo.all_tenants.select_related('fluxo', 'tenant')
+            .filter(pk=pk).first()
+        )
+        if ex is None:
+            continue
         branch = 'timeout' if ex.modo_espera == 'resposta' else 'default'
         retomar(ex, branch)
         n += 1
@@ -103,17 +189,31 @@ def rodar_novos(limite=100):
 
     O fluxo roda AQUI (no cron), fora do thread do evento que só enfileirou. Cada
     execução é isolada: uma falha não derruba as outras.
+
+    Claim atômico por execução (`_claim`): duas rodadas concorrentes nunca rodam a
+    mesma. Watchdog no início devolve pra fila o que ficou preso em 'rodando'.
     """
+    destravar_execucoes_presas()
     agora = timezone.now()
-    novos = list(
-        ExecucaoFluxo.all_tenants.select_related('fluxo', 'tenant', 'lead')
-        .filter(status='pendente', agendado_para__lte=agora)[:limite]
+    pks = list(
+        ExecucaoFluxo.all_tenants
+        .filter(status='pendente', agendado_para__lte=agora)
+        .values_list('pk', flat=True)[:limite]
     )
     n = 0
-    for ex in novos:
+    for pk in pks:
+        if not _claim(pk, 'pendente'):
+            continue  # outra rodada venceu a corrida
+        ex = (
+            ExecucaoFluxo.all_tenants.select_related('fluxo', 'tenant', 'lead')
+            .filter(pk=pk).first()
+        )
+        if ex is None:
+            continue
         try:
             contexto = _rehidratar(ex)
-            inicio = (ex.estado or {}).get('inicio')
+            # pendente-retry usa o nó que falhou (no_pausado); pendente novo, o estado.inicio.
+            inicio = ex.no_pausado or (ex.estado or {}).get('inicio')
             executar_e_persistir(ex.fluxo, contexto, inicio=inicio, execucao=ex)
             n += 1
         except Exception:

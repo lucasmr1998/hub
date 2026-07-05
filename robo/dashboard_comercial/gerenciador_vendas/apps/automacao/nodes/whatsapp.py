@@ -50,6 +50,7 @@ class _WhatsappBase(BaseNode):
 class WhatsappTextoNode(_WhatsappBase):
     tipo = "whatsapp_texto"
     label = "WhatsApp: enviar mensagem"
+    retry_seguro = False  # envio real sem dedupe: não reenviar num retry automático
 
     def campos_config(self) -> list:
         return [
@@ -81,6 +82,7 @@ class WhatsappMidiaNode(_WhatsappBase):
     tipo = "whatsapp_midia"
     label = "WhatsApp: enviar mídia"
     icone = "bi-image"
+    retry_seguro = False  # envio real sem dedupe: não reenviar num retry automático
 
     def campos_config(self) -> list:
         return [
@@ -153,6 +155,7 @@ class WhatsappPerguntaNode(_WhatsappBase):
     label = "WhatsApp: enviar e aguardar resposta"
     icone = "bi-chat-dots"
     saidas = ["resposta", "timeout"]
+    retry_seguro = False  # envio real sem dedupe: não reenviar num retry automático
 
     def campos_config(self) -> list:
         return [

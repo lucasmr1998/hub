@@ -24,6 +24,7 @@ class MatrixHsmNode(BaseNode):
     grupo = "Integrações"
     subgrupo = "Matrix"
     saidas = ["sucesso", "erro"]
+    retry_seguro = False  # outbound real (cria atendimento + envia HSM): não reexecutar num retry
 
     def campos_config(self) -> list:
         return [

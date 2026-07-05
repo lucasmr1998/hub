@@ -137,6 +137,10 @@ AUTOMACAO_WIRING_ATIVO = os.environ.get('AUTOMACAO_WIRING_ATIVO', 'false').strip
 # env-driven pra ligar/desligar sem deploy. settings_local liga em dev.
 AUTOMACAO_SHADOW_ATIVO = os.environ.get('AUTOMACAO_SHADOW_ATIVO', 'false').strip().lower() in ('true', '1', 'yes', 'on')
 
+# Watchdog do cron (hardening E3): minutos que uma execução pode ficar 'rodando'
+# antes do watchdog devolvê-la pra fila (worker morto no meio). Env-driven.
+AUTOMACAO_WATCHDOG_MINUTOS = int(os.environ.get('AUTOMACAO_WATCHDOG_MINUTOS', '10'))
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',

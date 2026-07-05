@@ -85,6 +85,9 @@ class BaseNode:
     subgrupo = ""        # subcategoria no menu
     saidas = ["sucesso"] # branches que o nó pode emitir (portas de saída no editor)
     is_trigger = False   # gatilho? (sem porta de entrada; é o início do fluxo)
+    # Retry transitório (E4): pode reexecutar automaticamente após erro não tratado?
+    # False = ação sem dedupe (ex: envia mensagem real) — não reexecutar num retry.
+    retry_seguro = True
 
     # Saídas dinâmicas (config-driven): quando True, as portas do nó vêm de um campo
     # da config (`campo_saidas`) em vez de `saidas` fixo. Ex: o `switch` deriva os
