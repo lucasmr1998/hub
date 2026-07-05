@@ -82,6 +82,12 @@ class ExecucaoFluxo(TenantMixin):
         on_delete=models.SET_NULL, related_name='+',
     )
     agendado_para = models.DateTimeField(null=True, blank=True, db_index=True)
+    # Claim atômico (hardening E3): quando um worker reivindicou esta execução
+    # (status='rodando'). Base do CAS anti dupla execução e do watchdog.
+    claimed_em = models.DateTimeField(null=True, blank=True)
+    # Retry transitório (hardening E4): quantas vezes esta execução já foi retentada
+    # após terminar em erro não tratado (teto em execucao.MAX_TENTATIVAS).
+    tentativas = models.PositiveSmallIntegerField(default=0)
     trace = models.JSONField(default=list)
     erro = models.TextField(blank=True, default='')
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -93,6 +99,8 @@ class ExecucaoFluxo(TenantMixin):
         indexes = [
             models.Index(fields=['status', 'agendado_para']),
             models.Index(fields=['status', 'modo_espera', 'chave']),
+            models.Index(fields=['status', 'claimed_em']),      # watchdog (E3)
+            models.Index(fields=['fluxo', 'lead', 'criado_em']),  # orçamento anti-loop (E5) + freios
         ]
 
     def __str__(self):
