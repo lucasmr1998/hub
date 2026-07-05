@@ -141,6 +141,12 @@ AUTOMACAO_SHADOW_ATIVO = os.environ.get('AUTOMACAO_SHADOW_ATIVO', 'false').strip
 # antes do watchdog devolvê-la pra fila (worker morto no meio). Env-driven.
 AUTOMACAO_WATCHDOG_MINUTOS = int(os.environ.get('AUTOMACAO_WATCHDOG_MINUTOS', '10'))
 
+# Orçamento global anti-loop (hardening E5): teto de execuções na última hora,
+# por lead e por fluxo inteiro. Default-on (independe de config por fluxo);
+# 0 desliga o respectivo limite. Env-driven.
+AUTOMACAO_ORCAMENTO_LEAD_HORA = int(os.environ.get('AUTOMACAO_ORCAMENTO_LEAD_HORA', '20'))
+AUTOMACAO_ORCAMENTO_FLUXO_HORA = int(os.environ.get('AUTOMACAO_ORCAMENTO_FLUXO_HORA', '500'))
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',

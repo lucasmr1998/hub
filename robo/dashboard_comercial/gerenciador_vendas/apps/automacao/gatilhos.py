@@ -12,6 +12,9 @@ Segurança:
 - Tudo por tenant explícito (a engine roda fora de request).
 - Tudo embrulhado: uma falha aqui NUNCA quebra o motor que disparou o evento.
 - Guard de re-entrância (thread-local) contra cascata no mesmo request.
+- Orçamento global (hardening E5, `_orcamento_excedido`): teto por hora, default
+  on, contra loop entre ciclos de cron (fluxo reenfileirando a si mesmo via
+  evento). Independente do guard acima, que só protege o mesmo request.
 """
 import logging
 import threading
@@ -73,6 +76,8 @@ def _despachar(evento, contexto, tenant):
             lead = ctx.lead if _eh_lead(ctx.lead) else None
             if _freio_bloqueia(fluxo, lead, cfg):
                 continue
+            if _orcamento_excedido(fluxo, lead):
+                continue
             _enfileirar(fluxo, ctx, trigger_handle)
         except Exception:
             logger.exception('automacao: falha ao enfileirar fluxo %s (evento=%s)', fluxo.pk, evento)
@@ -115,6 +120,66 @@ def _freio_bloqueia(fluxo, lead, cfg):
             return True
     if max_lead > 0 and qs.count() >= max_lead:
         return True
+    return False
+
+
+def _orcamento_excedido(fluxo, lead):
+    """Teto GLOBAL de execuções por hora, default-on e independente da config do fluxo.
+
+    O `_freio_bloqueia` acima é opcional (por fluxo) e o guard de profundidade em
+    `on_evento` é thread-local (só protege dentro do mesmo request). Nenhum dos
+    dois barra o caso: fluxo dispara uma ação que gera um evento que reenfileira
+    o próprio fluxo, formando um loop que atravessa ciclos de cron (a execução é
+    deferida). Este teto cobre esse buraco, por janela de 1 hora.
+
+    `AUTOMACAO_ORCAMENTO_LEAD_HORA` / `AUTOMACAO_ORCAMENTO_FLUXO_HORA` <= 0
+    desliga cada limite independentemente.
+    """
+    max_lead = int(getattr(settings, 'AUTOMACAO_ORCAMENTO_LEAD_HORA', 0) or 0)
+    max_fluxo = int(getattr(settings, 'AUTOMACAO_ORCAMENTO_FLUXO_HORA', 0) or 0)
+    if max_lead <= 0 and max_fluxo <= 0:
+        return False
+
+    from datetime import timedelta
+    from django.utils import timezone
+    from .models import ExecucaoFluxo
+
+    def _logar(motivo, contagem, limite):
+        try:
+            from apps.sistema.models import LogSistema
+            LogSistema.all_tenants.create(
+                tenant=fluxo.tenant,
+                categoria='sistema', acao='automacao_freio_global',
+                entidade='Fluxo', entidade_id=fluxo.pk,
+                mensagem=(
+                    f'Fluxo {fluxo.pk} barrado pelo orçamento global ({motivo}): '
+                    f'{contagem}/{limite} execuções na última hora.'
+                ),
+                dados_extras={
+                    'motivo': motivo, 'contagem': contagem, 'limite': limite,
+                    'lead_id': lead.pk if lead is not None else None,
+                },
+            )
+        except Exception:
+            logger.exception('automacao: falha ao registrar freio global (fluxo=%s)', fluxo.pk)
+
+    base = ExecucaoFluxo.all_tenants.filter(
+        tenant=fluxo.tenant, fluxo=fluxo,
+        criado_em__gte=timezone.now() - timedelta(hours=1),
+    )
+
+    if lead is not None and max_lead > 0:
+        contagem = base.filter(lead=lead).count()
+        if contagem >= max_lead:
+            _logar('lead', contagem, max_lead)
+            return True
+
+    if max_fluxo > 0:
+        contagem = base.count()
+        if contagem >= max_fluxo:
+            _logar('fluxo', contagem, max_fluxo)
+            return True
+
     return False
 
 
