@@ -259,11 +259,33 @@ function nomeCurto(nome) {
   return p[0] + ' ' + p[1][0].toUpperCase() + '.';
 }
 
-function renderTabela(vendedores) {
+const RANKING_POR_PAGINA = 10;
+let rankingPagina = 1;
+let rankingDados = [];
+
+function renderTabela(vendedores, pagina) {
   if (!vendedores.length) {
     document.getElementById('tabela-vendedores').innerHTML = '<div class="loading-state"><i class="bi bi-people"></i> Nenhum dado.</div>';
     return;
   }
+  rankingDados = vendedores;
+  const totalPaginas = Math.ceil(vendedores.length / RANKING_POR_PAGINA);
+  rankingPagina = Math.min(Math.max(pagina || 1, 1), totalPaginas);
+  const inicio = (rankingPagina - 1) * RANKING_POR_PAGINA;
+  const paginaItens = vendedores.slice(inicio, inicio + RANKING_POR_PAGINA);
+
+  const paginacao = totalPaginas > 1 ? `
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--sp-3) var(--sp-2) 0;">
+      <span style="font-size: 12px; color: var(--color-text-muted);">
+        ${inicio + 1}–${Math.min(inicio + RANKING_POR_PAGINA, vendedores.length)} de ${vendedores.length} vendedores
+      </span>
+      <div style="display: flex; gap: var(--sp-1);">
+        <button class="btn btn-secondary btn-sm" onclick="mudarPaginaRanking(${rankingPagina - 1})" ${rankingPagina <= 1 ? 'disabled' : ''}><i class="bi bi-chevron-left"></i></button>
+        <span style="font-size: 12px; color: var(--color-text-muted); align-self: center; padding: 0 var(--sp-2);">${rankingPagina} / ${totalPaginas}</span>
+        <button class="btn btn-secondary btn-sm" onclick="mudarPaginaRanking(${rankingPagina + 1})" ${rankingPagina >= totalPaginas ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>
+      </div>
+    </div>` : '';
+
   document.getElementById('tabela-vendedores').innerHTML = `
     <table class="data-table">
       <thead>
@@ -277,11 +299,11 @@ function renderTabela(vendedores) {
         </tr>
       </thead>
       <tbody>
-        ${vendedores.map((v, i) => {
+        ${paginaItens.map((v, i) => {
           const pct = v.meta_quantidade > 0 ? Math.min(Math.round(v.vendas_quantidade / v.meta_quantidade * 100), 100) : 0;
           const ini = (v.nome || '?').split(' ').filter(Boolean).map(p => p[0]).slice(0, 2).join('').toUpperCase();
           return `<tr>
-            <td style="color: var(--color-text-muted); font-weight: var(--fw-bold);">${i + 1}</td>
+            <td style="color: var(--color-text-muted); font-weight: var(--fw-bold);">${inicio + i + 1}</td>
             <td><div class="vendedor-nome"><div class="av">${ini}</div>${nomeCurto(v.nome)}</div></td>
             <td style="font-weight: var(--fw-bold); color: var(--color-text);">${v.vendas_quantidade}</td>
             <td style="min-width: 140px;">
@@ -296,7 +318,12 @@ function renderTabela(vendedores) {
           </tr>`;
         }).join('')}
       </tbody>
-    </table>`;
+    </table>
+    ${paginacao}`;
+}
+
+function mudarPaginaRanking(pagina) {
+  renderTabela(rankingDados, pagina);
 }
 
 function renderFunil(funil) {
