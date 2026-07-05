@@ -341,9 +341,11 @@ function renderFunil(funil) {
 }
 
 function renderChart(vendedores) {
-  const nomes = vendedores.map(v => v.nome.split(' ')[0]);
-  const vendas = vendedores.map(v => v.vendas_quantidade);
-  const metas = vendedores.map(v => v.meta_quantidade);
+  // Grafico mostra so o top 5 (lista completa fica na tabela paginada)
+  const top = vendedores.slice(0, 5);
+  const nomes = top.map(v => v.nome.split(' ')[0]);
+  const vendas = top.map(v => v.vendas_quantidade);
+  const metas = top.map(v => v.meta_quantidade);
 
   if (chartInstance) chartInstance.destroy();
   chartInstance = new Chart(document.getElementById('chartVendas'), {
