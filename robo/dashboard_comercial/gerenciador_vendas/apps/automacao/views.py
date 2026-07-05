@@ -6,17 +6,37 @@ Endpoints do editor de automação.
   trace. Sem persistência — o editor manda o grafo, o backend executa e responde.
 """
 import json
+import logging
 
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
+from apps.sistema.decorators import user_tem_funcionalidade
+from apps.sistema.utils import registrar_acao
+
 from .models import Fluxo, ExecucaoFluxo
 from .nodes import Contexto, REGISTRY
-from .runtime import executar_fluxo, validar_fluxo
+from .runtime import executar_fluxo, validar_fluxo, FluxoInvalido
+
+logger = logging.getLogger(__name__)
+
+
+def _exige_ver(request):
+    """Bloqueia (403 JSON) se o usuário não tem `automacao.ver`. Devolve None se pode seguir."""
+    if not user_tem_funcionalidade(request, 'automacao.ver'):
+        return JsonResponse({'erro': 'Sem permissão'}, status=403)
+    return None
+
+
+def _exige_gerenciar(request):
+    """Bloqueia (403 JSON) se o usuário não tem `automacao.gerenciar`. Devolve None se pode seguir."""
+    if not user_tem_funcionalidade(request, 'automacao.gerenciar'):
+        return JsonResponse({'erro': 'Sem permissão'}, status=403)
+    return None
 
 
 def _corpo_json(request):
@@ -45,6 +65,8 @@ def editor_page(request):
     Passa `v` (mtime do bundle) pro template fazer cache-bust — o nome do arquivo
     é fixo (editor.js), então sem isso o navegador serve a versão velha do cache.
     """
+    if not user_tem_funcionalidade(request, 'automacao.ver'):
+        return HttpResponseForbidden('Sem permissão')
     import os
     bundle = os.path.join(os.path.dirname(__file__), 'static', 'automacao_editor', 'editor.js')
     try:
@@ -57,6 +79,8 @@ def editor_page(request):
 @login_required
 def execucoes_page(request):
     """Observabilidade: lista as execuções de fluxo do tenant (status, trace, erro)."""
+    if not user_tem_funcionalidade(request, 'automacao.ver'):
+        return HttpResponseForbidden('Sem permissão')
     from django.core.paginator import Paginator
     from django.db.models import Count
 
@@ -99,6 +123,9 @@ def execucoes_page(request):
 def opcoes_api(request, fonte):
     """Opções dinâmicas de uma fonte (segmentos, pipelines, estágios, responsáveis…)
     pro tenant — alimenta os dropdowns dinâmicos do editor."""
+    neg = _exige_ver(request)
+    if neg:
+        return neg
     from .opcoes import opcoes_de
     return JsonResponse({'opcoes': opcoes_de(fonte, getattr(request, 'tenant', None))})
 
@@ -107,6 +134,9 @@ def opcoes_api(request, fonte):
 def execucoes_api(request):
     """JSON das execuções do tenant — alimenta a aba 'Execuções' DENTRO do editor
     (sem sair da página). Opcional `?fluxo=<id>` e `?status=<s>`."""
+    neg = _exige_ver(request)
+    if neg:
+        return neg
     tenant = getattr(request, 'tenant', None)
     if tenant is None:
         return JsonResponse({'erro': 'sem tenant'}, status=400)
@@ -134,6 +164,9 @@ def execucoes_api(request):
 def execucao_detalhe_api(request, pk):
     """Uma execução com o grafo + estado (variaveis/nodes) + trace — pro editor
     REPRODUZIR a execução no canvas (caminho verde + I/O por nó), estilo n8n."""
+    neg = _exige_ver(request)
+    if neg:
+        return neg
     tenant = getattr(request, 'tenant', None)
     e = (ExecucaoFluxo.all_tenants.filter(tenant=tenant, pk=pk)
          .select_related('fluxo').first())
@@ -156,6 +189,8 @@ def execucao_detalhe_api(request, pk):
 def agentes_page(request):
     """Consolidado: a gerencia de agentes mora no Workspace (casa unica).
     Mantido como redirect pra nao quebrar links/bookmarks antigos."""
+    if not user_tem_funcionalidade(request, 'automacao.ver'):
+        return HttpResponseForbidden('Sem permissão')
     from django.shortcuts import redirect
     return redirect('workspace:agentes_lista')
 
@@ -163,6 +198,8 @@ def agentes_page(request):
 @login_required
 def agente_editar_page(request, pk=None):
     """Consolidado: o editor de agentes mora no Workspace. Redirect (mantem o pk)."""
+    if not user_tem_funcionalidade(request, 'automacao.ver'):
+        return HttpResponseForbidden('Sem permissão')
     from django.shortcuts import redirect
     if pk:
         return redirect('workspace:agente_editar', pk=pk)
@@ -173,6 +210,9 @@ def agente_editar_page(request, pk=None):
 @login_required
 def agente_salvar(request):
     """Cria/atualiza um Agente do tenant (form POST)."""
+    neg = _exige_gerenciar(request)
+    if neg:
+        return neg
     tenant = getattr(request, 'tenant', None)
     if tenant is None:
         return JsonResponse({'erro': 'sem tenant'}, status=400)
@@ -189,7 +229,8 @@ def agente_salvar(request):
         integracao = IntegracaoAPI.all_tenants.filter(tenant=tenant, id=int(integ_id)).first()
 
     pk = (request.POST.get('id') or '').strip()
-    if pk.isdigit():
+    criando = not pk.isdigit()
+    if not criando:
         agente = Agente.all_tenants.filter(tenant=tenant, pk=int(pk)).first()
         if agente is None:
             return JsonResponse({'erro': 'agente não encontrado'}, status=404)
@@ -205,6 +246,13 @@ def agente_salvar(request):
     agente.tools = [t for t in request.POST.getlist('tools') if t]
     agente.base_categorias = [c for c in request.POST.getlist('base_categorias') if c]
     agente.save()
+    try:
+        acao = 'criar' if criando else 'editar'
+        registrar_acao('config', acao, 'agente', agente.pk,
+                        f"Agente '{agente.nome}' {'criado' if criando else 'atualizado'}",
+                        request=request)
+    except Exception:
+        pass
     return JsonResponse({'ok': True, 'id': agente.pk})
 
 
@@ -212,12 +260,21 @@ def agente_salvar(request):
 @login_required
 def agente_excluir(request, pk):
     """Remove um Agente do tenant."""
+    neg = _exige_gerenciar(request)
+    if neg:
+        return neg
     tenant = getattr(request, 'tenant', None)
     from .models import Agente
     agente = Agente.all_tenants.filter(tenant=tenant, pk=pk).first()
     if agente is None:
         return JsonResponse({'erro': 'agente não encontrado'}, status=404)
+    nome = agente.nome
     agente.delete()
+    try:
+        registrar_acao('config', 'excluir', 'agente', pk,
+                        f"Agente '{nome}' excluído", request=request)
+    except Exception:
+        pass
     return JsonResponse({'ok': True})
 
 
@@ -226,6 +283,9 @@ def agente_excluir(request, pk):
 def agente_simular_api(request):
     """Simulador de conversa: roda o agente com o histórico do chat + tools (que rodam
     de verdade em dev), e devolve a resposta + quais tools dispararam. Sem WhatsApp."""
+    neg = _exige_gerenciar(request)
+    if neg:
+        return neg
     tenant = getattr(request, 'tenant', None)
     if tenant is None:
         return JsonResponse({'erro': 'sem tenant'}, status=400)
@@ -273,6 +333,9 @@ def agente_simular_api(request):
 def agente_resumo_api(request, pk):
     """Resumo read-only de um agente (prompt + tools ativas) — pro nó ia_agente
     mostrar o que o agente escolhido faz, sem sair do editor."""
+    neg = _exige_ver(request)
+    if neg:
+        return neg
     tenant = getattr(request, 'tenant', None)
     from .models import Agente
     from .services.ia_tools import tools_disponiveis
@@ -302,6 +365,9 @@ def agente_resumo_api(request, pk):
 @login_required
 def nodes_catalogo_api(request):
     """Paleta: tipos de nó disponíveis pro editor montar a barra de blocos."""
+    neg = _exige_ver(request)
+    if neg:
+        return neg
     return JsonResponse({'nodes': [
         {
             'tipo': n.tipo, 'label': n.label, 'icone': n.icone,
@@ -317,6 +383,9 @@ def nodes_catalogo_api(request):
 @login_required
 def testar_fluxo_api(request):
     """Roda um fluxo postado pelo editor e devolve o trace. Não persiste nada."""
+    neg = _exige_gerenciar(request)
+    if neg:
+        return neg
     try:
         payload = json.loads(request.body or b'{}')
     except json.JSONDecodeError:
@@ -355,6 +424,13 @@ def testar_fluxo_api(request):
 @login_required
 def fluxos_api(request):
     """Lista (GET) e cria (POST) fluxos do tenant da sessão."""
+    if request.method == 'GET':
+        neg = _exige_ver(request)
+    else:
+        neg = _exige_gerenciar(request)
+    if neg:
+        return neg
+
     tenant = getattr(request, 'tenant', None)
     if tenant is None:
         return JsonResponse({'erro': 'Sem tenant na sessão.'}, status=400)
@@ -379,6 +455,11 @@ def fluxos_api(request):
             criado_por=request.user if request.user.is_authenticated else None,
         )
         token = _ensure_webhook_token(fluxo)
+        try:
+            registrar_acao('config', 'criar', 'fluxo', fluxo.id,
+                            f"Fluxo '{fluxo.nome}' criado", request=request)
+        except Exception:
+            pass
         return JsonResponse({'id': fluxo.id, 'nome': fluxo.nome, 'webhook_token': token})
 
     return JsonResponse({'erro': 'método não suportado'}, status=405)
@@ -387,6 +468,13 @@ def fluxos_api(request):
 @login_required
 def fluxo_api(request, pk):
     """Lê (GET), atualiza (PUT/POST) e remove (DELETE) um fluxo do tenant."""
+    if request.method == 'GET':
+        neg = _exige_ver(request)
+    else:
+        neg = _exige_gerenciar(request)
+    if neg:
+        return neg
+
     tenant = getattr(request, 'tenant', None)
     if tenant is None:
         return JsonResponse({'erro': 'Sem tenant na sessão.'}, status=400)
@@ -411,10 +499,22 @@ def fluxo_api(request, pk):
             fluxo.grafo = data['grafo'] or {}
         fluxo.save()
         token = _ensure_webhook_token(fluxo)
+        try:
+            registrar_acao('config', 'editar', 'fluxo', fluxo.id,
+                            f"Fluxo '{fluxo.nome}' atualizado", request=request)
+        except Exception:
+            pass
         return JsonResponse({'id': fluxo.id, 'nome': fluxo.nome, 'webhook_token': token})
 
     if request.method == 'DELETE':
+        nome = fluxo.nome
+        fid = fluxo.id
         fluxo.delete()
+        try:
+            registrar_acao('config', 'excluir', 'fluxo', fid,
+                            f"Fluxo '{nome}' excluído", request=request)
+        except Exception:
+            pass
         return JsonResponse({'ok': True})
 
     return JsonResponse({'erro': 'método não suportado'}, status=405)
@@ -424,6 +524,9 @@ def fluxo_api(request, pk):
 @login_required
 def fluxo_webhook_api(request, pk):
     """Ativa o gatilho webhook do fluxo (gera token) e devolve a URL."""
+    neg = _exige_gerenciar(request)
+    if neg:
+        return neg
     import secrets
     tenant = getattr(request, 'tenant', None)
     fluxo = Fluxo.all_tenants.filter(tenant=tenant, pk=pk).first()
@@ -454,6 +557,9 @@ def _webhook_rate_limited(token):
 @login_required
 def eventos_api(request):
     """Catálogo de eventos do sistema (+ subcampos) pro nó Evento e seus filtros."""
+    neg = _exige_ver(request)
+    if neg:
+        return neg
     from .eventos import catalogo
     return JsonResponse({'eventos': catalogo()})
 
@@ -473,8 +579,14 @@ def webhook_receber(request, token):
     if payload is None:
         payload = {}
     from .execucao import executar_e_persistir
-    contexto = Contexto(tenant=fluxo.tenant, variaveis={'payload': payload})
-    execucao, res = executar_e_persistir(fluxo, contexto)
+    try:
+        contexto = Contexto(tenant=fluxo.tenant, variaveis={'payload': payload})
+        execucao, res = executar_e_persistir(fluxo, contexto)
+    except FluxoInvalido as exc:
+        return JsonResponse({'erro': 'fluxo inválido', 'detalhes': str(exc)}, status=400)
+    except Exception:
+        logger.exception("Falha ao executar fluxo via webhook (token=%s)", token)
+        return JsonResponse({'erro': 'falha interna ao executar o fluxo'}, status=500)
 
     # Modo de resposta (estilo n8n), configurado no próprio nó Webhook.
     grafo = fluxo.grafo or {}

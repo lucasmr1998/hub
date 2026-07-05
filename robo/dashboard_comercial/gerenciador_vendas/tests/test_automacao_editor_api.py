@@ -19,7 +19,9 @@ from apps.automacao import views
 
 def _req_get(autenticado=True):
     req = RequestFactory().get('/automacao/api/nodes/')
-    req.user = SimpleNamespace(is_authenticated=autenticado)
+    # is_superuser=True: estes testes cobrem roteamento/execução, não permissão
+    # (permissão granular tem suite própria em test_automacao_permissoes.py).
+    req.user = SimpleNamespace(is_authenticated=autenticado, is_superuser=True)
     return req
 
 
@@ -29,7 +31,7 @@ def _post_fluxo(payload, tenant=SimpleNamespace(pk=1, slug='alpha')):
         data=json.dumps(payload),
         content_type='application/json',
     )
-    req.user = SimpleNamespace(is_authenticated=True)
+    req.user = SimpleNamespace(is_authenticated=True, is_superuser=True)
     req.tenant = tenant
     return views.testar_fluxo_api(req)
 

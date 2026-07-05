@@ -67,6 +67,9 @@ FUNCIONALIDADES = [
     ('configuracoes', 'integracoes.gerenciar_ordens_servico', 'Gerenciar Ordens de Servico', 'Re-tentar e resolver manualmente OS', 11),
     ('configuracoes', 'integracoes.ver_contratos', 'Ver Contratos', 'Painel de tentativas de criar/aceitar contrato HubSoft', 12),
     ('configuracoes', 'integracoes.gerenciar_contratos', 'Gerenciar Contratos', 'Re-tentar tentativas de contrato', 13),
+    # Automação (engine nova React Flow)
+    ('configuracoes', 'automacao.ver', 'Ver Automações', 'Ver fluxos, execuções e agentes da engine de automação', 14),
+    ('configuracoes', 'automacao.gerenciar', 'Gerenciar Automações', 'Criar, editar, testar e ativar fluxos e agentes da engine de automação', 15),
 ]
 
 
