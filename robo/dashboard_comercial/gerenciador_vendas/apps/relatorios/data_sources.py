@@ -102,6 +102,8 @@ registrar(DataSource(
         'lead__bairro':          FieldSpec('Bairro', 'string'),
         'lead__origem':          FieldSpec('Origem do lead', 'choice'),
         'lead__canal_entrada':   FieldSpec('Canal de entrada', 'choice'),
+        'lead__fonte':           FieldSpec('Fonte de trafego (ads)', 'choice'),
+        'lead__campanha_origem__nome': FieldSpec('Campanha de origem', 'string'),
     },
     metricas=['count', 'sum:valor_estimado', 'avg:valor_estimado', 'avg:probabilidade'],
     order_by_padrao='-data_criacao',
