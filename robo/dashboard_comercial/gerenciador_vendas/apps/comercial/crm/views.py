@@ -896,7 +896,19 @@ def oportunidade_detalhe(request, pk):
 
     # Dados cross-app (sem duplicar, apenas consultando)
     from apps.comercial.leads.models import HistoricoContato
-    historico_contatos = HistoricoContato.objects.filter(lead=lead).order_by('-data_hora_contato')[:20]
+    historico_contatos = list(
+        HistoricoContato.objects.filter(lead=lead).order_by('-data_hora_contato')[:20]
+    )
+    # Ids de midia do WhatsApp (wamid...) sao tokens gigantes que estouram o
+    # layout da timeline e nao dizem nada pro usuario. Troca por rotulo
+    # legivel SO na exibicao (nao altera o banco).
+    import re as _re
+    _wamid_re = _re.compile(r'\S*wamid\.\S+')
+    for _hc in historico_contatos:
+        if _hc.observacoes and 'wamid.' in _hc.observacoes:
+            _hc.observacoes = _wamid_re.sub('[midia recebida]', _hc.observacoes)
+        if _hc.ultima_mensagem and 'wamid.' in _hc.ultima_mensagem:
+            _hc.ultima_mensagem = _wamid_re.sub('[midia recebida]', _hc.ultima_mensagem)
 
     try:
         from apps.integracoes.models import ClienteHubsoft
