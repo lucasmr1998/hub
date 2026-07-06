@@ -217,7 +217,57 @@ class WidgetQueryBuilder:
           aquele estagio (via HistoricoPipelineEstagio). Finais agrupados
           em 'Contratacao' e 'Perdido'. IGNORA o resultado original do
           queryset — recalcula via historico.
+        - 'funil_macro': funil de NEGOCIO cross-modelo:
+          Atendimentos -> Leads -> Oportunidades -> Vendas | Perdidas.
+          IGNORA o queryset — conta direto nos models, janela de N dias
+          (agrupamento['dias'], default 30). Percentual de conversao vs
+          etapa anterior vai no label. "Vendas" = ops em estagio
+          is_final_ganho fechadas no periodo (fonte: CRM, decisao 06/07).
         """
+        if transform == 'funil_macro':
+            from apps.comercial.leads.models import LeadProspecto, HistoricoContato
+            from apps.comercial.crm.models import OportunidadeVenda
+            from django.utils import timezone as dj_tz
+            from datetime import timedelta as td
+
+            dias = 30
+            try:
+                dias = int((self.widget.agrupamento or {}).get('dias') or 30)
+            except (TypeError, ValueError):
+                pass
+            cutoff = dj_tz.now() - td(days=dias)
+
+            atendimentos = HistoricoContato.all_tenants.filter(
+                tenant=self.tenant, status='fluxo_inicializado',
+                data_hora_contato__gte=cutoff,
+            ).count()
+            leads_n = LeadProspecto.all_tenants.filter(
+                tenant=self.tenant, data_cadastro__gte=cutoff,
+            ).count()
+            ops_n = OportunidadeVenda.all_tenants.filter(
+                tenant=self.tenant, data_criacao__gte=cutoff,
+            ).count()
+            vendas = OportunidadeVenda.all_tenants.filter(
+                tenant=self.tenant, estagio__is_final_ganho=True,
+                data_fechamento_real__gte=cutoff,
+            ).count()
+            perdidas = OportunidadeVenda.all_tenants.filter(
+                tenant=self.tenant, estagio__is_final_perdido=True,
+                data_fechamento_real__gte=cutoff,
+            ).count()
+
+            def _pct(parte, todo):
+                return f' ({round(parte / todo * 100)}%)' if todo else ''
+
+            labels = [
+                'Atendimentos',
+                f'Leads{_pct(leads_n, atendimentos)}',
+                f'Oportunidades{_pct(ops_n, leads_n)}',
+                f'Vendas: {vendas}{_pct(vendas, ops_n)} | Perdidas: {perdidas}{_pct(perdidas, ops_n)}',
+            ]
+            data = [float(atendimentos), float(leads_n), float(ops_n), float(vendas + perdidas)]
+            return labels, data
+
         if transform == 'funil_comercial' and dimensao == 'estagio__nome':
             from apps.comercial.crm.models import PipelineEstagio
             ests = {e.nome: (e.ordem, e.is_final_ganho, e.is_final_perdido)
