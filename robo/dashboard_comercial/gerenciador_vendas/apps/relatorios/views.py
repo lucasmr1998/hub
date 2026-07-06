@@ -284,8 +284,20 @@ def api_widget_dados(request, pk):
     dashboard = widget.dashboard
     if not (dashboard.compartilhado or dashboard.criado_por_id == request.user.id or request.user.is_superuser):
         return JsonResponse({'error': 'Sem acesso a este dashboard'}, status=403)
+
+    # Filtros globais do dashboard (barra no topo): ?dias=7|30|90|tudo & ?fonte=facebook|organico
+    overrides = {}
+    dias_param = (request.GET.get('dias') or '').strip()
+    if dias_param == 'tudo':
+        overrides['dias'] = 'tudo'
+    elif dias_param.isdigit():
+        overrides['dias'] = int(dias_param)
+    fonte_param = (request.GET.get('fonte') or '').strip()
+    if fonte_param in ('facebook', 'organico'):
+        overrides['fonte'] = fonte_param
+
     try:
-        builder = WidgetQueryBuilder(widget, tenant=request.tenant)
+        builder = WidgetQueryBuilder(widget, tenant=request.tenant, overrides=overrides)
         resultado = builder.build()
         payload = resultado.to_dict()
         # Garante visualizacao no meta — JS do front usa pra renderizar com tipo correto

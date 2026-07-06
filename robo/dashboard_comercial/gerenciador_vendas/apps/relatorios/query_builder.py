@@ -75,9 +75,15 @@ class WidgetQueryBuilder:
         resultado = builder.build()   # ResultadoQuery
     """
 
-    def __init__(self, widget, tenant=None):
+    def __init__(self, widget, tenant=None, overrides=None):
         self.widget = widget
         self.tenant = tenant
+        # Filtros globais do dashboard (barra no topo). Suporta:
+        #   {'dias': 7|30|90|'tudo', 'fonte': 'facebook'|'organico'}
+        # 'dias' substitui o valor de filtros `ultimos_dias` existentes no
+        # widget ('tudo' remove o filtro). 'fonte' injeta filtro de origem
+        # de trafego nos data sources que tem o campo.
+        self.overrides = overrides or {}
         self.data_source = ds_registry.get(widget.data_source)
         if not self.data_source:
             raise WidgetQueryError(f'Data source desconhecido: {widget.data_source}')
@@ -117,16 +123,40 @@ class WidgetQueryBuilder:
         return campo in (self.data_source.campos or {})
 
     def _aplicar_filtros(self, qs):
+        dias_override = self.overrides.get('dias')
         for f in (self.widget.filtros or []):
             campo = f.get('campo')
             operador = f.get('operador', 'igual')
             valor = f.get('valor')
             if not self._validar_campo(campo) or operador not in OPERADORES_VALIDOS:
                 continue
+            # Override global de periodo: substitui valor dos ultimos_dias;
+            # 'tudo' remove o filtro de data por completo
+            if operador == 'ultimos_dias' and dias_override:
+                if dias_override == 'tudo':
+                    continue
+                valor = dias_override
             try:
                 qs = qs.filter(OPERADORES_VALIDOS[operador](campo, valor))
             except Exception:
                 continue
+
+        # Override global de fonte de trafego
+        fonte = self.overrides.get('fonte')
+        if fonte:
+            campo_fonte = None
+            if 'lead__fonte' in (self.data_source.campos or {}):
+                campo_fonte = 'lead__fonte'
+            elif 'fonte' in (self.data_source.campos or {}):
+                campo_fonte = 'fonte'
+            if campo_fonte:
+                try:
+                    if fonte == 'organico':
+                        qs = qs.exclude(**{campo_fonte: 'facebook'})
+                    else:
+                        qs = qs.filter(**{campo_fonte: fonte})
+                except Exception:
+                    pass
         return qs
 
     def _agg_expr(self, metrica: dict):
@@ -242,29 +272,59 @@ class WidgetQueryBuilder:
                 dias = int((self.widget.agrupamento or {}).get('dias') or 30)
             except (TypeError, ValueError):
                 pass
-            cutoff = dj_tz.now() - td(days=dias)
+            # Override global de periodo (barra do dashboard)
+            dias_override = self.overrides.get('dias')
+            if dias_override == 'tudo':
+                cutoff = None
+            elif dias_override:
+                dias = int(dias_override)
+                cutoff = dj_tz.now() - td(days=dias)
+            else:
+                cutoff = dj_tz.now() - td(days=dias)
 
-            atendimentos = HistoricoContato.all_tenants.filter(
+            # Override global de fonte: filtra leads/ops/vendas/perdidas.
+            # Atendimentos (HistoricoContato) nao tem atribuicao de fonte —
+            # fica sempre com o total do periodo.
+            fonte = self.overrides.get('fonte')
+
+            def _fonte_q_lead(qs):
+                if fonte == 'organico':
+                    return qs.exclude(fonte='facebook')
+                if fonte:
+                    return qs.filter(fonte=fonte)
+                return qs
+
+            def _fonte_q_op(qs):
+                if fonte == 'organico':
+                    return qs.exclude(lead__fonte='facebook')
+                if fonte:
+                    return qs.filter(lead__fonte=fonte)
+                return qs
+
+            atend_qs = HistoricoContato.all_tenants.filter(
                 tenant=self.tenant, status='fluxo_inicializado',
-                data_hora_contato__gte=cutoff,
-            ).count()
-            leads_n = LeadProspecto.all_tenants.filter(
-                tenant=self.tenant, data_cadastro__gte=cutoff,
-            ).count()
-            ops_qs = OportunidadeVenda.all_tenants.filter(
-                tenant=self.tenant, data_criacao__gte=cutoff,
             )
+            leads_qs = _fonte_q_lead(LeadProspecto.all_tenants.filter(tenant=self.tenant))
+            ops_qs = _fonte_q_op(OportunidadeVenda.all_tenants.filter(tenant=self.tenant))
+            vendas_qs = _fonte_q_op(OportunidadeVenda.all_tenants.filter(
+                tenant=self.tenant, estagio__is_final_ganho=True))
+            perdidas_qs = _fonte_q_op(OportunidadeVenda.all_tenants.filter(
+                tenant=self.tenant, estagio__is_final_perdido=True))
+
+            if cutoff:
+                atend_qs = atend_qs.filter(data_hora_contato__gte=cutoff)
+                leads_qs = leads_qs.filter(data_cadastro__gte=cutoff)
+                ops_qs = ops_qs.filter(data_criacao__gte=cutoff)
+                vendas_qs = vendas_qs.filter(data_fechamento_real__gte=cutoff)
+                perdidas_qs = perdidas_qs.filter(data_fechamento_real__gte=cutoff)
+
+            atendimentos = atend_qs.count()
+            leads_n = leads_qs.count()
             ops_n = ops_qs.count()
             ops_ads = ops_qs.filter(lead__fonte='facebook').count()
             ops_organico = ops_n - ops_ads
-            vendas = OportunidadeVenda.all_tenants.filter(
-                tenant=self.tenant, estagio__is_final_ganho=True,
-                data_fechamento_real__gte=cutoff,
-            ).count()
-            perdidas = OportunidadeVenda.all_tenants.filter(
-                tenant=self.tenant, estagio__is_final_perdido=True,
-                data_fechamento_real__gte=cutoff,
-            ).count()
+            vendas = vendas_qs.count()
+            perdidas = perdidas_qs.count()
 
             def _pct(parte, todo):
                 return round(parte / todo * 100) if todo else 0

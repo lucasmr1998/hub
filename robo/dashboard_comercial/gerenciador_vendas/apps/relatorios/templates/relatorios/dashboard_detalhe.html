@@ -25,6 +25,25 @@
   </div>
 </div>
 
+{% if widgets %}
+<div id="rel-filtros" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin: 0 0 var(--sp-4); padding: var(--sp-2) var(--sp-3); background: var(--color-bg-subtle,#f8fafc); border:1px solid var(--color-border,#e2e8f0); border-radius:10px;">
+  <div style="display:flex;align-items:center;gap:6px;">
+    <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Período</span>
+    <button class="btn btn-sm filtro-chip is-active" data-grupo="dias" data-valor="" onclick="setFiltroGlobal('dias','',this)">Padrão</button>
+    <button class="btn btn-sm filtro-chip" data-grupo="dias" data-valor="7" onclick="setFiltroGlobal('dias','7',this)">7d</button>
+    <button class="btn btn-sm filtro-chip" data-grupo="dias" data-valor="30" onclick="setFiltroGlobal('dias','30',this)">30d</button>
+    <button class="btn btn-sm filtro-chip" data-grupo="dias" data-valor="90" onclick="setFiltroGlobal('dias','90',this)">90d</button>
+    <button class="btn btn-sm filtro-chip" data-grupo="dias" data-valor="tudo" onclick="setFiltroGlobal('dias','tudo',this)">Tudo</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;">
+    <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Fonte</span>
+    <button class="btn btn-sm filtro-chip is-active" data-grupo="fonte" data-valor="" onclick="setFiltroGlobal('fonte','',this)">Todas</button>
+    <button class="btn btn-sm filtro-chip" data-grupo="fonte" data-valor="facebook" onclick="setFiltroGlobal('fonte','facebook',this)">Meta Ads</button>
+    <button class="btn btn-sm filtro-chip" data-grupo="fonte" data-valor="organico" onclick="setFiltroGlobal('fonte','organico',this)">Orgânico</button>
+  </div>
+</div>
+{% endif %}
+
 {% if not widgets %}
   <div class="rel-empty">
     <i class="bi bi-bar-chart" style="font-size:3rem;color:var(--color-text-muted);"></i>
@@ -253,6 +272,8 @@
   .rel-empty p { color:var(--color-text-muted); margin-bottom:var(--sp-3); }
 
   /* Widget card */
+  .filtro-chip { background: #fff; border: 1px solid var(--color-border,#e2e8f0); color: #475569; font-size: 12px; padding: 4px 12px; border-radius: 999px; }
+  .filtro-chip.is-active { background: var(--color-primary,#2563eb); border-color: var(--color-primary,#2563eb); color: #fff; font-weight: 600; }
   .widget-card {
     background:var(--color-bg); border:1px solid var(--color-border);
     border-radius:var(--radius); height:100%; display:flex; flex-direction:column;
@@ -339,11 +360,32 @@ const DASHBOARD_PK = {{ dashboard.pk }};
 const MODO_EDICAO = {{ modo_edicao|yesno:"true,false" }};
 const CSRF = "{{ csrf_token }}";
 
+// Filtros globais do dashboard (barra no topo) — aplicados em todos os widgets
+const FILTRO_GLOBAL = { dias: '', fonte: '' };
+
+function setFiltroGlobal(grupo, valor, btn) {
+  FILTRO_GLOBAL[grupo] = valor;
+  document.querySelectorAll(`.filtro-chip[data-grupo="${grupo}"]`).forEach(b => b.classList.remove('is-active'));
+  btn.classList.add('is-active');
+  document.querySelectorAll('.widget-card').forEach(card => {
+    const wid = parseInt(card.dataset.widgetId, 10);
+    if (wid) carregarWidget(wid, card);
+  });
+}
+
+function _filtroQuery() {
+  const p = new URLSearchParams();
+  if (FILTRO_GLOBAL.dias) p.set('dias', FILTRO_GLOBAL.dias);
+  if (FILTRO_GLOBAL.fonte) p.set('fonte', FILTRO_GLOBAL.fonte);
+  const s = p.toString();
+  return s ? `?${s}` : '';
+}
+
 const URLS = {
   data_sources: "{% url 'relatorios:api_data_sources' %}",
   ds_detalhe: (slug) => `/dashboards/api/data-source/${slug}/`,
   preview: "{% url 'relatorios:api_preview' %}",
-  widget_dados: (id) => `/dashboards/api/widget/${id}/dados/`,
+  widget_dados: (id) => `/dashboards/api/widget/${id}/dados/${_filtroQuery()}`,
   widget_salvar: "{% url 'relatorios:api_widget_salvar' %}",
   widget_excluir: (id) => `/dashboards/api/widget/${id}/excluir/`,
   layout_salvar: "{% url 'relatorios:api_dashboard_layout' dashboard.pk %}",
@@ -408,6 +450,7 @@ async function carregarWidget(widgetId, cardEl) {
   const tabela = body.querySelector('.widget-tabela');
   const erro = body.querySelector('.widget-erro');
 
+  erro.style.display = 'none';
   try {
     const r = await fetch(URLS.widget_dados(widgetId));
     const d = await r.json();
