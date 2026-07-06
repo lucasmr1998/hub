@@ -197,11 +197,18 @@ class WidgetQueryBuilder:
         if transform:
             labels, data = self._aplicar_transform(transform, dimensao, qs, labels, data)
 
+        meta_out = {'data_source': self.data_source.slug, 'metrica': metrica, 'dimensao': dimensao}
+        if transform:
+            meta_out['transform'] = transform
+            # funil_macro deixa os numeros crus pro front renderizar como fluxo
+            if getattr(self, '_macro_meta', None):
+                meta_out['macro'] = self._macro_meta
+
         return ResultadoQuery(
             labels=labels,
             series=[{'name': self._label_metrica(metrica), 'data': data}],
             total=sum(data) if data else 0,
-            meta={'data_source': self.data_source.slug, 'metrica': metrica, 'dimensao': dimensao},
+            meta=meta_out,
         )
 
     def _aplicar_transform(self, transform: str, dimensao: str, qs, labels: list, data: list):
@@ -257,13 +264,25 @@ class WidgetQueryBuilder:
             ).count()
 
             def _pct(parte, todo):
-                return f' ({round(parte / todo * 100)}%)' if todo else ''
+                return round(parte / todo * 100) if todo else 0
+
+            # Numeros crus pro front renderizar como fluxo horizontal
+            self._macro_meta = {
+                'dias': dias,
+                'etapas': [
+                    {'label': 'Atendimentos', 'valor': atendimentos, 'pct': None},
+                    {'label': 'Leads', 'valor': leads_n, 'pct': _pct(leads_n, atendimentos)},
+                    {'label': 'Oportunidades', 'valor': ops_n, 'pct': _pct(ops_n, leads_n)},
+                ],
+                'vendas': {'valor': vendas, 'pct': _pct(vendas, ops_n)},
+                'perdidas': {'valor': perdidas, 'pct': _pct(perdidas, ops_n)},
+            }
 
             labels = [
                 'Atendimentos',
-                f'Leads{_pct(leads_n, atendimentos)}',
-                f'Oportunidades{_pct(ops_n, leads_n)}',
-                f'Vendas: {vendas}{_pct(vendas, ops_n)} | Perdidas: {perdidas}{_pct(perdidas, ops_n)}',
+                f'Leads ({_pct(leads_n, atendimentos)}%)',
+                f'Oportunidades ({_pct(ops_n, leads_n)}%)',
+                f'Vendas: {vendas} ({_pct(vendas, ops_n)}%) | Perdidas: {perdidas} ({_pct(perdidas, ops_n)}%)',
             ]
             data = [float(atendimentos), float(leads_n), float(ops_n), float(vendas + perdidas)]
             return labels, data
