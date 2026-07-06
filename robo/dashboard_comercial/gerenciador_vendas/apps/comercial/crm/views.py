@@ -494,6 +494,22 @@ def api_mover_oportunidade(request):
 
     oportunidade.save(update_fields=campos)
 
+    # Op REABERTA (saiu de estagio final pra ativo): reavalia regras do motor.
+    # Sem isso, edicoes feitas enquanto a op estava em Perdido/Ganho nunca
+    # sincronizam com o HubSoft — o motor pula estagios finais e o signal de
+    # op so dispara na criacao. Caso real: lead 1955 (CPF corrigido com op em
+    # Perdido; HubSoft ficou com CPF antigo e bot nao converteu).
+    reaberta = (
+        (estagio_anterior.is_final_ganho or estagio_anterior.is_final_perdido)
+        and not (estagio_novo.is_final_ganho or estagio_novo.is_final_perdido)
+    )
+    if reaberta:
+        try:
+            from apps.comercial.crm.services.automacao_pipeline import processar_seguro
+            processar_seguro(oportunidade=oportunidade)
+        except Exception:
+            logger.warning('[CRM] Reavaliacao pos-reabertura falhou (op=%s)', oportunidade.pk, exc_info=True)
+
     # Disparar webhook N8N
     try:
         config = ConfiguracaoCRM.get_config()
