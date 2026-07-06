@@ -251,9 +251,12 @@ class WidgetQueryBuilder:
             leads_n = LeadProspecto.all_tenants.filter(
                 tenant=self.tenant, data_cadastro__gte=cutoff,
             ).count()
-            ops_n = OportunidadeVenda.all_tenants.filter(
+            ops_qs = OportunidadeVenda.all_tenants.filter(
                 tenant=self.tenant, data_criacao__gte=cutoff,
-            ).count()
+            )
+            ops_n = ops_qs.count()
+            ops_ads = ops_qs.filter(lead__fonte='facebook').count()
+            ops_organico = ops_n - ops_ads
             vendas = OportunidadeVenda.all_tenants.filter(
                 tenant=self.tenant, estagio__is_final_ganho=True,
                 data_fechamento_real__gte=cutoff,
@@ -272,7 +275,11 @@ class WidgetQueryBuilder:
                 'etapas': [
                     {'label': 'Atendimentos', 'valor': atendimentos, 'pct': None},
                     {'label': 'Leads', 'valor': leads_n, 'pct': _pct(leads_n, atendimentos)},
-                    {'label': 'Oportunidades', 'valor': ops_n, 'pct': _pct(ops_n, leads_n)},
+                    {'label': 'Oportunidades', 'valor': ops_n, 'pct': _pct(ops_n, leads_n),
+                     'quebra': [
+                         {'label': 'Meta Ads', 'valor': ops_ads, 'pct': _pct(ops_ads, ops_n)},
+                         {'label': 'Organico', 'valor': ops_organico, 'pct': _pct(ops_organico, ops_n)},
+                     ]},
                 ],
                 'vendas': {'valor': vendas, 'pct': _pct(vendas, ops_n)},
                 'perdidas': {'valor': perdidas, 'pct': _pct(perdidas, ops_n)},

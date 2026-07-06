@@ -446,12 +446,23 @@ function renderFunilMacro(body, macro) {
   const pctCss = 'font-size:11px;font-weight:600;color:#059669;';
   const seta = '<i class="bi bi-arrow-right" style="font-size:18px;color:#94a3b8;flex:0 0 auto;"></i>';
 
-  const etapas = (macro.etapas || []).map(e => `
+  const etapas = (macro.etapas || []).map(e => {
+    const quebra = (e.quebra && e.quebra.length) ? `
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        ${e.quebra.map(q => `
+          <div style="flex:1;background:#fff;border:1px solid var(--color-border,#e2e8f0);border-radius:8px;padding:5px 6px;">
+            <div style="font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;">${esc(q.label)}</div>
+            <div style="font-size:14px;font-weight:800;color:#0f172a;">${fmtNum(q.valor)} <span style="font-size:10px;font-weight:600;color:#059669;">(${q.pct}%)</span></div>
+          </div>`).join('')}
+      </div>` : '';
+    return `
     <div style="${cardCss}">
       <div style="${labelCss}">${esc(e.label)}</div>
       <div style="${valorCss}">${fmtNum(e.valor)}</div>
       ${e.pct != null ? `<div style="${pctCss}">${e.pct}% da anterior</div>` : '<div style="font-size:11px;color:transparent;">.</div>'}
-    </div>`).join(seta);
+      ${quebra}
+    </div>`;
+  }).join(seta);
 
   const v = macro.vendas || {valor: 0, pct: 0};
   const p = macro.perdidas || {valor: 0, pct: 0};
