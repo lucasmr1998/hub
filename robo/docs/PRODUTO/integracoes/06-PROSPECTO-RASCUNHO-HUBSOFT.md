@@ -157,3 +157,15 @@ Adicionado em 17/06 e **REMOVIDO** em 18/06 com o refactor pro CRM:
 - UI form da ação com toggle "executar imediatamente (síncrono)" vs "executar via cron (default)" — hoje sempre síncrono no motor CRM.
 - Permitir configurar fakes via UI (ex: trocar email default `noreply@nuvyon.com.br`) — hoje hardcoded em `hubsoft_prospecto_rascunho.py`.
 - Dashboard específico de "leads sincronizados com HubSoft" — pode virar widget no dashboard **Comercial** quando os dados estabilizarem.
+
+## Retry em 2 fases pra rejeicao plano x cidade (07/07/2026)
+
+O HubSoft valida o plano do payload contra a cidade ATUAL do prospecto. Como o rascunho nasce com CEP default (Mococa), qualquer PUT que traga endereco real + plano juntos entra em ciclo vicioso: o plano novo e rejeitado contra a cidade velha, e o endereco novo nunca entra. Impacto medido antes do fix: 82 rejeicoes, 13 leads em 12 dias, toda ocorrencia virava correcao manual do time.
+
+Comportamento apos o fix (`hubsoft.py`):
+
+- `_eh_erro_plano_cidade(msg)`: detecta a substring "permitido ser vendido na cidade" na resposta de erro.
+- **PUT** (`editar_prospecto` -> `_editar_em_duas_fases`): fase 1 reenvia o payload sem `prospecto_servico` (endereco e cidade entram); fase 2 reenvia so `prospecto_servico` + `id_externo` (agora validado contra a cidade nova). Retorno ganha marcador `retry_plano_cidade: true`.
+- **POST** (`cadastrar_prospecto` -> `_cadastrar_sem_servico`): recria o prospecto sem a chave `servico` (rascunho nasce); o plano entra no proximo update via Regra 24, que ja passa pelo retry do PUT.
+- Retry e 1x, sem recursao. Se a fase 2 falhar com o mesmo erro, o plano e genuinamente invalido pra cidade real do lead: `HubsoftServiceError` sobe com contexto e um humano decide.
+- Se o HubSoft mudar o texto do erro, o retry deixa de ativar e o comportamento degrada pro anterior (erro direto), nunca piora.
