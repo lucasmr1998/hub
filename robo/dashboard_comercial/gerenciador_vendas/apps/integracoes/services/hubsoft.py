@@ -163,9 +163,38 @@ class HubsoftService:
                         'prospecto': {'id_prospecto': id_existente},
                         'fallback_duplicado': True,
                     }
+            if self._eh_erro_plano_cidade(msg) and 'servico' in payload:
+                return self._cadastrar_sem_servico(lead, payload)
             raise HubsoftServiceError(
                 f"HubSoft rejeitou prospecto: {resposta}"
             )
+        return resposta
+
+    @staticmethod
+    def _eh_erro_plano_cidade(msg: str) -> bool:
+        """HubSoft valida o plano contra a cidade ATUAL do prospecto. Quando
+        endereco e servico mudam na mesma chamada, o plano novo e rejeitado
+        contra a cidade velha (ciclo vicioso). Detecta a mensagem especifica
+        pra acionar o retry que separa endereco de servico."""
+        return 'permitido ser vendido na cidade' in msg
+
+    def _cadastrar_sem_servico(self, lead, payload: dict) -> dict:
+        """Retry do POST quando HubSoft rejeita por plano x cidade: recria o
+        prospecto SEM o servico (o rascunho nasce). O plano entra depois via
+        PUT quando o endereco real completar; `editar_prospecto` garante a
+        ordem com o retry em 2 fases."""
+        logger.warning(
+            '[HubsoftService] POST prospecto do lead %s rejeitado por plano x cidade. '
+            'Recriando sem o servico; plano entra no proximo update.',
+            getattr(lead, 'pk', '?'),
+        )
+        payload_sem_servico = {k: v for k, v in payload.items() if k != 'servico'}
+        resposta = self._post(self.ENDPOINT_PROSPECTO, json=payload_sem_servico, lead=lead)
+        if resposta.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft rejeitou prospecto mesmo sem servico (retry plano x cidade): {resposta}"
+            )
+        resposta['retry_plano_cidade'] = True
         return resposta
 
     def _recuperar_id_prospect_duplicado(self, lead) -> int | None:
@@ -267,10 +296,56 @@ class HubsoftService:
                     f"[HubsoftService] Lead {lead.id} marcado convertido_cliente "
                     f"(detectado via resposta HubSoft)"
                 )
+            elif self._eh_erro_plano_cidade(msg) and 'prospecto_servico' in payload:
+                return self._editar_em_duas_fases(lead, id_prospecto, endpoint, payload)
             raise HubsoftServiceError(
                 f"HubSoft rejeitou edicao do prospecto {id_prospecto}: {resposta}"
             )
         return resposta
+
+    def _editar_em_duas_fases(self, lead, id_prospecto, endpoint: str, payload: dict) -> dict:
+        """Retry do PUT quando HubSoft rejeita por plano x cidade.
+
+        Fase 1: reenvia o payload SEM prospecto_servico (endereco/cidade
+        entram). Fase 2: reenvia SO o prospecto_servico, agora validado
+        contra a cidade nova.
+
+        Se a fase 2 falhar com o mesmo erro, o plano e realmente invalido
+        pra cidade real do lead: o erro sobe e um humano decide. Sem loop,
+        cada fase e um `_put` direto (nao recursa em editar_prospecto).
+        """
+        lead_id = getattr(lead, 'pk', '?')
+        logger.warning(
+            '[HubsoftService] PUT prospecto %s rejeitado por plano x cidade (lead %s). '
+            'Retry em 2 fases: primeiro endereco, depois servico.',
+            id_prospecto, lead_id,
+        )
+
+        fase1 = {k: v for k, v in payload.items() if k != 'prospecto_servico'}
+        resp1 = self._put(endpoint, json=fase1, lead=lead)
+        if resp1.get('status') and resp1.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft rejeitou edicao do prospecto {id_prospecto} mesmo sem o servico "
+                f"(fase 1 do retry plano x cidade): {resp1}"
+            )
+
+        fase2 = {'prospecto_servico': payload['prospecto_servico']}
+        if payload.get('id_externo'):
+            fase2['id_externo'] = payload['id_externo']
+        resp2 = self._put(endpoint, json=fase2, lead=lead)
+        if resp2.get('status') and resp2.get('status') != 'success':
+            raise HubsoftServiceError(
+                f"HubSoft aplicou dados/endereco do prospecto {id_prospecto} mas rejeitou o "
+                f"servico na fase 2 do retry plano x cidade. Plano provavelmente invalido "
+                f"pra cidade real do lead, revisar manualmente: {resp2}"
+            )
+
+        logger.info(
+            '[HubsoftService] Retry em 2 fases concluido pro prospecto %s (lead %s): '
+            'endereco e servico aplicados.', id_prospecto, lead_id,
+        )
+        resp2['retry_plano_cidade'] = True
+        return resp2
 
     # ------------------------------------------------------------------
     # Cliente

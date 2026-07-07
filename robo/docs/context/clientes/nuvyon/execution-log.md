@@ -237,3 +237,12 @@ Resolvido: `IntegracaoAPI #18` (HubSoft Nuvyon) com `modos_sync.enviar_lead='des
 - Ação (5) Motivos de perda padronizados a pedido da Gabi: renomeados #46 "Prazo de instalação"→"Prazo" e #34 "Sumiu / sem resposta"→"Sem retorno" (FKs preservadas); criados #49 "Condições" e #50 "Fidelidade atual". Total 12 motivos ativos.
 - Validação: os 3 widgets renderizando com dados reais via WidgetQueryBuilder em prod (funil 390→289 + Contratação 78/Perdido 230; origem 391 ops; motivos 217 perdas).
 - Status: completed
+
+## 2026-07-07 — Fix estrutural do bug plano x cidade (retry em 2 fases no HubSoft)
+
+- Contexto: HubSoft valida o plano do payload contra a cidade ATUAL do prospecto. Prospect nasce com CEP default Mococa e, quando o endereço real chega junto do plano no mesmo PUT, o plano novo é rejeitado contra a cidade velha (ciclo vicioso). 3ª ocorrência reportada pelo time (Gabriela teste 30/06, Reinaldo 01/07 alerta #4010, Juliana 07/07). Impacto medido em prod: 82 chamadas rejeitadas, 13 leads afetados desde 25/06 (~40 rejeições/semana), 63 no PUT editar e 19 no POST create. Toda ocorrência virava correção manual do time no painel.
+- Fix `hubsoft.py`: detector `_eh_erro_plano_cidade()` (substring "permitido ser vendido na cidade" na msg de erro). No PUT (`editar_prospecto`), aciona `_editar_em_duas_fases()`: fase 1 reenvia payload sem `prospecto_servico` (endereço/cidade entram), fase 2 reenvia só o serviço (validado contra a cidade nova). No POST (`cadastrar_prospecto`), aciona `_cadastrar_sem_servico()`: recria sem o serviço (rascunho nasce), plano entra no próximo update via Regra 24. Sem loop: retry é 1x, chamadas diretas em `_put`/`_post`. Se a fase 2 falhar, o plano é genuinamente inválido pra cidade real e o erro sobe pra decisão humana.
+- Riscos avaliados: chamadas extras só na ocorrência do erro (~80/semana, irrelevante); mudança de texto do erro pelo HubSoft degrada pro comportamento atual (nunca piora); estado parcial (fase 1 ok, fase 2 falha) é melhor que hoje (nada entrava) e loga explicitamente.
+- Validação: cenários testados com mock (detector, caminho feliz 2 fases, fase 2 falhando, create sem serviço). `manage.py check` limpo.
+- Pendência: parte 2 preventiva (`cep_default_por_empresa`) vira otimização opcional; Tarefa #168 do backlog cobre este fix.
+- Status: completed (aguardando deploy)
