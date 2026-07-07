@@ -35,6 +35,8 @@ OPERADORES_VALIDOS = {
     'nao_existe':  lambda c, v: Q(**{f'{c}__isnull': True}) | Q(**{c: ''}),
     'entre':       lambda c, v: Q(**{f'{c}__range': v}) if isinstance(v, (list, tuple)) and len(v) == 2 else Q(),
     'ultimos_dias': lambda c, v: Q(**{f'{c}__gte': timezone.now() - timedelta(days=int(v))}),
+    # Data mais antiga que N dias atras (ex: "parado no estagio ha mais de 7 dias")
+    'ha_mais_de_dias': lambda c, v: Q(**{f'{c}__lt': timezone.now() - timedelta(days=int(v))}),
 }
 
 
