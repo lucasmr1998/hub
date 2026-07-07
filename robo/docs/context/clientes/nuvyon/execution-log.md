@@ -246,3 +246,11 @@ Resolvido: `IntegracaoAPI #18` (HubSoft Nuvyon) com `modos_sync.enviar_lead='des
 - Validação: cenários testados com mock (detector, caminho feliz 2 fases, fase 2 falhando, create sem serviço). `manage.py check` limpo.
 - Pendência: parte 2 preventiva (`cep_default_por_empresa`) vira otimização opcional; Tarefa #168 do backlog cobre este fix.
 - Status: completed (aguardando deploy)
+
+## 2026-07-07 — Deploy do retry plano x cidade + caso Misael Silva (gate de sync)
+
+- Deploy: fix do retry em 2 fases (commits `c4dad49` + `a868d37`) publicado em prod e confirmado no container. Validação ao vivo pendente: aguardando primeiro caso orgânico cair no retry (monitorar marcador `retry_plano_cidade` nos logs de integração). Isabella (1840) saiu da lista de teste: prospect virou cliente 60382, guard convertido_cliente pula corretamente. Ivanildo (1969), Pedro Henrique (1901) e Cleber (1690) seguem travados com dados de Mococa no HubSoft, reprocesso não autorizado ainda.
+- Investigação Misael Silva (lead 2067, prospect 23699): card em Endereço Validado com a Lavínia, mas prospect no HubSoft ainda como "Magda Santos" com endereço "A confirmar". NÃO é o bug plano x cidade: a Regra 24 disparou 2x às 13:12, porém o gate `validar_lead_pronto_para_prospect` bloqueou o PUT com `campos faltando: email, data_nascimento` (status_api=incompleto). Mesma assinatura do caso Ana Vitória. Nenhuma chamada saiu pro HubSoft.
+- Decisão: evoluir pra sync incremental (PUT parcial a cada edição do lead, gate de 8 campos vira informativo, validação por campo pra CPF e serviço). Riscos avaliados com o Lucas (dado provisório espelhando cedo, CPF sem checksum fora do payload, CRM afirmado como fonte da verdade do prospect, volume trivial). Implementação ADIADA por decisão do usuário.
+- Output: Tarefa Workspace #172 criada com objetivo, passos e critérios de aceite; log da Tarefa #168 atualizado com o deploy do fix. Destravar o Misael hoje é operacional: preencher email + data de nascimento no card que a Regra 24 sincroniza sozinha.
+- Status: pending (tarefa #172 no backlog; validação do retry em prod pendente)
