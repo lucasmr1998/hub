@@ -288,3 +288,11 @@ Resolvido: `IntegracaoAPI #18` (HubSoft Nuvyon) com `modos_sync.enviar_lead='des
 - Prevencao (0425a64): modal de cadastro completo agora exige email, origem do cliente e origem do contato. Validacao dupla: front (toast + contador 15 campos) e backend pelo ESTADO FINAL do lead (campo ja preenchido nao precisa ser reenviado). Label "Origem do servico" renomeada pra "Origem do contato".
 - Achado colateral: chamadas HubSoft feitas via manage.py shell NAO geram LogIntegracao (TenantManager sem tenant no thread-local, create falha e o `_registrar_log` engole). Explica os PUTs sem log de hoje e de casos manuais anteriores. Fix sugerido: passar tenant explicito no create do log.
 - Status: completed (prospect 23728 correto e lead processado; retry corrigido em prod aguardando caso organico; Misael 2067 segue incompleto ate alguem editar o card, o modal agora vai exigir o email)
+
+## 2026-07-08 — Filtro "Sem responsavel" + widget Leads sem atendimento (pergunta da Gabi)
+
+- Gabi recebeu o resumo diario e perguntou onde ve as ops "sem responsavel". Nao tinha como: o filtro de Responsavel do kanban/lista so aceitava pessoa especifica.
+- Entrega (commit 8c7efee): opcao "— Sem responsavel —" no dropdown das duas telas (valor especial `sem` -> `responsavel__isnull=True`); alerta do resumo diario ganhou link direto "Ver e atribuir" pra lista filtrada; SITE_URL default corrigido do dominio megalink antigo pra app.hubtrix.com.br (sem uso em codigo, agora usado no resumo).
+- Widget w#75 "Leads sem atendimento (sem responsavel)" no dash #15 (12 ops ativas sem dono) — fecha o item 7 do relatorio executivo com a leitura confirmada pela propria Gabi (ops sem dono, nao ops em Novo Lead).
+- Placar do relatorio executivo: 11 de 12 no ar. Falta so CAC (decisao da fonte de investimento) e a ativacao do cron horario do resumo (INSERT aguardando confirmacao).
+- Status: completed
