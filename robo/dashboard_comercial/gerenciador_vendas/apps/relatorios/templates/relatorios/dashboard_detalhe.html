@@ -68,12 +68,17 @@
         <div class="widget-card" data-widget-id="{{ w.pk }}">
           <div class="widget-header">
             <div class="widget-title">{{ w.titulo }}</div>
-            {% if modo_edicao %}
-              <div class="widget-actions">
+            <div class="widget-actions">
+              {% if w.descricao %}
+                <button class="widget-btn widget-info-btn" title="O que este relatorio mostra"
+                        data-titulo="{{ w.titulo }}" data-descricao="{{ w.descricao }}"
+                        onclick="abrirInfoWidget(this)"><i class="bi bi-question-circle"></i></button>
+              {% endif %}
+              {% if modo_edicao %}
                 <button class="widget-btn" onclick="editarWidget({{ w.pk }})" title="Editar"><i class="bi bi-pencil"></i></button>
                 <button class="widget-btn widget-btn-danger" onclick="excluirWidget({{ w.pk }})" title="Excluir"><i class="bi bi-trash"></i></button>
-              </div>
-            {% endif %}
+              {% endif %}
+            </div>
           </div>
           <div class="widget-body">
             <div class="widget-loading"><i class="bi bi-hourglass-split"></i> Carregando...</div>
@@ -88,6 +93,19 @@
   {% endfor %}
 </div>
 {% endif %}
+
+<!-- Modal explicacao do widget (icone ?) -->
+<div class="modal-overlay" id="modal-info-widget" style="display:none;">
+  <div class="modal-content" style="max-width:460px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-question-circle"></i> <span id="info-widget-titulo"></span></h3>
+      <button class="modal-close" onclick="fecharModal('modal-info-widget')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <p id="info-widget-texto" style="white-space:pre-line;margin:0;"></p>
+    </div>
+  </div>
+</div>
 
 {% if modo_edicao %}
 <!-- Modal Wizard Widget -->
@@ -291,6 +309,8 @@
   }
   .widget-btn:hover { background:var(--color-bg-soft); }
   .widget-btn-danger:hover { background:rgba(239,68,68,0.1); color:var(--color-danger); border-color:var(--color-danger); }
+  .widget-info-btn { color:var(--color-text-muted); border:none; background:transparent; }
+  .widget-info-btn:hover { color:var(--color-primary); background:transparent; }
   .widget-body { flex:1; padding:var(--sp-3); position:relative; min-height:0; display:flex; align-items:center; justify-content:center; }
   .widget-numero { font-size:2.5rem; font-weight:var(--fw-bold); color:var(--color-primary); }
   .widget-loading { color:var(--color-text-muted); font-size:var(--fs-xs); }
@@ -1063,6 +1083,12 @@ async function editarWidget(widgetId) {
 
 function abrirModalConfig() {
   abrirModal('modal-config');
+}
+
+function abrirInfoWidget(btn) {
+  document.getElementById('info-widget-titulo').textContent = btn.dataset.titulo;
+  document.getElementById('info-widget-texto').textContent = btn.dataset.descricao;
+  abrirModal('modal-info-widget');
 }
 
 async function excluirDashboard() {
