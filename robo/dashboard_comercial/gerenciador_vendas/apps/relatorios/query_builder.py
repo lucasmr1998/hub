@@ -412,6 +412,26 @@ class WidgetQueryBuilder:
             data = [float(atendimentos), float(leads_n), float(ops_n), float(vendas + perdidas)]
             return labels, data
 
+        if transform == 'normalizar_cidade':
+            # Agrupa variantes de grafia da mesma cidade: case, espacos
+            # duplicados/nas pontas e sufixo /UF ("RIBEIRÃO PRETO/SP",
+            # "ribeirão preto ", "Ribeirão Preto" viram uma linha so).
+            import re as _re
+            agg = {}
+            for lb, v in zip(labels, data):
+                chave = _re.sub(r'\s*/\s*[a-zA-Z]{2}\s*$', '', str(lb).strip().lower())
+                chave = _re.sub(r'\s+', ' ', chave)
+                if not chave or chave == '—':
+                    continue
+                agg[chave] = agg.get(chave, 0) + v
+            ordenado = sorted(agg.items(), key=lambda kv: -kv[1])
+            _menores = {'de', 'do', 'da', 'dos', 'das', 'e'}
+            def _titulo(s):
+                return ' '.join(p if p in _menores else p.capitalize() for p in s.split())
+            labels = [_titulo(k) for k, _ in ordenado]
+            data = [v for _, v in ordenado]
+            return labels, data
+
         if transform == 'conversao_por_canal':
             # % de conversao por canal: vendas fechadas no periodo / leads
             # criados no periodo, agrupado pelo campo do lead apontado pela
