@@ -273,3 +273,10 @@ Resolvido: `IntegracaoAPI #18` (HubSoft Nuvyon) com `modos_sync.enviar_lead='des
 - Achado de negocio: o funil passa 91-100% em todas as etapas de atendimento, e o PIOR gargalo e o final: Contrato Assinado -> Contratacao com 28,6% de passagem nas ops dos ultimos 30d. Leitura: o atendimento converte bem; o represamento esta na ativacao/instalacao (parte das ops recentes ainda esta em transito, o numero tende a subir um pouco, mas o padrao e claro).
 - Gotcha de infra: script remoto via base64 pro shell do container NAO pode ter f-string com sequencia de escape dentro (SyntaxError na compilacao); usar print("") pra linha em branco.
 - Status: completed (itens 3, 11 e 12 do relatorio executivo fechados; restam sem atendimento e instalacoes pendentes aguardando definicao da Gabi, e CAC aguardando fonte de investimento)
+
+## 2026-07-08 — CORRECAO: bug no funil cumulativo invalidava a leitura dos gargalos
+
+- Usuario desconfiou dos numeros do w#73 e estava certo. Bug herdado do transform `funil_cumulativo`: o estagio Perdido tem a maior `ordem` do pipeline (10), e o calculo de alcance (`ordem_max`) contava op perdida em qualquer ponto como se tivesse atravessado o funil inteiro. As 266 perdidas de 30d inflavam todas as passagens intermediarias pra ~90% e esmagavam a final (28,6% falso).
+- Fix (commit 2441c71): Perdido nao avanca o alcance da op (vale o ultimo estagio real por onde passou); ganho conta como funil completo. Numeros validados contra SQL direto no `crm_historico_estagio` antes e depois do deploy.
+- LEITURA DE NEGOCIO INVERTIDA: o gargalo NAO e instalacao (Contrato -> Contratacao passa 92,9%, saudavel). Os gargalos reais sao no meio do funil: Plano Escolhido -> Endereco Validado (64,4%, pior), Em Atendimento -> Plano Escolhido (68,0%) e Analises -> Contrato Assinado (68,7%). Viabilidade de endereco e escolha de plano e onde a Nuvyon mais perde oportunidade. A entrada anterior deste log (bloco 2) esta SUPERSEDIDA neste ponto.
+- Status: completed
