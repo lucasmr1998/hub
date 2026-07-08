@@ -142,10 +142,12 @@ class HubsoftService:
         e retorna sucesso simulado.
         """
         payload = self._mapear_lead_para_hubsoft(lead)
-        resposta = self._post(self.ENDPOINT_PROSPECTO, json=payload, lead=lead)
-
-        if resposta.get('status') != 'success':
-            msg = (resposta.get('msg') or '').lower()
+        # Erro logico do HubSoft (HTTP 200 + status error) chega como
+        # HubsoftServiceError levantada pelo _request — deteccao no except.
+        try:
+            resposta = self._post(self.ENDPOINT_PROSPECTO, json=payload, lead=lead)
+        except HubsoftServiceError as exc:
+            msg = str(exc).lower()
             if 'já foi cadastrado' in msg or 'ja foi cadastrado' in msg:
                 # Tenta recuperar o id existente
                 id_existente = self._recuperar_id_prospect_duplicado(lead)
@@ -163,11 +165,10 @@ class HubsoftService:
                         'prospecto': {'id_prospecto': id_existente},
                         'fallback_duplicado': True,
                     }
+                raise
             if self._eh_erro_plano_cidade(msg) and 'servico' in payload:
                 return self._cadastrar_sem_servico(lead, payload)
-            raise HubsoftServiceError(
-                f"HubSoft rejeitou prospecto: {resposta}"
-            )
+            raise
         return resposta
 
     @staticmethod
@@ -189,11 +190,12 @@ class HubsoftService:
             getattr(lead, 'pk', '?'),
         )
         payload_sem_servico = {k: v for k, v in payload.items() if k != 'servico'}
-        resposta = self._post(self.ENDPOINT_PROSPECTO, json=payload_sem_servico, lead=lead)
-        if resposta.get('status') != 'success':
+        try:
+            resposta = self._post(self.ENDPOINT_PROSPECTO, json=payload_sem_servico, lead=lead)
+        except HubsoftServiceError as exc:
             raise HubsoftServiceError(
-                f"HubSoft rejeitou prospecto mesmo sem servico (retry plano x cidade): {resposta}"
-            )
+                f"HubSoft rejeitou prospecto mesmo sem servico (retry plano x cidade): {exc}"
+            ) from exc
         resposta['retry_plano_cidade'] = True
         return resposta
 
@@ -282,13 +284,16 @@ class HubsoftService:
         if payload is None:
             payload = self._mapear_lead_para_hubsoft_editar(lead)
         endpoint = self.ENDPOINT_PROSPECTO_EDITAR_TPL.format(id_prospecto=id_prospecto)
-        resposta = self._put(endpoint, json=payload, lead=lead)
-
-        if resposta.get('status') and resposta.get('status') != 'success':
-            # Detecta erro "convertido pra cliente" mesmo quando o guard nao pegou
-            # (caso o ClienteHubsoft ainda nao foi sincronizado no espelho) e marca
-            # o lead pra parar futuras tentativas
-            msg = str(resposta.get('msg', '')).lower()
+        # Erro logico do HubSoft (HTTP 200 + status error) chega como
+        # HubsoftServiceError levantada pelo _request, NAO como dict de
+        # retorno — a deteccao de negocio precisa acontecer no except.
+        try:
+            resposta = self._put(endpoint, json=payload, lead=lead)
+        except HubsoftServiceError as exc:
+            msg = str(exc).lower()
+            # "convertido pra cliente" quando o guard por CPF nao pegou
+            # (espelho ClienteHubsoft ainda nao sincronizado): marca o lead
+            # pra parar futuras tentativas
             if 'convertido para o cliente' in msg and lead:
                 lead.status_api = 'convertido_cliente'
                 lead.save(update_fields=['status_api', 'data_atualizacao'])
@@ -296,11 +301,10 @@ class HubsoftService:
                     f"[HubsoftService] Lead {lead.id} marcado convertido_cliente "
                     f"(detectado via resposta HubSoft)"
                 )
-            elif self._eh_erro_plano_cidade(msg) and 'prospecto_servico' in payload:
+                raise
+            if self._eh_erro_plano_cidade(msg) and 'prospecto_servico' in payload:
                 return self._editar_em_duas_fases(lead, id_prospecto, endpoint, payload)
-            raise HubsoftServiceError(
-                f"HubSoft rejeitou edicao do prospecto {id_prospecto}: {resposta}"
-            )
+            raise
         return resposta
 
     def _editar_em_duas_fases(self, lead, id_prospecto, endpoint: str, payload: dict) -> dict:
@@ -322,23 +326,25 @@ class HubsoftService:
         )
 
         fase1 = {k: v for k, v in payload.items() if k != 'prospecto_servico'}
-        resp1 = self._put(endpoint, json=fase1, lead=lead)
-        if resp1.get('status') and resp1.get('status') != 'success':
+        try:
+            self._put(endpoint, json=fase1, lead=lead)
+        except HubsoftServiceError as exc:
             raise HubsoftServiceError(
                 f"HubSoft rejeitou edicao do prospecto {id_prospecto} mesmo sem o servico "
-                f"(fase 1 do retry plano x cidade): {resp1}"
-            )
+                f"(fase 1 do retry plano x cidade): {exc}"
+            ) from exc
 
         fase2 = {'prospecto_servico': payload['prospecto_servico']}
         if payload.get('id_externo'):
             fase2['id_externo'] = payload['id_externo']
-        resp2 = self._put(endpoint, json=fase2, lead=lead)
-        if resp2.get('status') and resp2.get('status') != 'success':
+        try:
+            resp2 = self._put(endpoint, json=fase2, lead=lead)
+        except HubsoftServiceError as exc:
             raise HubsoftServiceError(
                 f"HubSoft aplicou dados/endereco do prospecto {id_prospecto} mas rejeitou o "
                 f"servico na fase 2 do retry plano x cidade. Plano provavelmente invalido "
-                f"pra cidade real do lead, revisar manualmente: {resp2}"
-            )
+                f"pra cidade real do lead, revisar manualmente: {exc}"
+            ) from exc
 
         logger.info(
             '[HubsoftService] Retry em 2 fases concluido pro prospecto %s (lead %s): '
