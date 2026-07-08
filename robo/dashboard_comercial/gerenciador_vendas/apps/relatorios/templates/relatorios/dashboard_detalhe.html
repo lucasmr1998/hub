@@ -744,6 +744,13 @@ function fmtNum(n) {
 }
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+// Modal de explicacao do widget (icone ?) — disponivel tambem no modo consulta
+function abrirInfoWidget(btn) {
+  document.getElementById('info-widget-titulo').textContent = btn.dataset.titulo;
+  document.getElementById('info-widget-texto').textContent = btn.dataset.descricao;
+  abrirModal('modal-info-widget');
+}
+
 // ============================================================
 // Wizard de widget
 // ============================================================
@@ -1083,12 +1090,6 @@ async function editarWidget(widgetId) {
 
 function abrirModalConfig() {
   abrirModal('modal-config');
-}
-
-function abrirInfoWidget(btn) {
-  document.getElementById('info-widget-titulo').textContent = btn.dataset.titulo;
-  document.getElementById('info-widget-texto').textContent = btn.dataset.descricao;
-  abrirModal('modal-info-widget');
 }
 
 async function excluirDashboard() {
