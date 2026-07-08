@@ -639,7 +639,41 @@ class LeadProspecto(TenantMixin):
     def save(self, *args, **kwargs):
         if self.cep:
             self.cep = self._normalizar_cep(self.cep)
+        if self._preencher_valor_do_plano():
+            uf = kwargs.get('update_fields')
+            if uf is not None and 'valor' not in uf:
+                kwargs['update_fields'] = list(uf) + ['valor']
         super().save(*args, **kwargs)
+
+    def _preencher_valor_do_plano(self) -> bool:
+        """Default de valor a partir do preco tipico do plano escolhido.
+
+        Op criada manualmente ou importada do Talk fecha com plano escolhido
+        mas valor 0, subnotificando receita e ticket medio nos relatorios.
+        Quando o lead tem id_plano_rp e valor vazio, assume o valor mais
+        frequente entre leads do mesmo tenant com o mesmo plano e valor
+        preenchido (acompanha promocao sem precisar de catalogo manual).
+        Retorna True se preencheu.
+        """
+        if not self.id_plano_rp or (self.valor or 0) > 0 or not self.tenant_id:
+            return False
+        from django.db.models import Count
+        try:
+            tipico = (
+                LeadProspecto.all_tenants
+                .filter(tenant_id=self.tenant_id, id_plano_rp=self.id_plano_rp, valor__gt=0)
+                .exclude(pk=self.pk)
+                .values('valor')
+                .annotate(qtd=Count('id'))
+                .order_by('-qtd', '-valor')
+                .first()
+            )
+        except Exception:
+            return False
+        if not tipico:
+            return False
+        self.valor = tipico['valor']
+        return True
 
     @staticmethod
     def status_api_inicial(tenant):
