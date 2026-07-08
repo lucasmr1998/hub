@@ -265,3 +265,11 @@ Resolvido: `IntegracaoAPI #18` (HubSoft Nuvyon) com `modos_sync.enviar_lead='des
 - Achados de dado: 1 lead com origem suja ("Ja e cliente" no campo origem); HubSoft mostra status de instalacao (Aguardando Instalacao) utilizavel pra metrica de instalacoes pendentes.
 - Pendencias: definicao da Gabi pra "leads sem atendimento" (Novo Lead=37 vs sem responsavel=12) e "instalacoes pendentes" (HubSoft vs estagio CRM); transforms de conversao geral/por canal e pior gargalo; CAC aguardando fonte do investimento (campo manual vs API Meta).
 - Status: partial (5 de 12 metricas novas entregues; tarefa Workspace #173)
+
+## 2026-07-08 — Transforms de conversao e gargalo (relatorio executivo, bloco 2)
+
+- Engine (commit bcda76b): 3 transforms novos no query builder. `conversao_geral` (numero unico, vendas do periodo / leads do periodo, atalho no build sem exigir dimensao), `conversao_por_canal` (% por campo do lead da dimensao, corta canal com menos de 3 leads) e `gargalo_funil` (% de passagem entre etapas consecutivas reusando o funil cumulativo, pior gargalo no transform_meta). Helper `_janela_e_fonte` compartilha a logica de overrides de periodo/fonte entre os transforms cross-modelo.
+- Widgets no dash #15: w#71 Conversao geral (19,6% em 30d; Meta Ads 9,5% vs organico 21,3%), w#72 Conversao por canal (manual 30%, whatsapp 19,1%, telefone 11,1%), w#73 Gargalos do funil. Faixa de numeros do topo agora com 4 cards (receita, ticket, parados, conversao).
+- Achado de negocio: o funil passa 91-100% em todas as etapas de atendimento, e o PIOR gargalo e o final: Contrato Assinado -> Contratacao com 28,6% de passagem nas ops dos ultimos 30d. Leitura: o atendimento converte bem; o represamento esta na ativacao/instalacao (parte das ops recentes ainda esta em transito, o numero tende a subir um pouco, mas o padrao e claro).
+- Gotcha de infra: script remoto via base64 pro shell do container NAO pode ter f-string com sequencia de escape dentro (SyntaxError na compilacao); usar print("") pra linha em branco.
+- Status: completed (itens 3, 11 e 12 do relatorio executivo fechados; restam sem atendimento e instalacoes pendentes aguardando definicao da Gabi, e CAC aguardando fonte de investimento)
