@@ -235,6 +235,7 @@ def formatar_whatsapp(dados, nome_destinatario='pessoal', nome_tenant='comercial
             linhas.append(f"   • {d['paradas_mais_3_dias']} oportunidades paradas ha mais de 3 dias")
         if d['sem_responsavel']:
             linhas.append(f"   • {d['sem_responsavel']} oportunidade(s) sem responsavel")
+            linhas.append(f"     Ver e atribuir: {settings.SITE_URL}/crm/oportunidades/?responsavel=sem")
 
     linhas.append('')
     linhas.append('Bom dia e boa venda! ☕')

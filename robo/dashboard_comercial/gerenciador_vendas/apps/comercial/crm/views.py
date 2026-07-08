@@ -181,8 +181,8 @@ def pipeline_view(request):
     )
 
     filter_fields = [
-        {'type': 'select', 'label': 'Responsavel', 'name': 'responsavel', 'value': '',
-         'options': [('', 'Todos')] + [(str(v['id']), v['nome']) for v in vendedores]},
+        {'type': 'select', 'label': 'Responsavel', 'name': 'responsavel', 'value': request.GET.get('responsavel', ''),
+         'options': [('', 'Todos'), ('sem', '— Sem responsavel —')] + [(str(v['id']), v['nome']) for v in vendedores]},
         {'type': 'select', 'label': 'Tag', 'name': 'tag', 'value': '',
          'options': [('', 'Todas')] + [(t.nome, t.nome) for t in tags]},
         {'type': 'select', 'label': 'Valor', 'name': 'valor', 'value': '',
@@ -305,7 +305,11 @@ def api_pipeline_dados(request):
     fontes = [f for f in request.GET.getlist('fonte') if f]
     campanhas = [c for c in request.GET.getlist('campanha') if c]
 
-    if responsavel_id:
+    if responsavel_id == 'sem':
+        # Valor especial do filtro: so oportunidades sem dono (pedido da Gabi
+        # pra cobrar atribuicao a partir do resumo diario)
+        qs = qs.filter(responsavel__isnull=True)
+    elif responsavel_id:
         qs = qs.filter(responsavel_id=responsavel_id)
     if prioridade:
         qs = qs.filter(prioridade=prioridade)
@@ -587,7 +591,9 @@ def oportunidades_lista(request):
         )
     if estagio_id:
         qs = qs.filter(estagio_id=estagio_id)
-    if responsavel_id:
+    if responsavel_id == 'sem':
+        qs = qs.filter(responsavel__isnull=True)
+    elif responsavel_id:
         qs = qs.filter(responsavel_id=responsavel_id)
     if tag_nome:
         qs = qs.filter(tags__nome=tag_nome)
@@ -604,7 +610,7 @@ def oportunidades_lista(request):
         {'type': 'select', 'label': 'Estagio', 'name': 'estagio', 'value': estagio_id or '',
          'options': [('', 'Todos')] + [(str(e.pk), e.nome) for e in estagios]},
         {'type': 'select', 'label': 'Responsavel', 'name': 'responsavel', 'value': responsavel_id or '',
-         'options': [('', 'Todos')] + [(str(v['id']), v['nome']) for v in vendedores]},
+         'options': [('', 'Todos'), ('sem', '— Sem responsavel —')] + [(str(v['id']), v['nome']) for v in vendedores]},
         {'type': 'select', 'label': 'Tag', 'name': 'tag', 'value': tag_nome,
          'options': [('', 'Todas')] + [(t.nome, t.nome) for t in tags]},
     ]

@@ -390,7 +390,7 @@ NOTIFICATION_BATCH_SIZE = 100
 NOTIFICATION_CLEANUP_DAYS = 30  # Limpar notificações antigas
 
 # Site URL para links em notificações
-SITE_URL = os.environ.get('SITE_URL', 'https://robovendas.megalinkpiaui.com.br')
+SITE_URL = os.environ.get('SITE_URL', 'https://app.hubtrix.com.br')
 
 # Email Templates
 EMAIL_TEMPLATES = {
