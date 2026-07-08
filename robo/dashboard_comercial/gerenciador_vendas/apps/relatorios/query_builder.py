@@ -538,12 +538,21 @@ class WidgetQueryBuilder:
             est_meta = {e.id: (e.pipeline_id, e.ordem, e.is_final_ganho, e.is_final_perdido)
                         for e in estagios}
 
-            # ordem_max por op
+            # ordem_max por op — considera SO estagios intermediarios.
+            # Cair em Perdido NAO avanca a op (o alcance dela e o ultimo
+            # estagio real por onde passou); sem esse skip, "Perdido" tem a
+            # maior ordem do pipeline e op perdida cedo contava como se
+            # tivesse atravessado o funil inteiro, inflando todas as etapas.
+            # Ganhou = completou o funil (alcanca todas as intermediarias).
             ordem_max_por_op = {}
             def _registrar(op_id, est_id):
                 if not est_id or est_id not in est_meta:
                     return
-                ord_ = est_meta[est_id][1]
+                _, ord_, ganho, perdido = est_meta[est_id]
+                if perdido:
+                    return
+                if ganho:
+                    ord_ = 10 ** 9
                 cur = ordem_max_por_op.get(op_id)
                 if cur is None or ord_ > cur:
                     ordem_max_por_op[op_id] = ord_
