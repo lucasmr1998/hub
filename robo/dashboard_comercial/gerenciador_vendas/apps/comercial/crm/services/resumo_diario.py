@@ -12,7 +12,7 @@ Design:
 - "Hoje" = pipeline snapshot (nao depende de data).
 - "Dia fechado" = agregado do dia passado como argumento (default ontem).
 """
-from datetime import date, timedelta
+from datetime import timedelta
 
 from django.conf import settings
 from django.db.models import Count
@@ -197,7 +197,6 @@ def formatar_whatsapp(dados, nome_destinatario='pessoal', nome_tenant='comercial
     linhas.append('')
     linhas.append(f"📥 Novas oportunidades: *{d['ops_dia']}* (dia anterior: {d['ops_dia_anterior']})")
     linhas.append(f"✅ Vendas fechadas (CRM): *{d['ganhas_crm']}* (dia anterior: {d['ganhas_crm_anterior']})")
-    linhas.append(f"🏁 Convertidas no HubSoft: *{d['vendas_hubsoft']}* (dia anterior: {d['vendas_hubsoft_anterior']})")
     if d['contratos_assinados']:
         linhas.append(f"📝 Contratos assinados: {d['contratos_assinados']}")
     linhas.append(f"🚫 Perdidas: {d['perdidas']}")
