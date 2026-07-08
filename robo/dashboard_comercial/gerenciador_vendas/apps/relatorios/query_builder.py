@@ -98,12 +98,66 @@ class WidgetQueryBuilder:
         metrica = self.widget.metrica or {'tipo': 'count'}
         agrupamento = self.widget.agrupamento or {}
 
+        # Caso 0: transform de numero unico cross-modelo (nao usa dimensao)
+        if agrupamento.get('transform') == 'conversao_geral':
+            return self._calcular_conversao_geral()
+
         # Caso 1: numero unico (sem agrupamento) ou widget tipo=numero
         if self.widget.visualizacao == 'numero' or not agrupamento:
             return self._calcular_numero(qs, metrica)
 
         # Caso 2: agrupado (com ou sem serie temporal)
         return self._calcular_agrupado(qs, metrica, agrupamento)
+
+    def _janela_e_fonte(self):
+        """Cutoff de data e fonte efetivos, honrando os filtros globais do
+        dashboard (overrides). Compartilhado pelos transforms cross-modelo
+        (funil_macro, conversao_geral, conversao_por_canal).
+
+        Retorna (cutoff|None, fonte|None, dias)."""
+        dias = 30
+        try:
+            dias = int((self.widget.agrupamento or {}).get('dias') or 30)
+        except (TypeError, ValueError):
+            pass
+        dias_override = self.overrides.get('dias')
+        fonte = self.overrides.get('fonte')
+        if dias_override == 'tudo':
+            return None, fonte, dias
+        if dias_override:
+            dias = int(dias_override)
+        return timezone.now() - timedelta(days=dias), fonte, dias
+
+    def _calcular_conversao_geral(self) -> ResultadoQuery:
+        """Conversao geral em %: vendas fechadas no periodo / leads criados
+        no periodo. Vendas = ops em estagio is_final_ganho (fonte: CRM)."""
+        from apps.comercial.leads.models import LeadProspecto
+        from apps.comercial.crm.models import OportunidadeVenda
+
+        cutoff, fonte, dias = self._janela_e_fonte()
+        leads_qs = LeadProspecto.all_tenants.filter(tenant=self.tenant)
+        vendas_qs = OportunidadeVenda.all_tenants.filter(
+            tenant=self.tenant, estagio__is_final_ganho=True)
+        if fonte == 'organico':
+            leads_qs = leads_qs.exclude(fonte='facebook')
+            vendas_qs = vendas_qs.exclude(lead__fonte='facebook')
+        elif fonte:
+            leads_qs = leads_qs.filter(fonte=fonte)
+            vendas_qs = vendas_qs.filter(lead__fonte=fonte)
+        if cutoff:
+            leads_qs = leads_qs.filter(data_cadastro__gte=cutoff)
+            vendas_qs = vendas_qs.filter(data_fechamento_real__gte=cutoff)
+
+        leads_n = leads_qs.count()
+        vendas_n = vendas_qs.count()
+        pct = round(vendas_n / leads_n * 100, 1) if leads_n else 0.0
+        return ResultadoQuery(
+            labels=['Conversao'],
+            series=[{'name': f'{vendas_n} vendas / {leads_n} leads', 'data': [pct]}],
+            total=pct,
+            meta={'data_source': self.data_source.slug, 'transform': 'conversao_geral',
+                  'vendas': vendas_n, 'leads': leads_n, 'dias': dias},
+        )
 
     # ------------- internos -------------
 
@@ -235,6 +289,8 @@ class WidgetQueryBuilder:
             # funil_macro deixa os numeros crus pro front renderizar como fluxo
             if getattr(self, '_macro_meta', None):
                 meta_out['macro'] = self._macro_meta
+            if getattr(self, '_transform_meta', None):
+                meta_out['transform_meta'] = self._transform_meta
 
         return ResultadoQuery(
             labels=labels,
@@ -354,6 +410,75 @@ class WidgetQueryBuilder:
                 f'Vendas: {vendas} ({_pct(vendas, ops_n)}%) | Perdidas: {perdidas} ({_pct(perdidas, ops_n)}%)',
             ]
             data = [float(atendimentos), float(leads_n), float(ops_n), float(vendas + perdidas)]
+            return labels, data
+
+        if transform == 'conversao_por_canal':
+            # % de conversao por canal: vendas fechadas no periodo / leads
+            # criados no periodo, agrupado pelo campo do lead apontado pela
+            # dimensao (lead__origem, lead__fonte...). IGNORA o queryset.
+            from apps.comercial.leads.models import LeadProspecto
+            from apps.comercial.crm.models import OportunidadeVenda
+
+            cutoff, fonte, _dias = self._janela_e_fonte()
+            campo_lead = dimensao.replace('lead__', '', 1) if dimensao.startswith('lead__') else dimensao
+            leads_qs = LeadProspecto.all_tenants.filter(tenant=self.tenant)
+            vendas_qs = OportunidadeVenda.all_tenants.filter(
+                tenant=self.tenant, estagio__is_final_ganho=True)
+            if fonte == 'organico':
+                leads_qs = leads_qs.exclude(fonte='facebook')
+                vendas_qs = vendas_qs.exclude(lead__fonte='facebook')
+            elif fonte:
+                leads_qs = leads_qs.filter(fonte=fonte)
+                vendas_qs = vendas_qs.filter(lead__fonte=fonte)
+            if cutoff:
+                leads_qs = leads_qs.filter(data_cadastro__gte=cutoff)
+                vendas_qs = vendas_qs.filter(data_fechamento_real__gte=cutoff)
+
+            leads_por = {(r[campo_lead] or '—'): r['n']
+                         for r in leads_qs.values(campo_lead).annotate(n=Count('id'))}
+            vendas_por = {(r[f'lead__{campo_lead}'] or '—'): r['n']
+                          for r in vendas_qs.values(f'lead__{campo_lead}').annotate(n=Count('id'))}
+            linhas = []
+            for canal, n_leads in leads_por.items():
+                n_vendas = vendas_por.get(canal, 0)
+                pct = round(n_vendas / n_leads * 100, 1) if n_leads else 0.0
+                linhas.append((str(canal), pct, n_leads, n_vendas))
+            # Canal com menos de 3 leads no periodo so gera ruido (0% ou 100%)
+            linhas = [ln for ln in linhas if ln[2] >= 3]
+            linhas.sort(key=lambda ln: -ln[1])
+            linhas = linhas[:12]
+            labels = [f'{c} ({v} de {n})' for c, p, n, v in linhas]
+            data = [p for _, p, _, _ in linhas]
+            self._transform_meta = {'linhas': [
+                {'canal': c, 'pct': p, 'leads': n, 'vendas': v} for c, p, n, v in linhas
+            ]}
+            return labels, data
+
+        if transform == 'gargalo_funil':
+            # % de passagem entre etapas consecutivas do funil; o menor
+            # percentual eh o pior gargalo. Reusa o calculo do funil
+            # cumulativo (que preenche self._funil_detalhe).
+            self._funil_detalhe = None
+            self._aplicar_transform('funil_cumulativo', dimensao, qs, labels, data)
+            det = getattr(self, '_funil_detalhe', None)
+            if not det or not det.get('etapas'):
+                return [], []
+            etapas = det['etapas']  # [(ordem, nome, count)]
+            passagens = []
+            for (_, n1, c1), (_, n2, c2) in zip(etapas, etapas[1:]):
+                pct = round(c2 / c1 * 100, 1) if c1 else 0.0
+                passagens.append((f'{n1} → {n2}', pct, c1, c2))
+            _, nome_ult, count_ult = etapas[-1]
+            pct_final = round(det['ganhas'] / count_ult * 100, 1) if count_ult else 0.0
+            passagens.append((f'{nome_ult} → Contratacao', pct_final, count_ult, det['ganhas']))
+
+            labels = [p[0] for p in passagens]
+            data = [p[1] for p in passagens]
+            pior = min((p for p in passagens if p[2] > 0), key=lambda p: p[1], default=None)
+            self._transform_meta = {
+                'pior': {'passagem': pior[0], 'pct': pior[1]} if pior else None,
+                'passagens': [{'label': lb, 'pct': v} for lb, v, _, _ in passagens],
+            }
             return labels, data
 
         if transform == 'funil_comercial' and dimensao == 'estagio__nome':
@@ -478,6 +603,11 @@ class WidgetQueryBuilder:
             n_perdidos = len(ops_perdidas)
             labels.append(f'Contratacao: {n_ganhos} | Perdido: {n_perdidos}')
             data.append(float(n_ganhos + n_perdidos))
+            # Numeros crus pro transform gargalo_funil reaproveitar
+            self._funil_detalhe = {
+                'etapas': etapas_intermediarias,
+                'ganhas': n_ganhos, 'perdidas': n_perdidos,
+            }
 
         return labels, data
 
