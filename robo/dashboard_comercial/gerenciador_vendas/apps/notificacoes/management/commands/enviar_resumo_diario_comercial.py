@@ -8,8 +8,11 @@ Uso:
     python manage.py enviar_resumo_diario_comercial --dry-run
     python manage.py enviar_resumo_diario_comercial --tenant=nuvyon --dia=2026-07-02
 
-Agenda: rodar via cron `0 8 * * *` (todo dia as 8h). O resumo agrega o dia
-anterior (default) + snapshot do pipeline atual.
+Agenda: rodar via cron `0 * * * *` (toda hora cheia). O command so envia
+pra cada destinatario quando a hora atual BRT bate com o
+`PreferenciaNotificacao.horario_inicio` (default 8h) e ainda nao houve
+envio do dia (dedup por Notificacao). O resumo agrega o dia anterior
+(default) + snapshot do pipeline atual. `--force` ignora horario e dedup.
 
 Envio: usa a Uazapi da Aurora HQ (canal do sistema, nao o canal comercial
 do proprio tenant). Falha por destinatario nao para o command — vai pro proximo.
@@ -45,6 +48,8 @@ class Command(BaseCommand):
         parser.add_argument('--tenant', help='slug do tenant (default: todos com PreferenciaNotificacao ativa)')
         parser.add_argument('--dia', help='dia do resumo YYYY-MM-DD (default: ontem BRT)')
         parser.add_argument('--dry-run', action='store_true', help='monta e imprime sem enviar')
+        parser.add_argument('--force', action='store_true',
+                            help='ignora horario da preferencia e dedup (pra teste manual)')
 
     def handle(self, *args, **opts):
         tenant_slug = opts.get('tenant')
@@ -92,11 +97,35 @@ class Command(BaseCommand):
             dados = montar_resumo(tenant, dia=dia)
             self.stdout.write(
                 f'[{tenant.slug}] resumo montado pra {dados["dia"]}: '
-                f'{dados["leads_dia"]} leads, {dados["vendas_hubsoft"]} vendas HubSoft, '
+                f'{dados["ops_dia"]} novas ops, {dados["ganhas_crm"]} vendas CRM, '
                 f'{dados["total_pipeline"]} no pipeline'
             )
 
+            hora_atual_brt = timezone.localtime().hour
             for pref in preferencias:
+                # Respeita o horario da preferencia: envia so quando a hora
+                # atual bate com horario_inicio (default 8h). O cron roda de
+                # hora em hora; --force/--dry-run ignoram o gate.
+                hora_pref = pref.horario_inicio.hour if pref.horario_inicio else 8
+                if not opts.get('force') and not dry and hora_atual_brt != hora_pref:
+                    self.stdout.write(
+                        f'  {pref.usuario.username}: fora do horario '
+                        f'(agora {hora_atual_brt}h BRT, preferencia {hora_pref}h), pulando'
+                    )
+                    continue
+
+                # Dedup: 1 resumo por usuario por dia. Reexecucao do cron na
+                # mesma hora (ou retry apos falha parcial) nao duplica envio.
+                ja_enviada = Notificacao.objects.filter(
+                    tenant=tenant, tipo=tipo, destinatario=pref.usuario,
+                    status='enviada', dados_contexto__dia=str(dados['dia']),
+                ).exists()
+                if not opts.get('force') and not dry and ja_enviada:
+                    self.stdout.write(
+                        f'  {pref.usuario.username}: resumo de {dados["dia"]} ja enviado hoje, pulando'
+                    )
+                    continue
+
                 telefone = _telefone_do_usuario(pref.usuario, tenant)
                 if not telefone:
                     self.stdout.write(self.style.WARNING(
