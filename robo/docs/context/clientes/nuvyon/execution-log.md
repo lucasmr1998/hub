@@ -296,3 +296,10 @@ Resolvido: `IntegracaoAPI #18` (HubSoft Nuvyon) com `modos_sync.enviar_lead='des
 - Widget w#75 "Leads sem atendimento (sem responsavel)" no dash #15 (12 ops ativas sem dono) — fecha o item 7 do relatorio executivo com a leitura confirmada pela propria Gabi (ops sem dono, nao ops em Novo Lead).
 - Placar do relatorio executivo: 11 de 12 no ar. Falta so CAC (decisao da fonte de investimento) e a ativacao do cron horario do resumo (INSERT aguardando confirmacao).
 - Status: completed
+
+## 2026-07-08 — Diagnostico dos "sem responsavel" + fix do default na criacao manual
+
+- Diagnostico das 14 ops ativas sem responsavel, 3 grupos: (1) 9 criadas MANUALMENTE com campo responsavel vazio (Thais 7, Bianca 1, Victoria 1) — a distribuicao automatica nao cobria e o card sumia da visao da propria criadora (op sem dono so aparece pra admin); (2) 2 orfas do Talk (ligacoes nao atendidas, sem cod_agente — legitimas, decisao da Gabi: redistribuir ou descartar); (3) 3 recem-chegadas do bot no dia (transitorio, sync do Matrix atribui quando atendente humano assume).
+- Fix (commit 293ef81): na criacao manual, quem cria vira responsavel default (escolher outra pessoa no form segue valendo) + log de atribuicao na timeline. Mata o grupo 1 na raiz.
+- Pendente: backfill das 9 orfas existentes pro respectivo criador (aguardando confirmacao).
+- Status: completed (fix em prod)
