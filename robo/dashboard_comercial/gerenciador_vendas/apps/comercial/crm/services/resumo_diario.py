@@ -14,15 +14,14 @@ Design:
 """
 from datetime import date, timedelta
 
-from django.db.models import Count, Q
+from django.conf import settings
+from django.db.models import Count
 from django.utils import timezone
 
 from apps.comercial.crm.models import (
     HistoricoPipelineEstagio,
     OportunidadeVenda,
-    PipelineEstagio,
 )
-from apps.comercial.leads.models import LeadProspecto
 
 
 def _hoje_brt():
@@ -46,11 +45,13 @@ def montar_resumo(tenant, dia=None):
     dia_anterior = dia - timedelta(days=1)
 
     # ── DIA FECHADO ──
-    leads_dia = LeadProspecto.objects.filter(
-        tenant=tenant, data_cadastro__date=dia,
+    # Novas oportunidades (nao leads): alinha com o card "Oportunidades" do
+    # painel. Na Nuvyon o webhook cria a op junto do lead, entao e 1:1.
+    ops_dia = OportunidadeVenda.objects.filter(
+        tenant=tenant, data_criacao__date=dia,
     ).count()
-    leads_dia_anterior = LeadProspecto.objects.filter(
-        tenant=tenant, data_cadastro__date=dia_anterior,
+    ops_dia_anterior = OportunidadeVenda.objects.filter(
+        tenant=tenant, data_criacao__date=dia_anterior,
     ).count()
 
     # Vendas confirmadas no HubSoft (ClienteHubsoft criado)
@@ -75,6 +76,11 @@ def montar_resumo(tenant, dia=None):
     ganhas_dia = OportunidadeVenda.objects.filter(
         tenant=tenant,
         data_fechamento_real__date=dia,
+        estagio__is_final_ganho=True,
+    ).count()
+    ganhas_dia_anterior = OportunidadeVenda.objects.filter(
+        tenant=tenant,
+        data_fechamento_real__date=dia_anterior,
         estagio__is_final_ganho=True,
     ).count()
 
@@ -118,7 +124,10 @@ def montar_resumo(tenant, dia=None):
         for e in por_estagio
     ]
 
-    por_vendedora = list(ativos.values(
+    # Ranking exclui usuarios robo (QA/automatizados) definidos em settings
+    robos = getattr(settings, 'USUARIOS_ROBO_RELATORIOS', [])
+    ativos_ranking = ativos.exclude(responsavel__username__in=robos) if robos else ativos
+    por_vendedora = list(ativos_ranking.values(
         'responsavel__first_name',
     ).annotate(total=Count('id')).order_by('-total'))
     por_vendedora = [
@@ -137,13 +146,14 @@ def montar_resumo(tenant, dia=None):
     return {
         'dia': dia,
         'dia_semana_pt': _dia_semana(dia),
-        'leads_dia': leads_dia,
-        'leads_dia_anterior': leads_dia_anterior,
+        'ops_dia': ops_dia,
+        'ops_dia_anterior': ops_dia_anterior,
         'vendas_hubsoft': vendas_hubsoft,
         'vendas_hubsoft_anterior': vendas_hubsoft_anterior,
         'contratos_assinados': contratos_assinados,
         'perdidas': perdidas_dia,
         'ganhas_crm': ganhas_dia,
+        'ganhas_crm_anterior': ganhas_dia_anterior,
         'movimentacoes': total_movs,
         'fluxos_top': fluxos_top,
         'total_pipeline': total_pipeline,
@@ -185,8 +195,9 @@ def formatar_whatsapp(dados, nome_destinatario='pessoal', nome_tenant='comercial
     linhas.append('📊 *COMO ONTEM FECHOU*')
     linhas.append(linha_sep)
     linhas.append('')
-    linhas.append(f"📥 Atendimentos: *{d['leads_dia']}* (dia anterior: {d['leads_dia_anterior']})")
-    linhas.append(f"✅ Vendas fechadas HubSoft: *{d['vendas_hubsoft']}* (dia anterior: {d['vendas_hubsoft_anterior']})")
+    linhas.append(f"📥 Novas oportunidades: *{d['ops_dia']}* (dia anterior: {d['ops_dia_anterior']})")
+    linhas.append(f"✅ Vendas fechadas (CRM): *{d['ganhas_crm']}* (dia anterior: {d['ganhas_crm_anterior']})")
+    linhas.append(f"🏁 Convertidas no HubSoft: *{d['vendas_hubsoft']}* (dia anterior: {d['vendas_hubsoft_anterior']})")
     if d['contratos_assinados']:
         linhas.append(f"📝 Contratos assinados: {d['contratos_assinados']}")
     linhas.append(f"🚫 Perdidas: {d['perdidas']}")

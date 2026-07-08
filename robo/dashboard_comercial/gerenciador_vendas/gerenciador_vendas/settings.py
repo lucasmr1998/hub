@@ -327,6 +327,10 @@ LOGOUT_REDIRECT_URL = '/'
 # Disable APPEND_SLASH for API endpoints to avoid POST redirect issues
 APPEND_SLASH = False
 
+# Usuarios robo (QA/automatizados) excluidos de rankings e relatorios
+# gerenciais (ex: resumo diario comercial)
+USUARIOS_ROBO_RELATORIOS = ['playwright_qa']
+
 # ============================================================================
 # DJANGO REST FRAMEWORK
 # ============================================================================
