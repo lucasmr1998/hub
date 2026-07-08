@@ -2725,7 +2725,7 @@ function _ccPreencher(d) {
   _ccElem('cc-viabilidade').textContent = (d.viabilidade && d.viabilidade.status) || '(nao consultado)';
 }
 
-const CC_OBRIGATORIOS = ['cc-nome','cc-cpf','cc-data-nasc','cc-telefone','cc-cep','cc-rua','cc-numero','cc-bairro','cc-cidade','cc-estado','cc-plano','cc-vencimento'];
+const CC_OBRIGATORIOS = ['cc-nome','cc-cpf','cc-data-nasc','cc-telefone','cc-email','cc-cep','cc-rua','cc-numero','cc-bairro','cc-cidade','cc-estado','cc-plano','cc-vencimento','cc-id-origem','cc-id-origem-servico'];
 
 function _ccAtualizarStatus() {
   let ok = 0;
@@ -2757,6 +2757,15 @@ async function _ccBuscarCep() {
 }
 
 async function _ccSalvar(eFechar) {
+  // Obrigatorios de negocio: email + origens (validados tambem no backend)
+  const faltando = [];
+  if (!_ccElem('cc-email').value.trim()) faltando.push('Email');
+  if (!_ccElem('cc-id-origem').value.trim()) faltando.push('Origem do cliente');
+  if (!_ccElem('cc-id-origem-servico').value.trim()) faltando.push('Origem do contato');
+  if (faltando.length) {
+    toast('Campos obrigatorios', 'Preencha: ' + faltando.join(', '), 'warning');
+    return;
+  }
   const payload = {
     nome: _ccElem('cc-nome').value.trim(),
     cpf_cnpj: _ccElem('cc-cpf').value.replace(/\D/g, ''),
@@ -2819,7 +2828,7 @@ async function _ccSalvar(eFechar) {
           <label class="cc-field"><span>CPF / CNPJ *</span><input id="cc-cpf" type="text" placeholder="000.000.000-00" oninput="_ccAtualizarStatus()"></label>
           <label class="cc-field"><span>Data de nascimento *</span><input id="cc-data-nasc" type="date" oninput="_ccAtualizarStatus()"></label>
           <label class="cc-field"><span>RG</span><input id="cc-rg" type="text"></label>
-          <label class="cc-field"><span>Email</span><input id="cc-email" type="email"></label>
+          <label class="cc-field"><span>Email *</span><input id="cc-email" type="email" oninput="_ccAtualizarStatus()"></label>
           <label class="cc-field"><span>Telefone *</span><input id="cc-telefone" type="text" placeholder="(00) 00000-0000" oninput="_ccAtualizarStatus()"></label>
         </div>
       </div>
@@ -2853,14 +2862,14 @@ async function _ccSalvar(eFechar) {
       <div class="cc-section">
         <h4>Origem e atribuicao</h4>
         <div class="cc-grid">
-          <label class="cc-field"><span>Origem do cliente</span>
-            <select id="cc-id-origem">
-              <option value="">— sem definir (usa padrao do tenant) —</option>
+          <label class="cc-field"><span>Origem do cliente *</span>
+            <select id="cc-id-origem" onchange="_ccAtualizarStatus()">
+              <option value="">— escolha a origem —</option>
             </select>
           </label>
-          <label class="cc-field"><span>Origem do servico</span>
-            <select id="cc-id-origem-servico">
-              <option value="">— sem definir (usa padrao do tenant) —</option>
+          <label class="cc-field"><span>Origem do contato *</span>
+            <select id="cc-id-origem-servico" onchange="_ccAtualizarStatus()">
+              <option value="">— escolha a origem —</option>
             </select>
           </label>
         </div>

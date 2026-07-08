@@ -4105,6 +4105,25 @@ def api_cadastro_completo_oportunidade(request, pk):
     if not update_fields:
         return JsonResponse({'error': 'Nenhum campo valido pra atualizar'}, status=400)
 
+    # Obrigatorios de negocio no cadastro completo: email + origens. Valida o
+    # ESTADO FINAL (payload aplicado sobre o que o lead ja tem), pra barrar
+    # salvar vazio sem exigir reenvio de campo ja preenchido antes.
+    OBRIGATORIOS_CADASTRO = {
+        'email': 'Email',
+        'id_origem': 'Origem do cliente',
+        'id_origem_servico': 'Origem do contato',
+    }
+    faltando = []
+    for campo, label in OBRIGATORIOS_CADASTRO.items():
+        valor_final = update_fields.get(campo, getattr(lead, campo, None))
+        if valor_final in ('', None):
+            faltando.append(label)
+    if faltando:
+        return JsonResponse({
+            'error': 'Campos obrigatorios: ' + ', '.join(faltando),
+            'campos_obrigatorios': faltando,
+        }, status=400)
+
     try:
         from apps.comercial.leads.models import LeadProspecto
         for k, v in update_fields.items():
