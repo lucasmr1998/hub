@@ -701,20 +701,30 @@ def api_criar_oportunidade(request):
     if not estagio:
         return JsonResponse({'ok': False, 'erro': 'Nenhum estagio disponivel'}, status=400)
 
+    # Responsavel default = quem criou. Diagnostico de 08/07: 9 ops manuais
+    # orfas porque o campo e opcional e a distribuicao automatica nao cobria
+    # (vendedora criava o card e ele sumia da propria visao, ja que op sem
+    # dono so aparece pra admin). Escolher outra pessoa no form segue valendo.
     oport = OportunidadeVenda.objects.create(
         pipeline=pipeline,
         lead=lead,
         estagio=estagio,
         titulo=titulo or nome,
-        responsavel_id=responsavel_id if responsavel_id else None,
+        responsavel_id=responsavel_id or request.user.pk,
         criado_por=request.user,
         origem_crm='manual',
     )
 
-    # Distribuir automaticamente se não tem responsável
-    if not responsavel_id:
-        from apps.comercial.crm.distribution import distribuir_oportunidade
-        distribuir_oportunidade(oport)
+    try:
+        from apps.sistema.utils import registrar_acao
+        registrar_acao(
+            'crm', 'atribuir', 'oportunidade', oport.pk,
+            f"Responsavel atribuido na criacao manual: "
+            f"{oport.responsavel.get_full_name() or oport.responsavel.username}",
+            request=request,
+        )
+    except Exception:
+        pass
 
     return JsonResponse({'ok': True, 'id': oport.pk})
 
