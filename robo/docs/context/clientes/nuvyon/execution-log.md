@@ -303,3 +303,11 @@ Resolvido: `IntegracaoAPI #18` (HubSoft Nuvyon) com `modos_sync.enviar_lead='des
 - Fix (commit 293ef81): na criacao manual, quem cria vira responsavel default (escolher outra pessoa no form segue valendo) + log de atribuicao na timeline. Mata o grupo 1 na raiz.
 - Pendente: backfill das 9 orfas existentes pro respectivo criador (aguardando confirmacao).
 - Status: completed (fix em prod)
+
+## 2026-07-08 — Pedidos da Gabi: icone de explicacao nos widgets + leads/vendas por cidade
+
+- Icone "?" em cada widget do painel abre modal com explicacao em linguagem de negocio (commits 1f87e99 + fix 2f66aaa: a funcao tinha ficado no bloco do modo edicao e nao existia no modo consulta). Campo Widget.descricao ja existia, sem migration; os 15 widgets do dash #15 ganharam texto.
+- Pedidos novos da Gabi (17:14): origem pre-WhatsApp (ja coberto pelo rastreamento Meta Ads, com ressalvas: nao separa Face/Insta e import do CSV ainda manual), funil com viabilidade (pendente, dev pequeno), leads e vendas por cidade (entregues).
+- Transform `normalizar_cidade` (98d6cff): agrupa variantes de grafia (ribeirao preto tinha 5 formas), remove sufixo /UF, title case com conectivos minusculos, descarta vazios. Widgets w#76 Leads por cidade (154 em 30d: Salto 41, Mococa 30, Ribeirao Preto 17...) e w#77 Vendas por cidade (Salto 30, Mococa 20, Mogi Mirim 12...), ambos com a ressalva de cobertura na explicacao (71% dos leads ainda sem cidade ate a etapa de endereco).
+- Painel da Gabi agora com 17 widgets. Pendentes dela: funil de viabilidade (item 2) e CAC; pendencias de infra: cron do resumo diario (INSERT aguardando confirmacao) e cron do true-up de instalacoes.
+- Status: completed
