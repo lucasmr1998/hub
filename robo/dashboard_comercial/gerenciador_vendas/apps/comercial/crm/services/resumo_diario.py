@@ -343,9 +343,13 @@ def formatar_whatsapp(dados, nome_destinatario='pessoal', nome_tenant='comercial
         linhas.append(linha_sep)
         linhas.append('')
         if d['paradas_mais_3_dias']:
-            linhas.append(f"   • {d['paradas_mais_3_dias']} oportunidades paradas ha mais de 3 dias")
+            n = d['paradas_mais_3_dias']
+            txt = 'oportunidade parada' if n == 1 else 'oportunidades paradas'
+            linhas.append(f"   • {n} {txt} ha mais de 3 dias")
         if d['sem_responsavel']:
-            linhas.append(f"   • {d['sem_responsavel']} oportunidade(s) sem responsavel")
+            n = d['sem_responsavel']
+            txt = 'oportunidade' if n == 1 else 'oportunidades'
+            linhas.append(f"   • {n} {txt} sem responsavel")
             linhas.append(f"     Ver e atribuir: {settings.SITE_URL}/crm/oportunidades/?responsavel=sem")
 
     linhas.append('')
