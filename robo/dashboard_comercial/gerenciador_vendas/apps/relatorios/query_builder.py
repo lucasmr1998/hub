@@ -412,6 +412,61 @@ class WidgetQueryBuilder:
             data = [float(atendimentos), float(leads_n), float(ops_n), float(vendas + perdidas)]
             return labels, data
 
+        if transform == 'funil_viabilidade':
+            # Leads criados -> alcancaram a etapa de viabilidade -> vendas
+            # fechadas, na janela/fonte do dashboard. A etapa do meio e um
+            # estagio do pipeline (default "Endereco Validado"): a consulta
+            # formal de viabilidade quase nao e usada (o check acontece no
+            # flow Matrix sem carimbar o lead), entao o estagio alcancado e
+            # a leitura fiel. Configuravel via agrupamento.etapa_viabilidade.
+            from apps.comercial.leads.models import LeadProspecto
+            from apps.comercial.crm.models import OportunidadeVenda
+
+            cutoff, fonte, _dias = self._janela_e_fonte()
+            leads_qs = LeadProspecto.all_tenants.filter(tenant=self.tenant)
+            ops_qs = OportunidadeVenda.all_tenants.filter(tenant=self.tenant)
+            vendas_qs = OportunidadeVenda.all_tenants.filter(
+                tenant=self.tenant, estagio__is_final_ganho=True)
+            if fonte == 'organico':
+                leads_qs = leads_qs.exclude(fonte='facebook')
+                ops_qs = ops_qs.exclude(lead__fonte='facebook')
+                vendas_qs = vendas_qs.exclude(lead__fonte='facebook')
+            elif fonte:
+                leads_qs = leads_qs.filter(fonte=fonte)
+                ops_qs = ops_qs.filter(lead__fonte=fonte)
+                vendas_qs = vendas_qs.filter(lead__fonte=fonte)
+            if cutoff:
+                leads_qs = leads_qs.filter(data_cadastro__gte=cutoff)
+                ops_qs = ops_qs.filter(data_criacao__gte=cutoff)
+                vendas_qs = vendas_qs.filter(data_fechamento_real__gte=cutoff)
+
+            leads_n = leads_qs.count()
+            vendas_n = vendas_qs.count()
+
+            etapa_alvo = (self.widget.agrupamento or {}).get('etapa_viabilidade', 'Endereco Validado')
+            self._funil_detalhe = None
+            self._aplicar_transform('funil_cumulativo', dimensao, ops_qs, [], [])
+            det = getattr(self, '_funil_detalhe', None) or {}
+            alcancaram = 0
+            for _, nome_etapa, count in det.get('etapas', []):
+                if nome_etapa == etapa_alvo:
+                    alcancaram = count
+                    break
+
+            def _pct_v(a, b):
+                return round(a / b * 100, 1) if b else 0.0
+            labels = [
+                f'Leads ({leads_n})',
+                f'{etapa_alvo} ({alcancaram} · {_pct_v(alcancaram, leads_n)}%)',
+                f'Vendas ({vendas_n} · {_pct_v(vendas_n, alcancaram)}%)',
+            ]
+            data = [float(leads_n), float(alcancaram), float(vendas_n)]
+            self._transform_meta = {
+                'leads': leads_n, 'viabilidade': alcancaram, 'vendas': vendas_n,
+                'etapa': etapa_alvo,
+            }
+            return labels, data
+
         if transform == 'normalizar_cidade':
             # Agrupa variantes de grafia da mesma cidade: case, espacos
             # duplicados/nas pontas e sufixo /UF ("RIBEIRÃO PRETO/SP",
