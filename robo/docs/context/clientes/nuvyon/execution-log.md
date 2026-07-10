@@ -311,3 +311,12 @@ Resolvido: `IntegracaoAPI #18` (HubSoft Nuvyon) com `modos_sync.enviar_lead='des
 - Transform `normalizar_cidade` (98d6cff): agrupa variantes de grafia (ribeirao preto tinha 5 formas), remove sufixo /UF, title case com conectivos minusculos, descarta vazios. Widgets w#76 Leads por cidade (154 em 30d: Salto 41, Mococa 30, Ribeirao Preto 17...) e w#77 Vendas por cidade (Salto 30, Mococa 20, Mogi Mirim 12...), ambos com a ressalva de cobertura na explicacao (71% dos leads ainda sem cidade ate a etapa de endereco).
 - Painel da Gabi agora com 17 widgets. Pendentes dela: funil de viabilidade (item 2) e CAC; pendencias de infra: cron do resumo diario (INSERT aguardando confirmacao) e cron do true-up de instalacoes.
 - Status: completed
+
+## 2026-07-10 — Funil de viabilidade (pedido da Gabi, item que faltava)
+
+- Investigacao: o marcador formal de viabilidade quase nao existe (7 leads marcados vs ~130 vendas em 30d). As consultas reais rodam via Matrix/N8N so com CEP, sem identificar o lead (173 chamadas N8N todas do tr-carrion; 60 consultas HubSoft da Nuvyon sem vinculo). Funil literal sairia enganoso.
+- Solucao (caf8dbe): transform `funil_viabilidade` com a etapa do meio sendo o estagio alcancado "Endereco Validado" (proxy fiel: so e alcancado quando o CEP passou na cobertura dentro do fluxo), reusando o calculo cumulativo corrigido. Etapa configuravel via agrupamento.etapa_viabilidade. Widget w#78 no dash #15.
+- Numeros (30d): Leads 574 -> Endereco Validado 228 (39,7%) -> Vendas 133 (58,3%). So Meta Ads: 74 -> 34 (45,9%) -> 8 (23,5%): lead de ads valida endereco bem mas fecha muito pior pos-viabilidade.
+- Gotcha: Widget.descricao e varchar(255), INSERT falhou com texto longo na primeira tentativa.
+- Melhoria registrada: instrumentar o endpoint N8N de viabilidade pra aceitar telefone e carimbar o lead (funil literal vira opcao depois).
+- Status: completed
