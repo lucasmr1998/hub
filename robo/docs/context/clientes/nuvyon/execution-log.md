@@ -320,3 +320,9 @@ Resolvido: `IntegracaoAPI #18` (HubSoft Nuvyon) com `modos_sync.enviar_lead='des
 - Gotcha: Widget.descricao e varchar(255), INSERT falhou com texto longo na primeira tentativa.
 - Melhoria registrada: instrumentar o endpoint N8N de viabilidade pra aceitar telefone e carimbar o lead (funil literal vira opcao depois).
 - Status: completed
+
+## 2026-07-10 — Resumo diario da Gabi ATIVADO (cron #19)
+
+- Cron `resumo_diario_comercial` (#19) cadastrado: roda de hora em hora (`0 * * * *`), o command envia apenas quando a hora BRT bate com o `horario_inicio` da PreferenciaNotificacao (Gabi: 8h) e ha dedup por Notificacao enviada no dia. Validado em prod: rodada as 10h pulou com "fora do horario", zero envios.
+- A partir de amanha a Gabi recebe o resumo automatico as 8h, no formato aprovado pelo Lucas (novas oportunidades, vendas CRM, fluxo do dia, pipeline, ranking sem robos, alertas com link "Ver e atribuir").
+- Status: completed
