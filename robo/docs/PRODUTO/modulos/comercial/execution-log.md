@@ -204,3 +204,9 @@ Status: completed + deployado em prod (commits `d4cbd3c`, `88dd40d`, `e3f2de0`, 
 - Prevencao plano x regiao: dropdown de planos do modal recarrega pelos planos vendaveis no CEP (proxy listar_planos_por_cep, cache 10min) + save bloqueia plano fora do catalogo do CEP, fail-open. Motivo: plano de unidade errada gravado no HubSoft trava o prospecto (deadlock, caso Jefferson/Itu). Commit 847bbfe.
 - Leads: valor autopreenchido com o preco tipico do plano quando vem zerado (22 vendas sem receita; backfill com valor real do HubSoft executado). Commit 440e11b.
 - Status: completed
+
+## 2026-07-10 — Ajuste: dropdown de planos = catalogo curado x CEP (intersecao)
+
+- Acao: o filtro por CEP mostrava a lista bruta do HubSoft (91 itens em Itu, com variantes MIG/rural/PJ). Pergunta do Lucas ("vamos mostrar todos os ativos?") levou ao desenho final: intersecao entre o catalogo de Produtos do CRM (39 planos curados, gerenciaveis em /crm/produtos/) e os planos validos no CEP. Fallback pra lista completa do CEP quando o catalogo nao cobre a regiao. A trava do save segue validando contra a lista bruta. Commit 8c79b98.
+- Nota: o catalogo curado NAO e hardcoded — vem de crm_produtos (ja foi lista fixa de 5 no passado e virou gerenciavel).
+- Status: completed
