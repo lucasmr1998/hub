@@ -2706,7 +2706,13 @@ async function _ccFiltrarPlanosPorCep() {
     const r = await fetch(`/crm/api/planos-por-cep/?cep=${cep}`);
     const d = await r.json();
     if (d.ok && Array.isArray(d.planos) && d.planos.length) {
-      _ccRenderPlanos(d.planos, '— planos disponiveis pro CEP —');
+      // Intersecao: catalogo curado do CRM (o que o tenant vende) filtrado
+      // pelos planos que o HubSoft aceita nesse CEP. Se o catalogo curado
+      // nao tem nenhum plano da regiao, cai pra lista completa do CEP
+      // (melhor oferecer os validos crus do que nada).
+      const idsCep = new Set(d.planos.map(p => String(p.id_hubsoft)));
+      const curados = _ccTodosPlanos.filter(p => idsCep.has(String(p.id_hubsoft)));
+      _ccRenderPlanos(curados.length ? curados : d.planos, '— planos disponiveis pro CEP —');
     } else if (d.ok && d.planos === null) {
       // Consulta indisponivel: mantem catalogo cheio (fail-open)
       _ccRenderPlanos(_ccTodosPlanos, '— escolha o plano —');
