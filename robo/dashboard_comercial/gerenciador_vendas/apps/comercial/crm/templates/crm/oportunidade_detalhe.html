@@ -2673,20 +2673,53 @@ async function abrirCadastroCompleto() {
                       d.opcoes_origens_cliente || [], d.opcoes_origens_servico || []);
     _ccPreencher(d);
     _ccAtualizarStatus();
+    // Lead ja tem CEP: filtra o dropdown de planos pela regiao dele
+    _ccFiltrarPlanosPorCep();
   } catch (e) {
     toast('Erro', 'Falha de rede', 'danger');
   }
 }
 
-function _ccPopularSelects(planos, vencimentos, origensCliente, origensServico) {
+let _ccTodosPlanos = [];  // catalogo completo; o filtro por CEP substitui as opcoes
+
+function _ccRenderPlanos(planos, placeholder) {
   const selPlano = _ccElem('cc-plano');
+  if (!selPlano) return;
+  const atual = selPlano.value;
+  selPlano.innerHTML = `<option value="">${placeholder}</option>` +
+    planos.map(p => `<option value="${p.id_hubsoft}">${p.nome}${p.valor ? ` — R$ ${Number(p.valor).toFixed(2).replace('.',',')}` : ''}</option>`).join('');
+  if (atual && planos.some(p => String(p.id_hubsoft) === String(atual))) {
+    selPlano.value = atual;
+  } else if (atual) {
+    selPlano.value = '';
+    toast('Plano fora da regiao',
+          'O plano selecionado nao e vendido nesse CEP. Escolha um plano disponivel pra regiao.',
+          'warning');
+    _ccAtualizarStatus();
+  }
+}
+
+async function _ccFiltrarPlanosPorCep() {
+  const cep = (_ccElem('cc-cep').value || '').replace(/\D/g, '');
+  if (cep.length !== 8) return;
+  try {
+    const r = await fetch(`/crm/api/planos-por-cep/?cep=${cep}`);
+    const d = await r.json();
+    if (d.ok && Array.isArray(d.planos) && d.planos.length) {
+      _ccRenderPlanos(d.planos, '— planos disponiveis pro CEP —');
+    } else if (d.ok && d.planos === null) {
+      // Consulta indisponivel: mantem catalogo cheio (fail-open)
+      _ccRenderPlanos(_ccTodosPlanos, '— escolha o plano —');
+    }
+  } catch (e) { /* fail-open: mantem o que esta */ }
+}
+
+function _ccPopularSelects(planos, vencimentos, origensCliente, origensServico) {
   const selVenc  = _ccElem('cc-vencimento');
   const selOC    = _ccElem('cc-id-origem');
   const selOS    = _ccElem('cc-id-origem-servico');
-  if (selPlano) {
-    selPlano.innerHTML = '<option value="">— escolha o plano —</option>' +
-      planos.map(p => `<option value="${p.id_hubsoft}">${p.nome}${p.valor ? ` — R$ ${Number(p.valor).toFixed(2).replace('.',',')}` : ''}</option>`).join('');
-  }
+  _ccTodosPlanos = planos || [];
+  _ccRenderPlanos(_ccTodosPlanos, '— escolha o plano —');
   if (selVenc) {
     selVenc.innerHTML = '<option value="">— escolha o dia —</option>' +
       vencimentos.map(v => `<option value="${v.id_hubsoft}">Dia ${v.dia}</option>`).join('');
@@ -2754,6 +2787,7 @@ async function _ccBuscarCep() {
     if (!_ccElem('cc-estado').value) _ccElem('cc-estado').value = d.uf || '';
     _ccAtualizarStatus();
   } catch {}
+  _ccFiltrarPlanosPorCep();
 }
 
 async function _ccSalvar(eFechar) {

@@ -3948,6 +3948,54 @@ def regra_pipeline_historico(request, pk):
     })
 
 
+def _planos_por_cep(tenant, cep_digits):
+    """Planos vendaveis no CEP segundo o HubSoft (catalogo da unidade de
+    negocio da cidade), com cache curto por tenant+cep.
+
+    Retorna lista [{id_hubsoft, nome, valor}] ou None quando nao da pra
+    saber (sem integracao ativa ou consulta falhou) — caller decide o
+    fail-open."""
+    from django.core.cache import cache as _cache
+    chave = f'planos_cep:{tenant.pk}:{cep_digits}'
+    planos = _cache.get(chave)
+    if planos is not None:
+        return planos
+    try:
+        from apps.integracoes.models import IntegracaoAPI
+        from apps.integracoes.services.hubsoft import HubsoftService
+        integ = IntegracaoAPI.all_tenants.filter(
+            tenant=tenant, tipo='hubsoft', ativa=True,
+        ).first()
+        if not integ:
+            return None
+        servicos = HubsoftService(integ).listar_planos_por_cep(cep_digits)
+        planos = [
+            {
+                'id_hubsoft': s.get('id_servico'),
+                'nome': s.get('descricao') or s.get('display') or '',
+                'valor': s.get('valor'),
+            }
+            for s in servicos if s.get('id_servico') is not None
+        ]
+        _cache.set(chave, planos, 600)
+        return planos
+    except Exception:
+        return None
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_planos_por_cep(request):
+    """Alimenta o dropdown do cadastro completo: a vendedora preenche o
+    endereco e os planos mudam conforme a regiao (caso Jefferson/Itu 10/07:
+    plano de unidade errada gravado no HubSoft trava o prospecto inteiro).
+    `planos: null` = nao foi possivel consultar, front mantem catalogo cheio."""
+    cep = ''.join(ch for ch in request.GET.get('cep', '') if ch.isdigit())
+    if len(cep) != 8:
+        return JsonResponse({'ok': False, 'erro': 'CEP invalido'}, status=400)
+    return JsonResponse({'ok': True, 'planos': _planos_por_cep(request.tenant, cep)})
+
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def api_cadastro_completo_oportunidade(request, pk):
@@ -4139,6 +4187,28 @@ def api_cadastro_completo_oportunidade(request, pk):
             'error': 'Campos obrigatorios: ' + ', '.join(faltando),
             'campos_obrigatorios': faltando,
         }, status=400)
+
+    # Plano x cidade: bloqueia salvar plano que o HubSoft nao vende no CEP
+    # informado (caso Jefferson/Itu 10/07: plano de unidade errada gravado
+    # trava o prospecto no HubSoft, nem edicao sem servico passa depois).
+    # Fail-open: consulta indisponivel nao bloqueia o save.
+    plano_final = update_fields.get('id_plano_rp', lead.id_plano_rp)
+    cep_final = ''.join(ch for ch in str(update_fields.get('cep', lead.cep) or '') if ch.isdigit())
+    if plano_final and len(cep_final) == 8:
+        planos_cep = _planos_por_cep(request.tenant, cep_final)
+        if planos_cep is not None:
+            ids_validos = {int(p['id_hubsoft']) for p in planos_cep}
+            try:
+                plano_int = int(plano_final)
+            except (ValueError, TypeError):
+                plano_int = None
+            if plano_int is not None and plano_int not in ids_validos:
+                return JsonResponse({
+                    'error': 'O plano escolhido nao e vendido no endereco informado '
+                             '(unidade de negocio da cidade). Escolha um plano '
+                             'disponivel pra esse CEP.',
+                    'campos_obrigatorios': ['Plano compativel com a cidade'],
+                }, status=400)
 
     try:
         from apps.comercial.leads.models import LeadProspecto

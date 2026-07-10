@@ -29,6 +29,7 @@ urlpatterns = [
     path('oportunidades/<int:pk>/sugestao/aplicar/', views.api_sugestao_aplicar, name='api_sugestao_aplicar'),
     path('oportunidades/<int:pk>/cadastro-completo/', views.api_cadastro_completo_oportunidade, name='api_cadastro_completo_oportunidade'),
     path('oportunidades/<int:pk>/sugestao/rejeitar/', views.api_sugestao_rejeitar, name='api_sugestao_rejeitar'),
+    path('api/planos-por-cep/', views.api_planos_por_cep, name='api_planos_por_cep'),
 
     # Tarefas
     path('tarefas/', views.tarefas_lista, name='tarefas_lista'),
