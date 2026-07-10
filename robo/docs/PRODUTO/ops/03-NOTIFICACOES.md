@@ -335,3 +335,24 @@ Arquivo: `tests/test_models_notificacoes.py` �� 9 testes
 | 0002 | unique_together com tenant (tipo, canal) |
 | 0003 | Adiciona lida, data_lida, url_acao, icone, resposta_externa. Remove campos n8n. Fix unique_together preferencia e template. Index destinatario+lida |
 | 0004 | NotificacaoLeituraBroadcast — track de leitura por user pra notif broadcast |
+
+---
+
+## Resumos diarios comerciais via WhatsApp (10/07/2026)
+
+Dois resumos independentes, cada um com `TipoNotificacao` proprio (destinatarios e horario configuraveis via `PreferenciaNotificacao`):
+
+| Resumo | Command | Tipo | Conteudo |
+|---|---|---|---|
+| Geral | `enviar_resumo_diario_comercial` | `resumo_diario_comercial` | Novas oportunidades, vendas CRM, contratos, perdidas, fluxo mais forte, pipeline por estagio, alertas (paradas 3d+, sem responsavel com link "Ver e atribuir") |
+| Vendedoras | `enviar_resumo_diario_vendedoras` | `resumo_diario_vendedoras` | 1 linha por vendedora: +recebeu, fechou, perdeu (com "Sem retorno" declarado no card), carteira ativa e paradas 3d+; alerta de carteira parada no fim |
+
+Regras comuns dos dois commands:
+- Janela: dia anterior (BRT); snapshot de carteira e do momento do envio.
+- Cron roda de hora em hora (`0 * * * *`, job `resumo_diario_comercial` id 19); o command SO envia quando a hora BRT bate com `PreferenciaNotificacao.horario_inicio` (default 8h) e ha dedup por `Notificacao` enviada no dia. Reexecucao nao duplica.
+- `--dry-run` imprime sem enviar; `--force` ignora horario e dedup (teste manual); `--dia YYYY-MM-DD` reprocessa dia especifico.
+- Envio via Uazapi da Aurora HQ (`enviar_whatsapp_aurora`); telefone vem do `PerfilUsuario` do destinatario.
+- Ranking exclui usuarios robo (`settings.USUARIOS_ROBO_RELATORIOS`).
+- "Sem retorno" = motivo de perda do catalogo declarado pela vendedora ao marcar Perdido (100% manual, verificado 10/07).
+
+Estado em 10/07: formatos aprovados pelo Lucas em preview; **cron #19 DESATIVADO** aguardando aprovacao final. Ativacao = criar `TipoNotificacao resumo_diario_vendedoras` + preferencia da Gabi + `UPDATE cron_jobs SET ativo=TRUE WHERE id=19`.

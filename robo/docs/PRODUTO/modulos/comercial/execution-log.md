@@ -195,3 +195,12 @@ Status: completed + deployado em prod (commits `d4cbd3c`, `88dd40d`, `e3f2de0`, 
 - **How to apply**: padrao "telefone" no schema deve ser VARCHAR >= 20. Se ID `120363...` voltar a aparecer em outro tenant, ja esta blindado. Pra debugar webhooks futuros, `integracoes_log_webhook_n8n` tem `body_preview` + `status_code` por chamada (consultar via SQL).
 - **Output**: commit `570ef8c`.
 - **Status**: completed + deployado em prod.
+
+## 2026-07-08 a 2026-07-10 — CRM: obrigatorios no cadastro, sem responsavel, prevencao plano x regiao
+
+- Modal cadastro completo: email, origem do cliente e origem do contato obrigatorios (validacao front + backend pelo ESTADO FINAL do lead); label "Origem do servico" renomeada pra "Origem do contato". Commit 0425a64.
+- Criacao manual de oportunidade: criador vira responsavel default (9 ops orfas eram desse caminho; distribuicao automatica nao cobria) + log de atribuicao na timeline. Commit 293ef81. Backfill das orfas pro criador executado em prod.
+- Filtro "— Sem responsavel —" no kanban e na lista (`?responsavel=sem`); resumo diario aponta link direto. Commit 8c7efee.
+- Prevencao plano x regiao: dropdown de planos do modal recarrega pelos planos vendaveis no CEP (proxy listar_planos_por_cep, cache 10min) + save bloqueia plano fora do catalogo do CEP, fail-open. Motivo: plano de unidade errada gravado no HubSoft trava o prospecto (deadlock, caso Jefferson/Itu). Commit 847bbfe.
+- Leads: valor autopreenchido com o preco tipico do plano quando vem zerado (22 vendas sem receita; backfill com valor real do HubSoft executado). Commit 440e11b.
+- Status: completed

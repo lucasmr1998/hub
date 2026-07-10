@@ -169,3 +169,12 @@ Comportamento apos o fix (`hubsoft.py`):
 - **POST** (`cadastrar_prospecto` -> `_cadastrar_sem_servico`): recria o prospecto sem a chave `servico` (rascunho nasce); o plano entra no proximo update via Regra 24, que ja passa pelo retry do PUT.
 - Retry e 1x, sem recursao. Se a fase 2 falhar com o mesmo erro, o plano e genuinamente invalido pra cidade real do lead: `HubsoftServiceError` sobe com contexto e um humano decide.
 - Se o HubSoft mudar o texto do erro, o retry deixa de ativar e o comportamento degrada pro anterior (erro direto), nunca piora.
+
+## Deadlock de plano x cidade gravado + prevencao no modal (10/07/2026)
+
+Aprendizado do caso Jefferson/Itu (prospecto 23831): o HubSoft valida o plano **armazenado** contra a cidade do prospecto em TODA edicao. Se um PUT consegue gravar plano de unidade errada (ex: plano NUVYON num endereco Meganet), o prospecto entra em deadlock: qualquer edicao posterior e rejeitada, inclusive a fase 1 do retry (sem servico). O retry nao resolve por design — a saida e trocar o plano por um da unidade correta (decisao humana no card).
+
+Prevencao (commit 847bbfe), em 3 camadas no modal de cadastro completo do CRM:
+1. `GET /crm/api/planos-por-cep/?cep=` — proxy de `listar_planos_por_cep` (catalogo real da unidade do CEP no HubSoft), cache 10min por tenant+cep.
+2. Front: preencheu o CEP, o dropdown de planos recarrega so com os planos vendaveis na regiao; selecao invalida e limpa com aviso.
+3. Backend: o save do modal bloqueia plano fora do catalogo do CEP (estado final do lead), com mensagem acionavel. Fail-open: consulta indisponivel nao bloqueia (retry/alertas cobrem).
