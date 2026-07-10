@@ -340,3 +340,11 @@ Resolvido: `IntegracaoAPI #18` (HubSoft Nuvyon) com `modos_sync.enviar_lead='des
 - Validado pos-deploy: os 2 commands montam o resumo e pulam fora do horario (gate 8h + dedup). Primeiro envio automatico: 11/07 as 8h, duas mensagens pra Gabi.
 - Gerenciavel em Configuracoes > Notificacoes (ligar/desligar tipo, destinatarios, horario, canal) — o cron e so o tick horario.
 - Status: completed
+
+## 2026-07-10 — Bug do atendimento Rosy + acesso ao n8n proprio + dominio antigo em node ativo
+
+- Caso Rosy (lead 2194, tel 5519988813130): flow Matrix aceitou "Nao" como nome (no sem validacao), cliente mandou o endereco completo em bloco na pergunta do CEP (no `sol_cep` com validation=0), o subworkflow de validacao aprovou sem extrair o CEP, confirmacao saiu com CEP/estado vazios e o atendimento enroscou na pergunta do email. Dados reais do cliente estao na conversa (via API Matrix, atendimento 1060182) mas o lead ficou vazio porque o flow so grava no no final. Cliente comprador a resgatar (op 2353).
+- ACESSO NOVO: o n8n que atende os flows e NOSSO (container `automation_n8n` no VPS, SQLite interno em /home/node/.n8n/database.sqlite). Execucoes consultaveis via node+sqlite3 (formato achatado com referencias por indice). 100 workflows, ~15 ativos.
+- Outros problemas do dia: 4x `registrar-erro-resposta` (clientes enroscando na pergunta do email; endpoint chega SEM telefone/protocolo, dificulta correlacao) + 2 execucoes com erro no workflow `[Nyvion] Matrix | Atendimento Fixo | 1.2`: node **UpdateCellphone1** aponta pro dominio ANTIGO `robovendas.megalinkpiaui.com.br` -> resolve tenant errado -> 404 "Registro nao encontrado" (leads existem). E o node que marca `status_api=cliente` de quem responde "ja sou cliente" - quebrado desde o clone do flow da Megalink. Auditoria: 3 workflows ativos com o dominio antigo (Nyvion 1.2, Megalink 1.1 e 1.2), todos nesse node.
+- Fixes encaminhados (tarefa #179): trocar a URL do UpdateCellphone1 nos 3 workflows (UI n8n), regex no `sol_cep` do flow Matrix, Sub/CEPValidation extrair CEP de texto livre, registrar-erro-resposta passar protocolo.
+- Status: pending (correcoes no n8n/Matrix a aplicar; resgate do cliente Rosy com o time)
