@@ -326,3 +326,10 @@ Resolvido: `IntegracaoAPI #18` (HubSoft Nuvyon) com `modos_sync.enviar_lead='des
 - Cron `resumo_diario_comercial` (#19) cadastrado: roda de hora em hora (`0 * * * *`), o command envia apenas quando a hora BRT bate com o `horario_inicio` da PreferenciaNotificacao (Gabi: 8h) e ha dedup por Notificacao enviada no dia. Validado em prod: rodada as 10h pulou com "fora do horario", zero envios.
 - A partir de amanha a Gabi recebe o resumo automatico as 8h, no formato aprovado pelo Lucas (novas oportunidades, vendas CRM, fluxo do dia, pipeline, ranking sem robos, alertas com link "Ver e atribuir").
 - Status: completed
+
+## 2026-07-10 — Caso Jefferson/Itu (alerta #4108) + prevencao plano x regiao no modal
+
+- Alerta #4108: prospecto 23831 (Jefferson, lead 2212) travado no HubSoft. Historia: PUT das 12:33 gravou endereco de Itu + plano NUVYON 1GIGA (na hora validou contra a cidade antiga); depois disso TODA edicao e rejeitada porque o HubSoft valida o plano ARMAZENADO contra a cidade em qualquer PUT — ate a fase 1 do retry (sem servico) falha. Aprendizado: plano invalido gravado = prospecto em deadlock; retry nao resolve por design (decisao humana). Destravar = trocar o plano no card pra um da unidade Meganet (time avisado via Lucas).
+- Prevencao (847bbfe), fluxo sugerido pelo Lucas: no modal de cadastro completo, preencheu o CEP -> o dropdown de planos recarrega so com os planos vendaveis na regiao (proxy do listar_planos_por_cep com cache 10min); selecao invalida e limpa com aviso; save bloqueia plano fora do catalogo do CEP (fail-open se HubSoft indisponivel). Validado em prod: CEP de Itu retorna 91 planos SEM o 1260; CEP de Caconde retorna 119 planos COM o 1260.
+- Tambem hoje: resumo diario dividido em dois (geral sem ranking + vendedoras 1 linha por pessoa com recebeu/fechou/perdeu/sem retorno/carteira/paradas, formato compacto aprovado em preview no WhatsApp do Lucas). Cron #19 DESATIVADO a pedido ate aprovacao final; ativacao pendente: TipoNotificacao resumo_diario_vendedoras + preferencia da Gabi + religar cron.
+- Status: completed (prevencao no ar) / pending (ativacao dos resumos, plano do Jefferson)
