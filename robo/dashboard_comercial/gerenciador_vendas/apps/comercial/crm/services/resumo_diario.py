@@ -15,7 +15,7 @@ Design:
 from datetime import timedelta
 
 from django.conf import settings
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from apps.comercial.crm.models import (
@@ -164,6 +164,118 @@ def montar_resumo(tenant, dia=None):
     }
 
 
+def montar_resumo_vendedoras(tenant, dia=None):
+    """Resumo diario POR VENDEDORA (pedido da Gabi 10/07): pra cada uma,
+    o movimento do dia (recebidas, fechadas, perdidas e quantas perdidas
+    com motivo Sem retorno) + snapshot da carteira ativa e paradas 3d+.
+
+    Retorna dict com `dia` e `vendedoras` (lista ordenada por fechadas,
+    depois recebidas). Vendedora sem movimento no dia e sem carteira fica
+    de fora. Usuarios robo (settings.USUARIOS_ROBO_RELATORIOS) excluidos.
+    """
+    if dia is None:
+        dia = _hoje_brt() - timedelta(days=1)
+
+    robos = getattr(settings, 'USUARIOS_ROBO_RELATORIOS', [])
+    ops = OportunidadeVenda.objects.filter(
+        tenant=tenant, responsavel__isnull=False,
+    )
+    if robos:
+        ops = ops.exclude(responsavel__username__in=robos)
+
+    limite_paradas = timezone.now() - timedelta(days=3)
+    q_ativa = Q(estagio__is_final_ganho=False, estagio__is_final_perdido=False, ativo=True)
+    agregado = ops.values('responsavel__first_name', 'responsavel__username').annotate(
+        recebidas=Count('id', filter=Q(data_criacao__date=dia)),
+        fechadas=Count('id', filter=Q(
+            estagio__is_final_ganho=True, data_fechamento_real__date=dia)),
+        perdidas=Count('id', filter=Q(
+            estagio__is_final_perdido=True, data_fechamento_real__date=dia)),
+        sem_retorno=Count('id', filter=Q(
+            estagio__is_final_perdido=True, data_fechamento_real__date=dia,
+            motivo_perda_ref__nome__icontains='sem retorno')),
+        carteira=Count('id', filter=q_ativa),
+        paradas=Count('id', filter=q_ativa & Q(data_atualizacao__lt=limite_paradas)),
+    )
+
+    vendedoras = []
+    for v in agregado:
+        if not any((v['recebidas'], v['fechadas'], v['perdidas'], v['carteira'])):
+            continue
+        nome = (v['responsavel__first_name'] or v['responsavel__username'] or '').strip()
+        vendedoras.append({
+            'nome': nome,
+            'recebidas': v['recebidas'],
+            'fechadas': v['fechadas'],
+            'perdidas': v['perdidas'],
+            'sem_retorno': v['sem_retorno'],
+            'carteira': v['carteira'],
+            'paradas': v['paradas'],
+            'teve_movimento': bool(v['recebidas'] or v['fechadas'] or v['perdidas']),
+        })
+    vendedoras.sort(key=lambda v: (-v['fechadas'], -v['recebidas'], -v['carteira']))
+
+    return {
+        'dia': dia,
+        'dia_semana_pt': _dia_semana(dia),
+        'vendedoras': vendedoras,
+    }
+
+
+def formatar_whatsapp_vendedoras(dados, nome_destinatario='pessoal', nome_tenant='comercial'):
+    """Formata o resumo por vendedora pra WhatsApp: bloco completo pra quem
+    teve movimento no dia, linha compacta pras demais, alerta de paradas."""
+    d = dados
+    dia_fmt = d['dia'].strftime('%d/%m')
+    linha_sep = '━' * 22
+    linhas = []
+    linhas.append(f"🧑‍💼 Bom dia, {nome_destinatario}! Vendedoras {nome_tenant} — {dia_fmt} ({d['dia_semana_pt']})")
+    linhas.append('')
+    linhas.append(linha_sep)
+    linhas.append('📊 *MOVIMENTO DO DIA*')
+    linhas.append(linha_sep)
+
+    com_mov = [v for v in d['vendedoras'] if v['teve_movimento']]
+    sem_mov = [v for v in d['vendedoras'] if not v['teve_movimento']]
+
+    if not com_mov:
+        linhas.append('')
+        linhas.append('Nenhuma vendedora movimentou oportunidades no dia.')
+    for v in com_mov:
+        linhas.append('')
+        linhas.append(f"*{v['nome'].upper()}*")
+        perdeu = f"perdeu {v['perdidas']}"
+        if v['sem_retorno']:
+            perdeu += f" ({v['sem_retorno']} sem retorno)"
+        linhas.append(f"   recebeu {v['recebidas']} · fechou *{v['fechadas']}* · {perdeu}")
+        carteira = f"   carteira: {v['carteira']} ativas"
+        if v['paradas']:
+            carteira += f" ({v['paradas']} paradas 3d+)"
+        linhas.append(carteira)
+
+    if sem_mov:
+        linhas.append('')
+        linhas.append('*Sem movimento no dia:*')
+        linhas.append('   ' + ' · '.join(
+            f"{v['nome']} {v['carteira']}" + (f" ({v['paradas']}⚠)" if v['paradas'] else '')
+            for v in sem_mov
+        ))
+
+    alertas = [v for v in d['vendedoras'] if v['paradas']]
+    if alertas:
+        linhas.append('')
+        linhas.append(linha_sep)
+        linhas.append('⚠️ *CARTEIRA PARADA HA 3+ DIAS*')
+        linhas.append(linha_sep)
+        linhas.append('')
+        for v in sorted(alertas, key=lambda x: -x['paradas']):
+            linhas.append(f"   • {v['nome']}: {v['paradas']} de {v['carteira']}")
+
+    linhas.append('')
+    linhas.append('Bom dia e boa venda! ☕')
+    return '\n'.join(linhas)
+
+
 _DIAS_SEMANA = [
     'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo',
 ]
@@ -220,10 +332,9 @@ def formatar_whatsapp(dados, nome_destinatario='pessoal', nome_tenant='comercial
             linhas.append(f"   • {e['nome']}: {e['total']}")
         linhas.append('')
 
-    if d['por_vendedora']:
-        linhas.append('*Por vendedora:*')
-        for v in d['por_vendedora']:
-            linhas.append(f"   • {v['nome']}: {v['total']}")
+    # Ranking por vendedora saiu do resumo geral em 10/07: virou o resumo
+    # dedicado `resumo_diario_vendedoras` (montar_resumo_vendedoras), com
+    # mais dados por pessoa, a pedido da Gabi.
 
     if d['paradas_mais_3_dias'] or d['sem_responsavel']:
         linhas.append('')
