@@ -223,53 +223,53 @@ def montar_resumo_vendedoras(tenant, dia=None):
 
 
 def formatar_whatsapp_vendedoras(dados, nome_destinatario='pessoal', nome_tenant='comercial'):
-    """Formata o resumo por vendedora pra WhatsApp: bloco completo pra quem
-    teve movimento no dia, linha compacta pras demais, alerta de paradas."""
+    """Formata o resumo por vendedora pra WhatsApp em 1 linha por pessoa
+    (pedido do Lucas 10/07: bloco de 3 linhas ocupava espaco demais).
+    Legenda no topo; alerta de carteira parada no fim."""
     d = dados
     dia_fmt = d['dia'].strftime('%d/%m')
     linha_sep = '━' * 22
     linhas = []
     linhas.append(f"🧑‍💼 Bom dia, {nome_destinatario}! Vendedoras {nome_tenant} — {dia_fmt} ({d['dia_semana_pt']})")
     linhas.append('')
-    linhas.append(linha_sep)
-    linhas.append('📊 *MOVIMENTO DO DIA*')
+    linhas.append('+recebeu · ✅fechou · ❌perdeu (s/retorno) · 🗂carteira (⚠paradas 3d+)')
     linhas.append(linha_sep)
 
     com_mov = [v for v in d['vendedoras'] if v['teve_movimento']]
     sem_mov = [v for v in d['vendedoras'] if not v['teve_movimento']]
 
+    def _linha(v):
+        partes = [f"+{v['recebidas']}", f"✅{v['fechadas']}"]
+        perdeu = f"❌{v['perdidas']}"
+        if v['sem_retorno']:
+            perdeu += f" ({v['sem_retorno']} s/ret)"
+        partes.append(perdeu)
+        carteira = f"🗂{v['carteira']}"
+        if v['paradas']:
+            carteira += f" ({v['paradas']}⚠)"
+        partes.append(carteira)
+        return f"*{v['nome']}:* " + ' · '.join(partes)
+
     if not com_mov:
-        linhas.append('')
         linhas.append('Nenhuma vendedora movimentou oportunidades no dia.')
     for v in com_mov:
-        linhas.append('')
-        linhas.append(f"*{v['nome'].upper()}*")
-        perdeu = f"perdeu {v['perdidas']}"
-        if v['sem_retorno']:
-            perdeu += f" ({v['sem_retorno']} sem retorno)"
-        linhas.append(f"   recebeu {v['recebidas']} · fechou *{v['fechadas']}* · {perdeu}")
-        carteira = f"   carteira: {v['carteira']} ativas"
-        if v['paradas']:
-            carteira += f" ({v['paradas']} paradas 3d+)"
-        linhas.append(carteira)
+        linhas.append(_linha(v))
 
     if sem_mov:
         linhas.append('')
         linhas.append('*Sem movimento no dia:*')
-        linhas.append('   ' + ' · '.join(
-            f"{v['nome']} {v['carteira']}" + (f" ({v['paradas']}⚠)" if v['paradas'] else '')
+        linhas.append(' · '.join(
+            f"{v['nome']} 🗂{v['carteira']}" + (f" ({v['paradas']}⚠)" if v['paradas'] else '')
             for v in sem_mov
         ))
 
     alertas = [v for v in d['vendedoras'] if v['paradas']]
     if alertas:
         linhas.append('')
-        linhas.append(linha_sep)
-        linhas.append('⚠️ *CARTEIRA PARADA HA 3+ DIAS*')
-        linhas.append(linha_sep)
-        linhas.append('')
-        for v in sorted(alertas, key=lambda x: -x['paradas']):
-            linhas.append(f"   • {v['nome']}: {v['paradas']} de {v['carteira']}")
+        linhas.append('⚠️ *Carteira parada ha 3+ dias:* ' + ' · '.join(
+            f"{v['nome']} {v['paradas']} de {v['carteira']}"
+            for v in sorted(alertas, key=lambda x: -x['paradas'])
+        ))
 
     linhas.append('')
     linhas.append('Bom dia e boa venda! ☕')
