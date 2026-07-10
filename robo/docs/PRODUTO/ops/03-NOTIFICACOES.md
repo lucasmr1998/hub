@@ -355,4 +355,4 @@ Regras comuns dos dois commands:
 - Ranking exclui usuarios robo (`settings.USUARIOS_ROBO_RELATORIOS`).
 - "Sem retorno" = motivo de perda do catalogo declarado pela vendedora ao marcar Perdido (100% manual, verificado 10/07).
 
-Estado em 10/07: formatos aprovados pelo Lucas em preview; **cron #19 DESATIVADO** aguardando aprovacao final. Ativacao = criar `TipoNotificacao resumo_diario_vendedoras` + preferencia da Gabi + `UPDATE cron_jobs SET ativo=TRUE WHERE id=19`.
+Estado em 10/07 (fim do dia): ATIVADO. Tipo resumo_diario_vendedoras (#86) + preferencia da Gabi (8h) criados; crons #19 (geral) e #20 (vendedoras) ativos. Gerenciavel em Configuracoes > Notificacoes.

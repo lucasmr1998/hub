@@ -333,3 +333,10 @@ Resolvido: `IntegracaoAPI #18` (HubSoft Nuvyon) com `modos_sync.enviar_lead='des
 - Prevencao (847bbfe), fluxo sugerido pelo Lucas: no modal de cadastro completo, preencheu o CEP -> o dropdown de planos recarrega so com os planos vendaveis na regiao (proxy do listar_planos_por_cep com cache 10min); selecao invalida e limpa com aviso; save bloqueia plano fora do catalogo do CEP (fail-open se HubSoft indisponivel). Validado em prod: CEP de Itu retorna 91 planos SEM o 1260; CEP de Caconde retorna 119 planos COM o 1260.
 - Tambem hoje: resumo diario dividido em dois (geral sem ranking + vendedoras 1 linha por pessoa com recebeu/fechou/perdeu/sem retorno/carteira/paradas, formato compacto aprovado em preview no WhatsApp do Lucas). Cron #19 DESATIVADO a pedido ate aprovacao final; ativacao pendente: TipoNotificacao resumo_diario_vendedoras + preferencia da Gabi + religar cron.
 - Status: completed (prevencao no ar) / pending (ativacao dos resumos, plano do Jefferson)
+
+## 2026-07-10 — Resumos diarios ATIVADOS (tarefa #174 concluida)
+
+- Ativacao completa: TipoNotificacao `resumo_diario_vendedoras` (#86, tenant 12) + PreferenciaNotificacao da Gabi (8h, whatsapp, todos os dias) + cron #20 (vendedoras) criado + cron #19 (geral) religado + fix de plural nos alertas (4fb506e).
+- Validado pos-deploy: os 2 commands montam o resumo e pulam fora do horario (gate 8h + dedup). Primeiro envio automatico: 11/07 as 8h, duas mensagens pra Gabi.
+- Gerenciavel em Configuracoes > Notificacoes (ligar/desligar tipo, destinatarios, horario, canal) — o cron e so o tick horario.
+- Status: completed
