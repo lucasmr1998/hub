@@ -74,6 +74,24 @@ def test_sem_marcador_exclui_ja_processadas():
 
 
 @pytest.mark.django_db
+def test_filtro_motivo_ref_nome():
+    from apps.comercial.crm.models import MotivoPerda
+
+    tenant = TenantFactory()
+    estagio = _estagio_perdido(tenant)
+    sem_retorno = MotivoPerda.objects.create(tenant=tenant, nome='Sem retorno', ativo=True)
+    preco = MotivoPerda.objects.create(tenant=tenant, nome='Preço', ativo=True)
+    op_sem_retorno = _op_perdida(tenant, estagio, 40, motivo_perda_ref=sem_retorno)
+    op_preco = _op_perdida(tenant, estagio, 40, motivo_perda_ref=preco)
+
+    achados = _oportunidades_perdidas(tenant, {'motivo_ref_nome': 'sem retorno'})  # case insensitive
+
+    ids = {a['oportunidade'].pk for a in achados}
+    assert ids == {op_sem_retorno.pk}
+    assert op_preco.pk not in ids
+
+
+@pytest.mark.django_db
 def test_estrutura_do_retorno():
     tenant = TenantFactory()
     estagio = _estagio_perdido(tenant)

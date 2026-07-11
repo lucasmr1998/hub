@@ -26,6 +26,9 @@ def _oportunidades_perdidas(tenant, config):
     Filtros opcionais na `config`:
     - `motivo_categoria`: categoria legada do motivo de perda (`motivo_perda_categoria`).
     - `motivo_ref_id`: id do `MotivoPerda` (`motivo_perda_ref_id`).
+    - `motivo_ref_nome`: nome do `MotivoPerda` (case insensitive). Preferível a
+      `motivo_ref_id` em config portável entre tenants/ambientes (o id varia; o
+      nome é o mesmo).
     - `pipeline`: slug do pipeline (`OportunidadeVenda.pipeline`).
     - `sem_marcador`: só entram oportunidades SEM essa chave em `dados_custom`
       (freio manual: o fluxo marca a op depois de processar, pra não repetir).
@@ -55,6 +58,10 @@ def _oportunidades_perdidas(tenant, config):
             qs = qs.filter(motivo_perda_ref_id=int(motivo_ref_id))
         except (TypeError, ValueError):
             pass
+
+    motivo_ref_nome = (config.get('motivo_ref_nome') or '').strip()
+    if motivo_ref_nome:
+        qs = qs.filter(motivo_perda_ref__nome__iexact=motivo_ref_nome)
 
     pipeline_slug = (config.get('pipeline') or '').strip()
     if pipeline_slug:
