@@ -146,6 +146,7 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 | tipo | grupo › subgrupo | label | status |
 |---|---|---|---|
 | `set_fields` | Transformação › Campos | Definir variáveis | ✅ (nó de referência) |
+| `extrair_json` | Transformação › JSON | Extrair JSON | ✅ tarefas 180/181 (parseia JSON de texto livre; aceita cerca de código) |
 | `http_request` | Core › HTTP | HTTP Request | ✅ (guard SSRF + mascaramento) |
 | `if` | Fluxo › Lógica | Condição (If) | ✅ (saídas true/false) |
 | `switch` | Fluxo › Roteamento | Switch (roteador) | ✅ **N saídas dinâmicas** — modelo "Rules" (n8n): regras `valor [operador] comparar → saída` (reusa operadores/`_comparar` do `if`); 1ª que casa ganha; resto → `default` |
@@ -176,6 +177,7 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 | `marcar_dados_custom` | Comercial › Oportunidades | Marcar dado customizado | ✅ tarefas 180/181 (chave/valor em `dados_custom`; vazio grava timestamp) |
 | `dar_pontos` | CS › Clube | Dar pontos (Clube) | ✅ **convergência** (CPF do config ou do lead; filtra por tenant) |
 | `matrix_hsm` | Integrações › Matrix | Matrix: disparar HSM (WhatsApp) | ✅ **outbound real** (`MatrixBrasilService.enviar_hsm`; template HSM + variáveis) |
+| `matrix_atendimento` | Integrações › Matrix | Matrix: transcript do atendimento | ✅ tarefas 180/181 (`MatrixBrasilService.consultar_atendimento`; anonimiza PII por padrão) |
 | `hubsoft_sincronizar_prospecto` | Integrações › HubSoft | HubSoft: sincronizar prospecto | ✅ **outbound real** (cria rascunho/atualiza; converge a ação do marketing; precisa de lead) |
 | `hubsoft_consultar_cliente` | Integrações › HubSoft | HubSoft: consultar cliente | ✅ read (por CPF/CNPJ; enriquecimento) |
 | `hubsoft_listar_faturas` | Integrações › HubSoft | HubSoft: listar faturas | ✅ read (boletos por CPF/CNPJ; só pendentes opcional) |

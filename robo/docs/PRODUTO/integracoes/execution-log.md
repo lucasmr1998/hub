@@ -88,3 +88,10 @@ Registro cronológico do que foi executado no módulo de integrações (ação, 
 - **Sub-nav**: entrada "Contratos" ao lado de "Ordens de Serviço" em Sistema/Integrações.
 - **Doc**: [08-CONTRATOS.md](08-CONTRATOS.md). README atualizado.
 - **Status**: completed local. **Pending**: deploy prod, `seed_funcionalidades` em prod, atribuir funcionalidades aos perfis.
+
+## 2026-07-11 — Anonimizador de PII extraído pra módulo compartilhado
+
+- **Ação**: a lógica de mascaramento de PII (nome/CPF/CNPJ/telefone/email) que vivia dentro do command `extrair_historico_matrix.py` (função `_build_anonimizador`) foi extraída pra `apps/integracoes/services/anonimizador.py` — `construir_anonimizador(contato)` (mesma factory, comportamento idêntico) + atalho novo `anonimizar_texto(texto, contato=None)` pra uso avulso sem manter a closure.
+- **Motivo**: a engine de automação precisava da mesma lógica no nó `matrix_atendimento` (transcript de atendimento) sem duplicar regex/regras. O command passou a importar do módulo novo; comportamento verificado idêntico (import roda limpo via `manage shell -c "from ... import Command"`).
+- **Arquivos**: `apps/integracoes/services/anonimizador.py` (novo), `apps/integracoes/management/commands/extrair_historico_matrix.py` (import trocado, função local removida).
+- **Status**: completed (local). NÃO commitado, NÃO deployado.

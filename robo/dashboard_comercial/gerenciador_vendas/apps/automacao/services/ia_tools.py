@@ -27,6 +27,7 @@ _TOOLS = {}
 _CLASSIFICACAO = {
     'registrar_feedback':          ('executavel', 'atendimento'),
     'criar_oportunidade':          ('executavel', 'crm'),
+    'listar_motivos_perda':        ('conhecimento', 'crm'),
     'consultar_base_conhecimento': ('conhecimento', 'conhecimento'),
     'marcar_cliente':              ('executavel', 'atendimento'),
     'marcar_intencao':             ('executavel', 'atendimento'),
@@ -152,6 +153,25 @@ def _criar_oportunidade(contexto, args, agente=None):
     if res.branch == 'erro':
         return f'não foi possível criar a oportunidade: {res.erro}'
     return f'oportunidade criada: {(res.output or {}).get("titulo", config["titulo"])}'
+
+
+@_tool(
+    'listar_motivos_perda',
+    'Liste os motivos de perda cadastrados pro tenant, em ordem. Use quando precisar saber '
+    'quais motivos de perda existem antes de classificar uma oportunidade como perdida.',
+    {},
+    [],
+)
+def _listar_motivos_perda(contexto, args, agente=None):
+    from apps.comercial.crm.models import MotivoPerda
+    nomes = list(
+        MotivoPerda.all_tenants.filter(tenant=contexto.tenant, ativo=True)
+        .order_by('ordem', 'nome')
+        .values_list('nome', flat=True)
+    )
+    if not nomes:
+        return 'nenhum motivo de perda cadastrado para este tenant.'
+    return '\n'.join(nomes)
 
 
 @_tool(

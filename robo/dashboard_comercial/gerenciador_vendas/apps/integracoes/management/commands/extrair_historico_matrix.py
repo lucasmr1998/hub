@@ -15,61 +15,16 @@ com texto anonimizado. Arquivo gitignored por padrao (prefixo `_historico_`).
 NAO COMMITAR — apague apos analise.
 """
 import json
-import re
 import time
 from datetime import datetime, timedelta
 
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.sistema.models import Tenant
+from apps.integracoes.services.anonimizador import construir_anonimizador
 from apps.integracoes.services.matrix_brasil import (
     MatrixBrasilService, MatrixBrasilServiceError,
 )
-
-
-def _build_anonimizador(contato):
-    """Cria funcao que anonimiza texto removendo PII do contato.
-
-    Substitui ocorrencias de nome/cpf/telefone/email pelo placeholder
-    correspondente. Tambem aplica regex pra capturar PII generico que
-    apareca no texto (CPFs digitados, emails de terceiros, telefones).
-    """
-    nome = (contato.get('contato') or contato.get('nome') or '').strip()
-    cpf = re.sub(r'\D', '', str(contato.get('cpf') or ''))
-    telefone = re.sub(r'\D', '', str(contato.get('telefone') or ''))
-    email = (contato.get('email') or '').strip().lower()
-
-    # Componentes do nome (so substitui token >= 3 chars, evita preposicoes)
-    nome_partes = [p for p in re.split(r'\s+', nome) if len(p) >= 3]
-
-    # Regex globais — captura PII que aparece no texto (digitado pelo cliente)
-    cpf_re = re.compile(r'\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b')
-    cnpj_re = re.compile(r'\b\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2}\b')
-    tel_re = re.compile(r'\b(?:\+?55)?\s?\(?\d{2}\)?\s?\d{4,5}-?\d{4}\b')
-    email_re = re.compile(r'\b[\w.+-]+@[\w-]+\.[\w.-]+\b')
-
-    def _anon(texto):
-        if not texto:
-            return texto
-        t = str(texto)
-        # Anonimiza nome especifico do contato (palavra-a-palavra, case-insensitive)
-        for parte in nome_partes:
-            t = re.sub(rf'\b{re.escape(parte)}\b', '[NOME]', t, flags=re.IGNORECASE)
-        # CPF/telefone especificos do contato
-        if cpf and len(cpf) >= 11:
-            t = t.replace(cpf, '[CPF]')
-        if telefone and len(telefone) >= 10:
-            t = t.replace(telefone, '[TELEFONE]')
-        if email:
-            t = re.sub(re.escape(email), '[EMAIL]', t, flags=re.IGNORECASE)
-        # Generico — qualquer PII que aparecer no texto
-        t = cpf_re.sub('[CPF]', t)
-        t = cnpj_re.sub('[CNPJ]', t)
-        t = tel_re.sub('[TELEFONE]', t)
-        t = email_re.sub('[EMAIL]', t)
-        return t
-
-    return _anon
 
 
 def _extrair_mensagens(detalhe, anon):
@@ -202,7 +157,7 @@ class Command(BaseCommand):
             cod = at.get('id_atendimento')
             if not cod:
                 continue
-            anon = _build_anonimizador(at)
+            anon = construir_anonimizador(at)
             try:
                 detalhe = svc.consultar_atendimento(cod)
                 mensagens = _extrair_mensagens(detalhe, anon)

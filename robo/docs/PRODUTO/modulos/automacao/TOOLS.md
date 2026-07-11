@@ -6,13 +6,13 @@
 
 > `tipo`: **Conhecimento** = le/consulta (read-only) · **Executavel** = faz/escreve (efeito colateral).
 
-Total: **23 tools** em **8 categorias**.
+Total: **24 tools** em **8 categorias**.
 
 | Categoria | Tools |
 |---|---|
 | **atendimento** | `marcar_cliente`, `marcar_intencao`, `marcar_intencao_energia`, `registrar_feedback` |
 | **conhecimento** | `consultar_base_conhecimento` |
-| **crm** | `criar_oportunidade` |
+| **crm** | `listar_motivos_perda`, `criar_oportunidade` |
 | **dados** | `churn_clientes`, `resumo_leads`, `status_pipeline`, `tickets_abertos`, `vendas_periodo` |
 | **dev** | `explorar_codigo` |
 | **governanca** | `solicitar_aprovacao` |
@@ -65,6 +65,12 @@ Consulte a base de conhecimento da empresa (produtos, serviços, procedimentos, 
 | `pergunta` | string | sim | A pergunta ou tema a buscar na base |
 
 ## crm
+
+### `listar_motivos_perda` — Conhecimento
+
+Liste os motivos de perda cadastrados pro tenant, em ordem. Use quando precisar saber quais motivos de perda existem antes de classificar uma oportunidade como perdida.
+
+_Sem parametros._
 
 ### `criar_oportunidade` — Executavel
 

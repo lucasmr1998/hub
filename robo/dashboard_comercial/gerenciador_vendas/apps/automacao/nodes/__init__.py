@@ -16,6 +16,7 @@ from .context import Contexto  # noqa: F401
 
 # Nós concretos (importados pra registrar no REGISTRY):
 from . import set_fields  # noqa: F401,E402  (D2 — nó de referência)
+from . import extrair_json  # noqa: F401,E402  (tarefas 180/181: parseia JSON de texto livre)
 from . import http_request  # noqa: F401,E402  (D4)
 from . import if_node  # noqa: F401,E402  (P2 — condição)
 from . import switch  # noqa: F401,E402  (P3 — roteador de N saídas; saídas dinâmicas)
@@ -34,6 +35,7 @@ from . import criar_venda  # noqa: F401,E402  (C5 — convergência: criar venda
 from . import dar_pontos  # noqa: F401,E402  (C6 — convergência: pontos no clube)
 from . import atribuir_responsavel  # noqa: F401,E402  (C7 — convergência: round-robin)
 from . import matrix_hsm  # noqa: F401,E402  (M1 — Integrações: disparo HSM Matrix)
+from . import matrix_atendimento  # noqa: F401,E402  (tarefas 180/181: transcript de atendimento Matrix)
 from . import hubsoft_sincronizar_prospecto  # noqa: F401,E402  (H1 — Integrações: prospecto HubSoft)
 from . import hubsoft_consultar_cliente  # noqa: F401,E402  (H2 — Integrações: consultar cliente)
 from . import hubsoft_listar_faturas  # noqa: F401,E402  (H3 — Integrações: faturas HubSoft)
