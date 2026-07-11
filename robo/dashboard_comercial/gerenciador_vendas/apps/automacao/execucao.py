@@ -246,12 +246,46 @@ def retomar_por_resposta(tenant, chave, conteudo, modo_atendimento=None):
 
 
 def _rehidratar(execucao):
-    """Re-hidrata o Contexto de uma execução. Restaura o lead pela FK; oportunidade/
-    conversa como entidade ficam como follow-up (seus subcampos são `var.*`)."""
+    """Re-hidrata o Contexto de uma execução: lead pela FK (fallback: id no estado)
+    e `oportunidade`/`conversa` pelos ids em `estado.entidades` (gravados pelo
+    `gatilhos._enfileirar` via `Contexto.serializar()`). Sem isso, nós de CRM que
+    exigem `contexto.oportunidade` falhariam no caminho da fila (cron)."""
     estado = execucao.estado or {}
+    entidades = estado.get('entidades') or {}
+
+    lead = execucao.lead
+    if lead is None and entidades.get('lead'):
+        try:
+            from apps.comercial.leads.models import LeadProspecto
+            lead = LeadProspecto.all_tenants.filter(
+                tenant=execucao.tenant, pk=entidades['lead']).first()
+        except Exception:  # noqa: BLE001
+            lead = None
+
+    oportunidade = None
+    if entidades.get('oportunidade'):
+        try:
+            from apps.comercial.crm.models import OportunidadeVenda
+            oportunidade = (OportunidadeVenda.all_tenants
+                            .filter(tenant=execucao.tenant, pk=entidades['oportunidade'])
+                            .select_related('lead', 'estagio', 'pipeline').first())
+        except Exception:  # noqa: BLE001
+            oportunidade = None
+
+    conversa = None
+    if entidades.get('conversa'):
+        try:
+            from apps.inbox.models import Conversa
+            conversa = Conversa.all_tenants.filter(
+                tenant=execucao.tenant, pk=entidades['conversa']).first()
+        except Exception:  # noqa: BLE001
+            conversa = None
+
     return Contexto(
         tenant=execucao.tenant,
-        lead=execucao.lead,
+        lead=lead,
+        oportunidade=oportunidade,
+        conversa=conversa,
         variaveis=estado.get('variaveis'),
         nodes=estado.get('nodes'),
     )

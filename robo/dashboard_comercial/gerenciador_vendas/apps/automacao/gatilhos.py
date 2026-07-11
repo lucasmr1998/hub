@@ -335,11 +335,16 @@ def _filtros_passam(filtros, ctx):
 
 
 def _enfileirar(fluxo, ctx, trigger_handle):
-    """Cria a execução PENDENTE (deferida). O cron roda fora do thread do evento."""
+    """Cria a execução PENDENTE (deferida). O cron roda fora do thread do evento.
+
+    O `estado` persiste também as ENTIDADES por id (`Contexto.serializar()`), pra
+    o `execucao._rehidratar` restaurar `oportunidade`/`conversa` na hora de rodar —
+    sem isso, nós de CRM (criar_nota, mover_estagio, reabrir...) falhariam no
+    caminho da fila por falta de `contexto.oportunidade`."""
     from django.utils import timezone
     from .models import ExecucaoFluxo
 
-    estado = {'variaveis': ctx.variaveis, 'nodes': {}, 'inicio': trigger_handle}
+    estado = {**ctx.serializar(), 'inicio': trigger_handle}
     ExecucaoFluxo(
         tenant=fluxo.tenant,
         fluxo=fluxo,
