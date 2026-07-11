@@ -274,3 +274,143 @@ def adicionar_item_oportunidade(tenant, *, oportunidade, quantidade=1):
         quantidade=qtd, valor_unitario=produto.preco or 0, desconto=0,
     )
     return item, True, ''
+
+
+def criar_nota(tenant, *, oportunidade, texto, titulo=''):
+    """Cria uma `NotaInterna` vinculada à `oportunidade`. O model não tem campo de
+    título; quando `titulo` vem preenchido, ele é prefixado no `conteudo`. Autor
+    resolve por default (oportunidade.responsavel → staff do tenant → superuser),
+    mesmo padrão de `criar_tarefa`. Devolve a NotaInterna.
+
+    Levanta `ValueError` se não houver oportunidade, conteúdo vazio, ou nenhum autor
+    possível.
+    """
+    from django.contrib.auth.models import User
+    from apps.comercial.crm.models import NotaInterna
+    from apps.sistema.models import PerfilUsuario
+
+    if oportunidade is None:
+        raise ValueError('Sem oportunidade para anotar.')
+
+    conteudo = (texto or '').strip()
+    if (titulo or '').strip():
+        conteudo = f'{titulo.strip()}\n\n{conteudo}' if conteudo else titulo.strip()
+    if not conteudo:
+        raise ValueError('Nota sem conteúdo.')
+
+    autor = getattr(oportunidade, 'responsavel', None)
+    if autor is None:
+        perfil = PerfilUsuario.objects.filter(tenant=tenant, user__is_staff=True).first()
+        autor = perfil.user if perfil else User.objects.filter(is_superuser=True).first()
+    if autor is None:
+        raise ValueError('Nenhum autor disponível para a nota.')
+
+    nota = NotaInterna(tenant=tenant, oportunidade=oportunidade, autor=autor, conteudo=conteudo)
+    nota.save()
+    return nota
+
+
+def definir_motivo_perda(tenant, *, oportunidade, motivo_nome, texto='', somente_se_vazio=True):
+    """Resolve um `MotivoPerda` ativo do tenant por nome (case-insensitive) e vincula
+    em `oportunidade.motivo_perda_ref`. Se `texto` vier, também preenche o
+    `motivo_perda` (texto livre). Com `somente_se_vazio=True` (default), não sobrescreve
+    se a op já tiver um `motivo_perda_ref`, devolve `(motivo_atual, False)` sem tocar.
+    Devolve `(motivo, alterou: bool)`.
+
+    Levanta `ValueError` se não houver oportunidade, `motivo_nome` vazio, ou nenhum
+    MotivoPerda ativo do tenant com esse nome (lista os disponíveis na mensagem).
+    """
+    from apps.comercial.crm.models import MotivoPerda
+    if oportunidade is None:
+        raise ValueError('Sem oportunidade para definir motivo de perda.')
+    nome = (motivo_nome or '').strip()
+    if not nome:
+        raise ValueError('Motivo de perda não especificado.')
+
+    motivo = MotivoPerda.all_tenants.filter(tenant=tenant, ativo=True, nome__iexact=nome).first()
+    if motivo is None:
+        disponiveis = ', '.join(
+            MotivoPerda.all_tenants.filter(tenant=tenant, ativo=True)
+            .order_by('ordem').values_list('nome', flat=True)
+        ) or 'nenhum cadastrado'
+        raise ValueError(f'Motivo de perda "{motivo_nome}" não encontrado. Disponíveis: {disponiveis}')
+
+    if somente_se_vazio and oportunidade.motivo_perda_ref_id:
+        return oportunidade.motivo_perda_ref, False
+
+    oportunidade.motivo_perda_ref = motivo
+    campos = ['motivo_perda_ref']
+    if (texto or '').strip():
+        oportunidade.motivo_perda = texto.strip()
+        campos.append('motivo_perda')
+    oportunidade.save(update_fields=campos)
+    return motivo, True
+
+
+def reabrir_oportunidade(tenant, *, oportunidade, estagio_slug, motivo=''):
+    """Reabre uma oportunidade que estava em estágio perdido (`is_final_perdido=True`),
+    movendo pro `estagio_slug` informado dentro do mesmo pipeline. Idempotente: se a op
+    não está perdida, não é erro, devolve `(None, False)` sem tocar. MANTÉM
+    motivo_perda/motivo_perda_ref/responsavel (auditoria da perda anterior) e limpa
+    `data_fechamento_real`. Registra `HistoricoPipelineEstagio` + `LogSistema`. Devolve
+    `(estagio_novo, reabriu: bool)`.
+
+    Levanta `ValueError` se `estagio_slug` não vier ou não existir no pipeline da op.
+    """
+    from apps.comercial.crm.models import PipelineEstagio, HistoricoPipelineEstagio
+    from apps.sistema.utils import registrar_acao
+
+    if oportunidade is None:
+        raise ValueError('Sem oportunidade para reabrir.')
+    if not (oportunidade.estagio and oportunidade.estagio.is_final_perdido):
+        return None, False  # não está perdida, idempotente
+
+    if not (estagio_slug or '').strip():
+        raise ValueError('Estágio de reabertura não especificado.')
+    estagio_novo = PipelineEstagio.all_tenants.filter(
+        tenant=tenant, pipeline=oportunidade.pipeline, slug=estagio_slug.strip(),
+    ).first()
+    if estagio_novo is None:
+        raise ValueError(f'Estágio "{estagio_slug}" não encontrado no pipeline.')
+
+    estagio_anterior = oportunidade.estagio
+    oportunidade.estagio = estagio_novo
+    oportunidade.data_entrada_estagio = timezone.now()
+    oportunidade.data_fechamento_real = None
+    oportunidade.save(update_fields=['estagio', 'data_entrada_estagio', 'data_fechamento_real'])
+
+    HistoricoPipelineEstagio.objects.create(
+        tenant=tenant, oportunidade=oportunidade,
+        estagio_anterior=estagio_anterior, estagio_novo=estagio_novo,
+        movido_por=None, motivo=f'Automacao: {motivo or "reabertura"}',
+    )
+    try:
+        registrar_acao(
+            'crm', 'reabrir', 'oportunidade', oportunidade.pk,
+            f'Oportunidade reaberta para "{estagio_novo.nome}"',
+            dados_extras={'estagio_anterior': estagio_anterior.slug if estagio_anterior else None,
+                          'estagio_novo': estagio_novo.slug, 'motivo': motivo or ''},
+            tenant=tenant,
+        )
+    except Exception:
+        pass
+    return estagio_novo, True
+
+
+def marcar_dados_custom(tenant, *, oportunidade, chave, valor=None):
+    """Grava `valor` em `oportunidade.dados_custom[chave]`. Sem `valor` (None ou
+    vazio), grava o timestamp atual (ISO 8601), útil pra marcar "processado em".
+    Devolve o valor gravado.
+
+    Levanta `ValueError` se `oportunidade` ou `chave` (após strip) não vierem.
+    """
+    if oportunidade is None:
+        raise ValueError('Sem oportunidade para marcar dado customizado.')
+    chave_limpa = (chave or '').strip()
+    if not chave_limpa:
+        raise ValueError('Chave não especificada.')
+
+    valor_gravado = valor if (valor is not None and valor != '') else timezone.now().isoformat()
+    oportunidade.dados_custom = {**(oportunidade.dados_custom or {}), chave_limpa: valor_gravado}
+    oportunidade.save(update_fields=['dados_custom'])
+    return valor_gravado

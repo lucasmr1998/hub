@@ -170,6 +170,10 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 | `gerar_contrato_hubsoft` | Comercial › Contrato | HubSoft: gerar contrato (criar→anexar→aceitar) | ✅ **migração funil Fase 1** 🔴 outbound real; porta p/ `services/contrato_hubsoft`; **picker HubSoft** |
 | `assinar_contrato_hubsoft` | Comercial › Contrato | HubSoft: assinar contrato existente | ✅ **migração funil Fase 1** 🔴 outbound real; porta p/ `services/contrato_hubsoft`; **picker HubSoft** |
 | `atribuir_responsavel` | Comercial › Oportunidades | Atribuir responsável | ✅ **convergência** (round-robin ou fixo por username) |
+| `criar_nota` | Comercial › Oportunidades | Criar nota | ✅ tarefas 180/181 (autor: responsável da op → staff do tenant → superuser) |
+| `definir_motivo_perda` | Comercial › Oportunidades | Definir motivo de perda | ✅ tarefas 180/181 (resolve `MotivoPerda` por nome; `somente_se_vazio` não sobrescreve) |
+| `reabrir_oportunidade` | Comercial › Oportunidades | Reabrir oportunidade | ✅ tarefas 180/181 (idempotente fora de estágio perdido; mantém motivo/responsável como auditoria) |
+| `marcar_dados_custom` | Comercial › Oportunidades | Marcar dado customizado | ✅ tarefas 180/181 (chave/valor em `dados_custom`; vazio grava timestamp) |
 | `dar_pontos` | CS › Clube | Dar pontos (Clube) | ✅ **convergência** (CPF do config ou do lead; filtra por tenant) |
 | `matrix_hsm` | Integrações › Matrix | Matrix: disparar HSM (WhatsApp) | ✅ **outbound real** (`MatrixBrasilService.enviar_hsm`; template HSM + variáveis) |
 | `hubsoft_sincronizar_prospecto` | Integrações › HubSoft | HubSoft: sincronizar prospecto | ✅ **outbound real** (cria rascunho/atualiza; converge a ação do marketing; precisa de lead) |
