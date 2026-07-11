@@ -57,6 +57,18 @@ def _integracoes_hubsoft(tenant):
     return _integracoes_por_tipo(tenant, 'hubsoft')
 
 
+def _varreduras(tenant):
+    """Catálogo do gatilho `agenda` — não é por tenant, mas segue a assinatura padrão."""
+    from .varreduras import opcoes_varreduras
+    return opcoes_varreduras(tenant)
+
+
+def _motivos_perda(tenant):
+    from apps.comercial.crm.models import MotivoPerda
+    return [{'value': m.nome, 'label': m.nome}
+            for m in MotivoPerda.all_tenants.filter(tenant=tenant, ativo=True).order_by('ordem', 'nome')]
+
+
 FONTES = {
     'segmentos': _segmentos,
     'pipelines': _pipelines,
@@ -65,6 +77,8 @@ FONTES = {
     'agentes': _agentes,
     'integracoes_uazapi': _integracoes_uazapi,
     'integracoes_hubsoft': _integracoes_hubsoft,
+    'varreduras': _varreduras,
+    'motivos_perda': _motivos_perda,
 }
 
 

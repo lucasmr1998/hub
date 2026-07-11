@@ -153,6 +153,7 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 | `webhook` | Gatilho › Entrada | Webhook | ✅ **trigger** (entrada do fluxo, sem porta de entrada); campo **`responder`** (modo n8n): `imediato` (ack) / `ultimo_no` (output do último nó) / `no_resposta` (usa o nó Responder ao Webhook) |
 | `responder_webhook` | Core › Webhook | Responder ao Webhook | ✅ **"Respond to Webhook" (n8n)**: define `status`+`corpo` (aceita `{{...}}`) da resposta HTTP do fluxo via webhook; `webhook_receber` devolve isso em vez do `{execucao_id, status}` padrão |
 | `evento` | Gatilho › Sistema | Evento do sistema | ✅ **trigger** (evento + filtros; wiring deferido via `on_evento`, kill-switch `AUTOMACAO_WIRING_ATIVO`) |
+| `agenda` | Gatilho › Varredura | Agenda (varredura) | ✅ **trigger** (intervalo + `varredura`, registry em `varreduras.py`; cada item vira 1 execução). Dispatcher `gatilhos.despachar_agendas` (cron `automacao_despachar_agendas`, seed `ativo=False`), CAS em `Fluxo.agenda_ultima_rodada`, rodada sem freio (`max_por_lead`/`cooldown_horas`) é pulada com warning |
 | `chat` | Gatilho › Teste | Chat (teste) | ✅ **trigger de teste** (estilo n8n): abre o painel "💬 Chat" no editor; cada mensagem roda o fluxo como `{{var.conteudo}}`. Caminho executado fica verde; INPUT/OUTPUT por nó. |
 | `whatsapp_texto` | Integrações › WhatsApp · Uazapi | WhatsApp: enviar mensagem | ✅ (reusa `UazapiService`) |
 | `whatsapp_midia` | Integrações › WhatsApp · Uazapi | WhatsApp: enviar mídia | ✅ (image/doc/audio/video) |
@@ -187,7 +188,7 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 
 **Nós de domínio (WhatsApp/Uazapi):** reusam `apps.integracoes.services.uazapi.UazapiService` via `apps/automacao/services/whatsapp.py` (`uazapi_do_tenant`) — credenciais por tenant (`IntegracaoAPI` tipo='uazapi'). Sem integração ativa no tenant → erro controlado. **Executor de domínio único** (não reimplementa Uazapi). Categoria `atendimento` (gating por tenant futuro). ⚠️ Enviam de verdade — testar com `--tenant` que tenha Uazapi.
 
-**Nós de gatilho (trigger):** `is_trigger=True` no contrato → sem porta de entrada, são o **início** do fluxo, com forma/cor especial (Gatilho, laranja). O `webhook` é o 1º. Próximos: **evento do sistema** (signal: lead criado, msg recebida… — a convergência), **agendamento** (cron), **manual**. O token do webhook é gerado no save quando há um nó webhook no grafo; a URL aparece no painel do nó.
+**Nós de gatilho (trigger):** `is_trigger=True` no contrato → sem porta de entrada, são o **início** do fluxo, com forma/cor especial (Gatilho, laranja). `webhook`, `evento` e `agenda` (varredura) já existem. Próximo: **manual**. O token do webhook é gerado no save quando há um nó webhook no grafo; a URL aparece no painel do nó.
 
 ## Como testar um nó isolado
 

@@ -7,6 +7,12 @@ encontra os fluxos que escutam aquele evento, avalia os filtros e **enfileira**
 a execução (status `pendente`). Quem roda o fluxo é o cron (`rodar_novos`), fora
 do thread do evento — o evento nunca espera. (Modelo deferido: não sobrecarrega.)
 
+Além do gatilho por evento, existe o gatilho **agenda** (varredura): em vez de
+reagir a um evento do sistema, `despachar_agendas` roda em ciclo (cron próprio,
+`automacao_despachar_agendas`) e, pro fluxo cujo intervalo já venceu, executa uma
+`varredura` (registry em `varreduras.py`) que busca N itens no banco/API externa —
+cada item vira UMA execução enfileirada, com os mesmos freios do gatilho por evento.
+
 Segurança:
 - Kill-switch `settings.AUTOMACAO_WIRING_ATIVO` (liga/desliga sem deploy).
 - Tudo por tenant explícito (a engine roda fora de request).
@@ -88,6 +94,122 @@ def _achar_trigger(grafo, evento):
     nodes = (grafo or {}).get('nodes') or {}
     for handle, n in nodes.items():
         if n.get('tipo') == 'evento' and ((n.get('config') or {}).get('evento') or '') == evento:
+            return handle, (n.get('config') or {})
+    return None, {}
+
+
+# ============================================================================
+# GATILHO AGENDA (varredura) — dispatcher em ciclo, não por evento
+# ============================================================================
+
+def despachar_agendas(agora=None):
+    """Cron (`automacao_despachar_agendas`): dispara as rodadas de varredura vencidas.
+
+    Candidato = `Fluxo` ativo com `agenda_intervalo_minutos` preenchido (índice
+    sincronizado do grafo em `Fluxo.save()`). Cada fluxo roda no máximo 1 rodada
+    por chamada (CAS em `_rodar_agenda_do_fluxo`, que também decide se o intervalo
+    já venceu). Devolve o total de execuções enfileiradas na chamada."""
+    if not getattr(settings, 'AUTOMACAO_WIRING_ATIVO', False):
+        return 0
+
+    from django.utils import timezone
+    from .models import Fluxo
+
+    agora = agora or timezone.now()
+    candidatos = list(
+        Fluxo.all_tenants.filter(ativo=True, agenda_intervalo_minutos__isnull=False)
+        .select_related('tenant')
+    )
+    total = 0
+    for fluxo in candidatos:
+        try:
+            total += _rodar_agenda_do_fluxo(fluxo, agora)
+        except Exception:
+            logger.exception('automacao: falha na rodada de agenda do fluxo %s', fluxo.pk)
+    return total
+
+
+def _rodar_agenda_do_fluxo(fluxo, agora):
+    """Roda (no máximo) 1 rodada de varredura do fluxo, se o intervalo já venceu.
+
+    Claim atômico (CAS) em `agenda_ultima_rodada`, ANTES de varrer: só o worker
+    que vence a corrida executa a rodada — duas chamadas concorrentes sobre o
+    mesmo fluxo nunca varrem duas vezes. Devolve o nº de execuções enfileiradas
+    nesta rodada (0 se não venceu / sem trigger / sem varredura / sem freio / erro).
+    """
+    intervalo = fluxo.agenda_intervalo_minutos or 0
+    if intervalo <= 0:
+        return 0
+
+    from datetime import timedelta
+
+    from .models import Fluxo
+
+    ultima = fluxo.agenda_ultima_rodada
+    if ultima is not None and ultima + timedelta(minutes=intervalo) > agora:
+        return 0
+
+    # CAS: só quem vence a corrida (rowcount==1) executa esta rodada.
+    n = (
+        Fluxo.all_tenants.filter(pk=fluxo.pk, agenda_ultima_rodada=ultima)
+        .update(agenda_ultima_rodada=agora)
+    )
+    if n != 1:
+        return 0
+
+    trigger_handle, cfg = _achar_trigger_agenda(fluxo.grafo)
+    if trigger_handle is None:
+        return 0
+
+    from .varreduras import VARREDURAS
+    fn = VARREDURAS.get(cfg.get('varredura'))
+    if fn is None:
+        return 0
+
+    def _int(v):
+        try:
+            return int(v or 0)
+        except (ValueError, TypeError):
+            return 0
+
+    if _int(cfg.get('max_por_lead')) <= 0 and _int(cfg.get('cooldown_horas')) <= 0:
+        logger.warning('automacao: agenda do fluxo %s sem freio, pulando rodada', fluxo.pk)
+        return 0
+
+    try:
+        itens = fn(fluxo.tenant, cfg.get('varredura_config') or {}) or []
+    except Exception:
+        logger.exception('automacao: falha ao rodar varredura %r (fluxo=%s)', cfg.get('varredura'), fluxo.pk)
+        return 0
+
+    max_por_rodada = _int(cfg.get('max_por_rodada')) or 25
+
+    contador = 0
+    for item in itens:
+        if contador >= max_por_rodada:
+            break
+        if not isinstance(item, dict):
+            continue
+        try:
+            ctx = _contexto_do_evento(item, fluxo.tenant)
+            lead = ctx.lead if _eh_lead(ctx.lead) else None
+            if _freio_bloqueia(fluxo, lead, cfg) or _orcamento_excedido(fluxo, lead):
+                continue
+            _enfileirar(fluxo, ctx, trigger_handle)
+            contador += 1
+        except Exception:
+            logger.exception(
+                'automacao: falha ao enfileirar item de varredura %r (fluxo=%s)',
+                cfg.get('varredura'), fluxo.pk,
+            )
+    return contador
+
+
+def _achar_trigger_agenda(grafo):
+    """Acha (handle, config) do nó-gatilho `agenda`. (None, {}) se não houver."""
+    nodes = (grafo or {}).get('nodes') or {}
+    for handle, n in nodes.items():
+        if n.get('tipo') == 'agenda':
             return handle, (n.get('config') or {})
     return None, {}
 

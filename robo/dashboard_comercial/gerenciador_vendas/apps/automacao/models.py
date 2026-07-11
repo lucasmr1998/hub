@@ -23,6 +23,12 @@ class Fluxo(TenantMixin):
     # Índice denormalizado do gatilho de evento (preenchido no save a partir do grafo).
     # Permite achar rápido "quais fluxos escutam o evento X" sem varrer JSON em SQL.
     gatilho_evento = models.CharField(max_length=64, blank=True, default='', db_index=True)
+    # Gatilho agenda (varredura): intervalo (min) sincronizado do grafo no save().
+    # Preenchido = candidato do dispatcher `gatilhos.despachar_agendas`.
+    agenda_intervalo_minutos = models.PositiveIntegerField(null=True, blank=True, db_index=True)
+    # Quando a última rodada de varredura foi disparada — base do CAS anti dupla
+    # rodada em `gatilhos._rodar_agenda_do_fluxo`.
+    agenda_ultima_rodada = models.DateTimeField(null=True, blank=True)
     # Convergência: id da RegraAutomacao (marketing) que originou este fluxo (tradutor).
     # Usado no cutover pra desligar a regra antiga ao ligar este fluxo. int simples
     # (sem FK) pra não acoplar a engine nova ao app de marketing.
@@ -48,14 +54,37 @@ class Fluxo(TenantMixin):
                 return ((n.get('config') or {}).get('evento') or '').strip()
         return ''
 
+    def _agenda_do_grafo(self):
+        """Lê o `intervalo_minutos` do nó-gatilho `agenda` no grafo (ou None)."""
+        nodes = (self.grafo or {}).get('nodes') or {}
+        for n in nodes.values():
+            if n.get('tipo') == 'agenda':
+                try:
+                    intervalo = int((n.get('config') or {}).get('intervalo_minutos') or 0)
+                except (TypeError, ValueError):
+                    return None
+                return intervalo if intervalo > 0 else None
+        return None
+
     def save(self, *args, **kwargs):
-        # Mantém o índice gatilho_evento sincronizado com o grafo em qualquer save.
-        novo = self._evento_do_grafo()
-        if novo != self.gatilho_evento:
-            self.gatilho_evento = novo
+        # Mantém os índices de gatilho (evento + agenda) sincronizados com o grafo
+        # em qualquer save.
+        campos_sync = set()
+
+        novo_evento = self._evento_do_grafo()
+        if novo_evento != self.gatilho_evento:
+            self.gatilho_evento = novo_evento
+            campos_sync.add('gatilho_evento')
+
+        novo_intervalo = self._agenda_do_grafo()
+        if novo_intervalo != self.agenda_intervalo_minutos:
+            self.agenda_intervalo_minutos = novo_intervalo
+            campos_sync.add('agenda_intervalo_minutos')
+
+        if campos_sync:
             uf = kwargs.get('update_fields')
             if uf is not None:
-                kwargs['update_fields'] = list(set(uf) | {'gatilho_evento'})
+                kwargs['update_fields'] = list(set(uf) | campos_sync)
         super().save(*args, **kwargs)
 
     def __str__(self):
