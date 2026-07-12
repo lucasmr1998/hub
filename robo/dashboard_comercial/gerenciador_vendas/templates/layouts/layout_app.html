@@ -35,6 +35,7 @@ Com subnav:
 
   <main class="app-main{% block main_mod %}{% endblock %}">
     <div class="app-main-inner">
+      {% if modulo_atual == 'cs' %}{% include "partials/cs_subtabs.html" %}{% endif %}
       {% block content %}{% endblock %}
     </div>
   </main>

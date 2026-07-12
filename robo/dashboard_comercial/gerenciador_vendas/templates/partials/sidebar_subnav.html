@@ -152,77 +152,44 @@ Uso em template que extende layout_app:
       {% endif %}
 
     {% elif modulo_atual == 'cs' %}
+      {% with un=request.resolver_match.url_name %}
+      <div class="app-subnav-section">Clube</div>
       <nav class="app-subnav-list">
-        <a href="/cs/clube/dashboard/" class="app-subnav-item {% if request.resolver_match.url_name == 'dashboard_home' %}is-active{% endif %}">
-          <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+        <a href="/cs/clube/dashboard/" class="app-subnav-item {% if un == 'dashboard_home' %}is-active{% endif %}">
+          <i class="bi bi-speedometer2"></i><span>Visao geral</span>
         </a>
-        <a href="/cs/clube/dashboard/participantes/" class="app-subnav-item {% if 'participante' in request.resolver_match.url_name or 'extrato_membro' in request.resolver_match.url_name %}is-active{% endif %}">
+        <a href="/cs/clube/dashboard/participantes/" class="app-subnav-item {% if un == 'dashboard_participantes' or un == 'dashboard_extrato_membro' or un == 'retencao' %}is-active{% endif %}">
           <i class="bi bi-people"></i><span>Membros</span>
         </a>
-        <a href="/cs/retencao/" class="app-subnav-item {% if 'retencao' in request.resolver_match.url_name %}is-active{% endif %}">
-          <i class="bi bi-shield-check"></i><span>Retencao</span>
+        <a href="/cs/carteirinha/dashboard/carteirinha/" class="app-subnav-item {% if un == 'dashboard_carteirinha' or un == 'dashboard_modelos_carteirinha' or un == 'dashboard_modelo_criar' or un == 'dashboard_modelo_editar' or un == 'dashboard_regras_carteirinha' or un == 'dashboard_preview_carteirinha' %}is-active{% endif %}">
+          <i class="bi bi-person-vcard"></i><span>Carteirinhas</span>
         </a>
       </nav>
       <div class="app-subnav-section">Fidelizacao</div>
       <nav class="app-subnav-list">
-        <a href="/cs/indicacoes/dashboard/indicacoes/" class="app-subnav-item {% if 'indica' in request.resolver_match.url_name %}is-active{% endif %}">
+        <a href="/cs/indicacoes/dashboard/indicacoes/" class="app-subnav-item {% if un == 'dashboard_indicacoes_home' or un == 'dashboard_indicacoes' or un == 'dashboard_indicacoes_membros' or un == 'dashboard_indicacoes_visual' %}is-active{% endif %}">
           <i class="bi bi-share"></i><span>Indicacoes</span>
         </a>
-        <a href="/cs/parceiros/dashboard/parceiros/" class="app-subnav-item {% if 'parceiro' in request.resolver_match.url_name %}is-active{% endif %}">
+        <a href="/cs/parceiros/dashboard/parceiros/" class="app-subnav-item {% if un == 'dashboard_parceiros_home' or un == 'dashboard_parceiros' or un == 'dashboard_cupons' or un == 'dashboard_cupom_detalhe' or un == 'dashboard_cupons_resgates' or un == 'dashboard_categorias' %}is-active{% endif %}">
           <i class="bi bi-shop"></i><span>Parceiros</span>
         </a>
-        <a href="/cs/parceiros/dashboard/cupons/" class="app-subnav-item {% if 'cupom' in request.resolver_match.url_name %}is-active{% endif %}">
-          <i class="bi bi-ticket-perforated"></i><span>Cupons</span>
+        <a href="/cs/clube/dashboard/premios/" class="app-subnav-item {% if un == 'dashboard_premios' or un == 'dashboard_giros' or un == 'dashboard_gamificacao' %}is-active{% endif %}">
+          <i class="bi bi-trophy"></i><span>Sorteios</span>
         </a>
       </nav>
-      <div class="app-subnav-section">Operacao do clube</div>
+      <div class="app-subnav-section">Sistema</div>
       <nav class="app-subnav-list">
-        <a href="/cs/clube/dashboard/premios/" class="app-subnav-item {% if request.resolver_match.url_name == 'dashboard_premios' %}is-active{% endif %}">
-          <i class="bi bi-gift"></i><span>Premios</span>
+        <a href="/cs/clube/dashboard/relatorios/" class="app-subnav-item {% if un == 'dashboard_relatorios' or un == 'dashboard_relatorios_indicacoes' or un == 'dashboard_relatorios_parceiros' %}is-active{% endif %}">
+          <i class="bi bi-bar-chart"></i><span>Relatorios</span>
         </a>
-        <a href="/cs/clube/dashboard/giros/" class="app-subnav-item {% if request.resolver_match.url_name == 'dashboard_giros' %}is-active{% endif %}">
-          <i class="bi bi-arrow-clockwise"></i><span>Giros</span>
+        <a href="/cs/clube/dashboard/landing/" class="app-subnav-item {% if un == 'dashboard_landing_config' or un == 'dashboard_banners' or un == 'dashboard_assets' %}is-active{% endif %}">
+          <i class="bi bi-palette"></i><span>Aparencia</span>
         </a>
-        <a href="/cs/clube/dashboard/cidades/" class="app-subnav-item {% if request.resolver_match.url_name == 'dashboard_cidades' %}is-active{% endif %}">
-          <i class="bi bi-geo-alt"></i><span>Cidades</span>
-        </a>
-        <a href="/cs/clube/dashboard/banners/" class="app-subnav-item {% if request.resolver_match.url_name == 'dashboard_banners' %}is-active{% endif %}">
-          <i class="bi bi-image"></i><span>Banners</span>
-        </a>
-        <a href="/cs/clube/dashboard/categorias/" class="app-subnav-item {% if request.resolver_match.url_name == 'dashboard_categorias' %}is-active{% endif %}">
-          <i class="bi bi-tags"></i><span>Categorias</span>
-        </a>
-        <a href="/cs/clube/dashboard/assets/" class="app-subnav-item {% if request.resolver_match.url_name == 'dashboard_assets' %}is-active{% endif %}">
-          <i class="bi bi-images"></i><span>Assets</span>
-        </a>
-        <a href="/cs/clube/dashboard/gamificacao/" class="app-subnav-item {% if request.resolver_match.url_name == 'dashboard_gamificacao' %}is-active{% endif %}">
-          <i class="bi bi-trophy"></i><span>Gamificacao</span>
-        </a>
-        <a href="/cs/clube/dashboard/landing/" class="app-subnav-item {% if request.resolver_match.url_name == 'dashboard_landing_config' %}is-active{% endif %}">
-          <i class="bi bi-window"></i><span>Landing do clube</span>
+        <a href="/cs/clube/dashboard/config/" class="app-subnav-item {% if un == 'dashboard_config' or un == 'dashboard_cidades' or un == 'documentacao' %}is-active{% endif %}">
+          <i class="bi bi-gear"></i><span>Configuracoes</span>
         </a>
       </nav>
-      <div class="app-subnav-section">Relatorios CS</div>
-      <nav class="app-subnav-list">
-        <a href="/cs/clube/dashboard/relatorios/" class="app-subnav-item {% if request.resolver_match.url_name == 'dashboard_relatorios' %}is-active{% endif %}">
-          <i class="bi bi-bar-chart"></i><span>Geral</span>
-        </a>
-        <a href="/cs/clube/dashboard/relatorios/indicacoes/" class="app-subnav-item {% if request.resolver_match.url_name == 'dashboard_relatorios_indicacoes' %}is-active{% endif %}">
-          <i class="bi bi-share"></i><span>Indicacoes</span>
-        </a>
-        <a href="/cs/clube/dashboard/relatorios/parceiros/" class="app-subnav-item {% if request.resolver_match.url_name == 'dashboard_relatorios_parceiros' %}is-active{% endif %}">
-          <i class="bi bi-shop"></i><span>Parceiros</span>
-        </a>
-      </nav>
-      <div class="app-subnav-section">Configuracoes</div>
-      <nav class="app-subnav-list">
-        <a href="/cs/clube/dashboard/config/" class="app-subnav-item {% if request.resolver_match.url_name == 'dashboard_config' %}is-active{% endif %}">
-          <i class="bi bi-sliders"></i><span>Configuracoes do clube</span>
-        </a>
-        <a href="/cs/carteirinha/dashboard/carteirinha/" class="app-subnav-item {% if 'carteirinha' in request.resolver_match.url_name %}is-active{% endif %}">
-          <i class="bi bi-person-vcard"></i><span>Carteirinhas</span>
-        </a>
-      </nav>
+      {% endwith %}
 
     {% elif modulo_atual == 'workspace' %}
       <nav class="app-subnav-list">

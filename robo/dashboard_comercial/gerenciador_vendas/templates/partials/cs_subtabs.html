@@ -1,0 +1,88 @@
+{% comment %}
+Faixa de abas (navegacao) da area ativa do modulo CS. Cada aba e um LINK pra
+uma pagina real (rota propria), no estilo tabs-line do design system. Substitui
+os varios links soltos que a sidebar tinha antes: a sidebar agora so lista as 8
+areas, e cada area mostra aqui suas sub-paginas como aba (inclusive as que tinham
+sumido do menu na migracao do megaroleta: Modelos/Regras, Lista/Indicados/Pagina,
+Resgates, Documentacao, Cidades).
+
+Renderiza NADA quando a url atual nao pertence a uma area com sub-paginas
+(ex: Visao geral, paginas publicas). Incluido central pelo layout_app quando
+modulo_atual == 'cs'.
+{% endcomment %}
+{% with un=request.resolver_match.url_name %}
+
+{# Membros #}
+{% if un == 'dashboard_participantes' or un == 'dashboard_extrato_membro' or un == 'retencao' %}
+<div class="tabs tabs-line cs-subtabs" role="tablist">
+  <a class="tabs-item {% if un == 'dashboard_participantes' or un == 'dashboard_extrato_membro' %}is-active{% endif %}" href="{% url 'clube:dashboard_participantes' %}"><i class="bi bi-people"></i><span>Membros</span></a>
+  <a class="tabs-item {% if un == 'retencao' %}is-active{% endif %}" href="{% url 'retencao:retencao' %}"><i class="bi bi-shield-check"></i><span>Retencao</span></a>
+</div>
+{% endif %}
+
+{# Carteirinhas #}
+{% if un == 'dashboard_carteirinha' or un == 'dashboard_modelos_carteirinha' or un == 'dashboard_modelo_criar' or un == 'dashboard_modelo_editar' or un == 'dashboard_regras_carteirinha' or un == 'dashboard_preview_carteirinha' %}
+<div class="tabs tabs-line cs-subtabs" role="tablist">
+  <a class="tabs-item {% if un == 'dashboard_carteirinha' %}is-active{% endif %}" href="{% url 'carteirinha:dashboard_carteirinha' %}"><i class="bi bi-person-vcard"></i><span>Carteirinhas</span></a>
+  <a class="tabs-item {% if un == 'dashboard_modelos_carteirinha' or un == 'dashboard_modelo_criar' or un == 'dashboard_modelo_editar' or un == 'dashboard_preview_carteirinha' %}is-active{% endif %}" href="{% url 'carteirinha:dashboard_modelos_carteirinha' %}"><i class="bi bi-collection"></i><span>Modelos</span></a>
+  <a class="tabs-item {% if un == 'dashboard_regras_carteirinha' %}is-active{% endif %}" href="{% url 'carteirinha:dashboard_regras_carteirinha' %}"><i class="bi bi-sliders"></i><span>Regras</span></a>
+</div>
+{% endif %}
+
+{# Indicacoes #}
+{% if un == 'dashboard_indicacoes_home' or un == 'dashboard_indicacoes' or un == 'dashboard_indicacoes_membros' or un == 'dashboard_indicacoes_visual' %}
+<div class="tabs tabs-line cs-subtabs" role="tablist">
+  <a class="tabs-item {% if un == 'dashboard_indicacoes_home' %}is-active{% endif %}" href="{% url 'indicacoes:dashboard_indicacoes_home' %}"><i class="bi bi-grid-1x2"></i><span>Painel</span></a>
+  <a class="tabs-item {% if un == 'dashboard_indicacoes' %}is-active{% endif %}" href="{% url 'indicacoes:dashboard_indicacoes' %}"><i class="bi bi-list-ul"></i><span>Lista</span></a>
+  <a class="tabs-item {% if un == 'dashboard_indicacoes_membros' %}is-active{% endif %}" href="{% url 'indicacoes:dashboard_indicacoes_membros' %}"><i class="bi bi-people"></i><span>Indicados</span></a>
+  <a class="tabs-item {% if un == 'dashboard_indicacoes_visual' %}is-active{% endif %}" href="{% url 'indicacoes:dashboard_indicacoes_visual' %}"><i class="bi bi-window"></i><span>Pagina publica</span></a>
+</div>
+{% endif %}
+
+{# Parceiros #}
+{% if un == 'dashboard_parceiros_home' or un == 'dashboard_parceiros' or un == 'dashboard_cupons' or un == 'dashboard_cupom_detalhe' or un == 'dashboard_cupons_resgates' or un == 'dashboard_categorias' %}
+<div class="tabs tabs-line cs-subtabs" role="tablist">
+  <a class="tabs-item {% if un == 'dashboard_parceiros_home' or un == 'dashboard_parceiros' %}is-active{% endif %}" href="{% url 'parceiros:dashboard_parceiros_home' %}"><i class="bi bi-shop"></i><span>Parceiros</span></a>
+  <a class="tabs-item {% if un == 'dashboard_cupons' or un == 'dashboard_cupom_detalhe' %}is-active{% endif %}" href="{% url 'parceiros:dashboard_cupons' %}"><i class="bi bi-ticket-perforated"></i><span>Cupons</span></a>
+  <a class="tabs-item {% if un == 'dashboard_cupons_resgates' %}is-active{% endif %}" href="{% url 'parceiros:dashboard_cupons_resgates' %}"><i class="bi bi-bag-check"></i><span>Resgates</span></a>
+  <a class="tabs-item {% if un == 'dashboard_categorias' %}is-active{% endif %}" href="{% url 'clube:dashboard_categorias' %}"><i class="bi bi-tags"></i><span>Categorias</span></a>
+</div>
+{% endif %}
+
+{# Sorteios #}
+{% if un == 'dashboard_premios' or un == 'dashboard_giros' or un == 'dashboard_gamificacao' %}
+<div class="tabs tabs-line cs-subtabs" role="tablist">
+  <a class="tabs-item {% if un == 'dashboard_premios' %}is-active{% endif %}" href="{% url 'clube:dashboard_premios' %}"><i class="bi bi-gift"></i><span>Premios</span></a>
+  <a class="tabs-item {% if un == 'dashboard_giros' %}is-active{% endif %}" href="{% url 'clube:dashboard_giros' %}"><i class="bi bi-arrow-clockwise"></i><span>Sorteios</span></a>
+  <a class="tabs-item {% if un == 'dashboard_gamificacao' %}is-active{% endif %}" href="{% url 'clube:dashboard_gamificacao' %}"><i class="bi bi-trophy"></i><span>Niveis e missoes</span></a>
+</div>
+{% endif %}
+
+{# Relatorios #}
+{% if un == 'dashboard_relatorios' or un == 'dashboard_relatorios_indicacoes' or un == 'dashboard_relatorios_parceiros' %}
+<div class="tabs tabs-line cs-subtabs" role="tablist">
+  <a class="tabs-item {% if un == 'dashboard_relatorios' %}is-active{% endif %}" href="{% url 'clube:dashboard_relatorios' %}"><i class="bi bi-bar-chart"></i><span>Geral</span></a>
+  <a class="tabs-item {% if un == 'dashboard_relatorios_indicacoes' %}is-active{% endif %}" href="{% url 'clube:dashboard_relatorios_indicacoes' %}"><i class="bi bi-share"></i><span>Indicacoes</span></a>
+  <a class="tabs-item {% if un == 'dashboard_relatorios_parceiros' %}is-active{% endif %}" href="{% url 'clube:dashboard_relatorios_parceiros' %}"><i class="bi bi-shop"></i><span>Parceiros</span></a>
+</div>
+{% endif %}
+
+{# Aparencia #}
+{% if un == 'dashboard_landing_config' or un == 'dashboard_banners' or un == 'dashboard_assets' %}
+<div class="tabs tabs-line cs-subtabs" role="tablist">
+  <a class="tabs-item {% if un == 'dashboard_landing_config' %}is-active{% endif %}" href="{% url 'clube:dashboard_landing_config' %}"><i class="bi bi-window"></i><span>Landing</span></a>
+  <a class="tabs-item {% if un == 'dashboard_banners' %}is-active{% endif %}" href="{% url 'clube:dashboard_banners' %}"><i class="bi bi-image"></i><span>Banners</span></a>
+  <a class="tabs-item {% if un == 'dashboard_assets' %}is-active{% endif %}" href="{% url 'clube:dashboard_assets' %}"><i class="bi bi-images"></i><span>Visual</span></a>
+</div>
+{% endif %}
+
+{# Configuracoes #}
+{% if un == 'dashboard_config' or un == 'dashboard_cidades' or un == 'documentacao' %}
+<div class="tabs tabs-line cs-subtabs" role="tablist">
+  <a class="tabs-item {% if un == 'dashboard_config' %}is-active{% endif %}" href="{% url 'clube:dashboard_config' %}"><i class="bi bi-gear"></i><span>Geral</span></a>
+  <a class="tabs-item {% if un == 'dashboard_cidades' %}is-active{% endif %}" href="{% url 'clube:dashboard_cidades' %}"><i class="bi bi-geo-alt"></i><span>Cidades</span></a>
+  <a class="tabs-item {% if un == 'documentacao' %}is-active{% endif %}" href="{% url 'clube:documentacao' %}"><i class="bi bi-book"></i><span>Documentacao</span></a>
+</div>
+{% endif %}
+
+{% endwith %}
