@@ -177,3 +177,16 @@ def test_marcar_dados_custom_grava_valor_explicito():
     op.refresh_from_db()
     assert valor_gravado == 42
     assert op.dados_custom['score'] == 42
+
+
+@pytest.mark.django_db
+def test_criar_nota_prefere_autor_sistema():
+    """Com o usuario de sistema (hubtrix.ia) no tenant, a nota sai em nome dele."""
+    from django.contrib.auth.models import User
+
+    op = OportunidadeVendaFactory()
+    tenant = op.tenant
+    robo = User.objects.create_user('hubtrix.ia', first_name='Hubtrix', last_name='IA', is_active=False)
+    PerfilUsuario.objects.create(tenant=tenant, user=robo)
+    nota = criar_nota(tenant, oportunidade=op, texto='analise automatica')
+    assert nota.autor_id == robo.pk

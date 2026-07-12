@@ -147,6 +147,10 @@ AUTOMACAO_WATCHDOG_MINUTOS = int(os.environ.get('AUTOMACAO_WATCHDOG_MINUTOS', '1
 AUTOMACAO_ORCAMENTO_LEAD_HORA = int(os.environ.get('AUTOMACAO_ORCAMENTO_LEAD_HORA', '20'))
 AUTOMACAO_ORCAMENTO_FLUXO_HORA = int(os.environ.get('AUTOMACAO_ORCAMENTO_FLUXO_HORA', '500'))
 
+# Usuário de sistema que assina escritas automáticas da engine (ex: notas na
+# timeline). Precisa ter PerfilUsuario no tenant; ausente = fallback humano.
+AUTOMACAO_AUTOR_SISTEMA = os.environ.get('AUTOMACAO_AUTOR_SISTEMA', 'hubtrix.ia')
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',

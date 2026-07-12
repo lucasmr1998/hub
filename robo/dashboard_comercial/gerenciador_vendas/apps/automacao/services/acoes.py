@@ -276,11 +276,30 @@ def adicionar_item_oportunidade(tenant, *, oportunidade, quantidade=1):
     return item, True, ''
 
 
+def _autor_sistema(tenant):
+    """Usuário de sistema pra autoria de escritas automáticas (ex: notas da engine).
+
+    Resolve pelo username em `settings.AUTOMACAO_AUTOR_SISTEMA` (default
+    'hubtrix.ia'), desde que o usuário tenha PerfilUsuario NESTE tenant. Devolve
+    None quando não existe (o chamador cai no fallback humano)."""
+    from django.conf import settings
+    from apps.sistema.models import PerfilUsuario
+
+    username = (getattr(settings, 'AUTOMACAO_AUTOR_SISTEMA', 'hubtrix.ia') or '').strip()
+    if not username:
+        return None
+    perfil = (PerfilUsuario.objects
+              .filter(tenant=tenant, user__username=username)
+              .select_related('user').first())
+    return perfil.user if perfil else None
+
+
 def criar_nota(tenant, *, oportunidade, texto, titulo=''):
     """Cria uma `NotaInterna` vinculada à `oportunidade`. O model não tem campo de
-    título; quando `titulo` vem preenchido, ele é prefixado no `conteudo`. Autor
-    resolve por default (oportunidade.responsavel → staff do tenant → superuser),
-    mesmo padrão de `criar_tarefa`. Devolve a NotaInterna.
+    título; quando `titulo` vem preenchido, ele é prefixado no `conteudo`. Autor:
+    usuário de sistema do tenant (`_autor_sistema`, ex: 'hubtrix.ia' — identidade
+    de robô na timeline) e, na ausência dele, o fallback humano
+    (oportunidade.responsavel → staff do tenant → superuser). Devolve a NotaInterna.
 
     Levanta `ValueError` se não houver oportunidade, conteúdo vazio, ou nenhum autor
     possível.
@@ -298,7 +317,7 @@ def criar_nota(tenant, *, oportunidade, texto, titulo=''):
     if not conteudo:
         raise ValueError('Nota sem conteúdo.')
 
-    autor = getattr(oportunidade, 'responsavel', None)
+    autor = _autor_sistema(tenant) or getattr(oportunidade, 'responsavel', None)
     if autor is None:
         perfil = PerfilUsuario.objects.filter(tenant=tenant, user__is_staff=True).first()
         autor = perfil.user if perfil else User.objects.filter(is_superuser=True).first()
