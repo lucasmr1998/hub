@@ -8,6 +8,7 @@ from django.db.models.functions import TruncDate, TruncWeek, TruncMonth
 from django.http import HttpResponse
 from django.core.paginator import Paginator
 from apps.cs.clube.models import PremioRoleta, ParticipanteRoleta, RouletteAsset, RoletaConfig, MembroClube, NivelClube, RegraPontuacao, ExtratoPontuacao, Cidade, BannerClube, LandingConfig
+from apps.cs.clube.services.config_service import config_singleton
 from apps.cs.indicacoes.models import Indicacao
 from apps.cs.parceiros.models import Parceiro, CupomDesconto, ResgateCupom, CategoriaParceiro
 import csv
@@ -363,7 +364,7 @@ def dashboard_assets(request):
 
 @login_required
 def dashboard_config(request):
-    config, _ = RoletaConfig.objects.get_or_create(id=1)
+    config = config_singleton(RoletaConfig)
     if request.method == 'POST':
         config.custo_giro = int(request.POST.get('custo_giro', 10))
         config.nome_clube = request.POST.get('nome_clube', 'Clube MegaLink')
@@ -906,7 +907,7 @@ def dashboard_relatorios_parceiros(request):
 @login_required
 def dashboard_landing_config(request):
     """Editar configuracao da landing page publica."""
-    config, _ = LandingConfig.objects.get_or_create(id=1)
+    config = config_singleton(LandingConfig)
 
     if request.method == 'POST':
         config.titulo = request.POST.get('titulo', config.titulo).strip()

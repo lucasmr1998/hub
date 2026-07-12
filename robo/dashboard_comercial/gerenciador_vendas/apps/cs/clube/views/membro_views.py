@@ -5,6 +5,7 @@ from apps.cs.clube.models import MembroClube, RegraPontuacao, ExtratoPontuacao, 
 from apps.cs.parceiros.models import CupomDesconto, ResgateCupom
 from apps.cs.parceiros.services import CupomService
 from apps.cs.indicacoes.models import Indicacao, IndicacaoConfig
+from apps.cs.clube.services.config_service import config_singleton
 
 
 def _get_membro(request):
@@ -78,7 +79,7 @@ def membro_indicar(request):
         membro.save()
         membro.refresh_from_db()
 
-    config, _ = IndicacaoConfig.objects.get_or_create(id=1)
+    config = config_singleton(IndicacaoConfig)
     indicacoes_qs = Indicacao.objects.filter(membro_indicador=membro)
     stats = indicacoes_qs.aggregate(
         total=Count('id'),

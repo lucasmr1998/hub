@@ -9,12 +9,13 @@ from django.utils import timezone
 from datetime import timedelta
 import json
 from apps.cs.indicacoes.models import Indicacao, IndicacaoConfig
+from apps.cs.clube.services.config_service import config_singleton
 from apps.cs.indicacoes.services import IndicacaoService
 from apps.cs.clube.models import MembroClube
 
 
 def _get_config():
-    config, _ = IndicacaoConfig.objects.get_or_create(id=1)
+    config = config_singleton(IndicacaoConfig)
     return config
 
 

@@ -7,6 +7,7 @@ from django.http import JsonResponse
 from django.db import transaction, models
 from django.db.models import Q, F
 from apps.cs.clube.models import PremioRoleta, ParticipanteRoleta, RouletteAsset, RoletaConfig, MembroClube, RegraPontuacao, ExtratoPontuacao, NivelClube, Cidade
+from apps.cs.clube.services.config_service import config_singleton
 from apps.cs.clube.services.hubsoft_service import HubsoftService
 from apps.cs.clube.services.otp_service import OTPService
 from apps.cs.clube.services.sorteio_service import SorteioService
@@ -117,7 +118,7 @@ def roleta_init_dados(request):
             # Indicações — queries otimizadas
             auth_codigo_indicacao = membro.codigo_indicacao or ''
             todas_indicacoes = Indicacao.objects.filter(membro_indicador=membro)
-            indicacao_config, _ = IndicacaoConfig.objects.get_or_create(id=1)
+            indicacao_config = config_singleton(IndicacaoConfig)
             ind_stats = todas_indicacoes.aggregate(
                 total=Count('id'),
                 convertidas=Count('id', filter=Q(status='convertido')),
@@ -145,7 +146,7 @@ def roleta_init_dados(request):
             request.session.pop('auth_membro_nome', None)
             request.session.pop('auth_membro_cpf', None)
     
-    config, _ = RoletaConfig.objects.get_or_create(id=1)
+    config = config_singleton(RoletaConfig)
     cidades_disponiveis = Cidade.objects.filter(ativo=True).values_list('nome', flat=True).order_by('nome')
     assets = RouletteAsset.objects.filter(ativo=True).order_by('ordem')
     
@@ -195,7 +196,7 @@ def cadastrar_participante(request):
         auth_membro_id = request.session.get('auth_membro_id')
         membro = None
         created = False
-        config, _ = RoletaConfig.objects.get_or_create(id=1)
+        config = config_singleton(RoletaConfig)
 
         if auth_membro_id:
             try:
@@ -452,7 +453,7 @@ def verificar_cliente(request):
             return JsonResponse({'error': 'CPF não fornecido'}, status=400)
             
         # Get existing member if any
-        config, _ = RoletaConfig.objects.get_or_create(id=1)
+        config = config_singleton(RoletaConfig)
             
         cliente_data = HubsoftService.consultar_cliente(cpf)
         if cliente_data:
@@ -674,7 +675,7 @@ def pre_cadastrar(request):
         data = request.POST.dict()
         cpf = data.get('cpf', '').replace('.', '').replace('-', '')
         if cpf:
-            config, _ = RoletaConfig.objects.get_or_create(id=1)
+            config = config_singleton(RoletaConfig)
             defaults = {
                 'nome': data.get('nome') or "Participante",
                 'telefone': data.get('telefone'),

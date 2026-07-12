@@ -23,3 +23,11 @@ Trilha do que foi executado no modulo de Customer Success (clube, parceiros, ind
 - Validacao: manage.py check ok; 19 telas capturadas via Playwright local (200 em todas), sidebar e faixas conferidas visualmente. So local, sem push.
 - Pendente: a area Configuracoes cai em dashboard_config, que ainda da 500 (P0-4 do diagnostico, get_or_create(id=1) singleton); nao e regressao (o menu antigo tambem apontava pra la). Precisa do fix P0-4. Tarefa Workspace T-P2-A a criar apos aprovacao.
 - Status: completed (local, aguardando analise do Lucas)
+
+## 2026-07-12 — Fix P0-4: singletons de config por tenant (IntegrityError id=1)
+
+- Bug: `Model.objects.get_or_create(id=1)` em 9 call sites (RoletaConfig, LandingConfig, IndicacaoConfig, todos TenantMixin). O id=1 forcado colidia na PK entre tenants: o 2o tenant nao achava a linha id=1 pelo manager filtrado e tentava criar outra com a mesma PK -> IntegrityError 500 (reproduzido pelo Lucas em /cs/clube/dashboard/config/). Alem disso escrevia no banco em GET.
+- Fix: helper `config_singleton(model_cls)` em `apps/cs/clube/services/config_service.py` = `model_cls.objects.first() or model_cls.objects.create()`. `objects` e o TenantManager (filtra por tenant) e o save() do TenantMixin auto-preenche o tenant; sem PK forcada, usa auto-incremento. Aplicado nos 9 sites (api_views, dashboard_views, membro_views, indicacoes/views).
+- Validacao: manage.py check ok; config/landing/indicacoes agora 200 (antes 500). DB local: RoletaConfig id=1 tenant=9 intacto, id=2 criado pro tenant=10 sem colisao.
+- Pendente relacionado: nome padrao "Clube MegaLink" ainda vem do default do model (branding P0-1/P2-3, fix separado). Area de membro (/cs/clube/membro/) segue quebrada por outros motivos (redirect sem namespace + import gestao.models morto, P1-1). Mesmo fix precisa ir pra prod (mesmo codigo), com confirmacao.
+- Status: completed (local, sem push)
