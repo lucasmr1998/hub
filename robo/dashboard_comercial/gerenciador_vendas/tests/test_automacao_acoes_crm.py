@@ -1,14 +1,13 @@
 """Testes com DB dos services de CRM em `acoes.py`: `criar_nota`,
-`definir_motivo_perda`, `reabrir_oportunidade`, `marcar_dados_custom`."""
+`reabrir_oportunidade`.
+
+`definir_motivo_perda` e `marcar_dados_custom` foram movidos pro registry
+`apps.automacao.propriedades_oportunidade` (nó `definir_propriedade_oportunidade`);
+os testes deles agora ficam em `test_automacao_definir_propriedade.py`."""
 import pytest
 from django.utils import timezone
 
-from apps.automacao.services.acoes import (
-    criar_nota,
-    definir_motivo_perda,
-    marcar_dados_custom,
-    reabrir_oportunidade,
-)
+from apps.automacao.services.acoes import criar_nota, reabrir_oportunidade
 from apps.comercial.crm.models import HistoricoPipelineEstagio, MotivoPerda, NotaInterna
 from apps.sistema.models import PerfilUsuario
 from tests.factories import OportunidadeVendaFactory, PipelineEstagioFactory, TenantFactory, UserFactory
@@ -47,47 +46,17 @@ def test_criar_nota_sem_responsavel_usa_staff_do_tenant():
     assert nota.autor_id == staff.pk
 
 
-# ──────────────────────────────────────────────
-# definir_motivo_perda
-# ──────────────────────────────────────────────
-
 @pytest.mark.django_db
-def test_definir_motivo_perda_resolve_por_nome_iexact():
-    tenant = TenantFactory()
-    motivo = MotivoPerda.objects.create(tenant=tenant, nome='Preço alto', ativo=True)
-    op = OportunidadeVendaFactory(tenant=tenant)
+def test_criar_nota_prefere_autor_sistema():
+    """Com o usuario de sistema (hubtrix.ia) no tenant, a nota sai em nome dele."""
+    from django.contrib.auth.models import User
 
-    resolvido, alterou = definir_motivo_perda(tenant, oportunidade=op, motivo_nome='  preço alto  ')
-
-    op.refresh_from_db()
-    assert alterou is True
-    assert resolvido.pk == motivo.pk
-    assert op.motivo_perda_ref_id == motivo.pk
-
-
-@pytest.mark.django_db
-def test_definir_motivo_perda_somente_se_vazio_pula_quando_ja_tem():
-    tenant = TenantFactory()
-    motivo_atual = MotivoPerda.objects.create(tenant=tenant, nome='Timing', ativo=True)
-    MotivoPerda.objects.create(tenant=tenant, nome='Preço', ativo=True)
-    op = OportunidadeVendaFactory(tenant=tenant, motivo_perda_ref=motivo_atual)
-
-    resolvido, alterou = definir_motivo_perda(tenant, oportunidade=op, motivo_nome='Preço')
-
-    op.refresh_from_db()
-    assert alterou is False
-    assert resolvido.pk == motivo_atual.pk
-    assert op.motivo_perda_ref_id == motivo_atual.pk  # não trocou
-
-
-@pytest.mark.django_db
-def test_definir_motivo_perda_motivo_inexistente_levanta_value_error():
-    tenant = TenantFactory()
-    MotivoPerda.objects.create(tenant=tenant, nome='Timing', ativo=True)
-    op = OportunidadeVendaFactory(tenant=tenant)
-
-    with pytest.raises(ValueError):
-        definir_motivo_perda(tenant, oportunidade=op, motivo_nome='Inexistente')
+    op = OportunidadeVendaFactory()
+    tenant = op.tenant
+    robo = User.objects.create_user('hubtrix.ia', first_name='Hubtrix', last_name='IA', is_active=False)
+    PerfilUsuario.objects.create(tenant=tenant, user=robo)
+    nota = criar_nota(tenant, oportunidade=op, texto='analise automatica')
+    assert nota.autor_id == robo.pk
 
 
 # ──────────────────────────────────────────────
@@ -148,45 +117,3 @@ def test_reabrir_oportunidade_estagio_inexistente_levanta_value_error():
 
     with pytest.raises(ValueError):
         reabrir_oportunidade(tenant, oportunidade=op, estagio_slug='nao-existe')
-
-
-# ──────────────────────────────────────────────
-# marcar_dados_custom
-# ──────────────────────────────────────────────
-
-@pytest.mark.django_db
-def test_marcar_dados_custom_grava_timestamp_default():
-    tenant = TenantFactory()
-    op = OportunidadeVendaFactory(tenant=tenant, dados_custom={'existente': 'valor'})
-
-    valor_gravado = marcar_dados_custom(tenant, oportunidade=op, chave='analise_perda')
-
-    op.refresh_from_db()
-    assert isinstance(valor_gravado, str) and 'T' in valor_gravado  # ISO 8601
-    assert op.dados_custom['analise_perda'] == valor_gravado
-    assert op.dados_custom['existente'] == 'valor'  # não perde dado anterior
-
-
-@pytest.mark.django_db
-def test_marcar_dados_custom_grava_valor_explicito():
-    tenant = TenantFactory()
-    op = OportunidadeVendaFactory(tenant=tenant)
-
-    valor_gravado = marcar_dados_custom(tenant, oportunidade=op, chave='score', valor=42)
-
-    op.refresh_from_db()
-    assert valor_gravado == 42
-    assert op.dados_custom['score'] == 42
-
-
-@pytest.mark.django_db
-def test_criar_nota_prefere_autor_sistema():
-    """Com o usuario de sistema (hubtrix.ia) no tenant, a nota sai em nome dele."""
-    from django.contrib.auth.models import User
-
-    op = OportunidadeVendaFactory()
-    tenant = op.tenant
-    robo = User.objects.create_user('hubtrix.ia', first_name='Hubtrix', last_name='IA', is_active=False)
-    PerfilUsuario.objects.create(tenant=tenant, user=robo)
-    nota = criar_nota(tenant, oportunidade=op, texto='analise automatica')
-    assert nota.autor_id == robo.pk

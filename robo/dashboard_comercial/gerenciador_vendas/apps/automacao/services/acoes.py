@@ -329,43 +329,6 @@ def criar_nota(tenant, *, oportunidade, texto, titulo=''):
     return nota
 
 
-def definir_motivo_perda(tenant, *, oportunidade, motivo_nome, texto='', somente_se_vazio=True):
-    """Resolve um `MotivoPerda` ativo do tenant por nome (case-insensitive) e vincula
-    em `oportunidade.motivo_perda_ref`. Se `texto` vier, também preenche o
-    `motivo_perda` (texto livre). Com `somente_se_vazio=True` (default), não sobrescreve
-    se a op já tiver um `motivo_perda_ref`, devolve `(motivo_atual, False)` sem tocar.
-    Devolve `(motivo, alterou: bool)`.
-
-    Levanta `ValueError` se não houver oportunidade, `motivo_nome` vazio, ou nenhum
-    MotivoPerda ativo do tenant com esse nome (lista os disponíveis na mensagem).
-    """
-    from apps.comercial.crm.models import MotivoPerda
-    if oportunidade is None:
-        raise ValueError('Sem oportunidade para definir motivo de perda.')
-    nome = (motivo_nome or '').strip()
-    if not nome:
-        raise ValueError('Motivo de perda não especificado.')
-
-    motivo = MotivoPerda.all_tenants.filter(tenant=tenant, ativo=True, nome__iexact=nome).first()
-    if motivo is None:
-        disponiveis = ', '.join(
-            MotivoPerda.all_tenants.filter(tenant=tenant, ativo=True)
-            .order_by('ordem').values_list('nome', flat=True)
-        ) or 'nenhum cadastrado'
-        raise ValueError(f'Motivo de perda "{motivo_nome}" não encontrado. Disponíveis: {disponiveis}')
-
-    if somente_se_vazio and oportunidade.motivo_perda_ref_id:
-        return oportunidade.motivo_perda_ref, False
-
-    oportunidade.motivo_perda_ref = motivo
-    campos = ['motivo_perda_ref']
-    if (texto or '').strip():
-        oportunidade.motivo_perda = texto.strip()
-        campos.append('motivo_perda')
-    oportunidade.save(update_fields=campos)
-    return motivo, True
-
-
 def reabrir_oportunidade(tenant, *, oportunidade, estagio_slug, motivo=''):
     """Reabre uma oportunidade que estava em estágio perdido (`is_final_perdido=True`),
     movendo pro `estagio_slug` informado dentro do mesmo pipeline. Idempotente: se a op
@@ -414,22 +377,3 @@ def reabrir_oportunidade(tenant, *, oportunidade, estagio_slug, motivo=''):
     except Exception:
         pass
     return estagio_novo, True
-
-
-def marcar_dados_custom(tenant, *, oportunidade, chave, valor=None):
-    """Grava `valor` em `oportunidade.dados_custom[chave]`. Sem `valor` (None ou
-    vazio), grava o timestamp atual (ISO 8601), útil pra marcar "processado em".
-    Devolve o valor gravado.
-
-    Levanta `ValueError` se `oportunidade` ou `chave` (após strip) não vierem.
-    """
-    if oportunidade is None:
-        raise ValueError('Sem oportunidade para marcar dado customizado.')
-    chave_limpa = (chave or '').strip()
-    if not chave_limpa:
-        raise ValueError('Chave não especificada.')
-
-    valor_gravado = valor if (valor is not None and valor != '') else timezone.now().isoformat()
-    oportunidade.dados_custom = {**(oportunidade.dados_custom or {}), chave_limpa: valor_gravado}
-    oportunidade.save(update_fields=['dados_custom'])
-    return valor_gravado

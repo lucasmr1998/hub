@@ -141,6 +141,14 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 2. **Atendimento depois** (paridade conversacional: IA/tools/validação/recontato).
 3. **Comercial por último** (regra `condição→ação` vira fluxo trigger+condição+ação).
 
+## Princípio do catálogo: propriedades vs comportamentos
+
+Escrever **uma propriedade** de um recurso (um atributo, um par chave/valor) nunca gera um nó novo. Vira **uma entrada num registry** (`propriedades_oportunidade.py`, espelha `varreduras.py`) consumida por **um único nó genérico** (`definir_propriedade_oportunidade`) que escolhe a propriedade num dropdown. Motivo: sem essa regra, cada atributo escrevível (`motivo_perda`, `dados_custom[x]`, `valor_estimado`, o próximo que aparecer) vira um nó quase idêntico ao anterior, lotando a paleta do editor, cada um com sua própria cópia de validação.
+
+Nó **dedicado** continua existindo, mas só pra **comportamento**: uma ação com lógica própria que não é "escrever um campo", como mover de estágio, reabrir, atribuir responsável, criar nota. Esses ficam nós à parte porque o verbo (mover, reabrir, atribuir) É a ação, não um par chave/valor plugável num registry.
+
+Contrato do handler de propriedade (`fn(tenant, oportunidade, valor, *, chave='', somente_se_vazio=True) -> dict`): devolve `{'aplicado': bool, 'motivo_skip': str|None, 'detalhe': str}` e **nunca levanta exceção pra caso de negócio** (motivo fora do catálogo, condição de estado não satisfeita, valor inválido, campo já preenchido). `aplicado=False` é branch de **sucesso** no nó: skip não é erro, então nunca aciona retry. Achado do piloto real do fluxo 25 que motivou essa regra: o nó antigo `definir_motivo_perda` levantava `ValueError` quando um agente IA classificava a perda com um motivo fora do catálogo, um erro **determinístico** (a mesma config sempre falha do mesmo jeito) que o runtime tratava como falha transitória, gerando retries inúteis. O mesmo piloto também expôs que motivo de perda estava sendo aplicado em oportunidade fora de estágio `is_final_perdido` (poluição de dado); hoje é regra do handler, não do fluxo.
+
 ## Catálogo de nós
 
 | tipo | grupo › subgrupo | label | status |
@@ -172,9 +180,8 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 | `assinar_contrato_hubsoft` | Comercial › Contrato | HubSoft: assinar contrato existente | ✅ **migração funil Fase 1** 🔴 outbound real; porta p/ `services/contrato_hubsoft`; **picker HubSoft** |
 | `atribuir_responsavel` | Comercial › Oportunidades | Atribuir responsável | ✅ **convergência** (round-robin ou fixo por username) |
 | `criar_nota` | Comercial › Oportunidades | Criar nota | ✅ tarefas 180/181 (autor: responsável da op → staff do tenant → superuser) |
-| `definir_motivo_perda` | Comercial › Oportunidades | Definir motivo de perda | ✅ tarefas 180/181 (resolve `MotivoPerda` por nome; `somente_se_vazio` não sobrescreve) |
 | `reabrir_oportunidade` | Comercial › Oportunidades | Reabrir oportunidade | ✅ tarefas 180/181 (idempotente fora de estágio perdido; mantém motivo/responsável como auditoria) |
-| `marcar_dados_custom` | Comercial › Oportunidades | Marcar dado customizado | ✅ tarefas 180/181 (chave/valor em `dados_custom`; vazio grava timestamp) |
+| `definir_propriedade_oportunidade` | Comercial › Oportunidades | Definir propriedade da oportunidade | ✅ **catálogo de propriedades** (`propriedades_oportunidade.py`, select: `motivo_perda`, `detalhe_perda`, `marcador`, `valor_estimado`), substitui os antigos `definir_motivo_perda`/`marcar_dados_custom`; `aplicado=False` no output é branch de **sucesso** (skip por regra de negócio nunca vira erro/retry) |
 | `dar_pontos` | CS › Clube | Dar pontos (Clube) | ✅ **convergência** (CPF do config ou do lead; filtra por tenant) |
 | `matrix_hsm` | Integrações › Matrix | Matrix: disparar HSM (WhatsApp) | ✅ **outbound real** (`MatrixBrasilService.enviar_hsm`; template HSM + variáveis) |
 | `matrix_atendimento` | Integrações › Matrix | Matrix: transcript do atendimento | ✅ tarefas 180/181 (`MatrixBrasilService.consultar_atendimento`; anonimiza PII por padrão) |

@@ -53,7 +53,6 @@ from . import enviar_venda_whatsapp  # noqa: F401,E402  (F3 — migração funil
 from . import gerar_contrato_hubsoft  # noqa: F401,E402  (F4 — migração funil: gerar contrato HubSoft)
 from . import assinar_contrato_hubsoft  # noqa: F401,E402  (F5 — migração funil: assinar contrato HubSoft)
 from . import criar_nota  # noqa: F401,E402  (F6, tarefas 180/181: nota interna na oportunidade)
-from . import definir_motivo_perda  # noqa: F401,E402  (F7, tarefas 180/181: vincular MotivoPerda cadastrado)
 from . import reabrir_oportunidade  # noqa: F401,E402  (F8, tarefas 180/181: reabrir oportunidade perdida)
-from . import marcar_dados_custom  # noqa: F401,E402  (F9, tarefas 180/181: marcar dado customizado)
+from . import definir_propriedade_oportunidade  # noqa: F401,E402  (F7/F9 unificados: catálogo de propriedades)
 from . import ia_agente  # noqa: F401,E402  (D2 — Agente IA: turno conversacional referenciando Agente)

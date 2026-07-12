@@ -23,23 +23,51 @@ NOME_AGENTE = 'Analista de Atendimentos'
 
 DESCRICAO_AGENTE = (
     'Le o transcript de um atendimento Matrix finalizado e devolve um resumo, '
-    'se a venda foi perdida e o motivo sugerido do catalogo de MotivoPerda do tenant.'
+    'se a venda foi perdida e o motivo sugerido do catalogo de MotivoPerda do tenant. '
+    'O catalogo de motivos vai INLINE no system prompt (gerado no momento do seed). '
+    'Se o catalogo de motivos mudar, re-rodar o seed pra atualizar o prompt.'
 )
 
-SYSTEM_PROMPT_AGENTE = (
-    'Voce analisa transcripts de atendimentos de um provedor de internet que foram '
-    'transferidos para atendimento humano e finalizados. Sua saida e SEMPRE um unico '
-    'JSON valido, sem nenhum texto antes ou depois, no formato:\n'
-    '{"resumo": "<resumo fiel do atendimento em 2 a 4 frases>", "perdido": true|false, '
-    '"motivo_nome": "<nome exato de um motivo do catalogo>"|null, '
-    '"confianca": "alta"|"media"|"baixa"}\n'
-    'Regras: "perdido" = true somente se a conversa evidencia que a venda NAO avancou '
-    '(cliente desistiu, sem retorno, sem cobertura, preco, debito etc). Quando '
-    'perdido=true, use a tool listar_motivos_perda para ver o catalogo do tenant e '
-    'escolha o motivo_nome EXATAMENTE como esta no catalogo (o mais adequado a '
-    'conversa). Se nenhum motivo do catalogo servir ou perdido=false, motivo_nome=null. '
-    'Nao invente motivos fora do catalogo.'
-)
+
+def _system_prompt_agente(tenant):
+    """Monta o system prompt com o CATALOGO DE MOTIVOS do tenant embutido (achado
+    do piloto fluxo 25: o agente inventou motivo fora do catalogo). A tool
+    `listar_motivos_perda` continua disponivel como reforco/checagem, mas o
+    catalogo inline evita a rodada de tool-call na maioria dos casos e reduz a
+    chance do modelo alucinar um nome parecido.
+
+    O prompt tambem pede `conclusao`: uma linha ja pronta pra virar nota,
+    montada pelo proprio LLM (mata a lacuna de "Perda sugerida: " vazio quando
+    nao ha perda, que o template fixo antigo deixava passar).
+    """
+    from apps.comercial.crm.models import MotivoPerda
+
+    nomes = list(
+        MotivoPerda.all_tenants.filter(tenant=tenant, ativo=True)
+        .order_by('ordem', 'nome').values_list('nome', flat=True)
+    )
+    catalogo = ', '.join(nomes) if nomes else '(nenhum motivo cadastrado no tenant)'
+
+    return (
+        'Voce analisa transcripts de atendimentos de um provedor de internet que foram '
+        'transferidos para atendimento humano e finalizados. Sua saida e SEMPRE um unico '
+        'JSON valido, sem nenhum texto antes ou depois, no formato:\n'
+        '{"resumo": "<resumo fiel do atendimento em 2 a 4 frases>", "perdido": true|false, '
+        '"motivo_nome": "<nome exato de um motivo do catalogo>"|null, '
+        '"confianca": "alta"|"media"|"baixa", '
+        '"conclusao": "<uma linha, pronta para virar nota>"}\n'
+        f'CATALOGO DE MOTIVOS DO TENANT: {catalogo}. Use exatamente estes nomes.\n'
+        'Regras: "perdido" = true somente se a conversa evidencia que a venda NAO avancou '
+        '(cliente desistiu, sem retorno, sem cobertura, preco, debito etc). Quando '
+        'perdido=true, use a tool listar_motivos_perda para confirmar o catalogo do tenant e '
+        'escolha o motivo_nome EXATAMENTE como esta no catalogo acima (o mais adequado a '
+        'conversa). Se nenhum motivo do catalogo servir ou perdido=false, motivo_nome=null. '
+        'Nao invente motivos fora do catalogo. Em "conclusao", escreva a linha pronta pra '
+        'nota: se perdido=true e motivo_nome preenchido, use exatamente '
+        '"Perda sugerida: <motivo_nome> (confianca <confianca>)"; caso contrario, use '
+        'exatamente "Sem perda identificada no atendimento."'
+    )
+
 
 NOME_F1 = '[#181] Analise de atendimentos Matrix'
 NOME_F2 = '[#180] Recuperacao sem retorno, envio'
@@ -52,7 +80,8 @@ DESCRICAO_F1 = (
     'atendimento e classifica se a venda foi perdida (com o motivo sugerido do '
     'catalogo do tenant). Cria uma nota na oportunidade com o resumo e, quando '
     'perdido, define o motivo de perda (somente se a oportunidade ainda nao tiver '
-    'um). Tarefa #181. Nasce INATIVO, revisar antes de ligar.'
+    'um E estiver de fato em estagio de perda; caso contrario o no so pula, sem '
+    'erro). Tarefa #181. Nasce INATIVO, revisar antes de ligar.'
 )
 
 DESCRICAO_F2 = (
@@ -116,15 +145,15 @@ def _grafo_f1(agente_id):
                 'texto': (
                     'Analise automatica do atendimento {{var.id_atendimento_matrix}}:\n\n'
                     '{{nodes.json.resumo}}\n\n'
-                    'Perda sugerida: {{nodes.json.motivo_nome}} (confianca {{nodes.json.confianca}})'
+                    '{{nodes.json.conclusao}}'
                 ),
             },
             'pos': {'x': 960, 'y': 0},
             'label': 'Nota: resumo da analise',
         },
         'marcador': {
-            'tipo': 'marcar_dados_custom',
-            'config': {'chave': 'analise_atendimento_matrix'},
+            'tipo': 'definir_propriedade_oportunidade',
+            'config': {'propriedade': 'marcador', 'chave': 'analise_atendimento_matrix'},
             'pos': {'x': 1200, 'y': 0},
             'label': 'Marcar atendimento analisado',
         },
@@ -142,12 +171,17 @@ def _grafo_f1(agente_id):
             'label': 'Perdido?',
         },
         'motivo': {
-            'tipo': 'definir_motivo_perda',
+            'tipo': 'definir_propriedade_oportunidade',
             'config': {
-                'motivo_nome': '{{nodes.json.motivo_nome}}',
-                'texto': '{{nodes.json.resumo}}',
+                'propriedade': 'motivo_perda',
+                'valor': '{{nodes.json.motivo_nome}}',
                 'somente_se_vazio': True,
             },
+            # REDE DE SEGURANÇA real (achado piloto fluxo 25) não é este `if`
+            # (que só economiza a chamada quando o LLM já diz perdido=false):
+            # é o handler `motivo_perda`, que só aplica com a op em estágio
+            # `is_final_perdido` e nunca levanta (motivo fora do catálogo vira
+            # skip, não erro/retry).
             'pos': {'x': 1680, 'y': 0},
             'label': 'Definir motivo de perda',
         },
@@ -200,8 +234,8 @@ def _grafo_f2():
             'label': 'Matrix: enviar HSM de recontato',
         },
         'marcador': {
-            'tipo': 'marcar_dados_custom',
-            'config': {'chave': 'recuperacao_enviada'},
+            'tipo': 'definir_propriedade_oportunidade',
+            'config': {'propriedade': 'marcador', 'chave': 'recuperacao_enviada'},
             'pos': {'x': 480, 'y': 0},
             'label': 'Marcar recontato enviado',
         },
@@ -261,8 +295,8 @@ def _grafo_f3():
             'label': 'Matrix: enviar HSM de recontato',
         },
         'marcador': {
-            'tipo': 'marcar_dados_custom',
-            'config': {'chave': 'recuperacao_enviada'},
+            'tipo': 'definir_propriedade_oportunidade',
+            'config': {'propriedade': 'marcador', 'chave': 'recuperacao_enviada'},
             'pos': {'x': 960, 'y': 0},
             'label': 'Marcar recontato enviado',
         },
@@ -387,7 +421,7 @@ class Command(BaseCommand):
         agente.tools = ['listar_motivos_perda']
         agente.integracao_ia = None
         agente.descricao = DESCRICAO_AGENTE
-        agente.system_prompt = SYSTEM_PROMPT_AGENTE
+        agente.system_prompt = _system_prompt_agente(tenant)
         agente.save()
         return agente, criado
 

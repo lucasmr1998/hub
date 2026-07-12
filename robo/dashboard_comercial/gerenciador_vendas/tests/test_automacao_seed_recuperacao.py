@@ -115,11 +115,15 @@ def _mensagens_matrix():
     ]
 
 
-def _setup_f1(tenant):
+def _setup_f1(tenant, *, perdida=False):
+    """`perdida` controla o estágio da op: o handler `motivo_perda` só aplica o
+    motivo sugerido pelo agente quando a op JÁ está em estágio `is_final_perdido`
+    (rede de segurança do piloto fluxo 25, nunca poluir op aberta)."""
     IntegracaoAPIFactory(tenant=tenant, tipo='openai', ativa=True)
     user = UserFactory()
     lead = LeadProspectoFactory(tenant=tenant)
-    estagio = PipelineEstagioFactory(tenant=tenant)
+    estagio = PipelineEstagioFactory(
+        tenant=tenant, is_final_perdido=perdida, tipo='perdido' if perdida else 'novo')
     op = OportunidadeVendaFactory(tenant=tenant, lead=lead, estagio=estagio, responsavel=user)
     return lead, op
 
@@ -141,14 +145,15 @@ def _ativar_agente_e_fluxo(tenant, nome_fluxo):
 def test_e2e_f1_perdido_true_cria_nota_marca_e_define_motivo():
     tenant = TenantFactory()
     motivo = MotivoPerda.objects.create(tenant=tenant, nome='Sem retorno', ativo=True)
-    lead, op = _setup_f1(tenant)
+    lead, op = _setup_f1(tenant, perdida=True)
 
     call_command('seed_fluxos_recuperacao_analise', tenant=tenant.slug)
     fluxo = _ativar_agente_e_fluxo(tenant, NOME_F1)
 
     resposta_llm = (
         '{"resumo": "Cliente desistiu e pediu para nao ser mais contatado.", '
-        '"perdido": true, "motivo_nome": "Sem retorno", "confianca": "alta"}'
+        '"perdido": true, "motivo_nome": "Sem retorno", "confianca": "alta", '
+        '"conclusao": "Perda sugerida: Sem retorno (confianca alta)"}'
     )
     ctx = Contexto(tenant=tenant, lead=lead, oportunidade=op,
                     variaveis={'id_atendimento_matrix': '999'})
@@ -169,7 +174,11 @@ def test_e2e_f1_perdido_true_cria_nota_marca_e_define_motivo():
     nota = NotaInterna.objects.filter(oportunidade=op).first()
     assert nota is not None
     assert 'Cliente desistiu' in nota.conteudo
-    assert 'Sem retorno' in nota.conteudo
+    assert 'Perda sugerida: Sem retorno (confianca alta)' in nota.conteudo
+
+    passos = {p.handle: p for p in resultado.passos}
+    assert passos['motivo'].branch == 'sucesso'
+    assert ctx.nodes['motivo']['aplicado'] is True
 
 
 @pytest.mark.django_db
@@ -183,7 +192,8 @@ def test_e2e_f1_perdido_false_nao_define_motivo():
 
     resposta_llm = (
         '{"resumo": "Cliente confirmou interesse e vai fechar na proxima semana.", '
-        '"perdido": false, "motivo_nome": null, "confianca": "media"}'
+        '"perdido": false, "motivo_nome": null, "confianca": "media", '
+        '"conclusao": "Sem perda identificada no atendimento."}'
     )
     ctx = Contexto(tenant=tenant, lead=lead, oportunidade=op,
                     variaveis={'id_atendimento_matrix': '998'})
@@ -198,14 +208,62 @@ def test_e2e_f1_perdido_false_nao_define_motivo():
     assert resultado.status == 'completado', resultado.erro
 
     op.refresh_from_db()
-    # a nota e o marcador rodam sempre; só o `definir_motivo_perda` (branch true do if) não roda
+    # a nota e o marcador rodam sempre; só o `definir_propriedade_oportunidade` (branch true do if) não roda
     assert 'analise_atendimento_matrix' in (op.dados_custom or {})
     assert op.motivo_perda_ref_id is None
-    assert NotaInterna.objects.filter(oportunidade=op).exists()
+
+    nota = NotaInterna.objects.filter(oportunidade=op).first()
+    assert nota is not None
+    assert 'Sem perda identificada no atendimento.' in nota.conteudo
 
     passos = {p.handle: p for p in resultado.passos}
     assert passos['se_perdido'].branch == 'false'
     assert 'motivo' not in passos  # nó downstream do branch true nunca rodou
+
+
+@pytest.mark.django_db
+def test_e2e_f1_perdido_true_mas_op_nao_esta_perdida_nao_ganha_motivo():
+    """Rede de segurança do piloto fluxo 25: mesmo se o LLM classifica a
+    conversa como perdida (com um motivo válido do catálogo), o handler
+    `motivo_perda` só escreve `motivo_perda_ref` quando a oportunidade JÁ está
+    em estágio `is_final_perdido`, evita poluir dado de uma op ainda aberta.
+    O nó não vira erro (skip é branch de sucesso; nota e marcador seguem
+    normalmente)."""
+    tenant = TenantFactory()
+    MotivoPerda.objects.create(tenant=tenant, nome='Sem retorno', ativo=True)
+    lead, op = _setup_f1(tenant, perdida=False)
+
+    call_command('seed_fluxos_recuperacao_analise', tenant=tenant.slug)
+    fluxo = _ativar_agente_e_fluxo(tenant, NOME_F1)
+
+    resposta_llm = (
+        '{"resumo": "Cliente desistiu e pediu para nao ser mais contatado.", '
+        '"perdido": true, "motivo_nome": "Sem retorno", "confianca": "alta", '
+        '"conclusao": "Perda sugerida: Sem retorno (confianca alta)"}'
+    )
+    ctx = Contexto(tenant=tenant, lead=lead, oportunidade=op,
+                    variaveis={'id_atendimento_matrix': '997'})
+
+    with mock.patch('apps.automacao.nodes.matrix_atendimento.consultar_atendimento') as m_consultar, \
+         mock.patch('apps.automacao.services.ia.chamar_llm_com_tools', return_value=resposta_llm):
+        m_consultar.return_value = {
+            'status': 'finalizado', 'agente': 'Joana', 'mensagens': _mensagens_matrix(),
+        }
+        resultado = executar_fluxo(fluxo.grafo, ctx)
+
+    assert resultado.status == 'completado', resultado.erro
+
+    op.refresh_from_db()
+    assert 'analise_atendimento_matrix' in (op.dados_custom or {})  # marcador roda sempre
+    assert op.motivo_perda_ref_id is None  # skip: op não perdida
+    assert NotaInterna.objects.filter(oportunidade=op).exists()  # nota roda sempre
+
+    passos = {p.handle: p for p in resultado.passos}
+    assert passos['se_perdido'].branch == 'true'  # LLM disse perdido=true
+    assert passos['motivo'].status == 'ok'
+    assert passos['motivo'].branch == 'sucesso'  # skip é sucesso, não erro/retry
+    assert ctx.nodes['motivo']['aplicado'] is False
+    assert ctx.nodes['motivo']['motivo_skip'] == 'op_nao_perdida'
 
 
 # ──────────────────────────────────────────────

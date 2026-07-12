@@ -69,6 +69,13 @@ def _motivos_perda(tenant):
             for m in MotivoPerda.all_tenants.filter(tenant=tenant, ativo=True).order_by('ordem', 'nome')]
 
 
+def _propriedades_oportunidade(tenant):
+    """Catálogo do nó `definir_propriedade_oportunidade`. Não é por tenant, mas
+    segue a assinatura padrão."""
+    from .propriedades_oportunidade import opcoes_propriedades
+    return opcoes_propriedades(tenant)
+
+
 FONTES = {
     'segmentos': _segmentos,
     'pipelines': _pipelines,
@@ -79,6 +86,7 @@ FONTES = {
     'integracoes_hubsoft': _integracoes_hubsoft,
     'varreduras': _varreduras,
     'motivos_perda': _motivos_perda,
+    'propriedades_oportunidade': _propriedades_oportunidade,
 }
 
 
