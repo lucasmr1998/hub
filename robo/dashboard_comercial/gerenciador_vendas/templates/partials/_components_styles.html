@@ -1127,9 +1127,16 @@ Tokens base (cores, tipografia, spacing) ficam em layouts/base.html.
   .tabs-panel { display: none; padding: var(--sp-4) 0; }
   .tabs-panel.is-active { display: block; }
 
-  /* Abas usadas como link de navegacao (ex: subtabs do modulo CS) */
-  a.tabs-item { text-decoration: none; }
-  .cs-subtabs { margin-bottom: var(--sp-5); }
+  /* Faixa de abas de secao do modulo CS: mesmo visual do page-header-tabs do
+     DS, num container que sangra pras bordas do conteudo (como o .page-header)
+     e fica logo acima do header proprio da pagina. */
+  .cs-section-tabs {
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+    padding: 0 var(--sp-5);
+    margin: calc(-1 * var(--sp-6)) calc(-1 * var(--sp-6)) var(--sp-6);
+    overflow-x: auto;
+  }
 
   /* ============================================
      BREADCRUMBS

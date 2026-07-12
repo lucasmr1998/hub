@@ -31,3 +31,10 @@ Trilha do que foi executado no modulo de Customer Success (clube, parceiros, ind
 - Validacao: manage.py check ok; config/landing/indicacoes agora 200 (antes 500). DB local: RoletaConfig id=1 tenant=9 intacto, id=2 criado pro tenant=10 sem colisao.
 - Pendente relacionado: nome padrao "Clube MegaLink" ainda vem do default do model (branding P0-1/P2-3, fix separado). Area de membro (/cs/clube/membro/) segue quebrada por outros motivos (redirect sem namespace + import gestao.models morto, P1-1). Mesmo fix precisa ir pra prod (mesmo codigo), com confirmacao.
 - Status: completed (local, sem push)
+
+## 2026-07-12 — Ajuste: tabs do CS no padrao page-header-tabs
+
+- Feedback do Lucas: as tabs nao pareciam do padrao do sistema. Causa: usei o componente `tabs tabs-line` (que e pra troca de conteudo com JS) em vez do padrao de navegacao de pagina do DS, `page-header-tabs` (visto no showcase e no integracao_detalhe).
+- Fix: `cs_subtabs.html` reescrito com `<nav class="page-header-tabs">` + `<a class="page-header-tab">` (link, sem icone, ja com text-decoration none nativo). Wrapper `.cs-section-tabs` sangra pras bordas do conteudo com border-bottom, igual ao `.page-header`, ficando como barra de topo acima do header proprio da pagina. Removidas as regras temporarias `a.tabs-item`/`.cs-subtabs`.
+- Validado local (Playwright): membros, cupons e modelos com o visual nativo do DS.
+- Status: completed (local)
