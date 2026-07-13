@@ -22,10 +22,12 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.sistema.decorators import user_tem_funcionalidade
+from apps.relatorios.branding import paleta_tenant
 from apps.relatorios.models import Dashboard, Widget
 
+from . import modelos as modelos_slide
 from .models import Deck, Slide, SlideBloco
-from .services import dados_widget
+from .services import dados_widget, tema_deck
 
 logger = logging.getLogger(__name__)
 
@@ -119,10 +121,14 @@ def editor_view(request, pk):
     if not _pode_editar_deck(request, deck):
         return HttpResponseForbidden('Sem permissao pra editar')
     slides = [_slide_dict(s) for s in deck.slides.prefetch_related('blocos')]
+    tenant = getattr(request, 'tenant', None)
     return render(request, 'decks/editor.html', {
         'deck': deck,
         'slides_json': slides,
         'page_title': deck.nome,
+        'chart_palette': json.dumps(paleta_tenant(tenant)),
+        'tema_json': tema_deck(deck, tenant),
+        'modelos_json': modelos_slide.listar(),
     })
 
 
@@ -130,9 +136,12 @@ def editor_view(request, pk):
 def apresentar_view(request, pk):
     deck = get_object_or_404(_decks_visiveis(request), pk=pk)
     slides = [_slide_dict(s) for s in deck.slides.prefetch_related('blocos')]
+    tenant = getattr(request, 'tenant', None)
     return render(request, 'decks/apresentar.html', {
         'deck': deck,
         'slides_json': slides,
+        'chart_palette': json.dumps(paleta_tenant(tenant)),
+        'tema_json': tema_deck(deck, tenant),
     })
 
 
@@ -179,11 +188,20 @@ def api_deck_salvar(request):
 @login_required
 @require_POST
 def api_slide_adicionar(request, pk):
+    """Cria um slide, opcionalmente a partir de um modelo (body: {modelo}).
+    Os blocos do modelo ja nascem posicionados; os slots de grafico nascem sem
+    widget (o usuario clica e escolhe)."""
     deck = get_object_or_404(_decks_visiveis(request), pk=pk)
     if not _pode_editar_deck(request, deck):
         return HttpResponseForbidden('Sem permissao')
-    ordem = (deck.slides.count())
-    slide = Slide.objects.create(deck=deck, ordem=ordem)
+    modelo = (_json(request).get('modelo') or 'branco')
+    slide = Slide.objects.create(deck=deck, ordem=deck.slides.count())
+    for i, b in enumerate(modelos_slide.blocos_do_modelo(modelo)):
+        SlideBloco.objects.create(
+            slide=slide, ordem=i, tipo=b['tipo'],
+            conteudo=b.get('conteudo') or {}, layout=b.get('layout') or {},
+        )
+    slide.refresh_from_db()
     return JsonResponse({'ok': True, 'slide': _slide_dict(slide)})
 
 

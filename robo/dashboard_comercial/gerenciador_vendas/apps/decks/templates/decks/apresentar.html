@@ -7,7 +7,10 @@
 <style>
   body { margin:0; background:#0f172a; overflow:hidden; }
   .apre-wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
-  .apre-slide { position:relative; background:#fff; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+  /* Slide usa o TEMA do deck (herdado da marca do tenant) */
+  .apre-slide { position:relative; background:var(--deck-fundo,#fff); color:var(--deck-texto,#0f172a); font-family:var(--deck-fonte, inherit); box-shadow:0 20px 60px rgba(0,0,0,.5); }
+  .apre-logo { position:absolute; right:22px; bottom:18px; max-height:44px; max-width:170px; object-fit:contain; opacity:.9; z-index:2; }
+  .deck-secao h2 { color:var(--deck-primaria,#0f172a); }
   .apre-bloco { position:absolute; overflow:hidden; box-sizing:border-box; padding:10px; }
   .deck-bloco-titulo { font-size:13px; font-weight:600; color:#475569; margin-bottom:4px; }
   .deck-kpi { display:flex; flex-direction:column; justify-content:center; height:100%; }
@@ -30,6 +33,7 @@
 
 {% block body %}
 {{ slides_json|json_script:"slides-data" }}
+{{ tema_json|json_script:"tema-data" }}
 <div class="apre-wrap"><div class="apre-slide" id="apre-slide"></div></div>
 <a class="apre-exit" href="{% url 'decks:editar' deck.pk %}"><i class="bi bi-x-lg"></i> Sair</a>
 <div class="apre-nav">
@@ -42,11 +46,21 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+{# Paleta = marca do tenant; motor de grafico compartilhado com os dashboards #}
+<script>window.CHART_PALETTE = {{ chart_palette|safe }};</script>
+<script src="{% static 'relatorios/echarts_option.js' %}"></script>
 <script src="{% static 'decks/deck_render.js' %}"></script>
 <script>
 const SLIDES = JSON.parse(document.getElementById('slides-data').textContent) || [];
+const TEMA = JSON.parse(document.getElementById('tema-data').textContent) || {};
 let idx = 0;
 const slideEl = document.getElementById('apre-slide');
+
+// Tema do deck (herdado da marca do tenant) aplicado ao slide
+slideEl.style.setProperty('--deck-fundo', TEMA.cor_fundo || '#fff');
+slideEl.style.setProperty('--deck-texto', TEMA.cor_texto || '#0f172a');
+slideEl.style.setProperty('--deck-primaria', TEMA.cor_primaria || '#2563eb');
+slideEl.style.setProperty('--deck-fonte', TEMA.fonte || 'inherit');
 
 function dimensionar() {
   // slide 16:9 que cabe no viewport
@@ -75,6 +89,13 @@ function render() {
     const dados = (b.tipo === 'widget') ? (b.dados_snapshot && b.dados_snapshot.labels !== undefined ? b.dados_snapshot : {ok:false, error:'Congele o deck no editor'}) : null;
     DeckRender.renderBloco(el, b, dados);
   });
+  // logo da empresa no canto do slide
+  if (TEMA.mostrar_logo && TEMA.logo_url) {
+    const logo = document.createElement('img');
+    logo.className = 'apre-logo';
+    logo.src = TEMA.logo_url;
+    slideEl.appendChild(logo);
+  }
 }
 
 function ir(d) { idx = Math.min(SLIDES.length-1, Math.max(0, idx + d)); render(); }

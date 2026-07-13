@@ -16,3 +16,13 @@ Editor de apresentacoes (slides) montadas a partir dos widgets do modulo de rela
 - Pendente: C1e PDF (fast-follow, WeasyPrint + captura de grafico como imagem, quando o dono pedir); edicao inline de texto/kpi/estilo mais rica; upload de imagem; entrada na sidebar; deploy prod (migration sobe via rebuild) com confirmacao.
 - Arquivos: apps/decks/* (models/views/urls/admin/apps/services/static/templates/migrations), settings.py, urls.py, seed_funcionalidades.py.
 - Status: completed (MVP dev). Deploy pendente de confirmacao.
+
+## 2026-07-13 — Identidade visual (marca do tenant) + modelos de slide + paleta de grafico
+
+- Motivacao do dono: (1) "as apresentacoes precisam ter modelos de identidade visual, o cliente vai personalizar"; (2) "os graficos dos relatorios antigos parecem bem mais bonitos".
+- Causa do (2), achada no codigo: a paleta nova era PASTEL de baixa saturacao e as barras usavam todas a MESMA cor palida (PALETTE[0]); o legado (Chart.js) usava categorica saturada (#2563eb/#10b981/#f59e0b/...). Nao era impressao.
+- Paleta agora sai da MARCA do tenant: `apps/relatorios/branding.paleta_tenant()` monta [cor_primaria, cor_secundaria, ...categorica saturada] a partir de `sistema.ConfiguracaoEmpresa` (que JA tinha cor_primaria/cor_secundaria/logo — zero migration). Serie unica (barra/linha) sai na cor do cliente.
+- DIVIDA PAGA: motor de grafico extraido pra `apps/relatorios/static/relatorios/echarts_option.js` (PALETTE, fmt*, esc, montarOptionEcharts). Removidas 156 linhas duplicadas do dashboard_detalhe.html e as copias do deck_render.js. A paleta vive num lugar so e vale pro dashboard E pro deck (via window.CHART_PALETTE injetado pela view).
+- Identidade do deck: `services.tema_deck(deck, tenant)` herda a marca (logo, cores, fonte, nome) e o deck sobrescreve pontualmente (Deck.tema). Aplicado por CSS vars (--deck-fundo/texto/primaria/fonte) no canvas do editor e no slide do Apresentar; logo da empresa no canto do slide. Modal "Tema" no editor (cor principal, fundo, mostrar logo) + "voltar pra marca da empresa".
+- Modelos de slide: `apps/decks/modelos.py` com 6 modelos (branco, capa, secao, kpis, duas_colunas, grafico_comentario). "+ Slide" abre picker; os blocos ja nascem posicionados. Slot de grafico nasce SEM widget e o editor mostra "Escolher widget" (clicavel) -> picker preenche o slot.
+- Status: codigo pronto, `manage.py check` limpo. PENDENTE VALIDAR: Docker Desktop estava parado (banco local fora), entao nao rodou Playwright. Validar editor/apresentar + a cor nova antes de subir.

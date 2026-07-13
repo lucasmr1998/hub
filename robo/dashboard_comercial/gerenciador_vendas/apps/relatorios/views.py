@@ -22,6 +22,7 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 from apps.sistema.decorators import user_tem_funcionalidade
 
 from . import data_sources as ds_registry
+from .branding import paleta_tenant
 from .models import Dashboard, Widget, SETOR_CHOICES, SETOR_ICONES
 from .query_builder import WidgetQueryBuilder, WidgetQueryError
 
@@ -111,6 +112,7 @@ def dashboard_detalhe_view(request, pk):
         'pode_editar': _pode_editar_dashboard(request, dashboard),
         'modo_edicao': False,
         'page_title': dashboard.nome,
+        'chart_palette': json.dumps(paleta_tenant(getattr(request, 'tenant', None))),
     })
 
 
@@ -151,6 +153,7 @@ def dashboard_editar_view(request, pk):
         'setores': SETOR_CHOICES,
         'pode_compartilhar': _perm(request, 'relatorios.compartilhar_dashboard'),
         'page_title': f'{dashboard.nome} — Editar',
+        'chart_palette': json.dumps(paleta_tenant(getattr(request, 'tenant', None))),
     })
 
 
