@@ -26,3 +26,13 @@ Editor de apresentacoes (slides) montadas a partir dos widgets do modulo de rela
 - Identidade do deck: `services.tema_deck(deck, tenant)` herda a marca (logo, cores, fonte, nome) e o deck sobrescreve pontualmente (Deck.tema). Aplicado por CSS vars (--deck-fundo/texto/primaria/fonte) no canvas do editor e no slide do Apresentar; logo da empresa no canto do slide. Modal "Tema" no editor (cor principal, fundo, mostrar logo) + "voltar pra marca da empresa".
 - Modelos de slide: `apps/decks/modelos.py` com 6 modelos (branco, capa, secao, kpis, duas_colunas, grafico_comentario). "+ Slide" abre picker; os blocos ja nascem posicionados. Slot de grafico nasce SEM widget e o editor mostra "Escolher widget" (clicavel) -> picker preenche o slot.
 - Status: codigo pronto, `manage.py check` limpo. PENDENTE VALIDAR: Docker Desktop estava parado (banco local fora), entao nao rodou Playwright. Validar editor/apresentar + a cor nova antes de subir.
+
+## 2026-07-13 — Fix: modais do editor estavam sem o painel (classe errada)
+
+- **Sintoma** (reportado pelo dono, com print): todos os modais do deck apareciam sem fundo. So os cards internos e o overlay escuro apareciam; o titulo ficava cinza sobre o escuro, ilegivel.
+- **Causa**: escrevi o markup com `.modal-content`, que e a classe do **CSS legado** (`apps/sistema/static/sistema/css/dashboard.css:705`), carregado pelas 33 paginas antigas. O editor do deck estende `layouts/layout_app.html`, que traz o DS atual (`partials/_components_styles.html`), onde o painel e `.modal` + `.modal-sm|md|lg` (`.modal-overlay > .modal`). Resultado: nenhuma regra pintava o painel.
+- **Fix**: `.modal-content` -> `.modal .modal-lg|md` nos 3 modais (modelos, tema, widget); `style="display:none"` -> atributo `hidden` (o padrao do DS, que o `abrirModal/fecharModal` do layout ja manipula); removidos os estilos inline de `modal-footer` (padding/border-top ja vem do DS). `modelo-grid` fixado em 3 colunas (com auto-fill os 6 modelos quebravam 4+2 dentro do modal-lg).
+- **Licao**: o projeto tem DOIS sistemas de modal vivos. Em pagina que estende `layout_app`, usar SEMPRE `components/modal.html` (ou copiar a marcacao dele). `.modal-content` so funciona em quem carrega o `dashboard.css` legado.
+- **Validado** (Playwright, dev): painel com `rgb(255,255,255)`, radius 12px, 800px; 6 cards de modelo renderizam; fecha com `hidden`+`display:none`; 0 erros de console.
+- **Arquivos**: `apps/decks/templates/decks/editor.html`.
+- **Status**: completed (dev). Deploy pendente.

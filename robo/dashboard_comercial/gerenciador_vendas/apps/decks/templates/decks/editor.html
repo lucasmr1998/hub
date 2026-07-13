@@ -50,8 +50,8 @@
 </div>
 
 <!-- Modal: modelos de slide -->
-<div class="modal-overlay" id="modal-modelo" style="display:none;">
-  <div class="modal-content" style="max-width:620px;">
+<div class="modal-overlay" id="modal-modelo" role="dialog" aria-modal="true" hidden>
+  <div class="modal modal-lg">
     <div class="modal-header">
       <h3 class="modal-title"><i class="bi bi-collection"></i> Novo slide</h3>
       <button class="modal-close" onclick="fecharModal('modal-modelo')"><i class="bi bi-x-lg"></i></button>
@@ -66,8 +66,8 @@
 </div>
 
 <!-- Modal: tema (identidade visual) -->
-<div class="modal-overlay" id="modal-tema" style="display:none;">
-  <div class="modal-content" style="max-width:480px;">
+<div class="modal-overlay" id="modal-tema" role="dialog" aria-modal="true" hidden>
+  <div class="modal modal-md">
     <div class="modal-header">
       <h3 class="modal-title"><i class="bi bi-palette"></i> Identidade visual</h3>
       <button class="modal-close" onclick="fecharModal('modal-tema')"><i class="bi bi-x-lg"></i></button>
@@ -90,9 +90,9 @@
         </label>
       </div>
     </div>
-    <div class="modal-footer" style="display:flex;justify-content:space-between;gap:8px;padding:var(--sp-3) var(--sp-4);border-top:1px solid var(--color-border);">
+    <div class="modal-footer" style="justify-content:space-between;">
       <button class="btn btn-ghost" onclick="resetarTema()">Voltar pra marca da empresa</button>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:var(--sp-2);">
         <button class="btn btn-ghost" onclick="fecharModal('modal-tema')">Cancelar</button>
         <button class="btn btn-primary" onclick="salvarTema()">Aplicar</button>
       </div>
@@ -101,8 +101,8 @@
 </div>
 
 <!-- Modal picker de widget -->
-<div class="modal-overlay" id="modal-widget" style="display:none;">
-  <div class="modal-content" style="max-width:520px;">
+<div class="modal-overlay" id="modal-widget" role="dialog" aria-modal="true" hidden>
+  <div class="modal modal-md">
     <div class="modal-header">
       <h3 class="modal-title"><i class="bi bi-bar-chart"></i> Adicionar widget</h3>
       <button class="modal-close" onclick="fecharModal('modal-widget')"><i class="bi bi-x-lg"></i></button>
@@ -112,7 +112,7 @@
         <div class="field-input-wrap"><select id="widget-select" class="field-input"></select></div>
       </div>
     </div>
-    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:var(--sp-3) var(--sp-4);border-top:1px solid var(--color-border);">
+    <div class="modal-footer">
       <button class="btn btn-ghost" onclick="fecharModal('modal-widget')">Cancelar</button>
       <button class="btn btn-primary" onclick="confirmarWidget()">Adicionar</button>
     </div>
@@ -132,7 +132,9 @@
   /* O canvas usa o TEMA do deck (herdado da marca do tenant) */
   .deck-canvas { aspect-ratio:16/9; width:100%; background:var(--deck-fundo,#fff); color:var(--deck-texto,#0f172a); font-family:var(--deck-fonte, inherit); border:1px solid var(--color-border); border-radius:6px; position:relative; }
   .deck-logo { position:absolute; right:10px; bottom:8px; max-height:26px; max-width:110px; object-fit:contain; opacity:.9; z-index:2; pointer-events:none; }
-  .modelo-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:var(--sp-2); }
+  /* 3 fixas: com auto-fill os 6 modelos quebravam 4+2 dentro do modal-lg. */
+  .modelo-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--sp-2); }
+  @media (max-width:640px) { .modelo-grid { grid-template-columns:repeat(2,1fr); } }
   .modelo-card { text-align:left; padding:var(--sp-3); border:1px solid var(--color-border); border-radius:var(--radius); background:var(--color-bg); cursor:pointer; }
   .modelo-card:hover { border-color:var(--color-primary); }
   .modelo-card i { font-size:1.3rem; color:var(--color-primary); }
