@@ -470,8 +470,6 @@ class WidgetQueryBuilder:
             atendimentos = atend_qs.count()
             leads_n = leads_qs.count()
             ops_n = ops_qs.count()
-            ops_ads = ops_qs.filter(lead__fonte='facebook').count()
-            ops_organico = ops_n - ops_ads
             vendas = vendas_qs.count()
             perdidas = perdidas_qs.count()
 
@@ -484,11 +482,7 @@ class WidgetQueryBuilder:
                 'etapas': [
                     {'label': 'Atendimentos', 'valor': atendimentos, 'pct': None},
                     {'label': 'Leads', 'valor': leads_n, 'pct': _pct(leads_n, atendimentos)},
-                    {'label': 'Oportunidades', 'valor': ops_n, 'pct': _pct(ops_n, leads_n),
-                     'quebra': [
-                         {'label': 'Meta Ads', 'valor': ops_ads, 'pct': _pct(ops_ads, ops_n)},
-                         {'label': 'Organico', 'valor': ops_organico, 'pct': _pct(ops_organico, ops_n)},
-                     ]},
+                    {'label': 'Oportunidades', 'valor': ops_n, 'pct': _pct(ops_n, leads_n)},
                 ],
                 'vendas': {'valor': vendas, 'pct': _pct(vendas, ops_n)},
                 'perdidas': {'valor': perdidas, 'pct': _pct(perdidas, ops_n)},

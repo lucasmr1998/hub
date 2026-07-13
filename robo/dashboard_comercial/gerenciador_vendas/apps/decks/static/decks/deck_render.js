@@ -15,12 +15,9 @@
     const labelCss = 'font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.4px;';
     const valorCss = 'font-size:26px;font-weight:800;color:#0f172a;line-height:1.2;';
     const seta = '<i class="bi bi-arrow-right" style="font-size:18px;color:#94a3b8;flex:0 0 auto;"></i>';
-    const etapas = (macro.etapas || []).map(e => {
-      const quebra = (e.quebra && e.quebra.length)
-        ? `<div style="display:flex;gap:6px;margin-top:8px;">${e.quebra.map(q => `<div style="flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:5px 6px;"><div style="font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;">${esc(q.label)}</div><div style="font-size:14px;font-weight:800;color:#0f172a;">${fmtNum(q.valor)} <span style="font-size:10px;font-weight:600;color:#059669;">(${q.pct}%)</span></div></div>`).join('')}</div>`
-        : '';
-      return `<div style="${cardCss}"><div style="${labelCss}">${esc(e.label)}</div><div style="${valorCss}">${fmtNum(e.valor)}</div>${e.pct != null ? `<div style="font-size:11px;font-weight:600;color:#059669;">${e.pct}% da anterior</div>` : ''}${quebra}</div>`;
-    }).join(seta);
+    const etapas = (macro.etapas || []).map(e =>
+      `<div style="${cardCss}"><div style="${labelCss}">${esc(e.label)}</div><div style="${valorCss}">${fmtNum(e.valor)}</div>${e.pct != null ? `<div style="font-size:11px;font-weight:600;color:#059669;">${e.pct}% da anterior</div>` : ''}</div>`
+    ).join(seta);
     const v = macro.vendas || { valor: 0, pct: 0 }, p = macro.perdidas || { valor: 0, pct: 0 };
     const fork = `<div style="flex:1;min-width:130px;display:flex;flex-direction:column;gap:6px;"><div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:8px 10px;text-align:center;"><div style="${labelCss}color:#047857;">Vendas</div><div style="font-size:20px;font-weight:800;color:#047857;">${fmtNum(v.valor)} <span style="font-size:11px;font-weight:600;">(${v.pct}%)</span></div></div><div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:8px 10px;text-align:center;"><div style="${labelCss}color:#b91c1c;">Perdidas</div><div style="font-size:20px;font-weight:800;color:#b91c1c;">${fmtNum(p.valor)} <span style="font-size:11px;font-weight:600;">(${p.pct}%)</span></div></div></div>`;
     return `<div style="display:flex;align-items:center;gap:8px;width:100%;height:100%;overflow-x:auto;padding:8px;">${etapas}${seta}${fork}</div>`;

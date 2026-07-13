@@ -68,3 +68,12 @@
 - Pendente: rodar o seed dos 3 dashboards em prod (dado, com confirmacao); Conversoes (bonus, funil_macro) e Analise de atendimentos (fonte atendimento_fluxo) ficam pra depois.
 - Arquivo: apps/relatorios/data_sources.py.
 - Status: completed (dev). Deploy do codigo + seed em prod pendente de confirmacao.
+
+## 2026-07-13 — Painel #15: KPIs numa linha so e funil macro simplificado
+
+- Pedido do dono (2 ajustes visuais, painel Comercial da Nuvyon): (1) "esses 6 kpis poderiam estar juntos numa mesma linha"; (2) "vamos deixar esse funil mais simples, tire a informacao do meta ads e organico".
+- (1) e DADO, nao codigo: os 6 KPIs foram pra w=2 (12 colunas / 6 cards) em y=0 e os demais widgets subiram 2 linhas. UPDATE transacional em prod (dash #15, tenant nuvyon), 16 widgets, autorizado nominalmente. Titulos encurtados pra caber no card estreito (o detalhe segue no "?" de cada card): "Receita gerada", "Ticket medio", "Leads sem atendimento", "Leads parados", "Instalacoes pendentes".
+- (2) e CODIGO: o transform `funil_macro` emitia `quebra` (Meta Ads x Organico) dentro do card de Oportunidades. Removida a emissao no query_builder e o render nos DOIS renderizadores (dashboard_detalhe.html e decks/deck_render.js) pra nao deixar caminho morto. O recorte por fonte continua disponivel pelo chip global do dashboard (Meta Ads / Organico), que filtra o funil inteiro em vez de quebrar so uma etapa.
+- Nota de divida: o funil macro esta duplicado (inline no dashboard_detalhe.html e no deck_render.js). O motor de ECharts ja foi extraido pra static compartilhado; o funil macro (HTML puro) ainda nao. Extrair no proximo toque.
+- Arquivos: apps/relatorios/query_builder.py, apps/relatorios/templates/relatorios/dashboard_detalhe.html, apps/decks/static/decks/deck_render.js.
+- Status: completed (codigo). Layout em prod ja aplicado; o funil simplificado precisa de deploy.
