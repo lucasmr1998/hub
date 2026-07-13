@@ -106,3 +106,15 @@ Registro cronológico do que foi executado no módulo de integrações (ação, 
 - **Acao**: command novo `atualizar_status_servicos_hubsoft`. Consulta a API (GET), compara e grava com `queryset.update()`, que NAO dispara signals. `--dry-run` so relata a defasagem; `--escopo pendentes` (default) so os `aguardando_*` (os que congelam); `--escopo todos` varre a base pra pegar cancelado/suspenso (util pro CS). Sem PII no output.
 - **Nota**: o lote de 998 clientes de 17/06 esta CORRETO e nao contamina o painel comercial (17 dos 18 widgets leem `oportunidade`/`lead`; so o #74 le HubSoft). A hipotese inicial de "limpar os clientes importados" foi descartada: apagar daria trabalho e nao corrigiria nada.
 - **Status**: comando pronto e `check` limpo. PENDENTE: deploy + rodar `--dry-run` em prod (o dono nao tem shell aqui; roda no console do EasyPanel), depois aplicar e agendar no cron (senao congela de novo amanha).
+
+## 2026-07-13 — Reconciliacao aplicada em prod (nuvyon): card de instalacoes cai de 100 pra 56
+
+- **Acao**: `atualizar_status_servicos_hubsoft --tenant nuvyon` (escopo pendentes) rodado em prod via SSH, com autorizacao nominal do dono. Antes, `--dry-run` provou a defasagem sem gravar.
+- **Output**: 117 servicos verificados, **57 defasados corrigidos**, 0 erros de API. Transicoes: 34x aguardando_instalacao -> servico_habilitado, 13x aguardando_instalacao -> aguardando_assinatura_contrato, 9x aguardando_assinatura_contrato -> servico_habilitado, 1x aguardando_migracao -> servico_habilitado.
+- **Efeito**: KPI "Instalacoes pendentes" (widget #74, dash #15) caiu de **100 pra 56** — quase metade era fantasma. Servicos ativos subiram de 1312 pra 1356. Backlog real de venda nao entregue: 73 (56 instalacao + 17 assinatura), nao 114.
+- **Confirmado**: a engine de regras NAO foi acordada (gravacao via `queryset.update()`), nenhum contrato reemitido, nenhuma oportunidade movida.
+- **PENDENTE (senao volta a congelar)**:
+  1. `--escopo todos` (1130 clientes, ~6-10 min de API): o escopo `pendentes` nao olha os habilitados, entao **cancelamento e suspensao seguem invisiveis** (o banco ainda diz 0 clientes inativos, o que e falso). E o que destrava o modulo de CS pra enxergar churn.
+  2. **Agendar no cron** (delta diario + full semanal). Sem isso o espelho congela de novo a partir de amanha.
+  3. Widgets #87 (Cancelados) e #88 (Suspensos) do dash #17 filtram valores que nao existem (`servico_cancelado`/`servico_suspenso`); os reais sao `suspenso_debito` (11) e `suspenso_pedido_cliente` (3). Hoje mostram 0.
+- **Status**: completed (reconciliacao dos pendentes). Itens 1-3 pendentes.
