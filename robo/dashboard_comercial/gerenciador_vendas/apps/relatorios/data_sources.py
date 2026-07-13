@@ -17,6 +17,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
+from django.db.models import Count
+
 
 REGISTRY: dict[str, 'DataSource'] = {}
 
@@ -56,6 +58,14 @@ class DataSource:
     # Fonte sem colunas_drill nao abre lista (o card nao fica clicavel).
     colunas_drill: list = field(default_factory=list)
     url_detalhe: Optional[str] = None
+
+    # CAMPOS CALCULADOS (annotate). Sao campos que nao existem na tabela e
+    # precisam de agregacao pra existir — o caso classico e "lead sem NENHUM
+    # contato", que exige contar os contatos de cada lead.
+    # Aplicados sob demanda: so entram no queryset quando o widget realmente
+    # usa o campo (em filtro, dimensao ou metrica). Anotar sempre colocaria um
+    # GROUP BY em toda query da fonte, de graca.
+    anotacoes: dict = field(default_factory=dict)
 
     def resolve_model(self):
         """Lazy import pra evitar circular imports."""
@@ -157,7 +167,16 @@ registrar(DataSource(
         'valor':                 FieldSpec('Valor estimado', 'decimal'),
         'score_qualificacao':    FieldSpec('Score qualificacao', 'integer'),
         'campanha_origem__nome': FieldSpec('Campanha origem', 'string'),
+        # Operacional: o que trava a venda
+        'cpf_cnpj':              FieldSpec('CPF/CNPJ', 'string'),
+        'telefone':              FieldSpec('Telefone', 'string'),
+        'id_plano_rp':           FieldSpec('Plano escolhido (id)', 'integer'),
+        'id_dia_vencimento':     FieldSpec('Dia de vencimento (id)', 'integer'),
+        # Calculado (annotate): quantos contatos o lead ja recebeu.
+        # 'qtd_contatos = 0' e o lead que ninguem atendeu ainda.
+        'qtd_contatos':          FieldSpec('Contatos recebidos', 'integer'),
     },
+    anotacoes={'qtd_contatos': Count('historico_contatos', distinct=True)},
     metricas=['count', 'avg:score_qualificacao', 'sum:valor'],
     order_by_padrao='-data_cadastro',
     campo_vendedor='oportunidade_crm__responsavel',

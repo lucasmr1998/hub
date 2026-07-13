@@ -10,15 +10,18 @@ compativel com Chart.js.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, date, timedelta
-from typing import Any, Optional
+from typing import Optional
 
-from django.db.models import Count, Sum, Avg, F, Q
+from django.db.models import Count, Sum, Avg, Q
 from django.db.models.functions import TruncDay, TruncWeek, TruncMonth, TruncYear
 from django.utils import timezone
 
 from apps.relatorios import data_sources as ds_registry
+
+logger = logging.getLogger(__name__)
 
 
 OPERADORES_VALIDOS = {
@@ -171,12 +174,66 @@ class WidgetQueryBuilder:
                 qs = qs.filter(tenant=self.tenant)
             except Exception:
                 pass  # 'objects' ja deve estar filtrando
-        return qs
+        return self._anotar(qs)
+
+    def _campos_usados(self) -> set:
+        """Campos que este widget referencia (filtro, dimensao ou metrica)."""
+        usados = set()
+        for f in (self.widget.filtros or []):
+            if f.get('campo'):
+                usados.add(f['campo'])
+        agrupamento = self.widget.agrupamento or {}
+        if agrupamento.get('dimensao'):
+            usados.add(agrupamento['dimensao'])
+        metrica = self.widget.metrica or {}
+        if metrica.get('campo'):
+            usados.add(metrica['campo'])
+        for campo, _ in (getattr(self.data_source, 'colunas_drill', None) or []):
+            usados.add(campo)
+        return usados
+
+    def _anotar(self, qs):
+        """Aplica os campos calculados (annotate) que ESTE widget usa.
+
+        Sob demanda de proposito: anotar sempre poria um GROUP BY em toda
+        query da fonte, de graca.
+        """
+        anotacoes = getattr(self.data_source, 'anotacoes', None) or {}
+        if not anotacoes:
+            return qs
+        usados = self._campos_usados()
+        aplicar = {k: v for k, v in anotacoes.items() if k in usados}
+        return qs.annotate(**aplicar) if aplicar else qs
 
     def _validar_campo(self, campo: str) -> bool:
         if not campo:
             return False
         return campo in (self.data_source.campos or {})
+
+    # Tipos em que "vazio" e string vazia. Nos demais (numero, data, bool, FK)
+    # so existe NULL — comparar com '' estoura no banco.
+    TIPOS_TEXTO = ('string', 'choice')
+
+    def _q(self, campo: str, operador: str, valor):
+        """Monta o Q do filtro, respeitando o TIPO do campo.
+
+        `existe`/`nao_existe` sao os unicos sensiveis a tipo: em campo de texto,
+        vazio e NULL ou ''; em campo numerico/data, comparar com '' estoura, o
+        filtro cai no except e o card passa a mostrar a base inteira (foi o que
+        aconteceu com "Cadastro travado": 222 leads em vez de 0).
+        """
+        spec = (self.data_source.campos or {}).get(campo)
+        eh_texto = bool(spec and spec.tipo in self.TIPOS_TEXTO)
+
+        if operador == 'existe':
+            q = ~Q(**{f'{campo}__isnull': True})
+            return q & ~Q(**{campo: ''}) if eh_texto else q
+
+        if operador == 'nao_existe':
+            q = Q(**{f'{campo}__isnull': True})
+            return q | Q(**{campo: ''}) if eh_texto else q
+
+        return OPERADORES_VALIDOS[operador](campo, valor)
 
     def _aplicar_filtros(self, qs):
         dias_override = self.overrides.get('dias')
@@ -193,8 +250,16 @@ class WidgetQueryBuilder:
                     continue
                 valor = dias_override
             try:
-                qs = qs.filter(OPERADORES_VALIDOS[operador](campo, valor))
+                qs = qs.filter(self._q(campo, operador, valor))
             except Exception:
+                # Filtro que estoura vira card SEM filtro, ou seja, mostra a
+                # base inteira em vez do recorte pedido. Loga alto: um card que
+                # mente e pior do que um card quebrado.
+                logger.warning(
+                    'Filtro ignorado no widget %s (fonte %s): %s %s %r',
+                    getattr(self.widget, 'pk', '?'), self.data_source.slug,
+                    campo, operador, valor, exc_info=True,
+                )
                 continue
 
         # Override global de fonte de trafego
