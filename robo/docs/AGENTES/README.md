@@ -1,6 +1,6 @@
 # Agentes — AuroraISP
 
-**Última atualização:** 26/03/2026
+**Última atualização:** 13/07/2026
 
 ---
 
@@ -62,7 +62,7 @@ AGENTES/
 | Agente | Arquivo | Quando usar |
 |--------|---------|------------|
 | Tech Lead | [tech_lead.md](./tech/tech_lead.md) | Arquitetura, decisões técnicas, code review |
-| Data Analyst | [data.md](./tech/data.md) | Análise de métricas, dashboards, insights de dados |
+| Data Analyst | [data.md](./tech/data.md) | Dono do módulo de Relatórios (melhorar os painéis), análise de métricas, dashboards, insights de dados |
 
 ### Operações
 | Agente | Arquivo | Quando usar |

@@ -461,6 +461,7 @@ Antes de cada resposta, perguntar: "o que o usuario esta pedindo?" e mapear pra 
 | Seguranca, LGPD, auth, permissoes | **Seguranca** | auditoria de codigo, politica de senha, compliance |
 | Legal, contratos, DPA, regulatorio | **Legal** | contrato SaaS, clausula de privacidade, LGPD |
 | Testes, QA, Playwright, regressao | **QA** | estrategia de teste, Playwright E2E |
+| Analise de dados, metricas, relatorios, dashboards, insights | **Data Analyst** | melhorar painel de relatorios, definir/corrigir metrica, achar insight no funil, qualidade de widget |
 | Organizacao de arquivos/pastas (nao codigo) | **PM** | organizar docs, hierarquia de pastas |
 | Conversa geral, pergunta direta | **Assistente** | "me explica X", pergunta rapida |
 
