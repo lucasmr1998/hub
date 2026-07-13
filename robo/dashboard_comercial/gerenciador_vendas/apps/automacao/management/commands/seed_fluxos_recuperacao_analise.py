@@ -161,7 +161,7 @@ def _grafo_f1(agente_id):
         },
         'marcador': {
             'tipo': 'definir_propriedade_oportunidade',
-            'config': {'propriedade': 'marcador', 'chave': 'analise_atendimento_matrix'},
+            'config': {'propriedade': 'marcador', 'chave': '_analise_atendimento_matrix'},
             'pos': {'x': 1200, 'y': 0},
             'label': 'Marcar atendimento analisado',
         },
@@ -241,7 +241,7 @@ def _grafo_f2():
                 'varredura_config': {
                     'janela_dias_min': '15',
                     'motivo_ref_nome': 'Sem retorno',
-                    'sem_marcador': 'recuperacao_iniciada',
+                    'sem_marcador': '_recuperacao_iniciada',
                     'exige_responsavel': 'true',
                     'sem_contato_dias': '7',
                 },
@@ -261,7 +261,7 @@ def _grafo_f2():
         },
         'marcador': {
             'tipo': 'definir_propriedade_oportunidade',
-            'config': {'propriedade': 'marcador', 'chave': 'recuperacao_iniciada'},
+            'config': {'propriedade': 'marcador', 'chave': '_recuperacao_iniciada'},
             'pos': {'x': 480, 'y': 0},
             'label': 'Marcar recuperacao iniciada',
         },
@@ -305,7 +305,7 @@ def _grafo_f3():
                 'varredura_config': {
                     'janela_dias_min': '15',
                     'motivo_ref_nome': 'Sem viabilidade técnica',
-                    'sem_marcador': 'recuperacao_iniciada',
+                    'sem_marcador': '_recuperacao_iniciada',
                     'exige_responsavel': 'true',
                 },
                 'max_por_rodada': 15,
@@ -340,7 +340,7 @@ def _grafo_f3():
         },
         'marcador': {
             'tipo': 'definir_propriedade_oportunidade',
-            'config': {'propriedade': 'marcador', 'chave': 'recuperacao_iniciada'},
+            'config': {'propriedade': 'marcador', 'chave': '_recuperacao_iniciada'},
             'pos': {'x': 960, 'y': 0},
             'label': 'Marcar recuperacao iniciada',
         },
@@ -381,7 +381,7 @@ def _grafo_f4():
             'config': {
                 'tipo_condicao': 'oportunidade_dados_custom',
                 'operador': 'existe',
-                'campo': 'recuperacao_iniciada',
+                'campo': '_recuperacao_iniciada',
                 'valor': '',
             },
             'pos': {'x': 240, 'y': 0},

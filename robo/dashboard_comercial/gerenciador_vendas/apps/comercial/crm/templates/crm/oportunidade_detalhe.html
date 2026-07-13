@@ -1,5 +1,6 @@
 {% extends "sistema/base.html" %}
 {% load permissoes_tags %}
+{% load crm_extras %}
 
 {% block title %}{{ oportunidade.titulo|default:lead.nome_razaosocial|truncatechars:60 }} — Oportunidade{% endblock %}
 
@@ -201,8 +202,8 @@
               {% for key, value in oportunidade.dados_custom.items %}
                 {% if not key|slice:":12" == "atendimento_" and not key|slice:":1" == "_" %}
                   <div class="dados-extra-chip">
-                    <span class="dados-extra-key">{{ key|cut:"_"|title }}</span>
-                    <span class="editable dados-extra-val" data-field="dados_custom.{{ key }}">{{ value }}</span>
+                    <span class="dados-extra-key">{{ key|rotulo_chave }}</span>
+                    <span class="editable dados-extra-val" data-field="dados_custom.{{ key }}">{{ value|valor_amigavel }}</span>
                   </div>
                 {% endif %}
               {% endfor %}
@@ -843,7 +844,8 @@
                     </div>
                     <span class="tl-date">{{ item.data|date:"d/m H:i" }}</span>
                   </div>
-                  <p class="tl-body">{{ item.obj.conteudo|truncatechars:240 }}</p>
+                  <p class="tl-body tl-nota" data-expandivel>{{ item.obj.conteudo|linebreaksbr }}</p>
+                  <button type="button" class="tl-ver-mais" hidden>Ver nota completa</button>
                   <div class="tl-meta">{{ item.obj.autor.get_full_name|default:item.obj.autor.username }}</div>
                 {% elif item.tipo == 'automacao' %}
                   <div class="tl-dot {% if item.obj.status == 'erro' %}dot-perdido{% else %}dot-estagio{% endif %}"></div>
@@ -1463,6 +1465,12 @@
   .tl-title { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--color-text); display: flex; align-items: center; gap: 6px; }
   .tl-date { font-size: 11px; color: var(--color-text-muted); white-space: nowrap; flex-shrink: 0; }
   .tl-body { font-size: var(--fs-sm); color: var(--color-text-muted); line-height: 1.5; margin: 0; word-break: break-word; overflow-wrap: anywhere; }
+  /* Nota: colapsa em 3 linhas e expande no clique (o texto inteiro ja vem no HTML,
+     nao ha mais corte no servidor. Notas da analise automatica sao longas). */
+  .tl-nota.colapsada { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .tl-ver-mais { background: none; border: 0; padding: 2px 0; margin-top: 2px; cursor: pointer;
+                 color: var(--color-primary); font-size: 12px; font-weight: var(--fw-semibold); }
+  .tl-ver-mais:hover { text-decoration: underline; }
   .tl-meta { font-size: 11px; color: var(--color-text-muted); margin-top: 4px; }
 
   /* Notas */
@@ -2850,6 +2858,26 @@ async function _ccSalvar(eFechar) {
     toast('Erro', 'Falha de rede', 'danger');
   }
 }
+
+// Notas da timeline: colapsa em 3 linhas SO quando o texto transborda de verdade,
+// e oferece o "Ver nota completa". O conteudo inteiro ja esta no HTML (nao ha corte
+// no servidor), entao expandir nao faz request.
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.tl-nota[data-expandivel]').forEach(nota => {
+    const botao = nota.nextElementSibling;
+    if (!botao || !botao.classList.contains('tl-ver-mais')) return;
+    nota.classList.add('colapsada');
+    if (nota.scrollHeight <= nota.clientHeight + 2) {
+      nota.classList.remove('colapsada');   // cabe inteira, nao precisa de botao
+      return;
+    }
+    botao.hidden = false;
+    botao.addEventListener('click', () => {
+      const colapsada = nota.classList.toggle('colapsada');
+      botao.textContent = colapsada ? 'Ver nota completa' : 'Ver menos';
+    });
+  });
+});
 </script>
 
 {# Modal Completar dados da venda #}

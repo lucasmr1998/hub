@@ -131,7 +131,7 @@ def test_f2_e_f3_marcador_e_recuperacao_iniciada():
         fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=nome)
         marcador = fluxo.grafo['nodes']['marcador']
         assert marcador['tipo'] == 'definir_propriedade_oportunidade'
-        assert marcador['config']['chave'] == 'recuperacao_iniciada'
+        assert marcador['config']['chave'] == '_recuperacao_iniciada'
 
 
 @pytest.mark.django_db
@@ -143,7 +143,7 @@ def test_f2_varredura_config_tem_guardas_novas():
     cfg = fluxo.grafo['nodes']['trigger']['config']['varredura_config']
     assert cfg['exige_responsavel'] == 'true'
     assert cfg['sem_contato_dias'] == '7'
-    assert cfg['sem_marcador'] == 'recuperacao_iniciada'
+    assert cfg['sem_marcador'] == '_recuperacao_iniciada'
 
 
 @pytest.mark.django_db
@@ -155,7 +155,7 @@ def test_f3_varredura_config_tem_exige_responsavel_e_motivo_correto():
     cfg = fluxo.grafo['nodes']['trigger']['config']['varredura_config']
     assert cfg['exige_responsavel'] == 'true'
     assert cfg['motivo_ref_nome'] == 'Sem viabilidade técnica'
-    assert cfg['sem_marcador'] == 'recuperacao_iniciada'
+    assert cfg['sem_marcador'] == '_recuperacao_iniciada'
 
 
 @pytest.mark.django_db
@@ -165,7 +165,7 @@ def test_f4_condiciona_reabertura_em_recuperacao_iniciada():
 
     fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_F4)
     condicao = fluxo.grafo['nodes']['foi_recontatado']['config']
-    assert condicao['campo'] == 'recuperacao_iniciada'
+    assert condicao['campo'] == '_recuperacao_iniciada'
 
 
 @pytest.mark.django_db
@@ -244,7 +244,7 @@ def test_e2e_f1_perdido_true_cria_nota_marca_e_define_motivo():
     assert resultado.status == 'completado', resultado.erro
 
     op.refresh_from_db()
-    assert 'analise_atendimento_matrix' in (op.dados_custom or {})
+    assert '_analise_atendimento_matrix' in (op.dados_custom or {})
     assert op.motivo_perda_ref_id == motivo.pk
 
     nota = NotaInterna.objects.filter(oportunidade=op).first()
@@ -285,7 +285,7 @@ def test_e2e_f1_perdido_false_nao_define_motivo():
 
     op.refresh_from_db()
     # a nota e o marcador rodam sempre; só o `definir_propriedade_oportunidade` (branch true do if) não roda
-    assert 'analise_atendimento_matrix' in (op.dados_custom or {})
+    assert '_analise_atendimento_matrix' in (op.dados_custom or {})
     assert op.motivo_perda_ref_id is None
 
     nota = NotaInterna.objects.filter(oportunidade=op).first()
@@ -330,7 +330,7 @@ def test_e2e_f1_perdido_true_mas_op_nao_esta_perdida_nao_ganha_motivo():
     assert resultado.status == 'completado', resultado.erro
 
     op.refresh_from_db()
-    assert 'analise_atendimento_matrix' in (op.dados_custom or {})  # marcador roda sempre
+    assert '_analise_atendimento_matrix' in (op.dados_custom or {})  # marcador roda sempre
     assert op.motivo_perda_ref_id is None  # skip: op não perdida
     assert NotaInterna.objects.filter(oportunidade=op).exists()  # nota roda sempre
 
@@ -350,7 +350,7 @@ def _setup_f4(tenant, *, com_marcador):
     user = UserFactory()
     lead = LeadProspectoFactory(tenant=tenant)
     estagio_perdido = PipelineEstagioFactory(tenant=tenant, is_final_perdido=True, tipo='perdido')
-    dados_custom = {'recuperacao_iniciada': '2026-06-01T10:00:00'} if com_marcador else {}
+    dados_custom = {'_recuperacao_iniciada': '2026-06-01T10:00:00'} if com_marcador else {}
     op = OportunidadeVendaFactory(
         tenant=tenant, lead=lead, estagio=estagio_perdido, responsavel=user,
         dados_custom=dados_custom,

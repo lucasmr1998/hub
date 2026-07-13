@@ -138,7 +138,9 @@ def _atendimentos_matrix_finalizados(tenant, config):
         janela_dias = int(config.get('janela_dias') or 2)
     except (TypeError, ValueError):
         janela_dias = 2
-    marcador = (config.get('marcador') or '').strip() or 'analise_atendimento_matrix'
+    # Marcadores da engine nascem com `_` na frente: é a convenção que o painel de
+    # campos personalizados do CRM usa pra ocultar bookkeeping interno do usuário.
+    marcador = (config.get('marcador') or '').strip() or '_analise_atendimento_matrix'
     servico_nome = (config.get('servico_nome') or '').strip() or None
 
     hoje = timezone.now().date()
