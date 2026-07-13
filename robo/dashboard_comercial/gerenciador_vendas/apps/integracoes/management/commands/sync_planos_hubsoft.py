@@ -25,6 +25,12 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--tenant', type=str, required=True, help='Slug do tenant (ex: nuvyon)')
         parser.add_argument('--dry-run', action='store_true')
+        parser.add_argument('--cep', type=str, default=None, help=(
+            'Consulta ESTE cep em vez dos CEPs configurados. Ferramenta de '
+            'diagnostico: o HubSoft devolve planos por CEP e o nome do plano '
+            'nao revela a unidade, entao e assim que se descobre o que a '
+            'vendedora ve numa cidade. Use com --dry-run pra so listar.'
+        ))
 
     def handle(self, *args, **opts):
         from apps.sistema.models import Tenant
@@ -46,11 +52,14 @@ class Command(BaseCommand):
             return
 
         extras = integ.configuracoes_extras or {}
-        ceps_por_empresa = extras.get('cep_default_por_empresa') or {}
-        if not ceps_por_empresa:
-            cep_legado = extras.get('cep_default')
-            if cep_legado:
-                ceps_por_empresa = {'default': cep_legado}
+        if opts.get('cep'):
+            ceps_por_empresa = {f"cep {opts['cep']}": opts['cep']}
+        else:
+            ceps_por_empresa = extras.get('cep_default_por_empresa') or {}
+            if not ceps_por_empresa:
+                cep_legado = extras.get('cep_default')
+                if cep_legado:
+                    ceps_por_empresa = {'default': cep_legado}
         if not ceps_por_empresa:
             self.stdout.write(self.style.ERROR(
                 'Sem CEPs configurados em configuracoes_extras.cep_default_por_empresa'
@@ -88,7 +97,10 @@ class Command(BaseCommand):
                 velocidade_up = p.get('velocidade_upload')
 
                 if dry:
-                    self.stdout.write(f'  [DRY] {id_servico:>5} | R$ {preco:>7} | {nome}')
+                    vel = f'{velocidade_down or "?"}/{velocidade_up or "?"}'
+                    self.stdout.write(
+                        f'  [DRY] {id_servico:>5} | R$ {preco:>7} | {vel:>12} | {nome}'
+                    )
                     continue
 
                 # UPSERT por (tenant, id_externo).
