@@ -29,3 +29,14 @@
 - Hardcode: par facebook/organico em 6 pontos; 'Endereco Validado'/'fluxo_inicializado'; PALETTE e URLs /dashboards/ cravadas no JS; CDNs pinados sem fallback.
 - Output: doc `robo/docs/context/reunioes/diagnostico_ux_cto_relatorios_cs_10-07-2026.md` (achados + plano P0-P3 + estrategia de testes + tarefas propostas). Aguardando aprovacao do Lucas pra criar tarefas Workspace e executar.
 - Status: completed (diagnostico); pending (execucao dos fixes)
+
+## 2026-07-13 — Redesign visual do Painel Executivo (apresentacao Gabi)
+
+- Contexto: painel funcional mas "muito feio". Direcao escolhida pelo Lucas: KPI executivo compacto (padrao stat_card). Foco no dash #2 Painel Executivo (18 widgets).
+- KPI (widgets numero): passaram a renderizar no padrao executivo (label uppercase discreto + numero alinhado a esquerda, ~1.9rem) via CSS escopado por `[data-viz="numero"]`. Formatacao com UNIDADE, config-driven: `config_extra.formato` = moeda (R$, compacto acima de 1k) / percentual (%) / numero (abrevia >1k); nulo = travessao. Helper JS `fmtValor(n, formato)`. Widget-card ganhou `data-viz` e `data-formato` no template.
+- Funis: rotulo movido pra FORA (position:right) com linha guia; antes era branco por dentro, ilegivel em segmento estreito. Formatter nao duplica numero quando o label ja embute (regex /[|(:]/). Conserta "Funil do mes" (linha final composta vazando) e "Funil com viabilidade" (texto ilegivel + numero duplicado).
+- Barra: passa a horizontal quando ha >6 categorias OU rotulo longo (>14 chars). Conserta "Gargalo do funil" (era vertical a 30/45 graus, cortado) e "Conversao por canal".
+- Validado local (Playwright, dash #2): KPIs com R$/%/abrev, dois funis legiveis, gargalo horizontal completo.
+- Pendente: (1) setar `config_extra.formato` nos widgets de PROD (dado, vai junto no deploy com confirmacao); (2) opcionais: secoes de grupo no grid, relabel "Sem responsavel" no lugar de "—" em Vendas por consultora, altura dos KPI cards.
+- Arquivos: `apps/relatorios/templates/relatorios/dashboard_detalhe.html` (CSS+JS+template). Sem mudanca em views/models/query_builder.
+- Status: completed (local, aguardando validacao do Lucas)

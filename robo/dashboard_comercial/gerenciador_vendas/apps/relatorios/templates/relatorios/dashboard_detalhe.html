@@ -65,7 +65,7 @@
          gs-w="{{ w.layout.w|default_if_none:4 }}"
          gs-h="{{ w.layout.h|default_if_none:3 }}">
       <div class="grid-stack-item-content">
-        <div class="widget-card" data-widget-id="{{ w.pk }}">
+        <div class="widget-card" data-widget-id="{{ w.pk }}" data-viz="{{ w.visualizacao }}" data-formato="{{ w.config_extra.formato|default:'' }}">
           <div class="widget-header">
             <div class="widget-title">{{ w.titulo }}</div>
             <div class="widget-actions">
@@ -313,6 +313,22 @@
   .widget-info-btn:hover { color:var(--color-primary); background:transparent; }
   .widget-body { flex:1; padding:var(--sp-3); position:relative; min-height:0; display:flex; align-items:center; justify-content:center; }
   .widget-numero { font-size:2.5rem; font-weight:var(--fw-bold); color:var(--color-primary); }
+
+  /* KPI (numero) no padrao executivo compacto, estilo stat_card:
+     label uppercase discreto no topo, numero grande alinhado a esquerda. */
+  .widget-card[data-viz="numero"] .widget-header { border-bottom:none; padding:var(--sp-3) var(--sp-3) 0; }
+  .widget-card[data-viz="numero"] .widget-title {
+    font-size:var(--fs-xs); font-weight:var(--fw-semibold); text-transform:uppercase;
+    letter-spacing:0.04em; color:var(--color-text-muted);
+  }
+  .widget-card[data-viz="numero"] .widget-body {
+    flex-direction:column; align-items:flex-start; justify-content:center;
+    gap:2px; padding:0 var(--sp-3) var(--sp-3);
+  }
+  .widget-card[data-viz="numero"] .widget-numero {
+    font-size:1.9rem; font-weight:var(--fw-bold); color:var(--color-text);
+    line-height:1.15; letter-spacing:-0.02em;
+  }
   .widget-loading { color:var(--color-text-muted); font-size:var(--fs-xs); }
   .widget-chart { max-width:100%; max-height:100%; }
   .widget-tabela { width:100%; max-height:100%; overflow:auto; }
@@ -558,7 +574,9 @@ function renderWidget(cardEl, d) {
 
   // Numero unico
   if (viz === 'numero') {
-    numeroEl.textContent = fmtNum(d.total != null ? d.total : (valores[0] || 0));
+    const formato = cardEl.dataset.formato || '';
+    const valor = d.total != null ? d.total : (valores.length ? valores[0] : null);
+    numeroEl.textContent = fmtValor(valor, formato);
     numeroEl.style.display = 'block';
     return;
   }
@@ -661,22 +679,24 @@ function montarOptionEcharts(viz, labels, valores, seriesName) {
       tooltip: { ...base.tooltip, formatter: (p) => `${p.marker} <b>${p.name}</b><br/>${fmtCompacto(p.value)}` },
       series: [{
         type: 'funnel',
-        // Aperta nas laterais pra valor visualmente "afunilar" mais —
-        // funil clasico precisa de espaco lateral grande no topo e
-        // estreitar no fim
-        left: '15%', right: '15%', top: 16, bottom: 16,
-        // minSize MUITO baixo + maxSize 100% = afunilamento real:
-        // ultima etapa (menor count) vira fina, topo vira largo
-        minSize: '0%', maxSize: '100%',
+        // Funil ocupa a metade esquerda; rotulos ficam FORA, a direita, com
+        // linha guia. Rotulo por dentro (branco) era ilegivel em segmento
+        // estreito e cor clara, e a ultima etapa (label composto) vazava.
+        left: '4%', right: '48%', top: 12, bottom: 12,
+        minSize: '22%', maxSize: '100%',
         sort: 'none',  // respeita ordem do pipeline
         gap: 4,
         itemStyle: { borderColor: '#ffffff', borderWidth: 1, borderRadius: 4 },
         label: {
-          show: true, position: 'inside', fontSize: 12, color: '#ffffff',
-          fontWeight: 'bold',
-          formatter: (p) => `${p.name}: ${fmtCompacto(p.value)}`,
+          show: true, position: 'right', color: '#334155', fontSize: 12, fontWeight: 600,
+          // Quando o label ja embute numero/percentual (etapa final composta
+          // "Contratacao: X | Perdido: Y", ou viabilidade "Leads (103)"), mostra
+          // como esta. Só nos rotulos simples ("Novo Lead") acrescenta o valor.
+          formatter: (p) => /[|(:]/.test(String(p.name))
+            ? String(p.name)
+            : `${p.name}: ${fmtCompacto(p.value)}`,
         },
-        labelLine: { show: false },
+        labelLine: { show: true, length: 14, lineStyle: { color: '#cbd5e1', width: 1 } },
         data: labels.map((l, i) => ({ name: String(l), value: Number(valores[i] || 0) })),
       }],
     };
@@ -711,8 +731,11 @@ function montarOptionEcharts(viz, labels, valores, seriesName) {
     };
   }
 
-  // BARRA (default) — vertical ou horizontal se muitas categorias
-  const horizontal = labels.length > 6;
+  // BARRA (default) — horizontal quando ha muitas categorias OU rotulos longos
+  // (ex: "Novo Lead -> Em Atendimento" do gargalo). Barra horizontal deixa o
+  // rotulo inteiro legivel; a vertical espremia e rotacionava a 30/45 graus.
+  const rotuloLongo = labels.some(l => String(l).length > 14);
+  const horizontal = labels.length > 6 || rotuloLongo;
   const xAxis = horizontal
     ? { type: 'value', splitLine: { lineStyle: { color: '#f1f5f9' } }, axisLabel: { color: '#64748b', fontSize: 11, formatter: (v) => fmtCompacto(v) } }
     : { type: 'category', data: labels.map(String), axisTick: { show: false }, axisLine: { lineStyle: { color: '#e2e8f0' } }, axisLabel: { color: '#64748b', fontSize: 11, interval: 0, rotate: labels.length > 4 ? 30 : 0 } };
@@ -741,6 +764,23 @@ function fmtNum(n) {
   if (n == null) return '—';
   if (typeof n === 'number') return n.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
   return n;
+}
+// Formata o valor de um KPI conforme o formato configurado no widget
+// (config_extra.formato): 'moeda' (R$), 'percentual' (%), ou numero (default,
+// abrevia acima de 1k). Nulo vira travessao.
+function fmtValor(n, formato) {
+  if (n == null) return '—';
+  const num = Number(n);
+  if (Number.isNaN(num)) return '—';
+  if (formato === 'moeda') {
+    return Math.abs(num) >= 1000
+      ? 'R$ ' + fmtCompacto(num)
+      : 'R$ ' + num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  if (formato === 'percentual') {
+    return num.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%';
+  }
+  return Math.abs(num) >= 1000 ? fmtCompacto(num) : num.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
 }
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
