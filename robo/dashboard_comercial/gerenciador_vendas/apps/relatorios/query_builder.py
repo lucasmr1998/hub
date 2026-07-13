@@ -226,15 +226,108 @@ class WidgetQueryBuilder:
             return Avg(campo)
         return Count('id')
 
+    def _valor_periodo_anterior(self, metrica: dict):
+        """Valor da metrica na janela ANTERIOR (mesmo N de dias, deslocado pra
+        tras), pra calcular o delta do KPI. So funciona quando o widget tem um
+        filtro de data 'ultimos_dias'. Blindado: qualquer erro retorna None e o
+        numero principal segue intacto."""
+        try:
+            dias_override = self.overrides.get('dias')
+            if dias_override == 'tudo':
+                return None
+            campo_data, n = None, None
+            for f in (self.widget.filtros or []):
+                if f.get('operador') == 'ultimos_dias' and self._validar_campo(f.get('campo')):
+                    campo_data = f.get('campo')
+                    try:
+                        n = int(dias_override or f.get('valor'))
+                    except (TypeError, ValueError):
+                        n = None
+                    break
+            if not campo_data or not n:
+                return None
+
+            agora = timezone.now()
+            ini_atual = agora - timedelta(days=n)
+            ini_anterior = agora - timedelta(days=2 * n)
+
+            qs = self._base_queryset()
+            # Reaplica os filtros do widget, MENOS o de data (que sera trocado
+            # pela janela anterior).
+            for f in (self.widget.filtros or []):
+                campo = f.get('campo')
+                operador = f.get('operador', 'igual')
+                valor = f.get('valor')
+                if operador == 'ultimos_dias':
+                    continue
+                if not self._validar_campo(campo) or operador not in OPERADORES_VALIDOS:
+                    continue
+                try:
+                    qs = qs.filter(OPERADORES_VALIDOS[operador](campo, valor))
+                except Exception:
+                    continue
+            # Override global de fonte
+            fonte = self.overrides.get('fonte')
+            if fonte:
+                campo_fonte = None
+                if 'lead__fonte' in (self.data_source.campos or {}):
+                    campo_fonte = 'lead__fonte'
+                elif 'fonte' in (self.data_source.campos or {}):
+                    campo_fonte = 'fonte'
+                if campo_fonte:
+                    try:
+                        if fonte == 'organico':
+                            qs = qs.exclude(**{campo_fonte: 'facebook'})
+                        else:
+                            qs = qs.filter(**{campo_fonte: fonte})
+                    except Exception:
+                        pass
+            qs = qs.filter(**{f'{campo_data}__gte': ini_anterior, f'{campo_data}__lt': ini_atual})
+            return float(qs.aggregate(valor=self._agg_expr(metrica)).get('valor') or 0)
+        except Exception:
+            return None
+
     def _calcular_numero(self, qs, metrica: dict) -> ResultadoQuery:
         agg = self._agg_expr(metrica)
         result = qs.aggregate(valor=agg)
-        valor = result.get('valor') or 0
+        valor = float(result.get('valor') or 0)
+
+        # Delta vs periodo anterior (so pra KPI com janela de data). Aditivo:
+        # se nao der pra calcular, comparativo fica None e o KPI mostra so o numero.
+        # 'direcao' = movimento real (seta); 'positivo' = bom/ruim conforme o
+        # sentido do KPI (config_extra.sentido: 'maior_melhor' default, ou
+        # 'menor_melhor' pra metricas onde cair e bom, ex: leads sem atendimento).
+        comparativo = None
+        anterior = self._valor_periodo_anterior(metrica)
+        if anterior is not None:
+            if anterior > 0:
+                delta_pct = round((valor - anterior) / anterior * 100, 1)
+            elif valor > 0:
+                delta_pct = None  # saiu de zero: sem base de %
+            else:
+                delta_pct = 0.0
+            if valor > anterior:
+                direcao = 'subiu'
+            elif valor < anterior:
+                direcao = 'desceu'
+            else:
+                direcao = 'igual'
+            sentido = (self.widget.config_extra or {}).get('sentido', 'maior_melhor')
+            if direcao == 'igual':
+                positivo = None
+            elif sentido == 'menor_melhor':
+                positivo = (direcao == 'desceu')
+            else:
+                positivo = (direcao == 'subiu')
+            comparativo = {'anterior': anterior, 'delta_pct': delta_pct,
+                           'direcao': direcao, 'positivo': positivo}
+
         return ResultadoQuery(
             labels=['Total'],
-            series=[{'name': self._label_metrica(metrica), 'data': [float(valor)]}],
-            total=float(valor),
-            meta={'data_source': self.data_source.slug, 'metrica': metrica},
+            series=[{'name': self._label_metrica(metrica), 'data': [valor]}],
+            total=valor,
+            meta={'data_source': self.data_source.slug, 'metrica': metrica,
+                  'comparativo': comparativo},
         )
 
     def _calcular_agrupado(self, qs, metrica: dict, agrupamento: dict) -> ResultadoQuery:

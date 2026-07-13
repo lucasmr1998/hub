@@ -40,3 +40,13 @@
 - Pendente: (1) setar `config_extra.formato` nos widgets de PROD (dado, vai junto no deploy com confirmacao); (2) opcionais: secoes de grupo no grid, relabel "Sem responsavel" no lugar de "—" em Vendas por consultora, altura dos KPI cards.
 - Arquivos: `apps/relatorios/templates/relatorios/dashboard_detalhe.html` (CSS+JS+template). Sem mudanca em views/models/query_builder.
 - Status: completed (local, aguardando validacao do Lucas)
+
+## 2026-07-13 — Delta vs periodo anterior nos KPIs
+
+- KPI numero passou a mostrar delta vs periodo anterior (▲/▼ +X% vs periodo anterior). Backend: `_valor_periodo_anterior` recomputa a metrica na janela anterior (mesmo N de dias deslocado), so pra widget com filtro `ultimos_dias`; blindado (erro -> None, nao afeta o numero). So se aplica a Leads/Novas ops/Vendas/Receita/Ticket; conversao (transform) e snapshots (sem janela) ficam sem delta.
+- Semantica: 'direcao' (movimento real -> seta) separada de 'positivo' (bom/ruim -> cor), conforme `config_extra.sentido` do widget ('maior_melhor' default, 'menor_melhor' pra Leads sem atendimento / Leads parados, onde cair e bom). Respeita o filtro global de periodo (7d/30d/...).
+- Front: `.widget-delta` renderizado abaixo do numero (preenche o respiro do card). Verde/vermelho/neutro.
+- Validado local (dash #2): Vendas ▲53,3% verde, Leads do mes ▼5,5% vermelho, Leads sem atendimento ▼30,6% VERDE.
+- Pendente prod: alem de config_extra.formato, setar config_extra.sentido='menor_melhor' nos KPIs "ruins"; e o codigo do delta precisa de um 2o deploy.
+- Arquivos: `apps/relatorios/query_builder.py` (+_valor_periodo_anterior, comparativo no _calcular_numero), `dashboard_detalhe.html` (CSS+JS do delta).
+- Status: completed (local)

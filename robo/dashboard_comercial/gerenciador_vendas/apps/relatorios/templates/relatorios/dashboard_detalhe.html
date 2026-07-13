@@ -329,6 +329,14 @@
     font-size:1.9rem; font-weight:var(--fw-bold); color:var(--color-text);
     line-height:1.15; letter-spacing:-0.02em;
   }
+  .widget-card[data-viz="numero"] .widget-delta {
+    display:flex; align-items:baseline; gap:6px; margin-top:4px; font-size:var(--fs-xs);
+  }
+  .widget-delta-val { font-weight:var(--fw-semibold); }
+  .widget-delta-up .widget-delta-val { color:var(--color-success); }
+  .widget-delta-down .widget-delta-val { color:var(--color-danger); }
+  .widget-delta-flat .widget-delta-val { color:var(--color-text-muted); }
+  .widget-delta-note { color:var(--color-text-muted); }
   .widget-loading { color:var(--color-text-muted); font-size:var(--fs-xs); }
   .widget-chart { max-width:100%; max-height:100%; }
   .widget-tabela { width:100%; max-height:100%; overflow:auto; }
@@ -578,6 +586,27 @@ function renderWidget(cardEl, d) {
     const valor = d.total != null ? d.total : (valores.length ? valores[0] : null);
     numeroEl.textContent = fmtValor(valor, formato);
     numeroEl.style.display = 'block';
+    // Delta vs periodo anterior (quando o backend calculou o comparativo).
+    // Seta = direcao real do movimento; cor = bom/ruim conforme o sentido do KPI.
+    const comp = d.meta && d.meta.comparativo;
+    let deltaEl = body.querySelector('.widget-delta');
+    if (comp && comp.direcao) {
+      if (!deltaEl) {
+        deltaEl = document.createElement('div');
+        deltaEl.className = 'widget-delta';
+        numeroEl.insertAdjacentElement('afterend', deltaEl);
+      }
+      const seta = comp.direcao === 'subiu' ? '▲' : (comp.direcao === 'desceu' ? '▼' : '▬');
+      const cor = comp.positivo === true ? 'up' : (comp.positivo === false ? 'down' : 'flat');
+      const pct = (comp.delta_pct == null)
+        ? 'novo'
+        : Math.abs(comp.delta_pct).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%';
+      deltaEl.className = 'widget-delta widget-delta-' + cor;
+      deltaEl.innerHTML = `<span class="widget-delta-val">${seta} ${pct}</span><span class="widget-delta-note">vs periodo anterior</span>`;
+      deltaEl.style.display = 'flex';
+    } else if (deltaEl) {
+      deltaEl.style.display = 'none';
+    }
     return;
   }
   // Tabela
