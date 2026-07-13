@@ -36,6 +36,8 @@ class CriarTarefaNode(BaseNode):
             {'nome': 'tipo', 'label': 'Tipo', 'tipo': 'select', 'opcoes': _TIPOS},
             {'nome': 'prioridade', 'label': 'Prioridade', 'tipo': 'select', 'opcoes': _PRIORIDADES},
             {'nome': 'prazo_dias', 'label': 'Prazo (dias)', 'tipo': 'numero', 'placeholder': '1'},
+            {'nome': 'descricao', 'label': 'Descrição', 'tipo': 'textarea',
+             'ajuda': 'Contexto pra quem vai executar. Aceita {{...}}.'},
         ]
 
     def validar_config(self, config) -> list:
@@ -48,12 +50,18 @@ class CriarTarefaNode(BaseNode):
         tipo = contexto.resolver(config.get('tipo', '')) or 'followup'
         prioridade = contexto.resolver(config.get('prioridade', '')) or 'normal'
         prazo = _int(contexto.resolver(config.get('prazo_dias', '')), 1)
+        descricao = contexto.resolver(config.get('descricao', '')) or ''
         try:
             tarefa = criar_tarefa(
                 contexto.tenant,
                 titulo=str(titulo), tipo=str(tipo), prioridade=str(prioridade),
                 lead=contexto.lead, oportunidade=contexto.oportunidade, prazo_dias=prazo,
+                descricao=str(descricao),
             )
         except Exception as e:
             return NodeResult(status='erro', branch='erro', erro=str(e))
-        return NodeResult(output={'tarefa_id': tarefa.pk, 'titulo': tarefa.titulo}, branch='sucesso')
+        responsavel_nome = tarefa.responsavel.get_full_name() or tarefa.responsavel.username
+        return NodeResult(
+            output={'tarefa_id': tarefa.pk, 'titulo': tarefa.titulo, 'responsavel': responsavel_nome},
+            branch='sucesso',
+        )

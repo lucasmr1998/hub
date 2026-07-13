@@ -103,6 +103,82 @@ def test_tenant_inexistente_falha():
 
 
 # ──────────────────────────────────────────────
+# Decisão de produto: F2/F3 criam tarefa (humano no loop), não enviam HSM
+# ──────────────────────────────────────────────
+
+def _tipos_dos_nodes(grafo):
+    return {n.get('tipo') for n in (grafo.get('nodes') or {}).values()}
+
+
+@pytest.mark.django_db
+def test_f2_e_f3_nao_tem_matrix_hsm_e_tem_criar_tarefa():
+    tenant = TenantFactory()
+    call_command('seed_fluxos_recuperacao_analise', tenant=tenant.slug)
+
+    for nome in (NOME_F2, NOME_F3):
+        fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=nome)
+        tipos = _tipos_dos_nodes(fluxo.grafo)
+        assert 'matrix_hsm' not in tipos, f'{nome}: matrix_hsm ainda no grafo'
+        assert 'criar_tarefa' in tipos, f'{nome}: criar_tarefa ausente do grafo'
+
+
+@pytest.mark.django_db
+def test_f2_e_f3_marcador_e_recuperacao_iniciada():
+    tenant = TenantFactory()
+    call_command('seed_fluxos_recuperacao_analise', tenant=tenant.slug)
+
+    for nome in (NOME_F2, NOME_F3):
+        fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=nome)
+        marcador = fluxo.grafo['nodes']['marcador']
+        assert marcador['tipo'] == 'definir_propriedade_oportunidade'
+        assert marcador['config']['chave'] == 'recuperacao_iniciada'
+
+
+@pytest.mark.django_db
+def test_f2_varredura_config_tem_guardas_novas():
+    tenant = TenantFactory()
+    call_command('seed_fluxos_recuperacao_analise', tenant=tenant.slug)
+
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_F2)
+    cfg = fluxo.grafo['nodes']['trigger']['config']['varredura_config']
+    assert cfg['exige_responsavel'] == 'true'
+    assert cfg['sem_contato_dias'] == '7'
+    assert cfg['sem_marcador'] == 'recuperacao_iniciada'
+
+
+@pytest.mark.django_db
+def test_f3_varredura_config_tem_exige_responsavel_e_motivo_correto():
+    tenant = TenantFactory()
+    call_command('seed_fluxos_recuperacao_analise', tenant=tenant.slug)
+
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_F3)
+    cfg = fluxo.grafo['nodes']['trigger']['config']['varredura_config']
+    assert cfg['exige_responsavel'] == 'true'
+    assert cfg['motivo_ref_nome'] == 'Sem viabilidade técnica'
+    assert cfg['sem_marcador'] == 'recuperacao_iniciada'
+
+
+@pytest.mark.django_db
+def test_f4_condiciona_reabertura_em_recuperacao_iniciada():
+    tenant = TenantFactory()
+    call_command('seed_fluxos_recuperacao_analise', tenant=tenant.slug)
+
+    fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=NOME_F4)
+    condicao = fluxo.grafo['nodes']['foi_recontatado']['config']
+    assert condicao['campo'] == 'recuperacao_iniciada'
+
+
+@pytest.mark.django_db
+def test_todos_os_fluxos_nascem_inativos_mesmo_apos_troca_de_no():
+    tenant = TenantFactory()
+    call_command('seed_fluxos_recuperacao_analise', tenant=tenant.slug)
+
+    for nome in TODOS_OS_NOMES:
+        fluxo = Fluxo.all_tenants.get(tenant=tenant, nome=nome)
+        assert fluxo.ativo is False
+
+
+# ──────────────────────────────────────────────
 # E2E F1: analise de atendimento Matrix, roteamento do `if` pelo bool `perdido`
 # ──────────────────────────────────────────────
 
@@ -274,7 +350,7 @@ def _setup_f4(tenant, *, com_marcador):
     user = UserFactory()
     lead = LeadProspectoFactory(tenant=tenant)
     estagio_perdido = PipelineEstagioFactory(tenant=tenant, is_final_perdido=True, tipo='perdido')
-    dados_custom = {'recuperacao_enviada': '2026-06-01T10:00:00'} if com_marcador else {}
+    dados_custom = {'recuperacao_iniciada': '2026-06-01T10:00:00'} if com_marcador else {}
     op = OportunidadeVendaFactory(
         tenant=tenant, lead=lead, estagio=estagio_perdido, responsavel=user,
         dados_custom=dados_custom,

@@ -20,6 +20,12 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
+def _verdadeiro(valor):
+    """Aceita bool Python OU string ('true'/'1'/'sim', case insensitive) como
+    verdadeiro — config de fluxo sempre chega como string vinda do editor."""
+    return str(valor).strip().lower() in ('true', '1', 'sim')
+
+
 def _oportunidades_perdidas(tenant, config):
     """Oportunidades perdidas há pelo menos `janela_dias_min` dias (default 30).
 
@@ -32,6 +38,15 @@ def _oportunidades_perdidas(tenant, config):
     - `pipeline`: slug do pipeline (`OportunidadeVenda.pipeline`).
     - `sem_marcador`: só entram oportunidades SEM essa chave em `dados_custom`
       (freio manual: o fluxo marca a op depois de processar, pra não repetir).
+    - `exige_responsavel`: aceita True/'true'/'1'/'sim'. Quando ligado, só entram
+      oportunidades COM `responsavel` definido — sem isso a tarefa criada pelo
+      fluxo nasceria órfã (sem vendedora dona pra executar).
+    - `sem_contato_dias`: int. Quando > 0, EXCLUI oportunidades cujo lead teve
+      um `HistoricoContato` registrado nos últimos N dias (não insistir em
+      "retomar contato" com quem a vendedora acabou de falar).
+
+    Cada item devolvido também traz `motivo_perda_nome` (nome do `MotivoPerda`
+    da op, string vazia se não tiver) — pronto pra usar no texto do fluxo.
     """
     from apps.comercial.crm.models import OportunidadeVenda
 
@@ -71,7 +86,20 @@ def _oportunidades_perdidas(tenant, config):
     if sem_marcador:
         qs = qs.exclude(dados_custom__has_key=sem_marcador)
 
-    qs = qs.select_related('lead', 'pipeline').order_by('data_fechamento_real')[:1000]
+    if _verdadeiro(config.get('exige_responsavel')):
+        qs = qs.filter(responsavel__isnull=False)
+
+    try:
+        sem_contato_dias = int(config.get('sem_contato_dias') or 0)
+    except (TypeError, ValueError):
+        sem_contato_dias = 0
+    if sem_contato_dias > 0:
+        corte_contato = timezone.now() - timedelta(days=sem_contato_dias)
+        qs = qs.exclude(
+            lead__historico_contatos__data_hora_contato__gte=corte_contato,
+        ).distinct()
+
+    qs = qs.select_related('lead', 'pipeline', 'motivo_perda_ref').order_by('data_fechamento_real')[:1000]
 
     agora = timezone.now()
     out = []
@@ -80,6 +108,7 @@ def _oportunidades_perdidas(tenant, config):
             'oportunidade': op,
             'lead': op.lead,
             'dias_perdida': (agora - op.data_fechamento_real).days,
+            'motivo_perda_nome': op.motivo_perda_ref.nome if op.motivo_perda_ref_id else '',
         })
     return out
 

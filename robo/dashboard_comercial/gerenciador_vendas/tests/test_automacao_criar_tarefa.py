@@ -22,21 +22,42 @@ def test_validar_config_exige_titulo():
 def test_executar_resolve_template_e_chama_service():
     no = tipo_por_slug('criar_tarefa')
     ctx = _ctx(variaveis={'nome': 'Lucas'})
-    fake = SimpleNamespace(pk=42, titulo='Follow-up: Lucas')
+    responsavel = SimpleNamespace(get_full_name=lambda: '', username='vendedora1')
+    fake = SimpleNamespace(pk=42, titulo='Follow-up: Lucas', responsavel=responsavel)
     with mock.patch('apps.automacao.nodes.criar_tarefa.criar_tarefa', return_value=fake) as m:
         res = no.executar(
             {'titulo': 'Follow-up: {{var.nome}}', 'tipo': 'followup',
-             'prioridade': 'alta', 'prazo_dias': '3'},
+             'prioridade': 'alta', 'prazo_dias': '3', 'descricao': 'Contexto: {{var.nome}}'},
             {}, ctx,
         )
     assert res.branch == 'sucesso'
-    assert res.output == {'tarefa_id': 42, 'titulo': 'Follow-up: Lucas'}
-    # service chamado com tenant + template resolvido + prazo convertido p/ int
+    # output traz responsavel resolvido (username, sem full_name aqui) pra observabilidade
+    assert res.output == {'tarefa_id': 42, 'titulo': 'Follow-up: Lucas', 'responsavel': 'vendedora1'}
+    # service chamado com tenant + template resolvido + prazo convertido p/ int + descricao resolvida
     assert m.call_args.args[0] is ctx.tenant
     kwargs = m.call_args.kwargs
     assert kwargs['titulo'] == 'Follow-up: Lucas'
     assert kwargs['prioridade'] == 'alta'
     assert kwargs['prazo_dias'] == 3
+    assert kwargs['descricao'] == 'Contexto: Lucas'
+
+
+def test_output_usa_full_name_do_responsavel_quando_disponivel():
+    no = tipo_por_slug('criar_tarefa')
+    responsavel = SimpleNamespace(get_full_name=lambda: 'Vendedora Um', username='vendedora1')
+    fake = SimpleNamespace(pk=7, titulo='X', responsavel=responsavel)
+    with mock.patch('apps.automacao.nodes.criar_tarefa.criar_tarefa', return_value=fake):
+        res = no.executar({'titulo': 'X'}, {}, _ctx())
+    assert res.output['responsavel'] == 'Vendedora Um'
+
+
+def test_descricao_ausente_vira_string_vazia_no_service():
+    no = tipo_por_slug('criar_tarefa')
+    responsavel = SimpleNamespace(get_full_name=lambda: '', username='u')
+    fake = SimpleNamespace(pk=1, titulo='X', responsavel=responsavel)
+    with mock.patch('apps.automacao.nodes.criar_tarefa.criar_tarefa', return_value=fake) as m:
+        no.executar({'titulo': 'X'}, {}, _ctx())
+    assert m.call_args.kwargs['descricao'] == ''
 
 
 def test_titulo_vazio_vira_erro():

@@ -15,9 +15,15 @@ from django.utils import timezone
 
 
 def criar_tarefa(tenant, *, titulo, tipo='followup', prioridade='normal',
-                 lead=None, oportunidade=None, responsavel=None, prazo_dias=1):
-    """Cria uma `TarefaCRM`. Se `responsavel` não vier, resolve um default
-    (lead.responsavel → staff do tenant → superuser). Devolve a TarefaCRM.
+                 lead=None, oportunidade=None, responsavel=None, prazo_dias=1,
+                 descricao=''):
+    """Cria uma `TarefaCRM`. A tarefa é da vendedora DONA DA OPORTUNIDADE: se
+    `responsavel` não vier explícito, resolve por precedência
+    `oportunidade.responsavel` → `lead.responsavel` → staff do tenant →
+    superuser. Devolve a TarefaCRM.
+
+    `descricao` é opcional e grava direto em `TarefaCRM.descricao` (contexto
+    livre pra quem vai executar a tarefa).
 
     Levanta `ValueError` se não houver nenhum responsável possível (o campo é
     obrigatório no model).
@@ -26,6 +32,8 @@ def criar_tarefa(tenant, *, titulo, tipo='followup', prioridade='normal',
     from apps.comercial.crm.models import TarefaCRM
     from apps.sistema.models import PerfilUsuario
 
+    if responsavel is None and oportunidade is not None:
+        responsavel = getattr(oportunidade, 'responsavel', None)
     if responsavel is None and lead is not None:
         responsavel = getattr(lead, 'responsavel', None)
     if responsavel is None:
@@ -37,6 +45,7 @@ def criar_tarefa(tenant, *, titulo, tipo='followup', prioridade='normal',
     tarefa = TarefaCRM(
         tenant=tenant,
         titulo=titulo,
+        descricao=descricao or '',
         tipo=tipo or 'followup',
         prioridade=prioridade or 'normal',
         status='pendente',

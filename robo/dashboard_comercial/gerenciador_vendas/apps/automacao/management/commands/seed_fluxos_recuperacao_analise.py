@@ -8,7 +8,10 @@ existe, o campo NUNCA é tocado (o comando nunca liga nem desliga um fluxo). O
 
 Nasce tudo INATIVO: rodar este comando não muda nenhum comportamento em
 producao, só cadastra os fluxos/agente pra alguem revisar e ativar manualmente
-no editor (F2/F3 ainda precisam da conta/template HSM preenchidos a mao).
+no editor. F2/F3 NAO enviam mensagem automatica pro cliente final (decisao de
+produto): eles criam uma TAREFA pra vendedora dona da oportunidade retomar o
+contato pessoalmente. Janela/prazo/guarda de contato recente sao configuraveis
+no no de gatilho de cada fluxo, sem precisar editar este seed.
 
 Uso:
     python manage.py seed_fluxos_recuperacao_analise --tenant nuvyon \\
@@ -70,8 +73,8 @@ def _system_prompt_agente(tenant):
 
 
 NOME_F1 = '[#181] Analise de atendimentos Matrix'
-NOME_F2 = '[#180] Recuperacao sem retorno, envio'
-NOME_F3 = '[#180] Recuperacao inviabilidade, envio'
+NOME_F2 = '[#180] Recuperacao sem retorno, tarefa'
+NOME_F3 = '[#180] Recuperacao inviabilidade, tarefa'
 NOME_F4 = '[#180] Recuperacao, lead respondeu, reabrir'
 
 DESCRICAO_F1 = (
@@ -85,24 +88,29 @@ DESCRICAO_F1 = (
 )
 
 DESCRICAO_F2 = (
-    'Recontato automatico via HSM (WhatsApp) para oportunidades perdidas ha 30+ dias '
-    'pelo motivo "Sem retorno", que ainda nao receberam o recontato (marcador '
-    'recuperacao_enviada). ANTES DE ATIVAR: preencher conta e template HSM (com a '
-    'Gabi) no no de envio. Tarefa #180. Nasce INATIVO.'
+    'NAO envia mensagem automatica pro cliente final. Cria uma TAREFA pra vendedora '
+    'responsavel retomar contato pessoalmente, com oportunidades perdidas ha 15+ dias '
+    'pelo motivo "Sem retorno" que ainda nao tem uma tarefa de retomada (marcador '
+    'recuperacao_iniciada) e cujo lead a vendedora nao contatou nos ultimos 7 dias '
+    '(sem_contato_dias). So entram oportunidades COM responsavel definido '
+    '(exige_responsavel), pra a tarefa nunca nascer orfa. Janela, prazo e a guarda de '
+    'contato recente sao configuraveis no no de gatilho. Tarefa #180. Nasce INATIVO.'
 )
 
 DESCRICAO_F3 = (
-    'Recontato automatico via HSM (WhatsApp) para oportunidades perdidas ha 30+ dias '
-    'por falta de viabilidade tecnica, quando a consulta de planos por CEP mostra que '
-    'ja existe cobertura na regiao. ANTES DE ATIVAR: preencher conta e template HSM '
-    '(com a Gabi) no no de envio. Tarefa #180. Nasce INATIVO.'
+    'NAO envia mensagem automatica pro cliente final. Cria uma TAREFA pra vendedora '
+    'responsavel quando uma oportunidade perdida ha 15+ dias por falta de viabilidade '
+    'tecnica passa a ter cobertura no CEP (consulta hubsoft_planos_cep antes de criar '
+    'a tarefa, e lista os planos disponiveis na descricao). So entram oportunidades '
+    'COM responsavel definido (exige_responsavel), pra a tarefa nunca nascer orfa. '
+    'Janela e prazo sao configuraveis no no de gatilho. Tarefa #180. Nasce INATIVO.'
 )
 
 DESCRICAO_F4 = (
-    'Reabre a oportunidade quando o lead responde ao recontato automatico (evento '
-    'historico_contato com status "resposta"), desde que a oportunidade tenha sido '
-    'marcada como recuperacao_enviada por um dos fluxos de recontato. O estagio de '
-    'reabertura (em-atendimento) e configuravel no no "reabrir": ajustar se o '
+    'Reabre a oportunidade quando o lead responde ao contato (evento historico_contato '
+    'com status "resposta"), desde que a oportunidade tenha uma tarefa de retomada '
+    'criada por um dos fluxos de recuperacao (marcador recuperacao_iniciada). O estagio '
+    'de reabertura (em-atendimento) e configuravel no no "reabrir": ajustar se o '
     'pipeline do tenant usar outro slug. Tarefa #180. Nasce INATIVO.'
 )
 
@@ -198,15 +206,29 @@ def _grafo_f1(agente_id):
     return {'inicio': 'trigger', 'nodes': nodes, 'conexoes': conexoes}
 
 
-def _config_hsm_placeholder():
-    """Config do `matrix_hsm` com os campos de conta/template vazios de propósito
-    (preenchidos manualmente no editor antes de ativar, com a Gabi)."""
+def _config_tarefa(titulo, descricao, *, tipo='whatsapp', prioridade='alta', prazo_dias='2'):
+    """Config do nó `criar_tarefa` compartilhada entre F2/F3 (opção B: humano no
+    loop — cria tarefa pra vendedora responsável, nunca dispara mensagem
+    automática pro cliente final)."""
     return {
-        'cod_conta': '',
-        'hsm': '',
-        'telefone': '{{lead.telefone}}',
-        'nome': '{{lead.nome_razaosocial}}',
+        'titulo': titulo,
+        'tipo': tipo,
+        'prioridade': prioridade,
+        'prazo_dias': prazo_dias,
+        'descricao': descricao,
     }
+
+
+_DESCRICAO_TAREFA_F2 = (
+    'Lead perdido ha {{var.dias_perdida}} dias por "{{var.motivo_perda_nome}}".\n'
+    'Telefone: {{lead.telefone}}\n'
+    '\n'
+    'Vale uma segunda tentativa: quem some raramente e quem nao quer.\n'
+    'A analise do atendimento (resumo do que aconteceu e por que parou) esta na\n'
+    'linha do tempo desta oportunidade.\n'
+    '\n'
+    'Se o cliente responder, a oportunidade reabre sozinha e volta pro seu funil.'
+)
 
 
 def _grafo_f2():
@@ -217,9 +239,11 @@ def _grafo_f2():
                 'intervalo_minutos': 1440,
                 'varredura': 'oportunidades_perdidas',
                 'varredura_config': {
-                    'janela_dias_min': '30',
+                    'janela_dias_min': '15',
                     'motivo_ref_nome': 'Sem retorno',
-                    'sem_marcador': 'recuperacao_enviada',
+                    'sem_marcador': 'recuperacao_iniciada',
+                    'exige_responsavel': 'true',
+                    'sem_contato_dias': '7',
                 },
                 'max_por_rodada': 15,
                 'max_por_lead': 1,
@@ -227,31 +251,48 @@ def _grafo_f2():
             'pos': {'x': 0, 'y': 0},
             'label': 'Varredura: oportunidades perdidas (Sem retorno)',
         },
-        'hsm': {
-            'tipo': 'matrix_hsm',
-            'config': _config_hsm_placeholder(),
+        'tarefa': {
+            'tipo': 'criar_tarefa',
+            'config': _config_tarefa(
+                'Retomar contato: {{lead.nome_razaosocial}}', _DESCRICAO_TAREFA_F2,
+            ),
             'pos': {'x': 240, 'y': 0},
-            'label': 'Matrix: enviar HSM de recontato',
+            'label': 'Tarefa: retomar contato',
         },
         'marcador': {
             'tipo': 'definir_propriedade_oportunidade',
-            'config': {'propriedade': 'marcador', 'chave': 'recuperacao_enviada'},
+            'config': {'propriedade': 'marcador', 'chave': 'recuperacao_iniciada'},
             'pos': {'x': 480, 'y': 0},
-            'label': 'Marcar recontato enviado',
+            'label': 'Marcar recuperacao iniciada',
         },
         'nota': {
             'tipo': 'criar_nota',
-            'config': {'texto': 'Recontato automatico enviado (recuperacao sem retorno).'},
+            'config': {'texto': (
+                'Tarefa de retomada criada para {{lead.nome_razaosocial}} '
+                '(perdido ha {{var.dias_perdida}} dias).'
+            )},
             'pos': {'x': 720, 'y': 0},
-            'label': 'Nota: recontato enviado',
+            'label': 'Nota: tarefa de retomada criada',
         },
     }
     conexoes = [
-        {'de': 'trigger', 'para': 'hsm', 'saida': 'default'},
-        {'de': 'hsm', 'para': 'marcador', 'saida': 'sucesso'},
+        {'de': 'trigger', 'para': 'tarefa', 'saida': 'default'},
+        {'de': 'tarefa', 'para': 'marcador', 'saida': 'sucesso'},
         {'de': 'marcador', 'para': 'nota', 'saida': 'sucesso'},
     ]
     return {'inicio': 'trigger', 'nodes': nodes, 'conexoes': conexoes}
+
+
+_DESCRICAO_TAREFA_F3 = (
+    'O CEP {{lead.cep}} de {{lead.nome_razaosocial}} passou a ter viabilidade '
+    'tecnica (a oportunidade estava perdida ha {{var.dias_perdida}} dias por falta '
+    'de cobertura).\n'
+    'Telefone: {{lead.telefone}}\n'
+    '\n'
+    'Planos disponiveis agora ({{nodes.viabilidade.total}}): {{nodes.viabilidade.planos}}\n'
+    '\n'
+    'Vale confirmar com o cliente se ainda tem interesse.'
+)
 
 
 def _grafo_f3():
@@ -262,9 +303,10 @@ def _grafo_f3():
                 'intervalo_minutos': 1440,
                 'varredura': 'oportunidades_perdidas',
                 'varredura_config': {
-                    'janela_dias_min': '30',
-                    'motivo_categoria': 'viabilidade',
-                    'sem_marcador': 'recuperacao_enviada',
+                    'janela_dias_min': '15',
+                    'motivo_ref_nome': 'Sem viabilidade técnica',
+                    'sem_marcador': 'recuperacao_iniciada',
+                    'exige_responsavel': 'true',
                 },
                 'max_por_rodada': 15,
                 'max_por_lead': 1,
@@ -288,30 +330,35 @@ def _grafo_f3():
             'pos': {'x': 480, 'y': 0},
             'label': 'Tem cobertura agora?',
         },
-        'hsm': {
-            'tipo': 'matrix_hsm',
-            'config': _config_hsm_placeholder(),
+        'tarefa': {
+            'tipo': 'criar_tarefa',
+            'config': _config_tarefa(
+                'Agora tem cobertura: {{lead.nome_razaosocial}}', _DESCRICAO_TAREFA_F3,
+            ),
             'pos': {'x': 720, 'y': 0},
-            'label': 'Matrix: enviar HSM de recontato',
+            'label': 'Tarefa: retomar contato (cobertura nova)',
         },
         'marcador': {
             'tipo': 'definir_propriedade_oportunidade',
-            'config': {'propriedade': 'marcador', 'chave': 'recuperacao_enviada'},
+            'config': {'propriedade': 'marcador', 'chave': 'recuperacao_iniciada'},
             'pos': {'x': 960, 'y': 0},
-            'label': 'Marcar recontato enviado',
+            'label': 'Marcar recuperacao iniciada',
         },
         'nota': {
             'tipo': 'criar_nota',
-            'config': {'texto': 'Recontato automatico enviado (agora ha cobertura no CEP).'},
+            'config': {'texto': (
+                'Tarefa de retomada criada para {{lead.nome_razaosocial}} '
+                '(agora ha cobertura no CEP).'
+            )},
             'pos': {'x': 1200, 'y': 0},
-            'label': 'Nota: recontato enviado (cobertura nova)',
+            'label': 'Nota: tarefa de retomada criada (cobertura nova)',
         },
     }
     conexoes = [
         {'de': 'trigger', 'para': 'viabilidade', 'saida': 'default'},
         {'de': 'viabilidade', 'para': 'tem_cobertura', 'saida': 'sucesso'},
-        {'de': 'tem_cobertura', 'para': 'hsm', 'saida': 'true'},
-        {'de': 'hsm', 'para': 'marcador', 'saida': 'sucesso'},
+        {'de': 'tem_cobertura', 'para': 'tarefa', 'saida': 'true'},
+        {'de': 'tarefa', 'para': 'marcador', 'saida': 'sucesso'},
         {'de': 'marcador', 'para': 'nota', 'saida': 'sucesso'},
     ]
     return {'inicio': 'trigger', 'nodes': nodes, 'conexoes': conexoes}
@@ -334,7 +381,7 @@ def _grafo_f4():
             'config': {
                 'tipo_condicao': 'oportunidade_dados_custom',
                 'operador': 'existe',
-                'campo': 'recuperacao_enviada',
+                'campo': 'recuperacao_iniciada',
                 'valor': '',
             },
             'pos': {'x': 240, 'y': 0},

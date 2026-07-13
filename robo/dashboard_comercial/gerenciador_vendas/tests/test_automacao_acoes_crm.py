@@ -7,10 +7,12 @@ os testes deles agora ficam em `test_automacao_definir_propriedade.py`."""
 import pytest
 from django.utils import timezone
 
-from apps.automacao.services.acoes import criar_nota, reabrir_oportunidade
-from apps.comercial.crm.models import HistoricoPipelineEstagio, MotivoPerda, NotaInterna
+from apps.automacao.services.acoes import criar_nota, criar_tarefa, reabrir_oportunidade
+from apps.comercial.crm.models import HistoricoPipelineEstagio, MotivoPerda, NotaInterna, TarefaCRM
 from apps.sistema.models import PerfilUsuario
-from tests.factories import OportunidadeVendaFactory, PipelineEstagioFactory, TenantFactory, UserFactory
+from tests.factories import (
+    LeadProspectoFactory, OportunidadeVendaFactory, PipelineEstagioFactory, TenantFactory, UserFactory,
+)
 
 
 # ──────────────────────────────────────────────
@@ -57,6 +59,63 @@ def test_criar_nota_prefere_autor_sistema():
     PerfilUsuario.objects.create(tenant=tenant, user=robo)
     nota = criar_nota(tenant, oportunidade=op, texto='analise automatica')
     assert nota.autor_id == robo.pk
+
+
+# ──────────────────────────────────────────────
+# criar_tarefa
+# ──────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_criar_tarefa_prioriza_responsavel_da_oportunidade_sobre_o_lead():
+    """A tarefa é da vendedora DONA DA OPORTUNIDADE: `oportunidade.responsavel`
+    vence `lead.responsavel` (mesmo que o lead também tenha um, hipoteticamente
+    — `LeadProspecto` hoje nem tem esse campo, mas a precedência é a mesma se
+    algum dia ganhar)."""
+    tenant = TenantFactory()
+    vendedora_op = UserFactory()
+    lead = LeadProspectoFactory(tenant=tenant)
+    op = OportunidadeVendaFactory(tenant=tenant, lead=lead, responsavel=vendedora_op)
+
+    tarefa = criar_tarefa(tenant, titulo='Retomar contato', lead=lead, oportunidade=op)
+
+    assert isinstance(tarefa, TarefaCRM)
+    assert tarefa.responsavel_id == vendedora_op.pk
+
+
+@pytest.mark.django_db
+def test_criar_tarefa_sem_responsavel_na_op_usa_staff_do_tenant():
+    tenant = TenantFactory()
+    staff = UserFactory(is_staff=True)
+    PerfilUsuario.objects.create(tenant=tenant, user=staff)
+    lead = LeadProspectoFactory(tenant=tenant)
+    op = OportunidadeVendaFactory(tenant=tenant, lead=lead, responsavel=None)
+
+    tarefa = criar_tarefa(tenant, titulo='Retomar contato', lead=lead, oportunidade=op)
+
+    assert tarefa.responsavel_id == staff.pk
+
+
+@pytest.mark.django_db
+def test_criar_tarefa_grava_descricao():
+    tenant = TenantFactory()
+    vendedora = UserFactory()
+    op = OportunidadeVendaFactory(tenant=tenant, responsavel=vendedora)
+
+    tarefa = criar_tarefa(
+        tenant, titulo='Retomar contato', oportunidade=op,
+        descricao='Lead perdido ha 20 dias por "Sem retorno".',
+    )
+
+    assert tarefa.descricao == 'Lead perdido ha 20 dias por "Sem retorno".'
+
+
+@pytest.mark.django_db
+def test_criar_tarefa_sem_nenhum_responsavel_possivel_levanta_value_error():
+    tenant = TenantFactory()
+    lead = LeadProspectoFactory(tenant=tenant)
+
+    with pytest.raises(ValueError):
+        criar_tarefa(tenant, titulo='Retomar contato', lead=lead)
 
 
 # ──────────────────────────────────────────────
