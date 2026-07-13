@@ -68,6 +68,9 @@ def _bloco_dict(b: SlideBloco):
         'id': b.id,
         'tipo': b.tipo,
         'widget_id': b.widget_id,
+        # titulo do widget: e o rotulo do KPI/grafico no slide (sem isso o KPI
+        # aparece como um numero solto, sem dizer do que se trata)
+        'widget_titulo': (b.widget.titulo if b.widget_id and b.widget else ''),
         'conteudo': b.conteudo or {},
         'layout': b.layout or {},
         'estilo': b.estilo or {},
@@ -120,7 +123,7 @@ def editor_view(request, pk):
     deck = get_object_or_404(_decks_visiveis(request), pk=pk)
     if not _pode_editar_deck(request, deck):
         return HttpResponseForbidden('Sem permissao pra editar')
-    slides = [_slide_dict(s) for s in deck.slides.prefetch_related('blocos')]
+    slides = [_slide_dict(s) for s in deck.slides.prefetch_related('blocos__widget')]
     tenant = getattr(request, 'tenant', None)
     return render(request, 'decks/editor.html', {
         'deck': deck,
@@ -135,7 +138,7 @@ def editor_view(request, pk):
 @login_required
 def apresentar_view(request, pk):
     deck = get_object_or_404(_decks_visiveis(request), pk=pk)
-    slides = [_slide_dict(s) for s in deck.slides.prefetch_related('blocos')]
+    slides = [_slide_dict(s) for s in deck.slides.prefetch_related('blocos__widget')]
     tenant = getattr(request, 'tenant', None)
     return render(request, 'decks/apresentar.html', {
         'deck': deck,
