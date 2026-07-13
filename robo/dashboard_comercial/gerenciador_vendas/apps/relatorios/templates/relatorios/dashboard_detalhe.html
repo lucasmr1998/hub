@@ -119,6 +119,21 @@
   </div>
 </div>
 
+<!-- Modal DRILL-DOWN: a lista por tras do numero -->
+<div class="modal-overlay" id="modal-drill" style="display:none;">
+  <div class="modal-content" style="max-width:900px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-list-ul"></i> <span id="drill-titulo"></span></h3>
+      <button class="modal-close" onclick="fecharModal('modal-drill')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body" style="padding:0;max-height:60vh;overflow:auto;">
+      <div id="drill-corpo"></div>
+    </div>
+    <div id="drill-rodape" style="display:flex;align-items:center;justify-content:space-between;
+         gap:var(--sp-2);padding:var(--sp-3) var(--sp-4);border-top:1px solid var(--color-border);"></div>
+  </div>
+</div>
+
 {% if modo_edicao %}
 <!-- Modal Wizard Widget -->
 <div class="modal-overlay" id="modal-wizard" style="display:none;">
@@ -291,6 +306,17 @@
     overflow-y: auto;
     z-index: 10001;
   }
+
+  /* Tabela do drill-down (a lista por tras do numero) */
+  .drill-tabela { width:100%; border-collapse:collapse; font-size:var(--fs-sm); }
+  .drill-tabela th {
+    text-align:left; padding:8px 14px; font-size:11px; text-transform:uppercase;
+    letter-spacing:.04em; color:#64748b; background:var(--color-bg-subtle,#f8fafc);
+    border-bottom:1px solid var(--color-border); position:sticky; top:0; z-index:1;
+  }
+  .drill-tabela td { padding:8px 14px; border-bottom:1px solid var(--color-border); color:var(--color-text); }
+  .drill-tabela tbody tr:hover { background:var(--color-bg-subtle,#f8fafc); }
+  .drill-tabela a { color:var(--color-primary); }
 
   .rel-header { display:flex; align-items:start; justify-content:space-between; gap:var(--sp-4); margin-bottom:var(--sp-4); }
   .rel-back { color:var(--color-text-muted); text-decoration:none; font-size:var(--fs-sm); }
@@ -524,6 +550,7 @@ async function carregarWidget(widgetId, cardEl) {
     }
     renderWidget(cardEl, d);
     marcarNaoFiltrado(cardEl, (d.meta || {}).ignora_vendedor);
+    habilitarDrill(cardEl, d.meta);
   } catch (e) {
     loading.style.display = 'none';
     erro.textContent = `Erro: ${e.message}`;
@@ -673,12 +700,98 @@ function renderWidget(cardEl, d) {
   const option = montarOptionEcharts(viz, labels, valores, seriesName);
   chart.setOption(option);
 
+  // Drill-down: clicar na barra/fatia abre a lista daquela categoria.
+  if (d.meta && d.meta.drill) {
+    echartsDiv.style.cursor = 'pointer';
+    chart.off('click');
+    chart.on('click', (p) => abrirDrill(parseInt(cardEl.dataset.widgetId, 10), p.name));
+  }
+
   // Resize on container change
   if (!echartsDiv._resizeObs) {
     const ro = new ResizeObserver(() => chart.resize());
     ro.observe(echartsDiv);
     echartsDiv._resizeObs = ro;
   }
+}
+
+// ---------------------------------------------------------------------------
+// DRILL-DOWN — o numero vira lista.
+// Um card que diz "110 leads sem contato" e nao mostra QUEM sao os 110 nao
+// serve pra operacao: a vendedora precisa da lista pra ligar.
+// ---------------------------------------------------------------------------
+let DRILL = { widget: null, categoria: null, pagina: 1 };
+
+function habilitarDrill(cardEl, meta) {
+  const alvo = cardEl.querySelector('.widget-numero');
+  if (!alvo) return;
+  const pode = !!(meta && meta.drill);
+  alvo.style.cursor = pode ? 'pointer' : '';
+  alvo.title = pode ? 'Ver a lista por tras deste numero' : '';
+  alvo.onclick = pode
+    ? () => abrirDrill(parseInt(cardEl.dataset.widgetId, 10), null)
+    : null;
+}
+
+function abrirDrill(widgetId, categoria) {
+  DRILL = { widget: widgetId, categoria: categoria || null, pagina: 1 };
+  abrirModal('modal-drill');
+  carregarDrill();
+}
+
+async function carregarDrill() {
+  const corpo = document.getElementById('drill-corpo');
+  const rodape = document.getElementById('drill-rodape');
+  corpo.innerHTML = '<div style="padding:24px;text-align:center;color:#94a3b8;">Carregando...</div>';
+  rodape.textContent = '';
+
+  const p = new URLSearchParams(_filtroQuery().replace('?', ''));
+  if (DRILL.categoria) p.set('categoria', DRILL.categoria);
+  p.set('pagina', DRILL.pagina);
+
+  try {
+    const r = await fetch(`/dashboards/api/widget/${DRILL.widget}/registros/?${p}`);
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      corpo.innerHTML = `<div style="padding:24px;color:#b91c1c;">${esc(d.error || 'Falha ao carregar')}</div>`;
+      return;
+    }
+
+    document.getElementById('drill-titulo').textContent =
+      d.titulo + (DRILL.categoria ? ` — ${DRILL.categoria}` : '');
+
+    if (!d.linhas.length) {
+      corpo.innerHTML = '<div style="padding:24px;text-align:center;color:#94a3b8;">Nenhum registro.</div>';
+      return;
+    }
+
+    const cabecalho = d.colunas.map(c => `<th>${esc(c)}</th>`).join('');
+    const linhas = d.linhas.map(l => {
+      const celulas = l.valores.map(v => `<td>${esc(v)}</td>`).join('');
+      const abrir = l.url
+        ? `<td style="text-align:right;"><a href="${l.url}" target="_blank" title="Abrir ficha"><i class="bi bi-box-arrow-up-right"></i></a></td>`
+        : '<td></td>';
+      return `<tr>${celulas}${abrir}</tr>`;
+    }).join('');
+
+    corpo.innerHTML = `<table class="drill-tabela"><thead><tr>${cabecalho}<th></th></tr></thead><tbody>${linhas}</tbody></table>`;
+
+    const ini = d.offset + 1;
+    const fim = d.offset + d.linhas.length;
+    rodape.innerHTML = `
+      <span style="color:#64748b;font-size:var(--fs-sm);">${ini} a ${fim} de <b>${d.total}</b></span>
+      <span style="display:flex;gap:6px;">
+        <button class="btn btn-ghost btn-sm" ${d.pagina <= 1 ? 'disabled' : ''} onclick="paginarDrill(-1)">Anterior</button>
+        <button class="btn btn-ghost btn-sm" ${d.pagina >= d.paginas ? 'disabled' : ''} onclick="paginarDrill(1)">Proxima</button>
+      </span>`;
+  } catch (e) {
+    corpo.innerHTML = `<div style="padding:24px;color:#b91c1c;">Erro: ${esc(e.message)}</div>`;
+  }
+}
+
+function paginarDrill(delta) {
+  DRILL.pagina = Math.max(1, DRILL.pagina + delta);
+  carregarDrill();
 }
 
 // montarOptionEcharts / fmtNum / fmtValor / esc: ver static/relatorios/echarts_option.js

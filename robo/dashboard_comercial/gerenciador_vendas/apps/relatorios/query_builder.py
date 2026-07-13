@@ -237,6 +237,96 @@ class WidgetQueryBuilder:
         """A fonte deste widget responde ao filtro global de vendedor?"""
         return bool(getattr(self.data_source, 'campo_vendedor', None))
 
+    # ------------- drill-down -------------
+
+    # Transforms cujo numero NAO vem de um queryset unico (e sim da razao entre
+    # varios), ou cujo rotulo nao casa com o dado cru. Nesses o card nao abre
+    # lista: melhor nao abrir do que abrir uma lista errada.
+    #   - normalizar_cidade: a barra diz "Ribeirao Preto", mas no banco existem
+    #     'RIBEIRAO PRETO', 'RIBEIRAO PRETO/SP'... Filtrar pelo rotulo perderia
+    #     linhas. Volta a abrir quando o filtro de cidade normalizada existir.
+    TRANSFORMS_SEM_DRILL = (
+        'funil_macro', 'conversao_geral', 'conversao_por_canal',
+        'gargalo_funil', 'funil_viabilidade', 'funil_cumulativo',
+        'normalizar_cidade',
+    )
+
+    def suporta_drill(self) -> bool:
+        """O numero deste widget pode virar lista?"""
+        transform = (self.widget.agrupamento or {}).get('transform')
+        if transform in self.TRANSFORMS_SEM_DRILL:
+            return False
+        return bool(getattr(self.data_source, 'colunas_drill', None))
+
+    def registros(self, categoria=None, limite: int = 50, offset: int = 0) -> dict:
+        """As LINHAS por tras do numero, com os mesmos filtros do card.
+
+        `categoria` recorta pela fatia clicada (a barra 'Salto', por exemplo):
+        aplica a dimensao do agrupamento = valor.
+        """
+        if not self.suporta_drill():
+            raise WidgetQueryError('Este widget nao abre lista.')
+
+        qs = self._aplicar_filtros(self._base_queryset())
+
+        if categoria not in (None, ''):
+            # A chave e 'dimensao' (mesma que o _calcular_agrupado usa). Ler
+            # 'campo' aqui fazia o recorte sumir calado: o modal dizia "— Ana"
+            # e listava as vendas de todo mundo.
+            dimensao = (self.widget.agrupamento or {}).get('dimensao')
+            if not dimensao or not self._validar_campo(dimensao):
+                raise WidgetQueryError(f'Dimensao invalida pro drill: {dimensao}')
+            # '—' e o rotulo que o _calcular_agrupado da pra nulo/vazio. Sem
+            # tratar aqui, clicar nessa fatia abria uma lista vazia enquanto o
+            # grafico dizia 4.
+            if categoria in ('—', '(vazio)', '(sem valor)'):
+                qs = qs.filter(Q(**{f'{dimensao}__isnull': True}) | Q(**{dimensao: ''}))
+            else:
+                qs = qs.filter(**{dimensao: categoria})
+
+        colunas = list(self.data_source.colunas_drill)
+        campos = [c for c, _ in colunas]
+        total = qs.count()
+
+        try:
+            qs = qs.order_by(self.data_source.order_by_padrao)
+        except Exception:
+            pass
+
+        linhas = []
+        for row in qs.values('id', *campos)[offset:offset + limite]:
+            linhas.append({
+                'id': row['id'],
+                'valores': [self._formatar(row.get(c)) for c in campos],
+                'url': self._url_detalhe(row['id']),
+            })
+
+        return {
+            'colunas': [label for _, label in colunas],
+            'linhas': linhas,
+            'total': total,
+            'offset': offset,
+            'limite': limite,
+        }
+
+    def _url_detalhe(self, pk):
+        nome = getattr(self.data_source, 'url_detalhe', None)
+        if not nome:
+            return None
+        from django.urls import reverse, NoReverseMatch
+        try:
+            return reverse(nome, args=[pk])
+        except NoReverseMatch:
+            return None
+
+    @staticmethod
+    def _formatar(v):
+        if v is None:
+            return ''
+        if isinstance(v, (datetime, date)):
+            return v.strftime('%d/%m/%Y')
+        return str(v)
+
     # -- helpers do filtro de vendedor pros transforms cross-modelo ----------
     # Os transforms (funil_macro, conversao_*, gargalo, viabilidade) montam os
     # querysets na mao e nao passam por _aplicar_filtros, entao aplicam o

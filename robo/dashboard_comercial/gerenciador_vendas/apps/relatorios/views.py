@@ -12,6 +12,7 @@ Superuser bypassa.
 """
 import json
 import logging
+from math import ceil
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
@@ -350,11 +351,55 @@ def api_widget_dados(request, pk):
             payload['meta']['ignora_vendedor'] = bool(
                 overrides.get('vendedor') and not builder.suporta_vendedor()
             )
+            # Card clicavel: o numero abre a lista de quem esta por tras dele.
+            payload['meta']['drill'] = builder.suporta_drill()
         return JsonResponse({'ok': True, 'widget_id': widget.pk, **payload})
     except WidgetQueryError as exc:
         return JsonResponse({'error': str(exc)}, status=400)
     except Exception as exc:
         logger.exception('api_widget_dados falhou (widget=%s)', pk)
+        return JsonResponse({'error': f'{type(exc).__name__}: {exc}'}, status=500)
+
+
+@login_required
+@require_GET
+def api_widget_registros(request, pk):
+    """Drill-down: as linhas por tras do numero do card.
+
+    Mesmos filtros do widget + os globais da barra. `?categoria=` recorta pela
+    fatia clicada (a barra 'Salto', por exemplo).
+    """
+    if not _perm(request, 'relatorios.ver_dashboards'):
+        return JsonResponse({'error': 'Sem permissao'}, status=403)
+    widget = get_object_or_404(Widget.objects.select_related('dashboard'), pk=pk)
+    dashboard = widget.dashboard
+    if not (dashboard.compartilhado or dashboard.criado_por_id == request.user.id
+            or request.user.is_superuser):
+        return JsonResponse({'error': 'Sem acesso a este dashboard'}, status=403)
+
+    try:
+        pagina = max(1, int(request.GET.get('pagina') or 1))
+    except (TypeError, ValueError):
+        pagina = 1
+    limite = 50
+    categoria = request.GET.get('categoria') or None
+
+    try:
+        builder = WidgetQueryBuilder(widget, tenant=request.tenant,
+                                     overrides=_overrides_da_barra(request))
+        dados = builder.registros(categoria=categoria, limite=limite,
+                                  offset=(pagina - 1) * limite)
+        return JsonResponse({
+            'ok': True,
+            'titulo': widget.titulo,
+            'pagina': pagina,
+            'paginas': max(1, ceil(dados['total'] / limite)),
+            **dados,
+        })
+    except WidgetQueryError as exc:
+        return JsonResponse({'error': str(exc)}, status=400)
+    except Exception as exc:
+        logger.exception('api_widget_registros falhou (widget=%s)', pk)
         return JsonResponse({'error': f'{type(exc).__name__}: {exc}'}, status=500)
 
 

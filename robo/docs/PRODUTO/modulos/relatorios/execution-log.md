@@ -89,3 +89,17 @@
 - **Validado (dev)**: por fonte, a soma por vendedor sempre <= total (a diferenca sao as ops sem responsavel, que existem de verdade); builder bate com o ORM cru (42/32/30); funil reparte por vendedora; no browser o select filtra os KPIs (101 -> 12 leads, conversao 22,8% -> 58,3%) e os 8 cards HubSoft aparecem marcados. 0 erros de console.
 - **Arquivos**: `data_sources.py`, `query_builder.py`, `views.py`, `templates/relatorios/dashboard_detalhe.html`.
 - **Status**: completed (dev). Deploy pendente. Filtro de CIDADE pendente (exige normalizacao: 37 grafias distintas em prod, tipo 'caconde' vs 'Caconde', 'RIBEIRAO PRETO/SP' vs 'Ribeirao Preto').
+
+## 2026-07-13 — DRILL-DOWN: o numero do card vira lista
+
+- **Motivacao**: o dono pediu um painel OPERACIONAL. Um card que diz "110 leads sem contato" e nao mostra QUEM sao os 110 e decorativo: a vendedora precisa da lista pra ligar. Drill-down e a capacidade que faltava, e serve tambem ao painel executivo (auditar um numero antes de levar pra reuniao).
+- **Declarativo**: `DataSource.colunas_drill` (colunas da tabela) + `DataSource.url_detalhe` (rota da ficha). Declarado em oportunidade (-> crm:oportunidade_detalhe), lead (-> comercial_leads:lead_detail), historico_contato, servico_hubsoft e tarefa. Fonte sem colunas_drill nao fica clicavel.
+- **Motor**: `WidgetQueryBuilder.registros(categoria, limite, offset)` reusa `_aplicar_filtros` (mesmos filtros do widget + os globais da barra: periodo, fonte, vendedor) e recorta pela fatia clicada. `suporta_drill()` bloqueia transforms cujo numero nao vem de UM queryset (funil_macro, conversao_*, gargalo, viabilidade) e tambem `normalizar_cidade`: a barra diz "Ribeirao Preto" mas no banco existem 'RIBEIRAO PRETO' e 'RIBEIRAO PRETO/SP', entao filtrar pelo rotulo traria lista incompleta — melhor nao abrir do que abrir errado (volta quando o filtro de cidade normalizada existir).
+- **API**: `GET /dashboards/api/widget/<pk>/registros/?categoria=&pagina=` (50/pagina). `meta.drill` na API de dados diz ao front se o card e clicavel.
+- **UI**: clique no numero do KPI ou na barra/fatia do grafico abre modal com tabela, link pra ficha em cada linha e paginacao.
+- **DOIS BUGS MEUS, pegos pelo teste de consistencia (valor da barra == total da lista)**:
+  1. Lia `agrupamento['campo']`, mas a chave e `dimensao` (a mesma do `_calcular_agrupado`). O recorte sumia calado: o modal dizia "— Ana" e listava as 23 vendas de todo mundo.
+  2. Nao tratava o rotulo `'—'` (que o motor da pra nulo/vazio): clicar na fatia "sem vendedor" abria lista vazia enquanto o grafico dizia 4.
+- **Validado (dev, Playwright)**: para 3 categorias de cada widget agrupado, o numero do grafico bate com o total da lista (inclusive a fatia vazia); KPI abre 50 de 101 com link pra ficha; paginacao anda; 0 erros de console.
+- **Arquivos**: `data_sources.py`, `query_builder.py`, `views.py`, `urls.py`, `templates/relatorios/dashboard_detalhe.html`.
+- **Status**: completed (dev). Deploy pendente de aprovacao.

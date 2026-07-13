@@ -48,6 +48,15 @@ class DataSource:
     # ignora o filtro e o front avisa que aquele numero nao foi recortado.
     campo_vendedor: Optional[str] = None
 
+    # DRILL-DOWN: o que aparece quando alguem clica no numero do card.
+    # Um painel operacional que mostra "110 leads sem contato" e nao deixa ver
+    # QUEM sao os 110 e decorativo — a vendedora precisa da lista pra ligar.
+    #   colunas_drill: [(campo_orm, label)] exibidas na tabela
+    #   url_detalhe:   nome da rota da ficha ('app:rota'), resolvida com o id
+    # Fonte sem colunas_drill nao abre lista (o card nao fica clicavel).
+    colunas_drill: list = field(default_factory=list)
+    url_detalhe: Optional[str] = None
+
     def resolve_model(self):
         """Lazy import pra evitar circular imports."""
         from django.apps import apps
@@ -115,6 +124,15 @@ registrar(DataSource(
               'sum:lead__valor', 'avg:lead__valor'],
     order_by_padrao='-data_criacao',
     campo_vendedor='responsavel',
+    colunas_drill=[
+        ('lead__nome_razaosocial', 'Cliente'),
+        ('estagio__nome', 'Estagio'),
+        ('responsavel__first_name', 'Vendedor'),
+        ('lead__cidade', 'Cidade'),
+        ('lead__valor', 'Valor'),
+        ('data_entrada_estagio', 'No estagio desde'),
+    ],
+    url_detalhe='crm:oportunidade_detalhe',
 ))
 
 registrar(DataSource(
@@ -143,6 +161,14 @@ registrar(DataSource(
     metricas=['count', 'avg:score_qualificacao', 'sum:valor'],
     order_by_padrao='-data_cadastro',
     campo_vendedor='oportunidade_crm__responsavel',
+    colunas_drill=[
+        ('nome_razaosocial', 'Nome'),
+        ('telefone', 'Telefone'),
+        ('cidade', 'Cidade'),
+        ('origem', 'Origem'),
+        ('data_cadastro', 'Cadastrado em'),
+    ],
+    url_detalhe='comercial_leads:lead_detail',
 ))
 
 registrar(DataSource(
@@ -165,6 +191,13 @@ registrar(DataSource(
     metricas=['count'],
     order_by_padrao='-data_criacao',
     campo_vendedor='responsavel',
+    colunas_drill=[
+        ('titulo', 'Tarefa'),
+        ('responsavel__first_name', 'Responsavel'),
+        ('status', 'Status'),
+        ('data_vencimento', 'Vence em'),
+    ],
+    url_detalhe=None,
 ))
 
 registrar(DataSource(
@@ -237,6 +270,13 @@ registrar(DataSource(
     metricas=['count', 'avg:duracao_segundos'],
     order_by_padrao='-data_hora_contato',
     campo_vendedor='lead__oportunidade_crm__responsavel',
+    colunas_drill=[
+        ('nome_contato', 'Contato'),
+        ('telefone', 'Telefone'),
+        ('status', 'Status'),
+        ('data_hora_contato', 'Quando'),
+    ],
+    url_detalhe=None,
 ))
 
 registrar(DataSource(
@@ -340,6 +380,14 @@ registrar(DataSource(
     },
     metricas=['count', 'sum:valor', 'avg:valor', 'avg:vigencia_meses', 'avg:cliente__churn_score'],
     order_by_padrao='-data_habilitacao',
+    colunas_drill=[
+        ('cliente__nome_razaosocial', 'Cliente'),
+        ('nome', 'Plano'),
+        ('status', 'Status'),
+        ('valor', 'Valor'),
+        ('vendedor_nome', 'Vendedor (HubSoft)'),
+    ],
+    url_detalhe=None,
 ))
 
 registrar(DataSource(
