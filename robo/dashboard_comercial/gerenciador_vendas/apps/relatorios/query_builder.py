@@ -297,15 +297,13 @@ class WidgetQueryBuilder:
         # 'direcao' = movimento real (seta); 'positivo' = bom/ruim conforme o
         # sentido do KPI (config_extra.sentido: 'maior_melhor' default, ou
         # 'menor_melhor' pra metricas onde cair e bom, ex: leads sem atendimento).
+        # So mostra delta quando ha base anterior REAL (> 0). Sem periodo
+        # anterior (ex: tenant com < 30 dias de historico), o delta seria
+        # sempre "saiu de zero" e poluiria o painel com "novo" em todo card.
         comparativo = None
         anterior = self._valor_periodo_anterior(metrica)
-        if anterior is not None:
-            if anterior > 0:
-                delta_pct = round((valor - anterior) / anterior * 100, 1)
-            elif valor > 0:
-                delta_pct = None  # saiu de zero: sem base de %
-            else:
-                delta_pct = 0.0
+        if anterior is not None and anterior > 0:
+            delta_pct = round((valor - anterior) / anterior * 100, 1)
             if valor > anterior:
                 direcao = 'subiu'
             elif valor < anterior:

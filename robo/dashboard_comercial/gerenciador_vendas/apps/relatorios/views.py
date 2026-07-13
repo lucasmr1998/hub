@@ -101,7 +101,10 @@ def dashboard_detalhe_view(request, pk):
     if not _perm(request, 'relatorios.ver_dashboards'):
         return HttpResponseForbidden('Sem permissao')
     dashboard = get_object_or_404(_dashboards_visiveis(request), pk=pk)
-    widgets = list(dashboard.widgets.all().order_by('ordem', 'id'))
+    # Modo consulta esconde widgets marcados como oculto (config_extra.oculto).
+    # Em edicao eles continuam aparecendo, pra poder reexibir/gerenciar.
+    widgets = [w for w in dashboard.widgets.all().order_by('ordem', 'id')
+               if not (w.config_extra or {}).get('oculto')]
     return render(request, 'relatorios/dashboard_detalhe.html', {
         'dashboard': dashboard,
         'widgets': widgets,

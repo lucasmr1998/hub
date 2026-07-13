@@ -50,3 +50,11 @@
 - Pendente prod: alem de config_extra.formato, setar config_extra.sentido='menor_melhor' nos KPIs "ruins"; e o codigo do delta precisa de um 2o deploy.
 - Arquivos: `apps/relatorios/query_builder.py` (+_valor_periodo_anterior, comparativo no _calcular_numero), `dashboard_detalhe.html` (CSS+JS do delta).
 - Status: completed (local)
+
+## 2026-07-13 — Limpeza do painel: delta sem base + widget oculto
+
+- Delta: so aparece quando ha base anterior REAL (`anterior > 0`). Tenant com < 30 dias de historico (ex: Nuvyon, base comecou 22/06) tinha periodo anterior = 0, e o delta mostrava "novo" em todo card. Agora suprime; reaparece sozinho quando houver periodo anterior.
+- Widget oculto: `config_extra.oculto=true` some do modo CONSULTA (view filtra), mas continua no modo EDICAO pra reexibir/gerenciar. Forma reversivel de tirar widget redundante do dashboard sem deletar.
+- Motivacao: painel #15 da Nuvyon estava visualmente bagunçado (KPIs no meio, funil no topo, 5 widgets de canal, 2 roscas quase iguais). Usado pra ocultar "Meta Ads vs Organico" (64) e "Vendas por canal" (69) e reordenar (KPIs no topo).
+- Arquivos: `query_builder.py` (comparativo so com base>0), `views.py` (filtro oculto no modo consulta).
+- Status: completed (codigo). Layout/oculto aplicados como dado em prod (dash #15).
