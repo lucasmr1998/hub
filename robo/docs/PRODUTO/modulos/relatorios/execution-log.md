@@ -58,3 +58,13 @@
 - Motivacao: painel #15 da Nuvyon estava visualmente bagunçado (KPIs no meio, funil no topo, 5 widgets de canal, 2 roscas quase iguais). Usado pra ocultar "Meta Ads vs Organico" (64) e "Vendas por canal" (69) e reordenar (KPIs no topo).
 - Arquivos: `query_builder.py` (comparativo so com base>0), `views.py` (filtro oculto no modo consulta).
 - Status: completed (codigo). Layout/oculto aplicados como dado em prod (dash #15).
+
+## 2026-07-13 — Migracao dos relatorios legados (Frente B): fonte historico_contato + 3 dashboards
+
+- Contexto: migrar os relatorios legados (apps/dashboard, /relatorios/leads|clientes|atendimentos) pro modulo novo /dashboards/, cada um virando um Dashboard. Decisao do dono: legados PERMANECEM no ar em paralelo.
+- Codigo (unico): nova fonte `historico_contato` (model leads.HistoricoContato) em data_sources.py — campos status(18 choices), origem_contato, data_hora_contato(granularidades), duracao_segundos, sucesso, converteu_lead, converteu_venda; metricas count + avg:duracao_segundos. Legado define "atendimento" como status='fluxo_inicializado'.
+- Dashboards (dado, via seed por tenant): Leads (fonte lead, 1:1), Clientes (servico_hubsoft/cliente_hubsoft, 1:1), Atendimentos (historico_contato). Cada um com KPIs de periodo (com delta de brinde), pizza e linha 30d.
+- Validado dev (nuvyon local): 6+8+6 widgets, todos rodam no builder; Atendimentos renderiza 272 total / 123 em 30d, pizza por status, linha por dia. Clientes fica 0 local (sem espelho HubSoft local; prod tem ~1000). Leads 222.
+- Pendente: rodar o seed dos 3 dashboards em prod (dado, com confirmacao); Conversoes (bonus, funil_macro) e Analise de atendimentos (fonte atendimento_fluxo) ficam pra depois.
+- Arquivo: apps/relatorios/data_sources.py.
+- Status: completed (dev). Deploy do codigo + seed em prod pendente de confirmacao.

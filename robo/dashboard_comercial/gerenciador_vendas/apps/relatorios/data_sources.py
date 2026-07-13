@@ -192,6 +192,44 @@ registrar(DataSource(
 ))
 
 registrar(DataSource(
+    slug='historico_contato',
+    label='Atendimentos (Historico de Contato)',
+    model_path='leads.HistoricoContato',
+    descricao='Atendimentos do funil (bot/humano). O legado conta como atendimento '
+              'os registros com status "fluxo_inicializado".',
+    campos={
+        'status':               FieldSpec('Status do contato', 'choice', choices=[
+            ('fluxo_inicializado', 'Fluxo Inicializado'),
+            ('fluxo_finalizado', 'Fluxo Finalizado'),
+            ('transferido_humano', 'Transferido para Humano'),
+            ('chamada_perdida', 'Chamada Perdida'),
+            ('ocupado', 'Ocupado'),
+            ('desligou', 'Desligou'),
+            ('nao_atendeu', 'Nao Atendeu'),
+            ('abandonou_fluxo', 'Abandonou o Fluxo'),
+            ('numero_invalido', 'Numero Invalido'),
+            ('erro_sistema', 'Erro do Sistema'),
+            ('convertido_lead', 'Convertido em Lead'),
+            ('venda_confirmada', 'Venda Confirmada'),
+            ('venda_rejeitada', 'Venda Rejeitada'),
+            ('venda_sem_viabilidade', 'Venda Sem Viabilidade'),
+            ('cliente_desistiu', 'Cliente Desistiu'),
+            ('aguardando_validacao', 'Aguardando Validacao'),
+            ('followup_agendado', 'Follow-up Agendado'),
+            ('nao_qualificado', 'Nao Qualificado'),
+        ]),
+        'origem_contato':       FieldSpec('Origem do contato', 'choice'),
+        'data_hora_contato':    FieldSpec('Data do contato', 'datetime', granularidades=['dia','semana','mes','ano']),
+        'duracao_segundos':     FieldSpec('Duracao (s)', 'integer'),
+        'sucesso':              FieldSpec('Sucesso', 'bool'),
+        'converteu_lead':       FieldSpec('Converteu em Lead', 'bool'),
+        'converteu_venda':      FieldSpec('Converteu em Venda', 'bool'),
+    },
+    metricas=['count', 'avg:duracao_segundos'],
+    order_by_padrao='-data_hora_contato',
+))
+
+registrar(DataSource(
     slug='historico_pipeline',
     label='Historico de Estagios',
     model_path='crm.HistoricoPipelineEstagio',
