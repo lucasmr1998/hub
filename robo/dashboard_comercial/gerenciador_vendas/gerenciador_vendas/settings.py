@@ -115,6 +115,7 @@ INSTALLED_APPS = [
 
     # === Relatorios self-service (dashboards estilo Hubspot) ===
     'apps.relatorios',
+    'apps.decks',
 
     # === Cron (dispatcher central de jobs periódicos — cross-tenant) ===
     'apps.cron',

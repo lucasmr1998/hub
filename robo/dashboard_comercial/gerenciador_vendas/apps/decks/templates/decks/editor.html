@@ -1,0 +1,268 @@
+{% extends "layouts/layout_app.html" %}
+{% load static %}
+{% block title %}{{ deck.nome }}, Apresentacoes{% endblock %}
+
+{% block extra_head %}
+<link href="https://cdn.jsdelivr.net/npm/gridstack@9/dist/gridstack.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+{{ slides_json|json_script:"slides-data" }}
+
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <a href="{% url 'decks:lista' %}" class="rel-back" style="font-size:var(--fs-sm);color:var(--color-text-muted);text-decoration:none;"><i class="bi bi-arrow-left"></i> Apresentacoes</a>
+      <h1 class="page-title" id="deck-nome" contenteditable="true" spellcheck="false">{{ deck.nome }}</h1>
+      <p class="page-subtitle" id="deck-snap">{% if deck.snapshot_em %}Snapshot de {{ deck.snapshot_em|date:"d/m H:i" }}{% else %}Sem snapshot ainda{% endif %}</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-secondary" onclick="congelar()"><i class="bi bi-snow"></i> Congelar dados</button>
+      <a class="btn btn-primary" href="{% url 'decks:apresentar' deck.pk %}"><i class="bi bi-play-fill"></i> Apresentar</a>
+    </div>
+  </div>
+</div>
+
+<div class="deck-editor">
+  <!-- Tira de slides -->
+  <aside class="deck-slides">
+    <div class="deck-slides-head">Slides</div>
+    <div id="slide-strip" class="deck-strip"></div>
+    <button class="btn btn-ghost btn-sm deck-add-slide" onclick="addSlide()"><i class="bi bi-plus-lg"></i> Slide</button>
+  </aside>
+
+  <!-- Canvas -->
+  <main class="deck-canvas-wrap">
+    <div id="deck-canvas" class="grid-stack deck-canvas"></div>
+  </main>
+
+  <!-- Biblioteca de blocos -->
+  <aside class="deck-lib">
+    <div class="deck-slides-head">Adicionar</div>
+    <button class="deck-lib-btn" onclick="abrirPickerWidget()"><i class="bi bi-bar-chart"></i> Widget (grafico/KPI)</button>
+    <button class="deck-lib-btn" onclick="addBloco('titulo_secao')"><i class="bi bi-type-h1"></i> Titulo de secao</button>
+    <button class="deck-lib-btn" onclick="addBloco('texto')"><i class="bi bi-text-paragraph"></i> Texto</button>
+    <button class="deck-lib-btn" onclick="addBloco('kpi')"><i class="bi bi-123"></i> KPI manual</button>
+  </aside>
+</div>
+
+<!-- Modal picker de widget -->
+<div class="modal-overlay" id="modal-widget" style="display:none;">
+  <div class="modal-content" style="max-width:520px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="bi bi-bar-chart"></i> Adicionar widget</h3>
+      <button class="modal-close" onclick="fecharModal('modal-widget')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label class="field-label">Escolha um widget de um dashboard</label>
+        <div class="field-input-wrap"><select id="widget-select" class="field-input"></select></div>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:var(--sp-3) var(--sp-4);border-top:1px solid var(--color-border);">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-widget')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarWidget()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .deck-editor { display:grid; grid-template-columns:180px 1fr 220px; gap:var(--sp-3); align-items:start; }
+  .deck-slides-head { font-size:var(--fs-xs); font-weight:var(--fw-semibold); text-transform:uppercase; letter-spacing:.04em; color:var(--color-text-muted); margin-bottom:var(--sp-2); }
+  .deck-strip { display:flex; flex-direction:column; gap:var(--sp-2); }
+  .deck-thumb { position:relative; aspect-ratio:16/9; background:var(--color-bg); border:2px solid var(--color-border); border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-text-muted); font-size:var(--fs-xs); font-weight:var(--fw-semibold); }
+  .deck-thumb.is-active { border-color:var(--color-primary); }
+  .deck-thumb-del { position:absolute; top:2px; right:2px; background:transparent; border:none; color:var(--color-text-muted); cursor:pointer; font-size:11px; }
+  .deck-thumb-del:hover { color:var(--color-danger); }
+  .deck-add-slide { width:100%; margin-top:var(--sp-2); }
+  .deck-canvas-wrap { background:var(--color-bg-soft); border:1px solid var(--color-border); border-radius:var(--radius); padding:var(--sp-3); }
+  .deck-canvas { aspect-ratio:16/9; width:100%; background:#fff; border:1px solid var(--color-border); border-radius:6px; }
+  .deck-lib-btn { display:flex; align-items:center; gap:8px; width:100%; text-align:left; padding:var(--sp-2) var(--sp-3); margin-bottom:var(--sp-2); background:var(--color-bg); border:1px solid var(--color-border); border-radius:var(--radius); cursor:pointer; font-size:var(--fs-sm); }
+  .deck-lib-btn:hover { border-color:var(--color-primary); color:var(--color-primary); }
+  .deck-bloco { width:100%; height:100%; overflow:hidden; padding:8px; box-sizing:border-box; position:relative; }
+  .deck-bloco-del { position:absolute; top:2px; right:2px; z-index:5; background:rgba(255,255,255,.85); border:1px solid var(--color-border); border-radius:4px; cursor:pointer; font-size:11px; color:var(--color-text-muted); width:20px; height:20px; }
+  .deck-bloco-del:hover { color:var(--color-danger); }
+  .deck-bloco-titulo { font-size:var(--fs-xs); font-weight:var(--fw-semibold); color:var(--color-text-secondary); margin-bottom:4px; }
+  .deck-kpi { display:flex; flex-direction:column; justify-content:center; height:100%; }
+  .deck-kpi-label { font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.04em; color:var(--color-text-muted); }
+  .deck-kpi-valor { font-size:2rem; font-weight:var(--fw-bold); color:var(--color-text); line-height:1.1; }
+  .deck-kpi-delta { font-size:var(--fs-xs); font-weight:var(--fw-semibold); margin-top:2px; }
+  .deck-secao h2 { margin:0; font-size:1.5rem; }
+  .deck-secao p { margin:4px 0 0; color:var(--color-text-muted); }
+  .deck-texto { white-space:pre-wrap; }
+  .deck-tabela { width:100%; border-collapse:collapse; font-size:var(--fs-xs); }
+  .deck-tabela th, .deck-tabela td { padding:4px 8px; border-bottom:1px solid var(--color-border); text-align:left; }
+  .deck-placeholder { display:flex; align-items:center; justify-content:center; height:100%; color:var(--color-text-muted); font-size:var(--fs-xs); text-align:center; }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/gridstack@9/dist/gridstack-all.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script src="{% static 'decks/deck_render.js' %}"></script>
+<script>
+const DECK_ID = {{ deck.pk }};
+const CSRF = "{{ csrf_token }}";
+const U = {
+  slideAdd: `/decks/api/deck/${DECK_ID}/slide/adicionar/`,
+  slidesReord: `/decks/api/deck/${DECK_ID}/slides/reordenar/`,
+  congelar: `/decks/api/deck/${DECK_ID}/congelar/`,
+  slideDel: (id) => `/decks/api/slide/${id}/excluir/`,
+  blocoSalvar: (sid) => `/decks/api/slide/${sid}/bloco/salvar/`,
+  slideLayout: (sid) => `/decks/api/slide/${sid}/layout/`,
+  blocoDel: (id) => `/decks/api/bloco/${id}/excluir/`,
+  blocoDados: (id) => `/decks/api/bloco/${id}/dados/`,
+  widgetsDisp: `/decks/api/widgets/disponiveis/`,
+  deckSalvar: `/decks/api/deck/salvar/`,
+};
+function post(url, body) {
+  return fetch(url, { method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':CSRF}, body: JSON.stringify(body||{}) }).then(r=>r.json());
+}
+let SLIDES = JSON.parse(document.getElementById('slides-data').textContent) || [];
+let atual = 0;
+let grid = null;
+
+function renderStrip() {
+  const strip = document.getElementById('slide-strip');
+  strip.innerHTML = '';
+  SLIDES.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'deck-thumb' + (i===atual?' is-active':'');
+    el.dataset.slideId = s.id;
+    el.innerHTML = `Slide ${i+1}<button class="deck-thumb-del" title="Excluir">&times;</button>`;
+    el.onclick = (ev) => { if (ev.target.classList.contains('deck-thumb-del')) return; selecionar(i); };
+    el.querySelector('.deck-thumb-del').onclick = (ev) => { ev.stopPropagation(); delSlide(i); };
+    strip.appendChild(el);
+  });
+  Sortable.create(strip, { animation:150, onEnd: () => {
+    const ordem = [...strip.children].map(c => c.dataset.slideId);
+    post(U.slidesReord, { ordem });
+    // reordena localmente
+    SLIDES.sort((a,b) => ordem.indexOf(String(a.id)) - ordem.indexOf(String(b.id)));
+    atual = 0; renderStrip(); renderCanvas();
+  }});
+}
+
+function selecionar(i) { atual = i; renderStrip(); renderCanvas(); }
+
+function renderCanvas() {
+  const el = document.getElementById('deck-canvas');
+  if (grid) { grid.destroy(false); grid = null; }
+  el.innerHTML = '';
+  const slide = SLIDES[atual];
+  if (!slide) return;
+  const cell = Math.max(30, Math.round(el.clientHeight / 9));
+  grid = GridStack.init({ column:12, cellHeight:cell, margin:6, float:true, disableOneColumnMode:true }, el);
+  slide.blocos.forEach(b => {
+    const lay = b.layout || {};
+    const content = document.createElement('div');
+    content.className = 'grid-stack-item-content';
+    const box = document.createElement('div');
+    box.className = 'deck-bloco'; box.dataset.blocoId = b.id;
+    box.innerHTML = '<button class="deck-bloco-del" title="Remover">&times;</button>';
+    content.appendChild(box);
+    const item = grid.addWidget({ x:lay.x||0, y:lay.y||0, w:lay.w||4, h:lay.h||3, content:'' });
+    item.querySelector('.grid-stack-item-content').replaceWith(content);
+    item.gridstackNode.el.setAttribute('gs-id', b.id);
+    box.querySelector('.deck-bloco-del').onclick = (ev) => { ev.stopPropagation(); delBloco(b, item); };
+    renderBloco(box, b);
+  });
+  grid.on('change', salvarLayout);
+}
+
+function renderBloco(box, b) {
+  const alvo = document.createElement('div');
+  alvo.style.cssText = 'width:100%;height:100%;';
+  box.appendChild(alvo);
+  if (b.tipo === 'widget' && b.widget_id) {
+    fetch(U.blocoDados(b.id)).then(r=>r.json()).then(d => DeckRender.renderBloco(alvo, b, d))
+      .catch(() => DeckRender.renderBloco(alvo, b, {ok:false,error:'Falha ao carregar'}));
+  } else {
+    DeckRender.renderBloco(alvo, b, null);
+  }
+}
+
+function salvarLayout() {
+  if (!grid) return;
+  const slide = SLIDES[atual];
+  const layouts = grid.save(false).map(n => ({ id: parseInt(n.el.getAttribute('gs-id')), x:n.x, y:n.y, w:n.w, h:n.h }));
+  post(U.slideLayout(slide.id), { layouts });
+  // atualiza local
+  layouts.forEach(l => { const b = slide.blocos.find(x=>x.id===l.id); if (b) b.layout = {x:l.x,y:l.y,w:l.w,h:l.h}; });
+}
+
+async function addSlide() {
+  const r = await post(U.slideAdd, {});
+  if (r.ok) { SLIDES.push(r.slide); selecionar(SLIDES.length-1); }
+}
+async function delSlide(i) {
+  const s = SLIDES[i];
+  if (!confirm('Excluir este slide?')) return;
+  await post(U.slideDel(s.id), {});
+  SLIDES.splice(i,1); atual = Math.max(0, atual-(i<=atual?1:0)); renderStrip(); renderCanvas();
+}
+
+const CONTEUDO_PADRAO = {
+  titulo_secao: { texto:'Titulo da secao', subtitulo:'' },
+  texto: { texto:'Clique pra editar o texto', align:'left', tamanho:16 },
+  kpi: { label:'Metrica', valor:'0', sufixo:'', prefixo:'' },
+};
+async function addBloco(tipo, extra) {
+  const slide = SLIDES[atual];
+  if (!slide) return;
+  const body = { tipo, conteudo: CONTEUDO_PADRAO[tipo] || {}, layout:{x:0,y:0,w:4,h:3}, ...(extra||{}) };
+  const r = await post(U.blocoSalvar(slide.id), body);
+  if (r.ok) { slide.blocos.push(r.bloco); renderCanvas(); }
+}
+async function delBloco(b, item) {
+  await post(U.blocoDel(b.id), {});
+  const slide = SLIDES[atual];
+  slide.blocos = slide.blocos.filter(x => x.id !== b.id);
+  if (grid && item) grid.removeWidget(item);
+}
+
+// Picker de widget
+let WIDGETS_DISP = null;
+async function abrirPickerWidget() {
+  if (!WIDGETS_DISP) {
+    const r = await fetch(U.widgetsDisp).then(x=>x.json());
+    WIDGETS_DISP = r.dashboards || [];
+  }
+  const sel = document.getElementById('widget-select');
+  sel.innerHTML = '';
+  WIDGETS_DISP.forEach(dash => {
+    const og = document.createElement('optgroup'); og.label = dash.dashboard_nome;
+    dash.widgets.forEach(w => {
+      const o = document.createElement('option'); o.value = w.id; o.textContent = `${w.titulo} (${w.visualizacao})`;
+      og.appendChild(o);
+    });
+    sel.appendChild(og);
+  });
+  if (!sel.options.length) { toast('Sem widgets', 'Crie widgets num dashboard primeiro em /dashboards/.', 'warning'); return; }
+  abrirModal('modal-widget');
+}
+async function confirmarWidget() {
+  const wid = parseInt(document.getElementById('widget-select').value);
+  fecharModal('modal-widget');
+  await addBloco('widget', { widget_id: wid, conteudo:{} });
+}
+
+async function congelar() {
+  const r = await post(U.congelar, {});
+  if (r.ok) {
+    document.getElementById('deck-snap').textContent = 'Snapshot agora (' + r.blocos + ' widgets)';
+    toast('Dados congelados', r.blocos + ' widget(s) atualizados pro modo Apresentar.', 'success');
+  }
+}
+
+// salvar nome do deck ao sair do contenteditable
+document.getElementById('deck-nome').addEventListener('blur', function() {
+  const nome = this.textContent.trim().slice(0,120) || 'Apresentacao';
+  this.textContent = nome;
+  post(U.deckSalvar, { id: DECK_ID, nome });
+});
+
+// init
+renderStrip();
+// espera o layout medir a altura do canvas
+requestAnimationFrame(() => renderCanvas());
+</script>
+{% endblock %}

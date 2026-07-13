@@ -1,0 +1,92 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %}{{ deck.nome }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+  body { margin:0; background:#0f172a; overflow:hidden; }
+  .apre-wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+  .apre-slide { position:relative; background:#fff; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+  .apre-bloco { position:absolute; overflow:hidden; box-sizing:border-box; padding:10px; }
+  .deck-bloco-titulo { font-size:13px; font-weight:600; color:#475569; margin-bottom:4px; }
+  .deck-kpi { display:flex; flex-direction:column; justify-content:center; height:100%; }
+  .deck-kpi-label { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:#94a3b8; }
+  .deck-kpi-valor { font-size:2.6rem; font-weight:800; color:#0f172a; line-height:1.1; }
+  .deck-kpi-delta { font-size:13px; font-weight:600; margin-top:4px; }
+  .deck-secao { display:flex; flex-direction:column; justify-content:center; height:100%; }
+  .deck-secao h2 { margin:0; font-size:2rem; color:#0f172a; }
+  .deck-secao p { margin:6px 0 0; color:#64748b; font-size:1.1rem; }
+  .deck-texto { white-space:pre-wrap; color:#0f172a; }
+  .deck-tabela { width:100%; border-collapse:collapse; font-size:13px; }
+  .deck-tabela th, .deck-tabela td { padding:5px 8px; border-bottom:1px solid #e2e8f0; text-align:left; }
+  .deck-placeholder { display:flex; align-items:center; justify-content:center; height:100%; color:#94a3b8; font-size:13px; text-align:center; }
+  .apre-nav { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:14px; background:rgba(15,23,42,.7); color:#fff; padding:8px 16px; border-radius:999px; font-size:13px; z-index:10; }
+  .apre-nav button { background:transparent; border:none; color:#fff; cursor:pointer; font-size:18px; }
+  .apre-nav button:hover { color:#7BB3F5; }
+  .apre-exit { position:fixed; top:16px; right:16px; color:#fff; background:rgba(15,23,42,.6); border:none; border-radius:8px; padding:6px 10px; cursor:pointer; z-index:10; text-decoration:none; }
+</style>
+{% endblock %}
+
+{% block body %}
+{{ slides_json|json_script:"slides-data" }}
+<div class="apre-wrap"><div class="apre-slide" id="apre-slide"></div></div>
+<a class="apre-exit" href="{% url 'decks:editar' deck.pk %}"><i class="bi bi-x-lg"></i> Sair</a>
+<div class="apre-nav">
+  <button onclick="ir(-1)"><i class="bi bi-chevron-left"></i></button>
+  <span id="apre-pos">1 / 1</span>
+  <button onclick="ir(1)"><i class="bi bi-chevron-right"></i></button>
+  <button onclick="fullscreen()" title="Tela cheia"><i class="bi bi-arrows-fullscreen"></i></button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="{% static 'decks/deck_render.js' %}"></script>
+<script>
+const SLIDES = JSON.parse(document.getElementById('slides-data').textContent) || [];
+let idx = 0;
+const slideEl = document.getElementById('apre-slide');
+
+function dimensionar() {
+  // slide 16:9 que cabe no viewport
+  const W = window.innerWidth * 0.92, H = window.innerHeight * 0.9;
+  let w = W, h = w * 9 / 16;
+  if (h > H) { h = H; w = h * 16 / 9; }
+  slideEl.style.width = w + 'px';
+  slideEl.style.height = h + 'px';
+}
+
+function render() {
+  dimensionar();
+  slideEl.innerHTML = '';
+  const slide = SLIDES[idx];
+  document.getElementById('apre-pos').textContent = (idx+1) + ' / ' + SLIDES.length;
+  if (!slide) return;
+  (slide.blocos || []).forEach(b => {
+    const lay = b.layout || {};
+    const el = document.createElement('div');
+    el.className = 'apre-bloco';
+    el.style.left = ((lay.x||0)/12*100) + '%';
+    el.style.top = ((lay.y||0)/9*100) + '%';
+    el.style.width = ((lay.w||4)/12*100) + '%';
+    el.style.height = ((lay.h||3)/9*100) + '%';
+    slideEl.appendChild(el);
+    const dados = (b.tipo === 'widget') ? (b.dados_snapshot && b.dados_snapshot.labels !== undefined ? b.dados_snapshot : {ok:false, error:'Congele o deck no editor'}) : null;
+    DeckRender.renderBloco(el, b, dados);
+  });
+}
+
+function ir(d) { idx = Math.min(SLIDES.length-1, Math.max(0, idx + d)); render(); }
+function fullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+
+document.addEventListener('keydown', (e) => {
+  if (['ArrowRight',' ','PageDown'].includes(e.key)) { ir(1); e.preventDefault(); }
+  else if (['ArrowLeft','PageUp'].includes(e.key)) { ir(-1); e.preventDefault(); }
+  else if (e.key === 'Escape' && !document.fullscreenElement) { window.location = "{% url 'decks:editar' deck.pk %}"; }
+  else if (e.key.toLowerCase() === 'f') { fullscreen(); }
+});
+window.addEventListener('resize', render);
+render();
+</script>
+{% endblock %}

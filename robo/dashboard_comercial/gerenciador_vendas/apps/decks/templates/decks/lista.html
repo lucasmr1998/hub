@@ -1,0 +1,63 @@
+{% extends "layouts/layout_app.html" %}
+{% load permissoes_tags %}
+{% block title %}Apresentacoes, Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title">Apresentacoes</h1>
+      <p class="page-subtitle">Monte decks a partir dos seus dashboards e apresente em tela cheia.</p>
+    </div>
+    {% if pode_criar %}
+    <div class="page-actions">
+      <form method="post" action="{% url 'decks:criar' %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Nova apresentacao</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if decks %}
+<div class="deck-grid">
+  {% for d in decks %}
+  <div class="deck-card">
+    <a href="{% url 'decks:editar' d.pk %}" class="deck-card-body">
+      <div class="deck-card-icon"><i class="bi bi-easel2"></i></div>
+      <div class="deck-card-nome">{{ d.nome }}</div>
+      <div class="deck-card-meta">
+        {{ d.slides.count }} slide{{ d.slides.count|pluralize }}
+        {% if d.snapshot_em %} · congelado {{ d.snapshot_em|date:"d/m H:i" }}{% endif %}
+      </div>
+    </a>
+    <div class="deck-card-acoes">
+      <a href="{% url 'decks:apresentar' d.pk %}" class="btn btn-ghost btn-sm" title="Apresentar"><i class="bi bi-play-fill"></i></a>
+      <a href="{% url 'decks:editar' d.pk %}" class="btn btn-ghost btn-sm" title="Editar"><i class="bi bi-pencil"></i></a>
+      <form method="post" action="{% url 'decks:excluir' d.pk %}" onsubmit="return confirm('Excluir esta apresentacao?');" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-ghost btn-sm" title="Excluir"><i class="bi bi-trash"></i></button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="rel-empty" style="text-align:center;padding:var(--sp-8);">
+  <i class="bi bi-easel2" style="font-size:2.5rem;color:var(--color-text-muted);"></i>
+  <h2 style="margin:var(--sp-3) 0 var(--sp-2);">Nenhuma apresentacao ainda</h2>
+  <p style="color:var(--color-text-muted);">Crie a primeira e monte os slides a partir dos seus dashboards.</p>
+</div>
+{% endif %}
+
+<style>
+  .deck-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:var(--sp-4); }
+  .deck-card { background:var(--color-bg); border:1px solid var(--color-border); border-radius:var(--radius); overflow:hidden; display:flex; flex-direction:column; }
+  .deck-card-body { display:block; padding:var(--sp-4); text-decoration:none; color:inherit; }
+  .deck-card-icon { font-size:1.6rem; color:var(--color-primary); margin-bottom:var(--sp-2); }
+  .deck-card-nome { font-weight:var(--fw-semibold); }
+  .deck-card-meta { font-size:var(--fs-xs); color:var(--color-text-muted); margin-top:4px; }
+  .deck-card-acoes { display:flex; gap:4px; padding:var(--sp-2) var(--sp-3); border-top:1px solid var(--color-border); }
+</style>
+{% endblock %}

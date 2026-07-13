@@ -108,6 +108,7 @@ urlpatterns = [
     path('integracoes/', RedirectView.as_view(url='/configuracoes/integracoes/', permanent=False, query_string=True)),
     path('crm/',          include('apps.comercial.crm.urls')),
     path('dashboards/',   include('apps.relatorios.urls')),
+    path('decks/',        include('apps.decks.urls')),
     path('comercial/',    include('apps.integracoes.urls_comercial')),
     path('automacao/', include('apps.automacao.urls')),
     # marketing/automacoes/ removido — motor antigo aposentado (engine nova: apps.automacao)

@@ -27,6 +27,10 @@ FUNCIONALIDADES = [
     ('relatorios', 'relatorios.ver_dashboards', 'Ver Dashboards', 'Acessar a tela de relatorios (dashboards compartilhados + proprios)', 1),
     ('relatorios', 'relatorios.criar_dashboard', 'Criar Dashboards Pessoais', 'Criar e editar dashboards privados do usuario', 2),
     ('relatorios', 'relatorios.compartilhar_dashboard', 'Compartilhar Dashboards', 'Marcar dashboard como compartilhado com a equipe (apenas admin)', 3),
+    # Decks (apresentacoes) — reusa o modulo relatorios na UI de perfis
+    ('relatorios', 'decks.ver_decks', 'Ver Apresentacoes', 'Acessar decks/apresentacoes (compartilhados + proprios)', 4),
+    ('relatorios', 'decks.criar_deck', 'Criar e Editar Apresentacoes', 'Criar/editar decks, slides e blocos', 5),
+    ('relatorios', 'decks.compartilhar_deck', 'Compartilhar Apresentacoes', 'Marcar deck como compartilhado com a equipe (apenas admin)', 6),
     # Configuracoes
     ('configuracoes', 'config.gerenciar_usuarios', 'Gerenciar Usuarios', 'Criar, editar e excluir usuarios do sistema', 1),
     ('configuracoes', 'config.gerenciar_perfis', 'Gerenciar Perfis de Permissao', 'Criar e editar perfis de permissao', 2),
