@@ -12,15 +12,17 @@
   .apre-logo { position:absolute; right:22px; bottom:18px; max-height:44px; max-width:170px; object-fit:contain; opacity:.9; z-index:2; }
   .deck-secao h2 { color:var(--deck-primaria,#0f172a); }
   .apre-bloco { position:absolute; overflow:hidden; box-sizing:border-box; padding:10px; }
-  .deck-bloco-titulo { font-size:13px; font-weight:600; color:#475569; margin-bottom:4px; }
+  /* Texto herda a cor do TEMA (currentColor). Com cor fixa, um deck de fundo
+     escuro sai ilegivel na projecao. */
+  .deck-bloco-titulo { font-size:13px; font-weight:600; color:currentColor; opacity:.7; margin-bottom:4px; }
   .deck-kpi { display:flex; flex-direction:column; justify-content:center; height:100%; }
-  .deck-kpi-label { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:#94a3b8; }
-  .deck-kpi-valor { font-size:2.6rem; font-weight:800; color:#0f172a; line-height:1.1; }
+  .deck-kpi-label { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:currentColor; opacity:.6; }
+  .deck-kpi-valor { font-size:2.6rem; font-weight:800; color:currentColor; line-height:1.1; }
   .deck-kpi-delta { font-size:13px; font-weight:600; margin-top:4px; }
   .deck-secao { display:flex; flex-direction:column; justify-content:center; height:100%; }
-  .deck-secao h2 { margin:0; font-size:2rem; color:#0f172a; }
-  .deck-secao p { margin:6px 0 0; color:#64748b; font-size:1.1rem; }
-  .deck-texto { white-space:pre-wrap; color:#0f172a; }
+  .deck-secao h2 { margin:0; font-size:2rem; color:var(--deck-primaria,currentColor); }
+  .deck-secao p { margin:6px 0 0; color:currentColor; opacity:.7; font-size:1.1rem; }
+  .deck-texto { white-space:pre-wrap; color:currentColor; }
   .deck-tabela { width:100%; border-collapse:collapse; font-size:13px; }
   .deck-tabela th, .deck-tabela td { padding:5px 8px; border-bottom:1px solid #e2e8f0; text-align:left; }
   .deck-placeholder { display:flex; align-items:center; justify-content:center; height:100%; color:#94a3b8; font-size:13px; text-align:center; }
@@ -56,9 +58,21 @@ const TEMA = JSON.parse(document.getElementById('tema-data').textContent) || {};
 let idx = 0;
 const slideEl = document.getElementById('apre-slide');
 
-// Tema do deck (herdado da marca do tenant) aplicado ao slide
-slideEl.style.setProperty('--deck-fundo', TEMA.cor_fundo || '#fff');
-slideEl.style.setProperty('--deck-texto', TEMA.cor_texto || '#0f172a');
+// Fundo escuro pede texto claro (senao o slide sai ilegivel na projecao).
+function textoPara(fundo) {
+  const h = String(fundo || '#ffffff').replace('#', '');
+  const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+  if (Number.isNaN(n)) return '#0f172a';
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.55 ? '#f8fafc' : '#0f172a';
+}
+
+// Tema do deck (herdado da marca do tenant) aplicado ao slide.
+// Texto SEMPRE derivado do fundo (o cor_texto herdado e escuro por padrao e
+// deixaria um deck de fundo escuro ilegivel).
+const FUNDO = TEMA.cor_fundo || '#fff';
+slideEl.style.setProperty('--deck-fundo', FUNDO);
+slideEl.style.setProperty('--deck-texto', textoPara(FUNDO));
 slideEl.style.setProperty('--deck-primaria', TEMA.cor_primaria || '#2563eb');
 slideEl.style.setProperty('--deck-fonte', TEMA.fonte || 'inherit');
 

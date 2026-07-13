@@ -129,8 +129,10 @@
   .deck-thumb-del:hover { color:var(--color-danger); }
   .deck-add-slide { width:100%; margin-top:var(--sp-2); }
   .deck-canvas-wrap { background:var(--color-bg-soft); border:1px solid var(--color-border); border-radius:var(--radius); padding:var(--sp-3); }
-  /* O canvas usa o TEMA do deck (herdado da marca do tenant) */
-  .deck-canvas { aspect-ratio:16/9; width:100%; background:var(--deck-fundo,#fff); color:var(--deck-texto,#0f172a); font-family:var(--deck-fonte, inherit); border:1px solid var(--color-border); border-radius:6px; position:relative; }
+  /* O canvas usa o TEMA do deck (herdado da marca do tenant).
+     Folha FIXA 16:9: overflow hidden + maxRow:9 no GridStack garantem que
+     arrastar um bloco nunca estica o slide. */
+  .deck-canvas { aspect-ratio:16/9; width:100%; overflow:hidden; background:var(--deck-fundo,#fff); color:var(--deck-texto,#0f172a); font-family:var(--deck-fonte, inherit); border:1px solid var(--color-border); border-radius:6px; position:relative; }
   .deck-logo { position:absolute; right:10px; bottom:8px; max-height:26px; max-width:110px; object-fit:contain; opacity:.9; z-index:2; pointer-events:none; }
   /* 3 fixas: com auto-fill os 6 modelos quebravam 4+2 dentro do modal-lg. */
   .modelo-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--sp-2); }
@@ -148,10 +150,12 @@
   .deck-bloco { width:100%; height:100%; overflow:hidden; padding:8px; box-sizing:border-box; position:relative; }
   .deck-bloco-del { position:absolute; top:2px; right:2px; z-index:5; background:rgba(255,255,255,.85); border:1px solid var(--color-border); border-radius:4px; cursor:pointer; font-size:11px; color:var(--color-text-muted); width:20px; height:20px; }
   .deck-bloco-del:hover { color:var(--color-danger); }
-  .deck-bloco-titulo { font-size:var(--fs-xs); font-weight:var(--fw-semibold); color:var(--color-text-secondary); margin-bottom:4px; }
+  /* Texto dos blocos herda a cor do TEMA (currentColor), nao a do sistema.
+     Sem isso, um slide de fundo escuro fica com texto escuro = ilegivel. */
+  .deck-bloco-titulo { font-size:var(--fs-xs); font-weight:var(--fw-semibold); color:currentColor; opacity:.7; margin-bottom:4px; }
   .deck-kpi { display:flex; flex-direction:column; justify-content:center; height:100%; }
-  .deck-kpi-label { font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.04em; color:var(--color-text-muted); }
-  .deck-kpi-valor { font-size:2rem; font-weight:var(--fw-bold); color:var(--color-text); line-height:1.1; }
+  .deck-kpi-label { font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.04em; color:currentColor; opacity:.6; }
+  .deck-kpi-valor { font-size:2rem; font-weight:var(--fw-bold); color:currentColor; line-height:1.1; }
   .deck-kpi-delta { font-size:var(--fs-xs); font-weight:var(--fw-semibold); margin-top:2px; }
   .deck-secao h2 { margin:0; font-size:1.5rem; }
   .deck-secao p { margin:4px 0 0; color:var(--color-text-muted); }
@@ -194,10 +198,25 @@ let grid = null;
 let blocoAlvo = null;  // bloco (slot vazio) que vai receber o widget escolhido
 
 // ---- Tema (identidade herdada da marca do tenant) ----
+// Fundo escuro pede texto claro. Sem isso, o cliente escolhe um fundo escuro
+// na identidade visual e o slide sai ilegivel (texto escuro sobre escuro).
+function textoPara(fundo) {
+  const h = String(fundo || '#ffffff').replace('#', '');
+  const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+  if (Number.isNaN(n)) return '#0f172a';
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  const luminancia = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminancia < 0.55 ? '#f8fafc' : '#0f172a';
+}
+
 function aplicarTema() {
   const el = document.getElementById('deck-canvas');
-  el.style.setProperty('--deck-fundo', TEMA.cor_fundo || '#fff');
-  el.style.setProperty('--deck-texto', TEMA.cor_texto || '#0f172a');
+  const fundo = TEMA.cor_fundo || '#fff';
+  el.style.setProperty('--deck-fundo', fundo);
+  // Texto SEMPRE derivado do fundo. O tema herdado traz um cor_texto (escuro,
+  // pensado pra fundo claro); se ele vencesse, escolher um fundo escuro
+  // deixaria o slide com texto escuro sobre escuro.
+  el.style.setProperty('--deck-texto', textoPara(fundo));
   el.style.setProperty('--deck-primaria', TEMA.cor_primaria || '#2563eb');
   el.style.setProperty('--deck-fonte', TEMA.fonte || 'inherit');
   let logo = el.querySelector('.deck-logo');
@@ -275,24 +294,52 @@ function renderCanvas() {
   el.innerHTML = '';
   const slide = SLIDES[atual];
   if (!slide) return;
-  const cell = Math.max(30, Math.round(el.clientHeight / 9));
-  grid = GridStack.init({ column:12, cellHeight:cell, margin:6, float:true, disableOneColumnMode:true }, el);
+  // Slide e uma FOLHA FIXA de 16:9 = 12 colunas x 9 linhas.
+  // `row: 9` (nao maxRow) e o que trava a folha: o GridStack dimensiona o
+  // container pelo numero de linhas OCUPADAS, entao com maxRow o slide ainda
+  // encolhia com poucos blocos e crescia com muitos. Com row fixo em 9 ele
+  // sempre desenha 9 linhas, e a folha nunca muda de tamanho.
+  grid = GridStack.init({
+    column: 12, row: 9, cellHeight: alturaCelula(el),
+    margin: 6, float: true, disableOneColumnMode: true,
+  }, el);
+
   slide.blocos.forEach(b => {
     const lay = b.layout || {};
-    const content = document.createElement('div');
-    content.className = 'grid-stack-item-content';
+    const item = grid.addWidget({ x:lay.x||0, y:lay.y||0, w:lay.w||4, h:lay.h||3, content:'' });
+    // REAPROVEITA o .grid-stack-item-content que o GridStack criou. Trocar o no
+    // (replaceWith) matava o drag: o handle de arraste e registrado NESSE
+    // elemento, e o novo no nao tem o listener.
+    const content = item.querySelector('.grid-stack-item-content');
     const box = document.createElement('div');
     box.className = 'deck-bloco'; box.dataset.blocoId = b.id;
     box.innerHTML = '<button class="deck-bloco-del" title="Remover">&times;</button>';
     content.appendChild(box);
-    const item = grid.addWidget({ x:lay.x||0, y:lay.y||0, w:lay.w||4, h:lay.h||3, content:'' });
-    item.querySelector('.grid-stack-item-content').replaceWith(content);
-    item.gridstackNode.el.setAttribute('gs-id', b.id);
+    item.setAttribute('gs-id', b.id);
     box.querySelector('.deck-bloco-del').onclick = (ev) => { ev.stopPropagation(); delBloco(b, item); };
     renderBloco(box, b);
   });
   grid.on('change', salvarLayout);
 }
+
+// Altura da celula = 1/9 da folha. Deriva da LARGURA, nunca da altura: o
+// GridStack reescreve a altura do container (row x cellHeight), entao medir
+// clientHeight aqui criava um laco de realimentacao e a folha encolhia a cada
+// render (486 -> 468 -> 450...). A largura e estavel; 16:9 sai de graca.
+function alturaCelula(el) {
+  const alturaFolha = el.clientWidth * 9 / 16;
+  return Math.max(20, Math.floor(alturaFolha / 9));  // = largura / 16
+}
+
+// A folha e fluida na largura (16:9), entao a celula muda junto com a janela.
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  if (!grid) return;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    grid.cellHeight(alturaCelula(document.getElementById('deck-canvas')));
+  }, 150);
+});
 
 function renderBloco(box, b) {
   const alvo = document.createElement('div');
@@ -315,7 +362,13 @@ function renderBloco(box, b) {
 function salvarLayout() {
   if (!grid) return;
   const slide = SLIDES[atual];
-  const layouts = grid.save(false).map(n => ({ id: parseInt(n.el.getAttribute('gs-id')), x:n.x, y:n.y, w:n.w, h:n.h }));
+  // engine.nodes (nao grid.save(false)): o save serializa os widgets SEM o `el`,
+  // entao n.el.getAttribute estourava e o layout nunca era gravado — o bloco
+  // voltava pro lugar antigo ao recarregar.
+  const layouts = grid.engine.nodes
+    .filter(n => n.el && n.el.getAttribute('gs-id'))
+    .map(n => ({ id: parseInt(n.el.getAttribute('gs-id')), x:n.x, y:n.y, w:n.w, h:n.h }));
+  if (!layouts.length) return;
   post(U.slideLayout(slide.id), { layouts });
   // atualiza local
   layouts.forEach(l => { const b = slide.blocos.find(x=>x.id===l.id); if (b) b.layout = {x:l.x,y:l.y,w:l.w,h:l.h}; });

@@ -36,3 +36,14 @@ Editor de apresentacoes (slides) montadas a partir dos widgets do modulo de rela
 - **Validado** (Playwright, dev): painel com `rgb(255,255,255)`, radius 12px, 800px; 6 cards de modelo renderizam; fecha com `hidden`+`display:none`; 0 erros de console.
 - **Arquivos**: `apps/decks/templates/decks/editor.html`.
 - **Status**: completed (dev). Deploy pendente.
+
+## 2026-07-13 — Editor: folha 16:9 fixa, drag funcionando e layout que persiste
+
+- **Sintomas** (dono, com print): (1) "esta mudando o tamanho do slide"; (2) "n consigo movimentar o elemento dentro dele"; (3) slide de fundo escuro saia ilegivel.
+- **(1) Folha mudava de tamanho**: o GridStack dimensiona o container pelas linhas OCUPADAS. Com poucos blocos o slide encolhia, com muitos crescia (o `aspect-ratio` do CSS nao segura: conteudo maior manda). Fix: opcao **`row: 9`** (nao `maxRow`), que forca o grid a desenhar sempre 9 linhas. Alem disso, `alturaCelula` passou a derivar da LARGURA (`clientWidth/16`) e nao da altura: medir `clientHeight` criava laco de realimentacao (o GridStack reescreve a altura), e a folha encolhia a cada render (486 -> 468 -> 450).
+- **(2) Drag morto**: `renderCanvas` fazia `item.querySelector('.grid-stack-item-content').replaceWith(content)`. O handle de arraste e registrado NESSE no (`opts.handle = '.grid-stack-item-content'`); trocando o elemento, o listener ia junto. Fix: reaproveitar o content que o GridStack cria e so appendar o `.deck-bloco` dentro.
+- **(3) BUG SILENCIOSO achado no caminho**: `salvarLayout` usava `grid.save(false)`, que serializa os widgets **sem** o `el`. `n.el.getAttribute` estourava e o layout NUNCA era gravado — o bloco voltava pro lugar antigo ao recarregar. So apareceu porque o Playwright capturou o pageerror. Fix: iterar `grid.engine.nodes` (que tem `el`).
+- **(4) Contraste**: texto dos blocos usava as cores do DS (`--color-text`), nao as do tema, e `aplicarTema` deixava o `cor_texto` herdado (escuro) vencer. Um fundo escuro dava texto escuro sobre escuro. Fix: blocos usam `currentColor`; a cor do texto e SEMPRE derivada da luminancia do fundo (`textoPara`). Vale no editor e no Apresentar.
+- **Validado (Playwright, dev)**: folha em ratio 1.78 nos 4 cenarios (vazia, 1 bloco, apos drag, 6 blocos); drag move (0,0 -> 4,4) e **persiste apos reload**; fundo #101828 -> texto #f8fafc; 0 erros de console.
+- **Arquivos**: `apps/decks/templates/decks/editor.html`, `apps/decks/templates/decks/apresentar.html`.
+- **Status**: completed (dev). Deploy pendente.
