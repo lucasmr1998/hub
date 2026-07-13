@@ -42,6 +42,17 @@
     <button class="btn btn-sm filtro-chip" data-grupo="fonte" data-valor="facebook" onclick="setFiltroGlobal('fonte','facebook',this)">Meta Ads</button>
     <button class="btn btn-sm filtro-chip" data-grupo="fonte" data-valor="organico" onclick="setFiltroGlobal('fonte','organico',this)">Orgânico</button>
   </div>
+  {% if vendedores %}
+  {# Vendedor vira select: 11 nomes nao cabem em chips como periodo/fonte. #}
+  <div style="display:flex;align-items:center;gap:6px;">
+    <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Vendedor</span>
+    <select id="filtro-vendedor" class="field-input" style="height:30px;padding:2px 8px;font-size:var(--fs-sm);min-width:170px;"
+            onchange="setFiltroVendedor(this.value)">
+      <option value="">Todas</option>
+      {% for v in vendedores %}<option value="{{ v.id }}">{{ v.nome }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
 </div>
 {% endif %}
 
@@ -409,7 +420,7 @@ const MODO_EDICAO = {{ modo_edicao|yesno:"true,false" }};
 const CSRF = "{{ csrf_token }}";
 
 // Filtros globais do dashboard (barra no topo) — aplicados em todos os widgets
-const FILTRO_GLOBAL = { dias: '', fonte: '' };
+const FILTRO_GLOBAL = { dias: '', fonte: '', vendedor: '' };
 
 function setFiltroGlobal(grupo, valor, btn) {
   FILTRO_GLOBAL[grupo] = valor;
@@ -421,10 +432,19 @@ function setFiltroGlobal(grupo, valor, btn) {
   });
 }
 
+function setFiltroVendedor(valor) {
+  FILTRO_GLOBAL.vendedor = valor || '';
+  document.querySelectorAll('.widget-card').forEach(card => {
+    const wid = parseInt(card.dataset.widgetId, 10);
+    if (wid) carregarWidget(wid, card);
+  });
+}
+
 function _filtroQuery() {
   const p = new URLSearchParams();
   if (FILTRO_GLOBAL.dias) p.set('dias', FILTRO_GLOBAL.dias);
   if (FILTRO_GLOBAL.fonte) p.set('fonte', FILTRO_GLOBAL.fonte);
+  if (FILTRO_GLOBAL.vendedor) p.set('vendedor', FILTRO_GLOBAL.vendedor);
   const s = p.toString();
   return s ? `?${s}` : '';
 }
@@ -503,10 +523,28 @@ async function carregarWidget(widgetId, cardEl) {
       return;
     }
     renderWidget(cardEl, d);
+    marcarNaoFiltrado(cardEl, (d.meta || {}).ignora_vendedor);
   } catch (e) {
     loading.style.display = 'none';
     erro.textContent = `Erro: ${e.message}`;
     erro.style.display = 'block';
+  }
+}
+
+// Widget cuja fonte nao tem dono (base HubSoft) ignora o filtro de vendedor.
+// Sem esta marca, a pessoa filtra por uma vendedora e le o numero global
+// achando que e dela.
+function marcarNaoFiltrado(cardEl, ignora) {
+  let tag = cardEl.querySelector('.widget-nao-filtrado');
+  if (!ignora) { if (tag) tag.remove(); return; }
+  if (!tag) {
+    const head = cardEl.querySelector('.widget-header') || cardEl;
+    tag = document.createElement('span');
+    tag.className = 'widget-nao-filtrado';
+    tag.title = 'Este numero vem da base do HubSoft, que nao tem vendedor do CRM. Continua mostrando o total.';
+    tag.innerHTML = '<i class="bi bi-exclamation-circle"></i> sem recorte por vendedor';
+    tag.style.cssText = 'font-size:10px;font-weight:600;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:999px;padding:1px 7px;margin-left:6px;white-space:nowrap;';
+    head.appendChild(tag);
   }
 }
 

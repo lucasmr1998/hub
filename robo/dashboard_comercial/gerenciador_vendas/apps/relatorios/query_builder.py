@@ -135,9 +135,9 @@ class WidgetQueryBuilder:
         from apps.comercial.crm.models import OportunidadeVenda
 
         cutoff, fonte, dias = self._janela_e_fonte()
-        leads_qs = LeadProspecto.all_tenants.filter(tenant=self.tenant)
-        vendas_qs = OportunidadeVenda.all_tenants.filter(
-            tenant=self.tenant, estagio__is_final_ganho=True)
+        leads_qs = self._v_lead(LeadProspecto.all_tenants.filter(tenant=self.tenant))
+        vendas_qs = self._v_op(OportunidadeVenda.all_tenants.filter(
+            tenant=self.tenant, estagio__is_final_ganho=True))
         if fonte == 'organico':
             leads_qs = leads_qs.exclude(fonte='facebook')
             vendas_qs = vendas_qs.exclude(lead__fonte='facebook')
@@ -213,7 +213,55 @@ class WidgetQueryBuilder:
                         qs = qs.filter(**{campo_fonte: fonte})
                 except Exception:
                     pass
+
+        # Override global de vendedor (barra do dashboard). O caminho ate o
+        # User e declarado por fonte em data_sources.campo_vendedor; fonte sem
+        # dono (base HubSoft) simplesmente nao filtra — e o meta avisa.
+        qs = self._aplicar_vendedor(qs)
         return qs
+
+    def _aplicar_vendedor(self, qs):
+        """Filtra pelo vendedor global, quando a fonte tem dono."""
+        vendedor = self.overrides.get('vendedor')
+        campo = getattr(self.data_source, 'campo_vendedor', None)
+        if not vendedor or not campo:
+            return qs
+        try:
+            return qs.filter(**{f'{campo}_id': int(vendedor)})
+        except (TypeError, ValueError):
+            return qs
+        except Exception:
+            return qs
+
+    def suporta_vendedor(self) -> bool:
+        """A fonte deste widget responde ao filtro global de vendedor?"""
+        return bool(getattr(self.data_source, 'campo_vendedor', None))
+
+    # -- helpers do filtro de vendedor pros transforms cross-modelo ----------
+    # Os transforms (funil_macro, conversao_*, gargalo, viabilidade) montam os
+    # querysets na mao e nao passam por _aplicar_filtros, entao aplicam o
+    # vendedor por aqui. Sem isso o funil ignorava o filtro da barra.
+
+    def _vendedor_id(self):
+        try:
+            v = self.overrides.get('vendedor')
+            return int(v) if v else None
+        except (TypeError, ValueError):
+            return None
+
+    def _v_lead(self, qs):
+        """Leads do vendedor = leads cuja oportunidade e dele (OneToOne, sem duplicar)."""
+        v = self._vendedor_id()
+        return qs.filter(oportunidade_crm__responsavel_id=v) if v else qs
+
+    def _v_op(self, qs):
+        v = self._vendedor_id()
+        return qs.filter(responsavel_id=v) if v else qs
+
+    def _v_atend(self, qs):
+        """Atendimento nao tem dono; usa o vendedor da oportunidade do lead."""
+        v = self._vendedor_id()
+        return qs.filter(lead__oportunidade_crm__responsavel_id=v) if v else qs
 
     def _agg_expr(self, metrica: dict):
         tipo = (metrica or {}).get('tipo', 'count')
@@ -450,15 +498,17 @@ class WidgetQueryBuilder:
                     return qs.filter(lead__fonte=fonte)
                 return qs
 
-            atend_qs = HistoricoContato.all_tenants.filter(
+            atend_qs = self._v_atend(HistoricoContato.all_tenants.filter(
                 tenant=self.tenant, status='fluxo_inicializado',
-            )
-            leads_qs = _fonte_q_lead(LeadProspecto.all_tenants.filter(tenant=self.tenant))
-            ops_qs = _fonte_q_op(OportunidadeVenda.all_tenants.filter(tenant=self.tenant))
-            vendas_qs = _fonte_q_op(OportunidadeVenda.all_tenants.filter(
-                tenant=self.tenant, estagio__is_final_ganho=True))
-            perdidas_qs = _fonte_q_op(OportunidadeVenda.all_tenants.filter(
-                tenant=self.tenant, estagio__is_final_perdido=True))
+            ))
+            leads_qs = self._v_lead(_fonte_q_lead(
+                LeadProspecto.all_tenants.filter(tenant=self.tenant)))
+            ops_qs = self._v_op(_fonte_q_op(
+                OportunidadeVenda.all_tenants.filter(tenant=self.tenant)))
+            vendas_qs = self._v_op(_fonte_q_op(OportunidadeVenda.all_tenants.filter(
+                tenant=self.tenant, estagio__is_final_ganho=True)))
+            perdidas_qs = self._v_op(_fonte_q_op(OportunidadeVenda.all_tenants.filter(
+                tenant=self.tenant, estagio__is_final_perdido=True)))
 
             if cutoff:
                 atend_qs = atend_qs.filter(data_hora_contato__gte=cutoff)
@@ -508,10 +558,10 @@ class WidgetQueryBuilder:
             from apps.comercial.crm.models import OportunidadeVenda
 
             cutoff, fonte, _dias = self._janela_e_fonte()
-            leads_qs = LeadProspecto.all_tenants.filter(tenant=self.tenant)
-            ops_qs = OportunidadeVenda.all_tenants.filter(tenant=self.tenant)
-            vendas_qs = OportunidadeVenda.all_tenants.filter(
-                tenant=self.tenant, estagio__is_final_ganho=True)
+            leads_qs = self._v_lead(LeadProspecto.all_tenants.filter(tenant=self.tenant))
+            ops_qs = self._v_op(OportunidadeVenda.all_tenants.filter(tenant=self.tenant))
+            vendas_qs = self._v_op(OportunidadeVenda.all_tenants.filter(
+                tenant=self.tenant, estagio__is_final_ganho=True))
             if fonte == 'organico':
                 leads_qs = leads_qs.exclude(fonte='facebook')
                 ops_qs = ops_qs.exclude(lead__fonte='facebook')
@@ -581,9 +631,9 @@ class WidgetQueryBuilder:
 
             cutoff, fonte, _dias = self._janela_e_fonte()
             campo_lead = dimensao.replace('lead__', '', 1) if dimensao.startswith('lead__') else dimensao
-            leads_qs = LeadProspecto.all_tenants.filter(tenant=self.tenant)
-            vendas_qs = OportunidadeVenda.all_tenants.filter(
-                tenant=self.tenant, estagio__is_final_ganho=True)
+            leads_qs = self._v_lead(LeadProspecto.all_tenants.filter(tenant=self.tenant))
+            vendas_qs = self._v_op(OportunidadeVenda.all_tenants.filter(
+                tenant=self.tenant, estagio__is_final_ganho=True))
             if fonte == 'organico':
                 leads_qs = leads_qs.exclude(fonte='facebook')
                 vendas_qs = vendas_qs.exclude(lead__fonte='facebook')

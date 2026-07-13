@@ -55,6 +55,49 @@ def _dashboards_visiveis(request):
     ).order_by('ordem', 'nome')
 
 
+def _overrides_da_barra(request) -> dict:
+    """Filtros globais do dashboard (barra do topo), lidos da querystring.
+
+    ?dias=7|30|90|tudo  ?fonte=facebook|organico  ?vendedor=<user_id>
+    """
+    overrides = {}
+    dias_param = (request.GET.get('dias') or '').strip()
+    if dias_param == 'tudo':
+        overrides['dias'] = 'tudo'
+    elif dias_param.isdigit():
+        overrides['dias'] = int(dias_param)
+
+    fonte_param = (request.GET.get('fonte') or '').strip()
+    if fonte_param in ('facebook', 'organico'):
+        overrides['fonte'] = fonte_param
+
+    vendedor_param = (request.GET.get('vendedor') or '').strip()
+    if vendedor_param.isdigit():
+        overrides['vendedor'] = int(vendedor_param)
+
+    return overrides
+
+
+def _vendedores_do_tenant(request):
+    """Vendedores pro select da barra: quem tem oportunidade no tenant.
+
+    Sai da propria base (nao de um cadastro a parte), entao a lista nunca
+    mostra gente que nao aparece no painel.
+    """
+    from apps.comercial.crm.models import OportunidadeVenda
+    from django.contrib.auth.models import User
+
+    # order_by() vazio de proposito: com o ordering padrao do model, o Django
+    # injeta a coluna de ordenacao no SELECT e o DISTINCT passa a devolver
+    # repetidos.
+    ids = (OportunidadeVenda.all_tenants
+           .filter(tenant=getattr(request, 'tenant', None), responsavel__isnull=False)
+           .order_by()
+           .values_list('responsavel_id', flat=True).distinct())
+    users = User.objects.filter(id__in=list(ids)).order_by('first_name', 'username')
+    return [{'id': u.id, 'nome': (u.get_full_name() or u.username).strip()} for u in users]
+
+
 # ----------------------------------------------------------------------------
 # UI
 # ----------------------------------------------------------------------------
@@ -113,6 +156,7 @@ def dashboard_detalhe_view(request, pk):
         'modo_edicao': False,
         'page_title': dashboard.nome,
         'chart_palette': json.dumps(paleta_tenant(getattr(request, 'tenant', None))),
+        'vendedores': _vendedores_do_tenant(request),
     })
 
 
@@ -291,16 +335,7 @@ def api_widget_dados(request, pk):
     if not (dashboard.compartilhado or dashboard.criado_por_id == request.user.id or request.user.is_superuser):
         return JsonResponse({'error': 'Sem acesso a este dashboard'}, status=403)
 
-    # Filtros globais do dashboard (barra no topo): ?dias=7|30|90|tudo & ?fonte=facebook|organico
-    overrides = {}
-    dias_param = (request.GET.get('dias') or '').strip()
-    if dias_param == 'tudo':
-        overrides['dias'] = 'tudo'
-    elif dias_param.isdigit():
-        overrides['dias'] = int(dias_param)
-    fonte_param = (request.GET.get('fonte') or '').strip()
-    if fonte_param in ('facebook', 'organico'):
-        overrides['fonte'] = fonte_param
+    overrides = _overrides_da_barra(request)
 
     try:
         builder = WidgetQueryBuilder(widget, tenant=request.tenant, overrides=overrides)
@@ -309,6 +344,12 @@ def api_widget_dados(request, pk):
         # Garante visualizacao no meta — JS do front usa pra renderizar com tipo correto
         if isinstance(payload.get('meta'), dict):
             payload['meta']['visualizacao'] = widget.visualizacao
+            # Widget cuja fonte nao tem dono (base HubSoft) ignora o filtro de
+            # vendedor. O front avisa, senao a pessoa filtra por uma vendedora
+            # e le o numero global achando que e dela.
+            payload['meta']['ignora_vendedor'] = bool(
+                overrides.get('vendedor') and not builder.suporta_vendedor()
+            )
         return JsonResponse({'ok': True, 'widget_id': widget.pk, **payload})
     except WidgetQueryError as exc:
         return JsonResponse({'error': str(exc)}, status=400)

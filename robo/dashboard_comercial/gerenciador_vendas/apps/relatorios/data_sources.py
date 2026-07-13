@@ -42,6 +42,11 @@ class DataSource:
     metricas: list = field(default_factory=lambda: ['count'])
     # default order_by ao tabular
     order_by_padrao: str = '-id'
+    # Caminho ORM ate o User responsavel, pro filtro global de vendedor da
+    # barra do dashboard. None = a fonte nao tem dono (ex: base HubSoft, cujo
+    # vendedor e outra identidade, com gente que nem existe no CRM) — o widget
+    # ignora o filtro e o front avisa que aquele numero nao foi recortado.
+    campo_vendedor: Optional[str] = None
 
     def resolve_model(self):
         """Lazy import pra evitar circular imports."""
@@ -109,6 +114,7 @@ registrar(DataSource(
     metricas=['count', 'sum:valor_estimado', 'avg:valor_estimado', 'avg:probabilidade',
               'sum:lead__valor', 'avg:lead__valor'],
     order_by_padrao='-data_criacao',
+    campo_vendedor='responsavel',
 ))
 
 registrar(DataSource(
@@ -136,6 +142,7 @@ registrar(DataSource(
     },
     metricas=['count', 'avg:score_qualificacao', 'sum:valor'],
     order_by_padrao='-data_cadastro',
+    campo_vendedor='oportunidade_crm__responsavel',
 ))
 
 registrar(DataSource(
@@ -157,6 +164,7 @@ registrar(DataSource(
     },
     metricas=['count'],
     order_by_padrao='-data_criacao',
+    campo_vendedor='responsavel',
 ))
 
 registrar(DataSource(
@@ -174,6 +182,7 @@ registrar(DataSource(
     },
     metricas=['count', 'sum:valor', 'avg:valor'],
     order_by_padrao='-data_venda',
+    campo_vendedor='oportunidade__responsavel',
 ))
 
 registrar(DataSource(
@@ -227,6 +236,7 @@ registrar(DataSource(
     },
     metricas=['count', 'avg:duracao_segundos'],
     order_by_padrao='-data_hora_contato',
+    campo_vendedor='lead__oportunidade_crm__responsavel',
 ))
 
 registrar(DataSource(
@@ -243,6 +253,7 @@ registrar(DataSource(
     },
     metricas=['count', 'avg:tempo_no_estagio_horas'],
     order_by_padrao='-criado_em',
+    campo_vendedor='oportunidade__responsavel',
 ))
 
 registrar(DataSource(
