@@ -177,9 +177,15 @@ function montarOptionEcharts(viz, labels, valores, seriesName) {
     series: [{
       type: 'bar',
       name: seriesName,
-      data: valores.map(v => Number(v || 0)),
-      // serie unica sai na cor da MARCA do tenant (PALETTE[0])
-      itemStyle: { borderRadius: horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0], color: PALETTE[0] },
+      // Cada barra sai numa cor da paleta (a 1a e a cor da MARCA do tenant).
+      // O eixo aqui e categorico (canal, cidade, motivo, etapa do funil), entao
+      // cor por categoria ajuda a escanear — era o que deixava o relatorio
+      // legado mais vivo que o nosso, que pintava tudo da mesma cor.
+      data: valores.map((v, i) => ({
+        value: Number(v || 0),
+        itemStyle: { color: PALETTE[i % PALETTE.length] },
+      })),
+      itemStyle: { borderRadius: horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0] },
       barMaxWidth: 40,
       label: { show: true, position: horizontal ? 'right' : 'top', fontSize: 11, fontWeight: 'bold', color: '#0f172a',
         formatter: (p) => fmtCompacto(p.value) },
