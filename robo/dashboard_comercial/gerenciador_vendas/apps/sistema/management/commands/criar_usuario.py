@@ -46,6 +46,9 @@ class Command(BaseCommand):
                                  'Sem isso, a pessoa nao entra no filtro por time.')
         parser.add_argument('--equipe', default=None,
                             help='Nome da EquipeVendas pra vincular (opcional).')
+        parser.add_argument('--senha', default=None,
+                            help='Senha inicial. Sem isso, sorteia uma. Em qualquer caso a '
+                                 'troca no primeiro login continua obrigatoria.')
         parser.add_argument('--dry-run', action='store_true')
 
     @transaction.atomic
@@ -97,7 +100,10 @@ class Command(BaseCommand):
             transaction.set_rollback(True)
             return
 
-        senha = ''.join(secrets.choice(ALFABETO) for _ in range(12))
+        senha = opts['senha'] or ''.join(secrets.choice(ALFABETO) for _ in range(12))
+        if len(senha) < 8:
+            self.stdout.write(self.style.ERROR('Senha muito curta (minimo 8). Abortado.'))
+            return
 
         user = User.objects.create_user(
             username=username, email=email, password=senha,
@@ -118,5 +124,8 @@ class Command(BaseCommand):
         self.stdout.write(f'    perfil : {perfil.nome}')
         self.stdout.write(f"    cargo  : {opts['cargo'] or '(sem cadastro CRM)'}"
                           f"{f' / {equipe.nome}' if equipe else ''}")
-        self.stdout.write(self.style.WARNING(f'    SENHA TEMPORARIA: {senha}'))
-        self.stdout.write('    (troca obrigatoria no primeiro login)')
+        if opts['senha']:
+            self.stdout.write('    senha  : (a que foi informada) — troca obrigatoria no 1o login')
+        else:
+            self.stdout.write(self.style.WARNING(f'    SENHA SORTEADA: {senha}'))
+            self.stdout.write('    (troca obrigatoria no primeiro login)')
