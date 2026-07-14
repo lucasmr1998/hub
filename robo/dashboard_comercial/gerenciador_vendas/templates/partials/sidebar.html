@@ -52,9 +52,11 @@ Rodape: notificacoes + avatar/menu do usuario (movidos do topbar removido).
         </a>
       {% endif %}
 
-      {# Relatorios LEGADO (/relatorios/, app dashboard) saiu do menu em 14/07/2026:
-         foi migrado pro modulo novo (/dashboards/). As paginas continuam no ar
-         por URL direta, so nao sao mais navegaveis. #}
+      {% comment %}
+        Relatorios LEGADO (/relatorios/, app dashboard) saiu do menu em
+        14/07/2026: foi migrado pro modulo novo (/dashboards/). As paginas
+        continuam no ar por URL direta, so nao sao mais navegaveis.
+      {% endcomment %}
       <a href="/dashboards/" class="app-sidebar-item {% if modulo_atual == 'dashboards' or modulo_atual == 'relatorios' %}is-active{% endif %}" data-module="dashboards" title="Relatorios">
         <i class="bi bi-bar-chart"></i>
       </a>

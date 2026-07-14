@@ -231,11 +231,13 @@ Uso em template que extende layout_app:
         </a>
       </nav>
 
-    {# O subnav do relatorio LEGADO (/relatorios/leads|clientes|conversoes|
-       atendimentos) saiu em 14/07/2026 junto com o icone: tudo foi migrado pro
-       modulo novo. Quem cair numa pagina legada por link antigo continua vendo
-       o subnav do modulo NOVO (o modulo_atual 'relatorios' cai no mesmo bloco),
-       que e pra onde ele deve ir. #}
+    {% comment %}
+      O subnav do relatorio LEGADO (/relatorios/leads|clientes|conversoes|
+      atendimentos) saiu em 14/07/2026 junto com o icone: tudo foi migrado pro
+      modulo novo. Quem cair numa pagina legada por link antigo continua vendo o
+      subnav do modulo NOVO (o modulo_atual 'relatorios' cai no mesmo bloco),
+      que e pra onde ele deve ir.
+    {% endcomment %}
     {% elif modulo_atual == 'dashboards' or modulo_atual == 'relatorios' %}
       <nav class="app-subnav-list">
         <a href="/dashboards/" class="app-subnav-item {% if request.resolver_match.url_name == 'lista' %}is-active{% endif %}">

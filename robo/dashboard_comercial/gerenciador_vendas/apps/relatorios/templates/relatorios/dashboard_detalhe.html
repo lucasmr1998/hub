@@ -43,8 +43,10 @@
     <button class="btn btn-sm filtro-chip" data-grupo="fonte" data-valor="organico" onclick="setFiltroGlobal('fonte','organico',this)">Orgânico</button>
   </div>
   {% if equipes %}
-  {# So aparece quando ha time DE VERDADE cadastrado (2+ equipes com gente).
-     Filtro que recorta 1 de 700 oportunidades nao informa, engana. #}
+  {% comment %}
+    So aparece quando ha time DE VERDADE cadastrado (2+ equipes com gente).
+    Filtro que recorta 1 de 700 oportunidades nao informa, engana.
+  {% endcomment %}
   <div style="display:flex;align-items:center;gap:6px;">
     <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Time</span>
     <select id="filtro-equipe" class="field-input" style="height:30px;padding:2px 8px;font-size:var(--fs-sm);min-width:150px;"
