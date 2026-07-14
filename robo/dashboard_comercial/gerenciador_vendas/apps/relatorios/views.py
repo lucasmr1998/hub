@@ -15,7 +15,7 @@ import logging
 from math import ceil
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import JsonResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
@@ -76,6 +76,10 @@ def _overrides_da_barra(request) -> dict:
     if vendedor_param.isdigit():
         overrides['vendedor'] = int(vendedor_param)
 
+    equipe_param = (request.GET.get('equipe') or '').strip()
+    if equipe_param.isdigit():
+        overrides['equipe'] = int(equipe_param)
+
     return overrides
 
 
@@ -97,6 +101,26 @@ def _vendedores_do_tenant(request):
            .values_list('responsavel_id', flat=True).distinct())
     users = User.objects.filter(id__in=list(ids)).order_by('first_name', 'username')
     return [{'id': u.id, 'nome': (u.get_full_name() or u.username).strip()} for u in users]
+
+
+def _equipes_do_tenant(request):
+    """Times pro select da barra — SO se o cadastro existir de verdade.
+
+    Hoje a Nuvyon tem 1 equipe e 1 vendedora vinculada (das 16 com
+    oportunidade). Um select com uma opcao que recorta 1 de 700 oportunidades
+    nao informa, engana. Entao o filtro so aparece quando houver pelo menos
+    DUAS equipes ativas com gente dentro; ate la ele fica dormindo, e no dia
+    em que a Nuvyon cadastrar os times ele acorda sozinho, sem deploy.
+    """
+    from apps.comercial.crm.models import EquipeVendas
+
+    equipes = (EquipeVendas.all_tenants
+               .filter(tenant=getattr(request, 'tenant', None), ativo=True)
+               .annotate(n=Count('membros', filter=Q(membros__ativo=True)))
+               .filter(n__gt=0)
+               .order_by('nome'))
+    lista = [{'id': e.id, 'nome': e.nome, 'membros': e.n} for e in equipes]
+    return lista if len(lista) >= 2 else []
 
 
 # ----------------------------------------------------------------------------
@@ -158,6 +182,7 @@ def dashboard_detalhe_view(request, pk):
         'page_title': dashboard.nome,
         'chart_palette': json.dumps(paleta_tenant(getattr(request, 'tenant', None))),
         'vendedores': _vendedores_do_tenant(request),
+        'equipes': _equipes_do_tenant(request),
     })
 
 
@@ -202,6 +227,7 @@ def dashboard_editar_view(request, pk):
         # Mesmo template das duas views: sem isto, o select de vendedor sumia
         # no modo edicao enquanto os chips de periodo e fonte continuavam la.
         'vendedores': _vendedores_do_tenant(request),
+        'equipes': _equipes_do_tenant(request),
     })
 
 
@@ -352,7 +378,8 @@ def api_widget_dados(request, pk):
             # vendedor. O front avisa, senao a pessoa filtra por uma vendedora
             # e le o numero global achando que e dela.
             payload['meta']['ignora_vendedor'] = bool(
-                overrides.get('vendedor') and not builder.suporta_vendedor()
+                (overrides.get('vendedor') and not builder.suporta_vendedor())
+                or (overrides.get('equipe') and not builder.suporta_equipe())
             )
             # Card clicavel: o numero abre a lista de quem esta por tras dele.
             payload['meta']['drill'] = builder.suporta_drill()

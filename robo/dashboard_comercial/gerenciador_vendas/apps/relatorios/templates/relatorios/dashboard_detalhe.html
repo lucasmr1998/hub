@@ -42,12 +42,24 @@
     <button class="btn btn-sm filtro-chip" data-grupo="fonte" data-valor="facebook" onclick="setFiltroGlobal('fonte','facebook',this)">Meta Ads</button>
     <button class="btn btn-sm filtro-chip" data-grupo="fonte" data-valor="organico" onclick="setFiltroGlobal('fonte','organico',this)">Orgânico</button>
   </div>
+  {% if equipes %}
+  {# So aparece quando ha time DE VERDADE cadastrado (2+ equipes com gente).
+     Filtro que recorta 1 de 700 oportunidades nao informa, engana. #}
+  <div style="display:flex;align-items:center;gap:6px;">
+    <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Time</span>
+    <select id="filtro-equipe" class="field-input" style="height:30px;padding:2px 8px;font-size:var(--fs-sm);min-width:150px;"
+            onchange="setFiltroGlobalSelect('equipe', this.value)">
+      <option value="">Todos</option>
+      {% for e in equipes %}<option value="{{ e.id }}">{{ e.nome }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
   {% if vendedores %}
   {# Vendedor vira select: 11 nomes nao cabem em chips como periodo/fonte. #}
   <div style="display:flex;align-items:center;gap:6px;">
     <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Vendedor</span>
     <select id="filtro-vendedor" class="field-input" style="height:30px;padding:2px 8px;font-size:var(--fs-sm);min-width:170px;"
-            onchange="setFiltroVendedor(this.value)">
+            onchange="setFiltroGlobalSelect('vendedor', this.value)">
       <option value="">Todas</option>
       {% for v in vendedores %}<option value="{{ v.id }}">{{ v.nome }}</option>{% endfor %}
     </select>
@@ -446,7 +458,7 @@ const MODO_EDICAO = {{ modo_edicao|yesno:"true,false" }};
 const CSRF = "{{ csrf_token }}";
 
 // Filtros globais do dashboard (barra no topo) — aplicados em todos os widgets
-const FILTRO_GLOBAL = { dias: '', fonte: '', vendedor: '' };
+const FILTRO_GLOBAL = { dias: '', fonte: '', vendedor: '', equipe: '' };
 
 function setFiltroGlobal(grupo, valor, btn) {
   FILTRO_GLOBAL[grupo] = valor;
@@ -458,8 +470,9 @@ function setFiltroGlobal(grupo, valor, btn) {
   });
 }
 
-function setFiltroVendedor(valor) {
-  FILTRO_GLOBAL.vendedor = valor || '';
+// Filtros globais que sao <select> (vendedor, time) — os de chip usam setFiltroGlobal.
+function setFiltroGlobalSelect(grupo, valor) {
+  FILTRO_GLOBAL[grupo] = valor || '';
   document.querySelectorAll('.widget-card').forEach(card => {
     const wid = parseInt(card.dataset.widgetId, 10);
     if (wid) carregarWidget(wid, card);
@@ -471,6 +484,7 @@ function _filtroQuery() {
   if (FILTRO_GLOBAL.dias) p.set('dias', FILTRO_GLOBAL.dias);
   if (FILTRO_GLOBAL.fonte) p.set('fonte', FILTRO_GLOBAL.fonte);
   if (FILTRO_GLOBAL.vendedor) p.set('vendedor', FILTRO_GLOBAL.vendedor);
+  if (FILTRO_GLOBAL.equipe) p.set('equipe', FILTRO_GLOBAL.equipe);
   const s = p.toString();
   return s ? `?${s}` : '';
 }
@@ -568,8 +582,8 @@ function marcarNaoFiltrado(cardEl, ignora) {
     const head = cardEl.querySelector('.widget-header') || cardEl;
     tag = document.createElement('span');
     tag.className = 'widget-nao-filtrado';
-    tag.title = 'Este numero vem da base do HubSoft, que nao tem vendedor do CRM. Continua mostrando o total.';
-    tag.innerHTML = '<i class="bi bi-exclamation-circle"></i> sem recorte por vendedor';
+    tag.title = 'Este numero vem da base do HubSoft, que nao conhece o vendedor nem o time do CRM. Continua mostrando o total.';
+    tag.innerHTML = '<i class="bi bi-exclamation-circle"></i> sem recorte por vendedor/time';
     tag.style.cssText = 'font-size:10px;font-weight:600;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:999px;padding:1px 7px;margin-left:6px;white-space:nowrap;';
     head.appendChild(tag);
   }

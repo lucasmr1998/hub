@@ -116,3 +116,14 @@
 - **Nota**: um teste meu tambem estava errado (contra-prova de "sem CPF" so olhava string vazia, e os leads tinham CPF NULL). O widget estava certo. Contra-prova sempre por ORM independente, nao por reimplementacao do mesmo filtro.
 - **Arquivos**: `data_sources.py`, `query_builder.py`, `management/commands/seed_painel_operacional.py`.
 - **Status**: completed (dev, dashboard #6 local). PENDENTE: aprovacao do dono + deploy + rodar o seed em prod (dado, exige confirmacao).
+
+## 2026-07-14 — Filtro global por TIME (dormente ate a Nuvyon cadastrar) + fix do select no modo edicao
+
+- **Pedido**: "a gente consegue adicionar um filtro por time?". Sim: a estrutura ja existia (EquipeVendas + PerfilVendedor.equipe, OneToOne com User). Caminho ORM: responsavel -> perfil_crm -> equipe.
+- **O problema nao era codigo, era CADASTRO**: em prod ha **1 equipe** ("Equipe Mococa") e **1 vendedora vinculada** — justamente a que tem 1 oportunidade. As outras 15 (incluindo a Thais, com 204 ops) nao tem nem PerfilVendedor. Um select com uma opcao que recorta 1 de 700 oportunidades nao informa, engana.
+- **Decisao do dono (opcao B)**: implementar agora e deixar o filtro DORMINDO. `_equipes_do_tenant` so devolve lista quando ha **2+ equipes ativas com membros**; abaixo disso o select nem renderiza. No dia em que a Nuvyon cadastrar os times, o filtro acorda sozinho, sem deploy.
+- **Implementacao** (mesmo padrao do filtro de vendedor, nada hardcoded): `DataSource.campo_equipe` declara o caminho por fonte; `_aplicar_equipe` no motor; helpers `_v_lead/_v_op/_v_atend` ganharam o recorte por time pros transforms cross-modelo (senao o funil ignoraria o filtro calado — a mesma armadilha do vendedor). Fonte sem dono (base HubSoft) ignora e o card exibe o selo "sem recorte por vendedor/time".
+- **BUG DO DONO (achado por ele, olhando a tela)**: "pq no painel executivo mostra o filtro por vendedora e no operacional nao?". Nao era o painel, era o MODO: as duas views usam o mesmo template, mas so a de consulta passava `vendedores`. No modo edicao a barra ficava com periodo/fonte e sem o select. Corrigido (commit 0a41358) e as duas views agora passam tambem `equipes`.
+- **Validado (dev)**: com 2 times simulados, a soma por time <= total (a diferenca sao as ops sem responsavel) e o funil reparte (78/62/62, vendas 20); no browser o select aparece so com 2+ times, filtra (leads 101 -> 25, conversao 22,8% -> 48%) e volta a sumir quando os times sao removidos. Cadastro de teste feito com rollback/limpeza, sem sujar o dev.
+- **Arquivos**: `data_sources.py`, `query_builder.py`, `views.py`, `templates/relatorios/dashboard_detalhe.html`.
+- **Status**: completed (dev). Deploy pendente. **Acao da Nuvyon**: cadastrar os times de verdade (por cidade? por canal?) e vincular cada vendedora — sem isso o filtro segue dormindo, por desenho.

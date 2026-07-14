@@ -279,10 +279,11 @@ class WidgetQueryBuilder:
                 except Exception:
                     pass
 
-        # Override global de vendedor (barra do dashboard). O caminho ate o
-        # User e declarado por fonte em data_sources.campo_vendedor; fonte sem
-        # dono (base HubSoft) simplesmente nao filtra — e o meta avisa.
+        # Overrides globais de PESSOA (barra do dashboard). O caminho ate o User
+        # / a Equipe e declarado por fonte (campo_vendedor / campo_equipe);
+        # fonte sem dono (base HubSoft) simplesmente nao filtra — e o meta avisa.
         qs = self._aplicar_vendedor(qs)
+        qs = self._aplicar_equipe(qs)
         return qs
 
     def _aplicar_vendedor(self, qs):
@@ -295,12 +296,25 @@ class WidgetQueryBuilder:
             return qs.filter(**{f'{campo}_id': int(vendedor)})
         except (TypeError, ValueError):
             return qs
-        except Exception:
+
+    def _aplicar_equipe(self, qs):
+        """Filtra pelo time global, quando a fonte tem dono."""
+        equipe = self.overrides.get('equipe')
+        campo = getattr(self.data_source, 'campo_equipe', None)
+        if not equipe or not campo:
+            return qs
+        try:
+            return qs.filter(**{f'{campo}_id': int(equipe)})
+        except (TypeError, ValueError):
             return qs
 
     def suporta_vendedor(self) -> bool:
         """A fonte deste widget responde ao filtro global de vendedor?"""
         return bool(getattr(self.data_source, 'campo_vendedor', None))
+
+    def suporta_equipe(self) -> bool:
+        """A fonte deste widget responde ao filtro global de time?"""
+        return bool(getattr(self.data_source, 'campo_equipe', None))
 
     # ------------- drill-down -------------
 
@@ -404,19 +418,41 @@ class WidgetQueryBuilder:
         except (TypeError, ValueError):
             return None
 
+    def _equipe_id(self):
+        try:
+            v = self.overrides.get('equipe')
+            return int(v) if v else None
+        except (TypeError, ValueError):
+            return None
+
     def _v_lead(self, qs):
-        """Leads do vendedor = leads cuja oportunidade e dele (OneToOne, sem duplicar)."""
+        """Leads do vendedor/time = leads cuja oportunidade e dele (OneToOne, sem duplicar)."""
         v = self._vendedor_id()
-        return qs.filter(oportunidade_crm__responsavel_id=v) if v else qs
+        if v:
+            qs = qs.filter(oportunidade_crm__responsavel_id=v)
+        e = self._equipe_id()
+        if e:
+            qs = qs.filter(oportunidade_crm__responsavel__perfil_crm__equipe_id=e)
+        return qs
 
     def _v_op(self, qs):
         v = self._vendedor_id()
-        return qs.filter(responsavel_id=v) if v else qs
+        if v:
+            qs = qs.filter(responsavel_id=v)
+        e = self._equipe_id()
+        if e:
+            qs = qs.filter(responsavel__perfil_crm__equipe_id=e)
+        return qs
 
     def _v_atend(self, qs):
         """Atendimento nao tem dono; usa o vendedor da oportunidade do lead."""
         v = self._vendedor_id()
-        return qs.filter(lead__oportunidade_crm__responsavel_id=v) if v else qs
+        if v:
+            qs = qs.filter(lead__oportunidade_crm__responsavel_id=v)
+        e = self._equipe_id()
+        if e:
+            qs = qs.filter(lead__oportunidade_crm__responsavel__perfil_crm__equipe_id=e)
+        return qs
 
     def _agg_expr(self, metrica: dict):
         tipo = (metrica or {}).get('tipo', 'count')

@@ -50,6 +50,12 @@ class DataSource:
     # ignora o filtro e o front avisa que aquele numero nao foi recortado.
     campo_vendedor: Optional[str] = None
 
+    # Caminho ORM ate a EquipeVendas, pro filtro global de TIME. Sai do mesmo
+    # dono do campo_vendedor: responsavel -> PerfilVendedor (OneToOne) -> equipe.
+    # Fonte sem dono nao tem time (mesma regra do vendedor: a base HubSoft
+    # ignora o filtro e o card avisa).
+    campo_equipe: Optional[str] = None
+
     # DRILL-DOWN: o que aparece quando alguem clica no numero do card.
     # Um painel operacional que mostra "110 leads sem contato" e nao deixa ver
     # QUEM sao os 110 e decorativo — a vendedora precisa da lista pra ligar.
@@ -134,6 +140,7 @@ registrar(DataSource(
               'sum:lead__valor', 'avg:lead__valor'],
     order_by_padrao='-data_criacao',
     campo_vendedor='responsavel',
+    campo_equipe='responsavel__perfil_crm__equipe',
     colunas_drill=[
         ('lead__nome_razaosocial', 'Cliente'),
         ('estagio__nome', 'Estagio'),
@@ -180,6 +187,7 @@ registrar(DataSource(
     metricas=['count', 'avg:score_qualificacao', 'sum:valor'],
     order_by_padrao='-data_cadastro',
     campo_vendedor='oportunidade_crm__responsavel',
+    campo_equipe='oportunidade_crm__responsavel__perfil_crm__equipe',
     colunas_drill=[
         ('nome_razaosocial', 'Nome'),
         ('telefone', 'Telefone'),
@@ -210,6 +218,7 @@ registrar(DataSource(
     metricas=['count'],
     order_by_padrao='-data_criacao',
     campo_vendedor='responsavel',
+    campo_equipe='responsavel__perfil_crm__equipe',
     colunas_drill=[
         ('titulo', 'Tarefa'),
         ('responsavel__first_name', 'Responsavel'),
@@ -235,6 +244,7 @@ registrar(DataSource(
     metricas=['count', 'sum:valor', 'avg:valor'],
     order_by_padrao='-data_venda',
     campo_vendedor='oportunidade__responsavel',
+    campo_equipe='oportunidade__responsavel__perfil_crm__equipe',
 ))
 
 registrar(DataSource(
@@ -289,6 +299,7 @@ registrar(DataSource(
     metricas=['count', 'avg:duracao_segundos'],
     order_by_padrao='-data_hora_contato',
     campo_vendedor='lead__oportunidade_crm__responsavel',
+    campo_equipe='lead__oportunidade_crm__responsavel__perfil_crm__equipe',
     colunas_drill=[
         ('nome_contato', 'Contato'),
         ('telefone', 'Telefone'),
@@ -313,6 +324,7 @@ registrar(DataSource(
     metricas=['count', 'avg:tempo_no_estagio_horas'],
     order_by_padrao='-criado_em',
     campo_vendedor='oportunidade__responsavel',
+    campo_equipe='oportunidade__responsavel__perfil_crm__equipe',
 ))
 
 registrar(DataSource(
