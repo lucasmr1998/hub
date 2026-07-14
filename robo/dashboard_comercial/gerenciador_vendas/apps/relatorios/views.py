@@ -104,13 +104,16 @@ def _vendedores_do_tenant(request):
 
 
 def _equipes_do_tenant(request):
-    """Times pro select da barra — SO se o cadastro existir de verdade.
+    """Times pro select da barra — as equipes ativas que tem gente dentro.
 
-    Hoje a Nuvyon tem 1 equipe e 1 vendedora vinculada (das 16 com
-    oportunidade). Um select com uma opcao que recorta 1 de 700 oportunidades
-    nao informa, engana. Entao o filtro so aparece quando houver pelo menos
-    DUAS equipes ativas com gente dentro; ate la ele fica dormindo, e no dia
-    em que a Nuvyon cadastrar os times ele acorda sozinho, sem deploy.
+    Basta UMA equipe com membro pra o filtro aparecer: quem cadastrou um time
+    quer poder recortar por ele. Equipe vazia fica de fora (filtrar por ela
+    devolveria zero em tudo, o que so confunde).
+
+    Atencao ao dado: o vinculo e o PerfilVendedor, nao a oportunidade. Na
+    Nuvyon so 2 das 16 vendedoras tem perfil, entao filtrar por "Equipe Mococa"
+    traz so as duas. Isso e o cadastro incompleto aparecendo, nao erro do
+    filtro — e e util que apareca.
     """
     from apps.comercial.crm.models import EquipeVendas
 
@@ -119,8 +122,7 @@ def _equipes_do_tenant(request):
                .annotate(n=Count('membros', filter=Q(membros__ativo=True)))
                .filter(n__gt=0)
                .order_by('nome'))
-    lista = [{'id': e.id, 'nome': e.nome, 'membros': e.n} for e in equipes]
-    return lista if len(lista) >= 2 else []
+    return [{'id': e.id, 'nome': e.nome, 'membros': e.n} for e in equipes]
 
 
 # ----------------------------------------------------------------------------
