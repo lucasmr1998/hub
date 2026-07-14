@@ -127,3 +127,16 @@
 - **Validado (dev)**: com 2 times simulados, a soma por time <= total (a diferenca sao as ops sem responsavel) e o funil reparte (78/62/62, vendas 20); no browser o select aparece so com 2+ times, filtra (leads 101 -> 25, conversao 22,8% -> 48%) e volta a sumir quando os times sao removidos. Cadastro de teste feito com rollback/limpeza, sem sujar o dev.
 - **Arquivos**: `data_sources.py`, `query_builder.py`, `views.py`, `templates/relatorios/dashboard_detalhe.html`.
 - **Status**: completed (dev). Deploy pendente. **Acao da Nuvyon**: cadastrar os times de verdade (por cidade? por canal?) e vincular cada vendedora — sem isso o filtro segue dormindo, por desenho.
+
+## 2026-07-14 — Painel "Pipeline por Etapa" (copia do operacional) + scorecard por vendedora
+
+- **Pedido do dono**: copia do painel operacional, com a 1a linha em cards de oportunidades POR ETAPA e, embaixo, uma tabela com os dados de cada vendedora. Investigacao paralelizada em 2 subagentes (suporte a tabela / mapa do menu legado).
+- **Achado do agente**: a visualizacao `tabela` existe, mas o renderer e FIXO em 2 colunas ("Categoria | Valor") — `dashboard_detalhe.html`. E o `WidgetQueryBuilder` so devolve 1 metrica agrupada por 1 dimensao (`series[0]`), sem multi-metrica. Um scorecard (N colunas por linha) nao era expressavel.
+- **Solucao sem quebrar contrato**: transform novo `scorecard_vendedor`, no mesmo padrao ja usado pelo `funil_macro` (transform enche `meta`, front tem renderer proprio). `ResultadoQuery` intacto; zero migration. Interceptado no `build()` (como o `conversao_geral`), entao nao gasta a query agrupada que seria descartada.
+- **Colunas**: Vendedora, Abertas, Ganhas, Perdidas, Conversao, Receita. **Conversao = ganhas / (ganhas + perdidas)**, nao sobre o total: contar as abertas como derrota puniria quem tem pipeline cheio. Conversao acima da media da equipe sai verde, abaixo vermelho — e o que faz a tabela virar leitura, nao planilha. `scorecard_vendedor` entrou em TRANSFORMS_SEM_DRILL (a tabela ja e a lista).
+- **Cards por etapa saem do PIPELINE DO TENANT**, nao de lista fixa: o seed le os estagios abertos (`is_final_ganho=False, is_final_perdido=False`) e cria 1 card por etapa, 4 por linha. Se a Nuvyon renomear/criar etapa, e so rodar de novo. Cada card abre a lista (drill).
+- **Seed**: `manage.py seed_painel_etapas --tenant <slug> [--dry-run]` — dashboard "Pipeline por Etapa" (nao mexe no "Painel Operacional", que fica intacto).
+- **Fix de UI no caminho**: `.widget-body` centraliza (bom pro numero grande), o que deixava a tabela flutuando no meio do card com um vazio enorme em cima. Tabela agora comeca no topo.
+- **Validado (dev)**: cada card de etapa bate com o ORM; soma de ganhas (38) e de abertas (91) do scorecard batem com o ORM; drill do card "Negociacao" abre as 25; regressao em 56 widgets / 6 dashboards sem falha; 0 erros de console.
+- **Arquivos**: `query_builder.py`, `templates/relatorios/dashboard_detalhe.html`, `management/commands/seed_painel_etapas.py`.
+- **Status**: completed (dev, dashboard #7 local). Deploy + seed em prod pendentes de confirmacao.

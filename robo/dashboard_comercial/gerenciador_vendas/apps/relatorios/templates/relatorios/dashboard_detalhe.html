@@ -319,6 +319,16 @@
     z-index: 10001;
   }
 
+  /* Scorecard (tabela de desempenho por vendedora) */
+  .scorecard-tabela { width:100%; border-collapse:collapse; font-size:var(--fs-sm); }
+  .scorecard-tabela th {
+    padding:6px 10px; font-size:10px; text-transform:uppercase; letter-spacing:.04em;
+    color:#64748b; border-bottom:1px solid var(--color-border); white-space:nowrap;
+  }
+  .scorecard-tabela td { padding:7px 10px; border-bottom:1px solid var(--color-border); }
+  .scorecard-tabela tbody tr:hover { background:var(--color-bg-subtle,#f8fafc); }
+  .scorecard-tabela tbody tr:last-child td { border-bottom:none; }
+
   /* Tabela do drill-down (a lista por tras do numero) */
   .drill-tabela { width:100%; border-collapse:collapse; font-size:var(--fs-sm); }
   .drill-tabela th {
@@ -389,9 +399,12 @@
   .widget-delta-note { color:var(--color-text-muted); }
   .widget-loading { color:var(--color-text-muted); font-size:var(--fs-xs); }
   .widget-chart { max-width:100%; max-height:100%; }
-  .widget-tabela { width:100%; max-height:100%; overflow:auto; }
+  .widget-tabela { width:100%; max-height:100%; overflow:auto; align-self:flex-start; }
   .widget-tabela table { width:100%; border-collapse:collapse; font-size:var(--fs-xs); }
   .widget-tabela th, .widget-tabela td { padding:6px 8px; border-bottom:1px solid var(--color-border); text-align:left; }
+  /* O corpo do card centraliza (bom pro numero grande); tabela comeca no topo,
+     senao ela flutua no meio e o card parece vazio em cima. */
+  .widget-card[data-viz="tabela"] .widget-body { align-items:flex-start; }
 
   /* Wizard */
   .wizard-steps { display:flex; gap:var(--sp-2); margin-bottom:var(--sp-4); padding-bottom:var(--sp-2); border-bottom:1px solid var(--color-border); }
@@ -589,6 +602,53 @@ function marcarNaoFiltrado(cardEl, ignora) {
   }
 }
 
+// Scorecard: tabela de desempenho, uma linha por vendedora e N colunas.
+// As colunas vem do backend (meta.scorecard.colunas), entao mudar a tabela e
+// mexer no transform, nao aqui.
+function renderScorecard(alvo, sc) {
+  const colunas = sc.colunas || [];
+  const linhas = sc.linhas || [];
+  if (!linhas.length) {
+    alvo.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;">Sem dados no periodo.</div>';
+    return;
+  }
+
+  const fmtCel = (valor, tipo) => {
+    if (valor == null || valor === '') return '—';
+    if (tipo === 'moeda') return fmtValor(valor, 'moeda');
+    if (tipo === 'percentual') return `${Number(valor).toLocaleString('pt-BR', {maximumFractionDigits: 1})}%`;
+    if (tipo === 'numero') return fmtNum(valor);
+    return esc(String(valor));
+  };
+
+  // Conversao ganha cor: acima da media da equipe puxa pra verde, abaixo pra
+  // vermelho. E o que faz a tabela virar leitura, e nao planilha.
+  const convs = linhas.map(l => Number(l.conversao) || 0);
+  const media = convs.reduce((a, b) => a + b, 0) / (convs.length || 1);
+
+  const th = colunas.map((c, i) => {
+    const alinha = i === 0 ? 'left' : 'right';
+    return `<th style="text-align:${alinha};">${esc(c.label)}</th>`;
+  }).join('');
+
+  const tr = linhas.map(l => {
+    const tds = colunas.map((c, i) => {
+      const alinha = i === 0 ? 'left' : 'right';
+      let estilo = `text-align:${alinha};`;
+      if (c.chave === 'conversao') {
+        const v = Number(l.conversao) || 0;
+        const cor = v >= media ? '#047857' : '#b91c1c';
+        estilo += `color:${cor};font-weight:600;`;
+      }
+      if (i === 0) estilo += 'font-weight:600;';
+      return `<td style="${estilo}">${fmtCel(l[c.chave], c.tipo)}</td>`;
+    }).join('');
+    return `<tr>${tds}</tr>`;
+  }).join('');
+
+  alvo.innerHTML = `<table class="scorecard-tabela"><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
+}
+
 function renderFunilMacro(body, macro) {
   // Esconde os outros renderers
   const chartEl = body.querySelector('.widget-chart');
@@ -676,6 +736,15 @@ function renderWidget(cardEl, d) {
     return;
   }
   // Tabela
+  // Tabela rica (scorecard): N colunas por linha. O renderer padrao de tabela
+  // e fixo em "Categoria | Valor", entao o scorecard vem por meta, como o
+  // funil macro ja faz.
+  if (viz === 'tabela' && d.meta && d.meta.scorecard) {
+    renderScorecard(tabelaEl, d.meta.scorecard);
+    tabelaEl.style.display = 'block';
+    return;
+  }
+
   if (viz === 'tabela') {
     let html = '<table><thead><tr><th>Categoria</th><th style="text-align:right;">Valor</th></tr></thead><tbody>';
     labels.forEach((l, i) => { html += `<tr><td>${esc(l)}</td><td style="text-align:right;">${fmtNum(valores[i])}</td></tr>`; });

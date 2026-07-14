@@ -105,6 +105,12 @@ class WidgetQueryBuilder:
         if agrupamento.get('transform') == 'conversao_geral':
             return self._calcular_conversao_geral()
 
+        # Caso 0b: scorecard (tabela rica, N colunas por linha). Intercepta aqui
+        # como o conversao_geral: nao depende de dimensao e nao gasta a query
+        # agrupada que o _calcular_agrupado faria pra depois descartar.
+        if agrupamento.get('transform') == 'scorecard_vendedor':
+            return self._calcular_scorecard_vendedor()
+
         # Caso 1: numero unico (sem agrupamento) ou widget tipo=numero
         if self.widget.visualizacao == 'numero' or not agrupamento:
             return self._calcular_numero(qs, metrica)
@@ -160,6 +166,86 @@ class WidgetQueryBuilder:
             total=pct,
             meta={'data_source': self.data_source.slug, 'transform': 'conversao_geral',
                   'vendas': vendas_n, 'leads': leads_n, 'dias': dias},
+        )
+
+    def _calcular_scorecard_vendedor(self) -> ResultadoQuery:
+        """Tabela de desempenho: uma linha por vendedora, varias colunas.
+
+        O renderer de tabela do modulo e fixo em 2 colunas (Categoria|Valor),
+        entao o scorecard sai como os outros transforms cross-modelo: os dados
+        vao em `meta` e o front tem um renderer proprio (mesmo padrao do
+        funil_macro).
+
+        Colunas: abertas, ganhas, perdidas, conversao (ganhas / fechadas) e
+        receita das ganhas. Conversao se mede sobre o que FECHOU, nao sobre o
+        total: contar as abertas como derrota puniria quem tem pipeline cheio.
+        """
+        from apps.comercial.crm.models import OportunidadeVenda
+
+        cutoff, fonte, dias = self._janela_e_fonte()
+
+        qs = self._v_op(OportunidadeVenda.all_tenants.filter(tenant=self.tenant))
+        if fonte == 'organico':
+            qs = qs.exclude(lead__fonte='facebook')
+        elif fonte:
+            qs = qs.filter(lead__fonte=fonte)
+
+        # A janela vale pro que FECHOU no periodo; oportunidade aberta e estoque
+        # (esta aberta agora), entao nao leva corte de data.
+        aberta = Q(estagio__is_final_ganho=False, estagio__is_final_perdido=False)
+        ganha = Q(estagio__is_final_ganho=True)
+        perdida = Q(estagio__is_final_perdido=True)
+        if cutoff:
+            ganha &= Q(data_fechamento_real__gte=cutoff)
+            perdida &= Q(data_fechamento_real__gte=cutoff)
+
+        linhas_qs = (
+            qs.values('responsavel_id', 'responsavel__first_name', 'responsavel__username')
+              .annotate(
+                  abertas=Count('id', filter=aberta),
+                  ganhas=Count('id', filter=ganha),
+                  perdidas=Count('id', filter=perdida),
+                  receita=Sum('lead__valor', filter=ganha),
+              )
+              .order_by('-ganhas', '-abertas')
+        )
+
+        linhas = []
+        for r in linhas_qs:
+            fechadas = (r['ganhas'] or 0) + (r['perdidas'] or 0)
+            conv = round((r['ganhas'] or 0) / fechadas * 100, 1) if fechadas else 0.0
+            nome = (r['responsavel__first_name'] or r['responsavel__username'] or '').strip()
+            linhas.append({
+                'vendedor_id': r['responsavel_id'],
+                'nome': nome or 'Sem dono',
+                'abertas': r['abertas'] or 0,
+                'ganhas': r['ganhas'] or 0,
+                'perdidas': r['perdidas'] or 0,
+                'conversao': conv,
+                'receita': float(r['receita'] or 0),
+            })
+
+        total_ganhas = sum(l['ganhas'] for l in linhas)
+        return ResultadoQuery(
+            labels=[l['nome'] for l in linhas],
+            series=[{'name': 'Vendas', 'data': [l['ganhas'] for l in linhas]}],
+            total=total_ganhas,
+            meta={
+                'data_source': self.data_source.slug,
+                'transform': 'scorecard_vendedor',
+                'dias': dias,
+                'scorecard': {
+                    'colunas': [
+                        {'chave': 'nome', 'label': 'Vendedora', 'tipo': 'texto'},
+                        {'chave': 'abertas', 'label': 'Abertas', 'tipo': 'numero'},
+                        {'chave': 'ganhas', 'label': 'Ganhas', 'tipo': 'numero'},
+                        {'chave': 'perdidas', 'label': 'Perdidas', 'tipo': 'numero'},
+                        {'chave': 'conversao', 'label': 'Conversao', 'tipo': 'percentual'},
+                        {'chave': 'receita', 'label': 'Receita', 'tipo': 'moeda'},
+                    ],
+                    'linhas': linhas,
+                },
+            },
         )
 
     # ------------- internos -------------
@@ -328,6 +414,8 @@ class WidgetQueryBuilder:
         'funil_macro', 'conversao_geral', 'conversao_por_canal',
         'gargalo_funil', 'funil_viabilidade', 'funil_cumulativo',
         'normalizar_cidade',
+        # O scorecard ja E a lista; cada linha tem seu proprio link.
+        'scorecard_vendedor',
     )
 
     def suporta_drill(self) -> bool:
