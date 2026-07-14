@@ -245,6 +245,22 @@ class Command(BaseCommand):
                     break
 
             if not atendida_com_agente:
+                # Diz POR QUE desistiu. Antes so contava (sem_agente_atendeu=7) e
+                # nao dava pra saber se o Talk nao devolveu chamada, se a chamada
+                # nao foi atendida, ou se veio sem agente — tres bugs diferentes
+                # com o mesmo contador.
+                if not chamadas:
+                    motivo = 'o Talk nao devolveu NENHUMA chamada pra esse telefone/data'
+                else:
+                    resumo = [
+                        f"{(ch.get('nom_resposta') or '?').strip()}"
+                        f"/{(ch.get('nom_agente') or 'sem-agente').strip()}"
+                        for ch in chamadas[:4]
+                    ]
+                    motivo = f'{len(chamadas)} chamada(s), nenhuma atendida-com-agente: {resumo}'
+                self.stdout.write(self.style.WARNING(
+                    f'  oport={oport.pk} tel=...{tel[-4:]} data={data_ref} — {motivo}'
+                ))
                 sem_agente_atendeu += 1
                 continue
 
