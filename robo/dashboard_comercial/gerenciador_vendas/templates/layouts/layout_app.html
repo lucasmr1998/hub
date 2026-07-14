@@ -358,15 +358,16 @@ Com subnav:
             { icon: 'bi-layers', label: 'Niveis e XP', url: '/cs/clube/dashboard/gamificacao/' },
           ]},
         ]},
-        relatorios: { title: 'Relatorios', groups: [
-          { section: 'Funil comercial', items: [
-            { icon: 'bi-person-plus', label: 'Leads', url: '/relatorios/leads/' },
-            { icon: 'bi-people', label: 'Clientes', url: '/relatorios/clientes/' },
-            { icon: 'bi-arrow-repeat', label: 'Conversoes', url: '/relatorios/conversoes/' },
+        // O flyout do relatorio LEGADO (/relatorios/*) saiu em 14/07/2026. No
+        // lugar entra o modulo novo (/dashboards/), que ate entao nao tinha
+        // flyout nenhum: com a sidebar colapsada, o hover no icone nao abria nada.
+        dashboards: { title: 'Relatorios', groups: [
+          { section: 'Paineis', items: [
+            { icon: 'bi-grid-1x2', label: 'Todos os paineis', url: '/dashboards/' },
+            { icon: 'bi-plus-circle', label: 'Novo painel', url: '/dashboards/criar/' },
           ]},
-          { section: 'Atendimento', items: [
-            { icon: 'bi-headset', label: 'Atendimentos', url: '/relatorios/atendimentos/' },
-            { icon: 'bi-activity', label: 'Analise de Atendimentos', url: '/relatorios/atendimentos/' },
+          { section: 'Apresentacoes', items: [
+            { icon: 'bi-easel', label: 'Decks', url: '/decks/' },
           ]},
         ]},
         configuracoes: { title: 'Configuracoes', groups: [

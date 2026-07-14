@@ -52,9 +52,10 @@
     <h3 style="margin: 0 0 4px; font-size: 14px; font-weight: 700;"><i class="bi bi-check2-square"></i> Tarefas</h3>
     <p style="margin: 0; color: var(--color-text-muted); font-size: 12px;">da equipe</p>
   </a>
-  <a href="{% url 'dashboard:relatorios' %}" class="card" style="text-decoration: none; color: inherit;">
+  {# Aponta pro modulo NOVO (/dashboards/). O legado saiu do menu em 14/07/2026. #}
+  <a href="/dashboards/" class="card" style="text-decoration: none; color: inherit;">
     <h3 style="margin: 0 0 4px; font-size: 14px; font-weight: 700;"><i class="bi bi-bar-chart"></i> Relatórios</h3>
-    <p style="margin: 0; color: var(--color-text-muted); font-size: 12px;">drill-down</p>
+    <p style="margin: 0; color: var(--color-text-muted); font-size: 12px;">paineis e drill-down</p>
   </a>
 </div>
 {% endblock %}
