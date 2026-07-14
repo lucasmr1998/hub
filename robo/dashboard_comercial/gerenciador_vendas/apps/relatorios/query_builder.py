@@ -226,6 +226,20 @@ class WidgetQueryBuilder:
             })
 
         total_ganhas = sum(l['ganhas'] for l in linhas)
+        total_perdidas = sum(l['perdidas'] for l in linhas)
+        total_fechadas = total_ganhas + total_perdidas
+
+        # Referencia da cor = conversao REAL da equipe (ganhas / fechadas), nao
+        # a media das conversoes individuais. Media das medias e armadilha: quem
+        # fechou 1 de 1 entra com 100% e puxa a referencia pra cima, pintando de
+        # vermelho ate quem converte acima da equipe.
+        conv_equipe = round(total_ganhas / total_fechadas * 100, 1) if total_fechadas else 0.0
+
+        # So colore quem tem volume: com 1 ou 2 fechadas, o percentual e ruido.
+        MIN_FECHADAS = 5
+        for l in linhas:
+            l['comparavel'] = (l['ganhas'] + l['perdidas']) >= MIN_FECHADAS
+
         return ResultadoQuery(
             labels=[l['nome'] for l in linhas],
             series=[{'name': 'Vendas', 'data': [l['ganhas'] for l in linhas]}],
@@ -235,6 +249,8 @@ class WidgetQueryBuilder:
                 'transform': 'scorecard_vendedor',
                 'dias': dias,
                 'scorecard': {
+                    'conversao_equipe': conv_equipe,
+                    'min_fechadas': MIN_FECHADAS,
                     'colunas': [
                         {'chave': 'nome', 'label': 'Vendedora', 'tipo': 'texto'},
                         {'chave': 'abertas', 'label': 'Abertas', 'tipo': 'numero'},

@@ -623,10 +623,11 @@ function renderScorecard(alvo, sc) {
     return esc(String(valor));
   };
 
-  // Conversao ganha cor: acima da media da equipe puxa pra verde, abaixo pra
-  // vermelho. E o que faz a tabela virar leitura, e nao planilha.
-  const convs = linhas.map(l => Number(l.conversao) || 0);
-  const media = convs.reduce((a, b) => a + b, 0) / (convs.length || 1);
+  // Cor da conversao: compara com a conversao da EQUIPE (vem do backend, ja
+  // calculada como ganhas/fechadas do time — nao a media das medias, que quem
+  // fechou 1 de 1 distorce). Quem tem pouco volume fica cinza: com 2 fechadas
+  // o percentual e ruido, nao desempenho.
+  const refEquipe = Number(sc.conversao_equipe) || 0;
 
   const th = colunas.map((c, i) => {
     const alinha = i === 0 ? 'left' : 'right';
@@ -638,9 +639,12 @@ function renderScorecard(alvo, sc) {
       const alinha = i === 0 ? 'left' : 'right';
       let estilo = `text-align:${alinha};`;
       if (c.chave === 'conversao') {
-        const v = Number(l.conversao) || 0;
-        const cor = v >= media ? '#047857' : '#b91c1c';
-        estilo += `color:${cor};font-weight:600;`;
+        if (!l.comparavel) {
+          estilo += 'color:#94a3b8;';           // volume baixo: sem julgamento
+        } else {
+          const v = Number(l.conversao) || 0;
+          estilo += `color:${v >= refEquipe ? '#047857' : '#b91c1c'};font-weight:600;`;
+        }
       }
       if (i === 0) estilo += 'font-weight:600;';
       return `<td style="${estilo}">${fmtCel(l[c.chave], c.tipo)}</td>`;
@@ -648,7 +652,12 @@ function renderScorecard(alvo, sc) {
     return `<tr>${tds}</tr>`;
   }).join('');
 
-  alvo.innerHTML = `<table class="scorecard-tabela"><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
+  const rodape = `<div style="padding:6px 10px;font-size:11px;color:#64748b;border-top:1px solid var(--color-border);">
+      Conversao da equipe: <b>${refEquipe}%</b> (ganhas sobre o que fechou).
+      Verde = acima da equipe, vermelho = abaixo. Cinza = menos de ${sc.min_fechadas || 5} fechadas no periodo.
+    </div>`;
+
+  alvo.innerHTML = `<table class="scorecard-tabela"><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>${rodape}`;
 }
 
 function renderFunilMacro(body, macro) {
