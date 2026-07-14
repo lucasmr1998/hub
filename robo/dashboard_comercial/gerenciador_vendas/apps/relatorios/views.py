@@ -199,6 +199,9 @@ def dashboard_editar_view(request, pk):
         'pode_compartilhar': _perm(request, 'relatorios.compartilhar_dashboard'),
         'page_title': f'{dashboard.nome} — Editar',
         'chart_palette': json.dumps(paleta_tenant(getattr(request, 'tenant', None))),
+        # Mesmo template das duas views: sem isto, o select de vendedor sumia
+        # no modo edicao enquanto os chips de periodo e fonte continuavam la.
+        'vendedores': _vendedores_do_tenant(request),
     })
 
 
