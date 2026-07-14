@@ -118,3 +118,19 @@ Registro cronológico do que foi executado no módulo de integrações (ação, 
   2. **Agendar no cron** (delta diario + full semanal). Sem isso o espelho congela de novo a partir de amanha.
   3. Widgets #87 (Cancelados) e #88 (Suspensos) do dash #17 filtram valores que nao existem (`servico_cancelado`/`servico_suspenso`); os reais sao `suspenso_debito` (11) e `suspenso_pedido_cliente` (3). Hoje mostram 0.
 - **Status**: completed (reconciliacao dos pendentes). Itens 1-3 pendentes.
+
+## 2026-07-14 — Atribuicao por telefone (Talk): match resistente, alerta e auditoria
+
+- **Como o dono chegou aqui**: "esse caiu no telefone pra Flavia e nao atribuiu pra ela". A op #2628 ESTAVA com ela — foi atribuida 7 min depois da criacao (o sync roda a cada minuto e a chamada demora a aparecer no Talk). O dono viu a tela na janela em que a oportunidade ainda estava orfa. **Nao era bug.**
+- **O que a investigacao achou de verdade** (3 coisas):
+  1. **A chamada do Talk NAO traz `cod_agente`** — so `nom_agente`, e com prefixo: `"1- Flavia"`. Entao o match e por TEXTO contra o catalogo (`listar_agentes`), que aí sim tem o codigo, e esse codigo cruza com `PerfilUsuario.cod_talk`. Ponte de 2 saltos apoiada num nome livre digitado do lado deles: **se renomearem o agente, a atribuicao para em silencio**.
+  2. **As oportunidades orfas de verdade sao ligacoes NAO ATENDIDAS**: o Talk devolve `nom_resposta='Ocupado'` e agente vazio. Nao ha a quem atribuir — o sistema esta certo. Mas elas ficam invisiveis, e sao **cliente que ligou e ninguem atendeu**, parado ha dias.
+  3. **Ligacao ATENDIDA sem match morria num contador** (`sem_agente_atendeu=7`), que juntava 3 falhas diferentes.
+- **Feito**:
+  1. **Match em 2 niveis**: exato (normalizado) e, se falhar, por PRIMEIRO NOME ignorando prefixo numerico e pontuacao (`"1- Flavia"`, `"01 - Flavia"`, `"Flavia Almeida"`, `"FLAVIA"` -> todos casam). Se o primeiro nome for AMBIGUO (duas "Ana"), **nao atribui**: chutar vendedora e pior que nao atribuir.
+  2. **Alerta novo `agente_sem_match`**: ligacao atendida cuja vendedora nao conseguimos identificar vira ALERTA (com dedup por oportunidade — o cron roda a cada minuto), com o motivo e o conserto na mensagem. Antes so aparecia se alguem fosse investigar na mao.
+  3. **Comando `auditar_agentes_talk --tenant <slug>`**: mostra agente do Talk SEM usuario aqui (vai gerar orfa) e `cod_talk` cadastrado aqui que nao existe mais la (cadastro morto). Hoje sao 13 usuarios com cod_talk de 27 — ninguem sabia quem faltava.
+- **Migration**: `sistema.0015_alter_alertasistema_tipo` (so acrescenta o tipo de alerta ao choices; nao toca dado).
+- **Diagnostico util no caminho**: `consultar_chamadas_talk --tenant <slug> [--telefone|--oportunidade] [--dias N]` mostra a resposta CRUA da API e testa variacoes do numero (sem 9o digito, com DDI) e dias anteriores.
+- **PENDENTE (decisao do dono)**: o que fazer com as oportunidades de **ligacao nao atendida** (Ocupado). Hoje ficam orfas e invisiveis. Proposta: distribuir automaticamente pra alguem retornar o contato — cada uma e um cliente que quis comprar e nao conseguiu falar com ninguem.
+- **Status**: completed (dev). Deploy pendente.

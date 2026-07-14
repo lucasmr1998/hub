@@ -28,6 +28,43 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
+def _alertar_sem_match(tenant, oport, nom_agente: str, motivo: str):
+    """A ligacao foi ATENDIDA e a oportunidade ficou sem dono.
+
+    Isso e venda parada: o cliente falou com alguem, e ninguem no Hubtrix e
+    responsavel por ele. Antes morria num contador do cron e so aparecia se
+    alguem fosse investigar na mao.
+
+    Dedup por oportunidade: o cron roda a cada minuto e nao pode disparar o
+    mesmo alerta 1440x por dia.
+    """
+    try:
+        from apps.sistema.services_alertas import disparar_alerta
+        disparar_alerta(
+            tipo='agente_sem_match',
+            titulo='Ligacao atendida sem vendedora atribuida',
+            mensagem=(
+                f'A oportunidade #{oport.pk} veio de uma ligacao ATENDIDA por '
+                f'{nom_agente!r}, mas o sistema nao conseguiu dizer quem e essa '
+                f'pessoa aqui dentro — entao a oportunidade esta SEM DONO.\n\n'
+                f'Motivo: {motivo}\n\n'
+                f'Conserto: cadastre o cod_talk dessa pessoa no perfil dela '
+                f'(/configuracoes/usuarios/), ou confira se o nome dela no Talk '
+                f'mudou. Enquanto isso, atribua a oportunidade na mao.'
+            ),
+            dedup_key=f'agente_sem_match:{oport.pk}',
+            dados_extras={
+                'oportunidade_id': oport.pk,
+                'agente_no_talk': nom_agente,
+                'motivo': motivo,
+            },
+            tenant=tenant,
+        )
+    except Exception:  # noqa: BLE001
+        # Alerta que quebra nao pode derrubar o sync.
+        logger.exception('falha ao disparar alerta agente_sem_match (oport=%s)', oport.pk)
+
+
 class Command(BaseCommand):
     help = 'Sincroniza vendedor atribuido no Matrix Brasil com OportunidadeVenda.responsavel'
 
@@ -173,23 +210,64 @@ class Command(BaseCommand):
         total = qs.count()
         self.stdout.write(f'Talk: {total} oportunidades elegiveis pra sync')
 
-        # Mapa nom_agente_normalizado -> cod_agente (pra descobrir cod a partir da chamada)
+        # A chamada do Talk NAO traz cod_agente — so o nome, e com prefixo
+        # ("1- Flavia"). Entao o match e por TEXTO contra o catalogo de agentes,
+        # que aí sim tem o codigo. Ponte fragil por construcao: se alguem no Talk
+        # renomear o agente, a atribuicao para de funcionar.
+        #
+        # Por isso o match tem 2 niveis:
+        #   1. exato (normalizado): "1- flavia" == "1- flavia"
+        #   2. pelo PRIMEIRO NOME, ignorando prefixo numerico e pontuacao:
+        #      "1- Flavia" -> "flavia"  casa com  "Flavia Almeida" -> "flavia"
+        # O nivel 2 so vale quando o primeiro nome e UNICO no catalogo: com duas
+        # "Ana", atribuir seria chutar, e chutar vendedora e pior que nao atribuir.
         import unicodedata, re
+
         def _norm(s):
-            if not s: return ''
-            s = unicodedata.normalize('NFD', str(s)).encode('ascii','ignore').decode()
+            if not s:
+                return ''
+            s = unicodedata.normalize('NFD', str(s)).encode('ascii', 'ignore').decode()
             return re.sub(r'\s+', ' ', s.lower().strip())
+
+        def _primeiro_nome(s):
+            """'1- Flavia Almeida' -> 'flavia'. Tira prefixo numerico e pontuacao."""
+            t = _norm(s)
+            t = re.sub(r'^[\d\s\.\-_/]+', '', t)      # "1- ", "01 - ", "1."
+            t = re.sub(r'[^a-z\s]', ' ', t)           # pontuacao no meio
+            partes = [p for p in t.split() if p]
+            return partes[0] if partes else ''
+
         try:
             agentes = svc.listar_agentes()
         except TalkServiceError as e:
             self.stdout.write(self.style.ERROR(f'Talk listar_agentes falhou: {e}'))
             return
+
         nom_to_cod = {}
+        primeiro_to_cods = {}   # primeiro_nome -> [cods]  (pra detectar ambiguidade)
         for a in agentes:
-            nom_norm = _norm(a.get('nom_agente'))
             cod = a.get('cod_agente')
-            if nom_norm and cod:
+            if not cod:
+                continue
+            nom_norm = _norm(a.get('nom_agente'))
+            if nom_norm:
                 nom_to_cod[nom_norm] = int(cod)
+            pn = _primeiro_nome(a.get('nom_agente'))
+            if pn:
+                primeiro_to_cods.setdefault(pn, []).append(int(cod))
+
+        def _cod_do_agente(nome_na_chamada):
+            """Retorna (cod, como_achou) ou (None, motivo)."""
+            n = _norm(nome_na_chamada)
+            if n in nom_to_cod:
+                return nom_to_cod[n], 'exato'
+            pn = _primeiro_nome(nome_na_chamada)
+            cods = primeiro_to_cods.get(pn) or []
+            if len(cods) == 1:
+                return cods[0], f'primeiro nome ({pn!r})'
+            if len(cods) > 1:
+                return None, f'AMBIGUO: {len(cods)} agentes com o primeiro nome {pn!r}'
+            return None, f'nome {nome_na_chamada!r} nao existe no catalogo do Talk'
 
         # Cache: cod_talk -> User
         perfis = PerfilUsuario.objects.filter(
@@ -265,24 +343,33 @@ class Command(BaseCommand):
                 continue
 
             nom_ag = atendida_com_agente.get('nom_agente') or ''
-            cod = nom_to_cod.get(_norm(nom_ag))
+            cod, como = _cod_do_agente(nom_ag)
             if not cod:
-                # Nao achou cod pelo nome — talvez nome mudou. Loga e pula.
-                self.stdout.write(self.style.WARNING(
-                    f'  oport={oport.pk} nom_agente={nom_ag!r} sem cod_agente conhecido no Talk'
+                # A LIGACAO FOI ATENDIDA e a gente nao sabe por quem: a venda existe
+                # e fica sem dono. Isso nao pode morrer num contador — vira alerta.
+                self.stdout.write(self.style.ERROR(
+                    f'  oport={oport.pk} ATENDIDA por {nom_ag!r} mas SEM MATCH: {como}'
                 ))
+                _alertar_sem_match(tenant, oport, nom_ag, como)
                 sem_match_no_hubtrix += 1
                 continue
+
             user = cod_to_user.get(cod)
             if not user:
-                self.stdout.write(self.style.WARNING(
-                    f'  oport={oport.pk} nom_agente={nom_ag!r} cod={cod} sem PerfilUsuario.cod_talk mapeado'
+                self.stdout.write(self.style.ERROR(
+                    f'  oport={oport.pk} ATENDIDA por {nom_ag!r} (Talk cod={cod}) mas esse agente '
+                    f'NAO TEM usuario no Hubtrix (falta PerfilUsuario.cod_talk={cod})'
                 ))
+                _alertar_sem_match(
+                    tenant, oport, nom_ag,
+                    f'agente existe no Talk (cod={cod}) mas nenhum usuario do Hubtrix '
+                    f'tem cod_talk={cod}',
+                )
                 sem_match_no_hubtrix += 1
                 continue
 
             self.stdout.write(self.style.SUCCESS(
-                f'  oport={oport.pk} <- {user.username} (Talk cod={cod} nom={nom_ag!r})'
+                f'  oport={oport.pk} <- {user.username} (Talk cod={cod} nom={nom_ag!r}, match {como})'
             ))
             if not opts['dry_run']:
                 oport.responsavel = user

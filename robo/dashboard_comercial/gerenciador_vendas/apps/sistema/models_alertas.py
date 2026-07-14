@@ -30,6 +30,10 @@ class AlertaSistema(models.Model):
         ('uazapi_caiu', 'uazapi sem token / instancia caiu'),
         ('bot_falhou', 'Bot Selenium falhou'),
         ('erro_python', 'Erro Python critico'),
+        # A ligacao FOI atendida, mas nao conseguimos dizer por quem: a
+        # oportunidade fica sem dono e ninguem sabe. Antes isso morria num
+        # contador do cron.
+        ('agente_sem_match', 'Ligacao atendida mas sem vendedora atribuida'),
         ('outro', 'Outro'),
     ]
 
