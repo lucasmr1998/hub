@@ -130,7 +130,10 @@ class Command(BaseCommand):
                         f"quando={ch.get('dat_ligacao')!r} "
                         f"tipo={ch.get('nom_tipo') or ch.get('tipo')!r}"
                     )
-                    self.stdout.write(f'      cru: {json.dumps(ch, ensure_ascii=False)[:220]}')
+                    # JSON COMPLETO, sem truncar: e comando de diagnostico — cortar
+                    # o payload esconde justamente o campo que falta.
+                    self.stdout.write('      cru:')
+                    self.stdout.write(json.dumps(ch, ensure_ascii=False, indent=2))
 
         self.stdout.write('')
         if not achou_algo:
