@@ -888,7 +888,7 @@ def _acao_adicionar_item_oportunidade(oportunidade, config):
 
 def _acao_criar_tarefa(oportunidade, config):
     """
-    Cria uma Tarefa no CRM vinculada a oportunidade. Idempotente: pula se ja
+    Cria uma TarefaCRM vinculada a oportunidade. Idempotente: pula se ja
     existe tarefa pendente com mesmo `titulo` (apos format) pra mesma oportunidade.
 
     config aceita:
@@ -898,14 +898,14 @@ def _acao_criar_tarefa(oportunidade, config):
       - descricao: string opcional, mesmos placeholders.
       - prazo_horas: int, horas a partir de agora (default 24).
       - prioridade: 'baixa' | 'normal' | 'alta' | 'urgente' (default 'normal').
-      - tipo: tipo da tarefa (default 'followup'). Veja Tarefa.TIPO_CHOICES.
+      - tipo: tipo da tarefa (default 'followup'). Veja TarefaCRM.TIPO_CHOICES.
       - responsavel_id: User id explicito. Se None, usa oportunidade.responsavel
                        ou cai pro primeiro superuser do tenant.
       - chave_idempotencia: string opcional. Se setada, idempotencia checa por
                             essa chave dentro do titulo em vez do titulo completo.
                             Util quando placeholders fazem o titulo variar.
     """
-    from apps.comercial.crm.models import Tarefa
+    from apps.comercial.crm.models import TarefaCRM
     from django.contrib.auth.models import User
     from django.utils import timezone
     from datetime import timedelta
@@ -936,7 +936,7 @@ def _acao_criar_tarefa(oportunidade, config):
 
     chave = (config.get('chave_idempotencia') or '').strip()
     chave_match = chave if chave else titulo
-    if Tarefa.objects.filter(
+    if TarefaCRM.objects.filter(
         oportunidade=oportunidade,
         status__in=['pendente', 'em_andamento'],
         titulo__icontains=chave_match,
@@ -963,7 +963,7 @@ def _acao_criar_tarefa(oportunidade, config):
     prioridade = config.get('prioridade') or 'normal'
     tipo = config.get('tipo') or 'followup'
 
-    Tarefa.objects.create(
+    TarefaCRM.objects.create(
         tenant=oportunidade.tenant,
         oportunidade=oportunidade,
         lead=lead,

@@ -98,3 +98,54 @@ movidos por vendedoras humanas (thais.moreira lidera com 12).
 consolidar (mover ops 84->73 + deletar 84) OU manter ambos.
 
 ---
+
+## 2026-07-14 — Fix: acao criar_tarefa da automacao de pipeline nunca funcionou
+
+**Acao:** Investigacao dos bugs do modulo de tarefas, disparada por pedido de video
+tutorial. Consulta read-only em prod pra medir impacto.
+
+**Diagnostico (o achado da sessao):** `_acao_criar_tarefa` em
+`crm/services/automacao_pipeline.py:908` importava `Tarefa`, nome que nunca existiu.
+A classe e `TarefaCRM`. O `ImportError` era engolido pelo try/except de
+`_executar_acoes_regra`, a regra registrava `resultado: 'erro'` num log que ninguem
+le, e a tarefa nunca era criada. Em silencio, desde sempre.
+
+**Impacto medido em prod:** a Nuvyon tem a regra 26 "Viabilidade pendente revisao ->
+criar tarefa" ATIVA, cuja unica acao e `criar_tarefa`. Ela ja disparou **34 vezes**
+(ultima em 13/07/2026 13:43) e criou **zero** tarefas. Ou seja: 34 leads com
+viabilidade pendente de revisao nunca geraram tarefa pra ninguem olhar. As 46 tarefas
+da Nuvyon em prod sao todas manuais.
+
+**Decisao:** corrigir os 3 bugs de baixo risco agora; o 4o (falta de tela de editar
+tarefa) e feature faltando, vai pro backlog.
+
+**Output:**
+1. `automacao_pipeline.py`: `Tarefa` -> `TarefaCRM` (import + 2 usos + docstring).
+   O resto da funcao ja estava correto (placeholders, idempotencia, fallback de
+   responsavel). Nao gera enxurrada retroativa: so age em disparo novo, e a
+   idempotencia impede duplicata.
+2. `crm/views.py:api_tarefa_concluir`: quem tem `ver_todas_oportunidades` passa a
+   concluir tarefa do time. Antes o card mostrava o botao pro gestor
+   (`_tarefa_card.html:35` nao checa dono) mas o backend exigia
+   `responsavel=request.user`, entao o clique voltava 404 calado. Decisao de produto
+   do Lucas: liberar o gestor. O log registra quando a conclusao foi feita por outro.
+3. Links de notificacao de tarefa corrigidos: `notificar_tarefas_vencendo.py` apontava
+   pra `/crm/tarefas/<id>/` (rota inexistente) e `notificacoes/signals.py` usava o
+   prefixo errado `/comercial/crm/tarefas/`. Os dois davam 404. Agora vao pra
+   `/crm/tarefas/`.
+4. Novo `tests/test_automacao_pipeline_criar_tarefa.py` (4 testes). Chamam a acao
+   DIRETO de proposito: passar pelo executor da regra nao serve de regressao porque
+   ele engole a excecao. Validado reintroduzindo o bug: o teste falha com o
+   ImportError exato.
+
+**Efeito colateral esperado no proximo deploy:** a regra 26 da Nuvyon volta a
+funcionar e passa a criar tarefa a cada disparo, notificando o responsavel (o signal
+`notificar_tarefa_atribuida` dispara porque `criado_por` e None na automacao).
+Avisar a Nuvyon antes de subir.
+
+**Status:** completed (codigo). Deploy pendente de confirmacao do Lucas.
+
+**Backlog aberto:** nao existe tela de editar/cancelar TarefaCRM. So lista, criar e
+concluir. Errou titulo ou data, so pelo admin do Django.
+
+---

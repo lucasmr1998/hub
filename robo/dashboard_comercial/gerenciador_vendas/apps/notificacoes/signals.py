@@ -277,7 +277,8 @@ def notificar_tarefa_atribuida(sender, instance, created, **kwargs):
             titulo=f'Nova tarefa: {instance.titulo}',
             mensagem=f'Tarefa "{instance.titulo}" foi atribuída a você.',
             destinatario=responsavel,
-            url_acao=f'/comercial/crm/tarefas/',
+            # o prefixo real e /crm/, nao /comercial/crm/. O link antigo caia em 404.
+            url_acao='/crm/tarefas/',
             prioridade=instance.prioridade,
             dados_contexto={
                 'tarefa_id': instance.pk,

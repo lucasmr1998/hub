@@ -86,7 +86,9 @@ class Command(BaseCommand):
                 titulo='Tarefa próxima do vencimento',
                 mensagem=corpo,
                 destinatario=tarefa.responsavel,
-                url_acao=f'/crm/tarefas/{tarefa.id}/' if hasattr(tarefa, 'id') else '/crm/tarefas/',
+                # nao existe rota de detalhe de tarefa. As rotas sao lista, criar e concluir.
+                # O link antigo (/crm/tarefas/<id>/) caia em 404.
+                url_acao='/crm/tarefas/',
                 dados_contexto={'tarefa_id': tarefa.id, 'horas_pra_vencer': horas_pra_vencer},
             )
             if n:

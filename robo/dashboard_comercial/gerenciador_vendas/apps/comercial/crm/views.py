@@ -1556,7 +1556,14 @@ def tarefas_lista(request):
 @login_required
 @require_POST
 def api_tarefa_concluir(request, pk):
-    tarefa = get_object_or_404(TarefaCRM, pk=pk, responsavel=request.user)
+    # Quem tem ver_todas_oportunidades enxerga a tarefa do time na lista e ve o
+    # botao de concluir no card. Antes o backend so aceitava o proprio responsavel,
+    # entao o clique do gestor voltava 404 calado. Agora ele conclui de verdade.
+    if user_tem_funcionalidade(request, 'comercial.ver_todas_oportunidades'):
+        tarefa = get_object_or_404(TarefaCRM, pk=pk)
+    else:
+        tarefa = get_object_or_404(TarefaCRM, pk=pk, responsavel=request.user)
+
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
@@ -1568,8 +1575,11 @@ def api_tarefa_concluir(request, pk):
     tarefa.save(update_fields=['status', 'data_conclusao', 'resultado', 'data_atualizacao'])
 
     from apps.sistema.utils import registrar_acao
-    registrar_acao('crm', 'concluir', 'tarefa', tarefa.pk,
-                   f'Tarefa concluida: {tarefa.titulo}', request=request)
+    dono = tarefa.responsavel_id != request.user.id
+    detalhe = f'Tarefa concluida: {tarefa.titulo}'
+    if dono:
+        detalhe += f' (concluida pelo gestor, responsavel era {tarefa.responsavel})'
+    registrar_acao('crm', 'concluir', 'tarefa', tarefa.pk, detalhe, request=request)
 
     return JsonResponse({'ok': True})
 
