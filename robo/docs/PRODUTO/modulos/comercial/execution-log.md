@@ -210,3 +210,14 @@ Status: completed + deployado em prod (commits `d4cbd3c`, `88dd40d`, `e3f2de0`, 
 - Acao: o filtro por CEP mostrava a lista bruta do HubSoft (91 itens em Itu, com variantes MIG/rural/PJ). Pergunta do Lucas ("vamos mostrar todos os ativos?") levou ao desenho final: intersecao entre o catalogo de Produtos do CRM (39 planos curados, gerenciaveis em /crm/produtos/) e os planos validos no CEP. Fallback pra lista completa do CEP quando o catalogo nao cobre a regiao. A trava do save segue validando contra a lista bruta. Commit 8c79b98.
 - Nota: o catalogo curado NAO e hardcoded — vem de crm_produtos (ja foi lista fixa de 5 no passado e virou gerenciavel).
 - Status: completed
+
+## 2026-07-15 — Filtros do Pipeline em DRAWER (modelo RD Station)
+
+- **Pedido do dono**: tirar a barra de filtros fixa e transformar num botao "Filtros" (junto de "Personalizar card"), abrindo um painel deslizante da DIREITA — modelo RD Station/HubSpot.
+- **Reuso**: o DS ja tem `.modal-drawer` (desliza da direita). Novo modo `drawer=True` no componente compartilhado `components/list_filters.html` (opt-in): botao na toolbar + drawer com os campos empilhados + Filtrar/Limpar no rodape.
+- **Sem quebrar o filtro existente**: a form do drawer mantem a classe `.list-filters-grid` e os mesmos `name=`, entao o JS de cada tela (change -> recarrega, submit -> intercepta) continua funcionando sem tocar.
+- **Ligado so no Pipeline por enquanto.** O componente e usado em 8 telas (pipeline, oportunidades, tarefas, vendas, contratos, OS, tickets, automacoes); as outras 7 seguem com a barra colapsavel ate o dono validar e mandar rolar.
+- **BUG MEU, 3a vez na sessao**: comentario Django multi-linha `{# #}` (so vale 1 linha) vazou como texto atras do drawer. Corrigido com `{% comment %}`. Peguei olhando o screenshot.
+- **Validado (dev, Playwright)**: botao na toolbar; drawer abre da direita (480px, campos empilhados); mudar filtro chama carregarPipeline; Filtrar fecha o drawer; sem vazamento de comentario; 0 erros de console.
+- **Arquivos**: `components/list_filters.html`, `partials/_components_styles.html`, `crm/pipeline.html`.
+- **Status**: completed (dev, so pipeline). Deploy + rollout pras outras 7 telas pendentes.

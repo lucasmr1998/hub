@@ -75,7 +75,88 @@ Exemplo MODO B (colapsado — preserva espaco em kanban/lista grande):
   </div>
 {% endif %}
 
-{% if fields %}
+{% if fields and drawer %}
+  {% comment %}
+    MODO C — DRAWER (modelo RD Station / HubSpot): botao na toolbar + painel
+    deslizando da direita. Mesma form.list-filters-grid e os mesmos name= do
+    modo B, entao o JS de filtro das telas continua funcionando.
+  {% endcomment %}
+  <script>
+    if (!window._multiselectInitialized) {
+      window._multiselectInitialized = true;
+      document.addEventListener('click', function(e){
+        document.querySelectorAll('.multiselect-wrap.is-open').forEach(function(el){
+          if (!el.contains(e.target)) el.classList.remove('is-open');
+        });
+      });
+    }
+  </script>
+  <button type="button" class="btn btn-secondary btn-sm"
+          onclick="abrirModal('{{ drawer_id|default:'filtros-drawer' }}')">
+    <i class="bi bi-funnel"></i> Filtros{% if active_filters_count %} <span class="list-filters-active-count">{{ active_filters_count }}</span>{% endif %}
+  </button>
+  <div class="modal-overlay" id="{{ drawer_id|default:'filtros-drawer' }}" role="dialog" aria-modal="true" hidden>
+    <div class="modal modal-drawer">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="bi bi-funnel"></i> Filtros</h3>
+        <button type="button" class="modal-close" aria-label="Fechar" onclick="fecharModal('{{ drawer_id|default:'filtros-drawer' }}')"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <form id="{{ drawer_id|default:'filtros-drawer' }}-form" class="modal-body list-filters-grid list-filters-drawer" method="get" {% if form_action %}action="{{ form_action }}"{% endif %}>
+        {% for f in fields %}
+          <div class="field">
+            <label class="field-label">{{ f.label }}</label>
+            <div class="field-input-wrap">
+              {% if f.type == 'select' %}
+                <select name="{{ f.name }}" class="field-input">
+                  {% for opt_val, opt_label in f.options %}
+                    <option value="{{ opt_val }}"{% if opt_val == f.value %} selected{% endif %}>{{ opt_label }}</option>
+                  {% endfor %}
+                </select>
+              {% elif f.type == 'multiselect' %}
+                <div class="multiselect-wrap" data-multiselect>
+                  <button type="button" class="field-input multiselect-toggle" onclick="this.parentElement.classList.toggle('is-open')">
+                    <span class="multiselect-label">{% if f.values %}{{ f.values|length }} selecionado{{ f.values|length|pluralize:"s" }}{% else %}Todos{% endif %}</span>
+                    <i class="bi bi-chevron-down"></i>
+                  </button>
+                  <div class="multiselect-menu">
+                    {% for opt_val, opt_label in f.options %}
+                      <label class="multiselect-item">
+                        <input type="checkbox" name="{{ f.name }}" value="{{ opt_val }}"{% if opt_val in f.values %} checked{% endif %}>
+                        <span>{{ opt_label }}</span>
+                      </label>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% else %}
+                <input type="{{ f.type|default:'text' }}" name="{{ f.name }}" class="field-input"
+                       value="{{ f.value|default:'' }}" placeholder="{{ f.placeholder|default:'' }}">
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+        {% if search_placeholder %}
+          <div class="field">
+            <label class="field-label">Buscar</label>
+            <div class="field-input-wrap">
+              <i class="bi bi-search field-icon"></i>
+              <input type="text" {% if search_id %}id="{{ search_id }}"{% endif %} name="{{ search_name|default:'q' }}"
+                     class="field-input" placeholder="{{ search_placeholder }}" value="{{ search_value|default:'' }}">
+            </div>
+          </div>
+        {% endif %}
+      </form>
+      <div class="modal-footer">
+        {% if clear_url %}<a href="{{ clear_url }}" class="btn btn-ghost">Limpar</a>{% endif %}
+        <button type="submit" form="{{ drawer_id|default:'filtros-drawer' }}-form"
+                class="btn btn-primary" onclick="fecharModal('{{ drawer_id|default:'filtros-drawer' }}')">
+          <i class="bi bi-funnel"></i> Filtrar
+        </button>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% if fields and not drawer %}
   {# MODO B — grid #}
   <script>
     // Fecha dropdowns multiselect ao clicar fora
