@@ -2,8 +2,9 @@
 Central de Acoes — coletor dos sinais de "o que fazer agora", escopado por
 papel via escopo_responsaveis (vendedor ve o dele, gerente ve o do time).
 
-Cada sinal vira um item {severidade, titulo, subtitulo, tag, url, ordem}.
-Severidades: 'critico' (vermelho), 'atencao' (amarelo), 'oportunidade' (verde).
+Cada sinal vira um item {tipo, titulo, subtitulo, tag, url, ordem}, agrupado
+por severidade (critico / atencao / oportunidade). O `tipo` e o selo que diz
+O QUE e cada linha (Parada, Sem dono, Tarefa, Erro, Nova).
 
 MVP com 6 sinais (regua do strawman aprovado):
   - Oportunidade parada no estagio > 7d (critico) / 3-7d (atencao)
@@ -20,8 +21,7 @@ from django.utils import timezone
 
 from apps.comercial.crm.escopo import escopo_responsaveis
 
-# Teto por sinal, pra nao explodir a pagina numa base grande. Os contadores
-# refletem o que foi coletado (ate este teto).
+# Teto por sinal, pra nao explodir a pagina numa base grande.
 LIMITE_POR_SINAL = 150
 
 
@@ -46,15 +46,20 @@ def _plural(n):
 
 
 def coletar_acoes(request):
-    """Devolve {itens, contadores, ve_time}. itens ja ordenado por severidade e
-    urgencia. Tudo filtrado pelo escopo do usuario."""
+    """Devolve {grupos, contadores, ve_time}. grupos = 3 baldes por severidade,
+    cada item ja rotulado (tipo) e ordenado por urgencia. Tudo escopado."""
     from apps.comercial.crm.models import OportunidadeVenda, TarefaCRM
     from apps.comercial.leads.models import LeadProspecto
 
     esc = escopo_responsaveis(request)          # None = ve tudo; senao lista de ids
     ve_time = esc is None or len(esc) > 1        # heuristica: gestor/admin (ve alem de si)
     agora = timezone.now()
-    itens = []
+
+    criticos, atencao, oportunidades = [], [], []
+
+    def add(bucket, tipo, titulo, subtitulo, tag, url, ordem):
+        bucket.append({'tipo': tipo, 'titulo': titulo, 'subtitulo': subtitulo,
+                       'tag': tag, 'url': url, 'ordem': ordem})
 
     op_base = (OportunidadeVenda.objects.filter(ativo=True)
                .exclude(Q(estagio__is_final_ganho=True) | Q(estagio__is_final_perdido=True))
@@ -69,14 +74,9 @@ def coletar_acoes(request):
                .order_by('data_entrada_estagio'))
     for op in paradas[:LIMITE_POR_SINAL]:
         dias = (agora - op.data_entrada_estagio).days
-        itens.append({
-            'severidade': 'critico' if dias > 7 else 'atencao',
-            'titulo': op.lead.nome_razaosocial or op.titulo or f'Oportunidade #{op.pk}',
-            'subtitulo': f'{dias} dia{_plural(dias)} sem acao em {op.estagio.nome}',
-            'tag': _equipe_nome(op),
-            'url': _url_op(op),
-            'ordem': dias,
-        })
+        nome = op.lead.nome_razaosocial or op.titulo or f'Oportunidade #{op.pk}'
+        sub = f'{dias} dia{_plural(dias)} parada em {op.estagio.nome}'
+        add(criticos if dias > 7 else atencao, 'Parada', nome, sub, _equipe_nome(op), _url_op(op), dias)
 
     # 3. Tarefa vencida
     tarefas = (TarefaCRM.objects.filter(data_vencimento__lt=agora,
@@ -88,28 +88,17 @@ def coletar_acoes(request):
         dias = (agora - t.data_vencimento).days
         alvo = t.oportunidade
         nome = (alvo.lead.nome_razaosocial if alvo and alvo.lead else None) or t.titulo
-        itens.append({
-            'severidade': 'critico',
-            'titulo': nome,
-            'subtitulo': f'Tarefa vencida ha {dias} dia{_plural(dias)}: {t.titulo}',
-            'tag': '',
-            'url': _url_op(alvo),
-            'ordem': dias + 5,  # vencida pesa um pouco mais que parada
-        })
+        add(criticos, 'Tarefa', nome, f'Vencida ha {dias} dia{_plural(dias)}: {t.titulo}',
+            '', _url_op(alvo), dias + 5)
 
     # 4. Oportunidade sem dono — so pra quem ve o time (gestor/admin)
     if ve_time:
         orfas = op_base.filter(responsavel__isnull=True).order_by('data_criacao')
         for op in orfas[:LIMITE_POR_SINAL]:
             dias = (agora - op.data_criacao).days
-            itens.append({
-                'severidade': 'critico',
-                'titulo': op.lead.nome_razaosocial or op.titulo or f'Oportunidade #{op.pk}',
-                'subtitulo': f'Sem responsavel ha {dias} dia{_plural(dias)}, precisa atribuir',
-                'tag': 'sem dono',
-                'url': _url_op(op),
-                'ordem': dias + 10,
-            })
+            nome = op.lead.nome_razaosocial or op.titulo or f'Oportunidade #{op.pk}'
+            add(criticos, 'Sem dono', nome, f'{dias} dia{_plural(dias)} sem responsavel, precisa atribuir',
+                op.estagio.nome, _url_op(op), dias + 100)
 
     # 5. Lead em status de erro (falha de sincronizacao)
     erros = LeadProspecto.objects.filter(status_api='erro').select_related('oportunidade_crm')
@@ -117,14 +106,8 @@ def coletar_acoes(request):
         erros = erros.filter(oportunidade_crm__responsavel_id__in=esc)
     for l in erros.order_by('-data_cadastro')[:LIMITE_POR_SINAL]:
         op = getattr(l, 'oportunidade_crm', None)
-        itens.append({
-            'severidade': 'critico',
-            'titulo': l.nome_razaosocial or f'Lead #{l.pk}',
-            'subtitulo': 'Lead em erro (falha de sincronizacao com o ERP)',
-            'tag': '',
-            'url': _url_op(op),
-            'ordem': 999,  # erro tecnico no topo dos criticos
-        })
+        nome = l.nome_razaosocial or f'Lead #{l.pk}'
+        add(criticos, 'Erro', nome, 'Falha de sincronizacao com o ERP', '', _url_op(op), 9999)
 
     # 6. Oportunidade nova < 24h — primeiro contato agora
     novas = (escopar_op(op_base)
@@ -132,21 +115,19 @@ def coletar_acoes(request):
              .order_by('-data_criacao'))
     for op in novas[:LIMITE_POR_SINAL]:
         horas = int((agora - op.data_criacao).total_seconds() // 3600)
-        itens.append({
-            'severidade': 'oportunidade',
-            'titulo': op.lead.nome_razaosocial or op.titulo or f'Oportunidade #{op.pk}',
-            'subtitulo': f'Nova ha {horas}h, faca o primeiro contato',
-            'tag': _equipe_nome(op),
-            'url': _url_op(op),
-            'ordem': -horas,  # mais nova primeiro dentro do verde
-        })
+        nome = op.lead.nome_razaosocial or op.titulo or f'Oportunidade #{op.pk}'
+        add(oportunidades, 'Nova', nome, f'Nova ha {horas}h, faca o primeiro contato',
+            _equipe_nome(op), _url_op(op), -horas)
 
-    peso = {'critico': 0, 'atencao': 1, 'oportunidade': 2}
-    itens.sort(key=lambda i: (peso[i['severidade']], -i['ordem']))
+    criticos.sort(key=lambda i: -i['ordem'])
+    atencao.sort(key=lambda i: -i['ordem'])
+    oportunidades.sort(key=lambda i: -i['ordem'])
 
-    contadores = {
-        'criticos': sum(1 for i in itens if i['severidade'] == 'critico'),
-        'atencao': sum(1 for i in itens if i['severidade'] == 'atencao'),
-        'oportunidades': sum(1 for i in itens if i['severidade'] == 'oportunidade'),
-    }
-    return {'itens': itens, 'contadores': contadores, 've_time': ve_time}
+    grupos = [
+        {'sev': 'critico', 'label': 'Críticos', 'itens': criticos, 'aberto': True},
+        {'sev': 'atencao', 'label': 'Atenção', 'itens': atencao, 'aberto': True},
+        {'sev': 'oportunidade', 'label': 'Oportunidades', 'itens': oportunidades, 'aberto': False},
+    ]
+    contadores = {'criticos': len(criticos), 'atencao': len(atencao),
+                  'oportunidades': len(oportunidades)}
+    return {'grupos': grupos, 'contadores': contadores, 've_time': ve_time}

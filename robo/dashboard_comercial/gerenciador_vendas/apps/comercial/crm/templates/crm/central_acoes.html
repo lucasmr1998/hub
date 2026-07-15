@@ -23,58 +23,75 @@
   </div>
 </div>
 
-<div class="card">
-  <div class="card-header" style="display:flex; align-items:center; gap:8px;">
-    <i class="bi bi-clock-history" style="color:var(--color-warning);"></i>
-    <strong>O que você deve fazer agora</strong>
-  </div>
-  <div class="ca-list">
-    {% for item in itens|slice:":60" %}
-      <a href="{{ item.url }}" class="ca-row">
-        <span class="ca-dot ca-dot-{{ item.severidade }}"></span>
-        <div class="ca-row-body">
-          <div class="ca-row-titulo">{{ item.titulo }}</div>
-          <div class="ca-row-sub">{{ item.subtitulo }}{% if item.tag %} <span class="ca-row-tag">[{{ item.tag }}]</span>{% endif %}</div>
-        </div>
-        <i class="bi bi-chevron-right ca-row-chevron"></i>
-      </a>
-    {% empty %}
-      <div class="ca-empty">
-        <i class="bi bi-check2-circle" style="font-size:2rem; color:var(--color-success); opacity:.5; display:block; margin-bottom:8px;"></i>
-        <p style="margin:0;">Nada pendente por aqui. Tudo em dia!</p>
-      </div>
-    {% endfor %}
-  </div>
-  {% if itens|length > 60 %}
-    <div class="ca-more">Mostrando 60 de {{ itens|length }}. Refine por equipe ou resolva os críticos primeiro.</div>
-  {% endif %}
-</div>
+{% for g in grupos %}
+  <details class="ca-group" {% if g.aberto and g.itens %}open{% endif %}>
+    <summary class="ca-group-head">
+      <span class="ca-dot ca-dot-{{ g.sev }}"></span>
+      <span class="ca-group-label">{{ g.label }}</span>
+      <span class="ca-group-count ca-count-{{ g.sev }}">{{ g.itens|length }}</span>
+      <i class="bi bi-chevron-down ca-group-chevron"></i>
+    </summary>
+    <div class="ca-list">
+      {% for item in g.itens|slice:":50" %}
+        <a href="{{ item.url }}" class="ca-row">
+          <span class="ca-badge ca-badge-{{ g.sev }}">{{ item.tipo }}</span>
+          <div class="ca-row-body">
+            <div class="ca-row-titulo">{{ item.titulo }}</div>
+            <div class="ca-row-sub">{{ item.subtitulo }}{% if item.tag %} · {{ item.tag }}{% endif %}</div>
+          </div>
+          <i class="bi bi-chevron-right ca-row-chevron"></i>
+        </a>
+      {% empty %}
+        <div class="ca-empty-sm">Nada aqui, tudo em dia.</div>
+      {% endfor %}
+      {% if g.itens|length > 50 %}
+        <div class="ca-more">e mais {{ g.itens|length|add:"-50" }}. Resolva os de cima primeiro.</div>
+      {% endif %}
+    </div>
+  </details>
+{% endfor %}
 
 <style>
   .ca-counters { display:flex; gap:8px; flex-wrap:wrap; }
-  .ca-chip { font-size:var(--fs-xs); font-weight:600; padding:3px 10px; border-radius:999px; border:1px solid; white-space:nowrap; }
+  .ca-chip { font-size:var(--fs-xs); font-weight:700; padding:3px 10px; border-radius:999px;
+             border:1px solid; white-space:nowrap; }
   .ca-chip-critico { color:var(--color-danger); border-color:var(--color-danger); }
   .ca-chip-atencao { color:var(--color-warning); border-color:var(--color-warning); }
   .ca-chip-oportunidade { color:var(--color-success); border-color:var(--color-success); }
 
-  .ca-list { display:flex; flex-direction:column; }
-  .ca-row { display:flex; align-items:center; gap:12px; padding:12px 16px;
+  .ca-group { background:var(--color-surface, #fff); border:1px solid var(--color-border, #e5e7eb);
+              border-radius:var(--radius-md, 10px); margin-bottom:var(--sp-4, 16px); overflow:hidden; }
+  .ca-group-head { display:flex; align-items:center; gap:10px; padding:12px 16px; cursor:pointer;
+                   list-style:none; user-select:none; font-weight:700; }
+  .ca-group-head::-webkit-details-marker { display:none; }
+  .ca-group-label { font-size:var(--fs-sm); }
+  .ca-group-count { font-size:var(--fs-xs); font-weight:700; padding:1px 9px; border-radius:999px;
+                    color:#fff; }
+  .ca-count-critico { background:var(--color-danger); }
+  .ca-count-atencao { background:var(--color-warning); }
+  .ca-count-oportunidade { background:var(--color-success); }
+  .ca-group-chevron { margin-left:auto; color:var(--color-text-muted); transition:transform .15s ease; }
+  details[open] .ca-group-chevron { transform:rotate(180deg); }
+
+  .ca-list { display:flex; flex-direction:column; border-top:1px solid var(--color-border, #e5e7eb); }
+  .ca-row { display:flex; align-items:center; gap:12px; padding:11px 16px;
             border-top:1px solid var(--color-border, #e5e7eb); text-decoration:none;
             color:inherit; transition:background .12s ease; }
   .ca-row:first-child { border-top:none; }
   .ca-row:hover { background:rgba(0,0,0,.035); }
-  .ca-dot { width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
-  .ca-dot-critico { background:var(--color-danger); }
-  .ca-dot-atencao { background:var(--color-warning); }
-  .ca-dot-oportunidade { background:var(--color-success); }
+  .ca-badge { flex:0 0 auto; font-size:10px; font-weight:700; text-transform:uppercase;
+              letter-spacing:.03em; padding:3px 8px; border-radius:6px; min-width:64px; text-align:center; }
+  .ca-badge-critico { background:rgba(239,68,68,.13); color:var(--color-danger); }
+  .ca-badge-atencao { background:rgba(245,158,11,.16); color:var(--color-warning); }
+  .ca-badge-oportunidade { background:rgba(16,185,129,.15); color:var(--color-success); }
   .ca-row-body { flex:1 1 auto; min-width:0; }
   .ca-row-titulo { font-weight:600; font-size:var(--fs-sm); white-space:nowrap;
                    overflow:hidden; text-overflow:ellipsis; }
-  .ca-row-sub { font-size:var(--fs-xs); color:var(--color-text-muted); }
-  .ca-row-tag { color:var(--color-text-muted); }
+  .ca-row-sub { font-size:var(--fs-xs); color:var(--color-text-muted); white-space:nowrap;
+                overflow:hidden; text-overflow:ellipsis; }
   .ca-row-chevron { color:var(--color-text-muted); font-size:.9rem; flex:0 0 auto; }
-  .ca-empty { text-align:center; padding:40px 16px; color:var(--color-text-muted); }
-  .ca-more { padding:12px 16px; border-top:1px solid var(--color-border, #e5e7eb);
+  .ca-empty-sm { padding:16px; text-align:center; color:var(--color-text-muted); font-size:var(--fs-xs); }
+  .ca-more { padding:11px 16px; border-top:1px solid var(--color-border, #e5e7eb);
              font-size:var(--fs-xs); color:var(--color-text-muted); }
 </style>
 {% endblock %}

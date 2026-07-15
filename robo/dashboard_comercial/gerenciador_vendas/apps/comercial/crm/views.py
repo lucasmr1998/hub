@@ -677,7 +677,7 @@ def central_acoes_view(request):
     dados = coletar_acoes(request)
     return render(request, 'crm/central_acoes.html', {
         'page_title': 'Central de Acoes',
-        'itens': dados['itens'],
+        'grupos': dados['grupos'],
         'contadores': dados['contadores'],
         've_time': dados['ve_time'],
     })

@@ -260,3 +260,15 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy pendente de validacao do Lucas.
 
 ---
+
+## 2026-07-15 — Central de Acoes: UX (secoes + selo de tipo)
+
+- **Feedback do Lucas:** lista chapada de 73 itens iguais, "nao sei o que e o
+  que". Faltava rotulo de tipo e agrupamento.
+- **Ajuste:** coletar_acoes passou a devolver `grupos` (3 baldes por severidade)
+  e cada item ganhou `tipo` (Parada / Sem dono / Tarefa / Erro / Nova). Template
+  virou 3 secoes colapsaveis (<details>): Criticos e Atencao abertos, Oportunidades
+  fechada por padrao (some o volume verde). Cada linha tem selo de tipo colorido.
+- **Status:** completed (codigo, dev).
+
+---
