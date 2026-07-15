@@ -52,6 +52,9 @@ Uso em template que extende layout_app:
       </nav>
       <div class="app-subnav-section">Operacao</div>
       <nav class="app-subnav-list">
+        <a href="/crm/central-acoes/" class="app-subnav-item {% if request.resolver_match.url_name == 'central_acoes' %}is-active{% endif %}">
+          <i class="bi bi-lightning-charge"></i><span>Central de Ações</span>
+        </a>
         <a href="/crm/" class="app-subnav-item {% if request.resolver_match.url_name == 'pipeline' or request.resolver_match.url_name == 'pipeline_view' or 'oportunidade' in request.resolver_match.url_name %}is-active{% endif %}">
           <i class="bi bi-kanban"></i><span>Pipeline</span>
         </a>

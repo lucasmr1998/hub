@@ -666,6 +666,23 @@ def oportunidades_lista(request):
     return render(request, 'crm/oportunidades_lista.html', context)
 
 
+@login_required
+def central_acoes_view(request):
+    """Central de Acoes: "o que fazer agora" priorizado, escopado por papel
+    (vendedor ve o dele, gerente ve o do time) via escopo_responsaveis."""
+    denied = _check_perm(request, 'comercial.ver_pipeline')
+    if denied:
+        return denied
+    from apps.comercial.crm.central_acoes import coletar_acoes
+    dados = coletar_acoes(request)
+    return render(request, 'crm/central_acoes.html', {
+        'page_title': 'Central de Acoes',
+        'itens': dados['itens'],
+        'contadores': dados['contadores'],
+        've_time': dados['ve_time'],
+    })
+
+
 def _tenant_tem_origens(request):
     """(tem_origens_cliente, tem_origens_servico) do cache HubSoft do tenant.
 

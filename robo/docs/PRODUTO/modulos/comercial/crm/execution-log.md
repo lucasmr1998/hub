@@ -235,3 +235,28 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (dado em prod, live sem rebuild).
 
 ---
+
+## 2026-07-15 — Central de Acoes (MVP, pagina role aware estilo Visio)
+
+- **Acao:** pagina nova /crm/central-acoes/ que lista "o que fazer agora"
+  priorizado, escopado por papel via escopo_responsaveis (vendedor ve o dele,
+  gerente ve o do time). Tarefa Workspace #200.
+- **Arquitetura (Opcao A):** view no CRM (central_acoes_view, gate ver_pipeline)
+  + motor em apps/comercial/crm/central_acoes.py (coletar_acoes). Reusa o
+  escopo_responsaveis ja em prod, entao o role aware sai de graca.
+- **6 sinais (regua do strawman):** oportunidade parada no estagio >7d (critico)
+  / 3-7d (atencao) via data_entrada_estagio; tarefa vencida (critico); oport sem
+  dono (critico, so pra quem ve o time); lead status_api=erro (critico); oport
+  nova <24h (oportunidade). Contadores por severidade. Ordena critico > atencao
+  > oportunidade, urgencia dentro.
+- **Template:** crm/central_acoes.html (estende sistema/base.html, estilo Visio:
+  chips de contador + lista clicavel com bolinha de severidade). Entrada nova na
+  sidebar (Operacao, topo). Cap de 60 itens exibidos + total.
+- **Validacao:** manage.py check limpo; smoke em dev (template compila, coletor
+  roda: 241 criticos/3 atencao/244 itens num superuser, ordenacao correta).
+- **Pendente/futuro:** filtro por equipe/loja na barra, feed de "Atualizacoes",
+  cap paginado ("ver todos"). Sinal de lead-novo usa oport <24h como proxy de
+  "sem 1o contato" (sem join em HistoricoContato ainda).
+- **Status:** completed (codigo, dev). Deploy pendente de validacao do Lucas.
+
+---

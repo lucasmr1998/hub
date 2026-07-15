@@ -4,6 +4,9 @@ from . import views
 app_name = 'crm'
 
 urlpatterns = [
+    # Central de Acoes (o que fazer agora, por papel)
+    path('central-acoes/', views.central_acoes_view, name='central_acoes'),
+
     # Pipeline / Kanban
     path('', views.pipeline_view, name='pipeline'),
     path('pipeline/', views.pipeline_view, name='pipeline_view'),

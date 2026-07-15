@@ -1,0 +1,80 @@
+{% extends "sistema/base.html" %}
+
+{% block title %}Central de Ações — Hubtrix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-top">
+    <div>
+      <h1 class="page-title" style="margin:0;">
+        <i class="bi bi-lightning-charge-fill" style="color:var(--color-primary);"></i> Central de Ações
+      </h1>
+      <p style="margin:4px 0 0; color:var(--color-text-muted); font-size:var(--fs-sm);">
+        O que precisa da sua ação agora{% if ve_time %} (visão do time){% else %} (suas pendências){% endif %}.
+      </p>
+    </div>
+    <div class="page-actions">
+      <div class="ca-counters">
+        <span class="ca-chip ca-chip-critico">{{ contadores.criticos }} críticos</span>
+        <span class="ca-chip ca-chip-atencao">{{ contadores.atencao }} atenção</span>
+        <span class="ca-chip ca-chip-oportunidade">{{ contadores.oportunidades }} oportunidades</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" style="display:flex; align-items:center; gap:8px;">
+    <i class="bi bi-clock-history" style="color:var(--color-warning);"></i>
+    <strong>O que você deve fazer agora</strong>
+  </div>
+  <div class="ca-list">
+    {% for item in itens|slice:":60" %}
+      <a href="{{ item.url }}" class="ca-row">
+        <span class="ca-dot ca-dot-{{ item.severidade }}"></span>
+        <div class="ca-row-body">
+          <div class="ca-row-titulo">{{ item.titulo }}</div>
+          <div class="ca-row-sub">{{ item.subtitulo }}{% if item.tag %} <span class="ca-row-tag">[{{ item.tag }}]</span>{% endif %}</div>
+        </div>
+        <i class="bi bi-chevron-right ca-row-chevron"></i>
+      </a>
+    {% empty %}
+      <div class="ca-empty">
+        <i class="bi bi-check2-circle" style="font-size:2rem; color:var(--color-success); opacity:.5; display:block; margin-bottom:8px;"></i>
+        <p style="margin:0;">Nada pendente por aqui. Tudo em dia!</p>
+      </div>
+    {% endfor %}
+  </div>
+  {% if itens|length > 60 %}
+    <div class="ca-more">Mostrando 60 de {{ itens|length }}. Refine por equipe ou resolva os críticos primeiro.</div>
+  {% endif %}
+</div>
+
+<style>
+  .ca-counters { display:flex; gap:8px; flex-wrap:wrap; }
+  .ca-chip { font-size:var(--fs-xs); font-weight:600; padding:3px 10px; border-radius:999px; border:1px solid; white-space:nowrap; }
+  .ca-chip-critico { color:var(--color-danger); border-color:var(--color-danger); }
+  .ca-chip-atencao { color:var(--color-warning); border-color:var(--color-warning); }
+  .ca-chip-oportunidade { color:var(--color-success); border-color:var(--color-success); }
+
+  .ca-list { display:flex; flex-direction:column; }
+  .ca-row { display:flex; align-items:center; gap:12px; padding:12px 16px;
+            border-top:1px solid var(--color-border, #e5e7eb); text-decoration:none;
+            color:inherit; transition:background .12s ease; }
+  .ca-row:first-child { border-top:none; }
+  .ca-row:hover { background:rgba(0,0,0,.035); }
+  .ca-dot { width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
+  .ca-dot-critico { background:var(--color-danger); }
+  .ca-dot-atencao { background:var(--color-warning); }
+  .ca-dot-oportunidade { background:var(--color-success); }
+  .ca-row-body { flex:1 1 auto; min-width:0; }
+  .ca-row-titulo { font-weight:600; font-size:var(--fs-sm); white-space:nowrap;
+                   overflow:hidden; text-overflow:ellipsis; }
+  .ca-row-sub { font-size:var(--fs-xs); color:var(--color-text-muted); }
+  .ca-row-tag { color:var(--color-text-muted); }
+  .ca-row-chevron { color:var(--color-text-muted); font-size:.9rem; flex:0 0 auto; }
+  .ca-empty { text-align:center; padding:40px 16px; color:var(--color-text-muted); }
+  .ca-more { padding:12px 16px; border-top:1px solid var(--color-border, #e5e7eb);
+             font-size:var(--fs-xs); color:var(--color-text-muted); }
+</style>
+{% endblock %}
