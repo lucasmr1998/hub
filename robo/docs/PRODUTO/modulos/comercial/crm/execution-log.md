@@ -215,3 +215,23 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy pendente de confirmacao do Lucas.
 
 ---
+
+## 2026-07-15 — Fix: plano 500 normal de Sumare nao aparecia (so o Mig)
+
+- **Report:** vendedora Nuvyon: "500mb de Sumare so tem o Mig, adicionar o normal".
+- **Diagnostico:** NAO era HubSoft nem cidade. O HubSoft devolve o 500 normal
+  (id_servico 515, "7- PLANO_500M - CONNECTIONS", R$99,90) pra todos os CEPs de
+  Sumare. O dropdown do completar-venda mostra o catalogo curado
+  (ProdutoServico categoria=plano ativo=True, id_externo) INTERSECTADO com os
+  ids do HubSoft no CEP; so cai na lista crua se o curado nao tiver nada da
+  regiao. No crm_produtos da Nuvyon o 515 estava ativo=False (id 163); so o Mig
+  (id 435, id_externo 1155) estava ativo, por isso a vendedora so via o Mig.
+- **Fix:** ProdutoServico.all_tenants.filter(id=163).update(ativo=True) em prod
+  (verificada a identidade da linha antes; .update sem signals). Confirmado: o
+  dropdown de Sumare passou a listar 515 (normal) + 1155 (Mig).
+- **Pendencia observada:** o Mig ativo (id 435) esta com preco R$ 0,00, provavel
+  erro de cadastro. Padrao "normal desativado / Mig ativo" pode existir em outras
+  velocidades/cidades (auditoria sugerida, nao feita).
+- **Status:** completed (dado em prod, live sem rebuild).
+
+---
