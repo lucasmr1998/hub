@@ -30,8 +30,7 @@
     </div>
     <div class="page-actions">
       {% include "components/list_filters.html" with fields=filter_fields search_placeholder="Buscar por nome, telefone..." search_name="search" search_id="searchPipeline" drawer=True drawer_id="pipeline-filtros" clear_url=request.path %}
-      <button class="btn btn-secondary btn-sm" onclick="abrirModalPersonalizarCard()" title="Personalizar campos do card"><i class="bi bi-sliders"></i> Personalizar card</button>
-      <button class="btn btn-secondary btn-sm" onclick="carregarPipeline()"><i class="bi bi-arrow-clockwise"></i> Atualizar</button>
+      <button class="btn btn-secondary btn-sm" onclick="abrirModalPersonalizarCard()" title="Personalizar campos do card"><i class="bi bi-sliders"></i> Personalizar</button>
       {% include "components/view_toggle.html" with storage_key="pipeline-view" %}
       <button class="btn btn-primary btn-sm" onclick="abrirModalNovaOportunidade()"><i class="bi bi-plus-lg"></i> Nova oportunidade</button>
     </div>
