@@ -149,3 +149,19 @@ Avisar a Nuvyon antes de subir.
 concluir. Errou titulo ou data, so pelo admin do Django.
 
 ---
+
+## 2026-07-15 — Fix: adicionar membro a equipe nao movia quem ja tinha perfil
+
+- **Acao:** `equipes_view` (action `adicionar_membro`) usava
+  `PerfilVendedor.objects.get_or_create(user=user, defaults={equipe, cargo})`.
+  Como `PerfilVendedor` e OneToOne com User e quase todo usuario ja tem perfil,
+  os defaults eram ignorados: adicionar alguem que ja tinha perfil nao trocava a
+  equipe. Bug silencioso (a tela nao mudava). Reportado pelo Lucas ao tentar por
+  a Gabriela Ferreira na EQUIPE CACONDE.
+- **Decisao:** trocar por `update_or_create`. Como `equipe` e FK unica, a
+  operacao MOVE a pessoa pro novo time (sai do anterior). Se um gerente precisar
+  cuidar de mais de um time no futuro, exige mudar o modelo (M2M ou usar `lider`).
+- **Output:** commit bf13cc4. `manage.py check` limpo.
+- **Status:** completed (codigo). Deploy pendente de confirmacao do Lucas.
+
+---
