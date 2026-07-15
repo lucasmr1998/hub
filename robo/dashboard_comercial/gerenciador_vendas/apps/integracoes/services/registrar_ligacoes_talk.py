@@ -14,7 +14,7 @@ dados_extras. Rodar de novo nao duplica.
 """
 import logging
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 from django.utils import timezone as dj_tz
 from django.utils.dateparse import parse_datetime
@@ -62,9 +62,13 @@ def _quando(dat_ligacao: str):
 
 
 def registrar_ligacoes_talk(tenant, dias: int = 7, limit: int = None,
-                            dry_run: bool = False) -> ResultadoLigacoes:
+                            dry_run: bool = False, refazer: bool = False) -> ResultadoLigacoes:
     """Pra cada lead do Talk dos ultimos N dias, cria um HistoricoContato por
-    ligacao encontrada no Talk. Idempotente por cod_cdr."""
+    ligacao encontrada no Talk. Idempotente por cod_cdr.
+
+    refazer=True apaga os contatos ja criados por este service (dados_extras.
+    origem='talk') antes de recriar — usar quando o formato mudou.
+    """
     from apps.comercial.leads.models import LeadProspecto, HistoricoContato
 
     res = ResultadoLigacoes()
@@ -81,6 +85,12 @@ def registrar_ligacoes_talk(tenant, dias: int = 7, limit: int = None,
              .order_by('-data_cadastro'))
     if limit:
         leads = leads[:limit]
+
+    if refazer and not dry_run:
+        apagados = HistoricoContato.all_tenants.filter(
+            tenant=tenant, lead__in=list(leads), dados_extras__origem='talk',
+        ).delete()[0]
+        res.mensagens.append(f'refazer: {apagados} contato(s) antigos do Talk apagados')
 
     for lead in leads:
         res.leads_processados += 1
@@ -127,25 +137,42 @@ def registrar_ligacoes_talk(tenant, dias: int = 7, limit: int = None,
                 )
                 continue
 
-            try:
-                dur = int(ch.get('num_seg_bilhetado') or ch.get('num_seg_chamada') or 0)
-            except (TypeError, ValueError):
-                dur = 0
+            status = _status_da_chamada(ch.get('nom_resposta'))
+            agente = (ch.get('nom_agente') or '').strip()
+
+            # Duracao (tempo de CONVERSA) so faz sentido em ligacao atendida. Em
+            # ocupado/nao atendida o Talk devolve num_seg_chamada (tempo total,
+            # incluindo fila/toque), que nao e conversa — ficava tipo "ocupado,
+            # 3043s", o que nao existe. So guardo a duracao da atendida.
+            dur = 0
+            if status == 'ligacao_atendida':
+                try:
+                    dur = int(ch.get('num_seg_bilhetado') or 0)
+                except (TypeError, ValueError):
+                    dur = 0
+
+            # Texto que reflete o RESULTADO — nao "atendida por" em tudo.
+            if status == 'ligacao_atendida':
+                mins = f' ({round(dur/60, 1)} min)' if dur else ''
+                obs = f"Ligacao atendida por {agente or 'agente do Talk'}{mins}"
+            elif status == 'ocupado':
+                obs = 'Cliente ligou, mas a linha estava ocupada (nao atendida)'
+            else:  # nao_atendeu / nao classificado
+                obs = 'Cliente ligou, ninguem atendeu'
 
             HistoricoContato.all_tenants.create(
                 tenant=tenant,
                 lead=lead,
                 telefone=lead.telefone or '',
-                nome_contato=lead.nome_razaosocial or '',
                 data_hora_contato=_quando(ch.get('dat_ligacao')) or lead.data_cadastro,
-                status=_status_da_chamada(ch.get('nom_resposta')),
+                status=status,
                 origem_contato='telefone',
                 duracao_segundos=dur,
-                observacoes=f"Ligacao Talk atendida por {ch.get('nom_agente') or '—'}",
+                observacoes=obs,
                 dados_extras={
                     'origem': 'talk',
                     'cod_cdr': cod_cdr,
-                    'nom_agente': ch.get('nom_agente'),
+                    'nom_agente': agente,
                     'nom_resposta': ch.get('nom_resposta'),
                     'gravacao_arquivo': ch.get('nom_arquivo'),  # nome do arquivo; play depende do endpoint do Talk
                 },

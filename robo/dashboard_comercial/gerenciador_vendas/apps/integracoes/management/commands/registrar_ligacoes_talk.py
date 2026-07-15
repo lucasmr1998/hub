@@ -21,6 +21,8 @@ class Command(BaseCommand):
         parser.add_argument('--dias', type=int, default=7)
         parser.add_argument('--limit', type=int, default=None)
         parser.add_argument('--dry-run', action='store_true')
+        parser.add_argument('--refazer', action='store_true',
+                            help='Apaga os contatos ja criados do Talk e recria (formato mudou).')
 
     def handle(self, *args, **opts):
         tenants = Tenant.objects.filter(ativo=True)
@@ -29,7 +31,8 @@ class Command(BaseCommand):
 
         for tenant in tenants:
             r = registrar_ligacoes_talk(
-                tenant, dias=opts['dias'], limit=opts['limit'], dry_run=opts['dry_run'],
+                tenant, dias=opts['dias'], limit=opts['limit'],
+                dry_run=opts['dry_run'], refazer=opts['refazer'],
             )
             if r.leads_processados == 0:
                 continue

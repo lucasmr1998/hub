@@ -1319,6 +1319,7 @@ class HistoricoContato(TenantMixin):
 
     status = models.CharField(
         max_length=30,
+        choices=STATUS_CHOICES,
         verbose_name="Status do Contato"
     )
 
@@ -1508,11 +1509,17 @@ class HistoricoContato(TenantMixin):
 
     def get_status_display(self):  # compatível com chamadas existentes
         from apps.sistema.models import StatusConfiguravel
+        mapping = dict(self.STATUS_CHOICES)
         try:
-            return StatusConfiguravel.get_label('historico_status', self.status)
+            label = StatusConfiguravel.get_label('historico_status', self.status)
+            # get_label devolve o PROPRIO codigo quando nao ha rotulo configurado;
+            # nesse caso, cai no rotulo padrao (STATUS_CHOICES), senao a timeline
+            # mostra o slug cru ('ocupado', 'nao_atendeu').
+            if label and label != self.status:
+                return label
         except Exception:
-            mapping = dict(self.STATUS_CHOICES)
-            return mapping.get(self.status, self.status)
+            pass
+        return mapping.get(self.status, self.status)
 
 
 class CampoCustomizado(TenantMixin):
