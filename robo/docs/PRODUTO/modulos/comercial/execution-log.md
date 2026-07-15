@@ -221,3 +221,13 @@ Status: completed + deployado em prod (commits `d4cbd3c`, `88dd40d`, `e3f2de0`, 
 - **Validado (dev, Playwright)**: botao na toolbar; drawer abre da direita (480px, campos empilhados); mudar filtro chama carregarPipeline; Filtrar fecha o drawer; sem vazamento de comentario; 0 erros de console.
 - **Arquivos**: `components/list_filters.html`, `partials/_components_styles.html`, `crm/pipeline.html`.
 - **Status**: completed (dev, so pipeline). Deploy + rollout pras outras 7 telas pendentes.
+
+## 2026-07-15 — Drawer de filtros: layout 2 colunas + 3 filtros novos
+
+- **Pedido do dono**: mais opcoes de filtro no drawer + Canal/Fonte/Campanha paravam de ocupar uma linha cada.
+- **Layout**: os campos do drawer viraram grade de 2 COLUNAS (`.list-filters-drawer` grid 1fr/1fr); Buscar ocupa a linha inteira. Multiselect (Canal/Fonte/Campanha) encolhia porque o `.multiselect-wrap` do meio nao tinha width — estiquei os tres niveis. Agora todos preenchem a celula.
+- **Filtros novos**: Estagio (backend novo: estagio_id), Prioridade (backend JA existia, so faltava a UI — filtro de graca), Criada em / Periodo (backend novo: data_criacao >= now-Nd). Deixei Cidade DE FORA de proposito: 37 grafias sujas em prod (caconde/Caconde, RIBEIRAO PRETO/SP...), viraria dropdown bagunçado — depende da normalizacao antes.
+- **BUG ANTIGO achado no caminho**: o `carregarPipeline` montava a query a mao com so 4 campos (search/responsavel/tag/valor), entao os multiselect Canal/Fonte/Campanha ja existentes **nunca chegavam ao backend no kanban** — filtros mortos. Trocado por `new URLSearchParams(new FormData(form))`, que envia TODOS os campos. Conserta os 3 antigos + os 3 novos. Change-listener ampliado pra todos os selects do form.
+- **Validado (dev)**: drawer com 10 filtros em 2 colunas; multiselect 100% da celula; backend recorta (Periodo 7d=8 <= 30d=69 <= 167 total; Estagio/Prioridade aplicam subset); 0 erros de console.
+- **Arquivos**: `components/list_filters.html`, `partials/_components_styles.html`, `crm/views.py`, `crm/pipeline.html`.
+- **Status**: completed (dev). Deploy pendente.

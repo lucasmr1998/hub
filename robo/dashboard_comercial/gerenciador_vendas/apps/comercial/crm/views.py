@@ -183,6 +183,10 @@ def pipeline_view(request):
     filter_fields = [
         {'type': 'select', 'label': 'Responsavel', 'name': 'responsavel', 'value': request.GET.get('responsavel', ''),
          'options': [('', 'Todos'), ('sem', '— Sem responsavel —')] + [(str(v['id']), v['nome']) for v in vendedores]},
+        {'type': 'select', 'label': 'Estagio', 'name': 'estagio', 'value': request.GET.get('estagio', ''),
+         'options': [('', 'Todos')] + [(str(e.pk), e.nome) for e in estagios]},
+        {'type': 'select', 'label': 'Prioridade', 'name': 'prioridade', 'value': request.GET.get('prioridade', ''),
+         'options': [('', 'Todas'), ('baixa', 'Baixa'), ('normal', 'Normal'), ('alta', 'Alta'), ('urgente', 'Urgente')]},
         {'type': 'select', 'label': 'Tag', 'name': 'tag', 'value': '',
          'options': [('', 'Todas')] + [(t.nome, t.nome) for t in tags]},
         {'type': 'select', 'label': 'Valor', 'name': 'valor', 'value': '',
@@ -192,6 +196,13 @@ def pipeline_view(request):
              ('100-500', 'R$ 100 a R$ 500'),
              ('500-1000', 'R$ 500 a R$ 1.000'),
              ('1000+', 'Acima de R$ 1.000'),
+         ]},
+        {'type': 'select', 'label': 'Criada em', 'name': 'periodo', 'value': request.GET.get('periodo', ''),
+         'options': [
+             ('', 'Qualquer data'),
+             ('7', 'Ultimos 7 dias'),
+             ('30', 'Ultimos 30 dias'),
+             ('90', 'Ultimos 90 dias'),
          ]},
         # Sprint 5: filtros de origem (multi-select)
         {'type': 'multiselect', 'label': 'Canal', 'name': 'canal',
@@ -313,6 +324,14 @@ def api_pipeline_dados(request):
         qs = qs.filter(responsavel_id=responsavel_id)
     if prioridade:
         qs = qs.filter(prioridade=prioridade)
+    estagio_filtro = request.GET.get('estagio')
+    if estagio_filtro:
+        qs = qs.filter(estagio_id=estagio_filtro)
+    periodo = request.GET.get('periodo')
+    if periodo and periodo.isdigit():
+        from django.utils import timezone as _tz
+        from datetime import timedelta as _td
+        qs = qs.filter(data_criacao__gte=_tz.now() - _td(days=int(periodo)))
     if tag:
         qs = qs.filter(tags__nome=tag)
     if canais:

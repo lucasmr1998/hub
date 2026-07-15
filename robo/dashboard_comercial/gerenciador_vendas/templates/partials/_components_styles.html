@@ -571,17 +571,23 @@ Tokens base (cores, tipografia, spacing) ficam em layouts/base.html.
 
   /* Modo B — grid (multiplos campos) */
   .list-filters-grid { padding: var(--sp-4); }
-  /* Modo DRAWER: os filtros empilham na vertical (o painel e estreito).
-     Sobrescreve o padding do .list-filters-grid dentro do modal. */
+  /* Modo DRAWER: grade de 2 colunas (os filtros curtos param de ocupar uma
+     linha cada). Sobrescreve o padding do .list-filters-grid dentro do modal. */
   .modal-drawer .list-filters-drawer {
     padding: 0;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: var(--sp-3);
+    align-content: start;
   }
-  .modal-drawer .list-filters-drawer .field { width: 100%; }
+  .modal-drawer .list-filters-drawer .field { width: 100%; min-width: 0; }
+  /* multiselect (Canal/Fonte/Campanha): tem um .multiselect-wrap no meio que,
+     sem width, encolhia o campo. Estica os tres niveis. */
   .modal-drawer .list-filters-drawer .field-input,
-  .modal-drawer .list-filters-drawer .field-input-wrap { width: 100%; }
+  .modal-drawer .list-filters-drawer .field-input-wrap,
+  .modal-drawer .list-filters-drawer .multiselect-wrap { width: 100%; }
+  /* Buscar ocupa a linha inteira (nao faz sentido meia-largura). */
+  .modal-drawer .list-filters-drawer .field-busca { grid-column: 1 / -1; }
   .list-filters-fields {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

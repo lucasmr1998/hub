@@ -863,7 +863,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Selects do list_filters devem recarregar ao mudar
-  document.querySelectorAll('.list-filters-grid [name="responsavel"], .list-filters-grid [name="tag"], .list-filters-grid [name="valor"]').forEach(el => {
+  document.querySelectorAll('.list-filters-grid select').forEach(el => {
     el.addEventListener('change', (e) => { e.preventDefault(); carregarPipeline(); });
   });
 
@@ -897,17 +897,13 @@ function getFiltroVal(name) {
 function carregarPipeline() {
   mostrarLoader(true);
 
-  const params = new URLSearchParams();
-  const search = getFiltroVal('search');
-  const responsavel = getFiltroVal('responsavel');
-  const tag = getFiltroVal('tag');
-  const valor = getFiltroVal('valor');
-
-  if (search) params.append('search', search);
-  if (responsavel) params.append('responsavel', responsavel);
-  if (tag) params.append('tag', tag);
-  if (valor) params.append('valor', valor);
-  if (_currentPipelineId) params.append('pipeline_id', _currentPipelineId);
+  // Le TODOS os campos do form de filtros (inclui os multiselect Canal/Fonte/
+  // Campanha e os novos Estagio/Prioridade/Periodo). Antes montava a query a
+  // mao com so 4 campos, entao os demais filtros nao chegavam ao backend.
+  const form = document.querySelector('.list-filters-grid');
+  const params = form ? new URLSearchParams(new FormData(form)) : new URLSearchParams();
+  for (const [k, v] of [...params.entries()]) { if (!v) params.delete(k); }
+  if (_currentPipelineId) params.set('pipeline_id', _currentPipelineId);
 
   fetch(`{% url 'crm:api_pipeline_dados' %}?${params}`)
     .then(r => r.json())
