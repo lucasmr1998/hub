@@ -999,8 +999,12 @@ def dashboard_data(request):
                 status_api='processado'
             ).count()
 
-        # 4. CLIENTES = Clientes HubSoft OU leads com venda confirmada
-        vendas = ClienteHubsoft.objects.count()
+        # 4. CLIENTES CONVERTIDOS = clientes que vieram do FUNIL (tem lead).
+        # Contar ClienteHubsoft.count() cru inflava o card: incluia os ~1006
+        # clientes da base historica importada de uma vez (sem lead), que nunca
+        # foram conversao. O fallback abaixo ja contava so venda confirmada — o
+        # count cru contradizia essa intencao.
+        vendas = ClienteHubsoft.objects.filter(lead__isnull=False).count()
         if vendas == 0:
             vendas = HistoricoContato.objects.filter(
                 converteu_venda=True
