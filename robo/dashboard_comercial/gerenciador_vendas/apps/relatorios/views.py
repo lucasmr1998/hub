@@ -80,7 +80,21 @@ def _overrides_da_barra(request) -> dict:
     if equipe_param.isdigit():
         overrides['equipe'] = int(equipe_param)
 
+    base_param = (request.GET.get('base') or '').strip()
+    if base_param in ('hubtrix', 'importado'):
+        overrides['base'] = base_param
+
     return overrides
+
+
+def _tem_filtro_base_cliente(widgets) -> bool:
+    """O dashboard tem algum widget de cliente/servico HubSoft? So ai o chip
+    'Base do cliente' faz sentido — nas demais fontes ele nao filtra nada."""
+    for w in widgets:
+        ds = ds_registry.get(w.data_source)
+        if ds and getattr(ds, 'campo_origem_lead', None):
+            return True
+    return False
 
 
 def _vendedores_do_tenant(request):
@@ -185,6 +199,7 @@ def dashboard_detalhe_view(request, pk):
         'chart_palette': json.dumps(paleta_tenant(getattr(request, 'tenant', None))),
         'vendedores': _vendedores_do_tenant(request),
         'equipes': _equipes_do_tenant(request),
+        'mostrar_base_cliente': _tem_filtro_base_cliente(widgets),
     })
 
 
@@ -230,6 +245,7 @@ def dashboard_editar_view(request, pk):
         # no modo edicao enquanto os chips de periodo e fonte continuavam la.
         'vendedores': _vendedores_do_tenant(request),
         'equipes': _equipes_do_tenant(request),
+        'mostrar_base_cliente': _tem_filtro_base_cliente(widgets),
     })
 
 

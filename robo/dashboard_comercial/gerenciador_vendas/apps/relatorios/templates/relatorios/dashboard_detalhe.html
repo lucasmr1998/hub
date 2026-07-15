@@ -42,6 +42,18 @@
     <button class="btn btn-sm filtro-chip" data-grupo="fonte" data-valor="facebook" onclick="setFiltroGlobal('fonte','facebook',this)">Meta Ads</button>
     <button class="btn btn-sm filtro-chip" data-grupo="fonte" data-valor="organico" onclick="setFiltroGlobal('fonte','organico',this)">Orgânico</button>
   </div>
+  {% if mostrar_base_cliente %}
+  {% comment %}
+    So aparece em dashboard com widget de cliente/servico HubSoft. Separa quem
+    veio do funil do Hubtrix da base historica importada de uma vez (sem lead).
+  {% endcomment %}
+  <div style="display:flex;align-items:center;gap:6px;">
+    <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Base</span>
+    <button class="btn btn-sm filtro-chip is-active" data-grupo="base" data-valor="" onclick="setFiltroGlobal('base','',this)">Todos</button>
+    <button class="btn btn-sm filtro-chip" data-grupo="base" data-valor="hubtrix" onclick="setFiltroGlobal('base','hubtrix',this)">Do Hubtrix</button>
+    <button class="btn btn-sm filtro-chip" data-grupo="base" data-valor="importado" onclick="setFiltroGlobal('base','importado',this)">Importados</button>
+  </div>
+  {% endif %}
   {% if equipes %}
   {% comment %}
     So aparece quando ha time DE VERDADE cadastrado (2+ equipes com gente).
@@ -473,7 +485,7 @@ const MODO_EDICAO = {{ modo_edicao|yesno:"true,false" }};
 const CSRF = "{{ csrf_token }}";
 
 // Filtros globais do dashboard (barra no topo) — aplicados em todos os widgets
-const FILTRO_GLOBAL = { dias: '', fonte: '', vendedor: '', equipe: '' };
+const FILTRO_GLOBAL = { dias: '', fonte: '', vendedor: '', equipe: '', base: '' };
 
 function setFiltroGlobal(grupo, valor, btn) {
   FILTRO_GLOBAL[grupo] = valor;
@@ -500,6 +512,7 @@ function _filtroQuery() {
   if (FILTRO_GLOBAL.fonte) p.set('fonte', FILTRO_GLOBAL.fonte);
   if (FILTRO_GLOBAL.vendedor) p.set('vendedor', FILTRO_GLOBAL.vendedor);
   if (FILTRO_GLOBAL.equipe) p.set('equipe', FILTRO_GLOBAL.equipe);
+  if (FILTRO_GLOBAL.base) p.set('base', FILTRO_GLOBAL.base);
   const s = p.toString();
   return s ? `?${s}` : '';
 }

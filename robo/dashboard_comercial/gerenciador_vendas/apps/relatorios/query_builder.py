@@ -386,6 +386,7 @@ class WidgetQueryBuilder:
         # fonte sem dono (base HubSoft) simplesmente nao filtra — e o meta avisa.
         qs = self._aplicar_vendedor(qs)
         qs = self._aplicar_equipe(qs)
+        qs = self._aplicar_base_cliente(qs)
         return qs
 
     def _aplicar_vendedor(self, qs):
@@ -417,6 +418,24 @@ class WidgetQueryBuilder:
     def suporta_equipe(self) -> bool:
         """A fonte deste widget responde ao filtro global de time?"""
         return bool(getattr(self.data_source, 'campo_equipe', None))
+
+    def suporta_base_cliente(self) -> bool:
+        """A fonte deste widget distingue cliente do funil x importado?"""
+        return bool(getattr(self.data_source, 'campo_origem_lead', None))
+
+    def _aplicar_base_cliente(self, qs):
+        """Filtra 'hubtrix' (veio do funil, tem lead) x 'importado' (base
+        historica, sem lead). So nas fontes de cliente/servico HubSoft."""
+        base = self.overrides.get('base')
+        campo = getattr(self.data_source, 'campo_origem_lead', None)
+        if base not in ('hubtrix', 'importado') or not campo:
+            return qs
+        try:
+            if base == 'hubtrix':
+                return qs.filter(**{f'{campo}__isnull': False})
+            return qs.filter(**{f'{campo}__isnull': True})
+        except Exception:
+            return qs
 
     # ------------- drill-down -------------
 

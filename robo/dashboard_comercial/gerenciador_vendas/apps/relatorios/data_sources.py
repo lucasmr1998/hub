@@ -56,6 +56,12 @@ class DataSource:
     # ignora o filtro e o card avisa).
     campo_equipe: Optional[str] = None
 
+    # Caminho ORM ate o lead do funil, pro filtro "Base do cliente" (Hubtrix x
+    # importado). Cliente com lead veio do funil do Hubtrix; sem lead e da base
+    # historica importada de uma vez. So faz sentido nas fontes de cliente/
+    # servico HubSoft; None nas demais (o chip nem aparece).
+    campo_origem_lead: Optional[str] = None
+
     # DRILL-DOWN: o que aparece quando alguem clica no numero do card.
     # Um painel operacional que mostra "110 leads sem contato" e nao deixa ver
     # QUEM sao os 110 e decorativo — a vendedora precisa da lista pra ligar.
@@ -364,6 +370,7 @@ registrar(DataSource(
     },
     metricas=['count', 'avg:churn_score'],
     order_by_padrao='-data_cadastro_hubsoft',
+    campo_origem_lead='lead',
 ))
 
 registrar(DataSource(
@@ -411,6 +418,7 @@ registrar(DataSource(
     },
     metricas=['count', 'sum:valor', 'avg:valor', 'avg:vigencia_meses', 'avg:cliente__churn_score'],
     order_by_padrao='-data_habilitacao',
+    campo_origem_lead='cliente__lead',
     colunas_drill=[
         ('cliente__nome_razaosocial', 'Cliente'),
         ('nome', 'Plano'),

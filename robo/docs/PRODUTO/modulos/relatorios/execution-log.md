@@ -140,3 +140,14 @@
 - **Validado (dev)**: cada card de etapa bate com o ORM; soma de ganhas (38) e de abertas (91) do scorecard batem com o ORM; drill do card "Negociacao" abre as 25; regressao em 56 widgets / 6 dashboards sem falha; 0 erros de console.
 - **Arquivos**: `query_builder.py`, `templates/relatorios/dashboard_detalhe.html`, `management/commands/seed_painel_etapas.py`.
 - **Status**: completed (dev, dashboard #7 local). Deploy + seed em prod pendentes de confirmacao.
+
+## 2026-07-15 — Filtro "Base do cliente" (Hubtrix x importado) no dashboard
+
+- **Pedido do dono**: separar os ~1006 clientes importados de uma vez (base historica, sem lead) dos que vieram do funil. Ele confirmou que quer FILTRAR, nao apagar — reversivel, nao perde dado (a alternativa era DELETE de 1006 clientes + 1309 servicos; descartada).
+- **Como distingue, sem campo novo no banco**: cliente com `lead` veio do funil do Hubtrix; sem `lead` e da base importada. So isso.
+- **Declarativo (mesmo padrao do filtro de vendedor)**: `DataSource.campo_origem_lead` = caminho ate o lead. `cliente_hubsoft`->'lead', `servico_hubsoft`->'cliente__lead'. Fonte sem esse campo ignora o filtro.
+- **Motor**: `_aplicar_base_cliente` — base='hubtrix' filtra lead IS NOT NULL, 'importado' filtra IS NULL. Validado inspecionando o SQL gerado.
+- **UI honesta**: o chip "Base: Todos / Do Hubtrix / Importados" so aparece em dashboard que TEM widget de cliente/servico HubSoft (`_tem_filtro_base_cliente`). Num painel sem essas fontes ele nao filtraria nada, entao nem renderiza. Validado no browser: aparece no dash Clientes, NAO aparece no Executivo, 0 erros.
+- **Numeros reais (prod)**: Todos 1155 = Do Hubtrix 149 + Importados 1006.
+- **Arquivos**: data_sources.py, query_builder.py, views.py, templates/relatorios/dashboard_detalhe.html.
+- **Status**: completed (dev). Deploy pendente.
