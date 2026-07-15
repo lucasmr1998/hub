@@ -26,6 +26,7 @@ from . import data_sources as ds_registry
 from .branding import paleta_tenant
 from .models import Dashboard, Widget, SETOR_CHOICES, SETOR_ICONES
 from .query_builder import WidgetQueryBuilder, WidgetQueryError
+from apps.comercial.crm.escopo import escopo_responsaveis, times_visiveis
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,10 @@ def _overrides_da_barra(request) -> dict:
     if base_param in ('hubtrix', 'importado'):
         overrides['base'] = base_param
 
+    # Trava de visibilidade por permissao (independe da barra): quem nao tem
+    # ver_todas so enxerga o proprio escopo de equipe. None = ve tudo.
+    overrides['escopo_responsaveis'] = escopo_responsaveis(request)
+
     return overrides
 
 
@@ -109,11 +114,16 @@ def _vendedores_do_tenant(request):
     # order_by() vazio de proposito: com o ordering padrao do model, o Django
     # injeta a coluna de ordenacao no SELECT e o DISTINCT passa a devolver
     # repetidos.
-    ids = (OportunidadeVenda.all_tenants
-           .filter(tenant=getattr(request, 'tenant', None), responsavel__isnull=False)
-           .order_by()
-           .values_list('responsavel_id', flat=True).distinct())
-    users = User.objects.filter(id__in=list(ids)).order_by('first_name', 'username')
+    ids = list(OportunidadeVenda.all_tenants
+               .filter(tenant=getattr(request, 'tenant', None), responsavel__isnull=False)
+               .order_by()
+               .values_list('responsavel_id', flat=True).distinct())
+    # Capa ao escopo: quem nao ve tudo so escolhe vendedor dentro do proprio time.
+    esc = escopo_responsaveis(request)
+    if esc is not None:
+        permitido = set(esc)
+        ids = [i for i in ids if i in permitido]
+    users = User.objects.filter(id__in=ids).order_by('first_name', 'username')
     return [{'id': u.id, 'nome': (u.get_full_name() or u.username).strip()} for u in users]
 
 
@@ -136,6 +146,10 @@ def _equipes_do_tenant(request):
                .annotate(n=Count('membros', filter=Q(membros__ativo=True)))
                .filter(n__gt=0)
                .order_by('nome'))
+    # Capa ao escopo: quem nao ve tudo so escolhe entre os times que enxerga
+    # (os que lidera + o que e membro).
+    if escopo_responsaveis(request) is not None:
+        equipes = equipes.filter(id__in=times_visiveis(request.user))
     return [{'id': e.id, 'nome': e.nome, 'membros': e.n} for e in equipes]
 
 
@@ -361,7 +375,10 @@ def api_preview(request):
         visualizacao = body.get('visualizacao', 'numero')
 
     try:
-        builder = WidgetQueryBuilder(_WidgetVirtual(), tenant=request.tenant)
+        builder = WidgetQueryBuilder(
+            _WidgetVirtual(), tenant=request.tenant,
+            overrides={'escopo_responsaveis': escopo_responsaveis(request)},
+        )
         resultado = builder.build()
         return JsonResponse({'ok': True, **resultado.to_dict()})
     except WidgetQueryError as exc:

@@ -387,6 +387,7 @@ class WidgetQueryBuilder:
         qs = self._aplicar_vendedor(qs)
         qs = self._aplicar_equipe(qs)
         qs = self._aplicar_base_cliente(qs)
+        qs = self._aplicar_escopo_visibilidade(qs)
         return qs
 
     def _aplicar_vendedor(self, qs):
@@ -436,6 +437,19 @@ class WidgetQueryBuilder:
             return qs.filter(**{f'{campo}__isnull': True})
         except Exception:
             return qs
+
+    def _aplicar_escopo_visibilidade(self, qs):
+        """Trava de visibilidade por usuario (permissao), NAO um filtro escolhido
+        na barra: quando setada, o usuario nunca ve alem do proprio escopo de
+        responsaveis. So nas fontes com dono (campo_vendedor); fonte sem dono e
+        agregado que nao expoe linha por pessoa."""
+        escopo = self.overrides.get('escopo_responsaveis')
+        if escopo is None:  # None = ve tudo (ou override ausente)
+            return qs
+        campo = getattr(self.data_source, 'campo_vendedor', None)
+        if not campo:
+            return qs
+        return qs.filter(**{f'{campo}_id__in': list(escopo)})
 
     # ------------- drill-down -------------
 
@@ -548,6 +562,12 @@ class WidgetQueryBuilder:
         except (TypeError, ValueError):
             return None
 
+    def _escopo_ids(self):
+        """Trava de visibilidade (permissao) pros transforms: None = ve tudo,
+        senao lista de user ids permitidos. Espelha o _aplicar_escopo_visibilidade
+        do caminho count/sum, com o path de responsavel de cada transform."""
+        return self.overrides.get('escopo_responsaveis')
+
     def _v_lead(self, qs):
         """Leads do vendedor/time = leads cuja oportunidade e dele (OneToOne, sem duplicar)."""
         v = self._vendedor_id()
@@ -556,6 +576,9 @@ class WidgetQueryBuilder:
         e = self._equipe_id()
         if e:
             qs = qs.filter(oportunidade_crm__responsavel__perfil_crm__equipe_id=e)
+        esc = self._escopo_ids()
+        if esc is not None:
+            qs = qs.filter(oportunidade_crm__responsavel_id__in=esc)
         return qs
 
     def _v_op(self, qs):
@@ -565,6 +588,9 @@ class WidgetQueryBuilder:
         e = self._equipe_id()
         if e:
             qs = qs.filter(responsavel__perfil_crm__equipe_id=e)
+        esc = self._escopo_ids()
+        if esc is not None:
+            qs = qs.filter(responsavel_id__in=esc)
         return qs
 
     def _v_atend(self, qs):
@@ -575,6 +601,9 @@ class WidgetQueryBuilder:
         e = self._equipe_id()
         if e:
             qs = qs.filter(lead__oportunidade_crm__responsavel__perfil_crm__equipe_id=e)
+        esc = self._escopo_ids()
+        if esc is not None:
+            qs = qs.filter(lead__oportunidade_crm__responsavel_id__in=esc)
         return qs
 
     def _agg_expr(self, metrica: dict):

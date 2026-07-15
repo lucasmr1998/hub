@@ -13,6 +13,7 @@ from django.views.decorators.http import require_http_methods, require_POST, req
 from django.views.decorators.http import require_POST, require_GET
 
 from apps.sistema.decorators import webhook_token_required, user_tem_funcionalidade
+from apps.comercial.crm.escopo import escopo_responsaveis
 from apps.sistema.models import PerfilUsuario
 from apps.sistema.utils import auditar
 
@@ -305,9 +306,10 @@ def api_pipeline_dados(request):
     if pipeline_id:
         qs = qs.filter(pipeline_id=pipeline_id)
 
-    # Regra de visibilidade baseada em funcionalidade
-    if not user_tem_funcionalidade(request, 'comercial.ver_todas_oportunidades'):
-        qs = qs.filter(responsavel=request.user)
+    # Regra de visibilidade por escopo (ve tudo / equipe / so as suas)
+    esc = escopo_responsaveis(request)
+    if esc is not None:
+        qs = qs.filter(responsavel_id__in=esc)
 
     tag = request.GET.get('tag', '').strip()
     valor_range = request.GET.get('valor', '').strip()
@@ -417,10 +419,11 @@ def api_mover_oportunidade(request):
     oportunidade = get_object_or_404(OportunidadeVenda, pk=oportunidade_id, ativo=True)
     estagio_novo = get_object_or_404(PipelineEstagio, pk=estagio_novo_id, ativo=True)
 
-    # Verificar permissão
-    if not user_tem_funcionalidade(request, 'comercial.ver_todas_oportunidades'):
-        if oportunidade.responsavel and oportunidade.responsavel != request.user:
-            return JsonResponse({'ok': False, 'erro': 'Sem permissão para mover esta oportunidade'}, status=403)
+    # Verificar permissão por escopo. Oportunidade sem dono continua movivel
+    # por qualquer um (nao ha responsavel a proteger).
+    esc = escopo_responsaveis(request)
+    if esc is not None and oportunidade.responsavel_id and oportunidade.responsavel_id not in esc:
+        return JsonResponse({'ok': False, 'erro': 'Sem permissão para mover esta oportunidade'}, status=403)
 
     if oportunidade.estagio_id == estagio_novo_id:
         return JsonResponse({'ok': True, 'mensagem': 'Sem mudança de estágio'})
@@ -593,8 +596,9 @@ def oportunidades_lista(request):
         'lead', 'estagio', 'responsavel'
     ).prefetch_related('tags').order_by('estagio__ordem', '-data_criacao')
 
-    if not user_tem_funcionalidade(request, 'comercial.ver_todas_oportunidades'):
-        qs = qs.filter(responsavel=request.user)
+    esc = escopo_responsaveis(request)
+    if esc is not None:
+        qs = qs.filter(responsavel_id__in=esc)
 
     # Filtros
     search = request.GET.get('search', '').strip()
@@ -1488,11 +1492,12 @@ def tarefas_lista(request):
     if denied: return denied
     from django.db.models import Q
 
-    # Base: tarefas do usuário logado (ver_todas_oportunidades vê todas)
-    if user_tem_funcionalidade(request, 'comercial.ver_todas_oportunidades'):
+    # Base: escopo de visibilidade (ve tudo / equipe / so as suas)
+    esc = escopo_responsaveis(request)
+    if esc is None:
         qs = TarefaCRM.objects.all()
     else:
-        qs = TarefaCRM.objects.filter(responsavel=request.user)
+        qs = TarefaCRM.objects.filter(responsavel_id__in=esc)
 
     qs = qs.select_related('lead', 'oportunidade', 'criado_por', 'responsavel').order_by('data_vencimento')
 
@@ -1575,13 +1580,14 @@ def tarefas_lista(request):
 @login_required
 @require_POST
 def api_tarefa_concluir(request, pk):
-    # Quem tem ver_todas_oportunidades enxerga a tarefa do time na lista e ve o
-    # botao de concluir no card. Antes o backend so aceitava o proprio responsavel,
-    # entao o clique do gestor voltava 404 calado. Agora ele conclui de verdade.
-    if user_tem_funcionalidade(request, 'comercial.ver_todas_oportunidades'):
+    # Quem enxerga a tarefa na lista (pelo escopo) pode concluir. Antes o backend
+    # so aceitava o proprio responsavel, entao o clique do gestor voltava 404
+    # calado. Agora ele conclui dentro do escopo dele.
+    esc = escopo_responsaveis(request)
+    if esc is None:
         tarefa = get_object_or_404(TarefaCRM, pk=pk)
     else:
-        tarefa = get_object_or_404(TarefaCRM, pk=pk, responsavel=request.user)
+        tarefa = get_object_or_404(TarefaCRM, pk=pk, responsavel_id__in=esc)
 
     try:
         data = json.loads(request.body)
@@ -2610,21 +2616,36 @@ def equipes_view(request):
                 eq = EquipeVendas.objects.filter(pk=eid).first()
                 user = User.objects.filter(pk=uid).first()
                 if eq and user:
-                    # update_or_create (nao get_or_create): o usuario ja costuma
-                    # ter PerfilVendedor (OneToOne criado no cadastro), e defaults
-                    # sao ignorados quando a linha existe. Sem isso, adicionar
-                    # alguem que ja tem perfil nao move de equipe (bug silencioso).
-                    # equipe e FK unica: isto MOVE a pessoa pra ca, tirando do time
-                    # anterior.
-                    PerfilVendedor.objects.update_or_create(
-                        user=user,
-                        defaults={'equipe': eq, 'cargo': cargo},
-                    )
+                    if cargo == 'gerente':
+                        # Gerente SUPERVISIONA o time, nao e membro que vende nele.
+                        # Vira lider (FK no lado do time), entao a mesma pessoa
+                        # lidera varios times sem sair de nenhum. Nao mexe no
+                        # PerfilVendedor.equipe dele.
+                        eq.lider = user
+                        eq.save(update_fields=['lider'])
+                    else:
+                        # Vendedor/Supervisor/Diretor: membro do time. Como equipe
+                        # e FK unica, update_or_create MOVE a pessoa pra ca (sai do
+                        # time anterior). get_or_create nao servia: ignora defaults
+                        # quando o PerfilVendedor ja existe (bug silencioso, a tela
+                        # nao mudava depois do Adicionar).
+                        PerfilVendedor.objects.update_or_create(
+                            user=user,
+                            defaults={'equipe': eq, 'cargo': cargo},
+                        )
             return redirect('crm:equipes')
 
         elif action == 'remover_membro':
             membro_id = request.POST.get('membro_id')
             PerfilVendedor.objects.filter(pk=membro_id).delete()
+            return redirect('crm:equipes')
+
+        elif action == 'remover_lider':
+            eid = request.POST.get('equipe_id')
+            eq = EquipeVendas.objects.filter(pk=eid).first()
+            if eq:
+                eq.lider = None
+                eq.save(update_fields=['lider'])
             return redirect('crm:equipes')
 
     return render(request, 'crm/equipes.html', {
@@ -4355,7 +4376,9 @@ def relatorio_win_loss(request):
     from datetime import timedelta
     from django.db.models import Count, Sum
 
-    if not user_tem_funcionalidade(request, 'comercial.ver_todas_oportunidades'):
+    # Ve tudo (ver_todas) ou o proprio escopo de equipe. Vendedor comum: 403.
+    esc = escopo_responsaveis(request)
+    if esc is not None and not user_tem_funcionalidade(request, 'comercial.ver_oportunidades_da_equipe'):
         return JsonResponse({'error': 'Acesso negado'}, status=403)
 
     # Período: últimos 90 dias por padrão
@@ -4368,6 +4391,8 @@ def relatorio_win_loss(request):
         Q(estagio__is_final_ganho=True) | Q(estagio__is_final_perdido=True),
         data_atualizacao__gte=desde,
     )
+    if esc is not None:
+        qs = qs.filter(responsavel_id__in=esc)
 
     ganhas = qs.filter(estagio__is_final_ganho=True)
     perdidas = qs.filter(estagio__is_final_perdido=True)

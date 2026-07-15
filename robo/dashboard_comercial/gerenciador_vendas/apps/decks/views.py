@@ -28,6 +28,7 @@ from apps.relatorios.models import Dashboard, Widget
 from . import modelos as modelos_slide
 from .models import Deck, Slide, SlideBloco
 from .services import dados_widget, tema_deck
+from apps.comercial.crm.escopo import escopo_responsaveis
 
 logger = logging.getLogger(__name__)
 
@@ -314,7 +315,8 @@ def api_deck_congelar(request, pk):
         for bloco in slide.blocos.all():
             if bloco.tipo != 'widget' or not bloco.widget_id:
                 continue
-            overrides = {}
+            # Snapshot herda o escopo de quem congela (nao vaza dado fora do time).
+            overrides = {'escopo_responsaveis': escopo_responsaveis(request)}
             conf = bloco.conteudo or {}
             if conf.get('dias'):
                 overrides['dias'] = conf['dias']
@@ -338,7 +340,7 @@ def api_bloco_widget_dados(request, pk):
     deck = get_object_or_404(_decks_visiveis(request), pk=bloco.slide.deck_id)
     if not bloco.widget_id:
         return JsonResponse({'ok': False, 'error': 'Bloco sem widget'}, status=400)
-    overrides = {}
+    overrides = {'escopo_responsaveis': escopo_responsaveis(request)}
     conf = bloco.conteudo or {}
     if conf.get('dias'):
         overrides['dias'] = conf['dias']

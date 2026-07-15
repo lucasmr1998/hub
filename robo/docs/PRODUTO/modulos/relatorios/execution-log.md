@@ -151,3 +151,18 @@
 - **Numeros reais (prod)**: Todos 1155 = Do Hubtrix 149 + Importados 1006.
 - **Arquivos**: data_sources.py, query_builder.py, views.py, templates/relatorios/dashboard_detalhe.html.
 - **Status**: completed (dev). Deploy pendente.
+
+## 2026-07-15 — Escopo de visibilidade por equipe nos dashboards
+
+- **Acao:** o query_builder passou a respeitar a permissao de visibilidade do CRM.
+  `_overrides_da_barra` injeta `escopo_responsaveis(request)` (None = ve tudo);
+  `_aplicar_escopo_visibilidade` filtra pelo `campo_vendedor` da fonte no caminho
+  count/sum, e os transforms (funil, scorecard) filtram via `_v_lead/_v_op/_v_atend`.
+  `api_preview` e os dropdowns (`_vendedores_do_tenant`, `_equipes_do_tenant`)
+  tambem capados ao escopo.
+- **Motivo:** os dashboards escopavam so por tenant, nao por usuario. Escopar so o
+  CRM vazaria pelos paineis compartilhados (Executivo/Operacional). Fecha isso.
+- **Detalhe:** logica em apps/comercial/crm/escopo.py. Ver execution-log do CRM.
+- **Status:** completed (codigo, dev).
+
+---

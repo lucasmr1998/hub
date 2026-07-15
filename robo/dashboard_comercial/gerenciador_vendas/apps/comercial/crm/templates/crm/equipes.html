@@ -74,6 +74,13 @@
             <div class="equipe-lider">
               <i class="bi bi-star-fill" style="color: var(--color-warning);"></i>
               Lider: <strong>{{ equipe.lider.get_full_name|default:equipe.lider.username }}</strong>
+              <span style="font-size: var(--fs-xs); color: var(--color-text-muted);">supervisiona o time</span>
+              <form method="post" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="remover_lider">
+                <input type="hidden" name="equipe_id" value="{{ equipe.pk }}">
+                <button type="submit" class="btn btn-ghost btn-sm" title="Remover lider" style="padding:2px 6px;"><i class="bi bi-x-lg"></i></button>
+              </form>
             </div>
           {% endif %}
 

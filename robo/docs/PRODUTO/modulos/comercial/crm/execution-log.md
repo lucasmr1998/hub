@@ -165,3 +165,33 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo). Deploy pendente de confirmacao do Lucas.
 
 ---
+
+## 2026-07-15 — Feature: visibilidade de oportunidades por equipe (permissao)
+
+- **Acao:** novo nivel de visibilidade dirigido por funcionalidade
+  `comercial.ver_oportunidades_da_equipe`. Modelo de 3 niveis: `ver_todas` ->
+  tudo; `ver_da_equipe` -> os times que a pessoa lidera (EquipeVendas.lider) +
+  o time de que e membro (PerfilVendedor.equipe); nenhuma -> so as suas.
+- **Decisao (Opcao A):** reusar `EquipeVendas.lider` pro vinculo gerente->times
+  (FK no lado do time = um gerente lidera N times, sem migration). Fonte unica de
+  verdade em `apps/comercial/crm/escopo.py::escopo_responsaveis(request)` (None =
+  ve tudo, senao lista de user ids). Adicionar membro com cargo Gerente passou a
+  definir o lider do time (nao mexe no equipe dele); vendedor/supervisor/diretor
+  continuam membros.
+- **Enforcement:** 6 pontos do CRM (pipeline, oportunidades_lista, mover,
+  tarefas_lista, api_tarefa_concluir, win_loss) + relatorios (query_builder
+  `_aplicar_escopo_visibilidade` no caminho count/sum e `_v_lead/_v_op/_v_atend`
+  nos transforms; `_overrides_da_barra` injeta o escopo; `api_preview` e os 2
+  callers do decks tambem; dropdowns de vendedor/equipe capados ao escopo).
+- **Efeito colateral (intencional):** os relatorios antes nao escopavam por
+  usuario (so por tenant), entao QUALQUER um via tudo. Agora quem nao tem
+  ver_todas so ve o proprio escopo tambem nos dashboards, batendo com o CRM.
+  Vendedor comum passa a ver so os dados dele nos paineis. Se quiserem que
+  vendedor veja agregados da empresa, criar uma excecao separada.
+- **Output:** seed rodado em dev (1 funcionalidade nova). manage.py check limpo.
+  Smoke da logica OK (None / [self] / uniao). Depende do cadastro de times/lideres
+  (tarefa 190) pra ligar de verdade; sem time, cai no default seguro (so as suas).
+- **Status:** completed (codigo, dev). Seed em prod + atribuir a permissao ao
+  perfil (UI) + deploy pendentes de confirmacao do Lucas.
+
+---

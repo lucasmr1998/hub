@@ -12,6 +12,7 @@ FUNCIONALIDADES = [
     ('comercial', 'comercial.ver_pipeline', 'Ver Pipeline', 'Visualizar pipeline Kanban e oportunidades', 2),
     ('comercial', 'comercial.mover_oportunidade', 'Mover Oportunidades', 'Arrastar oportunidades entre estagios', 3),
     ('comercial', 'comercial.ver_todas_oportunidades', 'Ver Todas as Oportunidades', 'Ver oportunidades de todos os vendedores', 4),
+    ('comercial', 'comercial.ver_oportunidades_da_equipe', 'Ver Oportunidades da Equipe', 'Ver oportunidades dos times que a pessoa lidera ou de que e membro, sem precisar de ver todas. Sem equipe cadastrada, ve so as suas', 4),
     ('comercial', 'comercial.criar_tarefa', 'Criar e Editar Tarefas', 'Criar, editar e concluir tarefas no CRM', 5),
     ('comercial', 'comercial.ver_desempenho', 'Ver Relatorios de Desempenho', 'Acessar dashboard de performance por vendedor', 6),
     ('comercial', 'comercial.gerenciar_metas', 'Gerenciar Metas', 'Criar, editar e excluir metas de vendas', 7),
