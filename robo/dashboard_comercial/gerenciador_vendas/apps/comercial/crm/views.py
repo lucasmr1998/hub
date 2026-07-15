@@ -2610,7 +2610,13 @@ def equipes_view(request):
                 eq = EquipeVendas.objects.filter(pk=eid).first()
                 user = User.objects.filter(pk=uid).first()
                 if eq and user:
-                    PerfilVendedor.objects.get_or_create(
+                    # update_or_create (nao get_or_create): o usuario ja costuma
+                    # ter PerfilVendedor (OneToOne criado no cadastro), e defaults
+                    # sao ignorados quando a linha existe. Sem isso, adicionar
+                    # alguem que ja tem perfil nao move de equipe (bug silencioso).
+                    # equipe e FK unica: isto MOVE a pessoa pra ca, tirando do time
+                    # anterior.
+                    PerfilVendedor.objects.update_or_create(
                         user=user,
                         defaults={'equipe': eq, 'cargo': cargo},
                     )
