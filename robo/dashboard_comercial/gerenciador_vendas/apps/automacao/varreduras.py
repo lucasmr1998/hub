@@ -205,14 +205,118 @@ def _atendimentos_matrix_finalizados(tenant, config):
     return out
 
 
+def _oportunidades_paradas(tenant, config):
+    """Oportunidades vivas (estágio não final) paradas no estágio atual além do
+    SLA por etapa (`PipelineEstagio.sla_horas`).
+
+    Filtros/config opcionais:
+    - `apenas_com_sla`: aceita True/'true'/'1'/'sim' (default TRUE). Quando
+      ligado, só entram oportunidades cujo estágio TEM `sla_horas` preenchido
+      (o valor da etapa é sempre quem manda quando existe). Estágio sem SLA
+      próprio fica de fora até alguém preencher no CRM.
+    - `sla_horas_padrao`: int opcional. Usado como SLA de FALLBACK pros
+      estágios sem `sla_horas` quando `apenas_com_sla` está DESLIGADO.
+      Estágio sem `sla_horas` e sem esse padrão fica de fora (sem limite não
+      dá pra saber se "está parado demais").
+    - `exige_responsavel`: aceita True/'true'/'1'/'sim' (default TRUE). Só
+      entram oportunidades COM `responsavel` definido — sem isso a tarefa de
+      follow-up nasceria órfã (sem vendedora dona pra executar).
+    - `estagios`: CSV de slugs de `PipelineEstagio`. Quando informado,
+      restringe a varredura a esses estágios; vazio = todos os não finais.
+    - `max_ordem`: int opcional. Quando informado, só considera estágios com
+      `ordem <= max_ordem` (ex: só as primeiras N colunas do funil).
+
+    `cooldown_horas` NÃO é filtro desta função — é o freio padrão do
+    dispatcher (`gatilhos._freio_bloqueia`), configurado no nó `agenda` do
+    fluxo que consome esta varredura (evita recriar a mesma tarefa pro mesmo
+    lead dentro da janela de cooldown). Por isso todo item devolvido aqui
+    sempre traz `lead` — é nele que o freio ancora.
+
+    Cada item devolvido traz `horas_paradas` (int, arredondado pra baixo),
+    `estagio_nome`, `estagio_atual` (slug) e `sla_horas` (int, o limite que
+    valeu pra aquela oportunidade: o da própria etapa ou o padrão).
+    """
+    from apps.comercial.crm.models import OportunidadeVenda
+
+    try:
+        qs = (
+            OportunidadeVenda.all_tenants
+            .filter(tenant=tenant, ativo=True)
+            .exclude(estagio__is_final_perdido=True)
+            .exclude(estagio__is_final_ganho=True)
+            .select_related('estagio', 'lead', 'responsavel', 'pipeline')
+        )
+
+        if _verdadeiro(config.get('exige_responsavel', True)):
+            qs = qs.filter(responsavel__isnull=False)
+
+        estagios_csv = (config.get('estagios') or '').strip()
+        if estagios_csv:
+            slugs = [s.strip() for s in estagios_csv.split(',') if s.strip()]
+            if slugs:
+                qs = qs.filter(estagio__slug__in=slugs)
+
+        max_ordem = config.get('max_ordem')
+        if max_ordem not in (None, ''):
+            try:
+                qs = qs.filter(estagio__ordem__lte=int(max_ordem))
+            except (TypeError, ValueError):
+                pass
+
+        apenas_com_sla = _verdadeiro(config.get('apenas_com_sla', True))
+        sla_padrao = None
+        if not apenas_com_sla:
+            try:
+                sla_padrao = int(config.get('sla_horas_padrao') or 0) or None
+            except (TypeError, ValueError):
+                sla_padrao = None
+
+        # mais parado primeiro (data_entrada_estagio mais antiga primeiro); cap
+        # defensivo pra rodada não crescer sem limite num tenant com funil grande.
+        qs = qs.order_by('data_entrada_estagio')[:2000]
+    except Exception:
+        logger.exception(
+            'varreduras: falha ao montar query de oportunidades paradas (tenant=%s)', tenant.pk,
+        )
+        return []
+
+    agora = timezone.now()
+    out = []
+    for op in qs:
+        try:
+            sla = op.estagio.sla_horas or (sla_padrao if not apenas_com_sla else None)
+            if not sla:
+                continue
+            horas_paradas = (agora - op.data_entrada_estagio).total_seconds() / 3600
+            if horas_paradas < sla:
+                continue
+            out.append({
+                'oportunidade': op,
+                'lead': op.lead,
+                'horas_paradas': int(horas_paradas),
+                'estagio_nome': op.estagio.nome,
+                'estagio_atual': op.estagio.slug,
+                'sla_horas': int(sla),
+            })
+        except Exception:
+            logger.exception(
+                'varreduras: falha ao processar oportunidade parada pk=%s (tenant=%s)',
+                getattr(op, 'pk', None), tenant.pk,
+            )
+            continue
+    return out
+
+
 VARREDURAS = {
     'oportunidades_perdidas': _oportunidades_perdidas,
     'atendimentos_matrix_finalizados': _atendimentos_matrix_finalizados,
+    'oportunidades_paradas': _oportunidades_paradas,
 }
 
 _LABELS = {
     'oportunidades_perdidas': 'Oportunidades perdidas (win/loss)',
     'atendimentos_matrix_finalizados': 'Atendimentos Matrix finalizados (sem análise)',
+    'oportunidades_paradas': 'Oportunidades paradas no estágio (SLA)',
 }
 
 

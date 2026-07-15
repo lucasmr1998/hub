@@ -1,10 +1,11 @@
-"""Varredura `oportunidades_perdidas` (registry `apps.automacao.varreduras.VARREDURAS`)."""
+"""Varreduras `oportunidades_perdidas` e `oportunidades_paradas` (registry
+`apps.automacao.varreduras.VARREDURAS`)."""
 from datetime import timedelta
 
 import pytest
 from django.utils import timezone
 
-from apps.automacao.varreduras import _oportunidades_perdidas
+from apps.automacao.varreduras import _oportunidades_paradas, _oportunidades_perdidas
 from tests.factories import (
     HistoricoContatoFactory, OportunidadeVendaFactory, PipelineEstagioFactory, TenantFactory, UserFactory,
 )
@@ -239,3 +240,149 @@ def test_ignora_oportunidades_nao_perdidas_ou_sem_data_fechamento():
     ids = {a['oportunidade'].pk for a in achados}
     assert aberta.pk not in ids
     assert sem_data.pk not in ids
+
+
+# ──────────────────────────────────────────────
+# _oportunidades_paradas (SLA por etapa, follow-up recorrente pedido pela Gabi)
+# ──────────────────────────────────────────────
+
+def _estagio_vivo(tenant, sla_horas=None, **kw):
+    return PipelineEstagioFactory(
+        tenant=tenant, sla_horas=sla_horas, is_final_perdido=False, is_final_ganho=False, **kw,
+    )
+
+
+def _op_parada(tenant, estagio, horas_atras, **kw):
+    op = OportunidadeVendaFactory(tenant=tenant, estagio=estagio, ativo=True, **kw)
+    op.data_entrada_estagio = timezone.now() - timedelta(hours=horas_atras)
+    op.save(update_fields=['data_entrada_estagio'])
+    return op
+
+
+@pytest.mark.django_db
+def test_paradas_entra_op_alem_do_sla_e_exclui_dentro_do_sla():
+    tenant = TenantFactory()
+    vendedora = UserFactory()
+    estagio = _estagio_vivo(tenant, sla_horas=2)
+    alem_do_sla = _op_parada(tenant, estagio, 3, responsavel=vendedora)
+    dentro_do_sla = _op_parada(tenant, estagio, 1, responsavel=vendedora)
+
+    achados = _oportunidades_paradas(tenant, {})
+
+    ids = {a['oportunidade'].pk for a in achados}
+    assert alem_do_sla.pk in ids
+    assert dentro_do_sla.pk not in ids
+
+
+@pytest.mark.django_db
+def test_paradas_ignora_estagio_final_perdido_ou_ganho():
+    tenant = TenantFactory()
+    vendedora = UserFactory()
+    estagio_perdido = PipelineEstagioFactory(tenant=tenant, sla_horas=1, is_final_perdido=True)
+    estagio_ganho = PipelineEstagioFactory(tenant=tenant, sla_horas=1, is_final_ganho=True)
+    op_perdida = _op_parada(tenant, estagio_perdido, 10, responsavel=vendedora)
+    op_ganha = _op_parada(tenant, estagio_ganho, 10, responsavel=vendedora)
+
+    achados = _oportunidades_paradas(tenant, {})
+
+    ids = {a['oportunidade'].pk for a in achados}
+    assert op_perdida.pk not in ids
+    assert op_ganha.pk not in ids
+
+
+@pytest.mark.django_db
+def test_paradas_apenas_com_sla_ignora_estagio_sem_sla():
+    tenant = TenantFactory()
+    vendedora = UserFactory()
+    estagio_sem_sla = _estagio_vivo(tenant, sla_horas=None)
+    _op_parada(tenant, estagio_sem_sla, 100, responsavel=vendedora)
+
+    achados = _oportunidades_paradas(tenant, {'apenas_com_sla': 'true'})
+
+    assert achados == []
+
+
+@pytest.mark.django_db
+def test_paradas_sla_padrao_usado_quando_apenas_com_sla_desligado():
+    tenant = TenantFactory()
+    vendedora = UserFactory()
+    estagio_sem_sla = _estagio_vivo(tenant, sla_horas=None)
+    alem_do_padrao = _op_parada(tenant, estagio_sem_sla, 5, responsavel=vendedora)
+    dentro_do_padrao = _op_parada(tenant, estagio_sem_sla, 1, responsavel=vendedora)
+
+    achados = _oportunidades_paradas(
+        tenant, {'apenas_com_sla': 'false', 'sla_horas_padrao': 2},
+    )
+
+    ids = {a['oportunidade'].pk for a in achados}
+    assert alem_do_padrao.pk in ids
+    assert dentro_do_padrao.pk not in ids
+
+
+@pytest.mark.django_db
+def test_paradas_exige_responsavel_exclui_op_sem_responsavel():
+    tenant = TenantFactory()
+    estagio = _estagio_vivo(tenant, sla_horas=1)
+    vendedora = UserFactory()
+    com_responsavel = _op_parada(tenant, estagio, 10, responsavel=vendedora)
+    sem_responsavel = _op_parada(tenant, estagio, 10, responsavel=None)
+
+    achados = _oportunidades_paradas(tenant, {})
+
+    ids = {a['oportunidade'].pk for a in achados}
+    assert ids == {com_responsavel.pk}
+    assert sem_responsavel.pk not in ids
+
+
+@pytest.mark.django_db
+def test_paradas_estrutura_do_item():
+    tenant = TenantFactory()
+    vendedora = UserFactory()
+    estagio = _estagio_vivo(tenant, sla_horas=2, nome='Negociacao', slug='negociacao')
+    op = _op_parada(tenant, estagio, 5, responsavel=vendedora)
+
+    achados = _oportunidades_paradas(tenant, {})
+
+    assert len(achados) == 1
+    item = achados[0]
+    assert set(item.keys()) == {
+        'oportunidade', 'lead', 'horas_paradas', 'estagio_nome', 'estagio_atual', 'sla_horas',
+    }
+    assert item['oportunidade'].pk == op.pk
+    assert item['lead'].pk == op.lead_id
+    assert item['horas_paradas'] >= 5
+    assert item['estagio_nome'] == 'Negociacao'
+    assert item['estagio_atual'] == 'negociacao'
+    assert item['sla_horas'] == 2
+
+
+@pytest.mark.django_db
+def test_paradas_filtro_estagios_csv_restringe():
+    tenant = TenantFactory()
+    vendedora = UserFactory()
+    estagio_a = _estagio_vivo(tenant, sla_horas=1, slug='estagio-a')
+    estagio_b = _estagio_vivo(tenant, sla_horas=1, slug='estagio-b')
+    op_a = _op_parada(tenant, estagio_a, 10, responsavel=vendedora)
+    op_b = _op_parada(tenant, estagio_b, 10, responsavel=vendedora)
+
+    achados = _oportunidades_paradas(tenant, {'estagios': 'estagio-a'})
+
+    ids = {a['oportunidade'].pk for a in achados}
+    assert ids == {op_a.pk}
+    assert op_b.pk not in ids
+
+
+@pytest.mark.django_db
+def test_paradas_max_ordem_restringe():
+    tenant = TenantFactory()
+    vendedora = UserFactory()
+    estagio_1 = _estagio_vivo(tenant, sla_horas=1, ordem=1)
+    estagio_5 = _estagio_vivo(tenant, sla_horas=1, ordem=5)
+    op_1 = _op_parada(tenant, estagio_1, 10, responsavel=vendedora)
+    op_5 = _op_parada(tenant, estagio_5, 10, responsavel=vendedora)
+
+    achados = _oportunidades_paradas(tenant, {'max_ordem': 2})
+
+    ids = {a['oportunidade'].pk for a in achados}
+    assert ids == {op_1.pk}
+    assert op_5.pk not in ids
