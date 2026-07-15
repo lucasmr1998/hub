@@ -195,3 +195,23 @@ concluir. Errou titulo ou data, so pelo admin do Django.
   perfil (UI) + deploy pendentes de confirmacao do Lucas.
 
 ---
+
+## 2026-07-15 — Origem obrigatoria no modal Nova oportunidade (condicional)
+
+- **Acao:** os campos Origem do cliente (id_origem) e Origem do contato
+  (id_origem_servico) do modal "Nova oportunidade" (pipeline) viraram
+  obrigatorios. Pedido da Nuvyon.
+- **Decisao (Opcao B):** obrigatorio SO onde o tenant tem origens configuradas
+  (cache HubSoft). pipeline.html e compartilhado; tenant sem HubSoft
+  (tr-carrion, gigamax) tem dropdown vazio e travar ali impediria criar
+  oportunidade manual. Nuvyon tem 24 origens_cliente + 4 origens_contato ->
+  obrigatorio; demais -> nao trava. Auto ajusta se outro tenant configurar
+  origens depois.
+- **Como:** frontend com asterisco condicional ({% if opcoes_origens_* %}) e
+  validacao no criarOportunidade() por options.length>1; backend com guard
+  _tenant_tem_origens em api_criar_oportunidade (defense in depth). Webhook/
+  Matrix nao passa por esse endpoint, entao entrada automatica nao e afetada.
+- **Output:** manage.py check limpo.
+- **Status:** completed (codigo, dev). Deploy pendente de confirmacao do Lucas.
+
+---

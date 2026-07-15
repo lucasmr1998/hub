@@ -115,7 +115,7 @@
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); margin-top: var(--sp-3);">
         <div class="field">
-          <label class="field-label" for="novaOportOrigemCliente">Origem do cliente</label>
+          <label class="field-label" for="novaOportOrigemCliente">Origem do cliente {% if opcoes_origens_cliente %}<span class="field-required">*</span>{% endif %}</label>
           <div class="field-input-wrap">
             <select id="novaOportOrigemCliente" class="field-input">
               <option value="">— sem definir —</option>
@@ -124,7 +124,7 @@
           </div>
         </div>
         <div class="field">
-          <label class="field-label" for="novaOportOrigemServico">Origem do contato</label>
+          <label class="field-label" for="novaOportOrigemServico">Origem do contato {% if opcoes_origens_servico %}<span class="field-required">*</span>{% endif %}</label>
           <div class="field-input-wrap">
             <select id="novaOportOrigemServico" class="field-input">
               <option value="">— sem definir —</option>
@@ -1622,6 +1622,18 @@ function criarOportunidade() {
 
   if (!nome || !telefone) {
     toast('Erro', 'Nome e telefone sao obrigatorios', 'danger');
+    return;
+  }
+
+  // Origem obrigatoria so quando o select tem opcao real (alem do placeholder).
+  const selOrigCli = document.getElementById('novaOportOrigemCliente');
+  const selOrigServ = document.getElementById('novaOportOrigemServico');
+  if (selOrigCli.options.length > 1 && !id_origem) {
+    toast('Erro', 'Origem do cliente e obrigatoria', 'danger');
+    return;
+  }
+  if (selOrigServ.options.length > 1 && !id_origem_servico) {
+    toast('Erro', 'Origem do contato e obrigatoria', 'danger');
     return;
   }
 

@@ -666,6 +666,25 @@ def oportunidades_lista(request):
     return render(request, 'crm/oportunidades_lista.html', context)
 
 
+def _tenant_tem_origens(request):
+    """(tem_origens_cliente, tem_origens_servico) do cache HubSoft do tenant.
+
+    Origem so vira obrigatoria onde ha o que escolher: tenant sem HubSoft tem
+    dropdown vazio (so o '— sem definir —') e travar ali impediria criar
+    qualquer oportunidade manual."""
+    try:
+        from apps.integracoes.models import IntegracaoAPI
+        integ = IntegracaoAPI.all_tenants.filter(
+            tenant=request.tenant, tipo='hubsoft', ativa=True,
+        ).first()
+        if not integ:
+            return (False, False)
+        cache_hs = (integ.configuracoes_extras or {}).get('cache') or {}
+        return (bool(cache_hs.get('origens_cliente')), bool(cache_hs.get('origens_contato')))
+    except Exception:
+        return (False, False)
+
+
 @login_required
 @require_http_methods(["POST"])
 @auditar('crm', 'criar', 'oportunidade')
@@ -686,6 +705,13 @@ def api_criar_oportunidade(request):
 
     if not nome or not telefone:
         return JsonResponse({'ok': False, 'erro': 'Nome e telefone sao obrigatorios'}, status=400)
+
+    # Origem obrigatoria so onde o tenant tem origens configuradas (HubSoft).
+    tem_org_cli, tem_org_serv = _tenant_tem_origens(request)
+    if tem_org_cli and not id_origem:
+        return JsonResponse({'ok': False, 'erro': 'Origem do cliente e obrigatoria'}, status=400)
+    if tem_org_serv and not id_origem_servico:
+        return JsonResponse({'ok': False, 'erro': 'Origem do contato e obrigatoria'}, status=400)
 
     from apps.comercial.leads.models import LeadProspecto
     # Buscar ou criar lead
