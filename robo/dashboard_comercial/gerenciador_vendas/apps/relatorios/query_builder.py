@@ -793,8 +793,12 @@ class WidgetQueryBuilder:
                     return qs.filter(lead__fonte=fonte)
                 return qs
 
+            # Atendimento = fluxo do bot iniciado OU ligacao telefonica atendida
+            # (Talk). Antes so contava o bot, entao o funil subcontava as vendas
+            # que entram por telefone.
             atend_qs = self._v_atend(HistoricoContato.all_tenants.filter(
-                tenant=self.tenant, status='fluxo_inicializado',
+                tenant=self.tenant,
+                status__in=['fluxo_inicializado', 'ligacao_atendida'],
             ))
             leads_qs = self._v_lead(_fonte_q_lead(
                 LeadProspecto.all_tenants.filter(tenant=self.tenant)))

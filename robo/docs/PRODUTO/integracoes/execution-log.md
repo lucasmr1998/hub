@@ -134,3 +134,18 @@ Registro cronológico do que foi executado no módulo de integrações (ação, 
 - **Diagnostico util no caminho**: `consultar_chamadas_talk --tenant <slug> [--telefone|--oportunidade] [--dias N]` mostra a resposta CRUA da API e testa variacoes do numero (sem 9o digito, com DDI) e dias anteriores.
 - **PENDENTE (decisao do dono)**: o que fazer com as oportunidades de **ligacao nao atendida** (Ocupado). Hoje ficam orfas e invisiveis. Proposta: distribuir automaticamente pra alguem retornar o contato — cada uma e um cliente que quis comprar e nao conseguiu falar com ninguem.
 - **Status**: completed (dev). Deploy pendente.
+
+## 2026-07-15 — Ligacao do Talk vira contato na timeline da oportunidade (tarefa #199)
+
+- **Pedido do dono**: a ligacao nao ficava no historico da oportunidade e deveria ficar. Tarefa criada ANTES do codigo (dessa vez).
+- **Causa**: o importador do Talk cria lead + oportunidade mas NAO registra HistoricoContato. A timeline JA sabe mostrar contato (tipo 'contato', de HistoricoContato) — faltava so criar o registro. Os dados vem do endpoint listar_chamadas_por_telefone (o mesmo do sync_vendedores_matrix).
+- **Feito**:
+  - Status novo `ligacao_atendida` em HistoricoContato.STATUS_CHOICES (o campo e CharField SEM choices, entao NAO precisou migration; a lista e so pra exibicao). Usar esse rotulo em vez de reaproveitar 'fluxo_inicializado' (que apareceria como 'Fluxo Inicializado' pra uma ligacao, confuso pra Gabi).
+  - `services/registrar_ligacoes_talk.py` + comando `registrar_ligacoes_talk --tenant <slug> [--dias N] [--dry-run]`. Cria 1 HistoricoContato por ligacao, idempotente por cod_cdr (guardado em dados_extras). Separado da atribuicao de proposito: logar a ligacao vale pra TODA oportunidade, nao so as sem dono. Serve de cron (--dias curto) e de backfill (--dias grande).
+  - Mapa de status: Atendida->ligacao_atendida, Ocupado->ocupado, resto->nao_atendeu. Guarda duracao (num_seg_bilhetado), agente, e o nom_arquivo da gravacao em dados_extras.
+  - funil_macro passa a contar `status__in=['fluxo_inicializado','ligacao_atendida']` como atendimento (antes subcontava as vendas que entram por telefone).
+- **BONUS resolvido junto**: o card "leads sem contato" para de marcar como nunca-contatado quem chegou por ligacao; ligacao NAO atendida (Ocupado) tambem vira registro visivel.
+- **Validado (dev, com API do Talk injetada)**: funcoes puras; cria 2 contatos e a 2a rodada cria 0 (idempotente); timeline vai de 0->1; funil atendimentos 272->273; card sem-contato deixa de contar o lead.
+- **RESSALVA**: guardamos o nome do arquivo da gravacao, mas TOCAR o audio depende do endpoint de download do Talk (pendente com a Matrix do Brasil) — fast-follow.
+- **PENDENTE**: rodar o backfill (--dias grande, 1x) pras ligacoes ja importadas; agendar no cron (--dias curto). Deploy pendente.
+- **Status**: completed (dev).

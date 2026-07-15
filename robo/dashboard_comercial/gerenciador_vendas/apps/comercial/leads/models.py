@@ -1275,6 +1275,7 @@ class HistoricoContato(TenantMixin):
 
         # Status de abandono/problemas
         ('chamada_perdida', 'Chamada Perdida'),
+        ('ligacao_atendida', 'Ligação Atendida'),  # chamada telefonica atendida por agente (Talk)
         ('ocupado', 'Ocupado'),
         ('desligou', 'Desligou'),
         ('nao_atendeu', 'Não Atendeu'),
