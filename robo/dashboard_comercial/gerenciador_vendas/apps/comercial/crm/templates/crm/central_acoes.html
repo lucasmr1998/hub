@@ -1,6 +1,6 @@
 {% extends "sistema/base.html" %}
 
-{% block title %}Central de Ações — Hubtrix{% endblock %}
+{% block title %}Comercial — Hubtrix{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -38,37 +38,34 @@
 
 <div class="card ca-panel">
   <div class="ca-panel-head"><i class="bi bi-lightning-charge-fill"></i> Central de Ações</div>
-  <div class="ca-tabs">
-    {% for t in tipos %}
-      <button type="button" class="ca-tab ca-tab-{{ t.sev }}" data-tipo="{{ t.chave }}" data-count="{{ t.count }}">
-        <span class="ca-tab-count">{{ t.count }}</span>
-        <span class="ca-tab-label">{{ t.label }}</span>
-      </button>
-    {% endfor %}
-  </div>
-  <div class="ca-queue-head">
-    <strong id="ca-queue-titulo">Fila</strong>
-    <div class="ca-pagination" id="ca-pag">
-      <button type="button" class="ca-page-btn" id="ca-prev"><i class="bi bi-chevron-left"></i></button>
-      <span class="ca-page-info" id="ca-info"></span>
-      <button type="button" class="ca-page-btn" id="ca-next"><i class="bi bi-chevron-right"></i></button>
-    </div>
-  </div>
-  <div class="ca-list" id="ca-list">
-    {% for item in itens %}
-      <a href="{{ item.url }}" class="ca-qrow" data-tipo="{{ item.chave }}" data-equipe="{{ item.tag }}">
-        <span class="ca-dot ca-dot-{{ item.severidade }}"></span>
-        <div class="ca-row-body">
-          <div class="ca-row-titulo">{{ item.titulo }}</div>
-          <div class="ca-row-sub">{{ item.subtitulo }}{% if item.tag %} · {{ item.tag }}{% endif %}</div>
+  <div class="ca-cols">
+    {% for col in colunas %}
+      {% if col.count %}
+        <div class="ca-col ca-col-{{ col.sev }}">
+          <div class="ca-col-head">
+            <span class="ca-col-count">{{ col.count }}</span>
+            <span class="ca-col-label">{{ col.label }}</span>
+          </div>
+          <div class="ca-col-list">
+            {% for item in col.itens %}
+              <a href="{{ item.url }}" class="ca-qrow" data-equipe="{{ item.tag }}">
+                <span class="ca-dot ca-dot-{{ item.severidade }}"></span>
+                <div class="ca-row-body">
+                  <div class="ca-row-titulo">{{ item.titulo }}</div>
+                  <div class="ca-row-sub">{{ item.subtitulo }}{% if item.tag %} · {{ item.tag }}{% endif %}</div>
+                </div>
+              </a>
+            {% endfor %}
+            <div class="ca-col-empty" style="display:none;">Nada nesta coluna.</div>
+          </div>
+          <div class="ca-col-pag">
+            <button type="button" class="ca-page-btn ca-col-prev"><i class="bi bi-chevron-left"></i></button>
+            <span class="ca-col-info"></span>
+            <button type="button" class="ca-page-btn ca-col-next"><i class="bi bi-chevron-right"></i></button>
+          </div>
         </div>
-        <i class="bi bi-chevron-right ca-row-chevron"></i>
-      </a>
+      {% endif %}
     {% endfor %}
-    <div class="ca-empty" id="ca-empty" style="display:none;">
-      <i class="bi bi-check2-circle" style="font-size:1.8rem; color:var(--color-success); opacity:.5; display:block; margin-bottom:6px;"></i>
-      Nada nesta fila. Tudo em dia por aqui.
-    </div>
   </div>
 </div>
 
@@ -83,103 +80,82 @@
   .ca-panel-head { display:flex; align-items:center; gap:6px; padding:12px 16px; font-weight:700;
                    font-size:var(--fs-sm); border-bottom:1px solid var(--color-border, #e5e7eb); }
   .ca-panel-head i { color:var(--color-primary); }
-  .ca-tabs { display:flex; border-bottom:1px solid var(--color-border, #e5e7eb); overflow-x:auto; }
-  .ca-tab { flex:1 1 0; min-width:112px; display:flex; flex-direction:column; gap:2px;
-            align-items:flex-start; text-align:left; padding:12px 16px; background:transparent;
-            border:none; border-right:1px solid var(--color-border, #e5e7eb);
-            border-bottom:3px solid transparent; cursor:pointer; color:inherit; transition:background .12s; }
-  .ca-tab:last-child { border-right:none; }
-  .ca-tab-critico { --tab-accent: var(--color-danger); }
-  .ca-tab-atencao { --tab-accent: var(--color-warning); }
-  .ca-tab-oportunidade { --tab-accent: var(--color-success); }
-  .ca-tab-count { font-size:1.4rem; font-weight:800; line-height:1; color:var(--tab-accent); }
-  .ca-tab-label { font-size:10px; color:var(--color-text-muted); font-weight:700;
-                  text-transform:uppercase; letter-spacing:.03em; }
-  .ca-tab:hover { background:rgba(0,0,0,.025); }
-  .ca-tab.is-active { border-bottom-color:var(--tab-accent); background:rgba(0,0,0,.02); }
 
-  .ca-queue-head { display:flex; align-items:center; justify-content:space-between;
-                   padding:12px 16px; font-size:var(--fs-sm); }
-  .ca-list { display:flex; flex-direction:column; border-top:1px solid var(--color-border, #e5e7eb); }
-  .ca-qrow { display:flex; align-items:center; gap:12px; padding:11px 16px;
+  .ca-cols { display:flex; overflow-x:auto; align-items:stretch; }
+  .ca-col { flex:1 1 0; min-width:230px; display:flex; flex-direction:column;
+            border-right:1px solid var(--color-border, #e5e7eb); }
+  .ca-col:last-child { border-right:none; }
+  .ca-col-head { display:flex; align-items:baseline; gap:6px; padding:10px 14px;
+                 border-top:3px solid var(--col-accent); border-bottom:1px solid var(--color-border, #e5e7eb); }
+  .ca-col-critico { --col-accent: var(--color-danger); }
+  .ca-col-atencao { --col-accent: var(--color-warning); }
+  .ca-col-oportunidade { --col-accent: var(--color-success); }
+  .ca-col-count { font-size:1.15rem; font-weight:800; line-height:1; color:var(--col-accent); }
+  .ca-col-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.03em;
+                  color:var(--color-text-muted); }
+  .ca-col-list { display:flex; flex-direction:column; flex:1 1 auto; }
+
+  .ca-qrow { display:flex; align-items:center; gap:10px; padding:10px 14px;
              border-top:1px solid var(--color-border, #e5e7eb); text-decoration:none;
              color:inherit; transition:background .12s ease; }
   .ca-qrow:first-child { border-top:none; }
   .ca-qrow:hover { background:rgba(0,0,0,.035); }
-  .ca-dot { width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
+  .ca-dot { width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
   .ca-dot-critico { background:var(--color-danger); }
   .ca-dot-atencao { background:var(--color-warning); }
   .ca-dot-oportunidade { background:var(--color-success); }
   .ca-row-body { flex:1 1 auto; min-width:0; }
   .ca-row-titulo { font-weight:600; font-size:var(--fs-sm); white-space:nowrap;
                    overflow:hidden; text-overflow:ellipsis; }
-  .ca-row-sub { font-size:var(--fs-xs); color:var(--color-text-muted); white-space:nowrap;
+  .ca-row-sub { font-size:11px; color:var(--color-text-muted); white-space:nowrap;
                 overflow:hidden; text-overflow:ellipsis; }
-  .ca-row-chevron { color:var(--color-text-muted); font-size:.9rem; flex:0 0 auto; }
-  .ca-empty { padding:36px 16px; text-align:center; color:var(--color-text-muted); font-size:var(--fs-sm); }
+  .ca-col-empty { padding:22px 14px; text-align:center; color:var(--color-text-muted); font-size:11px; }
 
-  .ca-pagination { display:flex; align-items:center; gap:12px; }
+  .ca-col-pag { display:flex; align-items:center; justify-content:center; gap:10px; padding:8px;
+                border-top:1px solid var(--color-border, #e5e7eb); margin-top:auto; }
+  .ca-col-info { font-size:11px; color:var(--color-text-muted); }
   .ca-page-btn { border:1px solid var(--color-border, #e5e7eb); background:transparent;
-                 border-radius:6px; padding:3px 10px; cursor:pointer; color:inherit; line-height:1; }
+                 border-radius:6px; padding:3px 9px; cursor:pointer; color:inherit; line-height:1; }
   .ca-page-btn:disabled { opacity:.4; cursor:default; }
-  .ca-page-info { font-size:var(--fs-xs); color:var(--color-text-muted); }
 </style>
 
 <script>
 (function(){
-  var tiles = Array.prototype.slice.call(document.querySelectorAll('.ca-tab'));
-  var rows  = Array.prototype.slice.call(document.querySelectorAll('.ca-qrow'));
-  if (!tiles.length) return;
   var eqSel = document.getElementById('ca-equipe');
-  var prev  = document.getElementById('ca-prev');
-  var next  = document.getElementById('ca-next');
-  var info  = document.getElementById('ca-info');
-  var pag   = document.getElementById('ca-pag');
-  var titulo = document.getElementById('ca-queue-titulo');
-  var empty = document.getElementById('ca-empty');
-  var PAGE = 15, page = 0, activeTipo = null;
+  var PAGE = 5;
+  var cols = Array.prototype.slice.call(document.querySelectorAll('.ca-col'));
 
-  function labelDe(tipo){
-    for (var i=0;i<tiles.length;i++){ if (tiles[i].getAttribute('data-tipo')===tipo)
-      return tiles[i].querySelector('.ca-tab-label').textContent; }
-    return '';
+  function setup(col){
+    var rows = Array.prototype.slice.call(col.querySelectorAll('.ca-qrow'));
+    var info = col.querySelector('.ca-col-info');
+    var prev = col.querySelector('.ca-col-prev');
+    var next = col.querySelector('.ca-col-next');
+    var empty = col.querySelector('.ca-col-empty');
+    var pag = col.querySelector('.ca-col-pag');
+    var page = 0;
+    function render(){
+      var eq = eqSel ? eqSel.value : '';
+      var f = rows.filter(function(r){ return !eq || r.getAttribute('data-equipe') === eq; });
+      var pages = Math.max(1, Math.ceil(f.length / PAGE));
+      if (page > pages - 1) page = pages - 1;
+      if (page < 0) page = 0;
+      rows.forEach(function(r){ r.style.display = 'none'; });
+      f.slice(page * PAGE, (page + 1) * PAGE).forEach(function(r){ r.style.display = ''; });
+      if (empty) empty.style.display = f.length ? 'none' : '';
+      if (info) info.textContent = f.length ? ((page + 1) + ' / ' + pages) : '';
+      if (pag) pag.style.display = f.length > PAGE ? '' : 'none';
+      if (prev) prev.disabled = page === 0;
+      if (next) next.disabled = page >= pages - 1;
+    }
+    if (prev) prev.addEventListener('click', function(){ page--; render(); });
+    if (next) next.addEventListener('click', function(){ page++; render(); });
+    col._reset = function(){ page = 0; render(); };
+    render();
   }
-  function filtered(){
-    var eq = eqSel ? eqSel.value : '';
-    return rows.filter(function(r){
-      return r.getAttribute('data-tipo')===activeTipo &&
-             (!eq || r.getAttribute('data-equipe')===eq);
-    });
-  }
-  function render(){
-    var f = filtered();
-    var pages = Math.max(1, Math.ceil(f.length / PAGE));
-    if (page >= pages) page = 0;
-    rows.forEach(function(r){ r.style.display = 'none'; });
-    f.slice(page*PAGE, (page+1)*PAGE).forEach(function(r){ r.style.display = ''; });
-    tiles.forEach(function(t){ t.classList.toggle('is-active', t.getAttribute('data-tipo')===activeTipo); });
-    titulo.textContent = 'Fila · ' + labelDe(activeTipo) + ' (' + f.length + ')';
-    empty.style.display = f.length ? 'none' : '';
-    info.textContent = f.length ? ('Pagina ' + (page+1) + ' de ' + pages) : '';
-    prev.disabled = page === 0;
-    next.disabled = page >= pages - 1;
-    pag.style.visibility = f.length > PAGE ? 'visible' : 'hidden';
-  }
-  function firstNonEmpty(){
-    for (var i=0;i<tiles.length;i++){ if (+tiles[i].getAttribute('data-count') > 0)
-      return tiles[i].getAttribute('data-tipo'); }
-    return tiles[0].getAttribute('data-tipo');
-  }
-  tiles.forEach(function(t){ t.addEventListener('click', function(){
-    activeTipo = t.getAttribute('data-tipo'); page = 0; render();
-  }); });
-  if (eqSel) eqSel.addEventListener('change', function(){ page = 0; render(); });
-  prev.addEventListener('click', function(){ if (page > 0){ page--; render(); } });
-  next.addEventListener('click', function(){
-    if (page < Math.ceil(filtered().length / PAGE) - 1){ page++; render(); }
+  cols.forEach(setup);
+  if (eqSel) eqSel.addEventListener('change', function(){
+    cols.forEach(function(c){ if (c._reset) c._reset(); });
   });
-  activeTipo = firstNonEmpty();
-  render();
 })();
 </script>
 {% endblock %}

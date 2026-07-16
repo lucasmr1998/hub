@@ -15,7 +15,6 @@ MVP com 6 sinais (regua do strawman aprovado):
   - Lead em status de erro (critico)
   - Oportunidade nova < 24h (oportunidade)
 """
-from collections import Counter
 from datetime import timedelta
 
 from django.db.models import Count, Q, Sum
@@ -26,13 +25,14 @@ from apps.comercial.crm.escopo import escopo_responsaveis
 
 LIMITE_POR_SINAL = 150
 
-# (chave, label do card, cor do card). A cor da LINHA vem da severidade real.
+# (chave, label singular, label da coluna, cor da coluna). A cor da LINHA vem
+# da severidade real de cada item.
 TIPOS_META = [
-    ('parada', 'Parada', 'atencao'),
-    ('sem_dono', 'Sem dono', 'critico'),
-    ('tarefa', 'Tarefa', 'critico'),
-    ('erro', 'Erro', 'critico'),
-    ('nova', 'Nova', 'oportunidade'),
+    ('parada', 'Parada', 'OP Paradas', 'atencao'),
+    ('sem_dono', 'Sem dono', 'Sem dono', 'critico'),
+    ('tarefa', 'Tarefa', 'Tarefas', 'critico'),
+    ('erro', 'Erro', 'Erros', 'critico'),
+    ('nova', 'Nova', 'Novas', 'oportunidade'),
 ]
 
 _PESO_SEV = {'critico': 0, 'atencao': 1, 'oportunidade': 2}
@@ -134,15 +134,19 @@ def coletar_acoes(request):
 
     itens.sort(key=lambda i: (_PESO_SEV[i['severidade']], -i['ordem']))
 
-    cnt = Counter(i['chave'] for i in itens)
-    tipos = [{'chave': c, 'label': l, 'sev': s, 'count': cnt.get(c, 0)} for (c, l, s) in TIPOS_META]
+    por_tipo = {}
+    for i in itens:
+        por_tipo.setdefault(i['chave'], []).append(i)
+    colunas = [{'chave': c, 'label': lp, 'sev': s, 'itens': por_tipo.get(c, []),
+                'count': len(por_tipo.get(c, []))}
+               for (c, ls, lp, s) in TIPOS_META]
     equipes = sorted({i['tag'] for i in itens if i['tag']})
     contadores = {
         'criticos': sum(1 for i in itens if i['severidade'] == 'critico'),
         'atencao': sum(1 for i in itens if i['severidade'] == 'atencao'),
         'oportunidades': sum(1 for i in itens if i['severidade'] == 'oportunidade'),
     }
-    return {'itens': itens, 'tipos': tipos, 'equipes': equipes,
+    return {'itens': itens, 'colunas': colunas, 'equipes': equipes,
             'contadores': contadores, 've_time': ve_time}
 
 

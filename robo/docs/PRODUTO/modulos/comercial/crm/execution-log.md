@@ -345,3 +345,16 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy em prod.
 
 ---
+
+## 2026-07-16 — Central de Acoes: abas viram colunas de triagem
+
+- **Feedback do Lucas:** em vez de abas, colunas (OP Paradas | Sem dono | Tarefas
+  | Novas...); e paginacao de 5 na fila.
+- **Ajuste:** coletar_acoes devolve `colunas` (agrupado por tipo, label plural).
+  Painel unico com o titulo Central de Acoes e as colunas lado a lado, cada uma
+  com header (contagem + label colorido), lista e paginacao propria de 5. Coluna
+  vazia (ex: Erros=0) fica escondida. Filtro de equipe repagina todas as colunas.
+  Em tela estreita as colunas rolam na horizontal.
+- **Status:** completed (codigo, dev). Deploy em prod.
+
+---
