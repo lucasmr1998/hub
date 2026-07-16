@@ -307,3 +307,19 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy em prod.
 
 ---
+
+## 2026-07-16 — Central de Acoes vira home do Comercial (KPIs)
+
+- **Decisao do Lucas:** a tela vira a landing do Comercial; as acoes sao uma
+  parte, com numeros em cima que ajudem vendedor e gestor.
+- **Ajuste:** funcao kpis_comerciais (central_acoes.py) com 4 KPIs escopados via
+  escopo_responsaveis (o mesmo numero vira 'meu'/'do time'): Em negociacao (qtd +
+  R$), Ganhas no mes (qtd + R$), Conversao do mes (ganhas/fechadas), Novas 7d; +
+  Sem dono (so gestor). Linha de KPI cards acima do cockpit; H1 virou 'Comercial'
+  com secao '⚡ Central de Acoes'. Nav principal do Comercial (sidebar) aponta pra
+  /crm/central-acoes/ (pipeline continua em /crm/).
+- **Follow-up:** seletor de periodo, progresso vs meta, drill dos cards ganhas/
+  conversao/novas. Tarefa #200.
+- **Status:** completed (codigo, dev). Deploy em prod.
+
+---

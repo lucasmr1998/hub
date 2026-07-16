@@ -6,11 +6,9 @@
 <div class="page-header">
   <div class="page-header-top">
     <div>
-      <h1 class="page-title" style="margin:0;">
-        <i class="bi bi-lightning-charge-fill" style="color:var(--color-primary);"></i> Central de Ações
-      </h1>
+      <h1 class="page-title" style="margin:0;">Comercial</h1>
       <p style="margin:4px 0 0; color:var(--color-text-muted); font-size:var(--fs-sm);">
-        O que precisa da sua ação agora{% if ve_time %} (visão do time){% else %} (suas pendências){% endif %}.
+        Resumo e o que precisa da sua ação{% if ve_time %} (visão do time){% else %} (suas pendências){% endif %}.
       </p>
     </div>
     {% if ve_time and equipes %}
@@ -25,6 +23,18 @@
     {% endif %}
   </div>
 </div>
+
+<div class="ca-kpis">
+  {% for k in kpis %}
+    {% if k.url %}<a href="{{ k.url }}" class="ca-kpi ca-kpi-{{ k.sev }}">{% else %}<div class="ca-kpi ca-kpi-{{ k.sev }}">{% endif %}
+      <span class="ca-kpi-valor">{{ k.valor }}</span>
+      <span class="ca-kpi-label">{{ k.label }}</span>
+      <span class="ca-kpi-sub">{{ k.sub }}</span>
+    {% if k.url %}</a>{% else %}</div>{% endif %}
+  {% endfor %}
+</div>
+
+<div class="ca-section-label"><i class="bi bi-lightning-charge-fill"></i> Central de Ações</div>
 
 <div class="ca-tiles">
   {% for t in tipos %}
@@ -63,6 +73,24 @@
 </div>
 
 <style>
+  .ca-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+             gap:12px; margin-bottom:18px; }
+  .ca-kpi { display:flex; flex-direction:column; gap:2px; text-decoration:none; color:inherit;
+            background:var(--color-surface, #fff); border:1px solid var(--color-border, #e5e7eb);
+            border-left:3px solid var(--kpi-accent); border-radius:var(--radius-md, 10px); padding:14px 16px; }
+  a.ca-kpi { transition:border-color .12s; }
+  a.ca-kpi:hover { border-color:var(--kpi-accent); }
+  .ca-kpi-primary, .ca-kpi-info { --kpi-accent: var(--color-primary); }
+  .ca-kpi-success { --kpi-accent: var(--color-success); }
+  .ca-kpi-danger { --kpi-accent: var(--color-danger); }
+  .ca-kpi-neutro { --kpi-accent: var(--color-text-muted); }
+  .ca-kpi-valor { font-size:1.5rem; font-weight:800; line-height:1.1; }
+  .ca-kpi-label { font-size:var(--fs-xs); font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+  .ca-kpi-sub { font-size:var(--fs-xs); color:var(--color-text-muted); }
+  .ca-section-label { font-size:var(--fs-sm); font-weight:700; margin:2px 0 10px;
+                      display:flex; align-items:center; gap:6px; }
+  .ca-section-label i { color:var(--color-primary); }
+
   .ca-tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(128px, 1fr));
               gap:12px; margin-bottom:16px; }
   .ca-tile { text-align:left; background:var(--color-surface, #fff);

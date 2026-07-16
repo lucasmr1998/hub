@@ -23,7 +23,7 @@ Rodape: notificacoes + avatar/menu do usuario (movidos do topbar removido).
       </a>
 
       {% if modulo_comercial and is_superuser or modulo_comercial and perm.acesso_comercial %}
-        <a href="/crm/" class="app-sidebar-item {% if modulo_atual == 'comercial' %}is-active{% endif %}" data-module="comercial" title="Comercial">
+        <a href="/crm/central-acoes/" class="app-sidebar-item {% if modulo_atual == 'comercial' %}is-active{% endif %}" data-module="comercial" title="Comercial">
           <i class="bi bi-briefcase"></i>
         </a>
       {% endif %}

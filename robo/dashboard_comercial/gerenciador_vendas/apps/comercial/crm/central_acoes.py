@@ -18,7 +18,7 @@ MVP com 6 sinais (regua do strawman aprovado):
 from collections import Counter
 from datetime import timedelta
 
-from django.db.models import Q
+from django.db.models import Count, Q, Sum
 from django.urls import reverse
 from django.utils import timezone
 
@@ -144,3 +144,67 @@ def coletar_acoes(request):
     }
     return {'itens': itens, 'tipos': tipos, 'equipes': equipes,
             'contadores': contadores, 've_time': ve_time}
+
+
+def _fmt_rs(v):
+    """R$ compacto: 82k, 1,2M."""
+    v = float(v or 0)
+    if v >= 1_000_000:
+        return ('%.1fM' % (v / 1_000_000)).replace('.', ',')
+    if v >= 1_000:
+        return '%dk' % round(v / 1_000)
+    return '%d' % v
+
+
+def kpis_comerciais(request):
+    """KPIs de estado/progresso do funil, escopados por papel (o mesmo numero
+    vira 'meu' pro vendedor e 'do time' pro gestor). Separado das acoes: aqui e
+    saude/progresso, la e o to-do."""
+    from apps.comercial.crm.models import OportunidadeVenda
+
+    esc = escopo_responsaveis(request)
+    ve_time = esc is None or len(esc) > 1
+    agora = timezone.now()
+    inicio_mes = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    ha_7d = agora - timedelta(days=7)
+
+    final = Q(estagio__is_final_ganho=True) | Q(estagio__is_final_perdido=True)
+
+    def escopar(qs):
+        return qs if esc is None else qs.filter(responsavel_id__in=esc)
+
+    base = OportunidadeVenda.objects.com_valor_estimado()
+
+    abertas = escopar(base.filter(ativo=True).exclude(final)).aggregate(
+        n=Count('id'), v=Sum('valor_estimado_anotado'))
+    ganhas = escopar(base.filter(estagio__is_final_ganho=True, data_atualizacao__gte=inicio_mes)).aggregate(
+        n=Count('id'), v=Sum('valor_estimado_anotado'))
+    perdidas_n = escopar(OportunidadeVenda.objects.filter(
+        estagio__is_final_perdido=True, data_atualizacao__gte=inicio_mes)).count()
+    novas_n = escopar(OportunidadeVenda.objects.filter(data_criacao__gte=ha_7d)).count()
+
+    ganhas_n = ganhas['n'] or 0
+    fechadas = ganhas_n + perdidas_n
+    conversao = round(ganhas_n / fechadas * 100) if fechadas else 0
+
+    try:
+        url_pipe = reverse('crm:pipeline')
+    except Exception:
+        url_pipe = '/crm/'
+
+    kpis = [
+        {'label': 'Em negociação', 'valor': abertas['n'] or 0,
+         'sub': 'R$ ' + _fmt_rs(abertas['v']), 'sev': 'primary', 'url': url_pipe},
+        {'label': 'Ganhas no mês', 'valor': ganhas_n,
+         'sub': 'R$ ' + _fmt_rs(ganhas['v']), 'sev': 'success', 'url': ''},
+        {'label': 'Conversão (mês)', 'valor': f'{conversao}%',
+         'sub': f'{ganhas_n} de {fechadas} fechadas', 'sev': 'neutro', 'url': ''},
+        {'label': 'Novas (7 dias)', 'valor': novas_n,
+         'sub': 'entrada de demanda', 'sev': 'info', 'url': ''},
+    ]
+    if ve_time:
+        sem_dono_n = (OportunidadeVenda.objects.filter(ativo=True, responsavel__isnull=True)
+                      .exclude(final).count())
+        kpis.append({'label': 'Sem dono', 'valor': sem_dono_n, 'sub': 'a distribuir',
+                     'sev': 'danger', 'url': url_pipe + '?responsavel=sem'})
+    return kpis
