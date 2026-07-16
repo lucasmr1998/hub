@@ -676,16 +676,19 @@ def central_acoes_view(request):
         return denied
     from apps.comercial.crm.central_acoes import (
         coletar_acoes, kpis_comerciais, tabela_operacional, opcoes_filtro)
+    is_fragment = bool(request.GET.get('fragment'))
     dados = coletar_acoes(request)
-    return render(request, 'crm/central_acoes.html', {
+    ctx = {
         'page_title': 'Central de Acoes',
         'kpis': kpis_comerciais(request),
         'colunas': dados['colunas'],
         'contadores': dados['contadores'],
         've_time': dados['ve_time'],
         'tabela': tabela_operacional(request),
-        'filtro': opcoes_filtro(request),
-    })
+    }
+    if not is_fragment:
+        ctx['filtro'] = opcoes_filtro(request)
+    return render(request, 'crm/_ca_conteudo.html' if is_fragment else 'crm/central_acoes.html', ctx)
 
 
 def _tenant_tem_origens(request):

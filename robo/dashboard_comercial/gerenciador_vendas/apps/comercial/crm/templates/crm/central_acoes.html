@@ -12,9 +12,9 @@
       </p>
     </div>
     {% if filtro.mostrar %}
-      <form method="get" class="page-actions ca-filtros">
+      <div class="page-actions ca-filtros">
         {% if filtro.equipes|length > 1 %}
-          <select name="equipe" class="field-input" onchange="this.form.submit()">
+          <select id="ca-sel-equipe" class="field-input" onchange="caFiltrar()">
             <option value="">Todas as equipes</option>
             {% for id, nome in filtro.equipes %}
               <option value="{{ id }}"{% if filtro.sel_equipe == id|stringformat:'s' %} selected{% endif %}>{{ nome }}</option>
@@ -25,119 +25,25 @@
             <option>{{ filtro.equipes.0.1 }}</option>
           </select>
         {% endif %}
-        <select name="pessoa" class="field-input" onchange="this.form.submit()">
+        <select id="ca-sel-pessoa" class="field-input" onchange="caFiltrar()">
           <option value="">Todas as pessoas</option>
           {% for id, nome in filtro.pessoas %}
             <option value="{{ id }}"{% if filtro.sel_pessoa == id|stringformat:'s' %} selected{% endif %}>{{ nome }}</option>
           {% endfor %}
         </select>
-      </form>
+      </div>
     {% endif %}
   </div>
 </div>
 
-<div class="ca-kpis">
-  {% for k in kpis %}
-    {% if k.url %}
-      <a href="{{ k.url }}" class="stat-card-link">
-        {% include "components/stat_card.html" with label=k.label value=k.valor footnote=k.sub icon=k.icon icon_variant=k.variant %}
-      </a>
-    {% else %}
-      {% include "components/stat_card.html" with label=k.label value=k.valor footnote=k.sub icon=k.icon icon_variant=k.variant %}
-    {% endif %}
-  {% endfor %}
+<div id="ca-conteudo">
+  {% include "crm/_ca_conteudo.html" %}
 </div>
-
-<div class="card ca-panel">
-  <div class="ca-panel-head"><i class="bi bi-lightning-charge-fill"></i> Central de Ações</div>
-  <div class="ca-cols">
-    {% for col in colunas %}
-      {% if col.count %}
-        <div class="ca-col ca-col-{{ col.sev }}">
-          <div class="ca-col-head">
-            <span class="ca-col-count">{{ col.count }}</span>
-            <span class="ca-col-label">{{ col.label }}</span>
-          </div>
-          <div class="ca-col-list">
-            {% for item in col.itens %}
-              <a href="{{ item.url }}" class="ca-qrow" data-equipe="{{ item.tag }}">
-                <span class="ca-dot ca-dot-{{ item.severidade }}"></span>
-                <div class="ca-row-body">
-                  <div class="ca-row-titulo">{{ item.titulo }}</div>
-                  <div class="ca-row-sub">{{ item.subtitulo }}{% if item.tag %} · {{ item.tag }}{% endif %}</div>
-                </div>
-              </a>
-            {% endfor %}
-            <div class="ca-col-empty" style="display:none;">Nada nesta coluna.</div>
-          </div>
-          <div class="ca-col-pag">
-            <button type="button" class="ca-page-btn ca-col-prev"><i class="bi bi-chevron-left"></i></button>
-            <span class="ca-col-info"></span>
-            <button type="button" class="ca-page-btn ca-col-next"><i class="bi bi-chevron-right"></i></button>
-          </div>
-        </div>
-      {% endif %}
-    {% endfor %}
-  </div>
-</div>
-
-{% if tabela %}
-  <div class="card ca-tabela">
-    <div class="ca-panel-head"><i class="bi bi-people-fill"></i> Equipe · operacional (mês)</div>
-    <div class="ca-tabela-scroll">
-      <table class="ca-op-table" id="ca-op-table">
-        <thead>
-          <tr class="ca-op-groups">
-            <th></th>
-            <th colspan="5" class="grp-op">Oportunidades</th>
-            <th colspan="3" class="grp-tar sep">Tarefas</th>
-          </tr>
-          <tr class="ca-op-sub">
-            <th class="ca-op-vend">Vendedor</th>
-            <th>Criadas</th><th>Ganhas</th><th>Perdidas</th><th>Aberto</th><th>Paradas</th>
-            <th class="sep">Feitas</th><th>Pendentes</th><th>Vencidas</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in tabela.linhas %}
-            <tr data-equipe="{{ r.equipe }}">
-              <td class="ca-op-vend"><span class="ca-op-avatar">{{ r.inicial }}</span>{{ r.nome }}</td>
-              <td><a href="{{ r.url_op }}">{{ r.criadas }}</a></td>
-              <td class="c-ganho"><a href="{{ r.url_op }}">{{ r.ganhas }}</a></td>
-              <td class="c-perda"><a href="{{ r.url_op }}">{{ r.perdidas }}</a></td>
-              <td><a href="{{ r.url_op }}">{{ r.aberto }}</a></td>
-              <td class="c-parada"><a href="{{ r.url_op }}">{{ r.paradas }}</a></td>
-              <td class="c-feita sep"><a href="{{ r.url_tar }}">{{ r.feitas }}</a></td>
-              <td><a href="{{ r.url_tar }}">{{ r.pendentes }}</a></td>
-              <td class="c-vencida"><a href="{{ r.url_tar }}">{{ r.vencidas }}</a></td>
-            </tr>
-          {% empty %}
-            <tr><td colspan="9" class="ca-op-empty">Sem membros na equipe ainda.</td></tr>
-          {% endfor %}
-        </tbody>
-        {% if tabela.total %}
-          <tfoot>
-            <tr class="ca-op-total">
-              <td class="ca-op-vend">Total da equipe</td>
-              <td>{{ tabela.total.criadas }}</td>
-              <td>{{ tabela.total.ganhas }}</td>
-              <td>{{ tabela.total.perdidas }}</td>
-              <td>{{ tabela.total.aberto }}</td>
-              <td>{{ tabela.total.paradas }}</td>
-              <td class="sep">{{ tabela.total.feitas }}</td>
-              <td>{{ tabela.total.pendentes }}</td>
-              <td>{{ tabela.total.vencidas }}</td>
-            </tr>
-          </tfoot>
-        {% endif %}
-      </table>
-    </div>
-  </div>
-{% endif %}
 
 <style>
   .ca-filtros { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0; }
   .ca-filtros .field-input { max-width:200px; }
+  #ca-conteudo { transition:opacity .15s ease; }
 
   .ca-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
              gap:12px; margin-bottom:18px; }
@@ -167,7 +73,6 @@
   .ca-qrow { display:flex; align-items:center; gap:10px; padding:12px 14px;
              border-top:1px solid var(--color-border, #e5e7eb); text-decoration:none;
              color:inherit; transition:background .12s ease; }
-  .ca-row-titulo { margin-bottom:1px; }
   .ca-qrow:first-child { border-top:none; }
   .ca-qrow:hover { background:rgba(0,0,0,.035); }
   .ca-dot { width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
@@ -175,7 +80,7 @@
   .ca-dot-atencao { background:var(--color-warning); }
   .ca-dot-oportunidade { background:var(--color-success); }
   .ca-row-body { flex:1 1 auto; min-width:0; }
-  .ca-row-titulo { font-weight:600; font-size:var(--fs-sm); white-space:nowrap;
+  .ca-row-titulo { font-weight:600; font-size:var(--fs-sm); margin-bottom:1px; white-space:nowrap;
                    overflow:hidden; text-overflow:ellipsis; }
   .ca-row-sub { font-size:11px; color:var(--color-text-muted); white-space:nowrap;
                 overflow:hidden; text-overflow:ellipsis; }
@@ -214,68 +119,54 @@
 </style>
 
 <script>
-(function(){
-  var eqSel = document.getElementById('ca-equipe');
-  var PAGE = 5;
-  var cols = Array.prototype.slice.call(document.querySelectorAll('.ca-col'));
-
-  function setup(col){
-    var rows = Array.prototype.slice.call(col.querySelectorAll('.ca-qrow'));
-    var info = col.querySelector('.ca-col-info');
-    var prev = col.querySelector('.ca-col-prev');
-    var next = col.querySelector('.ca-col-next');
-    var empty = col.querySelector('.ca-col-empty');
-    var pag = col.querySelector('.ca-col-pag');
-    var count = col.querySelector('.ca-col-count');
-    var page = 0;
-    function render(){
-      var eq = eqSel ? eqSel.value : '';
-      var f = rows.filter(function(r){ return !eq || r.getAttribute('data-equipe') === eq; });
-      if (count) count.textContent = f.length;
-      var pages = Math.max(1, Math.ceil(f.length / PAGE));
-      if (page > pages - 1) page = pages - 1;
-      if (page < 0) page = 0;
-      rows.forEach(function(r){ r.style.display = 'none'; });
-      f.slice(page * PAGE, (page + 1) * PAGE).forEach(function(r){ r.style.display = ''; });
-      if (empty) empty.style.display = f.length ? 'none' : '';
-      if (info) info.textContent = f.length ? ((page + 1) + ' / ' + pages) : '';
-      if (pag) pag.style.display = f.length > PAGE ? '' : 'none';
-      if (prev) prev.disabled = page === 0;
-      if (next) next.disabled = page >= pages - 1;
-    }
-    if (prev) prev.addEventListener('click', function(){ page--; render(); });
-    if (next) next.addEventListener('click', function(){ page++; render(); });
-    col._reset = function(){ page = 0; render(); };
-    render();
-  }
-  cols.forEach(setup);
-
-  var opTable = document.getElementById('ca-op-table');
-  function filtrarTabela(){
-    if (!opTable) return;
-    var eq = eqSel ? eqSel.value : '';
-    var rows = Array.prototype.slice.call(opTable.querySelectorAll('tbody tr[data-equipe]'));
-    var totalCells = Array.prototype.slice.call(opTable.querySelectorAll('tfoot td'));
-    var sums = [];
-    rows.forEach(function(tr){
-      var show = !eq || tr.getAttribute('data-equipe') === eq;
-      tr.style.display = show ? '' : 'none';
-      if (show) {
-        var tds = tr.querySelectorAll('td');
-        for (var i = 1; i < tds.length; i++) {
-          sums[i] = (sums[i] || 0) + (parseInt(tds[i].textContent, 10) || 0);
-        }
+  // Paginacao das colunas (5/pagina). Reexecutada apos cada troca de filtro AJAX.
+  function initCaPagination(){
+    var PAGE = 5;
+    document.querySelectorAll('#ca-conteudo .ca-col').forEach(function(col){
+      var rows = Array.prototype.slice.call(col.querySelectorAll('.ca-qrow'));
+      var info = col.querySelector('.ca-col-info');
+      var prev = col.querySelector('.ca-col-prev');
+      var next = col.querySelector('.ca-col-next');
+      var pag = col.querySelector('.ca-col-pag');
+      var pages = Math.max(1, Math.ceil(rows.length / PAGE));
+      var page = 0;
+      function render(){
+        rows.forEach(function(r, i){
+          r.style.display = (i >= page * PAGE && i < (page + 1) * PAGE) ? '' : 'none';
+        });
+        if (info) info.textContent = (page + 1) + ' / ' + pages;
+        if (pag) pag.style.display = rows.length > PAGE ? '' : 'none';
+        if (prev) prev.disabled = page === 0;
+        if (next) next.disabled = page >= pages - 1;
       }
+      if (prev) prev.addEventListener('click', function(){ if (page > 0){ page--; render(); } });
+      if (next) next.addEventListener('click', function(){ if (page < pages - 1){ page++; render(); } });
+      render();
     });
-    for (var j = 1; j < totalCells.length; j++) {
-      totalCells[j].textContent = sums[j] || 0;
-    }
   }
 
-  if (eqSel) eqSel.addEventListener('change', function(){
-    cols.forEach(function(c){ if (c._reset) c._reset(); });
-    filtrarTabela();
-  });
-})();
+  // Troca so o conteudo (KPIs + acoes + tabela) via AJAX, sem recarregar a pagina.
+  function caFiltrar(){
+    var eq = document.getElementById('ca-sel-equipe');
+    var pe = document.getElementById('ca-sel-pessoa');
+    var qs = new URLSearchParams();
+    if (eq && eq.value) qs.set('equipe', eq.value);
+    if (pe && pe.value) qs.set('pessoa', pe.value);
+    var q = qs.toString();
+    var alvo = document.getElementById('ca-conteudo');
+    alvo.style.opacity = '.45';
+    fetch(location.pathname + '?' + (q ? q + '&' : '') + 'fragment=1',
+          { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function(r){ return r.text(); })
+      .then(function(html){
+        alvo.innerHTML = html;
+        alvo.style.opacity = '';
+        initCaPagination();
+        history.replaceState(null, '', q ? (location.pathname + '?' + q) : location.pathname);
+      })
+      .catch(function(){ alvo.style.opacity = ''; });
+  }
+
+  initCaPagination();
 </script>
 {% endblock %}

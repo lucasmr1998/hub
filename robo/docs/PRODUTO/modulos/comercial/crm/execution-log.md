@@ -445,3 +445,17 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy em prod.
 
 ---
+
+## 2026-07-16 — Filtro da home via AJAX (sem recarregar a pagina)
+
+- **Feedback do Lucas:** o filtro server-side recarregava a pagina toda; queria
+  so atualizar as informacoes, rapido como antes.
+- **Ajuste:** conteudo (KPIs + Central de Acoes + tabela) extraido pro partial
+  crm/_ca_conteudo.html, dentro de #ca-conteudo. A view responde so o partial
+  quando ?fragment=1. Os selects de equipe/pessoa chamam caFiltrar() que faz
+  fetch do fragment e troca so o #ca-conteudo (com fade), reexecutando a
+  paginacao. history.replaceState mantem a URL. Continua server-side (KPIs em R$
+  corretos), mas sem reload da pagina inteira.
+- **Status:** completed (codigo, dev). Deploy em prod.
+
+---
