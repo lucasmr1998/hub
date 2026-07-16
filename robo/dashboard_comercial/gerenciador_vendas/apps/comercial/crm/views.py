@@ -414,10 +414,14 @@ def api_pipeline_dados(request):
             oportunidades_por_estagio[eid] = []
         oportunidades_por_estagio[eid].append(_oportunidade_para_dict(op, mapa_planos))
 
+    # Contador e soma vem do banco, sobre o filtro inteiro, e nao da lista
+    # carregada: e o que mantem o cabecalho da coluna honesto quando ela pagina.
+    totais = qs.totais_por_estagio()
+
     resultado = []
     for estagio in estagios:
         ops = oportunidades_por_estagio.get(estagio.pk, [])
-        total_valor = sum(float(o['valor']) for o in ops)
+        total_ops, total_valor = totais.get(estagio.pk, (0, 0.0))
         resultado.append({
             'id': estagio.pk,
             'nome': estagio.nome,
@@ -427,7 +431,7 @@ def api_pipeline_dados(request):
             'is_final_ganho': estagio.is_final_ganho,
             'is_final_perdido': estagio.is_final_perdido,
             'sla_horas': estagio.sla_horas,
-            'total': len(ops),
+            'total': total_ops,
             'total_valor': total_valor,
             'oportunidades': ops,
         })
