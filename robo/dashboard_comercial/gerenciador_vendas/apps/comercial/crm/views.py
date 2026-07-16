@@ -1587,7 +1587,19 @@ def tarefas_lista(request):
     tarefas_todas_page = tarefas_todas_paginator.get_page(request.GET.get('page'))
     tarefas_todas = tarefas_todas_page.object_list
 
-    tarefas_concluidas = qs.filter(status='concluida').order_by('-data_conclusao')[:20]
+    # Concluidas tambem pagina (antes era um [:20] silencioso: a aba mostrava 20
+    # de centenas sem avisar, e o contador da aba mentia junto).
+    tarefas_concluidas_qs = qs.filter(status='concluida').order_by('-data_conclusao')
+    tarefas_concluidas_paginator = Paginator(tarefas_concluidas_qs, 30)
+    tarefas_concluidas_page = tarefas_concluidas_paginator.get_page(request.GET.get('page_concluidas'))
+    tarefas_concluidas = tarefas_concluidas_page.object_list
+
+    # Cada lista pagina com o seu proprio parametro, entao o link de uma precisa
+    # carregar o parametro da outra (e os filtros) pra nao zerar o resto da tela.
+    def _query_exceto(chave):
+        params = request.GET.copy()
+        params.pop(chave, None)
+        return params.urlencode()
 
     # Dados para filtros
     from django.contrib.auth.models import User
@@ -1612,7 +1624,13 @@ def tarefas_lista(request):
         'tarefas_todas': tarefas_todas,
         'tarefas_todas_page_obj': tarefas_todas_page,
         'tarefas_todas_paginated': tarefas_todas_page.has_other_pages(),
+        'tarefas_todas_total': tarefas_todas_paginator.count,
+        'tarefas_todas_query': _query_exceto('page'),
         'tarefas_concluidas': tarefas_concluidas,
+        'tarefas_concluidas_page_obj': tarefas_concluidas_page,
+        'tarefas_concluidas_paginated': tarefas_concluidas_page.has_other_pages(),
+        'tarefas_concluidas_total': tarefas_concluidas_paginator.count,
+        'tarefas_concluidas_query': _query_exceto('page_concluidas'),
         'vendedores': vendedores,
         'filter_fields': filter_fields,
         'active_filters_count': active_filters_count,

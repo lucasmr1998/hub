@@ -5,6 +5,9 @@ Params:
   page_obj: instancia Page do Django Paginator (obrigatorio)
   base_url: URL base pra links (default: request.path)
   query: QueryDict extra pra preservar filtros (ex: request.GET.urlencode)
+  page_param: nome do parametro de pagina na URL (default: 'page'). Use quando a
+              tela tem MAIS DE UMA lista paginada, pra elas nao brigarem pelo
+              mesmo ?page= (ex: page_param="page_concluidas").
 
 Uso na view:
   from django.core.paginator import Paginator
@@ -23,8 +26,8 @@ Uso no template:
     </span>
     <div class="pagination-nav">
       {% if page_obj.has_previous %}
-        <a href="?page=1{% if query %}&{{ query }}{% endif %}" class="pagination-btn" title="Primeira"><i class="bi bi-chevron-double-left"></i></a>
-        <a href="?page={{ page_obj.previous_page_number }}{% if query %}&{{ query }}{% endif %}" class="pagination-btn" title="Anterior"><i class="bi bi-chevron-left"></i></a>
+        <a href="?{{ page_param|default:'page' }}=1{% if query %}&{{ query }}{% endif %}" class="pagination-btn" title="Primeira"><i class="bi bi-chevron-double-left"></i></a>
+        <a href="?{{ page_param|default:'page' }}={{ page_obj.previous_page_number }}{% if query %}&{{ query }}{% endif %}" class="pagination-btn" title="Anterior"><i class="bi bi-chevron-left"></i></a>
       {% else %}
         <span class="pagination-btn is-disabled"><i class="bi bi-chevron-double-left"></i></span>
         <span class="pagination-btn is-disabled"><i class="bi bi-chevron-left"></i></span>
@@ -35,8 +38,8 @@ Uso no template:
       </span>
 
       {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if query %}&{{ query }}{% endif %}" class="pagination-btn" title="Proxima"><i class="bi bi-chevron-right"></i></a>
-        <a href="?page={{ page_obj.paginator.num_pages }}{% if query %}&{{ query }}{% endif %}" class="pagination-btn" title="Ultima"><i class="bi bi-chevron-double-right"></i></a>
+        <a href="?{{ page_param|default:'page' }}={{ page_obj.next_page_number }}{% if query %}&{{ query }}{% endif %}" class="pagination-btn" title="Proxima"><i class="bi bi-chevron-right"></i></a>
+        <a href="?{{ page_param|default:'page' }}={{ page_obj.paginator.num_pages }}{% if query %}&{{ query }}{% endif %}" class="pagination-btn" title="Ultima"><i class="bi bi-chevron-double-right"></i></a>
       {% else %}
         <span class="pagination-btn is-disabled"><i class="bi bi-chevron-right"></i></span>
         <span class="pagination-btn is-disabled"><i class="bi bi-chevron-double-right"></i></span>

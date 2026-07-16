@@ -33,11 +33,11 @@
   </button>
   <button class="tab-btn is-active" onclick="switchTab(this, 'tab-todas')">
     <i class="bi bi-list-ul"></i> Todas pendentes
-    <span class="tab-count">{{ tarefas_todas|length }}</span>
+    <span class="tab-count">{{ tarefas_todas_total }}</span>
   </button>
   <button class="tab-btn" onclick="switchTab(this, 'tab-concluidas')">
     <i class="bi bi-check2-all"></i> Concluidas
-    <span class="tab-count tab-count-success">{{ tarefas_concluidas|length }}</span>
+    <span class="tab-count tab-count-success">{{ tarefas_concluidas_total }}</span>
   </button>
 </div>
 
@@ -81,7 +81,7 @@
       {% for t in tarefas_todas %}{% include "crm/_tarefa_card.html" with tarefa=t %}{% endfor %}
     </div>
     {% if tarefas_todas_paginated %}
-      {% include "components/pagination.html" with page_obj=tarefas_todas_page_obj %}
+      {% include "components/pagination.html" with page_obj=tarefas_todas_page_obj query=tarefas_todas_query %}
     {% endif %}
   {% else %}
     <div class="empty-state"><i class="bi bi-inbox"></i><p>Nenhuma tarefa pendente.</p></div>
@@ -94,6 +94,9 @@
     <div class="tarefa-list">
       {% for t in tarefas_concluidas %}{% include "crm/_tarefa_card.html" with tarefa=t %}{% endfor %}
     </div>
+    {% if tarefas_concluidas_paginated %}
+      {% include "components/pagination.html" with page_obj=tarefas_concluidas_page_obj page_param="page_concluidas" query=tarefas_concluidas_query %}
+    {% endif %}
   {% else %}
     <div class="empty-state"><i class="bi bi-inbox"></i><p>Nenhuma tarefa concluida ainda.</p></div>
   {% endif %}
@@ -313,6 +316,14 @@ function switchTab(btn, id) {
   btn.classList.add('is-active');
   document.getElementById(id).classList.add('is-active');
 }
+
+// Paginar recarrega a pagina: sem isso o clique na pagina 2 das concluidas
+// devolveria o usuario pra aba "Todas pendentes".
+(function abrirAbaDaUrl() {
+  if (!new URLSearchParams(location.search).has('page_concluidas')) return;
+  const btn = document.querySelector('.tab-btn[onclick*="tab-concluidas"]');
+  if (btn) switchTab(btn, 'tab-concluidas');
+})();
 
 function abrirModalTarefa() { document.getElementById('modal-tarefa').style.display = 'flex'; }
 function fecharModalTarefa() { document.getElementById('modal-tarefa').style.display = 'none'; }

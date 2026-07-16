@@ -470,3 +470,26 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy em prod.
 
 ---
+
+## 2026-07-16 — Tarefas: aba Concluidas paginada (fim do teto silencioso de 20)
+
+- **Pedido do Lucas:** "pq eu so vejo 20 tarefas concluidas?".
+- **Causa:** views.py tinha `qs.filter(status='concluida')[:20]` fixo enquanto a
+  aba vizinha ja paginava. A tela nao quebrava, ela omitia: o contador da aba
+  mostrava `|length` da fatia (20), entao o proprio numero confirmava a mentira.
+- **Ajuste:** Paginator(30) com parametro proprio `?page_concluidas=` (a aba
+  "Todas pendentes" continua no `?page=`, as duas navegam independentes).
+  Contadores das duas abas passam a usar `paginator.count` (total real), nao o
+  tamanho da pagina. Links de paginacao agora preservam os filtros ativos
+  (`query`), o que antes se perdia tambem na aba "Todas". JS reabre a aba
+  Concluidas quando a URL tem `page_concluidas` (o reload voltava pra "Todas").
+- **DS:** `components/pagination.html` ganhou o param opcional `page_param`
+  (default 'page', retrocompativel) em vez de forkar a marcacao. Habilita
+  qualquer tela com duas listas paginadas.
+- **Validacao:** `manage.py check` ok. Smoke em dev com 45 tarefas temporarias
+  (criadas e removidas, junto das 45 notificacoes que o signal gerou): 49
+  concluidas -> 2 paginas, 30 + 19, sem sobreposicao, listas independentes,
+  contador exibindo 49. Antes: 20 de 49.
+- **Status:** completed (codigo, dev). Deploy em prod pendente de confirmacao.
+
+---
