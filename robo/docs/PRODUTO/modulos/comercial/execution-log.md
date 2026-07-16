@@ -258,3 +258,30 @@ Status: completed + deployado em prod (commits `d4cbd3c`, `88dd40d`, `e3f2de0`, 
 - **Status:** completed (codigo, dev). Deploy em prod.
 
 ---
+
+## 2026-07-16 — Auditoria da regra "Sem viabilidade -> Perdido" e mudanca de acao
+
+- **Gatilho:** a op 2793 nao saia do Perdido. Historico mostrou LOOP: usuario tira
+  do Perdido -> regra 8 ("Lead respondeu o bot") puxa pra Em Atendimento -> regra
+  22 ("Sem viabilidade -> Perdido", SEM gatilho de estagio, dispara de qualquer
+  lugar) devolve pro Perdido no mesmo segundo. 3 tentativas humanas revertidas.
+- **Destrave (autorizado):** lead 2634 teve viabilidade.status trocado de
+  fora_cobertura -> pendente_revisao (desarma a regra 22, arma a regra 26 que cria
+  tarefa de validacao) e a op 2793 foi movida pra Analise de Viabilidade. Confirmado
+  que nao volta.
+- **Auditoria (18 ops distintas atingidas pela regra 22):**
+  - **11 estao hoje em "Ativacao Confirmada"** — ou seja, o veredito "sem
+    viabilidade" estava ERRADO em 61% dos casos; foram resgatadas na mao e viraram
+    clientes.
+  - 6 seguem em Perdido (1645, 1652, 1687, 1759, 1838, 1863) — candidatas a perda
+    falsa nunca resgatada. Revisao pendente com o Lucas.
+  - 3 tinham endereco comprovadamente trocado (numero/bairro).
+- **Mudanca (autorizada):** regra 22 deixou de perder lead automaticamente. Nome ->
+  "Sem viabilidade -> validar cobertura (tarefa)"; acao ->
+  mover_para_perdido_sem_viabilidade **substituida por** criar_tarefa
+  ("⚠️ Validar cobertura — {cidade}"). Condicao (fora_cobertura) inalterada, regra
+  segue ativa. Junto com o fix A+B do service (commit 6313cd1), o sistema para de
+  descartar lead com base em veredito de endereco furado.
+- **Status:** completed. Raiz (bot embaralhando endereco) na tarefa #201.
+
+---
