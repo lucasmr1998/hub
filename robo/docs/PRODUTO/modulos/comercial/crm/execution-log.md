@@ -282,3 +282,16 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev).
 
 ---
+
+## 2026-07-16 — Central de Acoes: layout Cockpit (cards + fila)
+
+- **Feedback do Lucas:** UX das sanfonas fechadas nao ficou boa; escolheu (via
+  mockups A/B/C) a estrutura Cockpit.
+- **Ajuste:** 5 cards por TIPO no topo (Parada / Sem dono / Tarefa / Erro / Nova)
+  com contagem e cor por severidade; clicar num card foca a fila embaixo. Fila
+  unica paginada (15/pag) filtrada por tipo + filtro de equipe (dropdown, so pra
+  quem ve o time). Cada linha mantem a bolinha de severidade real. coletar_acoes
+  passou a devolver itens (flat, com chave/severidade), tipos (tiles), equipes.
+- **Status:** completed (codigo, dev). Deploy em prod.
+
+---
