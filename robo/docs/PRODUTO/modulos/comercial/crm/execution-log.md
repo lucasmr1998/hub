@@ -413,3 +413,20 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy em prod.
 
 ---
+
+## 2026-07-16 — "Parada" passa a usar o SLA do estagio (fix de definicao)
+
+- **Feedback do Lucas:** "parada" deve comparar o tempo no estagio com o SLA
+  daquele estagio (sla_horas, configuravel no CRM), nao um corte fixo de dias.
+- **Diagnostico (prod):** os SLAs da Nuvyon estao em 2h por estagio. Por isso a
+  automacao dizia ~100 paradas (121 abertas, 100 acima do SLA de 2h) e estava
+  CERTA; meu corte fixo (>3d=24, >7d=6) subestimava. Estagio sem SLA (ex:
+  Aguardando Assinatura) nao gera parada.
+- **Ajuste:** parada = data_entrada_estagio + sla_horas < agora, via expressao
+  ORM _SLA_DEADLINE. Aplicado na coluna OP Paradas (severidade: critico se passou
+  2x o SLA, senao atencao; subtitulo mostra tempo no estagio) e na tabela
+  operacional (query separada por vendedor). data_entrada_estagio e atualizado no
+  arraste do kanban (api_mover_oportunidade), entao o campo e confiavel.
+- **Status:** completed (codigo, dev). Deploy em prod.
+
+---

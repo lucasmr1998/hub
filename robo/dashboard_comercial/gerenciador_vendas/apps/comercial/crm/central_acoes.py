@@ -17,11 +17,26 @@ MVP com 6 sinais (regua do strawman aprovado):
 """
 from datetime import timedelta
 
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, DateTimeField, ExpressionWrapper, F, Q, Sum
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.comercial.crm.escopo import escopo_responsaveis
+
+# Prazo do SLA de cada op: entrada no estagio + sla_horas do estagio. Op parada =
+# esse prazo ja passou. Estagio sem sla_horas nao gera parada (sla_vencido=False).
+_SLA_DEADLINE = ExpressionWrapper(
+    F('data_entrada_estagio') + timedelta(hours=1) * F('estagio__sla_horas'),
+    output_field=DateTimeField(),
+)
+
+
+def _tempo_no_estagio(horas):
+    """Formata o tempo no estagio: '5h' ou '3 dias'."""
+    if horas < 24:
+        return f'{int(horas)}h'
+    d = int(horas // 24)
+    return f'{d} dia{"s" if d != 1 else ""}'
 
 LIMITE_POR_SINAL = 150
 
@@ -83,15 +98,21 @@ def coletar_acoes(request):
     def escopar_op(qs):
         return qs if esc is None else qs.filter(responsavel_id__in=esc)
 
-    # Parada no estagio (>7d critico, 3-7d atencao)
+    # Parada = passou do SLA do estagio (data_entrada_estagio + sla_horas < agora).
+    # Estagio sem SLA nao gera parada. Severidade: critico se passou 2x o SLA.
     paradas = (escopar_op(op_base)
-               .filter(data_entrada_estagio__lt=agora - timedelta(days=3))
+               .filter(estagio__sla_horas__isnull=False)
+               .annotate(_sla_dl=_SLA_DEADLINE)
+               .filter(_sla_dl__lt=agora)
                .order_by('data_entrada_estagio'))
     for op in paradas[:LIMITE_POR_SINAL]:
-        dias = (agora - op.data_entrada_estagio).days
+        horas = (agora - op.data_entrada_estagio).total_seconds() / 3600
+        sla = op.estagio.sla_horas or 0
+        sev = 'critico' if sla and horas > 2 * sla else 'atencao'
         nome = op.lead.nome_razaosocial or op.titulo or f'Oportunidade #{op.pk}'
-        add('parada', 'Parada', 'critico' if dias > 7 else 'atencao', nome,
-            f'{dias} dia{_plural(dias)} parada em {op.estagio.nome}', _equipe_nome(op), _url_op(op), dias)
+        add('parada', 'Parada', sev, nome,
+            f'{_tempo_no_estagio(horas)} parada em {op.estagio.nome}',
+            _equipe_nome(op), _url_op(op), int(horas - sla))
 
     # Tarefa vencida
     tarefas = (TarefaCRM.objects.filter(data_vencimento__lt=agora,
@@ -224,7 +245,6 @@ def tabela_operacional(request):
 
     agora = timezone.now()
     inicio_mes = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    corte_parada = agora - timedelta(days=7)
     aberto_q = Q(ativo=True) & ~Q(estagio__is_final_ganho=True) & ~Q(estagio__is_final_perdido=True)
     aberta = ['pendente', 'em_andamento']
 
@@ -242,8 +262,13 @@ def tabela_operacional(request):
             ganhas=Count('id', filter=Q(estagio__is_final_ganho=True, data_atualizacao__gte=inicio_mes)),
             perdidas=Count('id', filter=Q(estagio__is_final_perdido=True, data_atualizacao__gte=inicio_mes)),
             aberto=Count('id', filter=aberto_q),
-            paradas=Count('id', filter=aberto_q & Q(data_entrada_estagio__lt=corte_parada)),
         ))}
+    # Paradas por SLA (query a parte por causa da comparacao com o prazo do SLA).
+    paradas_map = dict(
+        OportunidadeVenda.objects
+        .filter(responsavel_id__in=user_ids, estagio__sla_horas__isnull=False)
+        .filter(aberto_q).annotate(_sla_dl=_SLA_DEADLINE).filter(_sla_dl__lt=agora)
+        .values('responsavel_id').annotate(n=Count('id')).values_list('responsavel_id', 'n'))
     tars = {r['responsavel_id']: r for r in (
         TarefaCRM.objects.filter(responsavel_id__in=user_ids)
         .values('responsavel_id').annotate(
@@ -276,7 +301,7 @@ def tabela_operacional(request):
             'equipe': _equipe_de(u),
             'criadas': o.get('criadas', 0), 'ganhas': o.get('ganhas', 0),
             'perdidas': o.get('perdidas', 0), 'aberto': o.get('aberto', 0),
-            'paradas': o.get('paradas', 0), 'feitas': t.get('feitas', 0),
+            'paradas': paradas_map.get(uid, 0), 'feitas': t.get('feitas', 0),
             'pendentes': t.get('pendentes', 0), 'vencidas': t.get('vencidas', 0),
             'url_op': f'{url_op}?responsavel={uid}',
             'url_tar': f'{url_tar}?responsavel={uid}',
