@@ -371,3 +371,18 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy em prod.
 
 ---
+
+## 2026-07-16 — Central de Acoes: fix do filtro (contador + tag tarefa + seletor travado)
+
+- **Feedback do Lucas:** (1) seletor de equipe nao devia sumir com 1 time, e sim
+  ficar travado mostrando o time; (2) header dizia "31 Tarefas" mas a fila
+  filtrada zerava.
+- **Ajuste:** (1) com 1 equipe o seletor aparece desabilitado com o nome do time
+  (informativo; o escopo ja restringe). (2) contador do header (.ca-col-count)
+  passa a refletir o filtro via JS. (3) a tag de equipe da TAREFA vinha do
+  responsavel da OPORTUNIDADE, mas o escopo e pelo responsavel da TAREFA; alinhado
+  pra _equipe_de(t.responsavel). Agora 30/30 tarefas com equipe (era 6/30), o
+  filtro casa com o escopo.
+- **Status:** completed (codigo, dev). Deploy em prod.
+
+---

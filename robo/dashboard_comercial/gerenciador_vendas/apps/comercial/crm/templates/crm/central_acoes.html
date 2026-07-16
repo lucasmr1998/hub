@@ -11,13 +11,19 @@
         Resumo e o que precisa da sua ação{% if ve_time %} (visão do time){% else %} (suas pendências){% endif %}.
       </p>
     </div>
-    {% if ve_time and equipes|length > 1 %}
+    {% if ve_time and equipes %}
       <div class="page-actions">
         <div class="field-input-wrap" style="max-width:230px;">
-          <select id="ca-equipe" class="field-input">
-            <option value="">Todas as equipes</option>
-            {% for e in equipes %}<option value="{{ e }}">{{ e }}</option>{% endfor %}
-          </select>
+          {% if equipes|length == 1 %}
+            <select id="ca-equipe" class="field-input" disabled title="Você acompanha uma equipe">
+              <option value="" selected>{{ equipes.0 }}</option>
+            </select>
+          {% else %}
+            <select id="ca-equipe" class="field-input">
+              <option value="">Todas as equipes</option>
+              {% for e in equipes %}<option value="{{ e }}">{{ e }}</option>{% endfor %}
+            </select>
+          {% endif %}
         </div>
       </div>
     {% endif %}
@@ -133,10 +139,12 @@
     var next = col.querySelector('.ca-col-next');
     var empty = col.querySelector('.ca-col-empty');
     var pag = col.querySelector('.ca-col-pag');
+    var count = col.querySelector('.ca-col-count');
     var page = 0;
     function render(){
       var eq = eqSel ? eqSel.value : '';
       var f = rows.filter(function(r){ return !eq || r.getAttribute('data-equipe') === eq; });
+      if (count) count.textContent = f.length;
       var pages = Math.max(1, Math.ceil(f.length / PAGE));
       if (page > pages - 1) page = pages - 1;
       if (page < 0) page = 0;

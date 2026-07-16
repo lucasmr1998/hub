@@ -46,11 +46,15 @@ def _url_op(op):
         return '#'
 
 
-def _equipe_nome(op):
-    resp = getattr(op, 'responsavel', None)
-    perfil = getattr(resp, 'perfil_crm', None) if resp else None
+def _equipe_de(user):
+    """Nome da equipe do usuario (via PerfilVendedor), '' se nao tiver."""
+    perfil = getattr(user, 'perfil_crm', None) if user else None
     eq = getattr(perfil, 'equipe', None) if perfil else None
     return eq.nome if eq else ''
+
+
+def _equipe_nome(op):
+    return _equipe_de(getattr(op, 'responsavel', None)) if op else ''
 
 
 def _plural(n):
@@ -92,8 +96,8 @@ def coletar_acoes(request):
     # Tarefa vencida
     tarefas = (TarefaCRM.objects.filter(data_vencimento__lt=agora,
                                         status__in=['pendente', 'em_andamento'])
-               .select_related('lead', 'oportunidade', 'oportunidade__lead', 'responsavel',
-                               'oportunidade__responsavel__perfil_crm__equipe'))
+               .select_related('lead', 'oportunidade', 'oportunidade__lead',
+                               'responsavel__perfil_crm__equipe'))
     if esc is not None:
         tarefas = tarefas.filter(responsavel_id__in=esc)
     for t in tarefas.order_by('data_vencimento')[:LIMITE_POR_SINAL]:
@@ -101,7 +105,7 @@ def coletar_acoes(request):
         alvo = t.oportunidade
         nome = (alvo.lead.nome_razaosocial if alvo and alvo.lead else None) or t.titulo
         add('tarefa', 'Tarefa', 'critico', nome,
-            f'Vencida ha {dias} dia{_plural(dias)}: {t.titulo}', _equipe_nome(alvo), _url_op(alvo), dias + 5)
+            f'Vencida ha {dias} dia{_plural(dias)}: {t.titulo}', _equipe_de(t.responsavel), _url_op(alvo), dias + 5)
 
     # Lead em erro
     erros = LeadProspecto.objects.filter(status_api='erro').select_related(
