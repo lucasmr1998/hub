@@ -92,7 +92,8 @@ def coletar_acoes(request):
     # Tarefa vencida
     tarefas = (TarefaCRM.objects.filter(data_vencimento__lt=agora,
                                         status__in=['pendente', 'em_andamento'])
-               .select_related('lead', 'oportunidade', 'oportunidade__lead', 'responsavel'))
+               .select_related('lead', 'oportunidade', 'oportunidade__lead', 'responsavel',
+                               'oportunidade__responsavel__perfil_crm__equipe'))
     if esc is not None:
         tarefas = tarefas.filter(responsavel_id__in=esc)
     for t in tarefas.order_by('data_vencimento')[:LIMITE_POR_SINAL]:
@@ -100,16 +101,17 @@ def coletar_acoes(request):
         alvo = t.oportunidade
         nome = (alvo.lead.nome_razaosocial if alvo and alvo.lead else None) or t.titulo
         add('tarefa', 'Tarefa', 'critico', nome,
-            f'Vencida ha {dias} dia{_plural(dias)}: {t.titulo}', '', _url_op(alvo), dias + 5)
+            f'Vencida ha {dias} dia{_plural(dias)}: {t.titulo}', _equipe_nome(alvo), _url_op(alvo), dias + 5)
 
     # Lead em erro
-    erros = LeadProspecto.objects.filter(status_api='erro').select_related('oportunidade_crm')
+    erros = LeadProspecto.objects.filter(status_api='erro').select_related(
+        'oportunidade_crm', 'oportunidade_crm__responsavel__perfil_crm__equipe')
     if esc is not None:
         erros = erros.filter(oportunidade_crm__responsavel_id__in=esc)
     for l in erros.order_by('-data_cadastro')[:LIMITE_POR_SINAL]:
         op = getattr(l, 'oportunidade_crm', None)
         nome = l.nome_razaosocial or f'Lead #{l.pk}'
-        add('erro', 'Erro', 'critico', nome, 'Falha de sincronizacao com o ERP', '', _url_op(op), 9999)
+        add('erro', 'Erro', 'critico', nome, 'Falha de sincronizacao com o ERP', _equipe_nome(op), _url_op(op), 9999)
 
     # Oportunidade nova < 24h
     novas = (escopar_op(op_base)

@@ -358,3 +358,16 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy em prod.
 
 ---
+
+## 2026-07-16 — Central de Acoes: filtro de equipe (esconder com 1 time + fix)
+
+- **Feedback do Lucas:** supervisor de 1 time nao devia ver o seletor de equipe;
+  so com 2+ equipes. E garantir o filtro pra todos.
+- **Ajuste:** filtro de equipe so aparece com equipes|length > 1 (supervisor de um
+  time ve so o dele, sem dropdown). Fix: Tarefas e Erros nao carregavam a equipe
+  no item (tag vazia), entao filtrar por equipe zerava essas colunas. Agora
+  setam _equipe_nome via oportunidade.responsavel.perfil_crm.equipe (+ select_
+  related pra evitar N+1).
+- **Status:** completed (codigo, dev). Deploy em prod.
+
+---

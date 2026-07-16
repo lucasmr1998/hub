@@ -11,7 +11,7 @@
         Resumo e o que precisa da sua ação{% if ve_time %} (visão do time){% else %} (suas pendências){% endif %}.
       </p>
     </div>
-    {% if ve_time and equipes %}
+    {% if ve_time and equipes|length > 1 %}
       <div class="page-actions">
         <div class="field-input-wrap" style="max-width:230px;">
           <select id="ca-equipe" class="field-input">
