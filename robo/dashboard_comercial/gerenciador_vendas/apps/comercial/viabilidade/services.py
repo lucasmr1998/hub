@@ -16,11 +16,15 @@ Estrategia:
 Status possiveis no resultado:
   - 'cobertura_ok'        — atende (HubSoft) ou cidade cadastrada (local)
   - 'fora_cobertura'      — nao atende (HubSoft) ou cidade nao cadastrada
-  - 'pendente_revisao'    — HubSoft disse "fora_cobertura" mas cidade esta na whitelist
-                            do tenant (cidades_whitelist em configuracoes_extras.hubsoft).
-                            Significa: filial atende mas mapeamento HubSoft pode estar
-                            incompleto. Lead NAO deve ir pra Perdido — exige validacao
-                            manual (uma Tarefa eh criada pelo CRM).
+  - 'pendente_revisao'    — dois casos, ambos exigem validacao humana (o lead NAO
+                            deve ir pra Perdido; o CRM cria uma Tarefa):
+                            (a) HubSoft disse sem cobertura mas a cidade esta na
+                                whitelist do tenant (cidades_whitelist em
+                                configuracoes_extras.hubsoft) — filial atende mas o
+                                mapeamento HubSoft pode estar incompleto;
+                            (b) a resposta do HubSoft nao foi reconhecida. Nunca
+                                decidimos 'fora_cobertura' em cima de resposta
+                                indeterminada (isso matava lead calado).
   - 'endereco_incompleto' — falta dado pra chamar HubSoft (e nao tem CidadeViabilidade)
   - 'nao_consultado'      — tenant nao tem fonte de viabilidade
   - 'erro'                — falha imprevista
@@ -234,7 +238,8 @@ def _tentar_hubsoft(
     # a devolver aquele formato em outros tenants.
     via = resultado_api if isinstance(resultado_api, dict) else {}
 
-    projetos = via.get('projetos') if isinstance(via.get('projetos'), list) else []
+    projetos_raw = via.get('projetos')
+    projetos = projetos_raw if isinstance(projetos_raw, list) else []
     caixas_com_disponiveis = 0
     total_disponiveis = 0
     caixa_mais_proxima = None
@@ -248,8 +253,13 @@ def _tentar_hubsoft(
                 if caixa_mais_proxima is None:
                     caixa_mais_proxima = caixa.get('caixa')
 
+    # `indeterminado`: resposta que nao sabemos interpretar. NAO vira
+    # fora_cobertura (isso mandava o lead pra Perdido calado); vira
+    # pendente_revisao pra um humano decidir.
+    indeterminado = False
+
     if projetos:
-        # Schema novo — decide pela quantidade de portas livres.
+        # Schema novo com projetos — decide pela quantidade de portas livres.
         atende = caixas_com_disponiveis > 0
         detalhes = {
             'origem': via.get('origem'),
@@ -259,7 +269,14 @@ def _tentar_hubsoft(
         }
         if caixa_mais_proxima:
             detalhes['caixa_mais_proxima'] = caixa_mais_proxima
-    else:
+    elif isinstance(projetos_raw, str) and projetos_raw.strip():
+        # HubSoft devolve `projetos` como MENSAGEM quando nenhum projeto casou
+        # (ex: "Nenhum Projeto foi compatível com a localização."). Resposta
+        # determinada: nao atende, e guardamos o motivo real (antes virava um
+        # enganoso "planos: 0" via fallback legado).
+        atende = False
+        detalhes = {'origem': via.get('origem'), 'motivo': projetos_raw.strip()[:200]}
+    elif isinstance(via.get('viabilidade'), dict) or 'atende' in via:
         # Fallback schema antigo (`viabilidade.atende`)
         legado = via.get('viabilidade') if isinstance(via.get('viabilidade'), dict) else via
         atende = bool(legado.get('atende'))
@@ -268,10 +285,20 @@ def _tentar_hubsoft(
             'planos': len(legado.get('planos_disponiveis') or []),
             'motivo': legado.get('motivo') or legado.get('obs'),
         }
+    else:
+        indeterminado = True
+        atende = False
+        detalhes = {
+            'origem': via.get('origem'),
+            'motivo': 'resposta do HubSoft nao reconhecida; validar manualmente',
+            'resposta': str(via)[:200],
+        }
     detalhes = {k: v for k, v in detalhes.items() if v is not None}
 
     if atende:
         status = 'cobertura_ok'
+    elif indeterminado:
+        status = 'pendente_revisao'
     else:
         # Cidades com filial ativa mas mapeamento HubSoft possivelmente incompleto.
         # Em vez de descartar como fora_cobertura, marca pendente_revisao pra

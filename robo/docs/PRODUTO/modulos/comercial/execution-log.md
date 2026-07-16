@@ -231,3 +231,30 @@ Status: completed + deployado em prod (commits `d4cbd3c`, `88dd40d`, `e3f2de0`, 
 - **Validado (dev)**: drawer com 10 filtros em 2 colunas; multiselect 100% da celula; backend recorta (Periodo 7d=8 <= 30d=69 <= 167 total; Estagio/Prioridade aplicam subset); 0 erros de console.
 - **Arquivos**: `components/list_filters.html`, `partials/_components_styles.html`, `crm/views.py`, `crm/pipeline.html`.
 - **Status**: completed (dev). Deploy pendente.
+
+## 2026-07-16 — Viabilidade: nao decidir fora_cobertura em resposta indeterminada
+
+- **Gatilho:** Lucas perguntou se o CEP 13308-200 realmente nao tinha viabilidade
+  (op 2793, foi pra Perdido). Investigacao em prod:
+  - o CEP TEM viabilidade comercial: 91 planos (unidade Salto);
+  - a API tecnica (mapeamento/viabilidade/consultar) responde
+    `{"projetos": "Nenhum Projeto foi compativel com a localizacao.", ...}` —
+    ou seja, `projetos` vem como STRING, nao lista;
+  - o codigo fazia isinstance(projetos, list) -> caia no fallback legado -> lia
+    `atende` (inexistente) -> bool(None)=False -> fora_cobertura, gravando um
+    enganoso `detalhes: {"planos": 0}`. Veredito certo por acidente, razao perdida,
+    e fail-closed pra qualquer resposta inesperada.
+  - agravante: o endereco da op esta embaralhado (numero = nome da rua, bairro =
+    "14") e o CEP (Rodovia Waldomiro Correa de Camargo) nao bate com a rua
+    informada (Cristovao Martinelli). Veredito em cima de dado furado.
+- **Fix (A+B):** _tentar_hubsoft passou a tratar 4 casos: lista de projetos
+  (decide por portas livres), `projetos` como STRING (nao atende, guardando o
+  motivo real da API), schema legado (`atende`), e resposta NAO reconhecida ->
+  `pendente_revisao` (nunca mais fora_cobertura em cima de indeterminado; o lead
+  vai pra validacao humana em vez de Perdido calado).
+- **Validacao:** 4 ramos testados com resposta mockada; comportamento antigo
+  (cobertura_ok / fora_cobertura por portas) preservado.
+- **Pendente (C):** o bot esta embaralhando os campos de endereco. Tarefa a parte.
+- **Status:** completed (codigo, dev). Deploy em prod.
+
+---
