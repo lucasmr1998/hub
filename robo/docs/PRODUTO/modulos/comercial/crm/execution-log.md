@@ -493,3 +493,55 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy em prod pendente de confirmacao.
 
 ---
+
+## 2026-07-16 — Pipeline: padrao de mercado (N+1, agregacao, paginacao por coluna)
+
+- **Pedido do Lucas:** "o pipeline ta demorando um pouco pra carregar" e, apos a
+  analise, "a gente tem que seguir o padrao de qualidade do mercado". Tarefa #202.
+- **Diagnostico (medido em prod, nuvyon, 953 ops ativas):** o HTML da pagina
+  estava inocente (0.02s, 13 queries). O gargalo era o `api_pipeline_dados`:
+  1.33s, **567 queries**, **961 KB** de payload, 953 cards no DOM sem
+  virtualizacao. SQL somava so 0.19s (14%): o banco nunca foi o problema, eram
+  os round-trips + Python + payload.
+- **Item 0 (N+1):** 488 das 567 queries eram identicas em `crm_produtos` (nome do
+  plano, 1 por card) e buscavam **26 planos distintos**. Mais 74 em
+  `campanha_trafego`. Mapa numa query so (via `.objects`, tenant-scoped) +
+  select_related. Equivalencia provada contra dados reais de prod: 26/26
+  resolvidos, 0 divergencia, 0 id_externo duplicado, nenhum compartilhado entre
+  tenants.
+- **Item 1 (agregacao):** `totais_por_estagio()` no OportunidadeQuerySet. O
+  cabecalho da coluna saia de `len(ops)`; com paginacao viraria o tamanho da
+  pagina e a tela mentiria (mesmo bug do contador da aba de concluidas, e pior:
+  o vendedor decide o dia por esse numero). `Sum('valor_estimado_anotado')` e
+  proibido (aggregate de aggregate), entao a soma dos itens virou subquery
+  escalar, o que tirou o JOIN e o risco de Count inflado. Conferido contra os
+  valores reais de prod: total geral R$ 7008.40 identico, estagio a estagio.
+- **Item 2 (payload):** MEDIDO e descartado quase todo. Nenhum campo domina (o
+  maior, dados_custom, e 9.5%). O corte total possivel era ~19% com risco de
+  mexer no JS em varios pontos, enquanto o item 3 corta ~85% sozinho. Feito so
+  o corte com justificativa propria: `dados_custom` parou de mandar as chaves
+  internas (`_*`) que o card ja descartava no browser (higiene, nao perf).
+  Sobra registrada: 4 campos repetem o mesmo responsavel (137 KB) e
+  valor/valor_estimado sao iguais. Reavaliar so se o payload voltar a incomodar.
+- **Item 3 (paginacao):** 20 cards por coluna + "Carregar mais", endpoint
+  `api_pipeline_estagio_cards`, `_qs_pipeline_filtrado` compartilhado (a proxima
+  fatia tem que sair do mesmo recorte). `order_by('-data_criacao', '-id')`: o
+  ordering do model nao desempata e a coluna repetiria/pularia card entre as
+  levas. List view avisa "Mostrando X de Y" pra nao parecer completa.
+- **Item 4 (busca server-side):** ja era server-side. Nao precisou de codigo, mas
+  foi VERIFICADO em vez de assumido: busca por um card fora da 1a leva (op #268)
+  encontra o card, e o contador respeita o filtro.
+- **Item 5 (virtualizacao):** NAO feito, por decisao tecnica. O item 3 derrubou o
+  DOM de 953 pra ~160 nos, e virtualizar so agrega complexidade (drag and drop
+  com no reciclado e notoriamente ruim) sem ganho real. Revisitar se alguem
+  expandir muito uma coluna e reclamar.
+- **Validacao:** `manage.py check` ok; 30 testes (`test_automacao_pipeline`,
+  `test_automacao_acoes_crm`, `test_automacao_adicionar_item_oportunidade`)
+  passando; E2E Playwright em dev: coluna com 25 mostra "20 de 25", clique traz
+  os 5, 0 duplicado no DOM, topo segue em 25, 0 erro de console.
+- **Numeros (dev, 167 cards):** 567 -> 32 queries; payload 961 KB -> 106 KB.
+  Medicao de prod pendente do deploy.
+- **Limitacao conhecida:** mover card recarrega o board e a coluna volta a 20.
+- **Status:** completed (codigo, dev). Deploy em prod pendente de confirmacao.
+
+---
