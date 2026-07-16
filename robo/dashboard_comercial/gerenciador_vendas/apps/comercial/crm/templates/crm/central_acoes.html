@@ -79,7 +79,7 @@
   <div class="card ca-tabela">
     <div class="ca-panel-head"><i class="bi bi-people-fill"></i> Equipe · operacional (mês)</div>
     <div class="ca-tabela-scroll">
-      <table class="ca-op-table">
+      <table class="ca-op-table" id="ca-op-table">
         <thead>
           <tr class="ca-op-groups">
             <th></th>
@@ -94,7 +94,7 @@
         </thead>
         <tbody>
           {% for r in tabela.linhas %}
-            <tr>
+            <tr data-equipe="{{ r.equipe }}">
               <td class="ca-op-vend"><span class="ca-op-avatar">{{ r.inicial }}</span>{{ r.nome }}</td>
               <td><a href="{{ r.url_op }}">{{ r.criadas }}</a></td>
               <td class="c-ganho"><a href="{{ r.url_op }}">{{ r.ganhas }}</a></td>
@@ -240,8 +240,32 @@
     render();
   }
   cols.forEach(setup);
+
+  var opTable = document.getElementById('ca-op-table');
+  function filtrarTabela(){
+    if (!opTable) return;
+    var eq = eqSel ? eqSel.value : '';
+    var rows = Array.prototype.slice.call(opTable.querySelectorAll('tbody tr[data-equipe]'));
+    var totalCells = Array.prototype.slice.call(opTable.querySelectorAll('tfoot td'));
+    var sums = [];
+    rows.forEach(function(tr){
+      var show = !eq || tr.getAttribute('data-equipe') === eq;
+      tr.style.display = show ? '' : 'none';
+      if (show) {
+        var tds = tr.querySelectorAll('td');
+        for (var i = 1; i < tds.length; i++) {
+          sums[i] = (sums[i] || 0) + (parseInt(tds[i].textContent, 10) || 0);
+        }
+      }
+    });
+    for (var j = 1; j < totalCells.length; j++) {
+      totalCells[j].textContent = sums[j] || 0;
+    }
+  }
+
   if (eqSel) eqSel.addEventListener('change', function(){
     cols.forEach(function(c){ if (c._reset) c._reset(); });
+    filtrarTabela();
   });
 })();
 </script>

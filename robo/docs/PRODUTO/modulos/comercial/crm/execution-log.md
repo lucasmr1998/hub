@@ -402,3 +402,14 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy em prod.
 
 ---
+
+## 2026-07-16 — Tabela operacional: filtro de equipe recorta as linhas
+
+- **Feedback do Lucas:** o filtro de equipe nao refletia na tabela operacional;
+  gestor multi time filtrando deveria recortar os vendedores tambem.
+- **Ajuste:** cada linha ganhou a equipe (data-equipe via _equipe_de + select_
+  related perfil_crm__equipe). O JS do filtro passou a esconder as linhas de fora
+  da equipe e recalcular o Total da equipe pelas linhas visiveis.
+- **Status:** completed (codigo, dev). Deploy em prod.
+
+---

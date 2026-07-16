@@ -253,7 +253,7 @@ def tabela_operacional(request):
                 Q(data_vencimento__gte=agora) | Q(data_vencimento__isnull=True))),
         ))}
 
-    users = {u.id: u for u in User.objects.filter(id__in=user_ids)}
+    users = {u.id: u for u in User.objects.filter(id__in=user_ids).select_related('perfil_crm__equipe')}
     try:
         url_op = reverse('crm:oportunidades_lista')
     except Exception:
@@ -273,6 +273,7 @@ def tabela_operacional(request):
         nome = (u.get_full_name() or u.username).strip()
         linhas.append({
             'nome': nome, 'inicial': (nome[:1] or '?').upper(),
+            'equipe': _equipe_de(u),
             'criadas': o.get('criadas', 0), 'ganhas': o.get('ganhas', 0),
             'perdidas': o.get('perdidas', 0), 'aberto': o.get('aberto', 0),
             'paradas': o.get('paradas', 0), 'feitas': t.get('feitas', 0),
