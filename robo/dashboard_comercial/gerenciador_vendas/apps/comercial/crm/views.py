@@ -125,6 +125,12 @@ def _oportunidade_para_dict(op, mapa_planos=None):
     # isso travava o card num snapshot da criacao (bug do lead 1591/op 1750
     # onde o nome atualizou no lead mas o titulo da op ficou "Rafa").
     nome_display = lead.nome_razaosocial or op.titulo or lead.telefone or f'Lead #{lead.id}'
+    # dados_custom sem as chaves internas (_*): o card ja as descarta no browser
+    # e nenhum front as le, entao era analise interna trafegando a toa.
+    dados_custom_pub = {
+        k: v for k, v in (op.dados_custom or {}).items()
+        if not k.startswith('_')
+    }
     return {
         'id': op.pk,
         'lead_id': lead.pk,
@@ -160,7 +166,7 @@ def _oportunidade_para_dict(op, mapa_planos=None):
         'itens_count': sum(1 for _ in op.itens.all()),
         'tags': [{'nome': t.nome, 'cor': t.cor_hex} for t in op.tags.all()],
         'churn_risk_score': op.churn_risk_score,
-        'dados_custom': op.dados_custom or {},
+        'dados_custom': dados_custom_pub,
         # Origem / atribuicao — prioriza op (last-touch) com fallback no lead (first-touch)
         'canal':    op.canal_atribuicao or lead.canal or '',
         'fonte':    op.fonte_atribuicao or lead.fonte or '',
@@ -309,14 +315,18 @@ def pipeline_view(request):
     return render(request, 'crm/pipeline.html', context)
 
 
-@login_required
-@require_GET
-def api_pipeline_dados(request):
+# Cards carregados por coluna na primeira leva. O resto vem no "carregar mais".
+LIMITE_CARDS_COLUNA = 20
+
+
+def _qs_pipeline_filtrado(request):
+    """Queryset do kanban com os filtros da tela aplicados.
+
+    Compartilhado pela carga inicial e pelo "carregar mais" de uma coluna: as
+    duas PRECISAM enxergar o mesmo recorte, senao a coluna pagina sobre um
+    conjunto diferente do que o cabecalho conta.
+    """
     pipeline_id = request.GET.get('pipeline_id') or request.GET.get('pipeline')
-    if pipeline_id:
-        estagios = PipelineEstagio.objects.filter(pipeline_id=pipeline_id, ativo=True).order_by('ordem')
-    else:
-        estagios = PipelineEstagio.objects.filter(ativo=True).order_by('ordem')
 
     # Filtros
     responsavel_id = request.GET.get('responsavel')
@@ -399,29 +409,61 @@ def api_pipeline_dados(request):
             Q(titulo__icontains=search)
         )
 
-    # Agrupar por estágio
-    ops_lista = list(qs)
-    # Nome do plano de todos os cards numa query so, em vez de uma por card
+    # Ordem estavel e obrigatoria pra paginar: o ordering do model
+    # (-data_criacao) nao desempata, e duas ops criadas no mesmo instante
+    # trocariam de lugar entre requests, fazendo a coluna repetir ou pular card.
+    return qs.order_by('-data_criacao', '-id')
+
+
+def _serializar_cards(ops):
+    """Serializa uma lista de ops com um unico mapa de planos pro lote todo."""
     mapa_planos = _mapa_planos_por_id_externo({
         str(op.lead.id_plano_rp)
-        for op in ops_lista
+        for op in ops
         if op.lead_id and op.lead.id_plano_rp
     })
-    oportunidades_por_estagio = {}
-    for op in ops_lista:
-        eid = op.estagio_id
-        if eid not in oportunidades_por_estagio:
-            oportunidades_por_estagio[eid] = []
-        oportunidades_por_estagio[eid].append(_oportunidade_para_dict(op, mapa_planos))
+    return [_oportunidade_para_dict(op, mapa_planos) for op in ops]
+
+
+def _cards_do_estagio(qs, estagio_id, offset, limite):
+    """Fatia de uma coluna, ja serializada."""
+    return _serializar_cards(list(qs.filter(estagio_id=estagio_id)[offset:offset + limite]))
+
+
+@login_required
+@require_GET
+def api_pipeline_dados(request):
+    pipeline_id = request.GET.get('pipeline_id') or request.GET.get('pipeline')
+    if pipeline_id:
+        estagios = PipelineEstagio.objects.filter(pipeline_id=pipeline_id, ativo=True).order_by('ordem')
+    else:
+        estagios = PipelineEstagio.objects.filter(ativo=True).order_by('ordem')
+
+    qs = _qs_pipeline_filtrado(request)
+
+    try:
+        limite = max(1, min(int(request.GET.get('limite') or LIMITE_CARDS_COLUNA), 200))
+    except (TypeError, ValueError):
+        limite = LIMITE_CARDS_COLUNA
 
     # Contador e soma vem do banco, sobre o filtro inteiro, e nao da lista
     # carregada: e o que mantem o cabecalho da coluna honesto quando ela pagina.
     totais = qs.totais_por_estagio()
 
+    # Coleta a primeira leva de cada coluna antes de serializar, pra montar UM
+    # mapa de planos pro board inteiro em vez de um por coluna.
+    ops_por_estagio = {e.pk: list(qs.filter(estagio_id=e.pk)[:limite]) for e in estagios}
+    mapa_planos = _mapa_planos_por_id_externo({
+        str(op.lead.id_plano_rp)
+        for ops in ops_por_estagio.values()
+        for op in ops
+        if op.lead_id and op.lead.id_plano_rp
+    })
+
     resultado = []
     for estagio in estagios:
-        ops = oportunidades_por_estagio.get(estagio.pk, [])
         total_ops, total_valor = totais.get(estagio.pk, (0, 0.0))
+        ops = [_oportunidade_para_dict(op, mapa_planos) for op in ops_por_estagio[estagio.pk]]
         resultado.append({
             'id': estagio.pk,
             'nome': estagio.nome,
@@ -434,9 +476,42 @@ def api_pipeline_dados(request):
             'total': total_ops,
             'total_valor': total_valor,
             'oportunidades': ops,
+            # tem_mais compara com o total AGREGADO: e assim que o front sabe
+            # que a coluna esta incompleta em vez de fingir que acabou.
+            'tem_mais': total_ops > len(ops),
         })
 
-    return JsonResponse({'estagios': resultado, 'ok': True})
+    return JsonResponse({'estagios': resultado, 'ok': True, 'limite': limite})
+
+
+@login_required
+@require_GET
+def api_pipeline_estagio_cards(request, estagio_id):
+    """Proxima fatia de UMA coluna (o "carregar mais").
+
+    Recebe os mesmos filtros da tela pra paginar sobre o mesmo recorte da carga
+    inicial. So devolve cards: total e soma continuam vindo da agregacao.
+    """
+    qs = _qs_pipeline_filtrado(request)
+    try:
+        offset = max(0, int(request.GET.get('offset') or 0))
+    except (TypeError, ValueError):
+        offset = 0
+    try:
+        limite = max(1, min(int(request.GET.get('limite') or LIMITE_CARDS_COLUNA), 200))
+    except (TypeError, ValueError):
+        limite = LIMITE_CARDS_COLUNA
+
+    total = qs.filter(estagio_id=estagio_id).count()
+    ops = _cards_do_estagio(qs, estagio_id, offset, limite)
+    return JsonResponse({
+        'ok': True,
+        'estagio_id': int(estagio_id),
+        'oportunidades': ops,
+        'offset': offset,
+        'total': total,
+        'tem_mais': (offset + len(ops)) < total,
+    })
 
 
 @login_required

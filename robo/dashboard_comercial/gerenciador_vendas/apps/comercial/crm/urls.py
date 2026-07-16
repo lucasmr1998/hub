@@ -11,6 +11,8 @@ urlpatterns = [
     path('', views.pipeline_view, name='pipeline'),
     path('pipeline/', views.pipeline_view, name='pipeline_view'),
     path('pipeline/dados/', views.api_pipeline_dados, name='api_pipeline_dados'),
+    path('pipeline/estagio/<int:estagio_id>/cards/', views.api_pipeline_estagio_cards,
+         name='api_pipeline_estagio_cards'),
     path('pipeline/mover/', views.api_mover_oportunidade, name='api_mover_oportunidade'),
     path('pipeline/preferencia-kanban/', views.api_preferencia_kanban, name='api_preferencia_kanban'),
     path('pipeline/configuracao-card-padrao/', views.api_configuracao_card_padrao, name='api_configuracao_card_padrao'),

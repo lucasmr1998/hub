@@ -363,6 +363,33 @@
     flex-direction: column;
     gap: 8px;
   }
+  .col-mais { padding: 4px 0 var(--sp-2); }
+  .col-mais-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: var(--sp-2);
+    background: var(--color-surface);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-muted);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+    transition: all .15s ease;
+  }
+  .col-mais-btn:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    border-style: solid;
+  }
+  .col-mais-btn:disabled { opacity: .6; cursor: default; }
+  .col-mais-info {
+    color: var(--color-text-subtle, var(--color-text-muted));
+    font-weight: var(--fw-regular);
+  }
   .column-cards::-webkit-scrollbar { width: 4px; }
   .column-cards::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
 
@@ -987,7 +1014,72 @@ function renderPipeline(estagios) {
         container.appendChild(criarCard(op, e));
       });
     }
+    renderCarregarMais(e);
   });
+}
+
+// A coluna carrega 20 por vez. O rodape mostra quanto ja veio do total real
+// (que vem agregado do banco), pra coluna nunca fingir que acabou.
+function renderCarregarMais(e) {
+  const container = document.getElementById(`cards-${e.id}`);
+  if (!container) return;
+  const antigo = document.getElementById(`mais-${e.id}`);
+  if (antigo) antigo.remove();
+  if (!e.tem_mais) return;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'col-mais';
+  wrap.id = `mais-${e.id}`;
+  wrap.innerHTML = `
+    <button class="col-mais-btn" onclick="carregarMais(${e.id})">
+      <i class="bi bi-arrow-down-circle"></i>
+      Carregar mais
+      <span class="col-mais-info">${e.oportunidades.length} de ${e.total}</span>
+    </button>`;
+  container.appendChild(wrap);
+}
+
+function carregarMais(estagioId) {
+  const e = (_lastData || []).find(x => x.id === estagioId);
+  if (!e) return;
+  const btn = document.querySelector(`#mais-${estagioId} .col-mais-btn`);
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Carregando...';
+  }
+
+  // Repete os filtros da tela: a proxima fatia tem que sair do mesmo recorte
+  const form = document.querySelector('.list-filters-grid');
+  const params = form ? new URLSearchParams(new FormData(form)) : new URLSearchParams();
+  for (const [k, v] of [...params.entries()]) { if (!v) params.delete(k); }
+  if (_currentPipelineId) params.set('pipeline_id', _currentPipelineId);
+  params.set('offset', e.oportunidades.length);
+
+  fetch(`/crm/pipeline/estagio/${estagioId}/cards/?${params}`)
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) throw new Error('Erro ao carregar mais');
+      const container = document.getElementById(`cards-${estagioId}`);
+      const marcador = document.getElementById(`mais-${estagioId}`);
+      data.oportunidades.forEach(op => {
+        const card = criarCard(op, e);
+        container.insertBefore(card, marcador);
+      });
+      // _lastData e a fonte da list view: sem isso ela ficaria pra tras
+      e.oportunidades = e.oportunidades.concat(data.oportunidades);
+      e.tem_mais = data.tem_mais;
+      renderCarregarMais(e);
+      renderListView(_lastData);
+    })
+    .catch(err => {
+      console.error(err);
+      toast('Erro', 'Nao consegui carregar mais oportunidades', 'danger');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="bi bi-arrow-down-circle"></i> Carregar mais
+          <span class="col-mais-info">${e.oportunidades.length} de ${e.total}</span>`;
+      }
+    });
 }
 
 function criarCard(op, estagio) {
@@ -1134,6 +1226,21 @@ function renderListView(estagios) {
   });
   if (tbody.children.length === 0) {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--color-text-muted);padding:var(--sp-10);">Nenhuma oportunidade no pipeline</td></tr>';
+    return;
+  }
+
+  // A lista mostra o que as colunas ja carregaram. Se o board tem mais, diz
+  // aqui: sem esse aviso a tabela pareceria completa mostrando 140 de 954.
+  const carregados = estagios.reduce((n, e) => n + e.oportunidades.length, 0);
+  const total = estagios.reduce((n, e) => n + e.total, 0);
+  if (carregados < total) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td colspan="8" style="text-align:center;color:var(--color-text-muted);padding:var(--sp-4);background:var(--color-surface-2);">
+        Mostrando <strong>${carregados}</strong> de <strong>${total}</strong> oportunidades.
+        Use "Carregar mais" nas colunas do kanban ou filtre pra ver o resto.
+      </td>`;
+    tbody.appendChild(tr);
   }
 }
 
