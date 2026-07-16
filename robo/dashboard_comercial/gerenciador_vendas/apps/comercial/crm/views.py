@@ -47,7 +47,29 @@ def _disparar_webhook(url, payload):
         logger.warning(f"[CRM] Webhook falhou ({url}): {e}")
 
 
-def _oportunidade_para_dict(op):
+def _mapa_planos_por_id_externo(ids_externos):
+    """Nome do plano por id_externo, numa query so (mata o N+1 do card).
+
+    Usa `.objects` (tenant-scoped) de proposito: com `.all_tenants` um plano de
+    um tenant apareceria no card de outro, e o defeito seria silencioso.
+    Ordena por (ordem, nome) e deixa o primeiro vencer pra empatar exatamente
+    como o `.first()` que rodava por card antes (o ordering do Meta do model).
+    """
+    if not ids_externos:
+        return {}
+    from apps.comercial.crm.models import ProdutoServico
+    mapa = {}
+    for id_ext, nome in (ProdutoServico.objects
+                         .filter(id_externo__in=ids_externos)
+                         .order_by('ordem', 'nome')
+                         .values_list('id_externo', 'nome')):
+        mapa.setdefault(id_ext, nome)
+    return mapa
+
+
+def _oportunidade_para_dict(op, mapa_planos=None):
+    """Serializa a op pro card. `mapa_planos` evita 1 query por card no kanban;
+    sem ele (card avulso), cai no lookup individual."""
     from django.utils.timesince import timesince
     lead = op.lead
     responsavel = op.responsavel
@@ -68,13 +90,16 @@ def _oportunidade_para_dict(op):
     # Plano: tenta id_plano_rp -> ProdutoServico, senao plano_interesse legado
     plano_nome = None
     if lead.id_plano_rp:
-        try:
-            from apps.comercial.crm.models import ProdutoServico
-            prod = ProdutoServico.objects.filter(id_externo=str(lead.id_plano_rp)).first()
-            if prod:
-                plano_nome = prod.nome
-        except Exception:
-            pass
+        if mapa_planos is not None:
+            plano_nome = mapa_planos.get(str(lead.id_plano_rp))
+        else:
+            try:
+                from apps.comercial.crm.models import ProdutoServico
+                prod = ProdutoServico.objects.filter(id_externo=str(lead.id_plano_rp)).first()
+                if prod:
+                    plano_nome = prod.nome
+            except Exception:
+                pass
     if not plano_nome and op.plano_interesse:
         plano_nome = op.plano_interesse.nome
 
@@ -300,8 +325,11 @@ def api_pipeline_dados(request):
 
     # com_valor_estimado() anota `valor_estimado_anotado` (SUM dos itens com
     # fallback no manual) e evita N+1 ao ler op.valor_estimado em cada card
+    # campanha_atribuicao / lead__campanha_origem entram aqui porque o card le o
+    # .nome dos dois (era 1 query por card com campanha)
     qs = OportunidadeVenda.objects.com_valor_estimado().filter(ativo=True).select_related(
-        'lead', 'estagio', 'responsavel', 'plano_interesse', 'pipeline'
+        'lead', 'estagio', 'responsavel', 'plano_interesse', 'pipeline',
+        'campanha_atribuicao', 'lead__campanha_origem',
     ).prefetch_related('tarefas', 'tags', 'itens')
 
     if pipeline_id:
@@ -372,12 +400,19 @@ def api_pipeline_dados(request):
         )
 
     # Agrupar por estágio
+    ops_lista = list(qs)
+    # Nome do plano de todos os cards numa query so, em vez de uma por card
+    mapa_planos = _mapa_planos_por_id_externo({
+        str(op.lead.id_plano_rp)
+        for op in ops_lista
+        if op.lead_id and op.lead.id_plano_rp
+    })
     oportunidades_por_estagio = {}
-    for op in qs:
+    for op in ops_lista:
         eid = op.estagio_id
         if eid not in oportunidades_por_estagio:
             oportunidades_por_estagio[eid] = []
-        oportunidades_por_estagio[eid].append(_oportunidade_para_dict(op))
+        oportunidades_por_estagio[eid].append(_oportunidade_para_dict(op, mapa_planos))
 
     resultado = []
     for estagio in estagios:
