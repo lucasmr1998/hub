@@ -323,3 +323,14 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy em prod.
 
 ---
+
+## 2026-07-16 — KPIs da home usam o componente stat_card do DS
+
+- **Feedback do Lucas:** os cards de cima deviam seguir o padrao do DS (stat_card).
+- **Fix:** eu tinha inventado um .ca-kpi proprio; refatorado pra
+  {% include "components/stat_card.html" %} (label + icone colorido + valor +
+  footnote). Cada KPI ganhou icon + icon_variant; clicavel via wrapper
+  .stat-card-link. Removido o CSS custom. Regra de ouro do DS respeitada.
+- **Status:** completed (codigo, dev). Deploy em prod.
+
+---

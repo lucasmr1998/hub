@@ -194,17 +194,17 @@ def kpis_comerciais(request):
 
     kpis = [
         {'label': 'Em negociação', 'valor': abertas['n'] or 0,
-         'sub': 'R$ ' + _fmt_rs(abertas['v']), 'sev': 'primary', 'url': url_pipe},
+         'sub': 'R$ ' + _fmt_rs(abertas['v']), 'variant': 'info', 'icon': 'bi-briefcase', 'url': url_pipe},
         {'label': 'Ganhas no mês', 'valor': ganhas_n,
-         'sub': 'R$ ' + _fmt_rs(ganhas['v']), 'sev': 'success', 'url': ''},
+         'sub': 'R$ ' + _fmt_rs(ganhas['v']), 'variant': 'success', 'icon': 'bi-trophy', 'url': ''},
         {'label': 'Conversão (mês)', 'valor': f'{conversao}%',
-         'sub': f'{ganhas_n} de {fechadas} fechadas', 'sev': 'neutro', 'url': ''},
+         'sub': f'{ganhas_n} de {fechadas} fechadas', 'variant': 'primary', 'icon': 'bi-graph-up-arrow', 'url': ''},
         {'label': 'Novas (7 dias)', 'valor': novas_n,
-         'sub': 'entrada de demanda', 'sev': 'info', 'url': ''},
+         'sub': 'entrada de demanda', 'variant': 'primary', 'icon': 'bi-person-plus', 'url': ''},
     ]
     if ve_time:
         sem_dono_n = (OportunidadeVenda.objects.filter(ativo=True, responsavel__isnull=True)
                       .exclude(final).count())
         kpis.append({'label': 'Sem dono', 'valor': sem_dono_n, 'sub': 'a distribuir',
-                     'sev': 'danger', 'url': url_pipe + '?responsavel=sem'})
+                     'variant': 'danger', 'icon': 'bi-person-dash', 'url': url_pipe + '?responsavel=sem'})
     return kpis
