@@ -675,16 +675,16 @@ def central_acoes_view(request):
     if denied:
         return denied
     from apps.comercial.crm.central_acoes import (
-        coletar_acoes, kpis_comerciais, tabela_operacional)
+        coletar_acoes, kpis_comerciais, tabela_operacional, opcoes_filtro)
     dados = coletar_acoes(request)
     return render(request, 'crm/central_acoes.html', {
         'page_title': 'Central de Acoes',
         'kpis': kpis_comerciais(request),
         'colunas': dados['colunas'],
-        'equipes': dados['equipes'],
         'contadores': dados['contadores'],
         've_time': dados['ve_time'],
         'tabela': tabela_operacional(request),
+        'filtro': opcoes_filtro(request),
     })
 
 

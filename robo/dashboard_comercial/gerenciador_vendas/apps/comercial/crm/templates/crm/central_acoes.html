@@ -11,21 +11,27 @@
         Resumo e o que precisa da sua ação{% if ve_time %} (visão do time){% else %} (suas pendências){% endif %}.
       </p>
     </div>
-    {% if ve_time and equipes %}
-      <div class="page-actions">
-        <div class="field-input-wrap" style="max-width:230px;">
-          {% if equipes|length == 1 %}
-            <select id="ca-equipe" class="field-input" disabled title="Você acompanha uma equipe">
-              <option value="" selected>{{ equipes.0 }}</option>
-            </select>
-          {% else %}
-            <select id="ca-equipe" class="field-input">
-              <option value="">Todas as equipes</option>
-              {% for e in equipes %}<option value="{{ e }}">{{ e }}</option>{% endfor %}
-            </select>
-          {% endif %}
-        </div>
-      </div>
+    {% if filtro.mostrar %}
+      <form method="get" class="page-actions ca-filtros">
+        {% if filtro.equipes|length > 1 %}
+          <select name="equipe" class="field-input" onchange="this.form.submit()">
+            <option value="">Todas as equipes</option>
+            {% for id, nome in filtro.equipes %}
+              <option value="{{ id }}"{% if filtro.sel_equipe == id|stringformat:'s' %} selected{% endif %}>{{ nome }}</option>
+            {% endfor %}
+          </select>
+        {% elif filtro.equipes|length == 1 %}
+          <select class="field-input" disabled title="Você acompanha uma equipe">
+            <option>{{ filtro.equipes.0.1 }}</option>
+          </select>
+        {% endif %}
+        <select name="pessoa" class="field-input" onchange="this.form.submit()">
+          <option value="">Todas as pessoas</option>
+          {% for id, nome in filtro.pessoas %}
+            <option value="{{ id }}"{% if filtro.sel_pessoa == id|stringformat:'s' %} selected{% endif %}>{{ nome }}</option>
+          {% endfor %}
+        </select>
+      </form>
     {% endif %}
   </div>
 </div>
@@ -130,6 +136,9 @@
 {% endif %}
 
 <style>
+  .ca-filtros { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0; }
+  .ca-filtros .field-input { max-width:200px; }
+
   .ca-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
              gap:12px; margin-bottom:18px; }
   .stat-card-link { text-decoration:none; color:inherit; display:block; height:100%; }

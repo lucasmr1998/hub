@@ -38,6 +38,58 @@ def _tempo_no_estagio(horas):
     d = int(horas // 24)
     return f'{d} dia{"s" if d != 1 else ""}'
 
+
+def pode_ver_time(request):
+    """True pra gestor/supervisor/admin (ve alem de si). Sempre pelo escopo BASE
+    (permissao), independente do filtro aplicado."""
+    base = escopo_responsaveis(request)
+    return base is None or len(base) > 1
+
+
+def escopo_efetivo(request):
+    """Escopo base (permissao) estreitado pelos filtros server-side ?pessoa e
+    ?equipe. Pessoa tem prioridade sobre equipe. Devolve None (tudo) ou lista."""
+    base = escopo_responsaveis(request)
+    pessoa = (request.GET.get('pessoa') or '').strip()
+    equipe = (request.GET.get('equipe') or '').strip()
+    if pessoa.isdigit():
+        pid = int(pessoa)
+        if base is None or pid in base:
+            return [pid]
+    if equipe.isdigit():
+        from apps.comercial.crm.models import PerfilVendedor
+        membros = set(PerfilVendedor.objects.filter(equipe_id=int(equipe), ativo=True)
+                      .values_list('user_id', flat=True))
+        if base is not None:
+            membros &= set(base)
+        return sorted(membros)
+    return base
+
+
+def opcoes_filtro(request):
+    """Opcoes dos dropdowns de equipe e pessoa (so pra quem ve o time) + o que
+    esta selecionado. Equipes = os times visiveis; pessoas = o escopo base."""
+    from django.contrib.auth.models import User
+    from apps.comercial.crm.models import EquipeVendas, PerfilVendedor
+    from apps.comercial.crm.escopo import times_visiveis
+
+    base = escopo_responsaveis(request)
+    if base is None:
+        eq_qs = EquipeVendas.objects.filter(ativo=True)
+        pids = list(PerfilVendedor.objects.filter(ativo=True).values_list('user_id', flat=True))
+    else:
+        eq_qs = EquipeVendas.objects.filter(id__in=times_visiveis(request.user), ativo=True)
+        pids = list(base)
+    equipes = [(e.id, e.nome) for e in eq_qs.order_by('nome')]
+    pessoas = [(u.id, (u.get_full_name() or u.username).strip())
+               for u in User.objects.filter(id__in=pids).order_by('first_name', 'username')]
+    return {
+        'equipes': equipes, 'pessoas': pessoas,
+        'sel_equipe': (request.GET.get('equipe') or '').strip(),
+        'sel_pessoa': (request.GET.get('pessoa') or '').strip(),
+        'mostrar': base is None or len(base) > 1,
+    }
+
 LIMITE_POR_SINAL = 150
 
 # (chave, label singular, label da coluna, cor da coluna). A cor da LINHA vem
@@ -81,8 +133,8 @@ def coletar_acoes(request):
     from apps.comercial.crm.models import OportunidadeVenda, TarefaCRM
     from apps.comercial.leads.models import LeadProspecto
 
-    esc = escopo_responsaveis(request)          # None = ve tudo; senao lista de ids
-    ve_time = esc is None or len(esc) > 1        # heuristica: gestor/admin
+    esc = escopo_efetivo(request)               # base estreitado pelos filtros
+    ve_time = pode_ver_time(request)            # gate pelo escopo base (permissao)
     agora = timezone.now()
     itens = []
 
@@ -156,13 +208,12 @@ def coletar_acoes(request):
     colunas = [{'chave': c, 'label': lp, 'sev': s, 'itens': por_tipo.get(c, []),
                 'count': len(por_tipo.get(c, []))}
                for (c, ls, lp, s) in TIPOS_META]
-    equipes = sorted({i['tag'] for i in itens if i['tag']})
     contadores = {
         'criticos': sum(1 for i in itens if i['severidade'] == 'critico'),
         'atencao': sum(1 for i in itens if i['severidade'] == 'atencao'),
         'oportunidades': sum(1 for i in itens if i['severidade'] == 'oportunidade'),
     }
-    return {'itens': itens, 'colunas': colunas, 'equipes': equipes,
+    return {'itens': itens, 'colunas': colunas,
             'contadores': contadores, 've_time': ve_time}
 
 
@@ -182,8 +233,8 @@ def kpis_comerciais(request):
     saude/progresso, la e o to-do."""
     from apps.comercial.crm.models import OportunidadeVenda
 
-    esc = escopo_responsaveis(request)
-    ve_time = esc is None or len(esc) > 1
+    esc = escopo_efetivo(request)
+    ve_time = pode_ver_time(request)
     agora = timezone.now()
     inicio_mes = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     ha_7d = agora - timedelta(days=7)
@@ -238,10 +289,10 @@ def tabela_operacional(request):
     from django.contrib.auth.models import User
     from apps.comercial.crm.models import OportunidadeVenda, TarefaCRM, PerfilVendedor
 
-    esc = escopo_responsaveis(request)
-    ve_time = esc is None or len(esc) > 1
+    ve_time = pode_ver_time(request)
     if not ve_time:
         return None
+    esc = escopo_efetivo(request)
 
     agora = timezone.now()
     inicio_mes = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)

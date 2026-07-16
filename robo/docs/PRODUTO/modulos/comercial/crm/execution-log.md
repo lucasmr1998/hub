@@ -430,3 +430,18 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy em prod.
 
 ---
+
+## 2026-07-16 — Filtro da home vira server-side (KPIs refletem) + filtro de pessoa
+
+- **Feedback do Lucas:** os KPIs (primeira linha) nao mudavam com o filtro de
+  equipe (eram server-side, o filtro era client-side). E adicionar filtro de pessoa.
+- **Ajuste:** o filtro virou server-side (GET ?equipe / ?pessoa). Novos helpers
+  escopo_efetivo(request) (base estreitado pelo filtro; pessoa > equipe) e
+  pode_ver_time(request) (gate pela permissao base). coletar_acoes, kpis_comerciais
+  e tabela_operacional passam a usar escopo_efetivo pros dados e pode_ver_time pro
+  gate. Assim KPIs, colunas e tabela refletem o filtro. Form com 2 selects (equipe
+  + pessoa) que submetem ao mudar; equipe travada quando ha so 1 time. O filtro
+  client-side antigo ficou inerte (paginacao segue).
+- **Status:** completed (codigo, dev). Deploy em prod.
+
+---
