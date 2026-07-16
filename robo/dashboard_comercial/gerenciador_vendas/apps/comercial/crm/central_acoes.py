@@ -124,10 +124,6 @@ def _equipe_nome(op):
     return _equipe_de(getattr(op, 'responsavel', None)) if op else ''
 
 
-def _plural(n):
-    return 's' if n != 1 else ''
-
-
 def coletar_acoes(request):
     """Devolve {itens, tipos, equipes, contadores, ve_time}."""
     from apps.comercial.crm.models import OportunidadeVenda, TarefaCRM
@@ -166,19 +162,26 @@ def coletar_acoes(request):
             f'{_tempo_no_estagio(horas)} parada em {op.estagio.nome}',
             _equipe_nome(op), _url_op(op), int(horas - sla))
 
-    # Tarefa vencida
-    tarefas = (TarefaCRM.objects.filter(data_vencimento__lt=agora,
+    # Tarefa vencida (critico) + vence hoje (atencao). Fim do dia no fuso local.
+    fim_hoje = timezone.localtime(agora).replace(hour=23, minute=59, second=59, microsecond=0)
+    tarefas = (TarefaCRM.objects.filter(data_vencimento__lt=fim_hoje,
                                         status__in=['pendente', 'em_andamento'])
                .select_related('lead', 'oportunidade', 'oportunidade__lead',
                                'responsavel__perfil_crm__equipe'))
     if esc is not None:
         tarefas = tarefas.filter(responsavel_id__in=esc)
     for t in tarefas.order_by('data_vencimento')[:LIMITE_POR_SINAL]:
-        dias = (agora - t.data_vencimento).days
         alvo = t.oportunidade
         nome = (alvo.lead.nome_razaosocial if alvo and alvo.lead else None) or t.titulo
-        add('tarefa', 'Tarefa', 'critico', nome,
-            f'Vencida ha {dias} dia{_plural(dias)}: {t.titulo}', _equipe_de(t.responsavel), _url_op(alvo), dias + 5)
+        equipe = _equipe_de(t.responsavel)
+        if t.data_vencimento < agora:
+            atraso_h = (agora - t.data_vencimento).total_seconds() / 3600
+            add('tarefa', 'Tarefa', 'critico', nome,
+                f'Vencida ha {_tempo_no_estagio(atraso_h)}: {t.titulo}',
+                equipe, _url_op(alvo), int(atraso_h) + 100)
+        else:
+            add('tarefa', 'Tarefa', 'atencao', nome,
+                f'Vence hoje: {t.titulo}', equipe, _url_op(alvo), 0)
 
     # Lead em erro
     erros = LeadProspecto.objects.filter(status_api='erro').select_related(

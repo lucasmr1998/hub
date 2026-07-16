@@ -459,3 +459,14 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy em prod.
 
 ---
+
+## 2026-07-16 — Fila de Tarefas: inclui "vence hoje" (atencao) alem das vencidas
+
+- **Pedido do Lucas:** na coluna Tarefas da fila, mostrar tambem as que vencem
+  hoje (amarelo), nao so as vencidas (vermelho).
+- **Ajuste:** filtro passou de data_vencimento < agora pra < fim do dia local.
+  Vencida (< agora) = critico, "Vencida ha Xh/dias"; vence hoje (>= agora, ate
+  o fim do dia) = atencao, "Vence hoje". Removido helper _plural (orfao).
+- **Status:** completed (codigo, dev). Deploy em prod.
+
+---
