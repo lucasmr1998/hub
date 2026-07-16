@@ -386,3 +386,19 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy em prod.
 
 ---
+
+## 2026-07-16 — Central de Acoes: tabela operacional por vendedor
+
+- **Pedido do Lucas:** abaixo da Central de Acoes, tabela por membro da equipe
+  (so gestor/supervisor), colunas agrupadas por categoria. Confirmado: colunas
+  fechadas, mes corrente, celulas clicaveis.
+- **Ajuste:** tabela_operacional(request) em central_acoes.py (None pro vendedor
+  comum). 2 queries agrupadas por responsavel. Colunas: Oportunidades (Criadas,
+  Ganhas, Perdidas, Aberto, Paradas) | Tarefas (Feitas, Pendentes, Vencidas) +
+  linha Total da equipe. Cabecalho em 2 niveis (categoria + sub). Cada celula
+  linka pra a lista do vendedor (oportunidades_lista/tarefas_lista ?responsavel).
+- **Follow-up:** drill fino por metrica (ex: so as paradas do vendedor) quando a
+  lista suportar esses filtros; plugar no seletor de periodo. Tarefa #200.
+- **Status:** completed (codigo, dev). Deploy em prod.
+
+---

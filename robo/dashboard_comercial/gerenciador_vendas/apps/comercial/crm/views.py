@@ -674,7 +674,8 @@ def central_acoes_view(request):
     denied = _check_perm(request, 'comercial.ver_pipeline')
     if denied:
         return denied
-    from apps.comercial.crm.central_acoes import coletar_acoes, kpis_comerciais
+    from apps.comercial.crm.central_acoes import (
+        coletar_acoes, kpis_comerciais, tabela_operacional)
     dados = coletar_acoes(request)
     return render(request, 'crm/central_acoes.html', {
         'page_title': 'Central de Acoes',
@@ -683,6 +684,7 @@ def central_acoes_view(request):
         'equipes': dados['equipes'],
         'contadores': dados['contadores'],
         've_time': dados['ve_time'],
+        'tabela': tabela_operacional(request),
     })
 
 

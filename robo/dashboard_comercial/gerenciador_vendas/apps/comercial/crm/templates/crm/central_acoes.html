@@ -75,6 +75,60 @@
   </div>
 </div>
 
+{% if tabela %}
+  <div class="card ca-tabela">
+    <div class="ca-panel-head"><i class="bi bi-people-fill"></i> Equipe · operacional (mês)</div>
+    <div class="ca-tabela-scroll">
+      <table class="ca-op-table">
+        <thead>
+          <tr class="ca-op-groups">
+            <th></th>
+            <th colspan="5" class="grp-op">Oportunidades</th>
+            <th colspan="3" class="grp-tar sep">Tarefas</th>
+          </tr>
+          <tr class="ca-op-sub">
+            <th class="ca-op-vend">Vendedor</th>
+            <th>Criadas</th><th>Ganhas</th><th>Perdidas</th><th>Aberto</th><th>Paradas</th>
+            <th class="sep">Feitas</th><th>Pendentes</th><th>Vencidas</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in tabela.linhas %}
+            <tr>
+              <td class="ca-op-vend"><span class="ca-op-avatar">{{ r.inicial }}</span>{{ r.nome }}</td>
+              <td><a href="{{ r.url_op }}">{{ r.criadas }}</a></td>
+              <td class="c-ganho"><a href="{{ r.url_op }}">{{ r.ganhas }}</a></td>
+              <td class="c-perda"><a href="{{ r.url_op }}">{{ r.perdidas }}</a></td>
+              <td><a href="{{ r.url_op }}">{{ r.aberto }}</a></td>
+              <td class="c-parada"><a href="{{ r.url_op }}">{{ r.paradas }}</a></td>
+              <td class="c-feita sep"><a href="{{ r.url_tar }}">{{ r.feitas }}</a></td>
+              <td><a href="{{ r.url_tar }}">{{ r.pendentes }}</a></td>
+              <td class="c-vencida"><a href="{{ r.url_tar }}">{{ r.vencidas }}</a></td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="9" class="ca-op-empty">Sem membros na equipe ainda.</td></tr>
+          {% endfor %}
+        </tbody>
+        {% if tabela.total %}
+          <tfoot>
+            <tr class="ca-op-total">
+              <td class="ca-op-vend">Total da equipe</td>
+              <td>{{ tabela.total.criadas }}</td>
+              <td>{{ tabela.total.ganhas }}</td>
+              <td>{{ tabela.total.perdidas }}</td>
+              <td>{{ tabela.total.aberto }}</td>
+              <td>{{ tabela.total.paradas }}</td>
+              <td class="sep">{{ tabela.total.feitas }}</td>
+              <td>{{ tabela.total.pendentes }}</td>
+              <td>{{ tabela.total.vencidas }}</td>
+            </tr>
+          </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+{% endif %}
+
 <style>
   .ca-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
              gap:12px; margin-bottom:18px; }
@@ -124,6 +178,30 @@
   .ca-page-btn { border:1px solid var(--color-border, #e5e7eb); background:transparent;
                  border-radius:6px; padding:3px 9px; cursor:pointer; color:inherit; line-height:1; }
   .ca-page-btn:disabled { opacity:.4; cursor:default; }
+
+  .ca-tabela { padding:0; overflow:hidden; margin-top:18px; }
+  .ca-tabela-scroll { overflow-x:auto; }
+  .ca-op-table { width:100%; border-collapse:collapse; font-size:var(--fs-sm); }
+  .ca-op-table th, .ca-op-table td { padding:9px 12px; text-align:center; white-space:nowrap; }
+  .ca-op-table thead th { font-size:var(--fs-xs); color:var(--color-text-muted); font-weight:700; }
+  .ca-op-groups th { text-transform:uppercase; letter-spacing:.03em; padding-bottom:5px; }
+  .ca-op-groups .grp-op { color:var(--color-primary); }
+  .ca-op-groups .grp-tar { color:var(--color-warning); }
+  .ca-op-sub th { border-bottom:1px solid var(--color-border, #e5e7eb); padding-top:2px; }
+  .ca-op-table tbody td { border-bottom:1px solid var(--color-border, #e5e7eb); }
+  .ca-op-table tbody tr:hover { background:rgba(0,0,0,.02); }
+  .ca-op-vend { text-align:left !important; font-weight:600; }
+  .ca-op-avatar { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px;
+                  border-radius:50%; background:var(--color-primary); color:#fff; font-size:11px;
+                  font-weight:700; margin-right:8px; vertical-align:middle; }
+  .ca-op-table td a { color:inherit; text-decoration:none; }
+  .ca-op-table td a:hover { text-decoration:underline; }
+  .ca-op-table .sep { border-left:2px solid var(--color-border, #e5e7eb); }
+  .c-ganho { color:var(--color-success); font-weight:700; }
+  .c-perda, .c-vencida { color:var(--color-danger); }
+  .c-parada { color:var(--color-warning); }
+  .ca-op-total td { font-weight:700; border-top:2px solid var(--color-border, #e5e7eb); }
+  .ca-op-empty { padding:24px; color:var(--color-text-muted); }
 </style>
 
 <script>

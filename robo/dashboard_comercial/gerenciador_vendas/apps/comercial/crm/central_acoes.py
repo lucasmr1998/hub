@@ -207,3 +207,79 @@ def kpis_comerciais(request):
         kpis.append({'label': 'Sem dono', 'valor': sem_dono_n, 'sub': 'a distribuir',
                      'variant': 'danger', 'icon': 'bi-person-dash', 'url': url_pipe + '?responsavel=sem'})
     return kpis
+
+
+def tabela_operacional(request):
+    """Tabela operacional por vendedor (uma linha por membro do escopo), com
+    colunas agrupadas em Oportunidades e Tarefas. So pra quem ve o time
+    (gestor/supervisor). None pro vendedor comum. Numeros do mes corrente pros
+    fluxos; estado atual pro resto. Cada celula linka pra a lista do vendedor."""
+    from django.contrib.auth.models import User
+    from apps.comercial.crm.models import OportunidadeVenda, TarefaCRM, PerfilVendedor
+
+    esc = escopo_responsaveis(request)
+    ve_time = esc is None or len(esc) > 1
+    if not ve_time:
+        return None
+
+    agora = timezone.now()
+    inicio_mes = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    corte_parada = agora - timedelta(days=7)
+    aberto_q = Q(ativo=True) & ~Q(estagio__is_final_ganho=True) & ~Q(estagio__is_final_perdido=True)
+    aberta = ['pendente', 'em_andamento']
+
+    if esc is None:
+        user_ids = list(PerfilVendedor.objects.filter(ativo=True).values_list('user_id', flat=True))
+    else:
+        user_ids = list(esc)
+    if not user_ids:
+        return {'linhas': [], 'total': None}
+
+    ops = {r['responsavel_id']: r for r in (
+        OportunidadeVenda.objects.filter(responsavel_id__in=user_ids)
+        .values('responsavel_id').annotate(
+            criadas=Count('id', filter=Q(data_criacao__gte=inicio_mes)),
+            ganhas=Count('id', filter=Q(estagio__is_final_ganho=True, data_atualizacao__gte=inicio_mes)),
+            perdidas=Count('id', filter=Q(estagio__is_final_perdido=True, data_atualizacao__gte=inicio_mes)),
+            aberto=Count('id', filter=aberto_q),
+            paradas=Count('id', filter=aberto_q & Q(data_entrada_estagio__lt=corte_parada)),
+        ))}
+    tars = {r['responsavel_id']: r for r in (
+        TarefaCRM.objects.filter(responsavel_id__in=user_ids)
+        .values('responsavel_id').annotate(
+            feitas=Count('id', filter=Q(status='concluida', data_conclusao__gte=inicio_mes)),
+            vencidas=Count('id', filter=Q(status__in=aberta, data_vencimento__lt=agora)),
+            pendentes=Count('id', filter=Q(status__in=aberta) & (
+                Q(data_vencimento__gte=agora) | Q(data_vencimento__isnull=True))),
+        ))}
+
+    users = {u.id: u for u in User.objects.filter(id__in=user_ids)}
+    try:
+        url_op = reverse('crm:oportunidades_lista')
+    except Exception:
+        url_op = '/crm/oportunidades/'
+    try:
+        url_tar = reverse('crm:tarefas_lista')
+    except Exception:
+        url_tar = '/crm/tarefas/'
+
+    campos = ('criadas', 'ganhas', 'perdidas', 'aberto', 'paradas', 'feitas', 'pendentes', 'vencidas')
+    linhas = []
+    for uid in user_ids:
+        u = users.get(uid)
+        if not u:
+            continue
+        o, t = ops.get(uid, {}), tars.get(uid, {})
+        nome = (u.get_full_name() or u.username).strip()
+        linhas.append({
+            'nome': nome, 'inicial': (nome[:1] or '?').upper(),
+            'criadas': o.get('criadas', 0), 'ganhas': o.get('ganhas', 0),
+            'perdidas': o.get('perdidas', 0), 'aberto': o.get('aberto', 0),
+            'paradas': o.get('paradas', 0), 'feitas': t.get('feitas', 0),
+            'pendentes': t.get('pendentes', 0), 'vencidas': t.get('vencidas', 0),
+            'url_op': f'{url_op}?responsavel={uid}',
+            'url_tar': f'{url_tar}?responsavel={uid}',
+        })
+    linhas.sort(key=lambda r: (-r['ganhas'], -r['aberto']))
+    total = {c: sum(r[c] for r in linhas) for c in campos}
+    return {'linhas': linhas, 'total': total}
