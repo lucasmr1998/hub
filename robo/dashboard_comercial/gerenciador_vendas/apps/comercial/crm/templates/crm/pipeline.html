@@ -632,6 +632,14 @@
   .card-campo.card-tempo-vencido { color: #c93b3b; }
   .card-campo.card-tempo-vencido i { color: #c93b3b; }
   .card-campo.card-sem-resp { color: var(--color-text-muted); font-style: italic; font-size: 11px; }
+  .card-tarefa { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600;
+                 padding: 2px 8px; border-radius: 999px; max-width: 100%; }
+  .card-tarefa i { font-size: 10px; flex-shrink: 0; }
+  .card-tarefa.is-pendente { background: rgba(245,158,11,.15); color: #b45309; }
+  .card-tarefa.is-pendente i { color: #b45309; }
+  .card-tarefa.is-vencida { background: rgba(201,59,59,.14); color: #c93b3b; }
+  .card-tarefa.is-vencida i { color: #c93b3b; }
+  .card-tarefa-when { font-weight: 500; opacity: .85; }
 
   /* Nome do lead — trunca em 1 linha + ellipsis pra cards uniformes */
   .op-card .card-nome {
@@ -1374,10 +1382,14 @@ function renderCampoCard(slug, op) {
     case 'viabilidade':
       if (!op.viabilidade) return '';
       return `<div class="card-campo"><i class="bi bi-geo-alt"></i> ${escapeHtml(op.viabilidade)}</div>`;
-    case 'proxima_tarefa':
+    case 'proxima_tarefa': {
       if (!op.proxima_tarefa) return '';
-      return `<div class="card-campo"><i class="bi bi-check2-square"></i> ${escapeHtml(op.proxima_tarefa.titulo)}` +
-             (op.proxima_tarefa.vencimento ? ` <span class="card-campo-meta">${op.proxima_tarefa.vencimento}</span>` : '') + `</div>`;
+      const pt = op.proxima_tarefa;
+      const clsT = pt.vencida ? 'card-tarefa is-vencida' : 'card-tarefa is-pendente';
+      const icT = pt.vencida ? 'bi-exclamation-triangle-fill' : 'bi-clock-history';
+      const metaT = pt.vencimento ? ` <span class="card-tarefa-when">${pt.vencida ? 'vencida' : escapeHtml(pt.vencimento)}</span>` : '';
+      return `<div class="card-campo"><span class="${clsT}"><i class="bi ${icT}"></i> ${escapeHtml(pt.titulo)}${metaT}</span></div>`;
+    }
     case 'ultima_atividade':
       if (!op.ultima_atividade) return '';
       return `<div class="card-campo card-campo-meta"><i class="bi bi-activity"></i> ${escapeHtml(op.ultima_atividade)}</div>`;
@@ -1524,7 +1536,7 @@ function renderPreviewCard() {
     dias_no_estagio: 3, tempo_no_estagio: 3, sla_vencido: false,
     score_externo: 'B',
     viabilidade: 'OK',
-    proxima_tarefa: { titulo: 'Ligar de manha', vencimento: 'amanha 09:00' },
+    proxima_tarefa: { titulo: 'Ligar de manha', vencimento: 'amanha 09:00', vencida: false },
     ultima_atividade: 'ontem 14:32',
     id_hubsoft: 12345,
     canal: 'whatsapp',

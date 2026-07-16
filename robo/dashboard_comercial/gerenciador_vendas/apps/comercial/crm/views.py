@@ -90,6 +90,7 @@ def _oportunidade_para_dict(op):
             proxima_tarefa = {
                 'titulo': t.titulo[:50],
                 'vencimento': t.data_vencimento.strftime('%d/%m %H:%M') if t.data_vencimento else None,
+                'vencida': bool(t.data_vencimento and t.data_vencimento < timezone.now()),
             }
             break
 

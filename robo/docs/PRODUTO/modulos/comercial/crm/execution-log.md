@@ -295,3 +295,15 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy em prod.
 
 ---
+
+## 2026-07-16 — Card kanban: Proxima tarefa vira badge por status
+
+- **Pedido do Lucas:** o campo de tarefa no card deve ser badge amarelo se
+  pendente, vermelho se vencida.
+- **Ajuste:** o campo "Proxima tarefa" (ja existia em CAMPOS_CARD_DISPONIVEIS)
+  agora carrega `vencida` no dado do card (_card_data) e o renderCampoCard do
+  kanban o desenha como badge: amarelo (is-pendente, relogio) ou vermelho
+  (is-vencida, triangulo). Preview do modal de personalizar atualizado.
+- **Status:** completed (codigo, dev). Deploy em prod.
+
+---
