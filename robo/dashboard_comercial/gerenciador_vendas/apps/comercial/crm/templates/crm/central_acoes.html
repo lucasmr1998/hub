@@ -36,18 +36,16 @@
   {% endfor %}
 </div>
 
-<div class="ca-section-label"><i class="bi bi-lightning-charge-fill"></i> Central de Ações</div>
-
-<div class="ca-tiles">
-  {% for t in tipos %}
-    <button type="button" class="ca-tile ca-tile-{{ t.sev }}" data-tipo="{{ t.chave }}" data-count="{{ t.count }}">
-      <span class="ca-tile-count">{{ t.count }}</span>
-      <span class="ca-tile-label">{{ t.label }}</span>
-    </button>
-  {% endfor %}
-</div>
-
-<div class="card ca-queue">
+<div class="card ca-panel">
+  <div class="ca-panel-head"><i class="bi bi-lightning-charge-fill"></i> Central de Ações</div>
+  <div class="ca-tabs">
+    {% for t in tipos %}
+      <button type="button" class="ca-tab ca-tab-{{ t.sev }}" data-tipo="{{ t.chave }}" data-count="{{ t.count }}">
+        <span class="ca-tab-count">{{ t.count }}</span>
+        <span class="ca-tab-label">{{ t.label }}</span>
+      </button>
+    {% endfor %}
+  </div>
   <div class="ca-queue-head">
     <strong id="ca-queue-titulo">Fila</strong>
     <div class="ca-pagination" id="ca-pag">
@@ -80,24 +78,25 @@
   .stat-card-link { text-decoration:none; color:inherit; display:block; height:100%; }
   .stat-card-link .stat-card { height:100%; transition:border-color .12s, box-shadow .12s; }
   .stat-card-link:hover .stat-card { border-color:var(--color-primary); }
-  .ca-section-label { font-size:var(--fs-sm); font-weight:700; margin:2px 0 10px;
-                      display:flex; align-items:center; gap:6px; }
-  .ca-section-label i { color:var(--color-primary); }
 
-  .ca-tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(128px, 1fr));
-              gap:12px; margin-bottom:16px; }
-  .ca-tile { text-align:left; background:var(--color-surface, #fff);
-             border:1px solid var(--color-border, #e5e7eb); border-top:3px solid var(--tile-accent);
-             border-radius:var(--radius-md, 10px); padding:13px 15px; cursor:pointer;
-             display:flex; flex-direction:column; gap:3px; transition:border-color .12s, box-shadow .12s; }
-  .ca-tile-critico { --tile-accent: var(--color-danger); }
-  .ca-tile-atencao { --tile-accent: var(--color-warning); }
-  .ca-tile-oportunidade { --tile-accent: var(--color-success); }
-  .ca-tile-count { font-size:1.55rem; font-weight:800; line-height:1; color:var(--tile-accent); }
-  .ca-tile-label { font-size:var(--fs-xs); color:var(--color-text-muted); font-weight:700;
-                   text-transform:uppercase; letter-spacing:.03em; }
-  .ca-tile:hover { border-color:var(--tile-accent); }
-  .ca-tile.is-active { box-shadow:0 0 0 2px var(--tile-accent) inset; }
+  .ca-panel { padding:0; overflow:hidden; }
+  .ca-panel-head { display:flex; align-items:center; gap:6px; padding:12px 16px; font-weight:700;
+                   font-size:var(--fs-sm); border-bottom:1px solid var(--color-border, #e5e7eb); }
+  .ca-panel-head i { color:var(--color-primary); }
+  .ca-tabs { display:flex; border-bottom:1px solid var(--color-border, #e5e7eb); overflow-x:auto; }
+  .ca-tab { flex:1 1 0; min-width:112px; display:flex; flex-direction:column; gap:2px;
+            align-items:flex-start; text-align:left; padding:12px 16px; background:transparent;
+            border:none; border-right:1px solid var(--color-border, #e5e7eb);
+            border-bottom:3px solid transparent; cursor:pointer; color:inherit; transition:background .12s; }
+  .ca-tab:last-child { border-right:none; }
+  .ca-tab-critico { --tab-accent: var(--color-danger); }
+  .ca-tab-atencao { --tab-accent: var(--color-warning); }
+  .ca-tab-oportunidade { --tab-accent: var(--color-success); }
+  .ca-tab-count { font-size:1.4rem; font-weight:800; line-height:1; color:var(--tab-accent); }
+  .ca-tab-label { font-size:10px; color:var(--color-text-muted); font-weight:700;
+                  text-transform:uppercase; letter-spacing:.03em; }
+  .ca-tab:hover { background:rgba(0,0,0,.025); }
+  .ca-tab.is-active { border-bottom-color:var(--tab-accent); background:rgba(0,0,0,.02); }
 
   .ca-queue-head { display:flex; align-items:center; justify-content:space-between;
                    padding:12px 16px; font-size:var(--fs-sm); }
@@ -128,7 +127,7 @@
 
 <script>
 (function(){
-  var tiles = Array.prototype.slice.call(document.querySelectorAll('.ca-tile'));
+  var tiles = Array.prototype.slice.call(document.querySelectorAll('.ca-tab'));
   var rows  = Array.prototype.slice.call(document.querySelectorAll('.ca-qrow'));
   if (!tiles.length) return;
   var eqSel = document.getElementById('ca-equipe');
@@ -142,7 +141,7 @@
 
   function labelDe(tipo){
     for (var i=0;i<tiles.length;i++){ if (tiles[i].getAttribute('data-tipo')===tipo)
-      return tiles[i].querySelector('.ca-tile-label').textContent; }
+      return tiles[i].querySelector('.ca-tab-label').textContent; }
     return '';
   }
   function filtered(){

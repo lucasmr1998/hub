@@ -334,3 +334,14 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev). Deploy em prod.
 
 ---
+
+## 2026-07-16 — Central de Acoes: cards e fila unificados num painel
+
+- **Feedback do Lucas:** unificar os cards de tipo e a fila num bloco so, com o
+  titulo "Central de Acoes".
+- **Ajuste:** um card unico (.ca-panel) com cabecalho "Central de Acoes", os 5
+  tipos viraram barra de abas no topo (aba ativa com sublinhado colorido) e a
+  fila logo abaixo, no mesmo container. JS ajustado (.ca-tile -> .ca-tab).
+- **Status:** completed (codigo, dev). Deploy em prod.
+
+---
