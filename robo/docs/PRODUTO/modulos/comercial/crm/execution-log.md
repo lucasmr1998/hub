@@ -272,3 +272,13 @@ concluir. Errou titulo ou data, so pelo admin do Django.
 - **Status:** completed (codigo, dev).
 
 ---
+
+## 2026-07-15 — Central de Acoes: secoes fechadas + paginacao
+
+- **Feedback do Lucas:** trazer tudo fechado por padrao e paginar.
+- **Ajuste:** todas as 3 secoes agora iniciam fechadas (sem `open`). Cada secao
+  pagina client side (15/pagina, ‹ ›, "Pagina X de Y · N itens") sobre os itens
+  carregados, sem cortar em 50. Menos ruido, abre so o que interessa.
+- **Status:** completed (codigo, dev).
+
+---

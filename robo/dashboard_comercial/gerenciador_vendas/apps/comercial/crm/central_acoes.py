@@ -124,9 +124,9 @@ def coletar_acoes(request):
     oportunidades.sort(key=lambda i: -i['ordem'])
 
     grupos = [
-        {'sev': 'critico', 'label': 'Críticos', 'itens': criticos, 'aberto': True},
-        {'sev': 'atencao', 'label': 'Atenção', 'itens': atencao, 'aberto': True},
-        {'sev': 'oportunidade', 'label': 'Oportunidades', 'itens': oportunidades, 'aberto': False},
+        {'sev': 'critico', 'label': 'Críticos', 'itens': criticos},
+        {'sev': 'atencao', 'label': 'Atenção', 'itens': atencao},
+        {'sev': 'oportunidade', 'label': 'Oportunidades', 'itens': oportunidades},
     ]
     contadores = {'criticos': len(criticos), 'atencao': len(atencao),
                   'oportunidades': len(oportunidades)}

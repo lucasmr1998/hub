@@ -24,15 +24,15 @@
 </div>
 
 {% for g in grupos %}
-  <details class="ca-group" {% if g.aberto and g.itens %}open{% endif %}>
+  <details class="ca-group">
     <summary class="ca-group-head">
       <span class="ca-dot ca-dot-{{ g.sev }}"></span>
       <span class="ca-group-label">{{ g.label }}</span>
       <span class="ca-group-count ca-count-{{ g.sev }}">{{ g.itens|length }}</span>
       <i class="bi bi-chevron-down ca-group-chevron"></i>
     </summary>
-    <div class="ca-list">
-      {% for item in g.itens|slice:":50" %}
+    <div class="ca-list" data-page-size="15">
+      {% for item in g.itens %}
         <a href="{{ item.url }}" class="ca-row">
           <span class="ca-badge ca-badge-{{ g.sev }}">{{ item.tipo }}</span>
           <div class="ca-row-body">
@@ -44,9 +44,6 @@
       {% empty %}
         <div class="ca-empty-sm">Nada aqui, tudo em dia.</div>
       {% endfor %}
-      {% if g.itens|length > 50 %}
-        <div class="ca-more">e mais {{ g.itens|length|add:"-50" }}. Resolva os de cima primeiro.</div>
-      {% endif %}
     </div>
   </details>
 {% endfor %}
@@ -91,7 +88,49 @@
                 overflow:hidden; text-overflow:ellipsis; }
   .ca-row-chevron { color:var(--color-text-muted); font-size:.9rem; flex:0 0 auto; }
   .ca-empty-sm { padding:16px; text-align:center; color:var(--color-text-muted); font-size:var(--fs-xs); }
-  .ca-more { padding:11px 16px; border-top:1px solid var(--color-border, #e5e7eb);
-             font-size:var(--fs-xs); color:var(--color-text-muted); }
+
+  .ca-pagination { display:flex; align-items:center; justify-content:center; gap:14px;
+                   padding:10px 16px; border-top:1px solid var(--color-border, #e5e7eb); }
+  .ca-page-btn { border:1px solid var(--color-border, #e5e7eb); background:transparent;
+                 border-radius:6px; padding:4px 11px; cursor:pointer; color:inherit; line-height:1; }
+  .ca-page-btn:disabled { opacity:.4; cursor:default; }
+  .ca-page-info { font-size:var(--fs-xs); color:var(--color-text-muted); }
 </style>
+
+<script>
+(function(){
+  document.querySelectorAll('.ca-list').forEach(function(list){
+    var rows = Array.prototype.slice.call(list.querySelectorAll('.ca-row'));
+    var size = parseInt(list.getAttribute('data-page-size') || '15', 10);
+    if (rows.length <= size) return;
+    var page = 0;
+    var pages = Math.ceil(rows.length / size);
+
+    var nav = document.createElement('div');
+    nav.className = 'ca-pagination';
+    var prev = document.createElement('button');
+    prev.type = 'button'; prev.className = 'ca-page-btn';
+    prev.innerHTML = '<i class="bi bi-chevron-left"></i>';
+    var info = document.createElement('span');
+    info.className = 'ca-page-info';
+    var next = document.createElement('button');
+    next.type = 'button'; next.className = 'ca-page-btn';
+    next.innerHTML = '<i class="bi bi-chevron-right"></i>';
+    nav.appendChild(prev); nav.appendChild(info); nav.appendChild(next);
+    list.appendChild(nav);
+
+    function render(){
+      for (var i = 0; i < rows.length; i++){
+        rows[i].style.display = (i >= page * size && i < (page + 1) * size) ? '' : 'none';
+      }
+      info.textContent = 'Pagina ' + (page + 1) + ' de ' + pages + ' · ' + rows.length + ' itens';
+      prev.disabled = page === 0;
+      next.disabled = page >= pages - 1;
+    }
+    prev.addEventListener('click', function(){ if (page > 0){ page--; render(); } });
+    next.addEventListener('click', function(){ if (page < pages - 1){ page++; render(); } });
+    render();
+  });
+})();
+</script>
 {% endblock %}
