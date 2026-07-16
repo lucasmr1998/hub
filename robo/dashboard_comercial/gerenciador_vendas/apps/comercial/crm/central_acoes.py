@@ -29,7 +29,6 @@ LIMITE_POR_SINAL = 150
 # da severidade real de cada item.
 TIPOS_META = [
     ('parada', 'Parada', 'OP Paradas', 'atencao'),
-    ('sem_dono', 'Sem dono', 'Sem dono', 'critico'),
     ('tarefa', 'Tarefa', 'Tarefas', 'critico'),
     ('erro', 'Erro', 'Erros', 'critico'),
     ('nova', 'Nova', 'Novas', 'oportunidade'),
@@ -102,16 +101,6 @@ def coletar_acoes(request):
         nome = (alvo.lead.nome_razaosocial if alvo and alvo.lead else None) or t.titulo
         add('tarefa', 'Tarefa', 'critico', nome,
             f'Vencida ha {dias} dia{_plural(dias)}: {t.titulo}', '', _url_op(alvo), dias + 5)
-
-    # Oportunidade sem dono — so pra quem ve o time
-    if ve_time:
-        orfas = op_base.filter(responsavel__isnull=True).order_by('data_criacao')
-        for op in orfas[:LIMITE_POR_SINAL]:
-            dias = (agora - op.data_criacao).days
-            nome = op.lead.nome_razaosocial or op.titulo or f'Oportunidade #{op.pk}'
-            add('sem_dono', 'Sem dono', 'critico', nome,
-                f'{dias} dia{_plural(dias)} sem responsavel, precisa atribuir',
-                op.estagio.nome, _url_op(op), dias + 100)
 
     # Lead em erro
     erros = LeadProspecto.objects.filter(status_api='erro').select_related('oportunidade_crm')
