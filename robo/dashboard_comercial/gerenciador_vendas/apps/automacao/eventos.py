@@ -115,6 +115,14 @@ EVENTOS = {
             _c('var.tarefa_titulo', 'Título da tarefa'),
         ],
     },
+    'tarefa_concluida': {
+        'label': 'Tarefa concluída', 'grupo': 'Comercial',
+        'descricao': 'Uma tarefa do CRM foi marcada como concluída.',
+        'subcampos': [
+            _c('var.tarefa_titulo', 'Título da tarefa'),
+            _c('var.tarefa_tipo', 'Tipo da tarefa'),
+        ],
+    },
     'crm_reavaliar_oportunidade': {
         'label': 'Reavaliar oportunidade (funil)', 'grupo': 'Comercial',
         'descricao': ('Pulso interno: algo mudou no lead/oportunidade e as regras do funil '

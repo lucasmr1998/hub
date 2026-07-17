@@ -382,6 +382,42 @@ def _conectar_conversa_evento():
             logger.exception('eventos finos: on_conversa falhou')
 
 
+# ---- TarefaCRM: transição para concluída ----
+@receiver(pre_save, sender='crm.TarefaCRM')
+def _stash_tarefa(sender, instance, **kwargs):
+    if not _emissao_ativa() or not instance.pk:
+        instance._old_tarefa_status = None
+        return
+    try:
+        instance._old_tarefa_status = (sender.all_tenants.filter(pk=instance.pk)
+                                        .values_list('status', flat=True).first())
+    except Exception:  # noqa: BLE001
+        instance._old_tarefa_status = None
+
+
+@receiver(post_save, sender='crm.TarefaCRM')
+def on_tarefa_concluida(sender, instance, created, **kwargs):
+    # So no instante da virada pra concluida (nao em todo save de tarefa ja
+    # concluida). Tarefa nova ja nascendo concluida tambem conta.
+    if not _emissao_ativa() or getattr(instance, '_skip_automacao', False):
+        return
+    if instance.status != 'concluida':
+        return
+    antigo = None if created else getattr(instance, '_old_tarefa_status', None)
+    if antigo == 'concluida':
+        return
+    try:
+        op = getattr(instance, 'oportunidade', None)
+        lead = getattr(instance, 'lead', None) or (getattr(op, 'lead', None) if op else None)
+        disparar_evento('tarefa_concluida',
+                        _ctx(op=op, lead=lead,
+                             tarefa_titulo=instance.titulo or '',
+                             tarefa_tipo=instance.tipo or ''),
+                        tenant=getattr(instance, 'tenant', None))
+    except Exception:  # noqa: BLE001
+        logger.exception('eventos finos: on_tarefa_concluida falhou')
+
+
 # Conectar os signals de models externos (import no boot, via apps.py::ready()).
 _conectar_tag_evento()
 _conectar_servico_evento()

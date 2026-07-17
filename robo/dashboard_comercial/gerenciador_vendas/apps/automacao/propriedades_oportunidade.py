@@ -123,11 +123,62 @@ def _valor_estimado(tenant, oportunidade, valor, *, chave='', somente_se_vazio=T
     return {'aplicado': True, 'motivo_skip': None, 'detalhe': f'Valor estimado definido: {decimal_valor}.'}
 
 
+def _viabilidade_lead(tenant, oportunidade, valor, *, chave='', somente_se_vazio=True):
+    """Escreve o status de viabilidade do LEAD da oportunidade em
+    `lead.dados_custom.viabilidade.status`, preservando o resto do dict.
+
+    Existe pra fechar o ciclo aberto pela regra de viabilidade: a regra 22/26
+    cria a tarefa "Validar cobertura" quando o status e fora_cobertura ou
+    pendente_revisao, mas concluir a tarefa nao mexe no status, entao a regra
+    (que dispara a cada movimento de estagio) recria a tarefa pra sempre.
+    Marcando cobertura_ok na conclusao, a condicao da regra para de bater.
+
+    `somente_se_vazio` aqui NAO se aplica (o objetivo e justamente sobrescrever
+    o status antigo), mas o valor precisa ser um status conhecido pra nao
+    poluir o dado com texto livre vindo de um fluxo mal configurado.
+    """
+    STATUS_VALIDOS = {'cobertura_ok', 'fora_cobertura', 'pendente_revisao', 'nao_consultado'}
+    novo = (valor or '').strip()
+    if novo not in STATUS_VALIDOS:
+        return {
+            'aplicado': False, 'motivo_skip': 'status_invalido',
+            'detalhe': f'"{novo}" nao e um status de viabilidade valido ({", ".join(sorted(STATUS_VALIDOS))}).',
+        }
+
+    lead = getattr(oportunidade, 'lead', None)
+    if lead is None:
+        return {'aplicado': False, 'motivo_skip': 'sem_lead', 'detalhe': 'Oportunidade sem lead.'}
+
+    dados = dict(lead.dados_custom or {})
+    via = dict(dados.get('viabilidade') or {})
+    if via.get('status') == novo:
+        return {
+            'aplicado': False, 'motivo_skip': 'ja_estava',
+            'detalhe': f'Viabilidade do lead ja estava "{novo}".',
+        }
+
+    anterior = via.get('status')
+    via['status'] = novo
+    # Rastro da validacao humana, sem apagar o motivo original do HubSoft.
+    via['origem_status'] = 'validacao_humana'
+    via['validado_em'] = timezone.now().isoformat()
+    if anterior:
+        via['status_anterior'] = anterior
+    dados['viabilidade'] = via
+    lead.dados_custom = dados
+    lead.save(update_fields=['dados_custom'])
+    return {
+        'aplicado': True, 'motivo_skip': None,
+        'detalhe': f'Viabilidade do lead {anterior or "—"} -> {novo} (validacao humana).',
+    }
+
+
 PROPRIEDADES = {
     'motivo_perda': {'label': 'Motivo de perda (catalogo)', 'usa_chave': False, 'handler': _motivo_perda},
     'detalhe_perda': {'label': 'Detalhe da perda (texto livre)', 'usa_chave': False, 'handler': _detalhe_perda},
     'marcador': {'label': 'Marcador (dados_custom)', 'usa_chave': True, 'handler': _marcador},
     'valor_estimado': {'label': 'Valor estimado (R$)', 'usa_chave': False, 'handler': _valor_estimado},
+    'viabilidade_lead': {'label': 'Status de viabilidade (lead)', 'usa_chave': False, 'handler': _viabilidade_lead},
 }
 
 

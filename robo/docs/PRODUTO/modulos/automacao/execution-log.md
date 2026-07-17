@@ -681,3 +681,42 @@
 - **Testes:** `tests/test_automacao_varreduras.py` +9 casos (`_oportunidades_paradas`: SLA por etapa entra/exclui, estágio final nunca entra, `apenas_com_sla` liga/desliga com `sla_horas_padrao`, `exige_responsavel`, estrutura do item, filtro `estagios` CSV, `max_ordem`). `tests/test_automacao_seed_paradas.py` (novo, 7 casos: idempotência, nasce inativo, grafo válido, re-run preserva `ativo`, tenant inexistente falha, config do gatilho, sem nó de marcador).
 - **Gates:** `manage.py check` limpo (só o warning pré-existente de STATICFILES_DIRS); os 2 arquivos de teste novos/atualizados **33/33** verdes; `-k automacao` **408 passed, 4 failed** — as 4 falhas são **pré-existentes e não relacionadas** (`test_automacao_seed_recuperacao.py`, 4 E2E do F1/F4 do seed de recuperação; passam 16/16 quando o arquivo roda isolado e continuam falhando com os arquivos novos excluídos da rodada — poluição de estado entre arquivos de teste já existente antes deste trabalho, não investigada aqui). `seed_fluxo_oportunidades_paradas --tenant nuvyon` (dev) rodado 2x: 1º cria (id=74, `ativo=False`), 2º só atualiza (mesmo id, `ativo=False` preservado).
 - **Status:** **completed (local)**. NÃO commitado, NÃO deployado, NADA tocado em prod, NADA ativado. Pendente antes de ativar: Gabi preencher `sla_horas` nos estágios do pipeline Nuvyon no CRM (hoje vazio — sem isso a varredura não encontra nada com `apenas_com_sla=true` default).
+
+## 2026-07-17 — Fechar o ciclo da viabilidade pendente (tarefa #203)
+
+- **Problema:** a regra de viabilidade (22 fora_cobertura / 26 pendente_revisao,
+  motor antigo) cria a tarefa "Validar cobertura" mas concluir a tarefa nao muda
+  o status de viabilidade (mora em lead.dados_custom.viabilidade). Como a regra
+  dispara a cada movimento de estagio, a op ganha tarefa nova pra sempre. Caso
+  real op 2092: 3 tarefas identicas em 2 min. 17 leads pendente_revisao + 17
+  fora_cobertura sujeitos.
+- **Descoberta (poupou trabalho):** o dedupe JA existe (automacao_pipeline.py:940,
+  nao cria se ha tarefa pendente/em_andamento igual). O furo foi a tarefa ser
+  concluida quase instantaneamente, entao o dedupe (so olha pendentes) nao pegava
+  a proxima. Fechar o ciclo (abaixo) resolve isso sozinho: com o status mudando,
+  a condicao da regra para de bater e ela nunca mais recria.
+- **Solucao via ENGINE (nao hard-code), duas pecas pequenas:**
+  1. Evento `tarefa_concluida` (eventos.py + signals_dominio.py): par pre/post_save
+     em crm.TarefaCRM que dispara so na virada pra concluida, em qualquer caminho
+     de conclusao (view, fluxo, massa). Molde: tarefa_vencida.
+  2. Propriedade `viabilidade_lead` no registry propriedades_oportunidade.py
+     (zero no novo, por design): escreve lead.dados_custom.viabilidade.status,
+     valida contra os 4 status conhecidos, preserva o motivo do HubSoft, carimba
+     origem_status=validacao_humana + validado_em, idempotente (ja_estava).
+  Fluxo (montado no editor): [tarefa_concluida, filtro titulo contem "Validar
+  cobertura"] -> [definir propriedade viabilidade_lead = cobertura_ok].
+- **Decisao (reversivel):** validacao humana grava cobertura_ok PERMANENTE, mas com
+  timestamp, deixando a porta pra uma politica de revalidacao (cobertura muda; foi
+  o que gerou os 11 leads perdidos que viraram clientes). Decisao de expirar ou
+  nao fica pro Lucas.
+- **Nota:** o fluxo roda ASYNC (execucao nasce pendente, o cron automacao_retomar
+  processa). O cobertura_ok nao e instantaneo ao clicar concluir, leva o intervalo
+  do cron.
+- **Validacao:** manage.py check ok. E2E em dev: concluir a tarefa dispara o
+  evento, rodar_novos processa, viabilidade vira cobertura_ok. Handler testado
+  isolado (status invalido nao levanta, idempotente, preserva motivo). 32 testes
+  (test_automacao_pipeline + definir_propriedade + rehidratacao) passando.
+- **Status:** completed (codigo, dev). Falta: seed do fluxo em prod + deploy. Ambos
+  pendentes de confirmacao do Lucas.
+
+---
