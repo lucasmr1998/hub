@@ -128,6 +128,37 @@ O **handle do nó aparece em destaque no card** — resolve o "não dá pra ver 
 - **Próximo (convergência):** trigger por **evento do sistema** (lead criado, msg recebida) — toca os signals dos apps existentes; é o passo que aposenta os motores antigos.
 - **Dívida:** webhook público sem rate-limit (DoS) — adicionar antes de deploy; CSRF dos endpoints do editor ainda `csrf_exempt` (DEV-ONLY).
 
+## Checklist configurável (Fase 1 — models + service)
+
+Roteiro de perguntas que um bot conversacional externo (Matrix) conduz no
+WhatsApp pra preencher dados de uma entidade (lead, oportunidade...) passo a
+passo, sem código — a cliente edita as perguntas numa tela. Fase 1 entrega só
+a fonte das perguntas e o motor de elegibilidade/progresso; os endpoints que o
+Matrix consome (Fase 2) ainda não existem.
+
+Models em `apps/automacao/models.py` (ao lado do `Agente` — mesma natureza: peça
+de configuração que alimenta a IA/bot), todos `TenantMixin`:
+- **`Checklist`** — o roteiro (`contexto`, `modo_preenchimento`, `entidade_alvo`).
+  `bloqueia_avanco` existe pronto pra v2 endurecer; v1 só sugere.
+- **`ItemChecklist`** — uma pergunta (`ordem`, `chave`, `tipo_resposta`
+  texto_livre/opcoes, `condicao` pra ramificar, `tipo_validacao`, `campo`
+  opcional que espelha a resposta num `CampoCustomizado` do CRM). `ura_titulo`
+  é uma lista **fechada** de 3 slugs (só os que o Matrix já conhece — cada um
+  faz ele renderizar uma IMAGEM fixa de menu no WhatsApp; slug novo de verdade
+  exige mudança nos DOIS sistemas). `clean()` protege o contrato com o Matrix:
+  múltipla escolha só aceita **2 a 5 opções** (o flow dele só tem branch pronto
+  pra esses tamanhos; 6+ cai no default e quebra em silêncio).
+- **`RespostaChecklist`** — resposta de um item, ancorada em `entidade_tipo` +
+  `entidade_id` (genérico: lead, oportunidade, o que vier depois, sem FK nova
+  por entidade). 1 resposta corrente por item/entidade.
+
+Motor puro em `apps/automacao/services/checklist.py` (sem HTTP, sem `request`):
+`itens_elegiveis` (ordem + `condicao`, operadores `igual`/`diferente`/`existe`/
+`nao_existe`), `proximo_item`, `respostas_da_entidade`, `registrar_resposta`
+(idempotente; espelha em `dados_custom[campo.slug]` quando o item tem `campo`,
+blindado — nunca derruba o registro da resposta), `progresso` (só obrigatórios
+elegíveis).
+
 ## Princípios de design obrigatórios
 
 1. **Tenant explícito sempre.** `Contexto.tenant` é obrigatório (a engine roda em cron/command/signal, **fora de request** — o thread-local do `TenantMiddleware` está vazio ou sujo). Todo nó que tocar o ORM usa `contexto.tenant` em `.all_tenants.filter(tenant=...)` / `.create(tenant=...)`. **Nenhum nó lê `get_current_tenant()`.**

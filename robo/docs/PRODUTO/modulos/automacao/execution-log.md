@@ -720,3 +720,56 @@
   pendentes de confirmacao do Lucas.
 
 ---
+
+## 2026-07-18 — Checklist configuravel: Fase 1 (models + service)
+
+- **Contexto:** um bot externo (Matrix) vai perguntar coisas ao cliente no
+  WhatsApp seguindo um checklist configuravel (a cliente edita as perguntas
+  numa tela, sem codigo). Fase 1 = so a fonte das perguntas (models + motor
+  puro). Endpoints que o Matrix consome ficam pra Fase 2.
+- **Decisao de arquitetura (do dono):** os models ficam em `apps/automacao/models.py`,
+  ao lado do `Agente` (mesma natureza: peca de configuracao que alimenta a IA).
+  Nao em `apps/comercial`.
+- **3 models novos** (`Checklist`, `ItemChecklist`, `RespostaChecklist`, todos
+  `TenantMixin`, migration `0013`):
+  - `Checklist`: roteiro (contexto, modo_preenchimento, entidade_alvo,
+    `bloqueia_avanco` existe mas v1 so sugere).
+  - `ItemChecklist`: uma pergunta (tipo_resposta texto_livre/opcoes, `condicao`
+    pra ramificar, validacao, `campo` opcional que espelha em CampoCustomizado).
+    `URA_TITULO_CHOICES` fechado nos 3 slugs que o Matrix conhece (cada um
+    renderiza uma IMAGEM fixa de menu no WhatsApp — slug novo exige mudanca nos
+    DOIS sistemas). `clean()` protege o contrato com o Matrix: multipla escolha
+    so aceita 2 a 5 opcoes (o flow dele so tem branch pra esses tamanhos; 6+
+    cai no default e quebra em silencio), regex tem que compilar, `ura_titulo`
+    so com `tipo_resposta='opcoes'`, `condicao` precisa de chave+valor.
+  - `RespostaChecklist`: generico via `entidade_tipo`+`entidade_id` (serve lead,
+    oportunidade, o que vier depois, sem FK nova por entidade). 1 resposta
+    corrente por item/entidade (`unique_together`).
+- **Service puro** `services/checklist.py` (sem HTTP): `itens_elegiveis`
+  (respeita ordem + `condicao`, operadores igual/diferente/existe/nao_existe),
+  `proximo_item` (primeiro sem resposta elegivel), `respostas_da_entidade`,
+  `registrar_resposta` (idempotente via `update_or_create`; espelha em
+  `dados_custom[campo.slug]` do lead/oportunidade quando o item tem `campo`,
+  blindado em try/except + logger — nunca derruba o registro da resposta),
+  `progresso` (conta so obrigatorios elegiveis).
+- **Testes:** `tests/test_automacao_checklist.py` (novo, 23 casos: clean() —
+  1/6 opcoes rejeita, 2/5 aceita, opcao sem texto, regex invalido/vazio/valido,
+  ura_titulo sem opcoes, condicao incompleta; itens_elegiveis por ordem +
+  inativo + os 4 operadores; proximo_item; registrar_resposta idempotente +
+  espelho em lead e oportunidade + sem campo nao mexe; progresso).
+- **Gates:** `makemigrations automacao` (sem orfa previa) + `migrate` aplicados
+  em dev (`aurora_dev`) OK. `manage.py check` limpo (so o warning pre-existente
+  de STATICFILES_DIRS). `test_automacao_checklist.py` **23/23** verde isolado.
+  `-k automacao` **431 passed, 4 failed** — as 4 falhas sao em
+  `test_automacao_seed_recuperacao.py` (F1/F4 do seed de recuperacao),
+  **pre-existentes e nao relacionadas** (mesma poluicao de ordenacao entre
+  arquivos ja registrada na entrada de 16/07; passa **16/16** isolado).
+- **Nota:** `apps/automacao/services/ia.py` apareceu modificado no `git status`
+  no meio da sessao sem eu ter tocado nele — outra sessao concorrente rodando
+  na mesma pasta (regra 1.10 do CLAUDE.md). Nao mexi nele.
+- **Status:** completed (Fase 1, local). NAO commitado, NAO deployado, nada
+  tocado em prod. Falta Fase 2 (endpoints que o Matrix consome) + confirmar
+  tarefa Workspace vinculada (nao criada nesta sessao — checar/criar antes do
+  proximo bloco).
+
+---

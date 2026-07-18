@@ -44,11 +44,15 @@ def _credencial(integracao):
     )
 
 
-def chamar_llm(integracao, messages, *, modelo=None, max_tokens=1000):
+def chamar_llm(integracao, messages, *, modelo=None, max_tokens=1000, timeout=30):
     """Chama o LLM e devolve o texto da resposta (ou None em erro). Sem tools.
 
     `messages`: lista no formato OpenAI `[{'role','content'}]`. Monta url/headers/
-    payload conforme `integracao.tipo`. Síncrono, timeout 30s.
+    payload conforme `integracao.tipo`. Síncrono.
+
+    `timeout`: segundos do request HTTP (default 30). Quem chama no CAMINHO
+    CRÍTICO de um bot conversacional deve baixar isso (ex: 8s): o Matrix corta a
+    chamada em 45s, e uma resposta que chega depois disso não serve pra nada.
     """
     tipo = integracao.tipo
     base_url = integracao.base_url
@@ -105,7 +109,7 @@ def chamar_llm(integracao, messages, *, modelo=None, max_tokens=1000):
         payload = {'prompt': messages[-1].get('content', '') if messages else ''}
 
     try:
-        res = requests.post(url, json=payload, headers=headers, timeout=30)
+        res = requests.post(url, json=payload, headers=headers, timeout=timeout)
         if res.status_code != 200:
             logger.error('LLM %s retornou %s: %s', tipo, res.status_code, res.text[:200])
             return None
