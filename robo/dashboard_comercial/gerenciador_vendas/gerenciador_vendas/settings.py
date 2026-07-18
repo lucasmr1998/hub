@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     # === Módulo Comercial ===
     'apps.comercial.leads',
     'apps.comercial.atendimento',
+    'apps.comercial.atendimento_ia',
     'apps.comercial.cadastro',
     'apps.comercial.viabilidade',
     'apps.comercial.crm',

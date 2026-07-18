@@ -20,6 +20,12 @@ _EXEMPT_PATTERNS = [
     re.compile(r"^inbox/api/webhook/"),
     re.compile(r"^assistente/webhook/"),
     re.compile(r"^automacao/webhook/"),
+    # Bot conversacional (Matrix): contrato de path IMUTAVEL (sem prefixo
+    # /api/, sem barra final) e autenticado por Bearer token via
+    # @api_token_required, nao por sessao. Ver apps/comercial/atendimento_ia.
+    re.compile(r"^ia/proximo-passo$"),
+    re.compile(r"^ia/validar$"),
+    re.compile(r"^ia/recontato$"),
     re.compile(r"^cadastro/?$"),
     re.compile(r"^login/?$"),
     re.compile(r"^logout/?$"),

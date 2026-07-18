@@ -93,6 +93,7 @@ urlpatterns = [
     path('', include('apps.sistema.urls')),
     path('', include('apps.comercial.leads.urls')),
     path('', include('apps.comercial.atendimento.urls')),
+    path('', include('apps.comercial.atendimento_ia.urls')),
     path('', include('apps.comercial.cadastro.urls')),
     path('', include('apps.comercial.viabilidade.urls')),
     path('', include('apps.notificacoes.urls')),
