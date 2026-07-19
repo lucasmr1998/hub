@@ -7,7 +7,7 @@ from unittest import mock
 import pytest
 
 from apps.automacao.models import Checklist, ItemChecklist
-from apps.comercial.atendimento_ia.services import validacao
+from apps.comercial.atendimento_ia.services import validacao, validacao_ia
 from tests.factories import TenantFactory
 
 
@@ -310,7 +310,10 @@ def test_ia_aprova_resposta(mock_integracao, mock_chamar_llm):
     checklist = _criar_checklist(tenant)
     item = _criar_item(checklist, 'motivo_cancelamento', tipo_validacao='ia')
     mock_integracao.return_value = mock.Mock()
-    mock_chamar_llm.return_value = '{"valida": true, "valor": "quer trocar de operadora", "motivo": ""}'
+    mock_chamar_llm.return_value = (
+        '{"valido": true, "dados_extraidos": "quer trocar de operadora", "mensagem_bot": "", '
+        '"motivo_invalido": "", "confianca": 0.9, "intencao_detectada": "ok"}'
+    )
 
     resultado = validacao.validar(item, 'quero trocar de operadora', tenant)
 
@@ -318,7 +321,7 @@ def test_ia_aprova_resposta(mock_integracao, mock_chamar_llm):
     assert resultado['valor_processado'] == 'quer trocar de operadora'
     assert resultado['fonte'] == 'ia'
     # timeout curto e proposital: e o unico passo de IA dentro do orcamento de 45s do Matrix.
-    assert mock_chamar_llm.call_args.kwargs['timeout'] == validacao.TIMEOUT_IA_VALIDACAO
+    assert mock_chamar_llm.call_args.kwargs['timeout'] == validacao_ia._TIMEOUT_IA
 
 
 @pytest.mark.django_db
@@ -329,7 +332,10 @@ def test_ia_reprova_resposta(mock_integracao, mock_chamar_llm):
     checklist = _criar_checklist(tenant)
     item = _criar_item(checklist, 'motivo_cancelamento', tipo_validacao='ia')
     mock_integracao.return_value = mock.Mock()
-    mock_chamar_llm.return_value = '{"valida": false, "valor": "", "motivo": "resposta fora de contexto"}'
+    mock_chamar_llm.return_value = (
+        '{"valido": false, "dados_extraidos": {}, "mensagem_bot": "resposta fora de contexto", '
+        '"motivo_invalido": "fora_de_contexto", "confianca": 0.9, "intencao_detectada": "ok"}'
+    )
 
     resultado = validacao.validar(item, 'blablabla', tenant)
 

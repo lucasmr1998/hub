@@ -297,6 +297,19 @@ class ItemChecklist(TenantMixin):
     ura_titulo = models.CharField(max_length=60, blank=True, default='', choices=URA_TITULO_CHOICES)
     tipo_validacao = models.CharField(max_length=20, choices=TIPO_VALIDACAO_CHOICES, default='nenhuma')
     regex_validacao = models.CharField(max_length=200, blank=True, default='')
+    # Instrucoes especificas pra IA validar ESTE item (ex: "aceite apenas nomes de
+    # pessoa fisica, recuse nome de empresa"). Espelha o `RegraValidacao.instrucoes_ia`
+    # do robo original. Preenchido = habilita a IA como SEGUNDA OPINIAO quando a
+    # validacao deterministica falha (ver services/validacao.py::_com_segunda_opiniao_ia).
+    # Vazio = uma reprovacao deterministica nunca aciona IA, pra nao gastar token a toa.
+    instrucoes_ia = models.TextField(
+        blank=True, default='',
+        help_text=(
+            'Instrucoes especificas pra IA validar ESTE item (ex: "aceite apenas nomes '
+            'de pessoa fisica, recuse nome de empresa"). Preenchido, habilita a IA como '
+            'segunda opiniao quando a validacao deterministica falhar.'
+        ),
+    )
     obrigatorio = models.BooleanField(default=True)
     # {'chave': 'x', 'operador': 'igual', 'valor': 'y'} — item só entra no roteiro
     # se a resposta já dada de `chave` bater com `valor` conforme `operador`.

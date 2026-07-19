@@ -1,33 +1,37 @@
 """
 Cascata de validacao de resposta de UM item do checklist.
 
-Ordem (do mais barato pro mais caro, IA sempre por ultimo e so quando o item
-pede `tipo_validacao='ia'` explicitamente): vazio, opcoes, tipo builtin
-(email/cpf_cnpj/cep/numero/data), regex, IA.
+Ordem (do mais barato pro mais caro): vazio, opcoes, tipo builtin
+(email/cpf_cnpj/cep/numero/data), regex, IA (services/validacao_ia.py).
+
+A IA entra de DUAS formas:
+1. PRIMARIA: item com `tipo_validacao='ia'` — so tem julgamento livre, sempre
+   chama a IA (nao ha deterministico pra tentar antes).
+2. SEGUNDA OPINIAO: qualquer validacao deterministica (opcoes/tipo/regex) que
+   FALHOU, quando o item tem `instrucoes_ia` preenchida — cobre o caso de um
+   extractor rigido demais recusar uma resposta que um humano aceitaria (ex:
+   cliente respondeu "joao silva ribeiro" e um regex mal calibrado recusou).
+   Sem `instrucoes_ia` configurada, uma reprovacao NUNCA aciona a IA (nao
+   gasta token a toa) — ver `_com_segunda_opiniao_ia`.
 
 Conceito copiado de `apps.comercial.atendimento.engine._validar_resposta_questao`
 (motor a aposentar), reescrito aqui sem importar de la. Blindado: qualquer
 excecao vira resultado, nunca sobe (o Matrix tem timeout de 45s por chamada,
 uma view que sobe 500 trava o cliente no meio da conversa).
 """
-import json
 import logging
 import re
 import unicodedata
 from datetime import datetime
 
+from . import validacao_ia
+
 logger = logging.getLogger(__name__)
 
-# Timeout curto: o Matrix corta a chamada HTTP em 45s. A validacao por IA e
-# so UM passo de /ia/validar, tem que sobrar tempo pro resto do request.
-TIMEOUT_IA_VALIDACAO = 8
-MAX_TOKENS_IA_VALIDACAO = 100
-
-PROMPT_SISTEMA_VALIDACAO_IA = (
-    'Voce valida a resposta de um cliente numa pergunta de atendimento comercial. '
-    'Responda SOMENTE com um JSON, sem markdown e sem texto fora dele, no formato: '
-    '{"valida": true ou false, "valor": "resposta normalizada", "motivo": "motivo curto se invalida"}.'
-)
+# Intencoes que fazem /ia/validar transbordar pra humano em vez de insistir
+# na pergunta, mesmo quando a resposta em si validou (consumido em
+# apps/comercial/atendimento_ia/views.py::validar).
+INTENCOES_TRANSBORDO = frozenset({validacao_ia.INTENCAO_DESISTIR, validacao_ia.INTENCAO_TRANSFERIR_HUMANO})
 
 _FORMATOS_DATA = ('%d/%m/%Y', '%d-%m-%Y', '%Y-%m-%d')
 
@@ -39,13 +43,48 @@ _MOTIVO_CEP_INVALIDO = 'cep_invalido'
 _MOTIVO_NUMERO_INVALIDO = 'numero_invalido'
 _MOTIVO_DATA_INVALIDA = 'data_invalida'
 _MOTIVO_FORMATO_INVALIDO = 'formato_invalido'
-_MOTIVO_IA_INDISPONIVEL = 'ia_indisponivel'
-_MOTIVO_IA_RESPOSTA_INVALIDA = 'ia_resposta_invalida'
 _MOTIVO_ERRO_INTERNO = 'erro_interno_validacao'
 
 
-def _resultado(valida, valor_processado, fonte, erro=''):
-    return {'valida': valida, 'valor_processado': valor_processado, 'fonte': fonte, 'erro': erro}
+def _resultado(valida, valor_processado, fonte, erro='', confianca=None, intencao=''):
+    """`confianca`/`intencao` sao opcionais e so vem preenchidos quando a
+    fonte passou pela IA (primaria ou segunda opiniao) — nas fontes
+    deterministicas ficam None/'' (campos novos, nao quebram quem so olha
+    valida/valor_processado/fonte/erro)."""
+    return {
+        'valida': valida, 'valor_processado': valor_processado, 'fonte': fonte, 'erro': erro,
+        'confianca': confianca, 'intencao': intencao,
+    }
+
+
+def _resultado_de_ia(resultado_ia, fonte=None):
+    """Traduz o dict de `validacao_ia.validar_com_ia` (7 chaves) pro shape da
+    cascata. `erro` ja vem como a mensagem humanizada quando invalida (ver
+    contrato de `validacao_ia._resultado`)."""
+    return _resultado(
+        resultado_ia['valida'], resultado_ia['valor_processado'], fonte or resultado_ia['fonte'],
+        resultado_ia['erro'], resultado_ia['confianca'], resultado_ia['intencao'],
+    )
+
+
+def _com_segunda_opiniao_ia(item, resposta_str, tenant, resultado):
+    """Segunda opiniao (ver docstring do modulo): so aciona quando o
+    resultado deterministico reprovou (`valida is False`) E o item tem
+    `instrucoes_ia` preenchida. Se a IA confirmar validez, essa vira a
+    resposta final; se nao confirmar (invalida ou fallback), mantem a
+    reprovacao deterministica original — so repassa a `intencao` se a IA
+    detectou uma relevante (ex: cliente "desistiu" no meio de uma resposta
+    invalida)."""
+    if resultado['valida'] is not False or not item.instrucoes_ia:
+        return resultado
+
+    resultado_ia = validacao_ia.validar_com_ia(item, resposta_str, tenant)
+    if resultado_ia['valida'] is True:
+        return _resultado_de_ia(resultado_ia, fonte='ia_segunda_opiniao')
+
+    if resultado_ia['intencao'] in INTENCOES_TRANSBORDO:
+        resultado = dict(resultado, intencao=resultado_ia['intencao'])
+    return resultado
 
 
 def _normalizar(texto):
@@ -168,49 +207,11 @@ def _validar_regex(item, resposta_str):
     return _resultado(False, None, 'regex', _MOTIVO_FORMATO_INVALIDO)
 
 
-def _extrair_json(texto):
-    """O LLM as vezes cerca o JSON com markdown mesmo pedindo pra nao. Pega
-    o primeiro bloco {...} do texto."""
-    match = re.search(r'\{.*\}', texto, re.DOTALL)
-    return match.group(0) if match else texto
-
-
-def _validar_ia(item, resposta_str, tenant):
-    from apps.automacao.services.ia import chamar_llm, integracao_ia_do_tenant
-
-    integracao = integracao_ia_do_tenant(tenant)
-    if not integracao:
-        return _resultado(None, resposta_str, 'fallback', _MOTIVO_IA_INDISPONIVEL)
-
-    mensagens = [
-        {'role': 'system', 'content': PROMPT_SISTEMA_VALIDACAO_IA},
-        {'role': 'user', 'content': f'Pergunta: {item.pergunta}\nResposta do cliente: {resposta_str}'},
-    ]
-    # chamar_llm ja blinda erro de rede/HTTP/parse e devolve None: cobre
-    # timeout tambem (a lib requests estoura TimeoutError, capturado la dentro).
-    texto = chamar_llm(
-        integracao, mensagens,
-        timeout=TIMEOUT_IA_VALIDACAO, max_tokens=MAX_TOKENS_IA_VALIDACAO,
-    )
-    if not texto:
-        return _resultado(None, resposta_str, 'fallback', _MOTIVO_IA_INDISPONIVEL)
-
-    try:
-        dados = json.loads(_extrair_json(texto))
-        valida = bool(dados.get('valida'))
-        motivo = str(dados.get('motivo') or '')
-        if valida:
-            valor = dados.get('valor') or resposta_str
-            return _resultado(True, valor, 'ia')
-        return _resultado(False, None, 'ia', motivo or 'reprovado_pela_ia')
-    except (ValueError, TypeError, AttributeError):
-        return _resultado(None, resposta_str, 'fallback', _MOTIVO_IA_RESPOSTA_INVALIDA)
-
-
 def validar(item, resposta, tenant):
     """Valida `resposta` (texto bruto do cliente) contra `item`. Devolve
     sempre um dict {'valida': bool|None, 'valor_processado': any, 'fonte': str,
-    'erro': str}. `valida=None` = IA indisponivel, aceita com ressalva.
+    'erro': str, 'confianca': float|None, 'intencao': str}. `valida=None` =
+    IA indisponivel, aceita com ressalva.
 
     Blindado por fora tambem: qualquer excecao inesperada vira resultado
     com fonte='fallback' em vez de subir e derrubar a view."""
@@ -223,26 +224,32 @@ def validar(item, resposta, tenant):
             return _resultado(True, None, '')
 
         if item.tipo_resposta == 'opcoes':
-            return _validar_opcoes(item, resposta_str)
+            resultado = _validar_opcoes(item, resposta_str)
+            return _com_segunda_opiniao_ia(item, resposta_str, tenant, resultado)
 
         tipo = item.tipo_validacao
-        if tipo == 'email':
-            return _validar_email(resposta_str)
-        if tipo == 'cpf_cnpj':
-            return _validar_cpf_cnpj(resposta_str)
-        if tipo == 'cep':
-            return _validar_cep(resposta_str)
-        if tipo == 'numero':
-            return _validar_numero(resposta_str)
-        if tipo == 'data':
-            return _validar_data(resposta_str)
-        if tipo == 'regex':
-            return _validar_regex(item, resposta_str)
         if tipo == 'ia':
-            return _validar_ia(item, resposta_str, tenant)
+            # IA e a validacao PRIMARIA do item (nao segunda opiniao): sempre
+            # chama, e o unico jeito de validar esse item.
+            return _resultado_de_ia(validacao_ia.validar_com_ia(item, resposta_str, tenant))
+        if tipo == 'email':
+            resultado = _validar_email(resposta_str)
+        elif tipo == 'cpf_cnpj':
+            resultado = _validar_cpf_cnpj(resposta_str)
+        elif tipo == 'cep':
+            resultado = _validar_cep(resposta_str)
+        elif tipo == 'numero':
+            resultado = _validar_numero(resposta_str)
+        elif tipo == 'data':
+            resultado = _validar_data(resposta_str)
+        elif tipo == 'regex':
+            resultado = _validar_regex(item, resposta_str)
+        else:
+            # tipo_validacao='nenhuma': texto livre, aceita como esta. Nao ha
+            # o que questionar aqui, entao nao passa pela segunda opiniao.
+            return _resultado(True, resposta_str, '')
 
-        # tipo_validacao='nenhuma': texto livre, aceita como esta.
-        return _resultado(True, resposta_str, '')
+        return _com_segunda_opiniao_ia(item, resposta_str, tenant, resultado)
     except Exception:
         logger.exception('Falha inesperada validando item %s', getattr(item, 'pk', None))
         return _resultado(None, resposta, 'fallback', _MOTIVO_ERRO_INTERNO)

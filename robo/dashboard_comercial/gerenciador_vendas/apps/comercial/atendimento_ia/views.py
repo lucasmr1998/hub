@@ -43,6 +43,10 @@ MOTIVO_TRANSBORDO_GENERICO = 'transbordado'
 MSG_ERRO_SEM_CHECKLIST = 'Nao consegui continuar o atendimento automatico agora. Vou te transferir para um atendente.'
 MSG_ERRO_SEM_ITEM_ATUAL = 'Perdi o fio da nossa conversa por aqui. Vou te transferir para um atendente.'
 MSG_ERRO_PADRAO = 'Nao consegui entender sua resposta. Pode tentar novamente?'
+# Usada so quando a IA detecta intencao de desistir/transferir e o proprio
+# resultado nao trouxe uma mensagem humanizada pra usar no lugar (ver
+# `validacao_service.INTENCOES_TRANSBORDO`).
+MSG_TRANSBORDO_INTENCAO = 'Vou te transferir para um atendente que vai continuar seu atendimento.'
 MOTIVO_SEM_ITEM_ATUAL = 'sem_item_atual'
 MOTIVO_MAX_TENTATIVAS = 'max_tentativas_excedida'
 
@@ -226,6 +230,19 @@ def validar(request):
         valida=resultado['valida'], fonte_validacao=resultado['fonte'],
         motivo_erro=resultado['erro'],
     )
+
+    # IA detectou que o cliente quer desistir ou falar com atendente: transborda
+    # direto em vez de insistir na pergunta, mesmo que a resposta em si tenha
+    # validado (o cliente pode responder certo e ainda assim pedir humano).
+    intencao = resultado.get('intencao') or ''
+    if intencao in validacao_service.INTENCOES_TRANSBORDO:
+        sessao_service.transbordar(sessao, intencao)
+        return JsonResponse(contrato.payload_validar(
+            resposta_correta=False, resposta_sem_erro_api=True,
+            retorno_erro_api=resultado.get('erro') or MSG_TRANSBORDO_INTENCAO,
+            needs_reception=True, is_a_client=sessao.is_cliente_ativo,
+            cancelado=False, message='',
+        ))
 
     if resultado['valida'] is not False:
         # True (validou de verdade) ou None (IA fora do ar, aceito com

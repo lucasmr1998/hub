@@ -81,6 +81,7 @@ def editar_page(request, pk=None):
         'ura_titulo': item.ura_titulo,
         'tipo_validacao': item.tipo_validacao,
         'regex_validacao': item.regex_validacao,
+        'instrucoes_ia': item.instrucoes_ia,
         'obrigatorio': item.obrigatorio,
         'max_tentativas': item.max_tentativas,
         'estrategia_erro': item.estrategia_erro,
@@ -281,6 +282,7 @@ def item_salvar(request, pk):
     item.ura_titulo = ura_titulo if ura_titulo in ura_validos else ''
     item.tipo_validacao = tipo_validacao if tipo_validacao in tipos_val_validos else 'nenhuma'
     item.regex_validacao = (data.get('regex_validacao') or '').strip()
+    item.instrucoes_ia = (data.get('instrucoes_ia') or '').strip()
     item.obrigatorio = bool(data.get('obrigatorio'))
     try:
         item.max_tentativas = max(1, int(data.get('max_tentativas') or 3))
