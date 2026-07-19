@@ -93,5 +93,9 @@ class ChecklistValidarNode(BaseNode):
             'erro': resultado['erro'],
             'chave': item.chave,
             'item_id': item.pk,
+            # Texto da pergunta original: o grafo precisa disso pra dar contexto
+            # a um nó `ia_agente` de segunda opiniao (a resposta sozinha, sem a
+            # pergunta, nao da pro LLM julgar nada).
+            'pergunta': item.pergunta,
         }
         return NodeResult(output=output, branch='valida' if valida else 'invalida')

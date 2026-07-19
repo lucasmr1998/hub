@@ -52,6 +52,9 @@ class ChecklistProximoItemNode(BaseNode):
             'pergunta': item.pergunta,
             'tipo_resposta': item.tipo_resposta,
             'opcoes': item.opcoes,
+            # Contagem pronta pra montar blocos tipo `ura` de contratos externos
+            # (ex: Matrix) sem o grafo precisar de um nó só pra contar lista.
+            'total_opcoes': len(item.opcoes or []),
             'ura_titulo': item.ura_titulo,
             'tipo_validacao': item.tipo_validacao,
             'instrucoes_ia': item.instrucoes_ia,
